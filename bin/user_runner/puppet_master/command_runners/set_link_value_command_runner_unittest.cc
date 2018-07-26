@@ -21,9 +21,8 @@ class SetLinkValueCommandRunnerTest : public testing::TestWithLedger {
     return std::make_unique<SessionStorage>(ledger_client(), page_id);
   }
 
-  std::unique_ptr<SetLinkValueCommandRunner> MakeRunner(
-      SessionStorage* const storage) {
-    return std::make_unique<SetLinkValueCommandRunner>(storage);
+  std::unique_ptr<SetLinkValueCommandRunner> MakeRunner() {
+    return std::make_unique<SetLinkValueCommandRunner>();
   }
 
   std::unique_ptr<StoryStorage> GetStoryStorage(SessionStorage* const storage,
@@ -61,7 +60,7 @@ class SetLinkValueCommandRunnerTest : public testing::TestWithLedger {
     return path;
   }
 
-  fuchsia::modular::StoryCommand GetSetLinkValueCommand(
+  fuchsia::modular::StoryCommand MakeSetLinkValueCommand(
       const std::string& path_name, const std::string& value) {
     fsl::SizedVmo vmo;
     fsl::VmoFromString(value, &vmo);
@@ -79,43 +78,39 @@ class SetLinkValueCommandRunnerTest : public testing::TestWithLedger {
 // verifying that the link value is the expected one.
 TEST_F(SetLinkValueCommandRunnerTest, Execute) {
   auto storage = MakeStorage("page");
-  auto runner = MakeRunner(storage.get());
+  auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id);
   bool done{};
 
   // Let's set a value.
-  auto command = GetSetLinkValueCommand("link", "10");
-  runner->Execute(story_id, std::move(command),
+  auto command = MakeSetLinkValueCommand("link", "10");
+  runner->Execute(story_id, story_storage.get(), std::move(command),
                   [&](fuchsia::modular::ExecuteResult result) {
-                    ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
                     done = true;
                   });
-
   RunLoopUntil([&] { return done; });
   done = false;
 
   // Let's get the value.
-  auto get_story_future = storage->GetStoryStorage(story_id);
   story_storage->GetLinkValue(MakeLinkPath("link"))
       ->Then([&](StoryStorage::Status status, fidl::StringPtr v) {
         EXPECT_EQ("10", *v);
         done = true;
       });
-
   RunLoopUntil([&] { return done; });
   done = false;
 
   // Mutate again.
-  auto command2 = GetSetLinkValueCommand("link", "20");
-  runner->Execute(story_id, std::move(command2),
+  auto command2 = MakeSetLinkValueCommand("link", "20");
+  runner->Execute(story_id, story_storage.get(), std::move(command2),
                   [&](fuchsia::modular::ExecuteResult result) {
-                    ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
                     done = true;
                   });
-
   RunLoopUntil([&] { return done; });
   done = false;
 
@@ -125,23 +120,6 @@ TEST_F(SetLinkValueCommandRunnerTest, Execute) {
         EXPECT_EQ("20", *v);
         done = true;
       });
-
-  RunLoopUntil([&] { return done; });
-}
-
-TEST_F(SetLinkValueCommandRunnerTest, ExecuteInvalidStory) {
-  auto storage = MakeStorage("page");
-  auto runner = MakeRunner(storage.get());
-
-  bool done{};
-  auto command = GetSetLinkValueCommand("link", "10");
-  runner->Execute("fake", std::move(command),
-                  [&](fuchsia::modular::ExecuteResult result) {
-                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_STORY_ID,
-                              result.status);
-                    done = true;
-                  });
-
   RunLoopUntil([&] { return done; });
 }
 

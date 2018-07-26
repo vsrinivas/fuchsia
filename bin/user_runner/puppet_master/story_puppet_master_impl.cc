@@ -32,21 +32,20 @@ void StoryPuppetMasterImpl::Enqueue(
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   executor_->ExecuteCommands(
       story_id_, std::move(enqueued_commands_),
-      fxl::MakeCopyable(
-          [weak_ptr = weak_factory_.GetWeakPtr(),
-           done = std::move(done)](fuchsia::modular::ExecuteResult result) {
-            // If the StoryPuppetMasterImpl is gone, the connection that would
-            // handle |done| is also gone.
-            if (!weak_ptr) {
-              return;
-            }
-            // Adopt the story id from the StoryCommandExecutor.
-            if (weak_ptr->story_id_) {
-              FXL_DCHECK(result.story_id == weak_ptr->story_id_);
-            }
-            weak_ptr->story_id_ = result.story_id;
-            done(std::move(result));
-          }));
+      [weak_ptr = weak_factory_.GetWeakPtr(),
+       done = std::move(done)](fuchsia::modular::ExecuteResult result) {
+        // If the StoryPuppetMasterImpl is gone, the connection that would
+        // handle |done| is also gone.
+        if (!weak_ptr) {
+          return;
+        }
+        // Adopt the story id from the StoryCommandExecutor.
+        if (weak_ptr->story_id_) {
+          FXL_DCHECK(result.story_id == weak_ptr->story_id_);
+        }
+        weak_ptr->story_id_ = result.story_id;
+        done(std::move(result));
+      });
 }
 
 }  // namespace modular

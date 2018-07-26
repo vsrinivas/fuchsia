@@ -15,34 +15,17 @@ namespace {
 
 class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  UpdateModCall(SessionStorage* const session_storage, fidl::StringPtr story_id,
+  UpdateModCall(StoryStorage* const story_storage, fidl::StringPtr story_id,
                 fuchsia::modular::UpdateMod command, ResultCall done)
       : Operation("UpdateModCommandRunner::UpdateModCall", std::move(done)),
-        session_storage_(session_storage),
         story_id_(std::move(story_id)),
+        story_storage_(story_storage),
         command_(std::move(command)) {}
 
  private:
-  // Start by fetching the story storage.
   void Run() override {
     FlowToken flow{this, &result_};
     result_.story_id = story_id_;
-    session_storage_->GetStoryStorage(story_id_)->Then(
-        [this, flow](std::unique_ptr<StoryStorage> story_storage) {
-          if (!story_storage) {
-            result_.status = fuchsia::modular::ExecuteStatus::INVALID_STORY_ID;
-            result_.error_message = "No StoryStorage for given story.";
-            Done(std::move(result_));
-            return;
-          }
-          story_storage_ = std::move(story_storage);
-          Cont(flow);
-        });
-  }
-
-  // Once we have the story storage, get the module data to know what links to
-  // update.
-  void Cont(FlowToken flow) {
     story_storage_->ReadModuleData(command_.mod_name)
         ->Then([this, flow](fuchsia::modular::ModuleDataPtr module_data) {
           if (!module_data) {
@@ -51,13 +34,13 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
             Done(std::move(result_));
             return;
           }
-          Cont2(flow, std::move(module_data));
+          Cont1(flow, std::move(module_data));
         });
   }
 
   // Once we have the module data, use it to know what links to update and
   // update them if their names match the given parameters.
-  void Cont2(FlowToken flow, fuchsia::modular::ModuleDataPtr module_data) {
+  void Cont1(FlowToken flow, fuchsia::modular::ModuleDataPtr module_data) {
     std::vector<modular::FuturePtr<fuchsia::modular::ExecuteResult>>
         did_update_links;
     for (const auto& parameter : *command_.parameters) {
@@ -80,7 +63,6 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
             }
           }
           result_.status = fuchsia::modular::ExecuteStatus::OK;
-          Done(std::move(result_));
         });
   }
 
@@ -128,10 +110,9 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
         });
   }
 
-  SessionStorage* const session_storage_;
   fidl::StringPtr story_id_;
+  StoryStorage* const story_storage_;
   fuchsia::modular::UpdateMod command_;
-  std::unique_ptr<StoryStorage> story_storage_;
   fuchsia::modular::ExecuteResult result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateModCall);
@@ -139,18 +120,16 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
 
 }  // namespace
 
-UpdateModCommandRunner::UpdateModCommandRunner(
-    SessionStorage* const session_storage)
-    : CommandRunner(session_storage) {}
-
+UpdateModCommandRunner::UpdateModCommandRunner() = default;
 UpdateModCommandRunner::~UpdateModCommandRunner() = default;
 
 void UpdateModCommandRunner::Execute(
-    fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+    fidl::StringPtr story_id, StoryStorage* const story_storage,
+    fuchsia::modular::StoryCommand command,
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_update_mod());
 
-  operation_queue_.Add(new UpdateModCall(session_storage_, std::move(story_id),
+  operation_queue_.Add(new UpdateModCall(story_storage, std::move(story_id),
                                          std::move(command.update_mod()),
                                          std::move(done)));
 }

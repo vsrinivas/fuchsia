@@ -15,7 +15,6 @@ class StoryCommandExecutor;
 
 // Returns a StoryCommandExecutor suitable for use in production.
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
-    DispatchStoryCommandExecutor::OperationContainerAccessor factory,
     SessionStorage* session_storage,
     fuchsia::modular::FocusProviderPtr focus_provider);
 

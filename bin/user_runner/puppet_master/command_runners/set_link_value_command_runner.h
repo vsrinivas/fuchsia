@@ -14,11 +14,13 @@ namespace modular {
 
 class SetLinkValueCommandRunner : public CommandRunner {
  public:
-  SetLinkValueCommandRunner(SessionStorage* const session_storage);
+  SetLinkValueCommandRunner();
   ~SetLinkValueCommandRunner();
 
   void Execute(
-      fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+      fidl::StringPtr story_id,
+      StoryStorage* story_storage,
+      fuchsia::modular::StoryCommand command,
       std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:

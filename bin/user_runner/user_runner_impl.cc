@@ -608,7 +608,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       focus_provider_puppet_master.NewRequest();
   // Initialize the PuppetMaster.
   story_command_executor_ = MakeProductionStoryCommandExecutor(
-      nullptr, session_storage_.get(), std::move(focus_provider_puppet_master));
+      session_storage_.get(), std::move(focus_provider_puppet_master));
 
   puppet_master_impl_.reset(
       new PuppetMasterImpl(story_command_executor_.get()));

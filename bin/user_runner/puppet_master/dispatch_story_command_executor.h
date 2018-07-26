@@ -19,14 +19,7 @@ class OperationContainer;
 // fuchsia::modular::StoryCommand.
 class DispatchStoryCommandExecutor : public StoryCommandExecutor {
  public:
-  // Returns an OperationContainer* for a given |story_id|, or nullptr if
-  // |story_id| is invalid. OperationContainer instances must outlive the time
-  // between a call to ExecuteCommands(story_id, ...) until its |done| callback
-  // is invoked.
-  using OperationContainerAccessor =
-      std::function<OperationContainer*(const fidl::StringPtr& story_id)>;
-
-  DispatchStoryCommandExecutor(OperationContainerAccessor container_accessor,
+  DispatchStoryCommandExecutor(SessionStorage* session_storage,
                                std::map<fuchsia::modular::StoryCommand::Tag,
                                         std::unique_ptr<CommandRunner>>
                                    command_runners);
@@ -41,7 +34,7 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
 
   class ExecuteStoryCommandsCall;
 
-  OperationContainerAccessor container_accessor_;
+  SessionStorage* const session_storage_;  // Not owned.
   const std::map<fuchsia::modular::StoryCommand::Tag,
                  std::unique_ptr<CommandRunner>>
       command_runners_;
@@ -50,6 +43,8 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
   // human-readable string.
   const std::map<fuchsia::modular::StoryCommand::Tag, const char*>
       story_command_tag_strings_;
+
+  std::map<fidl::StringPtr, OperationQueue> operation_queues_;
 };
 
 }  // namespace modular

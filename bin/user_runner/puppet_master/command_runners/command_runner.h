@@ -13,17 +13,14 @@ namespace modular {
 
 class CommandRunner {
  public:
-  CommandRunner(SessionStorage* const session_storage);
+  CommandRunner();
   virtual ~CommandRunner();
 
   virtual void Execute(
-      fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+      fidl::StringPtr story_id,
+      StoryStorage* story_storage,
+      fuchsia::modular::StoryCommand command,
       std::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
-
- protected:
-  // The storage used to execute commands.
-  // Not owned.
-  SessionStorage* const session_storage_;
 };
 
 }  // namespace modular

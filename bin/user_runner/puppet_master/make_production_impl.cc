@@ -18,25 +18,25 @@ namespace modular {
 class PuppetMasterImpl;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
-    DispatchStoryCommandExecutor::OperationContainerAccessor factory,
     SessionStorage* session_storage,
     fuchsia::modular::FocusProviderPtr focus_provider) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners;
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetFocusState,
                           new SetFocusStateCommandRunner(
-                              session_storage, std::move(focus_provider)));
+                              std::move(focus_provider)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod,
-                          new AddModCommandRunner(session_storage));
+                          new AddModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,
-                          new UpdateModCommandRunner(session_storage));
+                          new UpdateModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
-                          new RemoveModCommandRunner(session_storage));
+                          new RemoveModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
-                          new SetLinkValueCommandRunner(session_storage));
+                          new SetLinkValueCommandRunner());
 
   auto executor = std::make_unique<DispatchStoryCommandExecutor>(
-      std::move(factory), std::move(command_runners));
+      session_storage,
+      std::move(command_runners));
   return executor;
 }
 

@@ -9,15 +9,14 @@
 namespace modular {
 
 SetFocusStateCommandRunner::SetFocusStateCommandRunner(
-    SessionStorage* const session_storage,
     fuchsia::modular::FocusProviderPtr focus_provider)
-    : CommandRunner(session_storage),
-      focus_provider_(std::move(focus_provider)) {}
+    : focus_provider_(std::move(focus_provider)) {}
 
 SetFocusStateCommandRunner::~SetFocusStateCommandRunner() = default;
 
 void SetFocusStateCommandRunner::Execute(
-    fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+    fidl::StringPtr story_id, StoryStorage* const story_storage,
+    fuchsia::modular::StoryCommand command,
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_focus_state());
 

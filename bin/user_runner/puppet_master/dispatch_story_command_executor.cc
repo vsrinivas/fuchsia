@@ -17,11 +17,14 @@ namespace {
 class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   RunStoryCommandCall(const char* const command_name,
-                      CommandRunner* const runner, fidl::StringPtr story_id,
+                      CommandRunner* const runner,
+                      StoryStorage* const story_storage,
+                      fidl::StringPtr story_id,
                       fuchsia::modular::StoryCommand command, ResultCall done)
       : Operation(command_name, std::move(done), ""),
-        story_id_(std::move(story_id)),
         command_(std::move(command)),
+        story_storage_(story_storage),
+        story_id_(std::move(story_id)),
         runner_(runner) {}
 
  private:
@@ -30,11 +33,13 @@ class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
     auto done = [this](fuchsia::modular::ExecuteResult result) {
       Done(std::move(result));
     };
-    runner_->Execute(story_id_, std::move(command_), std::move(done));
+    runner_->Execute(story_id_, story_storage_, std::move(command_),
+                     std::move(done));
   }
 
-  const fidl::StringPtr story_id_;
   fuchsia::modular::StoryCommand command_;
+  StoryStorage* const story_storage_;
+  const fidl::StringPtr story_id_;
   CommandRunner* runner_;
 };
 
@@ -56,6 +61,21 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
  private:
   void Run() override {
+    executor_->session_storage_->GetStoryStorage(story_id_)->WeakThen(
+        GetWeakPtr(), [this](std::unique_ptr<StoryStorage> story_storage) {
+          if (!story_storage) {
+            fuchsia::modular::ExecuteResult result;
+            result.status = fuchsia::modular::ExecuteStatus::INVALID_STORY_ID;
+            Done(result);
+            return;
+          }
+
+          story_storage_ = std::move(story_storage);
+          Cont();
+        });
+  }
+
+  void Cont() {
     // TODO(thatguy): Add a WeakPtr check on |executor_|.
 
     // Keep track of the number of commands we need to run. When they are all
@@ -85,9 +105,9 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
           Future<fuchsia::modular::ExecuteResult>::Create(
               "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.did_"
               "execute_command");
-      queue_.Add(new RunStoryCommandCall(tag_string, command_runner, story_id_,
-                                         std::move(command),
-                                         did_execute_command->Completer()));
+      queue_.Add(new RunStoryCommandCall(
+          tag_string, command_runner, story_storage_.get(), story_id_,
+          std::move(command), did_execute_command->Completer()));
       auto did_execute_command_callback = did_execute_command->Then(
           [this](fuchsia::modular::ExecuteResult result) {
             // Check for error for this command. If there was an error, abort
@@ -114,16 +134,18 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
   const fidl::StringPtr story_id_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
+  std::unique_ptr<StoryStorage> story_storage_;
+
   // All commands must be run in order so we use a queue.
   OperationQueue queue_;
 };
 
 DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
-    OperationContainerAccessor container_accessor,
+    SessionStorage* const session_storage,
     std::map<fuchsia::modular::StoryCommand::Tag,
              std::unique_ptr<CommandRunner>>
         command_runners)
-    : container_accessor_(std::move(container_accessor)),
+    : session_storage_(session_storage),
       command_runners_(std::move(command_runners)),
       story_command_tag_strings_{
           {fuchsia::modular::StoryCommand::Tag::kAddMod,
@@ -135,7 +157,9 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
           {fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
            "StoryCommand::SetLinkValue"},
           {fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-           "StoryCommand::SetFocusState"}} {}
+           "StoryCommand::SetFocusState"}} {
+  FXL_DCHECK(session_storage_ != nullptr);
+}
 
 DispatchStoryCommandExecutor::~DispatchStoryCommandExecutor() {}
 
@@ -143,15 +167,7 @@ void DispatchStoryCommandExecutor::ExecuteCommands(
     fidl::StringPtr story_id,
     std::vector<fuchsia::modular::StoryCommand> commands,
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
-  OperationContainer* const container = container_accessor_(story_id);
-  if (!container) {
-    fuchsia::modular::ExecuteResult result;
-    result.status = fuchsia::modular::ExecuteStatus::INVALID_STORY_ID;
-    done(result);
-    return;
-  }
-
-  container->Add(new ExecuteStoryCommandsCall(
+  operation_queues_[story_id].Add(new ExecuteStoryCommandsCall(
       this, std::move(story_id), std::move(commands), std::move(done)));
 }
 

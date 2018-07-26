@@ -16,11 +16,13 @@ namespace modular {
 
 class UpdateModCommandRunner : public CommandRunner {
  public:
-  UpdateModCommandRunner(SessionStorage* const session_storage);
+  UpdateModCommandRunner();
   ~UpdateModCommandRunner();
 
   void Execute(
-      fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+      fidl::StringPtr story_id,
+      StoryStorage* story_storage,
+      fuchsia::modular::StoryCommand command,
       std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:

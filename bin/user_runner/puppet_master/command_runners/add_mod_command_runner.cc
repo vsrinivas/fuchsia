@@ -8,13 +8,12 @@
 
 namespace modular {
 
-AddModCommandRunner::AddModCommandRunner(SessionStorage* const session_storage)
-    : CommandRunner(session_storage) {}
-
+AddModCommandRunner::AddModCommandRunner() = default;
 AddModCommandRunner::~AddModCommandRunner() = default;
 
 void AddModCommandRunner::Execute(
-    fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+    fidl::StringPtr story_id, StoryStorage* const story_storage,
+    fuchsia::modular::StoryCommand command,
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_add_mod());
 }

@@ -20,9 +20,8 @@ class UpdateModCommandRunnerTest : public testing::TestWithLedger {
     return std::make_unique<SessionStorage>(ledger_client(), page_id);
   }
 
-  std::unique_ptr<UpdateModCommandRunner> MakeRunner(
-      SessionStorage* const storage) {
-    return std::make_unique<UpdateModCommandRunner>(storage);
+  std::unique_ptr<UpdateModCommandRunner> MakeRunner() {
+    return std::make_unique<UpdateModCommandRunner>();
   }
 
   std::unique_ptr<StoryStorage> GetStoryStorage(SessionStorage* const storage,
@@ -146,7 +145,7 @@ class UpdateModCommandRunnerTest : public testing::TestWithLedger {
 // parameters.
 TEST_F(UpdateModCommandRunnerTest, Execute) {
   auto storage = MakeStorage("page");
-  auto runner = MakeRunner(storage.get());
+  auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id);
   bool done{};
@@ -177,7 +176,7 @@ TEST_F(UpdateModCommandRunnerTest, Execute) {
   fuchsia::modular::StoryCommand command;
   command.set_update_mod(std::move(update_mod));
 
-  runner->Execute(story_id, std::move(command),
+  runner->Execute(story_id, story_storage.get(), std::move(command),
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
@@ -196,7 +195,7 @@ TEST_F(UpdateModCommandRunnerTest, Execute) {
 // Sets a parameter of invalid type in the command.
 TEST_F(UpdateModCommandRunnerTest, ExecuteUnsupportedParameterType) {
   auto storage = MakeStorage("page");
-  auto runner = MakeRunner(storage.get());
+  auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id);
   bool done{};
@@ -223,7 +222,7 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteUnsupportedParameterType) {
   fuchsia::modular::StoryCommand command;
   command.set_update_mod(std::move(update_mod));
 
-  runner->Execute(story_id, std::move(command),
+  runner->Execute(story_id, story_storage.get(), std::move(command),
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
                               result.status);
@@ -239,27 +238,9 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteUnsupportedParameterType) {
   EXPECT_EQ(link2_value, "10");
 }
 
-TEST_F(UpdateModCommandRunnerTest, ExecuteInvalidStory) {
-  auto storage = MakeStorage("page");
-  auto runner = MakeRunner(storage.get());
-
-  bool done{};
-  fuchsia::modular::UpdateMod update_mod;
-  fuchsia::modular::StoryCommand command;
-  command.set_update_mod(std::move(update_mod));
-  runner->Execute("fake", std::move(command),
-                  [&](fuchsia::modular::ExecuteResult result) {
-                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_STORY_ID,
-                              result.status);
-                    done = true;
-                  });
-
-  RunLoopUntil([&] { return done; });
-};
-
 TEST_F(UpdateModCommandRunnerTest, ExecuteNoModuleData) {
   auto storage = MakeStorage("page");
-  auto runner = MakeRunner(storage.get());
+  auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id);
   bool done{};
@@ -272,7 +253,7 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteNoModuleData) {
   fuchsia::modular::StoryCommand command;
   command.set_update_mod(std::move(update_mod));
 
-  runner->Execute(story_id, std::move(command),
+  runner->Execute(story_id, story_storage.get(), std::move(command),
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
                               result.status);
