@@ -22,13 +22,14 @@ using paver::Flags;
 void PrintUsage() {
     ERROR("install-disk-image <command> [options...]\n");
     ERROR("Commands:\n");
-    ERROR("  install-fvm     : Install a sparse FVM to the device\n");
-    ERROR("  install-efi     : Install an EFI partition to the device\n");
-    ERROR("  install-kernc   : Install a KERN-C CrOS partition to the device\n");
-    ERROR("  install-zircona : Install a ZIRCON-A partition to the device\n");
-    ERROR("  install-zirconb : Install a ZIRCON-B partition to the device\n");
-    ERROR("  install-zirconr : Install a ZIRCON-R partition to the device\n");
-    ERROR("  wipe            : Clean up the install disk\n");
+    ERROR("  install-bootloader : Install a BOOTLOADER partition to the device\n");
+    ERROR("  install-efi        : Install an EFI partition to the device\n");
+    ERROR("  install-kernc      : Install a KERN-C CrOS partition to the device\n");
+    ERROR("  install-zircona    : Install a ZIRCON-A partition to the device\n");
+    ERROR("  install-zirconb    : Install a ZIRCON-B partition to the device\n");
+    ERROR("  install-zirconr    : Install a ZIRCON-R partition to the device\n");
+    ERROR("  install-fvm        : Install a sparse FVM to the device\n");
+    ERROR("  wipe               : Clean up the install disk\n");
     ERROR("Options:\n");
     ERROR("  --file <file>: Read from FILE instead of stdin\n");
     ERROR("  --force: Install partition even if inappropriate for the device\n");
@@ -48,7 +49,9 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     }
     SHIFT_ARGS;
 
-    if (!strcmp(argv[0], "install-efi")) {
+    if (!strcmp(argv[0], "install-bootloader")) {
+        flags->cmd = Command::kInstallBootloader;
+    } else if (!strcmp(argv[0], "install-efi")) {
         flags->cmd = Command::kInstallEfi;
     } else if (!strcmp(argv[0], "install-kernc")) {
         flags->cmd = Command::kInstallKernc;

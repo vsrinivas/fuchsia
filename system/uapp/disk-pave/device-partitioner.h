@@ -17,6 +17,7 @@
 namespace paver {
 
 enum class Partition {
+    kBootloader,
     kKernelC,
     kEfi,
     kZirconA,

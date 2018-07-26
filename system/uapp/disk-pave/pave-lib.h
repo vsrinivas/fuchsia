@@ -15,6 +15,7 @@ namespace paver {
 // List of commands supported by paver utility.
 enum class Command {
     kUnknown,
+    kInstallBootloader,
     kInstallEfi,
     kInstallKernc,
     kInstallZirconA,

@@ -802,6 +802,15 @@ zx_status_t RealMain(Flags flags) {
     const bool is_cros_device = device_partitioner->IsCros();
 
     switch (flags.cmd) {
+    case Command::kInstallBootloader:
+        if (flags.arch == Arch::X64 && !flags.force) {
+            LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
+            Drain(fbl::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
+                             Partition::kBootloader, flags.arch);
+
     case Command::kInstallEfi:
         if ((is_cros_device || flags.arch == Arch::ARM64) && !flags.force) {
             LOG("SKIPPING EFI install on ARM64/CROS device, pass --force if desired.\n");
