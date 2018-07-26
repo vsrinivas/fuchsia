@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/thermal" ]
+        "dev": [ "class/thermal", "misc/sysinfo" ]
     }
 }
