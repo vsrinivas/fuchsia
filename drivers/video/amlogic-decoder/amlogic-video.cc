@@ -528,13 +528,6 @@ void AmlogicVideo::InitializeInterrupts() {
             "AmlogicVideo::InitializeInterrupts() zx_interrupt_wait() failed "
             "status: %d\n",
             status);
-        if (status == ZX_ERR_BAD_STATE) {
-          // TODO(dustingreen): We should be able to remove this after fix for
-          // ZX-2268.  Currently this is potentially useful to repro for
-          // ZX-2268.
-          DECODE_ERROR("status == ZX_ERR_BAD_STATE - trying to continue\n");
-          continue;
-        }
         return;
       }
       std::lock_guard<std::mutex> lock(video_decoder_lock_);
