@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 package("escher_tests") {
   testonly = true
@@ -20,7 +21,10 @@ package("escher_tests") {
     },
   ]
 
-  resources = [
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+  resources += [
     {
       path = rebase_path("shaders/model_renderer/main.vert")
       dest = "shaders/model_renderer/main.vert"
