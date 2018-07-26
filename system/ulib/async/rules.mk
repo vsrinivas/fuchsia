@@ -13,6 +13,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_NAME := async
 
 MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/ops.c \
@@ -42,6 +43,7 @@ MODULE := $(LOCAL_DIR).cpp
 MODULE_NAME := async-cpp
 
 MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/receiver.cpp \
@@ -78,6 +80,7 @@ MODULE := $(LOCAL_DIR).default
 MODULE_NAME := async-default
 
 MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/default.c
