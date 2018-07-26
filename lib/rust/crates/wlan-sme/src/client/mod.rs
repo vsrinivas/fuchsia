@@ -80,6 +80,7 @@ pub struct ClientSme<T: Tokens> {
     device_info: Arc<DeviceInfo>,
 }
 
+#[derive(Debug)]
 pub enum ConnectResult {
     Success,
     Canceled,

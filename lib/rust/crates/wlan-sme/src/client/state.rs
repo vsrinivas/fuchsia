@@ -42,6 +42,13 @@ impl Rsna {
     }
 }
 
+#[derive(Debug)]
+pub enum RsnaStatus {
+    Established,
+    Failed(ConnectResult),
+    Unchanged,
+}
+
 pub enum State<T: Tokens> {
     Idle,
     Joining {
@@ -146,11 +153,11 @@ impl<T: Tokens> State<T> {
                     let cmd = ConnectCommand{ bss, token, rsna };
                     to_associating_state(cmd, mlme_sink)
                 },
-                MlmeEvent::DeauthenticateInd{ .. } => {
-                    // TODO(hahnr): Evaluate reason code.
-                    // Not all authentication and key exchange methods used in an RSNA are able to
-                    // detect if bad credentials were used. Often, the Authenticator will issue a
-                    // Deauthentication instead with a corresponding reason code.
+                MlmeEvent::DeauthenticateInd{ ind } => {
+                    if let LinkState::EstablishingRsna(token, _) = link_state {
+                        let connect_result = deauth_code_to_connect_result(ind.reason_code);
+                        report_connect_finished(token, user_sink, connect_result);
+                    }
                     State::Idle
                 },
                 MlmeEvent::SignalReport{ ind } => {
@@ -160,12 +167,35 @@ impl<T: Tokens> State<T> {
                         link_state,
                     }
                 },
-                MlmeEvent::EapolInd{ ref ind } if bss.rsn.is_some() => {
-                    State::Associated {
-                        bss,
-                        last_rssi,
-                        link_state: process_eapol_ind(mlme_sink, user_sink, link_state, &ind),
-                    }
+                MlmeEvent::EapolInd{ ref ind } if bss.rsn.is_some() => match link_state {
+                    LinkState::EstablishingRsna(token, mut rsna) => {
+                        match process_eapol_ind(mlme_sink, &mut rsna, &ind) {
+                            RsnaStatus::Established => {
+                                report_connect_finished(token, user_sink, ConnectResult::Success);
+                                let link_state = LinkState::LinkUp(Some(rsna));
+                                State::Associated { bss, last_rssi, link_state }
+                            },
+                            RsnaStatus::Failed(result) => {
+                                report_connect_finished(token, user_sink, result);
+                                to_deauthenticating_state(bss, None, mlme_sink)
+                            },
+                            RsnaStatus::Unchanged => {
+                                let link_state = LinkState::EstablishingRsna(token, rsna);
+                                State::Associated { bss, last_rssi, link_state }
+                            },
+                        }
+                    },
+                    LinkState::LinkUp(Some(mut rsna)) => {
+                        match process_eapol_ind(mlme_sink, &mut rsna, &ind) {
+                            RsnaStatus::Unchanged => {},
+                            // Once re-keying is supported, the RSNA can fail in LinkUp as well
+                            // and cause deauthentication.
+                            s => eprintln!("unexpected RsnaStatus in LinkUp state: {:?}", s),
+                        };
+                        let link_state = LinkState::LinkUp(Some(rsna));
+                        State::Associated { bss, last_rssi, link_state }
+                    },
+                    _ => panic!("expected Link to carry RSNA because bss.rsn is present"),
                 }
                 _ => State::Associated{ bss, last_rssi, link_state }
             },
@@ -234,18 +264,17 @@ impl<T: Tokens> State<T> {
     }
 }
 
-fn process_eapol_ind<T>(mlme_sink: &MlmeSink, user_sink: &UserSink<T>,
-                        link_state: LinkState<T>, ind: &fidl_mlme::EapolIndication)
-    -> LinkState<T>
-    where T: Tokens
-{
-    let link_was_up = if let LinkState::LinkUp(_) = &link_state { true } else { false };
-    let (mut token, mut rsna) = match link_state {
-        LinkState::EstablishingRsna(token, rsna) => (token, rsna),
-        LinkState::LinkUp(Some(rsna)) => (None, rsna),
-        LinkState::LinkUp(None) => return LinkState::LinkUp(None),
-    };
+fn deauth_code_to_connect_result(reason_code: fidl_mlme::ReasonCode) -> ConnectResult {
+    match reason_code {
+        fidl_mlme::ReasonCode::InvalidAuthentication
+        | fidl_mlme::ReasonCode::Ieee8021XAuthFailed => ConnectResult::BadCredentials,
+        _ => ConnectResult::Failed
+    }
+}
 
+fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::EapolIndication)
+    -> RsnaStatus
+{
     let mic_len = get_mic_size(&rsna.s_rsne);
     let eapol_pdu = &ind.data[..];
     let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_len).to_full_result() {
@@ -280,13 +309,9 @@ fn process_eapol_ind<T>(mlme_sink: &MlmeSink, user_sink: &UserSink<T>,
                     // Then we should rework this part.
                     SecAssocUpdate::Status(status) => match status {
                         // ESS Security Association was successfully established. Link is now up.
-                        SecAssocStatus::EssSaEstablished => {
-                            report_connect_finished(token.take(), user_sink, ConnectResult::Success);
-                            return LinkState::LinkUp(Some(rsna));
-                        },
+                        SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
                         SecAssocStatus::WrongPassword => {
-                            // TODO(hahnr): Report wrong password further up the stack and send
-                            // deauthentication notification to AP.
+                            return RsnaStatus::Failed(ConnectResult::BadCredentials);
                         }
                     },
                 }
@@ -295,11 +320,7 @@ fn process_eapol_ind<T>(mlme_sink: &MlmeSink, user_sink: &UserSink<T>,
         };
     }
 
-    if link_was_up {
-        LinkState::LinkUp(Some(rsna))
-    } else {
-        LinkState::EstablishingRsna(token, rsna)
-    }
+    RsnaStatus::Unchanged
 }
 
 fn get_mic_size(s_rsne: &Rsne) -> u16
