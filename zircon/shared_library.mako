@@ -93,9 +93,6 @@ if (current_toolchain != shlib_toolchain) {
       ":${data.name}_copy_abi_lib",
       ":${data.name}_copy_impl_lib",
       ":${data.name}_copy_unstripped_lib",
-      % for dep in sorted(data.deps):
-      "../${dep}",
-      % endfor
       % for dep in sorted(data.fidl_deps):
       "../../fidl/${dep}:${dep}_c",
       % endfor
@@ -104,6 +101,9 @@ if (current_toolchain != shlib_toolchain) {
     public_configs = [
       ":${data.name}_config",
       ":${data.name}_lib_config",
+      % for dep in sorted(data.deps):
+      "../${dep}:${dep}_config",
+      % endfor
     ]
 
     data_deps = [
