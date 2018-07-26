@@ -5,22 +5,33 @@
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 
 #include <algorithm>
+#include <unordered_map>
 
+#include <lib/fxl/strings/string_printf.h>
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
 namespace {
 
 template <typename Value>
-bool CopyArrayToVector(const Value& value, std::vector<std::string>* vector) {
-  if (!value.IsArray())
-    return false;
-  for (const auto& entry : value.GetArray()) {
-    if (!entry.IsString())
-      return false;
-    vector->push_back(entry.GetString());
+void CopyArrayToVector(const std::string& name, const Value& value,
+                       json::JSONParser* json_parser,
+                       std::vector<std::string>* vec) {
+  if (!value.IsArray()) {
+    json_parser->ReportError(fxl::StringPrintf(
+        "'%s' in sandbox is not an array.",
+        name.c_str()));
+    return;
   }
-  return true;
+  for (const auto& entry : value.GetArray()) {
+    if (!entry.IsString()) {
+      json_parser->ReportError(fxl::StringPrintf(
+          "Entry for '%s' in sandbox is not a string.", name.c_str()));
+      return;
+    }
+    vec->push_back(entry.GetString());
+  }
 }
 
 }  // namespace
@@ -31,47 +42,36 @@ constexpr char kPkgfs[] = "pkgfs";
 constexpr char kFeatures[] = "features";
 constexpr char kBoot[] = "boot";
 
-SandboxMetadata::SandboxMetadata() = default;
-
-SandboxMetadata::~SandboxMetadata() = default;
-
-bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
+bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
+                            json::JSONParser* json_parser) {
   dev_.clear();
+  system_.clear();
+  pkgfs_.clear();
   features_.clear();
+  boot_.clear();
   null_ = true;
 
   if (!sandbox_value.IsObject()) {
+    json_parser->ReportError("Sandbox is not an object.");
     return false;
   }
 
-  auto dev = sandbox_value.FindMember(kDev);
-  if (dev != sandbox_value.MemberEnd()) {
-    if (!CopyArrayToVector(dev->value, &dev_))
-      return false;
-  }
-
-  auto system = sandbox_value.FindMember(kSystem);
-  if (system != sandbox_value.MemberEnd()) {
-    if (!CopyArrayToVector(system->value, &system_))
-      return false;
-  }
-
-  auto pkgfs = sandbox_value.FindMember(kPkgfs);
-  if (pkgfs != sandbox_value.MemberEnd()) {
-    if (!CopyArrayToVector(pkgfs->value, &pkgfs_))
-      return false;
-  }
-
-  auto features = sandbox_value.FindMember(kFeatures);
-  if (features != sandbox_value.MemberEnd()) {
-    if (!CopyArrayToVector(features->value, &features_))
-      return false;
-  }
-
-  auto boot = sandbox_value.FindMember(kBoot);
-  if (boot != sandbox_value.MemberEnd()) {
-    if (!CopyArrayToVector(boot->value, &boot_))
-      return false;
+  const std::unordered_map<std::string, std::vector<std::string>*>
+      name_to_vec = {{kDev, &dev_},
+                     {kSystem, &system_},
+                     {kPkgfs, &pkgfs_},
+                     {kFeatures, &features_},
+                     {kBoot, &boot_}};
+  for (const auto& entry : name_to_vec) {
+    const std::string& name = entry.first;
+    auto* vec = entry.second;
+    auto member = sandbox_value.FindMember(name);
+    if (member != sandbox_value.MemberEnd()) {
+      CopyArrayToVector(name, member->value, json_parser, vec);
+      if (json_parser->HasError()) {
+        return false;
+      }
+    }
   }
 
   null_ = false;

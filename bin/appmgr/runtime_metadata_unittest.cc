@@ -4,23 +4,64 @@
 
 #include "garnet/bin/appmgr/runtime_metadata.h"
 
+#include <string>
+
+#include "garnet/lib/json/json_parser.h"
 #include "gtest/gtest.h"
 
 namespace component {
 namespace {
 
-TEST(RuntimeMetadata, Parse) {
-  RuntimeMetadata runtime;
-  EXPECT_FALSE(runtime.ParseFromData(""));
-  EXPECT_TRUE(runtime.ParseFromData("{}"));
-  EXPECT_TRUE(runtime.IsNull());
+class RuntimeMetadataTest : public ::testing::Test {
+ protected:
+  void ExpectFailedParse(const std::string& json,
+                         const std::string& expected_error) {
+    std::string error;
+    RuntimeMetadata runtime;
+    EXPECT_FALSE(ParseFrom(&runtime, json, &error));
+    EXPECT_TRUE(runtime.IsNull());
+    EXPECT_EQ(error, expected_error);
+  }
 
-  EXPECT_FALSE(runtime.ParseFromData(R"JSON({ "runner": 10 })JSON"));
-  EXPECT_FALSE(runtime.ParseFromData(R"JSON({ "runner": {} })JSON"));
+  bool ParseFrom(RuntimeMetadata* runtime, const std::string& json,
+                 std::string* error) {
+    EXPECT_TRUE(runtime->IsNull());
+    json::JSONParser parser;
+    const bool ret = runtime->ParseFromString(json, "test_file", &parser);
+    if (parser.HasError()) {
+      *error = parser.error_str();
+    }
+    return ret;
+  }
+};
 
-  EXPECT_TRUE(runtime.ParseFromData(R"JSON({ "runner": "dart_runner" })JSON"));
-  EXPECT_FALSE(runtime.IsNull());
-  EXPECT_EQ("dart_runner", runtime.runner());
+TEST_F(RuntimeMetadataTest, Parse) {
+  // empty
+  {
+    RuntimeMetadata runtime;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&runtime, R"JSON({})JSON", &error));
+    EXPECT_TRUE(runtime.IsNull());
+    EXPECT_EQ(runtime.runner(), "");
+  }
+
+  // runner
+  {
+    RuntimeMetadata runtime;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&runtime,
+                          R"JSON({ "runner": "dart_runner" })JSON",
+                          &error));
+    EXPECT_FALSE(runtime.IsNull());
+    EXPECT_EQ("dart_runner", runtime.runner());
+  }
+}
+
+TEST_F(RuntimeMetadataTest, ParseWithErrors) {
+  ExpectFailedParse(R"JSON({,,,})JSON",
+                    "test_file:1:2: Missing a name for object member.");
+  ExpectFailedParse(R"JSON({ "runner": 10 })JSON",
+                    "test_file: 'runner' is not a string.");
 }
 
 }  // namespace

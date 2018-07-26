@@ -4,29 +4,28 @@
 
 #include "garnet/bin/appmgr/runtime_metadata.h"
 
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
 
 constexpr char kRunner[] = "runner";
 
-RuntimeMetadata::RuntimeMetadata() = default;
-
-RuntimeMetadata::~RuntimeMetadata() = default;
-
-bool RuntimeMetadata::ParseFromData(const std::string& data) {
+bool RuntimeMetadata::ParseFromString(const std::string& data,
+                                      const std::string& file,
+                                      json::JSONParser* json_parser) {
   runner_.clear();
   null_ = true;
 
-  rapidjson::Document document;
-  document.Parse(data);
-  if (document.HasParseError()) {
+  rapidjson::Document document = json_parser->ParseFromString(data, file);
+  if (json_parser->HasError()) {
     return false;
   }
-  return ParseFromDocument(document);
+  return ParseFromDocument(document, json_parser);
 }
 
-bool RuntimeMetadata::ParseFromDocument(const rapidjson::Document& document) {
+bool RuntimeMetadata::ParseFromDocument(const rapidjson::Document& document,
+                                        json::JSONParser* json_parser) {
   runner_.clear();
   null_ = true;
 
@@ -36,6 +35,7 @@ bool RuntimeMetadata::ParseFromDocument(const rapidjson::Document& document) {
     return true;
   }
   if (!runner->value.IsString()) {
+    json_parser->ReportError("'runner' is not a string.");
     return false;
   }
   runner_ = runner->value.GetString();

@@ -7,20 +7,21 @@
 
 #include <string>
 
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
 
-// TODO(geb): Use JSONParser to hold errors.
 class RuntimeMetadata {
  public:
-  RuntimeMetadata();
-  ~RuntimeMetadata();
-
-  // Returns false if parsing failed. If a config is missing the runtime but
+  // Returns true if parsing succeeded. If a config is missing the runtime but
   // otherwise there are no errors, parsing succeeds and IsNull() is true.
-  bool ParseFromData(const std::string& data);
-  bool ParseFromDocument(const rapidjson::Document& document);
+  // |json_parser| is used to report any errors.
+  bool ParseFromString(const std::string& data,
+                       const std::string& file,
+                       json::JSONParser* json_parser);
+  bool ParseFromDocument(const rapidjson::Document& document,
+                         json::JSONParser* json_parser);
 
   bool IsNull() const { return null_; }
   const std::string& runner() const { return runner_; }

@@ -37,9 +37,7 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file) {
     return false;
   }
   ParseSandboxMetadata(document);
-  if (!runtime_meta_.ParseFromDocument(document)) {
-    json_parser_.ReportError("Invalid runtime metadata.");
-  }
+  runtime_meta_.ParseFromDocument(document, &json_parser_);
   ParseProgramMetadata(document);
   return !HasError();
 }
@@ -114,10 +112,7 @@ void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document) {
     return;
   }
 
-  if (!sandbox_meta_.Parse(sandbox->value)) {
-    json_parser_.ReportError("Invalid sandbox metadata.");
-    return;
-  }
+  sandbox_meta_.Parse(sandbox->value, &json_parser_);
 }
 
 void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document) {
@@ -130,11 +125,7 @@ void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document) {
     json_parser_.ReportError("'program' is not an object.");
     return;
   }
-
-  if (!program_meta_.Parse(program->value)) {
-    json_parser_.ReportError("Invalid program metadata.");
-    return;
-  }
+  program_meta_.Parse(program->value, &json_parser_);
 }
 
 }  // namespace component

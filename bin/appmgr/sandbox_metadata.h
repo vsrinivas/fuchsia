@@ -8,17 +8,18 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
 
-// TODO(geb): Use JSONParser to hold errors.
 class SandboxMetadata {
  public:
-  SandboxMetadata();
-  ~SandboxMetadata();
+  // Returns true if parsing succeeded. |json_parser| is used to report any
+  // errors.
+  bool Parse(const rapidjson::Value& sandbox_value,
+             json::JSONParser* json_parser);
 
-  bool Parse(const rapidjson::Value& sandbox_value);
   bool HasFeature(const std::string& feature) const;
   void AddFeature(std::string feature);
 

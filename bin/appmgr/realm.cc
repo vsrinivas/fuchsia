@@ -26,6 +26,7 @@
 #include "garnet/bin/appmgr/scheme_map.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/bin/appmgr/util.h"
+#include "garnet/lib/json/json_parser.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/io/fd.h"
@@ -617,14 +618,16 @@ void Realm::CreateComponentFromPackage(
     // If meta/*.cmx has runtime data, get it.
     if (!cmx.runtime_meta().IsNull()) {
       runtime = cmx.runtime_meta();
-    } else if (!runtime.ParseFromData(runtime_data)) {
-      // If meta/*.cmx has no runtime data, fallback to the *package*'s
-      // meta/runtime.
-      FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
-                     << launch_info.url;
-      component_request.SetReturnValues(kComponentCreationFailed,
-                                        TerminationReason::INTERNAL_ERROR);
-      return;
+    } else {
+      json::JSONParser json_parser;
+      if (!runtime.ParseFromString(runtime_data, kDeprecatedRuntimePath,
+                                   &json_parser)) {
+        FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
+                       << launch_info.url << ":\n" << json_parser.error_str();
+        component_request.SetReturnValues(kComponentCreationFailed,
+                                          TerminationReason::INTERNAL_ERROR);
+        return;
+      }
     }
 
     fuchsia::sys::Package inner_package;

@@ -8,20 +8,18 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
 
 // Class to parse the "program" attribute in a component manifest.
-// TODO(geb): Use JSONParser to hold errors.
 class ProgramMetadata {
  public:
-  ProgramMetadata();
-  ~ProgramMetadata();
-
   // Takes in a parsed value assumed to be corresponding to the "program"
   // attribute. Returns false if parsing failed.
-  bool Parse(const rapidjson::Value& program_value);
+  bool Parse(const rapidjson::Value& program_value,
+             json::JSONParser* json_parser);
 
   bool IsNull() const { return null_; }
   // Returns the "binary" attribute. Only applicable if this program is run as

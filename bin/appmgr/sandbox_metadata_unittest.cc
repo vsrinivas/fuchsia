@@ -4,45 +4,117 @@
 
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 
+#include <string>
+
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
 namespace {
 
-TEST(SandboxMetadata, Parse) {
-  rapidjson::Document dev_document;
-  dev_document.SetObject();
-  rapidjson::Document::AllocatorType& dev_allocator =
-      dev_document.GetAllocator();
-  rapidjson::Value dev_array(rapidjson::kArrayType);
-  dev_array.PushBack("class/input", dev_allocator);
-  dev_document.AddMember("dev", dev_array, dev_allocator);
-  SandboxMetadata dev_sandbox;
-  EXPECT_TRUE(dev_sandbox.IsNull());
-  EXPECT_TRUE(dev_sandbox.Parse(dev_document));
-  EXPECT_FALSE(dev_sandbox.IsNull());
-  EXPECT_EQ(1u, dev_sandbox.dev().size());
-  EXPECT_EQ(0u, dev_sandbox.features().size());
-  EXPECT_EQ("class/input", dev_sandbox.dev()[0]);
+class SandboxMetadataTest : public ::testing::Test {
+ protected:
+  void ExpectFailedParse(const std::string& json,
+                         const std::string& expected_error) {
+    std::string error;
+    SandboxMetadata sandbox;
+    EXPECT_FALSE(ParseFrom(&sandbox, json, &error));
+    EXPECT_TRUE(sandbox.IsNull());
+    EXPECT_EQ(error, expected_error);
+  }
 
-  rapidjson::Document feat_document;
-  feat_document.SetObject();
-  rapidjson::Document::AllocatorType& feat_allocator =
-      feat_document.GetAllocator();
-  rapidjson::Value feat_array(rapidjson::kArrayType);
-  feat_array.PushBack("vulkan", feat_allocator);
-  feat_document.AddMember("features", feat_array, feat_allocator);
-  SandboxMetadata feat_sandbox;
-  EXPECT_TRUE(feat_sandbox.IsNull());
-  EXPECT_TRUE(feat_sandbox.Parse(feat_document));
-  EXPECT_FALSE(feat_sandbox.IsNull());
-  EXPECT_EQ(0u, feat_sandbox.dev().size());
-  EXPECT_EQ(1u, feat_sandbox.features().size());
-  EXPECT_EQ("vulkan", feat_sandbox.features()[0]);
-  EXPECT_TRUE(feat_sandbox.HasFeature("vulkan"));
-  EXPECT_FALSE(feat_sandbox.HasFeature("banana"));
+  bool ParseFrom(SandboxMetadata* sandbox, const std::string& json,
+                 std::string* error) {
+    json::JSONParser parser;
+    rapidjson::Document document = parser.ParseFromString(json, "test_file");
+    EXPECT_FALSE(parser.HasError());
+    EXPECT_TRUE(sandbox->IsNull());
+    const bool ret = sandbox->Parse(document, &parser);
+    if (parser.HasError()) {
+      *error = parser.error_str();
+    }
+    return ret;
+  }
+};
+
+TEST_F(SandboxMetadataTest, Parse) {
+  // empty
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({})JSON", &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+  }
+
+  // dev
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "dev": [ "class/input" ] })JSON",
+                          &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
+  }
+
+  // system
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "system": [ "data" ] })JSON",
+                          &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.system(), ::testing::ElementsAre("data"));
+  }
+
+  // pkgfs
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "pkgfs": [ "packages" ] })JSON",
+                          &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.pkgfs(), ::testing::ElementsAre("packages"));
+  }
+
+  // features
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&sandbox,
+                          R"JSON({ "features": [ "vulkan", "shell" ] })JSON",
+                          &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.features(), ::testing::ElementsAre("vulkan", "shell"));
+    EXPECT_TRUE(sandbox.HasFeature("vulkan"));
+    EXPECT_TRUE(sandbox.HasFeature("shell"));
+    EXPECT_FALSE(sandbox.HasFeature("banana"));
+  }
+
+  // boot
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "boot": [ "log" ] })JSON",
+                          &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.boot(), ::testing::ElementsAre("log"));
+  }
+}
+
+TEST_F(SandboxMetadataTest, ParseWithErrors) {
+  ExpectFailedParse(R"JSON({ "dev": 3 })JSON",
+                    "test_file: 'dev' in sandbox is not an array.");
+  ExpectFailedParse(R"JSON({ "dev": [ "class/input", 3 ] })JSON",
+                    "test_file: Entry for 'dev' in sandbox is not a string.");
 }
 
 }  // namespace

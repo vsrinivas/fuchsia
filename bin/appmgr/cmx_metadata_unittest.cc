@@ -90,11 +90,11 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON",
                     "$0: 'sandbox' is not an object.");
   ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON",
-                    "$0: Invalid sandbox metadata.");
+                    "$0: 'dev' in sandbox is not an array.");
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON",
-                    "$0: Invalid runtime metadata.");
+                    "$0: 'runner' is not a string.");
   ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
-                    "$0: Invalid program metadata.");
+                    "$0: 'binary' in program is not a string.");
 }
 
 TEST_F(CmxMetadataTest, GetCmxPathFromFullPackagePath) {

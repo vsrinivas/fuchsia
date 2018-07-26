@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/json/json_parser.h"
 #include "gtest/gtest.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
@@ -28,7 +29,8 @@ TEST(NamespaceBuilder, Control) {
   document.AddMember("features", feat_array, allocator);
   SandboxMetadata sandbox;
 
-  EXPECT_TRUE(sandbox.Parse(document));
+  json::JSONParser parser;
+  EXPECT_TRUE(sandbox.Parse(document, &parser));
 
   NamespaceBuilder builder;
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
@@ -70,7 +72,8 @@ TEST(NamespaceBuilder, Shell) {
   document.AddMember("features", feat_array, allocator);
   SandboxMetadata sandbox;
 
-  EXPECT_TRUE(sandbox.Parse(document));
+  json::JSONParser parser;
+  EXPECT_TRUE(sandbox.Parse(document, &parser));
 
   NamespaceBuilder builder;
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
