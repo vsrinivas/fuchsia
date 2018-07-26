@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TEST_HELPERS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TEST_HELPERS_H_
 
 #include <algorithm>
 #include <iostream>
@@ -18,9 +19,7 @@ namespace common {
 // equality. If the contents are not equal, this logs a GTEST-style error
 // message to stdout. Meant to be used from unit tests.
 template <class InputIt1, class InputIt2>
-bool ContainersEqual(InputIt1 first1,
-                     InputIt1 last1,
-                     InputIt2 first2,
+bool ContainersEqual(InputIt1 first1, InputIt1 last1, InputIt2 first2,
                      InputIt2 last2) {
   if (std::equal(first1, last1, first2, last2))
     return true;
@@ -42,8 +41,7 @@ bool ContainersEqual(const Container1& c1, const Container2& c2) {
 }
 
 template <class Container1>
-bool ContainersEqual(const Container1& c1,
-                     const uint8_t* bytes,
+bool ContainersEqual(const Container1& c1, const uint8_t* bytes,
                      size_t num_bytes) {
   return ContainersEqual(c1.begin(), c1.end(), bytes, bytes + num_bytes);
 }
@@ -55,14 +53,11 @@ common::MutableByteBufferPtr NewBuffer(T... bytes) {
       std::forward<T>(bytes)...);
 }
 
-// Returns the Lower/Upper bits of a uint16_t
-constexpr uint8_t UpperBits(const uint16_t x) {
-  return x >> 8;
-}
-
-constexpr uint8_t LowerBits(const uint16_t x) {
-  return x & 0x00FF;
-}
+// Returns the Upper/Lower bits of a uint16_t
+constexpr uint8_t UpperBits(const uint16_t x) { return x >> 8; }
+constexpr uint8_t LowerBits(const uint16_t x) { return x & 0x00FF; }
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TEST_HELPERS_H_
