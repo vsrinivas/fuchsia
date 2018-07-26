@@ -8,10 +8,11 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -113,7 +114,11 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 
  private:
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override { continue_(json); }
+  void Notify(fuchsia::mem::Buffer value) override {
+    std::string json;
+    FXL_CHECK(fsl::StringFromVmo(value, &json));
+    continue_(json);
+  }
 
   fidl::Binding<fuchsia::modular::LinkWatcher> binding_;
 

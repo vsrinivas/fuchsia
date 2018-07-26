@@ -11,6 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/testing/reporting.h"
@@ -70,6 +71,14 @@ class TestApp {
   }
 
  private:
+  void SetLink(fuchsia::modular::Link* link,
+               fidl::VectorPtr<fidl::StringPtr> path,
+               const std::string& value) {
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(value, &vmo));
+    link->Set(std::move(path), std::move(vmo).ToTransport());
+  }
+
   TestPoint second_child_module_controller_closed_{
       "Second child module controller closed"};
 
@@ -83,9 +92,9 @@ class TestApp {
     // Internally, the child module tracks how many times its instance was
     // started.
     module_host_->module_context()->GetLink("module1link", link1_.NewRequest());
-    link1_->Set(nullptr, "1");
+    SetLink(link1_.get(), nullptr, "1");
     module_host_->module_context()->GetLink("module2link", link2_.NewRequest());
-    link2_->Set(nullptr, "2");
+    SetLink(link2_.get(), nullptr, "2");
 
     StartModuleWithLinkMapping(module_host_->module_context(), "module1link",
                                child_module_.NewRequest());

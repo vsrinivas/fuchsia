@@ -5,10 +5,11 @@
 #include <memory>
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
@@ -22,6 +23,13 @@
 using modular::testing::TestPoint;
 
 namespace {
+
+void SetLink(fuchsia::modular::Link* link,
+             fidl::VectorPtr<fidl::StringPtr> path, const std::string& value) {
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString(value, &vmo));
+  link->Set(std::move(path), std::move(vmo).ToTransport());
+}
 
 // A simple link watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
@@ -43,7 +51,9 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 
  private:
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
+  void Notify(fuchsia::mem::Buffer value) override {
+    std::string json;
+    FXL_CHECK(fsl::StringFromVmo(value, &json));
     FXL_LOG(INFO) << "fuchsia::modular::LinkWatcher: " << json;
     continue_(json);
   }
@@ -115,8 +125,8 @@ class TestApp
       }
     });
 
-    root_link_->Set(nullptr, "1");
-    root_link_->Set(nullptr, "2");
+    SetLink(root_link_.get(), nullptr, "1");
+    SetLink(root_link_.get(), nullptr, "2");
   }
 
   // Only update 4 is guaranteed to be delivered on link_watcher_, although
@@ -137,8 +147,8 @@ class TestApp
     zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
 
     // Watch the log to see what values are actually seen by the Watcher.
-    root_peer_->Set(nullptr, "3");
-    root_peer_->Set(nullptr, "4");
+    SetLink(root_link_.get(), nullptr, "3");
+    SetLink(root_link_.get(), nullptr, "4");
   }
 
   // The local update 6 is the only update guaranteed to be seen locally.
@@ -165,8 +175,8 @@ class TestApp
     });
 
     // Watch the log to see what values actually arrive, and in which order.
-    root_peer_->Set(nullptr, "5");
-    root_link_->Set(nullptr, "6");
+    SetLink(root_link_.get(), nullptr, "5");
+    SetLink(root_link_.get(), nullptr, "6");
 
     async::PostDelayedTask(async_get_default_dispatcher(),
                            [this, called] {

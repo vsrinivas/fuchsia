@@ -6,6 +6,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -72,7 +73,9 @@ class TestApp : fuchsia::modular::LinkWatcher {
   bool link2_checked_{};
 
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
+  void Notify(fuchsia::mem::Buffer content) override {
+    std::string json;
+    FXL_CHECK(fsl::StringFromVmo(content, &json));
     // This watches both link1 and link2. We distinguish the two by the value
     // received.
     FXL_LOG(INFO) << "module1 link: " << json;

@@ -9,6 +9,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "lib/svc/cpp/service_provider_bridge.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -51,7 +52,9 @@ class TestApp {
     module_host_->module_context()->GetLink(
         modular::testing::kTestDriverLinkName, link_.NewRequest());
     link_->Get(sub_module_url_path_.Clone(),
-               [this](fidl::StringPtr sub_module_url) {
+               [this](std::unique_ptr<fuchsia::mem::Buffer> link_data) {
+                 std::string sub_module_url;
+                 FXL_CHECK(fsl::StringFromVmo(*link_data, &sub_module_url));
                  if (!RunSubModule(std::move(sub_module_url))) {
                    Signal(modular::testing::kTestShutdown);
                    return;
@@ -112,32 +115,38 @@ class TestApp {
   // completion, setting the status of the test based on the exit code: non-zero
   // is a failure, whereas zero is a success.
   void RunTestDriver() {
-    link_->Get(test_driver_url_path_.Clone(), [this](fidl::StringPtr json) {
-      if (json == nullptr) {
-        Signal(modular::testing::kTestShutdown);
-        return;
-      }
-      rapidjson::Document document;
-      document.Parse(json.get().c_str());
-      std::string test_driver_url = document.GetString();
-      FXL_LOG(INFO) << "TestDriverModule launching test driver for URL: "
-                    << test_driver_url;
+    link_->Get(
+        test_driver_url_path_.Clone(),
+        [this](std::unique_ptr<fuchsia::mem::Buffer> link_data) {
+          if (link_data == nullptr) {
+            Signal(modular::testing::kTestShutdown);
+            return;
+          }
+          std::string json;
+          FXL_CHECK(fsl::StringFromVmo(*link_data, &json));
+          rapidjson::Document document;
+          document.Parse(json.c_str());
+          std::string test_driver_url = document.GetString();
+          FXL_LOG(INFO) << "TestDriverModule launching test driver for URL: "
+                        << test_driver_url;
 
-      if (!CreateNestedEnv()) {
-        return;
-      }
-      CreateTestDriverComponent(test_driver_url);
-      test_driver_component_controller_->Wait([this](int64_t return_code) {
-        FXL_LOG(INFO) << "TestDriverModule test driver returned with code : "
-                      << return_code;
-        if (return_code) {
-          modular::testing::Fail("Test driver failed.");
-        } else {
-          test_driver_completed_.Pass();
-        }
-        Signal(modular::testing::kTestShutdown);
-      });
-    });
+          if (!CreateNestedEnv()) {
+            return;
+          }
+          CreateTestDriverComponent(test_driver_url);
+          test_driver_component_controller_->Wait(
+              [this](int64_t return_code) {
+                FXL_LOG(INFO)
+                    << "TestDriverModule test driver returned with code : "
+                    << return_code;
+                if (return_code) {
+                  modular::testing::Fail("Test driver failed.");
+                } else {
+                  test_driver_completed_.Pass();
+                }
+                Signal(modular::testing::kTestShutdown);
+              });
+        });
   }
 
   modular::ModuleHost* const module_host_;

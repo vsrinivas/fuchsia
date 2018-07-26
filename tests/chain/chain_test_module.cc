@@ -7,6 +7,7 @@
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
 
@@ -85,7 +86,9 @@ class TestApp {
     intent_.parameters->at(0).data = std::move(parameter_data);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
-    link_two_->Set(nullptr, "12345");
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString("12345", &vmo));
+    link_two_->Set(nullptr, std::move(vmo).ToTransport());
     parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name("bar");
     intent_.parameters->at(1) = fuchsia::modular::IntentParameter();

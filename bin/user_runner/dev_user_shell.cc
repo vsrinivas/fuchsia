@@ -19,6 +19,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -187,7 +188,9 @@ class DevUserShellApp
       link_path.link_name = "root";
       story_controller_->GetLink(std::move(link_path), root.NewRequest());
 
-      root->Set(nullptr, settings_.root_link);
+      fsl::SizedVmo vmo;
+      FXL_CHECK(fsl::VmoFromString(settings_.root_link, &vmo));
+      root->Set(nullptr, std::move(vmo).ToTransport());
     }
   }
 

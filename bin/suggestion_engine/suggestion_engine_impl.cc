@@ -9,6 +9,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/context/cpp/context_helper.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
 #include <lib/fxl/time/time_point.h>
@@ -568,7 +569,9 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
                   break;
                 }
                 case fuchsia::modular::IntentParameterData::Tag::kJson: {
-                  link->Set(nullptr, parameter.data.json());
+                  fsl::SizedVmo vmo;
+                  FXL_CHECK(fsl::VmoFromString(*parameter.data.json(), &vmo));
+                  link->Set(nullptr, std::move(vmo).ToTransport());
                   break;
                 }
                 case fuchsia::modular::IntentParameterData::Tag::kEntityType:
@@ -608,7 +611,9 @@ void SuggestionEngineImpl::PerformSetLinkValueAction(
 
   story_controller->GetLink(fidl::Clone(set_link_value.link_path),
                             link.NewRequest());
-  link->Set(nullptr, set_link_value.value);
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString(*set_link_value.value, &vmo));
+  link->Set(nullptr, std::move(vmo).ToTransport());
 }
 
 void SuggestionEngineImpl::PerformQueryAction(

@@ -12,6 +12,7 @@
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
@@ -61,7 +62,11 @@ LinkWatcherImpl::LinkWatcherImpl(
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
-void LinkWatcherImpl::Notify(fidl::StringPtr json) { ProcessNewValue(json); }
+void LinkWatcherImpl::Notify(fuchsia::mem::Buffer json) {
+  std::string json_string;
+  FXL_CHECK(fsl::StringFromVmo(json, &json_string));
+  ProcessNewValue(json_string);
+}
 
 void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
   // We are looking for the following |value| structures:

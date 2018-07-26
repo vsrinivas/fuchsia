@@ -6,6 +6,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -38,8 +39,12 @@ class TestApp : fuchsia::modular::LinkWatcher {
     module_host_->module_context()->GetLink(nullptr, link2_.NewRequest());
     link2_->WatchAll(link2_watcher_binding_.NewBinding());
 
-    link1_->Set(nullptr, "1");
-    link2_->Set(nullptr, "2");
+    fsl::SizedVmo vmo1;
+    FXL_CHECK(fsl::VmoFromString("1", &vmo1));
+    fsl::SizedVmo vmo2;
+    FXL_CHECK(fsl::VmoFromString("2", &vmo2));
+    link1_->Set(nullptr, std::move(vmo1).ToTransport());
+    link2_->Set(nullptr, std::move(vmo2).ToTransport());
   }
 
   // Called from ModuleDriver.
@@ -50,7 +55,9 @@ class TestApp : fuchsia::modular::LinkWatcher {
 
  private:
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
+  void Notify(fuchsia::mem::Buffer content) override {
+    std::string json;
+    FXL_CHECK(fsl::StringFromVmo(content, &json));
     FXL_LOG(INFO) << "module3 link: " << json;
   }
 

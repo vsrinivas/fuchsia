@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
+#include <lib/fsl/vmo/strings.h>
 #include <test/peridot/tests/trigger/cpp/fidl.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -38,16 +39,21 @@ class TestApp {
     module_host->module_context()->GetLink(kLinkName, link_.NewRequest());
     fidl::VectorPtr<fidl::StringPtr> name;
     name.push_back(kLinkKey);
-    link_->Get(name.Clone(), [this, module_context](fidl::StringPtr value) {
-      if (value.is_null()) {
+    link_->Get(name.Clone(), [this, module_context](
+                                 std::unique_ptr<fuchsia::mem::Buffer> value) {
+      if (!value) {
         modular::testing::Fail("Did not receive a module name in link.");
+        return;
       }
+
+      std::string value_string;
+      FXL_CHECK(fsl::StringFromVmo(*value, &value_string));
+
       rapidjson::Document document;
-      document.Parse(value->c_str());
+      document.Parse(value_string.c_str());
       module_name_ = document.GetString();
 
-      Await(module_name_,
-            [this, module_context, value] { module_context->Done(); });
+      Await(module_name_, [this, module_context] { module_context->Done(); });
     });
   }
 

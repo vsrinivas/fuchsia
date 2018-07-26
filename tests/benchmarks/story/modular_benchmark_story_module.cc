@@ -9,6 +9,7 @@
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
@@ -37,7 +38,9 @@ class NullModule : fuchsia::modular::LinkWatcher {
 
  private:
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
+  void Notify(fuchsia::mem::Buffer content) override {
+    std::string json;
+    FXL_CHECK(fsl::StringFromVmo(content, &json));
     FXL_LOG(INFO) << "Notify() " << json;
 
     // First invocation is from WatchAll(); next from Set().
@@ -65,7 +68,9 @@ class NullModule : fuchsia::modular::LinkWatcher {
     // Corresponding TRACE_FLOW_END() is in the user shell.
     TRACE_FLOW_BEGIN("benchmark", "link/trans", count_);
 
-    link_->Set(nullptr, std::to_string(count_));
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(std::to_string(count_), &vmo));
+    link_->Set(nullptr, std::move(vmo).ToTransport());
   }
 
   modular::ModuleHost* const module_host_;

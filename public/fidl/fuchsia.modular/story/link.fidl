@@ -7,6 +7,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.mem;
+
 // This interface is implemented by the story runner. The ModuleContext service
 // acts as a factory for it.
 //
@@ -46,22 +48,25 @@ library fuchsia.modular;
 // No service name: returned from ModuleContext.GetLink().
 interface Link {
   // Gets the value at the given |path|, which is represented using the JSON
-  // Pointer specification (https://tools.ietf.org/html/rfc6901). Returns a null
-  // fidl string if |path| does not exist. Returns the entire JSON as a string
+  // Pointer specification (https://tools.ietf.org/html/rfc6901).
+  //
+  // |json_data| is a UTF8 encoded string representing valid JSON.
+  //
+  // Returns null if |path| does not exist. Returns the entire JSON object 
   // if |path| is either null or an empty array. Returns the string "null" if
   // the link is empty.
-  2: Get(vector<string>? path) -> (string? json);
+  2: Get(vector<string>? path) -> (fuchsia.mem.Buffer? json_data);
 
   // Set() overwrites the value/object/array at the given |path|. Set also
   // overwrites any values or arrays as necessary to ensure that |path| exists.
-  // The |json| parameter cannot be the empty string because that's not a legal
-  // value. Either pass "null" to set the value to null, or use Erase to
+  // The |json_data| parameter must be a UTF8 encoded JSON string.
+  // Either pass "null" to set the value to null, or use Erase to
   // completely remove a member of an object. To replace the root, pass null for
   // |path|.
   //
   // This call notifies Watchers, although this may be skipped if nothing
   // changed.
-  3: Set(vector<string>? path, string json);
+  3: Set(vector<string>? path, fuchsia.mem.Buffer json_data);
 
   // Erases the object member at the given |path|. If the path is not found or
   // does not match the current structure of the JSON, the path will not be
@@ -112,5 +117,5 @@ interface Link {
 //
 // No service name: created by Module.
 interface LinkWatcher {
-  1: Notify(string json);
+  1: Notify(fuchsia.mem.Buffer json);
 };

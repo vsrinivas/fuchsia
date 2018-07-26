@@ -55,6 +55,7 @@ class TestApp {
   void VerifyLinkOne() {
     module_context_->GetLink("one", link_one_.NewRequest());
     link_one_->GetEntity([this](const fidl::StringPtr& entity_reference) {
+      FXL_LOG(INFO) << "*******************: " << entity_reference;
       if (!entity_reference) {
         VerifyLinkTwo();
         return;
@@ -64,6 +65,7 @@ class TestApp {
           "myType", [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
             std::string content_string;
             FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+            FXL_LOG(INFO) << "*******************: " << content_string;
             if (content_string == "1337") {
               link_one_correct_.Pass();
             }
@@ -77,26 +79,32 @@ class TestApp {
 
   void VerifyLinkTwo() {
     module_context_->GetLink("two", link_two_.NewRequest());
-    link_two_->Get(nullptr, [this](fidl::StringPtr content) {
-      if (content == "12345") {
-        link_two_correct_.Pass();
-      }
+    link_two_->Get(nullptr,
+                   [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+                     std::string content_string;
+                     FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+                     if (content_string == "12345") {
+                       link_two_correct_.Pass();
+                     }
 
-      VerifyLinkThree();
-    });
+                     VerifyLinkThree();
+                   });
   }
 
   TestPoint link_three_correct_{"Link three value is correct."};
 
   void VerifyLinkThree() {
     module_context_->GetLink("three", link_three_.NewRequest());
-    link_three_->Get(nullptr, [this](fidl::StringPtr content) {
-      if (content == "67890") {
-        link_three_correct_.Pass();
-      }
+    link_three_->Get(
+        nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+          std::string content_string;
+          FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+          if (content_string == "67890") {
+            link_three_correct_.Pass();
+          }
 
-      VerifyDefaultLink();
-    });
+          VerifyDefaultLink();
+        });
   }
 
   TestPoint default_link_correct_{"Default Link value is correct."};
@@ -105,13 +113,16 @@ class TestApp {
     // Check that we did get a default link as specified by the
     // fuchsia::modular::Intent.
     module_context_->GetLink(nullptr, default_link_.NewRequest());
-    default_link_->Get(nullptr, [this](fidl::StringPtr content) {
-      if (content == "1337") {
-        default_link_correct_.Pass();
-      }
+    default_link_->Get(
+        nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+          std::string content_string;
+          FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+          if (content_string == "1337") {
+            default_link_correct_.Pass();
+          }
 
-      Signal(modular::testing::kTestShutdown);
-    });
+          Signal(modular::testing::kTestShutdown);
+        });
   }
 
   fuchsia::modular::ComponentContextPtr component_context_;

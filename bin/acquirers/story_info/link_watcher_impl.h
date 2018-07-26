@@ -29,7 +29,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(fidl::StringPtr json) override;
+  void Notify(fuchsia::mem::Buffer json) override;
 
   void ProcessNewValue(const fidl::StringPtr& json);
   void MaybeProcessContextLink(const fidl::StringPtr& value);

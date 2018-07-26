@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 
@@ -66,6 +67,12 @@ void ApplyEraseOp(fidl::StringPtr* value_str,
   ApplyOp(value_str, path, apply_fn);
 }
 
+fuchsia::mem::Buffer StringToVmo(const std::string& string) {
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString(string, &vmo));
+  return std::move(vmo).ToTransport();
+}
+
 }  // namespace
 
 LinkImpl::LinkImpl(StoryStorage* const story_storage, LinkPath link_path)
@@ -89,38 +96,52 @@ void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
                    GetCallback callback) {
   // TODO: Need error reporting. MI4-1082
   story_storage_->GetLinkValue(link_path_)
-      ->WeakThen(
+      ->WeakMap(
           GetWeakPtr(),
-          fxl::MakeCopyable([this /* for link_path_ */, path = std::move(path),
-                             callback = std::move(callback)](
-                                StoryStorage::Status status,
-                                fidl::StringPtr value) mutable {
-            if (status != StoryStorage::Status::OK) {
-              FXL_LOG(ERROR) << "Getting link " << link_path_
-                             << " failed: " << static_cast<int>(status);
-              callback("null");  // JSON for null
-              return;
-            }
+          fxl::MakeCopyable(
+              [this /* for link_path_ */, path = std::move(path)](
+                  StoryStorage::Status status, fidl::StringPtr value) mutable {
+                if (status != StoryStorage::Status::OK) {
+                  FXL_LOG(ERROR) << "Getting link " << link_path_
+                                 << " failed: " << static_cast<int>(status);
 
-            if (!path || path->empty()) {
-              // Common case requires no parsing of the JSON.
-              callback(std::move(value));
-              return;
-            }
+                  return std::string("null");
+                }
 
-            // Extract just the |path| portion of the value.
-            CrtJsonDoc json;
-            json.Parse(value);
-            FXL_DCHECK(!json.HasParseError());  // StoryStorage guarantees
-                                                // we get valid JSON.
-            auto& value_at_path =
-                CreatePointer(json, *path).GetWithDefault(json, CrtJsonValue());
-            callback(JsonValueToString(value_at_path));
-          }));
+                else if (!path || path->empty()) {
+                  // Common case requires no parsing of the JSON.
+                  return *value;
+                } else {
+                  // Extract just the |path| portion of the value.
+                  CrtJsonDoc json;
+                  json.Parse(value);
+                  FXL_DCHECK(!json.HasParseError());  // StoryStorage guarantees
+                                                      // we get valid JSON.
+                  auto& value_at_path =
+                      CreatePointer(json, *path)
+                          .GetWithDefault(json, CrtJsonValue());
+                  return JsonValueToString(value_at_path);
+                }
+              }))
+      ->WeakThen(GetWeakPtr(), [callback =
+                                    std::move(callback)](std::string json) {
+        fsl::SizedVmo vmo;
+        FXL_CHECK(fsl::VmoFromString(json, &vmo));
+        auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(
+            std::move(vmo).ToTransport());
+        callback(std::move(vmo_ptr));
+      });
 }
 
 void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
-                   fidl::StringPtr json) {
+                   fuchsia::mem::Buffer json) {
+  std::string json_string;
+  FXL_CHECK(fsl::StringFromVmo(json, &json_string));
+  Set(std::move(path), json_string);
+}
+
+void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
+                   const std::string& json) {
   // TODO: Need error reporting. MI4-1082
   story_storage_
       ->UpdateLinkValue(
@@ -168,7 +189,7 @@ void LinkImpl::GetEntity(GetEntityCallback callback) {
         std::string ref;
         if (!EntityReferenceFromJson(value, &ref)) {
           FXL_LOG(ERROR) << "Link value for " << link_path_
-                         << " is not an entity reference.";
+                         << " is not an entity reference: " << value;
           callback(nullptr);
           return;
         }
@@ -193,13 +214,13 @@ void LinkImpl::OnLinkValueChanged(const fidl::StringPtr& value,
   // different StoryStorage altogether (even on a different device).
   if (context != this) {
     for (auto& dst : normal_watchers_.ptrs()) {
-      (*dst)->Notify(value);
+      (*dst)->Notify(StringToVmo(value));
     }
   }
 
   // No matter what, everyone in |everything_watchers_| sees everything.
   for (auto& dst : everything_watchers_.ptrs()) {
-    (*dst)->Notify(value);
+    (*dst)->Notify(StringToVmo(value));
   }
 }
 
@@ -208,22 +229,24 @@ void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
   // that no other operation will run on |story_storage_| until our callback
   // is complete, which means the next mutation that happens will be sent to
   // |watcher|.
-  Get(nullptr, fxl::MakeCopyable([this, watcher = std::move(watcher)](
-                                     fidl::StringPtr value) mutable {
-        auto ptr = watcher.Bind();
-        ptr->Notify(value);
-        normal_watchers_.AddInterfacePtr(std::move(ptr));
-      }));
+  Get(nullptr, fxl::MakeCopyable(
+                   [this, watcher = std::move(watcher)](
+                       std::unique_ptr<fuchsia::mem::Buffer> value) mutable {
+                     auto ptr = watcher.Bind();
+                     ptr->Notify(std::move(*value));
+                     normal_watchers_.AddInterfacePtr(std::move(ptr));
+                   }));
 }
 
 void LinkImpl::WatchAll(
     fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
-  Get(nullptr, fxl::MakeCopyable([this, watcher = std::move(watcher)](
-                                     fidl::StringPtr value) mutable {
-        auto ptr = watcher.Bind();
-        ptr->Notify(value);
-        everything_watchers_.AddInterfacePtr(std::move(ptr));
-      }));
+  Get(nullptr, fxl::MakeCopyable(
+                   [this, watcher = std::move(watcher)](
+                       std::unique_ptr<fuchsia::mem::Buffer> value) mutable {
+                     auto ptr = watcher.Bind();
+                     ptr->Notify(std::move(*value));
+                     everything_watchers_.AddInterfacePtr(std::move(ptr));
+                   }));
 }
 
 fxl::WeakPtr<LinkImpl> LinkImpl::GetWeakPtr() {

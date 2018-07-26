@@ -7,10 +7,11 @@
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -87,28 +88,40 @@ class TestApp
     link_path.link_name = nullptr;
     story_controller_->GetLink(std::move(link_path), root_link_.NewRequest());
 
-    root_link_->Get(nullptr, [this](fidl::StringPtr value) {
-      if (value == kRootJson0) {
-        story1_get_module0_link_.Pass();
-      } else {
-        FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson0;
-      }
-      TestStory1_SetModule0Link();
-    });
+    root_link_->Get(nullptr,
+                    [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
+                      std::string json_string;
+                      FXL_CHECK(fsl::StringFromVmo(*value, &json_string));
+                      if (json_string == kRootJson0) {
+                        story1_get_module0_link_.Pass();
+                      } else {
+                        FXL_LOG(ERROR) << "GOT LINK " << json_string
+                                       << " EXPECTED " << kRootJson0;
+                      }
+                      TestStory1_SetModule0Link();
+                    });
   }
 
   TestPoint story1_set_module0_link_{"Story1 Set Module0 link"};
 
   void TestStory1_SetModule0Link() {
-    root_link_->Set(nullptr, kRootJson1);
-    root_link_->Get(nullptr, [this](fidl::StringPtr value) {
-      if (value == kRootJson1) {
-        story1_set_module0_link_.Pass();
-      } else {
-        FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson1;
-      }
-      TestStory1_Run();
-    });
+    fsl::SizedVmo data;
+    auto result = fsl::VmoFromString(kRootJson1, &data);
+    FXL_CHECK(result);
+
+    root_link_->Set(nullptr, std::move(data).ToTransport());
+    root_link_->Get(nullptr,
+                    [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
+                      std::string json_string;
+                      FXL_CHECK(fsl::StringFromVmo(*value, &json_string));
+                      if (json_string == kRootJson1) {
+                        story1_set_module0_link_.Pass();
+                      } else {
+                        FXL_LOG(ERROR) << "GOT LINK " << json_string
+                                       << " EXPECTED " << kRootJson1;
+                      }
+                      TestStory1_Run();
+                    });
   }
 
   TestPoint story1_run_module0_link_{"Story1 Run: Module0 link"};

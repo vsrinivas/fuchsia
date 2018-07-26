@@ -8,6 +8,7 @@
 #include <lib/async/cpp/operation.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/array.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
@@ -36,7 +37,11 @@ class TestLinkWatcher : public LinkWatcher {
   TestLinkWatcher(std::function<void(fidl::StringPtr)> fn) : fn_(fn) {}
 
  private:
-  void Notify(fidl::StringPtr json) override { fn_(json); }
+  void Notify(fuchsia::mem::Buffer json) override {
+    std::string json_string;
+    FXL_CHECK(fsl::StringFromVmo(json, &json_string));
+    fn_(json_string);
+  }
 
   std::function<void(fidl::StringPtr)> fn_;
 };
@@ -72,6 +77,13 @@ class LinkImplTest : public testing::TestWithLedger {
     link->WatchAll(std::move(ptr));
   }
 
+  void SetLink(Link* link, fidl::VectorPtr<fidl::StringPtr> path,
+               const std::string& value) {
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(value, &vmo));
+    link->Set(std::move(path), std::move(vmo).ToTransport());
+  }
+
   fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> links_;
   fidl::BindingSet<LinkWatcher, std::unique_ptr<TestLinkWatcher>> watchers_;
 };
@@ -81,18 +93,23 @@ TEST_F(LinkImplTest, GetNull) {
   auto link = MakeLink(storage.get(), "foo");
 
   bool get_done{};
-  link->Get(nullptr /* path */, [&](fidl::StringPtr value) {
-    get_done = true;
-    EXPECT_EQ("null", value);
-  });
+  link->Get(nullptr /* path */,
+            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+              std::string content_string;
+              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+              get_done = true;
+              EXPECT_EQ("null", content_string);
+            });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 
   get_done = false;
   fidl::VectorPtr<fidl::StringPtr> path;
   path->push_back("one");
-  link->Get(std::move(path), [&](fidl::StringPtr value) {
+  link->Get(std::move(path), [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    std::string content_string;
+    FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
     get_done = true;
-    EXPECT_EQ("null", value);
+    EXPECT_EQ("null", content_string);
   });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
@@ -137,7 +154,7 @@ TEST_F(LinkImplTest, SetAndWatch) {
     ++notified_count;
   });
 
-  link->Set(nullptr, "42");
+  SetLink(link.get(), nullptr, "42");
 
   bool synced{};
   link->Sync([&synced] { synced = true; });
@@ -158,17 +175,17 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
     ++notified_count;
   });
 
-  link->Set(nullptr, R"({
+  SetLink(link.get(), nullptr, R"({
     "one": 1,
     "two": 2
   })");
   fidl::VectorPtr<fidl::StringPtr> path;
   path->push_back("two");
-  link->Set(std::move(path), R"("two")");
+  SetLink(link.get(), std::move(path), R"("two")");
 
   path->clear();
   path->push_back("three");
-  link->Set(std::move(path), R"(3)");
+  SetLink(link.get(), std::move(path), R"(3)");
 
   bool synced{};
   link->Sync([&synced] { synced = true; });
@@ -179,10 +196,13 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
   EXPECT_EQ(expected_value, notified_value);
 
   bool get_done{};
-  link->Get(nullptr /* path */, [&](fidl::StringPtr value) {
-    get_done = true;
-    EXPECT_EQ(expected_value, value);
-  });
+  link->Get(nullptr /* path */,
+            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+              std::string content_string;
+              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+              get_done = true;
+              EXPECT_EQ(expected_value, content_string);
+            });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
@@ -190,7 +210,7 @@ TEST_F(LinkImplTest, Erase) {
   auto storage = MakeStorage("page");
   auto link = MakeLink(storage.get(), "mylink");
 
-  link->Set(nullptr, R"({
+  SetLink(link.get(), nullptr, R"({
     "one": 1,
     "two": 2
   })");
@@ -200,10 +220,13 @@ TEST_F(LinkImplTest, Erase) {
 
   const std::string expected_value = R"({"one":1})";
   bool get_done{};
-  link->Get(nullptr /* path */, [&](fidl::StringPtr value) {
-    get_done = true;
-    EXPECT_EQ(expected_value, value);
-  });
+  link->Get(nullptr /* path */,
+            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+              std::string content_string;
+              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+              get_done = true;
+              EXPECT_EQ(expected_value, content_string);
+            });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 

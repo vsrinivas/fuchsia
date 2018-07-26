@@ -261,10 +261,11 @@ class TestApp
 
   void TestUserShellContext_GetLink() {
     user_shell_context_->GetLink(user_shell_link_.NewRequest());
-    user_shell_link_->Get(nullptr, [this](fidl::StringPtr value) {
-      get_link_.Pass();
-      TestStoryProvider_PreviousStories();
-    });
+    user_shell_link_->Get(nullptr,
+                          [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
+                            get_link_.Pass();
+                            TestStoryProvider_PreviousStories();
+                          });
   }
 
   TestPoint previous_stories_{"StoryProvider.PreviousStories()"};

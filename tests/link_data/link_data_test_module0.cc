@@ -9,6 +9,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/reporting.h"
@@ -32,7 +33,9 @@ class LinkForwarder : fuchsia::modular::LinkWatcher {
   }
 
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override { dst_->Set(nullptr, json); }
+  void Notify(fuchsia::mem::Buffer json) override {
+    dst_->Set(nullptr, std::move(json));
+  }
 
  private:
   fidl::Binding<fuchsia::modular::LinkWatcher> src_binding_;
@@ -62,8 +65,10 @@ class TestApp {
     // first invocation. Therefore, it would be wrong to verify this with a
     // TestPoint.
     module_context_->GetLink(nullptr, link_.NewRequest());
-    link_->Get(nullptr, [this](fidl::StringPtr value) {
-      if (value == kRootJson1) {
+    link_->Get(nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+      std::string content_string;
+      FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+      if (content_string == kRootJson1) {
         Signal(std::string("module0_link") + ":" + kRootJson1);
       }
 

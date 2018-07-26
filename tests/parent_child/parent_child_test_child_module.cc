@@ -6,6 +6,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -30,7 +31,9 @@ class TestApp {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     module_host->module_context()->GetLink("link", link_.NewRequest());
 
-    link_->Get(nullptr, [this](fidl::StringPtr link_value) {
+    link_->Get(nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+      std::string link_value;
+      FXL_CHECK(fsl::StringFromVmo(*content, &link_value));
       Get("child_module_init_count", [this, link_value](fidl::StringPtr value) {
         init_count_ = atoi((*value).data());
         ++init_count_;

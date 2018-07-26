@@ -6,6 +6,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -65,8 +66,10 @@ class TestApp : fuchsia::modular::LinkWatcher {
 
  private:
   // |fuchsia::modular::LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
-    FXL_LOG(INFO) << "module2 link: " << json;
+  void Notify(fuchsia::mem::Buffer json) override {
+    std::string json_string;
+    FXL_CHECK(fsl::StringFromVmo(json, &json_string));
+    FXL_LOG(INFO) << "module2 link: " << json_string;
   }
 
   modular::ModuleHost* const module_host_;

@@ -6,6 +6,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/time/time_delta.h>
 
 #include "peridot/lib/testing/reporting.h"
@@ -41,10 +42,18 @@ class TestApp {
   }
 
  private:
+  void SetLink(fuchsia::modular::Link* link,
+               fidl::VectorPtr<fidl::StringPtr> path,
+               const std::string& value) {
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(value, &vmo));
+    link->Set(std::move(path), std::move(vmo).ToTransport());
+  }
+
   void Set1() {
-    link1_->Set(nullptr, R"({"@type": "type1", "value": "value1"})");
-    link2_->Set(nullptr,
-                R"({"a_property": {"@type": "type2", "value": "value2"}})");
+    SetLink(link1_.get(), nullptr, R"({"@type": "type1", "value": "value1"})");
+    SetLink(link2_.get(), nullptr,
+            R"({"a_property": {"@type": "type2", "value": "value2"}})");
     // TODO(thatguy): When we have fuchsia::modular::Entity support in
     // fuchsia::modular::ContextWriter, create a simple fuchsia::modular::Entity
     // reference and slap it into the fuchsia::modular::Link.
