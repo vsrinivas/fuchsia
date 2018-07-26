@@ -195,12 +195,13 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --fvm <file>     use the supplied file as a sparse FVM image (up to 4 times)\n"
-            "  --efi <file>     use the supplied file as an EFI image\n"
-            "  --kernc <file>   use the supplied file as a KERN-C CrOS image\n"
-            "  --zircona <file> use the supplied file as a ZIRCON-A ZBI\n"
-            "  --zirconb <file> use the supplied file as a ZIRCON-B ZBI\n"
-            "  --zirconr <file> use the supplied file as a ZIRCON-R ZBI\n"
+            "  --fvm <file>        use the supplied file as a sparse FVM image (up to 4 times)\n"
+            "  --bootloader <file> use the supplied file as a BOOTLOADER image\n"
+            "  --efi <file>        use the supplied file as an EFI image\n"
+            "  --kernc <file>      use the supplied file as a KERN-C CrOS image\n"
+            "  --zircona <file>    use the supplied file as a ZIRCON-A ZBI\n"
+            "  --zirconb <file>    use the supplied file as a ZIRCON-B ZBI\n"
+            "  --zirconr <file>    use the supplied file as a ZIRCON-R ZBI\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
             "  --nocolor    disable ANSI color (false)\n",
@@ -286,6 +287,7 @@ int main(int argc, char** argv) {
     char* nodename = NULL;
     int r, s = 1;
     int num_fvms = 0;
+    const char* bootloader_image = NULL;
     const char* efi_image = NULL;
     const char* kernc_image = NULL;
     const char* zircona_image = NULL;
@@ -326,6 +328,14 @@ int main(int argc, char** argv) {
                 return -1;
             }
             fvm_images[num_fvms++] = argv[1];
+        } else if (!strcmp(argv[1], "--bootloader")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--bootloader' option requires an argument (BOOTLOADER image)\n");
+                return -1;
+            }
+            bootloader_image = argv[1];
         } else if (!strcmp(argv[1], "--efi")) {
             argc--;
             argv++;
@@ -459,8 +469,8 @@ int main(int argc, char** argv) {
         argc--;
         argv++;
     }
-    if (!kernel_fn && !efi_image && !kernc_image && !zircona_image && !zirconb_image &&
-        !zirconr_image && !fvm_images[0]) {
+    if (!kernel_fn && !bootloader_image && !efi_image && !kernc_image && !zircona_image &&
+        !zirconb_image && !zirconr_image && !fvm_images[0]) {
         usage();
     }
     if (!nodename) {
@@ -579,6 +589,9 @@ int main(int argc, char** argv) {
             if (status == 0 && fvm_images[i]) {
                 status = xfer(&ra, fvm_images[i], NB_FVM_FILENAME);
             }
+        }
+        if (status == 0 && bootloader_image) {
+            status = xfer(&ra, bootloader_image, NB_BOOTLOADER_FILENAME);
         }
         if (status == 0 && efi_image) {
             status = xfer(&ra, efi_image, NB_EFI_FILENAME);

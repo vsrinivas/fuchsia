@@ -211,6 +211,9 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
     if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_FVM_HOST_FILENAME)) {
         printf("netsvc: Running FVM Paver\n");
         argv[1] = "install-fvm";
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_BOOTLOADER_HOST_FILENAME)) {
+        printf("netsvc: Running BOOTLOADER Paver\n");
+        argv[1] = "install-bootloader";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_EFI_HOST_FILENAME)) {
         printf("netsvc: Running EFI Paver\n");
         argv[1] = "install-efi";
