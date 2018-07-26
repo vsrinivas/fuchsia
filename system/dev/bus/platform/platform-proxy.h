@@ -71,22 +71,6 @@ typedef struct {
     mailbox_data_buf_t mdata;
 } pdev_mailbox_ctx_t;
 
-// context for scpi
-typedef struct {
-    union {
-        uint32_t sensor_id;
-        uint8_t power_domain;
-    };
-    union {
-        uint32_t sensor_value;
-        uint16_t idx;
-    };
-    union {
-        scpi_opp_t opps;
-        char name[20];
-    };
-} pdev_scpi_ctx_t;
-
 // context for i2c_transact
 typedef struct {
     size_t write_length;
@@ -115,8 +99,10 @@ typedef struct pdev_req {
         uint32_t i2c_bitrate;
         uint32_t flags;
         pdev_mailbox_ctx_t mailbox;
-        pdev_scpi_ctx_t scpi;
         pdev_canvas_ctx_t canvas;
+        uint8_t scpi_power_domain;
+        uint32_t scpi_sensor_id;
+        char scpi_name[20];
     };
 } pdev_req_t;
 
@@ -136,6 +122,9 @@ typedef struct {
         } mmio;
         pdev_device_info_t info;
         pdev_mailbox_ctx_t mailbox;
-        pdev_scpi_ctx_t scpi;
+        uint32_t scpi_sensor_value;
+        uint16_t scpi_dvfs_idx;
+        uint32_t scpi_sensor_id;
+        scpi_opp_t scpi_opps;
     };
 } pdev_resp_t;

@@ -466,23 +466,23 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         resp.status = pdev_rpc_mailbox_send_cmd(dev, req->mailbox);
         break;
     case PDEV_SCPI_GET_SENSOR:
-        resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi.name, &resp.scpi.sensor_id);
+        resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi_name, &resp.scpi_sensor_id);
         break;
     case PDEV_SCPI_GET_SENSOR_VALUE:
-        resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi.sensor_id,
-                                                     &resp.scpi.sensor_value);
+        resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi_sensor_id,
+                                                     &resp.scpi_sensor_value);
         break;
     case PDEV_SCPI_GET_DVFS_INFO:
-        resp.status = pdev_rpc_scpi_get_dvfs_info(dev, req->scpi.power_domain,
-                                                  &resp.scpi.opps);
+        resp.status = pdev_rpc_scpi_get_dvfs_info(dev, req->scpi_power_domain,
+                                                  &resp.scpi_opps);
         break;
     case PDEV_SCPI_GET_DVFS_IDX:
-        resp.status = pdev_rpc_scpi_get_dvfs_idx(dev, req->scpi.power_domain,
-                                                 &resp.scpi.idx);
+        resp.status = pdev_rpc_scpi_get_dvfs_idx(dev, req->scpi_power_domain,
+                                                 &resp.scpi_dvfs_idx);
         break;
     case PDEV_SCPI_SET_DVFS_IDX:
-        resp.status = pdev_rpc_scpi_set_dvfs_idx(dev, req->scpi.power_domain,
-                                                 req->scpi.idx);
+        resp.status = pdev_rpc_scpi_set_dvfs_idx(dev, req->scpi_power_domain,
+                                                 req->index);
         break;
     case PDEV_I2C_GET_MAX_TRANSFER:
         resp.status = i2c_impl_get_max_transfer_size(&dev->bus->i2c, req->index,

@@ -190,7 +190,7 @@ static zx_status_t pdev_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_SCPI_GET_SENSOR_VALUE,
-        .scpi.sensor_id = sensor_id,
+        .scpi_sensor_id = sensor_id,
     };
 
     pdev_resp_t resp;
@@ -198,7 +198,7 @@ static zx_status_t pdev_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
     zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
                                            NULL, 0, NULL, 0, NULL);
     if (status == ZX_OK) {
-        *sensor_value = resp.scpi.sensor_value;
+        *sensor_value = resp.scpi_sensor_value;
     }
     return status;
 }
@@ -209,18 +209,18 @@ static zx_status_t pdev_scpi_get_sensor(void* ctx, const char* name,
     pdev_req_t req = {
         .op = PDEV_SCPI_GET_SENSOR,
     };
-    uint32_t max_len = sizeof(req.scpi.name);
+    uint32_t max_len = sizeof(req.scpi_name);
     uint32_t len = strnlen(name, max_len);
     if (len == max_len) {
         return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(&req.scpi.name, name, len + 1);
+    memcpy(&req.scpi_name, name, len + 1);
     pdev_resp_t resp;
 
     zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
                                            NULL, 0, NULL, 0, NULL);
     if (status == ZX_OK) {
-        *sensor_id = resp.scpi.sensor_id;
+        *sensor_id = resp.scpi_sensor_id;
     }
     return status;
 }
@@ -230,7 +230,7 @@ static zx_status_t pdev_scpi_get_dvfs_info(void* ctx, uint8_t power_domain,
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_SCPI_GET_DVFS_INFO,
-        .scpi.power_domain = power_domain,
+        .scpi_power_domain = power_domain,
     };
 
     pdev_resp_t resp;
@@ -238,7 +238,7 @@ static zx_status_t pdev_scpi_get_dvfs_info(void* ctx, uint8_t power_domain,
     zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
                                            NULL, 0, NULL, 0, NULL);
     if (status == ZX_OK) {
-        memcpy(opps, &resp.scpi.opps, sizeof(scpi_opp_t));
+        memcpy(opps, &resp.scpi_opps, sizeof(scpi_opp_t));
     }
     return status;
 }
@@ -248,7 +248,7 @@ static zx_status_t pdev_scpi_get_dvfs_idx(void* ctx, uint8_t power_domain,
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_SCPI_GET_DVFS_IDX,
-        .scpi.power_domain = power_domain,
+        .scpi_power_domain = power_domain,
     };
 
     pdev_resp_t resp;
@@ -256,7 +256,7 @@ static zx_status_t pdev_scpi_get_dvfs_idx(void* ctx, uint8_t power_domain,
     zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
                                            NULL, 0, NULL, 0, NULL);
     if (status == ZX_OK) {
-        *idx = resp.scpi.idx;
+        *idx = resp.scpi_dvfs_idx;
     }
     return status;
 }
@@ -266,8 +266,8 @@ static zx_status_t pdev_scpi_set_dvfs_idx(void* ctx, uint8_t power_domain,
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_SCPI_SET_DVFS_IDX,
-        .scpi.power_domain = power_domain,
-        .scpi.idx = idx,
+        .scpi_power_domain = power_domain,
+        .index = idx,
     };
 
     pdev_resp_t resp;
