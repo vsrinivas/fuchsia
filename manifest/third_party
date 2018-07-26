@@ -227,7 +227,7 @@
     <project name="third_party/netstack"
              path="third_party/golibs/github.com/google/netstack"
              remote="https://fuchsia.googlesource.com/third_party/netstack"
-             revision="119be4161d370f95f45cd3908d79bb81b5ae13f9"
+             revision="edfbb1b67d8c386803a844e132bdd6cbe385eef6"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/processor-trace"
              path="third_party/processor-trace"
