@@ -115,11 +115,6 @@ static inline struct pthread* tp_to_pthread(void* tp) {
 #endif
 
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
-#define SIGPT_SET                                                                     \
-    ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){[sizeof(long) == 4] = \
-                                                                    3UL               \
-                                                                    << (32 * (sizeof(long) > 4))})
-#define SIGTIMER_SET ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){0x80000000})
 
 #define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)
 // The bit used in the recursive and errorchecking cases, which track thread owners.
@@ -186,7 +181,5 @@ thrd_t __allocate_thread(size_t guard_size,
     __attribute__((nonnull(3))) ATTR_LIBC_VISIBILITY;
 
 pthread_t __init_main_thread(zx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
-
-int __pthread_once(pthread_once_t*, void (*)(void)) ATTR_LIBC_VISIBILITY;
 
 int __clock_gettime(clockid_t, struct timespec*) ATTR_LIBC_VISIBILITY;
