@@ -6,7 +6,8 @@ use failure::{format_err, Error, ResultExt};
 use fidl::endpoints2;
 use fidl_fuchsia_wlan_device_service as wlan_service;
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, temp::TempStreamExt};
+use fuchsia_syslog::{self as syslog, fx_log, fx_log_err};
 use fuchsia_zircon as zx;
 use futures::future;
 use futures::prelude::*;
@@ -50,6 +51,66 @@ pub async fn get_iface_sme_proxy(wlan_svc: &WlanService, iface_id: u16)
     }
 }
 
+pub async fn connect_to_network(iface_sme_proxy: &fidl_sme::ClientSmeProxy,
+                                   target_ssid: Vec<u8>,
+                                   target_pwd: Vec<u8>)
+        -> Result<bool, Error> {
+    let (connection_proxy, connection_remote) = endpoints2::create_endpoints()?;
+
+    // create ConnectRequest holding network info
+    let mut req = fidl_sme::ConnectRequest {
+        ssid: target_ssid,
+        password: target_pwd,
+    };
+
+    let result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;
+
+    let connection_code = await!(handle_connect_transaction(connection_proxy))?;
+
+    let connected = match connection_code {
+        fidl_sme::ConnectResultCode::Success => true,
+        fidl_sme::ConnectResultCode::Canceled => {
+            fx_log_err!("Connecting was canceled or superseded by another command");
+            false
+        },
+        fidl_sme::ConnectResultCode::Failed => {
+            fx_log_err!("Failed to connect to network");
+            false
+        },
+        fidl_sme::ConnectResultCode::BadCredentials => {
+            fx_log_err!("Failed to connect to network; bad credentials");
+            false
+        },
+        e => {
+            // also need to handle new result codes, generically return false here
+            fx_log_err!("Failed to connect: {:?}", e);
+            false
+        }
+    };
+
+    Ok(connected)
+}
+
+async fn handle_connect_transaction(connect_transaction: fidl_sme::ConnectTransactionProxy)
+        -> Result<fidl_sme::ConnectResultCode, Error> {
+
+    let mut event_stream = connect_transaction.take_event_stream();
+
+    let mut result_code = fidl_sme::ConnectResultCode::Failed;
+
+    while let Some(evt) = await!(event_stream.try_next())
+        .context("failed to receive connect result before the channel was closed")? {
+            match evt {
+                fidl_sme::ConnectTransactionEvent::OnFinished { code } => {
+                    result_code = code;
+                    break;
+                }
+            }
+    }
+
+    Ok(result_code)
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -59,7 +120,9 @@ mod tests {
     use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
     use fidl_fuchsia_wlan_device_service::{DeviceServiceRequest, DeviceServiceRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, ListIfacesResponse};
+    use fidl_fuchsia_wlan_sme::{ClientSmeMarker, ClientSmeProxy};
     use fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream};
+    use fidl_fuchsia_wlan_sme::ConnectResultCode;
     use fuchsia_async as fasync;
     use futures::stream::StreamFuture;
 
@@ -156,8 +219,159 @@ mod tests {
         responder.send(&mut ListIfacesResponse{ifaces:iface_list_vec});
     }
 
+    #[test]
+    fn connect_to_network_success_returns_true() {
+        let connect_result = test_connect("TestAp", "", ConnectResultCode::Success);
+        assert!(connect_result);
+    }
+
+    #[test]
+    fn connect_to_network_failed_returns_false() {
+        let connect_result = test_connect("TestAp", "", ConnectResultCode::Failed);
+        assert!(!connect_result);
+    }
+
+    #[test]
+    fn connect_to_network_canceled_returns_false() {
+        let connect_result = test_connect("TestAp", "", ConnectResultCode::Canceled);
+        assert!(!connect_result);
+    }
+
+    #[test]
+    fn connect_to_network_bad_credentials_returns_false() {
+        let connect_result = test_connect(
+                "TestAp", "", ConnectResultCode::BadCredentials);
+        assert!(!connect_result);
+    }
+
+    fn test_connect(ssid: &str,
+                    password: &str,
+                    result_code: ConnectResultCode) -> bool {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client_sme, mut server) = create_client_sme_proxy();
+        let mut next_client_sme_req = server.into_future();
+
+        let target_ssid = ssid.as_bytes();
+        let target_password = password.as_bytes();
+
+        let mut fut = connect_to_network(&client_sme,
+                                            target_ssid.to_vec(),
+                                            target_password.to_vec());
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // have the request, need to send a response
+        send_connect_request_response(&mut exec, &mut next_client_sme_req,
+                target_ssid, target_password, result_code);
+
+        let complete = exec.run_until_stalled(&mut fut);
+        let connection_result = match complete {
+            Poll::Ready(result) => result,
+            _ => panic!("Expected a connect response")
+        };
+
+        let returned_bool = match connection_result {
+            Ok(response) => response,
+            _ => panic!("Expected a valid connection result")
+        };
+
+        returned_bool
+    }
+
+    #[test]
+    fn connect_to_network_properly_passes_network_info_with_password() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client_sme, mut server) = create_client_sme_proxy();
+        let mut next_client_sme_req = server.into_future();
+
+        let target_ssid = "TestAp".as_bytes();
+        let target_password = "password".as_bytes();
+
+        let mut fut = connect_to_network(&client_sme,
+                                            target_ssid.to_vec(),
+                                            target_password.to_vec());
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // verify the connect request info
+        verify_connect_request_info(&mut exec, &mut next_client_sme_req,
+                target_ssid, target_password);
+    }
+
+    #[test]
+    fn connect_to_network_properly_passes_network_info_open() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client_sme, mut server) = create_client_sme_proxy();
+        let mut next_client_sme_req = server.into_future();
+
+        let target_ssid = "TestAp".as_bytes();
+        let target_password = "".as_bytes();
+
+        let mut fut = connect_to_network(&client_sme,
+                                            target_ssid.to_vec(),
+                                            target_password.to_vec());
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // verify the connect request info
+        verify_connect_request_info(&mut exec, &mut next_client_sme_req,
+                target_ssid, target_password);
+    }
+
+    fn verify_connect_request_info(exec: &mut fasync::Executor,
+            server: &mut StreamFuture<ClientSmeRequestStream>,
+            expected_ssid: &[u8],
+            expected_password: &[u8]) {
+        match poll_client_sme_request(exec, server) {
+            Poll::Ready(ClientSmeRequest::Connect {req, .. }) => {
+                assert_eq!(expected_ssid, &req.ssid[..]);
+                assert_eq!(expected_password, &req.password[..]);
+            },
+            _ => panic!("expected a Connect request"),
+        }
+    }
+
+    fn send_connect_request_response(exec: &mut fasync::Executor,
+            server: &mut StreamFuture<ClientSmeRequestStream>,
+            expected_ssid: &[u8],
+            expected_password: &[u8],
+            connect_result: ConnectResultCode) {
+        let responder = match poll_client_sme_request(exec, server) {
+            Poll::Ready(ClientSmeRequest::Connect {req, txn, .. }) => {
+                assert_eq!(expected_ssid, &req.ssid[..]);
+                assert_eq!(expected_password, &req.password[..]);
+                txn.expect("expected a Connect transaction channel")
+            },
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a Connect request"),
+        };
+        let connect_transaction = responder.into_stream()
+                .expect("failed to create a connect transaction stream").control_handle();
+        connect_transaction.send_on_finished(connect_result)
+                .expect("failed to send OnFinished to ConnectTransaction");
+    }
+
+    fn poll_client_sme_request(exec: &mut fasync::Executor,
+            next_client_sme_req: &mut StreamFuture<ClientSmeRequestStream>)
+        -> Poll<ClientSmeRequest>
+    {
+        exec.run_until_stalled(next_client_sme_req).map(|(req, stream)| {
+            *next_client_sme_req = stream.into_future();
+            req.expect("did not expect the ClientSmeRequestStream to end")
+                .expect("error polling client sme request stream")
+        })
+    }
+
+    fn create_client_sme_proxy() -> (fidl_sme::ClientSmeProxy, ClientSmeRequestStream) {
+        let (proxy, server) = endpoints2::create_endpoints::<ClientSmeMarker>()
+                .expect("failed to create sme client channel");
+        let server = server.into_stream()
+                .expect("failed to create a client sme response stream");
+        (proxy, server)
+    }
+
     fn create_wlan_service_util()
-            -> (DeviceServiceProxy, wlan_service::DeviceServiceRequestStream) {
+            -> (DeviceServiceProxy, DeviceServiceRequestStream) {
         let (proxy, server) = endpoints2::create_endpoints::<DeviceServiceMarker>()
                 .expect("failed to create a wlan_service channel for tests");
         let server = server.into_stream()

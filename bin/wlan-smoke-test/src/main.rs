@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api, pin, transpose_result)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -16,6 +16,7 @@ use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_syslog::{self as syslog, fx_log, fx_log_err};
 use fuchsia_zircon as zx;
 use serde::{Serialize};
 use serde::ser::{Serializer, SerializeMap, SerializeStruct};
@@ -26,6 +27,7 @@ use std::fmt;
 type WlanService = DeviceServiceProxy;
 
 fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&["wlan-smoke-test"]).expect("should not fail");
 
     // create objects to hold test objects and results
     let mut test_results: TestResults = Default::default();
@@ -78,17 +80,33 @@ fn run_test(test_results: &mut TestResults)
             };
             let iface_object = WlanIface::new(sme_proxy, status_response);
 
+            test_results.iface_objects.insert(iface, iface_object);
+        }
+
+        let target_ssid = "HotspotNoInet";
+        let target_pwd = "";
+
+        // now that we have interfaces...  let's try to use them!
+        for (_, wlan_iface) in test_results.iface_objects.iter_mut() {
+            let connect_result = await!(
+                wlan_service_util::connect_to_network(&wlan_iface.sme_proxy,
+                                                         target_ssid.as_bytes().to_vec(),
+                                                         target_pwd.as_bytes().to_vec()))?;
+            if connect_result {
+                wlan_iface.connection_success = true;
+            }
+
             // if any of the checks failed, throw an error to indicate a part of
             // the test failure
-            if !(iface_object.connection_success &&
-                 iface_object.dhcp_success &&
-                 iface_object.data_transfer) {
+            if !(wlan_iface.connection_success &&
+                 wlan_iface.dhcp_success &&
+                 wlan_iface.data_transfer) {
                 // note: failures are logged at the point of the failure,
                 // simply checking here to return overall test status
                 test_pass = false;
             }
-            test_results.iface_objects.insert(iface, iface_object);
         }
+
         Ok(())
     };
     exec.run_singlethreaded(fut)?;
@@ -96,6 +114,7 @@ fn run_test(test_results: &mut TestResults)
     if !test_pass {
         return Err(err_msg("Saw a failure on at least one interface"));
     }
+
     Ok(())
 }
 
