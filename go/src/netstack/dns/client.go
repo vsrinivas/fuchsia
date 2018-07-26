@@ -46,11 +46,6 @@ var staticDNSConfig = dnsConfig{
 }
 
 func init() {
-	clientConf.lastChecked = time.Now()
-
-	// Prepare ch so that only one update of clientConfig may
-	// run at once.
-	clientConf.ch = make(chan struct{}, 1)
 	clientConf.dnsConfig = &staticDNSConfig
 	if clientConf.runtimeServers != nil {
 		clientConf.dnsConfig.servers = append(clientConf.dnsConfig.servers, clientConf.runtimeServers...)
@@ -297,11 +292,6 @@ func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 
 // A clientConfig represents a DNS stub resolver configuration.
 type clientConfig struct {
-	// ch is used as a semaphore that only allows one lookup at a
-	// time to recheck resolv.conf.
-	ch          chan struct{} // guards lastChecked and modTime
-	lastChecked time.Time     // last time resolv.conf was checked
-
 	mu             sync.RWMutex        // protects the following vars
 	dnsConfig      *dnsConfig          // parsed resolv.conf structure used in lookups
 	runtimeServers []tcpip.FullAddress // servers added while running (e.g. by DHCP)
@@ -337,41 +327,6 @@ func (conf *clientConfig) updateConfigLocked(dnsConfig *dnsConfig) {
 		conf.dnsConfig.servers = append(conf.dnsConfig.servers, conf.runtimeServers...)
 	}
 	conf.resolver = newCachedResolver(newNetworkResolver(conf.dnsConfig))
-}
-
-// tryUpdate tries to update conf with the named resolv.conf file.
-// The name variable only exists for testing. It is otherwise always
-// "/etc/resolv.conf".
-func (conf *clientConfig) tryUpdate() {
-	// Ensure only one update at a time checks resolv.conf.
-	if !conf.tryAcquireSema() {
-		return
-	}
-	defer conf.releaseSema()
-
-	now := time.Now()
-	if conf.lastChecked.After(now.Add(-5 * time.Second)) {
-		return
-	}
-	conf.lastChecked = now
-
-	dnsConf := readConfig()
-	conf.mu.Lock()
-	conf.updateConfigLocked(dnsConf)
-	conf.mu.Unlock()
-}
-
-func (conf *clientConfig) tryAcquireSema() bool {
-	select {
-	case conf.ch <- struct{}{}:
-		return true
-	default:
-		return false
-	}
-}
-
-func (conf *clientConfig) releaseSema() {
-	<-conf.ch
 }
 
 // avoidDNS reports whether this is a hostname for which we should not
@@ -445,7 +400,6 @@ func (c *Client) LookupIP(name string) (addrs []tcpip.Address, err error) {
 	if !isDomainName(name) {
 		return nil, &Error{Err: "invalid domain name", Name: name}
 	}
-	clientConf.tryUpdate()
 	clientConf.mu.RLock()
 	conf := clientConf.dnsConfig
 	resolver := clientConf.resolver
