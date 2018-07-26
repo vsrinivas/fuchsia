@@ -50,9 +50,9 @@ class Frame : public Resource {
 
   uint64_t frame_number() const { return frame_number_; }
 
-  CommandBuffer* cmds() const { return new_command_buffer_.get(); }
-  impl::CommandBuffer* command_buffer() const { return command_buffer_; }
-  vk::CommandBuffer vk_command_buffer() const { return vk_command_buffer_; }
+  CommandBuffer* cmds() const { return command_buffer_.get(); }
+  impl::CommandBuffer* command_buffer() const;
+  vk::CommandBuffer vk_command_buffer() const;
   uint64_t command_buffer_sequence_number() const {
     return command_buffer_sequence_number_;
   }
@@ -140,10 +140,7 @@ class Frame : public Resource {
   // here to track which command_buffer was managed by this frame if the command
   // buffer was taken (via TakeCommandBuffer()) for GPU uploads.
   uint64_t command_buffer_sequence_number_;
-  CommandBufferPtr new_command_buffer_;
-  // Cached elements of new_command_buffer_.
-  impl::CommandBuffer* command_buffer_ = nullptr;
-  vk::CommandBuffer vk_command_buffer_;
+  CommandBufferPtr command_buffer_;
 
   BlockAllocator block_allocator_;
 

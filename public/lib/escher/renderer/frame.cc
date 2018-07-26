@@ -61,6 +61,16 @@ Frame::~Frame() {
   FXL_DCHECK(state_ == State::kReadyToBegin) << "EndFrame() was not called.";
 }
 
+impl::CommandBuffer* Frame::command_buffer() const {
+  FXL_DCHECK(command_buffer_) << "Cannot access command buffer.";
+  return command_buffer_->impl();
+}
+
+vk::CommandBuffer Frame::vk_command_buffer() const {
+  FXL_DCHECK(command_buffer_) << "Cannot access command buffer.";
+  return command_buffer_->vk();
+}
+
 void Frame::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number",
                  frame_number_, "escher_frame_number", escher_frame_number_);
@@ -71,32 +81,28 @@ void Frame::BeginFrame() {
 }
 
 void Frame::IssueCommandBuffer() {
-  FXL_DCHECK(!new_command_buffer_);
+  FXL_DCHECK(!command_buffer_);
   state_ = State::kInProgress;
 
-  new_command_buffer_ =
-      CommandBuffer::NewForType(escher(), command_buffer_type_);
-  command_buffer_ = new_command_buffer_->impl();
-  command_buffer_sequence_number_ = command_buffer_->sequence_number();
-  vk_command_buffer_ = command_buffer_->vk();
+  command_buffer_ = CommandBuffer::NewForType(escher(), command_buffer_type_);
+  command_buffer_sequence_number_ = command_buffer_->impl()->sequence_number();
 }
 
 void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
-  FXL_DCHECK(new_command_buffer_ && command_buffer_);
+  FXL_DCHECK(command_buffer_);
 
   ++submission_count_;
   TRACE_DURATION("gfx", "escher::Frame::SubmitPartialFrame", "frame_number",
-                 frame_number_, "submission_index", submission_count_);
+                 frame_number_, "escher_frame_number", escher_frame_number_,
+                 "submission_index", submission_count_);
   FXL_DCHECK(state_ == State::kInProgress);
 
-  command_buffer_->AddSignalSemaphore(frame_done);
-  command_buffer_->Submit(queue_, nullptr);
+  command_buffer_->impl()->AddSignalSemaphore(frame_done);
+  command_buffer_->impl()->Submit(queue_, nullptr);
 
   // Command buffer has submitted, clear the current command buffer data to
   // recycle it.
-  new_command_buffer_ = nullptr;
   command_buffer_ = nullptr;
-  vk_command_buffer_ = vk::CommandBuffer();
   command_buffer_sequence_number_ = 0;
   // Issue a new command buffer this frame can be used for more submits.
   IssueCommandBuffer();
@@ -104,24 +110,25 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
 
 void Frame::EndFrame(const SemaphorePtr& frame_done,
                      FrameRetiredCallback frame_retired_callback) {
-  FXL_DCHECK(new_command_buffer_ && command_buffer_);
+  FXL_DCHECK(command_buffer_);
 
   ++submission_count_;
   TRACE_DURATION("gfx", "escher::Frame::EndFrame", "frame_number",
-                 frame_number_, "submission_index", submission_count_);
+                 frame_number_, "escher_frame_number", escher_frame_number_,
+                 "submission_index", submission_count_);
   FXL_DCHECK(state_ == State::kInProgress);
   state_ = State::kFinishing;
 
   AddTimestamp("end of frame");
 
-  command_buffer_->AddSignalSemaphore(frame_done);
+  command_buffer_->impl()->AddSignalSemaphore(frame_done);
 
   // Submit the final command buffer and register a callback to perform a
   // variety of bookkeeping and cleanup tasks.
   //
   // NOTE: this closure refs this Frame via a FramePtr, guaranteeing that it
   // will not be destroyed until the frame is finished rendering.
-  command_buffer_->Submit(
+  command_buffer_->impl()->Submit(
       queue_,
       [client_callback{std::move(frame_retired_callback)},
        profiler{std::move(profiler_)}, frame_number = frame_number_,
@@ -158,9 +165,7 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
         this_frame->state_ = State::kReadyToBegin;
       });
 
-  new_command_buffer_ = nullptr;
   command_buffer_ = nullptr;
-  vk_command_buffer_ = vk::CommandBuffer();
   command_buffer_sequence_number_ = 0;
 
   // Keep per-frame uniform buffers alive until frame is finished rendering.
@@ -180,7 +185,7 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
 
 void Frame::AddTimestamp(const char* name, vk::PipelineStageFlagBits stages) {
   if (profiler_)
-    profiler_->AddTimestamp(command_buffer_, stages, name);
+    profiler_->AddTimestamp(command_buffer_->impl(), stages, name);
 }
 
 void Frame::KeepAlive(ResourcePtr resource) {
@@ -188,19 +193,15 @@ void Frame::KeepAlive(ResourcePtr resource) {
 }
 
 CommandBufferPtr Frame::TakeCommandBuffer() {
-  command_buffer_ = nullptr;
-  return std::move(new_command_buffer_);
+  return std::move(command_buffer_);
 }
 
 void Frame::PutCommandBuffer(CommandBufferPtr command_buffer) {
-  FXL_DCHECK(command_buffer);
-  FXL_DCHECK(!new_command_buffer_);
+  FXL_DCHECK(!command_buffer_ && command_buffer);
   FXL_DCHECK(command_buffer_sequence_number_ ==
              command_buffer->impl()->sequence_number());
 
-  new_command_buffer_ = std::move(command_buffer);
-  command_buffer_ = new_command_buffer_->impl();
-  vk_command_buffer_ = new_command_buffer_->vk();
+  command_buffer_ = std::move(command_buffer);
 }
 
 void Frame::LogGpuQueryResults(
