@@ -236,6 +236,7 @@ class OmxCodecRunner : public CodecRunner {
                                         bool release_input_buffers,
                                         bool release_output_buffers);
   void Sync(SyncCallback callback) override;
+  void Sync_StreamControl(SyncCallback callback);
   void RecycleOutputPacket(
       fuchsia::mediacodec::CodecPacketHeader available_output_packet) override;
   void QueueInputFormatDetails(
@@ -462,7 +463,7 @@ class OmxCodecRunner : public CodecRunner {
   // Set AAC ADTS mode - called from SetAudioDecoderParams()
   void SetInputAacAdts();
 
-  void onStateSetComplete(OMX_STATETYPE state_reached);
+  void onOmxStateSetComplete(OMX_STATETYPE state_reached);
 
   // things that don't need to be protected by lock_
   const std::string mime_type_;
@@ -555,8 +556,7 @@ class OmxCodecRunner : public CodecRunner {
   void StartIgnoringClientOldOutputConfigLocked();
 
   void ValidateBufferSettingsVsConstraints(
-      uint32_t port,
-      const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+      Port port, const fuchsia::mediacodec::CodecPortBufferSettings& settings,
       const fuchsia::mediacodec::CodecBufferConstraints& constraints);
 
   bool enable_on_stream_failed_ = false;

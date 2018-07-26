@@ -503,6 +503,8 @@ void OmxCodecRunner::ComputeInputConstraints() {
               .packet_count_for_codec_max =
                   kOmxMaxBufferCountVsMinBufferCountFactor *
                   omx_initial_port_def_[kInput].nBufferCountMin,
+              .packet_count_for_client_max =
+                  std::numeric_limits<uint32_t>::max(),
               // TODO(dustingreen): verify that this works end to end for the
               // OmxCodecRunner...
               .single_buffer_mode_allowed = true,
@@ -565,11 +567,14 @@ void OmxCodecRunner::onInputConstraintsReady() {
 void OmxCodecRunner::GenerateAndSendNewOutputConfig(
     std::unique_lock<std::mutex>& lock,
     bool buffer_constraints_action_required) {
-  // The actual thing we care about is whether this method is called on the
-  // Setup ordering domain, or the StreamControl ordering domain.  This assert()
-  // isn't quite asserting exactly that, but close enough to be useful as an
-  // assert.
-  assert(!is_setup_done_ || thrd_current() == stream_control_thread_);
+  // This method is only called on these ordering domains:
+  //   * Setup ordering domain
+  //   * StreamControl ordering domain
+  //   * InputData domain if buffer_constraints_action_required is false
+  //
+  // TODO(dustingreen): Create an assert that checks for the above.  This
+  // commented-out assert doesn't include possibility of InputData domain:
+  // assert(!is_setup_done_ || thrd_current() == stream_control_thread_);
 
   uint64_t current_stream_lifetime_ordinal = stream_lifetime_ordinal_;
   uint64_t new_output_buffer_constraints_version_ordinal =
@@ -682,7 +687,7 @@ void OmxCodecRunner::EnsureCodecStreamClosedLockedInternal() {
 //
 // More complete protocol validation happens on StreamControl ordering domain.
 // The validation here is just to validate to degree needed to not break our
-// stream_queue_ and future_stream_lifetime_ordainal_.
+// stream_queue_ and future_stream_lifetime_ordinal_.
 void OmxCodecRunner::EnsureFutureStreamSeenLocked(
     uint64_t stream_lifetime_ordinal) {
   if (future_stream_lifetime_ordinal_ == stream_lifetime_ordinal) {
@@ -710,7 +715,7 @@ void OmxCodecRunner::EnsureFutureStreamSeenLocked(
 //
 // More complete protocol validation happens on StreamControl ordering domain.
 // The validation here is just to validate to degree needed to not break our
-// stream_queue_ and future_stream_lifetime_ordainal_.
+// stream_queue_ and future_stream_lifetime_ordinal_.
 void OmxCodecRunner::EnsureFutureStreamCloseSeenLocked(
     uint64_t stream_lifetime_ordinal) {
   if (future_stream_lifetime_ordinal_ % 2 == 0) {
@@ -749,7 +754,7 @@ void OmxCodecRunner::EnsureFutureStreamCloseSeenLocked(
 //
 // More complete protocol validation happens on StreamControl ordering domain.
 // The validation here is just to validate to degree needed to not break our
-// stream_queue_ and future_stream_lifetime_ordainal_.
+// stream_queue_ and future_stream_lifetime_ordinal_.
 void OmxCodecRunner::EnsureFutureStreamFlushSeenLocked(
     uint64_t stream_lifetime_ordinal) {
   if (stream_lifetime_ordinal != future_stream_lifetime_ordinal_) {
@@ -838,6 +843,8 @@ OmxCodecRunner::CreateNewOutputConfigFromOmxOutputFormat(
               .buffer_constraints.packet_count_for_codec_max =
                   kOmxMaxBufferCountVsMinBufferCountFactor *
                   port.nBufferCountMin,
+              .buffer_constraints.packet_count_for_client_max =
+                  std::numeric_limits<uint32_t>::max(),
               .buffer_constraints.single_buffer_mode_allowed = false,
 
               // default_settings
@@ -1103,9 +1110,6 @@ void OmxCodecRunner::SetBufferSettingsCommonLocked(
 
   ValidateBufferSettingsVsConstraints(port, settings, constraints);
 
-  // The client is permitted to try again with a new
-  // SetOutputBufferSettings() / SetInputBufferSettings().
-
   // Regardless of mid-stream output config change or not (only relevant to
   // output), we know that buffers aren't with OMX currently, so we can just
   // de-ref low-layer output buffers without needing to interact with OMX here.
@@ -1137,7 +1141,7 @@ void OmxCodecRunner::SetOutputBufferSettings(
     }
 
     // For a mid-stream output format change, this also enforces that the client
-    // can only catch up to the mid-stream format changen once.  In other words,
+    // can only catch up to the mid-stream format change once.  In other words,
     // if the client has already caught up to the mid-stream config change, the
     // client no longer has an excuse to re-configure again with a stream
     // active.
@@ -1403,12 +1407,12 @@ void OmxCodecRunner::FlushEndOfStreamAndCloseStream_StreamControl(
       //
       // OMX codecs have no way to report mid-stream input data corruption
       // errors or similar without it being a stream failure, so if there's any
-      // stream error it turns into OnOmxStreamFailed().  It's also permitted
-      // for a server to set error_detected_ bool(s) on output packets and send
+      // stream error it turns into OnStreamFailed().  It's also permitted for a
+      // server to set error_detected_ bool(s) on output packets and send
       // OnOutputEndOfStream() despite detected errors, but this is only a
       // reasonable behavior for the server if the server normally would detect
       // and report mid-stream input corruption errors without an
-      // OnOmxStreamFailed().
+      // OnStreamFailed().
       output_end_of_stream_seen_.wait(lock);
     }
 
@@ -1448,16 +1452,15 @@ void OmxCodecRunner::CloseCurrentStream_StreamControl(
 }
 
 void OmxCodecRunner::Sync(SyncCallback callback) {
-  // Because we use the FIDL thread to directly drive OMX state changes, and
-  // because Sync() is not required to do anything to queued input data, in this
-  // codec implementation, we just need to call the callback here.  The client
-  // receiving the response message will prove to the client that this FIDL
-  // thread has processed all messages sent by the client before the Sync()
-  // message we are currently receiving/processing.
-  //
-  // We don't need to hold lock_ here.
-  callback();
+  // By posting to StreamControl ordering domain before calling the callback, we
+  // sync the Output ordering domain and the StreamControl ordering domain.
+  PostSerial(stream_control_dispatcher_,
+             [this, callback = std::move(callback)]() mutable {
+               Sync_StreamControl(std::move(callback));
+             });
 }
+
+void OmxCodecRunner::Sync_StreamControl(SyncCallback callback) { callback(); }
 
 void OmxCodecRunner::RecycleOutputPacket(
     fuchsia::mediacodec::CodecPacketHeader available_output_packet) {
@@ -1490,7 +1493,7 @@ void OmxCodecRunner::RecycleOutputPacket(
   if (available_output_packet.packet_index >= all_packets_[kOutput].size()) {
     Exit("out of range packet_index from client in RecycleOutputPacket()");
   }
-  uint64_t packet_index = available_output_packet.packet_index;
+  uint32_t packet_index = available_output_packet.packet_index;
   if (packet_free_bits_[kOutput][packet_index]) {
     Exit(
         "packet_index already free at protocol level - invalid client message");
@@ -1530,9 +1533,6 @@ void OmxCodecRunner::QueueInputFormatDetails_StreamControl(
   CheckStreamLifetimeOrdinalLocked(stream_lifetime_ordinal);
   assert(stream_lifetime_ordinal >= stream_lifetime_ordinal_);
   if (stream_lifetime_ordinal > stream_lifetime_ordinal_) {
-    // It might seem odd to start a new stream given an end-of-stream for a
-    // stream we've not seen before, but in my experience, allowing empty things
-    // to not be errors is better.
     StartNewStream(lock, stream_lifetime_ordinal);
   }
   assert(stream_lifetime_ordinal == stream_lifetime_ordinal_);
@@ -1605,7 +1605,7 @@ void OmxCodecRunner::QueueInputPacket_StreamControl(
     // specifying the input constraints.
     //
     // One could somewhat-convincingly argue that this field in this particular
-    // message is a bit pointless, but it might server to detect client-side
+    // message is a bit pointless, but it might serve to detect client-side
     // bugs faster thanks to this check.
     if (packet.header.buffer_lifetime_ordinal !=
         port_settings_[kInput]->buffer_lifetime_ordinal) {
@@ -2345,7 +2345,7 @@ OMX_ERRORTYPE OmxCodecRunner::EventHandler(OMX_IN OMX_EVENTTYPE eEvent,
         case OMX_CommandStateSet:
           VLOGF("  OMX_CommandStateSet - state reached: %d\n", nData2);
           assert(pEventData == nullptr);
-          onStateSetComplete(static_cast<OMX_STATETYPE>(nData2));
+          onOmxStateSetComplete(static_cast<OMX_STATETYPE>(nData2));
           break;
         case OMX_CommandFlush:
           printf("  OMX_CommandFlush - port index: %d\n", nData2);
@@ -2877,7 +2877,8 @@ void OmxCodecRunner::onOmxStreamFailed(uint64_t stream_lifetime_ordinal) {
     // input data.
     //
     // There's not actually any need to track that the stream failed anywhere
-    // in the OmxCodecRunner.  The client needs to at least
+    // in the OmxCodecRunner.  The client needs to move on from the failed
+    // stream to a new stream, or close the Codec channel.
     printf("onOmxStreamFailed() - stream_lifetime_ordinal: %lu\n",
            stream_lifetime_ordinal);
     if (!enable_on_stream_failed_) {
@@ -2902,7 +2903,7 @@ OMX_ERRORTYPE OmxCodecRunner::EmptyBufferDone(
     OMX_IN OMX_BUFFERHEADERTYPE* pBuffer) {
   Packet* packet = reinterpret_cast<Packet*>(pBuffer->pAppPrivate);
   assert(packet->omx_header() == pBuffer);
-  {
+  {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
 
     // We don't care if omx_state_desired_ is OMX_StateExecuting or not.  OMX
@@ -2952,7 +2953,7 @@ OMX_ERRORTYPE OmxCodecRunner::EmptyBufferDone(
     SendFreeInputPacketLocked(fuchsia::mediacodec::CodecPacketHeader{
         .buffer_lifetime_ordinal = packet->buffer_lifetime_ordinal(),
         .packet_index = packet->packet_index()});
-  }
+  }  // ~lock
   return OMX_ErrorNone;
 oob_free_notify_outside_lock:;
   omx_input_packet_oob_free_condition_.notify_all();
@@ -3000,7 +3001,7 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
       // disable the output port or move the OMX codec back to Loaded state.
       //
       // This is only able to be checked this way because we make sure that
-      // calls to FillOutputBuffer() always set the buffer to nFilledLen = 0
+      // calls to FillThisBuffer() always set the buffer to nFilledLen = 0
       // before sending the buffer to the codec.  In addition, we can only check
       // that nFilledLen == 0 if !omx_output_enabled_desired_, because only in
       // that case do we know that the OMX codec itself is yet aware of the fact
@@ -3163,11 +3164,11 @@ void OmxCodecRunner::OmxFillThisBufferLocked(OMX_BUFFERHEADERTYPE* header) {
   });
 }
 
-void OmxCodecRunner::onStateSetComplete(OMX_STATETYPE state_reached) {
+void OmxCodecRunner::onOmxStateSetComplete(OMX_STATETYPE state_reached) {
   if (state_reached != OMX_StateLoaded && state_reached != OMX_StateIdle &&
       state_reached != OMX_StateExecuting) {
     Exit(
-        "onStateSetComplete() state_reached unexpected - exiting - "
+        "onOmxStateSetComplete() state_reached unexpected - exiting - "
         "state_reached: %d\n",
         state_reached);
   }
@@ -3279,27 +3280,27 @@ OmxCodecRunner::AudioChannelIdFromOmxAudioChannelType(
   return kOmxAudioChannelTypeToAudioChannelId[input_channeltype];
 }
 
-// The port parameter is only for debugging, so we don't expose the Port typedef
-// just for that.
 void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
-    uint32_t port, const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+    Port port, const fuchsia::mediacodec::CodecPortBufferSettings& settings,
     const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
   if (settings.packet_count_for_codec <
       constraints.packet_count_for_codec_min) {
     Exit("packet_count_for_codec < packet_count_for_codec_min");
   }
-  if (settings.packet_count_for_codec + settings.packet_count_for_client >
+  if (settings.packet_count_for_codec >
       constraints.packet_count_for_codec_max) {
-    Exit(
-        "packet_count_for_codec + packet_count_for_client > "
-        "packet_count_for_codec_max - exiting\n");
+    Exit("packet_count_for_codec > packet_count_for_codec_max");
+  }
+  if (settings.packet_count_for_client >
+      constraints.packet_count_for_client_max) {
+    Exit("packet_count_for_client > packet_count_for_client_max");
   }
   if (settings.per_packet_buffer_bytes <
       constraints.per_packet_buffer_bytes_min) {
     Exit(
         "settings.per_packet_buffer_bytes < "
         "constraints.per_packet_buffer_bytes_min - exiting - port: %u "
-        "settings: %u constraint: %u\n",
+        "settings: %u constraint: %u",
         port, settings.per_packet_buffer_bytes,
         constraints.per_packet_buffer_bytes_min);
   }
@@ -3307,12 +3308,12 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
       constraints.per_packet_buffer_bytes_max) {
     Exit(
         "settings.per_packet_buffer_bytes > "
-        "constraints.per_packet_buffer_bytes_max - exiting\n");
+        "constraints.per_packet_buffer_bytes_max");
   }
   if (settings.single_buffer_mode && !constraints.single_buffer_mode_allowed) {
     Exit(
         "settings.single_buffer_mode && "
-        "!constraints.single_buffer_mode_allowed - exiting\n");
+        "!constraints.single_buffer_mode_allowed");
   }
 }
 
