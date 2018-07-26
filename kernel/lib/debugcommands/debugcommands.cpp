@@ -289,7 +289,7 @@ static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
     if (argc >= 2) {
         t = ZX_MSEC(argv[1].u);
         if (!strcmp(argv[0].str, "sleep"))
-            t = zx_duration_mul_uint64(t, 1000);
+            t = zx_duration_mul_int64(t, 1000);
     }
 
     thread_sleep_relative(t);

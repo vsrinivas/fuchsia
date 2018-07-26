@@ -363,7 +363,7 @@ void dlog_bluescreen_init(void) {
     // replay debug log?
 
     dprintf(INFO, "\nZIRCON KERNEL PANIC\n\n");
-    dprintf(INFO, "UPTIME: %" PRIu64 "ms\n", current_time() / ZX_MSEC(1));
+    dprintf(INFO, "UPTIME: %" PRIi64 "ms\n", current_time() / ZX_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 
     // Log the ELF build ID in the format the symbolizer scripts understand.

@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <unittest/unittest.h>
 
-static bool deadline_test() {
+static bool deadline_after() {
     BEGIN_TEST;
     auto then = zx_clock_get_monotonic();
     // The day we manage to boot and run this test in less than 1uS we need to fix this.
@@ -22,9 +22,44 @@ static bool deadline_test() {
     auto one_hour_later = zx_deadline_after(ZX_HOUR(1));
     EXPECT_LT(then, one_hour_later);
 
-    uint64_t too_big = UINT64_MAX - 100u;
+    zx_duration_t too_big = INT64_MAX - 100;
     auto clamped = zx_deadline_after(too_big);
     EXPECT_EQ(clamped, ZX_TIME_INFINITE);
+
+    EXPECT_LT(0, zx_deadline_after(10 * 365 * ZX_HOUR(24)));
+    EXPECT_LT(zx_deadline_after(ZX_TIME_INFINITE_PAST), 0);
+    END_TEST;
+}
+
+static bool timer_set_negative_deadline() {
+    BEGIN_TEST;
+    zx::timer timer;
+    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+    zx::duration slack;
+    ASSERT_EQ(timer.set(zx::time(-1), slack), ZX_OK);
+    zx_signals_t pending;
+    ASSERT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
+    ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+    END_TEST;
+}
+
+static bool timer_set_negative_deadline_max() {
+    BEGIN_TEST;
+    zx::timer timer;
+    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+    zx::duration slack;
+    ASSERT_EQ(timer.set(zx::time(ZX_TIME_INFINITE_PAST), slack), ZX_OK);
+    zx_signals_t pending;
+    ASSERT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
+    ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+    END_TEST;
+}
+
+static bool timer_set_negative_slack() {
+    BEGIN_TEST;
+    zx::timer timer;
+    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+    ASSERT_EQ(timer.set(zx::time(), zx::duration(-1)), ZX_ERR_OUT_OF_RANGE);
     END_TEST;
 }
 
@@ -186,7 +221,10 @@ static bool coalesce_test_late() {
 }
 
 BEGIN_TEST_CASE(timers_test)
-RUN_TEST(deadline_test)
+RUN_TEST(deadline_after)
+RUN_TEST(timer_set_negative_deadline)
+RUN_TEST(timer_set_negative_deadline_max)
+RUN_TEST(timer_set_negative_slack)
 RUN_TEST(invalid_calls)
 RUN_TEST(basic_test)
 // Disabled: RUN_TEST(coalesce_test_late)

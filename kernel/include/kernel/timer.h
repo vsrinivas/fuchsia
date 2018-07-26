@@ -33,8 +33,8 @@ typedef struct timer {
     struct list_node node;
 
     zx_time_t scheduled_time;
-    int64_t slack; // Stores the applied slack adjustment from
-                   // the ideal scheduled_time.
+    zx_duration_t slack; // Stores the applied slack adjustment from
+                         // the ideal scheduled_time.
     timer_callback callback;
     void* arg;
 
@@ -73,8 +73,8 @@ void timer_init(timer_t*);
 // timer: the timer to use
 // deadline: absolute time, in ns, after which the timer is executed
 // mode: type of slack to apply, either symmetrical or one-sided to early or late
-// slack: delta time in nanoseconds from |deadline| after or before is
-//        acceptable to execute the timer.
+// slack: delta time in nanoseconds from |deadline| after or before it is
+//        acceptable to execute the timer. Must be >= 0.
 // callback: the function to call when the timer expires
 // arg: the argument to pass to the callback
 //

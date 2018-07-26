@@ -119,8 +119,8 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
             continue;
 
         printf("thread stats (cpu %u):\n", i);
-        printf("\ttotal idle time: %" PRIu64 "\n", percpu[i].stats.idle_time);
-        printf("\ttotal busy time: %" PRIu64 "\n",
+        printf("\ttotal idle time: %" PRIi64 "\n", percpu[i].stats.idle_time);
+        printf("\ttotal busy time: %" PRIi64 "\n",
                zx_time_sub_duration(current_time(), percpu[i].stats.idle_time));
         printf("\treschedules: %lu\n", percpu[i].stats.reschedules);
         printf("\treschedule_ipis: %lu\n", percpu[i].stats.reschedule_ipis);
@@ -165,7 +165,7 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
         } else {
             busy_time = 0;
         }
-        zx_duration_t busypercent = zx_duration_mul_uint64(busy_time, 10000) / ZX_SEC(1);
+        zx_duration_t busypercent = zx_duration_mul_int64(busy_time, 10000) / ZX_SEC(1);
 
         printf("%3u"
                " %3u.%02u%%"

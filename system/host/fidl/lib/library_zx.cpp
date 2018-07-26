@@ -14,8 +14,8 @@ const char kData[] = R"FIDL(
 library zx;
 
 using @status = int32;
-using time = uint64;
-using duration = uint64;
+using time = int64;
+using duration = int64;
 using koid = uint64;
 using vaddr = uint64;
 using paddr = uint64;

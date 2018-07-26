@@ -70,7 +70,7 @@ int fibo(int argc, const cmd_args* argv, uint32_t) {
     zx_duration_t msec_duration = (current_time() - tim) / ZX_MSEC(1);
 
     printf("fibo %d\n", retcode);
-    printf("took %" PRIu64 " msecs to calculate\n", msec_duration);
+    printf("took %" PRIi64 " msecs to calculate\n", msec_duration);
 
     return ZX_OK;
 }

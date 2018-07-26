@@ -43,6 +43,10 @@ zx_status_t sys_timer_create(uint32_t options, zx_clock_t clock_id,
 
 zx_status_t sys_timer_set(
     zx_handle_t handle, zx_time_t deadline, zx_duration_t slack) {
+    if (slack < 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<TimerDispatcher> timer;

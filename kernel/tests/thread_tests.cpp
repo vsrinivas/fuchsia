@@ -271,7 +271,7 @@ static void event_test(void) {
 
 static int quantum_tester(void* arg) {
     for (;;) {
-        printf("%p: in this thread. rq %" PRIu64 "\n", get_current_thread(), get_current_thread()->remaining_time_slice);
+        printf("%p: in this thread. rq %" PRIi64 "\n", get_current_thread(), get_current_thread()->remaining_time_slice);
     }
     return 0;
 }
@@ -393,7 +393,7 @@ static volatile int preempt_count;
 static int preempt_tester(void* arg) {
     spin(1000000);
 
-    printf("exiting ts %" PRIu64 " ns\n", current_time());
+    printf("exiting ts %" PRIi64 " ns\n", current_time());
 
     atomic_add(&preempt_count, -1);
 
@@ -582,7 +582,7 @@ static int sleeper_kill_thread(void* arg) {
     zx_time_t t = current_time();
     zx_status_t err = thread_sleep_etc(t + ZX_SEC(5), true);
     zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("thread_sleep_etc returns %d after %" PRIu64 " msecs\n", err, duration);
+    TRACEF("thread_sleep_etc returns %d after %" PRIi64 " msecs\n", err, duration);
 
     return 0;
 }
@@ -599,7 +599,7 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
     zx_time_t t = current_time();
     zx_status_t err = event_wait_deadline(e, ZX_TIME_INFINITE, true);
     zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("event_wait_deadline returns %d after %" PRIu64 " msecs\n", err, duration);
+    TRACEF("event_wait_deadline returns %d after %" PRIi64 " msecs\n", err, duration);
 
     return 0;
 }
@@ -612,7 +612,7 @@ static int waiter_kill_thread(void* arg) {
     zx_time_t t = current_time();
     zx_status_t err = event_wait_deadline(e, t + ZX_SEC(5), true);
     zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64 " msecs\n", err, duration);
+    TRACEF("event_wait_deadline with deadline returns %d after %" PRIi64 " msecs\n", err, duration);
 
     return 0;
 }

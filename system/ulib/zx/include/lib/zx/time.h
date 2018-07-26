@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
@@ -14,9 +15,12 @@ class duration {
 public:
     constexpr duration() = default;
 
-    explicit constexpr duration(zx_duration_t value) : value_(value) {}
+    explicit constexpr duration(zx_duration_t value)
+        : value_(value) {}
 
     static constexpr duration infinite() { return duration(ZX_TIME_INFINITE); }
+
+    static constexpr duration infinite_past() { return duration(ZX_TIME_INFINITE_PAST); }
 
     constexpr zx_duration_t get() const { return value_; }
 
@@ -28,11 +32,11 @@ public:
         return duration(zx_duration_sub_duration(value_, other.value_));
     }
 
-    constexpr duration operator*(uint64_t multiplier) const {
-        return duration(zx_duration_mul_uint64(value_, multiplier));
+    constexpr duration operator*(int64_t multiplier) const {
+        return duration(zx_duration_mul_int64(value_, multiplier));
     }
 
-    constexpr duration operator/(uint64_t divisor) const {
+    constexpr duration operator/(int64_t divisor) const {
         return duration(value_ / divisor);
     }
 
@@ -40,7 +44,7 @@ public:
         return duration(value_ % divisor.value_);
     }
 
-    constexpr uint64_t operator/(duration other) const {
+    constexpr int64_t operator/(duration other) const {
         return value_ / other.value_;
     }
 
@@ -54,14 +58,14 @@ public:
         return *this;
     }
 
-    constexpr duration& operator*=(uint64_t multiplier) {
-        value_ = zx_duration_mul_uint64(value_, multiplier);
+    constexpr duration& operator*=(int64_t multiplier) {
+        value_ = zx_duration_mul_int64(value_, multiplier);
         return *this;
     }
 
-    constexpr duration& operator/=(uint64_t divisor) {
-      value_ /= divisor;
-      return *this;
+    constexpr duration& operator/=(int64_t divisor) {
+        value_ /= divisor;
+        return *this;
     }
 
     constexpr bool operator==(duration other) const { return value_ == other.value_; }
@@ -71,17 +75,17 @@ public:
     constexpr bool operator>(duration other) const { return value_ > other.value_; }
     constexpr bool operator>=(duration other) const { return value_ >= other.value_; }
 
-    constexpr uint64_t to_nsecs() const { return value_; }
+    constexpr int64_t to_nsecs() const { return value_; }
 
-    constexpr uint64_t to_usecs() const { return value_ / ZX_USEC(1); }
+    constexpr int64_t to_usecs() const { return value_ / ZX_USEC(1); }
 
-    constexpr uint64_t to_msecs() const { return value_ / ZX_MSEC(1); }
+    constexpr int64_t to_msecs() const { return value_ / ZX_MSEC(1); }
 
-    constexpr uint64_t to_secs() const { return value_ / ZX_SEC(1); }
+    constexpr int64_t to_secs() const { return value_ / ZX_SEC(1); }
 
-    constexpr uint64_t to_mins() const { return value_ / ZX_MIN(1); }
+    constexpr int64_t to_mins() const { return value_ / ZX_MIN(1); }
 
-    constexpr uint64_t to_hours() const { return value_ / ZX_HOUR(1); }
+    constexpr int64_t to_hours() const { return value_ / ZX_HOUR(1); }
 
 private:
     zx_duration_t value_ = 0;
@@ -128,8 +132,8 @@ public:
     }
 
     constexpr ticks& operator-=(ticks other) {
-      value_ -= other.value_;
-      return *this;
+        value_ -= other.value_;
+        return *this;
     }
 
     constexpr ticks& operator*=(uint64_t multiplier) {
@@ -138,8 +142,8 @@ public:
     }
 
     constexpr ticks& operator/=(uint64_t divisor) {
-      value_ /= divisor;
-      return *this;
+        value_ /= divisor;
+        return *this;
     }
 
     constexpr bool operator==(ticks other) const { return value_ == other.value_; }
@@ -160,7 +164,13 @@ public:
 
     explicit constexpr basic_time(zx_time_t value) : value_(value) {}
 
-    static constexpr basic_time<kClockId> infinite() { return basic_time<kClockId>(ZX_TIME_INFINITE); }
+    static constexpr basic_time<kClockId> infinite() {
+        return basic_time<kClockId>(ZX_TIME_INFINITE);
+    }
+
+    static constexpr basic_time<kClockId> infinite_past() {
+        return basic_time<kClockId>(ZX_TIME_INFINITE_PAST);
+    }
 
     constexpr zx_time_t get() const { return value_; }
 
@@ -217,17 +227,17 @@ public:
     }
 };
 
-constexpr inline duration nsec(uint64_t n) { return duration(ZX_NSEC(n)); }
+constexpr inline duration nsec(int64_t n) { return duration(ZX_NSEC(n)); }
 
-constexpr inline duration usec(uint64_t n) { return duration(ZX_USEC(n)); }
+constexpr inline duration usec(int64_t n) { return duration(ZX_USEC(n)); }
 
-constexpr inline duration msec(uint64_t n) { return duration(ZX_MSEC(n)); }
+constexpr inline duration msec(int64_t n) { return duration(ZX_MSEC(n)); }
 
-constexpr inline duration sec(uint64_t n) { return duration(ZX_SEC(n)); }
+constexpr inline duration sec(int64_t n) { return duration(ZX_SEC(n)); }
 
-constexpr inline duration min(uint64_t n) { return duration(ZX_MIN(n)); }
+constexpr inline duration min(int64_t n) { return duration(ZX_MIN(n)); }
 
-constexpr inline duration hour(uint64_t n) { return duration(ZX_HOUR(n)); }
+constexpr inline duration hour(int64_t n) { return duration(ZX_HOUR(n)); }
 
 inline zx_status_t nanosleep(zx::time deadline) {
     return zx_nanosleep(deadline.get());

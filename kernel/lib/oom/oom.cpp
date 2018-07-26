@@ -176,7 +176,7 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
             oom_running = false;
             thread_t* t = oom_thread;
             oom_thread = nullptr;
-            zx_duration_t timeout = zx_duration_mul_uint64(oom_sleep_duration_ns, 4);
+            zx_duration_t timeout = zx_duration_mul_int64(oom_sleep_duration_ns, 4);
             zx_time_t deadline = zx_time_add_duration(current_time(), timeout);
             lock.release();
             zx_status_t s = thread_join(t, nullptr, deadline);

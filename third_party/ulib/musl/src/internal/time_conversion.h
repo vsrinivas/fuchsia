@@ -10,7 +10,7 @@
 
 static inline zx_time_t __duration_timespec_to_deadline(const struct timespec timespec) {
     zx_duration_t nanos = zx_duration_add_duration(
-        zx_duration_mul_uint64(1000000000ull, timespec.tv_sec),
+        zx_duration_mul_int64(1000000000ll, timespec.tv_sec),
         timespec.tv_nsec);
     return _zx_deadline_after(nanos);
 }

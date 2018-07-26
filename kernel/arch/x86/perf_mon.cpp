@@ -1701,7 +1701,7 @@ zx_status_t x86_ipm_fini() {
 
     return ZX_OK;
 }
-
+
 // Interrupt handling.
 
 // Helper function so that there is only one place where we enable/disable
@@ -1718,7 +1718,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 
     // On x86 zx_ticks_get uses rdtsc.
     zx_time_t now = rdtsc();
-    LTRACEF("cpu %u: now %" PRIu64 ", sp %p\n", cpu, now, __GET_FRAME());
+    LTRACEF("cpu %u: now %" PRIi64 ", sp %p\n", cpu, now, __GET_FRAME());
 
     // Rather than continually checking if we have enough space, just
     // conservatively check for the maximum amount we'll need.
@@ -1728,7 +1728,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                             state->num_used_misc) *
                            kMaxEventRecordSize);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
-        TRACEF("cpu %u: @%" PRIu64 " pmi buffer full\n", cpu, now);
+        TRACEF("cpu %u: @%" PRIi64 " pmi buffer full\n", cpu, now);
         data->buffer_start->flags |= CPUPERF_BUFFER_FLAG_FULL;
         return false;
     }

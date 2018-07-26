@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -245,12 +246,21 @@ static bool port_test() {
 static bool time_test() {
     BEGIN_TEST;
 
+    // time construction
     ASSERT_EQ(zx::time().get(), 0);
     ASSERT_EQ(zx::time::infinite().get(), ZX_TIME_INFINITE);
+    ASSERT_EQ(zx::time(-1).get(), -1);
+    ASSERT_EQ(zx::time(ZX_TIME_INFINITE_PAST).get(), ZX_TIME_INFINITE_PAST);
 
+    // duration construction
     ASSERT_EQ(zx::duration().get(), 0);
     ASSERT_EQ(zx::duration::infinite().get(), ZX_TIME_INFINITE);
+    ASSERT_EQ(zx::duration(-1).get(), -1);
+    ASSERT_EQ(zx::duration(ZX_TIME_INFINITE_PAST).get(), ZX_TIME_INFINITE_PAST);
 
+    // duration to/from nsec, usec, msec, etc.
+    ASSERT_EQ(zx::nsec(-10).get(), ZX_NSEC(-10));
+    ASSERT_EQ(zx::nsec(-10).to_nsecs(), -10);
     ASSERT_EQ(zx::nsec(10).get(), ZX_NSEC(10));
     ASSERT_EQ(zx::nsec(10).to_nsecs(), 10);
     ASSERT_EQ(zx::usec(10).get(), ZX_USEC(10));
@@ -291,6 +301,17 @@ static bool time_test() {
 
     // Just a smoke test
     ASSERT_GE(zx::deadline_after(zx::usec(10)).get(), ZX_USEC(10));
+
+    END_TEST;
+}
+
+static bool time_nanosleep_test() {
+    BEGIN_TEST;
+
+    ASSERT_EQ(zx::nanosleep(zx::time(ZX_TIME_INFINITE_PAST)), ZX_OK);
+    ASSERT_EQ(zx::nanosleep(zx::time(-1)), ZX_OK);
+    ASSERT_EQ(zx::nanosleep(zx::time(0)), ZX_OK);
+    ASSERT_EQ(zx::nanosleep(zx::time(1)), ZX_OK);
 
     END_TEST;
 }
@@ -611,6 +632,7 @@ RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
 RUN_TEST(port_test)
 RUN_TEST(time_test)
+RUN_TEST(time_nanosleep_test)
 RUN_TEST(ticks_test)
 RUN_TEST(thread_self_test)
 RUN_TEST(thread_suspend_test)

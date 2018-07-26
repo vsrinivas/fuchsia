@@ -1186,11 +1186,11 @@ void dump_thread(thread_t* t, bool full_dump) {
     if (full_dump) {
         dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
         dprintf(INFO, "\tstate %s, curr/last cpu %d/%d, cpu_affinity %#x, priority %d [%d:%d,%d], "
-                      "remaining time slice %" PRIu64 "\n",
+                      "remaining time slice %" PRIi64 "\n",
                 thread_state_to_str(t->state), (int)t->curr_cpu, (int)t->last_cpu, t->cpu_affinity,
                 t->effec_priority, t->base_priority,
                 t->priority_boost, t->inherited_priority, t->remaining_time_slice);
-        dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
+        dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n",
                 runtime, runtime / 1000000000);
         dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
         dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,

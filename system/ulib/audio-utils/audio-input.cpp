@@ -50,7 +50,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     }
 
     uint64_t ring_bytes_64 =
-        (zx_duration_mul_uint64(CHUNK_TIME, frame_rate_) / ZX_SEC(1)) * frame_sz_;
+        (zx_duration_mul_int64(CHUNK_TIME, frame_rate_) / ZX_SEC(1)) * frame_sz_;
     if (ring_bytes_64 > fbl::numeric_limits<uint32_t>::max()) {
         printf("Invalid frame rate %u\n", frame_rate_);
         return res;

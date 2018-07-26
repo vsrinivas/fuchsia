@@ -63,7 +63,7 @@ static zx_status_t cpustats(zx_handle_t root_resource, zx_duration_t delay) {
         } else {
             busy_time = 0;
         }
-        unsigned int busypercent = zx_duration_mul_uint64(busy_time, 10000) / delay;
+        unsigned int busypercent = zx_duration_mul_int64(busy_time, 10000) / delay;
 
         printf("%3zu"
                " %3u.%02u%%"

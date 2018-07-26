@@ -142,29 +142,25 @@ zx_time_t current_time(void) {
 // Round up t to a clock tick, so that when the APIC timer fires, the wall time
 // will have elapsed.
 static zx_time_t discrete_time_roundup(zx_time_t t) {
-    zx_time_t value = t;
+    zx_duration_t value;
     switch (wall_clock) {
     case CLOCK_TSC: {
-        value += ns_per_tsc_rounded_up;
+        value = ns_per_tsc_rounded_up;
         break;
     }
     case CLOCK_HPET: {
-        value += ns_per_hpet_rounded_up;
+        value = ns_per_hpet_rounded_up;
         break;
     }
     case CLOCK_PIT: {
-        value += ns_per_pit_rounded_up;
+        value = ns_per_pit_rounded_up;
         break;
     }
     default:
         panic("Invalid wall clock source\n");
     }
 
-    // Check for overflow
-    if (unlikely(t > value)) {
-        return UINT64_MAX;
-    }
-    return value;
+    return zx_time_add_duration(t, value);
 }
 
 zx_ticks_t ticks_per_second(void) {
@@ -549,10 +545,16 @@ LK_INIT_HOOK(timer, &pc_init_timer, LK_INIT_LEVEL_VM + 3);
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     DEBUG_ASSERT(arch_ints_disabled());
 
+    if (deadline < 0) {
+        deadline = 0;
+    }
     deadline = discrete_time_roundup(deadline);
+    DEBUG_ASSERT(deadline > 0);
 
     if (use_tsc_deadline) {
-        if (UINT64_MAX / deadline < (tsc_ticks_per_ms / ZX_MSEC(1))) {
+        // Check if the deadline would overflow the TSC.
+        const uint64_t tsc_ticks_per_ns = tsc_ticks_per_ms / ZX_MSEC(1);
+        if (UINT64_MAX / deadline < tsc_ticks_per_ns) {
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -571,7 +573,7 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
         return apic_timer_set_oneshot(1, 1, false /* unmasked */);
     }
     const zx_duration_t interval = zx_time_sub_time(deadline, now);
-    DEBUG_ASSERT(interval != 0);
+    DEBUG_ASSERT(interval > 0);
 
     uint64_t apic_ticks_needed = u64_mul_u64_fp32_64(interval, apic_ticks_per_ns);
     if (apic_ticks_needed == 0) {

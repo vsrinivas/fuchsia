@@ -1934,7 +1934,7 @@ int ppoll(struct pollfd* fds, nfds_t n,
         zx_time_t tmo = ZX_TIME_INFINITE;
         // Check for overflows on every operation.
         if (timeout_ts && timeout_ts->tv_sec >= 0 && timeout_ts->tv_nsec >= 0 &&
-            (uint64_t)timeout_ts->tv_sec <= UINT64_MAX / ZX_SEC(1)) {
+            timeout_ts->tv_sec <= INT64_MAX / ZX_SEC(1)) {
             zx_duration_t seconds_duration = ZX_SEC(timeout_ts->tv_sec);
             zx_duration_t duration =
                 zx_duration_add_duration(seconds_duration, timeout_ts->tv_nsec);

@@ -37,7 +37,7 @@ int clock_tests(int, const cmd_args*, uint32_t) {
             t2 = current_time();
             //printf("%llu %llu\n", last, t2);
             if (t2 < last) {
-                printf("WARNING: time ran backwards: %" PRIu64 " < %" PRIu64 "\n", t2, last);
+                printf("WARNING: time ran backwards: %" PRIi64 " < %" PRIi64 "\n", t2, last);
                 last = t2;
                 continue;
             }

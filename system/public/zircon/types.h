@@ -38,18 +38,19 @@ typedef uint32_t zx_handle_t;
 typedef int32_t zx_status_t;
 
 // absolute time in nanoseconds (generally with respect to the monotonic clock)
-typedef uint64_t zx_time_t;
+typedef int64_t zx_time_t;
 // a duration in nanoseconds
-typedef uint64_t zx_duration_t;
+typedef int64_t zx_duration_t;
 // a duration in hardware ticks
 typedef uint64_t zx_ticks_t;
-#define ZX_TIME_INFINITE UINT64_MAX
-#define ZX_NSEC(n) ((zx_duration_t)(1ULL * (n)))
-#define ZX_USEC(n) ((zx_duration_t)(1000ULL * (n)))
-#define ZX_MSEC(n) ((zx_duration_t)(1000000ULL * (n)))
-#define ZX_SEC(n)  ((zx_duration_t)(1000000000ULL * (n)))
-#define ZX_MIN(n)  (ZX_SEC(n) * 60ULL)
-#define ZX_HOUR(n) (ZX_MIN(n) * 60ULL)
+#define ZX_TIME_INFINITE INT64_MAX
+#define ZX_TIME_INFINITE_PAST INT64_MIN
+#define ZX_NSEC(n) ((zx_duration_t)(1LL * (n)))
+#define ZX_USEC(n) ((zx_duration_t)(1000LL * (n)))
+#define ZX_MSEC(n) ((zx_duration_t)(1000000LL * (n)))
+#define ZX_SEC(n)  ((zx_duration_t)(1000000000LL * (n)))
+#define ZX_MIN(n)  (ZX_SEC(n) * 60LL)
+#define ZX_HOUR(n) (ZX_MIN(n) * 60LL)
 
 // clock ids
 typedef uint32_t zx_clock_t;

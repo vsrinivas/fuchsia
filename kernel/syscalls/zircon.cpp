@@ -42,9 +42,9 @@ constexpr size_t kMaxCPRNGDraw = ZX_CPRNG_DRAW_MAX_LEN;
 constexpr size_t kMaxCPRNGSeed = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
 zx_status_t sys_nanosleep(zx_time_t deadline) {
-    LTRACEF("nseconds %" PRIu64 "\n", deadline);
+    LTRACEF("nseconds %" PRIi64 "\n", deadline);
 
-    if (deadline == 0ull) {
+    if (deadline <= 0) {
         thread_yield();
         return ZX_OK;
     }

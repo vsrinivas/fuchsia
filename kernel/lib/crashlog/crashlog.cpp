@@ -30,7 +30,7 @@ size_t crashlog_to_string(char* out, const size_t out_len) {
     remain -= len;
     buf += len;
 
-    len = snprintf(buf, remain, "UPTIME (ms)\n%" PRIu64 "\n\n", current_time() / ZX_MSEC(1));
+    len = snprintf(buf, remain, "UPTIME (ms)\n%" PRIi64 "\n\n", current_time() / ZX_MSEC(1));
     if (len > remain) {
         return out_len;
     }
