@@ -147,10 +147,16 @@ impl<B: ByteSlice> Icmpv4DestUnreachable<B> {
     /// Parse a ByteSlice into a ICMPv4 Destination Unreachable message body.
     pub fn parse(bytes: B) -> Result<Icmpv4DestUnreachable<B>, ParseError> {
         // Eat the 4 unused bytes at the start of the packet
-        let (_, bytes) = LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let origin_data = LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
-        Ok(Icmpv4DestUnreachable {  internet_header, origin_data })
+        let (_, bytes) =
+            LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let origin_data =
+            LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        Ok(Icmpv4DestUnreachable {
+            internet_header,
+            origin_data,
+        })
     }
 }
 
@@ -162,10 +168,17 @@ struct Icmpv4Redirect<B> {
 
 impl<B: ByteSlice> Icmpv4Redirect<B> {
     pub fn parse(bytes: B) -> Result<Icmpv4Redirect<B>, ParseError> {
-        let (gateway, bytes) = LayoutVerified::<B, Ipv4Addr>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let origin_data = LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
-        Ok(Icmpv4Redirect { gateway, internet_header, origin_data })
+        let (gateway, bytes) =
+            LayoutVerified::<B, Ipv4Addr>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let origin_data =
+            LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        Ok(Icmpv4Redirect {
+            gateway,
+            internet_header,
+            origin_data,
+        })
     }
 }
 
@@ -177,10 +190,16 @@ struct Icmpv4TimeExceeded<B> {
 impl<B: ByteSlice> Icmpv4TimeExceeded<B> {
     pub fn parse(bytes: B) -> Result<Icmpv4TimeExceeded<B>, ParseError> {
         // Eat the 4 unused bytes at the start of the packet
-        let (_, bytes) = LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let origin_data = LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
-        Ok(Icmpv4TimeExceeded { internet_header, origin_data })
+        let (_, bytes) =
+            LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let origin_data =
+            LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        Ok(Icmpv4TimeExceeded {
+            internet_header,
+            origin_data,
+        })
     }
 }
 
@@ -192,11 +211,19 @@ struct Icmpv4ParameterProblem<B> {
 
 impl<B: ByteSlice> Icmpv4ParameterProblem<B> {
     pub fn parse(bytes: B) -> Result<Icmpv4ParameterProblem<B>, ParseError> {
-        let (pointer, bytes) = LayoutVerified::<B, u8>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (_, bytes) = LayoutVerified::<B, [u8; 3]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let origin_data = LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
-        Ok(Icmpv4ParameterProblem { pointer, internet_header, origin_data })
+        let (pointer, bytes) =
+            LayoutVerified::<B, u8>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (_, bytes) =
+            LayoutVerified::<B, [u8; 3]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let origin_data =
+            LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        Ok(Icmpv4ParameterProblem {
+            pointer,
+            internet_header,
+            origin_data,
+        })
     }
 }
 
@@ -244,9 +271,11 @@ struct Icmpv4Timestamp<B> {
 
 impl<B: ByteSlice> Icmpv4Timestamp<B> {
     pub fn parse(bytes: B) -> Result<Icmpv4Timestamp<B>, ParseError> {
-        let (id_seq, bytes) = LayoutVerified::<B, IdAndSeq>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let timestamps = LayoutVerified::<B, IcmpTimestampData>::new(bytes).ok_or(ParseError::Format)?;
-        Ok(Icmpv4Timestamp { id_seq, timestamps  })
+        let (id_seq, bytes) =
+            LayoutVerified::<B, IdAndSeq>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let timestamps =
+            LayoutVerified::<B, IcmpTimestampData>::new(bytes).ok_or(ParseError::Format)?;
+        Ok(Icmpv4Timestamp { id_seq, timestamps })
     }
 }
 
@@ -271,26 +300,31 @@ pub struct Icmpv4Packet<B> {
 impl<B: ByteSlice> Icmpv4Packet<B> {
     /// Parse a ByteSlice into an ICMPv4 packet.
     pub fn parse(bytes: B) -> Result<Icmpv4Packet<B>, ParseError> {
-        let (header, body_bytes) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(
-            bytes,
-        ).ok_or(ParseError::Format)?;
+        let (header, body_bytes) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
+            .ok_or(ParseError::Format)?;
 
         let mut c = Checksum::new();
         c.add_bytes(&[header.msg_type, header.code]);
         c.add_bytes(&body_bytes);
 
         if c.checksum() != header.checksum() {
-            return Err(ParseError::Checksum)
+            return Err(ParseError::Checksum);
         }
 
         let body = match header.msg_type() {
             Ok(EchoReply) => Icmpv4Body::EchoReply(Icmpv4Echo::parse(body_bytes)?),
-            Ok(DestUnreachable) => Icmpv4Body::DestUnreachable(Icmpv4DestUnreachable::parse(body_bytes)?),
+            Ok(DestUnreachable) => {
+                Icmpv4Body::DestUnreachable(Icmpv4DestUnreachable::parse(body_bytes)?)
+            }
             Ok(Redirect) => Icmpv4Body::Redirect(Icmpv4Redirect::parse(body_bytes)?),
             Ok(EchoRequest) => Icmpv4Body::EchoRequest(Icmpv4Echo::parse(body_bytes)?),
             Ok(TimeExceeded) => Icmpv4Body::TimeExceeded(Icmpv4TimeExceeded::parse(body_bytes)?),
-            Ok(ParameterProblem) => Icmpv4Body::ParameterProblem(Icmpv4ParameterProblem::parse(body_bytes)?),
-            Ok(TimestampRequest) => Icmpv4Body::TimestampRequest(Icmpv4Timestamp::parse(body_bytes)?),
+            Ok(ParameterProblem) => {
+                Icmpv4Body::ParameterProblem(Icmpv4ParameterProblem::parse(body_bytes)?)
+            }
+            Ok(TimestampRequest) => {
+                Icmpv4Body::TimestampRequest(Icmpv4Timestamp::parse(body_bytes)?)
+            }
             Ok(TimestampReply) => Icmpv4Body::TimestampReply(Icmpv4Timestamp::parse(body_bytes)?),
             Err(_) => return Err(ParseError::NotSupported),
         };
@@ -347,7 +381,10 @@ mod tests {
             Icmpv4Type::TimestampRequest
         );
         if let Icmpv4Body::TimestampRequest(timestamp_reply) = icmp_packet.body {
-            assert_eq!(timestamp_reply.timestamps.origin_timestamp(), ORIGIN_TIMESTAMP);
+            assert_eq!(
+                timestamp_reply.timestamps.origin_timestamp(),
+                ORIGIN_TIMESTAMP
+            );
             assert_eq!(timestamp_reply.timestamps.recv_timestamp(), RX_TX_TIMESTAMP);
             assert_eq!(timestamp_reply.timestamps.tx_timestamp(), RX_TX_TIMESTAMP);
             assert_eq!(timestamp_reply.id_seq.id(), IDENTIFIER);
@@ -374,10 +411,7 @@ mod tests {
         use wire::testdata::icmp_redirect::*;
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        assert_eq!(
-            icmp_packet.header.msg_type().unwrap(),
-            Icmpv4Type::Redirect
-        );
+        assert_eq!(icmp_packet.header.msg_type().unwrap(), Icmpv4Type::Redirect);
         if let Icmpv4Body::Redirect(packet) = icmp_packet.body {
             assert_eq!(*packet.gateway, GATEWAY_ADDR);
         }
