@@ -1,4 +1,6 @@
 {
-  "program": "bin/app",
-  "runner": "guest_runner"
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "guest_runner"
 }
