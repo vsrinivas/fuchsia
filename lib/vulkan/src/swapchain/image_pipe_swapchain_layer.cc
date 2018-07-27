@@ -11,7 +11,6 @@
 #include <fuchsia/images/cpp/fidl.h>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fxl/logging.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer_config.h"
 #include "vk_layer_extension_utils.h"
@@ -230,7 +229,7 @@ VkResult ImagePipeSwapchain::Initialize(
 
     result = pDisp->CreateImage(device, &create_info, pAllocator, &image);
     if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "VkCreateImage failed: " << result;
+      fprintf(stderr, "VkCreateImage failed: %d", result);
       return result;
     }
     images_.push_back(image);
@@ -253,13 +252,13 @@ VkResult ImagePipeSwapchain::Initialize(
     result =
         pDisp->AllocateMemory(device, &alloc_info, pAllocator, &device_mem);
     if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "vkAllocMemory failed: " << result;
+      fprintf(stderr, "vkAllocMemory failed: %d", result);
       return result;
     }
     memories_.push_back(device_mem);
     result = pDisp->BindImageMemory(device, image, device_mem, 0);
     if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "vkBindImageMemory failed: " << result;
+      fprintf(stderr, "vkBindImageMemory failed: %d", result);
       return result;
     }
     uint32_t vmo_handle;
@@ -271,7 +270,7 @@ VkResult ImagePipeSwapchain::Initialize(
     result =
         pDisp->GetMemoryFuchsiaHandleKHR(device, &get_handle_info, &vmo_handle);
     if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "vkGetMemoryFuchsiaHandleKHR failed: " << result;
+      fprintf(stderr, "vkGetMemoryFuchsiaHandleKHR failed: %d", result);
       return result;
     }
 
@@ -303,7 +302,7 @@ VkResult ImagePipeSwapchain::Initialize(
     result = pDisp->CreateSemaphore(device, &create_semaphore_info, pAllocator,
                                     &semaphore);
     if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "vkCreateSemaphore failed: " << result;
+      fprintf(stderr, "vkCreateSemaphore failed: %d", result);
       return result;
     }
     semaphores_.push_back(semaphore);
@@ -328,7 +327,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(
   ret = swapchain->Initialize(device, pCreateInfo, pAllocator);
   if (ret != VK_SUCCESS) {
     swapchain->Cleanup(device, pAllocator);
-    FXL_DLOG(ERROR) << "failed to create swapchain: " << ret;
+    fprintf(stderr, "failed to create swapchain: %d", ret);
     return ret;
   }
   *pSwapchain = reinterpret_cast<VkSwapchainKHR>(swapchain.release());
@@ -388,7 +387,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
   if (available_ids_.empty()) {
     // only way this can happen is if there are 0 images or if the client has
     // already acquired all images
-    FXL_DCHECK(!pending_images_.empty());
+    assert(!pending_images_.empty());
     if (timeout_ns == 0)
       return VK_NOT_READY;
     // wait for image to become available
@@ -402,10 +401,10 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     if (status == ZX_ERR_TIMED_OUT) {
       return VK_TIMEOUT;
     } else if (status != ZX_OK) {
-      FXL_DLOG(ERROR) << "event::wait_one returned " << status;
+      fprintf(stderr, "event::wait_one returned %d", status);
       return VK_ERROR_DEVICE_LOST;
     }
-    FXL_DCHECK(pending & ZX_EVENT_SIGNALED);
+    assert(pending & ZX_EVENT_SIGNALED);
 
     available_ids_.push_back(pending_images_[0].image_index);
     pending_images_.erase(pending_images_.begin());
@@ -421,7 +420,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     if (!acquire_events_[*pImageIndex]) {
       zx_status_t status = zx::event::create(0, &acquire_events_[*pImageIndex]);
       if (status != ZX_OK) {
-        FXL_DLOG(ERROR) << "zx::event::create failed: " << status;
+        fprintf(stderr, "zx::event::create failed: %d", status);
         return VK_SUCCESS;
       }
     }
@@ -430,7 +429,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     zx_status_t status =
         acquire_events_[*pImageIndex].duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
     if (status != ZX_OK) {
-      FXL_DLOG(ERROR) << "failed to duplicate acquire semaphore: " << status;
+      fprintf(stderr, "failed to duplicate acquire semaphore: %d", status);
       return VK_SUCCESS;
     }
 
@@ -450,7 +449,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     VkResult result =
         pDisp->ImportSemaphoreFuchsiaHandleKHR(device_, &import_info);
     if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "semaphore import failed: " << result;
+      fprintf(stderr, "semaphore import failed: %d", result);
       return VK_SUCCESS;
     }
   }
@@ -461,7 +460,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(
     VkDevice device, VkSwapchainKHR vk_swapchain, uint64_t timeout,
     VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex) {
   // TODO(MA-264) handle this correctly
-  FXL_CHECK(fence == VK_NULL_HANDLE);
+  assert(fence == VK_NULL_HANDLE);
 
   auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
   return swapchain->AcquireNextImage(timeout, semaphore, pImageIndex);
@@ -487,7 +486,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
                               .pSignalSemaphores = &semaphores_[index]};
   VkResult result = pDisp->QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
   if (result != VK_SUCCESS) {
-    FXL_DLOG(ERROR) << "vkQueueSubmit failed with result " << result;
+    fprintf(stderr, "vkQueueSubmit failed with result %d", result);
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
@@ -501,13 +500,13 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
   result = pDisp->GetSemaphoreFuchsiaHandleKHR(
       device_, &semaphore_info, acquire_fence.reset_and_get_address());
   if (result != VK_SUCCESS) {
-    FXL_DLOG(ERROR) << "GetSemaphoreFuchsiaHandleKHR failed with result "
-                    << result;
+    fprintf(stderr, "GetSemaphoreFuchsiaHandleKHR failed with result %d",
+            result);
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
   auto iter = std::find(acquired_ids_.begin(), acquired_ids_.end(), index);
-  FXL_DCHECK(iter != acquired_ids_.end());
+  assert(iter != acquired_ids_.end());
   acquired_ids_.erase(iter);
 
   if (kSkipPresent) {
@@ -523,9 +522,10 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     status =
         release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
     if (status != ZX_OK) {
-      FXL_DLOG(ERROR) << "failed to duplicate release fence, "
-                         "zx::event::duplicate() failed with status "
-                      << status;
+      fprintf(stderr,
+              "failed to duplicate release fence, "
+              "zx::event::duplicate() failed with status %d",
+              status);
       return VK_ERROR_DEVICE_LOST;
     }
 
@@ -628,7 +628,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(
     *pCount = supported_properties.formats.size();
     return VK_SUCCESS;
   }
-  FXL_DCHECK(*pCount >= supported_properties.formats.size());
+  assert(*pCount >= supported_properties.formats.size());
   memcpy(pSurfaceFormats, supported_properties.formats.data(),
          supported_properties.formats.size() * sizeof(VkSurfaceFormatKHR));
   *pCount = supported_properties.formats.size();
@@ -644,7 +644,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(
     *pCount = present_mode_count;
     return VK_SUCCESS;
   }
-  FXL_DCHECK(*pCount >= present_mode_count);
+  assert(*pCount >= present_mode_count);
   memcpy(pPresentModes, present_modes, present_mode_count);
   *pCount = present_mode_count;
   return VK_SUCCESS;
@@ -897,7 +897,7 @@ GetInstanceProcAddr(VkInstance instance, const char* funcName) {
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 GetPhysicalDeviceProcAddr(VkInstance instance, const char* funcName) {
-  FXL_DCHECK(instance);
+  assert(instance);
 
   LayerData* my_data;
   my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
