@@ -270,7 +270,8 @@ void CobaltContextImpl::ConnectToCobaltApplication() {
     SendObservations();
   } else {
     fsl::SizedVmo config_vmo;
-    FXL_CHECK(config_.Duplicate(0, &config_vmo) == ZX_OK)
+    FXL_CHECK(config_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+                                &config_vmo) == ZX_OK)
         << "Could not clone config VMO";
 
     fuchsia::cobalt::ProjectProfile profile;
@@ -411,7 +412,8 @@ fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
     fsl::SizedVmo config, CobaltContext** cobalt_context) {
   return InitializeCobalt(
-      MakeCobaltContext(dispatcher, startup_context, std::move(config)), cobalt_context);
+      MakeCobaltContext(dispatcher, startup_context, std::move(config)),
+      cobalt_context);
 }
 
 void ReportObservation(CobaltObservation observation,

@@ -78,7 +78,7 @@ bool Equals(const fidl::VectorPtr<fuchsia::cobalt::ObservationValue>& v1,
   return true;
 }
 
-constexpr int32_t kFakeCobaltProjectId = 1;
+constexpr char kFakeCobaltConfig[] = "FakeConfig";
 constexpr int32_t kFakeCobaltMetricId = 2;
 constexpr int32_t kFakeCobaltEncodingId = 3;
 
@@ -195,6 +195,7 @@ class FakeCobaltEncoderFactoryImpl
     cobalt_encoder_.reset(new FakeCobaltEncoderImpl());
     cobalt_encoder_bindings_.AddBinding(cobalt_encoder_.get(),
                                         std::move(request));
+    callback(fuchsia::cobalt::Status::OK);
   }
 
   FakeCobaltEncoderImpl* cobalt_encoder() { return cobalt_encoder_.get(); }
@@ -247,19 +248,11 @@ class CobaltTest : public gtest::TestLoopFixture {
 
 TEST_F(CobaltTest, InitializeCobalt) {
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
-  EXPECT_NE(cobalt_context, nullptr);
-  ac.call();
-  EXPECT_EQ(cobalt_context, nullptr);
-}
-
-TEST_F(CobaltTest, InitializeCobaltWithProjectProfile) {
-  CobaltContext* cobalt_context = nullptr;
   fsl::SizedVmo fake_cobalt_config;
-  ASSERT_TRUE(fsl::VmoFromString("FakeConfig", &fake_cobalt_config));
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   EXPECT_NE(cobalt_context, nullptr);
   ac.call();
   EXPECT_EQ(cobalt_context, nullptr);
@@ -271,8 +264,11 @@ TEST_F(CobaltTest, ReportIndexObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
+                             std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -284,8 +280,11 @@ TEST_F(CobaltTest, ReportIntObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
+                             std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -297,8 +296,11 @@ TEST_F(CobaltTest, ReportDoubleObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
+                             std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -310,8 +312,11 @@ TEST_F(CobaltTest, ReportStringObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
+                             std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -329,8 +334,11 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
+                             std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -349,8 +357,11 @@ TEST_F(CobaltTest, ReportMultipartObservation) {
   CobaltObservation observation(static_cast<uint32_t>(kFakeCobaltMetricId),
                                 fidl::Clone(parts));
   CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
-                             kFakeCobaltProjectId, &cobalt_context);
+                             std::move(fake_cobalt_config), &cobalt_context);
+  RunLoopUntilIdle();
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddMultipartObservation", parts);
