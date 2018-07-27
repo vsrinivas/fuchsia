@@ -104,7 +104,8 @@ In this document, the library is always named `tag`, and is variously
 referred to as `tag` or `TAG` or `Tag` or `kTag` to reflect a
 particular lexical convention. The `tag` should be a single identifier
 without underscores. The all-lowercase form of a tag is given by the
-regular expression `[a-z][a-z0-9]*`.
+regular expression `[a-z][a-z0-9]*`.  A tag can be replaced by a shorter
+version of the library name, for example `zx` instead of `zircon`.
 
 The include path for a header `foo.h`, as described by the [library
 naming document], should be `lib/tag/foo.h`.
@@ -182,15 +183,14 @@ definition looks like the following.
 
 where `EXPR` has one of the following forms (for a `uint32_t`)
 
-- `((uint32_t) 23)`
-- `((uint32_t) 0x23)`
-- `((uint32_t) (EXPR | EXPR | ...))`
+- `((uint32_t)23)`
+- `((uint32_t)0x23)`
+- `((uint32_t)(EXPR | EXPR | ...))`
 
 #### Enumerated integer constants
 
 Given an enumerated set of integer constants named `NAME` in a library
-`TAG`, a related set of compile-time constants has the following
-parts.
+`TAG`, a related set of compile-time constants has the following parts.
 
 First, a typedef to give the type a name, a size, and a
 signedness. The typedef should be of an explicitly sized integer
@@ -209,9 +209,9 @@ Each constant then has the form
 where `EXPR` is one of a handful of types of compile-time integer
 constants (always wrapped in parentheses):
 
-- `((tag_name_t) 23)`
-- `((tag_name_t) 0x23)`
-- `((tag_name_t) (TAG_NAME_FOO | TAG_NAME_BAR | ...))`
+- `((tag_name_t)23)`
+- `((tag_name_t)0x23)`
+- `((tag_name_t)(TAG_NAME_FOO | TAG_NAME_BAR | ...))`
 
 Do not include a count of values, which is difficult to maintain as
 the set of constants grows.
