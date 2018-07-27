@@ -12,6 +12,7 @@ fidl("fuchsia.accessibility") {
     "manager.fidl",
     "semantics_root.fidl",
     "test_client.fidl",
+    "touch_dispatcher.fidl",
   ]
 
   public_deps = [

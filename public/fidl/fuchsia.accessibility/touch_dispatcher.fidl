@@ -1,0 +1,60 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility;
+
+// The touch dispatcher routes raw touch events to accessibility gesture detectors
+// for them to perform custom gesture detection. A connected gesture detector gets
+// raw touch events from a Presentation and can send back simulated input
+// through the regular input dispatch. For now, we only allow a single
+// client to connect.
+[Discoverable]
+interface TouchDispatcher {
+    // Sends the client a touch pointer event received from the current active
+    // fuchsia.ui.policy.Presentation.
+    1: -> OnInputEvent(fuchsia.ui.input.PointerEvent event);
+
+    // Notify the client that the active presentation has changed. Clients should use
+    // this to invalidate any previous gesture detection state and store a reference to
+    // the current active view represented through the ViewTreeToken.
+    2: -> OnPresentationChangedEvent(fuchsia.ui.viewsv1.ViewTreeToken token);
+
+    // Return a simulated pointer event to the active presentation to process through the regular
+    // input pipeline.
+    3: SendSimulatedPointerEvent(fuchsia.ui.input.PointerEvent event);
+};
+
+[Discoverable]
+// The input receiver takes in input from presentations to send to clients of
+// the touch dispatcher and may pass back modified input. Only one presentation may connect
+// to the input receiver at a time. Upon being set active, a presentation client
+// should connect to the input receiver and register itself to receive and send events.
+//
+// The input receiver accepts all input types, despite only supporting TouchDispatcher, to allow
+// for support of other event dispatchers in the future.
+interface InputReceiver {
+    // Register the current presentation with its ViewTreeToken to the input receiver.
+    // The InputReceiver currently only keeps connection to a single client at a time.
+    // When a presentation client becomes active, it should connect to the InputReceiver service
+    // and register itself before sending input events. Otherwise, the InputReceiver drops
+    // the sent inputs.
+    //
+    // The setup protocol is done because the InputReceiver currently only supports connection to
+    // a single presentation at a time. An existing client is disconnected from the InputReceiver
+    // once a new client connects. Therefore, we specify that a presentation should always
+    // reconnect upon being set active, as that is when the presentation can receive raw inputs.
+    // Registration must be done to specify the ViewTree of the currently connected presentation
+    // for hit tests.
+    1: RegisterPresentation(fuchsia.ui.viewsv1.ViewTreeToken token);
+
+    // Send an input event to the input receiver to process. No-op if the presentation client
+    // did not reconnect and register beforehand.
+    2: SendInputEvent(fuchsia.ui.input.InputEvent event);
+
+    // Sends back an input event to the presentation client for the client to process through
+    // the regular input event processing pipeline.
+    // TODO(SCN-866): Figure out how to make sure valid orderings of input events are
+    // returned.
+    3: -> OnReturnInputEvent(fuchsia.ui.input.InputEvent event);
+};

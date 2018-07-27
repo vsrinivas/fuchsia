@@ -11,3 +11,11 @@ package("a11y_manager") {
 
   binary = "a11y_manager"
 }
+
+package("a11y_touch_dispatcher") {
+  deps = [
+    "a11y_touch_dispatcher",
+  ]
+
+  binary = "a11y_touch_dispatcher"
+}
