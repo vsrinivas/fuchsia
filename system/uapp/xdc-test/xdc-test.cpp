@@ -80,7 +80,7 @@ static zx_status_t write_file_header(const fbl::unique_fd& file_fd, fbl::unique_
 // Reads from the src_fd and writes to the dest_fd until src_len bytes has been written,
 // or a fatal error occurs while reading or writing.
 static zx_status_t transfer(fbl::unique_fd& src_fd, off_t src_len, fbl::unique_fd& dest_fd) {
-    printf("Transferring file of size %lld bytes.\n", src_len);
+    printf("Transferring file of size %jd bytes.\n", (uintmax_t)src_len);
 
     fbl::unique_ptr<unsigned char*[]> buf(new unsigned char*[BUFFER_SIZE]);
     ssize_t res;
