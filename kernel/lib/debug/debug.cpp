@@ -16,7 +16,13 @@
 #include <printf.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/status.h>
+#include <zircon/status_impl.h>
 #include <zircon/types.h>
+
+const char* zx_status_get_string(zx_status_t status) {
+    return zx_status_get_string_impl(status);
+}
 
 void spin(uint32_t usecs) {
     zx_time_t start = current_time();
