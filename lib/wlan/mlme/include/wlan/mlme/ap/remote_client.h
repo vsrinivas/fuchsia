@@ -32,12 +32,7 @@ class RemoteClient : public RemoteClientInterface {
 
     // RemoteClientInterface implementation
     void HandleTimeout() override;
-
-    zx_status_t HandleEthFrame(const EthFrame& frame) override;
-    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
-
+    zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>) override;
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);

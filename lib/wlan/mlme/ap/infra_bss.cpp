@@ -6,6 +6,7 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
+#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -94,105 +95,147 @@ bool InfraBss::IsStarted() {
     return started_at_ != 0;
 }
 
+void InfraBss::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
+    switch (pkt->peer()) {
+    case Packet::Peer::kEthernet: {
+        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+            HandleEthFrame(eth_frame.IntoOwned(fbl::move(pkt)));
+        }
+        break;
+    }
+    case Packet::Peer::kWlan:
+        HandleAnyWlanFrame(fbl::move(pkt));
+        break;
+    default:
+        errorf("unknown Packet peer: %u\n", pkt->peer());
+        break;
+    }
+}
+
+void InfraBss::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+    if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
+        if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
+            HandleAnyMgmtFrame(mgmt_frame.IntoOwned(fbl::move(pkt)));
+        }
+    } else if (auto possible_data_frame = DataFrameView<>::CheckType(pkt.get())) {
+        if (auto data_frame = possible_data_frame.CheckLength()) {
+            HandleAnyDataFrame(data_frame.IntoOwned(fbl::move(pkt)));
+        }
+    } else if (auto possible_ctrl_frame = CtrlFrameView<>::CheckType(pkt.get())) {
+        if (auto ctrl_frame = possible_ctrl_frame.CheckLength()) {
+            HandleAnyCtrlFrame(ctrl_frame.IntoOwned(fbl::move(pkt)));
+        }
+    }
+}
+
+void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
+    auto mgmt_frame = frame.View();
+    bool to_bss = (bssid_ == mgmt_frame.hdr()->addr1 && bssid_ == mgmt_frame.hdr()->addr3);
+
+    // Special treatment for ProbeRequests which can be addressed towards
+    // broadcast address.
+    if (auto possible_probe_req_frame = mgmt_frame.CheckBodyType<ProbeRequest>()) {
+        if (auto probe_req_frame = possible_probe_req_frame.CheckLength()) {
+            // Drop all ProbeRequests which are neither targeted to this BSS nor to
+            // broadcast address.
+            auto hdr = probe_req_frame.hdr();
+            bool to_bcast = hdr->addr1.IsBcast() && hdr->addr3.IsBcast();
+            if (!to_bss && !to_bcast) { return; }
+
+            // Valid ProbeRequest, let BeaconSender process and respond to it.
+            bcn_sender_->SendProbeResponse(probe_req_frame);
+            return;
+        }
+    }
+
+    // Drop management frames which are not targeted towards this BSS.
+    if (!to_bss) { return; }
+
+    // Register the client if it's not yet known.
+    const auto& client_addr = mgmt_frame.hdr()->addr2;
+    if (!clients_.Has(client_addr)) {
+        if (auto auth_frame = mgmt_frame.CheckBodyType<Authentication>().CheckLength()) {
+            HandleNewClientAuthAttempt(auth_frame);
+        }
+    }
+
+    // Forward all frames to the correct client.
+    if (clients_.Has(client_addr)) {
+        clients_.GetClient(client_addr)->HandleAnyFrame(frame.Take());
+    }
+}
+
+void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
+    if (bssid_ != frame.hdr()->addr1) { return; }
+
+    // Let the correct RemoteClient instance process the received frame.
+    const auto& client_addr = frame.hdr()->addr2;
+    if (clients_.Has(client_addr)) {
+        clients_.GetClient(client_addr)->HandleAnyFrame(frame.Take());
+    }
+}
+
+void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
+    auto ctrl_frame = frame.View();
+
+    if (auto pspoll_frame = ctrl_frame.CheckBodyType<PsPollFrame>().CheckLength()) {
+        if (pspoll_frame.body()->bssid != bssid_) { return; }
+
+        const auto& client_addr = pspoll_frame.body()->ta;
+        if (!clients_.Has(client_addr)) { return; }
+        if (clients_.GetClientAid(client_addr) != pspoll_frame.body()->aid) { return; }
+
+        clients_.GetClient(client_addr)->HandleAnyFrame(frame.Take());
+    }
+}
+
 zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
     ZX_DEBUG_ASSERT(clients_.Has(client_addr));
     if (clients_.Has(client_addr)) { clients_.GetClient(client_addr)->HandleTimeout(); }
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
-    bool to_bss = (bssid_ == hdr.addr1 && bssid_ == hdr.addr3);
-
-    // Special treatment for ProbeRequests which can be addressed towards
-    // broadcast address.
-    if (hdr.fc.subtype() == ManagementSubtype::kProbeRequest) {
-        // Drop all ProbeRequests which are neither targeted to this BSS nor to
-        // broadcast address.
-        bool to_bcast = (common::kBcastMac == hdr.addr1 && common::kBcastMac == hdr.addr3);
-        if (!to_bss && !to_bcast) { return ZX_ERR_STOP; }
-
-        // Valid ProbeRequest, forward to BeaconSender for processing.
-        ForwardCurrentFrameTo(bcn_sender_.get());
-        return ZX_OK;
-    }
-
-    // Drop management frames which are not targeted towards this BSS.
-    if (!to_bss) { return ZX_ERR_STOP; }
-
-    // Let the correct RemoteClient instance process the received frame.
-    auto& client_addr = hdr.addr2;
-    if (clients_.Has(client_addr)) { ForwardCurrentFrameTo(clients_.GetClient(client_addr)); }
-    return ZX_OK;
-}
-
-zx_status_t InfraBss::HandleDataFrame(const DataFrameHeader& hdr) {
-    if (bssid_ != hdr.addr1) { return ZX_ERR_STOP; }
-
-    // Let the correct RemoteClient instance process the received frame.
-    auto& client_addr = hdr.addr2;
-    if (clients_.Has(client_addr)) { ForwardCurrentFrameTo(clients_.GetClient(client_addr)); }
-    return ZX_OK;
-}
-
-zx_status_t InfraBss::HandleEthFrame(const EthFrame& frame) {
+void InfraBss::HandleEthFrame(EthFrame&& frame) {
     // Lookup client associated with incoming unicast frame.
     auto& dest_addr = frame.hdr()->dest;
     if (dest_addr.IsUcast()) {
         if (clients_.Has(dest_addr)) {
-            ForwardCurrentFrameTo(clients_.GetClient(dest_addr));
-        } else {
-            // TODO(hahnr): Add warning once bridge is more mature.
+            clients_.GetClient(dest_addr)->HandleAnyFrame(frame.Take());
         }
-        return ZX_OK;
+        return;
     }
 
     // Process multicast frames ourselves.
     fbl::unique_ptr<Packet> out_frame;
     auto status = EthToDataFrame(frame, &out_frame);
-    if (status != ZX_OK) {
+    if (status == ZX_OK) {
+        SendDataFrame(fbl::move(out_frame));
+    } else {
         errorf("[infra-bss] [%s] couldn't convert ethernet frame: %d\n", bssid_.ToString().c_str(),
                status);
-        return status;
     }
-    return SendDataFrame(fbl::move(out_frame));
 }
 
-zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
-    // If the client is already known, there is no work to be done here.
+void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& frame) {
     auto& client_addr = frame.hdr()->addr2;
-    if (clients_.Has(client_addr)) { return ZX_OK; }
+    ZX_DEBUG_ASSERT(!clients_.Has(client_addr));
+
     debugbss("[infra-bss] [%s] new client: %s\n", bssid_.ToString().c_str(),
              client_addr.ToString().c_str());
 
     // Else, create a new remote client instance.
     fbl::unique_ptr<Timer> timer = nullptr;
     auto status = CreateClientTimer(client_addr, &timer);
-    if (status != ZX_OK) {
+    if (status == ZX_OK) {
+        auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer),
+                                                     this,  // bss
+                                                     this,  // client listener
+                                                     client_addr);
+        clients_.Add(client_addr, fbl::move(client));
+    } else {
         errorf("[infra-bss] [%s] could not create client timer: %d\n", bssid_.ToString().c_str(),
                status);
-        return status;
     }
-
-    auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer),
-                                                 this,  // bss
-                                                 this,  // client listener
-                                                 client_addr);
-    clients_.Add(client_addr, fbl::move(client));
-
-    // Note: usually, HandleMgmtFrame(...) will forward incoming frames to the
-    // corresponding clients. However, Authentication frames will add new clients
-    // and hence, this frame must be forwarded manually to the newly added client.
-    ForwardCurrentFrameTo(clients_.GetClient(client_addr));
-    return ZX_OK;
-}
-
-zx_status_t InfraBss::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
-    auto& client_addr = frame.body()->ta;
-    if (frame.body()->bssid != bssid_) { return ZX_ERR_STOP; }
-    if (clients_.GetClientAid(client_addr) != frame.body()->aid) { return ZX_ERR_STOP; }
-
-    ForwardCurrentFrameTo(clients_.GetClient(client_addr));
-    return ZX_OK;
 }
 
 zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client) {

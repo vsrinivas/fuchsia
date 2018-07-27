@@ -65,12 +65,6 @@ class BssInterface {
     virtual const common::MacAddr& bssid() const = 0;
     virtual uint64_t timestamp() = 0;
 
-    // Starts the BSS. Beacons will be sent and incoming frames are processed.
-    virtual void Start(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req) = 0;
-    // Stops the BSS. All incoming frames are dropped and Beacons are not sent
-    // anymore.
-    virtual void Stop() = 0;
-
     // Assigns an AID to the given client. Returns an error if there is no AID
     // available anymore.
     virtual zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) = 0;

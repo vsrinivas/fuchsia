@@ -62,39 +62,39 @@ bool BeaconSender::IsStarted() {
     return bss_ != nullptr;
 }
 
-zx_status_t BeaconSender::HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame) {
-    auto probereq = frame.body();
-    size_t elt_len = frame.body_len() - sizeof(ProbeRequest);
-    ElementReader reader(probereq->elements, elt_len);
+bool BeaconSender::ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_req_frame) {
+    size_t elt_len = probe_req_frame.body_len() - probe_req_frame.hdr()->len();
+    ElementReader reader(probe_req_frame.body()->elements, elt_len);
     while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) break;
+        auto hdr = reader.peek();
+        if (hdr == nullptr) {
+            // Invalid header and thus corrupted request.
+            return false;
+        }
 
         switch (hdr->id) {
-        case element_id::kSsid: {
-            auto ie = reader.read<SsidElement>();
-            if (ie == nullptr) { return ZX_ERR_STOP; };
-            if (hdr->len == 0) {
-                // Wildcard ProbeRequest
-                break;
-            }
-            size_t ssid_len = strlen(req_.ssid->data());
-            if (hdr->len != ssid_len || strncmp(ie->ssid, req_.ssid->data(), ssid_len) != 0) {
-                // Probe request was broadcast but not intended for this BSS.
-                return ZX_ERR_STOP;
-            }
+            case element_id::kSsid: {
+                auto ie = reader.read<SsidElement>();
+                if (ie == nullptr) { return false; };
+                if (hdr->len == 0) {
+                    // Always respond to wildcard requests.
+                    return true;
+                }
 
-            break;
-        }
-        default:
-            // TODO(hahnr): Process additional IEs.
-            reader.skip(sizeof(ElementHeader) + hdr->len);
-            break;
+                // Send ProbeResponse if request was targeted towards this BSS.
+                size_t ssid_len = strlen(req_.ssid->data());
+                bool to_bss =
+                        hdr->len == ssid_len && strncmp(ie->ssid, req_.ssid->data(), ssid_len) == 0;
+                return to_bss;
+            }
+            default:
+                reader.skip(sizeof(ElementHeader) + hdr->len);
+                break;
         }
     }
 
-    // ProbeRequest is valid, send response.
-    return SendProbeResponse(frame);
+    // Request did not contain an SSID IE and is therefore a wildcard one.
+    return true;
 }
 
 zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
@@ -147,6 +147,10 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
         if (status != ZX_OK) { return status; }
     }
 
+    status = WriteExtendedSupportedRates(&w);
+    if (status != ZX_OK) { return status; }
+
+
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
 
     // Validate the request in debug mode.
@@ -171,21 +175,20 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     return ZX_OK;
 }
 
-zx_status_t BeaconSender::SendProbeResponse(const MgmtFrame<ProbeRequest>& probereq) {
-    debugfn();
-    ZX_DEBUG_ASSERT(IsStarted());
-    if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
+void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_req_frame) {
+    if (!IsStarted()) { return; }
+    if (!ShouldSendProbeResponse(probe_req_frame)) { return; }
 
-    // TODO(hahnr): Length of elements is not known at this time. Allocate enough
-    // bytes. This should be updated once there is a better size management.
+    // Length of elements is not known at this time. Allocate enough bytes.
+    // This should be updated once there is a better size management.
     size_t body_payload_len = 256;
     MgmtFrame<ProbeResponse> frame;
     auto status = BuildMgmtFrame(&frame, body_payload_len);
-    if (status != ZX_OK) { return status; }
+    if (status != ZX_OK) { return; }
 
     auto hdr = frame.hdr();
     const auto& bssid = bss_->bssid();
-    hdr->addr1 = probereq.hdr()->addr2;
+    hdr->addr1 = probe_req_frame.hdr()->addr2;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
     frame.FillTxInfo();
@@ -198,24 +201,15 @@ zx_status_t BeaconSender::SendProbeResponse(const MgmtFrame<ProbeRequest>& probe
 
     // Write elements.
     ElementWriter w(resp->elements, body_payload_len);
-    status = WriteSsid(&w);
-    if (status != ZX_OK) { return status; }
-
-    status = WriteSupportedRates(&w);
-    if (status != ZX_OK) { return status; }
-
-    status = WriteDsssParamSet(&w);
-    if (status != ZX_OK) { return status; }
-
-    status = WriteCountry(&w);
-    if (status != ZX_OK) { return status; }
+    if (WriteSsid(&w) != ZX_OK) { return; }
+    if (WriteSupportedRates(&w) != ZX_OK) { return; }
+    if (WriteDsssParamSet(&w) != ZX_OK) { return; }
+    if (WriteCountry(&w) != ZX_OK) { return; }
+    if (WriteExtendedSupportedRates(&w) != ZX_OK) { return; }
 
     if (bss_->IsHTReady()) {
-        status = WriteHtCapabilities(&w);
-        if (status != ZX_OK) { return status; }
-
-        status = WriteHtOperation(&w);
-        if (status != ZX_OK) { return status; }
+        if (WriteHtCapabilities(&w) != ZX_OK) { return; }
+        if (WriteHtOperation(&w) != ZX_OK) { return; }
     }
 
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
@@ -224,22 +218,18 @@ zx_status_t BeaconSender::SendProbeResponse(const MgmtFrame<ProbeRequest>& probe
     ZX_DEBUG_ASSERT(resp->Validate(w.size()));
 
     // Update the length with final values
-    size_t body_len = sizeof(ProbeResponse) + w.size();
+    size_t body_len = resp->len() + w.size();
     status = frame.set_body_len(body_len);
-    if (status != ZX_OK) {
+    if (status == ZX_OK) {
+        status = device_->SendWlan(frame.Take());
+        if (status != ZX_OK) {
+            errorf("[bcn-sender] [%s] could not send ProbeResponse packet: %d\n",
+                   bssid.ToString().c_str(), status);
+        }
+    } else {
         errorf("[bcn-sender] [%s] could not set body length to %zu: %d\n", bssid.ToString().c_str(),
                body_len, status);
-        return status;
     }
-
-    status = device_->SendWlan(frame.Take());
-    if (status != ZX_OK) {
-        errorf("[bcn-sender] [%s] could not send ProbeResponse packet: %d\n",
-               bssid.ToString().c_str(), status);
-        return status;
-    }
-
-    return ZX_OK;
 }
 
 zx_status_t BeaconSender::WriteSsid(ElementWriter* w) {

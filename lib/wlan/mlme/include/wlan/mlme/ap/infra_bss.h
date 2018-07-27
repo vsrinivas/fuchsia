@@ -26,20 +26,26 @@ class MlmeMsg;
 
 // An infrastructure BSS which keeps track of its client and owned by the AP
 // MLME.
-class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::Listener {
+class InfraBss : public BssInterface, public RemoteClient::Listener {
    public:
     InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
              const common::MacAddr& bssid);
     virtual ~InfraBss();
 
+    // Starts the BSS. Beacons will be sent and incoming frames are processed.
+    void Start(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>&);
+    // Stops the BSS. All incoming frames are dropped and Beacons are not sent
+    // anymore.
+    void Stop();
     bool IsStarted();
+
+    // Entry point for ethernet and WLAN frames.
+    void HandleAnyFrame(fbl::unique_ptr<Packet>);
     zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
     // BssInterface implementation
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
-    void Start(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req) override;
-    void Stop() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
 
@@ -65,17 +71,17 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     wlan_channel_t Chan() const override { return chan_; }
 
    private:
+    void HandleEthFrame(EthFrame&&);
+    void HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
+    void HandleAnyMgmtFrame(MgmtFrame<>&&);
+    void HandleAnyDataFrame(DataFrame<>&&);
+    void HandleAnyCtrlFrame(CtrlFrame<>&&);
+    void HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>&);
+
     // Maximum number of group addressed packets buffered while at least one
     // client is dozing.
     // TODO(NET-687): Find good BU limit.
     static constexpr size_t kMaxGroupAddressedBu = 128;
-
-    // FrameHandler implementation
-    zx_status_t HandleEthFrame(const EthFrame& frame) override;
-    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
-    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
 
     // RemoteClient::Listener implementation
     zx_status_t HandleClientDeauth(const common::MacAddr& client) override;

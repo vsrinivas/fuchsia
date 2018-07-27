@@ -19,19 +19,20 @@ template<typename T>
 class MlmeMsg;
 
 // Configures the driver to send Beacon frames periodically.
-class BeaconSender : public FrameHandler {
+class BeaconSender {
    public:
-    BeaconSender(DeviceInterface* device);
+    explicit BeaconSender(DeviceInterface* device);
     ~BeaconSender();
 
     void Start(BssInterface* bss, const PsCfg& ps_cfg,
                const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
     void Stop();
     zx_status_t UpdateBeacon(const PsCfg& ps_cfg);
-    zx_status_t HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame) override;
+    void SendProbeResponse(const MgmtFrameView<ProbeRequest>&);
 
    private:
-    zx_status_t SendProbeResponse(const MgmtFrame<ProbeRequest>& frame);
+    bool ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>&);
+
     zx_status_t WriteSsid(ElementWriter* w);
     zx_status_t WriteSupportedRates(ElementWriter* w);
     zx_status_t WriteDsssParamSet(ElementWriter* w);

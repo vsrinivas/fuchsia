@@ -55,7 +55,7 @@ zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 zx_status_t ApMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
-    if (bss_ != nullptr) { return DispatchFramePacket(fbl::move(pkt), bss_.get()); }
+    if (bss_ != nullptr) { bss_->HandleAnyFrame(fbl::move(pkt)); }
     return ZX_OK;
 }
 

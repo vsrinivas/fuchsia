@@ -67,36 +67,10 @@ class FrameHandler {
     virtual ~FrameHandler() = default;
 
     template <typename... Args> zx_status_t HandleFrame(Args&&... args) {
-        auto status = HandleAnyFrame();
-        // Do not forward frame if it was dropped.
-        if (status == ZX_ERR_STOP) { return ZX_OK; }
-        // Do not forward frame if processing failed.
-        if (status != ZX_OK) { return status; }
-
-        status = HandleFrameInternal(std::forward<Args>(args)...);
-        if (status == ZX_ERR_STOP) { return ZX_OK; }
-        if (status != ZX_OK) { return status; }
-
-        // If there is a dynamic target registered, forward frame.
-        if (dynamic_target_ != nullptr) {
-            status = dynamic_target_->HandleFrame(std::forward<Args>(args)...);
-            if (status != ZX_OK) {
-                debugfhandler("dynamic target failed handling frame: %d\n", status);
-            }
-            dynamic_target_ = nullptr;
-        }
-        return ZX_OK;
-    }
-
-    void ForwardCurrentFrameTo(FrameHandler* handler) {
-        ZX_DEBUG_ASSERT(handler != nullptr);
-        ZX_DEBUG_ASSERT(dynamic_target_ == nullptr);
-        dynamic_target_ = handler;
+        return HandleFrameInternal(std::forward<Args>(args)...);
     }
 
    protected:
-    virtual zx_status_t HandleAnyFrame() { return ZX_OK; }
-
     // Ethernet frame handlers.
     virtual zx_status_t HandleEthFrame(const EthFrame& frame) { return ZX_OK; }
 
@@ -164,12 +138,6 @@ class FrameHandler {
         return HandleCtrlFrameInternal(frame);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_CTRL(PsPollFrame)
-
-    // Frame target which will only receive the current frame. Will be reset after each frame.
-    // TODO(hahnr): This is still not exactly what I fancy but good enough for now.
-    // Ideally, this will turn into its own component which is also better testable and replaceable.
-    // However, most of my prototyping hit compiler limitations.
-    FrameHandler* dynamic_target_ = nullptr;
 };
 
 }  // namespace wlan

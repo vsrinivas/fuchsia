@@ -5,6 +5,7 @@
 #include <wlan/mlme/ap/remote_client.h>
 
 #include <wlan/mlme/debug.h>
+#include <wlan/mlme/frame_dispatcher.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -607,33 +608,9 @@ void RemoteClient::HandleTimeout() {
     state_->HandleTimeout();
 }
 
-zx_status_t RemoteClient::HandleEthFrame(const EthFrame& frame) {
-    ForwardCurrentFrameTo(state_.get());
-    return ZX_OK;
-}
-
-zx_status_t RemoteClient::HandleDataFrame(const DataFrameHeader& hdr) {
-    ZX_DEBUG_ASSERT(hdr.addr2 == addr_);
-    if (hdr.addr2 != addr_) { return ZX_ERR_STOP; }
-
-    ForwardCurrentFrameTo(state_.get());
-    return ZX_OK;
-}
-
-zx_status_t RemoteClient::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
-    ZX_DEBUG_ASSERT(hdr.addr2 == addr_);
-    if (hdr.addr2 != addr_) { return ZX_ERR_STOP; }
-
-    ForwardCurrentFrameTo(state_.get());
-    return ZX_OK;
-}
-
-zx_status_t RemoteClient::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
-    ZX_DEBUG_ASSERT(frame.body()->ta == addr_);
-    if (frame.body()->ta != addr_) { return ZX_ERR_STOP; }
-
-    ForwardCurrentFrameTo(state_.get());
-    return ZX_OK;
+zx_status_t RemoteClient::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
+    // TODO(hahnr): forward directly to state rather than using dispatcher.
+    return DispatchFramePacket(fbl::move(pkt), state_.get());
 }
 
 zx_status_t RemoteClient::StartTimer(zx::time deadline) {
