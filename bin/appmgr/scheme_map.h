@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <lib/fxl/macros.h>
+#include "garnet/lib/json/json_parser.h"
 
 namespace component {
 
@@ -18,12 +19,11 @@ class SchemeMap {
  public:
   SchemeMap() = default;
 
-  // Parses a JSON schema map config string and uses it to initialize this
-  // object.
-  bool Parse(const std::string& data, std::string* error);
-
   // Parses a schema map from a file.
-  bool ReadFrom(const std::string& file, std::string* error);
+  bool ParseFromFile(const std::string& file);
+
+  bool HasError() const { return json_parser_.HasError(); }
+  std::string error_str() const { return json_parser_.error_str(); }
 
   // Returns the launcher type for a given scheme, or "" if none.
   std::string LookUp(const std::string& scheme) const;
@@ -33,7 +33,7 @@ class SchemeMap {
 
  private:
   std::unordered_map<std::string, std::string> internal_map_;
-  bool parsed_ = false;
+  json::JSONParser json_parser_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SchemeMap);
 };

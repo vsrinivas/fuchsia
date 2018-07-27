@@ -210,8 +210,9 @@ Realm::Realm(RealmArgs args)
 
   const std::string scheme_map_path = SchemeMap::GetSchemeMapPath();
   std::string error;
-  if (!scheme_map_.ReadFrom(scheme_map_path, &error)) {
-    FXL_LOG(FATAL) << "Could not parse scheme map config file: " << error;
+  if (!scheme_map_.ParseFromFile(scheme_map_path)) {
+    FXL_LOG(FATAL) << "Could not parse scheme map config file: "
+                   << scheme_map_.error_str();
   }
 }
 

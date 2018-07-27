@@ -12,20 +12,21 @@
 
 namespace component {
 
-bool SchemeMap::Parse(const std::string& data, std::string* error) {
-  rapidjson::Document document;
-  document.Parse(data);
+bool SchemeMap::ParseFromFile(const std::string& file) {
+  internal_map_.clear();
+
+  const rapidjson::Document document = json_parser_.ParseFromFile(file);
   if (!document.IsObject()) {
-    *error = "document is not a valid object";
+    json_parser_.ReportError("Document is not a valid object.");
     return false;
   }
   auto launchers = document.FindMember("launchers");
   if (launchers == document.MemberEnd()) {
-    *error = "missing \"launchers\"";
+    json_parser_.ReportError("Missing 'launchers'.");
     return false;
   }
   if (!launchers->value.IsObject()) {
-    *error = "\"launchers\" is not a valid object";
+    json_parser_.ReportError("'launchers' is not a valid object.");
     return false;
   }
 
@@ -33,34 +34,23 @@ bool SchemeMap::Parse(const std::string& data, std::string* error) {
        it != launchers->value.MemberEnd(); ++it) {
     const std::string& launcher = it->name.GetString();
     if (!it->value.IsArray()) {
-      *error = fxl::StringPrintf(
-          "schemes for \"%s\" are not a list", launcher.c_str());
+      json_parser_.ReportError(fxl::StringPrintf(
+          "Schemes for '%s' are not a list.", launcher.c_str()));
       return false;
     }
     for (const auto& scheme : it->value.GetArray()) {
       if (!scheme.IsString()) {
-        *error = fxl::StringPrintf(
-            "scheme for \"%s\" is not a string", launcher.c_str());
-        return false;
+        json_parser_.ReportError(fxl::StringPrintf(
+            "Scheme for '%s' is not a string.", launcher.c_str()));
+      } else {
+        internal_map_[scheme.GetString()] = launcher;
       }
-      internal_map_[scheme.GetString()] = launcher;
     }
   }
-  parsed_ = true;
-  return true;
-}
-
-bool SchemeMap::ReadFrom(const std::string& file, std::string* error) {
-  std::string data;
-  if (!files::ReadFileToString(file, &data)) {
-    *error = fxl::StringPrintf("failed to read config file: %s", file.c_str());
-    return false;
-  }
-  return Parse(data, error);
+  return !json_parser_.HasError();
 }
 
 std::string SchemeMap::LookUp(const std::string& scheme) const {
-  FXL_CHECK(parsed_);
   if (internal_map_.count(scheme) == 0) {
     return "";
   }
