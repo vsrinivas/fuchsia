@@ -343,7 +343,7 @@ using debug_ipc::RegisterCategory;
 const char kRegsShortHelp[] =
     "regs / rg: Show the current registers for a thread.";
 const char kRegsHelp[] =
-    R"(regs [--category=<category>]
+    R"(regs [--category=<category>] [<regexp>]
 
   Alias: "rg"
 
@@ -369,11 +369,16 @@ Arguments:
       NOTE: not all categories exist within all architectures. For example,
             ARM64's fp category doesn't have any registers.
 
+  <regexp>
+      Case insensitive regular expression. Any register that matches will be
+      shown. Uses POSIX Basic Regular Expression syntax. If not specified, it
+      will match all registers.
+
 Examples
 
   regs
   thread 4 regs --category=vector
-  process 2 thread 1 regs -c all
+  process 2 thread 1 regs -c all v*
 )";
 
 // Switches

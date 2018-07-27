@@ -163,6 +163,25 @@ TEST(FormatRegisters, OneRegister) {
             out.AsString());
 }
 
+TEST(FormatRegister, RegexSearch) {
+  RegisterSet registers;
+  GetCategories(&registers);
+  OutputBuffer out;
+
+  // Case insensitive search.
+  Err err = FormatRegisters(registers, "X[3-5]$", &out,
+                            {RegisterCategory::Type::kVector});
+
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ("Vector Registers\n"
+            "Name Size                                 Value\n"
+            "x3      8                     01020304 05060708\n"
+            "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
+            "\n",
+            out.AsString());
+}
+
 TEST(FormatRegisters, CannotFindRegister) {
   RegisterSet registers;
   GetCategories(&registers);

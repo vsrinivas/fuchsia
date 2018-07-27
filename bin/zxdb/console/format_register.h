@@ -18,17 +18,16 @@ class RegisterSet;
 std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
 
 // Outputs the register information received from the debug agent.
-// |searched_register| is the name of a register we want to look at
-// individually. If found, it will only output information for that register
-// (and its category), or err otherwise.
+// |search_regexp| is to limit which register to show. It will only output
+// information for registers that matches.
 //
 // You can define the types of categories to print using the vector at the end.
 // By default only prints the general registers. Empty means every category.
 Err FormatRegisters(
-    const RegisterSet&, const std::string& searched_register, OutputBuffer* out,
+    const RegisterSet&, const std::string& search_regexp, OutputBuffer* out,
     std::vector<debug_ipc::RegisterCategory::Type> categories = {
         debug_ipc::RegisterCategory::Type::kGeneral});
 
-std::string RegisterIDToString(debug_ipc::RegisterID);
+const char* RegisterIDToString(debug_ipc::RegisterID);
 
 }   // namespace zxdb
