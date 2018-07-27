@@ -97,6 +97,7 @@ class Device : public DeviceInterface {
     zx_status_t QueueDevicePortPacket(DevicePacket id, uint32_t status = 0);
 
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
+
     void SetStatusLocked(uint32_t status);
 
     zx_device_t* parent_;
@@ -121,5 +122,7 @@ class Device : public DeviceInterface {
     std::mutex packet_queue_lock_;
     PacketQueue packet_queue_ __TA_GUARDED(packet_queue_lock_);
 };
+
+zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info);
 
 }  // namespace wlan

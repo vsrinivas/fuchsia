@@ -6,12 +6,15 @@
 
 #include <ddk/device.h>
 #include <fbl/limits.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>
+#include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/client_mlme.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
@@ -29,6 +32,8 @@
 #include <utility>
 
 namespace wlan {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlan_device_ops = {
@@ -101,6 +106,13 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         errorf("could not query wlanmac device: %d\n", status);
         return status;
     }
+
+    status = ValidateWlanMacInfo(wlanmac_info_);
+    if (status != ZX_OK) {
+        errorf("could not bind wlanmac device with invalid wlanmac info\n");
+        return status;
+    }
+
     state_->set_address(common::MacAddr(wlanmac_info_.ifc_info.mac_addr));
 
     fbl::unique_ptr<Mlme> mlme;
@@ -643,6 +655,44 @@ zx_status_t Device::GetChannel(zx::channel* out) {
     }
 
     infof("channel opened\n");
+    return ZX_OK;
+}
+
+zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
+    for (uint8_t i = 0; i < wlanmac_info.ifc_info.num_bands; i++) {
+        auto bandinfo = wlanmac_info.ifc_info.bands[i];
+
+        // Validate channels
+        auto& supported_channels = bandinfo.supported_channels;
+        switch (supported_channels.base_freq) {
+        case 5000:
+            for (auto c : supported_channels.channels) {
+                if ((c > 0 && c < 36) || c > 196) {
+                    errorf("wlanmac band info for %u MHz has invalid channel %u\n",
+                           supported_channels.base_freq, c);
+                    errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
+                    return ZX_ERR_NOT_SUPPORTED;
+                }
+            }
+            break;
+        case 2407:
+            for (auto c : supported_channels.channels) {
+                if (c > 14) {
+                    errorf("wlanmac band info for %u MHz has invalid cahnnel %u\n",
+                           supported_channels.base_freq, c);
+                    errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
+                    return ZX_ERR_NOT_SUPPORTED;
+                }
+            }
+            break;
+        default:
+            errorf("wlanmac band info for %u MHz not supported\n", supported_channels.base_freq);
+            errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+    }
+    // Add more sanity check here
+
     return ZX_OK;
 }
 
