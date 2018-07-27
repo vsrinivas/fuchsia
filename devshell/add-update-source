@@ -42,7 +42,7 @@ function main {
         remove_localhost=true
         ;;
       *)
-        echo "Unrecognized option: $1"
+        echo >&2 "Unrecognized option: $1"
         usage
         exit 1
     esac
@@ -50,13 +50,13 @@ function main {
   done
 
   if ! [[ -x "$(command -v shasum)" ]]; then
-    echo "'shasum' binary not found"
+    echo >&2 "'shasum' binary not found"
     exit 1
   fi
 
   device_addr="$(fx-command-run netaddr --local $device_name)"
   if [[ $? -ne 0 || -z "${device_addr}" ]]; then
-    echo "Unable to determine host's IP.  Is the target up?"
+    echo >&2 "Unable to determine host's IP.  Is the target up?"
     exit 1
   fi
   # Strip interface name suffix.
@@ -64,7 +64,7 @@ function main {
 
   repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
   if [[ ! -d "${repository_dir}" ]]; then
-    echo "Amber repository does not exist.  Please build first."
+    echo >&2 "Amber repository does not exist.  Please build first."
     exit 1
   fi
 
@@ -86,9 +86,15 @@ function main {
   fx-command-run shell $device_arg amber_ctl add_src \
     -f "${config_url}" \
     -h "${config_hash}"
+  err=$?
 
-  if [[ $? -ne 0 ]]; then
-    echo "Unable to register update source.  Is 'fx serve' or 'fx serve-updates' running?"
+  if [[ $err -ne 0 ]]; then
+    echo >&2 "Unable to register update source."
+    if [[ $err -eq 2 ]]; then
+      # The GET request failed.
+      echo >&2 " - Is 'fx serve' or 'fx serve-updates' running?"
+      echo >&2 " - Can the target reach the development host on tcp port 8083?"
+    fi
     exit 1
   fi
 
