@@ -92,20 +92,20 @@ pub enum Error {
     UnsupportedKeyDerivation,
     #[fail(display = "unexpected message: {:?}", _0)]
     Unexpected4WayHandshakeMessage(MessageNumber),
-    #[fail(display = "invalid install bit value")]
-    InvalidInstallBitValue,
-    #[fail(display = "invalid key_ack bit value")]
-    InvalidKeyAckBitValue,
-    #[fail(display = "invalid key_mic bit value")]
-    InvalidKeyMicBitValue,
-    #[fail(display = "invalid key_mic bit value")]
-    InvalidSecureBitValue,
-    #[fail(display = "invalid error bit value")]
-    InvalidErrorBitValue,
-    #[fail(display = "invalid request bit value")]
-    InvalidRequestBitValue,
+    #[fail(display = "invalid install bit value; message: {:?}", _0)]
+    InvalidInstallBitValue(MessageNumber),
+    #[fail(display = "invalid key_ack bit value; message: {:?}", _0)]
+    InvalidKeyAckBitValue(MessageNumber),
+    #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
+    InvalidKeyMicBitValue(MessageNumber),
+    #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
+    InvalidSecureBitValue(MessageNumber),
+    #[fail(display = "invalid error bit value; message: {:?}", _0)]
+    InvalidErrorBitValue(MessageNumber),
+    #[fail(display = "invalid request bit value; message: {:?}", _0)]
+    InvalidRequestBitValue(MessageNumber),
     #[fail(display = "invalid encrypted_key_data bit value")]
-    InvalidEncryptedKeyDataBitValue,
+    InvalidEncryptedKeyDataBitValue(MessageNumber),
     #[fail(display = "invalid pairwise key length {:?}; expected {:?}", _0, _1)]
     InvalidPairwiseKeyLength(u16, u16),
     #[fail(display = "unsupported cipher suite")]
@@ -115,11 +115,11 @@ pub enum Error {
     #[fail(display = "invalid MIC size")]
     InvalidMicSize,
     #[fail(display = "invalid Nonce; expected to be non-zero")]
-    InvalidNonce,
+    InvalidNonce(MessageNumber),
     #[fail(display = "invalid RSC; expected to be zero")]
-    InvalidRsc,
+    InvalidRsc(MessageNumber),
     #[fail(display = "invalid key data; must not be zero")]
-    EmptyKeyData,
+    EmptyKeyData(MessageNumber),
     #[fail(display = "invalid key data")]
     InvalidKeyDataContent,
     #[fail(display = "invalid key data length; doesn't match with key data")]
@@ -134,8 +134,8 @@ pub enum Error {
     InvalidKeyReplayCounter(u64, u64),
     #[fail(display = "invalid nonce; nonce must match nonce from 1st message")]
     ErrorNonceDoesntMatch,
-    #[fail(display = "invalid IV; expected zeroed IV")]
-    InvalidIv,
+    #[fail(display = "invalid IV; EAPOL protocol version: {:?}; message: {:?}", _0, _1)]
+    InvalidIv(u8, MessageNumber),
     #[fail(display = "PMKSA was not yet established")]
     PmksaNotEstablished,
     #[fail(display = "invalid nonce size; expected 32 bytes, found: {:?}", _0)]
