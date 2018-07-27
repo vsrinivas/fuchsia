@@ -8,6 +8,8 @@ source_set("util") {
     "error_reporter.h",
     "print_command.cc",
     "print_command.h",
+    "print_event.cc",
+    "print_event.h",
   ]
 
   public_deps = [
