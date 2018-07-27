@@ -326,7 +326,7 @@ func (c *Client) handleResponse(obs zx.Signals, err error) (state, error) {
 
 		case obs&ZX_SOCKET_READABLE != 0:
 			// TODO(tkilbourn): decide on a default buffer size, and support growing the buffer as needed
-			var buf [5120]byte
+			var buf [16384]byte
 			_, _, err := c.mlmeChan.Read(buf[:], nil, 0)
 			if err != nil {
 				return nil, fmt.Errorf("error reading from channel: %v", err)
