@@ -26,13 +26,6 @@
 #include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
 
-// Tracing Includes
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
-#include <lib/async/cpp/time.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
-
 #include "txn-group.h"
 
 // Represents the mapping of "vmoid --> VMO"
@@ -73,9 +66,6 @@ struct block_msg_extra {
     BlockServer* server;
     reqid_t reqid;
     groupid_t group;
-
-    // member for tracing
-    trace_async_id_t async_id;
 };
 
 // A single unit of work transmitted to the underlying block layer.
@@ -97,6 +87,7 @@ struct DoublyLinkedListTraits {
 using BlockMsgQueue = fbl::DoublyLinkedList<block_msg_t*, DoublyLinkedListTraits>;
 
 // C++ safe wrapper around block_msg_t.
+//
 // It's difficult to allocate a dynamic-length "block_op" as requested by the
 // underlying driver while maintaining valid object construction & destruction;
 // this class attempts to hide those details.

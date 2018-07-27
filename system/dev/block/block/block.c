@@ -6,7 +6,6 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
-#include <ddk/debug.h>
 
 #include <assert.h>
 #include <inttypes.h>
@@ -21,12 +20,6 @@
 #include <zircon/device/block.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
-
-// Tracing Includes
-#include <lib/async-loop/loop.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
-
 
 #include "server.h"
 
@@ -57,11 +50,6 @@ typedef struct blkdev {
     zx_status_t iostatus;
     sync_completion_t iosignal;
     block_op_t* iobop;
-
-    //members for tracing
-    async_loop_t* loop;
-    trace_provider_t* trace_provider;
-    bool trace_on;
 } blkdev_t;
 
 static int blockserver_thread_serve(blkdev_t* bdev) {
@@ -334,53 +322,9 @@ static zx_off_t blkdev_get_size(void* ctx) {
     //return bdev->info.block_count * bdev->info.block_size;
 }
 
-static void register_trace(blkdev_t* bdev) {
-    bdev->trace_on = true;
-    // Create a message loop.
-    zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &(bdev->loop));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to create a message loop.\n");
-        zxlogf(ERROR, "Failed to register the tracing interface.\n");
-        bdev->trace_on = false;
-        return;
-    }
-
-    // Start a thread for the loop to run on.
-    // We could instead use async_loop_run() to run on the current thread.
-    status = async_loop_start_thread(bdev->loop, "loop", NULL);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to start a thread.\n");
-        zxlogf(ERROR, "Failed to register the tracing interface.\n");
-        bdev->trace_on = false;
-        return;
-    }
-
-    // Create the trace provider.
-    async_dispatcher_t* async = async_loop_get_dispatcher(bdev->loop);
-    bdev->trace_provider = trace_provider_create(async);
-    if (!bdev->trace_provider) {
-        async_loop_shutdown(bdev->loop);
-        zxlogf(ERROR, "Failed to create a trace provider.\n");
-        zxlogf(ERROR, "Failed to register the tracing interface.\n");
-        bdev->trace_on = false;
-        return;
-    }
-    zxlogf(TRACE, "Tracing interface is registered successfully!\n");
-}
-
-static void close_trace(blkdev_t* bdev) {
-    trace_provider_destroy(bdev->trace_provider);
-    async_loop_shutdown(bdev->loop);
-    bdev->trace_on = false;
-    zxlogf(TRACE, "Tracing interface is closed successfully!\n");
-}
-
 static void blkdev_unbind(void* ctx) {
     blkdev_t* blkdev = ctx;
     device_remove(blkdev->zxdev);
-    if (blkdev->trace_on) {
-        close_trace(blkdev);
-    }
 }
 
 static void blkdev_release(void* ctx) {
@@ -489,8 +433,6 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     if (status != ZX_OK) {
         goto fail;
     }
-
-    register_trace(bdev);
 
     return ZX_OK;
 
