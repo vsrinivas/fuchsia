@@ -856,9 +856,6 @@ private:
             exit(1);
         }
         std::string group(start + 1, end_group - 1 - start);
-        printf("XXX group=\"%s\" allows=%d rest=%.*s\n",
-               group.c_str(), filter_->Allows(group),
-               (int)(eol-end_group-1), end_group + 1);
         return filter_->Allows(group) ? end_group + 1 : nullptr;
     }
 };
