@@ -21,15 +21,5 @@ TEST(Random, RandUint64) {
   }
 }
 
-TEST(Random, RandBytes) {
-  size_t sizes[] = {1, 16, 256, 4096};
-
-  for (auto size : sizes) {
-    std::vector<uint8_t> buf;
-    buf.resize(size);
-    EXPECT_TRUE(RandBytes(buf.data(), buf.size()));
-  }
-}
-
 }  // namespace
 }  // namespace fxl

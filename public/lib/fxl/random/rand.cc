@@ -20,14 +20,7 @@
 #endif
 
 namespace fxl {
-
-uint64_t RandUint64() {
-  uint64_t number;
-  bool success = RandBytes(&number, sizeof(number));
-
-  FXL_CHECK(success);
-  return number;
-}
+namespace {
 
 bool RandBytes(void* output, size_t output_length) {
   FXL_DCHECK(output);
@@ -46,6 +39,16 @@ bool RandBytes(void* output, size_t output_length) {
   FXL_DCHECK(success);
   return success;
 #endif
+}
+
+}  // namespace
+
+uint64_t RandUint64() {
+  uint64_t number;
+  bool success = RandBytes(&number, sizeof(number));
+
+  FXL_CHECK(success);
+  return number;
 }
 
 }  // namespace fxl
