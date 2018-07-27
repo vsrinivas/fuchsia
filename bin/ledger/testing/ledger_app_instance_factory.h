@@ -101,9 +101,6 @@ class LedgerAppInstanceFactory {
   LedgerAppInstanceFactory() {}
   virtual ~LedgerAppInstanceFactory() {}
 
-  // Sets a custom server id for synchronization.
-  virtual void SetServerId(std::string server_id) = 0;
-
   // Starts a new instance of the Ledger. The |loop_controller| must allow to
   // control the loop that is used to access the LedgerAppInstance.
   virtual std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(

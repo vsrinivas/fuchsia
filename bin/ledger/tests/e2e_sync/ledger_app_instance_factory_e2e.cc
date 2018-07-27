@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
+
 #include <utility>
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/strings/string_view.h>
 #include <lib/svc/cpp/services.h>
 
-#include "gtest/gtest.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
+#include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
@@ -61,35 +62,19 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   return cloud_provider;
 }
 
-class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
- public:
-  LedgerAppInstanceFactoryImpl()
-      : startup_context_(
-            component::StartupContext::CreateFromStartupInfoNotChecked()),
-        cloud_provider_firebase_factory_(startup_context_.get()) {}
-  ~LedgerAppInstanceFactoryImpl() override;
-  void Init();
+}  // namespace
 
-  void SetServerId(std::string server_id) override;
-
-  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
-      LoopController* loop_controller) override;
-
- private:
-  std::unique_ptr<component::StartupContext> startup_context_;
-  CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
-
-  std::string server_id_;
-};
-
-void LedgerAppInstanceFactoryImpl::Init() {
-  cloud_provider_firebase_factory_.Init();
-}
+LedgerAppInstanceFactoryImpl::LedgerAppInstanceFactoryImpl(
+    std::string server_id)
+    : startup_context_(
+          component::StartupContext::CreateFromStartupInfoNotChecked()),
+      cloud_provider_firebase_factory_(startup_context_.get()),
+      server_id_(std::move(server_id)) {}
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {}
 
-void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
-  server_id_ = server_id;
+void LedgerAppInstanceFactoryImpl::Init() {
+  cloud_provider_firebase_factory_.Init();
 }
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
@@ -111,22 +96,6 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
       loop_controller, std::move(controller), std::move(repository_factory),
       &cloud_provider_firebase_factory_, server_id_);
   return result;
-}
-
-}  // namespace
-
-std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
-  static std::unique_ptr<LedgerAppInstanceFactory> factory;
-  static std::once_flag flag;
-
-  auto factory_ptr = &factory;
-  std::call_once(flag, [factory_ptr] {
-    auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>();
-    factory->Init();
-    *factory_ptr = std::move(factory);
-  });
-
-  return {factory.get()};
 }
 
 }  // namespace test

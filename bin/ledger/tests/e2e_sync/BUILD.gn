@@ -11,11 +11,12 @@ executable("e2e_sync") {
   sources = [
     "e2e_sync_main.cc",
     "ledger_app_instance_factory_e2e.cc",
+    "ledger_app_instance_factory_e2e.h",
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/callback",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

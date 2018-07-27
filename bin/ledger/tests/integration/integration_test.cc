@@ -17,16 +17,6 @@
 namespace test {
 namespace integration {
 
-namespace {
-constexpr fxl::StringView kServerIdFlag = "server-id";
-std::string* server_id = nullptr;
-
-void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kServerIdFlag
-            << "=<string>" << std::endl;
-}
-}  // namespace
-
 BaseIntegrationTest::BaseIntegrationTest()
     : loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
@@ -40,9 +30,6 @@ void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
   trace_provider_ = std::make_unique<trace::TraceProvider>(dispatcher());
   loop_.StartThread();
-  if (server_id) {
-    GetAppFactory()->SetServerId(*server_id);
-  }
 }
 
 void BaseIntegrationTest::TearDown() {
@@ -53,7 +40,7 @@ void BaseIntegrationTest::TearDown() {
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
   async::PostTask(loop_.dispatcher(), [socket = std::move(sockets.socket1),
-                                  data = std::move(data)]() mutable {
+                                       data = std::move(data)]() mutable {
     auto writer = new socket::StringSocketWriter();
     writer->Start(std::move(data), std::move(socket));
   });
@@ -71,20 +58,6 @@ IntegrationTest::~IntegrationTest() = default;
 
 LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
   return GetParam();
-}
-
-bool ProcessCommandLine(int argc, char** argv) {
-  FXL_DCHECK(!test::integration::server_id);
-
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
-  std::string server_id;
-  if (!command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
-    PrintUsage(argv[0]);
-    return false;
-  }
-  test::integration::server_id = new std::string(server_id);
-  return true;
 }
 
 }  // namespace integration

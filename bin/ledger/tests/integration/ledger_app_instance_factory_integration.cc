@@ -126,14 +126,15 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
   loop_.StartThread();
-  async::PostTask(
-      loop_.dispatcher(), [this, request = std::move(repository_factory_request),
-                      user_communicator_factory =
-                          std::move(user_communicator_factory)]() mutable {
-        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            loop_.dispatcher(), std::move(request),
-            std::move(user_communicator_factory));
-      });
+  async::PostTask(loop_.dispatcher(),
+                  [this, request = std::move(repository_factory_request),
+                   user_communicator_factory =
+                       std::move(user_communicator_factory)]() mutable {
+                    factory_container_ =
+                        std::make_unique<LedgerRepositoryFactoryContainer>(
+                            loop_.dispatcher(), std::move(request),
+                            std::move(user_communicator_factory));
+                  });
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
@@ -211,15 +212,12 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
 
-  void SetServerId(std::string server_id) override;
-
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
       LoopController* loop_controller) override;
 
  private:
   // Loop on which to run services.
   async::Loop services_loop_;
-  std::string server_id_ = "server-id";
   ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                           ledger::FakeCloudProvider>
       cloud_provider_;
@@ -235,10 +233,6 @@ LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
   services_loop_.JoinThreads();
 }
 
-void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
-  server_id_ = server_id;
-}
-
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
     LoopController* loop_controller) {
@@ -250,7 +244,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
     std::string host_name = "host_" + std::to_string(app_instance_counter_);
     user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        services_loop_.dispatcher(), &netconnector_factory_, std::move(host_name));
+        services_loop_.dispatcher(), &netconnector_factory_,
+        std::move(host_name));
   }
   auto result = std::make_unique<LedgerAppInstanceImpl>(
       loop_controller, services_loop_.dispatcher(),
