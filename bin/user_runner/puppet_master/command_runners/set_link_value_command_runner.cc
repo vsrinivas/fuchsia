@@ -13,18 +13,16 @@ namespace {
 
 class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  SetLinkValueCall(StoryStorage* const story_storage, fidl::StringPtr story_id,
+  SetLinkValueCall(StoryStorage* const story_storage,
                    fuchsia::modular::SetLinkValue command, ResultCall done)
       : Operation("SetLinkValueCommandRunner::SetLinkValueCall",
                   std::move(done)),
-        story_id_(std::move(story_id)),
         story_storage_(story_storage),
         command_(std::move(command)) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &result_};
-    result_.story_id = story_id_;
     auto did_update = story_storage_->UpdateLinkValue(
         command_.path,
         [this](fidl::StringPtr* value) {
@@ -45,7 +43,6 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
     });
   }
 
-  fidl::StringPtr story_id_;
   StoryStorage* const story_storage_;
   fuchsia::modular::SetLinkValue command_;
   fuchsia::modular::ExecuteResult result_;
@@ -64,9 +61,8 @@ void SetLinkValueCommandRunner::Execute(
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_link_value());
 
-  operation_queue_.Add(new SetLinkValueCall(story_storage, std::move(story_id),
-                                            std::move(command.set_link_value()),
-                                            std::move(done)));
+  operation_queue_.Add(new SetLinkValueCall(
+      story_storage, std::move(command.set_link_value()), std::move(done)));
 }
 
 }  // namespace modular

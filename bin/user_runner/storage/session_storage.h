@@ -59,8 +59,26 @@ class SessionStorage : public PageClient {
   }
 
   // Creates a new story and returns a tuple of (story id, story ledger page
-  // id) on completion. |extra_info| may be null. If set, populates
-  // StoryData.story_info.extra with the entries given.
+  // id) on completion. |story_name| and |extra_info| may be null.
+  //
+  // If |story_name| is set, it is associated as a client-supplied alias for
+  // the story's record. Its data is retrievable through GetStoryDataByName().
+  //
+  // If |extra_info| is set, populates StoryData.story_info.extra with the
+  // entries given.
+  //
+  // TODO(thatguy): Allowing for null story names is left in for backwards
+  // compatibility with existing code. The intention is that all clients
+  // outside the FW (through FIDL interfaces) use story names exclusively.  It
+  // is unclear if internal story IDs should be an implementation detail of
+  // SessionStorage, or if they should be exposed to the story runtime
+  // architecture.
+  FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
+      fidl::StringPtr story_name,
+      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+      bool is_kind_of_proto_story);
+
+  // Same as above, but defaults |story_name| to nullptr.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
       bool is_kind_of_proto_story);
@@ -87,13 +105,18 @@ class SessionStorage : public PageClient {
 
   // Returns a Future StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
-  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryData(
+  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryDataById(
       fidl::StringPtr story_id);
+
+  // Returns a Future StoryDataPtr for story with |name|. See CreateStory() for
+  // more information.
+  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryDataByName(
+      fidl::StringPtr name);
 
   // Returns a Future vector of StoryData for all stories in this session.
   //
-  // TODO(thatguy): If the return value grows large, an dispatcher stream would be
-  // a more appropriate return value.
+  // TODO(thatguy): If the return value grows large, an dispatcher stream would
+  // be a more appropriate return value.
   FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
   GetAllStoryData();
 

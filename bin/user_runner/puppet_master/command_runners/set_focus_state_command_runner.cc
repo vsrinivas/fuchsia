@@ -25,7 +25,6 @@ void SetFocusStateCommandRunner::Execute(
 
   if (command.set_focus_state().focused) {
     focus_provider_->Request(story_id);
-    result.story_id = story_id;
   } else {
     // According to FIDL docs a null |story_id| brings the timeline into
     // focus, defocusing any story.

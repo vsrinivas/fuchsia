@@ -8,6 +8,9 @@ struct StoryData {
   // Metadata available to the UserShell.
   fuchsia.modular.StoryInfo story_info;
 
+  // An optiona client-supplied name for this story.
+  string? story_name;
+
   // If true, excludes the story from StoryProvider.PreviousStories().
   bool is_kind_of_proto_story;
 

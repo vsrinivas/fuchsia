@@ -8,35 +8,39 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
 namespace modular {
 
+class SessionStorage;
 class StoryCommandExecutor;
 
 // An implementation of fuchsia::modular::StoryPuppetMaster which delegates
 // story command execution to a StoryCommandExecutor.
 class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
-  StoryPuppetMasterImpl(fidl::StringPtr story_id,
+  StoryPuppetMasterImpl(fidl::StringPtr story_name,
+                        SessionStorage* session_storage,
                         StoryCommandExecutor* executor_);
   ~StoryPuppetMasterImpl() override;
 
  private:
-  // |fuchsia::modular::StoryPuppetMaster|
+  // |StoryPuppetMaster|
   void Enqueue(
       fidl::VectorPtr<fuchsia::modular::StoryCommand> commands) override;
 
-  // |fuchsia::modular::StoryPuppetMaster|
+  // |StoryPuppetMaster|
   void Execute(ExecuteCallback done) override;
 
-  fidl::StringPtr story_id_;
-  StoryCommandExecutor* const executor_;  // Not owned.
+  fidl::StringPtr story_name_;
+  SessionStorage* const session_storage_;  // Not owned.
+  StoryCommandExecutor* const executor_;   // Not owned.
 
   std::vector<fuchsia::modular::StoryCommand> enqueued_commands_;
 
-  fxl::WeakPtrFactory<StoryPuppetMasterImpl> weak_factory_;
+  OperationCollection operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryPuppetMasterImpl);
 };

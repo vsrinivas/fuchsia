@@ -7,11 +7,14 @@
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/user_runner/puppet_master/story_puppet_master_impl.h"
+#include "peridot/bin/user_runner/storage/session_storage.h"
 
 namespace modular {
 
-PuppetMasterImpl::PuppetMasterImpl(StoryCommandExecutor* const executor)
-    : executor_(executor) {
+PuppetMasterImpl::PuppetMasterImpl(SessionStorage* const session_storage,
+                                   StoryCommandExecutor* const executor)
+    : session_storage_(session_storage), executor_(executor) {
+  FXL_DCHECK(session_storage_ != nullptr);
   FXL_DCHECK(executor_ != nullptr);
 }
 
@@ -23,10 +26,10 @@ void PuppetMasterImpl::Connect(
 }
 
 void PuppetMasterImpl::ControlStory(
-    fidl::StringPtr story_id,
+    fidl::StringPtr story_name,
     fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster> request) {
-  auto controller =
-      std::make_unique<StoryPuppetMasterImpl>(story_id, executor_);
+  auto controller = std::make_unique<StoryPuppetMasterImpl>(
+      story_name, session_storage_, executor_);
   story_puppet_masters_.AddBinding(std::move(controller), std::move(request));
 }
 

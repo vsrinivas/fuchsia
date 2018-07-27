@@ -8,12 +8,76 @@
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/bin/user_runner/storage/session_storage.h"
 
 namespace modular {
 
+namespace {
+
+class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
+ public:
+  ExecuteOperation(SessionStorage* const session_storage,
+                   StoryCommandExecutor* const executor,
+                   fidl::StringPtr story_name,
+                   std::vector<fuchsia::modular::StoryCommand> commands,
+                   ResultCall done)
+      : Operation("StoryPuppetMasterImpl.ExecuteOpreation", std::move(done)),
+        session_storage_(session_storage),
+        executor_(executor),
+        story_name_(std::move(story_name)),
+        commands_(std::move(commands)) {}
+
+ private:
+  void Run() override {
+    session_storage_->GetStoryDataByName(story_name_)
+        ->WeakThen(GetWeakPtr(),
+                   [this](fuchsia::modular::internal::StoryDataPtr data) {
+                     if (data) {
+                       story_id_ = data->story_info.id;
+                       ExecuteCommands();
+                       return;
+                     }
+
+                     CreateStory();
+                   });
+  }
+
+  void CreateStory() {
+    session_storage_
+        ->CreateStory(story_name_, nullptr /* extra_info */,
+                      false /* is_kind_of_proto_story */)
+        ->WeakThen(GetWeakPtr(),
+                   [this](fidl::StringPtr story_id, auto /* ignored */) {
+                     story_id_ = story_id;
+                     ExecuteCommands();
+                   });
+  }
+
+  void ExecuteCommands() {
+    executor_->ExecuteCommands(story_id_, std::move(commands_),
+                               [weak_ptr = GetWeakPtr(),
+                                this](fuchsia::modular::ExecuteResult result) {
+                                 Done(std::move(result));
+                               });
+  }
+
+  SessionStorage* const session_storage_;
+  StoryCommandExecutor* const executor_;
+  fidl::StringPtr story_name_;
+  std::vector<fuchsia::modular::StoryCommand> commands_;
+
+  fidl::StringPtr story_id_;
+};
+
+}  // namespace
+
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(
-    fidl::StringPtr story_id, StoryCommandExecutor* const executor)
-    : story_id_(story_id), executor_(executor), weak_factory_(this) {
+    fidl::StringPtr story_name, SessionStorage* const session_storage,
+    StoryCommandExecutor* const executor)
+    : story_name_(story_name),
+      session_storage_(session_storage),
+      executor_(executor) {
+  FXL_DCHECK(session_storage != nullptr);
   FXL_DCHECK(executor != nullptr);
 }
 
@@ -30,22 +94,9 @@ void StoryPuppetMasterImpl::Enqueue(
 }
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
-  executor_->ExecuteCommands(
-      story_id_, std::move(enqueued_commands_),
-      [weak_ptr = weak_factory_.GetWeakPtr(),
-       done = std::move(done)](fuchsia::modular::ExecuteResult result) {
-        // If the StoryPuppetMasterImpl is gone, the connection that would
-        // handle |done| is also gone.
-        if (!weak_ptr) {
-          return;
-        }
-        // Adopt the story id from the StoryCommandExecutor.
-        if (weak_ptr->story_id_) {
-          FXL_DCHECK(result.story_id == weak_ptr->story_id_);
-        }
-        weak_ptr->story_id_ = result.story_id;
-        done(std::move(result));
-      });
+  // First ensure that the story is created.
+  operations_.Add(new ExecuteOperation(session_storage_, executor_, story_name_,
+                                       std::move(enqueued_commands_), done));
 }
 
 }  // namespace modular

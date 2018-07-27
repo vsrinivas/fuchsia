@@ -150,7 +150,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
-                    EXPECT_EQ(story_id, result.story_id);
                     done = true;
                   });
   RunLoopUntil([&] { return done; });
@@ -238,7 +237,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
-                    EXPECT_EQ(story_id, result.story_id);
                     done = true;
                   });
   RunLoopUntil([&] { return done; });
@@ -323,7 +321,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteNoModulesFound) {
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND,
                               result.status);
-                    EXPECT_EQ(story_id, result.story_id);
                     EXPECT_EQ("Resolution of intent gave zero results.",
                               result.error_message);
                     done = true;

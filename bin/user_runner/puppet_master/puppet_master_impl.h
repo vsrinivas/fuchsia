@@ -13,6 +13,7 @@
 
 namespace modular {
 
+class SessionStorage;
 class StoryCommandExecutor;
 class StoryPuppetMasterImpl;
 
@@ -20,8 +21,9 @@ class StoryPuppetMasterImpl;
 // clients to instances of StoryPuppetMasterImpl for story control.
 class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
  public:
-  // Does not take ownership of |executor|.
-  explicit PuppetMasterImpl(StoryCommandExecutor* executor);
+  // Does not take ownership of |session_storage| or |executor|.
+  explicit PuppetMasterImpl(SessionStorage* session_storage,
+                            StoryCommandExecutor* executor);
   ~PuppetMasterImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request);
@@ -38,7 +40,8 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
       fuchsia::modular::WatchSessionOptionsPtr options,
       WatchSessionCallback done) override;
 
-  StoryCommandExecutor* const executor_;  // Not owned.
+  SessionStorage* const session_storage_;  // Not owned.
+  StoryCommandExecutor* const executor_;   // Not owned.
 
   fidl::BindingSet<fuchsia::modular::PuppetMaster> bindings_;
   // There is a one-impl-per-connection relationship between

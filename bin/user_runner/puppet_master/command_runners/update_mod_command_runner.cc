@@ -15,17 +15,15 @@ namespace {
 
 class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  UpdateModCall(StoryStorage* const story_storage, fidl::StringPtr story_id,
+  UpdateModCall(StoryStorage* const story_storage,
                 fuchsia::modular::UpdateMod command, ResultCall done)
       : Operation("UpdateModCommandRunner::UpdateModCall", std::move(done)),
-        story_id_(std::move(story_id)),
         story_storage_(story_storage),
         command_(std::move(command)) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &result_};
-    result_.story_id = story_id_;
     story_storage_->ReadModuleData(command_.mod_name)
         ->Then([this, flow](fuchsia::modular::ModuleDataPtr module_data) {
           if (!module_data) {
@@ -57,7 +55,6 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
                    std::vector<fuchsia::modular::ExecuteResult> result_values) {
           for (auto& result : result_values) {
             if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-              result.story_id = std::move(result_.story_id);
               Done(std::move(result));
               return;
             }
@@ -110,7 +107,6 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
         });
   }
 
-  fidl::StringPtr story_id_;
   StoryStorage* const story_storage_;
   fuchsia::modular::UpdateMod command_;
   fuchsia::modular::ExecuteResult result_;
@@ -129,9 +125,8 @@ void UpdateModCommandRunner::Execute(
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_update_mod());
 
-  operation_queue_.Add(new UpdateModCall(story_storage, std::move(story_id),
-                                         std::move(command.update_mod()),
-                                         std::move(done)));
+  operation_queue_.Add(new UpdateModCall(
+      story_storage, std::move(command.update_mod()), std::move(done)));
 }
 
 }  // namespace modular

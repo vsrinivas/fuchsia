@@ -25,20 +25,17 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
   AddModCall(StoryStorage* const story_storage,
              fuchsia::modular::ModuleResolver* const module_resolver,
              fuchsia::modular::EntityResolver* const entity_resolver,
-             fidl::StringPtr story_id, fuchsia::modular::AddMod command,
-             ResultCall done)
+             fuchsia::modular::AddMod command, ResultCall done)
       : Operation("AddModCommandRunner::AddModCall", std::move(done)),
         story_storage_(story_storage),
         module_resolver_(module_resolver),
         entity_resolver_(entity_resolver),
-        story_id_(std::move(story_id)),
         command_(std::move(command)) {}
 
  private:
   // Start by finding the module through module resolver
   void Run() override {
     FlowToken flow{this, &result_};
-    result_.story_id = story_id_;
 
     operation_queue_.Add(new FindModulesCall(
         story_storage_, module_resolver_, entity_resolver_,
@@ -186,7 +183,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
   StoryStorage* const story_storage_;
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
-  fidl::StringPtr story_id_;
   fuchsia::modular::AddMod command_;
   fuchsia::modular::FindModulesResponse resolver_response_;
   fuchsia::modular::CreateModuleParameterMapInfoPtr parameter_info_;
@@ -219,9 +215,9 @@ void AddModCommandRunner::Execute(
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_add_mod());
 
-  operation_queue_.Add(new AddModCall(
-      story_storage, module_resolver_, entity_resolver_, std::move(story_id),
-      std::move(command.add_mod()), std::move(done)));
+  operation_queue_.Add(
+      new AddModCall(story_storage, module_resolver_, entity_resolver_,
+                     std::move(command.add_mod()), std::move(done)));
 }
 
 }  // namespace modular

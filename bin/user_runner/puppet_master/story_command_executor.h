@@ -17,10 +17,7 @@ class StoryCommandExecutor {
   virtual ~StoryCommandExecutor();
 
   // Executes |commands| on story identified by |story_id| and calls |done| when
-  // complete. If |story_id| is null, a new story will be created. In either
-  // case, fuchsia::modular::ExecuteResult.story_id will be set to the id of the
-  // story on which commands were executed. In the case |story_id| is not null,
-  // this will be exactly the value of |story_id|.
+  // complete. |story_id| is always non-null and refers to an existing Story.
   //
   // If an error occurs, fuchsia::modular::ExecuteResult.status will be set to
   // indicate the type of error, and a helpful error message must also be

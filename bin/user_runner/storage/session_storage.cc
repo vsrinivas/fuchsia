@@ -55,11 +55,12 @@ class CreateStoryCall
  public:
   CreateStoryCall(
       fuchsia::ledger::Ledger* const ledger,
-      fuchsia::ledger::Page* const root_page,
+      fuchsia::ledger::Page* const root_page, fidl::StringPtr story_name,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
       bool is_kind_of_proto_story, ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
+        story_name_(std::move(story_name)),
         extra_info_(std::move(extra_info)),
         is_kind_of_proto_story_(is_kind_of_proto_story) {}
 
@@ -90,6 +91,7 @@ class CreateStoryCall
     story_id_ = to_hex_string(story_page_id_.id);
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
+    story_data_->story_name = story_name_;
     story_data_->is_kind_of_proto_story = is_kind_of_proto_story_;
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
@@ -100,8 +102,9 @@ class CreateStoryCall
                                                 [this, flow] {}));
   }
 
+  const fidl::StringPtr story_name_;
   fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
-  bool is_kind_of_proto_story_;
+  const bool is_kind_of_proto_story_;
 
   fuchsia::ledger::PagePtr story_page_;
   fuchsia::modular::internal::StoryDataPtr story_data_;
@@ -118,14 +121,22 @@ class CreateStoryCall
 }  // namespace
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
+    fidl::StringPtr story_name,
     fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
     bool is_kind_of_proto_story) {
   auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create(
       "SessionStorage.CreateStory.ret");
   operation_queue_.Add(new CreateStoryCall(
-      ledger_client_->ledger(), page(), std::move(extra_info),
-      is_kind_of_proto_story, ret->Completer()));
+      ledger_client_->ledger(), page(), std::move(story_name),
+      std::move(extra_info), is_kind_of_proto_story, ret->Completer()));
   return ret;
+}
+
+FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
+    fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+    bool is_kind_of_proto_story) {
+  return CreateStory(nullptr /* story_name */, std::move(extra_info),
+                     is_kind_of_proto_story);
 }
 
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
@@ -214,11 +225,29 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_id,
 }
 
 FuturePtr<fuchsia::modular::internal::StoryDataPtr>
-SessionStorage::GetStoryData(fidl::StringPtr story_id) {
+SessionStorage::GetStoryDataById(fidl::StringPtr story_id) {
   auto ret = Future<fuchsia::modular::internal::StoryDataPtr>::Create(
-      "SessionStorage.GetStoryData.ret");
+      "SessionStorage.GetStoryDataById.ret");
   operation_queue_.Add(
       MakeGetStoryDataCall(page(), story_id, ret->Completer()));
+  return ret;
+}
+
+FuturePtr<fuchsia::modular::internal::StoryDataPtr>
+SessionStorage::GetStoryDataByName(fidl::StringPtr story_name) {
+  auto ret = Future<fuchsia::modular::internal::StoryDataPtr>::Create(
+      "SessionStorage.GetStoryDataByName.ret");
+  // TODO(thatguy): This is inefficient. We should store a separate index of
+  // story_name->story_id and perform a lookup.
+  GetAllStoryData()->Then([ret, story_name](auto all_data) {
+    for (auto& entry : *all_data) {
+      if (entry.story_name == story_name) {
+        ret->Complete(CloneOptional(entry));
+        return;
+      }
+    }
+    ret->Complete(nullptr);
+  });
   return ret;
 }
 

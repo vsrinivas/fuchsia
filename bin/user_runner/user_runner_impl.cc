@@ -609,8 +609,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master),
       module_resolver_service_.get(), entity_provider_runner_.get());
-  puppet_master_impl_.reset(
-      new PuppetMasterImpl(story_command_executor_.get()));
+  puppet_master_impl_.reset(new PuppetMasterImpl(
+      session_storage_.get(), story_command_executor_.get()));
 
   session_ctl_.reset(new SessionCtl(startup_context_->outgoing().debug_dir(),
                                     "sessionctl", puppet_master_impl_.get()));

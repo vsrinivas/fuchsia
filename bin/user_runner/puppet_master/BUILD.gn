@@ -30,7 +30,9 @@ source_set("puppet_master_impl") {
   ]
 
   public_deps = [
+    "//peridot/bin/user_runner/storage",
     "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
   ]
 }
 
@@ -44,7 +46,7 @@ executable("puppet_master_impl_unittest") {
   deps = [
     ":puppet_master_impl",
     ":story_command_executor",
-    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_session_storage",
     "//peridot/public/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]

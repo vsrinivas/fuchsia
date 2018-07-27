@@ -63,7 +63,6 @@ TEST_F(SetFocusStateCommandRunnerTest, Focus) {
                    [&](fuchsia::modular::ExecuteResult result) {
                      EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                                result.status);
-                     EXPECT_EQ("story1", result.story_id);
                    });
 
   RunLoopUntilIdle();
@@ -80,7 +79,6 @@ TEST_F(SetFocusStateCommandRunnerTest, Unfocus) {
       nullptr /* story_id */, nullptr /* story_storage */, std::move(command),
       [&](fuchsia::modular::ExecuteResult result) {
         EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-        EXPECT_TRUE(result.story_id->empty());
       });
 
   RunLoopUntilIdle();

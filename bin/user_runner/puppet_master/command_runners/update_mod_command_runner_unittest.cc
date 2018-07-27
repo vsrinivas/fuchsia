@@ -102,7 +102,6 @@ TEST_F(UpdateModCommandRunnerTest, Execute) {
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
-                    EXPECT_EQ(story_id, result.story_id);
                     done = true;
                   });
   RunLoopUntil([&] { return done; });
@@ -148,7 +147,6 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteUnsupportedParameterType) {
                   [&](fuchsia::modular::ExecuteResult result) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
                               result.status);
-                    EXPECT_EQ(story_id, result.story_id);
                     done = true;
                   });
   RunLoopUntil([&] { return done; });
@@ -180,7 +178,6 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteNoModuleData) {
                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
                               result.status);
                     EXPECT_EQ("No module data", result.error_message);
-                    EXPECT_EQ(story_id, result.story_id);
                     done = true;
                   });
 

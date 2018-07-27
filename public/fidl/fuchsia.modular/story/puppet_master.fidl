@@ -29,12 +29,6 @@ enum ExecuteStatus {
 struct ExecuteResult {
   ExecuteStatus @status;
   string? error_message;
-
-  // Set to the story id of the controlled story. Equal to ControlStory()'s
-  // |story_id|, if it was provided.
-  //
-  // If an error occurred, this may be null.
-  string? story_id;
 };
 
 // Enables control of a session. A session, conceptually, is a single
@@ -46,14 +40,17 @@ struct ExecuteResult {
 // within them, any agents that run to support the mods and the various UI
 // shells (session and story shells).
 interface PuppetMaster {
-  // Requests a capability to control a story. If |story_id| is not specified,
-  // a new story is created. New stories are not created (not committed to
-  // session state) until StoryPuppetMaster.Execute() is called and returns OK.
-  // The story id (either that of the new story or |story_id|) is returned in
-  // ExecuteResult.
+  // Requests a capability to control a story by name.
+  //
+  // The story name, as well as modification to the story, are durable and
+  // persist across device reboots. This allows the client to assign its own
+  // identifiers to stories. Clients wishing to guarantee a new story is
+  // created should generate a UUIDv4 or similar.
   //
   // |request| is closed if control cannot be granted.
-  1: ControlStory(string? story_id, request<StoryPuppetMaster> @request);
+  //
+  // TODO(thatguy): We want story names to be scoped to the client's namespace.
+  1: ControlStory(string story_name, request<StoryPuppetMaster> @request);
 
   // Events on the session will be sent to |watcher| as long as |watcher| is
   // alive. |options| specifies filters and policy about which events are sent
@@ -64,7 +61,7 @@ interface PuppetMaster {
 struct WatchSessionOptions {
   // If null, all stories are watched. If non-null, only events for
   // matching stories are returned.
-  vector<string>? filter_story_ids;
+  vector<string>? filter_story_names;
 };
 
 interface SessionWatcher {
@@ -74,12 +71,12 @@ interface SessionWatcher {
   1: OnStoryRuntimeState(StoryState state);
 
   // Indicates the story record was permanently deleted from storage.
-  2: OnStoryDeleted(string story_id);
+  2: OnStoryDeleted(string story_name);
 
   // Notifies of StoryCommands. If |is_last| == false, more StoryCommands
   // were executed in a single batch than can be fit into one message and the
   // client should expect further calls to OnStoryCommands() immediately.
-  3: OnStoryCommands(string story_id, vector<StoryCommand> commands, bool is_last);
+  3: OnStoryCommands(string story_name, vector<StoryCommand> commands, bool is_last);
 };
 
 interface StoryPuppetMaster {
@@ -94,6 +91,6 @@ interface StoryPuppetMaster {
   // a batch: no other commands from other clients will be interleaved.
   //
   // If an error occurs, execution is stopped and an error code
-  // and message are returned.
+  // and message are returned in |result|.
   2: Execute() -> (ExecuteResult result);
 };

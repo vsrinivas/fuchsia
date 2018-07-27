@@ -125,7 +125,6 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
         ->Then([this] {
           fuchsia::modular::ExecuteResult result;
           result.status = fuchsia::modular::ExecuteStatus::OK;
-          result.story_id = story_id_;
           Done(std::move(result));
         });
   }
