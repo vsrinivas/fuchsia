@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_FIDL_H_
+#define ZIRCON_FIDL_H_
 
 #include <assert.h>
 #include <stdalign.h>
@@ -283,6 +284,7 @@ typedef uint32_t fidl_union_tag_t;
 
 typedef struct fidl_message_header {
     zx_txid_t txid;
+    // This reserved word is used by Epitaphs to represent an error value.
     uint32_t reserved0;
     uint32_t flags;
     uint32_t ordinal;
@@ -335,14 +337,18 @@ struct fidl_txn {
     zx_status_t (*reply)(fidl_txn_t* txn, const fidl_msg_t* msg);
 };
 
-// An epitaph.  Epitaphs are defined in the FIDL wire format specification.
-// Once sent down the wire, the channel should be closed.  app_error is an
-// application-specific error code.
+// An epitaph is a message that a server sends just prior to closing the
+// connection.  It provides an indication of why the connection is being closed.
+// Epitaphs are defined in the FIDL wire format specification.  Once sent down
+// the wire, the channel should be closed.
 typedef struct fidl_epitaph {
     FIDL_ALIGNDECL
+
+    // The error associated with this epitaph is stored in the reserved word of
+    // the message header.  System errors must be constants of type zx_status_t,
+    // which are all negative.  Positive numbers should be used for application
+    // errors.  A value of ZX_OK indicates no error.
     fidl_message_header_t hdr;
-    zx_status_t sys_error;
-    uint32_t app_error;
 } fidl_epitaph_t;
 
 // This ordinal value is reserved for Epitaphs.
@@ -367,3 +373,5 @@ static_assert(alignof(fidl_union_tag_t) <= FIDL_ALIGNMENT, "");
 static_assert(alignof(fidl_message_header_t) <= FIDL_ALIGNMENT, "");
 
 __END_CDECLS
+
+#endif // ZIRCON_FIDL_H_

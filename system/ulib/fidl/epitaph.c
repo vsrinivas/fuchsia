@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include <string.h>
+
+#include <lib/fidl/epitaph.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
-zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t sys_error,
-                               int32_t app_error) {
+zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error) {
     fidl_epitaph_t epitaph;
     memset(&epitaph, 0, sizeof(epitaph));
     epitaph.hdr.ordinal = FIDL_EPITAPH_ORDINAL;
-    epitaph.sys_error = sys_error;
-    epitaph.app_error = app_error;
+    epitaph.hdr.reserved0 = error;
 
     return zx_channel_write(channel, 0, &epitaph, sizeof(epitaph), NULL, 0);
 }

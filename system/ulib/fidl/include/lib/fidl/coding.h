@@ -46,11 +46,6 @@ zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
 size_t fidl_format_type_name(const fidl_type_t* type,
                              char* buffer, size_t capacity);
 
-// Sends an epitaph with the given values down the channel.
-// TODO: Add docs on epitaphs to FIDL C bindings docs, point to it here.
-zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t sys_error,
-                               int32_t app_error);
-
 __END_CDECLS
 
 #endif // LIB_FIDL_CODING_H_
