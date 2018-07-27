@@ -349,6 +349,8 @@ int main(int argc, const char** argv) {
                                    &commit_count_str) ||
       !fxl::StringToNumberWithError(commit_count_str, &commit_count) ||
       commit_count <= 0 ||
+      !command_line.GetOptionValue(kRefsFlag.ToString(),
+                                   &reference_strategy_str) ||
       !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
                                                        &server_id)) {
     PrintUsage(argv[0]);
