@@ -67,8 +67,10 @@ class CppBuilder(Builder):
                 self.make_dir(dest)
                 shutil.copy2(file.source, dest)
             else:
-                raise Exception('Error: unknow file extension "%s" for %s.' %
-                                (extension, atom.id))
+                dest = os.path.join(self.output, 'pkg', atom.id.name,
+                        destination)
+                self.make_dir(dest)
+                shutil.copy2(file.source, dest)
 
 
     def install_cpp_source_atom(self, atom):
