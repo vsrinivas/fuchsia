@@ -66,28 +66,21 @@ class CreateStoryCall
  private:
   void Run() override {
     FlowToken flow{this, &story_id_, &story_page_id_};
-
     ledger()->GetPage(nullptr, story_page_.NewRequest(),
                       Protect([this, flow](fuchsia::ledger::Status status) {
                         if (status != fuchsia::ledger::Status::OK) {
                           FXL_LOG(ERROR) << trace_name() << " "
                                          << "Ledger.GetPage() "
                                          << fidl::ToUnderlying(status);
-                          return;
                         }
-
-                        Cont1(flow);
                       }));
-  }
-
-  void Cont1(FlowToken flow) {
     story_page_->GetId([this, flow](fuchsia::ledger::PageId id) {
       story_page_id_ = std::move(id);
-      Cont2(flow);
+      Cont(flow);
     });
   }
 
-  void Cont2(FlowToken flow) {
+  void Cont(FlowToken flow) {
     // TODO(security), cf. FW-174. This ID is exposed in public services
     // such as fuchsia::modular::StoryProvider.PreviousStories(),
     // fuchsia::modular::StoryController.GetInfo(),
