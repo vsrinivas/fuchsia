@@ -65,8 +65,10 @@ connection is made from the host to the target and a command is run to tell the
 update agent to look for a new package. To trigger the update invoke
 `fx build-push <package_name>`. The &lt;package_name&gt; argument can be
 repeated to push multiple packages. The &lt;package_name&gt; argument can also
-be omitted to cause *all* packages to be pushed, but in this case it may be
-better to instead do an [OTA].
+be omitted to cause *all* packages, except the system package, to be pushed.
+The number of packages is typically large and the `build-push` mechanism doesn't
+scale well. To update all the packages on a target it will be faster to do an
+[OTA].
 
 The update package(s) will be available until the target is rebooted. Following
 a reboot the package data will still be on local storage, but will be
@@ -74,20 +76,29 @@ inaccessible. This is a limitation of the current implementation which will
 improve over time. When doing an [OTA] the result of the OTA is persistent
 across reboots.
 
-## Triggering an OTA (experimental)
+## Triggering an OTA
 
-Sometimes there may be kernel changes or changes in the system package that you
-need to pick up. There are two options, [paving][paver] or doing an OTA. To do
-an OTA you should make sure your code is up to date, do a full-build, and have
-the update server running on your host. Then run the command `fx ota`. If the
-update server is running with the `-v` flag there should be a flurry of output
-as the target retrieves all the new files. Following completion of the OTA the
-device will reboot.
+Sometimes there may be many packages changed or the kernel may change or there
+may be changes in the system package. To get kernel changes or changes in the
+system package an OTA or [pave][paver] is *required*, `fx build-push` isn't
+capable of updating these things. An OTA update will usually be faster than
+paving. When updating a large number of packages an OTA update will be faster
+than `fx build-push` because of its more optimized implementation.
+
+The command `fx ota` asks the target device to perform an update from any of
+the update sources available to it. To OTA update a build made on the dev host to
+a  target on the same LAN, first build the system you want. If `fx serve [-v]`
+isn't already running, start it so the target can use the development host as an
+update source. The `-v` option will show more information about the files the
+target is requesting from the host. If the  the `-v` flag was used there should
+be a flurry of output as the target retrieves all the new files. Following
+completion of the OTA the device will reboot.
 
 
 ## Just the commands
 
-  * `fx serve -v` or `fx serve-updates -v` (to not run the bootserver as well)
+  * `fx serve -v` (to run the update server for both build-push and ota)
+    * `fx serve-updates -v` (to run only the update server, not the bootserver)
   * `fx build-push <package_name>` (each time a change is made you want to push)
   * `fx shell "killall sysmgr"` (optional, depending on your component)
   * `fx ota` (to trigger a full system update and reboot)
@@ -140,4 +151,4 @@ root hash and put in a directory at the root of the TUF file tree called 'blobs'
 [pkg-doc]: /development/build/packages.md "Packaging docs"
 [flutter-gni]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"
 [paver]: fuchsia_paver.md "Fuchsia paver"
-[OTA]: #triggering-an-ota-experimental "Triggering an OTA"
+[OTA]: #triggering-an-ota "Triggering an OTA"
