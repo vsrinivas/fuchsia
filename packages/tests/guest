@@ -1,9 +1,11 @@
 {
     "imports": [
+        "garnet/packages/experimental/zircon_guest"
     ],
     "packages": [
         "//garnet/bin/guest/mgr:guestmgr_tests",
         "//garnet/lib/machina:machina_tests",
+        "//garnet/bin/guest/integration_test:guest_integration_tests",
         "//garnet/bin/guest/vmm:vmm_tests"
     ]
 }
