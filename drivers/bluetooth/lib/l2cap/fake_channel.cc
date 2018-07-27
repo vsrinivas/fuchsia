@@ -25,7 +25,8 @@ FakeChannel::FakeChannel(ChannelId id, hci::ConnectionHandle handle,
 }
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
-  FXL_DCHECK(rx_cb_ && dispatcher_);
+  FXL_DCHECK(rx_cb_);
+  FXL_DCHECK(dispatcher_);
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
   async::PostTask(dispatcher_,
