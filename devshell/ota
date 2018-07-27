@@ -7,9 +7,10 @@
 
 ## usage: fx ota [-d|--device <device_address>] [-h|--help]
 ##
-## This requires the target have a update server available to it. The 'serve'
-## command is typically used to make your development host available to the
-## target as an update server.
+## Ask the target to do an OTA. The target will use any update server available
+## to it to do the update. This requires the target have a update server
+## available to it. The 'serve' command is typically used to make your
+## development host available to the target as an update server.
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
