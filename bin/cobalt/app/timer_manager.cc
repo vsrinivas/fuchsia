@@ -6,11 +6,12 @@
 
 #include <thread>
 
+#include <lib/async/cpp/time.h>
+
 namespace cobalt {
 
 using fuchsia::cobalt::Status;
 using std::string;
-using wlan::SystemClock;
 
 const uint32_t kMaxTimerTimeout = 300;
 
@@ -27,7 +28,7 @@ void TimerVal::AddEnd(int64_t timestamp, const std::string& part_name) {
 }
 
 TimerManager::TimerManager(async_dispatcher_t* dispatcher)
-    : clock_(new SystemClock()), dispatcher_(dispatcher) {}
+    : dispatcher_(dispatcher) {}
 
 TimerManager::~TimerManager() {}
 
@@ -73,7 +74,7 @@ Status TimerManager::GetTimerValWithStart(
 
   // An expired timer with that timer_id exists.
   if (timer_val_iter != timer_values_.end() &&
-      timer_val_iter->second->expiry_time < clock_->Now()) {
+      timer_val_iter->second->expiry_time < async::Now(dispatcher_)) {
     timer_values_.erase(timer_val_iter);
     timer_val_iter = timer_values_.end();
   }
@@ -112,7 +113,7 @@ Status TimerManager::GetTimerValWithEnd(
 
   // An expired timer with that timer_id exists.
   if (timer_val_iter != timer_values_.end() &&
-      timer_val_iter->second->expiry_time < clock_->Now()) {
+      timer_val_iter->second->expiry_time < async::Now(dispatcher_)) {
     timer_values_.erase(timer_val_iter);
     timer_val_iter = timer_values_.end();
   }
@@ -151,7 +152,7 @@ Status TimerManager::GetTimerValWithEnd(
 
   // An expired timer with that timer_id exists.
   if (timer_val_iter != timer_values_.end() &&
-      timer_val_iter->second->expiry_time < clock_->Now()) {
+      timer_val_iter->second->expiry_time < async::Now(dispatcher_)) {
     timer_values_.erase(timer_val_iter);
     timer_val_iter = timer_values_.end();
   }
@@ -191,7 +192,7 @@ void TimerManager::MoveTimerToTimerVal(
 void TimerManager::ScheduleExpiryTask(
     const std::string& timer_id, uint32_t timeout_s,
     std::unique_ptr<TimerVal>* timer_val_ptr) {
-  (*timer_val_ptr)->expiry_time = clock_->Now() + zx::sec(timeout_s);
+  (*timer_val_ptr)->expiry_time = async::Now(dispatcher_) + zx::sec(timeout_s);
 
   (*timer_val_ptr)
       ->expiry_task.set_handler(

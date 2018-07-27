@@ -20,19 +20,14 @@ class TimerManagerTests : public ::gtest::TestLoopFixture {
  protected:
   void SetUp() override {
     timer_manager_.reset(new TimerManager(dispatcher()));
-    test_clock_.reset(new wlan::TestClock());
-
-    timer_manager_->SetClockForTesting(test_clock_);
     SetTimeSec(1);
   }
 
   void SetTimeSec(uint32_t time_s) {
-    test_clock_->Set(zx::time(ZX_SEC(time_s)));
-    RunLoopUntil(zx::time(ZX_SEC(time_s)));
+    RunLoopUntil(zx::time() + zx::sec(time_s));
   }
 
   std::unique_ptr<TimerManager> timer_manager_;
-  std::shared_ptr<wlan::TestClock> test_clock_;
 };
 
 TEST_F(TimerManagerTests, ValidationEmptyTimerId) {
@@ -188,7 +183,6 @@ TEST_F(TimerManagerTests, ExpireStartAddEnd) {
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
 
   EXPECT_TRUE(RunLoopFor(zx::sec(10)));  // expiry task executed.
-  SetTimeSec(10);
 
   status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
                                               kTimeoutSec, &timer_val_ptr);
@@ -212,7 +206,6 @@ TEST_F(TimerManagerTests, ExpireStartAddStart) {
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
 
   EXPECT_TRUE(RunLoopFor(zx::sec(10)));  // expiry task executed.
-  SetTimeSec(10);
 
   status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
                                                 kTimerId, kStartTimestamp,
@@ -281,7 +274,6 @@ TEST_F(TimerManagerTests, GetTimerValMakeSureExpiryIsCancelled) {
   EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
 
   EXPECT_FALSE(RunLoopFor(zx::sec(10)));  // expiry task did not execute.
-  SetTimeSec(12);
 
   status = timer_manager_->GetTimerValWithStart(
       kMetricId, kEncodingId, kTimerId, kStartTimestamp, 2 * kTimeoutSec,

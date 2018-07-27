@@ -19,8 +19,6 @@
 #include <lib/fxl/logging.h>
 #include <lib/zx/time.h>
 
-#include "garnet/lib/wlan/mlme/include/wlan/mlme/clock.h"
-
 using fuchsia::cobalt::Status;
 
 namespace cobalt {
@@ -96,15 +94,7 @@ class TimerManager {
                             uint32_t timeout_s, const std::string& part_name,
                             std::unique_ptr<TimerVal>* timer_val_ptr);
 
-  // Tests can use private methods for setup.
-  friend class TimerManagerTests;
-
  private:
-  // Used for testing.
-  void SetClockForTesting(std::shared_ptr<wlan::Clock> clock) {
-    clock_ = clock;
-  }
-
   // Schedules a task which will delete the timer entries associated with
   // timer_id when it expires.
   // timeout_s : the timer timer_id will be deleted after timeout_s seconds.
@@ -124,8 +114,6 @@ class TimerManager {
 
   // Map from timer_id to the TimerVal values associated with it.
   std::unordered_map<std::string, std::unique_ptr<TimerVal>> timer_values_;
-  // The clock is abstracted so that friend tests can set a non-system clock.
-  std::shared_ptr<wlan::Clock> clock_;
   // Async dispatcher used for deleting expired timer entries.
   async_dispatcher_t* const dispatcher_;  // not owned.
 };
