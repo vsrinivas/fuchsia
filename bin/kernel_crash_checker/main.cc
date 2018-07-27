@@ -68,6 +68,10 @@ int main(int argc, char** argv) {
 #if USE_CRASHPAD
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   CrashpadAnalyzer crashpad_analyzer;
+
+  // TODO(DX-230): wait for network to come up instead of sleeping for 60s.
+  zx_nanosleep(zx_deadline_after(ZX_SEC(60)));
+
   // Switch to crashlog.ToTransport() once we use fuchsia::mem::Buffer.
   fuchsia::crash::Buffer buf;
   buf.vmo = fbl::move(crashlog_vmo.vmo());

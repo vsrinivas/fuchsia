@@ -18,14 +18,25 @@
 #include <stdio.h>
 #include <third_party/crashpad/client/settings.h>
 #include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
+#include <third_party/crashpad/minidump/minidump_file_writer.h>
 #include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h>
+#include <third_party/crashpad/util/misc/metrics.h>
+#include <third_party/crashpad/util/misc/uuid.h>
+#include <third_party/crashpad/util/net/http_body.h>
+#include <third_party/crashpad/util/net/http_headers.h>
+#include <third_party/crashpad/util/net/http_multipart_builder.h>
+#include <third_party/crashpad/util/net/http_transport.h>
+#include <third_party/crashpad/util/net/url.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
 namespace {
+
+const char kURL[] = "https://clients2.google.com/cr/report";
 
 class ScopedStoppable {
  public:
@@ -134,8 +145,7 @@ int HandleException(zx::process process, zx::thread thread) {
   upload_thread_options.watch_pending_reports = true;
 
   upload_thread.Reset(new crashpad::CrashReportUploadThread(
-      database.get(), "https://clients2.google.com/cr/report",
-      upload_thread_options));
+      database.get(), kURL, upload_thread_options));
   upload_thread.Get()->Start();
 
   std::map<std::string, std::string> annotations;
@@ -160,6 +170,103 @@ int HandleException(zx::process process, zx::thread thread) {
              : EXIT_FAILURE;
 }
 
+int Process(fuchsia::crash::Buffer crashlog) {
+  std::unique_ptr<crashpad::CrashReportDatabase> database(
+      crashpad::CrashReportDatabase::Initialize(
+          base::FilePath("/data/kernel_crashes")));
+  if (!database) {
+    return EXIT_FAILURE;
+  }
+  database->GetSettings()->SetUploadsEnabled(true);
+
+  crashpad::CrashReportDatabase::OperationStatus database_status;
+
+  // Create report.
+  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
+  database_status = database->PrepareNewCrashReport(&report);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    return EXIT_FAILURE;
+  }
+
+  // Add annotations.
+  std::map<std::string, std::string> annotations = {
+      {"product", "Fuchsia"},
+      // Technically the version after reboot, not when it crashed.
+      {"version", GetVersion()},
+      // We use ptype to benefit from Chrome's "Process type" handling in the
+      // UI.
+      {"ptype", "kernel"},
+  };
+
+  // Add attachments.
+  crashpad::FileWriter* writer = report->AddAttachment("log");
+  if (!writer) {
+    return EXIT_FAILURE;
+  }
+  // TODO(frousseau): make crashpad::FileWriter VMO-aware.
+  std::unique_ptr<void, decltype(&free)> buffer(malloc(crashlog.size), &free);
+  zx_status_t status = crashlog.vmo.read(buffer.get(), 0u, crashlog.size);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "error writing VMO crashlog to buffer: "
+                   << zx_status_get_string(status);
+    return EXIT_FAILURE;
+  }
+  writer->Write(buffer.get(), crashlog.size);
+
+  // Finish new report.
+  crashpad::UUID local_report_id;
+  database_status =
+      database->FinishedWritingCrashReport(std::move(report), &local_report_id);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    return EXIT_FAILURE;
+  }
+
+  // Switch to an "upload" report.
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
+      upload_report;
+  database_status =
+      database->GetReportForUploading(local_report_id, &upload_report);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    return EXIT_FAILURE;
+  }
+
+  // Upload report.
+  // We have to build the MIME multipart message ourselves as all the Crashpad
+  // helpers expect some process to build a minidump from and we don't have one.
+  crashpad::HTTPMultipartBuilder http_multipart_builder;
+  http_multipart_builder.SetGzipEnabled(true);
+  for (const auto& kv : annotations) {
+    http_multipart_builder.SetFormData(kv.first, kv.second);
+  }
+  for (const auto& kv : upload_report->GetAttachments()) {
+    http_multipart_builder.SetFileAttachment(kv.first, kv.first, kv.second,
+                                             "application/octet-stream");
+  }
+  std::unique_ptr<crashpad::HTTPTransport> http_transport(
+      crashpad::HTTPTransport::Create());
+  crashpad::HTTPHeaders content_headers;
+  http_multipart_builder.PopulateContentHeaders(&content_headers);
+  for (const auto& content_header : content_headers) {
+    http_transport->SetHeader(content_header.first, content_header.second);
+  }
+  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
+  http_transport->SetTimeout(60.0);  // 1 minute.
+  http_transport->SetURL(kURL);
+
+  std::string server_report_id;
+  if (!http_transport->ExecuteSynchronously(&server_report_id)) {
+    database->SkipReportUpload(
+        local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
+    return EXIT_FAILURE;
+  }
+  database->RecordUploadComplete(std::move(upload_report), server_report_id);
+  FXL_LOG(INFO) << "Successfully uploaded crash report at "
+                   "https://crash.corp.google.com/"
+                << server_report_id;
+
+  return EXIT_SUCCESS;
+}
+
 class AnalyzerImpl : public fuchsia::crash::Analyzer {
  public:
   // fuchsia::crash::Analyzer:
@@ -172,8 +279,9 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
   void Process(fuchsia::crash::Buffer crashlog,
                ProcessCallback callback) override {
     callback();
-    // TODO(DX-230): upload a report with the crashlog as attachment.
-    FXL_LOG(WARNING) << "Processing VMO crashlog not supported yet.";
+    if (::Process(fbl::move(crashlog)) == EXIT_FAILURE) {
+      FXL_LOG(ERROR) << "Failed to process VMO crashlog. Won't retry.";
+    }
   }
 };
 
