@@ -72,9 +72,12 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_DRAM_POWER_LIMIT);
     ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PKG_ENERGY_STATUS);
     ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_DRAM_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PP0_POWER_LIMIT);
     ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PP0_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PP1_POWER_LIMIT);
     ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PP1_ENERGY_STATUS);
     ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PLATFORM_ENERGY_COUNTER);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PLATFORM_POWER_LIMIT);
 
     // Setup VPID allocator
     fbl::AutoLock lock(&guest->vcpu_mutex_);
