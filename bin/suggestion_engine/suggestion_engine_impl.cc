@@ -83,13 +83,9 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
                          source_url = source->component_url(),
                          activity](fidl::StringPtr preloaded_story_id) mutable {
         auto story_id = StoryIdFromName(source_url, proposal.story_name);
-        // Keep display around since the suggestion could be displayed in some
-        // places using the display data instead of the preloaded story.
-        fuchsia::modular::SuggestionDisplay cloned_display;
-        proposal.display.Clone(&cloned_display);
         ExecuteActions(std::move(proposal.on_selected),
                        nullptr /* proposal_listener */, proposal.id,
-                       std::move(cloned_display), preloaded_story_id);
+                       preloaded_story_id);
         next_processor_.AddProposal(source_url, story_id, preloaded_story_id,
                                     std::move(proposal));
       }));
@@ -188,7 +184,7 @@ void SuggestionEngineImpl::NotifyInteraction(
         PerformActions(std::move(proposal.on_selected),
                        std::move(proposal.listener), proposal.id,
                        proposal.story_name, suggestion->prototype->source_url,
-                       proposal.story_id, std::move(proposal.display));
+                       proposal.story_id);
       } else {
         should_delete_story = false;
         auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
@@ -317,11 +313,10 @@ void SuggestionEngineImpl::PerformActions(
     fidl::VectorPtr<fuchsia::modular::Action> actions,
     fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
     const std::string& proposal_id, const std::string& story_name,
-    const std::string& source_url, const std::string& proposal_story_id,
-    fuchsia::modular::SuggestionDisplay suggestion_display) {
+    const std::string& source_url, const std::string& proposal_story_id) {
   if (story_name.empty()) {
     ExecuteActions(std::move(actions), std::move(listener), proposal_id,
-                   std::move(suggestion_display), proposal_story_id);
+                   proposal_story_id);
     return;
   }
   const std::string key = StoryNameKey(source_url, story_name);
@@ -329,30 +324,26 @@ void SuggestionEngineImpl::PerformActions(
   if (it == story_name_mapping_.end()) {
     story_provider_->CreateStory(
         nullptr /* module_url */,
-        fxl::MakeCopyable(
-            [this, actions = std::move(actions), listener = std::move(listener),
-             proposal_id, suggestion_display = std::move(suggestion_display),
-             story_name, source_url](const fidl::StringPtr& story_id) mutable {
-              story_name_mapping_[StoryNameKey(source_url, story_name)] =
-                  story_id;
-              // TODO(miguelfrde): better expect clients to send focus action?
-              focus_provider_ptr_->Request(story_id);
-              ExecuteActions(std::move(actions), std::move(listener),
-                             proposal_id, std::move(suggestion_display),
-                             story_id);
-            }));
+        fxl::MakeCopyable([this, actions = std::move(actions),
+                           listener = std::move(listener), proposal_id,
+                           story_name, source_url](
+                              const fidl::StringPtr& story_id) mutable {
+          story_name_mapping_[StoryNameKey(source_url, story_name)] = story_id;
+          // TODO(miguelfrde): better expect clients to send focus action?
+          focus_provider_ptr_->Request(story_id);
+          ExecuteActions(std::move(actions), std::move(listener), proposal_id,
+                         story_id);
+        }));
   } else {
     ExecuteActions(std::move(actions), std::move(listener), proposal_id,
-                   std::move(suggestion_display), it->second);
+                   it->second);
   }
 }
 
 void SuggestionEngineImpl::ExecuteActions(
     fidl::VectorPtr<fuchsia::modular::Action> actions,
     fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id,
-    fuchsia::modular::SuggestionDisplay suggestion_display,
-    const std::string& override_story_id) {
+    const std::string& proposal_id, const std::string& override_story_id) {
   for (auto& action : *actions) {
     switch (action.Which()) {
       // TODO(miguelfrde): CreateStory is deprecated, remove.
@@ -360,10 +351,10 @@ void SuggestionEngineImpl::ExecuteActions(
         // If we are overriding a story, no need to create a new story. Ignore
         // this action.
         if (override_story_id.empty()) {
-          fuchsia::modular::SuggestionDisplay cloned_display;
-          suggestion_display.Clone(&cloned_display);
-          PerformCreateStoryAction(action, std::move(listener), proposal_id,
-                                   std::move(cloned_display));
+          PerformCreateStoryAction(action, std::move(listener), proposal_id);
+        } else {
+          FXL_LOG(INFO) << "Ignored CreateStory action since we are overriding "
+                        << " a story.";
         }
         break;
       }
@@ -410,8 +401,7 @@ void SuggestionEngineImpl::ExecuteActions(
 void SuggestionEngineImpl::PerformCreateStoryAction(
     const fuchsia::modular::Action& action,
     fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id,
-    fuchsia::modular::SuggestionDisplay suggestion_display) {
+    const std::string& proposal_id) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto& create_story = action.create_story();
 
@@ -429,26 +419,8 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
     FXL_LOG(INFO) << "Creating story with action " << intent.action;
   }
 
-  // TODO(MI4-997): Use a separate enum for internal ranking vs. what is exposed
-  // to the user shell for display purposes.
-  fuchsia::modular::StoryInfoExtraEntry extra_entry;
-  extra_entry.key = "annoyance_type";
-  switch (suggestion_display.annoyance) {
-    case fuchsia::modular::AnnoyanceType::NONE:
-      extra_entry.value = "none";
-      break;
-    case fuchsia::modular::AnnoyanceType::PEEK:
-      extra_entry.value = "peek";
-      break;
-    case fuchsia::modular::AnnoyanceType::INTERRUPT:
-      extra_entry.value = "interrupt";
-      break;
-  }
-  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info;
-  extra_info.push_back(std::move(extra_entry));
-
-  story_provider_->CreateStoryWithInfo(
-      nullptr /* module_url */, std::move(extra_info), nullptr /* root_json */,
+  story_provider_->CreateStory(
+      nullptr /* module_url */,
       fxl::MakeCopyable([this, listener = std::move(listener), proposal_id,
                          intent = std::move(intent),
                          activity](const fidl::StringPtr& story_id) mutable {

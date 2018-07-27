@@ -187,15 +187,12 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
       fidl::VectorPtr<fuchsia::modular::Action> actions,
       fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
       const std::string& proposal_id, const std::string& story_name,
-      const std::string& source_url, const std::string& proposal_story_id,
-      fuchsia::modular::SuggestionDisplay suggestion_display);
+      const std::string& source_url, const std::string& proposal_story_id);
 
   void ExecuteActions(
       fidl::VectorPtr<fuchsia::modular::Action> actions,
       fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id,
-      fuchsia::modular::SuggestionDisplay suggestion_display,
-      const std::string& override_story_id);
+      const std::string& proposal_id, const std::string& override_story_id);
 
   // Performs an action that creates a story.
   //
@@ -204,8 +201,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void PerformCreateStoryAction(
       const fuchsia::modular::Action& action,
       fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id,
-      fuchsia::modular::SuggestionDisplay suggestion_display);
+      const std::string& proposal_id);
 
   void PerformFocusStoryAction(const fuchsia::modular::Action& action,
                                const std::string& override_story_id);
