@@ -5,6 +5,7 @@
 use fidl_mlme::BssDescription;
 use Ssid;
 use std::cmp::Ordering;
+use wlan_rsn::{akm, cipher, rsne::{self, Rsne}};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BssInfo {
@@ -50,9 +51,33 @@ fn get_rx_dbm(bss: &BssDescription) -> i8 {
 fn is_bss_compatible(bss: &BssDescription) -> bool {
     match bss.rsn.as_ref() {
         None => true,
-        // TODO(hahnr): check if RSN is supported
-        Some(_rsn) => false
+        Some(rsn) => match rsne::from_bytes(&rsn[..]).to_full_result() {
+            Ok(a_rsne) => is_rsn_compatible(&a_rsne),
+            _ => false
+        }
     }
+}
+
+/// Supported Ciphers and AKMs:
+/// Group Data Ciphers: CCMP-128, TKIP
+/// Pairwise Cipher: CCMP-128
+/// AKM: PSK
+pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
+    let has_supported_group_data_cipher = match a_rsne.group_data_cipher_suite.as_ref() {
+        Some(c) if c.has_known_usage() => match c.suite_type {
+            // IEEE allows TKIP usage only in GTKSAs for compatibility reasons.
+            // TKIP is considered broken and should never be used in a PTKSA or IGTKSA.
+            cipher::CCMP_128 | cipher::TKIP => true,
+            _ => false,
+        },
+        _ => false,
+    };
+    let has_supported_pairwise_cipher = a_rsne.pairwise_cipher_suites.iter()
+        .any(|c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
+    let has_supported_akm_suite = a_rsne.akm_suites.iter()
+        .any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
+
+    has_supported_group_data_cipher && has_supported_pairwise_cipher && has_supported_akm_suite
 }
 
 #[cfg(test)]

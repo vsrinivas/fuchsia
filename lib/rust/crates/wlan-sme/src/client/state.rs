@@ -320,7 +320,7 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
                     },
                 }
             }
-            Err(e) => eprintln!("error processing EAPOL key frame: {:?}", e),
+            Err(e) => eprintln!("error processing EAPOL key frame: {}", e),
         };
     }
 
