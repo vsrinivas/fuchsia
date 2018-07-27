@@ -69,29 +69,39 @@ DisplaySwapchain::DisplaySwapchain(DisplayManager* display_manager,
                                    Display* display,
                                    EventTimestamper* timestamper,
                                    escher::Escher* escher)
-    : display_manager_(display_manager),
+    : escher_(escher),
+      display_manager_(display_manager),
       display_(display),
-      device_(escher->vk_device()),
-      queue_(escher->device()->vk_main_queue()),
-      vulkan_proc_addresses_(escher->device()->proc_addrs()),
       timestamper_(timestamper) {
   FXL_DCHECK(display);
   FXL_DCHECK(timestamper);
-  FXL_DCHECK(escher);
 
-  display_->Claim();
+  if (escher_) {
+    device_ = escher_->vk_device();
+    queue_ = escher_->device()->vk_main_queue();
+    format_ = GetDisplayImageFormat(escher->device());
 
-  format_ = GetDisplayImageFormat(escher->device());
+    display_->Claim();
 
-  frames_.resize(kSwapchainImageCount);
+    frames_.resize(kSwapchainImageCount);
 
-  if (!InitializeFramebuffers(escher->resource_recycler())) {
-    FXL_LOG(ERROR) << "Initializing buffers for display swapchain failed.";
+    if (!InitializeFramebuffers(escher_->resource_recycler())) {
+      FXL_LOG(ERROR) << "Initializing buffers for display swapchain failed.";
+    }
+  } else {
+    device_ = vk::Device();
+    queue_ = vk::Queue();
+    format_ = vk::Format::eUndefined;
+
+    display_->Claim();
+
+    FXL_VLOG(2) << "Using a NULL escher in DisplaySwapchain; likely in a test.";
   }
 }
 
 bool DisplaySwapchain::InitializeFramebuffers(
     escher::ResourceRecycler* resource_recycler) {
+  FXL_CHECK(escher_);
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
 
 #if !defined(__x86_64__)
@@ -183,8 +193,9 @@ bool DisplaySwapchain::InitializeFramebuffers(
         buffer.device_memory->base(),
         vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
 
-    auto export_result = vulkan_proc_addresses_.getMemoryFuchsiaHandleKHR(
-        device_, export_memory_info);
+    auto export_result =
+        escher_->device()->proc_addrs().getMemoryFuchsiaHandleKHR(
+            device_, export_memory_info);
 
     if (export_result.result != vk::Result::eSuccess) {
       FXL_DLOG(ERROR) << "VkGetMemoryFuchsiaHandleKHR failed: "
@@ -212,6 +223,11 @@ bool DisplaySwapchain::InitializeFramebuffers(
 }
 
 DisplaySwapchain::~DisplaySwapchain() {
+  if (!escher_) {
+    display_->Unclaim();
+    return;
+  }
+
   // Turn off operations.
   display_manager_->EnableVsync(nullptr);
 
@@ -233,11 +249,13 @@ DisplaySwapchain::~DisplaySwapchain() {
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     const FrameTimingsPtr& frame_timings) {
+  FXL_CHECK(escher_);
   auto render_finished_escher_semaphore =
       escher::Semaphore::NewExportableSem(device_);
 
-  zx::event render_finished_event = GetEventForSemaphore(
-      vulkan_proc_addresses_, device_, render_finished_escher_semaphore);
+  zx::event render_finished_event =
+      GetEventForSemaphore(escher_->device()->proc_addrs(), device_,
+                           render_finished_escher_semaphore);
   uint64_t render_finished_event_id =
       display_manager_->ImportEvent(render_finished_event);
 

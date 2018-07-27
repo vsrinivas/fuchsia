@@ -68,14 +68,12 @@ class DisplaySwapchain : public Swapchain {
 
   void OnVsync(zx_time_t timestamp, const std::vector<uint64_t>& image_ids);
 
+  // A nullable Escher (good for testing) means some resources must be accessed
+  // through its (valid) pointer.
+  escher::Escher* const escher_ = nullptr;
+
   DisplayManager* display_manager_;
   Display* const display_;
-
-  vk::Format format_;
-  vk::Device device_;
-  vk::Queue queue_;
-
-  const escher::VulkanDeviceQueues::ProcAddrs& vulkan_proc_addresses_;
 
   size_t next_frame_index_ = 0;
   size_t presented_frame_idx_ = 0;
@@ -85,6 +83,10 @@ class DisplaySwapchain : public Swapchain {
   std::vector<Framebuffer> swapchain_buffers_;
 
   std::vector<std::unique_ptr<FrameRecord>> frames_;
+
+  vk::Format format_;
+  vk::Device device_;
+  vk::Queue queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };
