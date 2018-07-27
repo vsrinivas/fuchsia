@@ -13,5 +13,6 @@ MODULE_PACKAGE := fidl
 MODULE_FIDL_LIBRARY := fuchsia.cobalt
 
 MODULE_SRCS += $(LOCAL_DIR)/cobalt.fidl $(LOCAL_DIR)/cobalt_controller.fidl
+MODULE_SRCS += $(LOCAL_DIR)/cobalt2.fidl
 
 include make/module.mk

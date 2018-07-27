@@ -1,0 +1,422 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.cobalt;
+
+// Cobalt is the Fuchsia service used to log, collect and analyze metrics.
+// The two main pillars of Cobalt are protecting user privacy and providing
+// high-quality, aggregate metrics to serve system and component software
+// developers' needs.
+//
+// This file contains interfaces that allow clients to log Events to
+// Cobalt.
+//
+// To use Cobalt, you must have a Project and one or more Metrics registered
+// with the Cobalt registration system. You must also register one or more
+// Reports in order to see the results of your logging aggregated over
+// all Fuchsia devices. Registration of Projects, Metrics and Reports consists
+// of entries in the YAML files in this repo:
+// https://cobalt-analytics.googlesource.com/config/.
+// In a Garnet checkout that is mapped to //third_party/cobalt_config.
+// Each registered object has an integer ID and those IDs are used as
+// parameters in the methods in this file.
+//
+// While Cobalt's code and registration files are open source, the running
+// system being managed by the Cobalt team is currently intended to be used by
+// software engineers at Google in order to collect metrics in a way that
+// preserves our users' privacy. If you are a Google software engineer
+// please see our internal [user guide](go/fuchsia-cobalt-userguide) or
+// ask for assistance from the Cobalt [team](go/fuchsia-cobalt#comms).
+//
+// Usage: First use LoggerFactory to get a Logger for your
+// project. Then you log Events using the Log*() methods.
+// Events are accumulated by the cobalt FIDL service and periodically
+// Observations, derived from the logged Events, are sent to the Cobalt server,
+// where they are used to generate Reports.
+
+// The maximum size of a single Event is 100 KB.
+const int64 MAX_BYTES_PER_EVENT = 102400;
+
+// Response codes for Logger operations.
+enum Status2 : int32 {
+    OK = 0;
+
+    // For example the supplied metric id is invalid.
+    INVALID_ARGUMENTS = 1;
+
+    // An attempt was made to log an Event whose seralized size exceeds
+    // kMaxBytesPerEvent.
+    EVENT_TOO_BIG = 2;
+
+    // Cobalt's local buffer is temporarily full and cannot handle any more
+    // Events at this time. Try again later. This condition should be rare
+    BUFFER_FULL = 3;
+
+    // Catch-all for unexpected errors.
+    INTERNAL_ERROR = -1;
+};
+
+// TODO(prathyushk): Get rid of this struct and move to fuchsia.mem.Buffer
+// This is a temporary workaround for ZX-2406.
+// Since fuchsia.mem cannot be added as a dependency to this library, we create
+// a copy here.
+struct Buffer2 {
+    // The vmo.
+    handle<vmo> vmo;
+    // The size of the data in the vmo. This size must be smaller than the
+    // physical size of the vmo.
+    uint64 size;
+};
+
+// A ProjectProfile is used to describe the client's Cobalt project
+struct ProjectProfile2 {
+    // The |config| Buffer contains the bytes of a serialized Cobalt config
+    // proto message. This specifies registered Metric and Report definitions
+    // for a single project.
+    Buffer2 config;
+};
+
+[Discoverable]
+// LoggerFactory creates Loggers.
+interface LoggerFactory {
+    // Creates a Logger for the given ProjectProfile.
+    // |profile| A ProjectProfile describing the Cobalt project that the
+    // returned Logger is for.
+    //
+    // |status| Returns OK on success or INVALID_ARGUMENTS if the project
+    //  profile does not contain a valid Cobalt config with only a single
+    //  project_id.
+    2: CreateLogger(ProjectProfile2 profile,
+                    request<Logger> logger)
+        -> (Status2 @status);
+};
+
+/////////////////////////////////////////////////////////////////////
+// Logger Interface
+/////////////////////////////////////////////////////////////////////
+
+// A value that may be a string, int, double or index.
+union Value2 {
+  string string_value;
+  int64  int_value;
+  float64 double_value;
+  uint32 index_value;
+};
+
+// A value for a custom Event. This is used by the method LogCustomEvent().
+struct CustomEventValue {
+  // The name of the Metric dimension this value is for.
+  string dimension_name;
+
+  // The value for that dimension.
+  Value2 value;
+};
+
+
+// One bucket of histogram. This is used by the method LogIntHistogram().
+struct HistogramBucket {
+  // The index of the bucket. The meaning of the bucket is specified in the
+  // Metric definition.
+  uint32 index;
+
+  // The number of values in that bucket.
+  uint64 count;
+};
+
+// Logger is used to log Events to the Cobalt system. The Cobalt FIDL
+// service stores the Events locally for some period of time, processes the
+// Events to form Observations, and periodically uploads batches of Observations
+// to the Cobalt server. The Cobalt server processes the Observations and
+// generates Reports. See [TODO(rudominer)] for more description of the Cobalt
+// server and Reports.
+//
+// An instance of Logger is associated with a single Cobalt project.
+//
+// Next method ordinal: 12
+interface Logger {
+    // Logs the fact that an event has occurred.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type EVENT_OCCURRED.
+    //
+    // |event_type_index| The index of the event type that occurred. The indexed
+    //     set of all event types is specified in the metric definition.
+    1: LogEvent(string metric_name, uint32 event_type_index)
+        -> (Status2 @status);
+
+    // Logs that an event has occurred a given number of times.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type EVENT_COUNT.
+    //
+    // |event_type_index| The index of the event type that occurred. The indexed
+    //     set of all event types is specified in the metric definition.
+    //
+    // |component| Optionally, a component associated with the event may
+    //     also be logged. Any notion of component that makes sense may be
+    //     used or use the empty string if there is no natural notion of
+    //     component.
+    //
+    // |period_duration_micros| Optionally, the period of time over which
+    //     the |count| events occurred may be logged. If this is not
+    //     relevant the value may be set to 0. Otherwise specify the period
+    //     duration as a number of microseconds.
+    //
+    //  |count| The number of times the event occurred. One may choose to
+    //      always set this value to 1 and always set
+    //     |period_duration_micros| to 0 in order to achieve a semantics
+    //     similar to the LogEventOccurred() method, but with a |component|.
+    2: LogEventCount(string metric_name, uint32 event_type_index,
+                     string component, int64 period_duration_micros,
+                     uint32 count)
+        -> (Status @status);
+
+    // Logs that an event lasted a given amount of time.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type ELAPSED_TIME.
+    //
+    // |event_type_index| The index of the event type that occurred. The indexed
+    //     set of all event types is specified in the metric definition.
+    //
+    // |component| Optionally, a component associated with the event may
+    //     also be logged. Any notion of component that makes sense may be
+    //     used or use the empty string if there is no natural notion of
+    //     component.
+    //
+    // |elapsed_micros| The elapsed time of the event, specified as a number
+    //     of microseconds.
+    3: LogElapsedTime(string metric_name, uint32 event_type_index,
+                      string component, int64 elapsed_micros)
+        -> (Status2 @status);
+
+    // Logs a measured average frame rate.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type FRAME_RATE.
+    //
+    // |event_type_index| The index of the event type that associated with the
+    //     frame-rate measurement. The indexed set of all event types is
+    //     specified in the metric definition.
+    //
+    // |component| Optionally, a component associated with the frame-rate
+    //     measurement may also be logged. Any notion of component that makes
+    //     sense may be used or use the empty string if there is no natural
+    //     notion of component.
+    //
+    // |fps| The average-frame rate in frames-per-second.
+    4: LogFrameRate(string metric_name, uint32 event_type_index,
+                    string component, float32 fps)
+        -> (Status2 @status);
+
+    // Logs a measured memory usage.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type MEMORY_USAGE.
+    //
+    // |event_type_index| The index of the event type associated with the memory
+    //     usage. The indexed set of all event types is specified in the metric
+    //     definition.
+    //
+    // |component| Optionally, a component associated with the memory usage
+    //     may also be logged. Any notion of component that makes sense may be
+    //     used or use the empty string if there is no natural notion of
+    //     component.
+    //
+    // |bytes| The memory used, in bytes.
+    5: LogMemoryUsage(string metric_name, uint32 event_type_index,
+                      string component, int64 bytes)
+        -> (Status2 @status);
+
+
+    // Logs a histogram over a set of integer buckets. The meaning of the
+    // Metric and the buckets is specified in the Metric definition.
+    //
+    // This method is intended to be used in situations where the client
+    // wishes to aggregate a large number of integer-valued measurements
+    // *in-process*, prior to submitting the data to Cobalt.
+    // One reason a client may wish to do this is that the measurements occur
+    // with very high frequency and it is not practical to make a FIDL call
+    // for each individual measurement.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type INT_HISTOGRAM.
+    //
+    // |event_type_index| The index of the event type associated with the
+    // integer-valued measurement. The indexed set of all event types is
+    // specified in the metric definition.
+    //
+    // |component| Optionally, a component associated with integer-valued
+    //     measurements may also be logged. Any notion of component that makes
+    //     sense may be used or use the empty string if there is no natural
+    //     notion of component.
+    //
+    // |histogram| The histogram to log. Each HistogramBucket gives the count
+    //     for one bucket of the histogram. The definitions of the buckets is
+    //     given in the Metric definition.
+    6: LogIntHistogram(string metric_name, uint32 event_type_index,
+                       string component, vector<HistogramBucket> histogram)
+        -> (Status2 @status);
+
+    // Logs the fact that a given string was used, in a specific context.
+    // The semantics of the context and the string is specified in the
+    // Metric definition.
+    //
+    //  This method is intended to be used in the following situation:
+    //  * The string s being logged does not contain PII or passwords.
+    //  * The set S of all possible strings that may be logged is large.
+    //    If the set S is small consider using LogEvent() instead.
+    //  * The ultimate data of interest is the statistical distribution of the
+    //    most commonly used strings from S over the population of all Fuchsia
+    //    devices.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type STRING_USED.
+    //
+    // |s| The string to log. This should be a human-readable string of
+    //      size no more than 1k bytes.
+    7: LogString(string metric_name, string s) -> (Status2 @status);
+
+    // Logs a custom Event. The semantics of the Metric are specified in the
+    // Metric defintion.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type CUSTOM.
+    //
+    // |event_values| The values for the custom Event. There is one value for
+    // each dimension of the Metric. The number and types of the values must
+    // be consistent with the dimensions declared in the Metric definition.
+    8: LogCustomEvent(string metric_name,
+                      vector<CustomEventValue> event_values)
+        -> (Status2 @status);
+
+    // This method is part of Cobalt's helper service for measuring the time
+    // delta between two events that occur in different processes. This starts
+    // the timer. A corresponding invocation of EndTimer() with the same
+    // |timer_id| ends the timer. After both StartTimer() and EnvdTimer() have
+    // been invoked, LogElapsedTime() will be invoked with the difference
+    // between the end timestamp and the start timestamp as the value of
+    // |duration_microseconds|. It is OK if Cobalt receives the EndTimer()
+    // call before the StartTimer() call.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type ELAPSED_TIME.
+    //
+    // |event_type_index| The index of the event type to associate with the
+    // elapsed time. This is passed to LogElapsedTime()
+    //
+    // |component| Optionally, a component associated with the event may
+    //     also be logged. See the description at LogElapsedTime().
+    //
+    // |timer_id| The ID of the timer being started. This is an arbitrary
+    //     non-empty string provided by the caller and it is the caller's
+    //     responsibility to ensure that Cobalt receives a pair of
+    //     StartTimer(), EndTimer() calls with this id before the timeout
+    //     and without any intervening additional calls to StartTimer()
+    //     or EndTimer() using the same id. Once such a pair is received
+    //     Cobalt will delete the timer with this ID and after that the
+    //     ID may be re-used.
+    //
+    // |timestamp| The timestamp to set as the start of the timer. The units
+    //     must be microseconds. The absolute value does not matter, only the
+    //     difference between the end and start timestamps will be used.
+    //
+    // |timeout_s| The number of seconds Cobalt should wait to receive the
+    //     corresponding EndTimer() call with the same |timer_id|. If
+    //     Cobalt has already received the corresponding EndTimer() call
+    //     before receiving this StartTimer() call then this value is
+    //     ignored as the timeout has already been set by the EndTimer()
+    //     call. If Cobalt does not receive the corresponding EndTimer()
+    //     call before the timeout then the timer will be deleted and
+    //     this invocation of StartTimer() will be forgotten. Must be a
+    //     positive value less than 300.
+    //
+    // |status| Returns OK on success. There are two success cases:
+    //     (i) Cobalt does not currently have any timers with the given
+    //         timer_id. In that case this call creates a new timer with
+    //         the given ID and start timestamp.
+    //     (ii) Cobalt currently has a timer with the given timer_id for
+    //         which it has received exactly one EndTimer() call and no
+    //         StartTimer() calls. In this case Cobalt will delete the
+    //         timer and invoke LogElapsedTime() using the difference
+    //         between the end timestamp and the start timestamp as the
+    //         value of |duration_micors|. It is ok if this value is
+    //         negative.
+    //     Returns INVALID_ARGUMENTS if |timer_id| is empty or the timeout
+    //        is not positive and less than 5 minutes.
+    //     Returns FAILED_PRECONDITION if Cobalt currently has a timer
+    //        with the given timer_ID and it already has a start
+    //        timestamp. In this case Cobalt will delete the timer with
+    //        the given |timer_id| and this invocation of StartTimer()
+    //        will be forgotten.
+    //     Any error returned by LogElapsedTime() may also be returned by this
+    //     method.
+    9: StartTimer(string metric_name, uint32 event_type_index, string component,
+                  string timer_id, uint64 timestamp, uint32 timeout_s)
+        -> (Status2 @status);
+
+    // This method is part of Cobalt's helper service for measuring the time
+    // delta between two events that occur in different processes. This ends
+    // the timer. A corresponding invocation of StartTimer() with the same
+    // |timer_id| starts the timer. After both StartTimer() and EnvdTimer() have
+    // been invoked, LogElapsedTime() will be invoked with the difference
+    // between the end timestamp and the start timestamp as the value of
+    // |duration_microseconds|. It is OK if Cobalt receives the EndTimer()
+    // call before the StartTimer() call.
+    //
+    // |timer_id| The ID of the timer being ended. This is an arbitrary
+    //     non-empty string provided by the caller and it is the caller's
+    //     responsibility to ensure that Cobalt receives a pair of
+    //     StartTimer(), EndTimer() calls with this id before the timeout
+    //     and without any intervening additional calls to StartTimer()
+    //     or EndTimer() using the same id. Once such a pair is received
+    //     Cobalt will delete the timer with this ID and after that the
+    //     ID may be re-used.
+    //
+    // |timestamp| The timestamp to set as the end of the timer. The units
+    //     must be microseconds. The absolute value does not matter, only the
+    //     difference between the end and start timestamps will be used.
+    //
+    // |timeout_s| The number of seconds Cobalt should wait to receive the
+    //     corresponding EndTimer() call with the same |timer_id|. If
+    //     Cobalt has already received the corresponding EndTimer() call
+    //     before receiving this StartTimer() call then this value is
+    //     ignored as the timeout has already been set by the EndTimer()
+    //     call. If Cobalt does not receive the corresponding EndTimer()
+    //     call before the timeout then the timer will be deleted and
+    //     this invocation of StartTimer() will be forgotten. Must be a
+    //     positive value less than 300.
+    //
+    // |status| Returns OK on success. There are two success cases:
+    //     (i) Cobalt does not currently have any timers with the given
+    //         timer_id. In that case this call creates a new timer with
+    //         the given ID and end timestamp.
+    //     (ii) Cobalt currently has a timer with the given timer_id for
+    //         which it has received exactly one StartTimer() call and no
+    //         EndTimer() calls. In this case Cobalt will delete the
+    //         timer and invoke LogElapsedTime() using the difference
+    //         between the end timestamp and the start timestamp as the
+    //         value of |duration_micors|. It is ok if this value is
+    //         negative.
+    //     Returns INVALID_ARGUMENTS if |timer_id| is empty or the timeout
+    //        is not positive and less than 5 minutes.
+    //     Returns FAILED_PRECONDITION if Cobalt currently has a timer
+    //        with the given timer_ID and it already has an end
+    //        timestamp. In this case Cobalt will delete the timer with
+    //        the given |timer_id| and this invocation of EndTimer()
+    //        will be forgotten.
+    //     Any error returned by LogElapsedTime() may also be returned by this
+    //     method.
+    10: EndTimer(string timer_id, uint64 timestamp, uint32 timeout_s)
+        -> (Status2 @status);
+};
