@@ -541,11 +541,30 @@ void Realm::CreateComponentFromPackage(
     }
   }
 
-  std::string runtime_data;
+  RuntimeMetadata runtime;
+  std::string runtime_parse_error;
+  // If meta/*.cmx has runtime data, get it.
+  if (!cmx.runtime_meta().IsNull()) {
+    runtime = cmx.runtime_meta();
+  } else {
+    json::JSONParser json_parser;
+    runtime.ParseFromFileAt(fd.get(), kDeprecatedRuntimePath, &json_parser);
+    runtime_parse_error = json_parser.error_str();
+  }
+
+  // If we cannot parse a runtime from either .cmx or deprecated_runtime, then
+  // we fall back to the default runner, which is running an ELF binary.
   fsl::SizedVmo app_data;
-  if (!files::ReadFileToStringAt(fd.get(), kDeprecatedRuntimePath,
-                                 &runtime_data))
+  if (runtime.IsNull()) {
     VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+    if (!app_data) {
+      FXL_LOG(ERROR) << "component has neither runner nor elf binary: "
+                     << runtime_parse_error;
+      component_request.SetReturnValues(kComponentCreationFailed,
+                                        TerminationReason::INTERNAL_ERROR);
+      return;
+    }
+  }
 
   ExportedDirType exported_dir_layout =
       files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
@@ -587,14 +606,16 @@ void Realm::CreateComponentFromPackage(
   // steps.
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
-  if (app_data) {
+  if (runtime.IsNull()) {
+    // Use the default runner: ELF binaries.
     CreateElfBinaryComponentFromPackage(
         std::move(launch_info), app_data, exported_dir_layout,
         std::move(loader_service), builder.Build(),
         std::move(component_request), std::move(ns), fbl::move(callback));
   } else {
+    // Use other component runners.
     CreateRunnerComponentFromPackage(
-        std::move(package), std::move(launch_info), cmx, runtime_data,
+        std::move(package), std::move(launch_info), runtime,
         builder.BuildForRunner(), std::move(component_request), std::move(ns));
   }
 }
@@ -637,26 +658,8 @@ void Realm::CreateElfBinaryComponentFromPackage(
 
 void Realm::CreateRunnerComponentFromPackage(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-    CmxMetadata& cmx, std::string& runtime_data,
-    fuchsia::sys::FlatNamespace flat, ComponentRequestWrapper component_request,
-    fxl::RefPtr<Namespace> ns) {
-  RuntimeMetadata runtime;
-
-  // If meta/*.cmx has runtime data, get it.
-  if (!cmx.runtime_meta().IsNull()) {
-    runtime = cmx.runtime_meta();
-  } else {
-    json::JSONParser json_parser;
-    if (!runtime.ParseFromString(runtime_data, kDeprecatedRuntimePath,
-                                 &json_parser)) {
-      FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
-                     << launch_info.url << ":\n" << json_parser.error_str();
-      component_request.SetReturnValues(kComponentCreationFailed,
-                                        TerminationReason::INTERNAL_ERROR);
-      return;
-    }
-  }
-
+    RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns) {
   fuchsia::sys::Package inner_package;
   inner_package.resolved_url = package->resolved_url;
 

@@ -17,8 +17,7 @@ class RuntimeMetadata {
   // Returns true if parsing succeeded. If a config is missing the runtime but
   // otherwise there are no errors, parsing succeeds and IsNull() is true.
   // |json_parser| is used to report any errors.
-  bool ParseFromString(const std::string& data,
-                       const std::string& file,
+  bool ParseFromFileAt(int dirfd, const std::string& file,
                        json::JSONParser* json_parser);
   bool ParseFromDocument(const rapidjson::Document& document,
                          json::JSONParser* json_parser);

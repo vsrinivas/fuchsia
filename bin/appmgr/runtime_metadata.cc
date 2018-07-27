@@ -11,13 +11,12 @@ namespace component {
 
 constexpr char kRunner[] = "runner";
 
-bool RuntimeMetadata::ParseFromString(const std::string& data,
-                                      const std::string& file,
+bool RuntimeMetadata::ParseFromFileAt(int dirfd, const std::string& file,
                                       json::JSONParser* json_parser) {
   runner_.clear();
   null_ = true;
 
-  rapidjson::Document document = json_parser->ParseFromString(data, file);
+  rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
   if (json_parser->HasError()) {
     return false;
   }

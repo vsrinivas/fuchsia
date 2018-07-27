@@ -14,7 +14,6 @@
 #include <unordered_map>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
@@ -23,6 +22,7 @@
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runner_holder.h"
+#include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/scheme_map.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
@@ -120,8 +120,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   void CreateRunnerComponentFromPackage(
       fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-      CmxMetadata& cmx, std::string& runtime_data,
-      fuchsia::sys::FlatNamespace flat,
+      RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
       ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns);
 
   zx::channel OpenInfoDir();
