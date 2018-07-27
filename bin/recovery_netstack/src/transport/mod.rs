@@ -35,5 +35,7 @@ pub fn receive_ip_packet<A: IpAddr, B: AsMut<[u8]>>(
             self::udp::receive_ip_packet(state, src_ip, dst_ip, buffer);
             true
         }
+        // All other protocols are not "transport" protocols.
+        _ => false,
     }
 }

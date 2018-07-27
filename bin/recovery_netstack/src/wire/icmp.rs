@@ -122,7 +122,8 @@ unsafe impl FromBytes for IcmpOriginData {}
 unsafe impl AsBytes for IcmpOriginData {}
 unsafe impl Unaligned for IcmpOriginData {}
 
-struct Icmpv4Echo<B> {
+/// ICMP echo request/reply packet.
+pub struct Icmpv4Echo<B> {
     id_seq: LayoutVerified<B, IdAndSeq>,
     data: B,
 }
@@ -136,6 +137,16 @@ impl<B: ByteSlice> Icmpv4Echo<B> {
 
     fn size(&self) -> usize {
         self.id_seq.bytes().len() + self.data.len()
+    }
+
+    /// Constructs an ICMPv4 echo request packet.
+    pub fn request(self) -> Icmpv4Packet<B> {
+        Icmpv4Packet::new(Icmpv4Body::EchoRequest(self))
+    }
+
+    /// Constructs an ICMPv4 echo reply packet.
+    pub fn reply(self) -> Icmpv4Packet<B> {
+        Icmpv4Packet::new(Icmpv4Body::EchoReply(self))
     }
 
     fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
@@ -173,7 +184,8 @@ create_net_enum! {
   PrecedenceCutoffInEffect: PRECEDENCE_CUTOFF_IN_EFFECT = 15,
 }
 
-struct Icmpv4DestUnreachable<B> {
+/// ICMP destination unreachable packet.
+pub struct Icmpv4DestUnreachable<B> {
     code: Icmpv4DestUnreachableCode,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
     origin_data: LayoutVerified<B, IcmpOriginData>,
@@ -181,7 +193,7 @@ struct Icmpv4DestUnreachable<B> {
 
 impl<B: ByteSlice> Icmpv4DestUnreachable<B> {
     fn parse(bytes: B, code: u8) -> Result<Icmpv4DestUnreachable<B>, ParseError> {
-        // Eat the 4 unused bytes at the start of the packet
+        // Eat the 4 unused bytes at the start of the packet.
         let (_, bytes) =
             LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         let (internet_header, bytes) = LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(
@@ -233,7 +245,8 @@ create_net_enum! {
   RedirectForToSHost: REDIRECT_FOR_TOS_HOST = 3,
 }
 
-struct Icmpv4Redirect<B> {
+/// ICMP redirect packet.
+pub struct Icmpv4Redirect<B> {
     code: Icmpv4RedirectCode,
     gateway: LayoutVerified<B, Ipv4Addr>,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
@@ -296,7 +309,8 @@ create_net_enum! {
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
 
-struct Icmpv4TimeExceeded<B> {
+/// ICMP time exceeded packet.
+pub struct Icmpv4TimeExceeded<B> {
     code: Icmpv4TimeExceededCode,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
     origin_data: LayoutVerified<B, IcmpOriginData>,
@@ -356,7 +370,8 @@ create_net_enum! {
   BadLength: BAD_LENGTH = 2,
 }
 
-struct Icmpv4ParameterProblem<B> {
+/// ICMP parameter problem packet.
+pub struct Icmpv4ParameterProblem<B> {
     code: Icmpv4ParameterProblemCode,
     pointer: LayoutVerified<B, u8>,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
@@ -456,7 +471,8 @@ unsafe impl FromBytes for IcmpTimestampData {}
 unsafe impl AsBytes for IcmpTimestampData {}
 unsafe impl Unaligned for IcmpTimestampData {}
 
-struct Icmpv4Timestamp<B> {
+/// ICMP timestamp packet.
+pub struct Icmpv4Timestamp<B> {
     id_seq: LayoutVerified<B, IdAndSeq>,
     timestamps: LayoutVerified<B, IcmpTimestampData>,
 }
@@ -495,7 +511,7 @@ impl<B: ByteSlice> Icmpv4Timestamp<B> {
 }
 
 #[allow(missing_docs)]
-enum Icmpv4Body<B> {
+pub enum Icmpv4Body<B> {
     EchoRequest(Icmpv4Echo<B>),
     EchoReply(Icmpv4Echo<B>),
     TimestampRequest(Icmpv4Timestamp<B>),
@@ -567,15 +583,20 @@ impl<B: ByteSlice> Icmpv4Body<B> {
 
 /// Struct to represent an ICMPv4 packet.
 pub struct Icmpv4Packet<B> {
-    checksum: [u8; 2],
     body: Icmpv4Body<B>,
 }
 
 impl<B: ByteSlice> Icmpv4Packet<B> {
+    /// Return the body data of the ICMP packet.
+    pub fn body(self) -> Icmpv4Body<B> {
+        self.body
+    }
+
     /// Parse a ByteSlice into an ICMPv4 packet.
     pub fn parse(bytes: B) -> Result<Icmpv4Packet<B>, ParseError> {
         let (header, body_bytes) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
             .ok_or(ParseError::Format)?;
+        println!("Parsed header/body_bytes");
 
         let mut c = Checksum::new();
         c.add_bytes(&[header.msg_type, header.code]);
@@ -608,12 +629,13 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
             }
             Err(_) => return Err(ParseError::NotSupported),
         };
-        let packet = Icmpv4Packet {
-            checksum: header.checksum,
-            body,
-        };
 
-        Ok(packet)
+        Ok(Icmpv4Packet::new(body))
+    }
+
+    /// Construct a new ICMPv4 packet.
+    pub fn new(body: Icmpv4Body<B>) -> Icmpv4Packet<B> {
+        Icmpv4Packet { body }
     }
 
     /// Serialize an ICMPv4 Echo request into a ByteSlice.

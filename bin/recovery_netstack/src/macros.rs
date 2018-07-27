@@ -498,6 +498,13 @@ macro_rules! log_unimplemented {
     };
 }
 
+macro_rules! increment_counter {
+    ($state:ident, $key:expr) => {
+        #[cfg(test)]
+        $state.test_counters.increment($key);
+    };
+}
+
 mod test {
     // don't 'use' anything from the ip module so we can be sure that the
     // absolute paths used in the definitions of these macros work properly

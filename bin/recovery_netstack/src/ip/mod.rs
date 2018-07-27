@@ -5,6 +5,9 @@
 //! The Internet Protocol, versions 4 and 6.
 
 mod forwarding;
+mod icmp;
+#[cfg(test)]
+mod testdata;
 mod types;
 
 pub use self::types::*;
@@ -18,6 +21,7 @@ use error::ParseError;
 use ip::forwarding::{Destination, ForwardingTable};
 use wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
 use wire::{ensure_prefix_padding, AddrSerializationCallback, BufferAndRange, SerializationCallback};
+use zerocopy::ByteSlice;
 use StackState;
 
 // default IPv4 TTL or IPv6 hops
@@ -34,6 +38,16 @@ pub struct IpLayerState {
 struct IpLayerStateInner<I: Ip> {
     forward: bool,
     table: ForwardingTable<I>,
+}
+
+fn dispatch_receive_ip_packet<I: IpAddr, B: AsMut<[u8]>>(
+    proto: IpProto, state: &mut StackState, src_ip: I, dst_ip: I, mut buffer: BufferAndRange<B>,
+) -> bool {
+    increment_counter!(state, "dispatch_receive_ip_packet");
+    match proto {
+        IpProto::Icmp => icmp::receive_icmp_packet(state, src_ip, dst_ip, buffer),
+        _ => ::transport::receive_ip_packet(state, src_ip, dst_ip, proto, buffer),
+    }
 }
 
 /// Receive an IP packet from a device.
@@ -71,7 +85,7 @@ pub fn receive_ip_packet<I: Ip>(
             mem::drop(packet);
             // slice the buffer to be only the body range
             buffer.slice(body_range);
-            ::transport::receive_ip_packet(state, src_ip, dst_ip, proto, buffer)
+            dispatch_receive_ip_packet(proto, state, src_ip, dst_ip, buffer)
         } else {
             // TODO(joshlf): Log unrecognized protocol number
             false
@@ -189,18 +203,14 @@ where
     F: AddrSerializationCallback<A, B>,
 {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
+    increment_counter!(state, "send_ip_packet");
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
+        increment_counter!(state, "send_ip_packet::loopback");
         let buffer = get_buffer(A::Version::LOOPBACK_ADDRESS, 0, 0);
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
-        let handled = ::transport::receive_ip_packet(
-            state,
-            A::Version::LOOPBACK_ADDRESS,
-            dst_ip,
-            proto,
-            buffer,
-        );
+        dispatch_receive_ip_packet(proto, state, A::Version::LOOPBACK_ADDRESS, dst_ip, buffer);
     } else if let Some(dest) = lookup_route(&state.ip, dst_ip) {
         let (src_ip, _) = ::device::get_ip_addr(state, dest.device)
             .expect("IP device route set for device without IP address");
@@ -216,6 +226,7 @@ where
             },
         );
     } else {
+        println!("No route to host");
         // TODO(joshlf): No route to host
     }
 }

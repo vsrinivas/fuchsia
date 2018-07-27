@@ -64,4 +64,6 @@ pub struct StackState {
     pub transport: TransportLayerState,
     pub ip: IpLayerState,
     pub device: DeviceLayerState,
+    #[cfg(test)]
+    pub test_counters: testutil::TestCounters,
 }

@@ -358,11 +358,13 @@ impl<A: IpAddr> Debug for Subnet<A> {
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum IpProto {
+    Icmp = IpProto::ICMP,
     Tcp = IpProto::TCP,
     Udp = IpProto::UDP,
 }
 
 impl IpProto {
+    const ICMP: u8 = 1;
     const TCP: u8 = 6;
     const UDP: u8 = 17;
 
@@ -374,6 +376,7 @@ impl IpProto {
         match u {
             Self::TCP => Some(IpProto::Tcp),
             Self::UDP => Some(IpProto::Udp),
+            Self::ICMP => Some(IpProto::Icmp),
             _ => None,
         }
     }
@@ -387,6 +390,7 @@ impl Display for IpProto {
             match self {
                 IpProto::Tcp => "TCP",
                 IpProto::Udp => "UDP",
+                IpProto::Icmp => "ICMP",
             }
         )
     }
