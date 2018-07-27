@@ -157,14 +157,23 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    // TODO(stevensd): Read the display mode from hardware to prevent unnecessary
-    // latency when the first client connects if the display is already initialized.
-    LOG_INFO("Display %ld detected (%d x %d)\n", id(),
-             (*preferred_timing).horizontal_addressable,
-             (*preferred_timing).vertical_addressable);
+    info_.pixel_clock_10khz = preferred_timing->pixel_freq_10khz;
+    info_.h_addressable = preferred_timing->horizontal_addressable;
+    info_.h_front_porch = preferred_timing->horizontal_front_porch;
+    info_.h_sync_pulse = preferred_timing->horizontal_sync_pulse;
+    info_.h_blanking = preferred_timing->horizontal_blanking;
+    info_.v_addressable = preferred_timing->vertical_addressable;
+    info_.v_front_porch = preferred_timing->vertical_front_porch;
+    info_.v_sync_pulse = preferred_timing->vertical_sync_pulse;
+    info_.v_blanking = preferred_timing->vertical_blanking;
+    info_.flags = preferred_timing->flags;
 
     ResetPipe();
     if (!ResetTrans() || !ResetDdi()) {
+        return false;
+    }
+
+    if (!ConfigureDdi()) {
         return false;
     }
 
@@ -235,11 +244,12 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
 
         ConfigureDdi();
 
-        auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-        pipe_size.set_horizontal_source_size(info_.h_addressable - 1);
-        pipe_size.set_vertical_source_size(info_.v_addressable - 1);
-        pipe_size.WriteTo(mmio_space());
     }
+
+    auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
+    pipe_size.set_horizontal_source_size(info_.h_addressable - 1);
+    pipe_size.set_vertical_source_size(info_.v_addressable - 1);
+    pipe_size.WriteTo(mmio_space());
 
     if (config->cc_flags) {
         float zero_offset[3] = {};
