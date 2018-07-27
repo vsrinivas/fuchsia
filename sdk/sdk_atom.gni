@@ -225,7 +225,7 @@ template("sdk_atom") {
 
     script = "//build/sdk/create_atom_manifest.py"
 
-    deps = gn_deps
+    public_deps = gn_deps
 
     inputs = dep_manifests + file_inputs + [
                # Imported by the action's script.
