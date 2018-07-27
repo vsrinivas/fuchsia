@@ -24,6 +24,9 @@ enum ExecuteStatus {
 
   // Resolution of the intent provided in AddMod returned zero results.
   NO_MODULES_FOUND = 5;
+
+  // Some error happened while executing the command.
+  INTERNAL_ERROR = 6;
 };
 
 struct ExecuteResult {

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/set_link_value_call.h"
 
 namespace modular {
 
@@ -50,16 +51,20 @@ void InitializeChainCall::Run() {
       auto initial_data = info.create_link().initial_data;
       // TODO(miguelfrde): UpdateLinkValue can return an error StoryStatus. We
       // should handle it.
-      story_storage_->UpdateLinkValue(
-          mapping->link_path,
-          [initial_data, flow](fidl::StringPtr* value) {
-            if (value->is_null()) {
-              // This is a new link. If it weren't, *value would be set to
-              // some valid JSON.
-              *value = initial_data;
-            }
-          },
-          this /* context */);
+      fuchsia::modular::LinkPath out_path;
+      mapping->link_path.Clone(&out_path);
+      operations_.Add(
+          new SetLinkValueCall(story_storage_, std::move(out_path),
+                               [initial_data](fidl::StringPtr* value) {
+                                 if (value->is_null()) {
+                                   // This is a new link. If it weren't, *value
+                                   // would be set to some valid JSON.
+                                   *value = initial_data;
+                                 }
+                               },
+                               [flow](fuchsia::modular::ExecuteResult result) {
+                                 // TODO(miguelfrde): propagate errors
+                               }));
     }
 
     result_->entries.push_back(std::move(*mapping));

@@ -51,6 +51,7 @@ source_set("initialize_chain_call") {
   ]
 
   deps = [
+    ":set_link_value_call",
     "//peridot/bin/user_runner/storage:story_storage",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
@@ -66,6 +67,19 @@ source_set("get_types_from_entity_call") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("set_link_value_call") {
+  sources = [
+    "set_link_value_call.cc",
+    "set_link_value_call.h",
+  ]
+
+  deps = [
+    "//peridot/bin/user_runner/storage:story_storage",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
   ]

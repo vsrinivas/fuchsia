@@ -32,6 +32,7 @@ class InitializeChainCall
   const fuchsia::modular::CreateModuleParameterMapInfoPtr
       create_parameter_map_info_;
   fuchsia::modular::ModuleParameterMapPtr result_;
+  OperationCollection operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeChainCall);
 };

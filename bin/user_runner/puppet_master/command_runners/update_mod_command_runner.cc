@@ -9,6 +9,8 @@
 #include <lib/async/cpp/future.h>
 #include <lib/entity/cpp/json.h>
 
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/set_link_value_call.h"
+
 namespace modular {
 
 namespace {
@@ -87,29 +89,21 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
             "UpdateModCommandRunner.UpdateLinkValue.ret", std::move(result));
         return ret;
     }
-    return story_storage_
-        ->UpdateLinkValue(path,
-                          [new_value = new_value](fidl::StringPtr* value) {
-                            *value = new_value;
-                          },
-                          this /* context */)
-        ->Map([](StoryStorage::Status status) {
-          fuchsia::modular::ExecuteResult result;
-          if (status == StoryStorage::Status::OK) {
-            result.status = fuchsia::modular::ExecuteStatus::OK;
-          } else {
-            result.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
-            std::stringstream stream;
-            stream << "StoryStorage error status:" << (uint32_t)status;
-            result.error_message = stream.str();
-          }
-          return result;
-        });
+    auto fut = Future<fuchsia::modular::ExecuteResult>::Create(
+        "UpdateModCommandRunner.UpdateLinkValue.fut");
+    fuchsia::modular::LinkPath out_path;
+    path.Clone(&out_path);
+    operations_.Add(new SetLinkValueCall(
+        story_storage_, std::move(out_path),
+        [new_value](fidl::StringPtr* value) { *value = new_value; },
+        fut->Completer()));
+    return fut;
   }
 
   StoryStorage* const story_storage_;
   fuchsia::modular::UpdateMod command_;
   fuchsia::modular::ExecuteResult result_;
+  OperationCollection operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateModCall);
 };
