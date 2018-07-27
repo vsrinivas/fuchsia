@@ -28,6 +28,9 @@ $VerifiedPlatform linux-amd64
 $VerifiedPlatform mac-amd64
 #MatchedPlatform linux-arm64
 
+# This tells CIPD to fix up manually deleted files.
+$ParanoidMode CheckPresence
+
 # Clang
 @Subdir clang
 fuchsia/clang/${platform} git_revision:bf0e3dfee52b8515aa95cde6239d0ba4ff3bac5d

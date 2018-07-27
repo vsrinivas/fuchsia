@@ -21,6 +21,8 @@ readonly URL_PREFIX="https://storage.googleapis.com/fuchsia"
 # write $DOWNLOAD_DIR/$PACKAGE.stamp files with the versions from
 # VERSIONS_FILE on faith that that's what we just unpacked.
 
+set -o pipefail
+
 cipd_ok=true
 case "$#:$1" in
 0:)
@@ -198,14 +200,13 @@ find_cipd() {
 update_via_cipd() {
   local -r CIPD="$1" internal_access="$2"
 
-  ensure_files="${PREBUILTS_DIR}/zircon.ensure"
+  local -a ensure_files=("${PREBUILTS_DIR}/zircon.ensure")
   if $internal_access; then
-    ensure_files+=" ${PREBUILTS_DIR}/zircon_internal.ensure"
+    ensure_files+=("${PREBUILTS_DIR}/zircon_internal.ensure")
   fi
 
-  cat $ensure_files | "$CIPD" ensure -ensure-file - \
-                                     -root "$DOWNLOAD_DIR" \
-                                     -log-level warning
+  (sed '/^\$/!d' "${ensure_files[@]}" && sed '/^\$/d' "${ensure_files[@]}") |
+    "$CIPD" ensure -ensure-file - -root "$DOWNLOAD_DIR" -log-level warning
   rc=$?
   if [[ $rc -ne 0 ]]; then
     echo >&2 "$0: $CIPD failed.  For direct downloads, remove cipd from PATH."

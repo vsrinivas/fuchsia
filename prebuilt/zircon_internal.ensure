@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This tells CIPD to fix up manually deleted files.
+$ParanoidMode CheckPresence
+
 # ADSP SST Firmware
 @Subdir firmware/intel-adsp-sst
 fuchsia_internal/firmware/intel-adsp-sst git_revision:8fc2d4e55685bf73b6f7752383da9067404a74bb
