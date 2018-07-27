@@ -14,10 +14,12 @@ use parking_lot::RwLock;
 use serde_json::Value;
 use std::sync::Arc;
 
-use common::bluetooth_commands::ble_method_to_fidl;
+// Sl4f related inclusions
+use server::sl4f::Sl4f;
+use server::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 
-use common::sl4f::Sl4f;
-use common::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
+// Translation layers go here (i.e wlan_method_to_fidl)
+use bluetooth::commands::ble_method_to_fidl;
 
 pub fn run_fidl_loop(
     sl4f_session: Arc<RwLock<Sl4f>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,

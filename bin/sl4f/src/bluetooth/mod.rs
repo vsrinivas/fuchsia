@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod bluetooth_commands;
-pub mod bluetooth_facade;
+pub mod commands;
 pub mod constants;
-pub mod sl4f;
-pub mod sl4f_executor;
-pub mod sl4f_types;
+pub mod facade;
+pub mod types;

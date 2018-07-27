@@ -5,7 +5,6 @@
 use app;
 use async;
 use bt::error::Error as BTError;
-use common::constants::*;
 use failure::{Error, Fail, ResultExt};
 use fidl::encoding2::OutOfLine;
 use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy, RemoteDevice};
@@ -18,6 +17,10 @@ use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+// Sl4f-Constants and Bluetooth related functionality
+use bluetooth::constants::*;
+use bluetooth::types::{BleAdvertiseResponse, BleScanResponse};
 
 // BluetoothFacade: Stores Central and Peripheral proxies used for
 // bluetooth scan and advertising requests.
@@ -66,8 +69,8 @@ impl BluetoothFacade {
     }
 
     // Set the peripheral proxy only if none exists, otherwise, use existing
-    pub fn set_peripheral_proxy(&mut self) {
-        let new_periph = match self.peripheral.clone() {
+    pub fn set_peripheral_proxy(bt_facade: Arc<RwLock<BluetoothFacade>>) {
+        let new_periph = match bt_facade.read().peripheral.clone() {
             Some(p) => {
                 fx_log_warn!(tag: "set_peripheral_proxy",
                     "Current peripheral: {:?}",
@@ -84,7 +87,7 @@ impl BluetoothFacade {
             }
         };
 
-        self.peripheral = new_periph
+        bt_facade.write().peripheral = new_periph
     }
 
     // Update the central proxy if none exists, otherwise raise error
@@ -126,11 +129,11 @@ impl BluetoothFacade {
     }
 
     // Update the advertisement ID if none exists already
-    pub fn update_adv_id(&mut self, aid: Option<String>) {
-        if self.adv_id.is_none() {
-            self.adv_id = aid
+    pub fn update_adv_id(bt_facade: Arc<RwLock<BluetoothFacade>>, aid: Option<String>) {
+        if bt_facade.read().adv_id.is_none() {
+            bt_facade.write().adv_id = aid
         } else {
-            fx_log_warn!(tag: "update_adv_id", "Current aid: {:?}. Attempted aid: {:?}", self.adv_id, aid);
+            fx_log_warn!(tag: "update_adv_id", "Current aid: {:?}. Attempted aid: {:?}", bt_facade.read().adv_id, aid);
         }
     }
 
@@ -209,8 +212,9 @@ impl BluetoothFacade {
     }
 
     pub fn start_adv(
-        &mut self, adv_data: Option<AdvertisingData>, interval: Option<u32>,
-    ) -> impl Future<Item = Option<String>, Error = Error> {
+        bt_facade: Arc<RwLock<BluetoothFacade>>, adv_data: Option<AdvertisingData>,
+        interval: Option<u32>,
+    ) -> impl Future<Item = (), Error = Error> {
         // Default interval (ms) to 1 second
         let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
 
@@ -229,16 +233,18 @@ impl BluetoothFacade {
         };
 
         // Create peripheral proxy if necessary
-        self.set_peripheral_proxy();
+        let facade = bt_facade.clone();
+        BluetoothFacade::set_peripheral_proxy(bt_facade.clone());
 
-        match &self.peripheral {
+        match &bt_facade.read().peripheral {
             Some(p) => Right(
                 p.start_advertising(&mut ad, None, intv, false)
                     .map_err(|e| e.context("failed to initiate advertise.").into())
                     .and_then(|(status, aid)| match status.error {
                         None => {
                             fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", aid);
-                            Ok(aid)
+                            BluetoothFacade::update_adv_id(facade, aid.clone());
+                            Ok(())
                         }
                         Some(e) => {
                             let err = BTError::from(*e);
@@ -353,58 +359,6 @@ impl BluetoothFacade {
         bt_facade: Arc<RwLock<BluetoothFacade>>, count: u64,
     ) -> impl Future<Item = (), Error = Never> {
         OnDeviceFoundFuture::new(bt_facade.clone(), count as usize)
-    }
-}
-
-/// Enum for supported FIDL commands, to extend support for new commands, add to this definition,
-/// update ble_method_to_fidl, and implement helper methods in BluetoothFacade
-pub enum BluetoothMethod {
-    BleScan,
-    BleAdvertise,
-    BleStopAdvertise,
-    BleUndefined,
-}
-
-impl BluetoothMethod {
-    pub fn from_str(method: String) -> BluetoothMethod {
-        match method.as_ref() {
-            "BleScan" => BluetoothMethod::BleScan,
-            "BleAdvertise" => BluetoothMethod::BleAdvertise,
-            "BleStopAdvertise" => BluetoothMethod::BleStopAdvertise,
-            _ => BluetoothMethod::BleUndefined,
-        }
-    }
-}
-
-/// BleScan result type
-/// TODO(aniramakri): Add support for RemoteDevices when clone() is implemented
-#[derive(Serialize, Clone, Debug)]
-pub struct BleScanResponse {
-    pub id: String,
-    pub name: String,
-    pub connectable: bool,
-}
-
-impl BleScanResponse {
-    pub fn new(id: String, name: String, connectable: bool) -> BleScanResponse {
-        BleScanResponse {
-            id,
-            name,
-            connectable,
-        }
-    }
-}
-
-/// BleAdvertise result type (only uuid)
-/// TODO(aniramakri): Add support for AdvertisingData when clone() is implemented
-#[derive(Serialize, Clone, Debug)]
-pub struct BleAdvertiseResponse {
-    pub name: Option<String>,
-}
-
-impl BleAdvertiseResponse {
-    pub fn new(name: Option<String>) -> BleAdvertiseResponse {
-        BleAdvertiseResponse { name }
     }
 }
 

@@ -34,10 +34,11 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 use std::thread;
 
-mod common;
+mod bluetooth;
+mod server;
 
-use common::sl4f::{serve, Sl4f};
-use common::sl4f_executor::run_fidl_loop;
+use server::sl4f::{serve, Sl4f};
+use server::sl4f_executor::run_fidl_loop;
 
 // Config, flexible for any ip/port combination
 const SERVER_IP: &str = "0.0.0.0";

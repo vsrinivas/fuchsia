@@ -16,11 +16,11 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 
-// Bluetooth related includes (do the same for each connectivity stack)
-use common::bluetooth_facade::BluetoothFacade;
-
 // Standardized sl4f types.
-use common::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse};
+use server::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse};
+
+// Bluetooth related includes (do the same for each connectivity stack)
+use bluetooth::facade::BluetoothFacade;
 
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.

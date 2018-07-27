@@ -5,8 +5,6 @@
 use async;
 use async::TimeoutExt;
 use bt::error::Error as BTError;
-use common::bluetooth_facade::BluetoothFacade;
-use common::constants::*;
 use failure::Error;
 use fidl_ble::{AdvertisingData, ScanFilter};
 use futures::future::ok as fok;
@@ -18,7 +16,10 @@ use serde_json::{to_value, Value};
 use std::sync::Arc;
 use zx::prelude::*;
 
-use common::bluetooth_facade::{BleAdvertiseResponse, BluetoothMethod};
+// Bluetooth-related functionality
+use bluetooth::constants::*;
+use bluetooth::facade::BluetoothFacade;
+use bluetooth::types::BluetoothMethod;
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
@@ -113,7 +114,16 @@ fn ble_stop_advertise_to_fidl(
 pub fn ble_method_to_fidl(
     method_name: String, args: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    many_futures!(Output, [BleAdvertise, BleScan, BleStopAdvertise, Error]);
+    many_futures!(
+        Output,
+        [
+            BleAdvertise,
+            BleConnectPeripheral,
+            BleScan,
+            BleStopAdvertise,
+            Error
+        ]
+    );
     match BluetoothMethod::from_str(method_name) {
         BluetoothMethod::BleAdvertise => {
             let (ad, interval) = match ble_advertise_to_fidl(args) {
@@ -142,6 +152,9 @@ pub fn ble_method_to_fidl(
             let stop_fut = stop_adv_async(bt_facade.clone(), advertisement_id.clone());
             Output::BleStopAdvertise(stop_fut)
         }
+        BluetoothMethod::BleConnectPeripheral => {
+            Output::BleConnectPeripheral(fok(Err(BTError::new("Invalid BLE FIDL method").into())))
+        }
         _ => Output::Error(fok(Err(BTError::new("Invalid BLE FIDL method").into()))),
     }
 }
@@ -149,22 +162,17 @@ pub fn ble_method_to_fidl(
 fn start_adv_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, ad: Option<AdvertisingData>, interval: Option<u32>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    let start_adv = bt_facade.write().start_adv(ad, interval);
-    let adv_fut = start_adv.then(move |aid| match aid {
-        Ok(adv_id) => {
-            let id = adv_id.clone();
-            bt_facade.write().update_adv_id(id);
-            Ok(adv_id.clone())
-        }
-        Err(_e) => Ok(None),
-    });
+    let start_adv_fut = BluetoothFacade::start_adv(bt_facade.clone(), ad, interval);
 
-    adv_fut.and_then(|aid| {
-        let aid_response = BleAdvertiseResponse::new(aid.clone());
-        match to_value(aid_response) {
-            Ok(val) => fok(Ok(val)),
-            Err(e) => fok(Err(e.into())),
+    start_adv_fut.then(move |res| match res {
+        Ok(_) => {
+            let aid_response = bt_facade.read().get_adv_id();
+            match to_value(aid_response) {
+                Ok(val) => fok(Ok(val)),
+                Err(e) => fok(Err(e.into())),
+            }
         }
+        Err(e) => fok(Err(e.into())),
     })
 }
 
