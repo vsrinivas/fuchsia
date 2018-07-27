@@ -28,7 +28,6 @@ inline OutputBuffer RegisterValueToOutputBuffer(const Register& reg) {
                      << reg.size();
   }
 
-
   // For now we print into chunks of 32-bits, shortening the ends.
   // TODO(donosoc): Extract this logic to be used separatedly by sub-registers.
   // TODO(donosoc): FP formatting: float, double-float, extended double-float.
@@ -64,8 +63,9 @@ inline OutputBuffer RegisterValueToOutputBuffer(const Register& reg) {
                      << reg.size();
   }
 
-
-  // We append them backwards
+  // Though each particular chunk correctly keeps the endianness, the order is
+  // backwards, as the last bits of the register would be printed first.
+  // For that we append the chunks backwards.
   OutputBuffer out;
   auto cit = chunks.rbegin();
   while (cit != chunks.rend()) {
@@ -143,6 +143,7 @@ Err FormatRegisters(const RegisterSet& registers,
     if (it == category_map.end()) {
       continue;
     }
+
     Err err = InternalFormatCategory(category, it->second, searched_register,
                                      &out_buffers);
     if (err.has_error()) {
@@ -189,7 +190,7 @@ std::string RegisterIDToString(RegisterID id) {
 
     // ARMv8 -------------------------------------------------------------------
 
-    // General purpose
+    // General purpose.
 
     case RegisterID::kARMv8_x0: return "x0";
     case RegisterID::kARMv8_x1: return "x1";
@@ -226,13 +227,49 @@ std::string RegisterIDToString(RegisterID id) {
     case RegisterID::kARMv8_pc: return "pc";
     case RegisterID::kARMv8_cpsr: return "cpsr";
 
-    // FP (none defined for ARM64)
+    // FP (none defined for ARM64).
 
-    // TODO(donosoc): Add ARM64 vector registers
+    // Vector.
+
+    case RegisterID::kARMv8_fpcr: return "fpcr";
+    case RegisterID::kARMv8_fpsr: return "fpsr";
+
+    case RegisterID::kARMv8_v0  : return "v0";
+    case RegisterID::kARMv8_v1  : return "v1";
+    case RegisterID::kARMv8_v2  : return "v2";
+    case RegisterID::kARMv8_v3  : return "v3";
+    case RegisterID::kARMv8_v4  : return "v4";
+    case RegisterID::kARMv8_v5  : return "v5";
+    case RegisterID::kARMv8_v6  : return "v6";
+    case RegisterID::kARMv8_v7  : return "v7";
+    case RegisterID::kARMv8_v8  : return "v8";
+    case RegisterID::kARMv8_v9  : return "v9";
+    case RegisterID::kARMv8_v10 : return "v10";
+    case RegisterID::kARMv8_v11 : return "v11";
+    case RegisterID::kARMv8_v12 : return "v12";
+    case RegisterID::kARMv8_v13 : return "v13";
+    case RegisterID::kARMv8_v14 : return "v14";
+    case RegisterID::kARMv8_v15 : return "v15";
+    case RegisterID::kARMv8_v16 : return "v16";
+    case RegisterID::kARMv8_v17 : return "v17";
+    case RegisterID::kARMv8_v18 : return "v18";
+    case RegisterID::kARMv8_v19 : return "v19";
+    case RegisterID::kARMv8_v20 : return "v20";
+    case RegisterID::kARMv8_v21 : return "v21";
+    case RegisterID::kARMv8_v22 : return "v22";
+    case RegisterID::kARMv8_v23 : return "v23";
+    case RegisterID::kARMv8_v24 : return "v24";
+    case RegisterID::kARMv8_v25 : return "v25";
+    case RegisterID::kARMv8_v26 : return "v26";
+    case RegisterID::kARMv8_v27 : return "v27";
+    case RegisterID::kARMv8_v28 : return "v28";
+    case RegisterID::kARMv8_v29 : return "v29";
+    case RegisterID::kARMv8_v30 : return "v30";
+    case RegisterID::kARMv8_v31 : return "v31";
 
     // x64 ---------------------------------------------------------------------
 
-    // General purpose
+    // General purpose.
 
     case RegisterID::kX64_rax: return "rax";
     case RegisterID::kX64_rbx: return "rbx";
@@ -253,12 +290,12 @@ std::string RegisterIDToString(RegisterID id) {
     case RegisterID::kX64_rip: return "rip";
     case RegisterID::kX64_rflags: return "rflags";
 
-    // FP
+    // FP.
 
     case RegisterID::kX64_fcw: return "fcw";
     case RegisterID::kX64_fsw: return "fsw";
     case RegisterID::kX64_ftw: return "ftw";
-    // Reserved
+    // Reserved.
     case RegisterID::kX64_fop: return "fop";
     case RegisterID::kX64_fip: return "fip";
     case RegisterID::kX64_fdp: return "fdp";
@@ -272,7 +309,47 @@ std::string RegisterIDToString(RegisterID id) {
     case RegisterID::kX64_st6: return "st6";
     case RegisterID::kX64_st7: return "st7";
 
-    // TODO(donosoc): Add x64 vector registers
+    // Vector.
+
+    case RegisterID::kX64_mxcsr : return "csr ";
+
+    // SSE/SSE2 (128 bit).
+    case RegisterID::kX64_xmm0  : return "m0";
+    case RegisterID::kX64_xmm1  : return "m1";
+    case RegisterID::kX64_xmm2  : return "m2";
+    case RegisterID::kX64_xmm3  : return "m3";
+    case RegisterID::kX64_xmm4  : return "m4";
+    case RegisterID::kX64_xmm5  : return "m5";
+    case RegisterID::kX64_xmm6  : return "m6";
+    case RegisterID::kX64_xmm7  : return "m7";
+    case RegisterID::kX64_xmm8  : return "m8";
+    case RegisterID::kX64_xmm9  : return "m9";
+    case RegisterID::kX64_xmm10 : return "m10";
+    case RegisterID::kX64_xmm11 : return "m11";
+    case RegisterID::kX64_xmm12 : return "m12";
+    case RegisterID::kX64_xmm13 : return "m13";
+    case RegisterID::kX64_xmm14 : return "m14";
+    case RegisterID::kX64_xmm15 : return "m15";
+
+    // AVX (256 bit).
+    case RegisterID::kX64_ymm0  : return "m0";
+    case RegisterID::kX64_ymm1  : return "m1";
+    case RegisterID::kX64_ymm2  : return "m2";
+    case RegisterID::kX64_ymm3  : return "m3";
+    case RegisterID::kX64_ymm4  : return "m4";
+    case RegisterID::kX64_ymm5  : return "m5";
+    case RegisterID::kX64_ymm6  : return "m6";
+    case RegisterID::kX64_ymm7  : return "m7";
+    case RegisterID::kX64_ymm8  : return "m8";
+    case RegisterID::kX64_ymm9  : return "m9";
+    case RegisterID::kX64_ymm10 : return "m10";
+    case RegisterID::kX64_ymm11 : return "m11";
+    case RegisterID::kX64_ymm12 : return "m12";
+    case RegisterID::kX64_ymm13 : return "m13";
+    case RegisterID::kX64_ymm14 : return "m14";
+    case RegisterID::kX64_ymm15 : return "m15";
+
+    // TODO(donosoc): Add support for AVX-512 when zircon supports it.
   }
 
   FXL_NOTREACHED() << "Unknown register requested.";

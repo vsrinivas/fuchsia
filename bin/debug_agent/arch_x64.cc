@@ -117,6 +117,28 @@ inline zx_status_t ReadFPRegs(const zx::thread& thread,
   return ZX_OK;
 }
 
+inline zx_status_t ReadVectorRegs(const zx::thread& thread,
+                                  std::vector<debug_ipc::Register>* out) {
+  zx_thread_state_vector_regs vec_regs;
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs,
+                                         sizeof(vec_regs));
+  if (status != ZX_OK)
+    return status;
+
+  out->push_back(CreateRegister(RegisterID::kX64_mxcsr, 4u, &vec_regs.mxcsr));
+
+  // TODO(donosoc): For now there is no support of AVX-512 within zircon,
+  //                so we're not sending over that data, only AVX.
+  //                Enable it when AVX-512 is done.
+  auto base = static_cast<uint32_t>(RegisterID::kX64_ymm0);
+  for (size_t i = 0; i < 16; i++) {
+    auto reg_id = static_cast<RegisterID>(base + i);
+    out->push_back(CreateRegister(reg_id, 32u, &vec_regs.zmm[i]));
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 bool GetRegisterStateFromCPU(const zx::thread& thread,
@@ -133,6 +155,13 @@ bool GetRegisterStateFromCPU(const zx::thread& thread,
   cats->push_back({debug_ipc::RegisterCategory::Type::kFloatingPoint, {}});
   auto& fp_category = cats->back();
   if (ReadFPRegs(thread, &fp_category.registers) != ZX_OK) {
+    cats->clear();
+    return false;
+  }
+
+  cats->push_back({debug_ipc::RegisterCategory::Type::kVector, {}});
+  auto& vec_category = cats->back();
+  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK) {
     cats->clear();
     return false;
   }

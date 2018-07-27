@@ -91,6 +91,26 @@ inline zx_status_t ReadGeneralRegs(const zx::thread& thread,
   return ZX_OK;
 }
 
+inline zx_status_t ReadVectorRegs(const zx::thread& thread,
+                                  std::vector<debug_ipc::Register>* out) {
+  zx_thread_state_vector_regs vec_regs;
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs,
+                                         sizeof(vec_regs));
+  if (status != ZX_OK)
+    return status;
+
+  out->push_back(CreateRegister(RegisterID::kARMv8_fpcr, 4u, &vec_regs.fpcr));
+  out->push_back(CreateRegister(RegisterID::kARMv8_fpsr, 4u, &vec_regs.fpsr));
+
+  auto base = static_cast<uint32_t>(RegisterID::kARMv8_v0);
+  for (size_t i = 0; i < 32; i++) {
+    auto reg_id = static_cast<RegisterID>(base + i);
+    out->push_back(CreateRegister(reg_id, 16u, &vec_regs.v[i]));
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 bool GetRegisterStateFromCPU(
@@ -106,6 +126,13 @@ bool GetRegisterStateFromCPU(
   }
 
   // There are no FP registers defined for ARM64
+
+  categories->push_back({debug_ipc::RegisterCategory::Type::kVector, {}});
+  auto& vec_category = categories->back();
+  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK) {
+    categories->clear();
+    return false;
+  }
 
   return true;
 }

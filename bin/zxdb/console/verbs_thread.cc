@@ -351,6 +351,10 @@ const char kRegsHelp[] =
   By default the general purpose registers will be shown, but more can be
   configures through switches.
 
+  NOTE: The values are displayed in the endianess of the target architecture.
+        The interpretation of which bits are the MSB will vary across different
+        endianess.
+
 Arguments:
 
   --category=<category> | -c <category>

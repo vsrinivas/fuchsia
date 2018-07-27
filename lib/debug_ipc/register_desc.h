@@ -55,7 +55,45 @@ enum class RegisterID : uint32_t {
   kARMv8_pc   = 1032,
   kARMv8_cpsr = 1034,
 
-  // TODO(donosoc): Add ARMv8 vector registers
+  // FP (None on ARMv8).
+
+  // Vector.
+
+  kARMv8_fpcr = 1100,   // Control register.
+  kARMv8_fpsr = 1101,   // Status register.
+
+  kARMv8_v0   = 1200,
+  kARMv8_v1   = 1201,
+  kARMv8_v2   = 1202,
+  kARMv8_v3   = 1203,
+  kARMv8_v4   = 1204,
+  kARMv8_v5   = 1205,
+  kARMv8_v6   = 1206,
+  kARMv8_v7   = 1207,
+  kARMv8_v8   = 1208,
+  kARMv8_v9   = 1209,
+  kARMv8_v10  = 1210,
+  kARMv8_v11  = 1211,
+  kARMv8_v12  = 1212,
+  kARMv8_v13  = 1213,
+  kARMv8_v14  = 1214,
+  kARMv8_v15  = 1215,
+  kARMv8_v16  = 1216,
+  kARMv8_v17  = 1217,
+  kARMv8_v18  = 1218,
+  kARMv8_v19  = 1219,
+  kARMv8_v20  = 1220,
+  kARMv8_v21  = 1221,
+  kARMv8_v22  = 1222,
+  kARMv8_v23  = 1223,
+  kARMv8_v24  = 1224,
+  kARMv8_v25  = 1225,
+  kARMv8_v26  = 1226,
+  kARMv8_v27  = 1227,
+  kARMv8_v28  = 1228,
+  kARMv8_v29  = 1229,
+  kARMv8_v30  = 1230,
+  kARMv8_v31  = 1231,
 
   // x64 (Range: 2000-2999) ----------------------------------------------------
 
@@ -80,7 +118,7 @@ enum class RegisterID : uint32_t {
   kX64_rip    = 2016,
   kX64_rflags = 2017,
 
-  // FP (x87 FPU/MMX)
+  // FP (x87 FPU/MMX).
 
   kX64_fcw = 2100,  // Control word.
   kX64_fsw = 2101,  // Status word.
@@ -102,7 +140,47 @@ enum class RegisterID : uint32_t {
   kX64_st6 = 2116,
   kX64_st7 = 2117,
 
-  // TODO(donosoc): Add x64 vector registers
+  // Vector.
+
+  kX64_mxcsr  = 2200,   // Control and Status register.
+
+  // SSE/SSE2 (128 bit).
+  kX64_xmm0   = 2300,
+  kX64_xmm1   = 2301,
+  kX64_xmm2   = 2302,
+  kX64_xmm3   = 2303,
+  kX64_xmm4   = 2304,
+  kX64_xmm5   = 2305,
+  kX64_xmm6   = 2306,
+  kX64_xmm7   = 2307,
+  kX64_xmm8   = 2308,
+  kX64_xmm9   = 2309,
+  kX64_xmm10  = 2310,
+  kX64_xmm11  = 2311,
+  kX64_xmm12  = 2312,
+  kX64_xmm13  = 2313,
+  kX64_xmm14  = 2314,
+  kX64_xmm15  = 2315,
+
+  // AVX (256 bit).
+  kX64_ymm0   = 2400,
+  kX64_ymm1   = 2401,
+  kX64_ymm2   = 2402,
+  kX64_ymm3   = 2403,
+  kX64_ymm4   = 2404,
+  kX64_ymm5   = 2405,
+  kX64_ymm6   = 2406,
+  kX64_ymm7   = 2407,
+  kX64_ymm8   = 2408,
+  kX64_ymm9   = 2409,
+  kX64_ymm10  = 2410,
+  kX64_ymm11  = 2411,
+  kX64_ymm12  = 2412,
+  kX64_ymm13  = 2413,
+  kX64_ymm14  = 2414,
+  kX64_ymm15  = 2415,
+
+  // TODO(donosoc): Add AVX-512 support.
 };
 
 }   // namespace debug_ipc
