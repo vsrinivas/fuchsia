@@ -37,6 +37,9 @@ public:
     // dispatched.
     bool DispatchNextDueMessage();
 
+    // Whether there are any due tasks or waits.
+    bool HasPendingWork();
+
     // Returns the deadline of the next posted task if one is pending; else
     // returns zx::time::infinite().
     zx::time GetNextTaskDueTime();
@@ -45,8 +48,12 @@ private:
     // Moves due tasks from |task_list_| to |due_list_|.
     void ExtractDueTasks();
 
-    // Dispatches the next due task. Returns true iff a task was dispatched.
-    bool DispatchNextDueTask();
+    // Dispatches the next due task.
+    void DispatchNextDueTask();
+
+    // Dequeues from |port_| the next due packet. Must not be called if
+    // |due_packet_| is already non-null.
+    void ExtractNextDuePacket();
 
     // Dispatches all remaining posted waits and tasks, invoking their handlers
     // with status ZX_ERR_CANCELED.
@@ -59,6 +66,9 @@ private:
     // Port on which waits and timer expirations from |time_keeper_| are
     // signaled.
     zx::port port_;
+
+    // The most recent packet dequeued from |port_|.
+    fbl::unique_ptr<zx_port_packet_t> due_packet_;
 
     // Pending tasks, earliest deadline first.
     list_node_t task_list_;

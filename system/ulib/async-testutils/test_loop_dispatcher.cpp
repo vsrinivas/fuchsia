@@ -93,6 +93,16 @@ zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     if (!list_in_list(node)) {
         return ZX_ERR_NOT_FOUND;
     }
+
+    // |wait| already might be encoded in |due_packet_|.
+    if (due_packet_ && due_packet_->key != kTimerExpirationKey) {
+        if (wait == reinterpret_cast<async_wait_t*>(due_packet_->key)) {
+            due_packet_.reset();
+            list_delete(node);
+            return ZX_OK;
+        }
+    }
+
     zx_status_t status = port_.cancel(*zx::unowned_handle(wait->object),
                                       reinterpret_cast<uintptr_t>(wait));
     if (status == ZX_OK) {
@@ -139,7 +149,27 @@ zx::time TestLoopDispatcher::GetNextTaskDueTime() {
     return zx::time(NodeToTask(node)->deadline);
 }
 
-bool TestLoopDispatcher::DispatchNextDueTask() {
+
+void TestLoopDispatcher::ExtractNextDuePacket() {
+    ZX_DEBUG_ASSERT(!due_packet_);
+    bool tasks_are_due = GetNextTaskDueTime() <= Now();
+
+    // If no tasks are due, flush all timer expiration packets until either
+    // there are no more packets to dequeue or a wait packet is reached.
+    do {
+        auto packet = fbl::make_unique<zx_port_packet_t>();
+        if (ZX_OK != port_.wait(zx::time(0), packet.get())) { return; }
+        due_packet_.swap(packet);
+    } while (!tasks_are_due && due_packet_->key == kTimerExpirationKey);
+}
+
+bool TestLoopDispatcher::HasPendingWork() {
+    if (GetNextTaskDueTime() <= Now()) { return true; }
+    if (!due_packet_) { ExtractNextDuePacket(); }
+    return !!due_packet_;
+}
+
+void TestLoopDispatcher::DispatchNextDueTask() {
     // if something is already in the due list, dispatch that.
     list_node_t* node = list_peek_head(&due_list_);
     if (node) {
@@ -152,33 +182,33 @@ bool TestLoopDispatcher::DispatchNextDueTask() {
         if (list_is_empty(&due_list_) && !list_is_empty(&task_list_)) {
             time_keeper_->RegisterTimer(GetNextTaskDueTime(), this);
         }
-        return true;
     }
-    return false;
 }
 
 bool TestLoopDispatcher::DispatchNextDueMessage() {
-    if (DispatchNextDueTask()) { return true; }
-
-    zx_port_packet_t packet;
-    zx_status_t status = port_.wait(zx::time(0), &packet);
-
-    // If the drawn packet is a timer expiration with no due tasks, drain the
-    // subsequent timer expirations (an excess may have been signaled)
-    while (status == ZX_OK && packet.key == kTimerExpirationKey) {
-        ExtractDueTasks();
-        if (DispatchNextDueTask()) { return true; }
-        status = port_.wait(zx::time(0), &packet);
+    if (!list_is_empty(&due_list_)) {
+        DispatchNextDueTask();
+        return true;
     }
 
-    if (status != ZX_OK) {
+    if (!due_packet_) { ExtractNextDuePacket(); }
+
+    if (!due_packet_) {
         return false;
-    } else {  // |packet| encodes a finished wait.
+    } else if (due_packet_->key == kTimerExpirationKey) {
+        ExtractDueTasks();
+        DispatchNextDueTask();
+        due_packet_.reset();
+    } else {  // |due_packet_| encodes a finished wait.
+        // Move the next due packet to the stack, as invoking the associated
+        // wait's handler might try to extract another.
+        zx_port_packet_t packet = *due_packet_;
+        due_packet_.reset();
         async_wait_t* wait = reinterpret_cast<async_wait_t*>(packet.key);
         list_delete(WaitToNode(wait));
         wait->handler(this, wait, ZX_OK, &packet.signal);
-        return true;
     }
+    return true;
 }
 
 void TestLoopDispatcher::ExtractDueTasks() {

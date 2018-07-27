@@ -113,19 +113,16 @@ bool TestLoop::RunUntil(zx::time deadline) {
     ZX_ASSERT(!is_running_);
     is_running_ = true;
     bool did_work = false;
-    for (;;) {
-        bool ran_handler = dispatcher_.DispatchNextDueMessage();
-        did_work |= ran_handler;
-
-        if (has_quit_) { break; }
-        if (ran_handler) { continue; }
-
-        zx::time next_due_time = dispatcher_.GetNextTaskDueTime();
-        if (next_due_time > deadline) {
-            AdvanceTimeTo(deadline);
-            break;
+    while (!has_quit_) {
+        if (!dispatcher_.HasPendingWork()) {
+            zx::time next_due_time = dispatcher_.GetNextTaskDueTime();
+            if (next_due_time > deadline) {
+                AdvanceTimeTo(deadline);
+                break;
+            }
+            AdvanceTimeTo(next_due_time);
         }
-        AdvanceTimeTo(next_due_time);
+        did_work |= dispatcher_.DispatchNextDueMessage();
     }
     is_running_ = false;
     has_quit_ = false;
