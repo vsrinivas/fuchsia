@@ -64,7 +64,7 @@ function main {
 
   repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
   if [[ ! -d "${repository_dir}" ]]; then
-    echo "Amber repository does not exist.  Run a build first."
+    echo "Amber repository does not exist.  Please build first."
     exit 1
   fi
 
