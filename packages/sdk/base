@@ -3,6 +3,8 @@
         "garnet/packages/config/network",
         "garnet/packages/prod/far",
         "garnet/packages/prod/installblob",
+        "garnet/packages/prod/logger",
+        "garnet/packages/prod/log_listener",
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/openssh",
