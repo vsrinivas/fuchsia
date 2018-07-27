@@ -98,6 +98,9 @@ public:
         END_HELPER;
     }
 
+    // Forcibly resets a running test by destroying and recreating the Blobfs partition.
+    bool ForceReset();
+
     // Sleeps or wakes the ramdisk underlying the blobfs partition, depending on its current state.
     bool ToggleSleep(uint64_t blk_count = 0);
 

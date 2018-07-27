@@ -96,13 +96,11 @@ void BlobfsChecker::Init(fbl::unique_ptr<Blobfs> blob) {
 }
 
 zx_status_t Fsck(fbl::unique_ptr<Blobfs> blob) {
-    zx_status_t status = ZX_OK;
     BlobfsChecker chk;
     chk.Init(fbl::move(blob));
     chk.TraverseInodeBitmap();
     chk.TraverseBlockBitmap();
-    status |= (status != ZX_OK) ? 0 : chk.CheckAllocatedCounts();
-    return status;
+    return chk.CheckAllocatedCounts();
 }
 
 } // namespace blobfs

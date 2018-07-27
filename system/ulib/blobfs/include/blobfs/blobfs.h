@@ -168,17 +168,19 @@ private:
     void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
 
-    void QueueUnlink();
+    zx_status_t QueueUnlink();
 
-    void TryPurge() {
+    zx_status_t TryPurge() {
         if (Purgeable()) {
-            Purge();
+            return Purge();
         }
+
+        return ZX_OK;
     }
 
     // Verify that the blob is purgeable and remove all traces of the blob from blobfs.
     // The blob is not expected to be accessed again after this is called.
-    void Purge();
+    zx_status_t Purge();
 
     // If successful, allocates Blob Node and Blocks (in-memory)
     // kBlobStateEmpty --> kBlobStateDataWrite
@@ -244,7 +246,7 @@ private:
 
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
-    zx_status_t WriteMetadata(fbl::unique_ptr<WritebackWork> wb);
+    zx_status_t WriteMetadata();
 
     // Acquire a pointer to the mapped data or merkle tree
     void* GetData() const;
@@ -381,10 +383,11 @@ public:
         on_unmount_ = fbl::move(closure);
     }
 
-    // Initializes the WritebackBuffer.
-    zx_status_t InitializeWriteback();
-    // Returns the capacity of the writeback buffer, in blocks.
-    size_t WritebackCapacity() const { return writeback_->Capacity(); }
+    // Initializes the WritebackQueue (if enabled in |options|),
+    zx_status_t InitializeWriteback(const MountOptions& options);
+
+    // Returns the capacity of the writeback buffer in blocks.
+    size_t WritebackCapacity() const;
 
     virtual ~Blobfs();
 
@@ -430,6 +433,8 @@ public:
         return blockfd_.get();
     }
 
+    const Superblock& Info() const { return info_; }
+
     // Returns an unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
 
@@ -469,17 +474,10 @@ public:
     void UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
                                    const fs::Duration& duration);
 
-    Superblock info_;
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode);
 
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
-        ZX_DEBUG_ASSERT(writeback_ != nullptr);
-        return writeback_->GenerateWork(out, fbl::move(fbl::WrapRefPtr(vnode)));
-    }
-
-    void EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
-        ZX_DEBUG_ASSERT(writeback_ != nullptr);
-        writeback_->Enqueue(fbl::move(work));
-    }
+    // Enqueues |work| to the writeback queue. Returns an error if it is in a readonly state.
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) __WARN_UNUSED_RESULT;
 
     // Does a single pass of all blobs, creating uninitialized Vnode
     // objects for them all.
@@ -508,7 +506,8 @@ private:
 
     Blobfs(fbl::unique_fd fd, const Superblock* info);
     zx_status_t LoadBitmaps();
-    fbl::unique_ptr<WritebackBuffer> writeback_;
+    fbl::unique_ptr<WritebackQueue> writeback_;
+    Superblock info_;
 
     // Inserts a Vnode into the |closed_hash_|, tears down
     // cache Vnode state, and leaks a reference to the Vnode

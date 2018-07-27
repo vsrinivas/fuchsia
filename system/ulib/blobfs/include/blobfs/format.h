@@ -46,6 +46,10 @@ constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
 
 constexpr size_t kMinimumDataBlocks = 2;
 
+// Maximum number of metadata blocks possible for a single transaction - 3
+// (blobfs superblock, inode table, block bitmap).
+constexpr uint32_t kMaximumMetaBlocks = 3;
+
 #ifdef __Fuchsia__
 // Use a heuristics-based approach based on physical RAM size to
 // determine the size of the writeback buffer.
@@ -100,6 +104,7 @@ constexpr uint64_t NodeMapStartBlock(const Superblock& info) {
     if (info.flags & kBlobFlagFVM) {
         return kFVMNodeMapStart;
     } else {
+        // Node map immediately follows the block map
         return BlockMapStartBlock(info) + BlockMapBlocks(info);
     }
 }
@@ -117,6 +122,7 @@ constexpr uint64_t DataStartBlock(const Superblock& info) {
     if (info.flags & kBlobFlagFVM) {
         return kFVMDataStart;
     } else {
+        // Data immediately follows the node map
         return NodeMapStartBlock(info) + NodeMapBlocks(info);
     }
 }

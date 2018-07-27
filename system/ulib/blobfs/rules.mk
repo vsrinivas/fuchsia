@@ -22,9 +22,9 @@ MODULE_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/blobfs.cpp \
     $(LOCAL_DIR)/metrics.cpp \
-    $(LOCAL_DIR)/writeback.cpp \
-    $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/rpc.cpp \
+    $(LOCAL_DIR)/vnode.cpp \
+    $(LOCAL_DIR)/writeback.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \

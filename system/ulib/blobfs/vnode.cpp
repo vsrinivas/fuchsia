@@ -225,8 +225,7 @@ zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
     } else if ((status = blobfs_->LookupBlob(digest, &out)) < 0) {
         return status;
     }
-    out->QueueUnlink();
-    return ZX_OK;
+    return out->QueueUnlink();
 }
 
 zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
@@ -292,15 +291,15 @@ zx_status_t VnodeBlob::Close() {
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
     fd_count_--;
     // Attempt purge in case blob was unlinked prior to close
-    TryPurge();
-    return ZX_OK;
+    return TryPurge();
 }
 
-void VnodeBlob::Purge() {
+zx_status_t VnodeBlob::Purge() {
     ZX_DEBUG_ASSERT(fd_count_ == 0);
     ZX_DEBUG_ASSERT(Purgeable());
-    blobfs_->PurgeBlob(this);
+    zx_status_t status = blobfs_->PurgeBlob(this);
     SetState(kBlobStatePurged);
+    return status;
 }
 
 } // namespace blobfs

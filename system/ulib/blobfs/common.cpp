@@ -160,6 +160,8 @@ int Mkfs(int fd, uint64_t block_count) {
     info.block_size = kBlobfsBlockSize;
     // Set block_count to max blocks so we can calculate block map blocks
     info.block_count = block_count;
+    //TODO(planders): Consider modifying the inode count if we are low on space.
+    //                It doesn't make sense to have fewer data blocks than inodes.
     info.inode_count = inodes;
     info.alloc_block_count = 0;
     info.alloc_inode_count = 0;
@@ -242,7 +244,7 @@ int Mkfs(int fd, uint64_t block_count) {
         return -1;
     }
 
-    // Reserve first 2 data blocks
+    // Reserve first |kStartBlockMinimum| data blocks
     abm.Set(0, kStartBlockMinimum);
     info.alloc_block_count += kStartBlockMinimum;
 

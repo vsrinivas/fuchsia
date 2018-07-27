@@ -133,7 +133,9 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobf
             if (status != ZX_OK) {
                 return status;
             }
-            blobfs->EnqueueWork(fbl::move(*work));
+            if ((status = blobfs->EnqueueWork(fbl::move(*work))) != ZX_OK) {
+                return status;
+            }
             *work = fbl::move(tmp);
         }
     }
@@ -356,10 +358,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
             return status;
         }
         SetState(kBlobStateDataWrite);
-        fbl::unique_ptr<WritebackWork> wb;
-        if ((status = blobfs_->CreateWork(&wb, this)) != ZX_OK) {
-           return status;
-        } else if ((status = WriteMetadata(fbl::move(wb))) != ZX_OK) {
+        if ((status = WriteMetadata()) != ZX_OK) {
             fprintf(stderr, "Null blob metadata fail: %d\n", status);
             goto fail;
         }
@@ -414,9 +413,15 @@ void* VnodeBlob::GetMerkle() const {
     return blob_->GetData();
 }
 
-zx_status_t VnodeBlob::WriteMetadata(fbl::unique_ptr<WritebackWork> wb) {
+zx_status_t VnodeBlob::WriteMetadata() {
     TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
     assert(GetState() == kBlobStateDataWrite);
+
+    zx_status_t status;
+    fbl::unique_ptr<WritebackWork> wb;
+    if ((status = blobfs_->CreateWork(&wb, this)) != ZX_OK) {
+        return status;
+    }
 
     // Update the on-disk hash.
     memcpy(inode_.merkle_root_hash, &digest_[0], Digest::kLength);
@@ -424,7 +429,7 @@ zx_status_t VnodeBlob::WriteMetadata(fbl::unique_ptr<WritebackWork> wb) {
     // All data has been written to the containing VMO.
     SetState(kBlobStateReadable);
     if (readable_event_.is_valid()) {
-        zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
+        status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
         if (status != ZX_OK) {
             SetState(kBlobStateError);
             return status;
@@ -440,7 +445,9 @@ zx_status_t VnodeBlob::WriteMetadata(fbl::unique_ptr<WritebackWork> wb) {
 
     blobfs_->PersistNode(wb.get(), map_index_, inode_);
     wb->SetSyncComplete();
-    blobfs_->EnqueueWork(fbl::move(wb));
+    if ((status = blobfs_->EnqueueWork(fbl::move(wb))) != ZX_OK) {
+        return status;
+    }
 
     // Drop the write info, since we no longer need it.
     write_info_.reset();
@@ -487,6 +494,14 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             return status;
         }
 
+        auto cleanup = fbl::MakeAutoCall([&]() {
+            if (wb != nullptr) {
+                wb->Reset(ZX_ERR_BAD_STATE);
+            }
+
+            SetState(kBlobStateError);
+        });
+
         if (write_info_->compressor.Compressing()) {
             if ((status = write_info_->compressor.End()) != ZX_OK) {
                 return status;
@@ -530,11 +545,9 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
 
             if ((status = MerkleTree::Create(blob_data, inode_.blob_size, merkle_data,
                                              merkle_size, &digest)) != ZX_OK) {
-                SetState(kBlobStateError);
                 return status;
             } else if (digest != digest_) {
                 // Downloaded blob did not match provided digest.
-                SetState(kBlobStateError);
                 return ZX_ERR_IO_DATA_INTEGRITY;
             }
 
@@ -545,19 +558,23 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             // Small blobs may not have associated Merkle Trees, and will
             // require validation, since we are not regenerating and checking
             // the digest.
-            SetState(kBlobStateError);
+            return status;
+        }
+
+        // Enqueue the blob's final data work. Metadata must be enqueued separately.
+        if ((status = blobfs_->EnqueueWork(fbl::move(wb))) != ZX_OK) {
             return status;
         }
 
         // No more data to write. Flush to disk.
         fs::Ticker ticker(blobfs_->CollectingMetrics()); // Tracking enqueue time.
-        if ((status = WriteMetadata(fbl::move(wb))) != ZX_OK) {
-            SetState(kBlobStateError);
+        if ((status = WriteMetadata()) != ZX_OK) {
             return status;
         }
 
         blobfs_->UpdateClientWriteMetrics(to_write, merkle_size, ticker.End(),
                                           generation_time);
+        cleanup.cancel();
         return ZX_OK;
     }
 
@@ -683,10 +700,10 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     return status;
 }
 
-void VnodeBlob::QueueUnlink() {
+zx_status_t VnodeBlob::QueueUnlink() {
     flags_ |= kBlobFlagDeletable;
     // Attempt to purge in case the blob has been unlinked with no open fds
-    TryPurge();
+    return TryPurge();
 }
 
 zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, size_t node_index) {
@@ -701,11 +718,13 @@ zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, size_t node_index) {
     }
 
     vn->PopulateInode(node_index);
-    vn->InitVmos();
 
     // Set blob state to "Purged" so we do not try to add it to the cached map on recycle.
     vn->SetState(kBlobStatePurged);
-    return vn->Verify();
+
+    // If we are unable to read in the blob from disk, this should also be a VerifyBlob error.
+    // Since InitVmos calls Verify as its final step, we can just return its result here.
+    return vn->InitVmos();
 }
 
 zx_status_t Blobfs::VerifyBlob(size_t node_index) {
@@ -903,23 +922,21 @@ void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-zx_status_t Blobfs::InitializeWriteback() {
-    zx_status_t status;
-    fbl::unique_ptr<fzl::MappedVmo> buffer;
-    if ((status = fzl::MappedVmo::Create(WriteBufferSize(), "blobfs-writeback",
-                                         &buffer)) != ZX_OK) {
-        return status;
-    }
-    if ((status = WritebackBuffer::Create(this, fbl::move(buffer), &writeback_)) != ZX_OK) {
-        return status;
+zx_status_t Blobfs::InitializeWriteback(const MountOptions& options) {
+    if (options.readonly) {
+        // If blobfs should be readonly, do not start up the writeback thread.
+        return ZX_OK;
     }
 
-    return ZX_OK;
+    // Initialize the WritebackQueue.
+    return WritebackQueue::Create(this, WriteBufferSize() / kBlobfsBlockSize,
+                                  &writeback_);
 }
+
+size_t Blobfs::WritebackCapacity() const { return writeback_->GetCapacity(); }
 
 void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     TRACE_DURATION("blobfs", "Blobfs::Unmount");
-    ZX_DEBUG_ASSERT_MSG(writeback_ != nullptr, "Shutdown requires writeback thread to sync");
 
     // 1) Shutdown all external connections to blobfs.
     ManagedVfs::Shutdown([this, cb = fbl::move(cb)](zx_status_t status) mutable {
@@ -1041,8 +1058,7 @@ zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
         FreeNode(wb.get(), node_index);
         FreeBlocks(wb.get(), nblocks, start_block);
         VnodeReleaseHard(vn);
-        EnqueueWork(fbl::move(wb));
-        return ZX_OK;
+        return EnqueueWork(fbl::move(wb));
     }
     default: {
         assert(false);
@@ -1230,8 +1246,7 @@ zx_status_t Blobfs::AddInodes() {
     WriteInfo(wb.get());
     wb.get()->Enqueue(node_map_->GetVmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
                 inoblks - inoblks_old);
-    EnqueueWork(fbl::move(wb));
-    return ZX_OK;
+    return EnqueueWork(fbl::move(wb));
 }
 
 zx_status_t Blobfs::AddBlocks(size_t nblocks) {
@@ -1293,8 +1308,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
     info_.block_count = blocks;
 
     WriteInfo(wb.get());
-    EnqueueWork(fbl::move(wb));
-    return ZX_OK;
+    return EnqueueWork(fbl::move(wb));
 }
 
 void Blobfs::Sync(SyncCallback closure) {
@@ -1305,8 +1319,9 @@ void Blobfs::Sync(SyncCallback closure) {
         return;
     }
 
-    wb->SetClosure(fbl::move(closure));
-    EnqueueWork(fbl::move(wb));
+    wb->SetSyncCallback(fbl::move(closure));
+    // This may return an error, but it doesn't matter - the closure will be called anyway.
+    status = EnqueueWork(fbl::move(wb));
 }
 
 void Blobfs::UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration) {
@@ -1377,7 +1392,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
 }
 
 Blobfs::~Blobfs() {
-    writeback_ = nullptr;
+    writeback_.reset();
 
     ZX_ASSERT(open_hash_.is_empty());
     closed_hash_.clear();
@@ -1614,7 +1629,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
         return status;
     }
 
-    if ((status = fs->InitializeWriteback()) != ZX_OK) {
+    if ((status = fs->InitializeWriteback(options)) != ZX_OK) {
         return status;
     }
 
@@ -1635,5 +1650,26 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     // Shutdown is now responsible for deleting the Blobfs object.
     __UNUSED auto r = fs.release();
     return ZX_OK;
+}
+
+zx_status_t Blobfs::CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
+    if (writeback_ == nullptr) {
+        // Transactions should never be allowed if the writeback queue is disabled.
+        return ZX_ERR_BAD_STATE;
+    }
+
+    out->reset(new WritebackWork(this, fbl::move(fbl::WrapRefPtr(vnode))));
+    return ZX_OK;
+}
+
+zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
+    if (writeback_ != nullptr) {
+        return writeback_->Enqueue(fbl::move(work));
+    }
+
+    // The file system is currently in a readonly state.
+    // Reset the work to ensure that any callbacks are completed.
+    work->Reset(ZX_ERR_BAD_STATE);
+    return ZX_ERR_BAD_STATE;
 }
 } // namespace blobfs

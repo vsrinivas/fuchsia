@@ -368,23 +368,50 @@ bool BlobfsTest::GetDevicePath(char* path, size_t len) const {
     END_HELPER;
 }
 
+bool BlobfsTest::ForceReset() {
+    BEGIN_HELPER;
+    if (state_ == FsTestState::kComplete) {
+        return Reset();
+    }
+
+    ASSERT_NE(state_, FsTestState::kInit);
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount filesystem");
+
+    if (gUseRealDisk) {
+        if (type_ == FsTestType::kFvm) {
+            ASSERT_EQ(fvm_destroy(fvm_path_), ZX_OK);
+        }
+    } else {
+        if (type_ == FsTestType::kFvm) {
+            ASSERT_EQ(destroy_ramdisk(fvm_path_), 0);
+        } else {
+            ASSERT_EQ(destroy_ramdisk(ramdisk_path_), 0);
+        }
+    }
+
+    FsTestState old_state = state_;
+    state_ = FsTestState::kInit;
+
+    ASSERT_TRUE(Init(old_state));
+    END_HELPER;
+}
+
 bool BlobfsTest::ToggleSleep(uint64_t blk_count) {
     BEGIN_HELPER;
 
+    char* ramdisk_path;
+    if (type_ == FsTestType::kNormal) {
+        ramdisk_path = ramdisk_path_;
+    } else {
+        ramdisk_path = fvm_path_;
+    }
+
     if (asleep_) {
         // If the ramdisk is asleep, wake it up.
-        if (type_ == FsTestType::kNormal) {
-            ASSERT_EQ(wake_ramdisk(ramdisk_path_), ZX_OK);
-        } else {
-            ASSERT_EQ(wake_ramdisk(fvm_path_), ZX_OK);
-        }
+        ASSERT_EQ(wake_ramdisk(ramdisk_path), ZX_OK);
     } else {
         // If the ramdisk is active, put it to sleep after the specified block count.
-        if (type_ == FsTestType::kNormal) {
-            ASSERT_EQ(sleep_ramdisk(ramdisk_path_, blk_count), ZX_OK);
-        } else {
-            ASSERT_EQ(sleep_ramdisk(fvm_path_, blk_count), ZX_OK);
-        }
+        ASSERT_EQ(sleep_ramdisk(ramdisk_path, blk_count), ZX_OK);
     }
 
     asleep_ = !asleep_;
@@ -2114,7 +2141,6 @@ static bool ResizePartition(BlobfsTest* blobfsTest) {
         ASSERT_EQ(close(fd.release()), 0);
     }
 
-    printf("Remounting blobfs\n");
     // Remount partition
     ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
 
@@ -2306,6 +2332,67 @@ static bool TestCompressorBufferTooSmall(void) {
     END_TEST;
 }
 
+static bool TestFailedWrite(BlobfsTest* blobfsTest) {
+    BEGIN_TEST;
+
+    if (gUseRealDisk) {
+        fprintf(stderr, "Ramdisk required; skipping test\n");
+        return true;
+    }
+
+    uint64_t block_size = blobfsTest->GetBlockSize();
+    ASSERT_EQ(blobfs::kBlobfsBlockSize % block_size, 0);
+    const uint64_t kDiskBlocksPerBlobfsBlock = blobfs::kBlobfsBlockSize / block_size;
+
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateRandomBlob(blobfs::kBlobfsBlockSize, &info));
+
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd, "Failed to create blob");
+    // Truncate before sleeping the ramdisk. This is so potential FVM updates
+    // do not interfere with the ramdisk block count.
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    // Sleep after |kMaximumMetaBlocks| blocks. This is 1 less than will be needed to write out the
+    // entire blob. This ensures that writing the blob will ultimately fail, but the write
+    // operation will return a successful response.
+    ASSERT_TRUE(blobfsTest->ToggleSleep(kDiskBlocksPerBlobfsBlock * blobfs::kMaximumMetaBlocks));
+    ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
+              static_cast<ssize_t>(info->size_data));
+
+    // Since the write operation ultimately failed when going out to disk,
+    // syncfs will return a failed response.
+    ASSERT_LT(syncfs(fd.get()), 0);
+    ASSERT_EQ(errno, EPIPE);
+
+    ASSERT_TRUE(GenerateRandomBlob(blobfs::kBlobfsBlockSize, &info));
+    fd.reset(open(info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd, "Failed to create blob");
+
+    if (blobfsTest->GetType() == FsTestType::kFvm) {
+        // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
+        // it will fail since the ramdisk is asleep; otherwise, it will pass.
+        ftruncate(fd.get(), info->size_data);
+    } else {
+        // Since truncate is done entirely in memory, a non-FVM truncate should always pass.
+        ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    }
+
+    // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
+    ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
+    ASSERT_EQ(errno, EPIPE);
+
+    // Wake the ramdisk and forcibly reset the BlobfsTest to an initial state.
+    //TODO(planders): Once journaling is enabled, use ForceRemount instead of ForceReset.
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
+    ASSERT_TRUE(blobfsTest->ForceReset());
+
+    // Reset the ramdisk counts so we don't attempt to run ramdisk failure tests,
+    // since we are already failing the ramdisk within this test.
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(blobfs_tests)
 RUN_TESTS(MEDIUM, TestBasic)
 RUN_TESTS(MEDIUM, TestNullBlob)
@@ -2346,7 +2433,8 @@ RUN_TESTS(MEDIUM, TestReadOnly)
 RUN_TEST_FVM(MEDIUM, ResizePartition)
 RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
-RUN_TEST(TestCompressorBufferTooSmall);
+RUN_TEST(TestCompressorBufferTooSmall)
+RUN_TESTS(SMALL, TestFailedWrite)
 END_TEST_CASE(blobfs_tests)
 
 static void print_test_help(FILE* f) {
