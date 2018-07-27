@@ -575,8 +575,6 @@ images += [
     deps = [
       ":data.blk",
     ]
-    legacy_copy = "fvm.data.sparse.blk"
-    legacy_copy_dir = legacy_images_dir
   },
 ]
 
@@ -598,6 +596,8 @@ images += [
     public = [
       "IMAGE_DATA_FVM_RAW",
     ]
+    legacy_copy = "fvm.data.sparse.blk"
+    legacy_copy_dir = legacy_images_dir
   },
 ]
 
