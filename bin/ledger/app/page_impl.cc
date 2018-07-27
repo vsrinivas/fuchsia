@@ -62,6 +62,11 @@ void PageImpl::Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) {
   delegate_->Delete(std::move(key), std::move(timed_callback));
 }
 
+void PageImpl::Clear(ClearCallback callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::INTERNAL_ERROR);
+}
+
 void PageImpl::CreateReferenceFromSocket(
     uint64_t size, zx::socket data,
     CreateReferenceFromSocketCallback callback) {

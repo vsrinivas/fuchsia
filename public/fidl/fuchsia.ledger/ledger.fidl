@@ -98,6 +98,8 @@ interface Page {
       vector<uint8>:256 key_prefix, PageWatcher? watcher) -> (Status @status);
 
   // Mutation operations.
+
+  // Key level operations.
   // Mutations are bundled together into atomic commits. If a transaction is in
   // progress, the list of mutations bundled together is tied to the current
   // transaction. If no transaction is in progress, mutations will be bundled
@@ -122,17 +124,27 @@ interface Page {
       -> (Status @status);
   6: Delete(vector<uint8>:256 key) -> (Status @status);
 
+  // Page level operations.
+  // Deletes all entries in the page.
+  // Outside of a transaction, this operation is equivalent to deleting every
+  // key currently present on the page in a single transaction.
+  // In a transaction, this operation is equivalent to deleting every key
+  // present in the page before the transaction, as well as any new key added
+  // since the transaction started.
+  // TODO(qsr): This method is currently unimplemented.
+  7: Clear() -> (Status @status);
+
   // References.
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the socket. The content size must be equal to
   // |size|, otherwise the call will fail.
-  7: CreateReferenceFromSocket(uint64 size, handle<socket> data)
+  8: CreateReferenceFromSocket(uint64 size, handle<socket> data)
       -> (Status @status, Reference? reference);
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the vmo.
-  8: CreateReferenceFromVmo(fuchsia.mem.Buffer buffer)
+  9: CreateReferenceFromVmo(fuchsia.mem.Buffer buffer)
       -> (Status @status, Reference? reference);
 
   // Transactions.
@@ -164,14 +176,14 @@ interface Page {
   // will be used as the base of the transaction. Put (with all its variants)
   // and Delete calls may be pipelined while StartTransaction() is pending and
   // will be taken into account in the transaction while it is pending.
-  9: StartTransaction() -> (Status @status);
-  10: Commit() -> (Status @status);
-  11: Rollback() -> (Status @status);
+  10: StartTransaction() -> (Status @status);
+  11: Commit() -> (Status @status);
+  12: Rollback() -> (Status @status);
 
   // Sets a watcher to track the synchronisation state of this page. The
   // current state is immediately sent to the watcher when this method is
   // called.
-  12: SetSyncStateWatcher(SyncWatcher watcher) -> (Status @status);
+  13: SetSyncStateWatcher(SyncWatcher watcher) -> (Status @status);
 
   // Conflict resolution.
   //
@@ -182,7 +194,7 @@ interface Page {
   // registration and its execution.
   // If there are no pending conflicts at the time this is called, the callback
   // gets executed right away.
-  13: WaitForConflictResolution() -> (ConflictResolutionWaitStatus wait_status);
+  14: WaitForConflictResolution() -> (ConflictResolutionWaitStatus wait_status);
 };
 
 // The synchronization priority of a reference.

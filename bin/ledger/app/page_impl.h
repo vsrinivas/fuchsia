@@ -39,6 +39,8 @@ class PageImpl : public Page {
 
   void Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) override;
 
+  void Clear(ClearCallback callback) override;
+
   void CreateReferenceFromSocket(
       uint64_t size, zx::socket data,
       CreateReferenceFromSocketCallback callback) override;
