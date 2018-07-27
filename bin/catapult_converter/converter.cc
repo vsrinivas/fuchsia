@@ -288,7 +288,7 @@ int ConverterMain(int argc, char** argv) {
         output_filename = optarg;
         break;
       case 'e':
-        args.timestamp = strtol(optarg, nullptr, 0);
+        args.timestamp = strtoll(optarg, nullptr, 0);
         break;
       case 'm':
         args.masters = optarg;

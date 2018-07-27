@@ -9,7 +9,7 @@
 struct ConverterArgs {
   // These parameters are copied into the Catapult histogram file.  See the
   // README.md file for the meanings of these parameters.
-  long timestamp = 0;
+  int64_t timestamp = 0;
   const char* masters = nullptr;
   const char* bots = nullptr;
   const char* log_url = nullptr;
