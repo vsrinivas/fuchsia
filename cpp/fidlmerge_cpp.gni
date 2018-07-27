@@ -60,7 +60,7 @@ template("fidlmerge_cpp") {
   fidl_target_name = get_path_info(fidl_target_gen_dir, "file")
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
-  include_stem = exec_script("//build/fidl/merge/replace_dot_with_slash.py",
+  include_stem = exec_script("//build/cpp/replace_dot_with_slash.py",
       [
         "--name",
         target_gen_dir,
