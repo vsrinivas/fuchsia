@@ -84,10 +84,7 @@ fi
 
 device_addr=
 update_device_addr() {
-  device_addr=$(get-device-addr "$@")
-  if [[ -z "${device_addr}" ]]; then
-    device_addr="$(fx-command-run netaddr --fuchsia "$@" 2>/dev/null)"
-  fi
+  device_addr="$(fx-command-run netaddr --nowait --timeout=1000 --fuchsia "$@" 2>/dev/null)"
 }
 
 # State is used to prevent too much output
