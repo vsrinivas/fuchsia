@@ -262,11 +262,16 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
     }
 
     if (netboot_bind_to_cmd_port(s) < 0) {
-        fprintf(stderr, "cannot bind to command port: %s\n", strerror(errno));
+        fprintf(stderr, "error: cannot bind to command port: %s\n", strerror(errno));
+        close(s);
         return -1;
     }
 
-    netboot_send_query(s, port, ifname);
+    if (netboot_send_query(s, port, ifname) < 0) {
+        fprintf(stderr, "error: failed to send netboot query\n");
+        close(s);
+        return -1;
+    }
 
     struct pollfd fds;
     fds.fd = s;
