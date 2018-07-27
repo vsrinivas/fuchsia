@@ -41,15 +41,7 @@ declare -r OUT_DIR="${OUT_DIR:-${BUILD_DIR}}"
 declare -r ZIRCON_SYSTEM_GUID="606B000B-B7C7-4653-A7D5-B737332C899D"
 declare -r ZIRCON_GPT_IMAGE="${OUT_DIR}/zircon.gpt"
 declare -r ZIRCON_SYSTEM_IMAGE="${OUT_DIR}/system.minfs"
-
-# sgdisk is used to manipulate GPT partition tables.
-check_sgdisk() {
-  type -P sgdisk &>/dev/null && return 0
-
-  # sgdisk is provided by the gdisk package.
-  echo "Required package gdisk is not installed. (sudo apt install gdisk)"
-  exit 1
-}
+declare -r CGPT="${BUILD_DIR}/${ARCH}/tools/cgpt"
 
 # Create a minfs system image file.
 #
@@ -79,7 +71,7 @@ generate_gpt_image() {
   local image=${1}
   local system_image=${2}
 
-  # sgdisk operates on 512 byte sector addresses.
+  # cgpt operates on 512 byte sector addresses.
   local sys_part_size=`du --block-size 512 ${system_image} | cut -f 1`
   local sys_start_sector=2048
   local sys_end_sector=$((${sys_part_size} + ${sys_start_sector}))
@@ -90,22 +82,26 @@ generate_gpt_image() {
      bs=512 \
      count="$((${sys_end_sector} + 2048))"
 
-  sgdisk --new 1:${sys_start_sector}:${sys_end_sector} ${image}
-  sgdisk --typecode 1:${ZIRCON_SYSTEM_GUID}  ${image}
-  sgdisk --print ${image}
+  # Pipe stderr to /dev/null because cgpt will always warn us (rightly) that
+  # our GPT partition headers are invalid.
+  ${CGPT} create ${image} \
+      2> /dev/null
+  ${CGPT} add \
+      -b ${sys_start_sector} \
+      -s ${sys_part_size} \
+      -t ${ZIRCON_SYSTEM_GUID} \
+      ${image}
 
-   # Copy bytes from the system image into the correct location in the GPT
-   # image.
-   dd status=none \
-      if="${system_image}" \
-      of="${image}" \
-      bs=512 \
-      seek="${sys_start_sector}" \
-      count=${sys_part_size} \
-      conv=notrunc
+  # Copy bytes from the system image into the correct location in the GPT
+  # image.
+  dd status=none \
+     if="${system_image}" \
+     of="${image}" \
+     bs=512 \
+     seek="${sys_start_sector}" \
+     count=${sys_part_size} \
+     conv=notrunc
 }
-
-check_sgdisk
 
 generate_system_image "${ZIRCON_SYSTEM_IMAGE}" "30"
 generate_gpt_image "${ZIRCON_GPT_IMAGE}" "${ZIRCON_SYSTEM_IMAGE}" > /dev/null
