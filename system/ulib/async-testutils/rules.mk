@@ -20,6 +20,7 @@ MODULE_STATIC_LIBS := \
         system/ulib/async \
         system/ulib/fbl \
         system/ulib/zx \
+        system/ulib/zircon-internal \
         system/ulib/zxcpp \
 
 MODULE_LIBS := \

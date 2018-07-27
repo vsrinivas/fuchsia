@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-testutils/dispatcher_stub.h>
 #include <lib/async-testutils/time-keeper.h>
@@ -22,6 +23,7 @@ class TestLoopDispatcher : public DispatcherStub, public TimerDispatcher {
 public:
     TestLoopDispatcher(TimeKeeper* time_keeper);
     ~TestLoopDispatcher();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(TestLoopDispatcher);
 
     // async_dispatcher_t operation implementations.
     zx::time Now() override;

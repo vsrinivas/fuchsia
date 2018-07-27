@@ -4,33 +4,88 @@
 
 #include <lib/async-testutils/test_loop.h>
 
+#include <stdlib.h>
+
+#include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <lib/async-testutils/time-keeper.h>
 #include <lib/async/default.h>
+#include <lib/zircon-internal/xorshiftrand.h>
+#include <zircon/syscalls.h>
 
 namespace async {
 namespace {
 
+// Determinisitically updates |m| to point to a pseudo-random number.
+void Randomize(uint32_t* m) {
+  rand32_t r = { .n = *m };
+  *m = rand32(&r);
+}
+
+// Generates a random seed if the environment variable TEST_LOOP_RANDOM_SEED
+// is unset; else returns the value of the latter.
+uint32_t GetRandomSeed() {;
+    uint32_t random_seed;
+    const char* preset = getenv("TEST_LOOP_RANDOM_SEED");
+
+    if (preset) {
+        size_t preset_length = strlen(preset);
+        char* endptr = nullptr;
+        long unsigned preset_seed = strtoul(preset, &endptr, 10);
+        ZX_ASSERT_MSG(preset_seed > 0 && endptr == preset + preset_length,
+                      "ERROR: \"%s\" does not give a valid random seed\n", preset);
+
+        random_seed = static_cast<uint32_t>(preset_seed);
+    } else {
+        zx_cprng_draw(&random_seed, sizeof(uint32_t));
+    }
+
+    printf("\nTEST_LOOP_RANDOM_SEED=\"%u\"\n", random_seed);
+    return random_seed;
+}
+
 // Timer abstractions to be 'fired' as time is advanced.
-class Timer : public fbl::WAVLTreeContainable<fbl::unique_ptr<Timer>> {
+class TimerList : public fbl::WAVLTreeContainable<fbl::unique_ptr<TimerList>> {
 public:
-    Timer(zx::time deadline, TimerDispatcher* dispatcher)
-        : deadline_(deadline), dispatcher_(dispatcher) {}
+    TimerList(zx::time deadline, TimerDispatcher* dispatcher)
+        : deadline_(deadline), dispatchers_({dispatcher}) {}
 
     zx::time Deadline() const { return deadline_; }
 
-    bool IsDispatchedBy(TimerDispatcher* dispatcher) const {
-        return dispatcher_ == dispatcher;
+    void AddDispatcher(TimerDispatcher* dispatcher) {
+        for (const auto& td : dispatchers_){
+            if (dispatcher == td) { return; }
+        }
+        dispatchers_.push_back(dispatcher);
     }
 
-    void Fire() { dispatcher_->FireTimer(); }
+    // Removes |dispatcher| from |dispatchers_| and returns true iff there are
+    // elements still left in the latter.
+    bool RemoveDispatcher(TimerDispatcher* dispatcher) {
+        for (size_t i = 0; i < dispatchers_.size(); ++i) {
+            if (dispatcher == dispatchers_[i]) {
+                dispatchers_.erase(i);
+                break;
+            }
+        }
+        return !dispatchers_.is_empty();
+    }
+
+    void Fire() {
+        for (const auto& dispatcher : dispatchers_) {
+          dispatcher->FireTimer();
+        }
+        while(!dispatchers_.is_empty()) {
+            dispatchers_.pop_back();
+        }
+    }
 
     // Trait implementation for fbl::WAVLTree.
     zx::time GetKey() const { return deadline_; }
 
 private:
     const zx::time deadline_;
-    TimerDispatcher* const dispatcher_;
+    fbl::Vector<TimerDispatcher*> dispatchers_;
 };
 
 } // namespace
@@ -42,21 +97,26 @@ public:
 
     zx::time Now() const override { return current_time_; }
 
-    void RegisterTimer(zx::time deadline, TimerDispatcher* timer_dispatcher) override {
+    void RegisterTimer(zx::time deadline, TimerDispatcher* dispatcher) override {
         // If |deadline| has passed, signal expiration immediately.
         if (deadline <= current_time_) {
-            timer_dispatcher->FireTimer();
+            dispatcher->FireTimer();
             return;
         }
-        fbl::unique_ptr<Timer> fake_timer(new Timer(deadline, timer_dispatcher));
-        fake_timers_.insert_or_find(fbl::move(fake_timer));
+        auto iter = fake_timers_.find(deadline);
+        if (iter.IsValid()) {
+            iter->AddDispatcher(dispatcher);
+        } else {
+            fake_timers_.insert(
+                fbl::make_unique<TimerList>(deadline, dispatcher));
+        }
     }
 
-    void CancelTimers(TimerDispatcher* timer_dispatcher) override {
+    void CancelTimers(TimerDispatcher* dispatcher) override {
       auto iter = fake_timers_.begin();
       while (iter.IsValid()) {
           auto current = iter++;
-          if (current->IsDispatchedBy(timer_dispatcher)) {
+          if (!current->RemoveDispatcher(dispatcher)) {
               fake_timers_.erase(current);
           }
       }
@@ -73,12 +133,37 @@ public:
 
 private:
     zx::time current_time_;
-    fbl::WAVLTree<zx::time, fbl::unique_ptr<Timer>> fake_timers_;
+    fbl::WAVLTree<zx::time, fbl::unique_ptr<TimerList>> fake_timers_;
+};
+
+
+class TestLoop::TestLoopInterface : public LoopInterface {
+public:
+      TestLoopInterface(TestLoop* loop, TestLoopDispatcher* dispatcher)
+          : loop_(loop), dispatcher_(dispatcher) {}
+
+      ~TestLoopInterface() override {
+          auto& dispatchers = loop_->dispatchers_;
+          for (size_t index = 0; index < dispatchers.size(); ++index) {
+              if (dispatchers[index].get() == dispatcher_) {
+                  dispatchers.erase(index);
+                  break;
+              }
+          }
+          dispatcher_ = nullptr;
+      }
+
+      async_dispatcher_t* dispatcher() override { return dispatcher_; }
+
+private:
+    TestLoop* const loop_;
+    TestLoopDispatcher* dispatcher_;
 };
 
 TestLoop::TestLoop()
-    : time_keeper_(new TestLoopTimeKeeper()), dispatcher_(time_keeper_.get()) {
-    async_set_default_dispatcher(&dispatcher_);
+    : time_keeper_(new TestLoopTimeKeeper()), state_(GetRandomSeed()) {
+    dispatchers_.push_back(fbl::make_unique<TestLoopDispatcher>(time_keeper_.get()));
+    async_set_default_dispatcher(dispatchers_[0].get());
 }
 
 TestLoop::~TestLoop() {
@@ -86,14 +171,16 @@ TestLoop::~TestLoop() {
 }
 
 async_dispatcher_t* TestLoop::dispatcher() {
-    return &dispatcher_;
+    return dispatchers_[0].get();
 }
 
-async_dispatcher_t* TestLoop::async() {
-    return dispatcher();
+fbl::unique_ptr<LoopInterface> TestLoop::StartNewLoop() {
+    dispatchers_.push_back(fbl::make_unique<TestLoopDispatcher>(time_keeper_.get()));
+    auto* new_dispatcher = dispatchers_[dispatchers_.size() - 1].get();
+    return fbl::make_unique<TestLoopInterface>(this, new_dispatcher);
 }
 
-zx::time TestLoop::Now() {
+zx::time TestLoop::Now() const {
     return time_keeper_->Now();
 }
 
@@ -109,20 +196,29 @@ void TestLoop::Quit() {
     has_quit_ = true;
 }
 
+
 bool TestLoop::RunUntil(zx::time deadline) {
     ZX_ASSERT(!is_running_);
     is_running_ = true;
     bool did_work = false;
     while (!has_quit_) {
-        if (!dispatcher_.HasPendingWork()) {
-            zx::time next_due_time = dispatcher_.GetNextTaskDueTime();
+        if (!HasPendingWork()) {
+            zx::time next_due_time = GetNextTaskDueTime();
             if (next_due_time > deadline) {
                 AdvanceTimeTo(deadline);
                 break;
             }
             AdvanceTimeTo(next_due_time);
         }
-        did_work |= dispatcher_.DispatchNextDueMessage();
+
+        Randomize(&state_);
+        size_t current_index = state_ % dispatchers_.size();
+        auto& current_dispatcher = dispatchers_[current_index];
+
+        async_set_default_dispatcher(current_dispatcher.get());
+        did_work |= current_dispatcher->DispatchNextDueMessage();
+        async_set_default_dispatcher(dispatchers_[0].get());
+
     }
     is_running_ = false;
     has_quit_ = false;
@@ -135,6 +231,22 @@ bool TestLoop::RunFor(zx::duration duration) {
 
 bool TestLoop::RunUntilIdle() {
     return RunUntil(Now());
+}
+
+bool TestLoop::HasPendingWork() {
+    for (auto& dispatcher : dispatchers_) {
+        if (dispatcher->HasPendingWork()) { return true; }
+    }
+    return false;
+}
+
+zx::time TestLoop::GetNextTaskDueTime() const {
+  zx::time next_due_time = zx::time::infinite();
+  for (auto& dispatcher : dispatchers_) {
+      next_due_time =
+          fbl::min<zx::time>(next_due_time, dispatcher->GetNextTaskDueTime());
+  }
+  return next_due_time;
 }
 
 } // namespace async

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/array.h>
 #include <fbl/function.h>
 #include <lib/async-testutils/test_loop.h>
 #include <lib/async/cpp/task.h>
@@ -408,9 +409,166 @@ bool NestedTasksAndWaitsAreDispatched() {
     END_TEST;
 }
 
+bool TasksAreDispatchedOnManyLoops() {
+    BEGIN_TEST;
+
+    async::TestLoop loop;
+    auto loopA = loop.StartNewLoop();
+    auto loopB = loop.StartNewLoop();
+    auto loopC = loop.StartNewLoop();
+
+    bool called = false;
+    bool calledA = false;
+    bool calledB = false;
+    bool calledC = false;
+    async::TaskClosure taskC([&calledC] { calledC = true; });
+
+    async::PostTask(loopB->dispatcher(), [&calledB] { calledB = true; });
+    async::PostDelayedTask(loop.dispatcher(), [&called] { called = true; }, zx::sec(1));
+    ASSERT_EQ(ZX_OK, taskC.PostDelayed(loopC->dispatcher(), zx::sec(1)));
+    async::PostDelayedTask(loopA->dispatcher(), [&calledA] { calledA = true; }, zx::sec(2));
+
+    loop.RunUntilIdle();
+    EXPECT_FALSE(called);
+    EXPECT_FALSE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_FALSE(calledC);
+
+    taskC.Cancel();
+    loop.RunFor(zx::sec(1));
+    EXPECT_TRUE(called);
+    EXPECT_FALSE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_FALSE(calledC);
+
+    loop.RunFor(zx::sec(1));
+    EXPECT_TRUE(called);
+    EXPECT_TRUE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_FALSE(calledC);
+
+    END_TEST;
+}
+
+bool WaitsAreDispatchedOnManyLoops() {
+    BEGIN_TEST;
+
+    async::TestLoop loop;
+    auto loopA = loop.StartNewLoop();
+    auto loopB = loop.StartNewLoop();
+    auto loopC = loop.StartNewLoop();
+    async::Wait wait;
+    async::Wait waitA;
+    async::Wait waitB;
+    async::Wait waitC;
+    bool called = false;
+    bool calledA = false;
+    bool calledB = false;
+    bool calledC = false;
+    zx::event event;
+
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+
+    InitWait(&wait, [&called] { called = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(&waitA, [&calledA] { calledA = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(&waitB, [&calledB] { calledB = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(&waitC, [&calledC] { calledC = true; }, event, ZX_USER_SIGNAL_0);
+
+    ASSERT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, waitA.Begin(loopA->dispatcher()));
+    ASSERT_EQ(ZX_OK, waitB.Begin(loopB->dispatcher()));
+    ASSERT_EQ(ZX_OK, waitC.Begin(loopC->dispatcher()));
+
+    ASSERT_EQ(ZX_OK, waitB.Cancel());
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_TRUE(calledA);
+    EXPECT_FALSE(calledB);
+    EXPECT_TRUE(calledC);
+
+    END_TEST;
+}
+
+
+// Populates |order| with the order in which two tasks and two waits on four
+// loops were dispatched, given a |random_seed|.
+bool DetermineDispatchOrder(const char* random_seed, int (*order)[4]) {
+    BEGIN_HELPER;
+
+    ASSERT_EQ(0, setenv("TEST_LOOP_RANDOM_SEED", random_seed, 1));
+    async::TestLoop loop;
+    auto loopA = loop.StartNewLoop();
+    auto loopB = loop.StartNewLoop();
+    auto loopC = loop.StartNewLoop();
+    async::Wait wait;
+    async::Wait waitB;
+    zx::event event;
+    int i = 0;
+
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+
+    InitWait(&wait, [&] { (*order)[0] = ++i; }, event, ZX_USER_SIGNAL_0);
+    async::PostTask(loopA->dispatcher(), [&] { (*order)[1] = ++i; });
+    InitWait(&waitB, [&] { (*order)[2] = ++i; }, event, ZX_USER_SIGNAL_0);
+    async::PostTask(loopC->dispatcher(), [&] { (*order)[3] = ++i; });
+
+    ASSERT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, waitB.Begin(loopB->dispatcher()));
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
+
+    loop.RunUntilIdle();
+
+    EXPECT_EQ(4, i);
+    EXPECT_NE(0, (*order)[0]);
+    EXPECT_NE(0, (*order)[1]);
+    EXPECT_NE(0, (*order)[2]);
+    EXPECT_NE(0, (*order)[3]);
+
+    ASSERT_EQ(0, unsetenv("TEST_LOOP_RANDOM_SEED"));
+
+    END_HELPER;
+}
+
+bool DispatchOrderIsDeterministicFor(const char* random_seed) {
+    BEGIN_HELPER;
+
+    int expected_order[4] = {0, 0, 0, 0};
+    EXPECT_TRUE(DetermineDispatchOrder(random_seed, &expected_order));
+
+    for (int i = 0; i < 5; ++i) {
+        int actual_order[4] = {0, 0, 0, 0};
+        EXPECT_TRUE(DetermineDispatchOrder(random_seed, &actual_order));
+        EXPECT_EQ(expected_order[0], actual_order[0]);
+        EXPECT_EQ(expected_order[1], actual_order[1]);
+        EXPECT_EQ(expected_order[2], actual_order[2]);
+        EXPECT_EQ(expected_order[3], actual_order[3]);
+    }
+
+    END_HELPER;
+}
+
+
+bool DispatchOrderIsDeterministic() {
+    BEGIN_TEST;
+
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("1"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("43"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("893"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("39408"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("844018"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("83018299"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("3213"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("139133113"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor("1323234373"));
+
+    END_TEST;
+}
+
 } // namespace
 
-BEGIN_TEST_CASE(TestLoopTest)
+BEGIN_TEST_CASE(SingleLoopTests)
 RUN_TEST(DefaultDispatcherIsSetAndUnset)
 RUN_TEST(FakeClockTimeIsCorrect)
 RUN_TEST(TasksAreDispatched)
@@ -422,4 +580,10 @@ RUN_TEST(WaitsAreDispatched)
 RUN_TEST(NestedWaitsAreDispatched)
 RUN_TEST(WaitsAreCanceled)
 RUN_TEST(NestedTasksAndWaitsAreDispatched)
-END_TEST_CASE(TestLoopTest)
+END_TEST_CASE(SingleLoopTests)
+
+BEGIN_TEST_CASE(MultiLoopTests)
+RUN_TEST(TasksAreDispatchedOnManyLoops)
+RUN_TEST(WaitsAreDispatchedOnManyLoops)
+RUN_TEST(DispatchOrderIsDeterministic)
+END_TEST_CASE(MultiLoopTests)

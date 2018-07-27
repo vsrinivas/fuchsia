@@ -5,9 +5,20 @@
 #pragma once
 
 #include <lib/async-testutils/test_loop_dispatcher.h>
+
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <lib/async/dispatcher.h>
 
 namespace async {
+
+// A minimal, abstract message loop interface.
+class LoopInterface {
+public:
+    virtual ~LoopInterface() = default;
+    virtual async_dispatcher_t* dispatcher() = 0;
+};
+
 
 // A message loop with a fake clock, to be controlled within a test setting.
 class TestLoop {
@@ -15,14 +26,16 @@ public:
     TestLoop();
     ~TestLoop();
 
-    // Returns the test loops asynchronous dispatcher.
+    // Returns the test loop's asynchronous dispatcher.
     async_dispatcher_t* dispatcher();
-    // TODO(davemoore): ZX-2337 Remove after all external references have been changed
-    // to async_dispatcher_t.
-    async_dispatcher_t* async();
+
+    // Returns a loop interface simulating the starting up of a new message
+    // loop. The lifetime of the 'loop' is tied to the returned interface.
+    // Each successive calls to this method corresponds to a new loop.
+    fbl::unique_ptr<LoopInterface> StartNewLoop();
 
     // Returns the current fake clock time.
-    zx::time Now();
+    zx::time Now() const;
 
     // Advances the fake clock time to |time|, if |time| is greater than the
     // current time; else, nothing happens.
@@ -53,17 +66,30 @@ public:
     bool RunUntilIdle();
 
 private:
+    // An implementation of LoopInterface.
+    class TestLoopInterface;
+
     // A TimeKeeper implementation that manages the test loop's fake clock time
     // and fake timers.
     class TestLoopTimeKeeper;
+
+    // Whether there are any due tasks or waits across |dispatchers_|.
+    bool HasPendingWork();
+
+    // Returns the next due task time across |dispatchers_|.
+    zx::time GetNextTaskDueTime() const;
+
     fbl::unique_ptr<TestLoopTimeKeeper> time_keeper_;
 
-    // Encapsulation of the async_t dispatch methods.
-    TestLoopDispatcher dispatcher_;
+    // Encapsulation of the async_dispatcher_t dispatch methods.
+    fbl::Vector<fbl::unique_ptr<TestLoopDispatcher>> dispatchers_;
+
+    // A pseudo-random number used to determinisitically determine the
+    // dispatching order across |dispatchers_|.
+    uint32_t state_;
 
     // Quit state of the loop.
     bool has_quit_ = false;
-
     // Whether the loop is currently running.
     bool is_running_ = false;
 };
