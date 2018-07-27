@@ -383,11 +383,6 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                            });
 }
 
-Status LedgerManager::DeletePage(convert::ExtendedStringView /*page_id*/) {
-  FXL_NOTIMPLEMENTED();
-  return Status::INTERNAL_ERROR;
-}
-
 void LedgerManager::InitPageManagerContainer(
     PageManagerContainer* container, convert::ExtendedStringView page_id,
     fit::function<void(Status)> callback) {

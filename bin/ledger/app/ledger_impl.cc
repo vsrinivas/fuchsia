@@ -53,12 +53,6 @@ void LedgerImpl::GetPage(PageIdPtr id,
       TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_page"));
 }
 
-void LedgerImpl::DeletePage(PageId id, DeletePageCallback callback) {
-  TRACE_DURATION("ledger", "ledger_delete_page");
-
-  callback(delegate_->DeletePage(id.id));
-}
-
 void LedgerImpl::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory,
     SetConflictResolverFactoryCallback callback) {

@@ -67,7 +67,6 @@ class LedgerManager : public LedgerImpl::Delegate,
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
                fit::function<void(Status)> callback) override;
-  Status DeletePage(convert::ExtendedStringView page_id) override;
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 

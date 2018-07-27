@@ -42,8 +42,6 @@ class LedgerImpl : public Ledger {
                          fidl::InterfaceRequest<Page> page_request,
                          fit::function<void(Status)> callback) = 0;
 
-    virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
-
     virtual void SetConflictResolverFactory(
         fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
 
@@ -61,7 +59,6 @@ class LedgerImpl : public Ledger {
                    GetRootPageCallback callback) override;
   void GetPage(PageIdPtr id, fidl::InterfaceRequest<Page> page_request,
                GetPageCallback callback) override;
-  void DeletePage(PageId id, DeletePageCallback callback) override;
 
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory,

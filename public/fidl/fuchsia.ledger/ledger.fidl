@@ -52,15 +52,12 @@ interface Ledger {
   // GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
   2: GetRootPage(request<Page> page_request) -> (Status @status);
 
-  // Deletes the page with the given id.
-  3: DeletePage(PageId id) -> (Status @status);
-
   // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
   // If |factory| is NULL or this method is not called, a global last one wins
   // policy will be used. If a factory is set and later on disconnected, pages
   // for which no conflict resolution is set up will not get their conflict
   // resolved until this method is called again.
-  4: SetConflictResolverFactory(ConflictResolverFactory? factory)
+  3: SetConflictResolverFactory(ConflictResolverFactory? factory)
       -> (Status @status);
 };
 

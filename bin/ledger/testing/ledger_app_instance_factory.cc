@@ -127,16 +127,4 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   return page_ptr;
 }
 
-void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
-    const ledger::PageId& page_id, ledger::Status expected_status) {
-  fidl::InterfaceHandle<ledger::Page> page;
-  ledger::Status status;
-  ledger::LedgerPtr ledger = GetTestLedger();
-  auto waiter = loop_controller_->NewWaiter();
-  ledger->DeletePage(fidl::Clone(page_id),
-                     callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
-  EXPECT_EQ(expected_status, status);
-}
-
 }  // namespace test

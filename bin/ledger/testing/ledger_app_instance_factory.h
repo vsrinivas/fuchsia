@@ -82,9 +82,6 @@ class LedgerAppInstanceFactory {
     // Returns a connection to the given page on the default Ledger object.
     ledger::PagePtr GetPage(const ledger::PageIdPtr& page_id,
                             ledger::Status expected_status);
-    // Deletes the given page on the default Ledger object.
-    void DeletePage(const ledger::PageId& page_id,
-                    ledger::Status expected_status);
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
