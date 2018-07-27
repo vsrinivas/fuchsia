@@ -94,6 +94,16 @@ func (e ErrDaemon) Error() string {
 	return string(e)
 }
 
+type ErrGetFile string
+
+func NewErrGetFile(str string, inner error) ErrGetFile {
+	return ErrGetFile(fmt.Sprintf("%s: %v", str, inner))
+}
+
+func (e ErrGetFile) Error() string {
+	return string(e)
+}
+
 func doTest(pxy *amber.ControlInterface) error {
 	v := int32(42)
 	resp, err := pxy.DoTest(v)
@@ -174,7 +184,7 @@ func addSource(a *amber.ControlInterface) error {
 
 			resp, err := http.Get(*pkgFile)
 			if err != nil {
-				return fmt.Errorf("failed to GET file: %v", err)
+				return NewErrGetFile("failed to GET file", err)
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != 200 {
@@ -338,7 +348,11 @@ func main() {
 	case "add_src":
 		if err := addSource(proxy); err != nil {
 			log.Printf("error adding source: %s", err)
-			os.Exit(1)
+			if _, ok := err.(ErrGetFile); ok {
+				os.Exit(2)
+			} else {
+				os.Exit(1)
+			}
 		}
 	case "rm_src":
 		if err := rmSource(proxy); err != nil {
