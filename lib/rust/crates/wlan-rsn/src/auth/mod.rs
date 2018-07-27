@@ -11,6 +11,7 @@ use failure;
 use key::exchange::Key;
 use rsna::SecAssocResult;
 
+#[derive(Debug)]
 pub enum Method {
     Psk(psk::Psk),
 }

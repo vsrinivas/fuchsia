@@ -12,6 +12,7 @@ use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate};
 use rsne::Rsne;
 use std::mem;
 
+#[derive(Debug)]
 struct Pmksa {
     method: auth::Method,
     pmk: Option<Vec<u8>>,
@@ -23,6 +24,7 @@ impl Pmksa {
     }
 }
 
+#[derive(Debug)]
 enum Ptksa {
     Uninitialized(Option<exchange::Config>),
     Initialized(PtksaCfg),
@@ -62,6 +64,7 @@ impl Ptksa {
     }
 }
 
+#[derive(Debug)]
 struct PtksaCfg {
     cfg: Option<exchange::Config>,
     method: exchange::Method,
@@ -69,6 +72,7 @@ struct PtksaCfg {
 }
 
 // IEEE Std 802.11-2016, 12.6.1.3.2
+#[derive(Debug)]
 pub struct EssSa {
     // Configuration.
     role: Role,

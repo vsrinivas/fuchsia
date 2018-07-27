@@ -16,17 +16,20 @@ use eapol;
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 
+#[derive(Debug)]
 pub enum LinkState<T: Tokens> {
     EstablishingRsna(Option<T::ConnectToken>, Rsna),
     LinkUp(Option<Rsna>)
 }
 
+#[derive(Debug)]
 pub struct ConnectCommand<T> {
     pub bss: Box<BssDescription>,
     pub token: Option<T>,
     pub rsna: Option<Rsna>,
 }
 
+#[derive(Debug)]
 pub struct Rsna {
     s_rsne: Rsne,
     esssa: EssSa,
@@ -49,6 +52,7 @@ pub enum RsnaStatus {
     Unchanged,
 }
 
+#[derive(Debug)]
 pub enum State<T: Tokens> {
     Idle,
     Joining {
@@ -532,4 +536,118 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
         },
         rssi_dbm: d.rssi_dbm,
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::channel::mpsc;
+    use client::test_utils::fake_bss_description;
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
+    use Ssid;
+
+    #[derive(Debug)]
+    struct FakeTokens;
+
+    impl Tokens for FakeTokens {
+        type ScanToken = u32;
+        type ConnectToken = u32;
+    }
+
+    #[test]
+    fn associate_happy_path_unprotected() {
+        let state = State::Idle::<FakeTokens>;
+        let (mlme_sink, mut mlme_stream) = mpsc::unbounded();
+        let (user_sink, mut _user_stream) = mpsc::unbounded();
+        let mlme_sink = MlmeSink{ sink: mlme_sink };
+        let user_sink = UserSink{ sink: user_sink };
+        let device_info = fake_device_info();
+
+        // Issue a "connect" command
+        let cmd = ConnectCommand {
+            bss: Box::new(bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
+            token: Some(123_u32),
+            rsna: None,
+        };
+        let state = state.disconnect(Some(cmd), &mlme_sink, &user_sink);
+
+        // (sme->mlme) Expect a JoinRequest
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Join(req)) => {
+                assert_eq!("foo", &req.selected_bss.ssid);
+            },
+            other => panic!("expected a Join request, got {:?}", other),
+        }
+
+        // (mlme->sme) Send a JoinConf as a response
+        let join_conf = MlmeEvent::JoinConf {
+            resp: fidl_mlme::JoinConfirm {
+                result_code: fidl_mlme::JoinResultCodes::Success
+            }
+        };
+        let state = state.on_mlme_event(&device_info, join_conf, &mlme_sink, &user_sink);
+
+        // (sme->mlme) Expect an AuthenticateRequest
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Authenticate(req)) => {
+                assert_eq!([ 7, 7, 7, 7, 7, 7 ], req.peer_sta_address);
+            },
+            other => panic!("expected an Authenticate request, got {:?}", other)
+        }
+
+        // (mlme->sme) Send an AuthenticateConf as a response
+        let auth_conf = MlmeEvent::AuthenticateConf {
+            resp: fidl_mlme::AuthenticateConfirm {
+                peer_sta_address: [7, 7, 7, 7, 7, 7],
+                auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+                result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            }
+        };
+        let state = state.on_mlme_event(&device_info, auth_conf, &mlme_sink, &user_sink);
+
+        // (sme->mlme) Expect an AssociateRequest
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Associate(req)) => {
+                assert_eq!([ 7, 7, 7, 7, 7, 7 ], req.peer_sta_address);
+            },
+            other => panic!("expected an Associate request, got {:?}", other)
+        }
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf = MlmeEvent::AssociateConf {
+            resp: fidl_mlme::AssociateConfirm {
+                result_code: fidl_mlme::AssociateResultCodes::Success,
+                association_id: 55,
+            }
+        };
+        let state = state.on_mlme_event(&device_info, assoc_conf, &mlme_sink, &user_sink);
+
+        // We should now be in the associated state
+        match state {
+            State::Associated { bss, link_state, .. } => {
+                assert_eq!([ 7, 7, 7, 7, 7, 7 ], bss.bssid);
+                match link_state {
+                    LinkState::LinkUp(None) => {},
+                    other => panic!("Wrong link state {:?}", other)
+                }
+            },
+            other => panic!("Expected an Associated state, got {:?}", other)
+        }
+    }
+
+    fn bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
+        fidl_mlme::BssDescription {
+            bssid,
+            .. fake_bss_description(ssid)
+        }
+    }
+
+    fn fake_device_info() -> DeviceInfo {
+        DeviceInfo {
+            supported_channels: HashSet::from_iter([1, 2, 3].into_iter().cloned()),
+            addr: [ 0, 1, 2, 3, 4, 5 ],
+        }
+    }
+
 }

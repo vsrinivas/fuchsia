@@ -6,6 +6,7 @@ use eapol;
 use failure;
 use rsna::SecAssocResult;
 
+#[derive(Debug)]
 pub struct Authenticator {
     pub key_replay_counter: u64,
     pub s_nonce: [u8; 32],

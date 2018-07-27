@@ -19,8 +19,9 @@ use rsna::{SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct PtkInitState {}
+#[derive(Debug)]
 struct GtkInitState {}
 
 impl PtkInitState {
@@ -173,6 +174,7 @@ impl GtkInitState {
     }
 }
 
+#[derive(Debug)]
 enum State {
     PtkInit(PtkInitState),
     GtkInit(GtkInitState),
@@ -260,6 +262,7 @@ impl State {
     }
 }
 
+#[derive(Debug)]
 struct SharedState {
     key_replay_counter: u64,
     anonce: [u8; 32],
@@ -270,6 +273,7 @@ struct SharedState {
     nonce_rdr: NonceReader,
 }
 
+#[derive(Debug)]
 pub struct Supplicant {
     shared: SharedState,
     state: Option<State>,

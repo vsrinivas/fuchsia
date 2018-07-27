@@ -9,6 +9,7 @@ use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
 use time;
 
+#[derive(Debug)]
 pub struct NonceReader {
     key_counter: BigUint,
 }

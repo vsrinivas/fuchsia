@@ -24,6 +24,7 @@ pub struct DeviceInfo {
     pub addr: [u8; 6],
 }
 
+#[derive(Debug)]
 pub enum MlmeRequest {
     Scan(fidl_mlme::ScanRequest),
     Join(fidl_mlme::JoinRequest),
