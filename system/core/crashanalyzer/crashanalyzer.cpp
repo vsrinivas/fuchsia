@@ -58,11 +58,11 @@ static void do_print_zx_error(const char* file, int line, const char* what, zx_s
                    what, status, zx_status_get_string(status));
 }
 
-#define print_zx_error(what, status) \
-  do { \
-    do_print_zx_error(__FILE__, __LINE__, \
-                      (what), static_cast<zx_status_t>(status)); \
-  } while (0)
+#define PRINT_ZX_ERROR(what, status)                                 \
+    do {                                                             \
+        do_print_zx_error(__FILE__, __LINE__,                        \
+                          (what), static_cast<zx_status_t>(status)); \
+    } while (0)
 
 // Return true if the thread is to be resumed "successfully" (meaning the o/s
 // won't kill it, and thus the kill process).
@@ -133,10 +133,10 @@ static uint32_t crashed_thread_excp_type;
 #if defined(__aarch64__)
 static bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
     // The syscall takes a uint32_t.
-    auto to_xfer = static_cast<uint32_t> (buf_size);
+    auto to_xfer = static_cast<uint32_t>(buf_size);
     auto status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, buf, to_xfer);
     if (status != ZX_OK) {
-        print_zx_error("unable to access general regs", status);
+        PRINT_ZX_ERROR("unable to access general regs", status);
         return false;
     }
     return true;
@@ -162,7 +162,7 @@ static void resume_thread(zx_handle_t thread, bool handled) {
         options |= ZX_RESUME_TRY_NEXT;
     auto status = zx_task_resume(thread, options);
     if (status != ZX_OK) {
-        print_zx_error("unable to \"resume\" thread", status);
+        PRINT_ZX_ERROR("unable to \"resume\" thread", status);
         // This shouldn't happen (unless someone killed it already).
         // The task is now effectively hung (until someone kills it).
         // TODO: Try to forcefully kill it ourselves?
@@ -175,8 +175,8 @@ static void resume_thread_from_exception(zx_handle_t thread,
     if (is_resumable_swbreak(excp_type) &&
         gregs != nullptr && have_swbreak_magic(gregs)) {
 #if defined(__x86_64__)
-        // On x86, the pc is left at one past the s/w break insn,
-        // so there's nothing more we need to do.
+// On x86, the pc is left at one past the s/w break insn,
+// so there's nothing more we need to do.
 #elif defined(__aarch64__)
         zx_thread_state_general_regs_t regs = *gregs;
         // Skip past the brk instruction.
@@ -201,7 +201,7 @@ static void resume_thread_from_exception(zx_handle_t thread,
     }
 
 #if !defined(__x86_64__)
-  Fail:
+Fail:
 #endif
     // Tell the o/s to "resume" the thread by killing the process, the
     // exception has not been handled.
@@ -245,7 +245,7 @@ static void process_report(zx_handle_t process, zx_handle_t thread, bool use_lib
     auto context = report.context;
 
     zx_thread_state_general_regs_t reg_buf;
-    zx_thread_state_general_regs_t *regs = nullptr;
+    zx_thread_state_general_regs_t* regs = nullptr;
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
     const char* fatal = "fatal ";
@@ -322,7 +322,7 @@ static void process_report(zx_handle_t process, zx_handle_t thread, bool use_lib
                                   pc, sp, fp, use_libunwind);
     }
 
-    // TODO(ZX-588): Print a backtrace of all other threads in the process.
+// TODO(ZX-588): Print a backtrace of all other threads in the process.
 
 Fail:
     if (verbosity_level >= 1)
