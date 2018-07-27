@@ -38,6 +38,10 @@ class FakeControllerBase;
 template <class FakeControllerType>
 class FakeControllerTest : public ::gtest::TestLoopFixture {
  public:
+  // Default data buffer information used by ACLDataChannel.
+  static constexpr size_t kDefaultMaxDataPacketLength = 1024;
+  static constexpr size_t kDefaultMaxPacketCount = 5;
+
   FakeControllerTest() = default;
   virtual ~FakeControllerTest() = default;
 
@@ -63,22 +67,28 @@ class FakeControllerTest : public ::gtest::TestLoopFixture {
     test_device_ = nullptr;
  }
 
-  // Directly initializes the ACL data channel and wires up its data rx
-  // callback. It is OK to override the data rx callback after this is called.
-  bool InitializeACLDataChannel(const hci::DataBufferInfo& bredr_buffer_info,
-                                const hci::DataBufferInfo& le_buffer_info) {
-    if (!transport_->InitializeACLDataChannel(bredr_buffer_info,
-                                              le_buffer_info)) {
-      return false;
-    }
+ // Directly initializes the ACL data channel and wires up its data rx
+ // callback. It is OK to override the data rx callback after this is called.
+ //
+ // If data buffer information isn't provided, the ACLDataChannel will be
+ // initialized with shared BR/EDR/LE buffers using the constants declared
+ // above.
+ bool InitializeACLDataChannel(
+     const hci::DataBufferInfo& bredr_buffer_info = hci::DataBufferInfo(
+         kDefaultMaxDataPacketLength, kDefaultMaxPacketCount),
+     const hci::DataBufferInfo& le_buffer_info = hci::DataBufferInfo()) {
+   if (!transport_->InitializeACLDataChannel(bredr_buffer_info,
+                                             le_buffer_info)) {
+     return false;
+   }
 
-    transport_->acl_data_channel()->SetDataRxHandler(
-        std::bind(&FakeControllerTest<FakeControllerType>::OnDataReceived, this,
-                  std::placeholders::_1),
-        dispatcher());
+   transport_->acl_data_channel()->SetDataRxHandler(
+       std::bind(&FakeControllerTest<FakeControllerType>::OnDataReceived, this,
+                 std::placeholders::_1),
+       dispatcher());
 
-    return true;
-  }
+   return true;
+ }
 
   // Sets a callback which will be invoked when we receive packets from the test
   // controller. |callback| will be posted on the test loop, thus no locking is

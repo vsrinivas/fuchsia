@@ -175,6 +175,11 @@ ConnectionImpl::ConnectionImpl(ConnectionHandle handle, LinkType ll_type,
 }
 
 ConnectionImpl::~ConnectionImpl() {
+  // Tell ACL data channel to clear all ACL buffering state related to this
+  // link.
+  hci_->acl_data_channel()->ClearLinkState(handle());
+
+  // Unregister HCI event handlers.
   hci_->command_channel()->RemoveEventHandler(enc_change_id_);
   hci_->command_channel()->RemoveEventHandler(enc_key_refresh_cmpl_id_);
   hci_->command_channel()->RemoveEventHandler(le_ltk_request_id_);

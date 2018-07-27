@@ -184,6 +184,30 @@ bool ACLDataChannel::SendPackets(common::LinkedList<ACLDataPacket> packets,
   return true;
 }
 
+bool ACLDataChannel::ClearLinkState(hci::ConnectionHandle handle) {
+  std::lock_guard<std::mutex> lock(send_mutex_);
+  auto iter = pending_links_.find(handle);
+  if (iter == pending_links_.end()) {
+    FXL_VLOG(1) << "hci: No pending packets on connection (handle: " << handle
+                << ")";
+    return false;
+  }
+
+  const PendingPacketData& data = iter->second;
+  if (data.ll_type == Connection::LinkType::kLE) {
+    DecrementLETotalNumPacketsLocked(data.count);
+  } else {
+    DecrementTotalNumPacketsLocked(data.count);
+  }
+
+  pending_links_.erase(iter);
+
+  // Try sending the next batch of packets in case buffer space opened up.
+  TrySendNextQueuedPacketsLocked();
+
+  return true;
+}
+
 const DataBufferInfo& ACLDataChannel::GetBufferInfo() const {
   return bredr_buffer_info_;
 }

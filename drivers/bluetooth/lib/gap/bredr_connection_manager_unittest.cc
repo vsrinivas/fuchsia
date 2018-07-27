@@ -95,13 +95,13 @@ class BrEdrConnectionManagerTest : public TestingBase {
 
   void SetUp() override {
     TestingBase::SetUp();
+    InitializeACLDataChannel();
 
     device_cache_ = std::make_unique<RemoteDeviceCache>();
     connection_manager_ = std::make_unique<BrEdrConnectionManager>(
         transport(), device_cache_.get(), true);
 
-    test_device()->StartCmdChannel(test_cmd_chan());
-    test_device()->StartAclChannel(test_acl_chan());
+    StartTestDevice();
   }
 
   void TearDown() override {

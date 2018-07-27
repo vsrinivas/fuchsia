@@ -32,6 +32,9 @@ constexpr UInt128 kLTK{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
 constexpr uint64_t kRand = 1;
 constexpr uint16_t kEDiv = 255;
 
+const DataBufferInfo kBrEdrBufferInfo(1024, 5);
+const DataBufferInfo kLeBufferInfo(1024, 1);
+
 using ::btlib::testing::CommandTransaction;
 
 using TestingBase =
@@ -43,6 +46,12 @@ class ConnectionTest : public TestingBase {
   ~ConnectionTest() override = default;
 
  protected:
+  void SetUp() override {
+    TestingBase::SetUp();
+    InitializeACLDataChannel(kBrEdrBufferInfo, kLeBufferInfo);
+    StartTestDevice();
+  }
+
   ConnectionPtr NewLEConnection(
       Connection::Role role = Connection::Role::kMaster) {
     return Connection::CreateLE(kTestHandle, role, kLEAddress1, kLEAddress2,
@@ -58,7 +67,7 @@ class ConnectionTest : public TestingBase {
 
 using HCI_ConnectionTest = ConnectionTest;
 
-TEST_F(HCI_ConnectionTest, TestGetters) {
+TEST_F(HCI_ConnectionTest, Getters) {
   auto connection = NewLEConnection();
 
   EXPECT_EQ(Connection::LinkType::kLE, connection->ll_type());
@@ -89,7 +98,6 @@ TEST_F(HCI_ConnectionTest, Close) {
 
   test_device()->QueueCommandTransaction(req_bytes,
                                          {&cmd_status_bytes, &disc_cmpl_bytes});
-  StartTestDevice();
 
   bool callback_called = false;
   test_device()->SetTransactionCallback(
@@ -127,7 +135,6 @@ TEST_F(HCI_ConnectionTest, CloseError) {
 
   test_device()->QueueCommandTransaction(req_bytes,
                                          {&cmd_status_bytes, &disc_cmpl_bytes});
-  StartTestDevice();
 
   // The callback should get called regardless of the procedure status.
   bool callback_called = false;
@@ -188,7 +195,6 @@ TEST_F(HCI_ConnectionTest, LEStartEncryptionFailsAtStatus) {
   // clang-format on
 
   test_device()->QueueCommandTransaction(kExpectedCommand, {&kErrorStatus});
-  StartTestDevice();
 
   bool callback = false;
   auto conn = NewLEConnection();
@@ -224,7 +230,6 @@ TEST_F(HCI_ConnectionTest, LEStartEncryptionSuccess) {
   );
 
   test_device()->QueueCommandTransaction(kExpectedCommand, {&kStatus});
-  StartTestDevice();
 
   bool callback = false;
   auto conn = NewLEConnection();
@@ -242,8 +247,6 @@ TEST_F(HCI_ConnectionTest, LEStartEncryptionSuccess) {
 }
 
 TEST_F(HCI_ConnectionTest, EncryptionChangeIgnoredEvents) {
-  StartTestDevice();
-
   // clang-format off
   auto kEncChangeMalformed = CreateStaticByteBuffer(
     0x08,       // HCI Encryption Change event code
@@ -276,8 +279,6 @@ TEST_F(HCI_ConnectionTest, EncryptionChangeIgnoredEvents) {
 }
 
 TEST_F(HCI_ConnectionTest, EncryptionChangeEvents) {
-  StartTestDevice();
-
   // clang-format off
   auto kEncryptionEnabled = CreateStaticByteBuffer(
     0x08,        // HCI Encryption Change event code
@@ -345,8 +346,6 @@ TEST_F(HCI_ConnectionTest, EncryptionChangeEvents) {
 }
 
 TEST_F(HCI_ConnectionTest, EncryptionKeyRefreshEvents) {
-  StartTestDevice();
-
   // clang-format off
   auto kEncryptionKeyRefresh = CreateStaticByteBuffer(
     0x30,       // HCI Encryption Key Refresh Complete event
@@ -399,8 +398,6 @@ TEST_F(HCI_ConnectionTest, EncryptionKeyRefreshEvents) {
 }
 
 TEST_F(HCI_ConnectionTest, LELongTermKeyRequestIgnoredEvent) {
-  StartTestDevice();
-
   // clang-format off
   auto kMalformed = CreateStaticByteBuffer(
     0x3E,        // LE Meta Event code
@@ -441,8 +438,6 @@ TEST_F(HCI_ConnectionTest, LELongTermKeyRequestIgnoredEvent) {
 }
 
 TEST_F(HCI_ConnectionTest, LELongTermKeyRequestNoKey) {
-  StartTestDevice();
-
   // clang-format off
   auto kEvent = CreateStaticByteBuffer(
     0x3E,        // LE Meta Event code
@@ -473,8 +468,6 @@ TEST_F(HCI_ConnectionTest, LELongTermKeyRequestNoKey) {
 
 // There is a link key but EDiv and Rand values don't match.
 TEST_F(HCI_ConnectionTest, LELongTermKeyRequestNoMatchinKey) {
-  StartTestDevice();
-
   // clang-format off
   auto kEvent = CreateStaticByteBuffer(
     0x3E,        // LE Meta Event code
@@ -505,8 +498,6 @@ TEST_F(HCI_ConnectionTest, LELongTermKeyRequestNoMatchinKey) {
 }
 
 TEST_F(HCI_ConnectionTest, LELongTermKeyRequestReply) {
-  StartTestDevice();
-
   // clang-format off
   auto kEvent = CreateStaticByteBuffer(
     0x3E,        // LE Meta Event code
@@ -537,6 +528,47 @@ TEST_F(HCI_ConnectionTest, LELongTermKeyRequestReply) {
 
   test_device()->SendCommandChannelPacket(kEvent);
   RunLoopUntilIdle();
+}
+
+// Tests that a Connection clears the ACL data channel state associated with its
+// connection handle during destruction.
+TEST_F(HCI_ConnectionTest, ClearAclState) {
+  constexpr size_t kMaxNumPackets = 1;
+  ASSERT_EQ(kMaxNumPackets, kLeBufferInfo.max_num_packets());
+
+  auto conn = NewLEConnection();
+
+  // TODO(NET-1211): Change this test to exercise enable/disable functionality.
+  // Consider creating a FakeAclDataChannel class to prevent duplicating tests
+  // in HCI_ConnectionTest and HCI_ACLDataChannelTest.
+  size_t packet_count = 0;
+  test_device()->SetDataCallback([&](const auto&) { packet_count++; },
+                                 dispatcher());
+
+  ASSERT_TRUE(acl_data_channel()->SendPacket(
+      ACLDataPacket::New(conn->handle(),
+                         ACLPacketBoundaryFlag::kFirstNonFlushable,
+                         ACLBroadcastFlag::kPointToPoint, 1),
+      Connection::LinkType::kLE));
+  ASSERT_TRUE(acl_data_channel()->SendPacket(
+      ACLDataPacket::New(conn->handle(),
+                         ACLPacketBoundaryFlag::kFirstNonFlushable,
+                         ACLBroadcastFlag::kPointToPoint, 1),
+      Connection::LinkType::kLE));
+
+  RunLoopUntilIdle();
+
+  // The second packet should have been queued.
+  ASSERT_EQ(kMaxNumPackets, packet_count);
+
+  // Mark the connection as closed so that destroying it doesn't send
+  // HCI_Disconnect. ACLDataChannel should get updated regardless.
+  conn->set_closed();
+
+  // This should allow the next packet to go out.
+  conn = nullptr;
+  RunLoopUntilIdle();
+  ASSERT_EQ(2u, packet_count);
 }
 
 }  // namespace

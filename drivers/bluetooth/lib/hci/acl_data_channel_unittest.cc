@@ -30,11 +30,7 @@ class ACLDataChannelTest : public TestingBase {
   // TestBase overrides:
   void SetUp() override {
     TestingBase::SetUp();
-    test_device()->StartCmdChannel(test_cmd_chan());
-    test_device()->StartAclChannel(test_acl_chan());
-
-    // This test never sets up command/event expections (as it only uses the
-    // data endpoint) so always start the test controller during SetUp().
+    StartTestDevice();
   }
 
  private:
@@ -577,6 +573,44 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
     EXPECT_EQ(1u, packet.payload_size());
     EXPECT_EQ((i % kPacketsPerThread) + 1, packet.payload_bytes()[0]);
   }
+}
+
+TEST_F(HCI_ACLDataChannelTest, ClearLinkState) {
+  constexpr size_t kMaxMTU = 1024;
+  constexpr size_t kMaxNumPackets = 2;
+  constexpr ConnectionHandle kHandle1 = 1;
+  constexpr ConnectionHandle kHandle2 = 2;
+
+  InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
+                           DataBufferInfo());
+
+  int packet_count = 0;
+  test_device()->SetDataCallback([&](const auto&) { packet_count++; },
+                                 dispatcher());
+
+  // Send 3 packets on two links. This is enough to fill up the data buffers.
+  ASSERT_TRUE(acl_data_channel()->SendPacket(
+      ACLDataPacket::New(kHandle1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                         ACLBroadcastFlag::kPointToPoint, 1),
+      Connection::LinkType::kLE));
+  ASSERT_TRUE(acl_data_channel()->SendPacket(
+      ACLDataPacket::New(kHandle2, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                         ACLBroadcastFlag::kPointToPoint, 1),
+      Connection::LinkType::kLE));
+  ASSERT_TRUE(acl_data_channel()->SendPacket(
+      ACLDataPacket::New(kHandle1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                         ACLBroadcastFlag::kPointToPoint, 1),
+      Connection::LinkType::kLE));
+
+  RunLoopUntilIdle();
+
+  // The third packet should have been queued.
+  ASSERT_EQ(2, packet_count);
+
+  // Clear the packet count for |kHandle2|. The next packet should go out.
+  acl_data_channel()->ClearLinkState(kHandle2);
+  RunLoopUntilIdle();
+  ASSERT_EQ(3, packet_count);
 }
 
 TEST_F(HCI_ACLDataChannelTest, ReceiveData) {

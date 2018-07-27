@@ -39,6 +39,7 @@ class LowEnergyConnectorTest : public TestingBase {
   // TestingBase overrides:
   void SetUp() override {
     TestingBase::SetUp();
+    InitializeACLDataChannel();
 
     FakeController::Settings settings;
     settings.ApplyLegacyLEConfig();
@@ -54,9 +55,7 @@ class LowEnergyConnectorTest : public TestingBase {
                   std::placeholders::_1, std::placeholders::_2,
                   std::placeholders::_3),
         dispatcher());
-
-    test_device()->StartCmdChannel(test_cmd_chan());
-    test_device()->StartAclChannel(test_acl_chan());
+    StartTestDevice();
   }
 
   void TearDown() override {

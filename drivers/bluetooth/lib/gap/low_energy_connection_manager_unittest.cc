@@ -43,6 +43,8 @@ class LowEnergyConnectionManagerTest : public TestingBase {
  protected:
   void SetUp() override {
     TestingBase::SetUp();
+
+    // Initialize with LE buffers only.
     TestingBase::InitializeACLDataChannel(
         hci::DataBufferInfo(),
         hci::DataBufferInfo(hci::kMaxACLPayloadSize, 10));
@@ -68,9 +70,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
         fit::bind_member(
             this, &LowEnergyConnectionManagerTest::OnConnectionStateChanged),
         dispatcher());
-
-    test_device()->StartCmdChannel(test_cmd_chan());
-    test_device()->StartAclChannel(test_acl_chan());
+    StartTestDevice();
   }
 
   void TearDown() override {
