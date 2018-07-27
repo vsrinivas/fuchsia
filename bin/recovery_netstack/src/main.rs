@@ -18,6 +18,7 @@
 // an unsound manner without using unsafe code.
 #![deny(safe_packed_borrows)]
 #![deny(missing_docs)]
+#![deny(unreachable_patterns)]
 
 extern crate byteorder;
 #[macro_use]
