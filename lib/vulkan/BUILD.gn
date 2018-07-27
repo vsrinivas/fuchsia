@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/sdk/sdk_atom.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
@@ -11,6 +12,47 @@ group("image_pipe_swapchain") {
   public_deps = [
     "src/swapchain",
   ]
+}
+
+sdk_atom("vulkan_layers") {
+  domain = "cpp"
+  tags = [
+    "type:compiled_shared",
+    "arch:target",
+  ]
+
+  name = "vulkan_layers"
+
+  id = "sdk://pkg/vulkan_layers"
+
+  category = "partner"
+
+  files = []
+
+  # TODO(MA-475): Add image_pipe_swapchain as well once its dependencies are
+  # cleaned up
+  resources = vulkan_validation_layers.resources
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  non_sdk_deps = vulkan_validation_layers.public_deps
+
+  foreach(resource, resources) {
+    files += [
+      {
+        source = resource.path
+        dest = "data/" + resource.dest
+      },
+    ]
+  }
+
+  foreach(loadable_module, loadable_modules) {
+    files += [
+      {
+        source = "$root_out_dir/" + loadable_module.name
+        dest = "dist/" + loadable_module.name
+        packaged = true
+      },
+    ]
+  }
 }
 
 package("image-pipe-swapchain-tests") {
