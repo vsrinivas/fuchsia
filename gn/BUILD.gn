@@ -20,15 +20,11 @@ group("default") {
     ":host_tests",
     ":packages",
   ]
-  if (monolith_packages != []) {
-    deps += [
-      "//build/images",
-    ]
+  if (all_packages != [] || monolith_packages != []) {
+    deps += [ "//build/images" ]
   }
   if (all_packages != []) {
-    deps += [
-      "//build/images:updates",
-    ]
+    deps += [ "//build/images:updates" ]
   }
 }
 
