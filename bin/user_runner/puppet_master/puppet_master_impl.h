@@ -29,12 +29,12 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
   void Connect(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request);
 
  private:
-  // |fuchsia::modular::PuppetMaster|
+  // |PuppetMaster|
   void ControlStory(fidl::StringPtr story_id,
                     fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster>
                         request) override;
 
-  // |fuchsia::modular::PuppetMaster|
+  // |PuppetMaster|
   void WatchSession(
       fidl::InterfaceHandle<fuchsia::modular::SessionWatcher> session_watcher,
       fuchsia::modular::WatchSessionOptionsPtr options,

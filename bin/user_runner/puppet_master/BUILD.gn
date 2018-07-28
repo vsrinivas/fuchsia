@@ -8,6 +8,7 @@ tests_package("puppet_master_unittests") {
   deps = [
     ":dispatch_story_command_executor_unittest",
     ":puppet_master_impl_unittest",
+    ":story_command_executor_unittest",
     "command_runners:add_mod_command_runner_unittest",
     "command_runners:remove_mod_command_runner_unittest",
     "command_runners:set_focus_state_command_runner_unittest",
@@ -59,7 +60,22 @@ source_set("story_command_executor") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+executable("story_command_executor_unittest") {
+  testonly = true
+
+  sources = [
+    "story_command_executor_unittest.cc",
+  ]
+
+  deps = [
+    ":story_command_executor",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

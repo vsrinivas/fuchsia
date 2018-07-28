@@ -59,9 +59,9 @@ interface PuppetMaster {
 };
 
 struct WatchSessionOptions {
-  // If null, all stories are watched. If non-null, only events for
-  // matching stories are returned.
-  vector<string>? filter_story_names;
+  // FIDL doens't allow empty structs. We want this struct to exist in the API
+  // for future session watching options.
+  int32 placeholder;
 };
 
 interface SessionWatcher {

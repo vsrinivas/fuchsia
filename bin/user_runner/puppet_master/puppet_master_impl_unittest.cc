@@ -27,7 +27,7 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommands(
+  void ExecuteCommandsInternal(
       fidl::StringPtr story_id,
       std::vector<fuchsia::modular::StoryCommand> commands,
       std::function<void(fuchsia::modular::ExecuteResult)> done) override {
