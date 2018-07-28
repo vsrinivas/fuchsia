@@ -17,26 +17,15 @@ std::unique_ptr<InterfaceMonitor> FidlInterfaceMonitor::Create(
 }
 
 FidlInterfaceMonitor::FidlInterfaceMonitor(
-    component::StartupContext* startup_context)
-    : binding_(this) {
+    component::StartupContext* startup_context) {
   netstack_ = startup_context
                   ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
 
-  binding_.set_error_handler([this]() {
-    binding_.set_error_handler(nullptr);
-    binding_.Unbind();
-    FXL_LOG(ERROR) << "Connection to netstack dropped.";
-  });
   netstack_.events().OnInterfacesChanged =
-      fit::bind_member(this, &FidlInterfaceMonitor::OnInterfacesChanged);
+      fit::bind_member(this, &FidlInterfaceMonitor::InterfacesChanged);
 }
 
-FidlInterfaceMonitor::~FidlInterfaceMonitor() {
-  if (binding_.is_bound()) {
-    binding_.set_error_handler(nullptr);
-    binding_.Unbind();
-  }
-}
+FidlInterfaceMonitor::~FidlInterfaceMonitor() {}
 
 void FidlInterfaceMonitor::RegisterLinkChangeCallback(fit::closure callback) {
   link_change_callback_ = std::move(callback);
@@ -47,7 +36,7 @@ FidlInterfaceMonitor::GetInterfaces() {
   return interfaces_;
 }
 
-void FidlInterfaceMonitor::OnInterfacesChanged(
+void FidlInterfaceMonitor::InterfacesChanged(
     fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
   bool link_change = false;
 

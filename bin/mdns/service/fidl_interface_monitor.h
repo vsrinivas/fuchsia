@@ -15,8 +15,7 @@
 namespace mdns {
 
 // FIDL-based interface monitor implementation.
-class FidlInterfaceMonitor : public fuchsia::netstack::NotificationListener,
-                             public InterfaceMonitor {
+class FidlInterfaceMonitor : public InterfaceMonitor {
  public:
   static std::unique_ptr<InterfaceMonitor> Create(
       component::StartupContext* startup_context);
@@ -32,12 +31,9 @@ class FidlInterfaceMonitor : public fuchsia::netstack::NotificationListener,
       override;
 
  private:
-  // NotificationListener implementation.
-  void OnInterfacesChanged(
-      fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) override;
-
+  void InterfacesChanged(
+      fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces);
   fuchsia::netstack::NetstackPtr netstack_;
-  fidl::Binding<fuchsia::netstack::NotificationListener> binding_;
   fit::closure link_change_callback_;
   std::vector<std::unique_ptr<InterfaceDescriptor>> interfaces_;
 };
