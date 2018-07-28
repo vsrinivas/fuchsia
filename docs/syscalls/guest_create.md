@@ -45,8 +45,8 @@ returned.
 ## ERRORS
 
 **ZX_ERR_ACCESS_DENIED** *resource* is not of *ZX_RSRC_KIND_HYPERVISOR*, or
-*physmem_vmo* does not have the *ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*, and
-*ZX_RIGHT_EXECUTE* rights.
+*physmem_vmo* does not have the *ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*,
+*ZX_RIGHT_EXECUTE*, and *ZX_RIGHT_MAP* rights.
 
 **ZX_ERR_BAD_HANDLE** *physmem_vmo* is an invalid handle.
 

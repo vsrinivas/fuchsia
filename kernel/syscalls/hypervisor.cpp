@@ -29,7 +29,7 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<VmObjectDispatcher> physmem;
-    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE;
+    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP;
     status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
     if (status != ZX_OK)
         return status;
