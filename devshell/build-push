@@ -61,6 +61,14 @@ function main {
     return
   fi
 
+  if [[ "${#targets[@]}" -eq 0 ]]; then
+    echo "No packages names provided, all packages will be pushed."
+    echo "Consider using \"fx build && fx ota\" for better performance when"
+    echo "pushing all packages."
+    # give a window for that to sink in
+    sleep 1
+  fi
+
   if [[ -z "$(pgrep amber-srv)" ]]; then
     echo
     echo "WARNING: It looks like amber-srv is not running."
