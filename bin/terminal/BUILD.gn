@@ -22,7 +22,9 @@ rustc_binary("bin") {
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-scenic",
     "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/crates/shared-buffer",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:font-rs",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:parking_lot",
   ]
