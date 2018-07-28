@@ -226,6 +226,18 @@ function main {
     shift
   done
 
+  if [[ -z "${products}${packages}" ]]; then
+    # This is the default logic GN would use, but if a user specified --netboot
+    # we would short-circuit the logic, so repeat it here.
+    local layers
+    layers="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
+    readonly layers
+    local layer
+    for layer in $layers; do
+      products+="${products:+,}$layer/products/default"
+    done
+  fi
+
   # Remove any trailing slash from build directory name.
   build_dir="${build_dir%/}"
 
