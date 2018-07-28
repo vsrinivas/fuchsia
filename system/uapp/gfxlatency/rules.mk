@@ -20,9 +20,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/gfx \
     system/ulib/hid \
-    system/ulib/framebuffer \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/fidl/fuchsia-display
@@ -33,5 +33,7 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/zircon \
     system/ulib/trace-engine
+
+MODULE_FIDL_LIBS := system/fidl/fuchsia-display
 
 include make/module.mk
