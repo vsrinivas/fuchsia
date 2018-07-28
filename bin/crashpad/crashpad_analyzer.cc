@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
+#include <fuchsia/crash/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/io.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/trim.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
+#include <third_party/crashpad/client/settings.h>
+#include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
+#include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/strings/trim.h"
-
-#include <utility>
-
-#include <fuchsia/crash/cpp/fidl.h>
-#include "lib/component/cpp/startup_context.h"
-#include "third_party/crashpad/client/settings.h"
-#include "third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h"
-#include "third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h"
 
 namespace {
 
@@ -63,14 +63,14 @@ std::string GetSystemLogToFile() {
   char filename[] = "/data/crashes/log.XXXXXX";
   base::ScopedFD fd(mkstemp(filename));
   if (fd.get() < 0) {
-    printf("crashpad_analyzer: could not create temp file\n");
+    FXL_LOG(ERROR) << "could not create temp file";
     return std::string();
   }
 
   zx::log log;
   zx_status_t status = zx::log::create(ZX_LOG_FLAG_READABLE, &log);
   if (status != ZX_OK) {
-    printf("zx::log::create failed %d\n", status);
+    FXL_LOG(ERROR) << "zx::log::create failed " << status;
     return std::string();
   }
 
@@ -84,8 +84,8 @@ std::string GetSystemLogToFile() {
 
     dprintf(fd.get(), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
             (int)(rec->timestamp / 1000000000ULL),
-            (int)((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid,
-            rec->tid, rec->data);
+            (int)((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid, rec->tid,
+            rec->data);
   }
   return std::string(filename);
 }
@@ -123,7 +123,6 @@ int HandleException(zx::process process, zx::thread thread) {
     return EXIT_FAILURE;
   }
 
-  printf("WARNING: In test configuration, opting in to crash report upload.\n");
   database->GetSettings()->SetUploadsEnabled(true);
 
   ScopedStoppable upload_thread;
