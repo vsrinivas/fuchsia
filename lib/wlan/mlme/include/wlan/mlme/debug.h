@@ -31,5 +31,13 @@ std::string Describe(const Packet& packet);
 std::string Describe(const AmsduSubframe& s);
 
 std::string DescribeSuppressed(const Packet& p);
+
+std::string DescribeArray(const uint8_t arr[], size_t size);
+std::string DescribeHtCaps(const wlan_ht_caps& ht_caps);
+
+std::string DescribeSupportedChannels(const wlan_chan_list& wl);
+std::string DescribeWlanBandInfo(const wlan_band_info& bi);
+std::string DescribeWlanMacInfo(const wlanmac_info& wi);
+
 }  // namespace debug
 }  // namespace wlan

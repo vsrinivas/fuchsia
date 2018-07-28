@@ -329,5 +329,63 @@ std::string DescribeSuppressed(const Packet& p) {
     return "";
 }
 
+std::string DescribeArray(const uint8_t arr[], size_t size) {
+    char buf[1024];
+    size_t offset = 0;
+    for (size_t idx = 0; idx < size; idx++) {
+        BUFFER("%02x", arr[idx]);
+    }
+    return std::string(buf);
+}
+
+std::string DescribeHtCaps(const wlan_ht_caps& ht_caps) {
+    char buf[1024];
+    size_t offset = 0;
+    BUFFER("ht_cap_info:%04x", ht_caps.ht_capability_info);
+    BUFFER("ampdu_params:%02x", ht_caps.ampdu_params);
+    BUFFER("supported_mcs_set:[%s]", DescribeArray(ht_caps.supported_mcs_set, 16).c_str());
+    BUFFER("ht_ext_cap:%04x", ht_caps.ht_ext_capabilities);
+    BUFFER("txbf:%08x", ht_caps.tx_beamforming_capabilities);
+    BUFFER("asel:%02x", ht_caps.asel_capabilities);
+    return std::string(buf);
+}
+
+std::string DescribeSupportedChannels(const wlan_chan_list& wl) {
+    char buf[512];
+    size_t offset = 0;
+    BUFFER("base_freq:%u", wl.base_freq);
+    BUFFER("channels:[%s]", DescribeArray(wl.channels, 64).c_str());
+    return std::string(buf);
+}
+
+std::string DescribeWlanBandInfo(const wlan_band_info& bi) {
+    char buf[1024];
+    size_t offset = 0;
+    BUFFER("desc:%s", bi.desc);
+    BUFFER("ht_caps:[%s]", DescribeHtCaps(bi.ht_caps).c_str());
+    BUFFER("vht_supported:%u", bi.vht_supported);
+    BUFFER("vht_caps:[to implement]");
+    BUFFER("basic_rates:[%s]", DescribeArray(bi.basic_rates, 12).c_str());
+    BUFFER("supported_channels:[%s]", DescribeSupportedChannels(bi.supported_channels).c_str());
+    return std::string(buf);
+}
+
+std::string DescribeWlanMacInfo(const wlanmac_info& wi) {
+    char buf[2048];
+    size_t offset = 0;
+
+    auto& ii = wi.ifc_info;
+    BUFFER("mac:%s", common::MacAddr(ii.mac_addr).ToString().c_str());
+    BUFFER("role:%04x", ii.mac_role);
+    BUFFER("phys:%04x", ii.supported_phys);
+    BUFFER("feat:%08x", ii.driver_features);
+    BUFFER("cap:%08x", ii.caps);
+    BUFFER("#bands:%u", ii.num_bands);
+    for (uint8_t i = 0; i < ii.num_bands; i++) {
+        BUFFER("[band %u] %s", i, DescribeWlanBandInfo(ii.bands[i]).c_str());
+    }
+    return std::string(buf);
+}
+
 }  // namespace debug
 }  // namespace wlan
