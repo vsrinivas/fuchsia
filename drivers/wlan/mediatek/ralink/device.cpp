@@ -9,8 +9,8 @@
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
@@ -121,8 +121,7 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     },
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
         return DEV(ctx)->DestroyIface(id);
-    }
-};
+    }};
 
 static wlanmac_protocol_ops_t wlanmac_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
@@ -157,10 +156,7 @@ constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-    : parent_(device),
-      usb_(usb),
-      rx_endpt_(bulk_in),
-      tx_endpts_(std::move(bulk_out)) {
+    : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
 }
 
@@ -3349,9 +3345,7 @@ void Device::MacUnbind() {
     zx_device_t* dev;
     {
         std::lock_guard<std::mutex> guard(lock_);
-        if (iface_state_ == IFC_DESTROYING) {
-            return;
-        }
+        if (iface_state_ == IFC_DESTROYING) { return; }
         iface_state_ = IFC_DESTROYING;
         dev = wlanmac_dev_;
     }
@@ -3445,8 +3439,8 @@ zx_status_t Device::Query(wlan_info_t* info) {
                         0xff,
                         0x00,
                         0x00,
-                        0x80,
                         0x00,
+                        0x01,
                         0x00,
                         0x00,
                         0x00,
@@ -3475,7 +3469,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
         .basic_rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
         .supported_channels =
             {
-                .base_freq = 2417,
+                .base_freq = 2407,
                 .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
             },
     };
@@ -3497,8 +3491,8 @@ zx_status_t Device::Query(wlan_info_t* info) {
                             0xff,
                             0xff,
                             0x00,
-                            0x80,
                             0x00,
+                            0x01,
                             0x00,
                             0x00,
                             0x00,
@@ -3545,12 +3539,8 @@ zx_status_t Device::CreateIface(uint16_t role, uint16_t* id) {
 
     {
         std::lock_guard<std::mutex> guard(lock_);
-        if (phy_state_ != PHY_RUNNING) {
-            return ZX_ERR_BAD_STATE;
-        }
-        if (iface_state_ != IFC_NONE) {
-            return ZX_ERR_ALREADY_BOUND;
-        }
+        if (phy_state_ != PHY_RUNNING) { return ZX_ERR_BAD_STATE; }
+        if (iface_state_ != IFC_NONE) { return ZX_ERR_ALREADY_BOUND; }
         iface_state_ = IFC_CREATING;
     }
 
@@ -3581,9 +3571,7 @@ zx_status_t Device::DestroyIface(uint16_t id) {
 
     {
         std::lock_guard<std::mutex> guard(lock_);
-        if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) {
-            return ZX_ERR_BAD_STATE;
-        }
+        if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) { return ZX_ERR_BAD_STATE; }
 
         if (id != iface_id_) {
             errorf("unknown iface id in destroy request: %u (expected %u)\n", id, iface_id_);
@@ -3604,9 +3592,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     uint16_t role;
     {
         std::lock_guard<std::mutex> guard(lock_);
-        if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) {
-            return ZX_ERR_BAD_STATE;
-        }
+        if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) { return ZX_ERR_BAD_STATE; }
         role = iface_role_;
     }
     zx_status_t status = Query(&info->ifc_info);
@@ -3752,8 +3738,8 @@ zx_status_t Device::StartInterruptPolling() {
         return status;
     }
 
-    status = async_tx_interrupt_timer_.wait_async(
-        interrupt_port_, kAsyncTxInterruptKey, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
+    status = async_tx_interrupt_timer_.wait_async(interrupt_port_, kAsyncTxInterruptKey,
+                                                  ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
     if (status != ZX_OK) {
         errorf("could not wait on async TX timer: %d\n", status);
         return status;
@@ -3765,8 +3751,8 @@ zx_status_t Device::StartInterruptPolling() {
         return status;
     }
 
-    status = tbtt_interrupt_timer_.wait_async(
-        interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
+    status = tbtt_interrupt_timer_.wait_async(interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED,
+                                              ZX_WAIT_ASYNC_REPEATING);
     if (status != ZX_OK) {
         errorf("could not wait on TBTT timer: %d\n", status);
         return status;
@@ -3805,9 +3791,7 @@ zx_status_t Device::OnTbttInterruptTimer() {
     if (pre_tbtt_interrupt) {
         {
             std::lock_guard<std::mutex> guard(lock_);
-            if (wlanmac_proxy_ != nullptr) {
-                wlanmac_proxy_->Indication(WLAN_INDICATION_PRE_TBTT);
-            }
+            if (wlanmac_proxy_ != nullptr) { wlanmac_proxy_->Indication(WLAN_INDICATION_PRE_TBTT); }
         }
 
         // Clear the pre-TBTT interrupt.

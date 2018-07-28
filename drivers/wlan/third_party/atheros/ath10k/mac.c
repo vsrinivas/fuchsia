@@ -101,12 +101,12 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
-        .name = "2.4 Ghz",
+        .name = "2.4 GHz",
         // FIXME: NET-817
         .ht_caps = { .ht_capability_info = 0x01fe,
                      .ampdu_params = 0x00,
-                     .supported_mcs_set = { 0xff, 0x00, 0x00, 0x80,
-                                            0x00, 0x00, 0x00, 0x00,
+                     .supported_mcs_set = { 0xff, 0x00, 0x00, 0x00,
+                                            0x01, 0x00, 0x00, 0x00,
                                             0x00, 0x00, 0x00, 0x00,
                                             0x01, 0x00, 0x00, 0x00 },
                      .ht_ext_capabilities = 0x0000,
@@ -120,12 +120,12 @@ static const struct ath10k_band ath10k_supported_bands[] = {
     },
 
     {
-        .name = "5 Ghz",
+        .name = "5 GHz",
         // FIXME: NET-817
         .ht_caps = { .ht_capability_info = 0x01fe,
                      .ampdu_params = 0x00,
-                     .supported_mcs_set = { 0xff, 0xff, 0x00, 0x80,
-                                            0x00, 0x00, 0x00, 0x00,
+                     .supported_mcs_set = { 0xff, 0xff, 0x00, 0x00,
+                                            0x01, 0x00, 0x00, 0x00,
                                             0x00, 0x00, 0x00, 0x00,
                                             0x01, 0x00, 0x00, 0x00 },
                      .ht_ext_capabilities = 0x0000,
@@ -133,6 +133,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
                      .asel_capabilities = 0x00 },
         .vht_supported = false,
         .basic_rates = { 12, 18, 24, 36, 48, 72, 96, 108 },
+        .base_freq = 5000,
         .n_channels = countof(ath10k_5ghz_channels),
         .channels = ath10k_5ghz_channels,
     },
