@@ -14,19 +14,18 @@ __BEGIN_CDECLS
 #define ZX_WAIT_ASYNC_ONCE          0u
 #define ZX_WAIT_ASYNC_REPEATING     1u
 
-// packet types.
-#define ZX_PKT_TYPE_USER            0x00u
-#define ZX_PKT_TYPE_SIGNAL_ONE      0x01u
-#define ZX_PKT_TYPE_SIGNAL_REP      0x02u
-#define ZX_PKT_TYPE_GUEST_BELL      0x03u
-#define ZX_PKT_TYPE_GUEST_MEM       0x04u
-#define ZX_PKT_TYPE_GUEST_IO        0x05u
-#define ZX_PKT_TYPE_GUEST_VCPU      0x06u
-#define ZX_PKT_TYPE_INTERRUPT       0x07u
-#define ZX_PKT_TYPE_EXCEPTION(n)    (0x08u | (((n) & 0xFFu) << 8))
+// packet types.  zx_port_packet_t::type
+#define ZX_PKT_TYPE_USER            ((uint8_t)0x00u)
+#define ZX_PKT_TYPE_SIGNAL_ONE      ((uint8_t)0x01u)
+#define ZX_PKT_TYPE_SIGNAL_REP      ((uint8_t)0x02u)
+#define ZX_PKT_TYPE_GUEST_BELL      ((uint8_t)0x03u)
+#define ZX_PKT_TYPE_GUEST_MEM       ((uint8_t)0x04u)
+#define ZX_PKT_TYPE_GUEST_IO        ((uint8_t)0x05u)
+#define ZX_PKT_TYPE_GUEST_VCPU      ((uint8_t)0x06u)
+#define ZX_PKT_TYPE_INTERRUPT       ((uint8_t)0x07u)
+#define ZX_PKT_TYPE_EXCEPTION(n)    ((uint32_t)(0x08u | (((n) & 0xFFu) << 8)))
 
-
-#define ZX_PKT_TYPE_MASK            0xFFu
+#define ZX_PKT_TYPE_MASK            ((uint32_t)0x000000FFu)
 
 #define ZX_PKT_IS_USER(type)        ((type) == ZX_PKT_TYPE_USER)
 #define ZX_PKT_IS_SIGNAL_ONE(type)  ((type) == ZX_PKT_TYPE_SIGNAL_ONE)

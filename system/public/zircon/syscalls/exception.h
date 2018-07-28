@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSCALLS_EXCEPTION_H_
+#define ZIRCON_SYSCALLS_EXCEPTION_H_
 
-#include <zircon/types.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -16,46 +18,47 @@ __BEGIN_CDECLS
 // architectural exceptions.
 // Note: Port packet types provide 8 bits to distinguish the exception type.
 // See zircon/port.h.
-#define ZX_EXCP_SYNTH 0x80
+#define ZX_EXCP_SYNTH ((uint8_t)0x80)
 
 // The kind of an exception.
 // Exception types are a subset of port packet types. See zircon/port.h.
-typedef enum {
-    // These are architectural exceptions.
-    // Depending on the exception, further information can be found in
-    // |report.context.arch|.
 
-    // General exception not covered by another value.
-    ZX_EXCP_GENERAL = ZX_PKT_TYPE_EXCEPTION(0),
-    ZX_EXCP_FATAL_PAGE_FAULT = ZX_PKT_TYPE_EXCEPTION(1),
-    ZX_EXCP_UNDEFINED_INSTRUCTION = ZX_PKT_TYPE_EXCEPTION(2),
-    ZX_EXCP_SW_BREAKPOINT = ZX_PKT_TYPE_EXCEPTION(3),
-    ZX_EXCP_HW_BREAKPOINT = ZX_PKT_TYPE_EXCEPTION(4),
-    ZX_EXCP_UNALIGNED_ACCESS = ZX_PKT_TYPE_EXCEPTION(5),
+// These are architectural exceptions.
+// Depending on the exception, further information can be found in
+// |report.context.arch|.
 
-    // Synthetic exceptions.
+// General exception not covered by another value.
+#define ZX_EXCP_GENERAL ZX_PKT_TYPE_EXCEPTION(0)
+#define ZX_EXCP_FATAL_PAGE_FAULT ZX_PKT_TYPE_EXCEPTION(1)
+#define ZX_EXCP_UNDEFINED_INSTRUCTION ZX_PKT_TYPE_EXCEPTION(2)
+#define ZX_EXCP_SW_BREAKPOINT ZX_PKT_TYPE_EXCEPTION(3)
+#define ZX_EXCP_HW_BREAKPOINT ZX_PKT_TYPE_EXCEPTION(4)
+#define ZX_EXCP_UNALIGNED_ACCESS ZX_PKT_TYPE_EXCEPTION(5)
 
-    // A thread is starting.
-    // This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
-    // The thread is paused until it is resumed by the debugger
-    // with zx_task_resume.
-    ZX_EXCP_THREAD_STARTING = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 0),
+// Synthetic exceptions.
 
-    // A thread is exiting.
-    // This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
-    // This exception is different from ZX_EXCP_GONE in that a debugger can
-    // still examine thread state.
-    // The thread is paused until it is resumed by the debugger
-    // with zx_task_resume.
-    ZX_EXCP_THREAD_EXITING = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 1),
+// A thread is starting.
+// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
+// The thread is paused until it is resumed by the debugger
+// with zx_task_resume.
+#define ZX_EXCP_THREAD_STARTING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 0)
 
-    // This exception is generated when a syscall fails with a job policy
-    // error (for example, an invalid handle argument is passed to the
-    // syscall when the ZX_POL_BAD_HANDLE policy is enabled) and
-    // ZX_POL_ACTION_EXCEPTION is set for the policy.  The thread that
-    // invoked the syscall may be resumed with zx_task_resume().
-    ZX_EXCP_POLICY_ERROR = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 2),
-} zx_excp_type_t;
+// A thread is exiting.
+// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
+// This exception is different from ZX_EXCP_GONE in that a debugger can
+// still examine thread state.
+// The thread is paused until it is resumed by the debugger
+// with zx_task_resume.
+#define ZX_EXCP_THREAD_EXITING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 1)
+
+// This exception is generated when a syscall fails with a job policy
+// error (for example, an invalid handle argument is passed to the
+// syscall when the ZX_POL_BAD_HANDLE policy is enabled) and
+// ZX_POL_ACTION_EXCEPTION is set for the policy.  The thread that
+// invoked the syscall may be resumed with zx_task_resume().
+#define ZX_EXCP_POLICY_ERROR ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 2)
+
+typedef uint32_t zx_excp_type_t;
 
 // Assuming |excp| is an exception type, return non-zero if it is an
 // architectural exception.
@@ -90,8 +93,7 @@ typedef struct zx_exception_header {
     // The actual size, in bytes, of the report (including this field).
     uint32_t size;
 
-    // While IWBN to use an enum here, it's still not portable in C.
-    uint32_t /*zx_excp_type_t*/ type;
+    zx_excp_type_t type;
 } zx_exception_header_t;
 
 // Data reported to an exception handler for most exceptions.
@@ -102,31 +104,33 @@ typedef struct zx_exception_report {
 } zx_exception_report_t;
 
 // Options for zx_task_resume()
-#define ZX_RESUME_EXCEPTION (1)
+#define ZX_RESUME_EXCEPTION ((uint32_t)1)
 // Indicates that we should resume the thread from stopped-in-exception state
 // (default resume does not do so)
 
-#define ZX_RESUME_TRY_NEXT (2)
+#define ZX_RESUME_TRY_NEXT ((uint32_t)2)
 // Only meaningful when combined with ZX_RESUME_EXCEPTION
 // Indicates that instead of resuming from the faulting instruction we instead
 // let the next exception handler in the search order, if any, process the
 // exception. If there are no more then the entire process is killed.
 
 // Options for zx_task_bind_exception_port.
-#define ZX_EXCEPTION_PORT_DEBUGGER (1)
+#define ZX_EXCEPTION_PORT_DEBUGGER ((uint32_t)1)
 // When binding an exception port to a process, set the process's debugger
 // exception port.
-#define ZX_EXCEPTION_PORT_UNBIND_QUIETLY (2)
+#define ZX_EXCEPTION_PORT_UNBIND_QUIETLY ((uint32_t)2)
 // When unbinding an exception port from a thread or process, any threads that
 // got an exception and are waiting for a response from this exception port
 // will continue to wait for a response.
 
 // The type of exception port a thread may be waiting for a response from.
 // These values are reported in zx_info_thread_t.wait_exception_port_type.
-#define ZX_EXCEPTION_PORT_TYPE_NONE     (0u)
-#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER (1u)
-#define ZX_EXCEPTION_PORT_TYPE_THREAD   (2u)
-#define ZX_EXCEPTION_PORT_TYPE_PROCESS  (3u)
-#define ZX_EXCEPTION_PORT_TYPE_JOB      (4u)
+#define ZX_EXCEPTION_PORT_TYPE_NONE     ((uint32_t)0u)
+#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER ((uint32_t)1u)
+#define ZX_EXCEPTION_PORT_TYPE_THREAD   ((uint32_t)2u)
+#define ZX_EXCEPTION_PORT_TYPE_PROCESS  ((uint32_t)3u)
+#define ZX_EXCEPTION_PORT_TYPE_JOB      ((uint32_t)4u)
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSCALLS_EXCEPTION_H_
