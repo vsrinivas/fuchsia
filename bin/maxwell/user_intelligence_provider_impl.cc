@@ -23,7 +23,7 @@ constexpr char kUsageLogUrl[] = "usage_log";
 constexpr char kStoryInfoAgentUrl[] = "story_info";
 
 constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
-    3, fxl::TimeDelta::FromSeconds(45)};
+    3, zx::sec(45)};
 
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
 // InterfaceHandle<>.
@@ -226,7 +226,7 @@ void UserIntelligenceProviderImpl::StartKronk() {
       StartKronk();
     } else {
       FXL_LOG(WARNING) << "Kronk crashed more than " << kKronkRetryLimit.count
-                       << " times in " << kKronkRetryLimit.period.ToSecondsF()
+                       << " times in " << kKronkRetryLimit.period.to_secs()
                        << " seconds. Speech capture disabled.";
     }
   });

@@ -10,7 +10,7 @@ RateLimitedRetry::RateLimitedRetry(const Threshold& threshold)
     : threshold_(threshold), failure_series_count_(0) {}
 
 bool RateLimitedRetry::ShouldRetry() {
-  fxl::TimePoint now = fxl::TimePoint::Now();
+  zx::time now = zx::clock::get_monotonic();
   if (failure_series_count_ == 0 ||
       now - failure_series_start_ >= threshold_.period) {
     failure_series_start_ = now;

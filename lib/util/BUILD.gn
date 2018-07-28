@@ -27,7 +27,7 @@ source_set("rate_limited_retry") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/zx",
   ]
 }
 

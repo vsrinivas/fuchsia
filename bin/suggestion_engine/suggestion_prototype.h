@@ -8,7 +8,7 @@
 #include <strstream>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fxl/time/time_point.h>
+#include <lib/zx/time.h>
 
 namespace modular {
 
@@ -21,7 +21,7 @@ struct SuggestionPrototype {
   std::string story_id;
   std::string preloaded_story_id;
   std::string source_url;
-  fxl::TimePoint timestamp;
+  zx::time timestamp;
   fuchsia::modular::Proposal proposal;
 };
 

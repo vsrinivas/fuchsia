@@ -88,7 +88,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   AppClientBase app_client_base(&launcher, GetTestAppConfig());
 
   bool app_terminated_callback_called = false;
-  app_client_base.Teardown(fxl::TimeDelta::Zero(),
+  app_client_base.Teardown(zx::duration(),
                            [&app_terminated_callback_called] {
                              app_terminated_callback_called = true;
                            });

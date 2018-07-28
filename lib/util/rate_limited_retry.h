@@ -5,8 +5,7 @@
 #ifndef PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
 #define PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
 
-#include <lib/fxl/time/time_delta.h>
-#include <lib/fxl/time/time_point.h>
+#include <lib/zx/time.h>
 
 namespace modular {
 
@@ -18,7 +17,7 @@ class RateLimitedRetry {
  public:
   struct Threshold {
     unsigned int count;
-    fxl::TimeDelta period;
+    zx::duration period;
   };
 
   // Constructs a retry tracker where retry should occur as long as no more than
@@ -37,7 +36,7 @@ class RateLimitedRetry {
   const Threshold threshold_;
 
   unsigned int failure_series_count_;
-  fxl::TimePoint failure_series_start_;
+  zx::time failure_series_start_;
 };
 
 }  // namespace modular

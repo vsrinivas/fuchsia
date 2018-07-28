@@ -5,12 +5,12 @@
 #ifndef PERIDOT_LIB_COMMON_TEARDOWN_H_
 #define PERIDOT_LIB_COMMON_TEARDOWN_H_
 
-#include <lib/fxl/time/time_delta.h>
+#include <lib/zx/time.h>
 
 namespace modular {
 
 // Standard timeout for dispatcher teardown.
-constexpr auto kBasicTimeout = fxl::TimeDelta::FromSeconds(1);
+constexpr auto kBasicTimeout = zx::sec(1);
 
 // Timeouts for teardown of composite objects need to be larger than the basic
 // timeout, because they run through the teardown of their parts, at least

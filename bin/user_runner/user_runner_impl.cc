@@ -130,7 +130,7 @@ std::function<void(std::function<void()>)> Reset(
 // members.
 template <typename X>
 std::function<void(std::function<void()>)> Teardown(
-    const fxl::TimeDelta timeout, const char* const message, X* const field) {
+    const zx::duration timeout, const char* const message, X* const field) {
   return [timeout, message, field](std::function<void()> cont) {
     field->Teardown(timeout, [message, cont] {
       if (message) {

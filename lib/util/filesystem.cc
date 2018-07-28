@@ -14,8 +14,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/string_view.h>
-#include <lib/fxl/time/time_delta.h>
-#include <lib/fxl/time/time_point.h>
+#include <lib/zx/time.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -24,12 +23,12 @@ namespace modular {
 // For polling minfs.
 constexpr fxl::StringView kPersistentFileSystem = "/data";
 constexpr fxl::StringView kMinFsName = "minfs";
-constexpr fxl::TimeDelta kMaxPollingDelay = fxl::TimeDelta::FromSeconds(10);
+constexpr zx::duration kMaxPollingDelay = zx::sec(10);
 
 void WaitForMinfs() {
-  auto delay = fxl::TimeDelta::FromMilliseconds(10);
-  fxl::TimePoint now = fxl::TimePoint::Now();
-  while (fxl::TimePoint::Now() - now < kMaxPollingDelay) {
+  auto delay = zx::msec(10);
+  zx::time now = zx::clock::get_monotonic();
+  while (zx::clock::get_monotonic() - now < kMaxPollingDelay) {
     fxl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDONLY));
     if (fd.is_valid()) {
       char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
@@ -42,7 +41,7 @@ void WaitForMinfs() {
       }
     }
 
-    usleep(delay.ToMicroseconds());
+    usleep(delay.to_usecs());
     delay = delay * 2;
   }
 

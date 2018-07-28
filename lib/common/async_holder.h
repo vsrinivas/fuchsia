@@ -10,7 +10,7 @@
 #include <string>
 
 #include <lib/fxl/macros.h>
-#include <lib/fxl/time/time_delta.h>
+#include <lib/zx/time.h>
 
 namespace modular {
 
@@ -28,7 +28,7 @@ class AsyncHolderBase {
   // long, and it's incongruent to have the timeout dangling after it, (2) the
   // timeout happens first, the done callback after that, so this ordering is
   // actually quite natural.
-  void Teardown(fxl::TimeDelta timeout, std::function<void()> done);
+  void Teardown(zx::duration timeout, std::function<void()> done);
 
  private:
   // Called by Teardown(). A timeout callback is scheduled simultaneously.

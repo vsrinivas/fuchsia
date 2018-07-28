@@ -7,7 +7,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fxl/logging.h>
-#include <lib/zx/time.h>
 
 namespace modular {
 
@@ -23,7 +22,7 @@ AsyncHolderBase::~AsyncHolderBase() {
   *down_ = true;
 }
 
-void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
+void AsyncHolderBase::Teardown(zx::duration timeout,
                                std::function<void()> done) {
   auto cont = [this, down = down_,
                done = std::move(done)](const bool from_timeout) {
@@ -46,8 +45,7 @@ void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
 
   auto cont_normal = [cont] { cont(false); };
 
-  async::PostDelayedTask(async_get_default_dispatcher(), cont_timeout,
-                         zx::nsec(timeout.ToNanoseconds()));
+  async::PostDelayedTask(async_get_default_dispatcher(), cont_timeout, timeout);
   ImplTeardown(cont_normal);
 }
 

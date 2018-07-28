@@ -33,7 +33,7 @@ SuggestionPrototype* CreateSuggestionPrototype(
   } else {
     suggestion_prototype->story_id = story_id;
   }
-  suggestion_prototype->timestamp = fxl::TimePoint::Now();
+  suggestion_prototype->timestamp = zx::clock::get_monotonic();
   suggestion_prototype->proposal = std::move(proposal);
 
   return suggestion_prototype;
