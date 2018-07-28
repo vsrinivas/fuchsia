@@ -48,7 +48,7 @@ def make_variant(name, info):
         tc = '%s-%s-shared' % (info.cpu.gn, name)
         if name in ('asan', 'asan-sancov'):
             libprefix = 'asan/'
-            runtime = 'libclang_rt.asan-%s.so' % info.cpu.llvm
+            runtime = 'libclang_rt.asan.so'
             # ASan drivers need devhost.asan.
             aux = [(file + '.asan', group) for file, group in aux]
     return variant(tc, libprefix, runtime, aux)
