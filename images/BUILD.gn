@@ -7,6 +7,7 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
+import("//build/images/crashpad.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
@@ -278,11 +279,6 @@ images += [
 ###
 
 declare_args() {
-  # When this is set, Crashpad will be used to handle exceptions (which uploads
-  # crashes to the crash server), rather than crashanalyzer in Zircon (which
-  # prints a backtrace the the system log).
-  enable_crashpad = false
-
   # List of arguments to add to /boot/config/devmgr.
   # These come after synthesized arguments to configure blobfs and pkgfs,
   # and the one generated for [`enable_crashpad`](#enable_crashpad).
