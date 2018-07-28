@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSCALLS_PORT_H_
+#define ZIRCON_SYSCALLS_PORT_H_
 
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -11,8 +13,8 @@ __BEGIN_CDECLS
 // clang-format off
 
 // zx_object_wait_async() options
-#define ZX_WAIT_ASYNC_ONCE          0u
-#define ZX_WAIT_ASYNC_REPEATING     1u
+#define ZX_WAIT_ASYNC_ONCE          ((uint32_t)0u)
+#define ZX_WAIT_ASYNC_REPEATING     ((uint32_t)1u)
 
 // packet types.  zx_port_packet_t::type
 #define ZX_PKT_TYPE_USER            ((uint8_t)0x00u)
@@ -37,8 +39,9 @@ __BEGIN_CDECLS
 #define ZX_PKT_IS_INTERRUPT(type)   ((type) == ZX_PKT_TYPE_INTERRUPT)
 #define ZX_PKT_IS_EXCEPTION(type)   (((type) & ZX_PKT_TYPE_MASK) == ZX_PKT_TYPE_EXCEPTION(0))
 
-#define ZX_PKT_GUEST_VCPU_INTERRUPT  0
-#define ZX_PKT_GUEST_VCPU_STARTUP    1
+// zx_packet_guest_vcpu_t::type
+#define ZX_PKT_GUEST_VCPU_INTERRUPT  ((uint8_t)0)
+#define ZX_PKT_GUEST_VCPU_STARTUP    ((uint8_t)1)
 // clang-format on
 
 // port_packet_t::type ZX_PKT_TYPE_USER.
@@ -142,3 +145,5 @@ typedef struct zx_port_packet {
 } zx_port_packet_t;
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSCALLS_PORT_H_
