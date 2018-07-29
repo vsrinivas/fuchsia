@@ -7,7 +7,9 @@
 extern crate failure;
 extern crate fuchsia_async as async;
 extern crate fuchsia_syslog_listener as syslog_listener;
+
 extern crate fuchsia_zircon as zx;
+use zx::{ClockId, Time};
 
 use failure::{Error, ResultExt};
 use std::collections::hash_set::HashSet;
@@ -29,12 +31,6 @@ struct LogListenerOptions {
     local: LocalOptions,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct LocalOptions {
-    file: Option<String>,
-    ignore_tags: HashSet<String>,
-}
-
 impl Default for LogListenerOptions {
     fn default() -> LogListenerOptions {
         LogListenerOptions {
@@ -52,11 +48,47 @@ impl Default for LogListenerOptions {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+struct LocalOptions {
+    file: Option<String>,
+    ignore_tags: HashSet<String>,
+    clock: ClockId,
+}
+
 impl Default for LocalOptions {
     fn default() -> LocalOptions {
         LocalOptions {
             file: None,
             ignore_tags: HashSet::new(),
+            clock: ClockId::Monotonic,
+        }
+    }
+}
+
+impl LocalOptions {
+    fn format_time(&self, timestamp: u64) -> String {
+        match self.clock {
+            ClockId::UTC => {
+                // Find UTC offset for Monotonic.
+                // Must compute this every time since UTC time can be adjusted.
+                // Note that when printing old messages from memory buffer then
+                // this may offset them from UTC time as set when logged in
+                // case of UTC time adjustments since.
+                let monotonic_zero_as_utc =
+                    Time::get(ClockId::UTC).nanos() - Time::get(ClockId::Monotonic).nanos();
+                let utc_timestamp = monotonic_zero_as_utc + timestamp;
+                // TODO(CP-111): format as wall time
+                format!(
+                    "{:05}.{:06}",
+                    utc_timestamp / 1000000000,
+                    (utc_timestamp / 1000) % 1000000
+                )
+            }
+            ClockId::Monotonic | _ => format!(
+                "{:05}.{:06}",
+                timestamp / 1000000000,
+                (timestamp / 1000) % 1000000
+            ),
         }
     }
 }
@@ -87,6 +119,10 @@ fn help(name: &str) -> String {
 
         --file <string>:
             File to write logs to. If omitted, logs are written to stdout.
+
+        --clock <MONOTONIC|UTC>:
+            Select clock to use for timestamps.
+            Defaults to MONOTONIC for ZX_CLOCK_MONOTONIC.
 
         --help | -h:
             Prints usage.",
@@ -185,6 +221,11 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             "--file" => {
                 options.local.file = Some((&args[i + 1]).clone());
             }
+            "--clock" => match args[i + 1].as_ref() {
+                "MONOTONIC" => options.local.clock = ClockId::Monotonic,
+                "UTC" => options.local.clock = ClockId::UTC,
+                a => return Err(format!("Invalid clock: {}", a)),
+            },
             a => {
                 return Err(format!("Invalid option {}", a));
             }
@@ -216,9 +257,8 @@ where
         let tags = message.tags.join(", ");
         writeln!(
             self.writer,
-            "[{:05}.{:06}][{}][{}][{}] {}: {}",
-            message.time / 1000000000,
-            (message.time / 1000) % 1000000,
+            "[{}][{}][{}][{}] {}: {}",
+            self.local_options.format_time(message.time),
             message.pid,
             message.tid,
             tags,
@@ -234,9 +274,8 @@ where
         {
             writeln!(
                 self.writer,
-                "[{:05}.{:06}][{}][{}][{}] WARNING: Dropped logs count: {}",
-                message.time / 1000000000,
-                (message.time / 1000) % 1000000,
+                "[{}][{}][{}][{}] WARNING: Dropped logs count: {}",
+                self.local_options.format_time(message.time),
                 message.pid,
                 message.tid,
                 tags,
@@ -345,10 +384,7 @@ mod tests {
         let mut l = Listener {
             dropped_logs: HashMap::new(),
             writer: tmp_file,
-            local_options: LocalOptions {
-                file: None,
-                ignore_tags: HashSet::new(),
-            },
+            local_options: LocalOptions::default(),
         };
 
         // test log levels
@@ -384,7 +420,7 @@ mod tests {
         l.log(copy_log_message(&message));
         expected.push_str("[00076.352234][123][321][tag1, tag2] INFO: hello\n");
 
-        // test time
+        // test Monotonic time
         message.time = 636253000631621;
         l.log(copy_log_message(&message));
         let s = "[636253.000631][123][321][tag1, tag2] INFO: hello\n";
@@ -422,6 +458,21 @@ mod tests {
             .expect("something went wrong reading the file");
 
         assert_eq!(content, expected);
+    }
+
+    #[test]
+    fn test_format_time() {
+        let mut local_options = LocalOptions::default();
+
+        // Monotonic time as nanos
+        assert_eq!(local_options.format_time(636253000631621), "636253.000631");
+        local_options.clock = ClockId::Monotonic;
+        assert_eq!(local_options.format_time(636253000631621), "636253.000631");
+
+        // UTC time as nanos
+        local_options.clock = ClockId::UTC;
+        // TODO(CP-111): figure out how to mock UTC time in test
+        assert_ne!(local_options.format_time(636253000631621), "636253.000631");
     }
 
     mod parse_flags {
@@ -596,6 +647,20 @@ mod tests {
         }
 
         #[test]
+        fn clock() {
+            let args = vec!["--clock".to_string(), "UTC".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.clock = ClockId::UTC;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn clock_fail() {
+            let args = vec!["--clock".to_string(), "CLUCK!!".to_string()];
+            parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
         fn tag_edge_case() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
@@ -628,7 +693,7 @@ mod tests {
             parse_flag_test_helper(&args, None);
 
             args[1] = "tag1".to_string();
-            for i in 0..MAX_TAGS {
+            for i in 0..MAX_TAGS + 5 {
                 args.push("--tag".to_string());
                 args.push(format!("tag{}", i));
             }
