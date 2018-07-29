@@ -5,7 +5,7 @@
 OUT_DIR=$1
 OUT_FILE=$2
 echo "== Checking for Vulkan support..."
-if /pkgfs/packages/scenic_benchmarks/0/bin/vulkan_is_supported; then
+if `run vulkan_is_supported`; then
   echo "Vulkan supported."
 else
   echo "No Vulkan!"

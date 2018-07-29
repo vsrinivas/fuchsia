@@ -4,6 +4,7 @@
     ],
     "packages": [
         "//garnet/bin/ui:scenic_tests",
-        "//garnet/bin/ui/tests/performance:scenic_benchmarks"
+        "//garnet/bin/ui/tests/performance:scenic_benchmarks",
+        "//garnet/bin/ui/tests/performance:vulkan_is_supported"
     ]
 }

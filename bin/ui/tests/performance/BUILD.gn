@@ -6,20 +6,44 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+
+package("vulkan_is_supported") {
+  testonly = true
+
+  deps = [
+    "vulkan_is_supported",
+  ]
+  binary = "vulkan_is_supported"
+
+  meta = [
+    {
+      path = rebase_path("meta/vulkan_is_supported.cmx")
+      dest = "vulkan_is_supported.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+}
 
 package("scenic_benchmarks") {
   testonly = true
 
   deps = [
     ":process_scenic_trace",
-    "vulkan_is_supported",
   ]
   binaries = [
     {
       name = "process_scenic_trace"
     },
+  ]
+
+  meta = [
     {
-      name = "vulkan_is_supported"
+      path = rebase_path("meta/scenic_benchmarks.cmx")
+      dest = "scenic_benchmarks.cmx"
     },
   ]
 
@@ -40,5 +64,7 @@ go_binary("process_scenic_trace") {
 
   gopackage = "process_scenic_trace"
 
-  deps = [ ":process_scenic_trace_lib" ]
+  deps = [
+    ":process_scenic_trace_lib",
+  ]
 }
