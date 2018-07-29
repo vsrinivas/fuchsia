@@ -27,6 +27,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:font-rs",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:parking_lot",
+    "third_party/term-model",
   ]
 }
 

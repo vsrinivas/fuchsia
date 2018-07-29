@@ -1,0 +1,18 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("term-model") {
+  name = "term_model"
+  version = "0.1.0"
+
+  deps = [
+    "//third_party/rust-crates/rustc_deps:base64",
+    "//third_party/rust-crates/rustc_deps:bitflags",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:unicode-width",
+    "//third_party/rust-crates/rustc_deps:vte",
+  ]
+}
