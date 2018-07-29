@@ -4,15 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
-
-declare_args() {
-  # Sets a custom base directory for `rustc` and `cargo`.
-  # This can be used to test custom Rust toolchains.
-  rustc_prefix = "//buildtools/${host_platform}/rust/bin"
-
-  # Sets the default LTO type for rustc bulids.
-  rust_lto = "unset"
-}
+import("//build/rust/config.gni") # for rust_config
 
 template("rustc_third_party_artifact") {
   # Dummy build target to match the one in rustc_artifact
@@ -101,31 +93,7 @@ template("rustc_artifact") {
     edition = "2015"
   }
 
-  assert(
-      current_os == "mac" || current_os == "linux" || current_os == "fuchsia",
-      "current_os was neither mac, linux, nor fuchsia")
-  if (current_os == "mac") {
-    target_triple = "x86_64-apple-darwin"
-    assert(current_cpu == "x64")
-  } else if (current_os == "linux") {
-    assert(current_cpu == "x64")
-    target_triple = "x86_64-unknown-linux-gnu"
-  } else if (current_os == "fuchsia") {
-    assert(current_cpu == "x64" || current_cpu == "arm64")
-    if (current_cpu == "x64") {
-      target_triple = "x86_64-unknown-fuchsia"
-    } else if (current_cpu == "arm64") {
-      target_triple = "aarch64-unknown-fuchsia"
-    }
-  }
-
   group_deps = []
-
-  if (is_debug) {
-    opt_level = "0"
-  } else {
-    opt_level = "z"
-  }
 
   if (type == "bin") {
     if (defined(invoker.with_lto)) {
@@ -225,19 +193,7 @@ template("rustc_artifact") {
 
     out_info_path = "${target_out_dir}/${target_name}_info.json"
 
-    # We want to force a recompile of the Rust world whenever Rust toolchain
-    # changes since artifacts from an older version of the toolchain may or
-    # may not be compatible with newer ones.
-    # To achieve this, we insert a synthetic argument to the script invocation.
-    cipd_version = read_file(
-            "//buildtools/${host_platform}/rust/.versions/rust.cipd_version",
-            "json")
-
     args = [
-      "--rustc",
-      rebase_path("$rustc_prefix/rustc"),
-      "--cipd-version",
-      cipd_version.instance_id,
       "--crate-root",
       rebase_path(root_file),
       "--cargo-toml-dir",
@@ -248,8 +204,6 @@ template("rustc_artifact") {
       crate_name,
       "--package-name",
       package_name,
-      "--opt-level",
-      opt_level,
       "--depfile",
       rebase_path(output_depfile),
       "--root-out-dir",
@@ -258,13 +212,6 @@ template("rustc_artifact") {
       rebase_path(output_file),
       "--test-output-file",
       rebase_path(test_output_file),
-      "--target",
-      target_triple,
-      "--cmake-dir",
-      rebase_path("//buildtools/cmake/bin"),
-      "--shared-libs-root",
-      rebase_path(
-          get_label_info("//default($shlib_toolchain)", "root_out_dir")),
       "--first-party-crate-root",
       rebase_path(first_party_crate_root),
       "--third-party-deps-data",
@@ -276,6 +223,11 @@ template("rustc_artifact") {
       "--edition",
       edition,
     ]
+
+    args += rust_build_args
+    deps += rust_build_deps
+    inputs += rust_build_inputs
+
     if (with_lto != "none") {
       args += [ "--lto", with_lto ]
     }
@@ -283,21 +235,6 @@ template("rustc_artifact") {
       args += [ "--with-unit-tests" ]
     }
 
-    if (is_fuchsia) {
-      deps += [
-        "//garnet/public/sdk:zircon_sysroot_export",
-
-        # These libraries are required by libstd.
-        "//zircon/public/lib/backtrace",
-        "//zircon/public/lib/fdio",
-      ]
-      args += [
-        "--clang_prefix",
-        rebase_path(clang_prefix, "", root_out_dir),
-        "--sysroot",
-        rebase_path("$root_out_dir/sdks/zircon_sysroot/arch/$target_cpu/sysroot"),
-      ]
-    }
     args += dep_info_paths
     outputs = [
       output_file,
