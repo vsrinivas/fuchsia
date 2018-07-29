@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"sort"
 	"strings"
 )
@@ -219,14 +220,20 @@ func (a ByTimestamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByTimestamp) Less(i, j int) bool { return a[i].Ts < a[j].Ts }
 
 type Benchmark struct {
-	Label  string    `json:"label"`
-	Values []float64 `json:"values"`
+	Label     string    `json:"label"`
+	TestSuite string    `json:"test_suite"`
+	Unit      string    `json:"unit"`
+	Values    []float64 `json:"values"`
 }
 
-type BenchmarkOut struct {
-	Label   string      `json:"label"`
-	Unit    string      `json:"unit"`
-	Samples []Benchmark `json:"samples"`
+// Go JSON encoder will not work if any of the values are NaN, so use 0 in those
+// cases instead.
+func jsonFloat(num float64) float64 {
+	if math.IsNaN(num) || math.IsInf(num, 0) {
+		return 0
+	} else {
+		return num
+	}
 }
 
 func main() {
@@ -244,11 +251,6 @@ func main() {
 	outputFilename := flag.Args()[2]
 	traceFile, err := ioutil.ReadFile(inputFilename)
 	check(err)
-
-	benchmarkValues := BenchmarkOut{
-		Label:   benchmarkLabel,
-		Unit:    "ms",
-		Samples: []Benchmark{}}
 
 	var trace Trace
 	err = json.Unmarshal([]byte(traceFile), &trace)
@@ -272,10 +274,14 @@ func main() {
 	fps, fpsPerTimeWindow := calculateFps(events)
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
 
-	benchmarkValues.Samples = append(
-		benchmarkValues.Samples, Benchmark{"fps", []float64{fps}})
-	benchmarkValues.Samples = append(benchmarkValues.Samples,
-		Benchmark{"fps_per_one_second_window", fpsPerTimeWindow})
+	unitName := "ms"
+
+	benchmarks := make([]Benchmark, 0)
+	benchmarks = append(
+		benchmarks, Benchmark{"fps", benchmarkLabel, unitName, []float64{jsonFloat(fps)}})
+
+	benchmarks = append(benchmarks,
+		Benchmark{"fps_per_one_second_window", benchmarkLabel, unitName, fpsPerTimeWindow})
 	fmt.Printf("\n== Average times ==\n")
 	type AverageEvent struct {
 		IndentLevel int
@@ -289,21 +295,23 @@ func main() {
 		{1, "Compositor::DrawFrame", "Compositor::DrawFrame"},
 		{0, "Scenic Compositor", "Escher GPU time"},
 	}
+
 	for _, e := range averageEvents {
+		avgDuration := jsonFloat(avgDuration(durations, "gfx", e.Name) / OneMsecInUsecs)
 		fmt.Printf("%-35s %.4gms\n", strings.Repeat("  ", e.IndentLevel)+e.Label,
-			avgDuration(durations, "gfx", e.Name)/OneMsecInUsecs)
-		benchmarkValues.Samples = append(benchmarkValues.Samples,
-			Benchmark{e.Label,
-				[]float64{avgDuration(durations, "gfx", e.Name) / OneMsecInUsecs}})
+			avgDuration)
+		benchmarks = append(benchmarks,
+			Benchmark{e.Label, benchmarkLabel, unitName,
+				[]float64{avgDuration}})
 	}
 	fmt.Printf("%-35s %.4gms", "unaccounted (mostly gfx driver)",
-		avgDurationBetween(
-			events, "gfx", "RenderFrame", "gfx", "Scenic Compositor")/OneMsecInUsecs)
+		jsonFloat(avgDurationBetween(
+			events, "gfx", "RenderFrame", "gfx", "Scenic Compositor")/OneMsecInUsecs))
 
-	benchmarkValuesJson, _ := json.Marshal(benchmarkValues)
+	benchmarkJson, _ := json.Marshal(benchmarks)
 
 	// 0644 permissions = -rw-r--r--
-	err = ioutil.WriteFile(outputFilename, benchmarkValuesJson, 0644)
+	err = ioutil.WriteFile(outputFilename, benchmarkJson, 0644)
 	check(err)
 
 	fmt.Printf("\n\nWrote benchmark values to file '%s'.\n", outputFilename)

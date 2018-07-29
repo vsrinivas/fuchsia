@@ -29,10 +29,13 @@ runbench_exec "${OUT_DIR}/zircon.perf_test.json" \
 runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /pkgfs/packages/zircon_benchmarks/0/bin/app -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
-# Scenic performance tests.
-# TODO(SCN-832): Re-enable when these tests pass on the perf bots.
-#runbench_exec "${OUT_DIR}/benchmark_hello_scenic.json" \
-#    /pkgfs/packages/scenic_benchmarks/0/data/hello_scenic_benchmark.sh "${OUT_DIR}" "${OUT_DIR}/benchmark_hello_scenic.json"
+if `run vulkan_is_supported`; then
+  # Scenic performance tests.
+  runbench_exec "${OUT_DIR}/benchmark_hello_scenic.json" \
+      /pkgfs/packages/scenic_benchmarks/0/data/hello_scenic_benchmark.sh "${OUT_DIR}" "${OUT_DIR}/benchmark_hello_scenic.json"
+else
+  echo "Vulkan not supported; Scenic tests skipped."
+fi
 
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
