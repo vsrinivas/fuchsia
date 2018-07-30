@@ -123,7 +123,8 @@ function main {
           fx-command-help
           return 1
         fi
-        products+=("$2")
+        # Multiple products may be comma separated
+        IFS=, products+=("$2")
         shift
         ;;
       --packages)
@@ -131,7 +132,8 @@ function main {
           fx-command-help
           return 1
         fi
-        packages+=("$2")
+        # Multiple packages may be comma separated
+        IFS=, packages+=("$2")
         shift
         ;;
       --netboot)
