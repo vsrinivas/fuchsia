@@ -64,7 +64,7 @@ package("cobalt_tests") {
 
     {
       name = rebase_path("testapp/cobalt_testapp_no_environment.sh")
-      dest = "cobalt_testapp_no_network"
+      dest = "cobalt_testapp_no_environment"
 
       # We don't want to run this version cobalt_testapp in the Garnet
       # CI/CQ  because it uses the real network. We run cobalt_testap_no_network
