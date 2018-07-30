@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_RIGHTS_H_
+#define ZIRCON_RIGHTS_H_
 
 #include <zircon/types.h>
 
@@ -95,3 +96,5 @@
 
 #define ZX_DEFAULT_SUSPEND_TOKEN_RIGHTS \
     (ZX_RIGHT_TRANSFER)
+
+#endif // ZIRCON_RIGHTS_H_

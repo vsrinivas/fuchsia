@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_PROCESSARGS_H_
+#define ZIRCON_PROCESSARGS_H_
 
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_CDECLS
 
 // This is a protocol for passing state to a new process
 // via a message in a channel.
 
-#define ZX_PROCARGS_PROTOCOL 0x4150585d // MXPA
-#define ZX_PROCARGS_VERSION 0x0001000
+#define ZX_PROCARGS_PROTOCOL ((uint32_t)0x4150585du) // MXPA
+#define ZX_PROCARGS_VERSION ((uint32_t)0x0001000u)
 
 typedef struct zx_proc_args zx_proc_args_t;
 
@@ -68,21 +68,21 @@ struct zx_proc_args {
 // Used by libc init (or equivalent) and dynamic loader
 
 // Handle to our own process.
-#define PA_PROC_SELF             0x01
+#define PA_PROC_SELF             0x01u
 
 // Handle to the initial thread of our own process.
-#define PA_THREAD_SELF           0x02
+#define PA_THREAD_SELF           0x02u
 
 // Handle to a Job object which can be used to make child processes. The
 // Job can be the same as the one used to create this process or it can
 // be different.
-#define PA_JOB_DEFAULT           0x03
+#define PA_JOB_DEFAULT           0x03u
 
 // Handle to the root of our address space
-#define PA_VMAR_ROOT             0x04
+#define PA_VMAR_ROOT             0x04u
 
 // Handle to the VMAR used to load the initial program image.
-#define PA_VMAR_LOADED           0x05
+#define PA_VMAR_LOADED           0x05u
 
 
 // --- Loader Service and VMO Handles ---
@@ -90,7 +90,7 @@ struct zx_proc_args {
 
 // Service for loading shared libraries.
 // See |fuchsia.ldsvc.Loader| for the interface definition.
-#define PA_LDSVC_LOADER          0x10
+#define PA_LDSVC_LOADER          0x10u
 
 // Handle to the VMO containing the ELF image of the system vDSO.  This
 // handle is duplicable, transferable, readable, and executable, but not
@@ -100,7 +100,7 @@ struct zx_proc_args {
 // might create or propagate it on to its children so they can do so.
 // Each process's own vDSO was mapped in by its creator before the
 // process started, its address passed as an argument to entry point.
-#define PA_VMO_VDSO              0x11
+#define PA_VMO_VDSO              0x11u
 
 // Handle to the VMO used to map the initial thread's stack.  This
 // handle usually has all rights.  The protocol between process creator
@@ -111,21 +111,21 @@ struct zx_proc_args {
 // calling convention for function entry.  Thus the new process can
 // compute its exact stack bounds by subtracting the size reported by
 // this VMO from the (adjusted back up) initial SP value.
-#define PA_VMO_STACK             0x13
+#define PA_VMO_STACK             0x13u
 
 // VM object handle for the main executable file
-#define PA_VMO_EXECUTABLE        0x14
+#define PA_VMO_EXECUTABLE        0x14u
 
 // Used by kernel and userboot during startup
-#define PA_VMO_BOOTDATA          0x1A
+#define PA_VMO_BOOTDATA          0x1Au
 
 // Used by kernel and userboot during startup
-#define PA_VMO_BOOTFS            0x1B
+#define PA_VMO_BOOTFS            0x1Bu
 
 // Used by the kernel to export debug information as a file in bootfs.  When
 // devmgr starts, it looks for handles of this type, and adds them as files in
 // /boot/kernel/<vmo-name>.
-#define PA_VMO_KERNEL_FILE        0x1C
+#define PA_VMO_KERNEL_FILE       0x1Cu
 
 
 // --- Namespace Handles ---
@@ -133,33 +133,33 @@ struct zx_proc_args {
 // A handle which will handle OPEN requests relative
 // to a particular path which is specified by the
 // nametable entry referred to by the "arg" field
-#define PA_NS_DIR                0x20
+#define PA_NS_DIR                0x20u
 
 
 // --- FDIO Handles ---
 // Used by libfdio for passing fdtable, fsroot, etc
 
 // Handle types the fdio library uses
-#define PA_FDIO_REMOTE           0x32
-#define PA_FDIO_PIPE             0x33
-#define PA_FDIO_EVENT            0x34
-#define PA_FDIO_LOGGER           0x35
-#define PA_FDIO_SOCKET           0x36
+#define PA_FDIO_REMOTE           0x32u
+#define PA_FDIO_PIPE             0x33u
+#define PA_FDIO_EVENT            0x34u
+#define PA_FDIO_LOGGER           0x35u
+#define PA_FDIO_SOCKET           0x36u
 
 // Server endpoint for handling connection to appmgr services.
-#define PA_DIRECTORY_REQUEST     0x3B
+#define PA_DIRECTORY_REQUEST     0x3Bu
 
 // Used by devmgr and devhosts
-#define PA_RESOURCE              0x3F
+#define PA_RESOURCE              0x3Fu
 
 
 // --- Various ---
 
 // Handle types for one-off use and prototyping
-#define PA_USER0                 0xF0
-#define PA_USER1                 0xF1
-#define PA_USER2                 0xF2
+#define PA_USER0                 0xF0u
+#define PA_USER1                 0xF1u
+#define PA_USER2                 0xF2u
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS
+
+#endif // ZIRCON_PROCESSARGS_H_
