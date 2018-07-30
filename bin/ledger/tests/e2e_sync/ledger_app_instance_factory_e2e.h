@@ -10,26 +10,22 @@
 
 #include <lib/component/cpp/startup_context.h>
 
-#include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 
 namespace test {
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl(std::string server_id);
+  LedgerAppInstanceFactoryImpl(ledger::SyncParams sync_params);
   ~LedgerAppInstanceFactoryImpl() override;
-
-  void Init();
 
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
       LoopController* loop_controller) override;
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
-  CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
-
-  const std::string server_id_;
+  const ledger::SyncParams sync_params_;
+  const std::string user_id_;
 };
 
 }  // namespace test
