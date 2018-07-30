@@ -670,18 +670,22 @@ void PageStorageImpl::GetThreeWayContentsDiff(
 
 void PageStorageImpl::GetJournalEntries(
     const JournalId& journal_id,
-    fit::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+    fit::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>,
+                       JournalContainsClearOperation contains_clear_operation)>
         callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, journal_id](
           CoroutineHandler* handler,
-          fit::function<void(Status,
-                             std::unique_ptr<Iterator<const EntryChange>>)>
+          fit::function<void(
+              Status, std::unique_ptr<Iterator<const EntryChange>>,
+              JournalContainsClearOperation contains_clear_operation)>
               callback) {
         std::unique_ptr<Iterator<const EntryChange>> entries;
-        Status s = db_->GetJournalEntries(handler, journal_id, &entries);
-        callback(s, std::move(entries));
+        JournalContainsClearOperation contains_clear_operation;
+        Status s = db_->GetJournalEntries(handler, journal_id, &entries,
+                                          &contains_clear_operation);
+        callback(s, std::move(entries), contains_clear_operation);
       });
 }
 
@@ -708,6 +712,17 @@ void PageStorageImpl::RemoveJournalEntry(const JournalId& journal_id,
       [this, journal_id, key = key.ToString()](
           CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(db_->RemoveJournalEntry(handler, journal_id, key));
+      });
+}
+
+void PageStorageImpl::EmptyJournalAndMarkContainsClearOperation(
+    const JournalId& journal_id, fit::function<void(Status)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, journal_id](CoroutineHandler* handler,
+                         fit::function<void(Status)> callback) {
+        callback(db_->EmptyJournalAndMarkContainsClearOperation(handler,
+                                                                journal_id));
       });
 }
 

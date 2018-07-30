@@ -1014,6 +1014,11 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::ILLEGAL_STATE, status);
 
+  journal->Clear(callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::ILLEGAL_STATE, status);
+
   ASSERT_FALSE(TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE));
 
   // Implicit journals.
@@ -1040,6 +1045,11 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
 
   journal->Delete("key",
                   callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_NE(Status::ILLEGAL_STATE, status);
+
+  journal->Clear(callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_NE(Status::ILLEGAL_STATE, status);

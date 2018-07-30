@@ -101,6 +101,17 @@ Status PageDbBatchImpl::RemoveJournalEntry(coroutine::CoroutineHandler* handler,
                      JournalEntryRow::kDeletePrefix);
 }
 
+Status PageDbBatchImpl::EmptyJournalAndMarkContainsClearOperation(
+    CoroutineHandler* handler, const JournalId& journal_id) {
+  Status status = batch_->DeleteByPrefix(
+      handler, JournalEntryRow::GetPrefixFor(journal_id));
+  if (status != Status::OK) {
+    return status;
+  }
+  return batch_->Put(handler, JournalEntryRow::GetClearMarkerKey(journal_id),
+                     "");
+}
+
 Status PageDbBatchImpl::WriteObject(
     CoroutineHandler* handler, ObjectIdentifier object_identifier,
     std::unique_ptr<DataSource::DataChunk> content,

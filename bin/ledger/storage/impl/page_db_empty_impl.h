@@ -30,7 +30,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                                  CommitId* base) override;
   Status GetJournalEntries(
       coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries) override;
+      std::unique_ptr<Iterator<const EntryChange>>* entries,
+      JournalContainsClearOperation* contains_clear_operation) override;
 
   // PageDb and PageDb::Batch:
   Status ReadObject(coroutine::CoroutineHandler* handler,
@@ -76,6 +77,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
                             const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
+  Status EmptyJournalAndMarkContainsClearOperation(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id) override;
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      ObjectIdentifier object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,

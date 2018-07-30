@@ -79,6 +79,8 @@ enum class IsObjectSynced : bool { NO, YES };
 
 enum class JournalType { IMPLICIT, EXPLICIT };
 
+enum class JournalContainsClearOperation { NO, YES };
+
 enum class Status {
   // User visible status.
   OK,

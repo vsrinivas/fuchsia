@@ -96,6 +96,7 @@ constexpr fxl::StringView JournalEntryRow::kDeletePrefix;
 constexpr char JournalEntryRow::kImplicitPrefix;
 constexpr char JournalEntryRow::kExplicitPrefix;
 constexpr char JournalEntryRow::kAddPrefix;
+constexpr char JournalEntryRow::kClear;
 
 std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
   std::string id;
@@ -107,12 +108,21 @@ std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
 }
 
 std::string JournalEntryRow::GetPrefixFor(const JournalId& journal_id) {
-  return fxl::Concatenate({kPrefix, journal_id, "/", kJournalEntry});
+  return fxl::Concatenate({kPrefix, journal_id, "/"});
+}
+
+std::string JournalEntryRow::GetEntriesPrefixFor(const JournalId& journal_id) {
+  return fxl::Concatenate(
+      {JournalEntryRow::GetPrefixFor(journal_id), kJournalEntry});
 }
 
 std::string JournalEntryRow::GetKeyFor(const JournalId& id,
                                        fxl::StringView key) {
-  return fxl::Concatenate({JournalEntryRow::GetPrefixFor(id), key});
+  return fxl::Concatenate({JournalEntryRow::GetEntriesPrefixFor(id), key});
+}
+
+std::string JournalEntryRow::GetClearMarkerKey(const JournalId& id) {
+  return fxl::Concatenate({JournalEntryRow::GetPrefixFor(id), {&kClear, 1}});
 }
 
 std::string JournalEntryRow::GetValueFor(

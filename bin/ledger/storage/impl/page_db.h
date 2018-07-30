@@ -91,6 +91,12 @@ class PageDbMutator {
       coroutine::CoroutineHandler* handler, const JournalId& journal_id,
       convert::ExtendedStringView key) = 0;
 
+  // Marks the journal with the given |journal_id| as containing a clear
+  // operation and removes all entries.
+  FXL_WARN_UNUSED_RESULT virtual Status
+  EmptyJournalAndMarkContainsClearOperation(
+      coroutine::CoroutineHandler* handler, const JournalId& journal_id) = 0;
+
   // Object data.
   // Writes the content of the given object.
   FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
@@ -191,10 +197,13 @@ class PageDb : public PageDbMutator {
       CommitId* base) = 0;
 
   // Finds all the entries of the journal with the given |journal_id| and stores
-  // an interator over the results on |entires|.
+  // an interator over the results on |entires|. Also returns a flag indicating
+  // if the journal contains a clear operation, in which case we need to delete
+  // all pre-existing data from the page upon commit.
   FXL_WARN_UNUSED_RESULT virtual Status GetJournalEntries(
       coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries) = 0;
+      std::unique_ptr<Iterator<const EntryChange>>* entries,
+      JournalContainsClearOperation* contains_clear_operation) = 0;
 
   // Object data.
   // Reads the content of the given object. To check whether an object is stored

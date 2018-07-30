@@ -66,12 +66,13 @@ See also [split.h] and [split.cc] for more details.
 
 ## Journals
 
-Changes in Ledger (Puts, Deletes) that have not yet been committed are organized
-in [journals]. A journal can be explicit, when it is part of an explicitly
-created transaction or part of a merge commit, or implicit, for any other case.
-On a system crash all explicit journals are considered invalid and once the
-system restarts they are removed from the storage. Implicit ones on the other
-hand, are immediately committed on system restart.
+Changes in Page (Put entry, Delete entry, Clear page) that have not yet been
+committed are organized in [journals]. A journal can be explicit, when it is
+part of an explicitly created transaction or part of a merge commit, or
+implicit, for any other case. On a system crash all explicit journals are
+considered invalid and once the system restarts they are removed from the
+storage. Implicit ones on the other hand, are immediately committed on system
+restart.
 
 A common prefix for all explicit journal entries (`journals/E`) helps remove
 them all together when necessary, and an additional metadata row, for implicit
@@ -97,6 +98,13 @@ key-value pair, then:
   is:
 
   Row value: `D`
+
+Moreover, if a journal contains a page clear operation, a row with an empty
+value is added to the journal. If it is present, when the journal is commited,
+the previous state of the page must be discarded.
+
+- Row key: `journals/{journal_id}/C`
+- Row value: (empty value)
 
 ### Metadata row for implicit journals
 

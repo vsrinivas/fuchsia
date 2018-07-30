@@ -212,6 +212,21 @@ void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
       });
 }
 
+void PageDelegate::Clear(Page::ClearCallback callback) {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this](Page::ClearCallback callback) mutable {
+        RunInTransaction(
+            [](storage::Journal* journal,
+               fit::function<void(Status)> callback) {
+              journal->Clear(
+                  [callback = std::move(callback)](storage::Status status) {
+                    callback(PageUtils::ConvertStatus(status));
+                  });
+            },
+            std::move(callback));
+      });
+}
+
 void PageDelegate::CreateReference(
     std::unique_ptr<storage::DataSource> data,
     fit::function<void(Status, ReferencePtr)> callback) {

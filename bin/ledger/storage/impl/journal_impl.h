@@ -62,6 +62,7 @@ class JournalImpl : public Journal {
            KeyPriority priority, fit::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
               fit::function<void(Status)> callback) override;
+  void Clear(fit::function<void(Status)> callback) override;
   const JournalId& GetId() const override;
 
  private:
@@ -76,8 +77,12 @@ class JournalImpl : public Journal {
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback);
 
+  // Creates a new commit. The commit parents are |parents|. The content of the
+  // commit is built by executing |changes| over the content pointed by
+  // |root_identifier|.
   void CreateCommitFromChanges(
       std::vector<std::unique_ptr<const storage::Commit>> parents,
+      ObjectIdentifier root_identifier,
       std::unique_ptr<Iterator<const EntryChange>> changes,
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
@@ -88,6 +93,10 @@ class JournalImpl : public Journal {
           callback);
 
   void RollbackInternal(fit::function<void(Status)> callback);
+
+  // Returns whether the journal is in a state where it is legal to call |Put|,
+  // |Delete| or |Clear|.
+  bool StateAllowsMutation();
 
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;

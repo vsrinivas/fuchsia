@@ -41,6 +41,7 @@ class FakeJournalDelegate {
   Status SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
                   KeyPriority priority);
   Status Delete(convert::ExtendedStringView key);
+  Status Clear();
 
   void Commit(
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>

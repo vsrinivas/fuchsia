@@ -35,7 +35,8 @@ Status PageDbEmptyImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::GetJournalEntries(
     CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
-    std::unique_ptr<Iterator<const EntryChange>>* /*entries*/) {
+    std::unique_ptr<Iterator<const EntryChange>>* /*entries*/,
+    JournalContainsClearOperation* /*contains_clear_operation*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
@@ -115,6 +116,10 @@ Status PageDbEmptyImpl::AddJournalEntry(
 Status PageDbEmptyImpl::RemoveJournalEntry(
     CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
     convert::ExtendedStringView /*key*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+Status PageDbEmptyImpl::EmptyJournalAndMarkContainsClearOperation(
+    coroutine::CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(

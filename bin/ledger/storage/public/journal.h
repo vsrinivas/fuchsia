@@ -34,6 +34,11 @@ class Journal {
   virtual void Delete(convert::ExtendedStringView key,
                       fit::function<void(Status)> callback) = 0;
 
+  // Deletes all entries from this Journal, as well as any entries already
+  // present on the page. This doesn't prevent subsequent calls to update the
+  // contents of this Journal (|Put|, |Delete| or |Clear|).
+  virtual void Clear(fit::function<void(Status)> callback) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Journal);
 };

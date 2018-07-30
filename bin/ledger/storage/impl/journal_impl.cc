@@ -14,6 +14,7 @@
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
+#include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 
@@ -65,7 +66,7 @@ void JournalImpl::Commit(
       std::move(callback),
       [this](fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
                  callback) {
-        if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+        if (!StateAllowsMutation()) {
           callback(Status::ILLEGAL_STATE, nullptr);
           return;
         }
@@ -79,17 +80,47 @@ void JournalImpl::Commit(
             return;
           }
           page_storage_->GetJournalEntries(
-              id_,
-              [this, parents = std::move(parents),
-               callback = std::move(callback)](
-                  Status status, std::unique_ptr<Iterator<const EntryChange>>
-                                     changes) mutable {
+              id_, [this, parents = std::move(parents),
+                    callback = std::move(callback)](
+                       Status status,
+                       std::unique_ptr<Iterator<const EntryChange>> changes,
+                       JournalContainsClearOperation
+                           contains_clear_operation) mutable {
                 if (status != Status::OK) {
                   callback(status, nullptr);
                   return;
                 }
-                CreateCommitFromChanges(std::move(parents), std::move(changes),
-                                        std::move(callback));
+                if (contains_clear_operation ==
+                    JournalContainsClearOperation::NO) {
+                  // The journal doesn't contain the clear operation. The
+                  // changes recorded on the journal need to be executed over
+                  // the content of the first parent.
+                  ObjectIdentifier root_identifier =
+                      parents[0]->GetRootIdentifier();
+                  CreateCommitFromChanges(
+                      std::move(parents), std::move(root_identifier),
+                      std::move(changes), std::move(callback));
+                  return;
+                }
+
+                // The journal contains the clear operation. The changes
+                // recorded on the journal need to be executed over an empty
+                // page.
+                btree::TreeNode::Empty(
+                    page_storage_,
+                    [this, parents = std::move(parents),
+                     changes = std::move(changes),
+                     callback = std::move(callback)](
+                        Status status,
+                        ObjectIdentifier root_identifier) mutable {
+                      if (status != Status::OK) {
+                        callback(status, nullptr);
+                        return;
+                      }
+                      CreateCommitFromChanges(
+                          std::move(parents), std::move(root_identifier),
+                          std::move(changes), std::move(callback));
+                    });
               });
         });
       });
@@ -110,7 +141,7 @@ void JournalImpl::Put(convert::ExtendedStringView key,
       [this, key = key.ToString(),
        object_identifier = std::move(object_identifier),
        priority](fit::function<void(Status)> callback) mutable {
-        if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+        if (!StateAllowsMutation()) {
           callback(Status::ILLEGAL_STATE);
           return;
         }
@@ -130,13 +161,31 @@ void JournalImpl::Delete(convert::ExtendedStringView key,
   serializer_.Serialize<Status>(
       std::move(callback),
       [this, key = key.ToString()](fit::function<void(Status)> callback) {
-        if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+        if (!StateAllowsMutation()) {
           callback(Status::ILLEGAL_STATE);
           return;
         }
 
         page_storage_->RemoveJournalEntry(
             id_, key, [this, callback = std::move(callback)](Status s) {
+              if (s != Status::OK) {
+                failed_operation_ = true;
+              }
+              callback(s);
+            });
+      });
+}
+
+void JournalImpl::Clear(fit::function<void(Status)> callback) {
+  serializer_.Serialize<Status>(
+      std::move(callback), [this](fit::function<void(Status)> callback) {
+        if (!StateAllowsMutation()) {
+          callback(Status::ILLEGAL_STATE);
+          return;
+        }
+
+        page_storage_->EmptyJournalAndMarkContainsClearOperation(
+            id_, [this, callback = std::move(callback)](Status s) {
               if (s != Status::OK) {
                 failed_operation_ = true;
               }
@@ -161,11 +210,12 @@ void JournalImpl::GetParents(
 
 void JournalImpl::CreateCommitFromChanges(
     std::vector<std::unique_ptr<const storage::Commit>> parents,
+    ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   btree::ApplyChanges(
-      coroutine_service_, page_storage_, parents[0]->GetRootIdentifier(),
+      coroutine_service_, page_storage_, std::move(root_identifier),
       std::move(changes),
       [this, parents = std::move(parents), callback = std::move(callback)](
           Status status, ObjectIdentifier object_identifier,
@@ -177,7 +227,12 @@ void JournalImpl::CreateCommitFromChanges(
         // If the commit is a no-op, return early.
         if (parents.size() == 1 &&
             parents.front()->GetRootIdentifier() == object_identifier) {
-          FXL_DCHECK(new_nodes.empty());
+          // |new_nodes| can be ignored here. If a clear operation has been
+          // executed and the state has then been restored to the one before the
+          // transaction, |ApplyChanges| might have re-created some nodes that
+          // already exist. Because they already exist in a pre-existing commit,
+          // there is no need to update their state.
+
           // We are in an operation from the serializer: make sure not to sent
           // the rollback operation in the serializer as well, or a deadlock
           // will be created.
@@ -236,8 +291,8 @@ void JournalImpl::GetObjectsToSync(
         callback) {
   page_storage_->GetJournalEntries(
       id_, [this, callback = std::move(callback)](
-               Status s,
-               std::unique_ptr<Iterator<const EntryChange>> entries) mutable {
+               Status s, std::unique_ptr<Iterator<const EntryChange>> entries,
+               JournalContainsClearOperation contains_clear_operation) mutable {
         if (s != Status::OK) {
           callback(s, {});
           return;
@@ -295,6 +350,10 @@ void JournalImpl::RollbackInternal(fit::function<void(Status)> callback) {
         }
         callback(s);
       });
+}
+
+bool JournalImpl::StateAllowsMutation() {
+  return valid_ && (type_ == JournalType::IMPLICIT || !failed_operation_);
 }
 
 }  // namespace storage

@@ -161,14 +161,22 @@ Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
 
 Status PageDbImpl::GetJournalEntries(
     CoroutineHandler* handler, const JournalId& journal_id,
-    std::unique_ptr<Iterator<const EntryChange>>* entries) {
+    std::unique_ptr<Iterator<const EntryChange>>* entries,
+    JournalContainsClearOperation* contains_clear_operation) {
   std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                            convert::ExtendedStringView>>>
       it;
   RETURN_ON_ERROR(db_.GetIteratorAtPrefix(
-      handler, JournalEntryRow::GetPrefixFor(journal_id), &it));
+      handler, JournalEntryRow::GetEntriesPrefixFor(journal_id), &it));
+  bool contains_clear_operation_key;
+  RETURN_ON_ERROR(db_.HasKey(handler,
+                             JournalEntryRow::GetClearMarkerKey(journal_id),
+                             &contains_clear_operation_key));
 
   *entries = std::make_unique<JournalEntryIterator>(std::move(it));
+  *contains_clear_operation = contains_clear_operation_key
+                                  ? JournalContainsClearOperation::YES
+                                  : JournalContainsClearOperation::NO;
   return Status::OK;
 }
 
@@ -341,6 +349,15 @@ Status PageDbImpl::RemoveJournalEntry(CoroutineHandler* handler,
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->RemoveJournalEntry(handler, journal_id, key));
+  return batch->Execute(handler);
+}
+
+Status PageDbImpl::EmptyJournalAndMarkContainsClearOperation(
+    coroutine::CoroutineHandler* handler, const JournalId& journal_id) {
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(
+      batch->EmptyJournalAndMarkContainsClearOperation(handler, journal_id));
   return batch->Execute(handler);
 }
 

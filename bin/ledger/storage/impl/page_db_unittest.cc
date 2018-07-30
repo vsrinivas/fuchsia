@@ -226,14 +226,60 @@ TEST_F(PageDbTest, JournalEntries) {
         NewRemoveEntryChange("remove-key"),
     };
     std::unique_ptr<Iterator<const EntryChange>> entries;
+    JournalContainsClearOperation contains_clear_operation;
     EXPECT_EQ(Status::OK,
-              page_db_.GetJournalEntries(handler, journal_id, &entries));
+              page_db_.GetJournalEntries(handler, journal_id, &entries,
+                                         &contains_clear_operation));
     for (const auto& expected_change : expected_changes) {
       EXPECT_TRUE(entries->Valid());
       ExpectChangesEqual(expected_change, **entries);
       entries->Next();
     }
     EXPECT_FALSE(entries->Valid());
+    EXPECT_EQ(JournalContainsClearOperation::NO, contains_clear_operation);
+    EXPECT_EQ(Status::OK, entries->GetStatus());
+  });
+}
+
+TEST_F(PageDbTest, JournalEntriesWithClear) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    CommitId commit_id = RandomCommitId();
+
+    JournalId journal_id;
+    EXPECT_EQ(Status::OK,
+              page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
+                                       commit_id, &journal_id));
+    EXPECT_EQ(Status::OK,
+              page_db_.AddJournalEntry(
+                  handler, journal_id, "add-key-1",
+                  encryption_service_.MakeObjectIdentifier("value1"),
+                  KeyPriority::LAZY));
+    EXPECT_EQ(Status::OK, page_db_.EmptyJournalAndMarkContainsClearOperation(
+                              handler, journal_id));
+    EXPECT_EQ(Status::OK,
+              page_db_.AddJournalEntry(
+                  handler, journal_id, "add-key-2",
+                  encryption_service_.MakeObjectIdentifier("value2"),
+                  KeyPriority::EAGER));
+    EXPECT_EQ(Status::OK,
+              page_db_.RemoveJournalEntry(handler, journal_id, "remove-key"));
+
+    EntryChange expected_changes[] = {
+        NewEntryChange("add-key-2", "value2", KeyPriority::EAGER),
+        NewRemoveEntryChange("remove-key"),
+    };
+    std::unique_ptr<Iterator<const EntryChange>> entries;
+    JournalContainsClearOperation contains_clear_operation;
+    EXPECT_EQ(Status::OK,
+              page_db_.GetJournalEntries(handler, journal_id, &entries,
+                                         &contains_clear_operation));
+    for (const auto& expected_change : expected_changes) {
+      EXPECT_TRUE(entries->Valid());
+      ExpectChangesEqual(expected_change, **entries);
+      entries->Next();
+    }
+    EXPECT_FALSE(entries->Valid());
+    EXPECT_EQ(JournalContainsClearOperation::YES, contains_clear_operation);
     EXPECT_EQ(Status::OK, entries->GetStatus());
   });
 }

@@ -115,7 +115,9 @@ class PageStorageImpl : public PageStorage {
   // Methods to be used by JournalImpl.
   void GetJournalEntries(
       const JournalId& journal_id,
-      fit::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+      fit::function<
+          void(Status, std::unique_ptr<Iterator<const EntryChange>>,
+               JournalContainsClearOperation contains_clear_operation)>
           callback);
 
   void AddJournalEntry(const JournalId& journal_id, fxl::StringView key,
@@ -125,6 +127,9 @@ class PageStorageImpl : public PageStorage {
   void RemoveJournalEntry(const JournalId& journal_id,
                           convert::ExtendedStringView key,
                           fit::function<void(Status)> callback);
+
+  void EmptyJournalAndMarkContainsClearOperation(
+      const JournalId& journal_id, fit::function<void(Status)> callback);
 
   void RemoveJournal(const JournalId& journal_id,
                      fit::function<void(Status)> callback);

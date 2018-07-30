@@ -67,6 +67,14 @@ Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
   return Status::OK;
 }
 
+Status FakeJournalDelegate::Clear() {
+  if (is_committed_ || is_rolled_back_) {
+    return Status::ILLEGAL_STATE;
+  }
+  data_.clear();
+  return Status::OK;
+}
+
 void FakeJournalDelegate::Commit(
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {

@@ -30,15 +30,20 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/storage/testing/storage_matcher.h"
 #include "peridot/lib/convert/convert.h"
 
 using testing::Contains;
+using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::Key;
 using testing::Not;
+using testing::Pair;
+using testing::SizeIs;
 
 namespace ledger {
 namespace {
+
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(*vmo, &value);
@@ -381,6 +386,28 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
   EXPECT_THAT(it->second->GetData(), IsEmpty());
 }
 
+TEST_F(PageImplTest, ClearNoTransaction) {
+  bool called;
+  Status status;
+  page_ptr_->Clear(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+
+  DrainLoop();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  auto objects = fake_storage_->GetObjects();
+  // No object should have been added.
+  EXPECT_THAT(objects, IsEmpty());
+
+  const std::map<std::string,
+                 std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+      journals = fake_storage_->GetJournals();
+  EXPECT_EQ(1u, journals.size());
+  auto it = journals.begin();
+  EXPECT_TRUE(it->second->IsCommitted());
+  EXPECT_THAT(it->second->GetData(), IsEmpty());
+}
+
 TEST_F(PageImplTest, TransactionCommit) {
   std::string key1("some_key1");
   storage::ObjectDigest object_digest1;
@@ -509,6 +536,121 @@ TEST_F(PageImplTest, TransactionCommit) {
     auto it = journals.begin();
     EXPECT_TRUE(it->second->IsCommitted());
     EXPECT_EQ(1u, it->second->GetData().size());
+  }
+}
+
+TEST_F(PageImplTest, TransactionClearCommit) {
+  std::string key1("some_key1");
+  std::string value1("a small value");
+
+  std::string key2("some_key2");
+  std::string value2("another value");
+  storage::ObjectDigest object_digest2;
+
+  bool called;
+  Status status;
+
+  // Sequence of operations:
+  //  - Put key1
+  //  - StartTransaction
+  //  - Clear
+  //  - Put key2
+  //  - Commit
+
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
+                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  page_ptr_->StartTransaction(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+
+  {
+    EXPECT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+  }
+
+  const std::map<std::string,
+                 std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+      journals = fake_storage_->GetJournals();
+  EXPECT_EQ(2u, journals.size());
+  const auto& journal_it = std::find_if(
+      journals.begin(), journals.end(),
+      [](const auto& pair) { return !pair.second->IsCommitted(); });
+  EXPECT_NE(journals.end(), journal_it);
+  const auto& journal = journal_it->second;
+
+  {
+    EXPECT_FALSE(journal->IsCommitted());
+    EXPECT_THAT(journal->GetData(), SizeIs(1));
+  }
+
+  page_ptr_->Clear(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+
+  {
+    EXPECT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
+
+    EXPECT_FALSE(journal->IsCommitted());
+    EXPECT_THAT(journal->GetData(), IsEmpty());
+  }
+
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
+                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+
+  {
+    EXPECT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+    auto objects = fake_storage_->GetObjects();
+    EXPECT_EQ(2u, objects.size());
+    bool object_found = false;
+    for (auto object : objects) {
+      if (object.second == value2) {
+        object_found = true;
+        object_digest2 = object.first.object_digest;
+        break;
+      }
+    }
+    EXPECT_TRUE(object_found);
+
+    // No finished commit yet.
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+        journals = fake_storage_->GetJournals();
+    EXPECT_THAT(journals, SizeIs(2));
+    EXPECT_FALSE(journal->IsCommitted());
+    EXPECT_THAT(journal->GetData(),
+                ElementsAre(Pair(
+                    key2, storage::EntryMatches(
+                              {key2, storage::DigestMatches(object_digest2),
+                               storage::KeyPriority::EAGER}))));
+  }
+
+  page_ptr_->Commit(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+
+  {
+    EXPECT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
+
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+        journals = fake_storage_->GetJournals();
+    EXPECT_THAT(journals, SizeIs(2));
+    EXPECT_TRUE(journal->IsCommitted());
+    EXPECT_THAT(journal->GetData(),
+                ElementsAre(Pair(
+                    key2, storage::EntryMatches(
+                              {key2, storage::DigestMatches(object_digest2),
+                               storage::KeyPriority::EAGER}))));
   }
 }
 
@@ -1508,30 +1650,33 @@ TEST_F(PageImplTest, SerializedOperations) {
   std::string value2("a second value");
   std::string value3("a third value");
 
-  bool called[6] = {false, false, false, false, false, false};
-  Status statuses[6] = {Status::UNKNOWN_ERROR, Status::UNKNOWN_ERROR,
+  bool called[7] = {false, false, false, false, false, false, false};
+  Status statuses[7] = {Status::UNKNOWN_ERROR, Status::UNKNOWN_ERROR,
                         Status::UNKNOWN_ERROR, Status::UNKNOWN_ERROR,
-                        Status::UNKNOWN_ERROR, Status::UNKNOWN_ERROR};
+                        Status::UNKNOWN_ERROR, Status::UNKNOWN_ERROR,
+                        Status::UNKNOWN_ERROR};
 
   page_ptr_->Put(
       convert::ToArray(key), convert::ToArray(value1),
       callback::Capture(callback::SetWhenCalled(&called[0]), &statuses[0]));
+  page_ptr_->Clear(
+      callback::Capture(callback::SetWhenCalled(&called[1]), &statuses[1]));
   page_ptr_->Put(
       convert::ToArray(key), convert::ToArray(value2),
-      callback::Capture(callback::SetWhenCalled(&called[1]), &statuses[1]));
+      callback::Capture(callback::SetWhenCalled(&called[2]), &statuses[2]));
   page_ptr_->Delete(
       convert::ToArray(key),
-      callback::Capture(callback::SetWhenCalled(&called[2]), &statuses[2]));
-  page_ptr_->StartTransaction(
       callback::Capture(callback::SetWhenCalled(&called[3]), &statuses[3]));
+  page_ptr_->StartTransaction(
+      callback::Capture(callback::SetWhenCalled(&called[4]), &statuses[4]));
   page_ptr_->Put(
       convert::ToArray(key), convert::ToArray(value3),
-      callback::Capture(callback::SetWhenCalled(&called[4]), &statuses[4]));
-  page_ptr_->Commit(
       callback::Capture(callback::SetWhenCalled(&called[5]), &statuses[5]));
+  page_ptr_->Commit(
+      callback::Capture(callback::SetWhenCalled(&called[6]), &statuses[6]));
 
-  // 3 first operations need to be serialized and blocked on commits.
-  for (size_t i = 0; i < 3; ++i) {
+  // 4 first operations need to be serialized and blocked on commits.
+  for (size_t i = 0; i < 4; ++i) {
     // Callbacks are blocked until operation commits.
     DrainLoop();
     EXPECT_FALSE(called[i]);
@@ -1548,22 +1693,22 @@ TEST_F(PageImplTest, SerializedOperations) {
 
   // Neither StartTransaction, nor Put in a transaction should now be blocked.
   DrainLoop();
-  for (size_t i = 3; i < 5; ++i) {
+  for (size_t i = 4; i < 6; ++i) {
     EXPECT_TRUE(called[i]);
     EXPECT_EQ(Status::OK, statuses[i]);
   }
 
   // But committing the transaction should still be blocked.
   DrainLoop();
-  EXPECT_FALSE(called[5]);
-  EXPECT_NE(Status::OK, statuses[5]);
+  EXPECT_FALSE(called[6]);
+  EXPECT_NE(Status::OK, statuses[6]);
 
   // Unblocking the transaction commit.
   CommitFirstPendingJournal(fake_storage_->GetJournals());
   // The operation can now succeed.
   DrainLoop();
-  EXPECT_TRUE(called[5]);
-  EXPECT_EQ(Status::OK, statuses[5]);
+  EXPECT_TRUE(called[6]);
+  EXPECT_EQ(Status::OK, statuses[6]);
 }
 
 TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {

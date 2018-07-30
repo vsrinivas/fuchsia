@@ -45,6 +45,9 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
                             const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
+  Status EmptyJournalAndMarkContainsClearOperation(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id) override;
 
   // Object data.
   Status WriteObject(coroutine::CoroutineHandler* handler,

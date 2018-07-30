@@ -63,8 +63,9 @@ void PageImpl::Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) {
 }
 
 void PageImpl::Clear(ClearCallback callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(Status::INTERNAL_ERROR);
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_clear");
+  delegate_->Clear(std::move(timed_callback));
 }
 
 void PageImpl::CreateReferenceFromSocket(

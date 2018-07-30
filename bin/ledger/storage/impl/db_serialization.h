@@ -81,6 +81,7 @@ class JournalEntryRow {
       kPrefix.size() + kJournalIdSize + 1 + kJournalEntry.size();
 
   // Journal values
+  static constexpr char kClear = 'C';
   static constexpr char kAddPrefix = 'A';
   static constexpr fxl::StringView kDeletePrefix = "D";
   static const char kLazyPrefix = 'L';
@@ -91,10 +92,14 @@ class JournalEntryRow {
 
   static std::string GetPrefixFor(const JournalId& journal_id);
 
+  static std::string GetEntriesPrefixFor(const JournalId& journal_id);
+
   static std::string GetKeyFor(const JournalId& id, fxl::StringView key);
 
   static std::string GetValueFor(const ObjectIdentifier& object_identifier,
                                  KeyPriority priority);
+
+  static std::string GetClearMarkerKey(const JournalId& id);
 
   static Status ExtractObjectIdentifier(fxl::StringView db_value,
                                         ObjectIdentifier* object_identifier);

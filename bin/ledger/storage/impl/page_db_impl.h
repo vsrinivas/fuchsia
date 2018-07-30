@@ -43,7 +43,8 @@ class PageDbImpl : public PageDb {
                                  CommitId* base) override;
   Status GetJournalEntries(
       coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries) override;
+      std::unique_ptr<Iterator<const EntryChange>>* entries,
+      JournalContainsClearOperation* contains_clear_operation) override;
   Status ReadObject(coroutine::CoroutineHandler* handler,
                     ObjectIdentifier object_identifier,
                     std::unique_ptr<const Object>* object) override;
@@ -86,6 +87,9 @@ class PageDbImpl : public PageDb {
   Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
                             const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
+  Status EmptyJournalAndMarkContainsClearOperation(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id) override;
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      ObjectIdentifier object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,

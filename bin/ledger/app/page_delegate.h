@@ -70,6 +70,8 @@ class PageDelegate {
 
   void Delete(fidl::VectorPtr<uint8_t> key, Page::DeleteCallback callback);
 
+  void Clear(Page::ClearCallback callback);
+
   void CreateReference(std::unique_ptr<storage::DataSource> data,
                        fit::function<void(Status, ReferencePtr)> callback);
 
