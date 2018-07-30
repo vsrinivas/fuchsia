@@ -413,7 +413,6 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
 
 error_return:
     zx_handle_close(xhci->bti_handle);
-    free(xhci);
     for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
         zx_handle_close(xhci->irq_handles[i]);
     }
@@ -422,6 +421,7 @@ error_return:
         zx_handle_close(xhci->mmio_handle);
     }
     zx_handle_close(xhci->cfg_handle);
+    free(xhci);
     return status;
 }
 
