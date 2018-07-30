@@ -11,7 +11,8 @@ extern crate serde_derive;
 mod opts;
 mod wlan_service_util;
 
-use failure::{Error, ResultExt, err_msg};
+use failure::{Error, ResultExt, bail, err_msg,};
+use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
 use fidl_fuchsia_wlan_device_service as wlan_service;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -19,6 +20,7 @@ use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{self as syslog, fx_log, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
+use futures::io::{AllowStdIo, AsyncReadExt};
 use serde::{Serialize};
 use serde::ser::{Serializer, SerializeMap, SerializeStruct};
 use std::collections::HashMap;
@@ -62,13 +64,16 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
             .context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
 
+    let http_svc = connect_to_service::<http::HttpServiceMarker>()?;
+    test_results.connect_to_http_service = true;
+
     let fut = async {
         let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&wlan_svc))
                 .context("wlan-smoke-test: failed to query wlanservice iface list")?;
         test_results.query_wlan_service_iface_list = true;
 
         if wlan_iface_ids.is_empty() {
-            return Err(err_msg("Did not find wlan interfaces"));
+            bail!("Did not find wlan interfaces");
         };
         test_results.wlan_discovered = true;
         // note: interface discovery is marked false at the time of failure
@@ -127,14 +132,28 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
                 // simply checking here to return overall test status
                 test_pass = false;
             }
+
+            // TODO(NET-1095): add ping check to verify connectivity
+
+            // TODO(NET-1095): add http get to verify data when we can specify this interface
         }
+
+        // create url (TODO(NET-1095): add command line option)
+        let url_string = "http://ovh.net/files/1Mb.dat";
+        let url_request = create_url_request(url_string);
+
+        // NOTE: this is intended to loop over each wlan iface. For now,
+        // make a single request to make sure that mechanism works and we have not broken
+        // connectivity with connection changes
+        await!(fetch_and_discard_url(http_svc, url_request))?;
+        test_results.base_data_transfer = true;
 
         Ok(())
     };
     exec.run_singlethreaded(fut)?;
 
     if !test_pass {
-        return Err(err_msg("Saw a failure on at least one interface"));
+        bail!("Saw a failure on at least one interface");
     }
 
     Ok(())
@@ -144,6 +163,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
 #[derive(Default, Serialize)]
 struct TestResults {
     connect_to_wlan_service: bool,
+    connect_to_http_service: bool,
     query_wlan_service_iface_list: bool,
     wlan_discovered: bool,
     interface_status: bool,
@@ -199,4 +219,47 @@ fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
         Some(ref bss) if bss.ssid.as_slice() == target_ssid.as_ref() => false,
         _ => true
     }
+}
+
+fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
+    http::UrlRequest {
+        url: url_string.into(),
+        method: String::from("GET"),
+        headers: None,
+        body: None,
+        response_body_buffer_size: 0,
+        auto_follow_redirects: true,
+        cache_mode: http::CacheMode::Default,
+        response_body_mode: http::ResponseBodyMode::Stream,
+    }
+}
+
+async fn fetch_and_discard_url(http_service: HttpServiceProxy, mut url_request: http::UrlRequest)
+        -> Result<(), Error> {
+
+    // Create a UrlLoader instance
+    let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
+    let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
+
+    let loader_server = fidl::endpoints::ServerEnd::<http::UrlLoaderMarker>::new(s);
+    http_service.create_url_loader(loader_server)?;
+
+    let loader_proxy = http::UrlLoaderProxy::new(proxy);
+    let response = await!(loader_proxy.start(&mut url_request))?;
+
+    if let Some(e) = response.error {
+        bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
+    }
+
+    let mut socket = match response.body.map(|x| *x) {
+        Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
+        _ => return Err(Error::from(zx::Status::BAD_STATE)),
+    };
+
+    // discard the bytes
+    let mut stdio_sink = AllowStdIo::new(::std::io::sink());
+    let bytes_received = await!(socket.copy_into(&mut stdio_sink))?;
+    fx_log_info!("Received {:?} bytes", bytes_received);
+
+    Ok(())
 }
