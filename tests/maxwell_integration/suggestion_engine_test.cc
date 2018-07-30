@@ -82,9 +82,7 @@ class Proposinator {
     out_->Propose(std::move(proposal));
   }
 
-  void Remove(const std::string& id) {
-    out_->Remove(id);
-  }
+  void Remove(const std::string& id) { out_->Remove(id); }
 
   void KillPublisher() { out_.Unbind(); }
 
@@ -227,6 +225,11 @@ class SuggestionEngineTest : public ContextEngineTestBase,
         focus_provider_handle;
     focus_provider_handle.NewRequest();
 
+    // Hack to get an unbound fuchsia::modular::PuppetMaster for
+    // Initialize().
+    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle;
+    puppet_master_handle.NewRequest();
+
     fidl::InterfaceHandle<fuchsia::modular::ContextWriter>
         context_writer_handle;
     fidl::InterfaceHandle<fuchsia::modular::ContextReader>
@@ -242,7 +245,8 @@ class SuggestionEngineTest : public ContextEngineTestBase,
 
     suggestion_engine()->Initialize(
         std::move(story_provider_handle), std::move(focus_provider_handle),
-        std::move(context_writer_handle), std::move(context_reader_handle));
+        std::move(context_writer_handle), std::move(context_reader_handle),
+        std::move(puppet_master_handle));
   }
 
  protected:

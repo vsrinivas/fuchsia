@@ -46,8 +46,8 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
       kStoryInfoAgentUrl, agent_services.NewRequest(), controller.NewRequest());
 
   using fuchsia::maxwell::internal::StoryInfoInitializer;
-  auto initializer = component::ConnectToService<StoryInfoInitializer>(
-      agent_services.get());
+  auto initializer =
+      component::ConnectToService<StoryInfoInitializer>(agent_services.get());
   initializer->Initialize(std::move(story_provider), std::move(focus_provider),
                           std::move(visible_stories_provider));
 
@@ -72,7 +72,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
         focus_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-        visible_stories_provider_handle)
+        visible_stories_provider_handle,
+    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master)
     : context_(context), config_(config), kronk_restart_(kKronkRetryLimit) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
@@ -100,7 +101,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   suggestion_engine_->Initialize(
       Duplicate(story_provider_), Duplicate(focus_provider_),
-      std::move(context_writer), std::move(context_reader));
+      std::move(context_writer), std::move(context_reader),
+      std::move(puppet_master));
 
   StartActionLog(suggestion_engine_.get());
 }
@@ -200,8 +202,7 @@ void UserIntelligenceProviderImpl::StartKronk() {
                                      kronk_controller_.NewRequest());
 
   fuchsia::modular::KronkInitializerPtr initializer;
-  component::ConnectToService(kronk_services_.get(),
-                                 initializer.NewRequest());
+  component::ConnectToService(kronk_services_.get(), initializer.NewRequest());
   initializer->Initialize(Duplicate(focus_provider_));
 
   // fuchsia::modular::Agent runner closes the agent controller connection when
@@ -316,6 +317,7 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
     fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider,
+    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master,
     fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
         user_intelligence_provider_request) {
   // Fail if someone has already used this Factory to create an instance of
@@ -323,7 +325,8 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
       context_, config_, std::move(context_engine), std::move(story_provider),
-      std::move(focus_provider), std::move(visible_stories_provider)));
+      std::move(focus_provider), std::move(visible_stories_provider),
+      std::move(puppet_master)));
   binding_.reset(new fidl::Binding<fuchsia::modular::UserIntelligenceProvider>(
       impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));

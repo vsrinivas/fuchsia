@@ -431,6 +431,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider_maxwell;
   auto focus_provider_request_maxwell = focus_provider_maxwell.NewRequest();
 
+  fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master;
+  auto puppet_master_request = puppet_master.NewRequest();
+
   fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
       visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
@@ -451,7 +454,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
       std::move(context_engine), std::move(story_provider),
       std::move(focus_provider_maxwell), std::move(visible_stories_provider),
-      std::move(intelligence_provider_request));
+      std::move(puppet_master), std::move(intelligence_provider_request));
   AtEnd(Reset(&maxwell_app_));
   AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_app_.get()));
 
@@ -611,6 +614,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       module_resolver_service_.get(), entity_provider_runner_.get());
   puppet_master_impl_.reset(new PuppetMasterImpl(
       session_storage_.get(), story_command_executor_.get()));
+  puppet_master_impl_->Connect(std::move(puppet_master_request));
 
   session_ctl_.reset(new SessionCtl(startup_context_->outgoing().debug_dir(),
                                     "sessionctl", puppet_master_impl_.get()));

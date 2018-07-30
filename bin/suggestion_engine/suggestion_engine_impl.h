@@ -156,7 +156,8 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
       fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
       fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer,
-      fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader)
+      fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader,
+      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master)
       override;
 
   void Terminate(std::function<void()> done) { done(); }
@@ -283,6 +284,9 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // context.
   fuchsia::modular::ContextReaderPtr context_reader_;
   fidl::Binding<fuchsia::modular::ContextListener> context_listener_binding_;
+
+  // The puppet master connection that is used to execute actions.
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
 
   // Used to jackpot a suggestion when a fuchsia::modular::QueryAction is
   // executed.

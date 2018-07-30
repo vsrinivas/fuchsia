@@ -27,7 +27,8 @@ class UserIntelligenceProviderImpl
       fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
       fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-          visible_stories_provider);
+          visible_stories_provider,
+      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master);
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
@@ -112,6 +113,7 @@ class UserIntelligenceProviderFactoryImpl
       fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
       fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
           visible_stories_provider,
+      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master,
       fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
           user_intelligence_provider_request) override;
 

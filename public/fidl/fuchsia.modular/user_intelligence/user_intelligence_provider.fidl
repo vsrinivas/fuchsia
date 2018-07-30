@@ -17,6 +17,7 @@ interface UserIntelligenceProviderFactory {
       StoryProvider story_provider,
       FocusProvider focus_provider,
       VisibleStoriesProvider visible_stories_provider,
+      PuppetMaster puppet_master,
       request<UserIntelligenceProvider> provider);
 };
 

@@ -239,11 +239,13 @@ void SuggestionEngineImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer,
-    fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader) {
+    fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader,
+    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
   context_reader_.Bind(std::move(context_reader));
   query_processor_.Initialize(std::move(context_writer));
+  puppet_master_.Bind(std::move(puppet_master));
   RegisterRankingFeatures();
 }
 
