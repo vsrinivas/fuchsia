@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSCALLS_DEBUG_
+#define ZIRCON_SYSCALLS_DEBUG_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -57,8 +58,8 @@ typedef struct zx_thread_state_fp_regs {
 // Setting vector registers will only work for threads that have previously executed an
 // instruction using the corresponding register class.
 typedef struct zx_thread_state_vector_regs {
-    // When only 16 registers are supported (pre-AVX-512), zmm[16-31] will be 0. YMM registers (256
-    // bits) are v[0-4], XMM registers (128 bits) are v[0-2].
+    // When only 16 registers are supported (pre-AVX-512), zmm[16-31] will be 0.
+    // YMM registers (256 bits) are v[0-4], XMM registers (128 bits) are v[0-2].
     struct {
         uint64_t v[8];
     } zmm[32];
@@ -81,8 +82,8 @@ typedef struct zx_thread_state_general_regs {
     uint64_t cpsr;
 } zx_thread_state_general_regs_t;
 
-// Value for ZX_THREAD_STATE_FP_REGS on ARM64 platforms. This is unused because vector state is
-// used for all floating point on ARM64.
+// Value for ZX_THREAD_STATE_FP_REGS on ARM64 platforms.
+// This is unused because vector state is used for all floating point on ARM64.
 typedef struct zx_thread_state_fp_regs {
     // Avoids sizing differences for empty structs between C and C++.
     uint32_t unused;
@@ -109,13 +110,14 @@ typedef uint64_t zx_thread_x86_register_fs_t;
 typedef uint64_t zx_thread_x86_register_gs_t;
 
 // Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
-typedef enum {
-    ZX_THREAD_STATE_GENERAL_REGS = 0, // zx_thread_state_general_regs_t value.
-    ZX_THREAD_STATE_FP_REGS = 1,      // zx_thread_state_fp_regs_t value.
-    ZX_THREAD_STATE_VECTOR_REGS = 2,  // zx_thread_state_vector_regs_t value.
-    ZX_THREAD_STATE_SINGLE_STEP = 4,  // zx_thread_state_single_step_t value.
-    ZX_THREAD_X86_REGISTER_FS = 5,    // zx_thread_x86_register_fs_t value.
-    ZX_THREAD_X86_REGISTER_GS = 6     // zx_thread_x86_register_gs_t value.
-} zx_thread_state_topic_t;
+typedef uint32_t zx_thread_state_topic_t;
+#define ZX_THREAD_STATE_GENERAL_REGS  ((uint32_t)0) // zx_thread_state_general_regs_t value.
+#define ZX_THREAD_STATE_FP_REGS       ((uint32_t)1) // zx_thread_state_fp_regs_t value.
+#define ZX_THREAD_STATE_VECTOR_REGS   ((uint32_t)2) // zx_thread_state_vector_regs_t value.
+#define ZX_THREAD_STATE_SINGLE_STEP   ((uint32_t)4) // zx_thread_state_single_step_t value.
+#define ZX_THREAD_X86_REGISTER_FS     ((uint32_t)5) // zx_thread_x86_register_fs_t value.
+#define ZX_THREAD_X86_REGISTER_GS     ((uint32_t)6) // zx_thread_x86_register_gs_t value.
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSCALLS_DEBUG_
