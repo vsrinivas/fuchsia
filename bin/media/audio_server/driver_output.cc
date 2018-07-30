@@ -25,7 +25,7 @@ namespace audio {
 static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
-    fuchsia::media::AudioSampleFormat::SIGNED_16;
+    fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
 static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(20);
 static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(30);
 static constexpr int64_t kDefaultMaxRetentionNsec = ZX_MSEC(60);

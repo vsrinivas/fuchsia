@@ -58,14 +58,11 @@ zx_status_t SelectBestFormat(
   }
 
   for (const auto& range : fmts) {
-    // Start by scoring our sample format.  Right now, we only support 8-bit
-    // unsigned, 16-bit signed, 24-bit-in-32 signed, and 32-bit float in the
-    // mixer.  If this sample format range does not support any of these, just
-    // skip it for now. Otherwise, 5 points if you match the requested format, 4
-    // for signed-16, 3 for float-32, 2 for signed-24, or 1 for unsigned-8.
-    //
-    // TODO(mpuryear): once we validate float or 24in32 on hardware with native
-    // support, change this algorithm to prefer either of these over signed-16.
+    // Start by scoring our sample format.  Right now, the audio core supports
+    // 8-bit unsigned, 16-bit signed, 24-bit-in-32 signed and 32-bit float. If
+    // this sample format range does not support any of these, just skip it for
+    // now. Otherwise, 5 points if you match the requested format, 4 for
+    // signed-24, 3 for signed-16, 2 for float-32, or 1 for unsigned-8.
     audio_sample_format_t this_sample_format;
     int sample_format_score;
 
@@ -75,21 +72,21 @@ zx_status_t SelectBestFormat(
     bool supports_f32 = (range.sample_formats & F32_FMT) == F32_FMT;
     if ((range.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
         (!supports_u8 && !supports_s16 && !supports_s24 && !supports_f32)) {
-      continue;  // Skip -- this isn't a sample container we understand.
+      continue;  // Otherwise skip: this isn't a sample container we understand.
     }
 
     if ((pref_sample_format & range.sample_formats) == pref_sample_format) {
       // Direct match.
       this_sample_format = pref_sample_format;
       sample_format_score = 5;
-    } else if (supports_s16) {
-      this_sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
-      sample_format_score = 4;
-    } else if (supports_f32) {
-      this_sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
-      sample_format_score = 3;
     } else if (supports_s24) {
       this_sample_format = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+      sample_format_score = 4;
+    } else if (supports_s16) {
+      this_sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
+      sample_format_score = 3;
+    } else if (supports_f32) {
+      this_sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
       sample_format_score = 2;
     } else {
       FXL_DCHECK(supports_u8);
