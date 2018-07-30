@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_PROCESS_H_
+#define ZIRCON_PROCESS_H_
 
 #include <zircon/types.h>
 #include <stdint.h>
@@ -30,3 +31,5 @@ zx_handle_t _zx_job_default(void);
 zx_handle_t zx_job_default(void);
 
 __END_CDECLS
+
+#endif // ZIRCON_PROCESS_H_
