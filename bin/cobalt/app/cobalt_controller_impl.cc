@@ -16,9 +16,10 @@ CobaltControllerImpl::CobaltControllerImpl(
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // invokes |callback| on the main thread
-  shipping_dispatcher_->RequestSendSoon(fxl::MakeCopyable(
-      [ dispatcher = dispatcher_, callback = std::move(callback) ](bool success) mutable {
-        async::PostTask(dispatcher, [ callback = std::move(callback), success ] {
+  shipping_dispatcher_->RequestSendSoon(
+      fxl::MakeCopyable([dispatcher = dispatcher_,
+                         callback = std::move(callback)](bool success) mutable {
+        async::PostTask(dispatcher, [callback = std::move(callback), success] {
           callback(success);
         });
       }));
@@ -30,12 +31,13 @@ void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,
   callback();
 }
 
-void CobaltControllerImpl::NumSendAttempts(NumSendAttemptsCallback callback) {
+void CobaltControllerImpl::GetNumSendAttempts(
+    GetNumSendAttemptsCallback callback) {
   callback(shipping_dispatcher_->NumSendAttempts());
 }
 
-void CobaltControllerImpl::FailedSendAttempts(
-    FailedSendAttemptsCallback callback) {
+void CobaltControllerImpl::GetFailedSendAttempts(
+    GetFailedSendAttemptsCallback callback) {
   callback(shipping_dispatcher_->NumFailedAttempts());
 }
 }  // namespace cobalt

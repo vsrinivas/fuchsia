@@ -64,12 +64,12 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
   store_dispatcher_.Register(
       ObservationMetadata::LEGACY_BACKEND,
       std::make_unique<MemoryObservationStore>(
-          fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
+          fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION, kMaxBytesPerEnvelope,
           kMaxBytesTotal, kMinEnvelopeSendSize));
   store_dispatcher_.Register(
       ObservationMetadata::V1_BACKEND,
       std::make_unique<MemoryObservationStore>(
-          fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
+          fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION, kMaxBytesPerEnvelope,
           kMaxBytesTotal, kMinEnvelopeSendSize));
 
   auto schedule_params =

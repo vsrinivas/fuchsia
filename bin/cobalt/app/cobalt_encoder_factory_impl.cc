@@ -11,7 +11,6 @@ namespace encoder {
 
 using cobalt::TimerManager;
 using config::ClientConfig;
-using fuchsia::cobalt::CobaltEncoder;
 
 const int32_t kFuchsiaCustomerId = 1;
 
@@ -30,7 +29,8 @@ CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
       timer_manager_(timer_manager) {}
 
 void CobaltEncoderFactoryImpl::GetEncoder(
-    int32_t project_id, fidl::InterfaceRequest<CobaltEncoder> request) {
+    int32_t project_id,
+    fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request) {
   std::unique_ptr<ProjectContext> project_context(
       new ProjectContext(kFuchsiaCustomerId, project_id, client_config_));
 
@@ -44,7 +44,7 @@ void CobaltEncoderFactoryImpl::GetEncoder(
 
 void CobaltEncoderFactoryImpl::GetEncoderForProject(
     fuchsia::cobalt::ProjectProfile profile,
-    fidl::InterfaceRequest<CobaltEncoder> request,
+    fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request,
     GetEncoderForProjectCallback callback) {
   fuchsia::mem::Buffer config_buffer{.vmo = std::move(profile.config.vmo),
                                      .size = profile.config.size};

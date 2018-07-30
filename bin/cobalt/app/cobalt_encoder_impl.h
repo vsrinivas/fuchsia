@@ -23,7 +23,7 @@
 namespace cobalt {
 namespace encoder {
 
-class CobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
+class CobaltEncoderImpl : public fuchsia::cobalt::Encoder {
  public:
   CobaltEncoderImpl(std::unique_ptr<encoder::ProjectContext> project_context,
                     ClientSecret client_secret,
@@ -34,7 +34,8 @@ class CobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
 
  private:
   template <class CB>
-  void AddEncodedObservation(Encoder::Result* result, CB callback);
+  void AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
+                             CB callback);
 
   void AddStringObservation(uint32_t metric_id, uint32_t encoding_id,
                             fidl::StringPtr observation,
@@ -86,7 +87,7 @@ class CobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
 
   void SendObservations(SendObservationsCallback callback) override;
 
-  Encoder encoder_;
+  cobalt::encoder::Encoder encoder_;
   ObservationStoreDispatcher* store_dispatcher_;      // not owned
   util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
   ShippingDispatcher* shipping_dispatcher_;           // not owned

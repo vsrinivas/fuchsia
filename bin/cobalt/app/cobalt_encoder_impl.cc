@@ -26,21 +26,21 @@ CobaltEncoderImpl::CobaltEncoderImpl(
       timer_manager_(timer_manager) {}
 
 template <class CB>
-void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
-                                              CB callback) {
+void CobaltEncoderImpl::AddEncodedObservation(
+    cobalt::encoder::Encoder::Result* result, CB callback) {
   switch (result->status) {
-    case Encoder::kOK:
+    case cobalt::encoder::Encoder::kOK:
       break;
-    case Encoder::kInsufficientBuildLevel:
+    case cobalt::encoder::Encoder::kInsufficientBuildLevel:
       FXL_LOG(WARNING)
           << "Cobalt metric reporting attempt with insufficient build level";
       callback(Status::OK);
       return;
-    case Encoder::kInvalidArguments:
+    case cobalt::encoder::Encoder::kInvalidArguments:
       callback(Status::INVALID_ARGUMENTS);
       return;
-    case Encoder::kInvalidConfig:
-    case Encoder::kEncodingFailed:
+    case cobalt::encoder::Encoder::kInvalidConfig:
+    case cobalt::encoder::Encoder::kEncodingFailed:
       callback(Status::INTERNAL_ERROR);
       FXL_LOG(WARNING) << "Cobalt internal error: " << result->status;
       return;
@@ -137,7 +137,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
     uint32_t metric_id,
     fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
     AddMultipartObservationCallback callback) {
-  Encoder::Value value;
+  cobalt::encoder::Encoder::Value value;
   for (const auto& obs_val : *observation) {
     switch (obs_val.value.Which()) {
       case fuchsia::cobalt::Value::Tag::kStringValue: {

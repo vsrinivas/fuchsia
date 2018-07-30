@@ -165,8 +165,8 @@ class CobaltTestApp {
   // parameters (1, 0) meaning that scheduled sends will occur every second.
   // The test will then not invoke RequestSendSoon() but rather will add
   // some Observations and then invoke BlockUntilEmpty() and wait up to one
-  // second for the sends to occur and then use the NumSendAttempts() and
-  // FailedSendAttempts() accessors to determine success.
+  // second for the sends to occur and then use the GetNumSendAttempts() and
+  // GetFailedSendAttempts() accessors to determine success.
   bool RunTestsWithBlockUntilEmpty();
 
   // Tests using the instance of the Cobalt service found in the environment.
@@ -260,8 +260,8 @@ class CobaltTestApp {
   // use the method RequestSendSoon() to ask the Cobalt Client to send the
   // Observations soon and return the status. Otherwise we use the method
   // BlockUntilEmpty() to wait for the CobaltClient to have sent all the
-  // Observations it is holding and then we query NumSendAttempts() and
-  // FailedSendAttempts().
+  // Observations it is holding and then we query GetNumSendAttempts() and
+  // GetFailedSendAttempts().
   bool CheckForSuccessfulSend(bool use_request_send_soon);
 
   bool use_network_;
@@ -270,8 +270,8 @@ class CobaltTestApp {
   int previous_value_of_num_send_attempts_ = 0;
   std::unique_ptr<component::StartupContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  fuchsia::cobalt::CobaltEncoderSyncPtr encoder_;
-  fuchsia::cobalt::CobaltControllerSyncPtr cobalt_controller_;
+  fuchsia::cobalt::EncoderSyncPtr encoder_;
+  fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
@@ -334,7 +334,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
-  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
+  fuchsia::cobalt::EncoderFactorySyncPtr factory;
   services.ConnectToService(factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
@@ -382,7 +382,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
-  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
+  fuchsia::cobalt::EncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
@@ -826,9 +826,9 @@ bool CobaltTestApp::CheckForSuccessfulSend(bool use_request_send_soon) {
   FXL_VLOG(1) << "BlockUntilEmpty() returned.";
 
   uint32_t num_send_attempts;
-  cobalt_controller_->NumSendAttempts(&num_send_attempts);
+  cobalt_controller_->GetNumSendAttempts(&num_send_attempts);
   uint32_t failed_send_attempts;
-  cobalt_controller_->FailedSendAttempts(&failed_send_attempts);
+  cobalt_controller_->GetFailedSendAttempts(&failed_send_attempts);
   FXL_VLOG(1) << "num_send_attempts=" << num_send_attempts;
   FXL_VLOG(1) << "failed_send_attempts=" << failed_send_attempts;
   uint32_t expected_lower_bound = previous_value_of_num_send_attempts_ + 1;

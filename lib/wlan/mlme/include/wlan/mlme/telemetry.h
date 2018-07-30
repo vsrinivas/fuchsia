@@ -38,7 +38,7 @@ class Telemetry {
    private:
     // Every report_period minutes, the worker Cobalt reporter sends data to Cobalt.
     void CobaltReporter(std::chrono::minutes report_period);
-    ::fuchsia::cobalt::CobaltEncoderSyncPtr ConnectToEnvironmentService();
+    ::fuchsia::cobalt::EncoderSyncPtr ConnectToEnvironmentService();
 
     Dispatcher* dispatcher_;
     std::thread worker_thread_;

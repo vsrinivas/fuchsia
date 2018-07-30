@@ -20,7 +20,7 @@
 namespace cobalt {
 namespace encoder {
 
-class CobaltEncoderFactoryImpl : public fuchsia::cobalt::CobaltEncoderFactory {
+class CobaltEncoderFactoryImpl : public fuchsia::cobalt::EncoderFactory {
  public:
   CobaltEncoderFactoryImpl(std::shared_ptr<config::ClientConfig> client_config,
                            ClientSecret client_secret,
@@ -31,19 +31,18 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::CobaltEncoderFactory {
                            TimerManager* timer_manager);
 
  private:
-  void GetEncoder(
-      int32_t project_id,
-      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request);
+  void GetEncoder(int32_t project_id,
+                  fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request);
 
   void GetEncoderForProject(
       fuchsia::cobalt::ProjectProfile profile,
-      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request,
+      fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request,
       GetEncoderForProjectCallback callback);
 
   std::shared_ptr<config::ClientConfig> client_config_;
   ClientSecret client_secret_;
-  fidl::BindingSet<fuchsia::cobalt::CobaltEncoder,
-                   std::unique_ptr<fuchsia::cobalt::CobaltEncoder>>
+  fidl::BindingSet<fuchsia::cobalt::Encoder,
+                   std::unique_ptr<fuchsia::cobalt::Encoder>>
       cobalt_encoder_bindings_;
   ObservationStoreDispatcher* store_dispatcher_;      // not owned
   util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned

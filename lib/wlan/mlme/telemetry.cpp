@@ -63,9 +63,9 @@ void Telemetry::CobaltReporter(std::chrono::minutes report_period) {
     }
 }
 
-cobalt::CobaltEncoderSyncPtr Telemetry::ConnectToEnvironmentService() {
-    cobalt::CobaltEncoderSyncPtr encoder;
-    cobalt::CobaltEncoderFactorySyncPtr factory;
+cobalt::EncoderSyncPtr Telemetry::ConnectToEnvironmentService() {
+    cobalt::EncoderSyncPtr encoder;
+    cobalt::EncoderFactorySyncPtr factory;
     component::ConnectToEnvironmentService(factory.NewRequest());
     factory->GetEncoder(kCobaltProjectId, encoder.NewRequest());
     infof("telemetry: connected to Cobalt\n");

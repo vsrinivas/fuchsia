@@ -61,11 +61,11 @@ class CobaltApp {
 
   std::shared_ptr<config::ClientConfig> client_config_;
 
-  std::unique_ptr<fuchsia::cobalt::CobaltController> controller_impl_;
-  fidl::BindingSet<fuchsia::cobalt::CobaltController> controller_bindings_;
+  std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
+  fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
 
-  std::unique_ptr<fuchsia::cobalt::CobaltEncoderFactory> factory_impl_;
-  fidl::BindingSet<fuchsia::cobalt::CobaltEncoderFactory> factory_bindings_;
+  std::unique_ptr<fuchsia::cobalt::EncoderFactory> factory_impl_;
+  fidl::BindingSet<fuchsia::cobalt::EncoderFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };
