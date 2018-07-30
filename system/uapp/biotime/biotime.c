@@ -326,13 +326,14 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         error("error: unexpected arguments\n");
     }
+    const char* device_filename = argv[0];
 
     int fd;
-    if ((fd = open(argv[0], O_RDONLY)) < 0) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[3]);
+    if ((fd = open(device_filename, O_RDONLY)) < 0) {
+        fprintf(stderr, "error: cannot open '%s'\n", device_filename);
         return -1;
     }
-    if (blkdev_open(fd, argv[1], 8*1024*1024, &blk) != ZX_OK) {
+    if (blkdev_open(fd, device_filename, 8*1024*1024, &blk) != ZX_OK) {
         return -1;
     }
 
