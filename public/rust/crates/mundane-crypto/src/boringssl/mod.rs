@@ -52,9 +52,10 @@ mod wrapper;
 mod raw;
 
 // C types
-pub use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_PKEY};
+pub use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_PKEY, SHA256_CTX, SHA512_CTX};
 // C constants
-pub use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
+pub use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, SHA256_DIGEST_LENGTH,
+                        SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH};
 // wrapper types
 pub use boringssl::wrapper::{CHeapWrapper, CRef, CStackWrapper};
 
@@ -69,7 +70,7 @@ use boringssl::raw::{CBB_data, CBB_init, CBB_len, CBS_init, CBS_len, ECDSA_sign,
                      EC_KEY_generate_key, EC_KEY_get0_group, EC_KEY_marshal_private_key,
                      EC_KEY_parse_private_key, EC_KEY_set_group, EC_curve_nid2nist,
                      ERR_print_errors_cb, EVP_PKEY_assign_EC_KEY, EVP_PKEY_get1_EC_KEY,
-                     EVP_marshal_public_key, EVP_parse_public_key};
+                     EVP_marshal_public_key, EVP_parse_public_key, SHA384_Init};
 
 impl CStackWrapper<CBB> {
     /// Creates a new `CBB` and initializes it with `CBB_init`.
@@ -123,7 +124,7 @@ impl CStackWrapper<CBS> {
     ) -> O {
         unsafe {
             let mut cbs = mem::uninitialized();
-            CBS_init(&mut cbs, slice_to_const(bytes), bytes.len());
+            CBS_init(&mut cbs, bytes.as_ptr(), bytes.len());
             let mut cbs = CStackWrapper::new(cbs);
             with_cbs(&mut cbs)
         }
@@ -219,9 +220,9 @@ pub fn ecdsa_sign(
         let mut sig_len: c_uint = 0;
         ECDSA_sign(
             0,
-            slice_to_const(digest),
+            digest.as_ptr(),
             digest.len(),
-            slice_to_mut(sig),
+            sig.as_mut_ptr(),
             &mut sig_len,
             key.as_const(),
         )?;
@@ -236,9 +237,9 @@ pub fn ecdsa_verify(digest: &[u8], sig: &[u8], key: &CHeapWrapper<EC_KEY>) -> bo
     unsafe {
         ECDSA_verify(
             0,
-            slice_to_const(digest),
+            digest.as_ptr(),
             digest.len(),
-            slice_to_const(sig),
+            sig.as_ptr(),
             sig.len(),
             key.as_const(),
         )
@@ -290,15 +291,91 @@ impl CHeapWrapper<EVP_PKEY> {
     }
 }
 
-// returns a pointer to the first element of `slc`
-fn slice_to_mut<T>(slc: &mut [T]) -> *mut T {
-    slc as *mut [T] as *mut T
+impl CStackWrapper<SHA512_CTX> {
+    /// Initializes a new `CStackWrapper<SHA512_CTX>` as a SHA-384 hash.
+    ///
+    /// The BoringSSL `SHA512_CTX` is used for both the SHA-512 and SHA-384 hash
+    /// functions. The implementation of `Default` for
+    /// `CStackWrapper<SHA512_CTX>` produces a context initialized for a SHA-512
+    /// hash. In order to produce a context for a SHA-384 hash, use this
+    /// constructor instead.
+    pub fn sha384_new() -> CStackWrapper<SHA512_CTX> {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            SHA384_Init(&mut ctx);
+            CStackWrapper::new(ctx)
+        }
+    }
 }
 
-// returns a pointer to the first element of `slc`
-fn slice_to_const<T>(slc: &[T]) -> *const T {
-    slc as *const [T] as *const T
+/// Implements `CStackWrapper` for a hash context type.
+///
+/// The caller provides doc comments, a public method name, and a private
+/// function name (from the `raw` module) for an update function and a final
+/// function (e.g., `SHA256_Update` and `SHA256_Final`). Note that, as multiple
+/// impl blocks are allowed for a particular type, the same context type may be
+/// used multiple times. This is useful because both SHA-384 and SHA-512 use the
+/// `SHA512_CTX` context type.
+macro_rules! impl_hash {
+    ($ctx:ident, $digest_len:ident, #[$update_doc:meta] $update:ident, $update_raw:ident, #[$final_doc:meta] $final:ident, $final_raw:ident) => {
+        impl CStackWrapper<$ctx> {
+            #[$update_doc]
+            pub fn $update(&mut self, data: &[u8]) {
+                unsafe {
+                    ::boringssl::raw::$update_raw(
+                        self.as_mut(),
+                        data.as_ptr() as *const c_void,
+                        data.len(),
+                    )
+                }
+            }
+
+            #[$final_doc]
+            #[must_use]
+            pub fn $final(
+                &mut self,
+            ) -> Result<[u8; ::boringssl_sys::$digest_len as usize], BoringError> {
+                unsafe {
+                    let mut md: [u8; ::boringssl_sys::$digest_len as usize] = mem::uninitialized();
+                    ::boringssl::raw::$final_raw((&mut md[..]).as_mut_ptr(), self.as_mut())?;
+                    Ok(md)
+                }
+            }
+        }
+    };
+    (@doc_string $s:expr) => (#[doc="The `"] #[doc=$s] #[doc="` function."]);
 }
+
+impl_hash!(
+    SHA256_CTX,
+    SHA256_DIGEST_LENGTH,
+    /// The `SHA256_Update` function.
+    sha256_update,
+    SHA256_Update,
+    /// The `SHA256_Final` function.
+    sha256_final,
+    SHA256_Final
+);
+impl_hash!(
+    SHA512_CTX,
+    SHA384_DIGEST_LENGTH,
+    /// The `SHA384_Update` function.
+    sha384_update,
+    SHA384_Update,
+    /// The `SHA384_Final` function.
+    sha384_final,
+    SHA384_Final
+);
+impl_hash!(
+    SHA512_CTX,
+    SHA512_DIGEST_LENGTH,
+    /// The `SHA512_Update` function.
+    sha512_update,
+    SHA512_Update,
+    /// The `SHA512_Final` function.
+    sha512_final,
+    SHA512_Final
+);
 
 /// An error generated by BoringSSL.
 ///

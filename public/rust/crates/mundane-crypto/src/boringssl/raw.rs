@@ -17,11 +17,12 @@ pub use boringssl_sys::{CBB_cleanup, CBB_len, CBS_init, CBS_len, EC_GROUP_get_cu
                         ERR_error_string_n, ERR_get_error, ERR_print_errors_cb};
 
 use std::num::NonZeroUsize;
-use std::os::raw::{c_char, c_int, c_uint};
+use std::os::raw::{c_char, c_int, c_uint, c_void};
 use std::ptr::NonNull;
 
-use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_PKEY};
+use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_PKEY, SHA512_CTX};
 
+use boringssl::wrapper::CInit;
 use boringssl::BoringError;
 
 // bytestring.h
@@ -192,6 +193,54 @@ pub unsafe fn EVP_PKEY_get1_EC_KEY(pkey: *mut EVP_PKEY) -> Result<NonNull<EC_KEY
         ::boringssl_sys::EVP_PKEY_get1_EC_KEY(pkey),
     )
 }
+
+// sha.h
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn SHA384_Init(ctx: *mut SHA512_CTX) {
+    // SHA384_Init promises to return 1.
+    assert_eq!(::boringssl_sys::SHA384_Init(ctx), 1);
+}
+
+// Implemented manually (rather than via impl_traits! or c_init!) so that we can
+// assert_eq! that the return value is 1.
+unsafe impl CInit for ::boringssl_sys::SHA256_CTX {
+    unsafe fn init(ctx: *mut Self) {
+        // SHA256_Init promises to return 1.
+        assert_eq!(::boringssl_sys::SHA256_Init(ctx), 1);
+    }
+}
+unsafe impl CInit for ::boringssl_sys::SHA512_CTX {
+    unsafe fn init(ctx: *mut Self) {
+        // SHA512_Init promises to return 1.
+        assert_eq!(::boringssl_sys::SHA512_Init(ctx), 1);
+    }
+}
+
+// implement no-op destructors
+impl_traits!(SHA256_CTX, CDestruct => _);
+impl_traits!(SHA512_CTX, CDestruct => _);
+
+macro_rules! sha {
+    ($ctx:ident, $update:ident, $final:ident) => {
+        #[allow(non_snake_case)]
+        pub unsafe fn $update(ctx: *mut ::boringssl_sys::$ctx, data: *const c_void, len: usize) {
+            // All XXX_Update functions promise to return 1.
+            assert_eq!(::boringssl_sys::$update(ctx, data, len), 1);
+        }
+        #[allow(non_snake_case)]
+        pub unsafe fn $final(
+            md: *mut u8, ctx: *mut ::boringssl_sys::$ctx,
+        ) -> Result<(), BoringError> {
+            one_or_err(stringify!($final), ::boringssl_sys::$final(md, ctx))
+        }
+    };
+}
+
+sha!(SHA256_CTX, SHA256_Update, SHA256_Final);
+sha!(SHA512_CTX, SHA384_Update, SHA384_Final);
+sha!(SHA512_CTX, SHA512_Update, SHA512_Final);
 
 // utility functions
 

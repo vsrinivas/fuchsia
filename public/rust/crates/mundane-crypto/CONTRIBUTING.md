@@ -3,9 +3,9 @@
 ## Unsafe
 
 `unsafe` is not allowed, except for in the `boringssl` module. We
-`#![deny(unsafe)]`, so code that uses `unsafe` outside of that module should
-fail to compile. For details on how to use `unsafe` in the `boringssl` module,
-see the doc comment on that module.
+`#[forbid(unsafe)]` in all other modules, so code that uses `unsafe` outside of
+that module should fail to compile. For details on how to use `unsafe` in the
+`boringssl` module, see the doc comment on that module.
 
 ## `#[must_use]`
 

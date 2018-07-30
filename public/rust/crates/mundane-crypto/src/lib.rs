@@ -4,20 +4,26 @@
 
 //! Cryptography in Rust.
 
-// Deny unsafe code except in the boringssl module.
-#![deny(unsafe_code)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![allow(unknown_lints)] // TODO: Remove
 #![feature(vec_resize_default)]
 #![feature(tool_lints)]
 #![allow(stable_features)]
+// just in case we forget to add #[forbid(unsafe_code)] on new module
+// definitions
+#![deny(unsafe_code)]
 
 extern crate boringssl_sys;
 extern crate failure;
 
+// Forbid unsafe code except in the boringssl module.
 mod boringssl;
+#[forbid(unsafe_code)]
+pub mod hash;
+#[forbid(unsafe_code)]
 pub mod public;
+#[forbid(unsafe_code)]
 mod util;
 
 use std::fmt::{self, Debug, Display, Formatter};
