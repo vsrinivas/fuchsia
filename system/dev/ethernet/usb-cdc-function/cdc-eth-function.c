@@ -222,7 +222,8 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
 
     // Send data
     tx_req->header.length = length;
-    ssize_t bytes_copied = usb_request_copyto(tx_req, byte_data, tx_req->header.length, 0);
+    ssize_t bytes_copied = usb_function_req_copy_to(&cdc->function, tx_req, byte_data,
+                                                    tx_req->header.length, 0);
     if (bytes_copied < 0) {
         zxlogf(LERROR, "%s: failed to copy data into send req (error %zd)\n", __FUNCTION__,
                 bytes_copied);
@@ -274,8 +275,9 @@ static ethmac_protocol_ops_t ethmac_ops = {
 };
 
 static void cdc_intr_complete(usb_request_t* req, void* cookie) {
+    usb_cdc_t* cdc = cookie;
     zxlogf(TRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
-    usb_request_release(req);
+    usb_function_req_release(&cdc->function, req);
 }
 
 static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_req) {
@@ -283,7 +285,7 @@ static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_r
     zx_status_t status = usb_function_req_alloc(&cdc->function, &req, INTR_MAX_PACKET,
                                                 cdc->intr_addr);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: usb_request_alloc failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: usb_function_req_alloc failed %d\n", __FUNCTION__, status);
         return status;
     }
     req->complete_cb = cdc_intr_complete;
@@ -321,13 +323,15 @@ static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
 
     status = cdc_alloc_interrupt_req(cdc, &req);
     if (status != ZX_OK) return status;
-    usb_request_copyto(req, &network_notification, sizeof(network_notification), 0);
+    usb_function_req_copy_to(&cdc->function, req, &network_notification,
+                             sizeof(network_notification), 0);
     req->header.length = sizeof(network_notification);
     usb_function_queue(&cdc->function, req);
 
     status = cdc_alloc_interrupt_req(cdc, &req);
     if (status != ZX_OK) return status;
-    usb_request_copyto(req, &speed_notification, sizeof(speed_notification), 0);
+    usb_function_req_copy_to(&cdc->function, req, &speed_notification,
+                             sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
     usb_function_queue(&cdc->function, req);
 
@@ -354,7 +358,7 @@ static void cdc_rx_complete(usb_request_t* req, void* cookie) {
         mtx_lock(&cdc->ethmac_mutex);
         if (cdc->ethmac_ifc) {
             uint8_t* data = NULL;
-            usb_request_mmap(req, (void*)&data);
+            usb_function_req_mmap(&cdc->function, req, (void*)&data);
             cdc->ethmac_ifc->recv(cdc->ethmac_cookie, data, req->response.actual, 0);
         }
         mtx_unlock(&cdc->ethmac_mutex);
@@ -520,10 +524,10 @@ static void usb_cdc_release(void* ctx) {
     usb_request_t* req;
 
     while ((req = list_remove_head_type(&cdc->bulk_out_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_function_req_release(&cdc->function, req);
     }
     while ((req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_function_req_release(&cdc->function, req);
     }
     mtx_destroy(&cdc->ethmac_mutex);
     mtx_destroy(&cdc->tx_mutex);

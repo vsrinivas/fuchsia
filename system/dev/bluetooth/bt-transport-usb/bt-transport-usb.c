@@ -130,9 +130,9 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
 
     if (req->response.status == ZX_OK) {
         uint8_t* buffer;
-        zx_status_t status = usb_request_mmap(req, (void*)&buffer);
+        zx_status_t status = usb_req_mmap(&hci->usb, req, (void*)&buffer);
         if (status != ZX_OK) {
-            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
             goto out2;
         }
         size_t length = req->response.actual;
@@ -198,9 +198,9 @@ static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
 
     if (req->response.status == ZX_OK) {
         void* buffer;
-        zx_status_t status = usb_request_mmap(req, &buffer);
+        zx_status_t status = usb_req_mmap(&hci->usb, req, &buffer);
         if (status != ZX_OK) {
-            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
             mtx_unlock(&hci->mutex);
             return;
         }
@@ -233,9 +233,9 @@ static void hci_acl_write_complete(usb_request_t* req, void* cookie) {
 
     if (hci->snoop_channel) {
         void* buffer;
-        zx_status_t status = usb_request_mmap(req, &buffer);
+        zx_status_t status = usb_req_mmap(&hci->usb, req, &buffer);
         if (status != ZX_OK) {
-            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
             mtx_unlock(&hci->mutex);
             return;
         }
@@ -343,7 +343,7 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
             return;
 
         usb_request_t* req = containerof(node, usb_request_t, node);
-        usb_request_copyto(req, buf, length, 0);
+        usb_req_copy_to(&hci->usb, req, buf, length, 0);
         req->header.length = length;
         usb_request_queue(&hci->usb, req);
     }
@@ -474,13 +474,13 @@ static void hci_release(void* ctx) {
 
     usb_request_t* req;
     while ((req = list_remove_head_type(&hci->free_event_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&hci->usb, req);
     }
     while ((req = list_remove_head_type(&hci->free_acl_read_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&hci->usb, req);
     }
     while ((req = list_remove_head_type(&hci->free_acl_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&hci->usb, req);
     }
 
     mtx_unlock(&hci->mutex);

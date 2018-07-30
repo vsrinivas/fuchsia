@@ -80,7 +80,7 @@ static void ftdi_read_complete(usb_request_t* request, void* cookie) {
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         zxlogf(INFO,"FTDI: remote closed\n");
-        usb_request_release(request);
+        usb_req_release(&ftdi->usb, request);
         return;
     }
 
@@ -98,7 +98,7 @@ static void ftdi_write_complete(usb_request_t* request, void* cookie) {
     ftdi_t* ftdi = (ftdi_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+        usb_req_release(&ftdi->usb, request);
         return;
     }
     mtx_lock(&ftdi->mutex);
@@ -151,7 +151,7 @@ static zx_status_t ftdi_write(void *ctx, const void* buf, size_t length, size_t*
         goto out;
     }
 
-    *actual = usb_request_copyto(req, buf, length, 0);
+    *actual = usb_req_copy_to(&ftdi->usb, req, buf, length, 0);
     req->header.length = length;
 
     usb_request_queue(&ftdi->usb,req);
@@ -181,8 +181,8 @@ static zx_status_t ftdi_read(void* ctx, void* data, size_t len, size_t* actual) 
             to_copy = len - bytes_copied;
         }
 
-        usb_request_copyfrom(req, &buffer[bytes_copied],
-                             to_copy, offset + FTDI_STATUS_SIZE);
+        usb_req_copy_from(&ftdi->usb, req, &buffer[bytes_copied],
+                          to_copy, offset + FTDI_STATUS_SIZE);
 
         bytes_copied = bytes_copied + to_copy;
 
@@ -309,13 +309,13 @@ static serial_impl_ops_t ftdi_serial_ops = {
 static void ftdi_free(ftdi_t* ftdi) {
     usb_request_t* req;
     while ((req = list_remove_head_type(&ftdi->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&ftdi->usb, req);
     }
     while ((req = list_remove_head_type(&ftdi->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&ftdi->usb, req);
     }
     while ((req = list_remove_head_type(&ftdi->completed_reads, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&ftdi->usb, req);
     }
 
     free(ftdi);

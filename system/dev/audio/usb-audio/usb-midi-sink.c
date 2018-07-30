@@ -53,12 +53,12 @@ static void update_signals(usb_midi_sink_t* sink) {
 }
 
 static void usb_midi_sink_write_complete(usb_request_t* req, void* cookie) {
+    usb_midi_sink_t* sink = (usb_midi_sink_t*)cookie;
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(req);
+        usb_req_release(&sink->usb, req);
         return;
     }
 
-    usb_midi_sink_t* sink = (usb_midi_sink_t*)cookie;
     // FIXME what to do with error here?
     mtx_lock(&sink->mutex);
     list_add_tail(&sink->free_write_reqs, &req->node);
@@ -78,7 +78,7 @@ static void usb_midi_sink_unbind(void* ctx) {
 static void usb_midi_sink_free(usb_midi_sink_t* sink) {
     usb_request_t* req;
     while ((req = list_remove_head_type(&sink->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&sink->usb, req);
     }
     free(sink);
 }
@@ -154,7 +154,7 @@ static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
         buffer[2] = (message_length > 1 ? src[1] : 0);
         buffer[3] = (message_length > 2 ? src[2] : 0);
 
-        usb_request_copyto(req, buffer, 4, 0);
+        usb_req_copy_to(&sink->usb, req, buffer, 4, 0);
         req->header.length = 4;
         usb_request_queue(&sink->usb, req);
 

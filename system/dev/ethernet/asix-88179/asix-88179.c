@@ -240,9 +240,9 @@ static zx_status_t ax88179_recv(ax88179_t* eth, usb_request_t* request) {
     }
 
     uint8_t* read_data;
-    zx_status_t status = usb_request_mmap(request, (void*)&read_data);
+    zx_status_t status = usb_req_mmap(&eth->usb, request, (void*)&read_data);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_request_mmap failed: %d\n", status);
+        zxlogf(ERROR, "usb_req_mmap failed: %d\n", status);
         return status;
     }
 
@@ -312,7 +312,7 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+        usb_req_release(&eth->usb, request);
         return;
     }
 
@@ -340,7 +340,8 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88179_append_to_tx_req(usb_request_t* req, ethmac_netbuf_t* netbuf) {
+static zx_status_t ax88179_append_to_tx_req(usb_protocol_t* usb, usb_request_t* req,
+                                            ethmac_netbuf_t* netbuf) {
     zx_off_t offset = ALIGN(req->header.length, 4);
     if (offset + sizeof(ax88179_tx_hdr_t) + netbuf->len > USB_BUF_SIZE) {
         return ZX_ERR_BUFFER_TOO_SMALL;
@@ -348,8 +349,8 @@ static zx_status_t ax88179_append_to_tx_req(usb_request_t* req, ethmac_netbuf_t*
     ax88179_tx_hdr_t hdr = {
         .tx_len = htole16(netbuf->len),
     };
-    usb_request_copyto(req, &hdr, sizeof(hdr), offset);
-    usb_request_copyto(req, netbuf->data, netbuf->len, offset + sizeof(hdr));
+    usb_req_copy_to(usb, req, &hdr, sizeof(hdr), offset);
+    usb_req_copy_to(usb, req, netbuf->data, netbuf->len, offset + sizeof(hdr));
     req->header.length = offset + sizeof(hdr) + netbuf->len;
     return ZX_OK;
 }
@@ -359,7 +360,7 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+        usb_req_release(&eth->usb, request);
         return;
     }
 
@@ -371,7 +372,8 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
         request->header.length = 0;
         ethmac_netbuf_t* next_netbuf = list_peek_head_type(&eth->pending_netbuf, ethmac_netbuf_t,
                                                            node);
-        while (next_netbuf != NULL && ax88179_append_to_tx_req(request, next_netbuf) == ZX_OK) {
+        while (next_netbuf != NULL && ax88179_append_to_tx_req(&eth->usb, request,
+                                                               next_netbuf) == ZX_OK) {
             list_remove_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
             mtx_lock(&eth->mutex);
             if (eth->ifc) {
@@ -420,7 +422,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
     if (request->response.status == ZX_OK && request->response.actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
-        usb_request_copyfrom(request, status, sizeof(status), 0);
+        usb_req_copy_from(&eth->usb, request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
             const uint8_t* b = status;
             zxlogf(TRACE, "ax88179 status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
@@ -493,7 +495,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     zxlogf(DEBUG1, "ax88179: current req len=%lu, next packet len=%zu\n",
             req->header.length, length);
 
-    if (ax88179_append_to_tx_req(req, netbuf) == ZX_ERR_BUFFER_TOO_SMALL) {
+    if (ax88179_append_to_tx_req(&eth->usb, req, netbuf) == ZX_ERR_BUFFER_TOO_SMALL) {
         // Our data won't fit - grab a new request
         zxlogf(DEBUG1, "ax88179: getting new write req\n");
         req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
@@ -502,7 +504,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
         }
         req->header.length = 0;
         list_add_tail(&eth->pending_usb_tx, &req->node);
-        ax88179_append_to_tx_req(req, netbuf);
+        ax88179_append_to_tx_req(&eth->usb, req, netbuf);
     } else if (options & ETHMAC_TX_OPT_MORE) {
         // Don't send data if we have more coming that might fit into the current request. If we
         // already filled up a request, though, we should write it out if we can.
@@ -541,15 +543,15 @@ static void ax88179_unbind(void* ctx) {
 static void ax88179_free(ax88179_t* eth) {
     usb_request_t* req;
     while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&eth->usb, req);
     }
     while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&eth->usb, req);
     }
     while ((req = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+        usb_req_release(&eth->usb, req);
     }
-    usb_request_release(eth->interrupt_req);
+    usb_req_release(&eth->usb, eth->interrupt_req);
 
     free(eth);
 }

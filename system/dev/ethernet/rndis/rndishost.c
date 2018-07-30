@@ -120,7 +120,7 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
     rndishost_t* eth = (rndishost_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+        usb_req_release(&eth->usb, request);
         return;
     }
 
@@ -140,9 +140,9 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
         size_t len = request->response.actual;
 
         uint8_t* read_data;
-        zx_status_t status = usb_request_mmap(request, (void*)&read_data);
+        zx_status_t status = usb_req_mmap(&eth->usb, request, (void*)&read_data);
         if (status != ZX_OK) {
-            printf("usb_request_mmap failed: %d\n", status);
+            printf("usb_req_mmap failed: %d\n", status);
             mtx_unlock(&eth->mutex);
             return;
         }
@@ -162,7 +162,7 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         zxlogf(ERROR, "rndis_write_complete zx_err_io_not_present\n");
-        usb_request_release(request);
+        usb_req_release(&eth->usb, request);
         return;
     }
 
@@ -186,13 +186,13 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
 static void rndishost_free(rndishost_t* eth) {
     usb_request_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(txn);
+        usb_req_release(&eth->usb, txn);
     }
     while ((txn = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(txn);
+        usb_req_release(&eth->usb, txn);
     }
     while ((txn = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(txn);
+        usb_req_release(&eth->usb, txn);
     }
     free(eth);
 }
@@ -265,8 +265,9 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
     header.data_offset = sizeof(rndis_packet_header) - 8;
     header.data_length = length;
 
-    usb_request_copyto(req, header_data, sizeof(rndis_packet_header), 0);
-    ssize_t bytes_copied = usb_request_copyto(req, byte_data, length, sizeof(rndis_packet_header));
+    usb_req_copy_to(&eth->usb, req, header_data, sizeof(rndis_packet_header), 0);
+    ssize_t bytes_copied = usb_req_copy_to(&eth->usb, req, byte_data, length,
+                                           sizeof(rndis_packet_header));
     req->header.length = sizeof(rndis_packet_header) + length;
     if (bytes_copied < 0) {
         printf("rndishost: failed to copy data into send txn (error %zd)\n", bytes_copied);
