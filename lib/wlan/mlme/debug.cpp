@@ -310,11 +310,11 @@ std::string Describe(const Packet& p) {
     return std::string(buf);
 }
 
-std::string Describe(const AmsduSubframe& s) {
+std::string Describe(const AmsduSubframeHeader& hdr) {
     char buf[128];
     size_t offset = 0;
-    BUFFER("[da] %s [sa] %s [msdu_len] %u", s.hdr.da.ToString().c_str(),
-           s.hdr.sa.ToString().c_str(), s.hdr.msdu_len());
+    BUFFER("[da] %s [sa] %s [msdu_len] %u", hdr.da.ToString().c_str(),
+           hdr.sa.ToString().c_str(), hdr.msdu_len());
     return std::string(buf);
 }
 

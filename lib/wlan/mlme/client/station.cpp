@@ -858,60 +858,20 @@ zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame
 zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
     // TODO(porce): Define A-MSDU or MSDU signature, and avoid forceful conversion.
     debugfn();
+    auto data_amsdu_frame = frame.View();
+    const auto& src = data_amsdu_frame.hdr()->addr3;
+    const auto& dst = data_amsdu_frame.hdr()->addr1;
 
     // Non-DMG stations use basic subframe format only.
-    auto amsdu_len = frame.body_len();
-    if (amsdu_len == 0) { return ZX_OK; }
-    finspect("Inbound AMSDU: len %zu\n", amsdu_len);
+    if (data_amsdu_frame.body_len() == 0) { return ZX_OK; }
+    finspect("Inbound AMSDU: len %zu\n", data_amsdu_frame.body_len());
 
     // TODO(porce): The received AMSDU should not be greater than max_amsdu_len, specified in
     // HtCapabilities IE of Association. Warn or discard if violated.
 
-    size_t offset = 0;  // Tracks up to which point of byte stream is parsed.
-    auto amsdu = reinterpret_cast<const uint8_t*>(frame.body());
-    while (offset < amsdu_len) {
-        size_t offset_prev = offset;
-        auto subframe = reinterpret_cast<const AmsduSubframe*>(amsdu + offset);
-
-        if (!(offset + sizeof(AmsduSubframeHeader) <= amsdu_len)) {
-            errorf(
-                "malformed A-MSDU subframe: amsdu_len %zu offset %zu offset_prev %zu "
-                "AmsduSubframeHeader size: %zu\n",
-                amsdu_len, offset, offset_prev, sizeof(AmsduSubframeHeader));
-            return ZX_ERR_STOP;
-        }
-
-        finspect("amsdu subframe: %s\n", debug::Describe(*subframe).c_str());
-        finspect(
-            "amsdu subframe dump: %s\n",
-            debug::HexDump(reinterpret_cast<const uint8_t*>(subframe), sizeof(AmsduSubframeHeader))
-                .c_str());
-
-        offset += sizeof(AmsduSubframeHeader);
-        auto msdu_len = subframe->hdr.msdu_len();
-
-        // Note: msdu_len == 0 is valid
-
-        if (msdu_len > 0) {
-            if (!(offset + msdu_len <= amsdu_len && msdu_len >= sizeof(LlcHeader))) {
-                errorf("malformed A-MSDU subframe: amsdu_len %zu offset %zu msdu_len %u\n",
-                       amsdu_len, offset, msdu_len);
-                return ZX_ERR_STOP;
-            }
-
-            offset += msdu_len;
-
-            // TODO(porce): Process MSDU - Construct an Ethernet frame and send up
-            auto llc_frame = subframe->get_msdu();
-            HandleLlcFrame(*llc_frame, msdu_len, subframe->hdr.da, subframe->hdr.sa);
-        }
-
-        // Skip by zero-padding
-        bool is_last_subframe = (offset == amsdu_len);
-        offset += subframe->PaddingLen(is_last_subframe);
-
-        ZX_DEBUG_ASSERT(offset > offset_prev);  // Otherwise infinite loop
-    }
+    DeaggregateAmsdu(data_amsdu_frame, [&](FrameView<LlcHeader> llc_frame, size_t payload_len) {
+        HandleLlcFrame(*llc_frame.hdr(), llc_frame.hdr()->len() + payload_len, dst, src);
+    });
 
     return ZX_OK;
 }

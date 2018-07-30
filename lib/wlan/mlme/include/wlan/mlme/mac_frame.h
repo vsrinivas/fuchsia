@@ -67,13 +67,13 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
         return VerifiedFrameType<Header, Body>::Valid(FrameView<Header, Body>(pkt, offset));
     }
 
-    template <typename NewBody> VerifiedFrameType<Header, NewBody> CheckBodyType() {
+    template <typename NewBody> VerifiedFrameType<Header, NewBody> CheckBodyType() const {
         return FrameView<Header, NewBody>::CheckType(pkt_, data_offset_);
     }
 
     // Skips the header on the underlying data of the frame.
     // Method has no effect when called on empty frames.
-    FrameView<Body, UnknownBody> SkipHeader() {
+    FrameView<Body, UnknownBody> SkipHeader() const {
         if (IsEmpty()) { return {}; }
 
 
@@ -83,20 +83,26 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
 
     // Verifies and treats the underlying data as a different frame type.
     template <typename NewHeader, typename NewBody = UnknownBody>
-    VerifiedFrameType<NewHeader, NewBody> As() {
+    VerifiedFrameType<NewHeader, NewBody> As() const {
         return FrameView<NewHeader, NewBody>::CheckType(pkt_, data_offset_);
     }
 
     // Advances the underlying data by `len` bytes and returns a frame of unknown type.
     // Returns an empty frame if the underlying data is too short.
-    FrameView<UnknownBody, UnknownBody> AdvanceBy(size_t len) {
+    FrameView<UnknownBody, UnknownBody> AdvanceBy(size_t len) const {
         if (IsEmpty() || pkt_->len() - data_offset_ < len) { return {}; }
         return FrameView<UnknownBody, UnknownBody>(pkt_, data_offset_ + len);
     }
 
-    Frame<Header, Body> IntoOwned(fbl::unique_ptr<Packet> pkt) {
+    Frame<Header, Body> IntoOwned(fbl::unique_ptr<Packet> pkt) const {
         ZX_DEBUG_ASSERT(pkt != nullptr && pkt.get() == pkt_);
         return Frame<Header, Body>(data_offset_, fbl::move(pkt));
+    }
+
+    const uint8_t* data() const {
+        ZX_DEBUG_ASSERT(pkt_ != nullptr);
+
+        return pkt_->data();
     }
 
     const Header* hdr() const {
@@ -335,4 +341,10 @@ seq_t NextSeqNo(const DataFrameHeader& hdr, Sequence* seq);
 void SetSeqNo(MgmtFrameHeader* hdr, Sequence* seq);
 void SetSeqNo(MgmtFrameHeader* hdr, uint8_t aci, Sequence* seq);
 void SetSeqNo(DataFrameHeader* hdr, Sequence* seq);
+
+using MsduCallback = std::function<void(FrameView<LlcHeader>, size_t)>;
+
+// Returns a list of all LLC frames carried in an AMSDU data frame.
+zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>&, MsduCallback);
+
 }  // namespace wlan

@@ -708,20 +708,6 @@ struct AmsduSubframeHeaderShort {
     uint16_t msdu_len_be;
 } __PACKED;
 
-struct AmsduSubframe {
-    AmsduSubframeHeader hdr;
-    uint8_t msdu[];
-    // msdu[] is followed by conditional zero-padding for alignment of the amsdu subframe by 4
-    // bytes.
-
-    const LlcHeader* get_msdu() const { return reinterpret_cast<const LlcHeader*>(msdu); }
-
-    size_t PaddingLen(bool is_last_subframe) const {
-        size_t base_len = sizeof(AmsduSubframeHeader) + hdr.msdu_len();
-        return (is_last_subframe) ? 0 : (fbl::round_up(base_len, 4u) - base_len);
-    }
-} __PACKED;
-
 // RFC 1042
 constexpr uint8_t kLlcSnapExtension = 0xaa;
 constexpr uint8_t kLlcUnnumberedInformation = 0x03;

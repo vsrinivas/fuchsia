@@ -7,6 +7,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
+#include <wlan/mlme/client/station.h>
 
 #include <gtest/gtest.h>
 
@@ -533,6 +534,30 @@ TEST(Frame, AdvanceThroughEapolFrame) {
     auto eapol_frame = llc_eapol_frame.SkipHeader();
     ASSERT_TRUE(eapol_frame);
     ASSERT_EQ(eapol_frame.hdr()->packet_type, 0x03);
+}
+
+TEST(Frame, DeaggregateAmsdu) {
+    // Construct AMSDU data frame.
+    auto frame_data = test_data::kAmsduDataFrame;
+    auto pkt = GetPacket(frame_data.size());
+    pkt->CopyFrom(frame_data.data(), frame_data.size(), 0);
+
+    auto data_amsdu_frame = DataFrameView<AmsduSubframeHeader>::CheckType(pkt.get()).CheckLength();
+    ASSERT_TRUE(data_amsdu_frame);
+
+    // Extract all LLC MSDUs from AMSDU frame.
+    std::vector<std::pair<FrameView<LlcHeader>, size_t>> llc_frames;
+    DeaggregateAmsdu(data_amsdu_frame, [&](FrameView<LlcHeader> llc_frame, size_t payload_len) {
+        std::pair<FrameView<LlcHeader>, size_t> e(llc_frame, payload_len);
+        llc_frames.push_back(e);
+    });
+
+    // Verify LLC MSDUs.
+    ASSERT_EQ(llc_frames.size(), static_cast<size_t>(2));
+    ASSERT_EQ(llc_frames[0].first.body()->data[3], static_cast<uint8_t>(0x6c));
+    ASSERT_EQ(llc_frames[0].second, static_cast<size_t>(108));
+    ASSERT_EQ(llc_frames[1].first.body()->data[3], static_cast<uint8_t>(0x5e));
+    ASSERT_EQ(llc_frames[1].second, static_cast<size_t>(94));
 }
 
 }  // namespace
