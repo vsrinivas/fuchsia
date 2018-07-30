@@ -109,7 +109,7 @@ static zx_status_t memstats(zx_handle_t root_resource) {
     }
 
     const int width = 80 / 8 - 1;
-    printf("%*s %*s %*s %*s %*s %*s %*s %*s\n",
+    printf("%*s %*s %*s %*s %*s %*s %*s %*s %*s\n",
            width, "mem total",
            width, "free",
            width, "VMOs",
@@ -117,6 +117,7 @@ static zx_status_t memstats(zx_handle_t root_resource) {
            width, "kfree",
            width, "wired",
            width, "mmu",
+           width, "ipc",
            width, "other");
 
     const size_t fields[] = {
@@ -127,6 +128,7 @@ static zx_status_t memstats(zx_handle_t root_resource) {
         stats.free_heap_bytes,
         stats.wired_bytes,
         stats.mmu_overhead_bytes,
+        stats.ipc_bytes,
         stats.other_bytes,
     };
     char line[128] = {};

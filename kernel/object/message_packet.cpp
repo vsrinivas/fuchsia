@@ -17,7 +17,7 @@
 //
 // To reduce heap fragmentation, MessagePackets are stored in a lists of fixed size buffers
 // (BufferChains) rather than a contiguous blocks of memory.  These lists and buffers are allocated
-// from a global free list to reduce the time required to construct/destroy.
+// from the PMM.
 //
 // The first buffer in a MessagePacket's BufferChain contains the MessagePacket object, followed by
 // its handles (if any), and finally its payload data (if any).
@@ -36,10 +36,6 @@ static inline uint32_t PayloadOffset(uint32_t num_handles) {
     return kHandlesOffset + num_handles * static_cast<uint32_t>(sizeof(Handle*));
 }
 
-// TODO(maniscalco): There should probably be a mechanism to purge the free list in response to
-// some low memory signal.
-static BufferChainFreeList free_list(64);
-
 // Creates a MessagePacket in |msg| sufficient to hold |data_size| bytes and |num_handles|.
 //
 // Note: This method does not write the payload into the MessagePacket.
@@ -57,7 +53,7 @@ inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_
 
     // MessagePackets lives *inside* a list of buffers.  The first buffer holds the MessagePacket
     // object, followed by its handles (if any), and finally the payload data.
-    BufferChain* chain = free_list.Alloc(payload_offset + data_size);
+    BufferChain* chain = BufferChain::Alloc(payload_offset + data_size);
     if (unlikely(!chain)) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -113,5 +109,5 @@ void MessagePacket::fbl_recycle() {
     BufferChain* chain = buffer_chain_;
     this->~MessagePacket();
     // |this| has been destroyed.
-    free_list.Free(chain);
+    BufferChain::Free(chain);
 }

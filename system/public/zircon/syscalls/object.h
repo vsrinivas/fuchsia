@@ -336,6 +336,9 @@ typedef struct zx_info_kmem_stats {
     // like page tables.
     uint64_t mmu_overhead_bytes;
 
+    // The amount of memory in use by IPC.
+    uint64_t ipc_bytes;
+
     // Non-free memory that isn't accounted for in any other field.
     uint64_t other_bytes;
 } zx_info_kmem_stats_t;

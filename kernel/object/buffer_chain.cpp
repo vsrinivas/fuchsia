@@ -32,11 +32,3 @@ zx_status_t BufferChain::CopyInKernel(const void* src, size_t dst_offset, size_t
 
 template zx_status_t BufferChain::CopyInCommon(user_in_ptr<const void> src, size_t dst_offset,
                                                size_t size);
-
-BufferChainFreeList::~BufferChainFreeList() {
-    while (!free_list_.is_empty()) {
-        BufferChain::Buffer* buf = free_list_.pop_front();
-        buf->BufferChain::Buffer::~Buffer();
-        free(buf);
-    }
-}

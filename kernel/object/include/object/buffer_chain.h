@@ -10,39 +10,54 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
+#include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <lib/user_copy/user_ptr.h>
-#include <zircon/thread_annotations.h>
+#include <vm/page.h>
+#include <vm/physmap.h>
+#include <vm/pmm.h>
 #include <zircon/types.h>
 #include <zxcpp/new.h>
 
-class BufferChainFreeList;
-
-// BufferChain is a list of fixed-size buffers allocated from a free list (BufferChainFreeList).
+// BufferChain is a list of fixed-size buffers allocated from the PMM.
 //
-// The BufferChain object itself lives *inside* its first buffer.
+// It's designed for use with channel messages.  Pages backing a BufferChain are marked as
+// VM_PAGE_STATE_IPC.
+//
+// The BufferChain object itself lives *inside* its first buffer.  Here's what it looks like:
+//
+//   +--------------------------------+     +--------------------------------+
+//   | page                           |     | page                           |
+//   |+------------------------------+|     |+------------------------------+|
+//   || Buffer                       |+---->|| Buffer                       ||
+//   || raw_data:   +---------------+||     || raw_data:    +--------------+||
+//   ||             |  BufferChain  |||     ||              | message data |||
+//   || reserved -> | ~~~~~~~~~~~~~ |||     || reserved = 0 |  continued   |||
+//   ||             |  message data |||     ||              |              |||
+//   ||             +---------------+||     ||              +--------------+||
+//   |+------------------------------+|     |+------------------------------+|
+//   +--------------------------------+     +--------------------------------+
+//
 class BufferChain {
 public:
     class Buffer;
     typedef fbl::SinglyLinkedList<Buffer*> BufferList;
 
-    // kRawSize is the number of bytes that can fit in a single buffer.
-    //
-    // However, not every buffer in a chain can store this many bytes.  The first buffer in a chain
-    // is special because it also stores the chain itself.  See also kContig.
-    //
-    // kRawSize should be small enough to minimize wasted space and large enough to be efficient
-    // when copying large buffer chains.
-    //
-    // TODO(maniscalco): When we move off malloc/free, statically compute this value such that a
-    // Buffer *actually* fits in a single page (including all overhead).
-    constexpr static size_t kRawSize = PAGE_SIZE;
+    constexpr static size_t kSizeOfBuffer = PAGE_SIZE;
+    constexpr static size_t kSizeOfBufferFields = 16;
 
-    // kContig is the number of bytes guaranteed to be stored contiguously in any buffer.
-    constexpr static size_t kContig = kRawSize - sizeof(BufferList);
+    // kRawDataSize is the maximum number of bytes that can fit in a single Buffer.
+    //
+    // However, not every Buffer in a BufferChain can store this many bytes.  The first Buffer in a
+    // BufferChain is special because it also stores the chain itself.  See also kContig.
+    constexpr static size_t kRawDataSize = kSizeOfBuffer - kSizeOfBufferFields;
+
+    // Unfortunately, we don't yet know sizeof(BufferChain) so estimate and rely on static_asserts
+    // further down to verify.
+    constexpr static size_t kSizeOfBufferChain = sizeof(BufferList) + sizeof(list_node);
+
+    // kContig is the number of bytes guaranteed to be stored contiguously in any buffer
+    constexpr static size_t kContig = kRawDataSize - kSizeOfBufferChain;
 
     // Copies |size| bytes from this chain starting at offset |src_offset| to |dst|.
     //
@@ -51,7 +66,8 @@ public:
         DEBUG_ASSERT(src_offset < buffers_.front().size());
         size_t copy_offset = src_offset;
         size_t rem = size;
-        for (auto iter = buffers_.begin(); rem > 0 && iter != buffers_.end(); ++iter) {
+        const auto end = buffers_.end();
+        for (auto iter = buffers_.begin(); rem > 0 && iter != end; ++iter) {
             const size_t copy_len = fbl::min(rem, iter->size() - copy_offset);
             const char* src = iter->data() + copy_offset;
             const zx_status_t status = dst.copy_array_to_user(src, copy_len);
@@ -63,6 +79,57 @@ public:
             copy_offset = 0;
         }
         return ZX_OK;
+    }
+
+    // Creates a BufferChain with enough buffers to store |size| bytes.
+    //
+    // It is the caller's responsibility to free the chain with BufferChain::Free.
+    //
+    // Returns nullptr on error.
+    static BufferChain* Alloc(size_t size) {
+        size += sizeof(BufferChain);
+        const size_t num_buffers = (size + kRawDataSize - 1) / kRawDataSize;
+
+        // Allocate a list of pages.
+        list_node pages = LIST_INITIAL_VALUE(pages);
+        size_t num_allocated = pmm_alloc_pages(num_buffers, 0, &pages);
+        if (unlikely(num_allocated != num_buffers)) {
+            pmm_free(&pages);
+            return nullptr;
+        }
+
+        // Construct a Buffer in each page and add them to a temporary list.
+        BufferChain::BufferList temp;
+        vm_page_t* page;
+        list_for_every_entry (&pages, page, vm_page_t, queue_node) {
+            DEBUG_ASSERT(page->state == VM_PAGE_STATE_ALLOC);
+            page->state = VM_PAGE_STATE_IPC;
+            void* va = paddr_to_physmap(page->paddr());
+            temp.push_front(new (va) BufferChain::Buffer);
+        }
+
+        // We now have a list of buffers and a list of pages.  Construct a chain inside the first
+        // buffer and give the buffers and pages to the chain.
+        BufferChain* chain = new (temp.front().data()) BufferChain(&temp, &pages);
+        DEBUG_ASSERT(list_is_empty(&pages));
+
+        return chain;
+    }
+
+    // Frees |chain| and its buffers.
+    static void Free(BufferChain* chain) {
+        // Remove the buffers and vm_page_t's from the chain *before* destorying it.
+        BufferChain::BufferList buffers(fbl::move(*chain->buffers()));
+        list_node pages = LIST_INITIAL_VALUE(pages);
+        list_move(&chain->pages_, &pages);
+
+        chain->~BufferChain();
+
+        while (!buffers.is_empty()) {
+            BufferChain::Buffer* buf = buffers.pop_front();
+            buf->Buffer::~Buffer();
+        }
+        pmm_free(&pages);
     }
 
     // Copies |size| bytes from |src| to this chain starting at offset |dst_offset|.
@@ -80,30 +147,39 @@ public:
         Buffer() = default;
         ~Buffer() = default;
 
-        char* data() { return raw_data_ + reserved_; }
+        char* data() {
+            canary_.Assert();
+            return raw_data_ + reserved_;
+        }
 
         size_t size() const { return sizeof(raw_data_) - reserved_; }
 
-        void set_reserved(size_t reserved) {
+        void set_reserved(uint32_t reserved) {
             DEBUG_ASSERT(reserved < sizeof(raw_data_));
             reserved_ = reserved;
         }
 
     private:
-        size_t reserved_ = 0;
-        char raw_data_[kRawSize];
+        fbl::Canary<fbl::magic("BUFC")> canary_;
+        uint32_t reserved_ = 0;
+        char raw_data_[kRawDataSize];
     };
+    static_assert(sizeof(BufferChain::Buffer) == BufferChain::kSizeOfBuffer, "");
 
     BufferList* buffers() { return &buffers_; }
 
 private:
-    friend BufferChainFreeList;
-    explicit BufferChain(BufferList* list) {
-        buffers_.swap(*list);
+    explicit BufferChain(BufferList* buffers, list_node* pages) {
+        buffers_.swap(*buffers);
+        list_move(pages, &pages_);
+
         // |this| now lives inside the first buffer.
         buffers_.front().set_reserved(sizeof(BufferChain));
     }
-    ~BufferChain() = default;
+
+    ~BufferChain() {
+        DEBUG_ASSERT(list_is_empty(&pages_));
+    }
 
     // |PTR_IN| is a user_in_ptr-like type.
     template <typename PTR_IN>
@@ -111,7 +187,8 @@ private:
         DEBUG_ASSERT(dst_offset < buffers_.front().size());
         size_t copy_offset = dst_offset;
         size_t rem = size;
-        for (auto iter = buffers_.begin(); rem > 0 && iter != buffers_.end(); ++iter) {
+        const auto end = buffers_.end();
+        for (auto iter = buffers_.begin(); rem > 0 && iter != end; ++iter) {
             const size_t copy_len = fbl::min(rem, iter->size() - copy_offset);
             char* dst = iter->data() + copy_offset;
             const zx_status_t status = src.copy_array_from_user(dst, copy_len);
@@ -128,115 +205,9 @@ private:
     // Take care when adding fields as BufferChain lives inside the first buffer of buffers_.
     BufferList buffers_;
 
+    // pages_ is a list of vm_page_t descriptors for the pages that back BufferList.
+    list_node pages_ = LIST_INITIAL_VALUE(pages_);
+
     DISALLOW_COPY_ASSIGN_AND_MOVE(BufferChain);
 };
-
-// The BufferChain must fit within a single buffer.
-static_assert(BufferChain::kRawSize - sizeof(BufferChain) == BufferChain::kContig, "");
-
-// BufferChainFreeList is a free list of Buffers.
-//
-// It's backed by the heap (malloc/free) and populated lazily.
-//
-// Objects of this class are thread-safe.
-class BufferChainFreeList {
-public:
-    // Constructs a BufferChainFreeList that can grow to at most |max_buffers|.
-    //
-    // |max_buffers| must be > 0.
-    //
-    // When the free list is full, freeing an element will return it to the heap.
-    constexpr BufferChainFreeList(unsigned max_buffers)
-        : max_buffers_(max_buffers), num_buffers_(0) { DEBUG_ASSERT(max_buffers_ > 0); }
-
-    ~BufferChainFreeList();
-
-    // Creates a BufferChain with enough buffers to store |size| bytes.
-    //
-    // It is the callers responsibility to free the chain with BufferChain::Free.
-    //
-    // Returns nullptr on error.
-    BufferChain* Alloc(size_t size) {
-        size += sizeof(BufferChain);
-        const size_t num_buffers = (size + BufferChain::kRawSize - 1) / BufferChain::kRawSize;
-        BufferChain::BufferList buffers;
-        if (unlikely(AllocBuffers(num_buffers, &buffers) != ZX_OK)) {
-            return nullptr;
-        }
-
-        // We now have a list of buffers.  Construct a chain inside the first buffer and give the
-        // buffers to the chain.
-        BufferChain* chain = new (buffers.front().data()) BufferChain(&buffers);
-        return chain;
-    }
-
-    // Frees |chain| and its buffers, returning them to the free list.
-    void Free(BufferChain* chain) {
-        // Remove the buffers from the chain before destorying it.
-        BufferChain::BufferList buffers(fbl::move(*chain->buffers()));
-        chain->~BufferChain();
-        {
-            fbl::AutoLock guard(&mutex_);
-            FreeBuffersLocked(&buffers);
-        }
-    }
-
-private:
-    // Allocates |count| buffers and returns them on |result|.
-    //
-    // If a non-empty |result| is passed in, its elements may be removed and freed.
-    //
-    // Returns ZX_OK if successful. On error, result is unmodified.
-    zx_status_t AllocBuffers(size_t count, BufferChain::BufferList* result) {
-        BufferChain::BufferList list;
-        {
-            fbl::AutoLock guard(&mutex_);
-            for (size_t i = 0; i < count; ++i) {
-                if (unlikely(free_list_.is_empty())) {
-                    // The free list is empty, time to refill it.
-                    for (unsigned i = 0; i < max_buffers_; ++i) {
-                        BufferChain::Buffer* buf =
-                            static_cast<BufferChain::Buffer*>(malloc(sizeof(BufferChain::Buffer)));
-                        if (unlikely(buf == nullptr)) {
-                            FreeBuffersLocked(&list);
-                            return ZX_ERR_NO_MEMORY;
-                        }
-                        new (buf) BufferChain::Buffer;
-                        free_list_.push_front(buf);
-                        ++num_buffers_;
-                    }
-                }
-                list.push_front(free_list_.pop_front());
-                --num_buffers_;
-            }
-        }
-        list.swap(*result);
-        return ZX_OK;
-    }
-
-    // Destroys and frees all elements of |list|.
-    //
-    // Callers must be holding |mutex_|.
-    void FreeBuffersLocked(BufferChain::BufferList* list) TA_REQ(&mutex_) {
-        while (!list->is_empty()) {
-            BufferChain::Buffer* buf = list->pop_front();
-            buf->Buffer::~Buffer();
-            if (num_buffers_ < max_buffers_) {
-                new (buf) BufferChain::Buffer;
-                free_list_.push_front(buf);
-                ++num_buffers_;
-            } else {
-                // The free list is full so return this one to the heap.
-                free(buf);
-            }
-        }
-    }
-
-    // Protects all fields below.
-    fbl::Mutex mutex_;
-    const unsigned max_buffers_ TA_GUARDED(&mutex_);
-    unsigned num_buffers_ TA_GUARDED(&mutex_);
-    BufferChain::BufferList free_list_ TA_GUARDED(&mutex_);
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BufferChainFreeList);
-};
+static_assert(sizeof(BufferChain) == BufferChain::kSizeOfBufferChain, "");

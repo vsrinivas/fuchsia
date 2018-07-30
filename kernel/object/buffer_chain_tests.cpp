@@ -17,49 +17,49 @@ using testing::UserMemory;
 
 static bool alloc_free_basic() {
     BEGIN_TEST;
-    BufferChainFreeList fl(1);
 
     // An empty chain requires one buffer
-    BufferChain* bc = fl.Alloc(0);
+    BufferChain* bc = BufferChain::Alloc(0);
     ASSERT_NE(bc, nullptr, "");
     ASSERT_FALSE(bc->buffers()->is_empty(), "");
     ASSERT_EQ(bc->buffers()->size_slow(), 1u, "");
-    fl.Free(bc);
+    BufferChain::Free(bc);
 
     // One Buffer is enough to hold one byte.
-    bc = fl.Alloc(1);
+    bc = BufferChain::Alloc(1);
     ASSERT_FALSE(bc->buffers()->is_empty(), "");
     ASSERT_EQ(bc->buffers()->size_slow(), 1u, "");
     ASSERT_NE(bc, nullptr, "");
-    fl.Free(bc);
+    BufferChain::Free(bc);
 
     // One Buffer is still enough.
-    bc = fl.Alloc(BufferChain::kContig);
+    bc = BufferChain::Alloc(BufferChain::kContig);
     ASSERT_FALSE(bc->buffers()->is_empty(), "");
     ASSERT_EQ(bc->buffers()->size_slow(), 1u, "");
     ASSERT_NE(bc, nullptr, "");
-    fl.Free(bc);
+    BufferChain::Free(bc);
 
     // Two Buffers required.
-    bc = fl.Alloc(BufferChain::kContig + 1);
+    bc = BufferChain::Alloc(BufferChain::kContig + 1);
     ASSERT_FALSE(bc->buffers()->is_empty(), "");
     ASSERT_EQ(bc->buffers()->size_slow(), 2u, "");
     ASSERT_NE(bc, nullptr, "");
-    fl.Free(bc);
+    BufferChain::Free(bc);
 
     // Many Buffers required.
-    bc = fl.Alloc(10000 * BufferChain::kRawSize);
+    bc = BufferChain::Alloc(10000 * BufferChain::kRawDataSize);
     ASSERT_FALSE(bc->buffers()->is_empty(), "");
     ASSERT_EQ(bc->buffers()->size_slow(), 1u + 10000u, "");
     ASSERT_NE(bc, nullptr, "");
-    fl.Free(bc);
+    BufferChain::Free(bc);
 
     END_TEST;
 }
 
 static bool copy_in_copy_out() {
     BEGIN_TEST;
-    constexpr size_t kSize = BufferChain::kContig + 2 * BufferChain::kRawSize;
+
+    constexpr size_t kSize = BufferChain::kContig + 2 * BufferChain::kRawDataSize;
     fbl::AllocChecker ac;
     auto buf = fbl::unique_ptr<char[]>(new (&ac) char[kSize]);
     ASSERT_TRUE(ac.check(), "");
@@ -67,8 +67,7 @@ static bool copy_in_copy_out() {
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
-    BufferChainFreeList fl(1);
-    BufferChain* bc = fl.Alloc(kSize);
+    BufferChain* bc = BufferChain::Alloc(kSize);
     ASSERT_NE(nullptr, bc, "");
     ASSERT_FALSE(bc->buffers()->is_empty(), "");
 
@@ -90,7 +89,7 @@ static bool copy_in_copy_out() {
     memset(buf.get(), 'B', kSize);
     ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kSize), "");
     size_t offset = BufferChain::kContig - 1;
-    size_t size = BufferChain::kRawSize + 2;
+    size_t size = BufferChain::kRawDataSize + 2;
     ASSERT_EQ(ZX_OK, bc->CopyIn(mem_in, offset, size), "");
 
     // Verify it.
@@ -101,13 +100,13 @@ static bool copy_in_copy_out() {
     }
     ASSERT_EQ('B', *(iter->data() + offset), "");
     ++iter;
-    for (size_t i = 0; i < BufferChain::kRawSize; ++i) {
+    for (size_t i = 0; i < BufferChain::kRawDataSize; ++i) {
         char* data = iter->data();
         ASSERT_EQ('B', data[i], "");
     }
     ++iter;
     ASSERT_EQ('B', *iter->data(), "");
-    for (size_t i = 1; i < BufferChain::kRawSize; ++i) {
+    for (size_t i = 1; i < BufferChain::kRawDataSize; ++i) {
         char* data = iter->data();
         EXPECT_EQ('A', data[i], "");
     }
@@ -126,19 +125,18 @@ static bool copy_in_copy_out() {
         ASSERT_EQ('A', buf[index++], "");
     }
     EXPECT_EQ('B', buf[index++], "");
-    for (size_t i = 0; i < BufferChain::kRawSize; ++i) {
+    for (size_t i = 0; i < BufferChain::kRawDataSize; ++i) {
         ASSERT_EQ('B', buf[index++], "");
     }
     ASSERT_EQ('B', buf[index++], "");
-    for (size_t i = 1; i < BufferChain::kRawSize; ++i) {
+    for (size_t i = 1; i < BufferChain::kRawDataSize; ++i) {
         EXPECT_EQ('A', buf[index++], "");
     }
 
-    fl.Free(bc);
+    BufferChain::Free(bc);
+
     END_TEST;
 }
-
-// TODO(maniscalco): Write a multi-threaded stress test for BufferChainFreeList's Alloc/Free.
 
 }  // namespace
 

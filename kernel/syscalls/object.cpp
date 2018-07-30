@@ -511,6 +511,9 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         stats.mmu_overhead_bytes = state_count[VM_PAGE_STATE_MMU] * PAGE_SIZE;
         other_bytes -= stats.mmu_overhead_bytes;
 
+        stats.ipc_bytes = state_count[VM_PAGE_STATE_IPC] * PAGE_SIZE;
+        other_bytes -= stats.ipc_bytes;
+
         // All other VM_PAGE_STATE_* counts get lumped into other_bytes.
         stats.other_bytes = other_bytes;
 

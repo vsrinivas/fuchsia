@@ -32,6 +32,8 @@ const char* page_state_to_string(unsigned int state) {
         return "object";
     case VM_PAGE_STATE_MMU:
         return "mmu";
+    case VM_PAGE_STATE_IPC:
+        return "ipc";
     default:
         return "unknown";
     }
