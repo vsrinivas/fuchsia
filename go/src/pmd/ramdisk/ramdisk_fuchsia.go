@@ -25,12 +25,12 @@ import (
 	"bytes"
 	"fmt"
 	"runtime"
-	"syscall/zx/fdio"
+	"syscall"
 	"unsafe"
 )
 
 type Ramdisk struct {
-	path [fdio.PathMax]byte
+	path [syscall.PathMax]byte
 }
 
 // New constructs and creates a ramdisk of size bytes at the given path.
