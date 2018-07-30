@@ -11,8 +11,26 @@ enum SuggestionImageType {
 
 enum AnnoyanceType {
   NONE = 0;
+
+  // Tiny interruptions meant to be displayed and hidden quickly without user
+  // interaction. Analogous to toasts. They won't reach the next space when
+  // ignored or missed.
   PEEK = 1;
+
+  // Interruptions meant to be displayed to the user. The user could accept or
+  // dismiss them. They are placed in the Next space when ignored or missed.
+  // Analogous to notifications.
   INTERRUPT = 2;
+
+  // Meant to show system errors or other extremely urgent alerts. It would
+  // block the rest of the interface and force the user to interact with it.
+  BLOCKING = 3;
+
+  // The suggestion is immediately accepted.
+  // TODO(miguelfrde): suggestion engine should be deciding whether to
+  // immediately execute (auto-accept) a proposal or not without the need of
+  // an external signal.
+  SHOW_IMMEDIATELY = 4;
 };
 
 // Information for the main image of the Suggestion.
