@@ -62,7 +62,6 @@ constexpr VkLayerProperties swapchain_layer = {
 };
 
 struct SupportedImageProperties {
-  VkExtent2D size;
   std::vector<VkSurfaceFormatKHR> formats;
 };
 
@@ -576,8 +575,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(
   auto surface = new ImagePipeSurface;
   std::vector<VkSurfaceFormatKHR> formats(
       {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
-  surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height},
-                                   formats};
+  surface->supported_properties = {formats};
   surface->image_pipe.Bind(zx::channel(pCreateInfo->imagePipeHandle));
   *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
   return VK_SUCCESS;
@@ -597,15 +595,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMagmaPresentationSupportKHR(
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR* pSurfaceCapabilities) {
-  auto image_pipe_surface = reinterpret_cast<ImagePipeSurface*>(surface);
-  SupportedImageProperties supported_properties =
-      image_pipe_surface->supported_properties;
+  VkLayerInstanceDispatchTable* instance_dispatch_table =
+      GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map)
+          ->instance_dispatch_table;
+
+  VkPhysicalDeviceProperties props;
+  instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &props);
 
   pSurfaceCapabilities->minImageCount = 2;
   pSurfaceCapabilities->maxImageCount = 0;
-  pSurfaceCapabilities->currentExtent = supported_properties.size;
-  pSurfaceCapabilities->minImageExtent = supported_properties.size;
-  pSurfaceCapabilities->maxImageExtent = supported_properties.size;
+  pSurfaceCapabilities->currentExtent = {0xFFFFFFFF, 0xFFFFFFFF};
+  pSurfaceCapabilities->minImageExtent = {1, 1};
+  pSurfaceCapabilities->maxImageExtent = {props.limits.maxImageDimension2D,
+                                          props.limits.maxImageDimension2D};
   pSurfaceCapabilities->supportedTransforms =
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   pSurfaceCapabilities->currentTransform =
