@@ -699,6 +699,8 @@ struct AmsduSubframeHeader {
     uint16_t msdu_len() const { return be16toh(msdu_len_be); }
 
     void set_msdu_len(uint16_t msdu_len) { msdu_len_be = htobe16(msdu_len); }
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.2.3

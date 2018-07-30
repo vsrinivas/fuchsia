@@ -105,7 +105,7 @@ class Station {
     zx_status_t HandleDataFrame(DataFrame<LlcHeader>&& frame);
     zx_status_t HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
                                const common::MacAddr& dest, const common::MacAddr& src);
-    zx_status_t HandleAmsduFrame(const DataFrame<LlcHeader>& frame);
+    zx_status_t HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&&);
     zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
 
     zx_status_t HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req);

@@ -153,7 +153,9 @@ zx_status_t Station::HandleAnyDataFrame(DataFrame<>&& frame) {
     WLAN_STATS_INC(data_frame.in);
     if (ShouldDropDataFrame(data_frame)) { return ZX_ERR_NOT_SUPPORTED; }
 
-    if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
+    if (auto amsdu_frame = data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength()) {
+        HandleAmsduFrame(amsdu_frame.IntoOwned(frame.Take()));
+    } else if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
         HandleDataFrame(llc_frame.IntoOwned(frame.Take()));
     } else if (auto null_frame = data_frame.CheckBodyType<NullDataHdr>().CheckLength()) {
         HandleNullDataFrame(null_frame.IntoOwned(frame.Take()));
@@ -795,12 +797,6 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     // PS-POLL if there are more buffered unicast frames.
     if (hdr->fc.more_data() && hdr->addr1.IsUcast()) { SendPsPoll(); }
 
-    if (frame.hdr()->fc.subtype() == DataSubtype::kQosdata &&
-        hdr->qos_ctrl()->amsdu_present() == 1) {
-        // TODO(porce): Adopt FrameHandler 2.0
-        return HandleAmsduFrame(frame);
-    }
-
     ZX_DEBUG_ASSERT(frame.body_len() >= sizeof(LlcHeader));
     if (frame.body_len() < sizeof(LlcHeader)) {
         errorf("Inbound LLC frame too short (%zu bytes). Drop.", frame.body_len());
@@ -838,32 +834,20 @@ zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame
     return status;
 }
 
-zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
+zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
     // TODO(porce): Define A-MSDU or MSDU signature, and avoid forceful conversion.
     debugfn();
-
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() >= DataSubtype::kQosdata);
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() <= DataSubtype::kQosdataCfackCfpoll);
 
     // Non-DMG stations use basic subframe format only.
     auto amsdu_len = frame.body_len();
     if (amsdu_len == 0) { return ZX_OK; }
+    finspect("Inbound AMSDU: len %zu\n", amsdu_len);
 
     // TODO(porce): The received AMSDU should not be greater than max_amsdu_len, specified in
     // HtCapabilities IE of Association. Warn or discard if violated.
 
-    if (amsdu_len < sizeof(AmsduSubframeHeader)) {
-        errorf("dropping malformed A-MSDU of len %zu\n", amsdu_len);
-        return ZX_ERR_STOP;
-    }
-
-    // LLC frame should be interpreted as A-MSDU
-    auto amsdu = reinterpret_cast<const uint8_t*>(frame.body());
-
-    finspect("Inbound AMSDU: len %zu\n", amsdu_len);
-
     size_t offset = 0;  // Tracks up to which point of byte stream is parsed.
-
+    auto amsdu = reinterpret_cast<const uint8_t*>(frame.body());
     while (offset < amsdu_len) {
         size_t offset_prev = offset;
         auto subframe = reinterpret_cast<const AmsduSubframe*>(amsdu + offset);
