@@ -20,6 +20,8 @@
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 
+#include <dev/pci/amlogic-pcie/atu-cfg.h>
+
 #include "aml-pcie-clk.h"
 #include "aml-pcie-regs.h"
 
@@ -53,6 +55,7 @@ typedef enum dw_pcie_clks {
 
 typedef struct dw_pcie {
     zx_device_t* zxdev;
+    zx_device_t* parent;
 
     io_buffer_t buffers[ADDR_WINDOW_COUNT];
 
@@ -278,7 +281,6 @@ static void aml_enable_memory_space(volatile uint8_t* ecam) {
     val |= (PCIE_TYPE1_STS_CMD_IO_ENABLE |
             PCIE_TYPE1_STS_CMD_MEM_SPACE_ENABLE |
             PCIE_TYPE1_STS_CMD_BUS_MASTER_ENABLE);
-    
     writel(val, reg);
 }
 
@@ -344,33 +346,66 @@ static zx_status_t aml_pcie_establish_link(dw_pcie_t* pcie) {
 static zx_status_t init_kernel_pci_driver(dw_pcie_t* pcie) {
     zx_status_t st;
 
-    const size_t pci_sz = io_buffer_size(&pcie->buffers[CONFIG_WINDOW], 0);
-    const zx_paddr_t pci_base = 0xf9c00000;
-    const size_t ecam_sz = 1 * 1024 * 1024;
-    const zx_paddr_t mmio_base = pci_base + ecam_sz;
-    const size_t mmio_sz = pci_sz - ecam_sz;
+    iatu_translation_entry_t cfg;
+    iatu_translation_entry_t io;
+    iatu_translation_entry_t mem;
 
-    // Carve out one ECAM for our downstream device.
-    if (pci_sz < ecam_sz) {
-        zxlogf(ERROR, "dw_pcie: Could not allocate memory aperture for pcie\n");
-        return ZX_ERR_NO_RESOURCES;
+    size_t actual;
+    st = device_get_metadata(pcie->parent, IATU_CFG_APERTURE_METADATA, &cfg,
+                             sizeof(cfg), &actual);
+    if (st != ZX_OK || actual != sizeof(cfg)) {
+        zxlogf(ERROR, "dw_pcie: could not get cfg atu metadata\n");
+        return st;
+    }
+
+    st = device_get_metadata(pcie->parent, IATU_IO_APERTURE_METADATA, &io,
+                             sizeof(io), &actual);
+    if (st != ZX_OK || actual != sizeof(io)) {
+        zxlogf(ERROR, "dw_pcie: could not get io atu metadata\n");
+        return st;
+    }
+
+    st = device_get_metadata(pcie->parent, IATU_MMIO_APERTURE_METADATA, &mem,
+                             sizeof(mem), &actual);
+    if (st != ZX_OK || actual != sizeof(mem)) {
+        zxlogf(ERROR, "dw_pcie: could not get mem atu metadata\n");
+        return st;
     }
 
     st = dw_program_outbound_atu(pcie, 0, PCIE_TLP_TYPE_CFG0,
-                                 (zx_paddr_t)pci_base, 0,
-                                 ATU_MIN_REGION_SIZE);
+                                 cfg.cpu_addr, cfg.pci_addr, cfg.length);
     if (st != ZX_OK) {
         zxlogf(ERROR, "dw_pcie: failed to program outbound atu, st = %d\n", st);
         return st;
     }
 
-    // The rest of the space belongs to the PCIe bars and the bus driver is free
-    // to allocate it however it pleases.
-    st = dw_program_outbound_atu(pcie, 1 << 1, PCIE_TLP_TYPE_MEM_RW,
-                                 mmio_base, mmio_base, mmio_sz);
+    st = dw_program_outbound_atu(pcie, 1, PCIE_TLP_TYPE_IO_RW,
+                                 io.cpu_addr, io.pci_addr, io.length);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to program outbound atu for ECAM "
                "st = %d\n", st);
+        return st;
+    }
+
+    st = zx_pci_add_subtract_io_range(get_root_resource(), false, io.cpu_addr,
+                                      io.length, true);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to add pcie io range, st = %d\n", st);
+        return st;
+    }
+
+    st = dw_program_outbound_atu(pcie, 2, PCIE_TLP_TYPE_MEM_RW,
+                                 mem.cpu_addr, mem.pci_addr, mem.length);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to program outbound atu for ECAM "
+               "st = %d\n", st);
+        return st;
+    }
+
+    st = zx_pci_add_subtract_io_range(get_root_resource(), true, mem.cpu_addr,
+                                      mem.length, true);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to add pcie mmio range, st = %d\n", st);
         return st;
     }
 
@@ -383,19 +418,12 @@ static zx_status_t init_kernel_pci_driver(dw_pcie_t* pcie) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    st = zx_pci_add_subtract_io_range(get_root_resource(), true, mmio_base,
-                                      mmio_sz, true);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "aml_pcie: failed to add pcie mmio range, st = %d\n", st);
-        goto free_and_fail;
-    }
-
     arg->num_irqs = 0;
     arg->addr_window_count = 1;
     arg->addr_windows[0].is_mmio = true;
     arg->addr_windows[0].has_ecam = true;
-    arg->addr_windows[0].base = pci_base;
-    arg->addr_windows[0].size = ecam_sz;
+    arg->addr_windows[0].base = cfg.cpu_addr;
+    arg->addr_windows[0].size = 1 * 1024 * 1024;
     arg->addr_windows[0].bus_start = 0;
     arg->addr_windows[0].bus_end = 0xff;
 
@@ -476,6 +504,8 @@ static zx_status_t aml_pcie_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "aml_pcie_bind: failed to allocate pcie struct");
         return ZX_ERR_NO_MEMORY;
     }
+
+    pcie->parent = parent;
 
     st = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pcie->pdev);
     if (st != ZX_OK) {
