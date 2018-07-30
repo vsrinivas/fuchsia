@@ -1,6 +1,8 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+import("//build/package.gni")
 
 source_set("namespace_test") {
   testonly = true
@@ -11,6 +13,44 @@ source_set("namespace_test") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("run_in_test_env_bin") {
+  output_name = "run_in_test_env"
+  testonly = true
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp/testing",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  sources = [
+    "run_in_test_env.cc",
+  ]
+}
+
+package("run_in_test_env") {
+  testonly = true
+
+  deps = [
+    ":run_in_test_env_bin",
+  ]
+
+  binary = "run_in_test_env"
+
+  meta = [
+    {
+      path = rebase_path("meta/run_in_test_env.cmx")
+      dest = "run_in_test_env.cmx"
+    },
   ]
 }

@@ -6,7 +6,15 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include "lib/component/cpp/environment_services.h"
+
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
+
+NamespaceTest::NamespaceTest() {
+  component::ConnectToEnvironmentService(env_.NewRequest());
+  env_->GetServices(service_provider_.NewRequest());
+}
 
 bool NamespaceTest::Exists(const char* path) {
   struct stat stat_;

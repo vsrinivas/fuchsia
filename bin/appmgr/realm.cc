@@ -300,14 +300,7 @@ void Realm::CreateComponent(
     return;
   }
   launch_info.url = canon_url;
-
   std::string scheme = GetSchemeFromURL(canon_url);
-
-  fxl::RefPtr<Namespace> ns = default_namespace_;
-  if (launch_info.additional_services) {
-    ns = fxl::MakeRefCounted<Namespace>(
-        default_namespace_, this, std::move(launch_info.additional_services));
-  }
 
   const std::string launcher_type = scheme_map_.LookUp(scheme);
   if (launcher_type == "") {
@@ -321,11 +314,15 @@ void Realm::CreateComponent(
     loader_->LoadComponent(
         url,
         fxl::MakeCopyable([this, launch_info = std::move(launch_info),
-                           component_request = std::move(component_request), ns,
+                           component_request = std::move(component_request),
                            callback = fbl::move(callback)](
                               fuchsia::sys::PackagePtr package) mutable {
+          fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
+              default_namespace_, this,
+              std::move(launch_info.additional_services));
           if (package) {
             if (package->data) {
+              // TODO(CP-25): Deprecate and remove CreateComponentWithProcess.
               CreateComponentWithProcess(std::move(package),
                                          std::move(launch_info),
                                          std::move(component_request),
@@ -342,10 +339,10 @@ void Realm::CreateComponent(
           }
         }));
   } else {
-    // Component that uses a runner.
-    CreateComponentWithRunner(launcher_type, std::move(launch_info),
-                              std::move(component_request), std::move(ns),
-                              std::move(callback));
+    // Component from scheme that maps to a runner.
+    CreateComponentWithRunnerForScheme(launcher_type, std::move(launch_info),
+                                       std::move(component_request),
+                                       std::move(callback));
   }
 }
 
@@ -473,18 +470,11 @@ void Realm::CreateComponentWithProcess(
   }
 }
 
-void Realm::CreateComponentWithRunner(std::string runner_url,
-                                      fuchsia::sys::LaunchInfo launch_info,
-                                      ComponentRequestWrapper component_request,
-                                      fxl::RefPtr<Namespace> ns,
-                                      ComponentObjectCreatedCallback callback) {
-  zx::channel svc = ns->OpenServicesAsDirectory();
-  if (!svc) {
-    component_request.SetReturnValues(kComponentCreationFailed,
-                                      TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
+void Realm::CreateComponentWithRunnerForScheme(
+    std::string runner_url,
+    fuchsia::sys::LaunchInfo launch_info,
+    ComponentRequestWrapper component_request,
+    ComponentObjectCreatedCallback callback) {
   // Use "web_runner" if it is installed, otherwise fall back to using
   // "web_runner_prototype" instead.
   // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
@@ -495,14 +485,12 @@ void Realm::CreateComponentWithRunner(std::string runner_url,
     runner_url = "web_runner_prototype";
   }
 
-  NamespaceBuilder builder;
-  builder.AddServices(std::move(svc));
-
   fuchsia::sys::Package package;
   package.resolved_url = launch_info.url;
 
   fuchsia::sys::StartupInfo startup_info;
   startup_info.launch_info = std::move(launch_info);
+  NamespaceBuilder builder;
   startup_info.flat_namespace = builder.BuildForRunner();
 
   auto* runner = GetOrCreateRunner(runner_url);
@@ -513,6 +501,9 @@ void Realm::CreateComponentWithRunner(std::string runner_url,
                                       TerminationReason::RUNNER_FAILED);
     return;
   }
+
+  fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
+      default_namespace_, this, nullptr);
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   TerminationCallback termination_callback;
@@ -613,11 +604,16 @@ void Realm::CreateComponentFromPackage(
   if (!cmx.sandbox_meta().IsNull()) {
     const auto& sandbox = cmx.sandbox_meta();
 
+    if (sandbox.has_services()) {
+      ns->SetServicesWhitelist(sandbox.services());
+    }
+
     // If an app has the "shell" feature, then we use the libraries from the
     // system rather than from the package because programs spawned from the
     // shell will need the system-provided libraries to run.
-    if (sandbox.HasFeature("shell"))
+    if (sandbox.HasFeature("shell")) {
       loader_service.reset();
+    }
 
     builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
   }

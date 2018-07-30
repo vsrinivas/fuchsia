@@ -21,7 +21,6 @@ static const std::regex* const kPackageNameFileScheme =
     new std::regex("^file:///pkgfs/packages/(.*?)/");
 
 CmxMetadata::CmxMetadata() = default;
-
 CmxMetadata::~CmxMetadata() = default;
 
 bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file) {

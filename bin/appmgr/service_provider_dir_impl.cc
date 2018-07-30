@@ -22,6 +22,12 @@ void ServiceProviderDirImpl::AddService(fbl::RefPtr<fs::Service> service,
   root_->AddEntry(service_name, std::move(service));
 }
 
+void ServiceProviderDirImpl::SetServicesWhitelist(
+    const std::vector<std::string>& services) {
+  has_services_whitelist_ = true;
+  services_whitelist_.insert(services.begin(), services.end());
+}
+
 void ServiceProviderDirImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
@@ -29,6 +35,12 @@ void ServiceProviderDirImpl::AddBinding(
 
 void ServiceProviderDirImpl::ConnectToService(fidl::StringPtr service_name,
                                               zx::channel channel) {
+  if (has_services_whitelist_ &&
+      services_whitelist_.count(service_name.get()) == 0) {
+    FXL_LOG(WARNING) << "Component is not allowed to connect to "
+                     << service_name.get();
+    return;
+  }
   fbl::RefPtr<fs::Vnode> child;
   zx_status_t status = root_->Lookup(&child, service_name.get());
   if (status == ZX_OK) {
@@ -51,6 +63,8 @@ zx_status_t ServiceProviderDirImpl::Getattr(vnattr_t* a) {
 zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie,
                                             void* dirents, size_t len,
                                             size_t* out_actual) {
+  // TODO(CP-25): Filter services according to the whitelist. In general,
+  // fix readdir so that it returns all services, not just the ones under root_.
   return root_->Readdir(cookie, dirents, len, out_actual);
 }
 

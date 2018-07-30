@@ -70,6 +70,21 @@ TEST_F(SandboxMetadataTest, Parse) {
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.system(), ::testing::ElementsAre("data"));
+    EXPECT_FALSE(sandbox.has_services());
+  }
+
+  // services
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(
+        &sandbox, R"JSON({ "services": [ "fuchsia.sys.Launcher" ] })JSON",
+        &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.services(),
+                ::testing::ElementsAre("fuchsia.sys.Launcher"));
+    EXPECT_TRUE(sandbox.has_services());
   }
 
   // pkgfs

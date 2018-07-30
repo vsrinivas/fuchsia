@@ -162,6 +162,8 @@ fdio_flat_namespace_t* NamespaceBuilder::Build() {
 
 fuchsia::sys::FlatNamespace NamespaceBuilder::BuildForRunner() {
   fuchsia::sys::FlatNamespace flat_namespace;
+  flat_namespace.paths.reset({});
+  flat_namespace.directories.reset({});
 
   for (auto& path : paths_) {
     flat_namespace.paths.push_back(std::move(path));

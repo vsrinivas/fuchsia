@@ -25,6 +25,8 @@ class SandboxMetadata {
 
   const std::vector<std::string>& dev() const { return dev_; }
   const std::vector<std::string>& system() const { return system_; }
+  const std::vector<std::string>& services() const { return services_; }
+  bool has_services() const { return has_services_; }
   const std::vector<std::string>& pkgfs() const { return pkgfs_; }
   const std::vector<std::string>& features() const { return features_; }
   const std::vector<std::string>& boot() const { return boot_; }
@@ -33,8 +35,10 @@ class SandboxMetadata {
 
  private:
   bool null_ = true;
+  bool has_services_ = false;
   std::vector<std::string> dev_;
   std::vector<std::string> system_;
+  std::vector<std::string> services_;
   std::vector<std::string> pkgfs_;
   std::vector<std::string> features_;
   std::vector<std::string> boot_;

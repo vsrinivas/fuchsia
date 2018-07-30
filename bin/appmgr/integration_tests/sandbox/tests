@@ -1,10 +1,15 @@
 {
     "packages": [
+        "//garnet/bin/appmgr/integration_tests/sandbox:run_in_test_env",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:no_persistent_storage",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_shell",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:has_system_temp",
-        "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp"
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:all_services",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:multiple_components",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:no_services",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services"
     ]
 }

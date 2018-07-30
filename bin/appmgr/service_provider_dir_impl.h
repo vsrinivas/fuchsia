@@ -5,6 +5,9 @@
 #ifndef GARNET_BIN_APPMGR_SERVICE_PROVIDER_DIR_IMPL_H_
 #define GARNET_BIN_APPMGR_SERVICE_PROVIDER_DIR_IMPL_H_
 
+#include <string>
+#include <unordered_set>
+
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
@@ -45,6 +48,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   void AddService(fbl::RefPtr<fs::Service> service,
                   const std::string& service_name);
 
+  void SetServicesWhitelist(const std::vector<std::string>& services);
+
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
@@ -67,6 +72,10 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   fbl::RefPtr<ServiceProviderDirImpl> parent_;
   zx::channel backing_dir_;
   fxl::WeakPtrFactory<ServiceProviderDirImpl> weak_factory_;
+  // TODO(CP-25): Remove has_services_whitelist_ when empty services is
+  // equivalent to no services.
+  bool has_services_whitelist_ = false;
+  std::unordered_set<std::string> services_whitelist_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderDirImpl);
 };

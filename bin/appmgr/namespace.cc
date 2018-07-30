@@ -18,7 +18,7 @@
 namespace component {
 
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
-                     fuchsia::sys::ServiceListPtr service_list)
+                     fuchsia::sys::ServiceListPtr additional_services)
     : vfs_(async_get_default_dispatcher()),
       services_(fbl::AdoptRef(new ServiceProviderDirImpl())),
       job_provider_(fbl::AdoptRef(new JobProviderImpl(realm))),
@@ -52,9 +52,9 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       })),
       fuchsia::process::Launcher::Name_);
 
-  if (service_list) {
-    auto& names = service_list->names;
-    additional_services_ = service_list->provider.Bind();
+  if (additional_services) {
+    auto& names = additional_services->names;
+    additional_services_ = additional_services->provider.Bind();
     for (auto& name : *names) {
       services_->AddService(
           fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
@@ -103,6 +103,11 @@ void Namespace::CreateComponent(
 
 zx::channel Namespace::OpenServicesAsDirectory() {
   return Util::OpenAsDirectory(&vfs_, services_);
+}
+
+void Namespace::SetServicesWhitelist(
+    const std::vector<std::string>& services) {
+  services_->SetServicesWhitelist(services);
 }
 
 }  // namespace component

@@ -1,0 +1,54 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+
+sandbox_test_package("some_services") {
+  sources = [
+    "some_services.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+sandbox_test_package("all_services") {
+  sources = [
+    "all_services.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+sandbox_test_package("no_services") {
+  sources = [
+    "no_services.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+sandbox_test_package("multiple_components") {
+  sources = [
+    "multiple_components.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}

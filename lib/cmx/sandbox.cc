@@ -37,30 +37,32 @@ void CopyArrayToVector(const std::string& name, const Value& value,
 
 constexpr char kDev[] = "dev";
 constexpr char kSystem[] = "system";
+constexpr char kServices[] = "services";
 constexpr char kPkgfs[] = "pkgfs";
 constexpr char kFeatures[] = "features";
 constexpr char kBoot[] = "boot";
 
 bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
                             json::JSONParser* json_parser) {
-  dev_.clear();
-  system_.clear();
-  pkgfs_.clear();
-  features_.clear();
-  boot_.clear();
+  const std::unordered_map<std::string, std::vector<std::string>*> name_to_vec =
+      {{kDev, &dev_},
+       {kSystem, &system_},
+       {kServices, &services_},
+       {kPkgfs, &pkgfs_},
+       {kFeatures, &features_},
+       {kBoot, &boot_}};
+
+  for (const auto& entry : name_to_vec) {
+    entry.second->clear();
+  }
   null_ = true;
+  has_services_ = false;
 
   if (!sandbox_value.IsObject()) {
     json_parser->ReportError("Sandbox is not an object.");
     return false;
   }
 
-  const std::unordered_map<std::string, std::vector<std::string>*> name_to_vec =
-      {{kDev, &dev_},
-       {kSystem, &system_},
-       {kPkgfs, &pkgfs_},
-       {kFeatures, &features_},
-       {kBoot, &boot_}};
   for (const auto& entry : name_to_vec) {
     const std::string& name = entry.first;
     auto* vec = entry.second;
@@ -72,6 +74,12 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
       }
     }
   }
+
+  // null |services| is distinguished from empty |services|.
+  // TODO(CP-25): Make null services equivalent to empty services once all
+  // component manifests are migrated.
+  auto services_member = sandbox_value.FindMember(kServices);
+  has_services_ = (services_member != sandbox_value.MemberEnd());
 
   null_ = false;
   return true;

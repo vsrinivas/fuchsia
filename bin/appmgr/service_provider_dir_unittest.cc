@@ -34,9 +34,9 @@ class FakeEcho : public fidl::examples::echo::Echo {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeEcho);
 };
 
-class ServiceProviderTest : public gtest::RealLoopFixture {
+class ServiceProviderTest : public ::gtest::RealLoopFixture {
  public:
-  ServiceProviderTest() : vfs_(dispatcher()), value_(0) {}
+  ServiceProviderTest() : vfs_(dispatcher()) {}
 
   fbl::RefPtr<fs::Service> CreateService(int set_value) {
     return fbl::AdoptRef(
@@ -71,11 +71,24 @@ class ServiceProviderTest : public gtest::RealLoopFixture {
     ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name));
     fbl::RefPtr<fs::Service> child_node;
     GetService(service_provider, service_name, &child_node);
-    if (child_node) {
-      child_node->Serve(&vfs_, zx::channel(), 0);
-      RunLoopUntilIdle();
-      ASSERT_EQ(expected_value, value_);
-    }
+    ASSERT_TRUE(child_node);
+    ASSERT_EQ(ZX_OK, child_node->Serve(&vfs_, zx::channel(), 0));
+    RunLoopUntilIdle();
+    EXPECT_EQ(expected_value, value_);
+  }
+
+  void TestMissingService(ServiceProviderDirImpl* service_provider,
+                          const fbl::String& service_name) {
+    const int expected_value = value_;
+    fbl::RefPtr<fs::Vnode> child;
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name));
+    fbl::RefPtr<fs::Service> child_node;
+    GetService(service_provider, service_name, &child_node);
+    ASSERT_TRUE(child_node);
+    ASSERT_EQ(ZX_OK, child_node->Serve(&vfs_, zx::channel(), 0));
+    RunLoopUntilIdle();
+    // Never connected to service.
+    EXPECT_EQ(expected_value, value_);
   }
 
   zx::channel OpenAsDirectory(fbl::RefPtr<ServiceProviderDirImpl> service) {
@@ -84,7 +97,7 @@ class ServiceProviderTest : public gtest::RealLoopFixture {
 
  protected:
   fs::SynchronousVfs vfs_;
-  int value_;
+  int value_ = 0;
   std::vector<std::unique_ptr<FakeEcho>> echo_services_;
 };
 
@@ -117,7 +130,7 @@ TEST_F(ServiceProviderTest, Parent) {
   // check that we can get parent service
   TestService(&service_provider, service_name2, 2);
 
-  // check that parent is able to access it's service
+  // check that parent is able to access its service
   TestService(parent_service_provider.get(), service_name1, 3);
 }
 
@@ -141,7 +154,7 @@ TEST_F(ServiceProviderTest, BackingDir) {
   // should call child service
   TestService(&service_provider, service_name1, 1);
 
-  // check that parent is able to access it's service
+  // check that parent is able to access its service
   TestService(parent_service_provider.get(), service_name1, 3);
 
   // check that we can get backing_dir service from child
@@ -177,6 +190,34 @@ TEST_F(ServiceProviderTest, ParentAndBackingDirTogther) {
 
   // test that we cannot set backing directory after setting parent.
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, b1.write(0, msg, sizeof(msg), nullptr, 0));
+}
+
+TEST_F(ServiceProviderTest, RestrictedServices) {
+  ServiceProviderDirImpl service_provider;
+  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
+  service_provider.set_parent(parent_service_provider);
+  auto service_name1 = "fake_service1";
+  auto service_name2 = "fake_service2";
+  auto service_name3 = "fake_service3";
+  auto service_name4 = "fake_service4";
+  auto service1 = CreateService(1);
+  auto service2 = CreateService(2);
+  auto service3 = CreateService(3);
+  auto service4 = CreateService(4);
+
+  service_provider.AddService(service1, service_name1);
+  service_provider.AddService(service2, service_name2);
+  parent_service_provider->AddService(service3, service_name3);
+  parent_service_provider->AddService(service4, service_name4);
+  service_provider.SetServicesWhitelist({service_name1, service_name3});
+
+  // should be able to call service1 and service3
+  TestService(&service_provider, service_name1, 1);
+  TestService(&service_provider, service_name3, 3);
+
+  // service2 and service4 are not accessible
+  TestMissingService(&service_provider, service_name2);
+  TestMissingService(&service_provider, service_name4);
 }
 
 }  // namespace

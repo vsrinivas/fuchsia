@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -37,6 +38,8 @@ class Namespace : public fuchsia::sys::Environment,
 
   zx::channel OpenServicesAsDirectory();
 
+  void SetServicesWhitelist(const std::vector<std::string>& services);
+
   // fuchsia::sys::Environment implementation:
 
   void CreateNestedEnvironment(
@@ -64,7 +67,7 @@ class Namespace : public fuchsia::sys::Environment,
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
-            fuchsia::sys::ServiceListPtr service_list);
+            fuchsia::sys::ServiceListPtr additional_services);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
   ~Namespace() override;
@@ -76,7 +79,7 @@ class Namespace : public fuchsia::sys::Environment,
   fbl::RefPtr<ServiceProviderDirImpl> services_;
   fbl::RefPtr<JobProviderImpl> job_provider_;
   fxl::RefPtr<Namespace> parent_;
-  Realm* realm_;
+  Realm* const realm_;
   fuchsia::sys::ServiceProviderPtr additional_services_;
   fuchsia::sys::LoaderPtr loader_;
 
