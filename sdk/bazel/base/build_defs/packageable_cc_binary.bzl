@@ -7,10 +7,10 @@ load(":package_info.bzl", "get_aggregate_info", "PackageGeneratedInfo", "Package
 """
 Makes a cc_binary ready for inclusion in a fuchsia_package.
 
-Parameters
-
-    binary(label, required)
-        The cc_binary to package up.
+Args:
+    name: The name of this build target.
+    target: The cc_binary or cc_test target to include in the fuchsia package.
+    **kwargs: Additional arguments, such as testonly.
 """
 
 def _cc_contents_impl(target, context):
@@ -67,12 +67,13 @@ _packageable_cc_binary = rule(
     },
 )
 
-def packageable_cc_binary(name, target):
+def packageable_cc_binary(name, target, **kwargs):
     packaged_name = name + "_packaged"
 
     _packageable_cc_binary(
         name = packaged_name,
         target = target,
+        **kwargs
     )
 
     # The filegroup is needed so that the packaging can properly crawl all the
@@ -84,5 +85,6 @@ def packageable_cc_binary(name, target):
             Label("//build_defs/toolchain:dist"),
             Label("//pkg/fdio"),
             Label("//pkg/sysroot"),
-        ]
+        ],
+        **kwargs
     )

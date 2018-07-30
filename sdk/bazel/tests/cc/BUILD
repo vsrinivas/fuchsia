@@ -61,3 +61,30 @@ fuchsia_package(
         ":packageable",
     ],
 )
+
+# Test the testonly attribute.
+
+cc_test(
+    name = "pkg_dep_test",
+    srcs = [
+        "pkg_dep.cc",
+    ],
+    deps = [
+        ":shared_library",
+        "@fuchsia_sdk//pkg/svc",
+    ],
+)
+
+packageable_cc_binary(
+    name = "packageable_testonly",
+    target = ":pkg_dep_test",
+    testonly = 1,
+)
+
+fuchsia_package(
+    name = "package_test",
+    deps = [
+        ":packageable_testonly",
+    ],
+    testonly = 1,
+)
