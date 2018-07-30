@@ -188,13 +188,15 @@ fn report_results(test_results: &TestResults) {
     println!("Test Results: {}", serde_json::to_string_pretty(&test_results).unwrap());
 }
 
-fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(stay_connected: bool,
-                                       target_ssid: T,
-                                       status: &fidl_sme::ClientStatusResponse) -> bool {
+fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
+    stay_connected: bool, target_ssid: T, status: &fidl_sme::ClientStatusResponse) -> bool {
     if !stay_connected {
         // doesn't matter if we are connected, we will force a reconnection
         return true;
     }
-    // TODO: add check if we are already connected, if so, make sure the ssid matches
-    return true
+    // are we already connected?  if so, check the current ssid
+    match status.connected_to {
+        Some(ref bss) if bss.ssid.as_slice() == target_ssid.as_ref() => false,
+        _ => true
+    }
 }
