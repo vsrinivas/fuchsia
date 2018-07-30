@@ -76,8 +76,9 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     FrameView<Body, UnknownBody> SkipHeader() {
         if (IsEmpty()) { return {}; }
 
-        ZX_DEBUG_ASSERT(data_offset_ + hdr()->len() <= pkt_->len());
-        return FrameView<Body, UnknownBody>(pkt_, data_offset_ + hdr()->len());
+
+        ZX_DEBUG_ASSERT(body_offset() <= pkt_->len());
+        return FrameView<Body, UnknownBody>(pkt_, body_offset());
     }
 
     // Verifies and treats the underlying data as a different frame type.

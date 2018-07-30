@@ -336,22 +336,15 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame) 
         return ZX_OK;
     }
 
-    auto hdr = frame.hdr();
-    auto llc = frame.body();
+    auto data_llc_frame = frame.View();
+    auto data_hdr = data_llc_frame.hdr();
 
     // Forward EAPOL frames to SME.
-    size_t payload_len = frame.body_len() - sizeof(LlcHeader);
-    if (be16toh(llc->protocol_id) == kEapolProtocolId) {
-        if (payload_len < sizeof(EapolFrame)) {
-            warnf("short EAPOL frame; len = %zu", payload_len);
-            return ZX_OK;
-        }
-
-        auto eapol = reinterpret_cast<const EapolFrame*>(llc->payload);
-        uint16_t actual_body_len = payload_len;
-        uint16_t expected_body_len = be16toh(eapol->packet_body_length);
-        if (actual_body_len != expected_body_len) {
-            return service::SendEapolIndication(client_->device(), *eapol, hdr->addr2, hdr->addr3);
+    auto llc_frame = data_llc_frame.SkipHeader();
+    if (auto eapol_frame = llc_frame.CheckBodyType<EapolHdr>().CheckLength().SkipHeader()) {
+        if (eapol_frame.body_len() == eapol_frame.hdr()->get_packet_body_length()) {
+            return service::SendEapolIndication(client_->device(), *eapol_frame.hdr(),
+                                                data_hdr->addr2, data_hdr->addr3);
         }
         return ZX_OK;
     }
@@ -360,7 +353,7 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame) 
     // yet.
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return ZX_OK; }
 
-    const size_t eth_len = sizeof(EthernetII) + payload_len;
+    const size_t eth_len = sizeof(EthernetII) + llc_frame.body_len();
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -369,10 +362,10 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame) 
     eth_packet->set_peer(Packet::Peer::kEthernet);
 
     auto eth = eth_packet->mut_field<EthernetII>(0);
-    eth->dest = hdr->addr3;
-    eth->src = hdr->addr2;
-    eth->ether_type = llc->protocol_id;
-    std::memcpy(eth->payload, llc->payload, payload_len - sizeof(LlcHeader));
+    eth->dest = data_hdr->addr3;
+    eth->src = data_hdr->addr2;
+    eth->ether_type = llc_frame.hdr()->protocol_id;
+    std::memcpy(eth->payload, llc_frame.body()->data, llc_frame.body_len());
 
     auto status = client_->bss()->SendEthFrame(std::move(eth_packet));
     if (status != ZX_OK) {

@@ -167,7 +167,7 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm);
 
 zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code);
-zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,
+zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst);
 }  // namespace service
 

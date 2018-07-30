@@ -221,7 +221,7 @@ zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCode
     return status;
 }
 
-zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,
+zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst) {
     debugfn();
 
@@ -229,12 +229,12 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol
     // might exceed 255 octets. However, we don't support EAP yet and EAPOL Key frames are always
     // shorter.
     // TODO(hahnr): If necessary, find a better upper bound once we support EAP.
-    size_t len = sizeof(EapolFrame) + be16toh(eapol.packet_body_length);
-    if (len > 255) { return ZX_OK; }
+    size_t frame_len = eapol.len() + eapol.get_packet_body_length();
+    if (frame_len > 255) { return ZX_OK; }
 
     auto ind = wlan_mlme::EapolIndication::New();
-    ind->data = ::fidl::VectorPtr<uint8_t>::New(len);
-    std::memcpy(ind->data->data(), &eapol, len);
+    ind->data = ::fidl::VectorPtr<uint8_t>::New(frame_len);
+    std::memcpy(ind->data->data(), &eapol, frame_len);
     src.CopyTo(ind->src_addr.mutable_data());
     dst.CopyTo(ind->dst_addr.mutable_data());
 

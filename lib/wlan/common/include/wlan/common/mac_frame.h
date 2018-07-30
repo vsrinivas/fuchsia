@@ -783,11 +783,14 @@ struct EthernetII {
 } __PACKED;
 
 // IEEE Std 802.1X-2010, 11.3, Figure 11-1
-struct EapolFrame {
+struct EapolHdr {
     uint8_t version;
     uint8_t packet_type;
     uint16_t packet_body_length;
-    uint8_t packet_body[];
+
+    size_t get_packet_body_length() const {
+        return static_cast<size_t>(be16toh(packet_body_length));
+    }
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;

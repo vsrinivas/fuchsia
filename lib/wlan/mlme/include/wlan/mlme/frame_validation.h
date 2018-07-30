@@ -134,6 +134,15 @@ template <typename B> struct FrameTypeValidator<AmsduSubframeHeader, B> {
     }
 };
 
+template <> struct FrameTypeValidator<LlcHeader, EapolHdr> {
+    static bool is_valid(const uint8_t* buf, size_t len) {
+        if (len < sizeof(LlcHeader)) { return false; }
+
+        auto hdr = reinterpret_cast<const LlcHeader*>(buf);
+        return be16toh(hdr->protocol_id) == kEapolProtocolId;
+    }
+};
+
 }  // namespace internal
 
 typedef size_t (*add_padding_func)(size_t);

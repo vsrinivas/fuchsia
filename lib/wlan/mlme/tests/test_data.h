@@ -33,6 +33,7 @@ extern std::vector<uint8_t> kPsPollFrame;
 extern std::vector<uint8_t> kPsPollHtcUnsupportedFrame;
 extern std::vector<uint8_t> kEthernetFrame;
 extern std::vector<uint8_t> kAmsduDataFrame;
+extern std::vector<uint8_t> kDataLlcEapolFrame;
 
 }  // namespace test_data
 }  // namespace wlan

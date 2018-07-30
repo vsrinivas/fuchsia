@@ -445,7 +445,7 @@ TEST(Frame, Specialize_ProgressedFrame) {
     ASSERT_EQ(specialized_frame.body()->b, 1337);
 }
 
-TEST(Frame, AdvanceThroughFrame) {
+TEST(Frame, AdvanceThroughAmsduFrame) {
     constexpr size_t kPadding = 2;
 
     auto frame_data = test_data::kAmsduDataFrame;
@@ -500,6 +500,39 @@ TEST(Frame, AdvanceOutOfBounds) {
 
     ASSERT_TRUE(frame.AdvanceBy(20));
     ASSERT_FALSE(frame.AdvanceBy(21));
+}
+
+TEST(Frame, AdvanceThroughEapolFrame) {
+    // The test frame uses padding after it's data header.
+    // Setup a Packet which respects this.
+    auto frame_data = test_data::kDataLlcEapolFrame;
+    auto pkt = GetPacket(frame_data.size());
+    pkt->CopyFrom(frame_data.data(), frame_data.size(), 0);
+    wlan_rx_info_t rx_info{.rx_flags = WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4};
+    pkt->CopyCtrlFrom(rx_info);
+
+    auto opt_data_frame = DataFrameView<>::CheckType(pkt.get());
+    ASSERT_TRUE(opt_data_frame);
+    auto data_frame = opt_data_frame.CheckLength();
+    ASSERT_TRUE(data_frame);
+
+    auto opt_data_llc_frame = data_frame.CheckBodyType<LlcHeader>();
+    ASSERT_TRUE(opt_data_llc_frame);
+    auto data_llc_frame = opt_data_llc_frame.CheckLength();
+    ASSERT_TRUE(data_llc_frame);
+    ASSERT_EQ(be16toh(data_llc_frame.body()->protocol_id), kEapolProtocolId);
+
+    auto llc_frame = data_llc_frame.SkipHeader();
+    ASSERT_TRUE(llc_frame);
+    ASSERT_EQ(be16toh(llc_frame.hdr()->protocol_id), kEapolProtocolId);
+    auto opt_llc_eapol_frame = llc_frame.CheckBodyType<EapolHdr>();
+    ASSERT_TRUE(opt_llc_eapol_frame);
+    auto llc_eapol_frame = opt_llc_eapol_frame.CheckLength();
+    ASSERT_TRUE(llc_eapol_frame);
+
+    auto eapol_frame = llc_eapol_frame.SkipHeader();
+    ASSERT_TRUE(eapol_frame);
+    ASSERT_EQ(eapol_frame.hdr()->packet_type, 0x03);
 }
 
 }  // namespace

@@ -789,30 +789,20 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
-    // For data frames within BlockAck session.
-    if (frame.hdr()->fc.subtype() == DataSubtype::kQosdata) {
-        ZX_DEBUG_ASSERT(frame.hdr()->HasQosCtrl());
-        ZX_DEBUG_ASSERT(frame.hdr()->qos_ctrl() != nullptr);
-    }
+    auto data_llc_frame = frame.View();
+    auto data_hdr = data_llc_frame.hdr();
 
     // Take signal strength into account.
     avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
 
-    auto hdr = frame.hdr();
-    auto llc = frame.body();
-
     // Forward EAPOL frames to SME.
-    size_t payload_len = frame.body_len() - sizeof(LlcHeader);
-    if (be16toh(llc->protocol_id) == kEapolProtocolId) {
-        if (payload_len < sizeof(EapolFrame)) {
-            warnf("short EAPOL frame; len = %zu", payload_len);
-            return ZX_OK;
-        }
-        auto eapol = reinterpret_cast<const EapolFrame*>(llc->payload);
-        size_t actual_body_len = payload_len;
-        uint16_t expected_body_len = be16toh(eapol->packet_body_length);
-        if (actual_body_len >= expected_body_len) {
-            return service::SendEapolIndication(device_, *eapol, hdr->addr3, hdr->addr1);
+    auto llc_frame = data_llc_frame.SkipHeader();
+    if (auto eapol_frame = llc_frame.CheckBodyType<EapolHdr>().CheckLength().SkipHeader()) {
+        if (eapol_frame.body_len() == eapol_frame.hdr()->get_packet_body_length()) {
+            return service::SendEapolIndication(device_, *eapol_frame.hdr(), data_hdr->addr3,
+                                                data_hdr->addr1);
+        } else {
+            errorf("received invalid EAPOL frame\n");
         }
         return ZX_OK;
     }
@@ -821,14 +811,9 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     if (controlled_port_ == eapol::PortState::kBlocked) { return ZX_OK; }
 
     // PS-POLL if there are more buffered unicast frames.
-    if (hdr->fc.more_data() && hdr->addr1.IsUcast()) { SendPsPoll(); }
+    if (data_hdr->fc.more_data() && data_hdr->addr1.IsUcast()) { SendPsPoll(); }
 
-    ZX_DEBUG_ASSERT(frame.body_len() >= sizeof(LlcHeader));
-    if (frame.body_len() < sizeof(LlcHeader)) {
-        errorf("Inbound LLC frame too short (%zu bytes). Drop.", frame.body_len());
-        return ZX_ERR_STOP;
-    }
-    return HandleLlcFrame(*llc, frame.body_len(), hdr->addr1, hdr->addr3);
+    return HandleLlcFrame(*llc_frame.hdr(), frame.body_len(), data_hdr->addr1, data_hdr->addr3);
 }
 
 zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
