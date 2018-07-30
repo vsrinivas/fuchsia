@@ -123,9 +123,7 @@ void TestCaseResults::WriteJSON(FILE* out_file) const {
         fprintf(out_file, ",\"bytes_processed_per_run\":%" PRIu64,
                 bytes_processed_per_run);
     }
-    fprintf(out_file, ",\"samples\":[");
-
-    fprintf(out_file, "{\"values\":[");
+    fprintf(out_file, ",\"values\":[");
     bool first = true;
     for (const auto value : values) {
         if (!first) {
@@ -134,8 +132,6 @@ void TestCaseResults::WriteJSON(FILE* out_file) const {
         fprintf(out_file, "%f", value);
         first = false;
     }
-    fprintf(out_file, "]}");
-
     fprintf(out_file, "]}");
 }
 

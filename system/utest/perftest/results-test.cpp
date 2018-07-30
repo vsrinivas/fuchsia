@@ -36,7 +36,7 @@ static bool test_json_output() {
     ASSERT_TRUE(FixUpFileBuffer(fp, buf, sizeof(buf)));
 
     // Test the JSON output.
-    const char* expected = R"JSON([{"label":"ExampleNullSyscall","test_suite":"results_test","unit":"nanoseconds","samples":[{"values":[101.000000,102.000000,103.000000,104.000000,105.000000]}]}])JSON";
+    const char* expected = R"JSON([{"label":"ExampleNullSyscall","test_suite":"results_test","unit":"nanoseconds","values":[101.000000,102.000000,103.000000,104.000000,105.000000]}])JSON";
     EXPECT_STR_EQ(expected, buf, "");
 
     END_TEST;
