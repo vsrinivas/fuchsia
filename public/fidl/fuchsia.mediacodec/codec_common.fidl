@@ -27,8 +27,8 @@ union Value {
 // still be reasonable to use a generic Parameter.
 struct Parameter {
   // Some indication of the scope of applicability of this Parameter.
-  string namespace;
-  // Specific name of this parameter, without the namespace prefix.
+  string scope;
+  // Specific name of this parameter, without the scope prefix.
   string name;
   // The particular value of this parameter.
   Value value;
