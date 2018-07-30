@@ -205,6 +205,35 @@ dm help
 dm shutdown
 ```
 
+### Change some source
+
+Almost everything that exists on a Fuchsia system is stored in a Fuchsia
+package. A typical development
+[workflow](https://fuchsia.googlesource.com/docs/+/master/development/workflows/package_update.md)
+involves re-building and pushing Fuchsia packages to a development device or
+QEMU virtual device.
+
+Make a change to the rolldice binary in `garnet/bin/rolldice/src/main.rs`.
+
+In a separate shell, start the development update server, if it isn't already
+running:
+
+```
+fx serve -v
+```
+
+Re-build and push the rolldice package to a running Fuchsia device with:
+
+```
+fx build-push rolldice
+```
+
+From a shell prompt on the Fuchsia device, run the updated package with:
+
+```
+run rolldice
+```
+
 ### Select a tab
 
 Fuchsia shows multiple tabs after booting [with graphics
