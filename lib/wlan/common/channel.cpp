@@ -112,10 +112,10 @@ Mhz GetCenterFreq(const wlan_channel_t& chan) {
     Mhz spacing = 5;
     Mhz channel_starting_frequency;
     if (Is2Ghz(chan)) {
-        channel_starting_frequency = 2407;
+        channel_starting_frequency = kBaseFreq2Ghz;
     } else {
         // 5Ghz
-        channel_starting_frequency = 5000;
+        channel_starting_frequency = kBaseFreq5Ghz;
     }
 
     // IEEE Std 802.11-2016, 21.3.14

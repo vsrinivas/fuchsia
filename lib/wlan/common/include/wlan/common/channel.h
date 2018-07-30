@@ -16,6 +16,10 @@ namespace common {
 
 typedef uint16_t Mhz;
 
+// IEEE Std 802.11-2016, Annex E
+constexpr Mhz kBaseFreq2Ghz = 2407;
+constexpr Mhz kBaseFreq5Ghz = 5000;
+
 // TODO(porce): Replace all channel > 14 test throughout the codes
 bool Is5Ghz(uint8_t channel_number);
 bool Is2Ghz(uint8_t channel_number);
