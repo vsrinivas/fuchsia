@@ -51,12 +51,7 @@ template("fidl_c_target") {
 
   library_name = invoker.name
 
-  c_stem = exec_script("//build/fidl/c_stem_from_library.py",
-                       [
-                         "--name",
-                         library_name,
-                       ],
-                       "trim string")
+  c_stem = string_replace(library_name, ".", "/") + "/c/fidl"
   fidl_root_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
   c_header = "$fidl_root_gen_dir/$c_stem.h"

@@ -32,12 +32,7 @@ template("fidl_library") {
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
-  c_stem = exec_script("//build/fidl/c_stem_from_library.py",
-                       [
-                         "--name",
-                         library_name,
-                       ],
-                       "trim string")
+  c_stem = string_replace(library_name, ".", "/") + "/c/fidl"
   c_client = "$root_gen_dir/$c_stem.client.c"
   c_header = "$root_gen_dir/$c_stem.h"
   c_server = "$root_gen_dir/$c_stem.server.c"

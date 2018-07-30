@@ -41,12 +41,7 @@ template("fidl_cpp") {
   fidl_root_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
 
-  include_stem = exec_script("//build/cpp/fidl_cpp_stem_from_library.py",
-      [
-        "--name",
-        library_name,
-      ],
-      "trim string")
+  include_stem = string_replace(library_name, ".", "/") + "/cpp/fidl"
   file_stem = "$fidl_root_gen_dir/$include_stem"
 
   # Only do the generation in the base toolchain, since it would

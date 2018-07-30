@@ -101,12 +101,7 @@ template("fidl_dart") {
 
     package_root = root_dir
 
-    package_name = exec_script("//build/dart/fidl_package_from_library.py",
-        [
-          "--name",
-          library_name,
-        ],
-        "trim string")
+    package_name = "fidl_" + string_replace(library_name, ".", "_")
 
     sources = [
       bindings_file,

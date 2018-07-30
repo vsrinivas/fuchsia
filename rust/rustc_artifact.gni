@@ -72,14 +72,7 @@ template("rustc_artifact") {
     package_name = target_name
   }
 
-  crate_name = exec_script(
-      "//build/rust/package_name_to_crate_name.py",
-      [
-        "--package-name",
-        package_name,
-      ],
-      "trim string"
-  )
+  crate_name = string_replace(package_name, "-", "_")
 
   if (defined(invoker.version)) {
     version = invoker.version
