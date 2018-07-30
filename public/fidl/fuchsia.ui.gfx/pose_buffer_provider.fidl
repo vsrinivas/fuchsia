@@ -1,0 +1,16 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.gfx;
+
+using fuchsia.ui.gfx;
+
+[Discoverable]
+// A minimal fidl interface to allow sourcing the contents of a PoseBuffer from another service.
+interface PoseBufferProvider {
+  // Sets the PoseBuffer and the parameters PoseBufferProvider will use to fill that PoseBuffer.
+  // Setting this when it is already set will replace the previously set parameters with the new
+  // parameters, which will release the provider's reference to the buffer.
+  1: SetPoseBuffer(handle<vmo> buffer, uint32 num_entries, uint64 base_time, uint64 time_interval);
+};
