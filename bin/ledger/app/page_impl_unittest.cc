@@ -19,6 +19,7 @@
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
@@ -30,6 +31,11 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/lib/convert/convert.h"
+
+using testing::Contains;
+using testing::IsEmpty;
+using testing::Key;
+using testing::Not;
 
 namespace ledger {
 namespace {
@@ -218,10 +224,8 @@ TEST_F(PageImplTest, PutNoTransaction) {
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
   EXPECT_EQ(1u, it->second->GetData().size());
-  storage::fake::FakeJournalDelegate::Entry entry =
-      it->second->GetData().at(key);
-  EXPECT_EQ(object_identifier, entry.value);
-  EXPECT_FALSE(entry.deleted);
+  storage::Entry entry = it->second->GetData().at(key);
+  EXPECT_EQ(object_identifier, entry.object_identifier);
   EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
 }
 
@@ -260,11 +264,10 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
   EXPECT_EQ(1u, it->second->GetData().size());
-  storage::fake::FakeJournalDelegate::Entry entry =
-      it->second->GetData().at(key);
+  storage::Entry entry = it->second->GetData().at(key);
   std::unique_ptr<const storage::Object> object = AddObject(object_data);
-  EXPECT_EQ(object->GetIdentifier().object_digest, entry.value.object_digest);
-  EXPECT_FALSE(entry.deleted);
+  EXPECT_EQ(object->GetIdentifier().object_digest,
+            entry.object_identifier.object_digest);
   EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
 }
 
@@ -375,10 +378,7 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
   EXPECT_EQ(1u, journals.size());
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
-  EXPECT_EQ(1u, it->second->GetData().size());
-  storage::fake::FakeJournalDelegate::Entry entry =
-      it->second->GetData().at(key);
-  EXPECT_TRUE(entry.deleted);
+  EXPECT_THAT(it->second->GetData(), IsEmpty());
 }
 
 TEST_F(PageImplTest, TransactionCommit) {
@@ -443,10 +443,8 @@ TEST_F(PageImplTest, TransactionCommit) {
     auto it = journals.begin();
     EXPECT_FALSE(it->second->IsCommitted());
     EXPECT_EQ(1u, it->second->GetData().size());
-    storage::fake::FakeJournalDelegate::Entry entry =
-        it->second->GetData().at(key1);
-    EXPECT_EQ(object_digest1, entry.value.object_digest);
-    EXPECT_FALSE(entry.deleted);
+    storage::Entry entry = it->second->GetData().at(key1);
+    EXPECT_EQ(object_digest1, entry.object_identifier.object_digest);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
   }
 
@@ -468,11 +466,9 @@ TEST_F(PageImplTest, TransactionCommit) {
     auto it = journals.begin();
     EXPECT_FALSE(it->second->IsCommitted());
     EXPECT_EQ(2u, it->second->GetData().size());
-    storage::fake::FakeJournalDelegate::Entry entry =
-        it->second->GetData().at(key2);
+    storage::Entry entry = it->second->GetData().at(key2);
     EXPECT_EQ(AddObject(value2)->GetIdentifier().object_digest,
-              entry.value.object_digest);
-    EXPECT_FALSE(entry.deleted);
+              entry.object_identifier.object_digest);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
   }
 
@@ -493,10 +489,8 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, journals.size());
     auto it = journals.begin();
     EXPECT_FALSE(it->second->IsCommitted());
-    EXPECT_EQ(2u, it->second->GetData().size());
-    storage::fake::FakeJournalDelegate::Entry entry =
-        it->second->GetData().at(key2);
-    EXPECT_TRUE(entry.deleted);
+    EXPECT_EQ(1u, it->second->GetData().size());
+    EXPECT_THAT(it->second->GetData(), Not(Contains(Key(key2))));
   }
 
   page_ptr_->Commit(
@@ -514,7 +508,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, journals.size());
     auto it = journals.begin();
     EXPECT_TRUE(it->second->IsCommitted());
-    EXPECT_EQ(2u, it->second->GetData().size());
+    EXPECT_EQ(1u, it->second->GetData().size());
   }
 }
 

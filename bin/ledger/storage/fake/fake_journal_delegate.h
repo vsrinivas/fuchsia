@@ -22,17 +22,18 @@ namespace fake {
 // object is owned by |FakePageStorage| and outlives |FakeJournal|.
 class FakeJournalDelegate {
  public:
-  struct Entry {
-    ObjectIdentifier value;
-    bool deleted;
-    KeyPriority priority;
-  };
+  using Data = std::map<std::string, Entry, convert::StringViewComparator>;
 
   // Regular commit.
-  FakeJournalDelegate(CommitId parent_id, bool autocommit, uint64_t generation);
-  // Merge commit.
-  FakeJournalDelegate(CommitId parent_id, CommitId other_id, bool autocommit,
+  // |initial_data| must contain the content of the page when the transaction
+  // starts.
+  FakeJournalDelegate(Data initial_data, CommitId parent_id, bool autocommit,
                       uint64_t generation);
+  // Merge commit.
+  // |initial_data| must contain the content of the page when the transaction
+  // starts.
+  FakeJournalDelegate(Data initial_data, CommitId parent_id, CommitId other_id,
+                      bool autocommit, uint64_t generation);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
@@ -56,18 +57,15 @@ class FakeJournalDelegate {
   bool IsPendingCommit();
   void ResolvePendingCommit(Status status);
 
-  const std::map<std::string, Entry, convert::StringViewComparator>& GetData()
-      const;
+  const Data& GetData() const;
 
  private:
-  Entry& Get(convert::ExtendedStringView key);
-
   bool autocommit_;
 
   const CommitId id_;
   const CommitId parent_id_;
   const CommitId other_id_;
-  std::map<std::string, Entry, convert::StringViewComparator> data_;
+  Data data_;
   uint64_t generation_;
 
   bool is_committed_ = false;

@@ -79,11 +79,13 @@ void FakePageStorage::StartCommit(
     const CommitId& commit_id, JournalType /*journal_type*/,
     fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   uint64_t next_generation = 0;
+  FakeJournalDelegate::Data data;
   if (journals_.find(commit_id) != journals_.end()) {
     next_generation = journals_[commit_id].get()->GetGeneration() + 1;
+    data = journals_[commit_id].get()->GetData();
   }
-  auto delegate = std::make_unique<FakeJournalDelegate>(commit_id, autocommit_,
-                                                        next_generation);
+  auto delegate = std::make_unique<FakeJournalDelegate>(
+      std::move(data), commit_id, autocommit_, next_generation);
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   callback(Status::OK, std::move(journal));
@@ -93,9 +95,9 @@ void FakePageStorage::StartMergeCommit(
     const CommitId& left, const CommitId& right,
     fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   auto delegate = std::make_unique<FakeJournalDelegate>(
-      left, right, autocommit_,
-      std::max(journals_[left].get()->GetGeneration(),
-               journals_[right].get()->GetGeneration()));
+      journals_[left].get()->GetData(), left, right, autocommit_,
+      1 + std::max(journals_[left].get()->GetGeneration(),
+                   journals_[right].get()->GetGeneration()));
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   callback(Status::OK, std::move(journal));
@@ -211,27 +213,11 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
     on_done(Status::NOT_FOUND);
     return;
   }
-  // Get all entries from this journal and its ancestors.
-  std::map<std::string, fake::FakeJournalDelegate::Entry,
-           convert::StringViewComparator>
-      data;
-  while (journal) {
-    for (const auto& entry : journal->GetData()) {
-      if ((min_key.empty() || min_key <= entry.first) &&
-          data.find(entry.first) == data.end()) {
-        data[entry.first] = entry.second;
-      }
-    }
-    // This only works with simple commits, not merge commits.
-    journal = journals_[journal->GetParentIds()[0].ToString()].get();
-  }
 
-  for (const auto& entry : data) {
-    if (!entry.second.deleted) {
-      if (!on_next(
-              Entry{entry.first, entry.second.value, entry.second.priority})) {
-        break;
-      }
+  for (auto it = journal->GetData().lower_bound(min_key);
+       it != journal->GetData().end(); ++it) {
+    if (!on_next(it->second)) {
+      break;
     }
   }
   on_done(Status::OK);
@@ -245,14 +231,13 @@ void FakePageStorage::GetEntryFromCommit(
     callback(Status::NOT_FOUND, Entry());
     return;
   }
-  const std::map<std::string, fake::FakeJournalDelegate::Entry,
-                 convert::StringViewComparator>& data = journal->GetData();
-  if (data.find(key) == data.end()) {
+  const fake::FakeJournalDelegate::Data& data = journal->GetData();
+  auto it = data.find(key);
+  if (it == data.end()) {
     callback(Status::NOT_FOUND, Entry());
     return;
   }
-  const fake::FakeJournalDelegate::Entry& entry = data.at(key);
-  callback(Status::OK, Entry{key, entry.value, entry.priority});
+  callback(Status::OK, it->second);
 }
 
 const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

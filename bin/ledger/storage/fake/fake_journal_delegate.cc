@@ -25,20 +25,23 @@ storage::CommitId RandomCommitId() {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, bool autocommit,
-                                         uint64_t generation = 0)
-    : autocommit_(autocommit),
-      id_(RandomCommitId()),
-      parent_id_(std::move(parent_id)),
-      generation_(generation) {}
-
-FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, CommitId other_id,
+FakeJournalDelegate::FakeJournalDelegate(Data initial_data, CommitId parent_id,
                                          bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId()),
       parent_id_(std::move(parent_id)),
+      data_(std::move(initial_data)),
+      generation_(generation) {}
+
+FakeJournalDelegate::FakeJournalDelegate(Data initial_data, CommitId parent_id,
+                                         CommitId other_id, bool autocommit,
+                                         uint64_t generation = 0)
+    : autocommit_(autocommit),
+      id_(RandomCommitId()),
+      parent_id_(std::move(parent_id)),
       other_id_(std::move(other_id)),
+      data_(std::move(initial_data)),
       generation_(generation) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
@@ -49,8 +52,7 @@ Status FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;
   }
-  Get(key).value = value;
-  Get(key).priority = priority;
+  data_.insert({key.ToString(), {key.ToString(), std::move(value), priority}});
   return Status::OK;
 }
 
@@ -58,7 +60,10 @@ Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;
   }
-  Get(key).deleted = true;
+  auto it = data_.find(key);
+  if (it != data_.end()) {
+    data_.erase(it);
+  }
   return Status::OK;
 }
 
@@ -107,18 +112,8 @@ void FakeJournalDelegate::ResolvePendingCommit(Status /*status*/) {
   callback(Status::OK, std::make_unique<const FakeCommit>(this));
 }
 
-const std::map<std::string, FakeJournalDelegate::Entry,
-               convert::StringViewComparator>&
-FakeJournalDelegate::GetData() const {
+const FakeJournalDelegate::Data& FakeJournalDelegate::GetData() const {
   return data_;
-}
-
-FakeJournalDelegate::Entry& FakeJournalDelegate::Get(
-    convert::ExtendedStringView key) {
-  auto it = data_.find(key);
-  if (it != data_.end())
-    return it->second;
-  return data_[key.ToString()];
 }
 
 }  // namespace fake
