@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSCALLS_H_
+#define ZIRCON_SYSCALLS_H_
 
 #include <zircon/types.h>
 #include <zircon/syscalls/types.h>
@@ -25,3 +26,5 @@ __BEGIN_CDECLS
 // there are any.
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSCALLS_H_
