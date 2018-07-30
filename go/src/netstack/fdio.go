@@ -121,7 +121,7 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	_, err := zxwait.Wait(ios.dataHandle,
+	obs0, err := zxwait.Wait(ios.dataHandle,
 		zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
 			zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 		zx.TimensecInfinite)
@@ -132,6 +132,13 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 		return
 	default:
 		log.Printf("loopSocketWrite: warmup failed: %v", err)
+	}
+
+	switch {
+	case obs0&LOCAL_SIGNAL_CLOSING != 0:
+		return
+	case obs0&zx.SignalSocketPeerClosed != 0:
+		return
 	}
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
@@ -212,7 +219,7 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 	writable := false
 	connected := false
 	for !(writable && connected) {
-		sigs := zx.Signals(zx.SignalSocketWriteDisabled | zx.SignalSocketPeerClosed)
+		sigs := zx.Signals(zx.SignalSocketWriteDisabled | zx.SignalSocketPeerClosed | LOCAL_SIGNAL_CLOSING)
 		if !writable {
 			sigs |= zx.SignalSocketWritable
 		}
@@ -235,6 +242,9 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 			connected = true
 		}
 		if obs&zx.SignalSocketPeerClosed != 0 {
+			return
+		}
+		if obs&LOCAL_SIGNAL_CLOSING != 0 {
 			return
 		}
 		if obs&zx.SignalSocketWriteDisabled != 0 {
@@ -303,7 +313,7 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 				}
 				obs, err := zxwait.Wait(ios.dataHandle,
 					zx.SignalSocketWritable|zx.SignalSocketWriteDisabled|
-						zx.SignalSocketPeerClosed,
+						zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 					zx.TimensecInfinite)
 				switch mxerror.Status(err) {
 				case zx.ErrOk:
@@ -316,6 +326,8 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 				}
 				switch {
 				case obs&zx.SignalSocketPeerClosed != 0:
+					return
+				case obs&LOCAL_SIGNAL_CLOSING != 0:
 					return
 				case obs&zx.SignalSocketWriteDisabled != 0:
 					// The next Write will return zx.ErrBadState.
