@@ -13,7 +13,9 @@ MODULE_SRCS += $(LOCAL_DIR)/biotime.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
-    system/ulib/sync
+    system/ulib/perftest \
+    system/ulib/sync \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/fdio \

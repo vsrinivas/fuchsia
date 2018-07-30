@@ -74,6 +74,11 @@ public:
 
     // A caller may check for errors using ferror().
     void WriteJSON(FILE* out_file) const;
+
+    // Writes the data to a file, in JSON format.  Returns whether this was
+    // successful; prints an error to stderr if this was not successful.
+    bool WriteJSONFile(const char* output_filename) const;
+
     void PrintSummaryStatistics(FILE* out_file) const;
 
 private:

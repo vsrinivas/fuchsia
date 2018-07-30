@@ -4,7 +4,6 @@
 
 #include <perftest/runner.h>
 
-#include <errno.h>
 #include <getopt.h>
 #include <pthread.h>
 #include <regex.h>
@@ -466,14 +465,9 @@ static bool PerfTestMode(const char* test_suite, int argc, char** argv) {
     printf("\n");
 
     if (args.output_filename) {
-        FILE* fh = fopen(args.output_filename, "w");
-        if (!fh) {
-            fprintf(stderr, "Failed to open output file \"%s\": %s\n",
-                    args.output_filename, strerror(errno));
+        if (!results.WriteJSONFile(args.output_filename)) {
             exit(1);
         }
-        results.WriteJSON(fh);
-        fclose(fh);
     }
 
     return success;

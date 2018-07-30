@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <fbl/atomic.h>
+#include <perftest/results.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/block.h>
 #include <zircon/misc/xorshiftrand.h>
@@ -260,6 +261,8 @@ void usage(void) {
                     "       -mo <num>     maximum outstanding ops (1..128)\n"
                     "       -linear       transfers in linear order\n"
                     "       -random       random transfers across total range\n"
+                    "       -output-file <filename>  destination file for "
+                    "writing results in JSON format\n"
                     );
 }
 
@@ -281,6 +284,7 @@ int main(int argc, char** argv) {
     a.seed = 7891263897612ULL;
     a.max_pending = 128;
     a.linear = true;
+    const char* output_file = nullptr;
 
     size_t total = 0;
 
@@ -309,6 +313,9 @@ int main(int argc, char** argv) {
             a.linear = true;
         } else if (!strcmp(argv[0], "-random")) {
             a.linear = false;
+        } else if (!strcmp(argv[0], "-output-file")) {
+            needparam();
+            output_file = argv[0];
         } else if (!strcmp(argv[0], "-h")) {
             usage();
             return 0;
@@ -352,5 +359,17 @@ int main(int argc, char** argv) {
     bytes_per_second(total, res);
     fprintf(stderr, "%zu ops in %zu ns: ", a.count, res);
     ops_per_second(a.count, res);
+
+    if (output_file) {
+        perftest::ResultsSet results;
+        auto* test_case = results.AddTestCase(
+            "fuchsia.zircon", "BlockDeviceThroughput", "bytes/second");
+        double time_in_seconds = static_cast<double>(res) / 1e9;
+        test_case->AppendValue(static_cast<double>(total) / time_in_seconds);
+        if (!results.WriteJSONFile(output_file)) {
+            return 1;
+        }
+    }
+
     return 0;
 }

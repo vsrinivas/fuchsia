@@ -4,6 +4,7 @@
 
 #include <perftest/results.h>
 
+#include <errno.h>
 #include <inttypes.h>
 #include <math.h>
 
@@ -154,6 +155,18 @@ void ResultsSet::WriteJSON(FILE* out_file) const {
         first = false;
     }
     fprintf(out_file, "]");
+}
+
+bool ResultsSet::WriteJSONFile(const char* output_filename) const {
+    FILE* fh = fopen(output_filename, "w");
+    if (!fh) {
+        fprintf(stderr, "Failed to open output file \"%s\": %s\n",
+                output_filename, strerror(errno));
+        return false;
+    }
+    WriteJSON(fh);
+    fclose(fh);
+    return true;
 }
 
 void ResultsSet::PrintSummaryStatistics(FILE* out_file) const {
