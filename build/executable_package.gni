@@ -18,6 +18,7 @@ template("executable_package") {
                            [
                              "sources",
                              "deps",
+                             "public_deps",
                              "testonly",
                            ])
   }

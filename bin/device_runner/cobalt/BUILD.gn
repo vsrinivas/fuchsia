@@ -2,10 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/cobalt_config/cobalt_config.gni")
+
 visibility = [
   "//peridot/bin/device_runner/*",
   "//peridot/bin/user_runner/*",
 ]
+
+cobalt_config("generate_device_runner_config") {
+  project_id = 101
+}
 
 source_set("cobalt") {
   sources = [
@@ -14,6 +20,7 @@ source_set("cobalt") {
   ]
 
   public_deps = [
+    ":generate_device_runner_config",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
   ]

@@ -72,6 +72,21 @@ executable_package("user_runner") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
+
+  public_deps = [
+    "//peridot/bin/device_runner/cobalt:generate_device_runner_config",
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                             "//peridot/bin/device_runner/cobalt:generate_device_runner_config",
+                             "target_gen_dir")
+              + "/cobalt_config.binproto")
+      dest = "cobalt_config.binproto"
+    },
+  ]
 }
 
 executable_package("dev_user_shell") {
