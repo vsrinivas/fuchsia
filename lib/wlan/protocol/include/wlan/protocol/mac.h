@@ -163,7 +163,13 @@ typedef struct wlanmac_ifc {
     void (*recv)(void* cookie, uint32_t flags, const void* data, size_t length,
                  wlan_rx_info_t* info);
 
-    // Complete the tx to return the ownership of the packet buffers to the wlan driver.
+    // complete_tx() is called to return ownership of a packet to the wlan driver.
+    // Return status indicates queue state:
+    //   ZX_OK: Packet has been enqueued.
+    //   Other: Packet could not be enqueued.
+    //
+    // Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
+    // the completion state of the transmission itself.
     void (*complete_tx)(void* cookie, wlan_tx_packet_t* packet, zx_status_t status);
 
     // Reports an indication of a status, state or action to the wlan driver.
@@ -183,14 +189,15 @@ typedef struct wlanmac_protocol_ops {
     // Safe to call if the wlanmac is already stopped.
     void (*stop)(void* ctx);
 
-    // Queue the data for transmit. Return status indicates disposition:
-    //   ZX_ERR_SHOULD_WAIT: Packet is being transmitted
-    //   ZX_OK: Packet has been transmitted
-    //   Other: Packet could not be transmitted
+    // Queue the data for transmit. Return status indicates queue state:
+    //   ZX_ERR_SHOULD_WAIT: Packet is being enqueued.
+    //   ZX_OK: Packet has been enqueued.
+    //   Other: Packet could not be enqueued.
     //
     // In the SHOULD_WAIT case the driver takes ownership of the wlan_tx_packet_t and must call
-    // complete_tx() to return it once the transmission is complete. complete_tx() MUST NOT be
-    // called from within the queue_tx() implementation.
+    // complete_tx() to return it once the enqueue is complete. complete_tx() may be used to return
+    // the packet before transmission itself completes, and MUST NOT be called from within the
+    // queue_tx() implementation.
     //
     // queue_tx() may be called at any time after start() is called including from multiple threads
     // simultaneously.
