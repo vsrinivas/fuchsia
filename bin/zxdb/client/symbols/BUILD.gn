@@ -45,6 +45,8 @@ static_library("symbols") {
     "data_member.cc",
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
+    "dwarf_expr_eval.cc",
+    "dwarf_expr_eval.h",
     "dwarf_symbol_factory.cc",
     "dwarf_symbol_factory.h",
     "file_line.cc",
@@ -110,6 +112,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "dwarf_expr_eval_unittest.cc",
     "dwarf_symbol_factory_unittest.cc",
     "dwarf_test_util.cc",
     "dwarf_test_util.h",
