@@ -673,8 +673,8 @@ void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_
         file_ << "#define " << named_interface.c_name << "_Name \"" << named_interface.discoverable_name << "\"\n";
     }
     for (const auto& method_info : named_interface.methods) {
-        file_ << "#define " << method_info.ordinal_name << " ((uint32_t)"
-              << method_info.ordinal << ")\n";
+        file_ << "#define " << method_info.ordinal_name << " ((uint32_t)0x"
+              << std::uppercase << std::hex << method_info.ordinal << ")\n";
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);
         if (method_info.response)
