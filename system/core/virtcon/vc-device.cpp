@@ -573,7 +573,12 @@ zx_status_t vc_alloc(vc_t** out, bool special) {
     vc->charw = vc->font->width;
     vc->charh = vc->font->height;
 
-    vc_setup(vc, special);
+    zx_status_t status = vc_setup(vc, special);
+    if (status != ZX_OK) {
+        free(vc);
+        return status;
+    }
+
     if (vc_gfx) {
         vc_attach_gfx(vc);
     }
