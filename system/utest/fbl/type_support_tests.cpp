@@ -29,6 +29,57 @@ static_assert(!fbl::is_null_pointer<int*>::value, "");
 static_assert(!fbl::is_null_pointer<s*>::value, "");
 static_assert(!fbl::is_null_pointer<fp>::value, "");
 
+// is_pointer tests:
+static_assert(fbl::is_pointer<int*>::value, "");
+static_assert(fbl::is_pointer<float*>::value, "");
+static_assert(fbl::is_pointer<s*>::value, "");
+static_assert(fbl::is_pointer<u*>::value, "");
+static_assert(fbl::is_pointer<s*>::value, "");
+static_assert(fbl::is_pointer<fp*>::value, "");
+
+static_assert(fbl::is_pointer<const int*>::value, "");
+static_assert(fbl::is_pointer<const float*>::value, "");
+static_assert(fbl::is_pointer<const s*>::value, "");
+static_assert(fbl::is_pointer<const u*>::value, "");
+static_assert(fbl::is_pointer<const s*>::value, "");
+
+static_assert(fbl::is_pointer<volatile int*>::value, "");
+static_assert(fbl::is_pointer<volatile float*>::value, "");
+static_assert(fbl::is_pointer<volatile s*>::value, "");
+static_assert(fbl::is_pointer<volatile u*>::value, "");
+static_assert(fbl::is_pointer<volatile s*>::value, "");
+
+static_assert(fbl::is_pointer<const volatile int*>::value, "");
+static_assert(fbl::is_pointer<const volatile float*>::value, "");
+static_assert(fbl::is_pointer<const volatile s*>::value, "");
+static_assert(fbl::is_pointer<const volatile u*>::value, "");
+static_assert(fbl::is_pointer<const volatile s*>::value, "");
+
+static_assert(!fbl::is_pointer<int>::value, "");
+static_assert(!fbl::is_pointer<float>::value, "");
+static_assert(!fbl::is_pointer<s>::value, "");
+static_assert(!fbl::is_pointer<u>::value, "");
+static_assert(!fbl::is_pointer<s>::value, "");
+static_assert(!fbl::is_pointer<fp>::value, "");
+
+static_assert(!fbl::is_pointer<const int>::value, "");
+static_assert(!fbl::is_pointer<const float>::value, "");
+static_assert(!fbl::is_pointer<const s>::value, "");
+static_assert(!fbl::is_pointer<const u>::value, "");
+static_assert(!fbl::is_pointer<const s>::value, "");
+
+static_assert(!fbl::is_pointer<volatile int>::value, "");
+static_assert(!fbl::is_pointer<volatile float>::value, "");
+static_assert(!fbl::is_pointer<volatile s>::value, "");
+static_assert(!fbl::is_pointer<volatile u>::value, "");
+static_assert(!fbl::is_pointer<volatile s>::value, "");
+
+static_assert(!fbl::is_pointer<const volatile int>::value, "");
+static_assert(!fbl::is_pointer<const volatile float>::value, "");
+static_assert(!fbl::is_pointer<const volatile s>::value, "");
+static_assert(!fbl::is_pointer<const volatile u>::value, "");
+static_assert(!fbl::is_pointer<const volatile s>::value, "");
+
 // is_reference tests:
 static_assert(fbl::is_reference<int&>::value, "");
 static_assert(fbl::is_reference<int&&>::value, "");
@@ -573,3 +624,128 @@ static_assert(!has_overloaded_int_const<int>::value, "");
 static_assert(!has_overloaded_int_const<decltype(nullptr)>::value, "");
 
 } // namespace has_member_fn_tests
+
+// is_function tests:
+
+namespace is_function_tests {
+
+struct s {};
+union u {};
+
+struct forward_s;
+
+// Lots of things are not functions.
+
+static_assert(!fbl::is_function<int>::value, "");
+static_assert(!fbl::is_function<int[]>::value, "");
+static_assert(!fbl::is_function<int[1]>::value, "");
+static_assert(!fbl::is_function<int*>::value, "");
+static_assert(!fbl::is_function<int&>::value, "");
+static_assert(!fbl::is_function<int&&>::value, "");
+
+static_assert(!fbl::is_function<float>::value, "");
+static_assert(!fbl::is_function<float[]>::value, "");
+static_assert(!fbl::is_function<float[1]>::value, "");
+static_assert(!fbl::is_function<float*>::value, "");
+static_assert(!fbl::is_function<float&>::value, "");
+static_assert(!fbl::is_function<float&&>::value, "");
+
+static_assert(!fbl::is_function<s>::value, "");
+static_assert(!fbl::is_function<s[]>::value, "");
+static_assert(!fbl::is_function<s[1]>::value, "");
+static_assert(!fbl::is_function<s*>::value, "");
+static_assert(!fbl::is_function<s&>::value, "");
+static_assert(!fbl::is_function<s&&>::value, "");
+
+static_assert(!fbl::is_function<u>::value, "");
+static_assert(!fbl::is_function<u[]>::value, "");
+static_assert(!fbl::is_function<u[1]>::value, "");
+static_assert(!fbl::is_function<u*>::value, "");
+static_assert(!fbl::is_function<u&>::value, "");
+static_assert(!fbl::is_function<u&&>::value, "");
+
+static_assert(!fbl::is_function<forward_s>::value, "");
+static_assert(!fbl::is_function<forward_s[]>::value, "");
+static_assert(!fbl::is_function<forward_s[1]>::value, "");
+static_assert(!fbl::is_function<forward_s*>::value, "");
+static_assert(!fbl::is_function<forward_s&>::value, "");
+static_assert(!fbl::is_function<forward_s&&>::value, "");
+
+static_assert(!fbl::is_function<decltype(nullptr)>::value, "");
+static_assert(!fbl::is_function<decltype(nullptr)[]>::value, "");
+static_assert(!fbl::is_function<decltype(nullptr)[1]>::value, "");
+static_assert(!fbl::is_function<decltype(nullptr)*>::value, "");
+static_assert(!fbl::is_function<decltype(nullptr)&>::value, "");
+static_assert(!fbl::is_function<decltype(nullptr)&&>::value, "");
+
+// There are pointers to void, but no references to void or arrays of
+// void.
+static_assert(!fbl::is_function<void>::value, "");
+static_assert(!fbl::is_function<void*>::value, "");
+
+using member_function_pointer = void(s::*)();
+static_assert(!fbl::is_function<member_function_pointer>::value, "");
+static_assert(!fbl::is_function<member_function_pointer[]>::value, "");
+static_assert(!fbl::is_function<member_function_pointer[1]>::value, "");
+static_assert(!fbl::is_function<member_function_pointer*>::value, "");
+static_assert(!fbl::is_function<member_function_pointer&>::value, "");
+static_assert(!fbl::is_function<member_function_pointer&&>::value, "");
+
+// Functions are functions, but pointers or references to them are
+// not.
+
+using void_to_void = void();
+static_assert(fbl::is_function<void_to_void>::value, "");
+static_assert(!fbl::is_function<void_to_void*>::value, "");
+static_assert(!fbl::is_function<void_to_void&>::value, "");
+static_assert(!fbl::is_function<void_to_void&&>::value, "");
+
+using void_to_int = int();
+static_assert(fbl::is_function<void_to_int>::value, "");
+static_assert(!fbl::is_function<void_to_int*>::value, "");
+static_assert(!fbl::is_function<void_to_int&>::value, "");
+static_assert(!fbl::is_function<void_to_int&&>::value, "");
+
+using int_to_void = void(int);
+static_assert(fbl::is_function<int_to_void>::value, "");
+static_assert(!fbl::is_function<int_to_void*>::value, "");
+static_assert(!fbl::is_function<int_to_void&>::value, "");
+static_assert(!fbl::is_function<int_to_void&&>::value, "");
+
+using int_to_int = int(int);
+static_assert(fbl::is_function<int_to_int>::value, "");
+static_assert(!fbl::is_function<int_to_int*>::value, "");
+static_assert(!fbl::is_function<int_to_int&>::value, "");
+static_assert(!fbl::is_function<int_to_int&&>::value, "");
+
+using s_to_void = void(s);
+static_assert(fbl::is_function<s_to_void>::value, "");
+static_assert(!fbl::is_function<s_to_void*>::value, "");
+static_assert(!fbl::is_function<s_to_void&>::value, "");
+static_assert(!fbl::is_function<s_to_void&&>::value, "");
+
+using u_to_void = void(u);
+static_assert(fbl::is_function<u_to_void>::value, "");
+static_assert(!fbl::is_function<u_to_void*>::value, "");
+static_assert(!fbl::is_function<u_to_void&>::value, "");
+static_assert(!fbl::is_function<u_to_void&&>::value, "");
+
+using va_to_void = void(...);
+static_assert(fbl::is_function<va_to_void>::value, "");
+static_assert(!fbl::is_function<va_to_void*>::value, "");
+static_assert(!fbl::is_function<va_to_void&>::value, "");
+static_assert(!fbl::is_function<va_to_void&&>::value, "");
+
+using int_va_to_void = void(int, ...);
+static_assert(fbl::is_function<int_va_to_void>::value, "");
+static_assert(!fbl::is_function<int_va_to_void*>::value, "");
+static_assert(!fbl::is_function<int_va_to_void&>::value, "");
+static_assert(!fbl::is_function<int_va_to_void&&>::value, "");
+
+auto lambda = [](){};
+auto function_pointer_inside_lambda = static_cast<void(*)()>(lambda);
+static_assert(fbl::is_pointer<decltype(function_pointer_inside_lambda)>::value, "");
+using function_type = fbl::remove_pointer<decltype(function_pointer_inside_lambda)>::type;
+static_assert(fbl::is_function<function_type>::value, "");
+
+}; // namespace is_function_tests

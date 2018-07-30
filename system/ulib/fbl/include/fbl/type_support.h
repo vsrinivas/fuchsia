@@ -100,6 +100,18 @@ struct remove_reference<T&&> {
     using type = T;
 };
 
+// remove_pointer:
+
+template <typename T>
+struct remove_pointer {
+    using type = T;
+};
+
+template <typename T>
+struct remove_pointer<T*> {
+    using type = T;
+};
+
 // remove_const:
 
 template <typename T>
@@ -399,5 +411,72 @@ struct make_void {
 // Utility type for SFINAE expression evaluation, equivalent to C++17 std::void_t.
 template <typename... Ts>
 using void_t = typename internal::make_void<Ts...>::type;
+
+// is_function:
+
+// Morally, is_function could be implemented in the same style as
+// e.g. is_reference: a base case of false, and specializations of
+// true for every kind of function. However, listing all of those
+// cases is brittle and language version dependent. For instance,
+// C++17 makes noexcept specifiers as part of the type.
+
+// Instead, this implementation uses a pair of tricky overloaded
+// functions to detect every type that _isn't_ a function. This
+// includes:
+// - objects (classes, unions, and primitives) (including incomplete types)
+// - references (including references to functions)
+// - nullptr_t
+// - void
+// - pointers (including pointers to functions)
+// - pointers to members
+// - arrays of both complete and incomplete type
+
+namespace internal {
+
+// This leaves pointers, pointer-to-members, arrays, and functions.
+template <typename T>
+struct is_object_void_reference_or_null_pointer {
+    static constexpr bool value =
+        is_class<T>::value ||
+        is_union<T>::value ||
+        is_void<T>::value ||
+        is_reference<T>::value ||
+        is_null_pointer<T>::value;
+};
+
+struct dummy {};
+
+struct func_tag {};
+
+struct nonfunc_tag {};
+
+template <typename T>
+func_tag choose(T*);
+
+template <typename T>
+func_tag choose(dummy);
+
+template <typename T>
+nonfunc_tag choose(...);
+
+template <typename T>
+T& make(int);
+
+template <typename T>
+dummy make(...);
+
+} // namespace internal
+
+template <typename T,
+          bool = internal::is_object_void_reference_or_null_pointer<T>::value>
+struct is_function : public integral_constant<bool,
+                                              is_same<internal::func_tag,
+                                                      decltype(internal::choose<T>(internal::make<T>(0)))
+                                                      >::value> {
+};
+
+template <typename T>
+struct is_function<T, true> : public false_type {
+};
 
 }  // namespace fbl
