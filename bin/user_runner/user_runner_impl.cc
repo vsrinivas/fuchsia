@@ -827,10 +827,10 @@ fuchsia::ledger::cloud::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
       ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
-  auto config = GetLedgerFirestoreConfig();
+  auto cloud_provider_config = GetLedgerFirestoreConfig();
 
   cloud_provider_factory_->GetCloudProvider(
-      std::move(config), std::move(ledger_token_provider),
+      std::move(cloud_provider_config), std::move(ledger_token_provider),
       cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
         if (status != fuchsia::ledger::cloud::Status::OK) {
           FXL_LOG(ERROR) << "Failed to create a cloud provider: "
