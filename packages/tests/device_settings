@@ -3,7 +3,6 @@
         "garnet/packages/prod/device_settings"
     ],
     "packages": [
-        "//garnet/bin/device_settings:device_settings_manager_tests",
         "//garnet/go/src/device_settings:device_settings_gotests"
     ]
 }
