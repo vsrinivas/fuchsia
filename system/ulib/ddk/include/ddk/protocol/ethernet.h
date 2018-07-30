@@ -66,6 +66,11 @@ typedef struct ethmac_ifc_virt {
     void (*recv)(void* cookie, void* data, size_t length, uint32_t flags);
 
     // complete_tx() is called to return ownership of a netbuf to the generic ethernet driver.
+    // Return status indicates queue state:
+    //   ZX_OK: Packet has been enqueued.
+    //   Other: Packet could not be enqueued.
+    // Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
+    // the completion state of the transmission itself.
     void (*complete_tx)(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status);
 } ethmac_ifc_t;
 
@@ -109,14 +114,15 @@ typedef struct ethmac_protocol_ops {
     // Callbacks on ifc may be invoked from now until stop() is called
     zx_status_t (*start)(void* ctx, ethmac_ifc_t* ifc, void* cookie);
 
-    // Request transmission of the packet in netbuf. Return status indicates disposition:
-    //   ZX_ERR_SHOULD_WAIT: Packet is being transmitted
-    //   ZX_OK: Packet has been transmitted
-    //   Other: Packet could not be transmitted
+    // Request transmission of the packet in netbuf. Return status indicates queue state:
+    //   ZX_ERR_SHOULD_WAIT: Packet is being enqueued.
+    //   ZX_OK: Packet has been enqueued.
+    //   Other: Packet could not be enqueued.
     //
     // In the SHOULD_WAIT case the driver takes ownership of the netbuf and must call complete_tx()
-    // to return it once the transmission is complete. complete_tx() MUST NOT be called from within
-    // the queue_tx() implementation.
+    // to return it once the enqueue is complete. complete_tx() may be used to return the packet
+    // before transmission itself completes, but MUST NOT be called from within the queue_tx()
+    // implementation.
     //
     // queue_tx() may be called at any time after start() is called including from multiple threads
     // simultaneously.
