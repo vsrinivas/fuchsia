@@ -20,10 +20,11 @@ interface StoryShell {
   // ModuleContext, AgentContext, this should be called StoryShellContext.
   1: Initialize(StoryContext story_context);
 
-  // Registers a new view to be displayed by the StoryShell. More context that
-  // allows the story shell to decide how to layout will be added later. Also,
-  // interface to influence life cycle and focus is obviously missing.
-  2: ConnectView(fuchsia.ui.viewsv1token.ViewOwner owner, string view_id, string parent_id,
+  // Adds a new View to be displayed by the StoryShell, creating a new
+  // StoryShell Surface. More context that allows the story shell to decide how
+  // to layout will be added later. Also, interface to influence life cycle and
+  // focus is obviously missing.
+  2: AddView(fuchsia.ui.viewsv1token.ViewOwner owner, string view_id, string parent_id,
                  SurfaceRelation? surface_relation, ModuleManifest? module_manifest);
 
   // Focuses the view with view_id, bringing it to the foreground. Optionally

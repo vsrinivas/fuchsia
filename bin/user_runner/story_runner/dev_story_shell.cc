@@ -11,9 +11,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -50,7 +50,7 @@ class DevStoryShellApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void ConnectView(
+  void AddView(
       fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::StringPtr /*view_id*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,

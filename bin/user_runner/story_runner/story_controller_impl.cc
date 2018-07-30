@@ -423,7 +423,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
     const auto view_id = PathString(module_data_.module_path);
 
-    story_controller_impl_->story_shell_->ConnectView(
+    story_controller_impl_->story_shell_->AddView(
         std::move(view_owner_), view_id, anchor_view_id,
         std::move(module_data_.surface_relation),
         std::move(module_data_.module_manifest));
@@ -1327,10 +1327,10 @@ void StoryControllerImpl::ProcessPendingViews() {
     }
 
     const auto view_id = PathString(kv.second.module_path);
-    story_shell_->ConnectView(std::move(kv.second.view_owner), view_id,
-                              anchor_view_id,
-                              std::move(kv.second.surface_relation),
-                              std::move(kv.second.module_manifest));
+    story_shell_->AddView(std::move(kv.second.view_owner), view_id,
+                          anchor_view_id,
+                          std::move(kv.second.surface_relation),
+                          std::move(kv.second.module_manifest));
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);

@@ -9,8 +9,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -43,19 +43,19 @@ class TestApp
     story_context_.Bind(std::move(story_context));
   }
 
-  TestPoint connect_view_{"ConnectView root:child:child root"};
+  TestPoint add_view_{"AddView root:child:child root"};
 
   // |fuchsia::modular::StoryShell|
-  void ConnectView(
+  void AddView(
       fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::StringPtr view_id, fidl::StringPtr anchor_id,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
       fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
-      connect_view_.Pass();
+      add_view_.Pass();
       modular::testing::GetStore()->Put("story_shell_done", "1", [] {});
     } else {
-      FXL_LOG(WARNING) << "ConnectView " << view_id << " anchor " << anchor_id;
+      FXL_LOG(WARNING) << "AddView " << view_id << " anchor " << anchor_id;
     }
   }
 
