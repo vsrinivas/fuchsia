@@ -293,15 +293,6 @@ static zx_status_t pdev_rpc_canvas_free(platform_dev_t* dev, uint8_t canvas_idx)
     return canvas_free(&bus->canvas, canvas_idx);
 }
 
-static zx_status_t pdev_rpc_mailbox_send_cmd(platform_dev_t* dev,
-                                             pdev_mailbox_ctx_t mailbox) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->mailbox.ops) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return mailbox_send_cmd(&bus->mailbox, &mailbox.channel, &mailbox.mdata);
-}
-
 static zx_status_t pdev_rpc_scpi_get_sensor(platform_dev_t* dev,
                                             char* name,
                                             uint32_t *sensor_id) {
@@ -461,9 +452,6 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GPIO_SET_POLARITY:
         resp.status = pdev_rpc_set_gpio_polarity(dev, req->index, req->flags);
-        break;
-    case PDEV_MAILBOX_SEND_CMD:
-        resp.status = pdev_rpc_mailbox_send_cmd(dev, req->mailbox);
         break;
     case PDEV_SCPI_GET_SENSOR:
         resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi_name, &resp.scpi_sensor_id);

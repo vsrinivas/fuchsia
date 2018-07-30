@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/scpi.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
@@ -45,9 +44,6 @@ enum {
     PDEV_CLK_ENABLE,
     PDEV_CLK_DISABLE,
 
-    // ZX_PROTOCOL_MAILBOX
-    PDEV_MAILBOX_SEND_CMD,
-
     // ZX_PROTOCOL_SCPI
     PDEV_SCPI_GET_SENSOR,
     PDEV_SCPI_GET_SENSOR_VALUE,
@@ -65,12 +61,6 @@ typedef struct {
     canvas_info_t info;
     size_t offset;
 } pdev_canvas_ctx_t;
-
-// context for mailbox
-typedef struct {
-    mailbox_channel_t channel;
-    mailbox_data_buf_t mdata;
-} pdev_mailbox_ctx_t;
 
 // context for i2c_transact
 typedef struct {
@@ -99,7 +89,6 @@ typedef struct pdev_req {
         pdev_i2c_txn_ctx_t i2c_txn;
         uint32_t i2c_bitrate;
         uint32_t flags;
-        pdev_mailbox_ctx_t mailbox;
         pdev_canvas_ctx_t canvas;
         uint8_t scpi_power_domain;
         uint32_t scpi_sensor_id;
@@ -122,7 +111,6 @@ typedef struct {
             zx_paddr_t paddr;
         } mmio;
         pdev_device_info_t info;
-        pdev_mailbox_ctx_t mailbox;
         uint32_t scpi_sensor_value;
         uint16_t scpi_dvfs_idx;
         uint32_t scpi_sensor_id;

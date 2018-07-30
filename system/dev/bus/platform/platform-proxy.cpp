@@ -269,61 +269,6 @@ static scpi_protocol_ops_t scpi_ops = {
     .set_dvfs_idx = pdev_scpi_set_dvfs_idx,
 };
 
-static zx_status_t pdev_mailbox_send_cmd(void* ctx, mailbox_channel_t* channel,
-                                         mailbox_data_buf_t* mdata) {
-    platform_proxy_t* proxy = static_cast<platform_proxy_t*>(ctx);
-    zx_status_t status = ZX_OK;
-    pdev_req_t req = {};
-    req.op = PDEV_MAILBOX_SEND_CMD;
-
-    if (!channel || !mdata) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    req.mailbox.channel.mailbox = channel->mailbox;
-    req.mailbox.channel.rx_size = channel->rx_size;
-    if (channel->rx_size) {
-        req.mailbox.channel.rx_buf = calloc(1, sizeof(channel->rx_size));
-        if (!req.mailbox.channel.rx_buf) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-    }
-
-    req.mailbox.mdata.cmd = mdata->cmd;
-    req.mailbox.mdata.tx_size = mdata->tx_size;
-    if (mdata->tx_size) {
-        if (!mdata->tx_buf) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        req.mailbox.mdata.tx_buf = calloc(1, sizeof(mdata->tx_size));
-        if (!req.mailbox.mdata.tx_buf) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(&req.mailbox.mdata.tx_buf, mdata->tx_buf, mdata->tx_size);
-    }
-
-    pdev_resp_t resp;
-
-    status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
-                               nullptr, 0, nullptr, 0, nullptr);
-    memcpy(channel->rx_buf, &resp.mailbox.channel.rx_buf, channel->rx_size);
-
-fail:
-    if (req.mailbox.channel.rx_buf) {
-        free(req.mailbox.channel.rx_buf);
-    }
-    if (req.mailbox.mdata.tx_buf) {
-        free(req.mailbox.mdata.tx_buf);
-    }
-    return status;
-}
-
-static mailbox_protocol_ops_t mailbox_ops = {
-    .send_cmd = pdev_mailbox_send_cmd,
-};
-
 static zx_status_t pdev_canvas_config(void* ctx, zx_handle_t vmo,
                                       size_t offset, canvas_info_t* info,
                                       uint8_t* canvas_idx) {
@@ -600,12 +545,6 @@ static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
         clk_protocol_t* proto = static_cast<clk_protocol_t*>(out);
         proto->ctx = ctx;
         proto->ops = &clk_ops;
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_MAILBOX: {
-        mailbox_protocol_t* proto = static_cast<mailbox_protocol_t*>(out);
-        proto->ctx = ctx;
-        proto->ops = &mailbox_ops;
         return ZX_OK;
     }
     case ZX_PROTOCOL_SCPI: {
