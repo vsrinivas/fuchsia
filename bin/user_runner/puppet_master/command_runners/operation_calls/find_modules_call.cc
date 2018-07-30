@@ -5,6 +5,7 @@
 
 #include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/type_converter.h>
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
@@ -106,7 +107,9 @@ FindModulesCall::GetTypesFromIntentParameter(
       break;
     }
     case fuchsia::modular::IntentParameterData::Tag::kJson: {
-      fut->Complete(GetTypesFromJson(input.json()));
+      std::string json_string;
+      FXL_CHECK(fsl::StringFromVmo(input.json(), &json_string));
+      fut->Complete(GetTypesFromJson(json_string));
       break;
     }
     case fuchsia::modular::IntentParameterData::Tag::kLinkName: {

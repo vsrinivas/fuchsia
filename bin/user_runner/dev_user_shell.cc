@@ -145,7 +145,9 @@ class DevUserShellApp
                        document.GetAllocator());
     document.AddMember(modular::testing::kTestDriverPath,
                        settings_.test_driver_url, document.GetAllocator());
-    test_driver_link_data.set_json(modular::JsonValueToString(document));
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(modular::JsonValueToString(document), &vmo));
+    test_driver_link_data.set_json(std::move(vmo).ToTransport());
 
     fuchsia::modular::IntentParameter test_driver_link_param;
     test_driver_link_param.name = modular::testing::kTestDriverLinkName;

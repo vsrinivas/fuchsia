@@ -11,6 +11,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/context/cpp/formatting.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
@@ -71,7 +72,9 @@ class TestApp
     intent.handler = kModuleUrl;
 
     fuchsia::modular::IntentParameterData data;
-    data.set_json(R"("initial data for the story")");
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(R"("initial data for the story")", &vmo));
+    data.set_json(std::move(vmo).ToTransport());
     fuchsia::modular::IntentParameter intent_parameter;
     intent_parameter.name = "rootModuleNoun1";
     intent_parameter.data = std::move(data);

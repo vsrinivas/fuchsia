@@ -309,7 +309,8 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
     if (new_value_.is_null() || doc.HasParseError()) {
       if (!new_value_.is_null()) {
         FXL_LOG(ERROR) << "StoryStorage.UpdateLinkCall.Mutate " << key_
-                       << " invalid json: " << doc.GetParseError();
+                       << " invalid json: " << doc.GetParseError() << " "
+                       << new_value_ << ";";
       }
       status_ = StoryStorage::Status::LINK_INVALID_JSON;
       return;

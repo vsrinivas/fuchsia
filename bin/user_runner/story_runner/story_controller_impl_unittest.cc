@@ -14,6 +14,7 @@
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
 
@@ -43,7 +44,9 @@ IntentParameter CreateLinkPathParam(std::string name, std::string link) {
 IntentParameter CreateJsonParam(std::string name, std::string json) {
   IntentParameter param;
   param.name = name;
-  param.data.set_json(json);
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString(json, &vmo));
+  param.data.set_json(std::move(vmo).ToTransport());
   return param;
 }
 

@@ -60,7 +60,9 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     if (!root_json.is_null()) {
       fuchsia::modular::IntentParameter param;
       param.name = nullptr;
-      param.data.set_json(std::move(root_json));
+      fsl::SizedVmo vmo;
+      FXL_CHECK(fsl::VmoFromString(*root_json, &vmo));
+      param.data.set_json(std::move(vmo).ToTransport());
       intent_.parameters.push_back(std::move(param));
     }
   }

@@ -5,6 +5,7 @@
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 
 #include <lib/async/cpp/future.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/testing/test_with_session_storage.h"
@@ -35,7 +36,9 @@ class UpdateModCommandRunnerTest : public testing::TestWithSessionStorage {
                                  const std::string& json_value) {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = parameter_name;
-    parameter.data.set_json(json_value);
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(json_value, &vmo));
+    parameter.data.set_json(std::move(vmo).ToTransport());
     fuchsia::modular::ModuleParameterMapEntry parameter_entry;
     parameter_entry.name = parameter_name;
     parameter_entry.link_path = MakeLinkPath(link_path);
@@ -89,7 +92,9 @@ TEST_F(UpdateModCommandRunnerTest, Execute) {
   parameter1.data.set_entity_reference("reference2");
   fuchsia::modular::IntentParameter parameter2;
   parameter2.name = "param2";
-  parameter2.data.set_json("20");
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString("20", &vmo));
+  parameter2.data.set_json(std::move(vmo).ToTransport());
 
   fuchsia::modular::UpdateMod update_mod;
   update_mod.mod_name = path.Clone();

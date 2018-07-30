@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fsl/vmo/strings.h>
 #include <lib/module_resolver/cpp/formatting.h>
 
 namespace modular {
@@ -21,7 +22,9 @@ std::ostream& operator<<(
     std::ostream& os,
     const fuchsia::modular::IntentParameterData& parameter_data) {
   if (parameter_data.is_json()) {
-    os << parameter_data.json();
+    std::string json;
+    FXL_CHECK(fsl::StringFromVmo(parameter_data.json(), &json));
+    os << json;
   } else if (parameter_data.is_entity_reference()) {
     os << "[ref: " << parameter_data.entity_reference() << "]";
   } else if (parameter_data.is_entity_type()) {

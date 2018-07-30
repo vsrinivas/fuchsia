@@ -24,6 +24,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/types/type_converters.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/join_strings.h>
@@ -849,15 +850,17 @@ class StoryControllerImpl::AddIntentCall
     for (auto& param : *intent->parameters) {
       if (param.data.is_entity_reference()) {
         fuchsia::modular::CreateLinkInfo create_link;
-        create_link.initial_data =
-            EntityReferenceToJson(param.data.entity_reference());
+        fsl::SizedVmo vmo;
+        FXL_CHECK(fsl::VmoFromString(
+            EntityReferenceToJson(param.data.entity_reference()), &vmo));
+        create_link.initial_data = std::move(vmo).ToTransport();
         fuchsia::modular::CreateModuleParameterMapEntry entry;
         entry.key = param.name;
         entry.value.set_create_link(std::move(create_link));
         param_map->property_info.push_back(std::move(entry));
       } else if (param.data.is_json()) {
         fuchsia::modular::CreateLinkInfo create_link;
-        create_link.initial_data = param.data.json();
+        param.data.json().Clone(&create_link.initial_data);
         fuchsia::modular::CreateModuleParameterMapEntry entry;
         entry.key = param.name;
         entry.value.set_create_link(std::move(create_link));

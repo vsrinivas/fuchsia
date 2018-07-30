@@ -4,12 +4,14 @@
 
 library fuchsia.modular;
 
+using fuchsia.mem;
+
 // Defines the attributes for a Link when the Link is created.
 struct CreateLinkInfo {
   // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
   // Link.Set() to set the value in the root link of the new Story's primary
   // module.
-  string initial_data;
+  fuchsia.mem.Buffer initial_data;
 
   // If |allowed_types| is null, the Link contains JSON. No schema validation
   // is performed.

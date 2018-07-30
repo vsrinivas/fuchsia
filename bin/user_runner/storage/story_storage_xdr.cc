@@ -5,6 +5,7 @@
 #include "peridot/bin/user_runner/storage/story_storage_xdr.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fsl/vmo/strings.h>
 
 namespace modular {
 
@@ -58,7 +59,9 @@ void XdrIntentParameterData(XdrContext* const xdr,
       } else if (tag == kJson) {
         fidl::StringPtr value;
         xdr->Field(kJson, &value);
-        data->set_json(std::move(value));
+        fsl::SizedVmo vmo;
+        FXL_CHECK(fsl::VmoFromString(*value, &vmo));
+        data->set_json(std::move(vmo).ToTransport());
       } else if (tag == kEntityType) {
         ::fidl::VectorPtr<::fidl::StringPtr> value;
         xdr->Field(kEntityType, &value);
@@ -99,7 +102,9 @@ void XdrIntentParameterData(XdrContext* const xdr,
         }
         case fuchsia::modular::IntentParameterData::Tag::kJson: {
           tag = kJson;
-          fidl::StringPtr value = data->json();
+          std::string json_string;
+          FXL_CHECK(fsl::StringFromVmo(data->json(), &json_string));
+          fidl::StringPtr value = json_string;
           xdr->Field(kJson, &value);
           break;
         }

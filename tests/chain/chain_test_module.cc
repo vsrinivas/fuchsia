@@ -61,6 +61,12 @@ class TestApp {
  private:
   TestPoint start_intent_{"Started child Intent"};
 
+  fuchsia::mem::Buffer VmoFromJson(const std::string& json) {
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(json, &vmo));
+    return std::move(vmo).ToTransport();
+  }
+
   void EmbedModule() {
     intent_.handler = kChildModuleUrl;
     intent_.parameters.resize(4);
@@ -96,7 +102,7 @@ class TestApp {
     intent_.parameters->at(1).data = std::move(parameter_data);
 
     parameter_data = fuchsia::modular::IntentParameterData();
-    parameter_data.set_json("67890");
+    parameter_data.set_json(VmoFromJson("67890"));
     intent_.parameters->at(2) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(2).name = "three";
     intent_.parameters->at(2).data = std::move(parameter_data);
@@ -104,7 +110,7 @@ class TestApp {
     // This noun doesn't have a name, and will appear as the root or default
     // link for the child mod. This is for backwards compatibility.
     parameter_data = fuchsia::modular::IntentParameterData();
-    parameter_data.set_json("1337");
+    parameter_data.set_json(VmoFromJson("1337"));
     intent_.parameters->at(3) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(3).data = std::move(parameter_data);
 

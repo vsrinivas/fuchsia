@@ -8,6 +8,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/entity/cpp/json.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/set_link_value_call.h"
 
@@ -69,12 +70,14 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
       const fuchsia::modular::LinkPath& path,
       const fuchsia::modular::IntentParameterData& data) {
     std::string new_value;
+    std::string json_string;
     switch (data.Which()) {
       case fuchsia::modular::IntentParameterData::Tag::kEntityReference:
         new_value = EntityReferenceToJson(data.entity_reference());
         break;
       case fuchsia::modular::IntentParameterData::Tag::kJson:
-        new_value = data.json();
+        FXL_CHECK(fsl::StringFromVmo(data.json(), &json_string));
+        new_value = json_string;
         break;
       case fuchsia::modular::IntentParameterData::Tag::kEntityType:
       case fuchsia::modular::IntentParameterData::Tag::kLinkName:

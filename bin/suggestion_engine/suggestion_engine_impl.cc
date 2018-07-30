@@ -571,9 +571,9 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
                   break;
                 }
                 case fuchsia::modular::IntentParameterData::Tag::kJson: {
-                  fsl::SizedVmo vmo;
-                  FXL_CHECK(fsl::VmoFromString(*parameter.data.json(), &vmo));
-                  link->Set(nullptr, std::move(vmo).ToTransport());
+                  fuchsia::mem::Buffer data;
+                  parameter.data.json().Clone(&data);
+                  link->Set(nullptr, std::move(data));
                   break;
                 }
                 case fuchsia::modular::IntentParameterData::Tag::kEntityType:

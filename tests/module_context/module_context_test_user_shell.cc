@@ -6,10 +6,11 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
@@ -170,7 +171,9 @@ class TestApp
     document.AddMember(kLinkKey, parameter_string, document.GetAllocator());
 
     fuchsia::modular::IntentParameterData parameter_data;
-    parameter_data.set_json(modular::JsonValueToString(document));
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(modular::JsonValueToString(document), &vmo));
+    parameter_data.set_json(std::move(vmo).ToTransport());
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
 

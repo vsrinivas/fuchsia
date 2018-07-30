@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.mem;
+
 // The Intent struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/intent.md.
 struct Intent {
@@ -44,7 +46,7 @@ union IntentParameterData {
   // eventually and move entirely to using Entity references.
   //
   // DEPRECATED: Use |entity_reference|.
-  string json;
+  fuchsia.mem.Buffer json;
 
   // Set this if you want to explicitly define this noun's allowed types. This
   // is also useful in the cases where the noun has a 'direction' of type

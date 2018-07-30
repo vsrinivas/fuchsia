@@ -8,6 +8,7 @@
 #include <lib/async/cpp/operation.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/find_modules_call.h"
@@ -106,8 +107,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
       switch (param.data.Which()) {
         case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
           fuchsia::modular::CreateLinkInfo create_link;
-          create_link.initial_data =
-              EntityReferenceToJson(param.data.entity_reference());
+          fsl::SizedVmo vmo;
+          FXL_CHECK(fsl::VmoFromString(
+              EntityReferenceToJson(param.data.entity_reference()), &vmo));
+          create_link.initial_data = std::move(vmo).ToTransport();
           entry.key = param.name;
           entry.value.set_create_link(std::move(create_link));
           break;
@@ -121,7 +124,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
         }
         case fuchsia::modular::IntentParameterData::Tag::kJson: {
           fuchsia::modular::CreateLinkInfo create_link;
-          create_link.initial_data = param.data.json();
+          param.data.json().Clone(&create_link.initial_data);
           entry.key = param.name;
           entry.value.set_create_link(std::move(create_link));
           break;

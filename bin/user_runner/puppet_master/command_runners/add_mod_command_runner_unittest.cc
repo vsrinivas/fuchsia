@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/types/type_converters.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/type_converter.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -20,6 +21,94 @@ namespace {
 
 class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
  protected:
+  // This method compares intents field by field, where fuchsia::mem::Buffers
+  // are compared via their contents.
+  bool AreIntentsEqual(const fuchsia::modular::Intent& old_intent,
+                       const fuchsia::modular::Intent& new_intent) {
+    if (old_intent.handler != new_intent.handler) {
+      return false;
+    }
+
+    if (old_intent.action != new_intent.action) {
+      return false;
+    }
+
+    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
+        old_params;
+    if (old_intent.parameters) {
+      for (const auto& entry : *old_intent.parameters) {
+        old_params[entry.name] = &entry.data;
+      }
+    }
+
+    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
+        new_params;
+    if (new_intent.parameters) {
+      for (const auto& entry : *new_intent.parameters) {
+        new_params[entry.name] = &entry.data;
+      }
+    }
+
+    if (new_params.size() != old_params.size()) {
+      return false;
+    }
+
+    for (const auto& entry : new_params) {
+      const auto& name = entry.first;
+      if (old_params.count(name) == 0) {
+        return false;
+      }
+
+      const auto& new_param = *entry.second;
+      const auto& old_param = *old_params[name];
+
+      // If a parameter type changed, or a link mapping changed, we
+      // need to relaunch.
+      if (old_param.Which() != new_param.Which()) {
+        return false;
+      }
+
+      switch (old_param.Which()) {
+        case fuchsia::modular::IntentParameterData::Tag::kEntityType:
+          if (old_param.entity_type() != new_param.entity_type()) {
+            return false;
+          }
+          break;
+        case fuchsia::modular::IntentParameterData::Tag::kEntityReference:
+          if (old_param.entity_reference() != new_param.entity_reference()) {
+            return false;
+          }
+        case fuchsia::modular::IntentParameterData::Tag::kJson: {
+          std::string old_string;
+          std::string new_string;
+          if (old_param.json().size == 0 && new_param.json().size == 0) {
+            break;
+          }
+
+          FXL_CHECK(fsl::StringFromVmo(old_param.json(), &old_string));
+          FXL_CHECK(fsl::StringFromVmo(new_param.json(), &new_string));
+          if (old_string != new_string) {
+            return false;
+          }
+          break;
+        }
+        case fuchsia::modular::IntentParameterData::Tag::kLinkName:
+          if (old_param.link_name() != new_param.link_name()) {
+            return false;
+          }
+          break;
+        case fuchsia::modular::IntentParameterData::Tag::kLinkPath:
+          if (old_param.link_path() != new_param.link_path()) {
+            return false;
+          }
+          break;
+        case fuchsia::modular::IntentParameterData::Tag::Invalid:
+          break;
+      }
+    }
+    return true;
+  }
+
   std::unique_ptr<AddModCommandRunner> MakeRunner(
       fuchsia::modular::ModuleResolver* const module_resolver,
       fuchsia::modular::EntityResolver* const entity_resolver) {
@@ -63,7 +152,9 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
                         const std::string& name, const std::string& json) {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
-    parameter.data.set_json(json);
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(json, &vmo));
+    parameter.data.set_json(std::move(vmo).ToTransport());
     intent->parameters.push_back(std::move(parameter));
   }
 
@@ -164,7 +255,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
         EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
                   module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
-        EXPECT_EQ(intent, *module_data->intent);
+        EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
         EXPECT_EQ(*manifest, *module_data->module_manifest);
         EXPECT_EQ(0u, module_data->parameter_map.entries->size());
         done = true;
@@ -257,7 +348,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
   EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
             module_data->module_source);
   EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
-  EXPECT_EQ(intent, *module_data->intent);
+  EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
   EXPECT_EQ(*manifest, *module_data->module_manifest);
   EXPECT_EQ(5u, module_data->parameter_map.entries->size());
 
