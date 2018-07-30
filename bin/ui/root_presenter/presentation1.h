@@ -106,6 +106,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   float display_rotation_current() const override {
     return display_rotation_current_;
   }
+
   const DisplayModel::DisplayInfo& display_info() override {
     return display_model_actual_.display_info();
   }
@@ -253,6 +254,14 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // Expressed in degrees.
   float display_rotation_desired_ = 0.f;
   float display_rotation_current_ = 0.f;
+
+  // At startup, apply a rotation defined in 90 degree increments, just once.
+  // Implies resizing of the presentation to adjust to rotated coordinates.
+  // Valid values are ... -180, -90, 0, 90, 180, ...
+  //
+  // Used when the native display orientation is reported incorrectly.
+  // TODO(SCN-857) - Make this less of a hack.
+  int32_t display_startup_rotation_adjustment_ = 0;
 
   ::fuchsia::ui::viewsv1::ViewPtr root_view_;
 
