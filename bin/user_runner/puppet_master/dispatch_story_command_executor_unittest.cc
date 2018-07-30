@@ -70,8 +70,7 @@ class DispatchStoryCommandExecutorTest
   fidl::StringPtr CreateStory() {
     bool done{};
     fidl::StringPtr ret;
-    session_storage_
-        ->CreateStory({} /* extra_info */, false /* is_kind_of_proto_story */)
+    session_storage_->CreateStory({} /* extra_info */, {} /* story_options */)
         ->Then([&](fidl::StringPtr story_id, fuchsia::ledger::PageId) {
           ret = story_id;
           done = true;

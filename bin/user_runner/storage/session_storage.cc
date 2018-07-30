@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/functional/make_copyable.h>
+#include <unordered_set>
 
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/session_storage_xdr.h"
@@ -56,12 +57,12 @@ class CreateStoryCall
       fuchsia::ledger::Ledger* const ledger,
       fuchsia::ledger::Page* const root_page, fidl::StringPtr story_name,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      bool is_kind_of_proto_story, ResultCall result_call)
+      fuchsia::modular::StoryOptions story_options, ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
         story_name_(std::move(story_name)),
         extra_info_(std::move(extra_info)),
-        is_kind_of_proto_story_(is_kind_of_proto_story) {}
+        story_options_(std::move(story_options)) {}
 
  private:
   void Run() override {
@@ -91,7 +92,7 @@ class CreateStoryCall
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
     story_data_->story_name = story_name_;
-    story_data_->is_kind_of_proto_story = is_kind_of_proto_story_;
+    story_data_->story_options = std::move(story_options_);
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
     story_data_->story_info.last_focus_time = 0;
@@ -103,7 +104,7 @@ class CreateStoryCall
 
   const fidl::StringPtr story_name_;
   fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
-  const bool is_kind_of_proto_story_;
+  fuchsia::modular::StoryOptions story_options_;
 
   fuchsia::ledger::PagePtr story_page_;
   fuchsia::modular::internal::StoryDataPtr story_data_;
@@ -122,20 +123,20 @@ class CreateStoryCall
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
     fidl::StringPtr story_name,
     fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-    bool is_kind_of_proto_story) {
+    fuchsia::modular::StoryOptions story_options) {
   auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create(
       "SessionStorage.CreateStory.ret");
   operation_queue_.Add(new CreateStoryCall(
       ledger_client_->ledger(), page(), std::move(story_name),
-      std::move(extra_info), is_kind_of_proto_story, ret->Completer()));
+      std::move(extra_info), std::move(story_options), ret->Completer()));
   return ret;
 }
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
     fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-    bool is_kind_of_proto_story) {
+    fuchsia::modular::StoryOptions story_options) {
   return CreateStory(nullptr /* story_name */, std::move(extra_info),
-                     is_kind_of_proto_story);
+                     std::move(story_options));
 }
 
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
@@ -262,46 +263,21 @@ SessionStorage::GetAllStoryData() {
   return ret;
 }
 
-FuturePtr<> SessionStorage::PromoteKindOfProtoStory(fidl::StringPtr story_id) {
-  auto mutate = [](fuchsia::modular::internal::StoryData* const story_data) {
-    if (story_data->is_kind_of_proto_story) {
-      story_data->is_kind_of_proto_story = false;
-      return true;
-    }
-    return false;
-  };
-  auto ret = Future<>::Create("SessionStorage.PromoteKindOfProtoStory.ret");
-  operation_queue_.Add(
-      new MutateStoryDataCall(page(), story_id, mutate, ret->Completer()));
-  return ret;
-}
-
-FuturePtr<> SessionStorage::DeleteKindOfProtoStory(fidl::StringPtr story_id) {
-  auto returned_future =
-      Future<>::Create("SessionStorage.DeleteKindOfProtoStory.returned_future");
-
-  operation_queue_.Add(MakeGetStoryDataCall(
-      page(), story_id,
-      [this, returned_future,
-       story_id](fuchsia::modular::internal::StoryDataPtr story_data) {
-        if (story_data && story_data->is_kind_of_proto_story) {
-          page()->Delete(
-              to_array(StoryIdToLedgerKey(story_id)),
-              [this, returned_future](fuchsia::ledger::Status status) {
-                // Deleting a key that doesn't exist is OK, not
-                // KEY_NOT_FOUND.
-                if (status != fuchsia::ledger::Status::OK) {
-                  FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
-                                 << fidl::ToUnderlying(status);
-                }
-                returned_future->Complete();
-              });
-        } else {
-          returned_future->Complete();
+FuturePtr<> SessionStorage::UpdateStoryOptions(
+    fidl::StringPtr story_id, fuchsia::modular::StoryOptions story_options) {
+  auto ret = Future<>::Create("SessionStorage.SetOptions.ret");
+  auto mutate =
+      fxl::MakeCopyable([story_options = std::move(story_options)](
+                            fuchsia::modular::internal::StoryData* story_data) {
+        if (story_data->story_options != story_options) {
+          story_data->story_options = std::move(story_options);
+          return true;
         }
-      }));
-
-  return returned_future;
+        return false;
+      });
+  operation_queue_.Add(new MutateStoryDataCall(
+      page(), story_id, std::move(mutate), ret->Completer()));
+  return ret;
 }
 
 FuturePtr<std::unique_ptr<StoryStorage>> SessionStorage::GetStoryStorage(

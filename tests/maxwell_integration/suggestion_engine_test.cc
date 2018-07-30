@@ -850,7 +850,6 @@ TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
   auto module_id = "foo://bar1";
 
   fuchsia::modular::AddModule add_module;
-  add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
   add_module.intent.handler = module_id;
   add_module.surface_parent_module_path =
@@ -906,7 +905,6 @@ TEST_F(SuggestionInteractionTest, DeleteProposalWithRichSuggestion) {
   auto module_id = "foo://bar1";
 
   fuchsia::modular::AddModule add_module;
-  add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
   add_module.intent.handler = module_id;
   add_module.surface_parent_module_path =
@@ -931,7 +929,7 @@ TEST_F(SuggestionInteractionTest, DeleteProposalWithRichSuggestion) {
   WaitUntilIdle();
 
   EXPECT_EQ(0, suggestion_count());
-  EXPECT_NE(story_provider()->deleted_kind_of_proto_story(), "");
+  EXPECT_NE(story_provider()->deleted_story(), "");
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {

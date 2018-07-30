@@ -11,8 +11,8 @@ struct StoryData {
   // An optiona client-supplied name for this story.
   string? story_name;
 
-  // If true, excludes the story from StoryProvider.PreviousStories().
-  bool is_kind_of_proto_story;
+  // Story metadata and configuration.
+  fuchsia.modular.StoryOptions story_options;
 
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.

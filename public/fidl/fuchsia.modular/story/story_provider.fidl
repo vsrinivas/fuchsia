@@ -26,8 +26,8 @@ interface StoryProvider {
   // Providing |module_url| is deprecated. It is preferred to GetController()
   // and call StoryController.AddModule().
   2: CreateStoryWithInfo(string? module_url,
-                        vector<StoryInfoExtraEntry>? extra_info,
-                        string? root_json) -> (string story_id);
+                         vector<StoryInfoExtraEntry>? extra_info,
+                         string? root_json) -> (string story_id);
 
   // Deletes an existing story from the list of known stories. Returns when the
   // delete notification is received from the Ledger. If the story to be deleted
@@ -72,20 +72,16 @@ interface StoryProvider {
   12: GetLinkPeer(string story_id, vector<string>? module_path, string link_name,
                   request<Link> @request);
 
-  // Creates a "kind-of" proto story. The story won't be returned by
-  // PreviousStories().
+  // Creates a story and sets the options it will have.
   // EXPERIMENTAL
-  13: CreateKindOfProtoStory() -> (string story_id);
+  13: CreateStoryWithOptions(StoryOptions story_options)
+                             -> (string story_id);
 
-  // Promotes a "kind-of" proto story to a regular story. After calling this,
-  // the StoryInfo of |story_id| will be returned in PreviousStories().
+  // Sets to |is_kind_of_proto_story| the |kind_of_proto_story| field of the
+  // story options.
   // EXPERIMENTAL
-  14: PromoteKindOfProtoStory(string story_id) -> ();
-
-  // Deletes the "kind-of" proto story if it has not yet been promoted to a
-  // regular story.
-  // EXPERIMENTAL
-  15: DeleteKindOfProtoStory(string story_id) -> ();
+  14: SetKindOfProtoStoryOption(string story_id,
+                                bool is_kind_of_proto_story) -> ();
 };
 
 // Implemented by clients of StoryProvider.

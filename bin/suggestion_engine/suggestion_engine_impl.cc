@@ -79,7 +79,10 @@ void SuggestionEngineImpl::ProposeNavigation(
 void SuggestionEngineImpl::AddProposalWithRichSuggestion(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  story_provider_->CreateKindOfProtoStory(
+  fuchsia::modular::StoryOptions story_options;
+  story_options.kind_of_proto_story = true;
+  story_provider_->CreateStoryWithOptions(
+      std::move(story_options),
       fxl::MakeCopyable([this, proposal = std::move(proposal),
                          source_url = source->component_url(),
                          activity](fidl::StringPtr preloaded_story_id) mutable {
@@ -97,9 +100,17 @@ void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
   SuggestionPrototype* suggestion =
       next_processor_.GetSuggestion(component_url, proposal_id);
   if (suggestion && !suggestion->preloaded_story_id.empty()) {
-    story_provider_->DeleteKindOfProtoStory(suggestion->preloaded_story_id,
-                                            [] {});
+    story_provider_->DeleteStory(suggestion->preloaded_story_id, [] {});
   }
+  next_processor_.RemoveProposal(component_url, proposal_id);
+}
+
+void SuggestionEngineImpl::PromoteNextProposal(
+    const std::string& component_url, const std::string& preloaded_story_id,
+    const std::string& proposal_id) {
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
+  story_provider_->SetKindOfProtoStoryOption(preloaded_story_id, false,
+                                             [activity]() {});
   next_processor_.RemoveProposal(component_url, proposal_id);
 }
 
@@ -163,6 +174,7 @@ void SuggestionEngineImpl::NotifyInteraction(
 
   // If it exists (and it should), perform the action and clean up
   if (suggestion) {
+    auto component_url = suggestion->prototype->source_url;
     std::string log_detail = suggestion->prototype
                                  ? short_proposal_str(*suggestion->prototype)
                                  : "invalid";
@@ -179,33 +191,28 @@ void SuggestionEngineImpl::NotifyInteraction(
     auto& proposal = suggestion->prototype->proposal;
     auto proposal_id = proposal.id;
     auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
-    auto should_delete_story = true;
     if (interaction.type == fuchsia::modular::InteractionType::SELECTED) {
       if (preloaded_story_id.empty()) {
         PerformActions(std::move(proposal.on_selected),
                        std::move(proposal.listener), proposal.id,
-                       proposal.story_name, suggestion->prototype->source_url,
-                       proposal.story_id);
+                       proposal.story_name, component_url, proposal.story_id);
       } else {
-        should_delete_story = false;
-        auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-        story_provider_->PromoteKindOfProtoStory(preloaded_story_id,
-                                                 [activity]() {});
+        // Notify before we promote + remove from next since the proposal
+        // won't be available when that happens.
         if (proposal.listener) {
           auto listener = proposal.listener.Bind();
-          listener->OnProposalAccepted(proposal_id, preloaded_story_id);
+          listener->OnProposalAccepted(proposal.id, preloaded_story_id);
         }
+        PromoteNextProposal(component_url, preloaded_story_id, proposal_id);
+        // Only next suggestions can be rich so we can finish early.
+        return;
       }
     }
 
     if (suggestion_in_ask) {
       query_processor_.CleanUpPreviousQuery();
     } else {
-      if (!preloaded_story_id.empty() && should_delete_story) {
-        auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-        story_provider_->DeleteStory(preloaded_story_id, [activity]() {});
-      }
-      RemoveNextProposal(suggestion->prototype->source_url, proposal_id);
+      RemoveNextProposal(component_url, proposal_id);
     }
   } else {
     FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "

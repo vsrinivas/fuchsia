@@ -35,16 +35,14 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   const std::string& last_created_story() const { return last_created_story_; }
 
   const std::string& last_created_kind_of_story() const {
-    return last_created_kind_of_story_;
+    return last_created_kind_of_proto_story_;
   }
 
   const std::string& last_promoted_story() const {
     return last_promoted_story_;
   }
 
-  const std::string& deleted_kind_of_proto_story() const {
-    return deleted_kind_of_proto_story_;
-  }
+  const std::string& deleted_story() const { return deleted_story_; }
 
  private:
   // |fuchsia::modular::StoryProvider|
@@ -63,9 +61,14 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
-  void CreateKindOfProtoStory(CreateKindOfProtoStoryCallback callback)
-      override {
-    last_created_kind_of_story_ = "kindoffoo";
+  void CreateStoryWithOptions(
+      fuchsia::modular::StoryOptions story_options,
+      CreateStoryWithOptionsCallback callback) override {
+    if (story_options.kind_of_proto_story) {
+      last_created_kind_of_proto_story_ = "kindoffoo";
+    } else {
+      last_created_story_ = "kindoffoo";
+    }
     callback("kindoffoo");
   }
 
@@ -85,6 +88,7 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   // |fuchsia::modular::StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
                    DeleteStoryCallback callback) override {
+    deleted_story_ = story_id;
     callback();
   }
 
@@ -126,25 +130,19 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
-  void PromoteKindOfProtoStory(
-      fidl::StringPtr story_id,
-      PromoteKindOfProtoStoryCallback callback) override {
-    last_promoted_story_ = story_id;
-    callback();
-  }
-
-  // |fuchsia::modular::StoryProvider|
-  void DeleteKindOfProtoStory(
-      fidl::StringPtr story_id,
-      DeleteKindOfProtoStoryCallback callback) override {
-    deleted_kind_of_proto_story_ = story_id;
+  void SetKindOfProtoStoryOption(
+      fidl::StringPtr story_id, bool kind_of_proto_story,
+      SetKindOfProtoStoryOptionCallback callback) override {
+    if (story_id == last_created_kind_of_proto_story_ && !kind_of_proto_story) {
+      last_promoted_story_ = story_id;
+    }
     callback();
   }
 
   std::string last_created_story_;
-  std::string last_created_kind_of_story_;
+  std::string last_created_kind_of_proto_story_;
   std::string last_promoted_story_;
-  std::string deleted_kind_of_proto_story_;
+  std::string deleted_story_;
   StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;

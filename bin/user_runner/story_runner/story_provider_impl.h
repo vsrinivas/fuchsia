@@ -130,13 +130,14 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
                    CreateStoryCallback callback) override;
 
   // |fuchsia::modular::StoryProvider|
+  void CreateStoryWithOptions(fuchsia::modular::StoryOptions story_options,
+                              CreateStoryWithOptionsCallback callback) override;
+
+  // |fuchsia::modular::StoryProvider|
   void CreateStoryWithInfo(
       fidl::StringPtr module_url,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
       fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
-  void CreateKindOfProtoStory(CreateKindOfProtoStoryCallback callback) override;
 
   // |fuchsia::modular::StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
@@ -173,13 +174,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
   // |fuchsia::modular::StoryProvider|
-  void PromoteKindOfProtoStory(
-      fidl::StringPtr story_id,
-      PromoteKindOfProtoStoryCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
-  void DeleteKindOfProtoStory(fidl::StringPtr story_id,
-                              DeleteKindOfProtoStoryCallback callback) override;
+  void SetKindOfProtoStoryOption(
+      fidl::StringPtr story_id, bool is_kind_of_proto_story,
+      SetKindOfProtoStoryOptionCallback callback) override;
 
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;

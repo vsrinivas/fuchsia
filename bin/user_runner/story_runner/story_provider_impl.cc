@@ -47,13 +47,13 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
       SessionStorage* const session_storage,
       StoryProviderImpl* const story_provider_impl, fidl::StringPtr url,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr root_json, const bool is_kind_of_proto_story,
+      fidl::StringPtr root_json, fuchsia::modular::StoryOptions story_options,
       ResultCall result_call)
       : Operation("StoryProviderImpl::CreateStoryCall", std::move(result_call)),
         session_storage_(session_storage),
         story_provider_impl_(story_provider_impl),
         extra_info_(std::move(extra_info)),
-        is_kind_of_proto_story_(is_kind_of_proto_story),
+        story_options_(std::move(story_options)),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
     intent_.handler = std::move(url);
 
@@ -76,7 +76,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     // 2) Set any extra info.
     // 3) If we got an initial module, add it.
     session_storage_
-        ->CreateStory(std::move(extra_info_), is_kind_of_proto_story_)
+        ->CreateStory(std::move(extra_info_), std::move(story_options_))
         ->WeakThen(GetWeakPtr(), [this, flow](fidl::StringPtr story_id,
                                               fuchsia::ledger::PageId page_id) {
           story_id_ = story_id;
@@ -104,7 +104,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
   StoryProviderImpl* const story_provider_impl_;  // Not owned
   fuchsia::modular::Intent intent_;
   fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
-  bool is_kind_of_proto_story_;
+  fuchsia::modular::StoryOptions story_options_;
   const zx_time_t start_time_;
 
   std::unique_ptr<StoryStorage> storage_;
@@ -537,7 +537,18 @@ void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
   FXL_LOG(INFO) << "fuchsia::modular::CreateStory() " << module_url;
   operation_queue_.Add(new CreateStoryCall(
       session_storage_, this, module_url, nullptr /* extra_info */,
-      nullptr /* root_json */, false /* is_kind_of_proto_story */, callback));
+      nullptr /* root_json */, {} /* story_options */, callback));
+}
+
+// |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::CreateStoryWithOptions(
+    fuchsia::modular::StoryOptions story_options,
+    CreateStoryWithOptionsCallback callback) {
+  FXL_LOG(INFO) << "CreateStoryWithOptions() ";
+  operation_queue_.Add(
+      new CreateStoryCall(session_storage_, this, nullptr /* module_url */,
+                          nullptr /* extra_info */, nullptr /* root_json */,
+                          std::move(story_options), callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -548,17 +559,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
   operation_queue_.Add(new CreateStoryCall(
       session_storage_, this, module_url, std::move(extra_info),
-      std::move(root_json), false /* is_kind_of_proto_story */, callback));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::CreateKindOfProtoStory(
-    CreateKindOfProtoStoryCallback callback) {
-  FXL_LOG(INFO) << "CreateKindOfProtoStory() ";
-  operation_queue_.Add(
-      new CreateStoryCall(session_storage_, this, nullptr /* module_url */,
-                          nullptr /* extra_info) */, nullptr /* root_json */,
-                          true /* is_kind_of_proto_story */, callback));
+      std::move(root_json), {} /* story_options */, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -630,7 +631,7 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
             auto result = fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
 
             for (auto& story_data : *all_story_data) {
-              if (!story_data.is_kind_of_proto_story) {
+              if (!story_data.story_options.kind_of_proto_story) {
                 result.push_back(std::move(story_data.story_info));
               }
             }
@@ -657,27 +658,25 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
 }
 
 // |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::PromoteKindOfProtoStory(
-    fidl::StringPtr story_id, PromoteKindOfProtoStoryCallback callback) {
+void StoryProviderImpl::SetKindOfProtoStoryOption(
+    fidl::StringPtr story_id, bool is_kind_of_proto_story,
+    SetKindOfProtoStoryOptionCallback callback) {
   auto on_run =
-      Future<>::Create("StoryProviderImpl.PromoteKindOfProtoStory.on_run");
-  auto done = on_run->AsyncMap([this, story_id] {
-    return session_storage_->PromoteKindOfProtoStory(story_id);
-  });
+      Future<>::Create("StoryProviderImpl.SetKindOfProtoStoryOption.on_run");
+  auto done =
+      on_run
+          ->AsyncMap([this, story_id, is_kind_of_proto_story] {
+            return session_storage_->GetStoryDataById(story_id);
+          })
+          ->AsyncMap([this, story_id, is_kind_of_proto_story](
+                         fuchsia::modular::internal::StoryDataPtr data) {
+            fuchsia::modular::StoryOptions new_options;
+            data->story_options.Clone(&new_options);
+            new_options.kind_of_proto_story = is_kind_of_proto_story;
+            return session_storage_->UpdateStoryOptions(story_id, new_options);
+          });
   operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::PromoteKindOfProtoStory", on_run, done, callback));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::DeleteKindOfProtoStory(
-    fidl::StringPtr story_id, DeleteKindOfProtoStoryCallback callback) {
-  auto on_run =
-      Future<>::Create("StoryProviderImpl.DeleteKindOfProtoStory.on_run");
-  auto done = on_run->AsyncMap([this, story_id] {
-    return session_storage_->DeleteKindOfProtoStory(story_id);
-  });
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::DeleteKindOfProtoStory", on_run, done, callback));
+      "StoryProviderImpl::UpdateStoryOptions", on_run, done, callback));
 }
 
 void StoryProviderImpl::OnStoryStorageUpdated(

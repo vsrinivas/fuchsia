@@ -53,6 +53,7 @@ fidl("fuchsia.modular") {
     "story/story_command.fidl",
     "story/story_controller.fidl",
     "story/story_info.fidl",
+    "story/story_options.fidl",
     "story/story_provider.fidl",
     "story/story_shell.fidl",
     "story/story_state.fidl",

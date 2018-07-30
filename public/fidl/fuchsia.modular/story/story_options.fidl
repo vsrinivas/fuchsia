@@ -1,0 +1,11 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+struct StoryOptions {
+  // Whether or not the story will be hidden on a call to
+  // StoryProvider#PreviousStories.
+  bool kind_of_proto_story;
+};

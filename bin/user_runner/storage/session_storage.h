@@ -76,12 +76,12 @@ class SessionStorage : public PageClient {
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
       fidl::StringPtr story_name,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      bool is_kind_of_proto_story);
+      fuchsia::modular::StoryOptions story_options);
 
   // Same as above, but defaults |story_name| to nullptr.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      bool is_kind_of_proto_story);
+      fuchsia::modular::StoryOptions story_options);
 
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.
@@ -120,13 +120,8 @@ class SessionStorage : public PageClient {
   FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
   GetAllStoryData();
 
-  // Returns a Future that promotes the story with |story_id| to a regular
-  // story.
-  FuturePtr<> PromoteKindOfProtoStory(fidl::StringPtr story_id);
-
-  // Deletes the story with |story_id| provided that it has not been promoted to
-  // a regular story.
-  FuturePtr<> DeleteKindOfProtoStory(fidl::StringPtr story_id);
+  FuturePtr<> UpdateStoryOptions(fidl::StringPtr story_id,
+                                 fuchsia::modular::StoryOptions story_options);
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.

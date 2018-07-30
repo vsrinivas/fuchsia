@@ -45,7 +45,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   void CreateStory() {
     session_storage_
         ->CreateStory(story_name_, nullptr /* extra_info */,
-                      false /* is_kind_of_proto_story */)
+                      {} /* story_options */)
         ->WeakThen(GetWeakPtr(),
                    [this](fidl::StringPtr story_id, auto /* ignored */) {
                      story_id_ = story_id;
