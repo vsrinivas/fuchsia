@@ -183,6 +183,16 @@ typedef struct wlanmac_ifc {
 
     // Reports an indication of a status, state or action to the wlan driver.
     void (*indication)(void* cookie, uint32_t ind);
+
+    // Reports the status of an attempted transmission.
+    // * tx_info: the transmit parameters for the attempted transmission.
+    // * retry_count: the number of unsuccessful retries before the final status. This will be 0,
+    //   for example, if transmission immediately succeeded or failed.
+    // * status: the transmission disposition.
+    //   ZX_OK: transmission was successful.
+    //   Other: transmission was not successful.
+    void (*report_tx_status)(void* cookie, const wlan_tx_info_t* tx_info, uint32_t retry_count,
+                             zx_status_t status);
 } wlanmac_ifc_t;
 
 typedef struct wlanmac_protocol_ops {

@@ -108,7 +108,10 @@ enum {
     // should not be populated, unless the MLME wishes to force a given rate for a packet.
     WLAN_DRIVER_FEATURE_RATE_SELECTION = (1 << 1),
     // Device is not a physical device.
-    WLAN_DRIVER_FEATURE_SYNTH = (1 << 2)
+    WLAN_DRIVER_FEATURE_SYNTH = (1 << 2),
+    // Driver supports transmission reports, and will use the wlanmac_ifc.report_tx_status()
+    // callback to report the status of each queued transmission.
+    WLAN_DRIVER_FEATURE_TX_STATUS_REPORT = (1 << 3),
 };
 
 // Mac roles: a device may support multiple roles, but an interface is instantiated with
