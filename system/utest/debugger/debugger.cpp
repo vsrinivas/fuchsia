@@ -1229,7 +1229,7 @@ int __NO_INLINE test_segfault() {
 // to request a backtrace but not terminate the process.
 int __NO_INLINE test_swbreak() {
     unittest_printf("Invoking s/w breakpoint instruction\n");
-    crashlogger_request_backtrace();
+    zx_crashlogger_request_backtrace();
     unittest_printf("Resumed after s/w breakpoint instruction\n");
     return 0;
 }

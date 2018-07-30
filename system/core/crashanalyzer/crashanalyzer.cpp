@@ -76,13 +76,13 @@ static bool is_resumable_swbreak(uint32_t excp_type) {
 #if defined(__x86_64__)
 
 static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return regs->rax == CRASHLOGGER_REQUEST_SELF_BT_MAGIC;
+    return regs->rax == ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC;
 }
 
 #elif defined(__aarch64__)
 
 static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return regs->r[0] == CRASHLOGGER_REQUEST_SELF_BT_MAGIC;
+    return regs->r[0] == ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC;
 }
 
 #else
@@ -273,7 +273,7 @@ static void process_report(zx_handle_t process, zx_handle_t thread, bool use_lib
 #endif
 
     // This won't print "fatal" in the case where this is a s/w bkpt but
-    // CRASHLOGGER_REQUEST_SELF_BT_MAGIC isn't set. Big deal.
+    // ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC isn't set. Big deal.
     if (is_resumable_swbreak(type))
         fatal = "";
     // TODO(MA-922): Remove this and make policy exceptions fatal.

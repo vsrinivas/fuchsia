@@ -107,7 +107,7 @@ debugger, or as a general builtin debug mechanism, this can be useful.
 #include <zircon/crashlogger.h>
 
 void my_function() {
-  crashlogger_request_backtrace();
+  zx_crashlogger_request_backtrace();
 }
 ```
 
