@@ -128,6 +128,8 @@ interface PageCloud {
       -> (Status @status, vector<Commit> commits, Token? position_token);
 
   // Uploads the given object to the cloud under the given id.
+  //
+  // If the object already exists in the cloud this method returns OK.
   3: AddObject(vector<uint8> id, fuchsia.mem.Buffer buffer) -> (Status @status);
 
   // Retrieves the object of the given id from the cloud.

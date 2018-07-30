@@ -240,6 +240,10 @@ void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
         firestore_service_->CreateDocument(
             std::move(request), std::move(call_credentials),
             [callback = std::move(callback)](auto status, auto result) {
+              if (status.error_code() == grpc::ALREADY_EXISTS) {
+                callback(cloud_provider::Status::OK);
+                return;
+              }
               if (LogGrpcRequestError(status)) {
                 callback(ConvertGrpcStatus(status.error_code()));
                 return;

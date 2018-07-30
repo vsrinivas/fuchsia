@@ -27,7 +27,8 @@ bool LogGrpcRequestError(const grpc::Status& status) {
   if (!status.ok()) {
     FXL_LOG(ERROR) << "Server request failed, "
                    << "error message: " << status.error_message()
-                   << ", error details: " << status.error_details();
+                   << ", error details: " << status.error_details()
+                   << ", error code: " << status.error_code();
     return true;
   }
 
@@ -38,7 +39,9 @@ bool LogGrpcConnectionError(const grpc::Status& status) {
   if (!status.ok()) {
     FXL_LOG(ERROR) << "Server unexpectedly closed the connection "
                    << "with status: " << status.error_message()
-                   << ", error details: " << status.error_details();
+                   << ", error details: " << status.error_details()
+                   << ", error code: " << status.error_code();
+    return true;
     return true;
   }
 

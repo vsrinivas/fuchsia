@@ -233,6 +233,26 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   EXPECT_EQ("bazinga!", data_str);
 }
 
+TEST_F(PageCloudTest, AddSameObjectTwice) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+
+  fsl::SizedVmo data;
+  ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
+  Status status = Status::INTERNAL_ERROR;
+  const std::string id = "some id";
+  ASSERT_EQ(ZX_OK, page_cloud->AddObject(
+                       ToArray(id), std::move(data).ToTransport(), &status));
+  EXPECT_EQ(Status::OK, status);
+  // Adding the same object again must succeed as per cloud provider contract.
+  fsl::SizedVmo more_data;
+  ASSERT_TRUE(fsl::VmoFromString("bazinga!", &more_data));
+  ASSERT_EQ(ZX_OK,
+            page_cloud->AddObject(ToArray(id),
+                                  std::move(more_data).ToTransport(), &status));
+  EXPECT_EQ(Status::OK, status);
+}
+
 TEST_F(PageCloudTest, WatchAndReceiveCommits) {
   PageCloudSyncPtr page_cloud;
   ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
