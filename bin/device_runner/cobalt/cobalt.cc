@@ -6,13 +6,12 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/file.h>
 
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace modular {
 namespace {
-constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
+constexpr int32_t kCobaltProjectId = 101;
 constexpr int32_t kCobaltNoOpEncodingId = 2;
 
 cobalt::CobaltContext* g_cobalt_context = nullptr;
@@ -21,11 +20,7 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context) {
-  fsl::SizedVmo config_vmo;
-  bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
-  FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
-
-  return cobalt::InitializeCobalt(dispatcher, context, std::move(config_vmo),
+  return cobalt::InitializeCobalt(dispatcher, context, kCobaltProjectId,
                                   &g_cobalt_context);
 }
 
