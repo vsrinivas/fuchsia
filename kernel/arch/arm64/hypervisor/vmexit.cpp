@@ -57,6 +57,16 @@ SystemInstruction::SystemInstruction(uint32_t iss) {
     read = BIT(iss, 0);
 }
 
+SgiRegister::SgiRegister(uint64_t sgir) {
+    aff3 = static_cast<uint8_t>(BITS_SHIFT(sgir, 55, 48));
+    aff2 = static_cast<uint8_t>(BITS_SHIFT(sgir, 39, 32));
+    aff1 = static_cast<uint8_t>(BITS_SHIFT(sgir, 23, 16));
+    rs = static_cast<uint8_t>(BITS_SHIFT(sgir, 47, 44));
+    target_list = static_cast<uint8_t>(BITS_SHIFT(sgir, 15, 0));
+    int_id = static_cast<uint8_t>(BITS_SHIFT(sgir, 27, 24));
+    all_but_local = BIT(sgir, 40);
+}
+
 DataAbort::DataAbort(uint32_t iss) {
     valid = BIT_SHIFT(iss, 24);
     access_size = static_cast<uint8_t>(1u << BITS_SHIFT(iss, 23, 22));
@@ -144,7 +154,8 @@ static void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
 }
 
 static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state,
-                                             hypervisor::GuestPhysicalAddressSpace* gpas) {
+                                             hypervisor::GuestPhysicalAddressSpace* gpas,
+                                             zx_port_packet_t* packet) {
     const SystemInstruction si(iss);
     const uint64_t reg = guest_state->x[si.xt];
 
@@ -198,6 +209,29 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
             guest_state->x[si.xt] = 0;
         }
         return ZX_OK;
+    case SystemRegister::ICC_SGI1R_EL1: {
+        if (si.read) {
+            // ICC_SGI1R_EL1 is write-only.
+            return ZX_ERR_INVALID_ARGS;
+        }
+        SgiRegister sgi(reg);
+        if (sgi.aff3 != 0 || sgi.aff2 != 0 || sgi.aff1 != 0 || sgi.rs != 0) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        memset(packet, 0, sizeof(*packet));
+        packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+        packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
+        if (sgi.all_but_local) {
+            auto vpid = BITS(guest_state->system_state.vmpidr_el2, 8, 0);
+            packet->guest_vcpu.interrupt.mask = ~(1u << vpid);
+        } else {
+            packet->guest_vcpu.interrupt.mask = sgi.target_list;
+        }
+        packet->guest_vcpu.interrupt.vector = sgi.int_id;
+        next_pc(guest_state);
+        return ZX_ERR_NEXT;
+    }
     }
 
     dprintf(CRITICAL, "Unhandled system register %#x\n", static_cast<uint16_t>(si.sysreg));
@@ -297,7 +331,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_SYSTEM_INSTRUCTION);
-        return handle_system_instruction(syndrome.iss, hcr, guest_state, gpas);
+        return handle_system_instruction(syndrome.iss, hcr, guest_state, gpas, packet);
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_INSTRUCTION_ABORT);
