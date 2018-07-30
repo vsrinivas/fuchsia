@@ -11,45 +11,42 @@ use wire::ipv4;
 use wire::util::Checksum;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-/// Enum to repersent the possible values of the type field in a ICMPv4 packet.
-#[allow(missing_docs)]
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum Icmpv4Type {
-    EchoReply = Icmpv4Type::ECHO_REPLY,
-    DestUnreachable = Icmpv4Type::DEST_UNREACHABLE,
-    Redirect = Icmpv4Type::REDIRECT,
-    EchoRequest = Icmpv4Type::ECHO_REQUEST,
-    TimeExceeded = Icmpv4Type::TIME_EXCEEDED,
-    ParameterProblem = Icmpv4Type::PARAMETER_PROBLEM,
-    TimestampRequest = Icmpv4Type::TIMESTAMP_REQUEST,
-    TimestampReply = Icmpv4Type::TIMESTAMP_REPLY,
+macro_rules! create_net_enum {
+    ($t:ident, $($val:ident: $const:ident = $value:expr,)*) => {
+      create_net_enum!($t, $($val: $const = $value),*);
+    };
+
+    ($t:ident, $($val:ident: $const:ident = $value:expr),*) => {
+      #[allow(missing_docs)]
+      #[derive(Debug, PartialEq, Copy, Clone)]
+      #[repr(u8)]
+      pub enum $t {
+        $($val = $t::$const),*
+      }
+
+      impl $t {
+        $(const $const: u8 = $value;)*
+
+        fn from_u8(u: u8) -> Option<$t> {
+          match u {
+            $($t::$const => Some($t::$val)),*,
+            _ => None,
+          }
+        }
+      }
+    };
 }
 
-impl Icmpv4Type {
-    const ECHO_REPLY: u8 = 0;
-    const DEST_UNREACHABLE: u8 = 3;
-    const REDIRECT: u8 = 5;
-    const ECHO_REQUEST: u8 = 8;
-    const TIME_EXCEEDED: u8 = 11;
-    const PARAMETER_PROBLEM: u8 = 12;
-    const TIMESTAMP_REQUEST: u8 = 13;
-    const TIMESTAMP_REPLY: u8 = 14;
-
-    //TODO(wesleyac) automate this
-    fn from_u8(u: u8) -> Option<Icmpv4Type> {
-        match u {
-            Icmpv4Type::ECHO_REPLY => Some(Icmpv4Type::EchoReply),
-            Icmpv4Type::DEST_UNREACHABLE => Some(Icmpv4Type::DestUnreachable),
-            Icmpv4Type::REDIRECT => Some(Icmpv4Type::Redirect),
-            Icmpv4Type::ECHO_REQUEST => Some(Icmpv4Type::EchoRequest),
-            Icmpv4Type::TIME_EXCEEDED => Some(Icmpv4Type::TimeExceeded),
-            Icmpv4Type::PARAMETER_PROBLEM => Some(Icmpv4Type::ParameterProblem),
-            Icmpv4Type::TIMESTAMP_REQUEST => Some(Icmpv4Type::TimestampRequest),
-            Icmpv4Type::TIMESTAMP_REPLY => Some(Icmpv4Type::TimestampReply),
-            _ => None,
-        }
-    }
+create_net_enum! {
+  Icmpv4Type,
+  EchoReply: ECHO_REPLY = 0,
+  DestUnreachable: DEST_UNREACHABLE = 3,
+  Redirect: REDIRECT = 5,
+  EchoRequest: ECHO_REQUEST = 8,
+  TimeExceeded: TIME_EXCEEDED = 11,
+  ParameterProblem: PARAMETER_PROBLEM = 12,
+  TimestampRequest: TIMESTAMP_REQUEST = 13,
+  TimestampReply: TIMESTAMP_REPLY = 14,
 }
 
 #[allow(missing_docs)]
@@ -130,22 +127,41 @@ struct Icmpv4Echo<B> {
 }
 
 impl<B: ByteSlice> Icmpv4Echo<B> {
-    /// Parse a ByteSlice into a ICMPv4 Echo request or response body.
-    pub fn parse(bytes: B) -> Result<Icmpv4Echo<B>, ParseError> {
+    fn parse(bytes: B) -> Result<Icmpv4Echo<B>, ParseError> {
         let (id_seq, data) =
             LayoutVerified::<B, IdAndSeq>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         Ok(Icmpv4Echo { id_seq, data })
     }
 }
 
+create_net_enum! {
+  Icmpv4DestUnreachableCode,
+  DestNetworkUnreachable: DEST_NETWORK_UNREACHABLE = 0,
+  DestHostUnreachable: DEST_HOST_UNREACHABLE = 1,
+  DestProtocolUnreachable: DEST_PROTOCOL_UNREACHABLE = 2,
+  DestPortUnreachable: DEST_PORT_UNREACHABLE = 3,
+  FragmentationRequired: FRAGMENTATION_REQUIRED = 4,
+  SourceRouteFailed: SOURCE_ROUTE_FAILED = 5,
+  DestNetworkUnknown: DEST_NETWORK_UNKNOWN = 6,
+  DestHostUnknown: DEST_HOST_UNKNOWN = 7,
+  SourceHostIsolated: SOURCE_HOST_ISOLATED = 8,
+  NetworkAdministrativelyProhibited: NETWORK_ADMINISTRATIVELY_PROHIBITED = 9,
+  HostAdministrativelyProhibited: HOST_ADMINISTRATIVELY_PROHIBITED = 10,
+  NetworkUnreachableForToS: NETWORK_UNREACHABLE_FOR_TOS = 11,
+  HostUnreachableForToS: HOST_UNREACHABLE_FOR_TOS = 12,
+  CommunicationAdministrativelyProhibited: COMMUNICATION_ADMINISTRATIVELY_PROHIBITED = 13,
+  HostPrecedenceViolation: HOST_PRECEDENCE_VIOLATION = 14,
+  PrecedenceCutoffInEffect: PRECEDENCE_CUTOFF_IN_EFFECT = 15,
+}
+
 struct Icmpv4DestUnreachable<B> {
+    code: Icmpv4DestUnreachableCode,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
     origin_data: LayoutVerified<B, IcmpOriginData>,
 }
 
 impl<B: ByteSlice> Icmpv4DestUnreachable<B> {
-    /// Parse a ByteSlice into a ICMPv4 Destination Unreachable message body.
-    pub fn parse(bytes: B) -> Result<Icmpv4DestUnreachable<B>, ParseError> {
+    fn parse(bytes: B, code: u8) -> Result<Icmpv4DestUnreachable<B>, ParseError> {
         // Eat the 4 unused bytes at the start of the packet
         let (_, bytes) =
             LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
@@ -154,21 +170,32 @@ impl<B: ByteSlice> Icmpv4DestUnreachable<B> {
         ).ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        let code = Icmpv4DestUnreachableCode::from_u8(code).ok_or(ParseError::Format)?;
         Ok(Icmpv4DestUnreachable {
+            code,
             internet_header,
             origin_data,
         })
     }
 }
 
+create_net_enum! {
+  Icmpv4RedirectCode,
+  RedirectForNetwork: REDIRECT_FOR_NETWORK = 0,
+  RedirectForHost: REDIRECT_FOR_HOST = 1,
+  RedirectForToSNetwork: REDIRECT_FOR_TOS_NETWORK = 2,
+  RedirectForToSHost: REDIRECT_FOR_TOS_HOST = 3,
+}
+
 struct Icmpv4Redirect<B> {
+    code: Icmpv4RedirectCode,
     gateway: LayoutVerified<B, Ipv4Addr>,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
     origin_data: LayoutVerified<B, IcmpOriginData>,
 }
 
 impl<B: ByteSlice> Icmpv4Redirect<B> {
-    pub fn parse(bytes: B) -> Result<Icmpv4Redirect<B>, ParseError> {
+    fn parse(bytes: B, code: u8) -> Result<Icmpv4Redirect<B>, ParseError> {
         let (gateway, bytes) =
             LayoutVerified::<B, Ipv4Addr>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         let (internet_header, bytes) = LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(
@@ -176,7 +203,9 @@ impl<B: ByteSlice> Icmpv4Redirect<B> {
         ).ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        let code = Icmpv4RedirectCode::from_u8(code).ok_or(ParseError::Format)?;
         Ok(Icmpv4Redirect {
+            code,
             gateway,
             internet_header,
             origin_data,
@@ -184,13 +213,20 @@ impl<B: ByteSlice> Icmpv4Redirect<B> {
     }
 }
 
+create_net_enum! {
+  Icmpv4TimeExceededCode,
+  TTLExpired: TTL_EXPIRED = 0,
+  FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
+}
+
 struct Icmpv4TimeExceeded<B> {
+    code: Icmpv4TimeExceededCode,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
     origin_data: LayoutVerified<B, IcmpOriginData>,
 }
 
 impl<B: ByteSlice> Icmpv4TimeExceeded<B> {
-    pub fn parse(bytes: B) -> Result<Icmpv4TimeExceeded<B>, ParseError> {
+    fn parse(bytes: B, code: u8) -> Result<Icmpv4TimeExceeded<B>, ParseError> {
         // Eat the 4 unused bytes at the start of the packet
         let (_, bytes) =
             LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
@@ -199,21 +235,31 @@ impl<B: ByteSlice> Icmpv4TimeExceeded<B> {
         ).ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        let code = Icmpv4TimeExceededCode::from_u8(code).ok_or(ParseError::Format)?;
         Ok(Icmpv4TimeExceeded {
+            code,
             internet_header,
             origin_data,
         })
     }
 }
 
+create_net_enum! {
+  Icmpv4ParameterProblemCode,
+  PointerIndicatesError: POINTER_INDICATES_ERROR = 0,
+  MissingRequiredOption: MISSING_REQUIRED_OPTION = 1,
+  BadLength: BAD_LENGTH = 2,
+}
+
 struct Icmpv4ParameterProblem<B> {
+    code: Icmpv4ParameterProblemCode,
     pointer: LayoutVerified<B, u8>,
     internet_header: LayoutVerified<B, ipv4::HeaderPrefix>,
     origin_data: LayoutVerified<B, IcmpOriginData>,
 }
 
 impl<B: ByteSlice> Icmpv4ParameterProblem<B> {
-    pub fn parse(bytes: B) -> Result<Icmpv4ParameterProblem<B>, ParseError> {
+    fn parse(bytes: B, code: u8) -> Result<Icmpv4ParameterProblem<B>, ParseError> {
         let (pointer, bytes) =
             LayoutVerified::<B, u8>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         let (_, bytes) =
@@ -223,7 +269,9 @@ impl<B: ByteSlice> Icmpv4ParameterProblem<B> {
         ).ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
+        let code = Icmpv4ParameterProblemCode::from_u8(code).ok_or(ParseError::Format)?;
         Ok(Icmpv4ParameterProblem {
+            code,
             pointer,
             internet_header,
             origin_data,
@@ -274,7 +322,7 @@ struct Icmpv4Timestamp<B> {
 }
 
 impl<B: ByteSlice> Icmpv4Timestamp<B> {
-    pub fn parse(bytes: B) -> Result<Icmpv4Timestamp<B>, ParseError> {
+    fn parse(bytes: B) -> Result<Icmpv4Timestamp<B>, ParseError> {
         let (id_seq, bytes) =
             LayoutVerified::<B, IdAndSeq>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         let timestamps =
@@ -297,7 +345,6 @@ enum Icmpv4Body<B> {
 
 /// Struct to represent an ICMPv4 packet.
 pub struct Icmpv4Packet<B> {
-    code: u8,
     checksum: [u8; 2],
     body: Icmpv4Body<B>,
 }
@@ -319,16 +366,18 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
         let body = match header.msg_type() {
             Ok(Icmpv4Type::EchoReply) => Icmpv4Body::EchoReply(Icmpv4Echo::parse(body_bytes)?),
             Ok(Icmpv4Type::DestUnreachable) => {
-                Icmpv4Body::DestUnreachable(Icmpv4DestUnreachable::parse(body_bytes)?)
+                Icmpv4Body::DestUnreachable(Icmpv4DestUnreachable::parse(body_bytes, header.code)?)
             }
-            Ok(Icmpv4Type::Redirect) => Icmpv4Body::Redirect(Icmpv4Redirect::parse(body_bytes)?),
+            Ok(Icmpv4Type::Redirect) => {
+                Icmpv4Body::Redirect(Icmpv4Redirect::parse(body_bytes, header.code)?)
+            }
             Ok(Icmpv4Type::EchoRequest) => Icmpv4Body::EchoRequest(Icmpv4Echo::parse(body_bytes)?),
             Ok(Icmpv4Type::TimeExceeded) => {
-                Icmpv4Body::TimeExceeded(Icmpv4TimeExceeded::parse(body_bytes)?)
+                Icmpv4Body::TimeExceeded(Icmpv4TimeExceeded::parse(body_bytes, header.code)?)
             }
-            Ok(Icmpv4Type::ParameterProblem) => {
-                Icmpv4Body::ParameterProblem(Icmpv4ParameterProblem::parse(body_bytes)?)
-            }
+            Ok(Icmpv4Type::ParameterProblem) => Icmpv4Body::ParameterProblem(
+                Icmpv4ParameterProblem::parse(body_bytes, header.code)?,
+            ),
             Ok(Icmpv4Type::TimestampRequest) => {
                 Icmpv4Body::TimestampRequest(Icmpv4Timestamp::parse(body_bytes)?)
             }
@@ -338,7 +387,6 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
             Err(_) => return Err(ParseError::NotSupported),
         };
         let packet = Icmpv4Packet {
-            code: header.code,
             checksum: header.checksum,
             body,
         };
