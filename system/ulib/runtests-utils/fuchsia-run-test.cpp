@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -22,13 +23,16 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
 
     // If |output_filename| is provided, prepare the file descriptors that will
     // be used to tee the stdout/stderr of the test into the associated file.
-    int fds[2] = {-1, -1};
+    fbl::unique_fd fds[2];
     size_t fdio_action_count = 1;  // At least one for SET_NAME.
     if (output_filename != nullptr) {
-        if (pipe(fds)) {
+        int temp_fds[2] = {-1, -1};
+        if (pipe(temp_fds)) {
             fprintf(stderr, "FAILURE: Failed to create pipe: %s\n", strerror(errno));
             return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
         }
+        fds[0].reset(temp_fds[0]);
+        fds[1].reset(temp_fds[1]);
         fdio_action_count += 2;  // Plus two for CLONE_FD and TRANSFER_FD.
     }
 
@@ -37,9 +41,9 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     const fdio_spawn_action_t fdio_actions[] = {
         {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = path}},
         {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-         .fd = {.local_fd = fds[1], .target_fd = STDOUT_FILENO}},
+         .fd = {.local_fd = fds[1].get(), .target_fd = STDOUT_FILENO}},
         {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-         .fd = {.local_fd = fds[1], .target_fd = STDERR_FILENO}},
+         .fd = {.local_fd = fds[1].get(), .target_fd = STDERR_FILENO}},
     };
 
     zx_status_t status = ZX_OK;
@@ -56,6 +60,8 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         fprintf(stderr, "FAILURE: set_property() returned %d\n", status);
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
+
+    fds[1].release(); // To avoid double close since fdio_spawn_etc() closes it.
     zx::process process;
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL,
@@ -77,7 +83,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         }
         char buf[1024];
         ssize_t bytes_read = 0;
-        while ((bytes_read = read(fds[0], buf, sizeof(buf))) > 0) {
+        while ((bytes_read = read(fds[0].get(), buf, sizeof(buf))) > 0) {
             fwrite(buf, 1, bytes_read, output_file);
             fwrite(buf, 1, bytes_read, stdout);
         }
