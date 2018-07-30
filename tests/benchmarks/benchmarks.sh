@@ -95,5 +95,11 @@ runbench_exec "${OUT_DIR}/ledger.delete_entry_transactions.json" \
     --test-suite=fuchsia.ledger.delete_entry_transactions \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_entry_transactions.json"
 
+runbench_exec "${OUT_DIR}/modular.story_runner.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/modular_benchmarks/0/data/modular_benchmark_story.tspec \
+    --test-suite=fuchsia.modular \
+    --benchmark-results-file="${OUT_DIR}/modular.story_runner.json"
+
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
