@@ -62,6 +62,7 @@ template("amber_publish") {
       "-ps",
       "-f",
       rebase_path(inputs[0]),
+      "-vt",
     ]
   }
 }
