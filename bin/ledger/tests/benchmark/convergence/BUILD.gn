@@ -16,11 +16,12 @@ executable("ledger_benchmark_convergence") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/callback",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/public/fidl/fuchsia.ledger",

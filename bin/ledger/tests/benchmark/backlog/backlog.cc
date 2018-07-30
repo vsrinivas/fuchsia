@@ -13,7 +13,9 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
 #include "lib/fidl/cpp/clone.h"
@@ -22,7 +24,6 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
-#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -31,7 +32,6 @@ constexpr fxl::StringView kUniqueKeyCountFlag = "unique-key-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kCommitCountFlag = "commit-count";
 constexpr fxl::StringView kRefsFlag = "refs";
-
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
 
@@ -58,23 +58,25 @@ BacklogBenchmark::BacklogBenchmark(
     async::Loop* loop, size_t unique_key_count, size_t value_size,
     size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
-    std::string server_id)
+    ledger::SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(startup_context_.get()),
+      cloud_provider_factory_(
+          startup_context_.get(), std::move(sync_params.server_id),
+          std::move(sync_params.api_key), std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
       unique_key_count_(unique_key_count),
       value_size_(value_size),
       commit_count_(commit_count),
       reference_strategy_(reference_strategy),
-      server_id_(std::move(server_id)),
+      user_id_("backlog_" + fxl::GenerateUUID()),
       writer_tmp_dir_(kStoragePath),
       reader_tmp_dir_(kStoragePath) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(unique_key_count_ > 0);
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(commit_count_ > 0);
-  cloud_provider_firebase_factory_.Init();
+  cloud_provider_factory_.Init();
 }
 
 void BacklogBenchmark::SyncStateChanged(ledger::SyncState download,
@@ -158,8 +160,8 @@ void BacklogBenchmark::ConnectUploader() {
   std::string uploader_path = writer_tmp_dir_.path() + kUserDirectory;
 
   cloud_provider::CloudProviderPtr cloud_provider_uploader;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "backlog", cloud_provider_uploader.NewRequest());
+  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+      user_id_, cloud_provider_uploader.NewRequest());
   test::GetLedger(
       startup_context_.get(), uploader_controller_.NewRequest(),
       std::move(cloud_provider_uploader), "backlog",
@@ -207,8 +209,8 @@ void BacklogBenchmark::ConnectReader() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "backlog", cloud_provider_reader.NewRequest());
+  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+      user_id_, cloud_provider_reader.NewRequest());
   test::GetLedger(
       startup_context_.get(), reader_controller_.NewRequest(),
       std::move(cloud_provider_reader), "backlog",
@@ -336,7 +338,7 @@ int main(int argc, const char** argv) {
   std::string commit_count_str;
   size_t commit_count;
   std::string reference_strategy_str;
-  std::string server_id;
+  ledger::SyncParams sync_params;
   if (!command_line.GetOptionValue(kUniqueKeyCountFlag.ToString(),
                                    &unique_key_count_str) ||
       !fxl::StringToNumberWithError(unique_key_count_str, &unique_key_count) ||
@@ -351,7 +353,7 @@ int main(int argc, const char** argv) {
       commit_count <= 0 ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ledger::ParseSyncParamsFromCommandLine(&command_line, &server_id)) {
+      !ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }
@@ -373,6 +375,6 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::BacklogBenchmark app(&loop, unique_key_count, value_size,
                                         commit_count, reference_strategy,
-                                        server_id);
+                                        std::move(sync_params));
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

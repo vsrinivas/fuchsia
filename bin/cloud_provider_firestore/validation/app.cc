@@ -78,17 +78,17 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
-  cloud_provider_firestore::CloudProviderFactory factory(startup_context.get(),
-                                                         credentials);
+  cloud_provider_firestore::CloudProviderFactory factory(
+      startup_context.get(), server_id, api_key, credentials);
 
   cloud_provider::ValidationTestsLauncher launcher(
-      startup_context.get(), [&factory, api_key, server_id](auto request) {
-        factory.MakeCloudProvider(server_id, api_key, std::move(request));
+      startup_context.get(), [&factory](auto request) {
+        factory.MakeCloudProvider(std::move(request));
       });
 
   int32_t return_code = -1;
   async::PostTask(loop.dispatcher(), [&factory, &launcher, &return_code, &loop,
-                                 arguments = std::move(arguments)] {
+                                      arguments = std::move(arguments)] {
     factory.Init();
 
     launcher.Run(arguments, [&return_code, &loop](int32_t result) {

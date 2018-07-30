@@ -11,8 +11,10 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
@@ -20,7 +22,6 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
-#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -58,14 +59,16 @@ struct ConvergenceBenchmark::DeviceContext {
 
 ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int device_count,
-                                           std::string server_id)
+                                           ledger::SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(startup_context_.get()),
+      cloud_provider_factory_(
+          startup_context_.get(), std::move(sync_params.server_id),
+          std::move(sync_params.api_key), std::move(sync_params.credentials)),
       entry_count_(entry_count),
       value_size_(value_size),
       device_count_(device_count),
-      server_id_(std::move(server_id)),
+      user_id_("convergence_" + fxl::GenerateUUID()),
       devices_(device_count) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count_ > 0);
@@ -79,7 +82,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
         std::make_unique<fidl::Binding<ledger::PageWatcher>>(this);
   }
   page_id_ = generator_.MakePageId();
-  cloud_provider_firebase_factory_.Init();
+  cloud_provider_factory_.Init();
 }
 
 void ConvergenceBenchmark::Run() {
@@ -95,8 +98,8 @@ void ConvergenceBenchmark::Run() {
     FXL_DCHECK(ret);
 
     cloud_provider::CloudProviderPtr cloud_provider;
-    cloud_provider_firebase_factory_.MakeCloudProvider(
-        server_id_, "", cloud_provider.NewRequest());
+    cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+        user_id_, cloud_provider.NewRequest());
 
     test::GetLedger(
         startup_context_.get(), device_context->controller.NewRequest(),
@@ -193,7 +196,7 @@ int main(int argc, const char** argv) {
   int value_size;
   std::string device_count_str;
   int device_count;
-  std::string server_id;
+  ledger::SyncParams sync_params;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
@@ -206,13 +209,13 @@ int main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !ledger::ParseSyncParamsFromCommandLine(&command_line, &server_id)) {
+      !ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::ConvergenceBenchmark app(&loop, entry_count, value_size,
-                                            device_count, server_id);
+  test::benchmark::ConvergenceBenchmark app(
+      &loop, entry_count, value_size, device_count, std::move(sync_params));
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

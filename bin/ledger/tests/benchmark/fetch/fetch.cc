@@ -12,7 +12,9 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
@@ -20,7 +22,6 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
-#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -50,22 +51,24 @@ namespace benchmark {
 
 FetchBenchmark::FetchBenchmark(async::Loop* loop, size_t entry_count,
                                size_t value_size, size_t part_size,
-                               std::string server_id)
+                               ledger::SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(startup_context_.get()),
+      cloud_provider_factory_(
+          startup_context_.get(), std::move(sync_params.server_id),
+          std::move(sync_params.api_key), std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
       entry_count_(entry_count),
       value_size_(value_size),
       part_size_(part_size),
-      server_id_(std::move(server_id)),
+      user_id_("fetch_" + fxl::GenerateUUID()),
       writer_tmp_dir_(kStoragePath),
       reader_tmp_dir_(kStoragePath) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count_ > 0);
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(part_size_ <= value_size);
-  cloud_provider_firebase_factory_.Init();
+  cloud_provider_factory_.Init();
 }
 
 void FetchBenchmark::SyncStateChanged(ledger::SyncState download,
@@ -85,8 +88,8 @@ void FetchBenchmark::Run() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_writer;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "", cloud_provider_writer.NewRequest());
+  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+      user_id_, cloud_provider_writer.NewRequest());
   test::GetLedger(
       startup_context_.get(), writer_controller_.NewRequest(),
       std::move(cloud_provider_writer), "fetch",
@@ -153,8 +156,8 @@ void FetchBenchmark::ConnectReader() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "", cloud_provider_reader.NewRequest());
+  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+      user_id_, cloud_provider_reader.NewRequest());
   test::GetLedger(
       startup_context_.get(), reader_controller_.NewRequest(),
       std::move(cloud_provider_reader), "fetch",
@@ -268,7 +271,7 @@ int main(int argc, const char** argv) {
   size_t value_size;
   std::string part_size_str;
   size_t part_size;
-  std::string server_id;
+  ledger::SyncParams sync_params;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
@@ -279,13 +282,13 @@ int main(int argc, const char** argv) {
       value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !ledger::ParseSyncParamsFromCommandLine(&command_line, &server_id)) {
+      !ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::FetchBenchmark app(&loop, entry_count, value_size, part_size,
-                                      server_id);
+                                      std::move(sync_params));
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

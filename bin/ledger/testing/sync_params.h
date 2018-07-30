@@ -10,6 +10,18 @@
 
 namespace ledger {
 
+// Parameters needed to configure synchronization against a real server.
+struct SyncParams {
+  // ID of the Firestore instance.
+  std::string server_id;
+
+  // API key used to access the database.
+  std::string api_key;
+
+  // Content of the service account JSON credentials.
+  std::string credentials;
+};
+
 // Returns a string listing the command-line parameters which need to be
 // provided for a benchmark to connect to a cloud server.
 std::string GetSyncParamsUsage();
@@ -17,7 +29,7 @@ std::string GetSyncParamsUsage();
 // Reads the sync parameters from the command-line. Prints a warning and returns
 // false if these parameters are missing or cannot be parsed.
 bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
-                                    std::string* server_id);
+                                    SyncParams* sync_params);
 
 }  // namespace ledger
 

@@ -7,8 +7,8 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>
@@ -26,22 +26,24 @@ namespace cloud_provider_firestore {
 class CloudProviderFactory {
  public:
   CloudProviderFactory(component::StartupContext* startup_context,
+                       std::string server_id, std::string api_key,
                        std::string credentials);
   ~CloudProviderFactory();
 
   void Init();
 
   void MakeCloudProvider(
-      std::string server_id, std::string api_key,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
   void MakeCloudProviderWithGivenUserId(
-      std::string server_id, std::string api_key, std::string user_id,
+      std::string user_id,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
   class TokenProviderContainer;
   component::StartupContext* const startup_context_;
+  const std::string server_id_;
+  const std::string api_key_;
   const std::string credentials_;
 
   // Loop on which the token manager runs.

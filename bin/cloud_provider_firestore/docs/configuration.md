@@ -24,3 +24,13 @@ service cloud.firestore {
 ```
 
 [Firebase Console]: https://console.firebase.google.com/
+
+## Credentials
+
+In order to run tests (end-to-end sync tests, sync benchmarks, validation tests)
+against a Firestore instance, you need the following:
+
+ - **server ID** - this is the ID of your Firestore instance
+ - **API key** - available in `Project Settings / General`
+ - **credentials file** for a service account - available in `Project Settings /
+     Service accounts`. Click on "Generate new private key".

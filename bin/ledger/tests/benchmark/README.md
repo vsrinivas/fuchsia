@@ -60,12 +60,15 @@ Benchmarks under `sync` and `convergence` use smaller number of entries and
 smaller value size.
 
 ### Benchmarks using sync
-Some benchmarks exercise sync. To run these, pass the ID of a correctly
-[configured] Firebase instance to the benchmark binary. For example:
+Some benchmarks exercise cloud synchronization using `cloud_provider_firestore`.
 
-```
-trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec
-  --append-args=--server-id=<my instance>
+To run these, [configure] a Firestore instance, obtain a credentials file for a
+service account managing it and copy it over to the device. Then, run the
+selected benchmark as follows:
+
+```sh
+trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec \
+  --append-args=--server-id=<instance id>,--credentials-path=<credentials file path>,--api-key=<api key>
 ```
 
 ### A note regarding benchmark apps
@@ -116,7 +119,7 @@ page.
       several entries, each of them added in a separate commit
 
 ### Sync benchmarks
-These benchmarks exercise synchronisation and need an ID of a Firebase instance
+These benchmarks exercise synchronisation and need an ID of a Firestore instance
 passed to them as described [in a previous
 section](README.md#benchmarks-using-sync).
 
@@ -151,6 +154,6 @@ section](README.md#benchmarks-using-sync).
       operations)
 
 [trace-based benchmarks]: https://fuchsia.googlesource.com/garnet/+/master/docs/benchmarking.md
-[configured]: /docs/ledger/firebase.md
+[configure]: /bin/cloud_provider_firestore/docs/configuration.md
 [lazy value]: /docs/ledger/api_guide.md#lazy-values
 [PageWatcher notification]: /docs/ledger/api_guide.md#watch

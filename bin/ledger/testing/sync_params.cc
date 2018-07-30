@@ -6,16 +6,24 @@
 
 #include <iostream>
 
+#include <lib/fxl/files/file.h>
+
 namespace {
 
 constexpr fxl::StringView kServerIdFlag = "server-id";
+constexpr fxl::StringView kApiKeyFlag = "api-key";
+constexpr fxl::StringView kCredentialsPathFlag = "credentials-path";
 
 void WarnIncorrectSyncParams() {
-  std::cout << "Missing " << kServerIdFlag << " parameter." << std::endl;
-  std::cout << "This benchmark needs an ID of a configured Firebase instance "
-               "to run. If you're running it from a .tspec file, make sure "
-               "you add --append-args=\"--"
-            << kServerIdFlag << "=<string>\"." << std::endl;
+  std::cerr << "Missing one or more of the sync parameters." << std::endl;
+  std::cerr << "This benchmark needs an ID of a configured Firestore instance "
+               "to run along with access credentials. "
+               "If you're running it from a .tspec file, make sure "
+               "you add --append-args=\""
+            << "--" << kServerIdFlag << "=<string>,"
+            << "--" << kApiKeyFlag << "=<string>,"
+            << "--" << kCredentialsPathFlag << "=<file path>"
+            << "\"." << std::endl;
 }
 
 }  // namespace
@@ -25,16 +33,30 @@ namespace ledger {
 std::string GetSyncParamsUsage() {
   std::ostringstream result;
   result << " --" << kServerIdFlag << "=<string>";
+  result << " --" << kApiKeyFlag << "=<string>";
+  result << " --" << kCredentialsPathFlag << "=<file path>";
   return result.str();
 }
 
 bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
-                                    std::string* server_id) {
-  bool ret = command_line->GetOptionValue(kServerIdFlag.ToString(), server_id);
+                                    SyncParams* sync_params) {
+  std::string credentials_path;
+  bool ret = command_line->GetOptionValue(kServerIdFlag.ToString(),
+                                          &sync_params->server_id) &&
+             command_line->GetOptionValue(kApiKeyFlag.ToString(),
+                                          &sync_params->api_key) &&
+             command_line->GetOptionValue(kCredentialsPathFlag.ToString(),
+                                          &credentials_path);
   if (!ret) {
     WarnIncorrectSyncParams();
+    return false;
   }
-  return ret;
+
+  if (!files::ReadFileToString(credentials_path, &sync_params->credentials)) {
+    std::cerr << "Cannot access " << credentials_path << std::endl;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace ledger

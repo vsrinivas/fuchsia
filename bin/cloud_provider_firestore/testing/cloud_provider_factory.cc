@@ -58,10 +58,17 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    component::StartupContext* startup_context, std::string credentials)
+    component::StartupContext* startup_context, std::string server_id,
+    std::string api_key, std::string credentials)
     : startup_context_(startup_context),
+      server_id_(std::move(server_id)),
+      api_key_(std::move(api_key)),
       credentials_(std::move(credentials)),
-      services_loop_(&kAsyncLoopConfigNoAttachToThread) {}
+      services_loop_(&kAsyncLoopConfigNoAttachToThread) {
+  FXL_DCHECK(startup_context);
+  FXL_DCHECK(!server_id_.empty());
+  FXL_DCHECK(!api_key_.empty());
+}
 
 CloudProviderFactory::~CloudProviderFactory() { services_loop_.Shutdown(); }
 
@@ -77,19 +84,13 @@ void CloudProviderFactory::Init() {
 }
 
 void CloudProviderFactory::MakeCloudProvider(
-    std::string server_id, std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
-  MakeCloudProviderWithGivenUserId(std::move(server_id), std::move(api_key),
-                                   fxl::GenerateUUID(), std::move(request));
+  MakeCloudProviderWithGivenUserId(fxl::GenerateUUID(), std::move(request));
 }
 
 void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
-    std::string server_id, std::string api_key, std::string user_id,
+    std::string user_id,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
-  if (api_key.empty()) {
-    FXL_LOG(WARNING) << "Empty Firebase API key - this can possibly work "
-                     << "only with unauthenticated server instances.";
-  }
   fuchsia::modular::auth::TokenProviderPtr token_provider;
   async::PostTask(
       services_loop_.dispatcher(),
@@ -100,8 +101,8 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
       }));
 
   cloud_provider_firestore::Config firebase_config;
-  firebase_config.server_id = server_id;
-  firebase_config.api_key = api_key;
+  firebase_config.server_id = server_id_;
+  firebase_config.api_key = api_key_;
 
   cloud_provider_factory_->GetCloudProvider(
       std::move(firebase_config), std::move(token_provider), std::move(request),
