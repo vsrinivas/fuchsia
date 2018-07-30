@@ -73,6 +73,22 @@ typedef struct {
                                  uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
     zx_status_t (*req_init)(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
                             uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
+    ssize_t (*req_copy_from)(void* ctx, usb_request_t* req, void* data,
+                                 size_t length, size_t offset);
+    ssize_t (*req_copy_to)(void* ctx, usb_request_t* req, const void* data,
+                               size_t length, size_t offset);
+    zx_status_t (*req_mmap)(void* ctx, usb_request_t* req, void** data);
+    zx_status_t (*req_cacheop)(void* ctx, usb_request_t* req, uint32_t op,
+                                   size_t offset, size_t length);
+    zx_status_t (*req_cache_flush)(void* ctx, usb_request_t* req,
+                                   size_t offset, size_t length);
+    zx_status_t (*req_cache_flush_invalidate)(void* ctx, usb_request_t* req,
+                                              zx_off_t offset, size_t length);
+    zx_status_t (*req_physmap)(void* ctx, usb_request_t* req);
+    void (*req_release)(void* ctx, usb_request_t* req);
+    void (*req_complete)(void* ctx, usb_request_t* req, zx_status_t status, zx_off_t actual);
+    void (*req_phys_iter_init)(void* ctx, phys_iter_t* iter, usb_request_t* req,
+                                   size_t max_length);
     zx_status_t (*register_func)(void* ctx, usb_function_interface_t* intf);
     zx_status_t (*alloc_interface)(void* ctx, uint8_t* out_intf_num);
     zx_status_t (*alloc_ep)(void* ctx, uint8_t direction, uint8_t* out_address);
@@ -106,6 +122,57 @@ static inline zx_status_t usb_function_req_init(usb_function_protocol_t* usb, us
                                                 zx_handle_t vmo_handle, uint64_t vmo_offset,
                                                 uint64_t length, uint8_t ep_address) {
     return usb->ops->req_init(usb->ctx, req, vmo_handle, vmo_offset, length, ep_address);
+}
+
+static inline ssize_t usb_function_req_copy_from(usb_function_protocol_t* usb, usb_request_t* req,
+                                                 void* data, size_t length, size_t offset) {
+    return usb->ops->req_copy_from(usb->ctx, req, data, length, offset);
+}
+
+static inline ssize_t usb_function_req_copy_to(usb_function_protocol_t* usb, usb_request_t* req,
+                                               const void* data, size_t length, size_t offset) {
+    return usb->ops->req_copy_to(usb->ctx, req, data, length, offset);
+}
+
+static inline zx_status_t usb_function_req_mmap(usb_function_protocol_t* usb, usb_request_t* req,
+                                                void** data) {
+    return usb->ops->req_mmap(usb->ctx, req, data);
+}
+
+static inline zx_status_t usb_function_req_cacheop(usb_function_protocol_t* usb, usb_request_t* req,
+                                                   uint32_t op, size_t offset, size_t length) {
+    return usb->ops->req_cacheop(usb->ctx, req, op, offset, length);
+}
+
+static inline zx_status_t usb_function_req_cache_flush(usb_function_protocol_t* usb,
+                                                       usb_request_t* req, size_t offset,
+                                                       size_t length) {
+    return usb->ops->req_cache_flush(usb->ctx, req, offset, length);
+}
+
+static inline zx_status_t usb_function_req_cache_flush_invalidate(usb_function_protocol_t* usb,
+                                                                  usb_request_t* req,
+                                                                  zx_off_t offset,
+                                                                  size_t length) {
+    return usb->ops->req_cache_flush_invalidate(usb->ctx, req, offset, length);
+}
+
+static inline zx_status_t usb_fucntion_req_physmap(usb_function_protocol_t* usb, usb_request_t* req) {
+    return usb->ops->req_physmap(usb->ctx, req);
+}
+
+static inline void usb_function_req_release(usb_function_protocol_t* usb, usb_request_t* req) {
+    usb->ops->req_release(usb->ctx, req);
+}
+
+static inline void usb_function_req_complete(usb_function_protocol_t* usb, usb_request_t* req,
+                                             zx_status_t status, zx_off_t actual) {
+    usb->ops->req_complete(usb->ctx, req, status, actual);
+}
+
+static inline void usb_function_req_phys_iter_init(usb_function_protocol_t* usb, phys_iter_t* iter,
+                                                   usb_request_t* req, size_t max_length) {
+    usb->ops->req_phys_iter_init(usb->ctx, iter, req, max_length);
 }
 
 // registers the function driver's callback interface

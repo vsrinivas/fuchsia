@@ -19,6 +19,22 @@ typedef struct usb_protocol_ops {
                                  uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
     zx_status_t (*req_init)(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
                             uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
+    ssize_t (*req_copy_from)(void* ctx, usb_request_t* req, void* data,
+                                 size_t length, size_t offset);
+    ssize_t (*req_copy_to)(void* ctx, usb_request_t* req, const void* data,
+                               size_t length, size_t offset);
+    zx_status_t (*req_mmap)(void* ctx, usb_request_t* req, void** data);
+    zx_status_t (*req_cacheop)(void* ctx, usb_request_t* req, uint32_t op,
+                                   size_t offset, size_t length);
+    zx_status_t (*req_cache_flush)(void* ctx, usb_request_t* req,
+                                   size_t offset, size_t length);
+    zx_status_t (*req_cache_flush_invalidate)(void* ctx, usb_request_t* req,
+                                              zx_off_t offset, size_t length);
+    zx_status_t (*req_physmap)(void* ctx, usb_request_t* req);
+    void (*req_release)(void* ctx, usb_request_t* req);
+    void (*req_complete)(void* ctx, usb_request_t* req, zx_status_t status, zx_off_t actual);
+    void (*req_phys_iter_init)(void* ctx, phys_iter_t* iter, usb_request_t* req,
+                                   size_t max_length);
     zx_status_t (*control)(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
                            uint16_t index, void* data, size_t length, zx_time_t timeout,
                            size_t* out_length);
@@ -61,6 +77,55 @@ static inline zx_status_t usb_req_init(const usb_protocol_t* usb, usb_request_t*
                                        zx_handle_t vmo_handle, uint64_t vmo_offset,
                                        uint64_t length, uint8_t ep_address) {
     return usb->ops->req_init(usb->ctx, req, vmo_handle, vmo_offset, length, ep_address);
+}
+
+static inline ssize_t usb_req_copy_from(const usb_protocol_t* usb, usb_request_t* req, void* data,
+                                        size_t length, size_t offset) {
+    return usb->ops->req_copy_from(usb->ctx, req, data, length, offset);
+}
+
+static inline ssize_t usb_req_copy_to(const usb_protocol_t* usb, usb_request_t* req,
+                                      const void* data, size_t length, size_t offset) {
+    return usb->ops->req_copy_to(usb->ctx, req, data, length, offset);
+}
+
+static inline zx_status_t usb_req_mmap(const usb_protocol_t* usb, usb_request_t* req,
+                                       void** data) {
+    return usb->ops->req_mmap(usb->ctx, req, data);
+}
+
+static inline zx_status_t usb_req_cacheop(const usb_protocol_t* usb, usb_request_t* req,
+                                          uint32_t op, size_t offset, size_t length) {
+    return usb->ops->req_cacheop(usb->ctx, req, op, offset, length);
+}
+
+static inline zx_status_t usb_req_cache_flush(const usb_protocol_t* usb, usb_request_t* req,
+                                              size_t offset, size_t length) {
+    return usb->ops->req_cache_flush(usb->ctx, req, offset, length);
+}
+
+static inline zx_status_t usb_req_cache_flush_invalidate(const usb_protocol_t* usb,
+                                                         usb_request_t* req, zx_off_t offset,
+                                                         size_t length) {
+    return usb->ops->req_cache_flush_invalidate(usb->ctx, req, offset, length);
+}
+
+static inline zx_status_t usb_req_physmap(const usb_protocol_t* usb, usb_request_t* req) {
+    return usb->ops->req_physmap(usb->ctx, req);
+}
+
+static inline void usb_req_release(const usb_protocol_t* usb, usb_request_t* req) {
+    usb->ops->req_release(usb->ctx, req);
+}
+
+static inline void usb_req_complete(const usb_protocol_t* usb, usb_request_t* req,
+                             zx_status_t status, zx_off_t actual) {
+    usb->ops->req_complete(usb->ctx, req, status, actual);
+}
+
+static inline void usb_req_phys_iter_init(const usb_protocol_t* usb, phys_iter_t* iter,
+                                          usb_request_t* req, size_t max_length) {
+    usb->ops->req_phys_iter_init(usb->ctx, iter, req, max_length);
 }
 
 // synchronously executes a control request on endpoint zero

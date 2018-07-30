@@ -228,8 +228,8 @@ static zx_status_t usb_interface_req_alloc_vmo(void* ctx, usb_request_t** out,
                                                uint64_t length, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
 
-    return usb_request_alloc_vmo(out, intf->device->bus->bti_handle, vmo_handle, vmo_offset, length,
-                                 ep_address);
+    return usb_request_alloc_vmo(out, intf->device->bus->bti_handle, vmo_handle, vmo_offset,
+                                 length, ep_address);
 }
 
 static zx_status_t usb_interface_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
@@ -239,6 +239,53 @@ static zx_status_t usb_interface_req_init(void* ctx, usb_request_t* req, zx_hand
 
     return usb_request_init(req, intf->device->bus->bti_handle, vmo_handle, vmo_offset, length,
                             ep_address);
+}
+
+static ssize_t usb_interface_req_copy_from(void* ctx, usb_request_t* req, void* data,
+                                          size_t length, size_t offset) {
+    return usb_request_copyfrom(req, data, length, offset);
+}
+
+static ssize_t usb_interface_req_copy_to(void* ctx, usb_request_t* req, const void* data,
+                                        size_t length, size_t offset) {
+    return usb_request_copyto(req, data, length, offset);
+}
+
+static zx_status_t usb_interface_req_mmap(void* ctx, usb_request_t* req, void** data) {
+    return usb_request_mmap(req, data);
+}
+
+static zx_status_t usb_interface_req_cacheop(void* ctx, usb_request_t* req, uint32_t op,
+                                             size_t offset, size_t length) {
+    return usb_request_cacheop(req, op, offset, length);
+}
+
+static zx_status_t usb_interface_req_cache_flush(void* ctx, usb_request_t* req,
+                                                 size_t offset, size_t length) {
+    return usb_request_cache_flush(req, offset, length);
+}
+
+static zx_status_t usb_interface_req_cache_flush_invalidate(void* ctx, usb_request_t* req,
+                                                            zx_off_t offset, size_t length) {
+    return usb_request_cache_flush_invalidate(req, offset, length);
+}
+
+static zx_status_t usb_interface_req_physmap(void* ctx, usb_request_t* req) {
+    return usb_request_physmap(req);
+}
+
+static void usb_interface_req_release(void* ctx, usb_request_t* req) {
+    usb_request_release(req);
+}
+
+static void usb_interface_req_complete(void* ctx, usb_request_t* req,
+                                       zx_status_t status, zx_off_t actual) {
+    usb_request_complete(req, status, actual);
+}
+
+static void usb_interface_req_phys_iter_init(void* ctx, phys_iter_t* iter, usb_request_t* req,
+                                             size_t max_length) {
+    usb_request_phys_iter_init(iter, req, max_length);
 }
 
 static void usb_control_complete(usb_request_t* req, void* cookie) {
@@ -455,6 +502,16 @@ static usb_protocol_ops_t _usb_protocol = {
     .req_alloc = usb_interface_req_alloc,
     .req_alloc_vmo = usb_interface_req_alloc_vmo,
     .req_init = usb_interface_req_init,
+    .req_copy_from = usb_interface_req_copy_from,
+    .req_copy_to = usb_interface_req_copy_to,
+    .req_mmap = usb_interface_req_mmap,
+    .req_cacheop = usb_interface_req_cacheop,
+    .req_cache_flush = usb_interface_req_cache_flush,
+    .req_cache_flush_invalidate = usb_interface_req_cache_flush_invalidate,
+    .req_physmap = usb_interface_req_physmap,
+    .req_release = usb_interface_req_release,
+    .req_complete = usb_interface_req_complete,
+    .req_phys_iter_init = usb_interface_req_phys_iter_init,
     .control = usb_interface_control,
     .request_queue = usb_interface_request_queue,
     .get_speed = usb_interface_get_speed,
