@@ -333,6 +333,55 @@ enum class Consumer : uint32_t {
     kGenericGUIAppControls      = 0x200
 };
 
+enum class Digitizer : uint32_t {
+    kUndefined                      = 0x00,
+
+    kDigitizer                      = 0x01,
+    kPen                            = 0x02,
+    kLightPen                       = 0x03,
+    kTouchScreen                    = 0x04,
+    kTouchPad                       = 0x05,
+    kWhiteBoard                     = 0x06,
+    kCoordinateMeasuringMachine     = 0x07,
+    k3DDigitizer                    = 0x08,
+    kStereoPlotter                  = 0x09,
+    kArticulatedArm                 = 0x0a,
+    kArmature                       = 0x0b,
+    kMultiplePointDigitizer         = 0x0c,
+    kFreeSpaceWand                  = 0x0d,
+
+    kTipPressure                    = 0x30,
+    kBarrelPressure                 = 0x31,
+    kInRange                        = 0x32,
+    kTouch                          = 0x33,
+    kUntouch                        = 0x34,
+    kTap                            = 0x35,
+    kQuality                        = 0x36,
+    kDataValid                      = 0x37,
+    kTransducerIndex                = 0x38,
+    kTabletFunctionKeys             = 0x39,
+    kProgramChangeKeys              = 0x3a,
+    kBatteryStrength                = 0x3b,
+    kInvert                         = 0x3c,
+    kXTilt                          = 0x3d,
+    kYTilt                          = 0x3e,
+    kAzimuth                        = 0x3f,
+    kAltitude                       = 0x40,
+    kTwist                          = 0x41,
+    kTipSwitch                      = 0x42,
+    kSecondaryTipSwitch             = 0x43,
+    kBarrelSwitch                   = 0x44,
+    kEraser                         = 0x45,
+    kTabletPick                     = 0x46,
+    kConfidence                     = 0x47,
+    kWidth                          = 0x48,
+    kHeight                         = 0x49,
+
+    kContactID                      = 0x51,
+    kContactCount                   = 0x54,
+    kScanTime                       = 0x56,
+};
+
 enum class Sensor : uint32_t {
     kUndefined                      = 0x00,
 
