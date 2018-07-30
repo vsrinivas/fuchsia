@@ -36,7 +36,7 @@ void PrintUsage(const char* executable_name) {
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kDeviceCountFlag << "=<int>"
-            << test::benchmark::GetSyncParamsUsage() << std::endl;
+            << ledger::GetSyncParamsUsage() << std::endl;
 }
 
 constexpr size_t kKeySize = 100;
@@ -206,8 +206,7 @@ int main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
-                                                       &server_id)) {
+      !ledger::ParseSyncParamsFromCommandLine(&command_line, &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }

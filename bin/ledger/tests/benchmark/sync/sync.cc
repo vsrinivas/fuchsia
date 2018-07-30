@@ -43,7 +43,7 @@ void PrintUsage(const char* executable_name) {
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kEntriesPerChangeFlag << "=<int>"
             << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
-            << ")" << test::benchmark::GetSyncParamsUsage() << std::endl;
+            << ")" << ledger::GetSyncParamsUsage() << std::endl;
 }
 
 }  // namespace
@@ -224,8 +224,7 @@ int main(int argc, const char** argv) {
                                     &entries_per_change) ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
-                                                       &server_id)) {
+      !ledger::ParseSyncParamsFromCommandLine(&command_line, &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }

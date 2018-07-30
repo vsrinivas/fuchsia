@@ -8,8 +8,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_view.h>
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Returns a string listing the command-line parameters which need to be
 // provided for a benchmark to connect to a cloud server.
@@ -20,7 +19,6 @@ std::string GetSyncParamsUsage();
 bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
                                     std::string* server_id);
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTING_SYNC_PARAMS_H_

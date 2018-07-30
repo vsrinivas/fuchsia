@@ -20,8 +20,7 @@ void WarnIncorrectSyncParams() {
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 std::string GetSyncParamsUsage() {
   std::ostringstream result;
@@ -38,5 +37,4 @@ bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
   return ret;
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger

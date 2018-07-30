@@ -40,7 +40,7 @@ void PrintUsage(const char* executable_name) {
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kPartSizeFlag << "=<int>"
-            << test::benchmark::GetSyncParamsUsage() << std::endl;
+            << ledger::GetSyncParamsUsage() << std::endl;
 }
 
 }  // namespace
@@ -279,8 +279,7 @@ int main(int argc, const char** argv) {
       value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
-                                                       &server_id)) {
+      !ledger::ParseSyncParamsFromCommandLine(&command_line, &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }
