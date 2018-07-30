@@ -214,7 +214,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
         block_fifo_response_t resp;
         zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, NULL);
         if (r == ZX_ERR_SHOULD_WAIT) {
-            r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
+            r = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
                                    ZX_TIME_INFINITE, NULL);
             if (r != ZX_OK) {
                 fprintf(stderr, "failed waiting for fifo: %d\n", r);
