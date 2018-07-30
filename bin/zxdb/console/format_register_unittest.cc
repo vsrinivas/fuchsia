@@ -57,12 +57,17 @@ void GetCategories(RegisterSet* registers) {
   categories.push_back(cat2);
 
   RegisterCategory cat3;
-  cat3.type = RegisterCategory::Type::kMisc;
-  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x20, 6));
-  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x21, 8));
-  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x22, 10));
-  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x23, 12));
-  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x24, 14));
+  cat3.type = RegisterCategory::Type::kFloatingPoint;
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x20, 4));
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x21, 4));
+  // Invalid
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x24, 16));
+  // Push a valid 16-byte long double value.
+  auto& reg = cat3.registers.back();
+  // Clear all (create a 0 value).
+  for (size_t i = 0; i < reg.data.size(); i++)
+    reg.data[i] = 0;
+
   categories.push_back(cat3);
 
   RegisterSet regs(debug_ipc::Arch::kArm64, std::move(categories));
@@ -128,6 +133,12 @@ TEST(FormatRegisters, AllRegisters) {
             "sp      4            01020304\n"
             "cpsr    8   01020304 05060708\n"
             "\n"
+            "Floating Point Registers\n"
+            "Name Size                                 Value                       FP\n"
+            "x20     4                              01020304             2.387939e-38\n"
+            "x21     4                              01020304             2.387939e-38\n"
+            "x24    16   00000000 00000000 00000000 00000000 0.000000000000000000e+00\n"
+            "\n"
             "Vector Registers\n"
             "Name Size                                 Value\n"
             "x0      1                                    01\n"
@@ -135,14 +146,6 @@ TEST(FormatRegisters, AllRegisters) {
             "x2      4                              01020304\n"
             "x3      8                     01020304 05060708\n"
             "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
-            "\n"
-            "Miscellaneous Registers\n"
-            "Name Size                             Value\n"
-            "x20     6                     0102 03040506\n"
-            "x21     8                 01020304 05060708\n"
-            "x22    10            0102 03040506 0708090a\n"
-            "x23    12        01020304 05060708 090a0b0c\n"
-            "x24    14   0102 03040506 0708090a 0b0c0d0e\n"
             "\n",
             out.AsString());
 }

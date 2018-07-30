@@ -39,6 +39,8 @@ static_library("console") {
     "nouns.h",
     "format_register.cc",
     "format_register.h",
+    "string_formatters.cc",
+    "string_formatters.h",
     "string_util.cc",
     "string_util.h",
     "verbs.h",

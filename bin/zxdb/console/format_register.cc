@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/string_formatters.h"
 #include "garnet/public/lib/fxl/functional/auto_call.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -144,14 +145,25 @@ Err InternalFormatCategory(debug_ipc::RegisterCategory::Type cat,
     row.push_back(OutputBuffer::WithContents(
         fxl::StringPrintf("%zu", reg_pair.first->size())));
     row.push_back(RegisterValueToOutputBuffer(*reg_pair.first));
+    if (cat == debug_ipc::RegisterCategory::Type::kFloatingPoint) {
+      std::string out;
+      if(GetFPString(*reg_pair.first, &out).ok())
+        row.push_back(OutputBuffer::WithContents(std::move(out)));
+      else
+        row.push_back({});
+    }
   }
 
   out_buffers->push_back({});
   OutputBuffer& out = out_buffers->back();
-  FormatTable(
+  auto colspecs = std::vector<ColSpec>(
       {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Size"),
-       ColSpec(Align::kRight, 0, "Value", 2)},
-      rows, &out);
+       ColSpec(Align::kRight, 0, "Value", 2)});
+
+  if (cat == debug_ipc::RegisterCategory::Type::kFloatingPoint) {
+    colspecs.push_back(ColSpec(Align::kRight, 0, "FP"));
+  }
+  FormatTable(colspecs, rows, &out);
 
   return Err();
 }
@@ -197,7 +209,10 @@ Err FormatRegisters(const RegisterSet& registers,
   return Err();
 }
 
-std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type type) {
+// Formatting helpers ----------------------------------------------------------
+
+std::string RegisterCategoryTypeToString(
+    debug_ipc::RegisterCategory::Type type) {
   switch (type) {
     case debug_ipc::RegisterCategory::Type::kGeneral:
       return "General Purpose";

@@ -105,14 +105,14 @@ inline zx_status_t ReadFPRegs(const zx::thread& thread,
   out->push_back(CreateRegister(RegisterID::kX64_fdp, 2u, &fp_regs.fdp));
 
   // Each entry is 16 bytes long, but only 10 are actually used.
-  out->push_back(CreateRegister(RegisterID::kX64_st0, 10u, &fp_regs.st[0]));
-  out->push_back(CreateRegister(RegisterID::kX64_st1, 10u, &fp_regs.st[1]));
-  out->push_back(CreateRegister(RegisterID::kX64_st2, 10u, &fp_regs.st[2]));
-  out->push_back(CreateRegister(RegisterID::kX64_st3, 10u, &fp_regs.st[3]));
-  out->push_back(CreateRegister(RegisterID::kX64_st4, 10u, &fp_regs.st[4]));
-  out->push_back(CreateRegister(RegisterID::kX64_st5, 10u, &fp_regs.st[5]));
-  out->push_back(CreateRegister(RegisterID::kX64_st6, 10u, &fp_regs.st[6]));
-  out->push_back(CreateRegister(RegisterID::kX64_st7, 10u, &fp_regs.st[7]));
+  out->push_back(CreateRegister(RegisterID::kX64_st0, 16u, &fp_regs.st[0]));
+  out->push_back(CreateRegister(RegisterID::kX64_st1, 16u, &fp_regs.st[1]));
+  out->push_back(CreateRegister(RegisterID::kX64_st2, 16u, &fp_regs.st[2]));
+  out->push_back(CreateRegister(RegisterID::kX64_st3, 16u, &fp_regs.st[3]));
+  out->push_back(CreateRegister(RegisterID::kX64_st4, 16u, &fp_regs.st[4]));
+  out->push_back(CreateRegister(RegisterID::kX64_st5, 16u, &fp_regs.st[5]));
+  out->push_back(CreateRegister(RegisterID::kX64_st6, 16u, &fp_regs.st[6]));
+  out->push_back(CreateRegister(RegisterID::kX64_st7, 16u, &fp_regs.st[7]));
 
   return ZX_OK;
 }

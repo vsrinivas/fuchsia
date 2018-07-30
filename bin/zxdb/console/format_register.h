@@ -15,8 +15,6 @@ class Err;
 class OutputBuffer;
 class RegisterSet;
 
-std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
-
 // Outputs the register information received from the debug agent.
 // |search_regexp| is to limit which register to show. It will only output
 // information for registers that matches.
@@ -27,6 +25,10 @@ Err FormatRegisters(
     const RegisterSet&, const std::string& search_regexp, OutputBuffer* out,
     std::vector<debug_ipc::RegisterCategory::Type> categories = {
         debug_ipc::RegisterCategory::Type::kGeneral});
+
+// Formatting helpers ----------------------------------------------------------
+
+std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
 
