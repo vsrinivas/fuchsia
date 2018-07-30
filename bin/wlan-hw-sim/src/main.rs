@@ -33,8 +33,8 @@ fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
             ht_capability_info: 0x01fe,
             ampdu_params: 0,
             supported_mcs_set: [
-                // 0  1  2     3  4  5  6  7  8  9 10 11    12 13 14 15
-                0xff, 0, 0, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0, 0, 0
+                // 0  1  2     3     4  5  6  7  8  9 10 11    12 13 14 15
+                0xff, 0, 0, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0x01, 0, 0, 0
             ],
             ht_ext_capabilities: 0,
             tx_beamforming_capabilities: 0,
