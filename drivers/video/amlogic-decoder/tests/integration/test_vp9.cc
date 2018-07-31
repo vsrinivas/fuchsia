@@ -12,7 +12,6 @@
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 
-#include "bear-vp9.ivf.h"
 #include "macros.h"
 
 struct __attribute__((__packed__)) IvfHeader {
@@ -198,15 +197,18 @@ class TestVP9 {
               ReturnFrame(video.get(), frame);
             else
               frames_to_return.push_back(frame);
-            if (frame_count == 80)
+            if (frame_count == 241)
               wait_valid.set_value();
           });
     }
+    auto test_ivf =
+        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+    ASSERT_NE(nullptr, test_ivf);
 
     // Put on a separate thread because it needs video decoding to progress in
     // order to finish.
-    auto parser = std::async([&video, use_parser]() {
-      auto aml_data = ConvertIvfToAmlV(bear_vp9_ivf, bear_vp9_ivf_len);
+    auto parser = std::async([&video, use_parser, &test_ivf]() {
+      auto aml_data = ConvertIvfToAmlV(test_ivf->ptr, test_ivf->size);
       if (use_parser) {
         video->ParseVideo(aml_data.data(), aml_data.size());
       } else {

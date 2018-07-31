@@ -143,6 +143,17 @@ copy("video-ucode") {
   ]
 }
 
+copy("test_files") {
+  sources = [
+    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+    "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.h264",
+    "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9",
+  ]
+  outputs = [
+    "$root_out_dir/firmware/video_test_data/{{source_file_part}}",
+  ]
+}
+
 package("amlogic_video_decoder") {
   deprecated_system_image = true
 
@@ -165,6 +176,24 @@ package("amlogic_video_decoder") {
       name = "firmware/amlogic_video_ucode.bin"
     },
   ]
+
+  if (amlogic_decoder_tests) {
+    deps += [ ":test_files($shlib_toolchain)" ]
+
+    # The test data is stored as a firmware file, because that's the only way
+    # that a file can be read from a driver.
+    libraries += [
+      {
+        name = "firmware/video_test_data/bear.h264"
+      },
+      {
+        name = "firmware/video_test_data/test-25fps.h264"
+      },
+      {
+        name = "firmware/video_test_data/test-25fps.vp9"
+      },
+    ]
+  }
 }
 
 #

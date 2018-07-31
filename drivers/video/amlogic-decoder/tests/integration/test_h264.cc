@@ -7,8 +7,6 @@
 #include "h264_decoder.h"
 #include "tests/test_support.h"
 
-#include "bear-larger.h264.h"
-#include "bear.h264.h"
 #include "macros.h"
 #include "vdec1.h"
 
@@ -50,6 +48,11 @@ class TestH264 {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
+    auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
+    ASSERT_NE(nullptr, bear_h264);
+    auto larger_h264 =
+        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.h264");
+    ASSERT_NE(nullptr, larger_h264);
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
@@ -88,20 +91,19 @@ class TestH264 {
 
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-      EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264, bear_h264_len));
+      EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264->ptr, bear_h264->size));
     } else {
       video->core_->InitializeDirectInput();
-      video->ProcessVideoNoParser(bear_h264, bear_h264_len);
+      video->ProcessVideoNoParser(bear_h264->ptr, bear_h264->size);
     }
 
     EXPECT_EQ(std::future_status::ready,
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
     if (use_parser) {
-      EXPECT_EQ(ZX_OK,
-                video->ParseVideo(bear_larger_h264, bear_larger_h264_len));
+      EXPECT_EQ(ZX_OK, video->ParseVideo(larger_h264->ptr, larger_h264->size));
     } else {
-      video->ProcessVideoNoParser(bear_larger_h264, bear_larger_h264_len);
+      video->ProcessVideoNoParser(larger_h264->ptr, larger_h264->size);
     }
 
     EXPECT_EQ(std::future_status::ready,
@@ -117,6 +119,8 @@ class TestH264 {
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
+    auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
+    ASSERT_NE(nullptr, bear_h264);
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
     status = video->InitializeStreamBuffer(true, PAGE_SIZE);
@@ -147,8 +151,8 @@ class TestH264 {
     }
 
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-    auto as = std::async([&video]() {
-      EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264, bear_h264_len));
+    auto as = std::async([&video, &bear_h264]() {
+      EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264->ptr, bear_h264->size));
     });
 
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
@@ -173,6 +177,8 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
+    auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
+    ASSERT_NE(nullptr, bear_h264);
 
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
@@ -203,14 +209,14 @@ class TestH264 {
           });
     }
 
-    auto split_nal = SplitNalUnits(bear_h264, bear_h264_len);
+    auto split_nal = SplitNalUnits(bear_h264->ptr, bear_h264->size);
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
       uint32_t total_size = 0;
       for (auto& nal : split_nal) {
         total_size += nal.size();
       }
-      EXPECT_EQ(bear_h264_len, total_size);
+      EXPECT_EQ(bear_h264->size, total_size);
       for (auto& nal : split_nal) {
         EXPECT_EQ(ZX_OK, video->ParseVideo(nal.data(), nal.size()));
       }
