@@ -124,10 +124,10 @@ fn store_response(
             .or_insert(Vec::new())
             .push(command_response);
     } else {
-        fx_log_err!("Client doesn't exist in server database: {:?}", client_id);
+        fx_log_err!(tag: "store_response", "Client doesn't exist in server database: {:?}", client_id);
     }
 
-    fx_log_info!("Stored response. Updated clients: {:?}", clients);
+    fx_log_info!(tag: "store_response", "Stored response. Updated clients: {:?}", clients);
 }
 
 // Given the request, map the test request to a FIDL query and execute

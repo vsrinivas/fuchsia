@@ -6,6 +6,7 @@
 extern crate failure;
 extern crate fidl;
 extern crate fidl_fuchsia_bluetooth as fidl_bt;
+extern crate fidl_fuchsia_bluetooth_gatt as fidl_gatt;
 extern crate fidl_fuchsia_bluetooth_le as fidl_ble;
 extern crate fuchsia_app as app;
 extern crate fuchsia_bluetooth as bt;

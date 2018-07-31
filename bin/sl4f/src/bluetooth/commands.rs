@@ -19,7 +19,7 @@ use zx::prelude::*;
 // Bluetooth-related functionality
 use bluetooth::constants::*;
 use bluetooth::facade::BluetoothFacade;
-use bluetooth::types::BluetoothMethod;
+use bluetooth::types::{BleConnectPeripheralResponse, BluetoothMethod};
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
@@ -40,7 +40,7 @@ fn ble_advertise_to_fidl(
     let name: Option<String> = adv_data_raw["name"].as_str().map(String::from);
     let interval: Option<u32> = interval_raw.as_u64().map(|i| i as u32);
 
-    // TODO(aniramakri): Is there a better way to unpack the args into an AdvData
+    // TODO(NET-1026): Is there a better way to unpack the args into an AdvData
     // struct? Unfortunately, can't derive deserialize for AdvData
     let ad = Some(AdvertisingData {
         name: name,
@@ -108,6 +108,20 @@ fn ble_stop_advertise_to_fidl(
     }
 }
 
+fn parse_identifier(args_raw: Value) -> Result<String, Error> {
+    let id_raw = match args_raw.get("identifier") {
+        Some(id) => id,
+        None => return Err(BTError::new("Connect peripheral identifier missing").into()),
+    };
+
+    let id = id_raw.as_str().map(String::from);
+
+    match id {
+        Some(id) => Ok(id),
+        None => return Err(BTError::new("Identifier missing").into()),
+    }
+}
+
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
 // To add new methods, add to the many_futures! macro
@@ -119,6 +133,8 @@ pub fn ble_method_to_fidl(
         [
             BleAdvertise,
             BleConnectPeripheral,
+            BleDisconnectPeripheral,
+            BleListServices,
             BleScan,
             BleStopAdvertise,
             Error
@@ -153,7 +169,31 @@ pub fn ble_method_to_fidl(
             Output::BleStopAdvertise(stop_fut)
         }
         BluetoothMethod::BleConnectPeripheral => {
-            Output::BleConnectPeripheral(fok(Err(BTError::new("Invalid BLE FIDL method").into())))
+            let id = match parse_identifier(args) {
+                Ok(id) => id,
+                Err(e) => return Output::Error(fok(Err(e))),
+            };
+
+            let connect_periph_fut = connect_peripheral_async(bt_facade.clone(), id.clone());
+            Output::BleConnectPeripheral(connect_periph_fut)
+        }
+        BluetoothMethod::BleDisconnectPeripheral => {
+            let id = match parse_identifier(args) {
+                Ok(id) => id,
+                Err(e) => return Output::Error(fok(Err(e))),
+            };
+
+            let disc_periph_fut = disconnect_peripheral_async(bt_facade.clone(), id.clone());
+            Output::BleDisconnectPeripheral(disc_periph_fut)
+        }
+        BluetoothMethod::BleListServices => {
+            let id = match parse_identifier(args) {
+                Ok(id) => id,
+                Err(e) => return Output::Error(fok(Err(e))),
+            };
+
+            let list_services_fut = list_services_async(bt_facade.clone(), id.clone());
+            Output::BleListServices(list_services_fut)
         }
         _ => Output::Error(fok(Err(BTError::new("Invalid BLE FIDL method").into()))),
     }
@@ -202,8 +242,8 @@ fn start_scan_async(
     // Create scanning future and listen on central events for scan
     let scan_fut = BluetoothFacade::start_scan(bt_facade.clone(), filter);
 
-    // Based on if a scan count is provided, either use TIMEOUT as termination criteria or custom
-    // future to terminate when <count> remote devices are discovered
+    // Based on if a scan count is provided, either use TIMEOUT as termination criteria
+    // or custom future to terminate when <count> remote devices are discovered
     let event_fut = if count.is_none() {
         Left(async::Timer::new(timeout_ms.after_now()))
     } else {
@@ -242,5 +282,59 @@ fn start_scan_async(
                 Err(e) => fok(Err(e.into())),
             }
         }
+    })
+}
+
+fn connect_peripheral_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+    let connect_periph_fut = BluetoothFacade::connect_peripheral(bt_facade.clone(), id.clone());
+
+    let list_services_fut = connect_periph_fut
+        .and_then(move |_| BluetoothFacade::list_services(bt_facade.clone(), id.clone()));
+
+    list_services_fut.then(move |res| match res {
+        Ok(r) => {
+            let result = BleConnectPeripheralResponse::new(r);
+            match to_value(result) {
+                Ok(val) => fok(Ok(val)),
+                Err(e) => fok(Err(e.into())),
+            }
+        }
+        Err(e) => fok(Err(e.into())),
+    })
+}
+
+fn disconnect_peripheral_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+    let disconnect_periph_fut =
+        BluetoothFacade::disconnect_peripheral(bt_facade.clone(), id.clone());
+
+    disconnect_periph_fut.then(move |res| match res {
+        Ok(r) => match to_value(r) {
+            Ok(val) => fok(Ok(val)),
+            Err(e) => fok(Err(e.into())),
+        },
+        Err(e) => fok(Err(e.into())),
+    })
+}
+
+// Uses the same return type as connect_peripheral_async -- Returns subset of
+// fidl::ServiceInfo
+fn list_services_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+    let list_services_fut = BluetoothFacade::list_services(bt_facade.clone(), id.clone());
+
+    list_services_fut.then(move |res| match res {
+        Ok(r) => {
+            let result = BleConnectPeripheralResponse::new(r);
+            match to_value(result) {
+                Ok(val) => fok(Ok(val)),
+                Err(e) => fok(Err(e.into())),
+            }
+        }
+        Err(e) => fok(Err(e.into())),
     })
 }
