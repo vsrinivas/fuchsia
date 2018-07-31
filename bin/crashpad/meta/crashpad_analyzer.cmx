@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/crashpad_analyzer"
+        "binary": "bin/app"
     },
     "sandbox": {
         "features": [ "persistent-storage", "root-ssl-certificates" ],
