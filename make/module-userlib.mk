@@ -61,8 +61,9 @@ $(MODULE_LIBNAME).so: _LDFLAGS := $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(MODU
 $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking userlib $@)
-	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared $(_SONAME_FLAGS) \
-                                   $(_OBJS) $(_LIBS) $(LIBGCC) -o $@)
+	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared $(_SONAME_FLAGS) $(_OBJS) \
+                                   --start-group $(_LIBS) --end-group \
+                                   $(LIBGCC) -o $@)
 
 EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
 
