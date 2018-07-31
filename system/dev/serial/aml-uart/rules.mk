@@ -9,11 +9,17 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-uart.c \
+    $(LOCAL_DIR)/aml-uart.cpp \
+    $(LOCAL_DIR)/binding.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/hwreg \
     system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
