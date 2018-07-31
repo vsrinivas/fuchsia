@@ -173,7 +173,12 @@ void CloudProviderImpl::CreatePlaceholderDocument(
            std::move(pending_request_marker)](auto call_credentials) mutable {
         firestore_service_->CreateDocument(
             std::move(request), std::move(call_credentials),
-            [](auto status, auto result) { LogGrpcRequestError(status); });
+            [](auto status, auto result) {
+              if (status.error_code() != grpc::OK &&
+                  status.error_code() != grpc::ALREADY_EXISTS) {
+                LogGrpcRequestError(status);
+              }
+            });
       });
 }
 
