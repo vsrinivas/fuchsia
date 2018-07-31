@@ -416,6 +416,14 @@ libraries other than libc and the dynamic linker.
 
 Example: `userboot=bin/core-tests`
 
+## userboot.reboot
+
+If this option is set, userboot will attempt to reboot the machine after
+waiting 3 seconds when the process it launches exits.
+
+*If running with userboot=bin/core-tests in QEMU, this will cause the system to
+continually run tests and reboot.*
+
 ## userboot.shutdown
 
 If this option is set, userboot will attempt to power off the machine

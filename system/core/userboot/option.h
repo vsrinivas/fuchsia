@@ -15,6 +15,9 @@ enum option {
     OPTION_SHUTDOWN,
 #define OPTION_SHUTDOWN_STRING "userboot.shutdown"
 #define OPTION_SHUTDOWN_DEFAULT NULL
+    OPTION_REBOOT,
+#define OPTION_REBOOT_STRING "userboot.reboot"
+#define OPTION_REBOOT_DEFAULT NULL
     OPTION_MAX
 };
 

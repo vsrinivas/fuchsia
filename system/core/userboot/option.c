@@ -20,6 +20,7 @@ static void initialize_options(struct options* o) {
         switch (i) {
             OPTION_DEFAULT(FILENAME);
             OPTION_DEFAULT(SHUTDOWN);
+            OPTION_DEFAULT(REBOOT);
         case OPTION_MAX:
             __builtin_unreachable();
         }
@@ -41,6 +42,7 @@ static void apply_option(struct options* o, const char* arg) {
         switch (i) {
             OPTION_STRING(FILENAME);
             OPTION_STRING(SHUTDOWN);
+            OPTION_STRING(REBOOT);
         case OPTION_MAX:
             __builtin_unreachable();
         }

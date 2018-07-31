@@ -24,13 +24,18 @@
 
 #pragma GCC visibility pop
 
-#define SHUTDOWN_COMMAND "poweroff"
 #define STACK_VMO_NAME "userboot-child-initial-stack"
 
-static noreturn void do_shutdown(zx_handle_t log, zx_handle_t rroot) {
-    printl(log, "Process exited.  Executing \"" SHUTDOWN_COMMAND "\".");
-    zx_system_powerctl(rroot, ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
-    printl(log, "still here after shutdown!");
+static noreturn void do_powerctl(zx_handle_t log, zx_handle_t rroot, uint32_t reason) {
+    const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
+    if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
+        printl(log, "Waiting 3 seconds...");
+        zx_nanosleep(zx_deadline_after(ZX_SEC(3u)));
+    }
+
+    printl(log, "Process exited.  Executing \"%s\".", r_str);
+    zx_system_powerctl(rroot, reason, NULL);
+    printl(log, "still here after %s!", r_str);
     while (true)
         __builtin_trap();
 }
@@ -317,12 +322,16 @@ static noreturn void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
     // All done with bootfs!
     bootfs_unmount(vmar_self, log, &bootfs);
 
-    if (o.value[OPTION_SHUTDOWN] != NULL) {
+    if ((o.value[OPTION_SHUTDOWN] != NULL) || (o.value[OPTION_REBOOT] != NULL)) {
         printl(log, "Waiting for %s to exit...", o.value[OPTION_FILENAME]);
         status = zx_object_wait_one(
             proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
         check(log, status, "zx_object_wait_one on process failed");
-        do_shutdown(log, root_resource_handle);
+        if (o.value[OPTION_SHUTDOWN] != NULL) {
+            do_powerctl(log, root_resource_handle, ZX_SYSTEM_POWERCTL_SHUTDOWN);
+        } else if (o.value[OPTION_REBOOT] != NULL) {
+            do_powerctl(log, root_resource_handle, ZX_SYSTEM_POWERCTL_REBOOT);
+        }
     }
 
     // Now we've accomplished our purpose in life, and we can die happy.
