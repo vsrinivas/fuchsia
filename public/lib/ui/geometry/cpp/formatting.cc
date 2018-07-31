@@ -19,6 +19,11 @@ std::ostream& operator<<(std::ostream& os, const PointF& value) {
   return os << "{x=" << value.x << ", y=" << value.y << "}";
 }
 
+std::ostream& operator<<(std::ostream& os, const Point3F& value) {
+  return os << "{x=" << value.x << ", y=" << value.y << ", z=" << value.z
+            << "}";
+}
+
 std::ostream& operator<<(std::ostream& os, const Rect& value) {
   return os << "{x=" << value.x << ", y=" << value.y
             << ", width=" << value.width << ", height=" << value.height << "}";

@@ -1,0 +1,26 @@
+{
+  "exclusions": [
+    "fuchsia.ui.input/InputEvent",
+    "fuchsia.ui.input/PointerEvent",
+    "fuchsia.ui.input/Point3F",
+    "fuchsia.ui.input/KeyboardEvent",
+    "fuchsia.ui.input/Range",
+    "fuchsia.ui.input/Axis",
+    "fuchsia.ui.input/KeyboardDescriptor",
+    "fuchsia.ui.input/MouseDescriptor",
+    "fuchsia.ui.input/StylusDescriptor",
+    "fuchsia.ui.input/TouchscreenDescriptor",
+    "fuchsia.ui.input/SensorDescriptor",
+    "fuchsia.ui.input/DeviceDescriptor",
+    "fuchsia.ui.input/KeyboardReport",
+    "fuchsia.ui.input/MouseReport",
+    "fuchsia.ui.input/StylusReport",
+    "fuchsia.ui.input/Touch",
+    "fuchsia.ui.input/TouchscreenReport",
+    "fuchsia.ui.input/SensorReport",
+    "fuchsia.ui.input/InputReport",
+    "fuchsia.ui.input/TextSelection",
+    "fuchsia.ui.input/TextRange",
+    "fuchsia.ui.input/TextInputState"
+  ]
+}

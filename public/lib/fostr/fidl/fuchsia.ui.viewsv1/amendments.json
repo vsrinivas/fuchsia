@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    "fuchsia.ui.viewsv1/ViewTreeToken",
+    "fuchsia.ui.viewsv1/ViewInfo",
+    "fuchsia.ui.viewsv1/ViewProperties",
+    "fuchsia.ui.viewsv1/ViewLayout"
+  ]
+}

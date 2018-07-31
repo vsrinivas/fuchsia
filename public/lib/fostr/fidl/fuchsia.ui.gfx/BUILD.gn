@@ -1,0 +1,14 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/build/fostr/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.ui.gfx") {
+  fidl_target = "//garnet/public/fidl/fuchsia.ui.gfx"
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.images",
+    "//garnet/public/lib/fostr/fidl/fuchsia.math",
+  ]
+}
