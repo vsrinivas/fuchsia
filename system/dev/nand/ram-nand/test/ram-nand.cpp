@@ -24,6 +24,7 @@ constexpr int kNumPages = kBlockSize * kNumBlocks;
 
 ram_nand_info_t BuildConfig() {
     return ram_nand_info_t{
+        .vmo = 0,
         .nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}},
         .export_nand_config = false,
         .export_partition_map = false,
@@ -41,13 +42,13 @@ bool TrivialLifetimeTest() {
     {
         NandDevice device(params);
 
-        ASSERT_EQ(ZX_OK, device.Init(name));
+        ASSERT_EQ(ZX_OK, device.Init(name, zx::vmo()));
         EXPECT_EQ(0, strncmp("ram-nand-0", name, NAME_MAX));
     }
     {
         NandDevice device(params);
 
-        ASSERT_EQ(ZX_OK, device.Init(name));
+        ASSERT_EQ(ZX_OK, device.Init(name, zx::vmo()));
         EXPECT_EQ(0, strncmp("ram-nand-1", name, NAME_MAX));
     }
     END_TEST;
@@ -82,7 +83,7 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
     }
 
     char name[NAME_MAX];
-    if (device->Init(name) != ZX_OK) {
+    if (device->Init(name, zx::vmo()) != ZX_OK) {
         return nullptr;
     }
     return fbl::move(device);
@@ -94,7 +95,7 @@ bool BasicDeviceProtocolTest() {
     NandDevice device(params);
 
     char name[NAME_MAX];
-    ASSERT_EQ(ZX_OK, device.Init(name));
+    ASSERT_EQ(ZX_OK, device.Init(name, zx::vmo()));
 
     ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
 

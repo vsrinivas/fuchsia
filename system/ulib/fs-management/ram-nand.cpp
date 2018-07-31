@@ -17,7 +17,7 @@ namespace {
 
 constexpr char base_path[] = "/dev/misc/nand-ctl";
 
-}  // namespace
+} // namespace
 
 int create_ram_nand(const ram_nand_info_t* config, char* out_path) {
     fbl::unique_fd control(open(base_path, O_RDWR));
@@ -27,7 +27,10 @@ int create_ram_nand(const ram_nand_info_t* config, char* out_path) {
     }
 
     ram_nand_name_t response = {};
-    if (ioctl_ram_nand_create(control.get(), config, &response) < 0) {
+    ssize_t rc = (config->vmo == ZX_HANDLE_INVALID)
+                     ? ioctl_ram_nand_create(control.get(), config, &response)
+                     : ioctl_ram_nand_create_vmo(control.get(), config, &response);
+    if (rc < 0) {
         fprintf(stderr, "Could not create ram_nand device\n");
         return -1;
     }

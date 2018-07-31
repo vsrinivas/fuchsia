@@ -57,7 +57,7 @@ NandDevice::~NandDevice() {
 
 zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
     char name[NAME_MAX];
-    zx_status_t status = Init(name);
+    zx_status_t status = Init(name, zx::vmo(info.vmo));
     if (status != ZX_OK) {
         return status;
     }
@@ -109,14 +109,29 @@ zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
     return ZX_OK;
 }
 
-zx_status_t NandDevice::Init(char name[NAME_MAX]) {
+zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
     ZX_DEBUG_ASSERT(!thread_created_);
     static uint64_t dev_count = 0;
     snprintf(name, NAME_MAX, "ram-nand-%" PRIu64, dev_count++);
 
-    zx_status_t status = zx::vmo::create(DdkGetSize(), 0, &vmo_);
-    if (status != ZX_OK) {
-        return status;
+    zx_status_t status;
+    const bool use_vmo = vmo.is_valid();
+    if (use_vmo) {
+        vmo_ = fbl::move(vmo);
+
+        uint64_t size;
+        status = vmo_.get_size(&size);
+        if (status != ZX_OK) {
+            return status;
+        }
+        if (size < DdkGetSize()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+    } else {
+        status = zx::vmo::create(DdkGetSize(), 0, &vmo_);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, DdkGetSize(),
@@ -125,7 +140,9 @@ zx_status_t NandDevice::Init(char name[NAME_MAX]) {
     if (status != ZX_OK) {
         return status;
     }
-    memset(reinterpret_cast<char*>(mapped_addr_), 0xff, DdkGetSize());
+    if (!use_vmo) {
+        memset(reinterpret_cast<char*>(mapped_addr_), 0xff, DdkGetSize());
+    }
 
     list_initialize(&txn_list_);
     if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {

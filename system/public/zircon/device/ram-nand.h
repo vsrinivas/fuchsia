@@ -11,9 +11,12 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/device/nand.h>
+#include <zircon/types.h>
 
 #define IOCTL_RAM_NAND_CREATE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 1)
+#define IOCTL_RAM_NAND_CREATE_VMO \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_RAMDISK, 4)
 #define IOCTL_RAM_NAND_UNLINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 2)
 #define IOCTL_RAM_NAND_SET_BAD_BLOCKS \
@@ -31,6 +34,10 @@ typedef struct ram_nand_partition_config {
 } ram_nand_partition_config_t;
 
 typedef struct ram_nand_info {
+    // VMO to use as backing store for nand device. Size should match
+    // size of |info.nand_info|.
+    // The handle is always consumed. Should be set to ZX_HANDLE_INVALID if not used.
+    zx_handle_t vmo;
     nand_info_t nand_info;
     bool export_nand_config;
     bool export_partition_map;
@@ -66,10 +73,16 @@ typedef struct ram_nand_name {
     char name[NAME_MAX + 1];
 } ram_nand_name_t;
 
-// ssize_t ioctl_ram_nand_config(int fd, const ram_nand_info_t* in,
+// ssize_t ioctl_ram_nand_create(int fd, const ram_nand_info_t* in,
 //                               ram_nand_name_t* out);
 // Must be issued to the control device.
 IOCTL_WRAPPER_INOUT(ioctl_ram_nand_create, IOCTL_RAM_NAND_CREATE, ram_nand_info_t,
+                    ram_nand_name_t);
+
+// ssize_t ioctl_ram_nand_create_vmo(int fd, const ram_nand_ext_t* in,
+//                                   ram_nand_name_t* out);
+// Must be issued to the control device.
+IOCTL_WRAPPER_INOUT(ioctl_ram_nand_create_vmo, IOCTL_RAM_NAND_CREATE_VMO, ram_nand_info_t,
                     ram_nand_name_t);
 
 // ssize_t ioctl_ram_nand_unlink(int fd);

@@ -58,7 +58,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
     // Performs the object initialization, returning the required data to create
     // an actual device (to call device_add()). The provided callback will be
     // called when this device must be removed from the system.
-    zx_status_t Init(char name[NAME_MAX]);
+    zx_status_t Init(char name[NAME_MAX], zx::vmo vmo);
 
     // Device protocol implementation.
     zx_off_t DdkGetSize() { return params_.GetSize(); }
