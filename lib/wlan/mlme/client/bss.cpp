@@ -313,45 +313,10 @@ wlan_mlme::AmpduParams AmpduParamsToFidl(const AmpduParams& ap) {
     return fidl;
 }
 
-bool inline ExactMatch(uint32_t bitmask, uint32_t val) {
-    return (val & bitmask) == bitmask && (val & ~bitmask) == 0;
-}
-
-zx_status_t HtMcsBitmaskToFidl(const SupportedMcsRxMcsHead& smrmh, wlan_mlme::HtMcs* fidl) {
-    // Support only MCS 0-31 and the supported MCS Set should be either all 1 or all 0 for a group
-    // of 8 corresponding to the number of spatial stream because MCS >= 32 are optional and not
-    // widely adopted.
-    uint32_t bitmask = 0xFFFFFFFF;
-    uint32_t mcs_set_bitmask = smrmh.bitmask();
-
-    if (ExactMatch(bitmask, mcs_set_bitmask)) {
-        *fidl = wlan_mlme::HtMcs::MCS0_31;
-        return ZX_OK;
-    }
-    bitmask >>= 8;
-    if (ExactMatch(bitmask, mcs_set_bitmask)) {
-        *fidl = wlan_mlme::HtMcs::MCS0_23;
-        return ZX_OK;
-    }
-    bitmask >>= 8;
-    if (ExactMatch(bitmask, mcs_set_bitmask)) {
-        *fidl = wlan_mlme::HtMcs::MCS0_15;
-        return ZX_OK;
-    }
-    bitmask >>= 8;
-    if (ExactMatch(bitmask, mcs_set_bitmask)) {
-        *fidl = wlan_mlme::HtMcs::MCS0_7;
-        return ZX_OK;
-    }
-    *fidl = wlan_mlme::HtMcs::MCS_INVALID;
-    if (mcs_set_bitmask == 0) { return ZX_OK; } // Empty MCS set OK for HTOperation, not an error
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 wlan_mlme::SupportedMcsSet SupportedMcsSetToFidl(const SupportedMcsSet& sms) {
     wlan_mlme::SupportedMcsSet fidl;
 
-    HtMcsBitmaskToFidl(sms.rx_mcs_head, &fidl.rx_mcs_set);
+    fidl.rx_mcs_set = sms.rx_mcs_head.bitmask();
     fidl.rx_highest_rate = sms.rx_mcs_tail.highest_rate();
     fidl.tx_mcs_set_defined = (sms.tx_mcs.set_defined() == 1);
     fidl.tx_rx_diff = (sms.tx_mcs.rx_diff() == 1);

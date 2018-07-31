@@ -141,20 +141,10 @@ struct AmpduParams {
 
 // SupportedMcsSet
 // IEEE Std 802.11-2016, 9.4.2.56.4 Table 9-164
-enum HtMcs : uint8 {
-    // For each spatial stream, the number of supported MCS must be either 0 or 8.:
-    // Anything else is invalid
-    MCS_INVALID = 0;
-    MCS0_7 = 1;
-    MCS0_15 = 2;
-    MCS0_23 = 3;
-    MCS0_31 = 4;
-    // TODO: MCS 32 and beyond
-};
-
 struct SupportedMcsSet {
     // Names are deviated from //garnet/lib/wlan/common/include/wlan/common/element.h's class SupportedMcsSet
-    HtMcs rx_mcs_set; // bit 0-76 indicates MCS
+    uint64 rx_mcs_set; // bitmask indicating MCS 0-63 support
+    // MCS 64-76 not supported
     uint16 rx_highest_rate; // Mbps
     bool tx_mcs_set_defined;
     bool tx_rx_diff;

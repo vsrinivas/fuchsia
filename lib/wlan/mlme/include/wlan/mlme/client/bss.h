@@ -86,8 +86,6 @@ class Bss : public fbl::RefCounted<Bss> {
 
 using BssMap = MacAddrMap<fbl::RefPtr<Bss>, macaddr_map_type::kBss>;
 
-zx_status_t HtMcsBitmaskToFidl(const SupportedMcsRxMcsHead& smrmh,
-                               ::fuchsia::wlan::mlme::HtMcs* fidl);
 ::fuchsia::wlan::mlme::HtCapabilityInfo HtCapabilityInfoToFidl(const HtCapabilityInfo& hci);
 ::fuchsia::wlan::mlme::AmpduParams AmpduParamsToFidl(const AmpduParams& ap);
 ::fuchsia::wlan::mlme::SupportedMcsSet SupportedMcsSetToFidl(const SupportedMcsSet& sms);
