@@ -222,8 +222,8 @@ class BazelBuilder(Builder):
                 if extension == 'h':
                     library.hdrs.append(destination)
             else:
-                raise Exception('Error: unknow file extension "%s" for %s.' %
-                                (extension, atom.id))
+                dest = self.make_dir(os.path.join(base, destination))
+                shutil.copy2(file.source, dest)
 
         for dep_id in atom.deps:
             library.deps.append('//pkg/' + sanitize(dep_id.name))
