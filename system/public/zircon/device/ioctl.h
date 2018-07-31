@@ -79,6 +79,7 @@
 #define IOCTL_FAMILY_NAND_TEST      0x3B
 #define IOCTL_FAMILY_TEE            0x3C
 #define IOCTL_FAMILY_SKIP_BLOCK     0x3D
+#define IOCTL_FAMILY_USB_TEST       0x3E
 
 // IOCTL constructor
 // --K-FFNN
