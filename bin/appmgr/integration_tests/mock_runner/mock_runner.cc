@@ -42,7 +42,7 @@ void FakeSubComponent::SendReturnCodeIfTerminated() {
       iter(return_code_);
     }
     wait_callbacks_.clear();
-    // TODO: support termination event
+    binding_.events().OnTerminated(return_code_, TerminationReason::EXITED);
   }
 }
 
@@ -63,10 +63,16 @@ MockRunner::MockRunner()
 
 MockRunner::~MockRunner() = default;
 
-void MockRunner::Kill() { loop_.Quit(); }
+void MockRunner::Crash() { exit(1); }
 
 void MockRunner::KillComponent(uint64_t id, uint64_t errorcode) {
-  // TODO: implement and use.
+  auto it = components_.find(id);
+  if (it == components_.end()) {
+    return;
+  }
+  auto component = it->second.get();
+  component->SetReturnCode(errorcode);
+  component->Kill();
 }
 
 void MockRunner::StartComponent(

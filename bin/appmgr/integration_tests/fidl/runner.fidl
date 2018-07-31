@@ -12,7 +12,7 @@ struct ComponentInfo {
 // TODO: support more function
 // - publish service to component to test exported directory
 interface MockRunner {
-  1: Kill();
+  1: Crash();
   2: KillComponent(uint64 id, uint64 errorcode);
 
   101: -> OnComponentCreated(ComponentInfo info);

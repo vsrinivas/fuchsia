@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <glob.h>
+
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace component {
 namespace {
 
+using fuchsia::sys::TerminationReason;
 using testing::EnclosingEnvironment;
 using testing::MockRunnerRegistry;
 using testing::TestWithEnvironment;
@@ -43,14 +49,14 @@ class RealmRunnerTest : public TestWithEnvironment {
     return ret;
   }
 
-  bool WaitForComponentStart(size_t expected_components_count) {
+  bool WaitForComponentCount(size_t expected_components_count) {
     auto runner = runner_registry_.runner();
     const bool ret = RunLoopWithTimeoutOrUntil(
         [&] {
           return runner->components().size() == expected_components_count;
         },
         kTimeout);
-    EXPECT_TRUE(ret) << "Waiting for component to start timed out, got:"
+    EXPECT_TRUE(ret) << "Waiting for component to start/die timed out, got:"
                      << runner->components().size()
                      << ", expected: " << expected_components_count;
     return ret;
@@ -64,20 +70,20 @@ TEST_F(RealmRunnerTest, RunnerLaunched) {
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
-  ASSERT_TRUE(WaitForComponentStart(1));
+  ASSERT_TRUE(WaitForComponentCount(1));
   auto components = runner_registry_.runner()->components();
   ASSERT_EQ(components[0].url, kComponentForRunnerUrl);
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedOnlyOnce) {
-  auto component =
+  auto component1 =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
   // launch again and check that runner was not executed again
-  component =
+  auto component2 =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
 
-  WaitForComponentStart(2);
+  WaitForComponentCount(2);
   EXPECT_EQ(1, runner_registry_.connect_count());
 }
 
@@ -85,8 +91,15 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
-  runner_registry_.runner()->runner_ptr()->Kill();
+  int64_t return_code = INT64_MIN;
+  component.events().OnTerminated =
+      [&](int64_t code, TerminationReason reason) { return_code = code; };
+  runner_registry_.runner()->runner_ptr()->Crash();
   ASSERT_TRUE(WaitForRunnerToDie());
+  // make sure component is dead. This makes sure that runner was killed inside
+  // appmgr.
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return return_code != INT64_MIN; }, kTimeout));
 
   // launch again and check that runner was executed again
   component =
@@ -94,9 +107,84 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   ASSERT_TRUE(WaitForRunnerToRegister());
   ASSERT_EQ(2, runner_registry_.connect_count());
   // make sure component was also launched
-  ASSERT_TRUE(WaitForComponentStart(1));
+  ASSERT_TRUE(WaitForComponentCount(1));
   auto components = runner_registry_.runner()->components();
   ASSERT_EQ(components[0].url, kComponentForRunnerUrl);
+}
+
+TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
+  auto component =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  ASSERT_TRUE(WaitForRunnerToRegister());
+  // make sure component was launched
+  ASSERT_TRUE(WaitForComponentCount(1));
+  int64_t return_code;
+  TerminationReason reason;
+  component.events().OnTerminated = [&](int64_t code, TerminationReason r) {
+    return_code = code;
+    reason = r;
+  };
+  auto components = runner_registry_.runner()->components();
+  const int64_t ret_code = 3;
+  runner_registry_.runner()->runner_ptr()->KillComponent(
+      components[0].unique_id, ret_code);
+  ASSERT_TRUE(WaitForComponentCount(0));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return reason == TerminationReason::EXITED; }, kTimeout));
+  EXPECT_EQ(return_code, ret_code);
+}
+
+TEST_F(RealmRunnerTest, DestroyingControllerKillsComponent) {
+  {
+    auto component =
+        enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+    ASSERT_TRUE(WaitForRunnerToRegister());
+    // make sure component was launched
+    ASSERT_TRUE(WaitForComponentCount(1));
+    // component will go out of scope
+  }
+  ASSERT_TRUE(WaitForComponentCount(0));
+}
+
+TEST_F(RealmRunnerTest, KillComponentController) {
+  auto component =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  ASSERT_TRUE(WaitForRunnerToRegister());
+  // make sure component was launched
+  ASSERT_TRUE(WaitForComponentCount(1));
+  TerminationReason reason;
+  component.events().OnTerminated = [&](int64_t code, TerminationReason r) {
+    reason = r;
+  };
+  component->Kill();
+  ASSERT_TRUE(WaitForComponentCount(0));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return reason == TerminationReason::EXITED; }, kTimeout));
+}
+
+TEST_F(RealmRunnerTest, ProbeHub) {
+  auto glob_str =
+      fxl::StringPrintf("/hub/r/sys/*/r/%s/*/c/appmgr_mock_runner/*/c/%s/*",
+                        kRealm, kComponentForRunner);
+  glob_t globbuf;
+  // launch two components and make sure both show up in /hub.
+  auto component1 =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component2 =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  ASSERT_TRUE(WaitForRunnerToRegister());
+  WaitForComponentCount(2);
+  ASSERT_EQ(glob(glob_str.data(), 0, nullptr, &globbuf), 0)
+      << glob_str << " does not exist.";
+
+  auto guard = fxl::MakeAutoCall([&]() { globfree(&globbuf); });
+
+  ASSERT_EQ(globbuf.gl_pathc, 2u);
+
+  const std::string path1 = globbuf.gl_pathv[0];
+  const std::string path2 = globbuf.gl_pathv[1];
+  EXPECT_NE(path1, path2);
+  EXPECT_EQ(files::GetDirectoryName(path1), files::GetDirectoryName(path2));
 }
 
 }  // namespace

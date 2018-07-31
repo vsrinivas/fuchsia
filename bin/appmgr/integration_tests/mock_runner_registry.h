@@ -28,7 +28,14 @@ class MockRunnerWrapper {
     runner_.events().OnComponentCreated =
         [this](mockrunner::ComponentInfo info) { components_.push_back(info); };
 
-    // TODO: implement OnComponentKilled
+    runner_.events().OnComponentKilled = [this](uint64_t id) {
+      for (auto it = components_.begin(); it != components_.end(); it++) {
+        if (it->unique_id == id) {
+          components_.erase(it);
+          break;
+        }
+      }
+    };
   }
 
  private:

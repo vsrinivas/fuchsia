@@ -19,6 +19,7 @@ namespace component {
 namespace testing {
 
 namespace mockrunner = test::component::mockrunner;
+using fuchsia::sys::TerminationReason;
 
 class MockRunner;
 
@@ -40,6 +41,8 @@ class FakeSubComponent : public fuchsia::sys::ComponentController {
 
   void SendReturnCodeIfTerminated();
 
+  void SetReturnCode(int64_t code) { return_code_ = code; }
+
  private:
   uint64_t id_;
   uint64_t return_code_;
@@ -56,7 +59,7 @@ class MockRunner : public fuchsia::sys::Runner, public mockrunner::MockRunner {
   MockRunner();
   ~MockRunner() override;
 
-  void Kill() override;
+  void Crash() override;
 
   void KillComponent(uint64_t id, uint64_t errorcode) override;
 
