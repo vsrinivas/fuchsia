@@ -72,7 +72,8 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
  public:
   Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
                 fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
-                RendererParams renderer_params);
+                RendererParams renderer_params,
+                int32_t display_startup_rotation_adjustment);
 
   ~Presentation1() override;
 
@@ -261,7 +262,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   //
   // Used when the native display orientation is reported incorrectly.
   // TODO(SCN-857) - Make this less of a hack.
-  int32_t display_startup_rotation_adjustment_ = 0;
+  int32_t display_startup_rotation_adjustment_;
 
   ::fuchsia::ui::viewsv1::ViewPtr root_view_;
 

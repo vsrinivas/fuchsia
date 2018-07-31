@@ -49,7 +49,8 @@ constexpr float kCursorElevation = 800;
 Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
                              fuchsia::ui::scenic::Scenic* scenic,
                              scenic::Session* session,
-                             RendererParams renderer_params)
+                             RendererParams renderer_params,
+                             int32_t display_startup_rotation_adjustment)
     : view_manager_(view_manager),
       scenic_(scenic),
       session_(session),
@@ -65,6 +66,7 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
       cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
+      display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       tree_listener_binding_(this),
       tree_container_listener_binding_(this),

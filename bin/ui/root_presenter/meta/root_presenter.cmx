@@ -3,6 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/input" ]
+        "dev": [ "class/input" ],
+        "system": [ "data/root_presenter" ]
     }
 }

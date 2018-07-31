@@ -5,11 +5,14 @@
 #include "garnet/bin/ui/root_presenter/app.h"
 
 #include <algorithm>
+#include <cstdlib>
+#include <string>
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 
@@ -80,8 +83,20 @@ void App::Present(
         presentation_request) {
   InitializeServices();
 
+  int32_t display_startup_rotation_adjustment = 0;
+  {
+    std::string rotation_value;
+    if (files::ReadFileToString("/system/data/root_presenter/display_rotation",
+                                &rotation_value)) {
+      display_startup_rotation_adjustment = atoi(rotation_value.c_str());
+      FXL_LOG(INFO) << "Display rotation adjustment applied: "
+                    << display_startup_rotation_adjustment << " degrees.";
+    }
+  }
+
   auto presentation = std::make_unique<Presentation1>(
-      view_manager_.get(), scenic_.get(), session_.get(), renderer_params_);
+      view_manager_.get(), scenic_.get(), session_.get(), renderer_params_,
+      display_startup_rotation_adjustment);
   presentation->Present(view_owner_handle.Bind(),
                         std::move(presentation_request), GetYieldCallback(),
                         GetShutdownCallback(presentation.get()));
