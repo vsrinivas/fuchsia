@@ -4,6 +4,6 @@
 
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
-fostr_fidl("fuchsia.sys") {
+fostr_fidl("fuchsia.media") {
   fidl_target = "//garnet/public/fidl/fuchsia.media"
 }
