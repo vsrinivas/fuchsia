@@ -31,7 +31,6 @@ def main():
   script_template = string.Template('''#!/bin/sh
 
 $dart \\
-  --no-preview-dart-2 \\
   $snapshot \\
   "$$@"
 ''')
