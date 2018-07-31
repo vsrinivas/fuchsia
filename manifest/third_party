@@ -319,7 +319,7 @@
              path="third_party/syzkaller"
              remote="https://fuchsia.googlesource.com/third_party/syzkaller"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="07e4f4281ee4a01f1e780100cb31c4ec574bedf7"/>
+             revision="a11f6eb4e31a474c1d54e9ff9846227be88bb797"/>
     <project name="third_party/openssh-portable"
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"
