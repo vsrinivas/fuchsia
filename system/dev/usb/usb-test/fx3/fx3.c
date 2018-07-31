@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/device/usb-test-fwloader.h>
 #include <zircon/hw/usb.h>
 

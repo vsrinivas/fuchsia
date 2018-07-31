@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-audio.h>

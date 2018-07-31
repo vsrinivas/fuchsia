@@ -6,7 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>

@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/serial.h>
 #include <ddk/protocol/usb.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/listnode.h>
 #include <zircon/hw/usb.h>
 

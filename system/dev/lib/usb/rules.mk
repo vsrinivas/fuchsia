@@ -5,13 +5,14 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
+MODULE_TYPE := userlib
 
-MODULE_TYPE := driver
+MODULE_SRCS := \
+	$(LOCAL_DIR)/usb.c \
 
-MODULE_SRCS := $(LOCAL_DIR)/usb-hid.c
+MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_LIBS := system/ulib/c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb system/ulib/pretty system/ulib/sync
-
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_PACKAGE := src
 
 include make/module.mk

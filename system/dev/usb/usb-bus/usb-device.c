@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/usb/usb.h>
 #include <zircon/hw/usb-audio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <driver/usb.h>
-
 #include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"

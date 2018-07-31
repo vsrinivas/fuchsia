@@ -10,7 +10,7 @@
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hub.h>
 #include <ddk/usb-request.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/hw/usb-hub.h>
 #include <lib/sync/completion.h>
 #include <inttypes.h>

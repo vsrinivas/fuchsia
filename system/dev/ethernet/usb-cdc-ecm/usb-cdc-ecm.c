@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/usb-request.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/hw/usb-cdc.h>
 #include <lib/sync/completion.h>
 

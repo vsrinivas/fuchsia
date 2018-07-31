@@ -10,7 +10,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/usb-request.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>

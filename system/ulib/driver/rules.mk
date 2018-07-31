@@ -18,7 +18,6 @@ MODULE_SO_NAME := driver
 MODULE_COMPILEFLAGS := -fvisibility=hidden
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/usb.c \
 	$(DEVMGR_SRCS)/devhost.c \
 	$(DEVMGR_SRCS)/devhost-api.c \
 	$(DEVMGR_SRCS)/devhost-core.c \

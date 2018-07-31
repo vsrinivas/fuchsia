@@ -8,7 +8,7 @@
 #include <ddk/protocol/bt-hci.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb-request.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
