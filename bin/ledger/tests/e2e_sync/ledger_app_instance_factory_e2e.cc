@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>

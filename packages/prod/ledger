@@ -3,7 +3,6 @@
         "garnet/packages/prod/cobalt_client"
     ],
     "packages": [
-        "//peridot/bin/cloud_provider_firebase",
         "//peridot/bin/cloud_provider_firestore",
         "//peridot/bin/ledger"
     ]

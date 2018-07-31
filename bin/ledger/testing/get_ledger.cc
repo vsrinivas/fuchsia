@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <utility>
 
-#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>

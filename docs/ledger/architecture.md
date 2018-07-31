@@ -83,11 +83,10 @@ by other devices, downloads them and registers them with Storage.
 
 Code:
 
- - [/bin/ledger/cloud_sync] implements high-level sync logic, in particular:
+ - [/bin/ledger/cloud_sync] implements high-level cloud sync logic, in particular:
    - [/bin/ledger/cloud_sync/public] contains the public (exposed to other components) API
    - [/bin/ledger/cloud_sync/impl] contains the implementation
- - [/bin/cloud_provider_firebase] and [/bin/cloud_provider_firestore]
-   implement integration with cloud services
+ - [/bin/cloud_provider_firestore] implements integration with cloud services
 
 [/bin/ledger/storage]: /bin/ledger/storage/
 [/bin/ledger/storage/public]: /bin/ledger/storage/public/
@@ -98,5 +97,4 @@ Code:
 [/bin/ledger/cloud_sync]: /bin/ledger/cloud_sync/
 [/bin/ledger/cloud_sync/public]: /bin/ledger/cloud_sync/public/
 [/bin/ledger/cloud_sync/impl]: /bin/ledger/cloud_sync/impl/
-[/bin/cloud_provider_firebase]: /bin/ledger/cloud_provider_firebase/
 [/bin/cloud_provider_firestore]: /bin/ledger/cloud_provider_firestore/

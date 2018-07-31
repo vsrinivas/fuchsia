@@ -5,7 +5,6 @@
 visibility = [
   # needed to access the serialization version constant
   # TODO(ppi): extract the serialization version constant to a separate library
-  "//peridot/bin/cloud_provider_firebase/*",
   "//peridot/bin/cloud_provider_firestore/*",
   "//peridot/bin/ledger/*",
 ]

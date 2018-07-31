@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -129,8 +129,9 @@ std::function<void(std::function<void()>)> Reset(
 // pointed to by the argument. Used to teardown AppClient and AsyncHolder
 // members.
 template <typename X>
-std::function<void(std::function<void()>)> Teardown(
-    const zx::duration timeout, const char* const message, X* const field) {
+std::function<void(std::function<void()>)> Teardown(const zx::duration timeout,
+                                                    const char* const message,
+                                                    X* const field) {
   return [timeout, message, field](std::function<void()> cont) {
     field->Teardown(timeout, [message, cont] {
       if (message) {

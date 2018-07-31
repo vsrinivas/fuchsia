@@ -11,4 +11,4 @@ launcher applications that configure and run the validation tests against their
 implementation of CloudProvider ([example]).
 
 [CloudProvider]: /public/lib/cloud_provider/fidl/cloud_provider.fidl
-[example]: /bin/cloud_provider_firebase/validation/
+[example]: /bin/cloud_provider_firestore/validation/

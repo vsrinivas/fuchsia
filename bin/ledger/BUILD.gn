@@ -24,18 +24,14 @@ package("ledger") {
   resources = [
     {
       path = rebase_path(
-              get_label_info(
-                             "cobalt:generate_ledger_config",
-                             "target_gen_dir")
-              + "/cobalt_config.binproto")
+              get_label_info("cobalt:generate_ledger_config",
+                             "target_gen_dir") + "/cobalt_config.binproto")
       dest = "ledger_cobalt_config.binproto"
     },
     {
       path = rebase_path(
-              get_label_info(
-                             "cobalt:generate_ledger_config",
-                             "target_gen_dir")
-              + "/cobalt_config.binproto")
+              get_label_info("cobalt:generate_ledger_config",
+                             "target_gen_dir") + "/cobalt_config.binproto")
       dest = "firebase_auth_cobalt_config.binproto"
     },
   ]
@@ -49,27 +45,16 @@ package("ledger_tests") {
     "tests/e2e_local",
     "tests/e2e_sync",
     "tests/integration",
-    "//peridot/bin/cloud_provider_firebase:tests",
     "//peridot/bin/cloud_provider_firestore:tests",
     "//peridot/public/lib/cloud_provider/validation",
   ]
 
   tests = [
     {
-      name = "cloud_provider_firebase_unittests"
-    },
-    {
       name = "cloud_provider_firestore_unittests"
     },
     {
       name = "cloud_provider_validation_tests"
-
-      # This test needs additional configuration and should not run by default.
-      # Marking it as disabled puts the binary in /system/test/disabled/.
-      disabled = true
-    },
-    {
-      name = "launch_validation_tests_firebase"
 
       # This test needs additional configuration and should not run by default.
       # Marking it as disabled puts the binary in /system/test/disabled/.

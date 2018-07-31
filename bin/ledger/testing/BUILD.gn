@@ -2,17 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//peridot/bin/ledger/*",
-  "//peridot/bin/cloud_provider_firebase/*",
-]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("lib") {
   testonly = true
 
   sources = [
-    "cloud_provider_firebase_factory.cc",
-    "cloud_provider_firebase_factory.h",
     "data_generator.cc",
     "data_generator.h",
     "get_ledger.cc",
@@ -35,7 +30,6 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",
@@ -51,7 +45,6 @@ source_set("lib") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/convert",
