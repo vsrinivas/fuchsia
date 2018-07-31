@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <zircon/syscalls.h>
-#include <zircon/time.h>
 
 namespace zx {
 
@@ -20,16 +19,16 @@ public:
 
     constexpr zx_duration_t get() const { return value_; }
 
-    duration operator+(duration other) const {
-        return duration(zx_duration_add_duration(value_, other.value_));
+    constexpr duration operator+(duration other) const {
+        return duration(value_ + other.value_);
     }
 
-    duration operator-(duration other) const {
-        return duration(zx_duration_sub_duration(value_, other.value_));
+    constexpr duration operator-(duration other) const {
+        return duration(value_ - other.value_);
     }
 
-    duration operator*(uint64_t multiplier) const {
-        return duration(zx_duration_mul_uint64(value_, multiplier));
+    constexpr duration operator*(uint64_t multiplier) const {
+        return duration(value_ * multiplier);
     }
 
     constexpr duration operator/(uint64_t divisor) const {
@@ -45,17 +44,17 @@ public:
     }
 
     duration& operator+=(duration other) {
-        value_ = zx_duration_add_duration(value_, other.value_);
+        value_ += other.value_;
         return *this;
     }
 
     duration& operator-=(duration other) {
-        value_ = zx_duration_sub_duration(value_, other.value_);
-        return *this;
+      value_ -= other.value_;
+      return *this;
     }
 
     duration& operator*=(uint64_t multiplier) {
-        value_ = zx_duration_mul_uint64(value_, multiplier);
+        value_ *= multiplier;
         return *this;
     }
 
@@ -167,24 +166,24 @@ public:
     zx_time_t* get_address() { return &value_; }
 
     constexpr duration operator-(basic_time<kClockId> other) const {
-        return duration(zx_time_sub_time(value_, other.value_));
+        return duration(value_ - other.value_);
     }
 
     constexpr basic_time<kClockId> operator+(duration delta) const {
-        return basic_time<kClockId>(zx_time_add_duration(value_, delta.get()));
+        return basic_time<kClockId>(value_ + delta.get());
     }
 
     constexpr basic_time<kClockId> operator-(duration delta) const {
-        return basic_time<kClockId>(zx_time_sub_duration(value_, delta.get()));
+        return basic_time<kClockId>(value_ - delta.get());
     }
 
     basic_time<kClockId>& operator+=(duration delta) {
-      value_ = zx_time_add_duration(value_, delta.get());
+      value_ += delta.get();
       return *this;
     }
 
     basic_time<kClockId>& operator-=(duration delta) {
-      value_ = zx_time_sub_duration(value_, delta.get());
+      value_ -= delta.get();
       return *this;
     }
 
