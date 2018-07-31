@@ -82,7 +82,7 @@ constexpr char kFakeCobaltConfig[] = "FakeConfig";
 constexpr int32_t kFakeCobaltMetricId = 2;
 constexpr int32_t kFakeCobaltEncodingId = 3;
 
-class FakeCobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
+class FakeCobaltEncoderImpl : public fuchsia::cobalt::Encoder {
  public:
   FakeCobaltEncoderImpl() {}
 
@@ -175,14 +175,13 @@ class FakeCobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
       multipart_calls_;
 };
 
-class FakeCobaltEncoderFactoryImpl
-    : public fuchsia::cobalt::CobaltEncoderFactory {
+class FakeCobaltEncoderFactoryImpl : public fuchsia::cobalt::EncoderFactory {
  public:
   FakeCobaltEncoderFactoryImpl() {}
 
   void GetEncoder(
       int32_t project_id,
-      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request) override {
+      fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request) override {
     cobalt_encoder_.reset(new FakeCobaltEncoderImpl());
     cobalt_encoder_bindings_.AddBinding(cobalt_encoder_.get(),
                                         std::move(request));
@@ -190,7 +189,7 @@ class FakeCobaltEncoderFactoryImpl
 
   void GetEncoderForProject(
       fuchsia::cobalt::ProjectProfile profile,
-      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request,
+      fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request,
       GetEncoderForProjectCallback callback) override {
     cobalt_encoder_.reset(new FakeCobaltEncoderImpl());
     cobalt_encoder_bindings_.AddBinding(cobalt_encoder_.get(),
@@ -202,7 +201,7 @@ class FakeCobaltEncoderFactoryImpl
 
  private:
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
-  fidl::BindingSet<fuchsia::cobalt::CobaltEncoder> cobalt_encoder_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::Encoder> cobalt_encoder_bindings_;
 };
 
 class CobaltTest : public gtest::TestLoopFixture {
@@ -219,8 +218,8 @@ class CobaltTest : public gtest::TestLoopFixture {
  private:
   std::unique_ptr<component::StartupContext> InitStartupContext() {
     factory_impl_.reset(new FakeCobaltEncoderFactoryImpl());
-    service_provider.AddService<fuchsia::cobalt::CobaltEncoderFactory>(
-        [this](fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoderFactory>
+    service_provider.AddService<fuchsia::cobalt::EncoderFactory>(
+        [this](fidl::InterfaceRequest<fuchsia::cobalt::EncoderFactory>
                    request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
@@ -240,7 +239,7 @@ class CobaltTest : public gtest::TestLoopFixture {
   std::unique_ptr<FakeCobaltEncoderFactoryImpl> factory_impl_;
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
   std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<fuchsia::cobalt::CobaltEncoderFactory> factory_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::EncoderFactory> factory_bindings_;
   fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;
   fidl::InterfaceRequest<fuchsia::sys::Environment> app_environment_request_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTest);

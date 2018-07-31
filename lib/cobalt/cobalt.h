@@ -32,7 +32,7 @@ class CobaltObservation {
   std::string ValueRepr();
 
   uint32_t metric_id() const { return metric_id_; }
-  void Report(fuchsia::cobalt::CobaltEncoderPtr& encoder,
+  void Report(fuchsia::cobalt::EncoderPtr& encoder,
               fit::function<void(fuchsia::cobalt::Status)> callback) &&;
 
   CobaltObservation& operator=(const CobaltObservation&);

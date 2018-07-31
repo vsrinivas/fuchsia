@@ -20,7 +20,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
-using fuchsia::cobalt::CobaltEncoderFactory;
+using fuchsia::cobalt::EncoderFactory;
 using fuchsia::cobalt::ObservationValue;
 using fuchsia::cobalt::Status;
 using fuchsia::cobalt::Value;
@@ -71,7 +71,7 @@ CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
 CobaltObservation::CobaltObservation(CobaltObservation&& rhs)
     : CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
-void CobaltObservation::Report(fuchsia::cobalt::CobaltEncoderPtr& encoder,
+void CobaltObservation::Report(fuchsia::cobalt::EncoderPtr& encoder,
                                fit::function<void(Status)> callback) && {
   if (parts_->size() == 1) {
     encoder->AddObservation(metric_id_, parts_->at(0).encoding_id,
@@ -217,7 +217,7 @@ class CobaltContextImpl : public CobaltContext {
   backoff::ExponentialBackoff backoff_;
   async_dispatcher_t* const dispatcher_;
   component::StartupContext* context_;
-  fuchsia::cobalt::CobaltEncoderPtr encoder_;
+  fuchsia::cobalt::EncoderPtr encoder_;
   const int32_t project_id_ = 0;
   const fsl::SizedVmo config_;
 
@@ -262,7 +262,7 @@ void CobaltContextImpl::ReportObservation(CobaltObservation observation) {
 
 void CobaltContextImpl::ConnectToCobaltApplication() {
   auto encoder_factory =
-      context_->ConnectToEnvironmentService<CobaltEncoderFactory>();
+      context_->ConnectToEnvironmentService<EncoderFactory>();
 
   if (project_id_ > 0) {
     encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
