@@ -7,8 +7,9 @@
 use byteorder::{ByteOrder, NetworkEndian};
 use error::ParseError;
 use ip::Ipv4Addr;
-use wire::ipv4;
+use std::cmp::min;
 use wire::util::Checksum;
+use wire::{ipv4, BufferAndRange};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 macro_rules! create_net_enum {
@@ -132,6 +133,24 @@ impl<B: ByteSlice> Icmpv4Echo<B> {
             LayoutVerified::<B, IdAndSeq>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         Ok(Icmpv4Echo { id_seq, data })
     }
+
+    fn size(&self) -> usize {
+        self.id_seq.bytes().len() + self.data.len()
+    }
+
+    fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        let (_, body, _) = buffer.parts_mut();
+
+        let (mut id_seq, body) = LayoutVerified::<_, IdAndSeq>::new_unaligned_from_prefix_zeroed(
+            body,
+        ).expect("Unable to allocate data for IdAndSeq");
+        id_seq.bytes_mut().clone_from_slice(self.id_seq.bytes());
+
+        let len = min(self.data.len(), body.len());
+        body[..len].clone_from_slice(&self.data[..len]);
+
+        buffer
+    }
 }
 
 create_net_enum! {
@@ -177,6 +196,33 @@ impl<B: ByteSlice> Icmpv4DestUnreachable<B> {
             origin_data,
         })
     }
+
+    fn size(&self) -> usize {
+        4 /* 4 unused bytes */ + self.internet_header.bytes().len() + self.origin_data.bytes().len()
+    }
+
+    fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        let (_, body, _) = buffer.parts_mut();
+
+        let (_, body) = LayoutVerified::<_, [u8; 4]>::new_unaligned_from_prefix(body)
+            .expect("Unable to allocate data for 4 unused bytes");
+
+        let (mut internet_header, body) =
+            LayoutVerified::<_, ipv4::HeaderPrefix>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for ipv4::HeaderPrefix");
+        internet_header
+            .bytes_mut()
+            .clone_from_slice(self.internet_header.bytes());
+
+        let (mut origin_data, _) =
+            LayoutVerified::<_, IcmpOriginData>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for IcmpOriginData");
+        origin_data
+            .bytes_mut()
+            .clone_from_slice(self.origin_data.bytes());
+
+        buffer
+    }
 }
 
 create_net_enum! {
@@ -211,6 +257,37 @@ impl<B: ByteSlice> Icmpv4Redirect<B> {
             origin_data,
         })
     }
+
+    fn size(&self) -> usize {
+        self.gateway.bytes().len()
+            + self.internet_header.bytes().len()
+            + self.origin_data.bytes().len()
+    }
+
+    fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        let (_, body, _) = buffer.parts_mut();
+
+        let (mut gateway, body) = LayoutVerified::<_, Ipv4Addr>::new_unaligned_from_prefix_zeroed(
+            body,
+        ).expect("Unable to allocate data for Ipv4Addr");
+        gateway.bytes_mut().clone_from_slice(self.gateway.bytes());
+
+        let (mut internet_header, body) =
+            LayoutVerified::<_, ipv4::HeaderPrefix>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for ipv4::HeaderPrefix");
+        internet_header
+            .bytes_mut()
+            .clone_from_slice(self.internet_header.bytes());
+
+        let (mut origin_data, _) =
+            LayoutVerified::<_, IcmpOriginData>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for ipv4::HeaderPrefix");
+        origin_data
+            .bytes_mut()
+            .clone_from_slice(self.origin_data.bytes());
+
+        buffer
+    }
 }
 
 create_net_enum! {
@@ -241,6 +318,34 @@ impl<B: ByteSlice> Icmpv4TimeExceeded<B> {
             internet_header,
             origin_data,
         })
+    }
+
+    fn size(&self) -> usize {
+        4 /* 4 unused bytes */ + self.internet_header.bytes().len() + self.origin_data.bytes().len()
+    }
+
+    fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        let (_, body, _) = buffer.parts_mut();
+
+        // Eat 4 unused bytes
+        let (_, body) = LayoutVerified::<_, [u8; 4]>::new_unaligned_from_prefix(body)
+            .expect("Unable to allocate data for 4 unused bytes");
+
+        let (mut internet_header, body) =
+            LayoutVerified::<_, ipv4::HeaderPrefix>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for ipv4::HeaderPrefix");
+        internet_header
+            .bytes_mut()
+            .clone_from_slice(self.internet_header.bytes());
+
+        let (mut origin_data, _) =
+            LayoutVerified::<_, IcmpOriginData>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for IcmpOriginData");
+        origin_data
+            .bytes_mut()
+            .clone_from_slice(self.origin_data.bytes());
+
+        buffer
     }
 }
 
@@ -277,6 +382,37 @@ impl<B: ByteSlice> Icmpv4ParameterProblem<B> {
             origin_data,
         })
     }
+
+    fn size(&self) -> usize {
+        1 /* pointer */ + 3 /* unused bytes */ + self.internet_header.bytes().len() + self.origin_data.bytes().len()
+    }
+
+    fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        let (_, body, _) = buffer.parts_mut();
+
+        let (mut pointer, body) = LayoutVerified::<_, u8>::new_unaligned_from_prefix_zeroed(body)
+            .expect("Unable to allocate data for pointer");
+        pointer.bytes_mut().clone_from_slice(self.pointer.bytes());
+
+        let (_, body) = LayoutVerified::<_, [u8; 3]>::new_unaligned_from_prefix_zeroed(body)
+            .expect("Unable to allocate data for Unused 3 bytes");
+
+        let (mut internet_header, body) =
+            LayoutVerified::<_, ipv4::HeaderPrefix>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for ipv4::HeaderPrefix");
+        internet_header
+            .bytes_mut()
+            .clone_from_slice(self.internet_header.bytes());
+
+        let (mut origin_data, _) =
+            LayoutVerified::<_, IcmpOriginData>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for IcmpOriginData");
+        origin_data
+            .bytes_mut()
+            .clone_from_slice(self.origin_data.bytes());
+
+        buffer
+    }
 }
 
 #[repr(C, packed)]
@@ -310,6 +446,10 @@ impl IcmpTimestampData {
     fn set_tx_timestamp(&mut self, timestamp: u32) {
         NetworkEndian::write_u32(&mut self.tx_timestamp, timestamp)
     }
+
+    fn size(&self) -> usize {
+        self.origin_timestamp.len() + self.recv_timestamp.len() + self.tx_timestamp.len()
+    }
 }
 
 unsafe impl FromBytes for IcmpTimestampData {}
@@ -329,6 +469,29 @@ impl<B: ByteSlice> Icmpv4Timestamp<B> {
             LayoutVerified::<B, IcmpTimestampData>::new(bytes).ok_or(ParseError::Format)?;
         Ok(Icmpv4Timestamp { id_seq, timestamps })
     }
+
+    fn size(&self) -> usize {
+        self.id_seq.bytes().len() + self.timestamps.bytes().len()
+    }
+
+    fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        let (_, body, _) = buffer.parts_mut();
+
+        let (mut id_seq, body) = LayoutVerified::<_, IdAndSeq>::new_unaligned_from_prefix_zeroed(
+            body,
+        ).expect("Unable to allocate data for IdAndSeq");
+        id_seq.bytes_mut().clone_from_slice(self.id_seq.bytes());
+
+        let (mut timestamps, _) =
+            LayoutVerified::<_, IcmpTimestampData>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for IcmpTimestampData");
+
+        timestamps
+            .bytes_mut()
+            .clone_from_slice(self.timestamps.bytes());
+
+        buffer
+    }
 }
 
 #[allow(missing_docs)]
@@ -341,6 +504,65 @@ enum Icmpv4Body<B> {
     Redirect(Icmpv4Redirect<B>),
     TimeExceeded(Icmpv4TimeExceeded<B>),
     ParameterProblem(Icmpv4ParameterProblem<B>),
+}
+
+impl<B: ByteSlice> Icmpv4Body<B> {
+    fn serialize<C: AsMut<[u8]>>(
+        self,
+        mut buffer: BufferAndRange<C>,
+    ) -> (Icmpv4Type, u8, BufferAndRange<C>) {
+        match self {
+            Icmpv4Body::EchoReply(echo_reply) => {
+                (Icmpv4Type::EchoReply, 0, echo_reply.serialize(buffer))
+            }
+            Icmpv4Body::DestUnreachable(dest_unreachable) => (
+                Icmpv4Type::DestUnreachable,
+                dest_unreachable.code as u8,
+                dest_unreachable.serialize(buffer),
+            ),
+            Icmpv4Body::Redirect(redirect) => (
+                Icmpv4Type::Redirect,
+                redirect.code as u8,
+                redirect.serialize(buffer),
+            ),
+            Icmpv4Body::EchoRequest(echo_request) => {
+                (Icmpv4Type::EchoRequest, 0, echo_request.serialize(buffer))
+            }
+            Icmpv4Body::TimeExceeded(time_exceeded) => (
+                Icmpv4Type::TimeExceeded,
+                time_exceeded.code as u8,
+                time_exceeded.serialize(buffer),
+            ),
+            Icmpv4Body::ParameterProblem(parameter_problem) => (
+                Icmpv4Type::ParameterProblem,
+                parameter_problem.code as u8,
+                parameter_problem.serialize(buffer),
+            ),
+            Icmpv4Body::TimestampRequest(timestamp_request) => (
+                Icmpv4Type::TimestampRequest,
+                0,
+                timestamp_request.serialize(buffer),
+            ),
+            Icmpv4Body::TimestampReply(timestamp_reply) => (
+                Icmpv4Type::TimestampReply,
+                0,
+                timestamp_reply.serialize(buffer),
+            ),
+        }
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            Icmpv4Body::EchoReply(ref er) => er.size(),
+            Icmpv4Body::DestUnreachable(ref du) => du.size(),
+            Icmpv4Body::Redirect(ref r) => r.size(),
+            Icmpv4Body::EchoRequest(ref er) => er.size(),
+            Icmpv4Body::TimeExceeded(ref te) => te.size(),
+            Icmpv4Body::ParameterProblem(ref pp) => pp.size(),
+            Icmpv4Body::TimestampRequest(ref tr) => tr.size(),
+            Icmpv4Body::TimestampReply(ref tr) => tr.size(),
+        }
+    }
 }
 
 /// Struct to represent an ICMPv4 packet.
@@ -393,6 +615,37 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
 
         Ok(packet)
     }
+
+    /// Serialize an ICMPv4 Echo request into a ByteSlice.
+    pub fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
+        // Slice off the header, so we can write the body first.
+        buffer.slice(4..);
+
+        let (msg_type, code, mut buffer) = self.body.serialize(buffer);
+
+        let (header_bytes, body, _) = buffer.parts_mut();
+
+        let (_, mut header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(
+            header_bytes,
+        ).expect("Unable to allocate data for Header");
+
+        header.code = code;
+        header.set_msg_type(msg_type);
+
+        let mut c = Checksum::new();
+        c.add_bytes(&[header.msg_type, header.code]);
+        c.add_bytes(&body);
+        NetworkEndian::write_u16(&mut header.checksum, c.checksum());
+
+        // Restore the header to the BufferAndRange
+        buffer.extend_backwards(4);
+        buffer
+    }
+
+    /// Return the size of the header plus the size of the body.
+    pub fn size(&self) -> usize {
+        4 + self.body.size()
+    }
 }
 
 #[cfg(test)]
@@ -401,39 +654,49 @@ mod tests {
     use wire::ipv4::Ipv4Packet;
 
     #[test]
-    fn test_parse_echo_request() {
+    fn test_parse_and_serialize_echo_request() {
         use wire::testdata::icmp_echo::*;
         let (ip_packet, range) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        if let Icmpv4Body::EchoRequest(echo_request) = icmp_packet.body {
+        if let Icmpv4Body::EchoRequest(ref echo_request) = icmp_packet.body {
             assert_eq!(echo_request.data, ECHO_DATA);
             assert_eq!(echo_request.id_seq.id(), IDENTIFIER);
             assert_eq!(echo_request.id_seq.seq(), SEQUENCE_NUM);
         } else {
             panic!("Unexpected packet body");
         }
+
+        let data = vec![0; icmp_packet.size()];
+        let mut serialized_data = icmp_packet.serialize(BufferAndRange::new(data, ..));
+        let (_, body, _) = serialized_data.parts_mut();
+        assert_eq!(body[..], REQUEST_IP_PACKET_BYTES[20..]);
     }
 
     #[test]
-    fn test_parse_echo_response() {
+    fn test_parse_and_serialize_echo_response() {
         use wire::testdata::icmp_echo::*;
         let (ip_packet, range) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        if let Icmpv4Body::EchoReply(echo_reply) = icmp_packet.body {
+        if let Icmpv4Body::EchoReply(ref echo_reply) = icmp_packet.body {
             assert_eq!(echo_reply.data, ECHO_DATA);
             assert_eq!(echo_reply.id_seq.id(), IDENTIFIER);
             assert_eq!(echo_reply.id_seq.seq(), SEQUENCE_NUM);
         } else {
             panic!("Unexpected packet body");
         }
+
+        let data = vec![0; icmp_packet.size()];
+        let mut serialized_data = icmp_packet.serialize(BufferAndRange::new(data, ..));
+        let (_, body, _) = serialized_data.parts_mut();
+        assert_eq!(body[..], RESPONSE_IP_PACKET_BYTES[20..]);
     }
 
     #[test]
-    fn test_parse_timestamp() {
+    fn test_parse_and_serialize_timestamp() {
         use wire::testdata::icmp_timestamp::*;
         let (ip_packet, range) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        if let Icmpv4Body::TimestampRequest(timestamp_reply) = icmp_packet.body {
+        if let Icmpv4Body::TimestampRequest(ref timestamp_reply) = icmp_packet.body {
             assert_eq!(
                 timestamp_reply.timestamps.origin_timestamp(),
                 ORIGIN_TIMESTAMP
@@ -445,44 +708,65 @@ mod tests {
         } else {
             panic!("Unexpected packet body");
         }
+
+        let data = vec![0; icmp_packet.size()];
+        let mut serialized_data = icmp_packet.serialize(BufferAndRange::new(data, ..));
+        let (_, body, _) = serialized_data.parts_mut();
+        assert_eq!(body[..], REQUEST_IP_PACKET_BYTES[20..]);
     }
 
     #[test]
-    fn test_parse_dest_unreachable() {
+    fn test_parse_and_serialize_dest_unreachable() {
         use wire::testdata::icmp_dest_unreachable::*;
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        if let Icmpv4Body::DestUnreachable(packet) = icmp_packet.body {
+        if let Icmpv4Body::DestUnreachable(ref packet) = icmp_packet.body {
             assert_eq!(packet.code, Icmpv4DestUnreachableCode::DestHostUnreachable);
             assert_eq!(packet.origin_data.bytes(), ORIGIN_DATA);
         } else {
             panic!("Unexpected packet body");
         }
+
+        let data = vec![0; icmp_packet.size()];
+        let mut serialized_data = icmp_packet.serialize(BufferAndRange::new(data, ..));
+        let (_, body, _) = serialized_data.parts_mut();
+        assert_eq!(body[..], IP_PACKET_BYTES[20..]);
     }
 
     #[test]
-    fn test_parse_redirect() {
+    fn test_parse_and_serialize_redirect() {
         use wire::testdata::icmp_redirect::*;
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        if let Icmpv4Body::Redirect(packet) = icmp_packet.body {
+        if let Icmpv4Body::Redirect(ref packet) = icmp_packet.body {
             assert_eq!(packet.code, Icmpv4RedirectCode::RedirectForHost);
             assert_eq!(*packet.gateway, GATEWAY_ADDR);
         } else {
             panic!("Unexpected packet body");
         }
+
+        let data = vec![0; icmp_packet.size()];
+        let mut serialized_data = icmp_packet.serialize(BufferAndRange::new(data, ..));
+        let (_, body, _) = serialized_data.parts_mut();
+        assert_eq!(body[..], IP_PACKET_BYTES[20..]);
     }
 
     #[test]
-    fn test_parse_time_exceeded() {
+    fn test_parse_and_serialize_time_exceeded() {
         use wire::testdata::icmp_time_exceeded::*;
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
-        if let Icmpv4Body::TimeExceeded(packet) = icmp_packet.body {
+        if let Icmpv4Body::TimeExceeded(ref packet) = icmp_packet.body {
             assert_eq!(packet.code, Icmpv4TimeExceededCode::TTLExpired);
             assert_eq!(packet.origin_data.bytes(), ORIGIN_DATA);
         } else {
             panic!("Unexpected packet body");
         }
+
+        let data = vec![0; icmp_packet.size()];
+        let mut serialized_data = icmp_packet.serialize(BufferAndRange::new(data, ..));
+        let (_, body, _) = serialized_data.parts_mut();
+        assert_eq!(body[..], IP_PACKET_BYTES[20..]);
     }
+
 }
