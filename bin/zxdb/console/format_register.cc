@@ -141,16 +141,30 @@ Err InternalFormatCategory(debug_ipc::RegisterCategory::Type cat,
     rows.emplace_back();
     auto& row = rows.back();
 
-    row.push_back(OutputBuffer::WithContents(reg_pair.second));
-    row.push_back(OutputBuffer::WithContents(
-        fxl::StringPrintf("%zu", reg_pair.first->size())));
-    row.push_back(RegisterValueToOutputBuffer(*reg_pair.first));
+    auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
+                                      : TextForegroundColor::kLightGray;
+
+    auto name = (OutputBuffer::WithContents(reg_pair.second));
+    name.SetForegroundColor(color);
+    row.push_back(name);
+
+    auto size = OutputBuffer::WithContents(
+        fxl::StringPrintf("%zu", reg_pair.first->size()));
+    size.SetForegroundColor(color);
+    row.push_back(size);
+
+    auto val = RegisterValueToOutputBuffer(*reg_pair.first);
+    val.SetForegroundColor(color);
+    row.push_back(val);
+
     if (cat == debug_ipc::RegisterCategory::Type::kFloatingPoint) {
+      OutputBuffer fp_val;
       std::string out;
-      if(GetFPString(*reg_pair.first, &out).ok())
-        row.push_back(OutputBuffer::WithContents(std::move(out)));
-      else
-        row.push_back({});
+      if(GetFPString(*reg_pair.first, &out).ok()) {
+        fp_val = OutputBuffer::WithContents(std::move(out));
+        fp_val.SetForegroundColor(color);
+      }
+      row.push_back(fp_val);
     }
   }
 

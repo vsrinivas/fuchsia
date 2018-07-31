@@ -24,6 +24,57 @@ enum class Syntax {
   kVariable  // Use for variable names.
 };
 
+// The following color enums are to be used when Syntax is not enough, which
+// is meant to semantic meaning. Colors are to be used by specific output that
+// use more fine-grained control over color output, like the register output
+// table.
+// Colors never override syntax. They are only applied when the Span is using
+// a normal syntax.
+
+enum class TextBackgroundColor {
+  kDefault,
+  // Basic 16 colors
+  kBlack,
+  kBlue,
+  kCyan,
+  kGray,
+  kGreen,
+  kMagenta,
+  kRed,
+  kYellow,
+  kWhite,
+
+  kLightBlue,
+  kLightCyan,
+  kLightGray,
+  kLightGreen,
+  kLightMagenta,
+  kLightRed,
+  kLightYellow,
+};
+
+enum class TextForegroundColor {
+  kDefault,
+  // Basic 16 colors
+  kBlack,
+  kBlue,
+  kCyan,
+  kGray,
+  kGreen,
+  kMagenta,
+  kRed,
+  kYellow,
+  kWhite,
+
+  kLightBlue,
+  kLightCyan,
+  kLightGray,
+  kLightGreen,
+  kLightMagenta,
+  kLightRed,
+  kLightYellow,
+};
+
 // This class collects output from commands so it can be put on the screen in
 // one chunk. It's not just a string because we want to add helper functions
 // and may want to add things like coloring in the future.
@@ -57,11 +108,18 @@ class OutputBuffer {
   // version in string_util.h, see that for documentation.
   size_t UnicodeCharWidth() const;
 
+  void SetBackgroundColor(TextBackgroundColor);
+  void SetForegroundColor(TextForegroundColor);
+
  private:
   struct Span {
     Span(Syntax s, std::string t);
 
     Syntax syntax = Syntax::kNormal;
+    // This will only be used when Syntax is kNormal.
+    // This is normally set through the OutputBuffer interface.
+    TextBackgroundColor background = TextBackgroundColor::kDefault;
+    TextForegroundColor foreground = TextForegroundColor::kDefault;
     std::string text;
   };
   std::vector<Span> spans_;
