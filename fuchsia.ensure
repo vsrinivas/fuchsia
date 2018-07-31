@@ -7,6 +7,9 @@ $VerifiedPlatform mac-amd64
 
 $ParanoidMode CheckPresence
 
+# GN
+gn/gn/${platform} git_revision:11e09914b1a4cd7b6f902e2f76798c47e9312e8e
+
 # vpython
 infra/tools/luci/vpython/${platform} git_revision:b6cdec8586c9f8d3d728b1bc0bd4331330ba66fc
 
@@ -18,9 +21,6 @@ infra/tools/luci/logdog/logdog/${platform} git_revision:cf9d281c2ff478928ff11dfa
 
 # Ninja
 infra/ninja/${platform} version:1.8.2
-
-# GN
-infra/tools/gn/${platform} gn_version:549249
 
 # Breakpad
 fuchsia/tools/breakpad/${os=linux}-${arch} git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
