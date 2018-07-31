@@ -392,16 +392,20 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
 
   // |UserProviderImpl::Delegate|
   void DidLogin() override {
-    if (settings_.test) {
+    // Continues if `enable_presenter` is set to true during testing, as
+    // ownership of the Presenter should still be moved to the user shell.
+    if (settings_.test && !settings_.enable_presenter) {
       // TODO(MI4-1117): Integration tests currently expect device shell to
       // always be running. So, if we're running under a test, do not shut down
       // the device shell after login.
       return;
     }
 
-    FXL_DLOG(INFO) << "Stopping device shell due to login";
-
-    StopDeviceShell();
+    // TODO(MI4-1117): See above. The device shell shouldn't be shut down.
+    if (!settings_.test) {
+      FXL_DLOG(INFO) << "Stopping device shell due to login";
+      StopDeviceShell();
+    }
 
     auto presentation_request =
         presentation_state_.presentation.is_bound()

@@ -55,7 +55,7 @@ class TestApp {
                [this](std::unique_ptr<fuchsia::mem::Buffer> link_data) {
                  std::string sub_module_url;
                  FXL_CHECK(fsl::StringFromVmo(*link_data, &sub_module_url));
-                 if (!RunSubModule(std::move(sub_module_url))) {
+                 if (!RunSubModule(sub_module_url)) {
                    Signal(modular::testing::kTestShutdown);
                    return;
                  };
@@ -66,13 +66,13 @@ class TestApp {
   TestPoint test_sub_module_launched_{"sub module launched"};
 
   // Launches the module which is under test by the test driver.
-  bool RunSubModule(fidl::StringPtr sub_module_url) {
-    if (sub_module_url == nullptr) {
+  bool RunSubModule(const std::string& sub_module_url) {
+    if (sub_module_url.empty()) {
       modular::testing::Fail("No sub_module_url supplied.");
       return false;
     }
     rapidjson::Document document;
-    document.Parse(sub_module_url.get().c_str());
+    document.Parse(sub_module_url.c_str());
     fuchsia::modular::Intent intent;
     intent.handler = document.GetString();
     module_host_->module_context()->StartModule(
