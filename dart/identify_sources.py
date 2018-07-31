@@ -13,23 +13,6 @@ import sys
 
 def get_dependencies(args):
     result = []
-    for source in args.sources:
-        command = [
-            args.gen_snapshot,
-            '--print_dependencies',
-            '--dependencies_only',
-            '--packages=' + args.packages,
-            '--vm_snapshot_data=/dev/null',
-            '--isolate_snapshot_data=/dev/null',
-        ]
-        for mapping in args.url_mapping:
-          command.append('--url_mapping=%s' % mapping)
-        command.append(source)
-        try:
-            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            raise Exception('Failed to run gen_snapshot: %s' % e.output)
-        result += output.strip().split('\n')
     return result
 
 
