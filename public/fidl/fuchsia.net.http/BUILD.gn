@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
+import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.http") {
+  sdk_category = "partner"
+
   sources = [
     "client.fidl",
   ]

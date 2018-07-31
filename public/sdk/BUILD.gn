@@ -35,6 +35,8 @@ sdk("garnet") {
     "//garnet/public/fidl/fuchsia.images:fuchsia.images_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.math:fuchsia.math_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.media:fuchsia.media_sdk($fidl_toolchain)",
+    "//garnet/public/fidl/fuchsia.net.http:fuchsia.net.http_sdk($fidl_toolchain)",
+    "//garnet/public/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.simplecamera:fuchsia.simplecamera_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.sys:fuchsia.sys_sdk($fidl_toolchain)",
