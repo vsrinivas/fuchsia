@@ -98,8 +98,9 @@ static void print_array(gpt_partition_t** a, int c) {
     }
 }
 
-static void partition_init(gpt_partition_t* part, const char* name, uint8_t* type, uint8_t* guid,
-                           uint64_t first, uint64_t last, uint64_t flags) {
+static void partition_init(gpt_partition_t* part, const char* name, const
+                           uint8_t* type, const uint8_t* guid, uint64_t first,
+                           uint64_t last, uint64_t flags) {
     memcpy(part->type, type, sizeof(part->type));
     memcpy(part->guid, guid, sizeof(part->guid));
     part->first = first;
@@ -445,8 +446,9 @@ int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_e
     return 0;
 }
 
-int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid,
-                      uint64_t offset, uint64_t blocks, uint64_t flags) {
+int gpt_partition_add(gpt_device_t* dev, const char* name, const uint8_t* type,
+                      const uint8_t* guid, uint64_t offset, uint64_t blocks,
+                      uint64_t flags) {
     gpt_priv_t* priv = get_priv(dev);
 
     if (!dev->valid) {

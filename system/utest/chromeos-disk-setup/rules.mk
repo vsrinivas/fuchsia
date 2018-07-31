@@ -10,18 +10,22 @@ MODULE_TYPE := usertest
 MODULE_GROUP := disktools
 MODULE_NAME := chromeos-disk-setup-test
 
-MODULE_SRCS := $(LOCAL_DIR)/chromeos-disk-setup.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/chromeos-disk-setup.cpp
 
 MODULE_STATIC_LIBS := \
-  system/ulib/chromeos-disk-setup \
-  system/ulib/gpt \
-  third_party/ulib/cksum
+    system/ulib/chromeos-disk-setup \
+    system/ulib/fbl \
+    system/ulib/gpt \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+    third_party/ulib/cksum
 
 MODULE_LIBS := \
-  system/ulib/c \
-  system/ulib/fdio \
-  system/ulib/fs-management \
-  system/ulib/unittest \
-  system/ulib/zircon
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/fs-management \
+    system/ulib/unittest \
+    system/ulib/zircon
 
 include make/module.mk

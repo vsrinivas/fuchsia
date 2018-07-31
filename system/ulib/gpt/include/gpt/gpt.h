@@ -69,8 +69,9 @@ int gpt_device_sync(gpt_device_t* dev);
 int gpt_device_finalize(gpt_device_t* dev);
 
 // adds a partition
-int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid,
-                      uint64_t offset, uint64_t blocks, uint64_t flags);
+int gpt_partition_add(gpt_device_t* dev, const char* name, const uint8_t* type,
+                      const uint8_t* guid, uint64_t offset, uint64_t blocks,
+                      uint64_t flags);
 
 // Writes zeroed blocks at an arbitrary offset (in blocks) within the device.
 //
