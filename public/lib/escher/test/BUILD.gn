@@ -60,6 +60,7 @@ if (is_mac) {
       ":gtest_escher",
       "base:base_unittests",
       "//garnet/public/lib/fxl",
+      "//third_party/googletest:gmock",
       "//third_party/shaderc/libshaderc",
       "//third_party/shaderc/third_party/glslang",
       "//third_party/shaderc/third_party/glslang:SPIRV",
@@ -76,7 +77,7 @@ if (is_mac) {
       ]
       deps += [
         "//garnet/public/lib/gtest",
-        "//third_party/googletest:gmock",
+
         "//zircon/public/lib/async-loop-cpp",
       ]
     }
