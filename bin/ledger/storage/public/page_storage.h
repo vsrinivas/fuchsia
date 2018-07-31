@@ -100,6 +100,15 @@ class PageStorage : public PageSyncClient {
   // exclusive access to the page to ensure a correct result.
   virtual void IsSynced(fit::function<void(Status, bool)> callback) = 0;
 
+  // Checks whether this page is online, i.e. has been synced to the cloud or a
+  // peer. The page is marked as online if any of these has occured: a local
+  // commit has been synced to the cloud, commits from the cloud have been
+  // downloaded, or the page has been synced to a peer. Note that the result of
+  // this method might be incorrect if there are other asynchronous operations
+  // in progress. To ensure a correct result, the caller must have exclusive
+  // access to the page.
+  virtual bool IsOnline() = 0;
+
   // Finds the commits that have not yet been synced.
   //
   // The commits passed in the callback are sorted in a non-decreasing order of
@@ -124,6 +133,9 @@ class PageStorage : public PageSyncClient {
   // otherwise.
   virtual void IsPieceSynced(ObjectIdentifier object_identifier,
                              fit::function<void(Status, bool)> callback) = 0;
+
+  // Marks this page as synced to a peer.
+  virtual void MarkSyncedToPeer(fit::function<void(Status)> callback) = 0;
 
   // Adds the given local object and passes the new object's id to the callback.
   virtual void AddObjectFromLocal(

@@ -189,18 +189,28 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
   FXL_DCHECK(!in_destructor_);
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
-      if (interested_devices_.find(source) == interested_devices_.end()) {
-        interested_devices_.insert(source.ToString());
-      }
-      auto it = not_interested_devices_.find(source);
-      if (it != not_interested_devices_.end()) {
-        // The device used to be ininterested, but now wants updates. Let's
-        // contact it again.
-        not_interested_devices_.erase(it);
-        flatbuffers::FlatBufferBuilder buffer;
-        BuildWatchStartBuffer(&buffer);
-        mesh_->Send(source, convert::ExtendedStringView(buffer));
-      }
+      MarkSyncedToPeer(
+          [this, source = source.ToString()](storage::Status status) {
+            if (status != storage::Status::OK) {
+              // If we fail to mark the page storage as synced to a peer, we
+              // might end up in a situation of deleting from disk a partially
+              // synced page. Log an error and return.
+              FXL_LOG(ERROR) << "Failed to mark PageStorage as synced to peer";
+              return;
+            }
+            if (interested_devices_.find(source) == interested_devices_.end()) {
+              interested_devices_.insert(source);
+            }
+            auto it = not_interested_devices_.find(source);
+            if (it != not_interested_devices_.end()) {
+              // The device used to be uninterested, but now wants updates.
+              // Let's contact it again.
+              not_interested_devices_.erase(it);
+              flatbuffers::FlatBufferBuilder buffer;
+              BuildWatchStartBuffer(&buffer);
+              mesh_->Send(source, convert::ExtendedStringView(buffer));
+            }
+          });
       break;
     }
     case RequestMessage_WatchStopRequest: {
@@ -463,10 +473,9 @@ void PageCommunicatorImpl::ProcessObjectRequest(
               [callback = response_waiter->NewCallback(), &response](
                   storage::Status status, bool is_synced) {
                 if (status == storage::Status::NOT_FOUND) {
-                  // Not finding an object is okay in this
-                  // context: we'll just reply we don't have it.
-                  // There is not need to abort processing the
-                  // request.
+                  // Not finding an object is okay in this context: we'll just
+                  // reply we don't have it. There is not need to abort
+                  // processing the request.
                   callback(storage::Status::OK);
                   return;
                 }
@@ -538,6 +547,21 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
+}
+
+void PageCommunicatorImpl::MarkSyncedToPeer(
+    fit::function<void(storage::Status)> callback) {
+  if (marked_as_synced_to_peer_) {
+    callback(storage::Status::OK);
+    return;
+  }
+  storage_->MarkSyncedToPeer(
+      [this, callback = std::move(callback)](storage::Status status) {
+        if (status == storage::Status::OK) {
+          marked_as_synced_to_peer_ = true;
+        }
+        callback(status);
+      });
 }
 
 }  // namespace p2p_sync

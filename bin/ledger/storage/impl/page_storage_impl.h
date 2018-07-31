@@ -82,6 +82,7 @@ class PageStorageImpl : public PageStorage {
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;
+  bool IsOnline() override;
   void GetUnsyncedCommits(
       fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) override;
@@ -94,6 +95,7 @@ class PageStorageImpl : public PageStorage {
                        fit::function<void(Status)> callback) override;
   void IsPieceSynced(ObjectIdentifier object_identifier,
                      fit::function<void(Status, bool)> callback) override;
+  void MarkSyncedToPeer(fit::function<void(Status)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
@@ -217,6 +219,10 @@ class PageStorageImpl : public PageStorage {
       ChangeSource source, IsObjectSynced is_object_synced,
       std::unique_ptr<DataSource::DataChunk> data);
 
+  // Marks this page as online.
+  FXL_WARN_UNUSED_RESULT Status SynchronousMarkPageOnline(
+      coroutine::CoroutineHandler* handler, PageDb::Batch* batch);
+
   async_dispatcher_t* const dispatcher_;
   coroutine::CoroutineService* const coroutine_service_;
   encryption::EncryptionService* const encryption_service_;
@@ -228,6 +234,7 @@ class PageStorageImpl : public PageStorage {
   std::queue<
       std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
       commits_to_send_;
+  bool page_is_online_ = false;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;

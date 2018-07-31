@@ -73,7 +73,8 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
 // DataSource that returns an error on the callback to Get().
 class FakeErrorDataSource : public DataSource {
  public:
-  explicit FakeErrorDataSource(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  explicit FakeErrorDataSource(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher) {}
 
   uint64_t GetSize() override { return 1; }
 
@@ -1477,6 +1478,62 @@ TEST_F(PageStorageTest, PageIsSynced) {
   for (auto& data : data_array) {
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
   }
+}
+
+TEST_F(PageStorageTest, PageIsMarkedOnlineAfterCloudSync) {
+  // Check that the page is initially not marked as online.
+  EXPECT_FALSE(storage_->IsOnline());
+
+  // Create a local commit: the page is still not online.
+  int size = 10;
+  std::unique_ptr<const Commit> commit =
+      TryCommitFromLocal(JournalType::EXPLICIT, size);
+  EXPECT_FALSE(storage_->IsOnline());
+
+  // Mark all objects as synced. The page is still not online: other devices
+  // will only see these objects if the corresponding commit is also synced to
+  // the cloud.
+  bool called;
+  Status status;
+  std::vector<ObjectIdentifier> object_identifiers;
+  storage_->GetUnsyncedPieces(callback::Capture(
+      callback::SetWhenCalled(&called), &status, &object_identifiers));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  for (ObjectIdentifier& object_identifier : object_identifiers) {
+    storage_->MarkPieceSynced(
+        object_identifier,
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+  }
+  EXPECT_FALSE(storage_->IsOnline());
+
+  // Mark the commit as synced. The page should now be marked as online.
+  storage_->MarkCommitSynced(
+      commit->GetId(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(storage_->IsOnline());
+}
+
+TEST_F(PageStorageTest, PageIsMarkedOnlineSyncWithPeer) {
+  // Check that the page is initially not marked as online.
+  EXPECT_FALSE(storage_->IsOnline());
+
+  // Mark the page as synced to peer and expect that it is marked as online.
+  bool called;
+  Status status;
+  storage_->MarkSyncedToPeer(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(storage_->IsOnline());
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {

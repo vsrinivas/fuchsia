@@ -418,6 +418,21 @@ TEST_F(PageDbTest, SyncMetadata) {
   });
 }
 
+TEST_F(PageDbTest, PageIsOnline) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    bool page_is_online;
+
+    // Check that the initial state is not online.
+    page_db_.IsPageOnline(handler, &page_is_online);
+    EXPECT_FALSE(page_is_online);
+
+    // Mark page as online and check it was updated.
+    EXPECT_EQ(Status::OK, page_db_.MarkPageOnline(handler));
+    page_db_.IsPageOnline(handler, &page_is_online);
+    EXPECT_TRUE(page_is_online);
+  });
+}
+
 // This test reproduces the crash of LE-451. The crash is due to a subtle
 // ordering of coroutine execution that is exactly reproduced here.
 TEST_F(PageDbTest, LE_451_ReproductionTest) {

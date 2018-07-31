@@ -302,6 +302,8 @@ void PageStorageImpl::IsSynced(fit::function<void(Status, bool)> callback) {
   });
 }
 
+bool PageStorageImpl::IsOnline() { return page_is_online_; }
+
 void PageStorageImpl::GetUnsyncedCommits(
     fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {
@@ -364,6 +366,24 @@ void PageStorageImpl::IsPieceSynced(
         Status status =
             db_->GetObjectStatus(handler, object_identifier, &object_status);
         callback(status, object_status == PageDbObjectStatus::SYNCED);
+      });
+}
+
+void PageStorageImpl::MarkSyncedToPeer(fit::function<void(Status)> callback) {
+  coroutine_manager_.StartCoroutine(
+      [this, callback = std::move(callback)](CoroutineHandler* handler) {
+        std::unique_ptr<PageDb::Batch> batch;
+        Status status = db_->StartBatch(handler, &batch);
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        status = SynchronousMarkPageOnline(handler, batch.get());
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        callback(batch->Execute(handler));
       });
 }
 
@@ -996,6 +1016,12 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
     }
   }
 
+  // Cache whether this page is online or not.
+  s = db_->IsPageOnline(handler, &page_is_online_);
+  if (s != Status::OK) {
+    return s;
+  }
+
   // Remove uncommited explicit journals.
   if (db_->RemoveExplicitJournals(handler) == Status::INTERRUPTED) {
     // Only fail if the handler is invalidated. Otherwise, failure to remove
@@ -1204,6 +1230,10 @@ Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
 Status PageStorageImpl::SynchronousMarkCommitSyncedInBatch(
     CoroutineHandler* handler, PageDb::Batch* batch,
     const CommitId& commit_id) {
+  Status status = SynchronousMarkPageOnline(handler, batch);
+  if (status != Status::OK) {
+    return status;
+  }
   return batch->MarkCommitIdSynced(handler, commit_id);
 }
 
@@ -1396,6 +1426,18 @@ Status PageStorageImpl::SynchronousAddPiece(
     }
     return db_->WriteObject(handler, object_identifier, std::move(data),
                             object_status);
+  }
+  return status;
+}
+
+Status PageStorageImpl::SynchronousMarkPageOnline(
+    coroutine::CoroutineHandler* handler, PageDb::Batch* batch) {
+  if (page_is_online_) {
+    return Status::OK;
+  }
+  Status status = batch->MarkPageOnline(handler);
+  if (status == Status::OK) {
+    page_is_online_ = true;
   }
   return status;
 }

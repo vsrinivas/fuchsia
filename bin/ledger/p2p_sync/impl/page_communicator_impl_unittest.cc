@@ -20,6 +20,8 @@
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/convert/convert.h"
 
+using testing::IsEmpty;
+
 namespace p2p_sync {
 namespace {
 
@@ -42,7 +44,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
                                    std::unique_ptr<const storage::Object>)>
                     callback) override {
     async::PostTask(dispatcher_, [this, object_identifier,
-                             callback = std::move(callback)]() {
+                                  callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
         callback(storage::Status::NOT_FOUND, nullptr);
@@ -65,7 +67,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
       storage::ObjectIdentifier object_identifier,
       fit::function<void(storage::Status, bool)> callback) override {
     async::PostTask(dispatcher_, [this, object_identifier,
-                             callback = std::move(callback)]() {
+                                  callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
         callback(storage::Status::NOT_FOUND, false);
@@ -92,10 +94,15 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
+  void MarkSyncedToPeer(fit::function<void(storage::Status)> callback) {
+    callback(mark_synced_to_peer_status);
+  }
+
   storage::CommitWatcher* watcher_ = nullptr;
   std::vector<std::pair<std::vector<storage::PageStorage::CommitIdAndBytes>,
                         fit::function<void(storage::Status)>>>
       commits_from_sync_;
+  storage::Status mark_synced_to_peer_status = storage::Status::OK;
 
  private:
   async_dispatcher_t* const dispatcher_;
@@ -366,6 +373,39 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   EXPECT_EQ(0u, object_request->object_ids()->begin()->deletion_scope_id());
   EXPECT_EQ("foo", convert::ExtendedStringView(
                        object_request->object_ids()->begin()->digest()));
+}
+
+TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildWatchStartBuffer(&buffer, "ledger", "page");
+  MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
+                                            &GetMessage);
+  // If storage fails to mark the page as synced to a peer, the mesh should not
+  // be updated.
+  storage.mark_synced_to_peer_status = storage::Status::IO_ERROR;
+  page_communicator.OnNewRequest(
+      "device2",
+      new_device_message.TakeAndMap<Request>([](const Message* message) {
+        return static_cast<const Request*>(message->message());
+      }));
+  bool called;
+  storage::Status status;
+  storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
+  std::unique_ptr<storage::DataSource::DataChunk> data;
+  page_communicator.GetObject(
+      storage::ObjectIdentifier{0, 0, "foo"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &is_object_synced, &data));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+  EXPECT_THAT(mesh.messages_, IsEmpty());
 }
 
 TEST_F(PageCommunicatorImplTest, ObjectRequest) {

@@ -112,7 +112,8 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
 
 }  // namespace
 
-PageDbImpl::PageDbImpl(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path)
+PageDbImpl::PageDbImpl(async_dispatcher_t* dispatcher,
+                       ledger::DetachedPath db_path)
     : db_(dispatcher, std::move(db_path)) {}
 
 PageDbImpl::~PageDbImpl() {}
@@ -258,6 +259,11 @@ Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
   return db_.Get(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 
+Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
+                                bool* page_is_online) {
+  return db_.HasKey(handler, PageIsOnlineRow::kKey, page_is_online);
+}
+
 Status PageDbImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
                            int64_t timestamp) {
   std::unique_ptr<Batch> batch;
@@ -381,6 +387,13 @@ Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler,
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->SetSyncMetadata(handler, key, value));
+  return batch->Execute(handler);
+}
+
+Status PageDbImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->MarkPageOnline(handler));
   return batch->Execute(handler);
 }
 

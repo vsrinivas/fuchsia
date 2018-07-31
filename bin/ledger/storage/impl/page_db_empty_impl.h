@@ -51,6 +51,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, std::string* value) override;
 
+  Status IsPageOnline(coroutine::CoroutineHandler* handler,
+                      bool* page_is_online) override;
+
   Status AddHead(coroutine::CoroutineHandler* handler, CommitIdView head,
                  int64_t timestamp) override;
   Status RemoveHead(coroutine::CoroutineHandler* handler,
@@ -87,6 +90,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, fxl::StringView value) override;
+
+  Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
 
   // PageDb::Batch:
   Status Execute(coroutine::CoroutineHandler* handler) override;

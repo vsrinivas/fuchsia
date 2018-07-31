@@ -100,6 +100,11 @@ class JournalEntryRow {
                                         ObjectIdentifier* object_identifier);
 };
 
+class PageIsOnlineRow {
+ public:
+  static constexpr fxl::StringView kKey = "page_is_online";
+};
+
 }  // namespace storage
 
 #endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_DB_SERIALIZATION_H_

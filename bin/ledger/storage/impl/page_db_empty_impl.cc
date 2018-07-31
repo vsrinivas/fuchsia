@@ -70,6 +70,10 @@ Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
+Status PageDbEmptyImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
+                                     bool* page_is_online) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/,
                                 CommitIdView /*head*/, int64_t /*timestamp*/) {
   return Status::NOT_IMPLEMENTED;
@@ -134,6 +138,10 @@ Status PageDbEmptyImpl::MarkCommitIdUnsynced(CoroutineHandler* /*handler*/,
 Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
                                         fxl::StringView /*key*/,
                                         fxl::StringView /*value*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+
+Status PageDbEmptyImpl::MarkPageOnline(coroutine::CoroutineHandler* handlers) {
   return Status::NOT_IMPLEMENTED;
 }
 

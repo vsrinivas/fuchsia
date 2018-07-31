@@ -162,6 +162,10 @@ Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* handler,
   return batch_->Put(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 
+Status PageDbBatchImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
+  return batch_->Put(handler, PageIsOnlineRow::kKey, "");
+}
+
 Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
   return batch_->Execute(handler);
 }

@@ -88,6 +88,10 @@ class PageCommunicatorImpl : public PageCommunicator,
   void ProcessObjectRequest(fxl::StringView source,
                             MessageHolder<ObjectRequest> request);
 
+  // Marks the PageStorage as synced to a peer. If successful, on the following
+  // call to MarkSyncedToPeer, the given |callback| will be called immediately.
+  void MarkSyncedToPeer(fit::function<void(storage::Status)> callback);
+
   // Map of pending requests for objects.
   callback::AutoCleanableMap<storage::ObjectIdentifier,
                              PendingObjectRequestHolder>
@@ -97,6 +101,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   // List of devices we know are not interested in this page.
   std::set<std::string, convert::StringViewComparator> not_interested_devices_;
   fit::closure on_delete_;
+  bool marked_as_synced_to_peer_ = false;
   bool started_ = false;
   bool in_destructor_ = false;
 

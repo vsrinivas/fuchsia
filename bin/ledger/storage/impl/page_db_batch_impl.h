@@ -66,6 +66,9 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, fxl::StringView value) override;
 
+  // Page online state.
+  Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
+
   Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:

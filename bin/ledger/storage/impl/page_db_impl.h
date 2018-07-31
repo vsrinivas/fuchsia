@@ -61,6 +61,8 @@ class PageDbImpl : public PageDb {
                          PageDbObjectStatus* object_status) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, std::string* value) override;
+  Status IsPageOnline(coroutine::CoroutineHandler* handler,
+                      bool* page_is_online) override;
 
   Status AddHead(coroutine::CoroutineHandler* handler, CommitIdView head,
                  int64_t timestamp) override;
@@ -98,6 +100,7 @@ class PageDbImpl : public PageDb {
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, fxl::StringView value) override;
+  Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
 
  private:
   LevelDb db_;

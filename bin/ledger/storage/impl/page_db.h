@@ -119,6 +119,10 @@ class PageDbMutator {
       coroutine::CoroutineHandler* handler, fxl::StringView key,
       fxl::StringView value) = 0;
 
+  // Updates the online state of the page.
+  FXL_WARN_UNUSED_RESULT virtual Status MarkPageOnline(
+      coroutine::CoroutineHandler* handler) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
 };
@@ -237,6 +241,12 @@ class PageDb : public PageDbMutator {
   FXL_WARN_UNUSED_RESULT virtual Status GetSyncMetadata(
       coroutine::CoroutineHandler* handler, fxl::StringView key,
       std::string* value) = 0;
+
+  // Returns whether the page is online, i.e. has been synced to the cloud or a
+  // peer at least once from this device. By default, the state of a page is
+  // offline. Once the state is set to online, it cannot be unset.
+  FXL_WARN_UNUSED_RESULT virtual Status IsPageOnline(
+      coroutine::CoroutineHandler* handler, bool* page_is_online) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);

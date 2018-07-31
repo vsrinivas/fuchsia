@@ -136,4 +136,8 @@ Status JournalEntryRow::ExtractObjectIdentifier(
   return Status::OK;
 }
 
+// PageIsOnlineRow.
+
+constexpr fxl::StringView PageIsOnlineRow::kKey;
+
 }  // namespace storage
