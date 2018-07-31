@@ -163,7 +163,7 @@ Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
 Device::~Device() {
     debugfn();
     for (auto req : free_write_reqs_) {
-        usb_request_release(req);
+        usb_req_release(&usb_, req);
     }
 }
 
@@ -3042,7 +3042,7 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
     }
 
     uint8_t* data;
-    usb_request_mmap(request, reinterpret_cast<void**>(&data));
+    usb_req_mmap(&usb_, request, reinterpret_cast<void**>(&data));
     debugf("# Rxed packet: rx_len=%" PRIu64 "\n", request->response.actual);
     debugf("  rxinfo: usb_dma_rx_pkt_len=%u\n", rx_info.usb_dma_rx_pkt_len());
     debugf("  rxdesc: ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n",
@@ -3271,7 +3271,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
         }
 
         uint8_t* data;
-        usb_request_mmap(request, reinterpret_cast<void**>(&data));
+        usb_req_mmap(&usb_, request, reinterpret_cast<void**>(&data));
         uint32_t* data32 = reinterpret_cast<uint32_t*>(data);
         RxInfo rx_info(letoh32(data32[RxInfo::addr()]));
 
@@ -4051,7 +4051,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     ZX_DEBUG_ASSERT(req != nullptr);
 
     BulkoutAggregation* aggr;
-    auto status = usb_request_mmap(req, reinterpret_cast<void**>(&aggr));
+    auto status = usb_req_mmap(&usb_, req, reinterpret_cast<void**>(&aggr));
     if (status != ZX_OK) {
         errorf("could not map usb request: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
@@ -4587,24 +4587,25 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
 }
 
 void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
+    auto dev = static_cast<Device*>(cookie);
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+        usb_req_release(&dev->usb_, request);
         return;
     }
 
-    auto dev = static_cast<Device*>(cookie);
     dev->HandleRxComplete(request);
 }
 
 void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
+    auto dev = static_cast<Device*>(cookie);
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+        usb_req_release(&dev->usb_, request);
         return;
     }
 
-    auto dev = static_cast<Device*>(cookie);
     dev->HandleTxComplete(request);
 }
+
 uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_pkt) {
     // TODO(NET-571): Honor what MLME instructs the chipset for this particular wlan_pkt
     // whether to wait for an acknowledgement from the recipient or not.

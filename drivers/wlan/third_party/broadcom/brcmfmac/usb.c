@@ -205,7 +205,10 @@ void brcmf_usb_free_urb(struct brcmf_urb* urb) {
     if (urb == NULL) {
         return;
     }
-    usb_request_release(urb->zxurb);
+    if (urb->devinfo == NULL) {
+        return;
+    }
+    usb_req_release(urb->devinfo->protocol, urb->zxurb);
     free(urb);
 }
 
@@ -233,7 +236,7 @@ static void brcmf_usb_init_urb(struct brcmf_urb* urb, struct brcmf_usbdev_info* 
     zxurb->header.send_zlp = zero_packet;
     if (out) {
         if (size > 0) {
-            usb_request_copyto(zxurb, buf, size, 0);
+            usb_req_copy_to(devinfo->protocol, zxurb, buf, size, 0);
         }
         urb->recv_buffer = 0;
         urb->desired_length = 0;
@@ -329,7 +332,7 @@ static void brcmf_usb_ctlread_complete(usb_request_t* zxurb, struct brcmf_urb* u
         }
         // TODO(cphoenix): At least some transfers malloc a buffer and copy to/from it, which
         // is unnecessary given we're in userspace and already copying here. Clean that up.
-        usb_request_copyfrom(zxurb, urb->recv_buffer, urb->actual_length, 0);
+        usb_req_copy_from(devinfo->protocol, zxurb, urb->recv_buffer, urb->actual_length, 0);
     }
 
     pthread_mutex_lock(&irq_callback_lock);
@@ -617,7 +620,7 @@ static void brcmf_usb_rx_complete(usb_request_t* zxurb, struct brcmf_urb* urb) {
                     urb->desired_length);
             urb->actual_length = urb->desired_length;
         }
-        usb_request_copyfrom(zxurb, urb->recv_buffer, urb->actual_length, 0);
+        usb_req_copy_from(devinfo->protocol, zxurb, urb->recv_buffer, urb->actual_length, 0);
     }
 
     /* zero length packets indicate usb "failure". Do not refill */
@@ -824,7 +827,7 @@ static void brcmf_usb_sync_complete(usb_request_t* zxurb, struct brcmf_urb* urb)
                     urb->desired_length);
             urb->actual_length = urb->desired_length;
         }
-        usb_request_copyfrom(zxurb, urb->recv_buffer, urb->actual_length, 0);
+        usb_req_copy_from(devinfo->protocol, zxurb, urb->recv_buffer, urb->actual_length, 0);
     }
 
     brcmf_usb_ioctl_resp_wake(devinfo);
