@@ -33,10 +33,10 @@ struct LogSettings {
   std::string log_file;
 };
 
-// Gets the active log settings for the current process.
+// Sets the active log settings for the current process.
 FXL_EXPORT void SetLogSettings(const LogSettings& settings);
 
-// Sets the active log settings for the current process.
+// Gets the active log settings for the current process.
 FXL_EXPORT LogSettings GetLogSettings();
 
 // Gets the minimum log level for the current process. Never returs a value
