@@ -3,6 +3,7 @@
         "garnet/packages/prod/atheros",
         "garnet/packages/prod/broadcom",
         "garnet/packages/prod/ralink",
+        "garnet/packages/prod/realtek",
         "garnet/packages/prod/wlanphy",
         "garnet/packages/prod/wlantap"
     ],

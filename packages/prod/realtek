@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/drivers/wlan/realtek/rtl8821"
+    ]
+}

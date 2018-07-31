@@ -54,6 +54,7 @@
         "garnet/packages/prod/pm",
         "garnet/packages/prod/power_manager",
         "garnet/packages/prod/ralink",
+        "garnet/packages/prod/realtek",
         "garnet/packages/prod/recovery_netstack",
         "garnet/packages/prod/recovery_ui",
         "garnet/packages/prod/root_ssl_certificates",
