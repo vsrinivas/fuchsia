@@ -25,6 +25,11 @@
 
 #define FIRMWARE_DOWNLOAD_DELAY ZX_MSEC(50)
 
+// Hardcoded. Better to paramaterize on chipset.
+// Broadcom chips need a few hundred msec delay
+// after firmware load
+#define BAUD_RATE_SWITCH_DELAY ZX_MSEC(200)
+
 typedef struct {
     uint16_t opcode;
     uint8_t parameter_total_size;
@@ -279,7 +284,8 @@ static int bcm_hci_start_thread(void* arg) {
                 goto fail;
             }
 
-            // switch baud rate to TARGET_BAUD_RATE
+            // switch baud rate to TARGET_BAUD_RATE after DELAY
+            zx_nanosleep(zx_deadline_after(BAUD_RATE_SWITCH_DELAY));
             status = bcm_hci_set_baud_rate(hci, TARGET_BAUD_RATE);
             if (status != ZX_OK) {
                 goto fail;
