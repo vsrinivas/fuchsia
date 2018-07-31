@@ -15,10 +15,14 @@
 #include <limits.h>
 
 #include <zircon/device/block.h>
+#include <zircon/device/skip-block.h>
 #include <zircon/device/device.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 #include <pretty/hexdump.h>
 
 #define DEV_BLOCK "/dev/class/block"
+#define DEV_SKIP_BLOCK "/dev/class/skip-block"
 
 static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
     const char* unit;
@@ -97,7 +101,7 @@ static int cmd_list_blk(void) {
     struct dirent* de;
     DIR* dir = opendir(DEV_BLOCK);
     if (!dir) {
-        printf("Error opening %s\n", DEV_BLOCK);
+        fprintf(stderr, "Error opening %s\n", DEV_BLOCK);
         return -1;
     }
     blkinfo_t info;
@@ -114,7 +118,7 @@ static int cmd_list_blk(void) {
         snprintf(info.path, sizeof(info.path), "%s/%s", DEV_BLOCK, de->d_name);
         fd = open(info.path, O_RDONLY);
         if (fd < 0) {
-            printf("Error opening %s\n", info.path);
+            fprintf(stderr, "Error opening %s\n", info.path);
             goto devdone;
         }
         if (ioctl_device_get_topo_path(fd, info.topo, sizeof(info.topo)) < 0) {
@@ -144,8 +148,8 @@ static int cmd_list_blk(void) {
         if (block_info.flags & BLOCK_FLAG_BOOTPART) {
             strlcat(flags, "BP ", sizeof(flags));
         }
-devdone:
         close(fd);
+devdone:
         printf("%-3s %4s %-16s %-20s %-6s %s\n",
                de->d_name, info.sizestr, type ? type : "",
                info.label, flags, info.topo);
@@ -154,10 +158,113 @@ devdone:
     return 0;
 }
 
+static int cmd_list_skip_blk(void) {
+    struct dirent* de;
+    DIR* dir = opendir(DEV_SKIP_BLOCK);
+    if (!dir) {
+        fprintf(stderr, "Error opening %s\n", DEV_SKIP_BLOCK);
+        return -1;
+    }
+    blkinfo_t info;
+    const char* type;
+    int fd;
+    while ((de = readdir(dir)) != NULL) {
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+            continue;
+        }
+        memset(&info, 0, sizeof(blkinfo_t));
+        type = NULL;
+        snprintf(info.path, sizeof(info.path), "%s/%s", DEV_SKIP_BLOCK, de->d_name);
+        fd = open(info.path, O_RDONLY);
+        if (fd < 0) {
+            fprintf(stderr, "Error opening %s\n", info.path);
+            goto devdone;
+        }
+        if (ioctl_device_get_topo_path(fd, info.topo, sizeof(info.topo)) < 0) {
+            strcpy(info.topo, "UNKNOWN");
+        }
+
+        skip_block_partition_info_t partition_info;
+        if (ioctl_skip_block_get_partition_info(fd, &partition_info) > 0) {
+            size_to_cstring(info.sizestr, sizeof(info.sizestr),
+                            partition_info.block_size_bytes * partition_info.partition_block_count);
+            uint8_to_guid_string(info.guid, partition_info.partition_guid);
+            type = guid_to_type(info.guid);
+        }
+
+        close(fd);
+devdone:
+        printf("%-3s %4s %-16s %-20s %-6s %s\n",
+               de->d_name, info.sizestr, type ? type : "", "", "", info.topo);
+    }
+    closedir(dir);
+    return 0;
+}
+
+static int try_read_skip_blk(int fd, off_t offset, size_t count) {
+    // check that count and offset are aligned to block size
+    uint64_t blksize;
+    skip_block_partition_info_t info;
+    ssize_t rc = ioctl_skip_block_get_partition_info(fd, &info);
+    if (rc < (ssize_t)sizeof(info)) {
+        return rc;
+    }
+    blksize = info.block_size_bytes;
+    if (count % blksize) {
+        fprintf(stderr, "Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
+        return -1;
+    }
+    if (offset % blksize) {
+        fprintf(stderr, "Offset must be a multiple of blksize=%" PRIu64 "\n", blksize);
+        return -1;
+    }
+
+    // allocate and map a buffer to read into
+    zx_handle_t vmo, dup;
+    void* buf;
+    if (zx_vmo_create(count, 0, &vmo) != ZX_OK) {
+        fprintf(stderr, "No memory\n");
+        return -1;
+    }
+    if (zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, count,
+                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (uintptr_t*) &buf) != ZX_OK) {
+        fprintf(stderr, "Failed to map vmo\n");
+        rc = -1;
+        goto out;
+    }
+    if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+        fprintf(stderr, "Cannot duplicate handle\n");
+        goto out2;
+    }
+
+    // read the data
+    skip_block_rw_operation_t op = {
+        .vmo = dup,
+        .vmo_offset = 0,
+        .block = offset / blksize,
+        .block_count = count / blksize,
+    };
+
+    ssize_t s = ioctl_skip_block_read(fd, &op);
+    if (s < 0) {
+        fprintf(stderr, "Error %zd in ioctl_skip_block_read()\n", s);
+        rc = s;
+        goto out2;
+    }
+
+    hexdump8_ex(buf, count, offset);
+
+out2:
+    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buf, count);
+out:
+    zx_handle_close(vmo);
+    return rc;
+}
+
 static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     int fd = open(dev, O_RDONLY);
     if (fd < 0) {
-        printf("Error opening %s\n", dev);
+        fprintf(stderr, "Error opening %s\n", dev);
         return fd;
     }
 
@@ -166,18 +273,19 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     block_info_t info;
     ssize_t rc = ioctl_block_get_info(fd, &info);
     if (rc < 0) {
-        printf("Error getting block size for %s\n", dev);
-        close(fd);
+        if (try_read_skip_blk(fd, offset, count) < 0) {
+            fprintf(stderr, "Error getting block size for %s\n", dev);
+        }
         goto out;
     }
     blksize = info.block_size;
     if (count % blksize) {
-        printf("Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
+        fprintf(stderr, "Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
         rc = -1;
         goto out;
     }
     if (offset % blksize) {
-        printf("Offset must be a multiple of blksize=%" PRIu64 "\n", blksize);
+        fprintf(stderr, "Offset must be a multiple of blksize=%" PRIu64 "\n", blksize);
         rc = -1;
         goto out;
     }
@@ -187,13 +295,13 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     if (offset) {
         rc = lseek(fd, offset, SEEK_SET);
         if (rc < 0) {
-            printf("Error %zd seeking to offset %jd\n", rc, (intmax_t)offset);
+            fprintf(stderr, "Error %zd seeking to offset %jd\n", rc, (intmax_t)offset);
             goto out2;
         }
     }
     ssize_t c = read(fd, buf, count);
     if (c < 0) {
-        printf("Error %zd in read()\n", c);
+        fprintf(stderr,"Error %zd in read()\n", c);
         rc = c;
         goto out2;
     }
@@ -210,14 +318,14 @@ out:
 static int cmd_stats(const char* dev, bool clear) {
     int fd = open(dev, O_RDONLY);
     if (fd < 0) {
-        printf("Error opening %s\n", dev);
+        fprintf(stderr, "Error opening %s\n", dev);
         return fd;
     }
 
     block_stats_t stats;
     ssize_t rc = ioctl_block_get_stats(fd, &clear, &stats);
     if (rc < 0) {
-        printf("Error getting stats for %s\n", dev);
+        fprintf(stderr, "Error getting stats for %s\n", dev);
         close(fd);
         goto out;
     }
@@ -245,17 +353,17 @@ int main(int argc, const char** argv) {
             if (strcmp("true", argv[3]) && strcmp("false", argv[3])) goto usage;
             rc = cmd_stats(argv[2], !strcmp("true", argv[3]) ? true : false);
         } else {
-            printf("Unrecognized command %s!\n", cmd);
+            fprintf(stderr, "Unrecognized command %s!\n", cmd);
             goto usage;
         }
     } else {
-        rc = cmd_list_blk();
+        rc = cmd_list_blk() || cmd_list_skip_blk();
     }
     return rc;
 usage:
-    printf("Usage:\n");
-    printf("%s\n", argv[0]);
-    printf("%s read <blkdev> <offset> <count>\n", argv[0]);
-    printf("%s stats <blkdev> <clear=true|false>\n", argv[0]);
+    fprintf(stderr, "Usage:\n");
+    fprintf(stderr, "%s\n", argv[0]);
+    fprintf(stderr, "%s read <blkdev> <offset> <count>\n", argv[0]);
+    fprintf(stderr, "%s stats <blkdev> <clear=true|false>\n", argv[0]);
     return 0;
 }
