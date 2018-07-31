@@ -745,7 +745,6 @@ enum KeyType {
 struct SetKeyDescriptor {
     // Specs specify a bit string, we use byte array.
     vector<uint8> key;
-    uint16 length;
     uint16 key_id;
     KeyType key_type;
     array<uint8>:6 address;

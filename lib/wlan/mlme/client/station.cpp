@@ -1194,9 +1194,9 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
         }
 
         wlan_key_config_t key_config = {};
-        memcpy(key_config.key, keyDesc.key->data(), keyDesc.length);
+        memcpy(key_config.key, keyDesc.key->data(), keyDesc.key->size());
         key_config.key_type = key_type;
-        key_config.key_len = static_cast<uint8_t>(keyDesc.length);
+        key_config.key_len = static_cast<uint8_t>(keyDesc.key->size());
         key_config.key_idx = keyDesc.key_id;
         key_config.protection = WLAN_PROTECTION_RX_TX;
         key_config.cipher_type = keyDesc.cipher_suite_type;

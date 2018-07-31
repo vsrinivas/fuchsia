@@ -272,7 +272,6 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 		cipher := hs.config.AssocRSNE.GroupData
 		keyList = append(keyList, mlme.SetKeyDescriptor{
 			Key:             hs.gtk,
-			Length:          uint16(len(hs.gtk)),
 			KeyType:         mlme.KeyType(mlme.KeyTypeGroup),
 			KeyId:           uint16(hs.gtkID),
 			CipherSuiteOui:  cipher.OUI,
@@ -291,7 +290,6 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 		cipher := hs.config.AssocRSNE.PairwiseCiphers[0]
 		keyList = append(keyList, mlme.SetKeyDescriptor{
 			Key:             hs.ptk.TK,
-			Length:          uint16(len(hs.ptk.TK)),
 			KeyType:         mlme.KeyType(mlme.KeyTypePairwise),
 			Address:         hs.config.PeerAddr,
 			CipherSuiteOui:  cipher.OUI,
