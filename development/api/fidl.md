@@ -418,7 +418,7 @@ propagate the error to another system.
 If a method can return either an error or a result, use the following pattern:
 
 ```
-enum MyStatus { OK; ERR_FOO; ... };
+enum MyStatus { OK; FOO; BAR; ... };
 
 interface Frobinator {
     1: Frobinate(...) -> (MyStatus @status, FrobinateResult? result);
