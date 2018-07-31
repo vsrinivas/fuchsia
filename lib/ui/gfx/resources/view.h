@@ -70,8 +70,10 @@ class View final : public Resource {
   void LinkResolved(ViewHolder* view_holder);
   void LinkDisconnected();
 
-  // Fired as a callback when a child Node is destroyed.
-  void OnChildDestroyed(Node* child);
+  // Called by Node in order to notify the View when a child is removed.
+  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
+  // and View.
+  void RemoveChild(Node* child);
 
   // Send an event to the parent ViewHolder's SessionListener.
   void SendViewDisconnectedEvent();
@@ -79,6 +81,11 @@ class View final : public Resource {
   ViewLinker::ImportLink link_;
   ViewHolder* view_holder_ = nullptr;
   std::unordered_set<NodePtr> children_;
+
+  // Used for |RemoveChild|.
+  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
+  // and View.
+  friend class Node;
 };
 using ViewPtr = fxl::RefPtr<View>;
 

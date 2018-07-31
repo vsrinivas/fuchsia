@@ -20,6 +20,7 @@ namespace gfx {
 
 class Node;
 class Scene;
+class View;
 class ViewHolder;
 
 using NodePtr = fxl::RefPtr<Node>;
@@ -77,21 +78,15 @@ class Node : public Resource {
 
   // |Resource|, DetachCmd.
   bool Detach() override;
-  // Sets a callback to be fired when the Node is Detached.  Takes ownership of
-  // the passed in callback.  Only one callback may be set on the Node; attempts
-  // to set another will fail.
-  //
-  // Currently made use of by View.
-  void set_on_detached_cb(fit::function<void(Node*)> on_detached_cb) {
-    FXL_DCHECK(on_detached_cb_ == nullptr);
-    on_detached_cb_ = std::move(on_detached_cb);
-  }
 
   Node* parent() const { return parent_; }
 
   // Each Node caches its containing Scene.  This is nullptr if the Node is not
   // part of a Scene.
   Scene* scene() const { return scene_; }
+
+  // Each Node which is the direct child of a View caches its parent.
+  View* view() const { return view_; }
 
   const std::vector<NodePtr>& children() const { return children_; }
 
@@ -145,11 +140,16 @@ class Node : public Resource {
   void DetachInternal();
   void RefreshScene(Scene* new_scene);
 
+  // Called by View in order to set itself as a parent.
+  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
+  // and View.
+  void set_view(View* view) { view_ = view; }
+
   uint32_t tag_value_ = 0u;
   Node* parent_ = nullptr;
   Scene* scene_ = nullptr;
+  View* view_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
-  fit::function<void(Node*)> on_detached_cb_;
 
   std::vector<NodePtr> children_;
   std::vector<NodePtr> parts_;
@@ -165,6 +165,11 @@ class Node : public Resource {
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ =
       ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
   ::fuchsia::ui::gfx::Metrics reported_metrics_;
+
+  // Used for |set_view|.
+  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
+  // and View.
+  friend class View;
 };
 
 // Inline functions.

@@ -48,7 +48,7 @@ bool View::AddChild(NodePtr child) {
   } else {
     child->Detach();
   }
-  child->set_on_detached_cb(fit::bind_member(this, &View::OnChildDestroyed));
+  child->set_view(this);
   children_.insert(child);
 
   return true;
@@ -88,7 +88,7 @@ void View::LinkDisconnected() {
   SendViewDisconnectedEvent();
 }
 
-void View::OnChildDestroyed(Node* child) {
+void View::RemoveChild(Node* child) {
   // It is OK to use the temporary RefPtr here, as child is guaranteed to
   // already have at least one other reference.  The RefPtr allows for easy
   // lookup into the set.

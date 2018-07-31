@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
@@ -155,9 +156,9 @@ bool Node::Detach() {
         break;
     }
 
-    if (on_detached_cb_) {
-      on_detached_cb_(this);
-      on_detached_cb_ = nullptr;
+    if (view_ != nullptr) {
+      view_->RemoveChild(this);
+      view_ = nullptr;
     }
 
     DetachInternal();
