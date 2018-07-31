@@ -58,19 +58,7 @@ class CobaltContext {
 // Returns a CobaltContext initialized with the provided parameters.
 std::unique_ptr<CobaltContext> MakeCobaltContext(
     async_dispatcher_t* dispatcher, component::StartupContext* context,
-    int32_t project_id);
-
-// Returns a CobaltContext initialized with the provided parameters.
-std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
     fsl::SizedVmo config);
-
-// Cobalt initialization. When cobalt is not needed anymore, the returned object
-// must be deleted. This method must not be called again until then.
-// DEPRECATED - prefer MakeCobaltContext().
-fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
-    int32_t project_id, CobaltContext** cobalt_context);
 
 // Cobalt initialization. When cobalt is not needed anymore, the returned object
 // must be deleted. This method must not be called again until then.

@@ -179,14 +179,6 @@ class FakeCobaltEncoderFactoryImpl : public fuchsia::cobalt::EncoderFactory {
  public:
   FakeCobaltEncoderFactoryImpl() {}
 
-  void GetEncoder(
-      int32_t project_id,
-      fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request) override {
-    cobalt_encoder_.reset(new FakeCobaltEncoderImpl());
-    cobalt_encoder_bindings_.AddBinding(cobalt_encoder_.get(),
-                                        std::move(request));
-  }
-
   void GetEncoderForProject(
       fuchsia::cobalt::ProjectProfile profile,
       fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request,

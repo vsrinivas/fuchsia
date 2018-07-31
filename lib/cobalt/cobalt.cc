@@ -200,8 +200,6 @@ namespace {
 class CobaltContextImpl : public CobaltContext {
  public:
   CobaltContextImpl(async_dispatcher_t* dispatcher,
-                    component::StartupContext* context, int32_t project_id);
-  CobaltContextImpl(async_dispatcher_t* dispatcher,
                     component::StartupContext* context, fsl::SizedVmo config);
   ~CobaltContextImpl() override;
 
@@ -218,7 +216,6 @@ class CobaltContextImpl : public CobaltContext {
   async_dispatcher_t* const dispatcher_;
   component::StartupContext* context_;
   fuchsia::cobalt::EncoderPtr encoder_;
-  const int32_t project_id_ = 0;
   const fsl::SizedVmo config_;
 
   std::multiset<CobaltObservation> observations_to_send_;
@@ -226,13 +223,6 @@ class CobaltContextImpl : public CobaltContext {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltContextImpl);
 };
-
-CobaltContextImpl::CobaltContextImpl(async_dispatcher_t* dispatcher,
-                                     component::StartupContext* context,
-                                     int32_t project_id)
-    : dispatcher_(dispatcher), context_(context), project_id_(project_id) {
-  ConnectToCobaltApplication();
-}
 
 CobaltContextImpl::CobaltContextImpl(async_dispatcher_t* dispatcher,
                                      component::StartupContext* context,
@@ -264,36 +254,29 @@ void CobaltContextImpl::ConnectToCobaltApplication() {
   auto encoder_factory =
       context_->ConnectToEnvironmentService<EncoderFactory>();
 
-  if (project_id_ > 0) {
-    encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
-    encoder_.set_error_handler([this] { OnConnectionError(); });
-    SendObservations();
-  } else {
-    fsl::SizedVmo config_vmo;
-    FXL_CHECK(config_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                                &config_vmo) == ZX_OK)
-        << "Could not clone config VMO";
+  fsl::SizedVmo config_vmo;
+  FXL_CHECK(config_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+                              &config_vmo) == ZX_OK)
+      << "Could not clone config VMO";
 
-    fuchsia::cobalt::ProjectProfile profile;
-    fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
-    profile.config.vmo = std::move(buf.vmo);
-    profile.config.size = buf.size;
+  fuchsia::cobalt::ProjectProfile profile;
+  fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
+  profile.config.vmo = std::move(buf.vmo);
+  profile.config.size = buf.size;
 
-    encoder_factory->GetEncoderForProject(
-        std::move(profile), encoder_.NewRequest(), [this](Status status) {
-          if (status == Status::OK) {
-            if (encoder_) {
-              encoder_.set_error_handler([this] { OnConnectionError(); });
-              SendObservations();
-            } else {
-              OnConnectionError();
-            }
+  encoder_factory->GetEncoderForProject(
+      std::move(profile), encoder_.NewRequest(), [this](Status status) {
+        if (status == Status::OK) {
+          if (encoder_) {
+            encoder_.set_error_handler([this] { OnConnectionError(); });
+            SendObservations();
           } else {
-            FXL_LOG(ERROR)
-                << "GetEncoderForProject() received invalid arguments";
+            OnConnectionError();
           }
-        });
-  }
+        } else {
+          FXL_LOG(ERROR) << "GetEncoderForProject() received invalid arguments";
+        }
+      });
 }
 
 void CobaltContextImpl::OnConnectionError() {
@@ -389,23 +372,9 @@ void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
 
 std::unique_ptr<CobaltContext> MakeCobaltContext(
     async_dispatcher_t* dispatcher, component::StartupContext* context,
-    int32_t project_id) {
-  return std::make_unique<CobaltContextImpl>(dispatcher, context, project_id);
-}
-
-std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
     fsl::SizedVmo config) {
   return std::make_unique<CobaltContextImpl>(dispatcher, context,
                                              std::move(config));
-}
-
-fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
-    int32_t project_id, CobaltContext** cobalt_context) {
-  return InitializeCobalt(
-      MakeCobaltContext(dispatcher, startup_context, project_id),
-      cobalt_context);
 }
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
