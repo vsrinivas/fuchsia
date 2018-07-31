@@ -17,12 +17,6 @@ namespace scenic {
 namespace gfx {
 namespace image_formats {
 
-// Returns the number of bytes per pixel for the given format.
-size_t BytesPerPixel(const fuchsia::images::PixelFormat& pixel_format);
-
-// Returns the pixel alignment for the given format.
-size_t PixelAlignment(const fuchsia::images::PixelFormat& pixel_format);
-
 // Returns a function that can be used to convert any format supported in
 // ImageInfo into a BGRA_8 image.
 escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(

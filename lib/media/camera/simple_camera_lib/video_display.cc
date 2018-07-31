@@ -118,6 +118,8 @@ fuchsia::images::PixelFormat ConvertFormat(
       return fuchsia::images::PixelFormat::BGRA_8;
     case YUY2:
       return fuchsia::images::PixelFormat::YUY2;
+    case NV12:
+      return fuchsia::images::PixelFormat::NV12;
     default:
       FXL_DCHECK(false) << "Unsupported format!";
   }
@@ -228,6 +230,12 @@ zx_status_t VideoDisplay::OnGetFormats(
   if (out_formats.size() < 1) {
     FXL_LOG(ERROR) << "No supported formats available";
     return ZX_ERR_INTERNAL;
+  }
+  for (const camera_video_format_t& format : out_formats) {
+    FXL_VLOG(4) << "Available format:  Capture Type: " << format.capture_type
+                << " W:H:S = " << format.width << ":" << format.height << ":"
+                << format.stride << " bbp: " << format.bits_per_pixel
+                << " format: " << format.pixel_format;
   }
   // For other configurations, we would chose a format in a fancier way...
   format_ = out_formats[0];

@@ -244,3 +244,18 @@ package("video_display") {
     },
   ]
 }
+
+package("yuv_to_image_pipe") {
+  deps = [
+    "yuv_to_image_pipe",
+  ]
+
+  binary = "yuv_to_image_pipe"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
+  ]
+}

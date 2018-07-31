@@ -1,0 +1,39 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+# this has to match the binary name in examples/ui/Build.gn
+
+executable("yuv_to_image_pipe") {
+  output_name = "yuv_to_image_pipe"
+
+  sources = [
+    "main.cc",
+    "yuv_view.cc",
+    "yuv_view.h",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/images:images_util",
+    "//garnet/public/lib/images:yuv_util",
+    "//garnet/public/lib/media/timeline:timeline",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/vmo-utils",
+  ]
+
+  include_dirs = [
+    #"//third_party/glm",
+    #"//lib",
+  ]
+}

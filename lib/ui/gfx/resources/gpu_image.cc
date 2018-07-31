@@ -41,6 +41,7 @@ GpuImagePtr GpuImage::New(Session* session, scenic::ResourceId id,
       pixel_alignment = 4u;
       break;
     case fuchsia::images::PixelFormat::YUY2:
+    case fuchsia::images::PixelFormat::NV12:
       error_reporter->ERROR()
           << "GpuImage::CreateFromMemory(): PixelFormat must be BGRA_8.";
       return nullptr;

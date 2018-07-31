@@ -8,6 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/util/image_formats.h"
+#include "garnet/public/lib/images/images_util.h"
 
 namespace scenic {
 namespace gfx {
@@ -35,10 +36,10 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
                         uint64_t memory_offset, ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
-  size_t bytes_per_pixel =
-      image_formats::BytesPerPixel(host_image_info.pixel_format);
+  size_t bits_per_pixel =
+      images_util::BitsPerPixel(host_image_info.pixel_format);
   size_t pixel_alignment =
-      image_formats::PixelAlignment(host_image_info.pixel_format);
+      images_util::MaxSampleAlignment(host_image_info.pixel_format);
 
   if (host_image_info.width <= 0) {
     error_reporter->ERROR()
@@ -65,7 +66,8 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
     return nullptr;
   }
 
-  if (host_image_info.stride < host_image_info.width * bytes_per_pixel) {
+  uint64_t width_bytes = (host_image_info.width * bits_per_pixel + 7) / 8;
+  if (host_image_info.stride < width_bytes) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): stride too small for width.";
     return nullptr;
@@ -82,14 +84,13 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
     return nullptr;
   }
 
-  size_t image_size = host_image_info.height * host_image_info.stride;
+  size_t image_size = images_util::ImageSize(host_image_info);
   if (memory_offset >= host_memory->size()) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): the offset of the Image must be "
         << "within the range of the Memory";
     return nullptr;
   }
-
   if (memory_offset + image_size > host_memory->size()) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): the Image must fit within the size "
@@ -97,10 +98,15 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
     return nullptr;
   }
 
-  // TODO(MZ-141): Support non-minimal strides.
-  if (host_image_info.stride != host_image_info.width * bytes_per_pixel) {
+  // TODO(SCN-141): Support non-minimal strides for all formats.  For now, NV12
+  // is ok because it will have image_conversion_function_ and for formats with
+  // image_conversion_function_, the stride is really only the input data stride
+  // not the output data stride (which ends up being minimal thanks to the
+  // image_conversion_function_).
+  if (host_image_info.pixel_format != fuchsia::images::PixelFormat::NV12 &&
+      host_image_info.stride != width_bytes) {
     error_reporter->ERROR()
-        << "Image::CreateFromMemory(): the stride must be minimal (MZ-141)";
+        << "Image::CreateFromMemory(): the stride must be minimal (SCN-141)";
     return nullptr;
   }
 

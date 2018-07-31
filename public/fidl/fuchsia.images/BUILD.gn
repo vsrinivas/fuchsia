@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
+# See also //garnet/public/lib/images:images_util
 fidl("fuchsia.images") {
   sdk_category = "partner"
 

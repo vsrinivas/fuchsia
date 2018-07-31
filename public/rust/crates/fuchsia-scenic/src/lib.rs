@@ -495,6 +495,7 @@ fn get_image_size(info: &ImageInfo) -> usize {
     match info.pixel_format {
         PixelFormat::Bgra8 => (info.height * info.stride) as usize,
         PixelFormat::Yuy2 => (info.height * info.stride) as usize,
+        PixelFormat::Nv12 => (info.height * info.stride * 3 / 2) as usize,
     }
 }
 

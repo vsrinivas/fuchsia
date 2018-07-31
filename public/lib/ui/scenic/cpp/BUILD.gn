@@ -61,6 +61,7 @@ source_set("cpp") {
   ]
 
   deps = [
+    "//garnet/public/lib/images:images_util",
     "//zircon/public/lib/fbl",
   ]
 }
@@ -76,8 +77,8 @@ source_set("base_view") {
 
   public_deps = [
     ":cpp",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/fidl/fuchsia.ui.app",
+    "//garnet/public/lib/component/cpp",
   ]
 
   deps = [

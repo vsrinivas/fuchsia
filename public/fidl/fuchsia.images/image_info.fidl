@@ -6,17 +6,50 @@ library fuchsia.images;
 
 // Specifies how pixels are represented in the image buffer.
 enum PixelFormat {
+  // BGRA_8
+  //
   // A 32-bit four-component unsigned integer format.
   // Byte order: B, G, R, A (little-endian ARGB packed 32-bit word).
   // Equivalent to Skia |kBGRA_8888_SkColorType| color type.
   // Equivalent to Zircon |ARGB_8888| pixel format on little-endian arch.
   BGRA_8 = 0;
+
+  // YUY2
+  //
+  // 4:2:2 (2x down-sampled UV horizontally; full res UV vertically)
+  //
   // A 32-bit component that contains information for 2 pixels:
   // Byte order: Y1, U, Y2, V
   // Unpacks to 2 RGB pixels, where RGB1 = func(Y1, U, V)
   // and RGB2 = func(Y2, U, V)
   // Equivalent to YUV422
   YUY2 = 1;
+
+  // NV12
+  //
+  // 4:2:0 (2x down-sampled UV in both directions)
+  //
+  // Offset 0:
+  // 8 bit per pixel Y plane with bytes YYY.
+  // Offset height * stride:
+  // 8 bit UV data interleaved bytes as UVUVUV.
+  //
+  // Y plane has line stride >= width.
+  //
+  // In this context, both width and height are required to be even.
+  //
+  // The UV data is separated into "lines", with each "line" having same byte
+  // width as a line of Y data, and same "line" stride as Y data's line stride.
+  // The UV data has height / 2 "lines".
+  //
+  // In converting to RGB, the UV data gets up-scaled by 2x in both directions
+  // overall.  This comment is intentionally silent on exactly how UV up-scaling
+  // phase/filtering/signal processing works, as it's a complicated topic that
+  // can vary by implementation, typically trading off speed and quality of the
+  // up-scaling.  See comments in relevant conversion code for approach taken
+  // by any given convert path.  The precise relative phase of the UV data is
+  // not presently conveyed.
+  NV12 = 2;
 };
 
 // Specifies how pixel color information should be interpreted.

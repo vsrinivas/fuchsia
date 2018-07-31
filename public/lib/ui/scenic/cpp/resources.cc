@@ -7,6 +7,7 @@
 #include <fbl/algorithm.h>
 
 #include "lib/fxl/logging.h"
+#include "lib/images/images_util.h"
 #include "lib/ui/scenic/cpp/fidl_helpers.h"
 
 namespace scenic {
@@ -102,16 +103,7 @@ Image::Image(Image&& moved)
 Image::~Image() = default;
 
 size_t Image::ComputeSize(const fuchsia::images::ImageInfo& image_info) {
-  FXL_DCHECK(image_info.tiling == fuchsia::images::Tiling::LINEAR);
-
-  switch (image_info.pixel_format) {
-    case fuchsia::images::PixelFormat::BGRA_8:
-      return image_info.height * image_info.stride;
-    case fuchsia::images::PixelFormat::YUY2:
-      return image_info.height * image_info.stride;
-  }
-
-  FXL_NOTREACHED();
+  return images_util::ImageSize(image_info);
 }
 
 Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)
