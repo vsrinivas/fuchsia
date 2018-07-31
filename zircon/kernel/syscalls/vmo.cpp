@@ -271,7 +271,9 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
         rights |= ZX_RIGHT_WRITE;
 
     // make sure we're somehow not elevating rights beyond what a new vmo should have
-    DEBUG_ASSERT((default_rights & rights) == rights);
+    DEBUG_ASSERT(((default_rights | ZX_RIGHT_EXECUTE) & rights) == rights);
+
+    // TODO(mdempsky): Assert W^X.
 
     // create a handle and attach the dispatcher to it
     return out_handle->make(ktl::move(dispatcher), rights);

@@ -39,6 +39,7 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     ASSERT(status == ZX_OK);
     vmo_ = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
     vmo_rights_ &= ~ZX_RIGHT_WRITE;
+    vmo_rights_ |= ZX_RIGHT_EXECUTE;
 
     // unmap it from the kernel
     // NOTE: this means the image can no longer be referenced from original pointer
