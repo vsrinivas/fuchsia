@@ -32,12 +32,79 @@ bool VmoReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size,
   return true;
 }
 
+// Measure the time taken to clone a vmo and destroy it.
+bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size) {
+  state->DeclareStep("clone");
+  state->DeclareStep("close");
+  zx::vmo vmo;
+  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
+
+  while (state->KeepRunning()) {
+    zx::vmo clone;
+    ZX_ASSERT(vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, copy_size, &clone) ==
+              ZX_OK);
+    state->NextStep();
+  }
+
+  return true;
+}
+
+// Measure the time it takes to clone a vmo, read or write into/from it and
+// destroy it.
+bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size,
+                             bool do_write) {
+  state->DeclareStep("clone");
+  state->DeclareStep(do_write ? "write" : "read");
+  state->DeclareStep("close");
+  state->SetBytesProcessedPerRun(copy_size);
+  zx::vmo vmo;
+  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
+  std::vector<char> buffer(copy_size);
+
+  if (do_write) {
+    while (state->KeepRunning()) {
+      zx::vmo clone;
+      ZX_ASSERT(vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, copy_size, &clone) ==
+                ZX_OK);
+      state->NextStep();
+      ZX_ASSERT(vmo.write(buffer.data(), 0, copy_size) == ZX_OK);
+      state->NextStep();
+    }
+  } else {
+    while (state->KeepRunning()) {
+      zx::vmo clone;
+      ZX_ASSERT(vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, copy_size, &clone) ==
+                ZX_OK);
+      state->NextStep();
+      ZX_ASSERT(vmo.read(buffer.data(), 0, copy_size) == ZX_OK);
+      state->NextStep();
+    }
+  }
+
+  return true;
+}
+
 void RegisterTests() {
-  for (bool do_write : {false, true}) {
-    for (unsigned size_in_kbytes : {128, 1000}) {
-      auto name = fbl::StringPrintf(
-          "Vmo/%s/%ukbytes", do_write ? "Write" : "Read", size_in_kbytes);
-      perftest::RegisterTest(name.c_str(), VmoReadOrWriteTest,
+  for (unsigned size_in_kbytes : {128, 1000}) {
+    for (bool do_write : {false, true}) {
+      // Read/Write.
+      const char* rw = do_write ? "Write" : "Read";
+      auto rw_name = fbl::StringPrintf("Vmo/%s/%ukbytes", rw, size_in_kbytes);
+      perftest::RegisterTest(rw_name.c_str(), VmoReadOrWriteTest,
+                             size_in_kbytes * 1024, do_write);
+    }
+
+    // Clone (only run it once).
+    auto clone_name = fbl::StringPrintf("Vmo/Clone/%ukbytes", size_in_kbytes);
+    perftest::RegisterTest(clone_name.c_str(), VmoCloneTest,
+                           size_in_kbytes * 1024);
+
+    for (bool do_write : {false, true}) {
+      // Clone Read/Write.
+      const char* rw = do_write ? "Write" : "Read";
+      auto clone_rw_name =
+          fbl::StringPrintf("Vmo/Clone%s/%ukbytes", rw, size_in_kbytes);
+      perftest::RegisterTest(clone_rw_name.c_str(), VmoCloneReadOrWriteTest,
                              size_in_kbytes * 1024, do_write);
     }
   }
