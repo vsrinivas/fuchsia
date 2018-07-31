@@ -56,6 +56,7 @@
         "garnet/packages/prod/realtek",
         "garnet/packages/prod/recovery_netstack",
         "garnet/packages/prod/recovery_ui",
+        "garnet/packages/prod/rolldice",
         "garnet/packages/prod/root_ssl_certificates",
         "garnet/packages/prod/run",
         "garnet/packages/prod/runtime",
