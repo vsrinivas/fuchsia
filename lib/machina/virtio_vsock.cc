@@ -271,12 +271,17 @@ zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue,
                                                 virtio_vsock_hdr_t* header,
                                                 virtio_desc_t* desc,
                                                 uint32_t* used) {
+  zx_status_t status = ZX_OK;
   desc->addr = header + 1;
-  desc->len -= *used;
-  zx_status_t status;
-  do {
+  desc->len -= sizeof(*header);
+  // If the descriptor was only large enough for the header, read the next
+  // descriptor, if there is one.
+  if (desc->len == 0 && desc->has_next) {
+    status = queue->ReadDesc(desc->next, desc);
+  }
+  while (status == ZX_OK) {
     size_t actual;
-    size_t len = desc->len < PeerFree() ? desc->len : PeerFree();
+    size_t len = std::min(desc->len, PeerFree());
     status = socket_.read(0, desc->addr, len, &actual);
     if (status != ZX_OK) {
       break;
@@ -286,19 +291,25 @@ zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue,
     if (PeerFree() == 0 || !desc->has_next || actual < desc->len) {
       break;
     }
+
     status = queue->ReadDesc(desc->next, desc);
-  } while (status == ZX_OK);
-  header->len = *used - sizeof(*header);
+  }
+  header->len = *used;
   return status;
 }
 
 zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
                                                  virtio_vsock_hdr_t* header,
                                                  virtio_desc_t* desc) {
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
   desc->addr = header + 1;
   desc->len -= sizeof(*header);
-  do {
+  // If the descriptor was only large enough for the header, read the next
+  // descriptor, if there is one.
+  if (desc->len == 0 && desc->has_next) {
+    status = queue->ReadDesc(desc->next, desc);
+  }
+  while (status == ZX_OK) {
     uint32_t len = std::min(desc->len, header->len);
     size_t actual;
     status = socket_.write(0, desc->addr, len, &actual);
@@ -320,7 +331,7 @@ zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
     }
 
     status = queue->ReadDesc(desc->next, desc);
-  } while (status == ZX_OK);
+  }
   return status;
 }
 
@@ -554,7 +565,6 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
         .type = VIRTIO_VSOCK_TYPE_STREAM,
         .op = conn->op(),
     };
-    uint32_t used = sizeof(*header);
 
     // If reading was shutdown, but we're still receiving a read request, send
     // a connection reset.
@@ -580,6 +590,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
         break;
     }
 
+    uint32_t used = 0;
     status = transmit(conn, rx_queue(), header, &desc, &used);
     rx_queue()->Return(index, used);
     index_valid = false;
