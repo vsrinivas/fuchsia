@@ -12,23 +12,36 @@ extern crate fuchsia_zircon as zx;
 use failure::{Error, ResultExt};
 use std::collections::HashMap;
 use std::env;
+use std::fs::OpenOptions;
 use std::io::{stdout, Write};
 use syslog_listener::LogProcessor;
 
 // Include the generated FIDL bindings for the `Logger` service.
 extern crate fidl_fuchsia_logger;
-use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage,
-                          MAX_TAGS, MAX_TAG_LEN_BYTES};
+use fidl_fuchsia_logger::{
+    LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN_BYTES,
+};
 
-fn default_log_filter_options() -> LogFilterOptions {
-    LogFilterOptions {
-        filter_by_pid: false,
-        pid: 0,
-        min_severity: LogLevelFilter::None,
-        verbosity: 0,
-        filter_by_tid: false,
-        tid: 0,
-        tags: vec![],
+#[derive(Debug, PartialEq)]
+struct LogListenerOptions {
+    filter: LogFilterOptions,
+    file: Option<String>,
+}
+
+impl Default for LogListenerOptions {
+    fn default() -> LogListenerOptions {
+        LogListenerOptions {
+            filter: LogFilterOptions {
+                filter_by_pid: false,
+                pid: 0,
+                min_severity: LogLevelFilter::None,
+                verbosity: 0,
+                filter_by_tid: false,
+                tid: 0,
+                tags: vec![],
+            },
+            file: None,
+        }
     }
 }
 
@@ -52,17 +65,20 @@ fn help(name: &str) -> String {
         --verbosity <integer>:
             Verbosity to filter on. It should be positive integer greater than 0.
 
+        --file <string>:
+            File to write logs to. If omitted, logs are written to stdout.
+
         --help | -h:
             Prints usage.",
         name
     )
 }
 
-fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
+fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
     if args.len() % 2 != 0 {
         return Err(String::from("Invalid args."));
     }
-    let mut options = default_log_filter_options();
+    let mut options = LogListenerOptions::default();
 
     let mut i = 0;
     while i < args.len() {
@@ -82,16 +98,16 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
                         tag, MAX_TAG_LEN_BYTES
                     ));
                 }
-                options.tags.push(String::from(tag.as_ref()));
-                if options.tags.len() > MAX_TAGS as usize {
+                options.filter.tags.push(String::from(tag.as_ref()));
+                if options.filter.tags.len() > MAX_TAGS as usize {
                     return Err(format!("Max tags allowed: {}", MAX_TAGS));
                 }
             }
             "--severity" => match args[i + 1].as_ref() {
-                "INFO" => options.min_severity = LogLevelFilter::Info,
-                "WARN" => options.min_severity = LogLevelFilter::Warn,
-                "ERROR" => options.min_severity = LogLevelFilter::Error,
-                "FATAL" => options.min_severity = LogLevelFilter::Fatal,
+                "INFO" => options.filter.min_severity = LogLevelFilter::Info,
+                "WARN" => options.filter.min_severity = LogLevelFilter::Warn,
+                "ERROR" => options.filter.min_severity = LogLevelFilter::Error,
+                "FATAL" => options.filter.min_severity = LogLevelFilter::Fatal,
                 a => return Err(format!("Invalid severity: {}", a)),
             },
             "--verbosity" => if let Ok(v) = args[i + 1].parse::<u8>() {
@@ -101,7 +117,7 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
                         args[i + 1]
                     ));
                 }
-                options.verbosity = v;
+                options.filter.verbosity = v;
             } else {
                 return Err(format!(
                     "Invalid verbosity: '{}', should be positive integer greater than 0.",
@@ -109,10 +125,10 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
                 ));
             },
             "--pid" => {
-                options.filter_by_pid = true;
+                options.filter.filter_by_pid = true;
                 match args[i + 1].parse::<u64>() {
                     Ok(pid) => {
-                        options.pid = pid;
+                        options.filter.pid = pid;
                     }
                     Err(_) => {
                         return Err(format!(
@@ -123,10 +139,10 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
                 }
             }
             "--tid" => {
-                options.filter_by_tid = true;
+                options.filter.filter_by_tid = true;
                 match args[i + 1].parse::<u64>() {
                     Ok(tid) => {
-                        options.tid = tid;
+                        options.filter.tid = tid;
                     }
                     Err(_) => {
                         return Err(format!(
@@ -135,6 +151,9 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
                         ));
                     }
                 }
+            }
+            "--file" => {
+                options.file = Some((&args[i + 1]).clone());
             }
             a => {
                 return Err(format!("Invalid option {}", a));
@@ -169,7 +188,8 @@ where
             message.msg
         ).expect("should not fail");
         if message.dropped_logs > 0
-            && self.dropped_logs
+            && self
+                .dropped_logs
                 .get(&message.pid)
                 .map(|d| d < &message.dropped_logs)
                 .unwrap_or(true)
@@ -209,14 +229,26 @@ fn get_log_level(level: i32) -> String {
     }
 }
 
-fn run_log_listener(options: Option<&mut LogFilterOptions>) -> Result<(), Error> {
+fn get_writer(file: &Option<String>) -> Result<Box<dyn Write + Send>, Error> {
+    match file {
+        None => Ok(Box::new(stdout())),
+        Some(name) => {
+            let f = OpenOptions::new().append(true).create(true).open(name)?;
+            Ok(Box::new(f))
+        }
+    }
+}
+
+fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
+    let (filter_options, file) =
+        options.map_or_else(|| (None, &None), |o| (Some(&mut o.filter), &o.file));
     let l = Listener {
         dropped_logs: HashMap::new(),
-        writer: stdout(),
+        writer: get_writer(file)?,
     };
 
-    let listener_fut = syslog_listener::run_log_listener(l, options, false)?;
+    let listener_fut = syslog_listener::run_log_listener(l, filter_options, false)?;
     executor
         .run_singlethreaded(listener_fut)
         .map_err(Into::into)
@@ -350,7 +382,7 @@ mod tests {
     mod parse_flags {
         use super::*;
 
-        fn parse_flag_test_helper(args: &[String], options: Option<&LogFilterOptions>) {
+        fn parse_flag_test_helper(args: &[String], options: Option<&LogListenerOptions>) {
             match parse_flags(args) {
                 Ok(l) => match options {
                     None => {
@@ -393,8 +425,8 @@ mod tests {
         #[test]
         fn one_tag() {
             let args = vec!["--tag".to_string(), "tag".to_string()];
-            let mut expected = default_log_filter_options();
-            expected.tags.push("tag".to_string());
+            let mut expected = LogListenerOptions::default();
+            expected.filter.tags.push("tag".to_string());
             parse_flag_test_helper(&args, Some(&expected));
         }
 
@@ -406,18 +438,18 @@ mod tests {
                 "--tag".to_string(),
                 "tag1".to_string(),
             ];
-            let mut expected = default_log_filter_options();
-            expected.tags.push("tag".to_string());
-            expected.tags.push("tag1".to_string());
+            let mut expected = LogListenerOptions::default();
+            expected.filter.tags.push("tag".to_string());
+            expected.filter.tags.push("tag1".to_string());
             parse_flag_test_helper(&args, Some(&expected));
         }
 
         #[test]
         fn pid() {
             let args = vec!["--pid".to_string(), "123".to_string()];
-            let mut expected = default_log_filter_options();
-            expected.filter_by_pid = true;
-            expected.pid = 123;
+            let mut expected = LogListenerOptions::default();
+            expected.filter.filter_by_pid = true;
+            expected.filter.pid = 123;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
@@ -430,9 +462,9 @@ mod tests {
         #[test]
         fn tid() {
             let args = vec!["--tid".to_string(), "123".to_string()];
-            let mut expected = default_log_filter_options();
-            expected.filter_by_tid = true;
-            expected.tid = 123;
+            let mut expected = LogListenerOptions::default();
+            expected.filter.filter_by_tid = true;
+            expected.filter.tid = 123;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
@@ -444,12 +476,12 @@ mod tests {
 
         #[test]
         fn severity() {
-            let mut expected = default_log_filter_options();
-            expected.min_severity = LogLevelFilter::None;
+            let mut expected = LogListenerOptions::default();
+            expected.filter.min_severity = LogLevelFilter::None;
             for s in vec!["INFO", "WARN", "ERROR", "FATAL"] {
                 let mut args = vec!["--severity".to_string(), s.to_string()];
-                expected.min_severity = LogLevelFilter::from_primitive(
-                    expected.min_severity.into_primitive() + 1,
+                expected.filter.min_severity = LogLevelFilter::from_primitive(
+                    expected.filter.min_severity.into_primitive() + 1,
                 ).unwrap();
                 parse_flag_test_helper(&args, Some(&expected));
             }
@@ -464,8 +496,8 @@ mod tests {
         #[test]
         fn verbosity() {
             let args = vec!["--verbosity".to_string(), "2".to_string()];
-            let mut expected = default_log_filter_options();
-            expected.verbosity = 2;
+            let mut expected = LogListenerOptions::default();
+            expected.filter.verbosity = 2;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
@@ -482,6 +514,21 @@ mod tests {
         }
 
         #[test]
+        fn file() {
+            let mut expected = LogListenerOptions::default();
+            expected.file = Some("/data/test".to_string());
+            let args = vec!["--file".to_string(), "/data/test".to_string()];
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn file_empty() {
+            let args = Vec::new();
+            let expected = LogListenerOptions::default();
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
         fn tag_edge_case() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
@@ -489,16 +536,16 @@ mod tests {
                 tag.push('a');
             }
             args.push(tag.clone());
-            let mut expected = default_log_filter_options();
-            expected.tags.push(tag);
+            let mut expected = LogListenerOptions::default();
+            expected.filter.tags.push(tag);
             parse_flag_test_helper(&args, Some(&expected));
 
             args[1] = "tag1".to_string();
-            expected.tags[0] = args[1].clone();
+            expected.filter.tags[0] = args[1].clone();
             for i in 1..MAX_TAGS {
                 args.push("--tag".to_string());
                 args.push(format!("tag{}", i));
-                expected.tags.push(format!("tag{}", i));
+                expected.filter.tags.push(format!("tag{}", i));
             }
             parse_flag_test_helper(&args, Some(&expected));
         }
