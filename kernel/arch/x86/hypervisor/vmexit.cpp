@@ -525,6 +525,8 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         guest_state->rax = read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings;
         guest_state->rdx = 0;
         return ZX_OK;
+    case X86_MSR_DRAM_ENERGY_STATUS:
+    case X86_MSR_DRAM_POWER_LIMIT:
     // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
     // type used for an access to a guest-physical address.
     case X86_MSR_IA32_MTRRCAP:
@@ -542,6 +544,14 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X86_MSR_IA32_MCG_CAP:
     case X86_MSR_IA32_MCG_STATUS:
     case X86_MSR_IA32_TEMPERATURE_TARGET:
+    case X86_MSR_PKG_ENERGY_STATUS:
+    case X86_MSR_PLATFORM_ENERGY_COUNTER:
+    case X86_MSR_PLATFORM_POWER_LIMIT:
+    case X86_MSR_PP0_ENERGY_STATUS:
+    case X86_MSR_PP0_POWER_LIMIT:
+    case X86_MSR_PP1_ENERGY_STATUS:
+    case X86_MSR_PP1_POWER_LIMIT:
+    case X86_MSR_RAPL_POWER_UNIT:
         next_rip(exit_info, vmcs);
         guest_state->rax = 0;
         guest_state->rdx = 0;
