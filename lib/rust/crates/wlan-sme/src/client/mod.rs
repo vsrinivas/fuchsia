@@ -272,7 +272,8 @@ fn make_esssa(ssid: &[u8], passphrase: &[u8], sta_addr: [u8; 6], sta_rsne: Rsne,
 {
     let auth_cfg = auth::Config::for_psk(passphrase, ssid)?;
     let ptk_cfg = exchange::Config::for_4way_handshake(Role::Supplicant, sta_addr, sta_rsne, bssid, bss_rsne)?;
-    EssSa::new(Role::Supplicant, auth_cfg, ptk_cfg)
+    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, sta_addr, bssid)?;
+    EssSa::new(Role::Supplicant, auth_cfg, ptk_cfg, gtk_cfg)
 }
 
 

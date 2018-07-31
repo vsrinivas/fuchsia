@@ -71,6 +71,49 @@ struct PtksaCfg {
     ptk: Option<Ptk>,
 }
 
+#[derive(Debug)]
+enum Gtksa {
+    Uninitialized(Option<exchange::Config>),
+    Initialized(GtksaCfg),
+}
+
+#[derive(Debug)]
+struct GtksaCfg {
+    cfg: Option<exchange::Config>,
+    method: exchange::Method,
+    gtk: Option<Gtk>,
+}
+
+impl Gtksa {
+    fn initialize(&mut self, ptk: Vec<u8>) -> Result<(), failure::Error> {
+        let cfg = match self {
+            Gtksa::Uninitialized(cfg) => cfg.take(),
+            _ => None,
+        };
+        let cfg = cfg.expect("invalid state: GTK configuration cannot be None");
+        *self = Gtksa::Initialized(GtksaCfg {
+            cfg: Some(cfg.clone()),
+            method: exchange::Method::from_config(cfg, ptk)?,
+            gtk: None,
+        });
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        *self = Gtksa::Uninitialized(match self {
+            Gtksa::Uninitialized(cfg) => cfg.take(),
+            Gtksa::Initialized(GtksaCfg{cfg, ..}) => cfg.take(),
+        });
+    }
+
+    fn is_established(&self) -> bool {
+        match self {
+            Gtksa::Initialized(GtksaCfg{ gtk: Some(_) , ..}) => true,
+            _ => false,
+        }
+    }
+}
+
 // IEEE Std 802.11-2016, 12.6.1.3.2
 #[derive(Debug)]
 pub struct EssSa {
@@ -80,7 +123,7 @@ pub struct EssSa {
     // Security associations.
     pmksa: Pmksa,
     ptksa: Ptksa,
-    // TODO(hahnr): Add GTK and optional IGTK support.
+    gtksa: Gtksa,
 }
 
 impl EssSa {
@@ -88,6 +131,7 @@ impl EssSa {
         role: Role,
         auth_cfg: auth::Config,
         ptk_exch_cfg: exchange::Config,
+        gtk_exch_cfg: exchange::Config,
     ) -> Result<EssSa, failure::Error> {
         let auth_method = auth::Method::from_config(auth_cfg)?;
 
@@ -98,6 +142,7 @@ impl EssSa {
                 pmk: None,
             },
             ptksa: Ptksa::Uninitialized(Some(ptk_exch_cfg)),
+            gtksa: Gtksa::Uninitialized(Some(gtk_exch_cfg)),
         };
         rsna.init_pmksa()?;
         Ok(rsna)
@@ -108,6 +153,10 @@ impl EssSa {
         self.ptksa.reset();
     }
 
+    fn is_established(&self) -> bool {
+        self.ptksa.is_established() && self.gtksa.is_established()
+    }
+
     fn on_key_confirmed(&mut self, key: Key) -> Result<(), failure::Error> {
         match key {
             Key::Pmk(pmk) => {
@@ -115,15 +164,20 @@ impl EssSa {
                 self.init_ptksa()
             }
             Key::Ptk(ptk) => {
-                if let Ptksa::Initialized(ptksa) = self.ptksa.by_mut_ref() {
+                // The PTK carries KEK and KCK which is used in the Group Key Handshake, thus,
+                // reset GTKSA whenever the PTK changed.
+                self.gtksa.reset();
+                self.gtksa.initialize(ptk.ptk().to_vec());
+
+                if let Ptksa::Initialized(ptksa) = &mut self.ptksa {
                     ptksa.ptk = Some(ptk);
                 }
-                // TODO(hahnr): Received new PTK. Invalidate GTKSA if it was already established.
                 Ok(())
             }
-            Key::Gtk(_gtk) => {
-                // TODO(hahnr): Update GTKSA
-                // Once both, PTKSA and GTKSA were established, install keys.
+            Key::Gtk(gtk) => {
+                if let Gtksa::Initialized(gtksa) = &mut self.gtksa {
+                    gtksa.gtk = Some(gtk);
+                }
                 Ok(())
             }
             _ => Ok(()),
@@ -157,11 +211,11 @@ impl EssSa {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let mut updates = match frame {
             &eapol::Frame::Key(ref key_frame) => self.on_eapol_key_frame(&key_frame),
-            _ => Ok(vec![]),
+            _ => return Ok(vec![]),
         }?;
 
         // Track keys to correctly update corresponding security associations.
-        let was_ptksa_established = self.ptksa.is_established();
+        let was_esssa_established = self.is_established();
         for update in &updates {
             if let SecAssocUpdate::Key(key) = update {
                 self.on_key_confirmed(key.clone())?;
@@ -169,9 +223,7 @@ impl EssSa {
         }
 
         // Report if ESSSA was established successfully.
-        // TODO(hahnr): Once GTKSA is supported, the ESSSA should only be reported once GTKSA was
-        // established as well.
-        if !was_ptksa_established && self.ptksa.is_established() {
+        if !was_esssa_established && self.is_established() {
             updates.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
         }
 
@@ -182,9 +234,23 @@ impl EssSa {
         // PMKSA must be established before any other security association can be established.
         match self.pmksa.pmk {
             None => self.pmksa.method.on_eapol_key_frame(frame),
-            Some(_) => match self.ptksa.by_mut_ref() {
-                Ptksa::Uninitialized(_) => Ok(vec![]),
-                Ptksa::Initialized(ptksa) => ptksa.method.on_eapol_key_frame(frame),
+            Some(_) => match (&mut self.ptksa, &mut self.gtksa) {
+                (Ptksa::Uninitialized(_), _) => Ok(vec![]),
+                (Ptksa::Initialized(ptksa), Gtksa::Uninitialized(_)) => {
+                    ptksa.method.on_eapol_key_frame(frame)
+                },
+                (Ptksa::Initialized(ptksa), Gtksa::Initialized(gtksa)) => {
+                    // IEEE Std 802.11-2016, 12.7.2 b.2)
+                    if frame.key_info.key_type() == eapol::KEY_TYPE_PAIRWISE {
+                        ptksa.method.on_eapol_key_frame(frame)
+                    } else if frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK {
+                        gtksa.method.on_eapol_key_frame(frame)
+                    } else {
+                        eprintln!("unsupported EAPOL Key frame key type: {:?}",
+                                  frame.key_info.key_type());
+                        Ok(vec![])
+                    }
+                },
             },
         }
     }
@@ -277,6 +343,7 @@ mod tests {
         let mut rxed_msg4 = false;
         let mut rxed_ptk = false;
         let mut rxed_gtk = false;
+        let mut rxed_esssa_established = false;
         for update in updates {
             match update {
                 SecAssocUpdate::TxEapolKeyFrame(msg4) => {
@@ -311,7 +378,9 @@ mod tests {
                     rxed_gtk = true;
                     assert_eq!(&gtk[..], reported_gtk.gtk());
                 }
-                SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) => {}
+                SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) => {
+                    rxed_esssa_established = true;
+                }
                 _ => assert!(false),
             }
         }
@@ -319,6 +388,7 @@ mod tests {
         assert!(rxed_msg4, "Supplicant didn't sent Handshake's 4th message");
         assert!(rxed_ptk, "Supplicant didn't sent PTK");
         assert!(rxed_gtk, "Supplicant didn't sent GTK");
+        assert!(rxed_esssa_established, "Supplicant didn't sent ESSSA established message");
     }
 
     // TODO(hahnr): Add additional tests to validate replay attacks,

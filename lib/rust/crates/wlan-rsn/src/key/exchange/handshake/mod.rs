@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 pub mod fourway;
+pub mod group_key;

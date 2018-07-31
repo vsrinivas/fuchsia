@@ -73,7 +73,9 @@ pub fn get_esssa() -> EssSa {
     let ptk_exch_cfg =
         exchange::Config::for_4way_handshake(Role::Supplicant, S_ADDR, s_rsne, A_ADDR, a_rsne)
             .expect("could not construct PTK exchange method");
-    EssSa::new(Role::Supplicant, auth_cfg, ptk_exch_cfg)
+    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, S_ADDR, A_ADDR)
+        .expect("could not construct GTK exchange method");
+    EssSa::new(Role::Supplicant, auth_cfg, ptk_exch_cfg, gtk_cfg)
         .expect("error constructing ESS Security Assocation")
 }
 
