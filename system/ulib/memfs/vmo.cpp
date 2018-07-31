@@ -62,7 +62,6 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* typ
                                  zxrio_node_info_t* extra) {
     zx_off_t* off = &extra->vmofile.offset;
     zx_off_t* len = &extra->vmofile.length;
-    zx_handle_t vmo;
     zx_status_t status;
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
         status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
@@ -71,10 +70,20 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* typ
         offset_ = 0;
         have_local_clone_ = true;
     }
+
+    zx_info_handle_basic_t info;
+    status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC,
+                                &info, sizeof(info), NULL, NULL);
+    if (status != ZX_OK)
+        return status;
+
+    // Drop write rights.
+    zx_handle_t vmo;
     status = zx_handle_duplicate(
         vmo_,
-        ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP |
-        ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
+        ZX_RIGHT_READ | ZX_RIGHT_MAP |
+        ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
+        (info.rights & ZX_RIGHT_EXECUTE), // Preserve exec if present.
         &vmo);
     if (status < 0)
         return status;

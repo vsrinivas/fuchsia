@@ -111,9 +111,14 @@ found:;
     // Drop unnecessary ZX_RIGHT_WRITE rights.
     // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_clone.
     if ((r = zx_handle_replace(vmo,
-                               ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE |
+                               ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
                                ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
                                &vmo)) != ZX_OK) {
+        return r;
+    }
+
+    // TODO(mdempsky): Restrict to bin/ and lib/.
+    if ((r = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo)) != ZX_OK) {
         return r;
     }
 

@@ -613,6 +613,11 @@ zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
         return status;
     }
 
+    // TODO(mdempsky): Push elsewhere.
+    if ((status = zx_vmo_replace_as_executable(clone, ZX_HANDLE_INVALID, &clone)) != ZX_OK) {
+        return status;
+    }
+
     if ((status = zx_handle_replace(clone, rights, out)) != ZX_OK) {
         return status;
     }
