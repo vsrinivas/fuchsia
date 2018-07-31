@@ -222,7 +222,7 @@ typedef struct camera_vb_frame_notify {
     camera_metadata_t metadata;
 
     // NOTE: The frame will be not be reused by the driver until the client
-    // calls FRAME_RELEASE with the frame's timestamp.
+    // calls FRAME_RELEASE with the frame's data_vb_offset.
 } camera_vb_frame_notify_t;
 
 __END_CDECLS
