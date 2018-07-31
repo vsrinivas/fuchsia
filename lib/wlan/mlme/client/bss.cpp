@@ -234,10 +234,6 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             }
 
             bss_desc_.ht_cap = HtCapabilitiesToFidl(*ie);
-            if (bss_desc_.ht_cap->mcs_set.rx_mcs_set == wlan_mlme::HtMcs::MCS_INVALID) {
-                errorf("Empty MCS Set not allowed in HtCapabilities IE.\n");
-            }
-            ZX_DEBUG_ASSERT(bss_desc_.ht_cap->mcs_set.rx_mcs_set != wlan_mlme::HtMcs::MCS_INVALID);
 
             debugbcn("%s HtCapabilities parsed\n", dbgmsghdr);
             break;
@@ -355,11 +351,7 @@ zx_status_t HtMcsBitmaskToFidl(const SupportedMcsRxMcsHead& smrmh, wlan_mlme::Ht
 wlan_mlme::SupportedMcsSet SupportedMcsSetToFidl(const SupportedMcsSet& sms) {
     wlan_mlme::SupportedMcsSet fidl;
 
-    zx_status_t status = HtMcsBitmaskToFidl(sms.rx_mcs_head, &fidl.rx_mcs_set);
-    if (status != ZX_OK) {
-        errorf("Error parsing MCS Set: %zu. Error: %d\n", sms.rx_mcs_head.bitmask(), status);
-    }
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    HtMcsBitmaskToFidl(sms.rx_mcs_head, &fidl.rx_mcs_set);
     fidl.rx_highest_rate = sms.rx_mcs_tail.highest_rate();
     fidl.tx_mcs_set_defined = (sms.tx_mcs.set_defined() == 1);
     fidl.tx_rx_diff = (sms.tx_mcs.rx_diff() == 1);
