@@ -29,7 +29,10 @@ FindModulesCall::FindModulesCall(
       requesting_module_path_(std::move(requesting_module_path)) {}
 
 void FindModulesCall::Run() {
-  FlowToken flow{this, &response_};
+  FlowToken flow{this, &result_, &response_};
+  // Default status. We'll update it and return if an error occurs.
+  result_.status = fuchsia::modular::ExecuteStatus::OK;
+
   if (intent_->handler) {
     // We already know which module to use, but we need its manifest.
     module_resolver_->GetModuleManifest(
@@ -39,6 +42,7 @@ void FindModulesCall::Run() {
           result.module_id = intent_->handler;
           result.manifest = CloneOptional(manifest);
           response_.results.push_back(std::move(result));
+          // Operation finshes since |flow| goes out of scope.
         });
     return;
   }
@@ -56,14 +60,17 @@ void FindModulesCall::Run() {
       // It is not allowed to have a null intent name (left in for backwards
       // compatibility with old code: MI4-736) and rely on action-based
       // resolution.
-      // TODO(thatguy): Return an error string.
-      FXL_LOG(WARNING) << "A null-named module parameter is not allowed "
-                       << "when using fuchsia::modular::Intent.action.";
+      result_.error_message =
+          "A null-named module parameter is not allowed "
+          "when using fuchsia::modular::Intent.action.";
+      result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
       return;
+      // Operation finishes since |flow| goes out of scope.
     }
 
     constraint_futs_.push_back(
-        GetTypesFromIntentParameter(requesting_module_path_.Clone(), param.data)
+        GetTypesFromIntentParameter(requesting_module_path_.Clone(), param.data,
+                                    param.name)
             ->Map([this, name = param.name](std::vector<std::string> types) {
               fuchsia::modular::FindModulesParameterConstraint constraint;
               constraint.param_name = name;
@@ -77,6 +84,10 @@ void FindModulesCall::Run() {
       ->Then([this, flow](
                  std::vector<fuchsia::modular::FindModulesParameterConstraint>
                      constraint_params) {
+        if (result_.status != fuchsia::modular::ExecuteStatus::OK) {
+          // Operation finishes since |flow| goes out of scope.
+          return;
+        }
         resolver_query_.parameter_constraints.reset(
             std::move(constraint_params));
         module_resolver_->FindModules(
@@ -92,7 +103,8 @@ void FindModulesCall::Run() {
 FuturePtr<std::vector<std::string>>
 FindModulesCall::GetTypesFromIntentParameter(
     fidl::VectorPtr<fidl::StringPtr> module_path,
-    const fuchsia::modular::IntentParameterData& input) {
+    const fuchsia::modular::IntentParameterData& input,
+    const fidl::StringPtr& param_name) {
   auto fut = Future<std::vector<std::string>>::Create(
       "AddModCommandRunner::GetTypesFromIntentParameter");
   switch (input.Which()) {
@@ -109,7 +121,16 @@ FindModulesCall::GetTypesFromIntentParameter(
     case fuchsia::modular::IntentParameterData::Tag::kJson: {
       std::string json_string;
       FXL_CHECK(fsl::StringFromVmo(input.json(), &json_string));
-      fut->Complete(GetTypesFromJson(json_string));
+      auto result = GetTypesFromJson(json_string);
+      if (result.first) {
+        fut->Complete(std::move(result.second));
+      } else {
+        std::ostringstream stream;
+        stream << "Mal-formed JSON in parameter: " << param_name;
+        result_.error_message = stream.str();
+        result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+        fut->Complete({});
+      }
       break;
     }
     case fuchsia::modular::IntentParameterData::Tag::kLinkName: {
@@ -118,44 +139,74 @@ FindModulesCall::GetTypesFromIntentParameter(
       operations_.Add(new GetLinkPathForParameterNameCall(
           story_storage_, module_path.Clone(), input.link_name(),
           did_get_lp->Completer()));
-      did_get_lp->Then([this, fut](fuchsia::modular::LinkPathPtr lp) {
-        // TODO(miguelfrde): handle case when no LinkPath is returned.
-        // Probably error case should come from the operation call above.
-        GetTypesFromLink(std::move(lp), fut->Completer());
+      did_get_lp->Then([this, fut,
+                        param_name](fuchsia::modular::LinkPathPtr lp) {
+        if (!lp) {
+          std::ostringstream stream;
+          stream << "No link path found for parameter with name " << param_name;
+          result_.error_message = stream.str();
+          result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+          fut->Complete({});
+        } else {
+          // If the call below has some error it will be set in result_.
+          GetTypesFromLink(std::move(lp), fut->Completer(), param_name);
+        }
       });
       break;
     }
     case fuchsia::modular::IntentParameterData::Tag::kLinkPath: {
       LinkPathPtr lp = CloneOptional(input.link_path());
-      GetTypesFromLink(std::move(lp), fut->Completer());
+      // If the call below has some error it will be set in result_.
+      GetTypesFromLink(std::move(lp), fut->Completer(), param_name);
       break;
     }
     case fuchsia::modular::IntentParameterData::Tag::Invalid: {
+      std::ostringstream stream;
+      stream << "Invalid data for parameter with name: " << param_name;
+      result_.error_message = stream.str();
+      result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+      fut->Complete({});
       break;
     }
   }
   return fut;
 }
 
-std::vector<std::string> FindModulesCall::GetTypesFromJson(
+std::pair<bool, std::vector<std::string>> FindModulesCall::GetTypesFromJson(
     const fidl::StringPtr& input) {
   std::vector<std::string> types;
   if (!ExtractEntityTypesFromJson(input, &types)) {
-    FXL_LOG(WARNING) << "Mal-formed JSON in parameter: " << input;
-    return {};
+    return {false, {}};
   } else {
-    return types;
+    return {true, types};
   }
 }
 
 void FindModulesCall::GetTypesFromLink(
     fuchsia::modular::LinkPathPtr link_path,
-    std::function<void(std::vector<std::string>)> done) {
+    std::function<void(std::vector<std::string>)> done,
+    const fidl::StringPtr& param_name) {
   story_storage_->GetLinkValue(*link_path)
-      ->Then([this, done = std::move(done)](StoryStorage::Status status,
-                                            fidl::StringPtr v) {
-        // TODO(miguelfrde): fail if wrong story status.
-        done(GetTypesFromJson(v));
+      ->Then([this, done = std::move(done), param_name](
+                 StoryStorage::Status status, fidl::StringPtr v) {
+        if (status != StoryStorage::Status::OK) {
+          std::ostringstream stream;
+          stream << "StoryStorage failed with status: " << (uint32_t)status
+                 << " for parameter with name " << param_name;
+          result_.error_message = stream.str();
+          result_.status = fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
+          done({});
+          return;
+        }
+        auto result = GetTypesFromJson(v);
+        if (!result.first) {
+          std::ostringstream stream;
+          stream << "Mal-formed JSON read from link for parameter: "
+                 << param_name;
+          result_.error_message = stream.str();
+          result_.status = fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
+        }
+        done(result.second);
       });
 }
 

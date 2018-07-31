@@ -22,7 +22,9 @@ void ModuleResolverFake::FindModules(fuchsia::modular::FindModulesQuery query,
 
 void ModuleResolverFake::GetModuleManifest(fidl::StringPtr module_id,
                                            GetModuleManifestCallback callback) {
-  get_module_manifest_validate_fn_(module_id);
+  if (get_module_manifest_validate_fn_) {
+    get_module_manifest_validate_fn_(module_id);
+  }
   callback(std::move(manifest_));
 }
 

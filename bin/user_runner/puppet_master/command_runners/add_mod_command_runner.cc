@@ -37,16 +37,25 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
   // Start by finding the module through module resolver
   void Run() override {
     FlowToken flow{this, &result_};
+    // Success status by default, we'll update it if we find an error state.
+    result_.status = fuchsia::modular::ExecuteStatus::OK;
 
     operation_queue_.Add(new FindModulesCall(
         story_storage_, module_resolver_, entity_resolver_,
         CloneOptional(command_.intent),
         command_.surface_parent_mod_name.Clone(),
-        [this, flow](fuchsia::modular::FindModulesResponse response) {
+        [this, flow](fuchsia::modular::ExecuteResult result,
+                     fuchsia::modular::FindModulesResponse response) {
+          if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+            result_ = std::move(result);
+            return;
+            // Operation finishes since |flow| goes out of scope.
+          }
           if (response.results->empty()) {
             result_.status = fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND;
             result_.error_message = "Resolution of intent gave zero results.";
             return;
+            // Operation finishes since |flow| goes out of scope.
           }
           resolver_response_ = std::move(response);
           Cont(flow);
@@ -56,6 +65,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
   // Create module parameters info and create links.
   void Cont(FlowToken flow) {
     CreateModuleParameterMapInfo(flow)->Then([this, flow] {
+      if (result_.status != fuchsia::modular::ExecuteStatus::OK) {
+        // Early finish since we found an error state.
+        return;
+      }
       auto full_module_path = command_.surface_parent_mod_name.Clone();
       full_module_path->insert(full_module_path->end(),
                                command_.mod_name->begin(),
@@ -89,21 +102,20 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
         std::make_unique<fuchsia::modular::Intent>(std::move(command_.intent));
     fidl::Clone(module_result.manifest, &module_data_.module_manifest);
 
+    // Operation stays alive until flow goes out of scope.
     story_storage_->WriteModuleData(std::move(module_data_))
-        ->Then([this, flow] {
-          result_.status = fuchsia::modular::ExecuteStatus::OK;
-        });
+        ->Then([this, flow] {});
   }
 
   FuturePtr<> CreateModuleParameterMapInfo(FlowToken flow) {
     parameter_info_ = fuchsia::modular::CreateModuleParameterMapInfo::New();
 
-    std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntry>>
+    std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntryPtr>>
         did_get_entries;
     did_get_entries.reserve(command_.intent.parameters->size());
 
     for (auto& param : *command_.intent.parameters) {
-      fuchsia::modular::CreateModuleParameterMapEntry entry;
+      auto entry = fuchsia::modular::CreateModuleParameterMapEntry::New();
       switch (param.data.Which()) {
         case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
           fuchsia::modular::CreateLinkInfo create_link;
@@ -111,22 +123,22 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
           FXL_CHECK(fsl::VmoFromString(
               EntityReferenceToJson(param.data.entity_reference()), &vmo));
           create_link.initial_data = std::move(vmo).ToTransport();
-          entry.key = param.name;
-          entry.value.set_create_link(std::move(create_link));
+          entry->key = param.name;
+          entry->value.set_create_link(std::move(create_link));
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
           // Create a link, but don't populate it. This is useful in the event
           // that the link is used as an 'output' link.
-          entry.key = param.name;
-          entry.value.set_create_link(fuchsia::modular::CreateLinkInfo{});
+          entry->key = param.name;
+          entry->value.set_create_link(fuchsia::modular::CreateLinkInfo{});
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::kJson: {
           fuchsia::modular::CreateLinkInfo create_link;
           param.data.json().Clone(&create_link.initial_data);
-          entry.key = param.name;
-          entry.value.set_create_link(std::move(create_link));
+          entry->key = param.name;
+          entry->value.set_create_link(std::move(create_link));
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::kLinkName: {
@@ -141,9 +153,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
           did_get_entries.emplace_back(
               did_get_lp->Map([param_name = param.name](
                                   fuchsia::modular::LinkPathPtr link_path) {
-                fuchsia::modular::CreateModuleParameterMapEntry entry;
-                entry.key = param_name;
-                entry.value.set_link_path(std::move(*link_path));
+                auto entry =
+                    fuchsia::modular::CreateModuleParameterMapEntry::New();
+                entry->key = param_name;
+                entry->value.set_link_path(std::move(*link_path));
                 return entry;
               }));
           continue;
@@ -151,20 +164,22 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
         case fuchsia::modular::IntentParameterData::Tag::kLinkPath: {
           fuchsia::modular::LinkPath lp;
           param.data.link_path().Clone(&lp);
-          entry.key = param.name;
-          entry.value.set_link_path(std::move(lp));
+          entry->key = param.name;
+          entry->value.set_link_path(std::move(lp));
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::Invalid: {
-          // TODO(miguelfrde): should we move this to the call and set an
-          // invalid command error.
-          FXL_DCHECK(false) << "Invalid intent parameter type.";
-          continue;
+          std::ostringstream stream;
+          stream << "Invalid data for parameter with name: " << param.name;
+          result_.error_message = stream.str();
+          result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+          return Future<>::CreateCompleted(
+              "AddModCommandRunner::FindModulesCall.invalid_parameter");
         }
       }
 
       auto did_create_entry =
-          Future<fuchsia::modular::CreateModuleParameterMapEntry>::
+          Future<fuchsia::modular::CreateModuleParameterMapEntryPtr>::
               CreateCompleted(
                   "AddModCommandRunner::FindModulesCall.did_create_entry",
                   std::move(entry));
@@ -172,15 +187,17 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
     }
 
     return Wait("AddModCommandRunner::FindModulesCall::Wait", did_get_entries)
-        ->Then([this, flow](
-                   std::vector<fuchsia::modular::CreateModuleParameterMapEntry>
-                       entries) {
-          parameter_info_ =
-              fuchsia::modular::CreateModuleParameterMapInfo::New();
-          for (auto& entry : entries) {
-            parameter_info_->property_info.push_back(std::move(entry));
-          }
-        });
+        ->Then(
+            [this, flow](
+                std::vector<fuchsia::modular::CreateModuleParameterMapEntryPtr>
+                    entries) {
+              parameter_info_ =
+                  fuchsia::modular::CreateModuleParameterMapInfo::New();
+              for (auto& entry : entries) {
+                parameter_info_->property_info.push_back(
+                    std::move(*entry.get()));
+              }
+            });
   }
 
   StoryStorage* const story_storage_;

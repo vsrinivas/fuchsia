@@ -804,7 +804,13 @@ class StoryControllerImpl::AddIntentCall
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
         CloneOptional(intent_), requesting_module_path_.Clone(),
-        [this, flow](fuchsia::modular::FindModulesResponse response) {
+        [this, flow](fuchsia::modular::ExecuteResult result,
+                     fuchsia::modular::FindModulesResponse response) {
+          if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+            FXL_LOG(WARNING)
+                << "StoryController::FindModulesCall returned "
+                << "error response with message: " << result.error_message;
+          }
           AddModuleFromResult(flow, std::move(response));
         }));
   }
@@ -1331,8 +1337,7 @@ void StoryControllerImpl::ProcessPendingViews() {
 
     const auto view_id = PathString(kv.second.module_path);
     story_shell_->AddView(std::move(kv.second.view_owner), view_id,
-                          anchor_view_id,
-                          std::move(kv.second.surface_relation),
+                          anchor_view_id, std::move(kv.second.surface_relation),
                           std::move(kv.second.module_manifest));
     connected_views_.emplace(view_id);
 

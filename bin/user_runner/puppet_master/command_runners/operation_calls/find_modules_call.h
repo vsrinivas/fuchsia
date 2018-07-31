@@ -12,7 +12,8 @@
 namespace modular {
 
 class FindModulesCall
-    : public Operation<fuchsia::modular::FindModulesResponse> {
+    : public Operation<fuchsia::modular::ExecuteResult,
+                       fuchsia::modular::FindModulesResponse> {
  public:
   FindModulesCall(StoryStorage* const story_storage,
                   fuchsia::modular::ModuleResolver* const module_resolver,
@@ -28,12 +29,15 @@ class FindModulesCall
   // on the story controller's operation queue.
   FuturePtr<std::vector<std::string>> GetTypesFromIntentParameter(
       fidl::VectorPtr<fidl::StringPtr> module_path,
-      const fuchsia::modular::IntentParameterData& input);
+      const fuchsia::modular::IntentParameterData& input,
+      const fidl::StringPtr& param_name);
 
-  std::vector<std::string> GetTypesFromJson(const fidl::StringPtr& input);
+  std::pair<bool, std::vector<std::string>> GetTypesFromJson(
+      const fidl::StringPtr& input);
 
   void GetTypesFromLink(fuchsia::modular::LinkPathPtr link_path,
-                        std::function<void(std::vector<std::string>)> done);
+                        std::function<void(std::vector<std::string>)> done,
+                        const fidl::StringPtr& param_name);
 
   StoryStorage* const story_storage_;                        // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not Owned
@@ -45,6 +49,7 @@ class FindModulesCall
   std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>>
       constraint_futs_;
   fuchsia::modular::LinkPtr link_;  // in case we need itf for
+  fuchsia::modular::ExecuteResult result_;
   fuchsia::modular::FindModulesResponse response_;
   OperationCollection operations_;
 
