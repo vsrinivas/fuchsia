@@ -75,16 +75,18 @@ struct StringPointerComparator {
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(
-    async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
+    async_dispatcher_t* dispatcher,
+    coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
     ledger::DetachedPath page_dir, PageId page_id)
-    : PageStorageImpl(
-          dispatcher, coroutine_service, encryption_service,
-          std::make_unique<PageDbImpl>(dispatcher, page_dir.SubPath(kLevelDbDir)),
-          std::move(page_id)) {}
+    : PageStorageImpl(dispatcher, coroutine_service, encryption_service,
+                      std::make_unique<PageDbImpl>(
+                          dispatcher, page_dir.SubPath(kLevelDbDir)),
+                      std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(
-    async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
+    async_dispatcher_t* dispatcher,
+    coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
     std::unique_ptr<PageDb> page_db, PageId page_id)
     : dispatcher_(dispatcher),
@@ -321,7 +323,7 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
       std::move(callback),
       [this, commit_id](CoroutineHandler* handler,
                         fit::function<void(Status)> callback) {
-        callback(db_->MarkCommitIdSynced(handler, commit_id));
+        callback(SynchronousMarkCommitSynced(handler, commit_id));
       });
 }
 
@@ -1187,7 +1189,22 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
 
 Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
                                                     const CommitId& commit_id) {
-  return db_->MarkCommitIdSynced(handler, commit_id);
+  std::unique_ptr<PageDb::Batch> batch;
+  Status status = db_->StartBatch(handler, &batch);
+  if (status != Status::OK) {
+    return status;
+  }
+  status = SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit_id);
+  if (status != Status::OK) {
+    return status;
+  }
+  return batch->Execute(handler);
+}
+
+Status PageStorageImpl::SynchronousMarkCommitSyncedInBatch(
+    CoroutineHandler* handler, PageDb::Batch* batch,
+    const CommitId& commit_id) {
+  return batch->MarkCommitIdSynced(handler, commit_id);
 }
 
 Status PageStorageImpl::SynchronousAddCommits(
@@ -1234,7 +1251,8 @@ Status PageStorageImpl::SynchronousAddCommits(
       Status s = ContainsCommit(handler, commit->GetId());
       if (s == Status::OK) {
         if (source == ChangeSource::CLOUD) {
-          s = batch->MarkCommitIdSynced(handler, commit->GetId());
+          s = SynchronousMarkCommitSyncedInBatch(handler, batch.get(),
+                                                 commit->GetId());
           if (s != Status::OK) {
             return s;
           }

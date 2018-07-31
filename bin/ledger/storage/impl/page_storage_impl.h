@@ -203,6 +203,10 @@ class PageStorageImpl : public PageStorage {
   FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSynced(
       coroutine::CoroutineHandler* handler, const CommitId& commit_id);
 
+  FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSyncedInBatch(
+      coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
+      const CommitId& commit_id);
+
   FXL_WARN_UNUSED_RESULT Status SynchronousAddCommits(
       coroutine::CoroutineHandler* handler,
       std::vector<std::unique_ptr<const Commit>> commits, ChangeSource source,
