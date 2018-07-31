@@ -82,19 +82,24 @@ public:
     ScpiProtocolProxy(scpi_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t ScpiGetSensor(const char* name, uint32_t* sensor_id) {
+    void GetProto(scpi_protocol_t* proto) {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+
+    zx_status_t GetSensor(const char* name, uint32_t* sensor_id) {
         return ops_->get_sensor(ctx_, name, sensor_id);
     }
-    zx_status_t ScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_value) {
+    zx_status_t GetSensorValue(uint32_t sensor_id, uint32_t* sensor_value) {
         return ops_->get_sensor_value(ctx_, sensor_id, sensor_value);
     }
-    zx_status_t ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps) {
+    zx_status_t GetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps) {
         return ops_->get_dvfs_info(ctx_, power_domain, opps);
     }
-    zx_status_t ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
+    zx_status_t GetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
         return ops_->get_dvfs_idx(ctx_, power_domain, idx);
     }
-    zx_status_t ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
+    zx_status_t SetDvfsIdx(uint8_t power_domain, uint16_t idx) {
         return ops_->set_dvfs_idx(ctx_, power_domain, idx);
     }
 \

@@ -4,7 +4,10 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <ddk/protocol/canvas.h>
+#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/scpi.h>
+#include <ddk/protocol/usb-mode-switch.h>
 
 // maximum transfer size we can proxy.
 #define PDEV_I2C_MAX_TRANSFER_SIZE 4096

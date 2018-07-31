@@ -2,51 +2,132 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "platform-device.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <zircon/syscalls/resource.h>
 
 #include "platform-bus.h"
 #include "proxy-protocol.h"
 
-// An overview of platform-device and platform proxy.
-//
-// Both this file and platform-proxy.c implement the platform device protocol.
-// At this time, this protocol provides the following methods:
-//     map_mmio
-//     map_interrupt
-//     get_bti
-//     get_device_info
-// The implementation in this file corresponds to the protocol for drivers that
-// exist within the platform bus process. The implementation of the protocol
-// in platform-proxy is for drivers that live in their own devhost and perform
-// RPC calls to the platform bus over a channel. In that case, RPC calls are
-// handled by platform_dev_rxrpc and then handled by relevant pdev_rpc_* functions.
-// Any resource handles passed back to the proxy are then used to create/map mmio
-// and irq objects within the proxy process. This ensures if the proxy driver dies
-// we will release their address space resources back to the kernel if necessary.
+namespace platform_bus {
 
-static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                         void** vaddr, size_t* size, zx_paddr_t* out_paddr,
-                                         zx_handle_t* out_handle) {
-    platform_dev_t* dev = static_cast<platform_dev_t*>(ctx);
+zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
+                                   uint32_t flags,
+                                   fbl::unique_ptr<platform_bus::PlatformDevice>* out) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<platform_bus::PlatformDevice> dev(new (&ac)
+                                            platform_bus::PlatformDevice(parent, bus, flags, pdev));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    auto status = dev->Init(pdev);
+    if (status != ZX_OK) {
+        return status;
+    }
+    out->swap(dev);
+    return ZX_OK;
+}
 
-    if (index >= dev->mmio_count) {
-        return ZX_ERR_INVALID_ARGS;
+PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, uint32_t flags,
+                               const pbus_dev_t* pdev)
+    : PlatformDeviceType(parent), bus_(bus), flags_(flags), vid_(pdev->vid), pid_(pdev->pid),
+      did_(pdev->did), serial_port_info_(pdev->serial_port_info) {
+    strlcpy(name_, pdev->name, sizeof(name_));
+}
+
+zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
+    fbl::AllocChecker ac;
+
+    if (pdev->mmio_count) {
+        mmios_.reserve(pdev->mmio_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->mmio_count; i++) {
+            mmios_.push_back(pdev->mmios[i]);
+        }
+    }
+    if (pdev->irq_count) {
+        irqs_.reserve(pdev->irq_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->irq_count; i++) {
+            irqs_.push_back(pdev->irqs[i]);
+        }
+    }
+    if (pdev->gpio_count) {
+        gpios_.reserve(pdev->gpio_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->gpio_count; i++) {
+            gpios_.push_back(pdev->gpios[i]);
+        }
+    }
+    if (pdev->i2c_channel_count) {
+        i2c_channels_.reserve(pdev->i2c_channel_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->i2c_channel_count; i++) {
+            i2c_channels_.push_back(pdev->i2c_channels[i]);
+        }
+    }
+    if (pdev->clk_count) {
+        clks_.reserve(pdev->clk_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->clk_count; i++) {
+            clks_.push_back(pdev->clks[i]);
+        }
+    }
+    if (pdev->bti_count) {
+        btis_.reserve(pdev->bti_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->bti_count; i++) {
+            btis_.push_back(pdev->btis[i]);
+        }
+    }
+    if (pdev->metadata_count) {
+        metadata_.reserve(pdev->metadata_count, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < pdev->metadata_count; i++) {
+            metadata_.push_back(pdev->metadata[i]);
+        }
     }
 
-    pbus_mmio_t* mmio = &dev->mmios[index];
-    zx_paddr_t vmo_base = ROUNDDOWN(mmio->base, PAGE_SIZE);
-    size_t vmo_size = ROUNDUP(mmio->base + mmio->length - vmo_base, PAGE_SIZE);
+    return ZX_OK;
+}
+
+
+zx_status_t PlatformDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
+                                    size_t* out_size, zx_paddr_t* out_paddr,
+                                    zx_handle_t* out_handle) {
+    if (index >= mmios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    const pbus_mmio_t& mmio = mmios_[index];
+    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
+    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
     zx_handle_t vmo_handle;
-    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, vmo_base, vmo_size,
+    zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
                                                 &vmo_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
@@ -68,12 +149,12 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
         goto fail;
     }
 
-    *size = mmio->length;
+    *out_size = mmio.length;
     *out_handle = vmo_handle;
     if (out_paddr) {
         *out_paddr = vmo_base;
     }
-    *vaddr = (void *)(virt + (mmio->base - vmo_base));
+    *out_vaddr = reinterpret_cast<void*>(virt + (mmio.base - vmo_base));
     return ZX_OK;
 
 fail:
@@ -81,20 +162,19 @@ fail:
     return status;
 }
 
-static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index,
-                                              uint32_t flags, zx_handle_t* out_handle) {
-    platform_dev_t* dev = static_cast<platform_dev_t*>(ctx);
-    uint32_t flags_;
-    if (index >= dev->irq_count || !out_handle) {
+zx_status_t PlatformDevice::MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
+    if (index >= irqs_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (out_handle == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
-    pbus_irq_t* irq = &dev->irqs[index];
-    if (flags) {
-        flags_ = flags;
-    } else {
-        flags_ = irq->mode;
+
+    pbus_irq_t& irq = irqs_[index];
+    if (flags == 0) {
+        flags = irq.mode;
     }
-    zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, flags_, out_handle);
+    zx_status_t status = zx_interrupt_create(bus_->GetResource(), irq.irq, flags, out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
         return status;
@@ -102,68 +182,53 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index,
     return status;
 }
 
-static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
-    platform_dev_t* dev = static_cast<platform_dev_t*>(ctx);
-    iommu_protocol_t* iommu = &dev->bus->iommu;
-
-    if (!iommu->ops) {
-        return ZX_ERR_NOT_SUPPORTED;
+zx_status_t PlatformDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
+    if (index >= btis_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    if (index >= dev->bti_count || !out_handle) {
+    if (out_handle == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
-    pbus_bti_t* bti = &dev->btis[index];
 
-    return iommu_get_bti(iommu, bti->iommu_index, bti->bti_id, out_handle);
+    pbus_bti_t& bti = btis_[index];
+
+    return bus_->GetBti(bti.iommu_index, bti.bti_id, out_handle);
 }
 
-static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* out_info) {
-    platform_dev_t* dev = static_cast<platform_dev_t*>(ctx);
-
+zx_status_t PlatformDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
     memset(out_info, 0, sizeof(*out_info));
-    out_info->vid = dev->vid;
-    out_info->pid = dev->pid;
-    out_info->did = dev->did;
-    memcpy(&out_info->serial_port_info, &dev->serial_port_info, sizeof(out_info->serial_port_info));
-    out_info->mmio_count = dev->mmio_count;
-    out_info->irq_count = dev->irq_count;
-    out_info->gpio_count = dev->gpio_count;
-    out_info->i2c_channel_count = dev->i2c_channel_count;
-    out_info->clk_count = dev->clk_count;
-    out_info->bti_count = dev->bti_count;
-    out_info->metadata_count = dev->metadata_count;
-    memcpy(out_info->name, dev->name, sizeof(out_info->name));
+    out_info->vid = vid_;
+    out_info->pid = pid_;
+    out_info->did = did_;
+    memcpy(&out_info->serial_port_info, &serial_port_info_, sizeof(out_info->serial_port_info));
+    out_info->mmio_count = static_cast<uint32_t>(mmios_.size());
+    out_info->irq_count = static_cast<uint32_t>(irqs_.size());
+    out_info->gpio_count = static_cast<uint32_t>(gpios_.size());
+    out_info->i2c_channel_count = static_cast<uint32_t>(i2c_channels_.size());
+    out_info->clk_count = static_cast<uint32_t>(clks_.size());
+    out_info->bti_count = static_cast<uint32_t>(btis_.size());
+    out_info->metadata_count = static_cast<uint32_t>(metadata_.size());
+    memcpy(out_info->name, name_, sizeof(out_info->name));
 
     return ZX_OK;
 }
 
-static platform_device_protocol_ops_t platform_dev_proto_ops = {
-    .map_mmio = platform_dev_map_mmio,
-    .map_interrupt = platform_dev_map_interrupt,
-    .get_bti = platform_dev_get_bti,
-    .get_device_info = platform_dev_get_device_info,
-};
-
 // Create a resource and pass it back to the proxy along with necessary metadata
 // to create/map the VMO in the driver process.
-static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev,
-                                     uint32_t index,
-                                     zx_paddr_t* out_paddr,
-                                     size_t *out_length,
-                                     zx_handle_t* out_handle,
-                                     uint32_t* out_handle_count) {
-    if (index >= dev->mmio_count) {
-        return ZX_ERR_INVALID_ARGS;
+zx_status_t PlatformDevice::RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t *out_length,
+                                       zx_handle_t* out_handle, uint32_t* out_handle_count) {
+    if (index >= mmios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
-    pbus_mmio_t* mmio = &dev->mmios[index];
+    pbus_mmio_t* mmio = &mmios_[index];
     zx_handle_t handle;
     char rsrc_name[ZX_MAX_NAME_LEN];
-    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", dev->name, index);
-    zx_status_t status = zx_resource_create(dev->bus->resource, ZX_RSRC_KIND_MMIO, mmio->base,
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", name_, index);
+    zx_status_t status = zx_resource_create(bus_->GetResource(), ZX_RSRC_KIND_MMIO, mmio->base,
                                             mmio->length, rsrc_name, sizeof(rsrc_name), &handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_rpc_get_mmio: zx_resource_create failed: %d\n", dev->name, status);
+        zxlogf(ERROR, "%s: pdev_rpc_get_mmio: zx_resource_create failed: %d\n", name_, status);
         return status;
     }
 
@@ -176,23 +241,18 @@ static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev,
 
 // Create a resource and pass it back to the proxy along with necessary metadata
 // to create the IRQ in the driver process.
-static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev,
-                                          uint32_t index,
-                                          uint32_t* out_irq,
-                                          uint32_t* out_mode,
-                                          zx_handle_t* out_handle,
-                                          uint32_t* out_handle_count) {
-
-    if (index > dev->irq_count) {
-        return ZX_ERR_INVALID_ARGS;
+zx_status_t PlatformDevice::RpcGetInterrupt(uint32_t index, uint32_t* out_irq, uint32_t* out_mode,
+                                            zx_handle_t* out_handle, uint32_t* out_handle_count) {
+    if (index >= irqs_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     zx_handle_t handle;
-    pbus_irq_t* irq = &dev->irqs[index];
+    pbus_irq_t* irq = &irqs_[index];
     uint32_t options = ZX_RSRC_KIND_IRQ | ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
-    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", dev->name, index);
-    zx_status_t status = zx_resource_create(dev->bus->resource, options, irq->irq, 1, rsrc_name,
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", name_, index);
+    zx_status_t status = zx_resource_create(bus_->GetResource(), options, irq->irq, 1, rsrc_name,
                                             sizeof(rsrc_name), &handle);
     if (status != ZX_OK) {
         return status;
@@ -205,240 +265,206 @@ static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev,
     return status;
 }
 
-static zx_status_t pdev_rpc_get_bti(platform_dev_t* dev, uint32_t index, zx_handle_t* out_handle,
-                                    uint32_t* out_handle_count) {
-
-    zx_status_t status = platform_dev_get_bti(dev, index, out_handle);
+zx_status_t PlatformDevice::RpcGetBti(uint32_t index, zx_handle_t* out_handle,
+                                      uint32_t* out_handle_count) {
+    zx_status_t status = GetBti(index, out_handle);
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
     return status;
 }
 
-static zx_status_t pdev_rpc_ums_set_mode(platform_dev_t* dev, usb_mode_t mode) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->ums.ops) {
+zx_status_t PlatformDevice::RpcUmsSetMode(usb_mode_t mode) {
+    if (bus_->ums() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return usb_mode_switch_set_mode(&bus->ums, mode);
+    return bus_->ums()->SetMode(mode);
 }
 
-static zx_status_t pdev_rpc_gpio_config(platform_dev_t* dev, uint32_t index,
-                                        uint32_t flags) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioConfig(uint32_t index, uint32_t flags) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    index = dev->gpios[index].gpio;
 
-    return gpio_config(&bus->gpio, index, flags);
+    return bus_->gpio()->Config(gpios_[index].gpio, flags);
 }
 
-static zx_status_t pdev_rpc_gpio_set_alt_function(platform_dev_t* dev, uint32_t index,
-                                                  uint64_t function) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioSetAltFunction(uint32_t index, uint64_t function) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    index = dev->gpios[index].gpio;
 
-    return gpio_set_alt_function(&bus->gpio, index, function);
+    return bus_->gpio()->SetAltFunction(gpios_[index].gpio, function);
 }
 
-static zx_status_t pdev_rpc_gpio_read(platform_dev_t* dev, uint32_t index, uint8_t* out_value) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioRead(uint32_t index, uint8_t* out_value) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    index = dev->gpios[index].gpio;
 
-    return gpio_read(&bus->gpio, index, out_value);
+    return bus_->gpio()->Read(gpios_[index].gpio, out_value);
 }
 
-static zx_status_t pdev_rpc_gpio_write(platform_dev_t* dev, uint32_t index, uint8_t value) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioWrite(uint32_t index, uint8_t value) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    index = dev->gpios[index].gpio;
 
-    return gpio_write(&bus->gpio, index, value);
+    return bus_->gpio()->Write(gpios_[index].gpio, value);
 }
 
-static zx_status_t pdev_rpc_get_gpio_interrupt(platform_dev_t* dev, uint32_t index,
-                                               uint32_t flags,
-                                               zx_handle_t* out_handle,
-                                               uint32_t* out_handle_count) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioGetInterrupt(uint32_t index, uint32_t flags,
+                                                zx_handle_t* out_handle,
+                                                uint32_t* out_handle_count) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
-    index = dev->gpios[index].gpio;
-    zx_status_t status = gpio_get_interrupt(&bus->gpio, index, flags, out_handle);
+    zx_status_t status = bus_->gpio()->GetInterrupt(gpios_[index].gpio, flags, out_handle);
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
     return status;
 }
 
-static zx_status_t pdev_rpc_release_gpio_interrupt(platform_dev_t* dev, uint32_t index) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioReleaseInterrupt(uint32_t index) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    index = dev->gpios[index].gpio;
-    return gpio_release_interrupt(&bus->gpio, index);
+    return bus_->gpio()->ReleaseInterrupt(gpios_[index].gpio);
 }
 
-static zx_status_t pdev_rpc_set_gpio_polarity(platform_dev_t* dev,
-                                            uint32_t index, uint32_t flags) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->gpio.ops) {
+zx_status_t PlatformDevice::RpcGpioSetPolarity(uint32_t index, uint32_t flags) {
+    if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->gpio_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= gpios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    index = dev->gpios[index].gpio;
-    return gpio_set_polarity(&bus->gpio, index, flags);
+    return bus_->gpio()->SetPolarity(gpios_[index].gpio, flags);
 }
 
-static zx_status_t pdev_rpc_canvas_config(platform_dev_t* dev, zx_handle_t vmo, size_t offset,
-                                          canvas_info_t* info, uint8_t* canvas_idx) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->canvas.ops) {
+zx_status_t PlatformDevice::RpcCanvasConfig(zx_handle_t vmo, size_t offset,
+                                            canvas_info_t* info, uint8_t* canvas_idx) {
+    if (bus_->canvas() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return canvas_config(&bus->canvas, vmo, offset, info, canvas_idx);
+    return bus_->canvas()->Config(vmo, offset, info, canvas_idx);
 }
 
-static zx_status_t pdev_rpc_canvas_free(platform_dev_t* dev, uint8_t canvas_idx) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->canvas.ops) {
+zx_status_t PlatformDevice::RpcCanvasFree(uint8_t canvas_idx) {
+    if (bus_->canvas() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return canvas_free(&bus->canvas, canvas_idx);
+    return bus_->canvas()->Free(canvas_idx);
 }
 
-static zx_status_t pdev_rpc_scpi_get_sensor(platform_dev_t* dev,
-                                            char* name,
-                                            uint32_t *sensor_id) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->scpi.ops) {
+zx_status_t PlatformDevice::RpcScpiGetSensor(char* name, uint32_t *sensor_id) {
+    if (bus_->scpi() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return scpi_get_sensor(&bus->scpi, name, sensor_id);
+    return bus_->scpi()->GetSensor(name, sensor_id);
 }
 
-static zx_status_t pdev_rpc_scpi_get_sensor_value(platform_dev_t* dev,
-                                            uint32_t sensor_id,
-                                            uint32_t* sensor_value) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->scpi.ops) {
+zx_status_t PlatformDevice::RpcScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_value) {
+    if (bus_->scpi() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return scpi_get_sensor_value(&bus->scpi, sensor_id, sensor_value);
+    return bus_->scpi()->GetSensorValue(sensor_id, sensor_value);
 }
 
-static zx_status_t pdev_rpc_scpi_get_dvfs_info(platform_dev_t* dev,
-                                               uint8_t power_domain,
-                                               scpi_opp_t* opps) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->scpi.ops) {
+zx_status_t PlatformDevice::RpcScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps) {
+    if (bus_->scpi() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return scpi_get_dvfs_info(&bus->scpi, power_domain, opps);
+    return bus_->scpi()->GetDvfsInfo(power_domain, opps);
 }
 
-static zx_status_t pdev_rpc_scpi_get_dvfs_idx(platform_dev_t* dev,
-                                              uint8_t power_domain,
-                                              uint16_t* idx) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->scpi.ops) {
+zx_status_t PlatformDevice::RpcScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
+    if (bus_->scpi() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return scpi_get_dvfs_idx(&bus->scpi, power_domain, idx);
+    return bus_->scpi()->GetDvfsIdx(power_domain, idx);
 }
 
-static zx_status_t pdev_rpc_scpi_set_dvfs_idx(platform_dev_t* dev,
-                                              uint8_t power_domain,
-                                              uint16_t idx) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->scpi.ops) {
+zx_status_t PlatformDevice::RpcScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
+    if (bus_->scpi() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return scpi_set_dvfs_idx(&bus->scpi, power_domain, idx);
+    return bus_->scpi()->SetDvfsIdx(power_domain, idx);
 }
 
-static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, uint8_t* data,
-                                        zx_handle_t channel) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->i2c.ops) {
+zx_status_t PlatformDevice::RpcI2cTransact(pdev_req_t* req, uint8_t* data, zx_handle_t channel) {
+    if (bus_->i2c_impl() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     uint32_t index = req->index;
-    if (index >= dev->i2c_channel_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= i2c_channels_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    pbus_i2c_channel_t* pdev_channel = &dev->i2c_channels[index];
+    pbus_i2c_channel_t* pdev_channel = &i2c_channels_[index];
 
-    return platform_i2c_transact(dev->bus, req, pdev_channel, data, channel);
+    return bus_->I2cTransact(req, pdev_channel, data, channel);
 }
 
-static zx_status_t pdev_rpc_clk_enable(platform_dev_t* dev, uint32_t index) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->clk.ops) {
+zx_status_t PlatformDevice::RpcI2cGetMaxTransferSize(uint32_t index, size_t* out_size) {
+    if (bus_->i2c_impl() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->clk_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= i2c_channels_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
+    pbus_i2c_channel_t* pdev_channel = &i2c_channels_[index];
 
-    index = dev->clks[index].clk;
-
-    return clk_enable(&bus->clk, index);
+    return bus_->i2c_impl()->GetMaxTransferSize(pdev_channel->bus_id, out_size);
 }
 
-static zx_status_t pdev_rpc_clk_disable(platform_dev_t* dev, uint32_t index) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->clk.ops) {
+zx_status_t PlatformDevice::RpcClkEnable(uint32_t index) {
+    if (bus_->clk() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (index >= dev->clk_count) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= clks_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
-    index = dev->clks[index].clk;
-
-    return clk_disable(&bus->clk, index);
+    return bus_->clk()->Enable(clks_[index].clk);
 }
 
-static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
+zx_status_t PlatformDevice::RpcDisable(uint32_t index) {
+    if (bus_->clk() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= clks_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return bus_->clk()->Disable(clks_[index].clk);
+}
+
+zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     if (channel == ZX_HANDLE_INVALID) {
         // proxy device has connected
         return ZX_OK;
     }
 
-    platform_dev_t* dev = static_cast<platform_dev_t*>(ctx);
     struct {
         pdev_req_t req;
         uint8_t data[PDEV_I2C_MAX_TRANSFER_SIZE];
@@ -462,69 +488,63 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 
     switch (req->op) {
     case PDEV_GET_MMIO:
-        resp.status = pdev_rpc_get_mmio(dev, req->index, &resp.mmio.paddr, &resp.mmio.length,
-                                        &handle, &handle_count);
+        resp.status = RpcGetMmio(req->index, &resp.mmio.paddr, &resp.mmio.length, &handle,
+                                 &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
-        resp.status = pdev_rpc_get_interrupt(dev, req->index, &resp.irq.irq, &resp.irq.mode,
-                                             &handle, &handle_count);
+        resp.status = RpcGetInterrupt(req->index, &resp.irq.irq, &resp.irq.mode, &handle,
+                                     &handle_count);
         break;
     case PDEV_GET_BTI:
-        resp.status = pdev_rpc_get_bti(dev, req->index, &handle, &handle_count);
+        resp.status = RpcGetBti(req->index, &handle, &handle_count);
         break;
     case PDEV_GET_DEVICE_INFO:
-        resp.status = platform_dev_get_device_info(dev, &resp.info);
+        resp.status = GetDeviceInfo(&resp.info);
         break;
     case PDEV_UMS_SET_MODE:
-        resp.status = pdev_rpc_ums_set_mode(dev, req->usb_mode);
+        resp.status = RpcUmsSetMode(req->usb_mode);
         break;
     case PDEV_GPIO_CONFIG:
-        resp.status = pdev_rpc_gpio_config(dev, req->index, req->gpio_flags);
+        resp.status = RpcGpioConfig(req->index, req->gpio_flags);
         break;
     case PDEV_GPIO_SET_ALT_FUNCTION:
-        resp.status = pdev_rpc_gpio_set_alt_function(dev, req->index, req->gpio_alt_function);
+        resp.status = RpcGpioSetAltFunction(req->index, req->gpio_alt_function);
         break;
     case PDEV_GPIO_READ:
-        resp.status = pdev_rpc_gpio_read(dev, req->index, &resp.gpio_value);
+        resp.status = RpcGpioRead(req->index, &resp.gpio_value);
         break;
     case PDEV_GPIO_WRITE:
-        resp.status = pdev_rpc_gpio_write(dev, req->index, req->gpio_value);
+        resp.status = RpcGpioWrite(req->index, req->gpio_value);
         break;
     case PDEV_GPIO_GET_INTERRUPT:
-        resp.status = pdev_rpc_get_gpio_interrupt(dev, req->index,
-                                                req->flags, &handle, &handle_count);
+        resp.status = RpcGpioGetInterrupt(req->index, req->flags, &handle, &handle_count);
         break;
     case PDEV_GPIO_RELEASE_INTERRUPT:
-        resp.status = pdev_rpc_release_gpio_interrupt(dev, req->index);
+        resp.status = RpcGpioReleaseInterrupt(req->index);
         break;
     case PDEV_GPIO_SET_POLARITY:
-        resp.status = pdev_rpc_set_gpio_polarity(dev, req->index, req->flags);
+        resp.status = RpcGpioSetPolarity(req->index, req->flags);
         break;
     case PDEV_SCPI_GET_SENSOR:
-        resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi.name, &resp.scpi.sensor_id);
+        resp.status = RpcScpiGetSensor(req->scpi.name, &resp.scpi.sensor_id);
         break;
     case PDEV_SCPI_GET_SENSOR_VALUE:
-        resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi.sensor_id,
-                                                     &resp.scpi.sensor_value);
+        resp.status = RpcScpiGetSensorValue(req->scpi.sensor_id, &resp.scpi.sensor_value);
         break;
     case PDEV_SCPI_GET_DVFS_INFO:
-        resp.status = pdev_rpc_scpi_get_dvfs_info(dev, req->scpi.power_domain,
-                                                  &resp.scpi.opps);
+        resp.status = RpcScpiGetDvfsInfo(req->scpi.power_domain, &resp.scpi.opps);
         break;
     case PDEV_SCPI_GET_DVFS_IDX:
-        resp.status = pdev_rpc_scpi_get_dvfs_idx(dev, req->scpi.power_domain,
-                                                 &resp.scpi.dvfs_idx);
+        resp.status = RpcScpiGetDvfsIdx(req->scpi.power_domain, &resp.scpi.dvfs_idx);
         break;
     case PDEV_SCPI_SET_DVFS_IDX:
-        resp.status = pdev_rpc_scpi_set_dvfs_idx(dev, req->scpi.power_domain,
-                                                 static_cast<uint16_t>(req->index));
+        resp.status = RpcScpiSetDvfsIdx(req->scpi.power_domain, static_cast<uint16_t>(req->index));
         break;
     case PDEV_I2C_GET_MAX_TRANSFER:
-        resp.status = i2c_impl_get_max_transfer_size(&dev->bus->i2c, req->index,
-                                                     &resp.i2c_max_transfer);
+        resp.status = RpcI2cGetMaxTransferSize(req->index, &resp.i2c_max_transfer);
         break;
     case PDEV_I2C_TRANSACT:
-        resp.status = pdev_rpc_i2c_transact(dev, req, req_data.data, channel);
+        resp.status = RpcI2cTransact(req, req_data.data, channel);
         if (resp.status == ZX_OK) {
             // If platform_i2c_transact succeeds, we return immmediately instead of calling
             // zx_channel_write below. Instead we will respond in platform_i2c_complete().
@@ -532,18 +552,17 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         }
         break;
     case PDEV_CLK_ENABLE:
-        resp.status = pdev_rpc_clk_enable(dev, req->index);
+        resp.status = RpcClkEnable(req->index);
         break;
     case PDEV_CLK_DISABLE:
-        resp.status = pdev_rpc_clk_disable(dev, req->index);
+        resp.status = RpcDisable(req->index);
         break;
     case PDEV_CANVAS_CONFIG:
-        resp.status = pdev_rpc_canvas_config(dev, in_handle,
-                                             req->canvas.offset, &req->canvas.info,
-                                             &resp.canvas_idx);
+        resp.status = RpcCanvasConfig(in_handle, req->canvas.offset, &req->canvas.info,
+                                      &resp.canvas_idx);
         break;
     case PDEV_CANVAS_FREE:
-        resp.status = pdev_rpc_canvas_free(dev, req->canvas_idx);
+        resp.status = RpcCanvasFree(req->canvas_idx);
         break;
     default:
         zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req->op);
@@ -559,245 +578,90 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     return status;
 }
 
-static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
-    platform_dev_t* dev = static_cast<platform_dev_t*>(ctx);
-
+zx_status_t PlatformDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     if (proto_id == ZX_PROTOCOL_PLATFORM_DEV) {
-        platform_device_protocol_t* proto = static_cast<platform_device_protocol_t*>(protocol);
-        proto->ops = &platform_dev_proto_ops;
-        proto->ctx = dev;
+        auto proto = static_cast<platform_device_protocol_t*>(out);
+        proto->ops = &pdev_proto_ops_;
+        proto->ctx = this;
         return ZX_OK;
     } else {
-        return platform_bus_get_protocol(dev->bus, proto_id, protocol);
+        return bus_->DdkGetProtocol(proto_id, out);
     }
 }
 
-void platform_dev_free(platform_dev_t* dev) {
-    free(dev->mmios);
-    free(dev->irqs);
-    free(dev->gpios);
-    free(dev->i2c_channels);
-    free(dev->clks);
-    free(dev->btis);
-    free(dev->metadata);
-    free(dev);
+void PlatformDevice::DdkRelease() {
+    delete this;
 }
 
-static zx_protocol_device_t platform_dev_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = platform_dev_get_protocol,
-    .open = nullptr,
-    .open_at = nullptr,
-    .close = nullptr,
-    .unbind = nullptr,
-    // Note that we do not have a release callback here because we
-    // need to support re-adding platform devices when they are reenabled.
-    .release = nullptr,
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .ioctl = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = platform_dev_rxrpc,
-    .message = nullptr,
-};
+zx_status_t PlatformDevice::AddMetaData(const pbus_metadata_t& pbm) {
+    const uint32_t type = pbm.type;
+    const uint32_t extra = pbm.extra;
+    const uint8_t* metadata = bus_->metadata();
+    const size_t metadata_size = bus_->metadata_size();
+    size_t offset = 0;
 
-zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uint32_t flags) {
-    zx_status_t status = ZX_OK;
-
-    if (flags & ~(PDEV_ADD_DISABLED | PDEV_ADD_PBUS_DEVHOST)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    platform_dev_t* dev = static_cast<platform_dev_t*>(calloc(1, sizeof(platform_dev_t)));
-    if (!dev) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    if (pdev->mmio_count) {
-        size_t size = pdev->mmio_count * sizeof(*pdev->mmios);
-        dev->mmios = static_cast<pbus_mmio_t*>(malloc(size));
-        if (!dev->mmios) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->mmios, pdev->mmios, size);
-        dev->mmio_count = pdev->mmio_count;
-    }
-    if (pdev->irq_count) {
-        size_t size = pdev->irq_count * sizeof(*pdev->irqs);
-        dev->irqs = static_cast<pbus_irq_t*>(malloc(size));
-        if (!dev->irqs) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->irqs, pdev->irqs, size);
-        dev->irq_count = pdev->irq_count;
-    }
-    if (pdev->gpio_count) {
-        size_t size = pdev->gpio_count * sizeof(*pdev->gpios);
-        dev->gpios = static_cast<pbus_gpio_t*>(malloc(size));
-        if (!dev->gpios) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->gpios, pdev->gpios, size);
-        dev->gpio_count = pdev->gpio_count;
-    }
-    if (pdev->i2c_channel_count) {
-        size_t size = pdev->i2c_channel_count * sizeof(*pdev->i2c_channels);
-        dev->i2c_channels = static_cast<pbus_i2c_channel_t*>(malloc(size));
-        if (!dev->i2c_channels) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->i2c_channels, pdev->i2c_channels, size);
-        dev->i2c_channel_count = pdev->i2c_channel_count;
-    }
-    if (pdev->clk_count) {
-        const size_t size = pdev->clk_count * sizeof(*pdev->clks);
-        dev->clks = static_cast<pbus_clk_t*>(malloc(size));
-        if (!dev->clks) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->clks, pdev->clks, size);
-        dev->clk_count = pdev->clk_count;
-    }
-    if (pdev->bti_count) {
-        const size_t size = pdev->bti_count * sizeof(*pdev->btis);
-        dev->btis = static_cast<pbus_bti_t*>(malloc(size));
-        if (!dev->btis) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->btis, pdev->btis, size);
-        dev->bti_count = pdev->bti_count;
-    }
-    if (pdev->metadata_count) {
-        const size_t size = pdev->metadata_count * sizeof(*pdev->metadata);
-        dev->metadata = static_cast<pbus_metadata_t*>(malloc(size));
-        if (!dev->metadata) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->metadata, pdev->metadata, size);
-        dev->metadata_count = pdev->metadata_count;
-    }
-
-    dev->bus = bus;
-    dev->flags = flags;
-    if (!pdev->name) {
-        status = ZX_ERR_INVALID_ARGS;
-        goto fail;
-    }
-    strlcpy(dev->name, pdev->name, sizeof(dev->name));
-    dev->vid = pdev->vid;
-    dev->pid = pdev->pid;
-    dev->did = pdev->did;
-    memcpy(&dev->serial_port_info, &pdev->serial_port_info, sizeof(dev->serial_port_info));
-
-    list_add_tail(&bus->devices, &dev->node);
-
-    if ((flags & PDEV_ADD_DISABLED) == 0) {
-        status = platform_device_enable(dev, true);
-    }
-
-fail:
-    if (status != ZX_OK) {
-        platform_dev_free(dev);
-    }
-
-    return status;
-}
-
-static zx_status_t platform_device_add_metadata(platform_dev_t* dev, uint32_t index) {
-    uint32_t type = dev->metadata[index].type;
-    uint32_t extra = dev->metadata[index].extra;
-    platform_bus_t* bus = dev->bus;
-    uint8_t* metadata = bus->metadata;
-    zx_off_t offset = 0;
-
-    while (offset < bus->metadata_size) {
-        zbi_header_t* header = (zbi_header_t*)metadata;
+    while (offset < metadata_size) {
+        auto header = reinterpret_cast<const zbi_header_t*>(metadata);
         size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
 
         if (header->type == type && header->extra == extra) {
-            return device_add_metadata(dev->zxdev, type, header + 1, length - sizeof(zbi_header_t));
+            return DdkAddMetadata(type, header + 1, length - sizeof(zbi_header_t));
         }
         metadata += length;
         offset += length;
     }
+    zxlogf(ERROR, "%s metadata not found for type %08x, extra %u\n", __FUNCTION__, type, extra);
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
+zx_status_t PlatformDevice::Enable(bool enable) {
     zx_status_t status = ZX_OK;
 
-    if (enable && !dev->enabled) {
+    if (enable && !enabled_) {
         zx_device_prop_t props[] = {
-            {BIND_PLATFORM_DEV_VID, 0, dev->vid},
-            {BIND_PLATFORM_DEV_PID, 0, dev->pid},
-            {BIND_PLATFORM_DEV_DID, 0, dev->did},
+            {BIND_PLATFORM_DEV_VID, 0, vid_},
+            {BIND_PLATFORM_DEV_PID, 0, pid_},
+            {BIND_PLATFORM_DEV_DID, 0, did_},
         };
 
         char namestr[ZX_DEVICE_NAME_MAX];
-        if (dev->vid == PDEV_VID_GENERIC && dev->pid == PDEV_PID_GENERIC &&
-            dev->did == PDEV_DID_KPCI) {
+        if (vid_ == PDEV_VID_GENERIC && pid_ == PDEV_PID_GENERIC && did_ == PDEV_DID_KPCI) {
             strlcpy(namestr, "pci", sizeof(namestr));
         } else {
 
-            snprintf(namestr, sizeof(namestr), "%02x:%02x:%01x", dev->vid, dev->pid, dev->did);
+            snprintf(namestr, sizeof(namestr), "%02x:%02x:%01x", vid_, pid_, did_);
         }
         char argstr[64];
         snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
-        bool new_devhost = !(dev->flags & PDEV_ADD_PBUS_DEVHOST);
-        device_add_args_t args = {};
-        args.version = DEVICE_ADD_ARGS_VERSION;
-        args.name = namestr;
-        args.ctx = dev;
-        args.ops = &platform_dev_proto;
-        args.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
-        args.props = props;
-        args.prop_count = countof(props);
-        args.proxy_args = (new_devhost ? argstr : nullptr);
-        args.flags = (new_devhost ? DEVICE_ADD_MUST_ISOLATE : 0) |
-                     (dev->metadata_count ? DEVICE_ADD_INVISIBLE : 0);
-
-        // add PCI root at top level
-        zx_device_t* parent = dev->bus->zxdev;
-        if (dev->did == PDEV_DID_KPCI) {
-            parent = device_get_parent(parent);
+        uint32_t flags = 0;
+        if (!(flags_ & PDEV_ADD_PBUS_DEVHOST)) {
+            flags |= DEVICE_ADD_MUST_ISOLATE;
+        }
+        if (metadata_.size() > 0) {
+            flags |= DEVICE_ADD_INVISIBLE;
         }
 
-        if (dev->metadata_count) {
-            // keep device invisible until we add its metadata
-            args.flags |= DEVICE_ADD_INVISIBLE;
-        }
-        status = device_add(parent, &args, &dev->zxdev);
-        if (status != ZX_OK) {
-            return status;
-        }
+        status = DdkAdd(namestr, flags, props, countof(props), argstr);
 
-        if (dev->metadata_count) {
-            for (uint32_t i = 0; i < dev->metadata_count; i++) {
-                pbus_metadata_t* pbm = &dev->metadata[i];
-                if (pbm->data && pbm->len) {
-                    device_add_metadata(dev->zxdev, pbm->type, pbm->data, pbm->len);
+        if (metadata_.size() > 0) {
+            for (const auto& pbm : metadata_) {
+                if (pbm.data && pbm.len) {
+                    DdkAddMetadata(pbm.type, pbm.data, pbm.len);
                 } else {
-                    platform_device_add_metadata(dev, i);
+                    AddMetaData(pbm);
                 }
             }
-            device_make_visible(dev->zxdev);
+            DdkMakeVisible();
         }
-     } else if (!enable && dev->enabled) {
-        device_remove(dev->zxdev);
-        dev->zxdev = nullptr;
+     } else if (!enable && enabled_) {
+        DdkRemove();
     }
 
     if (status == ZX_OK) {
-        dev->enabled = enable;
+        enabled_ = enable;
     }
 
     return status;
 }
+
+} // namespace platform_bus

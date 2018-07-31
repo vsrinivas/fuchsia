@@ -92,30 +92,30 @@ typedef struct {
     void* ctx;
 } platform_bus_protocol_t;
 
-static inline zx_status_t pbus_set_protocol(platform_bus_protocol_t* pbus,
+static inline zx_status_t pbus_set_protocol(const platform_bus_protocol_t* pbus,
                                             uint32_t proto_id, void* protocol) {
     return pbus->ops->set_protocol(pbus->ctx, proto_id, protocol);
 }
 
 // waits for the specified protocol to be made available by another driver
 // calling pbus_set_protocol()
-static inline zx_status_t pbus_wait_protocol(platform_bus_protocol_t* pbus, uint32_t proto_id) {
+static inline zx_status_t pbus_wait_protocol(const platform_bus_protocol_t* pbus, uint32_t proto_id) {
     return pbus->ops->wait_protocol(pbus->ctx, proto_id);
 }
 
-static inline zx_status_t pbus_device_add(platform_bus_protocol_t* pbus, const pbus_dev_t* dev,
+static inline zx_status_t pbus_device_add(const platform_bus_protocol_t* pbus, const pbus_dev_t* dev,
                                           uint32_t flags) {
     return pbus->ops->device_add(pbus->ctx, dev, flags);
 }
 
 // Dynamically enables or disables a platform device by adding or removing it
 // from the DDK device tree.
-static inline zx_status_t pbus_device_enable(platform_bus_protocol_t* pbus, uint32_t vid,
+static inline zx_status_t pbus_device_enable(const platform_bus_protocol_t* pbus, uint32_t vid,
                                              uint32_t pid, uint32_t did, bool enable) {
     return pbus->ops->device_enable(pbus->ctx, vid, pid, did, enable);
 }
 
-static inline const char* pbus_get_board_name(platform_bus_protocol_t* pbus) {
+static inline const char* pbus_get_board_name(const platform_bus_protocol_t* pbus) {
     return pbus->ops->get_board_name(pbus->ctx);
 }
 

@@ -71,12 +71,12 @@ public:
     I2cProtocolProxy(i2c_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t I2cTransact(uint32_t index, const void* write_buf, size_t write_length,
+    zx_status_t Transact(uint32_t index, const void* write_buf, size_t write_length,
                             size_t read_length, i2c_complete_cb complete_cb, void* cookie) {
         return ops_->transact(ctx_, index, write_buf, write_length, read_length, complete_cb,
                               cookie);
     }
-    zx_status_t I2cGetMaxTransferSize(uint32_t index, size_t* out_size) {
+    zx_status_t GetMaxTransferSize(uint32_t index, size_t* out_size) {
         return ops_->get_max_transfer_size(ctx_, index, out_size);
     }
 

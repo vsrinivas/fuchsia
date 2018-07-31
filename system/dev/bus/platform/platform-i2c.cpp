@@ -2,45 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <ddk/protocol/i2c.h>
-#include <zircon/listnode.h>
-#include <zircon/threads.h>
+#include "platform-i2c.h"
+
 #include <stdlib.h>
 #include <threads.h>
+#include <ddk/debug.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
+#include <zircon/listnode.h>
+#include <zircon/threads.h>
 
-#include "platform-bus.h"
-#include "proxy-protocol.h"
+PlatformI2cBus::PlatformI2cBus(i2c_impl_protocol_t* i2c, uint32_t bus_id)
+    : i2c_(i2c), bus_id_(bus_id) {
 
-typedef struct platform_i2c_bus {
-    i2c_impl_protocol_t i2c;
-    uint32_t bus_id;
-    size_t max_transfer;
+    list_initialize(&queued_txns_);
+    list_initialize(&free_txns_);
+    sync_completion_reset(&txn_signal_);
+}
 
-    list_node_t queued_txns;
-    list_node_t free_txns;
-    sync_completion_t txn_signal;
+zx_status_t PlatformI2cBus::Start() {
+    auto status = i2c_.GetMaxTransferSize(bus_id_, &max_transfer_);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    thrd_t thread;
-    mtx_t lock;
-} platform_i2c_bus_t;
+    char name[32];
+    snprintf(name, sizeof(name), "PlatformI2cBus[%u]", bus_id_);
+    auto thunk = [](void* arg) -> int { return static_cast<PlatformI2cBus*>(arg)->I2cThread(); };
+    thrd_create_with_name(&thread_, thunk, this, name);
 
-typedef struct {
-    uint32_t txid;
-    zx_handle_t channel_handle;
+    return ZX_OK;
+}
 
-
-    list_node_t node;
-    size_t write_length;
-    size_t read_length;
-    uint16_t address;
-    i2c_complete_cb complete_cb;
-    void* cookie;
-    uint8_t write_buffer[];
-} i2c_txn_t;
-
-static void platform_i2c_complete(i2c_txn_t* txn, zx_status_t status, const uint8_t* data,
-                                     size_t data_length) {
+void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* data,
+                                 size_t data_length) {
     struct {
         pdev_resp_t resp;
         uint8_t data[PDEV_I2C_MAX_TRANSFER_SIZE] = {};
@@ -68,115 +63,57 @@ static void platform_i2c_complete(i2c_txn_t* txn, zx_status_t status, const uint
     }
 }
 
-static int i2c_bus_thread(void *arg) {
-    platform_i2c_bus_t* i2c_bus = static_cast<platform_i2c_bus_t*>(arg);
-
-    uint8_t* read_buffer = static_cast<uint8_t*>(malloc(i2c_bus->max_transfer));
-    if (!read_buffer) {
-        return -1;
+int PlatformI2cBus::I2cThread() {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t> read_buffer(new (&ac) uint8_t[max_transfer_]);
+    if (!ac.check()) {
+        zxlogf(ERROR, "%s could not allocate read_buffer\n", __FUNCTION__);
+        return 0;
     }
 
     while (1) {
-        sync_completion_wait(&i2c_bus->txn_signal, ZX_TIME_INFINITE);
-        sync_completion_reset(&i2c_bus->txn_signal);
+        sync_completion_wait(&txn_signal_, ZX_TIME_INFINITE);
+        sync_completion_reset(&txn_signal_);
 
-        i2c_txn_t* txn;
+        I2cTxn* txn;
 
-        mtx_lock(&i2c_bus->lock);
-        while ((txn = list_remove_head_type(&i2c_bus->queued_txns, i2c_txn_t, node)) != nullptr) {
-            mtx_unlock(&i2c_bus->lock);
+        mutex_.Acquire();
+        while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
+            mutex_.Release();
 
-            zx_status_t status = i2c_impl_transact(&i2c_bus->i2c, i2c_bus->bus_id, txn->address,
-                                                        txn->write_buffer, txn->write_length,
-                                                        read_buffer, txn->read_length);
+            auto status = i2c_.Transact(bus_id_, txn->address,  txn->write_buffer,
+                                        txn->write_length, read_buffer.get(), txn->read_length);
             size_t actual = (status == ZX_OK ? txn->read_length : 0);
-            platform_i2c_complete(txn, status, read_buffer, actual);
+            Complete(txn, status, read_buffer.get(), actual);
 
-            mtx_lock(&i2c_bus->lock);
-            list_add_tail(&i2c_bus->free_txns, &txn->node);
+            mutex_.Acquire();
+            list_add_tail(&free_txns_, &txn->node);
         }
-        mtx_unlock(&i2c_bus->lock);
+        mutex_.Release();
     }
-
-    free(read_buffer);
     return 0;
 }
 
-zx_status_t platform_i2c_init(platform_bus_t* bus, i2c_impl_protocol_t* i2c) {
-    if (bus->i2c_buses) {
-        // already initialized
-        return ZX_ERR_BAD_STATE;
-    }
-
-    uint32_t bus_count = i2c_impl_get_bus_count(i2c);
-    if (!bus_count) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    platform_i2c_bus_t* i2c_buses = static_cast<platform_i2c_bus_t*>(calloc(bus_count,
-                                                                     sizeof(platform_i2c_bus_t)));
-    if (!i2c_buses) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t status = ZX_OK;
-
-    for (uint32_t i = 0; i < bus_count; i++) {
-        platform_i2c_bus_t* i2c_bus = &i2c_buses[i];
-
-        i2c_bus->bus_id = i;
-        mtx_init(&i2c_bus->lock, mtx_plain);
-        list_initialize(&i2c_bus->queued_txns);
-        list_initialize(&i2c_bus->free_txns);
-        sync_completion_reset(&i2c_bus->txn_signal);
-        memcpy(&i2c_bus->i2c, i2c, sizeof(i2c_bus->i2c));
-
-        status = i2c_impl_get_max_transfer_size(i2c, i, &i2c_bus->max_transfer);
-        if (status != ZX_OK) {
-            goto fail;
-        }
-
-        char name[32];
-        snprintf(name, sizeof(name), "i2c_bus_thread[%u]", i);
-        thrd_create_with_name(&i2c_bus->thread, i2c_bus_thread, i2c_bus, name);
-    }
-
-    bus->i2c_buses = i2c_buses;
-    bus->i2c_bus_count = bus_count;
-
-    return ZX_OK;
-
-fail:
-    free(i2c_buses);
-    return status;
-}
-
-zx_status_t platform_i2c_transact(platform_bus_t* bus, pdev_req_t* req, pbus_i2c_channel_t* channel,
-                                  const void* write_buf, zx_handle_t channel_handle) {
-    if (channel->bus_id >= bus->i2c_bus_count) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    platform_i2c_bus_t* i2c_bus = &bus->i2c_buses[channel->bus_id];
-
+ zx_status_t PlatformI2cBus::Transact(pdev_req_t* req, uint16_t address, const void* write_buf,
+                                      zx_handle_t channel_handle) {
     const size_t write_length = req->i2c_txn.write_length;
     const size_t read_length = req->i2c_txn.read_length;
-    if (write_length > i2c_bus->max_transfer || read_length > i2c_bus->max_transfer) {
+    if (write_length > max_transfer_ || read_length > max_transfer_) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    mtx_lock(&i2c_bus->lock);
+    fbl::AutoLock lock(&mutex_);
 
-    i2c_txn_t* txn = list_remove_head_type(&i2c_bus->free_txns, i2c_txn_t, node);
+    I2cTxn* txn = list_remove_head_type(&free_txns_, I2cTxn, node);
     if (!txn) {
         // add space for write buffer
-        txn = static_cast<i2c_txn_t*>(calloc(1, sizeof(i2c_txn_t) + i2c_bus->max_transfer));
+        txn = static_cast<I2cTxn*>(calloc(1, sizeof(I2cTxn) + max_transfer_));
     }
     if (!txn) {
-        mtx_unlock(&i2c_bus->lock);
         return ZX_ERR_NO_MEMORY;
     }
 
-    txn->address = channel->address;
+    txn->address = address;
     txn->write_length = write_length;
     txn->read_length = read_length;
     memcpy(txn->write_buffer, write_buf, write_length);
@@ -185,9 +122,8 @@ zx_status_t platform_i2c_transact(platform_bus_t* bus, pdev_req_t* req, pbus_i2c
     txn->txid = req->txid;
     txn->channel_handle = channel_handle;
 
-    list_add_tail(&i2c_bus->queued_txns, &txn->node);
-    mtx_unlock(&i2c_bus->lock);
-    sync_completion_signal(&i2c_bus->txn_signal);
+    list_add_tail(&queued_txns_, &txn->node);
+    sync_completion_signal(&txn_signal_);
 
     return ZX_OK;
 }

@@ -175,8 +175,8 @@ zx_status_t PlatformProxy::ScpiGetSensor(const char* name, uint32_t* sensor_id) 
     req.op = PDEV_SCPI_GET_SENSOR;
     uint32_t max_len = sizeof(req.scpi.name);
     size_t len = strnlen(name, max_len);
-    if (len == max_len) {
-        return ZX_ERR_INVALID_ARGS;
+    if (len >= max_len) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     memcpy(&req.scpi.name, name, len + 1);
     pdev_resp_t resp;
@@ -340,8 +340,8 @@ zx_status_t PlatformProxy::ClkDisable(uint32_t index) {
 zx_status_t PlatformProxy::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
                                    size_t* out_size, zx_paddr_t* out_paddr,
                                    zx_handle_t* out_handle) {
-    if (index > mmios_.size()) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= mmios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     Mmio* mmio = &mmios_[index];
@@ -393,8 +393,8 @@ fail:
 }
 
 zx_status_t PlatformProxy::MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
-    if (index > irqs_.size()) {
-        return ZX_ERR_INVALID_ARGS;
+    if (index >= irqs_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     Irq* irq = &irqs_[index];
@@ -466,7 +466,7 @@ zx_status_t PlatformProxy::Init() {
             pdev_req_t req = {};
             pdev_resp_t resp;
             zx_handle_t rsrc_handle;
-        
+
             req.op = PDEV_GET_MMIO;
             req.index = i;
             status = Rpc(&req, sizeof(req), &resp, sizeof(resp), NULL, 0, &rsrc_handle, 1, NULL);
@@ -477,7 +477,7 @@ zx_status_t PlatformProxy::Init() {
             Mmio mmio;
             mmio.base = resp.mmio.paddr;
             mmio.length = resp.mmio.length;
-            mmio.resource.reset(rsrc_handle);            
+            mmio.resource.reset(rsrc_handle);
             mmios_.push_back(fbl::move(mmio), &ac);
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
@@ -487,7 +487,7 @@ zx_status_t PlatformProxy::Init() {
                    mmio.base, mmio.length, mmio.resource.get());
         }
     }
-    
+
     if (info.irq_count) {
         for (uint32_t i = 0; i < info.irq_count; i++) {
             pdev_req_t req = {};

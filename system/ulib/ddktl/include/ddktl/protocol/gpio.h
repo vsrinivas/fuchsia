@@ -93,25 +93,30 @@ public:
     GpioProtocolProxy(gpio_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t GpioConfig(uint32_t index, uint32_t flags) {
+    void GetProto(gpio_protocol_t* proto) {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+
+    zx_status_t Config(uint32_t index, uint32_t flags) {
         return ops_->config(ctx_, index, flags);
     }
-    zx_status_t GpioSetAltFunction(uint32_t index, uint64_t function) {
+    zx_status_t SetAltFunction(uint32_t index, uint64_t function) {
         return ops_->set_alt_function(ctx_, index, function);
     }
-    zx_status_t GpioRead(uint32_t index, uint8_t* out_value) {
+    zx_status_t Read(uint32_t index, uint8_t* out_value) {
         return ops_->read(ctx_, index, out_value);
     }
-    zx_status_t GpioWrite(uint32_t index, uint8_t value) {
+    zx_status_t Write(uint32_t index, uint8_t value) {
         return ops_->write(ctx_, index, value);
     }
-    zx_status_t GpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
+    zx_status_t GetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
         return ops_->get_interrupt(ctx_, index, flags, out_handle);
     }
-    zx_status_t GpioReleaseInterrupt(uint32_t index) {
+    zx_status_t ReleaseInterrupt(uint32_t index) {
         return ops_->release_interrupt(ctx_, index);
     }
-    zx_status_t GpioSetPolarity(uint32_t index, uint32_t polarity) {
+    zx_status_t SetPolarity(uint32_t index, uint32_t polarity) {
         return ops_->set_polarity(ctx_, index, polarity);
     }
 
