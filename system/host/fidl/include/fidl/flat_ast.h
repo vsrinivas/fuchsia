@@ -411,10 +411,11 @@ struct Interface : public Decl {
     };
 
     Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
-              std::vector<Method> methods)
+              std::vector<Name> superinterfaces, std::vector<Method> methods)
         : Decl(Kind::kInterface, std::move(attributes), std::move(name)),
-          methods(std::move(methods)) {}
+          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
 
+    std::vector<Name> superinterfaces;
     std::vector<Method> methods;
 };
 

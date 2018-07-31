@@ -537,6 +537,16 @@ bool Library::ConsumeInterfaceDeclaration(
     auto attributes = std::move(interface_declaration->attributes);
     auto name = Name(this, interface_declaration->identifier->location);
 
+    std::vector<Name> superinterfaces;
+    for (auto& superinterface : interface_declaration->superinterfaces) {
+        Name superinterface_name;
+        auto location = superinterface->components[0]->location;
+        if (!CompileCompoundIdentifier(superinterface.get(), location, &superinterface_name)) {
+            return false;
+        }
+        superinterfaces.push_back(std::move(superinterface_name));
+    }
+
     std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->methods) {
         auto attributes = std::move(method->attributes);
@@ -583,7 +593,8 @@ bool Library::ConsumeInterfaceDeclaration(
     }
 
     interface_declarations_.push_back(
-        std::make_unique<Interface>(std::move(attributes), std::move(name), std::move(methods)));
+        std::make_unique<Interface>(std::move(attributes), std::move(name),
+                                    std::move(superinterfaces), std::move(methods)));
     return RegisterDecl(interface_declarations_.back().get());
 }
 
@@ -885,6 +896,12 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
             edges.insert(type_decl);
         }
     };
+    auto maybe_add_name = [this, &edges](const Name& name) {
+        auto type_decl = LookupDeclByName(name);
+        if (type_decl != nullptr) {
+            edges.insert(type_decl);
+        }
+    };
     auto maybe_add_constant = [this, &edges](const Type* type, const Constant* constant) -> bool {
         switch (constant->kind) {
         case Constant::Kind::kIdentifier: {
@@ -917,6 +934,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     }
     case Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const Interface*>(decl);
+        for (const auto& superinterface : interface_decl->superinterfaces) {
+            maybe_add_name(superinterface);
+        }
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {
                 for (const auto& parameter : method.maybe_request->parameters) {
