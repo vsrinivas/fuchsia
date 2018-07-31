@@ -75,6 +75,63 @@ void ConvertSpacesToUnderscores(std::string* string) {
   }
 }
 
+void ComputeStatistics(const std::vector<double>& vals,
+                       rapidjson::Value* output,
+                       rapidjson::Document::AllocatorType* alloc) {
+  double sum = 0;
+  double sum_of_logs = 0;
+
+  for (auto val : vals) {
+    sum += val;
+    sum_of_logs += log(val);
+  }
+
+  double min = *std::min_element(vals.begin(), vals.end());
+  double max = *std::max_element(vals.begin(), vals.end());
+  double mean = sum / vals.size();
+  // meanlogs is the mean of the logs of the values, which is useful for
+  // calculating the geometric mean of the values.
+  double meanlogs = sum_of_logs / vals.size();
+  double variance = Variance(vals, mean);
+  output->SetArray();
+  output->PushBack(vals.size(), *alloc);  // "count" entry.
+  output->PushBack(max, *alloc);
+  output->PushBack(meanlogs, *alloc);
+  output->PushBack(mean, *alloc);
+  output->PushBack(min, *alloc);
+  output->PushBack(sum, *alloc);
+  output->PushBack(variance, *alloc);
+}
+
+// Adds a Histogram to the given |output| Document.
+void AddHistogram(rapidjson::Document* output,
+                  rapidjson::Document::AllocatorType* alloc,
+                  const std::string& test_name,
+                  const std::string& unit,
+                  const std::vector<double>& vals,
+                  rapidjson::Value diagnostic_map,
+                  rapidjson::Value guid) {
+  rapidjson::Value stats;
+  ComputeStatistics(vals, &stats, alloc);
+
+  rapidjson::Value histogram;
+  histogram.SetObject();
+  histogram.AddMember("name", test_name, *alloc);
+  histogram.AddMember("unit", unit, *alloc);
+  histogram.AddMember("description", "", *alloc);
+  histogram.AddMember("diagnostics", diagnostic_map, *alloc);
+  histogram.AddMember("running", stats, *alloc);
+  histogram.AddMember("guid", guid, *alloc);
+
+  // This field is redundant with the "count" entry in "stats".
+  histogram.AddMember("maxNumSampleValues", vals.size(), *alloc);
+
+  // Assume for now that we didn't get any NaN values.
+  histogram.AddMember("numNans", 0, *alloc);
+
+  output->PushBack(histogram, *alloc);
+}
+
 }
 
 void Convert(rapidjson::Document* input, rapidjson::Document* output,
@@ -166,9 +223,13 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           MakeGuidForTestSuiteName(element["test_suite"].GetString());
       rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
       diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
-      histogram.AddMember("diagnostics", diagnostic_map, alloc);
 
       const rapidjson::Value& values = element["values"].GetArray();
+      if (values.Size() == 0) {
+        fprintf(stderr, "Input 'values' is empty");
+        exit(1);
+      }
+
       std::vector<double> vals;
       vals.reserve(values.Size());
       for (auto& val : values.GetArray()) {
@@ -187,38 +248,47 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         fprintf(stderr, "Units not recognized: %s\n", unit);
         exit(1);
       }
+      // Create the histogram.
+      if (element.HasMember("split_first") &&
+          element["split_first"].IsBool() &&
+          element["split_first"].GetBool()) {
+        // Create a histogram for the first sample value.
+        std::string h1_name = name + "_samples_0_to_0";
+        std::vector<double> h1_vals(vals.begin(), vals.begin()+1);
+        auto h1_diags = helper.Copy(diagnostic_map);
+        AddHistogram(output,
+                     &alloc,
+                     h1_name,
+                     "ms_smallerIsBetter",
+                     h1_vals,
+                     std::move(h1_diags),
+                     MakeUuid());
 
-      double sum = 0;
-      double sum_of_logs = 0;
-      for (auto val : vals) {
-        sum += val;
-        sum_of_logs += log(val);
+        // Create a histogram for the remaining sample values, if any.
+        if (vals.size() > 1) {
+          std::stringstream h2_name;
+          h2_name << name << "_samples_1_to_" << vals.size()-1;
+
+          std::vector<double> h2_vals(vals.begin()+1, vals.end());
+          auto h2_diags = helper.Copy(diagnostic_map);
+          AddHistogram(output,
+                       &alloc,
+                       h2_name.str(),
+                       "ms_smallerIsBetter",
+                       h2_vals,
+                       std::move(h2_diags),
+                       MakeUuid());
+        }
+      } else {
+        // Create a histogram for all |vals|.
+        AddHistogram(output,
+                     &alloc,
+                     name,
+                     "ms_smallerIsBetter",
+                     vals,
+                     std::move(diagnostic_map),
+                     MakeUuid());
       }
-      double mean = sum / vals.size();
-      // meanlogs is the mean of the logs of the values, which is useful for
-      // calculating the geometric mean of the values.
-      double meanlogs = sum_of_logs / vals.size();
-      double min = *std::min_element(vals.begin(), vals.end());
-      double max = *std::max_element(vals.begin(), vals.end());
-      double variance = Variance(vals, mean);
-      rapidjson::Value stats;
-      stats.SetArray();
-      stats.PushBack(vals.size(), alloc);  // "count" entry.
-      stats.PushBack(max, alloc);
-      stats.PushBack(meanlogs, alloc);
-      stats.PushBack(mean, alloc);
-      stats.PushBack(min, alloc);
-      stats.PushBack(sum, alloc);
-      stats.PushBack(variance, alloc);
-      histogram.AddMember("running", stats, alloc);
-
-      histogram.AddMember("guid", MakeUuid(), alloc);
-      // This field is redundant with the "count" entry in "running".
-      histogram.AddMember("maxNumSampleValues", vals.size(), alloc);
-      // Assume for now that we didn't get any NaN values.
-      histogram.AddMember("numNans", 0, alloc);
-
-      output->PushBack(histogram, alloc);
     } else {
       // Convert the old schema.
       // TODO(IN-452): Migrate existing tests to the new schema and delete this.
@@ -239,19 +309,12 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         }
         ConvertSpacesToUnderscores(&name);
 
-        rapidjson::Value histogram;
-        histogram.SetObject();
-        histogram.AddMember("name", name, alloc);
-        histogram.AddMember("unit", "ms_smallerIsBetter", alloc);
-        histogram.AddMember("description", "", alloc);
-
         // The "test_suite" field in the input becomes the "benchmarks"
         // diagnostic in the output.
         rapidjson::Value test_suite_guid =
             MakeGuidForTestSuiteName(element["test_suite"].GetString());
         rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
         diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
-        histogram.AddMember("diagnostics", diagnostic_map, alloc);
 
         const rapidjson::Value& values = sample["values"];
         std::vector<double> vals;
@@ -273,37 +336,13 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           exit(1);
         }
 
-        double sum = 0;
-        double sum_of_logs = 0;
-        for (auto val : vals) {
-          sum += val;
-          sum_of_logs += log(val);
-        }
-        double mean = sum / vals.size();
-        // meanlogs is the mean of the logs of the values, which is useful for
-        // calculating the geometric mean of the values.
-        double meanlogs = sum_of_logs / vals.size();
-        double min = *std::min_element(vals.begin(), vals.end());
-        double max = *std::max_element(vals.begin(), vals.end());
-        double variance = Variance(vals, mean);
-        rapidjson::Value stats;
-        stats.SetArray();
-        stats.PushBack(vals.size(), alloc);  // "count" entry.
-        stats.PushBack(max, alloc);
-        stats.PushBack(meanlogs, alloc);
-        stats.PushBack(mean, alloc);
-        stats.PushBack(min, alloc);
-        stats.PushBack(sum, alloc);
-        stats.PushBack(variance, alloc);
-        histogram.AddMember("running", stats, alloc);
-
-        histogram.AddMember("guid", MakeUuid(), alloc);
-        // This field is redundant with the "count" entry in "running".
-        histogram.AddMember("maxNumSampleValues", vals.size(), alloc);
-        // Assume for now that we didn't get any NaN values.
-        histogram.AddMember("numNans", 0, alloc);
-
-        output->PushBack(histogram, alloc);
+        AddHistogram(output,
+                     &alloc,
+                     name,
+                     "ms_smallerIsBetter",
+                     vals,
+                     std::move(diagnostic_map),
+                     MakeUuid());
       }
 
       size_t samples_size = element["samples"].GetArray().Size();
