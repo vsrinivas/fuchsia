@@ -202,7 +202,7 @@ typedef struct thread {
     char name[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
     // buffering for debug/klog output
-    int linebuffer_pos;
+    size_t linebuffer_pos;
     char linebuffer[THREAD_LINEBUFFER_LENGTH];
 #endif
 } thread_t;

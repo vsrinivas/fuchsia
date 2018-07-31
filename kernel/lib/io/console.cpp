@@ -150,6 +150,6 @@ int __printf_output_func(const char *s, size_t len, void *state)
 #else
     __kernel_stdout_write(s, len);
 #endif
-    return len;
+    return static_cast<int>(len);
 }
 
