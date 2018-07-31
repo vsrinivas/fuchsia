@@ -20,6 +20,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
@@ -38,11 +40,30 @@ ACPI_MODULE_NAME    ("oszircon")
 #define TRACEF(str, x...) do { printf("%s:%d: " str, __FUNCTION__, __LINE__, ## x); } while (0)
 #define LTRACEF(x...) do { if (LOCAL_TRACE) { TRACEF(x); } } while (0)
 
+/* Structures used for implementing AcpiOsExecute and
+ * AcpiOsWaitEventsComplete */
+struct AcpiOsTaskCtx : public fbl::DoublyLinkedListable<fbl::unique_ptr<AcpiOsTaskCtx>> {
+    ACPI_OSD_EXEC_CALLBACK func;
+    void *ctx;
+};
+
+/* Thread function for implementing AcpiOsExecute */
+static int AcpiOsExecuteTask(void *arg);
+/* Tear down the OsExecuteTask thread */
+static void ShutdownOsExecuteTask();
+
 /* Data used for implementing AcpiOsExecute and
  * AcpiOsWaitEventsComplete */
-static mtx_t os_execute_lock = MTX_INIT;
-static cnd_t os_execute_cond;
-static int os_execute_tasks = 0;
+static struct {
+    thrd_t thread;
+    cnd_t cond;
+    cnd_t idle_cond;
+    mtx_t lock = MTX_INIT;
+    bool shutdown = false;
+    bool idle = true;
+
+    fbl::DoublyLinkedList<fbl::unique_ptr<AcpiOsTaskCtx>> tasks;
+} os_execute_state;
 
 class AcpiOsMappingNode :
       public fbl::SinglyLinkedListable<fbl::unique_ptr<AcpiOsMappingNode>> {
@@ -178,10 +199,22 @@ void acpica_disable_noncontested_mode() {
  */
 ACPI_STATUS AcpiOsInitialize() {
     ACPI_STATUS status = thrd_status_to_acpi_status(
-            cnd_init(&os_execute_cond));
+            cnd_init(&os_execute_state.cond));
     if (status != AE_OK) {
         return status;
     }
+    status = thrd_status_to_acpi_status(cnd_init(&os_execute_state.idle_cond));
+    if (status != AE_OK) {
+        cnd_destroy(&os_execute_state.cond);
+        return status;
+    }
+
+    status = thrd_status_to_acpi_status(thrd_create(&os_execute_state.thread, AcpiOsExecuteTask,
+                                                    nullptr));
+    if (status != AE_OK) {
+        return status;
+    }
+
     /* TODO(teisenbe): be less permissive */
     zx_ioports_request(root_resource_handle, 0, 65536);
     return AE_OK;
@@ -196,7 +229,9 @@ ACPI_STATUS AcpiOsInitialize() {
  * @return Termination status
  */
 ACPI_STATUS AcpiOsTerminate() {
-    cnd_destroy(&os_execute_cond);
+    ShutdownOsExecuteTask();
+    cnd_destroy(&os_execute_state.cond);
+    cnd_destroy(&os_execute_state.idle_cond);
 
     return AE_OK;
 }
@@ -443,27 +478,39 @@ ACPI_THREAD_ID AcpiOsGetThreadId() {
     return (uintptr_t)thrd_current();
 }
 
-/* Structures used for implementing AcpiOsExecute and
- * AcpiOsWaitEventsComplete */
-struct acpi_os_task_ctx {
-    ACPI_OSD_EXEC_CALLBACK func;
-    void *ctx;
-};
+static int AcpiOsExecuteTask(void *arg) {
+    while (1)  {
+        fbl::unique_ptr<AcpiOsTaskCtx> task;
 
-static int acpi_os_task(void *raw_ctx) {
-    struct acpi_os_task_ctx *ctx = (struct acpi_os_task_ctx*)raw_ctx;
+        mtx_lock(&os_execute_state.lock);
+        while ((task = os_execute_state.tasks.pop_front()) == nullptr) {
+            os_execute_state.idle = true;
+            // If anything is waiting for the queue to empty, notify it.
+            cnd_signal(&os_execute_state.idle_cond);
 
-    ctx->func(ctx->ctx);
+            // If we're waiting to shutdown, do it now that there's no more work
+            if (os_execute_state.shutdown) {
+                mtx_unlock(&os_execute_state.lock);
+                return 0;
+            }
 
-    mtx_lock(&os_execute_lock);
-    os_execute_tasks--;
-    if (os_execute_tasks == 0) {
-        cnd_broadcast(&os_execute_cond);
+            cnd_wait(&os_execute_state.cond, &os_execute_state.lock);
+        }
+        os_execute_state.idle = false;
+        mtx_unlock(&os_execute_state.lock);
+
+        task->func(task->ctx);
     }
-    mtx_unlock(&os_execute_lock);
 
-    free(ctx);
     return 0;
+}
+
+static void ShutdownOsExecuteTask() {
+    mtx_lock(&os_execute_state.lock);
+    os_execute_state.shutdown = true;
+    mtx_unlock(&os_execute_state.lock);
+    cnd_broadcast(&os_execute_state.cond);
+    thrd_join(os_execute_state.thread, nullptr);
 }
 
 /**
@@ -497,34 +544,19 @@ ACPI_STATUS AcpiOsExecute(
         default: return AE_BAD_PARAMETER;
     }
 
-    struct acpi_os_task_ctx *ctx = (struct acpi_os_task_ctx*)malloc(sizeof(*ctx));
-    if (!ctx) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<AcpiOsTaskCtx> task(new (&ac) AcpiOsTaskCtx);
+    if (!ac.check()) {
         return AE_NO_MEMORY;
     }
-    ctx->func = Function;
-    ctx->ctx = Context;
+    task->func = Function;
+    task->ctx = Context;
 
-    mtx_lock(&os_execute_lock);
-    os_execute_tasks++;
-    mtx_unlock(&os_execute_lock);
+    mtx_lock(&os_execute_state.lock);
+    os_execute_state.tasks.push_back(fbl::move(task));
+    mtx_unlock(&os_execute_state.lock);
+    cnd_signal(&os_execute_state.cond);
 
-    // TODO(teisenbe): Instead of spawning a thread each time for this,
-    // we should back this with a thread pool.
-    thrd_t thread;
-    ACPI_STATUS status = thrd_status_to_acpi_status(
-            thrd_create(&thread, acpi_os_task, ctx));
-    if (status != AE_OK) {
-        free(ctx);
-        mtx_lock(&os_execute_lock);
-        os_execute_tasks--;
-        if (os_execute_tasks == 0) {
-            cnd_broadcast(&os_execute_cond);
-        }
-        mtx_unlock(&os_execute_lock);
-        return status;
-    }
-
-    thrd_detach(thread);
     return AE_OK;
 }
 
@@ -535,11 +567,11 @@ ACPI_STATUS AcpiOsExecute(
  * AcpiOsExecute have completed.
  */
 void AcpiOsWaitEventsComplete(void) {
-    mtx_lock(&os_execute_lock);
-    while (os_execute_tasks > 0) {
-        cnd_wait(&os_execute_cond, &os_execute_lock);
+    mtx_lock(&os_execute_state.lock);
+    while (!os_execute_state.idle) {
+        cnd_wait(&os_execute_state.idle_cond, &os_execute_state.lock);
     }
-    mtx_unlock(&os_execute_lock);
+    mtx_unlock(&os_execute_state.lock);
 }
 
 /**
