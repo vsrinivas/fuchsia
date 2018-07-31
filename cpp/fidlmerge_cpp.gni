@@ -27,6 +27,15 @@ import("//build/fidl/toolchain.gni")
 #     The list of extensions of source_set 'source' files that will be generated
 #     and included in the source set. By default, this is [ ".cc", ".h" ]
 #
+#   options (optional)
+#     A single string with comma-separated key=value pairs.
+#
+#   amendments_path (optional)
+#     Specifies a JSON file that contains amendments to be made to the fidl
+#     model before the template is applied. For example,
+#     "//garnet/public/build/fostr/fidl/fuchsia.media/amendments.fidlmerge".
+#     See the fidlmerge README for details.
+#
 #   deps, public_deps, test_only, visibility (optional)
 #     These parameters are forwarded to the source_set.
 #
@@ -93,6 +102,17 @@ template("fidlmerge_cpp") {
       "--output-base",
       rebase_path(file_stem, root_build_dir),
     ]
+
+    if (defined(invoker.options)) {
+      args += [ "--options", invoker.options ]
+    }
+
+    if (defined(invoker.amendments_path)) {
+      args += [
+        "--amend",
+        rebase_path(invoker.amendments_path, root_build_dir),
+      ]
+    }
 
     deps = [
       "$fidl_target($fidl_toolchain)",
