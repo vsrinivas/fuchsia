@@ -28,7 +28,7 @@
 #include "unistd.h"
 
 #ifndef FIDL_SOCKET_PROVIDER
-#define FIDL_SOCKET_PROVIDER 1
+#define FIDL_SOCKET_PROVIDER 0
 #endif
 
 zx_status_t zxsio_open(fdio_t** io, zx_handle_t svc, const char* name);
