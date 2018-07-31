@@ -21,7 +21,7 @@
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE    2000000
 
-#define FIRMWARE_PATH "/system/lib/firmware/bcm-bt-firmware.bin"
+#define FIRMWARE_PATH "/boot/lib/firmware/BCM4345C4.bin"
 
 #define FIRMWARE_DOWNLOAD_DELAY ZX_MSEC(50)
 
