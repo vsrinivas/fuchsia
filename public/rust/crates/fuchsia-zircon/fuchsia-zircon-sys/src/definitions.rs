@@ -800,10 +800,12 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_resource_create(
-        parent_handle: zx_handle_t,
-        kind: u32,
-        low: u64,
-        high: u64,
+        parent_rsrc: zx_handle_t,
+        options: u32,
+        base: u64,
+        len: usize,
+        name: *const u8,
+        name_len: u32,
         resource_out: *mut zx_handle_t
         ) -> zx_status_t;
 
