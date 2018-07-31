@@ -8,8 +8,7 @@
 #include <limits.h>
 #include <pow2.h>
 
-static bool pow2_test(void)
-{
+static bool pow2_test(void) {
     const size_t num_uint_bits = sizeof(uint) * CHAR_BIT;
     const size_t num_ulong_bits = sizeof(ulong) * CHAR_BIT;
 
