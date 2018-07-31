@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
 #include <zircon/device/usb.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <string.h>
 
 #include "video-util.h"

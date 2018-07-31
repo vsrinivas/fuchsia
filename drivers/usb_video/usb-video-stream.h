@@ -8,7 +8,7 @@
 #include <ddktl/device.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>

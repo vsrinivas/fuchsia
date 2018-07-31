@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <fbl/vector.h>
 #include <zircon/compiler.h>
 #include <zircon/device/camera-proto.h>

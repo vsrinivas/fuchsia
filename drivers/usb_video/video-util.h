@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <zircon/hw/usb-video.h>
 
 __BEGIN_CDECLS

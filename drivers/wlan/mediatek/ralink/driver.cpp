@@ -5,7 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <wlan/common/logging.h>
 
 #include <stdint.h>

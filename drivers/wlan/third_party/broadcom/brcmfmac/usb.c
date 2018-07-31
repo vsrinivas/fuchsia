@@ -17,7 +17,7 @@
 #include "usb.h"
 
 #include <ddk/protocol/usb.h>
-#include <driver/usb.h>
+#include <ddk/usb/usb.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
