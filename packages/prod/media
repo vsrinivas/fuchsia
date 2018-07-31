@@ -5,7 +5,6 @@
         "garnet/packages/prod/media_player"
     ],
     "packages": [
-        "//garnet/bin/media/net_media_service",
         "//garnet/bin/media/signal_generator",
         "//garnet/bin/media/vol",
         "//garnet/bin/tts:tts_service",

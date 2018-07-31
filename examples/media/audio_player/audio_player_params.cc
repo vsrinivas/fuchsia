@@ -41,8 +41,7 @@ AudioPlayerParams::AudioPlayerParams(const fxl::CommandLine& command_line) {
   }
 
   stay_ = !url_found;
-  stay_ = command_line.GetOptionValue("service", &service_name_) || stay_ ||
-          command_line.HasOption("stay");
+  stay_ = stay_ || command_line.HasOption("stay");
 
   is_valid_ = true;
 }
@@ -51,8 +50,6 @@ void AudioPlayerParams::Usage() {
   std::cerr << "audio_player usage:\n";
   std::cerr << "    audio_player [ options ] [ url-or-path ]\n";
   std::cerr << "options:\n";
-  std::cerr << "    --service=<service>  set the service name (default is "
-               "audio_player)\n";
   std::cerr << "    --stay               don't quit at end-of-stream\n";
   std::cerr << "The audio player terminates at end-of-stream if:\n";
   std::cerr << "   a url-or-path is supplied, and\n";

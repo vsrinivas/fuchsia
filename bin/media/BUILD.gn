@@ -8,7 +8,6 @@ group("services") {
   public_deps = [
     "//garnet/bin/media/codec_factory",
     "//garnet/bin/media/media_player",
-    "//garnet/bin/media/net_media_service",
   ]
 }
 
@@ -80,7 +79,6 @@ package("tests") {
     "//garnet/bin/media/media_player/demux:tests",
     "//garnet/bin/media/media_player/player:tests",
     "//garnet/bin/media/media_player/util:tests",
-    "//garnet/bin/media/net_media_service:tests",
     "//garnet/public/lib/media/audio_dfx:lib",
     "//garnet/public/lib/media/audio_dfx:tests",
     "//garnet/public/lib/media/timeline:tests",
@@ -127,12 +125,7 @@ package("tests") {
     },
 
     {
-      name = "net_media_service_tests"
-    },
-
-    {
       name = "player_tests"
     },
   ]
 }
- 

@@ -39,18 +39,6 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
         HandleStatusChanged(status);
       };
 
-  if (!params.service_name().empty()) {
-    auto net_media_service = startup_context->ConnectToEnvironmentService<
-        fuchsia::mediaplayer::NetMediaService>();
-
-    fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer>
-        media_player_handle;
-    media_player_->AddBinding(media_player_handle.NewRequest());
-
-    net_media_service->PublishMediaPlayer(params.service_name(),
-                                          std::move(media_player_handle));
-  }
-
   if (!params.url().empty()) {
     url::GURL url = url::GURL(params.url());
 

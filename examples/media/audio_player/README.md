@@ -14,22 +14,6 @@ Here's an example using the network reader:
 ```
     audio_player http://example.com/audio.ogg
 ```
-By default, the audio player is exposed via NetConnector under the service name
-'audio_player'. The 'service' option can be used to change this:
-```
-    audio_player --service=special_audio_player
-```
 Given a path or URL to play, the audio player will terminate unless the
 'service' option is used. The 'stay' option will also prevent the player from
 terminating.
-
-## FORMAT SUPPORT
-
-* Containers
-  * OGG
-  * FLAC
-  * WAV
-* Encodings
-  * VORBIS
-  * FLAC
-  * PCM (various)

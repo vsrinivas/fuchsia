@@ -9,7 +9,6 @@ fidl("fuchsia.mediaplayer") {
     "media_player.fidl",
     "media_result.fidl",
     "metadata.fidl",
-    "net_media_service.fidl",
     "problem.fidl",
     "seeking_reader.fidl",
   ]
