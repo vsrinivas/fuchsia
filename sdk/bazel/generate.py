@@ -170,7 +170,7 @@ class BazelBuilder(Builder):
     def install_cpp_atom(self, atom):
         '''Installs an atom from the "cpp" domain.'''
         type = atom.tags['type']
-        if type == 'compiled_shared':
+        if type == 'compiled_shared' or type == 'compiled_static':
             self.install_cpp_prebuilt_atom(atom)
         elif type == 'sources':
             self.install_cpp_source_atom(atom)

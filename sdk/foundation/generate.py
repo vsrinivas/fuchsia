@@ -31,7 +31,7 @@ class CppBuilder(Builder):
     def install_cpp_atom(self, atom):
         '''Installs an atom from the "cpp" domain.'''
         type = atom.tags['type']
-        if type == 'compiled_shared':
+        if type == 'compiled_shared' or type == 'compiled_static':
             self.install_cpp_prebuilt_atom(atom)
         elif type == 'sources':
             self.install_cpp_source_atom(atom)
@@ -50,7 +50,7 @@ class CppBuilder(Builder):
         for file in atom.files:
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
-            if extension == 'so' or extension == "o":
+            if extension == 'so' or extension == "a" or extension == "o":
                 dest = os.path.join(self.output, 'arch',
                                     self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
