@@ -1251,7 +1251,7 @@ static void demo_prepare_textures(struct demo *demo) {
             // shader to run until layout transition completes
             demo_set_image_layout(demo, demo->textures[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_PREINITIALIZED, demo->textures[i].imageLayout,
-                                  VK_ACCESS_HOST_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                  static_cast<VkAccessFlagBits>(0), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             demo->staging_texture.image = 0;
         } else if (props.optimalTilingFeatures &
@@ -1274,7 +1274,7 @@ static void demo_prepare_textures(struct demo *demo) {
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_PREINITIALIZED,
                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                  VK_ACCESS_HOST_WRITE_BIT,
+                                  static_cast<VkAccessFlagBits>(0),
                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_TRANSFER_BIT);
 
@@ -1282,7 +1282,7 @@ static void demo_prepare_textures(struct demo *demo) {
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_PREINITIALIZED,
                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                  VK_ACCESS_HOST_WRITE_BIT,
+                                  static_cast<VkAccessFlagBits>(0),
                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_TRANSFER_BIT);
 
@@ -1322,7 +1322,7 @@ static void demo_prepare_textures(struct demo *demo) {
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             .mipLodBias = 0.0f,
-            .anisotropyEnable = VK_TRUE,
+            .anisotropyEnable = VK_FALSE,
             .maxAnisotropy = 1,
             .compareOp = VK_COMPARE_OP_NEVER,
             .minLod = 0.0f,
