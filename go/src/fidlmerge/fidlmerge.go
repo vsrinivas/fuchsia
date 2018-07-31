@@ -28,7 +28,7 @@ func main() {
 	}
 
 	results := GenerateFidl(*cmdlineflags.templatePath,
-		cmdlineflags.FidlTypes(),
+		cmdlineflags.FidlAmendments().Amend(cmdlineflags.FidlTypes()),
 		cmdlineflags.outputBase,
 		options)
 
@@ -36,6 +36,83 @@ func main() {
 		log.Printf("Error running generator: %v", results)
 		os.Exit(1)
 	}
+}
+
+// Amendments to be applied to a types.Root
+type Amendments struct {
+	ExcludedDecls []types.EncodedCompoundIdentifier `json:"exclusions,omitempty"`
+}
+
+func (a Amendments) Amend(root types.Root) types.Root {
+	return a.ApplyExclusions(root)
+}
+
+func (a Amendments) ApplyExclusions(root types.Root) types.Root {
+	if len(a.ExcludedDecls) == 0 {
+		return root
+	}
+
+	excludeMap := make(map[types.EncodedCompoundIdentifier]bool)
+	for _, excludedDecl := range a.ExcludedDecls {
+		excludeMap[excludedDecl] = true
+		delete(root.Decls, excludedDecl)
+	}
+
+	newConsts := root.Consts[:0]
+	for _, element := range root.Consts {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newConsts = append(newConsts, element)
+		}
+	}
+	root.Consts = newConsts
+
+	newEnums := root.Enums[:0]
+	for _, element := range root.Enums {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newEnums = append(newEnums, element)
+		}
+	}
+	root.Enums = newEnums
+
+	newInterfaces := root.Interfaces[:0]
+	for _, element := range root.Interfaces {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newInterfaces = append(newInterfaces, element)
+		}
+	}
+	root.Interfaces = newInterfaces
+
+	newStructs := root.Structs[:0]
+	for _, element := range root.Structs {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newStructs = append(newStructs, element)
+		}
+	}
+	root.Structs = newStructs
+
+	newUnions := root.Unions[:0]
+	for _, element := range root.Unions {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newUnions = append(newUnions, element)
+		}
+	}
+	root.Unions = newUnions
+
+	newDeclOrder := root.DeclOrder[:0]
+	for _, element := range root.DeclOrder {
+		_, found := excludeMap[element]
+		if !found {
+			newDeclOrder = append(newDeclOrder, element)
+		}
+	}
+	root.DeclOrder = newDeclOrder
+
+	return root
 }
 
 // Root struct passed as the initial 'dot' for the template.

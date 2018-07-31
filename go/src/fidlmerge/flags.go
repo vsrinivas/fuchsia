@@ -30,6 +30,7 @@ func (o *Options) Set(args string) error {
 
 type Flags struct {
 	jsonPath     *string
+	amendPath    *string
 	templatePath *string
 	outputBase   *string
 }
@@ -39,6 +40,8 @@ func GetFlags() Flags {
 	return Flags{
 		flag.String("json", "",
 			"relative path to the FIDL intermediate representation."),
+		flag.String("amend", "",
+			"relative path to FIDL amendments file."),
 		flag.String("template", "",
 			"relative path to the template."),
 		flag.String("output-base", "",
@@ -71,4 +74,25 @@ func (f Flags) FidlTypes() types.Root {
 	}
 
 	return fidl
+}
+
+// FidlAmendments returns the Amendments read from the JSON amend file specified as an argument.
+func (f Flags) FidlAmendments() Amendments {
+	var amendments Amendments
+
+	if *f.amendPath == "" {
+		return amendments
+	}
+
+	bytes, err := ioutil.ReadFile(*f.amendPath)
+	if err != nil {
+		log.Fatalf("Error reading from %s: %v", *f.amendPath, err)
+	}
+
+	err = json.Unmarshal(bytes, &amendments)
+	if err != nil {
+		log.Fatalf("Error parsing JSON as FIDL amendment data: %v", err)
+	}
+
+	return amendments
 }

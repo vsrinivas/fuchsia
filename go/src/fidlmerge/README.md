@@ -8,7 +8,7 @@ end with a template. Templates are based on go's [text/template](https://golang.
 ## Usage
 
 ``` bash
-fidlmerge -template <template path> -json <json path> -output-base <output file base name> [ -options key=value,... ]
+fidlmerge -template <template path> -json <json path> -output-base <output file base name> [ -options key=value,... ] [ -amend <amend path> ]
 ```
 
 Example templates reside in the examples subdirectory.
@@ -20,6 +20,18 @@ can add extensions to the base name.
 
 Options can be accessed by templates using the getOption function or one of its
 variants.
+
+The amend path refers to a json file that contains amendments to the FIDL json.
+Declarations can be omitted from the FIDL data using the "exclusions" property:
+
+```
+{
+  "exclusions": [
+    "fuchsia.media/VideoProfile",
+    "fuchsia.media/PixelFormat"
+  ]
+}
+```
 
 ## Templates
 
