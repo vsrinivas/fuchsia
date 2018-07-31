@@ -68,6 +68,13 @@ class JsonHelper {
   rapidjson::Document::AllocatorType& alloc_;
 };
 
+void ConvertSpacesToUnderscores(std::string* string) {
+  for (size_t index = 0; index < string->size(); ++index) {
+    if ((*string)[index] == ' ')
+      (*string)[index] = '_';
+  }
+}
+
 }
 
 void Convert(rapidjson::Document* input, rapidjson::Document* output,
@@ -146,6 +153,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     // numbers.
     if (element.HasMember("values")) {
       std::string name = element["label"].GetString();
+      ConvertSpacesToUnderscores(&name);
       rapidjson::Value histogram;
       histogram.SetObject();
       histogram.AddMember("name", name, alloc);
@@ -229,11 +237,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           name += sample["label"].GetString();
           ++inner_label_count;
         }
-        // Convert spaces to underscores in the name.
-        for (size_t index = 0; index < name.size(); ++index) {
-          if (name[index] == ' ')
-            name[index] = '_';
-        }
+        ConvertSpacesToUnderscores(&name);
 
         rapidjson::Value histogram;
         histogram.SetObject();

@@ -408,7 +408,7 @@ TEST(CatapultConverter, ConvertNewSchema) {
         "unit": "nanoseconds"
     },
     {
-        "label": "ExampleOtherTest",
+        "label": "Example Other Test",
         "test_suite": "my_test_suite",
         "values": [200, 6, 100, 110],
         "unit": "ms"
@@ -481,7 +481,7 @@ TEST(CatapultConverter, ConvertNewSchema) {
         "numNans": 0
     },
     {
-        "name": "ExampleOtherTest",
+        "name": "Example_Other_Test",
         "unit": "ms_smallerIsBetter",
         "description": "",
         "diagnostics": {
