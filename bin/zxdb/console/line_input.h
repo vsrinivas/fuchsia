@@ -87,6 +87,7 @@ class LineInputBase {
 
   void HandleBackspace();
   void HandleDelete();
+  void HandleFormFeed();
   void HandleEnter();
   void HandleTab();
 
@@ -102,6 +103,7 @@ class LineInputBase {
   void AcceptCompletion();
 
   void RepaintLine();
+  void ResetLineState();
 
   // Helper to return the current line of text.
   std::string& cur_line() { return history_[history_index_]; }

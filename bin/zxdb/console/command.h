@@ -48,6 +48,7 @@ enum class Verb {
   kBacktrace,
   kBreak,
   kClear,
+  kCls,
   kConnect,
   kContinue,
   kDetach,

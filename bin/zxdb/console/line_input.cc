@@ -28,6 +28,7 @@ constexpr char kKeyControlF = 6;
 constexpr char kKeyControlH = 8;
 constexpr char kKeyTab = 9;
 constexpr char kKeyNewline = 10;
+constexpr char kKeyFormFeed = 12;
 constexpr char kKeyEnter = 13;
 constexpr char kKeyControlN = 14;
 constexpr char kKeyControlP = 16;
@@ -65,12 +66,7 @@ LineInputBase::~LineInputBase() { EnsureNoRawMode(); }
 void LineInputBase::BeginReadLine() {
   FXL_DCHECK(!editing_);  // Two BeginReadLine calls with no enter input.
 
-  editing_ = true;
-  pos_ = 0;
-  history_index_ = 0;
-  completion_mode_ = false;
-
-  cur_line() = std::string();
+  ResetLineState();
   RepaintLine();
 }
 
@@ -107,6 +103,9 @@ bool LineInputBase::OnInput(char c) {
       break;
     case kKeyControlF:
       MoveRight();
+      break;
+    case kKeyFormFeed:
+      HandleFormFeed();
       break;
     case kKeyTab:
       HandleTab();
@@ -277,6 +276,11 @@ void LineInputBase::HandleTab() {
   RepaintLine();
 }
 
+void LineInputBase::HandleFormFeed() {
+  Write("\033c");   // Form feed.
+  RepaintLine();
+}
+
 void LineInputBase::Insert(char c) {
   if (pos_ == cur_line().size() &&
       (max_cols_ == 0 || cur_line().size() + prompt_.size() < max_cols_ - 1)) {
@@ -382,6 +386,15 @@ void LineInputBase::RepaintLine() {
   buf += forward_buf;
 
   Write(buf);
+}
+
+void LineInputBase::ResetLineState() {
+  editing_ = true;
+  pos_ = 0;
+  history_index_ = 0;
+  completion_mode_ = false;
+
+  cur_line() = std::string();
 }
 
 LineInputStdout::LineInputStdout(const std::string& prompt)

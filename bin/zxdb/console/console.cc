@@ -68,6 +68,15 @@ void Console::Output(const Err& err) {
   Output(std::move(buffer));
 }
 
+void Console::Clear() {
+  // We write directly instead of using Output because WriteToStdout expects
+  // to append '\n' to outputs and won't flush it explicitly otherwise.
+  line_input_.Hide();
+  const char ff[] = "\033c";   // Form feed.
+  write(STDOUT_FILENO, ff, sizeof(ff));
+  line_input_.Show();
+}
+
 Console::Result Console::DispatchInputLine(const std::string& line,
                                            CommandCallback callback) {
   Command cmd;

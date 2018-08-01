@@ -35,6 +35,9 @@ class Console : public debug_ipc::FDWatcher {
   void Output(const std::string& s);
   void Output(const Err& err);
 
+  // Clears the contents of the console.
+  void Clear();
+
   // The result of dispatching input is either to keep running or quit the
   // message loop to exit.
   enum class Result { kContinue, kQuit };

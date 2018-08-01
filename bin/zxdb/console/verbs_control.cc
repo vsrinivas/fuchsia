@@ -265,6 +265,29 @@ Err DoDisconnect(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
+// cls -------------------------------------------------------------------------
+
+const char kClsShortHelp[] = "cls: clear screen.";
+const char kClsHelp[] =
+    R"(cls
+
+  Clears the contents of the console. Similar to "clear" on a shell.
+
+  There are no arguments.
+)";
+
+Err DoCls(ConsoleContext* context, const Command& cmd,
+          CommandCallback callback = nullptr) {
+  if (!cmd.args().empty())
+    return Err(ErrType::kInput, "\"cls\" takes no arguments.");
+
+  Console::get()->Clear();
+
+  if (callback)
+    callback(Err());
+  return Err();
+}
+
 }  // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -278,6 +301,8 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kDisconnect] =
       VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
                  kDisconnectHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
+                                    CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb
