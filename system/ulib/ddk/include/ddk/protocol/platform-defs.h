@@ -25,6 +25,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_GPU_VSL_GC         12  // Verisilicon GC series GPU
 #define PDEV_DID_ARM_MALI_INIT      13  // ARM MALI GPU (Zircon)
 #define PDEV_DID_OPTEE              14  // OP-TEE OS Driver
+#define PDEV_DID_RTC_FALLBACK       15  // Synthetic RTC device
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

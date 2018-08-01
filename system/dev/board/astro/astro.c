@@ -104,6 +104,13 @@ static const pbus_dev_t video_dev = {
     .irq_count = countof(astro_video_irqs),
 };
 
+static const pbus_dev_t rtc_dev = {
+    .name = "rtc",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_RTC_FALLBACK,
+};
+
 static int aml_start_thread(void* arg) {
     aml_bus_t* bus = arg;
     zx_status_t status;
@@ -146,6 +153,11 @@ static int aml_start_thread(void* arg) {
 
     if ((status = pbus_device_add(&bus->pbus, &video_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "aml_start_thread could not add video_dev: %d\n", status);
+        goto fail;
+    }
+
+    if ((status = pbus_device_add(&bus->pbus, &rtc_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "aml_start_thread could not add rtc_dev: %d\n", status);
         goto fail;
     }
 

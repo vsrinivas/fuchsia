@@ -4,8 +4,11 @@
 
 #pragma once
 
-#include <ddk/device.h>
+#include <zircon/compiler.h>
 #include <zircon/device/rtc.h>
+#include <ddk/device.h>
+
+__BEGIN_CDECLS
 
 zx_status_t set_utc_offset(const rtc_t* rtc);
 void sanitize_rtc(void* ctx, zx_protocol_device_t* dev, rtc_t* rtc);
@@ -13,3 +16,5 @@ bool rtc_is_invalid(const rtc_t* rtc);
 
 uint8_t to_bcd(uint8_t binary);
 uint8_t from_bcd(uint8_t bcd);
+
+__END_CDECLS
