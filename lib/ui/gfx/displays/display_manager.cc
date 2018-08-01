@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 
 #include <lib/async/default.h>
+#include <trace/event.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
@@ -55,8 +56,13 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
         };
         dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
                                    ::fidl::VectorPtr<uint64_t> images) {
-          if (display_id == default_display_->display_id() && vsync_cb_) {
-            vsync_cb_(timestamp, images.get());
+          if (display_id == default_display_->display_id()) {
+            // Emit an event called "VSYNC", which is by convention the event
+            // that Trace Viewer looks for in its "Highlight VSync" feature.
+            TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD);
+            if (vsync_cb_) {
+              vsync_cb_(timestamp, images.get());
+            }
           }
         };
 
