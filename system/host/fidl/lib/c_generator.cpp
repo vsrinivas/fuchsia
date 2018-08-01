@@ -197,6 +197,12 @@ void EmitServerDispatchDecl(std::ostream* file, StringView interface_name) {
           << interface_name << "_ops_t* ops)";
 }
 
+void EmitServerTryDispatchDecl(std::ostream* file, StringView interface_name) {
+    *file << "zx_status_t " << interface_name
+          << "_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const "
+          << interface_name << "_ops_t* ops)";
+}
+
 void EmitServerReplyDecl(std::ostream* file, StringView method_name,
                          const std::vector<CGenerator::Member>& response) {
     *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* _txn";
@@ -938,6 +944,8 @@ void CGenerator::ProduceInterfaceServerDeclaration(const NamedInterface& named_i
     file_ << "} " << named_interface.c_name << "_ops_t;\n\n";
 
     EmitServerDispatchDecl(&file_, named_interface.c_name);
+    file_ << ";\n";
+    EmitServerTryDispatchDecl(&file_, named_interface.c_name);
     file_ << ";\n\n";
 
     for (const auto& method_info : named_interface.methods) {
@@ -953,10 +961,12 @@ void CGenerator::ProduceInterfaceServerDeclaration(const NamedInterface& named_i
 }
 
 void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& named_interface) {
-    EmitServerDispatchDecl(&file_, named_interface.c_name);
+    EmitServerTryDispatchDecl(&file_, named_interface.c_name);
     file_ << " {\n";
-    file_ << kIndent << "if (msg->num_bytes < sizeof(fidl_message_header_t))\n";
+    file_ << kIndent << "if (msg->num_bytes < sizeof(fidl_message_header_t)) {\n";
+    file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
     file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+    file_ << kIndent << "}\n";
     file_ << kIndent << "fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;\n";
     file_ << kIndent << "zx_status_t status = ZX_OK;\n";
     file_ << kIndent << "switch (hdr->ordinal) {\n";
@@ -1015,15 +1025,25 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         if (method_info.response != nullptr)
             file_ << ", txn";
         file_ << ");\n";
+        file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
+        file_ << kIndent << kIndent << kIndent << "status = ZX_ERR_INTERNAL;\n";
         file_ << kIndent << kIndent << "break;\n";
         file_ << kIndent << "}\n";
     }
     file_ << kIndent << "default: {\n";
-    file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
     file_ << kIndent << kIndent << "status = ZX_ERR_NOT_SUPPORTED;\n";
     file_ << kIndent << kIndent << "break;\n";
     file_ << kIndent << "}\n";
     file_ << kIndent << "}\n";
+    file_ << kIndent << "return status;\n";
+    file_ << "}\n\n";
+
+    EmitServerDispatchDecl(&file_, named_interface.c_name);
+    file_ << " {\n";
+    file_ << kIndent << "zx_status_t status = "
+          << named_interface.c_name << "_try_dispatch(ctx, txn, msg, ops);\n";
+    file_ << kIndent << "if (status == ZX_ERR_NOT_SUPPORTED)\n";
+    file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
     file_ << kIndent << "return status;\n";
     file_ << "}\n\n";
 

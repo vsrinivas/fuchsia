@@ -58,7 +58,7 @@ static bool dispatch_test(void) {
     EXPECT_EQ(1u, g_analyze_call_count, "");
     g_analyze_call_count = 0u;
 
-    // Bad ordinal
+    // Bad ordinal (dispatch)
 
     request.hdr.ordinal = 8949;
     zx_handle_t canary0 = ZX_HANDLE_INVALID;
@@ -77,6 +77,29 @@ static bool dispatch_test(void) {
     ASSERT_EQ(ZX_ERR_PEER_CLOSED, status, "");
     status = zx_object_signal_peer(canary1, 0, ZX_USER_SIGNAL_0);
     ASSERT_EQ(ZX_ERR_PEER_CLOSED, status, "");
+    zx_handle_close(canary0);
+    zx_handle_close(canary1);
+
+    // Bad ordinal (try_dispatch)
+
+    request.hdr.ordinal = 8949;
+    canary0 = ZX_HANDLE_INVALID;
+    status = zx_eventpair_create(0, &handles[0], &canary0);
+
+    canary1 = ZX_HANDLE_INVALID;
+    status = zx_eventpair_create(0, &handles[1], &canary1);
+
+    ASSERT_EQ(ZX_OK, status, "");
+    EXPECT_EQ(0u, g_analyze_call_count, "");
+    status = fuchsia_crash_Analyzer_try_dispatch(&kContext, &txn, &msg, &ops);
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status, "");
+    EXPECT_EQ(0u, g_analyze_call_count, "");
+    g_analyze_call_count = 0u;
+    status = zx_object_signal_peer(canary0, 0, ZX_USER_SIGNAL_0);
+    ASSERT_EQ(ZX_OK, status, "");
+    status = zx_object_signal_peer(canary1, 0, ZX_USER_SIGNAL_0);
+    ASSERT_EQ(ZX_OK, status, "");
+    zx_handle_close_many(handles, 2);
     zx_handle_close(canary0);
     zx_handle_close(canary1);
 
