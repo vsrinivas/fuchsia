@@ -26,9 +26,6 @@ namespace image_pipe_swapchain {
 // (due to composition, vsync, etc.)
 constexpr bool kSkipPresent = false;
 
-// Zero is a invalid ID in the ImagePipe interface, so offset index by one
-static inline uint32_t ImageIdFromIndex(uint32_t index) { return index + 1; }
-
 struct LayerData {
   VkInstance instance;
   VkLayerDispatchTable* device_dispatch_table;
@@ -80,9 +77,22 @@ class ImagePipeSurface {
     return supported_image_properties_;
   }
 
+  uint32_t next_image_id() {
+    if (++next_image_id_ == 0) {
+      ++next_image_id_;
+    }
+    return next_image_id_;
+  }
+
  private:
   fuchsia::images::ImagePipeSyncPtr image_pipe_;
   SupportedImageProperties supported_image_properties_;
+  uint32_t next_image_id_ = UINT32_MAX - 1;  // Exercise rollover
+};
+
+struct ImagePipeImage {
+  VkImage image;
+  uint32_t id;
 };
 
 struct PendingImageInfo {
@@ -111,7 +121,7 @@ class ImagePipeSwapchain {
   ImagePipeSurface* surface() { return surface_; }
 
   ImagePipeSurface* surface_;
-  std::vector<VkImage> images_;
+  std::vector<ImagePipeImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
   std::vector<VkSemaphore> semaphores_;
@@ -243,7 +253,7 @@ VkResult ImagePipeSwapchain::Initialize(
       fprintf(stderr, "VkCreateImage failed: %d", result);
       return result;
     }
-    images_.push_back(image);
+    images_.push_back({image, surface_->next_image_id()});
 
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
@@ -296,7 +306,7 @@ VkResult ImagePipeSwapchain::Initialize(
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
     surface()->image_pipe()->AddImage(
-        ImageIdFromIndex(i), std::move(image_info), std::move(vmo),
+        images_[i].id, std::move(image_info), std::move(vmo),
         fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
 
     available_ids_.push_back(i);
@@ -346,12 +356,17 @@ void ImagePipeSwapchain::Cleanup(VkDevice device,
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
           ->device_dispatch_table;
-  for (auto image : images_)
-    pDisp->DestroyImage(device, image, pAllocator);
-  for (auto memory : memories_)
+
+  for (auto& image : images_) {
+    surface()->image_pipe()->RemoveImage(image.id);
+    pDisp->DestroyImage(device, image.image, pAllocator);
+  }
+  for (auto memory : memories_) {
     pDisp->FreeMemory(device, memory, pAllocator);
-  for (auto semaphore : semaphores_)
+  }
+  for (auto semaphore : semaphores_) {
     pDisp->DestroySemaphore(device, semaphore, pAllocator);
+  }
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -375,7 +390,7 @@ VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount,
   assert(images_.size() <= *pCount);
 
   for (uint32_t i = 0; i < images_.size(); i++)
-    pSwapchainImages[i] = images_[i];
+    pSwapchainImages[i] = images_[i].image;
 
   *pCount = images_.size();
   return VK_SUCCESS;
@@ -545,7 +560,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     release_fences.push_back(std::move(release_fence));
 
     fuchsia::images::PresentationInfo info;
-    surface()->image_pipe()->PresentImage(ImageIdFromIndex(index), 0,
+    surface()->image_pipe()->PresentImage(images_[index].id, 0,
                                           std::move(acquire_fences),
                                           std::move(release_fences), &info);
   }
