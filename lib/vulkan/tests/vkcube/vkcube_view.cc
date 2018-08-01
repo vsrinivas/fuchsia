@@ -14,7 +14,21 @@ VkCubeView::VkCubeView(
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "vkcube"),
       pane_node_(session()),
-      resize_callback_(std::move(resize_callback)) {}
+      pane_material_(session()),
+      resize_callback_(std::move(resize_callback)) {
+  zx::channel remote_endpoint;
+  zx::channel::create(0, &image_pipe_endpoint_, &remote_endpoint);
+
+  uint32_t image_pipe_id = session()->AllocResourceId();
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(
+      image_pipe_id, fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
+                         std::move(remote_endpoint))));
+  pane_material_.SetTexture(image_pipe_id);
+  session()->ReleaseResource(image_pipe_id);
+
+  pane_node_.SetMaterial(pane_material_);
+  parent_node().AddChild(pane_node_);
+}
 
 VkCubeView::~VkCubeView() {}
 
@@ -30,29 +44,12 @@ void VkCubeView::OnSceneInvalidated(
 
   scenic::Rectangle pane_shape(session(), logical_size().width,
                                logical_size().height);
-  scenic::Material pane_material(session());
-
   pane_node_.SetShape(pane_shape);
-  pane_node_.SetMaterial(pane_material);
   pane_node_.SetTranslation(logical_size().width * 0.5,
                             logical_size().height * 0.5, 0);
-  parent_node().AddChild(pane_node_);
-
-  zx::channel endpoint0;
-  zx::channel endpoint1;
-  zx::channel::create(0, &endpoint0, &endpoint1);
-
-  uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipeCmd(
-      image_pipe_id, fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
-                         std::move(endpoint1))));
-  pane_material.SetTexture(image_pipe_id);
-  session()->ReleaseResource(image_pipe_id);
 
   // No need to Present on session; base_view will present after calling
   // OnSceneInvalidated.
 
-  resize_callback_(
-      physical_size().width, physical_size().height,
-      fidl::InterfaceHandle<fuchsia::images::ImagePipe>(std::move(endpoint0)));
+  resize_callback_(physical_size().width, physical_size().height);
 }

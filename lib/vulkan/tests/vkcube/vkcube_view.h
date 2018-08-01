@@ -16,15 +16,15 @@
 
 class VkCubeView : public mozart::BaseView {
  public:
-  using ResizeCallback = fit::function<void(
-        float width, float height,
-        fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>;
+  using ResizeCallback = fit::function<void(float width, float height)>;
 
   VkCubeView(
       ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
       ResizeCallback resize_callback);
   ~VkCubeView() override;
+
+  zx::channel TakeImagePipeChannel() { return std::move(image_pipe_endpoint_); }
 
  private:
   // |BaseView|:
@@ -33,7 +33,9 @@ class VkCubeView : public mozart::BaseView {
   fuchsia::math::SizeF size_;
   fuchsia::math::Size physical_size_;
   scenic::ShapeNode pane_node_;
+  scenic::Material pane_material_;
   ResizeCallback resize_callback_;
+  zx::channel image_pipe_endpoint_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);
 };

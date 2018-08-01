@@ -2707,8 +2707,6 @@ void demo_init_vk_swapchain(struct demo* demo) {
       .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
 #if defined(CUBE_USE_IMAGE_PIPE)
       .imagePipeHandle = demo->fuchsia_state->image_pipe_handle,
-      .width = demo->width,
-      .height = demo->height,
 #endif
       .pNext = nullptr,
     };
@@ -2978,24 +2976,22 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
   demo->fuchsia_state->view_provider_service =
       std::make_unique<mozart::ViewProviderService>(
           startup_context_.get(), [demo](mozart::ViewContext view_context) {
-            auto resize_callback =
-                [demo](float width, float height,
-                       fidl::InterfaceHandle<fuchsia::images::ImagePipe>
-                           interface_handle) {
-                  demo->width = width;
-                  demo->height = height;
-                  demo->fuchsia_state->image_pipe_handle =
-                      interface_handle.TakeChannel().release();
-                  if (demo->prepared) {
-                    demo_resize(demo);
-                  } else {
-                    demo_init_vk_swapchain(demo);
-                    demo_prepare(demo);
-                  }
-                };
-            return std::make_unique<VkCubeView>(
+            auto resize_callback = [demo](float width, float height) {
+              demo->width = width;
+              demo->height = height;
+              if (demo->prepared) {
+                demo_resize(demo);
+              } else {
+                demo_prepare(demo);
+              }
+            };
+            auto view = std::make_unique<VkCubeView>(
                 std::move(view_context.view_manager),
                 std::move(view_context.view_owner_request), resize_callback);
+            demo->fuchsia_state->image_pipe_handle =
+                view->TakeImagePipeChannel().release();
+            demo_init_vk_swapchain(demo);
+            return view;
           });
 
   while (!demo->quit) {
