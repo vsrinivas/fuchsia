@@ -40,6 +40,17 @@ package("scenic_tests") {
       name = "view_manager_apptests"
     },
   ]
+
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+  public_deps = vulkan_validation_layers.public_deps
+
+  meta = [
+    {
+      path = rebase_path("meta/scenic_tests.cmx")
+      dest = "scenic_tests.cmx"
+    },
+  ]
 }
 
 package("root_presenter") {
