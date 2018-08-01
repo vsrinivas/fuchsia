@@ -17,7 +17,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 
-#include "channels.h"
 #include "round_trips.h"
 #include "test_runner.h"
 
@@ -122,7 +121,9 @@ class ThreadOrProcess {
   void Launch(const char* func_name, zx_handle_t* handles,
               uint32_t handle_count, MultiProc multiproc) {
     if (multiproc == MultiProcess) {
-      const char* args[] = {HELPER_PATH, "--subprocess", func_name, nullptr};
+      const char* executable_path =
+          "/pkgfs/packages/zircon_benchmarks/0/bin/app";
+      const char* args[] = {executable_path, "--subprocess", func_name, nullptr};
       fdio_spawn_action_t actions[handle_count + 1];
       for (uint32_t i = 0; i < handle_count; ++i) {
         actions[i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
@@ -133,9 +134,9 @@ class ThreadOrProcess {
       actions[handle_count].name.data = "test-process";
 
       char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-      if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, HELPER_PATH,
-                         args, nullptr, handle_count + 1, actions, &subprocess_,
-                         err_msg) != ZX_OK) {
+      if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                         executable_path, args, nullptr, handle_count + 1,
+                         actions, &subprocess_, err_msg) != ZX_OK) {
         FXL_LOG(FATAL) << "Subprocess launch failed: " << err_msg;
       }
     } else {

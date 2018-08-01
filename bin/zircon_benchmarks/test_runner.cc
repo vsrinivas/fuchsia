@@ -6,7 +6,6 @@
 #include <gflags/gflags.h>
 #include <perftest/perftest.h>
 
-#include "channels.h"
 #include "round_trips.h"
 
 // Command line argument used internally for launching subprocesses.
