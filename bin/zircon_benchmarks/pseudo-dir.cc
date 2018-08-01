@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <random>
+#include <vector>
 
 #include <benchmark/benchmark.h>
 #include <fbl/ref_ptr.h>
@@ -87,7 +88,7 @@ BENCHMARK_DEFINE_F(PseudoDir, Lookup)(benchmark::State& state) {
 BENCHMARK_DEFINE_F(PseudoDir, Readdir)(benchmark::State& state) {
   auto file_names = MakeDeterministicNamesList(state.range(0));
   size_t len = state.range(1);
-  void* buffer = calloc(0, len);
+  std::vector<char> buffer(len);
 
   auto dir = fbl::AdoptRef(new fs::PseudoDir());
   auto file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
@@ -99,7 +100,7 @@ BENCHMARK_DEFINE_F(PseudoDir, Readdir)(benchmark::State& state) {
   while (state.KeepRunning()) {
     fs::vdircookie_t cookie;
     size_t real_len;
-    while (dir->Readdir(&cookie, buffer, len, &real_len) != ZX_OK) {
+    while (dir->Readdir(&cookie, buffer.data(), len, &real_len) != ZX_OK) {
     }
   }
 }
