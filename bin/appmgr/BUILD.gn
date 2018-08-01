@@ -148,7 +148,7 @@ package("appmgr") {
   ]
   resources = [
     {
-      dest = "appmgr/scheme_map.config"
+      dest = "appmgr/scheme_map/default.config"
       path = rebase_path("scheme_map.config")
     },
   ]

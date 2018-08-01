@@ -6,9 +6,11 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <functional>
 #include <string>
 
 #include "gtest/gtest.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/concatenate.h"
@@ -23,6 +25,7 @@ class JSONParserTest : public ::testing::Test {
   // ExpectFailedParse() will replace '$0' with the JSON filename, if present.
   void ExpectFailedParse(JSONParser* parser, const std::string& json,
                          std::string expected_error) {
+    props_found_ = 0;
     const std::string json_file = NewJSONFile(json);
     std::string error;
     EXPECT_FALSE(ParseFromFile(parser, json_file, &error));
@@ -32,13 +35,14 @@ class JSONParserTest : public ::testing::Test {
       expected_error.replace(pos, 2, json_file);
     }
     EXPECT_EQ(error, expected_error);
+    EXPECT_EQ(0, props_found_);
   }
 
   bool ParseFromFile(JSONParser* parser, const std::string& file,
                      std::string* error) {
     rapidjson::Document document = parser->ParseFromFile(file);
     if (!parser->HasError()) {
-      InterpretDocument(parser, document);
+      InterpretDocument(parser, std::move(document));
     }
     *error = parser->error_str();
     return !parser->HasError();
@@ -48,8 +52,18 @@ class JSONParserTest : public ::testing::Test {
                        std::string* error) {
     rapidjson::Document document = parser->ParseFromFileAt(dirfd, file);
     if (!parser->HasError()) {
-      InterpretDocument(parser, document);
+      InterpretDocument(parser, std::move(document));
     }
+    *error = parser->error_str();
+    return !parser->HasError();
+  }
+
+  bool ParseFromDirectory(JSONParser* parser, const std::string& dir,
+                          std::string* error) {
+    std::function<void(rapidjson::Document)> cb =
+        std::bind(&JSONParserTest::InterpretDocument,
+                  this, parser, std::placeholders::_1);
+    parser->ParseFromDirectory(dir, cb);
     *error = parser->error_str();
     return !parser->HasError();
   }
@@ -62,8 +76,17 @@ class JSONParserTest : public ::testing::Test {
     return json_file;
   }
 
-  void InterpretDocument(JSONParser* parser,
-                         const rapidjson::Document& document) {
+  std::string NewJSONFileInDir(const std::string& dir,
+                               const std::string& json) {
+    const std::string json_file =
+        fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
+    if (!files::WriteFile(json_file, json.data(), json.size())) {
+      return "";
+    }
+    return json_file;
+  }
+
+  void InterpretDocument(JSONParser* parser, rapidjson::Document document) {
     if (!document.IsObject()) {
       parser->ReportError("Document is not an object.");
       return;
@@ -71,20 +94,28 @@ class JSONParserTest : public ::testing::Test {
 
     auto prop1 = document.FindMember("prop1");
     if (prop1 == document.MemberEnd()) {
-      parser->ReportError("missing prop1");
+      // Allow missing.
     } else if (!prop1->value.IsString()) {
       parser->ReportError("prop1 has wrong type");
+    } else {
+      ++props_found_;
     }
 
     auto prop2 = document.FindMember("prop2");
     if (prop2 == document.MemberEnd()) {
-      parser->ReportError("missing prop2");
+      // Allow missing.
     } else if (!prop2->value.IsInt()) {
       parser->ReportError("prop2 has wrong type");
+    } else {
+      ++props_found_;
     }
   }
 
   files::ScopedTempDir tmp_dir_;
+  int props_found_ = 0;
+
+ private:
+  int unique_id_ = 1;
 };
 
 TEST_F(JSONParserTest, ReadInvalidFile) {
@@ -113,11 +144,12 @@ TEST_F(JSONParserTest, ParseWithErrors) {
   // Multiple errors, after parsing.
   {
     const std::string json = R"JSON({
+  "prop1": 42,
   "prop2": "wrong_type"
   })JSON";
     JSONParser parser;
     ExpectFailedParse(&parser, json,
-                      "$0: missing prop1\n$0: prop2 has wrong type");
+                      "$0: prop1 has wrong type\n$0: prop2 has wrong type");
   }
 }
 
@@ -151,6 +183,7 @@ TEST_F(JSONParserTest, ParseTwice) {
   EXPECT_EQ(parser.error_str(),
             "test_file:2:12: Invalid value.\n"
             "test_file:2:34: Invalid encoding in string.");
+  EXPECT_EQ(0, props_found_);
 }
 
 TEST_F(JSONParserTest, ParseValid) {
@@ -163,6 +196,7 @@ TEST_F(JSONParserTest, ParseValid) {
   JSONParser parser;
   EXPECT_TRUE(ParseFromFile(&parser, file, &error));
   EXPECT_EQ("", error);
+  EXPECT_EQ(2, props_found_);
 }
 
 TEST_F(JSONParserTest, ParseFromFileAt) {
@@ -179,6 +213,46 @@ TEST_F(JSONParserTest, ParseFromFileAt) {
   JSONParser parser;
   EXPECT_TRUE(ParseFromFileAt(&parser, dirfd, basename, &error));
   EXPECT_EQ("", error);
+  EXPECT_EQ(2, props_found_);
+}
+
+TEST_F(JSONParserTest, ParseFromDirectory) {
+  const std::string json1 = R"JSON({
+  "prop1": "foo"
+  })JSON";
+  const std::string json2 = R"JSON({
+  "prop2": 42
+  })JSON";
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFileInDir(dir, json1);
+  NewJSONFileInDir(dir, json2);
+
+  std::string error;
+  JSONParser parser;
+  EXPECT_TRUE(ParseFromDirectory(&parser, dir, &error));
+  EXPECT_EQ("", error);
+  EXPECT_EQ(2, props_found_);
+}
+
+TEST_F(JSONParserTest, ParseFromDirectoryWithErrors) {
+  const std::string json1 = R"JSON({,,,})JSON";
+  const std::string json2 = R"JSON({
+  "prop2": 42
+  })JSON";
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  const std::string json_file1 = NewJSONFileInDir(dir, json1);
+  NewJSONFileInDir(dir, json2);
+
+  // Parsing should continue even when one file fails to parse.
+  std::string error;
+  JSONParser parser;
+  EXPECT_FALSE(ParseFromDirectory(&parser, dir, &error));
+  EXPECT_EQ(error,
+            fxl::Concatenate({json_file1,
+                              ":1:2: Missing a name for object member."}));
+  EXPECT_EQ(1, props_found_);
 }
 
 }  // namespace

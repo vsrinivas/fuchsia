@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <string>
 
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace sysmgr {
@@ -24,29 +26,32 @@ using testing::Value;
 class ConfigTest : public ::testing::Test {
  protected:
   void ExpectFailedParse(const std::string& json, std::string expected_error) {
-    const std::string json_file = NewJSONFile(json);
-    std::string error;
     Config config;
-    EXPECT_FALSE(config.ParseFromFile(json_file));
-    error = config.error_str();
+    std::string dir;
+    ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+    const std::string json_file = NewJSONFile(dir, json);
+    EXPECT_FALSE(config.ParseFromDirectory(dir));
     // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
     size_t pos;
     while ((pos = expected_error.find("$0")) != std::string::npos) {
       expected_error.replace(pos, 2, json_file);
     }
-    EXPECT_EQ(error, expected_error);
+    EXPECT_EQ(config.error_str(), expected_error);
   }
 
-  std::string NewJSONFile(const std::string& json) {
-    std::string json_file;
-    if (!tmp_dir_.NewTempFileWithData(json, &json_file)) {
+  std::string NewJSONFile(const std::string& dir, const std::string& json) {
+    const std::string json_file =
+        fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
+    if (!files::WriteFile(json_file, json.data(), json.size())) {
       return "";
     }
     return json_file;
   }
 
- private:
   files::ScopedTempDir tmp_dir_;
+
+ private:
+  int unique_id_ = 1;
 };
 
 TEST_F(ConfigTest, ParseWithErrors) {
@@ -102,15 +107,13 @@ TEST_F(ConfigTest, Parse) {
     }
   })json";
 
-  const std::string services_file = NewJSONFile(kServices);
-  const std::string apps_file = NewJSONFile(kApps);
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFile(dir, kServices);
+  NewJSONFile(dir, kApps);
 
   Config config;
-  EXPECT_TRUE(config.ParseFromFile(services_file));
-  EXPECT_FALSE(config.HasError());
-  EXPECT_EQ(config.error_str(), "");
-
-  EXPECT_TRUE(config.ParseFromFile(apps_file));
+  EXPECT_TRUE(config.ParseFromDirectory(dir));
   EXPECT_FALSE(config.HasError());
   EXPECT_EQ(config.error_str(), "");
 

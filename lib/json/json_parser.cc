@@ -4,9 +4,14 @@
 
 #include "garnet/lib/json/json_parser.h"
 
+#include <dirent.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
@@ -73,6 +78,51 @@ rapidjson::Document JSONParser::ParseFromString(const std::string& data,
                         GetParseError_En(document.GetParseError()));
   }
   return document;
+}
+
+void JSONParser::ParseFromDirectory(
+    const std::string& path,
+    fit::function<void(rapidjson::Document)> cb) {
+  static constexpr char kPathTooLong[] =
+      "Config directory path is too long: %s";
+  char buf[PATH_MAX];
+  buf[0] = '\0';
+  if (strlcpy(buf, path.c_str(), PATH_MAX) >= PATH_MAX) {
+    file_ = path;
+    ReportError(fxl::StringPrintf(kPathTooLong, buf));
+    return;
+  }
+  if (buf[strlen(buf) - 2] != '/' &&
+      strlcat(buf, "/", PATH_MAX) >= PATH_MAX) {
+    file_ = path;
+    ReportError(fxl::StringPrintf(kPathTooLong, buf));
+    return;
+  }
+  const size_t dir_len = strlen(buf);
+  DIR* cfg_dir = opendir(path.c_str());
+  if (cfg_dir != nullptr) {
+    for (dirent* cfg = readdir(cfg_dir); cfg != nullptr;
+         cfg = readdir(cfg_dir)) {
+      if (strcmp(".", cfg->d_name) == 0 || strcmp("..", cfg->d_name) == 0) {
+        continue;
+      }
+      if (strlcat(buf, cfg->d_name, PATH_MAX) >= PATH_MAX) {
+        file_ = path;
+        ReportError(fxl::StringPrintf(kPathTooLong, buf));
+        continue;
+      }
+      rapidjson::Document document = ParseFromFile(buf);
+      if (!document.HasParseError() && !document.IsNull()) {
+        cb(std::move(document));
+      }
+      // Reset buf to directory path.
+      buf[dir_len] = '\0';
+    }
+    closedir(cfg_dir);
+  } else {
+    file_ = path;
+    ReportError("Could not open config directory.");
+  }
 }
 
 void JSONParser::ReportError(const std::string& error) {

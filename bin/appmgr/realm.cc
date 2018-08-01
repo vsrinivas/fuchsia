@@ -210,10 +210,13 @@ Realm::Realm(RealmArgs args)
   loader_ =
       component::ConnectToService<fuchsia::sys::Loader>(service_provider.get());
 
-  const std::string scheme_map_path = SchemeMap::GetSchemeMapPath();
   std::string error;
-  if (!scheme_map_.ParseFromFile(scheme_map_path)) {
-    FXL_LOG(FATAL) << "Could not parse scheme map config file: "
+  if (!files::IsDirectory(SchemeMap::kConfigDirPath)) {
+    FXL_LOG(FATAL) << "Could not find scheme map config dir: "
+                   << SchemeMap::kConfigDirPath;
+  }
+  if (!scheme_map_.ParseFromDirectory(SchemeMap::kConfigDirPath)) {
+    FXL_LOG(FATAL) << "Could not parse scheme map config dir: "
                    << scheme_map_.error_str();
   }
 }

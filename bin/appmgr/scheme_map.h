@@ -19,8 +19,9 @@ class SchemeMap {
  public:
   SchemeMap() = default;
 
-  // Parses a schema map from a file.
-  bool ParseFromFile(const std::string& file);
+  // Parses a scheme map from a directory containing scheme map config files.
+  // Each file adds more scheme->launcher mappings.
+  bool ParseFromDirectory(const std::string& path);
 
   bool HasError() const { return json_parser_.HasError(); }
   std::string error_str() const { return json_parser_.error_str(); }
@@ -28,10 +29,11 @@ class SchemeMap {
   // Returns the launcher type for a given scheme, or "" if none.
   std::string LookUp(const std::string& scheme) const;
 
-  // Returns the path for the scheme map config file.
-  static std::string GetSchemeMapPath();
+  static const char kConfigDirPath[];
 
  private:
+  void ParseDocument(rapidjson::Document document);
+
   std::unordered_map<std::string, std::string> internal_map_;
   json::JSONParser json_parser_;
 

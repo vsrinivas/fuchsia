@@ -30,9 +30,9 @@ class Config {
   Config(Config&&) = default;
   Config& operator=(Config&&) = default;
 
-  // Initializes the Config from a JSON file. Returns false if there were
-  // any errors.
-  bool ParseFromFile(const std::string& config_file);
+  // Initializes the Config from a config directory, merging its files together.
+  // Returns false if there were any errors.
+  bool ParseFromDirectory(const std::string& dir);
 
   // Initializes the Config from a JSON string. |pseudo_file| is used as the
   // 'file' in the error string.
@@ -52,7 +52,7 @@ class Config {
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
-  void Parse(const rapidjson::Document& document);
+  void ParseDocument(rapidjson::Document document);
   bool ParseServiceMap(const rapidjson::Document& document,
                        const std::string& key, Config::ServiceMap* services);
   fuchsia::sys::LaunchInfoPtr GetLaunchInfo(

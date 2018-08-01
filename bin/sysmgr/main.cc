@@ -18,39 +18,14 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
-
+  
   sysmgr::Config config;
   if (command_line.HasOption("config")) {
     std::string config_data;
     command_line.GetOptionValue("config", &config_data);
     config.ParseFromString(config_data, "command line");
   } else {
-    char buf[PATH_MAX];
-    if (strlcpy(buf, kConfigDir, PATH_MAX) >= PATH_MAX) {
-      FXL_LOG(FATAL) << "Config directory path too long";
-    } else {
-      const size_t dir_len = strlen(buf);
-      DIR* cfg_dir = opendir(kConfigDir);
-      if (cfg_dir != nullptr) {
-        for (dirent* cfg = readdir(cfg_dir); cfg != nullptr;
-             cfg = readdir(cfg_dir)) {
-          if (strcmp(".", cfg->d_name) == 0 || strcmp("..", cfg->d_name) == 0) {
-            continue;
-          }
-          if (strlcat(buf, cfg->d_name, PATH_MAX) >= PATH_MAX) {
-            FXL_LOG(WARNING) << "Could not read config file, path too long";
-            continue;
-          }
-          if (!config.ParseFromFile(buf)) {
-            break;
-          }
-          buf[dir_len] = '\0';
-        }
-        closedir(cfg_dir);
-      } else {
-        FXL_LOG(WARNING) << "Could not open config directory " << kConfigDir;
-      }
-    }
+    config.ParseFromDirectory(kConfigDir);
   }
 
   if (config.HasError()) {

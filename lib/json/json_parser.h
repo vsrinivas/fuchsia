@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
@@ -41,6 +42,14 @@ class JSONParser {
   // on multiple files, in which case any previous errors will be retained.
   rapidjson::Document ParseFromString(const std::string& data,
                                       const std::string& file);
+
+  // Initialize multiple documents from files in a directory. |cb| is
+  // called for each file that parses. The traversal is not recursive, and all
+  // files in the directory are expected to be JSON files.
+  //
+  // It is up to the caller to decide how to merge multiple documents.
+  void ParseFromDirectory(const std::string& path,
+                          fit::function<void(rapidjson::Document)> cb);
 
   // Returns true if there was an error initializing the document.
   bool HasError() const;

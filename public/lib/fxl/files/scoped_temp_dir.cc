@@ -123,6 +123,16 @@ bool ScopedTempDirAt::NewTempFileWithData(const std::string& data,
   return WriteFile(*output, data.data(), data.size());
 }
 
+bool ScopedTempDirAt::NewTempDir(std::string* output) {
+  std::string dir_path = directory_path_ + "/XXXXXX";
+  char* out_path = MkdTempAt(root_fd_, &dir_path[0], dir_path.size());
+  if (out_path == nullptr) {
+    return false;
+  }
+  output->swap(dir_path);
+  return true;
+}
+
 ScopedTempDir::ScopedTempDir() : ScopedTempDir("") {}
 
 ScopedTempDir::ScopedTempDir(fxl::StringView parent_path)
@@ -140,4 +150,9 @@ bool ScopedTempDir::NewTempFileWithData(const std::string& data,
                                         std::string* output) {
   return base_.NewTempFileWithData(data, output);
 }
+
+bool ScopedTempDir::NewTempDir(std::string* path) {
+  return base_.NewTempDir(path);
+}
+
 }  // namespace files

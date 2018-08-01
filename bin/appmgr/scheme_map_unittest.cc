@@ -4,11 +4,15 @@
 
 #include "garnet/bin/appmgr/scheme_map.h"
 
+#include <unistd.h>
 #include <string>
 
 #include "gtest/gtest.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace component {
 namespace {
@@ -18,46 +22,71 @@ class SchemeMapTest : public ::testing::Test {
   void ExpectFailedParse(const std::string& json,
                          std::string expected_error) {
     SchemeMap scheme_map;
-    std::string error;
-    std::string json_file;
-    EXPECT_FALSE(ParseFrom(&scheme_map, json, &json_file));
-    if (scheme_map.HasError()) {
-      error = scheme_map.error_str();
-    }
+    std::string dir;
+    ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+    const std::string json_file = NewJSONFile(dir, json);
+    EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
     // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
     size_t pos;
     while ((pos = expected_error.find("$0")) != std::string::npos) {
       expected_error.replace(pos, 2, json_file);
     }
-    EXPECT_EQ(error, expected_error);
+    EXPECT_EQ(scheme_map.error_str(), expected_error);
   }
 
-
-  bool ParseFrom(SchemeMap* scheme_map, const std::string& json,
-                 std::string* json_file) {
-    std::string json_path;
-    if (!tmp_dir_.NewTempFileWithData(json, json_file)) {
-      return false;
+  std::string NewJSONFile(const std::string& dir, const std::string& json) {
+    const std::string json_file =
+        fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
+    if (!files::WriteFile(json_file, json.data(), json.size())) {
+      return "";
     }
-    return scheme_map->ParseFromFile(*json_file);
+    return json_file;
   }
+
+  files::ScopedTempDir tmp_dir_;
 
  private:
-  files::ScopedTempDir tmp_dir_;
+  int unique_id_ = 1;
 };
 
-const char kSchemeMapStr[] =
-    R"JSON({
-              "launchers": {
-                "web_runner": [ "http", "https" ],
-                "package": [ "file" ]
-              }
-           })JSON";
-
 TEST_F(SchemeMapTest, Parse) {
+  static constexpr char kJson[] = R"JSON({
+  "launchers": {
+    "web_runner": [ "http", "https" ],
+    "package": [ "file" ]
+  }
+  })JSON";
+
   SchemeMap scheme_map;
-  std::string file_unused;
-  ASSERT_TRUE(ParseFrom(&scheme_map, kSchemeMapStr, &file_unused));
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFile(dir, kJson);
+  EXPECT_TRUE(scheme_map.ParseFromDirectory(dir));
+  EXPECT_FALSE(scheme_map.HasError());
+  EXPECT_EQ("web_runner", scheme_map.LookUp("http"));
+  EXPECT_EQ("web_runner", scheme_map.LookUp("https"));
+  EXPECT_EQ("package", scheme_map.LookUp("file"));
+  EXPECT_EQ("", scheme_map.LookUp("doofus"));
+}
+
+TEST_F(SchemeMapTest, ParseMultiple) {
+  static constexpr char kJson1[] = R"JSON({
+  "launchers": { "web_runner": [ "http" ] }
+  })JSON";
+  static constexpr char kJson2[] = R"JSON({
+  "launchers": { "web_runner": [ "https" ] }
+  })JSON";
+  static constexpr char kJson3[] = R"JSON({
+  "launchers": { "package": [ "file" ] }
+  })JSON";
+
+  SchemeMap scheme_map;
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFile(dir, kJson1);
+  NewJSONFile(dir, kJson2);
+  NewJSONFile(dir, kJson3);
+  EXPECT_TRUE(scheme_map.ParseFromDirectory(dir));
   EXPECT_FALSE(scheme_map.HasError());
   EXPECT_EQ("web_runner", scheme_map.LookUp("http"));
   EXPECT_EQ("web_runner", scheme_map.LookUp("https"));
@@ -86,9 +115,26 @@ TEST_F(SchemeMapTest, ParseWithErrors) {
       "$0: Scheme for 'web_runner' is not a string.");
 }
 
-TEST_F(SchemeMapTest, GetSchemeMapPath) {
-  EXPECT_EQ("/system/data/appmgr/scheme_map.config",
-            SchemeMap::GetSchemeMapPath());
+TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
+  static constexpr char kJson1[] = R"JSON({
+  "launchers": { "web_runner": [ "http" ] }
+  })JSON";
+  static constexpr char kJson2[] = R"JSON({
+  "launchers": { "package": [ "http" ] }
+  })JSON";
+
+  SchemeMap scheme_map;
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFile(dir, kJson1);
+  const std::string json_file2 = NewJSONFile(dir, kJson2);
+  EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
+  EXPECT_TRUE(scheme_map.HasError());
+  // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
+  const std::string expected_error =
+      fxl::Concatenate({json_file2,
+                        ": Scheme 'http' is assigned to two launchers."});
+  EXPECT_EQ(scheme_map.error_str(), expected_error);
 }
 
 }  // namespace

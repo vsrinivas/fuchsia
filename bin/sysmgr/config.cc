@@ -11,7 +11,6 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/error/en.h"
 
 namespace sysmgr {
 namespace {
@@ -25,20 +24,20 @@ constexpr char kStartupServices[] = "startup_services";
 
 }  // namespace
 
-bool Config::ParseFromFile(const std::string& config_file) {
-  const rapidjson::Document document = json_parser_.ParseFromFile(config_file);
-  if (!json_parser_.HasError()) {
-    Parse(document);
-  }
+bool Config::ParseFromDirectory(const std::string& dir) {
+  auto cb = [this] (rapidjson::Document document) {
+    ParseDocument(std::move(document));
+  };
+  json_parser_.ParseFromDirectory(dir, cb);
   return !json_parser_.HasError();
 }
 
 bool Config::ParseFromString(const std::string& data,
                              const std::string& pseudo_file) {
-  const rapidjson::Document document =
+  rapidjson::Document document =
       json_parser_.ParseFromString(data, pseudo_file);
   if (!json_parser_.HasError()) {
-    Parse(document);
+    ParseDocument(std::move(document));
   }
   return !json_parser_.HasError();
 }
@@ -51,7 +50,7 @@ std::string Config::error_str() const {
   return json_parser_.error_str();
 }
 
-void Config::Parse(const rapidjson::Document& document) {
+void Config::ParseDocument(rapidjson::Document document) {
   if (!document.IsObject()) {
     json_parser_.ReportError("Config file is not a JSON object.");
     return;
