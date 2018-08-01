@@ -67,6 +67,7 @@ _preprocessed_products = exec_script("preprocess_products.py",
                                        # A list of strings in GN syntax is
                                        # valid JSON too.
                                        "--products=$fuchsia_products",
+                                       "--packages=$fuchsia_packages",
                                      ],
                                      "json")
 
@@ -88,51 +89,31 @@ foreach(pkg, _preprocessed_products.available) {
   available_packages += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
-# Resolve all the `fuchsia_packages` JSON files and their imports
-# into the two lists of GN labels, below.
-_preprocessed_packages = exec_script("prepreprocess_build_packages.py",
-                                     [
-                                       # A list of strings in GN syntax is
-                                       # valid JSON too.
-                                       "--packages=$fuchsia_packages",
-                                     ],
-                                     "json")
-
-# Tell GN that the files preprocess_build_packages.py ran are inputs to the
-# generation step, by declaring them as file inputs to a (silly) exec_script
-# invocation.
-exec_script("/bin/sh", ["-c", ":"], "", _preprocessed_packages.files_read)
-
-# Additional fuchsia packages are added to preinstall_packages
-foreach(pkg, _preprocessed_packages.targets) {
-  # Note: currently the infrastructure recipes require the packages build
-  # arguments to be added to the base image. In the future this should
-  # transition to preinstall_packages.
-  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
-}
-
 # Every extra GN target the package JSON requests be built on the side.
 # This is for things like install_host_tools() targets whose output should
 # be on hand for a developer to use in conjuction with a Fuchsia package.
 package_data_deps = []
-foreach(pkg, _preprocessed_products.data_deps + _preprocessed_packages.data_deps) {
+foreach(pkg, _preprocessed_products.data_deps) {
   package_data_deps += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Labels of test() targets to be copied into $root_build_dir/host_tests.
 package_host_tests = []
-foreach(label, _preprocessed_products.host_tests + _preprocessed_packages.host_tests) {
+foreach(label, _preprocessed_products.host_tests) {
   package_host_tests += [ get_label_info(label, "label_no_toolchain") ]
 }
 
 # Synthesized packages are instantiated in //build/gn/BUILD.gn,
 # so the package() target is //build/gn:package_name.
+_synthesized_packages = []
 foreach(pkg, synthesize_packages) {
   pkg = "//build/gn:${pkg.name}"
-  # Note: currently the infrastructure recipes require infra synthesized
-  # packages to become members of the monolith set.
-  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+  _synthesized_packages += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
-# all_packages contains a list of all requested packages.
-all_packages = monolith_packages + preinstall_packages + available_packages
+# Note: currently the infrastructure recipes require infra synthesized
+# packages to become members of the monolith set. The +,-,+ dance is to ensure
+# the list contains no duplicates.
+monolith_packages += _synthesized_packages
+monolith_packages -= _synthesized_packages
+monolith_packages += _synthesized_packages

@@ -55,6 +55,9 @@ files_read - a list of files used to compute all of the above
     parser.add_argument('--products',
                         help='JSON list of products',
                         required=True)
+    parser.add_argument('--packages',
+                        help='JSON list of additional packages',
+                        required=False)
     args = parser.parse_args()
 
     build_packages = {
@@ -66,6 +69,10 @@ files_read - a list of files used to compute all of the above
 
     # First load and merge the root package lists for each of the given products
     [parse_product(product, build_packages) for product in json.loads(args.products)]
+
+    # Merge the extra packages into the monolith set (these will move to preinstall in the future):
+    if args.packages:
+        build_packages["monolith"].update(json.loads(args.packages))
 
     monolith_results = preprocess_packages(list(build_packages["monolith"]))
     preinstall_results = preprocess_packages(list(build_packages["preinstall"]))

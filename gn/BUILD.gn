@@ -11,7 +11,7 @@ import("//build/toolchain/goma.gni")
 testonly = true
 
 group("packages") {
-  deps = all_packages
+  deps = available_packages
   data_deps = package_data_deps
 }
 
@@ -20,10 +20,10 @@ group("default") {
     ":host_tests",
     ":packages",
   ]
-  if (all_packages != [] || monolith_packages != []) {
+  if (preinstall_packages != [] || monolith_packages != []) {
     deps += [ "//build/images" ]
   }
-  if (all_packages != []) {
+  if (available_packages != []) {
     deps += [ "//build/images:updates" ]
   }
 }
@@ -46,17 +46,9 @@ if (package_host_tests != []) {
     # de-duplicated here to avoid output collisions.
     foreach(label, package_host_tests) {
       _full_label = "$label($host_toolchain)"
-      _already_done = false
-      foreach(done_label, deps) {
-        if (done_label == _full_label) {
-          _already_done = true
-        }
-      }
-      if (!_already_done) {
-        deps += [ _full_label ]
-        binary = get_label_info(label, "name")
-        sources += [ "$bindir/$binary" ]
-      }
+      deps += [ _full_label ]
+      binary = get_label_info(label, "name")
+      sources += [ "$bindir/$binary" ]
     }
 
     outputs = [
