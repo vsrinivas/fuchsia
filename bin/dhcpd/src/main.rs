@@ -7,50 +7,63 @@ extern crate dhcp;
 extern crate failure;
 extern crate fuchsia_async as async;
 extern crate futures;
+extern crate getopts;
 
 use async::Executor;
 use async::net::UdpSocket;
+use dhcp::configuration;
+use dhcp::protocol::{Message, SERVER_PORT};
+use dhcp::server::Server;
 use failure::{Error, Fail, ResultExt};
 use futures::future::{self, Loop};
 use futures::prelude::*;
-use dhcp::protocol::{Message, SERVER_PORT};
-use dhcp::server::{Server, ServerConfig};
+use getopts::Options;
+use std::env;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
+const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
 
 fn main() -> Result<(), Error> {
     println!("dhcpd: starting...");
     let mut exec = Executor::new().context("error creating executor")?;
-    let (udp_socket, server) = setup_and_bind_server(Ipv4Addr::new(127, 0, 0, 1))?;
+    let config_path = get_config_path()?;
+    let (server, server_ip) = build_server(config_path)?;
+    let udp_socket = bind_server_socket(server_ip)?;
     build_and_run_event_loop(&mut exec, udp_socket, server)
 }
 
-fn setup_and_bind_server(server_ip: Ipv4Addr) -> Result<(UdpSocket, Arc<Mutex<Server>>), Error> {
-    let addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
-    let udp_socket = UdpSocket::bind(&addr).context("unable to bind socket")?;
-    let server = build_server(server_ip)?;
-    Ok((udp_socket, server))
+fn get_config_path() -> Result<String, Error> {
+    let args: Vec<String> = env::args().collect();
+    let program = &args[0];
+    let mut opts = Options::new();
+    opts.optopt("c", "config", "dhcpd configuration file path", "FILE");
+    let matches = match opts.parse(args[1..].iter()) {
+        Ok(m) => m,
+        Err(e) => {
+            opts.short_usage(program);
+            return Err(e.context("failed to parse options").into());
+        }
+    };
+    match matches.opt_str("c") {
+        Some(p) => Ok(p),
+        None => Ok(DEFAULT_CONFIG_PATH.to_string()),
+    }
 }
 
-fn build_server(server_ip: Ipv4Addr) -> Result<Arc<Mutex<Server>>, Error> {
-    let mut server = Server::new();
-    // Placeholder addresses until the server supports loading addresses
-    // from a configuration file.
-    let addrs = vec![Ipv4Addr::new(192, 168, 0, 2),
-                     Ipv4Addr::new(192, 168, 0, 3),
-                     Ipv4Addr::new(192, 168, 0, 4)];
-    let config = ServerConfig {
-        server_ip: server_ip,
-        default_lease_time: 0,
-        subnet_mask: 24,
-    };
-    server.add_addrs(addrs);
-    server.set_config(config);
-    Ok(Arc::new(Mutex::new(server)))
+fn build_server(path: String) -> Result<(Arc<Mutex<Server>>, Ipv4Addr), Error> {
+    let config = configuration::load_server_config_from_file(path)?;
+    let server_ip = config.server_ip;
+    Ok((Arc::new(Mutex::new(Server::from_config(config))), server_ip))
+}
+
+fn bind_server_socket(server_ip: Ipv4Addr) -> Result<UdpSocket, Error> {
+    let addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
+    let udp_socket = UdpSocket::bind(&addr).context("unable to bind socket")?;
+    Ok(udp_socket)
 }
 
 fn build_and_run_event_loop(exec: &mut Executor, sock: UdpSocket, server: Arc<Mutex<Server>>) -> Result<(), Error> {

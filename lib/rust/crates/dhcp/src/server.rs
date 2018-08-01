@@ -1,10 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![deny(warnings)]
-#![allow(unused)] // TODO(atait): Remove once there are non-test clients
 
 use byteorder::{BigEndian, ByteOrder};
+use configuration::ServerConfig;
 use protocol;
 use protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -30,14 +29,15 @@ impl Server {
         }
     }
 
-    /// This is a placeholder method intended only for testing.
-    pub fn add_addrs(&mut self, addrs: Vec<Ipv4Addr>) {
-        self.pool.load_pool(addrs);
-    }
-
-    /// This is a placeholder method intended only for testing.
-    pub fn set_config(&mut self, config: ServerConfig) {
-        self.config = config
+    /// Instantiates a `Server` value from the provided `ServerConfig`.
+    pub fn from_config(config: ServerConfig) -> Self {
+        let mut server = Server {
+            cache: HashMap::new(),
+            pool: AddressPool::new(),
+            config: config,
+        };
+        server.pool.load_pool(&server.config.managed_addrs);
+        server
     }
 
     /// Dispatches an incoming DHCP message to the appropriate handler for processing.
@@ -188,10 +188,10 @@ impl AddressPool {
         }
     }
 
-    fn load_pool(&mut self, addrs: Vec<Ipv4Addr>) {
+    fn load_pool(&mut self, addrs: &[Ipv4Addr]) {
         for addr in addrs {
             if !self.allocated_addrs.contains(&addr) {
-                self.available_addrs.insert(addr);
+                self.available_addrs.insert(*addr);
             }
         }
     }
@@ -215,27 +215,6 @@ impl AddressPool {
 
     fn addr_is_allocated(&self, addr: Ipv4Addr) -> bool {
         !self.available_addrs.contains(&addr) && self.allocated_addrs.contains(&addr)
-    }
-}
-
-/// A collection of the basic configuration parameters needed by the server. 
-#[derive(Debug)]
-pub struct ServerConfig {
-    /// The IPv4 address of the host running the server.
-    pub server_ip: Ipv4Addr,
-    /// The default time (in seconds) assigned to IP address leases assigned by the server.
-    pub default_lease_time: u32,
-    /// The number of bits to mask the subnet address from the host address in an IPv4Addr.
-    pub subnet_mask: u8,
-}
-
-impl ServerConfig {
-    fn new() -> Self {
-        ServerConfig {
-            server_ip: Ipv4Addr::new(0, 0, 0, 0),
-            default_lease_time: 0,
-            subnet_mask: 24,
-        }
     }
 }
 

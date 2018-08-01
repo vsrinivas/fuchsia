@@ -5,19 +5,33 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rustc_binary("dhcpd_bin") {
+rustc_binary("bin") {
+  name = "dhcpd"
   deps = [
     "//garnet/lib/rust/crates/dhcp",
     "//garnet/public/rust/crates/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:getopts",
   ]
 }
 
 package("dhcpd") {
   deps = [
-    ":dhcpd_bin",
+    ":bin",
   ]
-  binary = "rust_crates/dhcpd_bin"
+  meta = [
+      {
+        path = rebase_path("meta/dhcpd.cmx")
+        dest = "dhcpd.cmx"
+      }
+  ]
+  resources = [
+    {
+      path = rebase_path("data/test_server_config.json")
+      dest = "config.json"
+    }
+  ]
+  binary = "rust_crates/dhcpd"
 }
 

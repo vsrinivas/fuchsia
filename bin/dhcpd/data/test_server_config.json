@@ -1,0 +1,10 @@
+{
+    "server_ip": "127.0.0.1",
+    "default_lease_time": 0,
+    "subnet_mask": 24,
+    "managed_addrs": [
+        "192.168.0.2",
+        "192.168.0.3",
+        "192.168.0.4"
+    ]
+}
