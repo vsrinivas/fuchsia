@@ -7,14 +7,27 @@ There are two GN targets which should be used for Rust projects:
   by other targets.
 - [`rustc_binary`][target-binary-rustc] defines an executable.
 
+The [garnet/examples/rust][rust-examples] directory has some examples of Rust
+packages that use these targets, as do the [Rust FIDL examples][fidl-tutorial].
+
 These GN targets do not require a `Cargo.toml` file, as they are not built with
 Cargo during a normal build of Fuchsia. However, a `Cargo.toml` file can be
-created for these targets by running `fx gen-cargo path/to/target:label`.
-In order to generate a Cargo.toml, there must have first been a successful build
-of Fuchsia which included the target. Generating `Cargo.toml` files is useful
-for integration with IDEs such as Intellij and VSCode, and for using the
-[`fargo`][fargo] tool to build and test targets without going through a full
-GN build and run cycle each time.
+created for these targets by running
+`fx gen-cargo path/from/fuchsia/root/to/target:label`. In order to generate a
+Cargo.toml, there must have first been a successful build of Fuchsia which
+included the target. Generating `Cargo.toml` files is useful for integration with
+IDEs such as Intellij and VSCode, and for using the [`fargo`][fargo] tool to build
+and test targets without going through a full GN build and run cycle each time.
+
+You can also run unit tests on connected devices using `fx`, with the
+`fx run-test {package name}_{bin or lib}_test_rustc` command, assuming your
+package in `BUILD.gn` has `with_unit_tests = true`.
+
+## Style
+
+We don't currently have a style guide for Rust, but you should
+run [`rustfmt`][rustfmt-install] before submitting. We mostly use the rustfmt
+defaults, but have a couple [custom settings][rustfmt-toml].
 
 ## Building With a Custom Toolchain
 
@@ -31,8 +44,12 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 - [Managing third-party dependencies](third_party.md)
 - [Unsafe code](unsafe.md)
 - [Unstable features](unstable.md)
-
+- [Rust FIDL server/client tutorial][fidl-tutorial]
 
 [target-library-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_library.gni "Rust library"
 [target-binary-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_binary.gni "Rust binary"
+[rust-examples]: https://fuchsia.googlesource.com/garnet/+/master/examples/rust/
 [fargo]: https://fuchsia.googlesource.com/fargo
+[rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
+[rustfmt-toml]: https://fuchsia.googlesource.com/garnet/+/master/rustfmt.toml
+[fidl-tutorial]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/tutorial.md#server-in-Rust
