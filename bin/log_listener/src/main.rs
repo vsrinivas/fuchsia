@@ -10,6 +10,7 @@ extern crate fuchsia_syslog_listener as syslog_listener;
 extern crate fuchsia_zircon as zx;
 
 use failure::{Error, ResultExt};
+use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
 use std::fs::OpenOptions;
@@ -25,7 +26,13 @@ use fidl_fuchsia_logger::{
 #[derive(Debug, PartialEq)]
 struct LogListenerOptions {
     filter: LogFilterOptions,
+    local: LocalOptions,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct LocalOptions {
     file: Option<String>,
+    ignore_tags: HashSet<String>,
 }
 
 impl Default for LogListenerOptions {
@@ -40,7 +47,16 @@ impl Default for LogListenerOptions {
                 tid: 0,
                 tags: vec![],
             },
+            local: LocalOptions::default(),
+        }
+    }
+}
+
+impl Default for LocalOptions {
+    fn default() -> LocalOptions {
+        LocalOptions {
             file: None,
+            ignore_tags: HashSet::new(),
         }
     }
 }
@@ -52,6 +68,10 @@ fn help(name: &str) -> String {
         --tag <string>:
             Tag to filter on. Multiple tags can be specified by using multiple --tag flags.
             All the logs containing at least one of the passed tags would be printed.
+
+        --ignore-tag <string>:
+            Tag to ignore. Any logs containing at least one of the passed tags will not be
+            printed.
 
         --pid <integer>:
             pid for the program to filter on.
@@ -94,7 +114,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 let tag = &args[i + 1];
                 if tag.len() > MAX_TAG_LEN_BYTES as usize {
                     return Err(format!(
-                        "'{}' should not be more then {} characters",
+                        "'{}' should not be more than {} characters",
                         tag, MAX_TAG_LEN_BYTES
                     ));
                 }
@@ -102,6 +122,16 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 if options.filter.tags.len() > MAX_TAGS as usize {
                     return Err(format!("Max tags allowed: {}", MAX_TAGS));
                 }
+            }
+            "--ignore-tag" => {
+                let tag = &args[i + 1];
+                if tag.len() > MAX_TAG_LEN_BYTES as usize {
+                    return Err(format!(
+                        "'{}' should not be more than {} characters",
+                        tag, MAX_TAG_LEN_BYTES
+                    ));
+                }
+                options.local.ignore_tags.insert(String::from(tag.as_ref()));
             }
             "--severity" => match args[i + 1].as_ref() {
                 "INFO" => options.filter.min_severity = LogLevelFilter::Info,
@@ -153,7 +183,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 }
             }
             "--file" => {
-                options.file = Some((&args[i + 1]).clone());
+                options.local.file = Some((&args[i + 1]).clone());
             }
             a => {
                 return Err(format!("Invalid option {}", a));
@@ -167,6 +197,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
 struct Listener<W: Write + Send> {
     // stores pid, dropped_logs
     dropped_logs: HashMap<u64, u32>,
+    local_options: LocalOptions,
     writer: W,
 }
 
@@ -175,6 +206,13 @@ where
     W: Write + Send,
 {
     fn log(&mut self, message: LogMessage) {
+        if message
+            .tags
+            .iter()
+            .any(|tag| self.local_options.ignore_tags.contains(tag))
+        {
+            return;
+        }
         let tags = message.tags.join(", ");
         writeln!(
             self.writer,
@@ -229,25 +267,28 @@ fn get_log_level(level: i32) -> String {
     }
 }
 
-fn get_writer(file: &Option<String>) -> Result<Box<dyn Write + Send>, Error> {
-    match file {
-        None => Ok(Box::new(stdout())),
-        Some(name) => {
+fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + Send>>, Error> {
+    let writer: Box<dyn Write + Send> = match local_options.file {
+        None => Box::new(stdout()),
+        Some(ref name) => {
             let f = OpenOptions::new().append(true).create(true).open(name)?;
-            Ok(Box::new(f))
+            Box::new(f)
         }
-    }
+    };
+    Ok(Listener {
+        dropped_logs: HashMap::new(),
+        writer: writer,
+        local_options: local_options,
+    })
 }
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
-    let (filter_options, file) =
-        options.map_or_else(|| (None, &None), |o| (Some(&mut o.filter), &o.file));
-    let l = Listener {
-        dropped_logs: HashMap::new(),
-        writer: get_writer(file)?,
-    };
-
+    let (filter_options, local_options) = options.map_or_else(
+        || (None, LocalOptions::default()),
+        |o| (Some(&mut o.filter), o.local.clone()),
+    );
+    let l = new_listener(local_options)?;
     let listener_fut = syslog_listener::run_log_listener(l, filter_options, false)?;
     executor
         .run_singlethreaded(listener_fut)
@@ -304,6 +345,10 @@ mod tests {
         let mut l = Listener {
             dropped_logs: HashMap::new(),
             writer: tmp_file,
+            local_options: LocalOptions {
+                file: None,
+                ignore_tags: HashSet::new(),
+            },
         };
 
         // test log levels
@@ -445,6 +490,28 @@ mod tests {
         }
 
         #[test]
+        fn one_ignore_tag() {
+            let args = vec!["--ignore-tag".to_string(), "tag".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.ignore_tags.insert("tag".to_string());
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn multiple_ignore_tags() {
+            let args = vec![
+                "--ignore-tag".to_string(),
+                "tag".to_string(),
+                "--ignore-tag".to_string(),
+                "tag1".to_string(),
+            ];
+            let mut expected = LogListenerOptions::default();
+            expected.local.ignore_tags.insert("tag".to_string());
+            expected.local.ignore_tags.insert("tag1".to_string());
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
         fn pid() {
             let args = vec!["--pid".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -516,7 +583,7 @@ mod tests {
         #[test]
         fn file() {
             let mut expected = LogListenerOptions::default();
-            expected.file = Some("/data/test".to_string());
+            expected.local.file = Some("/data/test".to_string());
             let args = vec!["--file".to_string(), "/data/test".to_string()];
             parse_flag_test_helper(&args, Some(&expected));
         }

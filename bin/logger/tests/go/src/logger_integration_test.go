@@ -29,13 +29,7 @@ func TestFullStack(t *testing.T) {
 		t.Fatalf("error stating log listener: %s", err)
 	}
 
-	var max big.Int
-	max.SetInt64(10000)
-	r, err := rand.Int(rand.Reader, &max)
-	if err != nil {
-		log.Fatal(err)
-	}
-	tag := fmt.Sprintf("logger_test_%d", r)
+	tag := genTag()
 
 	ctx := context.CreateFromStartupInfo()
 	if err := logger.InitDefaultLoggerWithTags(ctx.GetConnector(), tag); err != nil {
@@ -54,6 +48,33 @@ func TestFullStack(t *testing.T) {
 	t.Run("LogListenerToFile", func(t *testing.T) {
 		testToFile(t, tag, expected)
 	})
+
+	tagToIgnore := tag
+	for tagToIgnore == tag {
+		tagToIgnore = genTag()
+	}
+
+	if err := logger.InfoTf(tagToIgnore, "integer: NaN"); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("LogListenerIgnoringTag", func(t *testing.T) {
+		testIgnoringTag(t, tag, tagToIgnore, expected)
+	})
+
+	t.Run("LogListenerListingAndIgnoringTag", func(t *testing.T) {
+		testListingAndIgnoringTag(t, tag, tagToIgnore, expected)
+	})
+}
+
+func genTag() string {
+	var max big.Int
+	max.SetInt64(10000)
+	r, err := rand.Int(rand.Reader, &max)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return fmt.Sprintf("logger_test_%d", r)
 }
 
 // testToStdout runs log_listener to listen for the given tag and to write its
@@ -122,4 +143,49 @@ func tryWithBackoff(t *testing.T, f func() bool) bool {
 	}
 
 	return false
+}
+
+// testIgnoringTag runs log_listener configured to listen for `tag` and ignore
+// `tagToIgnore`. The last log containing `tag` and not `tagToIgnore` is then
+// compared against `expected`.
+func testIgnoringTag(t *testing.T, tag, tagToIgnore, expected string) {
+	cmd := exec.Command(loglistener, "--tag", tag, "--ignore-tag", tagToIgnore)
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cmd.Process.Kill()
+
+	res := tryWithBackoff(t, func() bool {
+		return strings.HasSuffix(stdout.String(), expected)
+	})
+
+	if !res {
+		t.Fatalf("expected suffix: %q, got: %q", expected, stdout.String())
+	}
+}
+
+// testListingAndIgnoringTag runs log_listener configured to listen for `tag`
+// AND `tagToIgnore`, and to ignore `tagToIgnore`. The last log containing `tag`
+// and not `tagToIgnore` is then compared against `expected` (the same behavior
+// as in testIgnoringTag)
+func testListingAndIgnoringTag(t *testing.T, tag, tagToIgnore, expected string) {
+	cmd := exec.Command(loglistener, "--tag", tag, "--tag", tagToIgnore, "--ignore-tag", tagToIgnore)
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cmd.Process.Kill()
+
+	res := tryWithBackoff(t, func() bool {
+		return strings.HasSuffix(stdout.String(), expected)
+	})
+
+	if !res {
+		t.Fatalf("expected suffix: %q, got: %q", expected, stdout.String())
+	}
 }
