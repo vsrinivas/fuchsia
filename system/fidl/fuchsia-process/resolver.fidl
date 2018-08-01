@@ -1,0 +1,21 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.process;
+
+[Discoverable, Layout="Simple"]
+interface Resolver {
+    // Resolves the given |name| to an |executable| and an shared library loader.
+    //
+    // If present, the |executable| is suitable for use as the |executable|
+    // property of |LaunchInfo|. If present, the |ldsvc| is suitable for use as
+    // the PA_LDSVC_LOADER handle when launching the process.
+    //
+    // For example, the resolver might locate the given |name| inside a package
+    // and return the exectuable binary from the package as well as a shared
+    // library loader scoped to that package.
+    1: Resolve(string:4096 name) -> (status @status,
+                                     handle<vmo>? executable,
+                                     handle<channel>? ldsvc);
+};

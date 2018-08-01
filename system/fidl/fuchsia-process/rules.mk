@@ -12,6 +12,8 @@ MODULE_PACKAGE := fidl
 
 MODULE_FIDL_LIBRARY := fuchsia.process
 
-MODULE_SRCS += $(LOCAL_DIR)/process.fidl
+MODULE_SRCS += \
+	$(LOCAL_DIR)/launcher.fidl \
+	$(LOCAL_DIR)/resolver.fidl \
 
 include make/module.mk
