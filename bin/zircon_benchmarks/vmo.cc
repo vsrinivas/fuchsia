@@ -2,53 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <benchmark/benchmark.h>
-#include <zircon/syscalls.h>
+#include <vector>
 
-class Vmo : public benchmark::Fixture {};
+#include <fbl/string_printf.h>
+#include <lib/zx/vmo.h>
+#include <perftest/perftest.h>
 
-BENCHMARK_DEFINE_F(Vmo, Write)(benchmark::State& state) {
-  zx_handle_t vmo;
-  uint64_t bytes_processed = 0;
-  std::vector<char> buffer(state.range(0));
+namespace {
 
-  if (zx_vmo_create(state.range(0), 0, &vmo) != ZX_OK) {
-    state.SkipWithError("Failed to create vmo");
-    return;
-  }
-  while(state.KeepRunning()) {
-    if(zx_vmo_write(vmo, buffer.data(), 0, buffer.size()) != ZX_OK) {
-      state.SkipWithError("Failed to write to vmo");
+// Measure the time taken to write or read a chunk of data to/from a VMO
+// using the zx_vmo_write() or zx_vmo_read() syscalls respectively.
+bool VmoReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size,
+                        bool do_write) {
+  state->SetBytesProcessedPerRun(copy_size);
+
+  zx::vmo vmo;
+  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
+  std::vector<char> buffer(copy_size);
+
+  if (do_write) {
+    while (state->KeepRunning()) {
+      ZX_ASSERT(vmo.write(buffer.data(), 0, copy_size) == ZX_OK);
     }
-    bytes_processed += buffer.size();
+  } else {
+    while (state->KeepRunning()) {
+      ZX_ASSERT(vmo.read(buffer.data(), 0, copy_size) == ZX_OK);
+    }
   }
-  zx_handle_close(vmo);
-  state.SetBytesProcessed(bytes_processed);
+  return true;
 }
 
-BENCHMARK_REGISTER_F(Vmo, Write)
-    ->Arg(128 * 1024)
-    ->Arg(1000 * 1024);
-
-BENCHMARK_DEFINE_F(Vmo, Read)(benchmark::State& state) {
-  zx_handle_t vmo;
-  std::vector<char> buffer(state.range(0));
-  uint64_t bytes_processed = 0;
-
-  if (zx_vmo_create(state.range(0), 0, &vmo) != ZX_OK) {
-    state.SkipWithError("Failed to create vmo");
-    return;
-  }
-  while(state.KeepRunning()) {
-    if(zx_vmo_read(vmo, buffer.data(), 0, buffer.size()) != ZX_OK) {
-      state.SkipWithError("Failed to read to vmo");
+void RegisterTests() {
+  for (bool do_write : {false, true}) {
+    for (unsigned size_in_kbytes : {128, 1000}) {
+      auto name = fbl::StringPrintf(
+          "Vmo/%s/%ukbytes", do_write ? "Write" : "Read", size_in_kbytes);
+      perftest::RegisterTest(name.c_str(), VmoReadOrWriteTest,
+                             size_in_kbytes * 1024, do_write);
     }
-    bytes_processed += buffer.size();
   }
-  zx_handle_close(vmo);
-  state.SetBytesProcessed(bytes_processed);
 }
+PERFTEST_CTOR(RegisterTests);
 
-BENCHMARK_REGISTER_F(Vmo, Read)
-    ->Arg(128 * 1024)
-    ->Arg(1000 * 1024);
+}  // namespace
