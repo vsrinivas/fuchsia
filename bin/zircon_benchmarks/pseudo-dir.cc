@@ -83,6 +83,8 @@ BENCHMARK_DEFINE_F(PseudoDir, Lookup)(benchmark::State& state) {
   }
 }
 
+BENCHMARK_REGISTER_F(PseudoDir, Lookup)->Range(1, 1 << 14);
+
 // Benchmark the time to read out a directory.
 // Parameterized by the number of files and the size of the output buffer.
 BENCHMARK_DEFINE_F(PseudoDir, Readdir)(benchmark::State& state) {
