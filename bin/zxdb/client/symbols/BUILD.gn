@@ -85,6 +85,7 @@ static_library("symbols") {
   public_deps = [
     "..:common",
     "//garnet/lib/debug_ipc:client",
+    "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
   ]
 

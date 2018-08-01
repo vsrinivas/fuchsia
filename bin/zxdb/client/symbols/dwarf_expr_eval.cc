@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -18,6 +19,12 @@ namespace zxdb {
 
 DwarfExprEval::DwarfExprEval() : weak_factory_(this) {}
 DwarfExprEval::~DwarfExprEval() = default;
+
+DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
+  FXL_DCHECK(is_complete_);
+  FXL_DCHECK(is_success_);
+  return result_type_;
+}
 
 uint64_t DwarfExprEval::GetResult() const {
   FXL_DCHECK(is_complete_);
@@ -47,6 +54,13 @@ DwarfExprEval::Completion DwarfExprEval::Eval(SymbolDataProvider* data_provider,
 }
 
 void DwarfExprEval::ContinueEval() {
+  // To allow interruption, only a certain number of instructions will be
+  // executed in sequence without posting back to the message loop. This
+  // gives calling code the chance to cancel long or hung executions. Since
+  // most programs are 1-4 instructions, the threshold can be low.
+  constexpr int kMaxInstructionsAtOnce = 32;
+  int instruction_count = 0;
+
   do {
     // Check for successfully reaching the end of the stream.
     if (!is_complete_ && expr_index_ == expr_.size()) {
@@ -63,6 +77,18 @@ void DwarfExprEval::ContinueEval() {
       completion_callback_ = CompletionCallback();
       return;
     }
+
+    if (instruction_count == kMaxInstructionsAtOnce) {
+      // Enough instructions have run at once. Schedule a callback to continue
+      // execution in the message loop.
+      debug_ipc::MessageLoop::Current()
+          ->PostTask([weak_eval = weak_factory_.GetWeakPtr()]() {
+            if (weak_eval)
+              weak_eval->ContinueEval();
+          });
+      return;
+    }
+    instruction_count++;
   } while (!is_complete_ && EvalOneOp() == Completion::kSync);
 }
 
@@ -90,7 +116,14 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 
   switch (op) {
     case llvm::dwarf::DW_OP_addr:
-      return OpPushUnsigned(8);  // Assume 64-bit (8-bytes per address).
+      // This is disabled until we have an example. The spec doesn't say
+      // anything about what this is supposed to be relative to (most likely
+      // the current module load address). It doesn't make sense for it to be
+      // truely absolute since no absolute addresses will be known at build
+      // time.
+      // return OpPushUnsigned(8);  // Assume 64-bit (8-bytes per address).
+      ReportUnimplementedOpcode(op);
+      return Completion::kSync;
     case llvm::dwarf::DW_OP_const1u:
       return OpPushUnsigned(1);
     case llvm::dwarf::DW_OP_const1s:
@@ -134,14 +167,11 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_and:
       return OpBinary([](uint64_t a, uint64_t b) { return a & b; });
     case llvm::dwarf::DW_OP_div:
-      return OpBinary([](uint64_t a, uint64_t b) {
-        return static_cast<uint64_t>(static_cast<int64_t>(a) /
-                                     static_cast<int64_t>(b));
-      });
+      return OpDiv();
     case llvm::dwarf::DW_OP_minus:
       return OpBinary([](uint64_t a, uint64_t b) { return a - b; });
     case llvm::dwarf::DW_OP_mod:
-      return OpBinary([](uint64_t a, uint64_t b) { return a % b; });
+      return OpMod();
     case llvm::dwarf::DW_OP_mul:
       return OpBinary([](uint64_t a, uint64_t b) { return a * b; });
     case llvm::dwarf::DW_OP_neg:
@@ -219,10 +249,11 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_call_frame_cfa:
     case llvm::dwarf::DW_OP_bit_piece:       // ULEB128 size + ULEB128 offset.
     case llvm::dwarf::DW_OP_implicit_value:  // ULEB128 size + block of size.
-    case llvm::dwarf::DW_OP_stack_value:
       // TODO(brettw) implement these.
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
+    case llvm::dwarf::DW_OP_stack_value:
+      return OpStackValue();
 
     default:
       // Invalid or unknown opcode.
@@ -377,6 +408,24 @@ DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
   return PushRegisterWithOffset(reg_index, offset);
 }
 
+DwarfExprEval::Completion DwarfExprEval::OpDiv() {
+  if (stack_.size() < 2) {
+    ReportStackUnderflow();
+  } else {
+    uint64_t b = stack_.back();
+    stack_.pop_back();
+    uint64_t a = stack_.back();
+
+    if (b == 0) {
+      ReportError("DWARF expression divided by zero.");
+    } else {
+      stack_.back() = static_cast<uint64_t>(static_cast<int64_t>(a) /
+                                            static_cast<int64_t>(b));
+    }
+  }
+  return Completion::kSync;
+}
+
 DwarfExprEval::Completion DwarfExprEval::OpDrop() {
   if (stack_.empty())
     ReportStackUnderflow();
@@ -412,6 +461,24 @@ DwarfExprEval::Completion DwarfExprEval::OpBregx() {
     return Completion::kSync;
 
   return PushRegisterWithOffset(static_cast<int>(reg), offset);
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpMod() {
+  if (stack_.size() < 2) {
+    ReportStackUnderflow();
+  } else {
+    uint64_t b = stack_.back();
+    stack_.pop_back();
+    uint64_t a = stack_.back();
+
+    if (b == 0) {
+      ReportError("DWARF expression divided by zero.");
+    } else {
+      stack_.back() = static_cast<uint64_t>(static_cast<int64_t>(a) %
+                                            static_cast<int64_t>(b));
+    }
+  }
+  return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpOver() {
@@ -507,6 +574,19 @@ DwarfExprEval::Completion DwarfExprEval::OpSkip() {
   if (!ReadSigned(2, &skip_amount))
     return Completion::kSync;
   Skip(skip_amount);
+  return Completion::kSync;
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpStackValue() {
+  // "Specifies that the object does not exist in memory but rather is a
+  // constant value. The value from the top of the stack is the value to be
+  // used. This is the actual object value and not the location."
+  result_type_ = ResultType::kValue;
+
+  // This operation also implicitly terminates the computation. Jump to the
+  // end to indicate this.
+  expr_index_ = expr_.size();
+
   return Completion::kSync;
 }
 

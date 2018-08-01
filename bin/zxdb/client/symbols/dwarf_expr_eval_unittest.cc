@@ -162,6 +162,55 @@ TEST_F(DwarfExprEvalTest, NoResult) {
              0, kNoResults);
 }
 
+TEST_F(DwarfExprEvalTest, MarkValue) {
+  // A computation without "stack_value" should report the result type as a
+  // pointers.
+  DoEvalTest({llvm::dwarf::DW_OP_lit4}, true, DwarfExprEval::Completion::kSync,
+             4u);
+  EXPECT_EQ(DwarfExprEval::ResultType::kPointer, eval().GetResultType());
+
+  // "stack value" should mark the result as a stack value and terminate the
+  // computation, skipping the last instruction.
+  DoEvalTest({llvm::dwarf::DW_OP_lit4, llvm::dwarf::DW_OP_stack_value,
+              llvm::dwarf::DW_OP_lit5},
+             true, DwarfExprEval::Completion::kSync, 4u);
+  EXPECT_EQ(DwarfExprEval::ResultType::kValue, eval().GetResultType());
+}
+
+// Tests that we can recover from infinite loops and destroy the evaluator
+// when it's got an asynchronous operation pending.
+TEST_F(DwarfExprEvalTest, InfiniteLoop) {
+  // This expression loops back to the beginning infinitely.
+  std::vector<uint8_t> loop_data = {llvm::dwarf::DW_OP_skip, 0xfd, 0xff};
+
+  std::unique_ptr<DwarfExprEval> eval = std::make_unique<DwarfExprEval>();
+
+  bool callback_issued = false;
+  eval->Eval(&provider(), loop_data,
+             [&callback_issued](DwarfExprEval* eval, const Err& err) {
+               callback_issued = true;
+             });
+
+  // Let the message loop process messages for a few times so the evaluator can
+  // run.
+  loop().PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  loop().Run();
+  loop().PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  loop().Run();
+
+  // Reset the evaluator, this should cancel everything.
+  eval.reset();
+
+  // This should not crash (the evaluator may have posted a pending task
+  // that will get executed when we run the loop again, and it should notice
+  // the object is gone).
+  loop().PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  loop().Run();
+
+  // Callback should never have been issued.
+  EXPECT_FALSE(callback_issued);
+}
+
 // Tests synchronously reading a single register.
 TEST_F(DwarfExprEvalTest, SyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
@@ -228,12 +277,15 @@ TEST_F(DwarfExprEvalTest, LiteralOp) {
              4u);
 }
 
+/* TODO(brettw) Commented out until this is implemented (see comment in
+                implementation).
 TEST_F(DwarfExprEvalTest, Addr) {
   // Always expect 8-byte (64-bit) addresses.
   DoEvalTest(
       {llvm::dwarf::DW_OP_addr, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xf0},
       true, DwarfExprEval::Completion::kSync, 0xf001020304050607u);
 }
+*/
 
 // Tests that reading fixed-length constant without enough room fails.
 TEST_F(DwarfExprEvalTest, Const4ReadOffEnd) {
@@ -461,6 +513,12 @@ TEST_F(DwarfExprEvalTest, Div) {
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit2,
               llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_div},
              true, DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-4));
+
+  // Divide by zero should give an error.
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit0,
+              llvm::dwarf::DW_OP_div},
+             false, DwarfExprEval::Completion::kSync, 0,
+             "DWARF expression divided by zero.");
 }
 
 TEST_F(DwarfExprEvalTest, Mod) {
@@ -468,6 +526,12 @@ TEST_F(DwarfExprEvalTest, Mod) {
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit2,
               llvm::dwarf::DW_OP_mod},
              true, DwarfExprEval::Completion::kSync, 1);
+
+  // Modulo 0 should give an error
+  DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit0,
+              llvm::dwarf::DW_OP_mod},
+             false, DwarfExprEval::Completion::kSync, 0,
+             "DWARF expression divided by zero.");
 }
 
 TEST_F(DwarfExprEvalTest, PlusUconst) {

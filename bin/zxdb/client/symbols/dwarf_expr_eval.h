@@ -43,6 +43,11 @@ class DwarfExprEval {
   // in the future.
   enum class Completion { kSync, kAsync };
 
+  // A DWARF expression can compute either the address of the desired object in
+  // the debugged programs address space, or it can compute the actual value of
+  // the object (because it may not expst in memory).
+  enum class ResultType { kPointer, kValue };
+
   // Storage for opcode data.
   using Expression = std::vector<uint8_t>;
 
@@ -57,6 +62,10 @@ class DwarfExprEval {
   // there is a valid result to read.
   bool is_complete() const { return is_complete_; }
   bool is_success() const { return is_success_; }
+
+  // Valid when is_success(), this indicates how to interpret the value from
+  // GetResult().
+  ResultType GetResultType() const;
 
   // Valid when is_success(), this returns the result of evaluating the
   // expression. The meaning will be dependent on the context of the expression
@@ -121,10 +130,12 @@ class DwarfExprEval {
   // parameters will be consumed).
   Completion OpBra();
   Completion OpBreg(uint8_t op);
+  Completion OpDiv();
   Completion OpDrop();
   Completion OpDup();
   Completion OpRegx();
   Completion OpBregx();
+  Completion OpMod();
   Completion OpOver();
   Completion OpPick();
   Completion OpPlusUconst();
@@ -134,6 +145,7 @@ class DwarfExprEval {
   Completion OpPushLEBUnsigned();
   Completion OpRot();
   Completion OpSkip();
+  Completion OpStackValue();
   Completion OpSwap();
 
   // Adjusts the instruction offset by the given amount, handling out-of-bounds
@@ -153,6 +165,10 @@ class DwarfExprEval {
 
   // Allocated on the heap to avoid exposing LLVM headers.
   std::unique_ptr<llvm::DataExtractor> data_extractor_;
+
+  // The result type. Normally expressions compute pointers unless explicitly
+  // tagged as a value.
+  ResultType result_type_ = ResultType::kPointer;
 
   // Indicates that execution is complete. When this is true, the callback will
   // have been issued. A complete expression could have stopped on error or
