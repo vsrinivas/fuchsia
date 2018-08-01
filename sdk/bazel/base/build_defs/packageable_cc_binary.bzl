@@ -14,7 +14,7 @@ Args:
 """
 
 def _cc_contents_impl(target, context):
-    if context.rule.kind != "cc_binary":
+    if not context.rule.kind in ["cc_binary", "cc_test"]:
         return [
             PackageGeneratedInfo(mappings = []),
         ]
