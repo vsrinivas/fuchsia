@@ -41,3 +41,13 @@ Fuchsia has adopted a [readability rubric](../../api/fidl.md) for FIDL libraries
 ## Learning
 
 See the [tutorial](tutorial.md) to learn about Fidl service development.
+
+## FIDL Tuning Proposals
+
+Substantial changes to FIDL (whether the language, the wire format, or
+language bindings) are described in [FIDL Tuning Proposals]. These
+decisions are recorded here for posterity. This includes both accepted
+and rejected designs. [FTP-001] describes the proposal process itself.
+
+[FIDL Tuning Proposals]: ./ftp
+[FTP-001]: ./ftp/ftp-001.md
