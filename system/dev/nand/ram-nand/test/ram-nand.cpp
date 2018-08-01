@@ -44,12 +44,10 @@ bool TrivialLifetimeTest() {
 bool DdkLifetimeTest() {
     BEGIN_TEST;
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
-    char name[NAME_MAX];
     NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
-    ASSERT_EQ(ZX_OK, device->Init(name));
 
     fake_ddk::Bind ddk;
-    device->Bind();
+    ASSERT_EQ(ZX_OK, device->Bind());
     device->DdkUnbind();
     EXPECT_TRUE(ddk.Ok());
 

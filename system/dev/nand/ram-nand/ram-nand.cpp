@@ -60,6 +60,7 @@ zx_status_t NandDevice::Bind() {
 }
 
 zx_status_t NandDevice::Init(char name[NAME_MAX]) {
+    ZX_DEBUG_ASSERT(!thread_created_);
     static uint64_t dev_count = 0;
     snprintf(name, NAME_MAX, "ram-nand-%" PRIu64, dev_count++);
 
