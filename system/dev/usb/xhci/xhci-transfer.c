@@ -652,6 +652,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_STOPPED:
         case TRB_CC_STOPPED_LENGTH_INVALID:
         case TRB_CC_STOPPED_SHORT_PACKET:
+        case TRB_CC_ENDPOINT_NOT_ENABLED_ERROR:
             switch (ep->state) {
             case EP_STATE_PAUSED:
                 result = ZX_ERR_CANCELED;
@@ -736,7 +737,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     if (!req) {
         // no req expected for this condition code
         if (cc != TRB_CC_STOPPED_LENGTH_INVALID) {
-            zxlogf(ERROR, "xhci_handle_transfer_event: unable to find request to complete!\n");
+            zxlogf(TRACE, "xhci_handle_transfer_event: unable to find request to complete!\n");
         }
         mtx_unlock(&ep->lock);
         return;
