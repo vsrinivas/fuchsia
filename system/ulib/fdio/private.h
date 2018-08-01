@@ -128,6 +128,9 @@ zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline,
 // Takes ownership of h.
 fdio_t* fdio_pipe_create(zx_handle_t h);
 
+// Wraps a socket with an fdio_t using socketpair io.
+fdio_t* fdio_socketpair_create(zx_handle_t h);
+
 zx_status_t fdio_pipe_posix_ioctl(fdio_t* io, int req, va_list va);
 
 // Wraps a vmo, offset, length with an fdio_t providing a readonly file.

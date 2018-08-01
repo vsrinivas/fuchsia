@@ -12,6 +12,9 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <lib/fdio/limits.h>
+#include <lib/fdio/util.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <unittest/unittest.h>
@@ -397,6 +400,43 @@ bool socketpair_shutdown_peer_rd_during_send_test(void) {
     END_TEST;
 }
 
+bool socketpair_clone_or_unwrap_and_wrap_test(void) {
+    BEGIN_TEST;
+
+    int fds[2];
+    int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
+
+    zx_handle_t handles[FDIO_MAX_HANDLES];
+    uint32_t types[FDIO_MAX_HANDLES];
+    zx_status_t handle_count = fdio_clone_fd(fds[0], fds[0], handles, types);
+    ASSERT_GT(handle_count, 0, "fdio_clone_fd() failed");
+    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_SOCKETPAIR, "Wrong cloned fd type");
+
+    int cloned_fd = -1;
+    status = fdio_create_fd(handles, types, handle_count, &cloned_fd);
+    EXPECT_EQ(status, 0, "fdio_create_fd(..., &cloned_fd) failed");
+
+    handle_count = fdio_transfer_fd(fds[0], fds[0], handles, types);
+    ASSERT_GT(handle_count, 0, "fdio_transfer_fd() failed");
+    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_SOCKETPAIR, "Wrong transferred fd type");
+
+    int transferred_fd = -1;
+    status = fdio_create_fd(handles, types, handle_count, &transferred_fd);
+    EXPECT_EQ(status, 0, "fdio_create_fd(..., &transferred_fd) failed");
+
+    // Verify that an operation specific to socketpairs works on these fds.
+    ASSERT_EQ(shutdown(cloned_fd, SHUT_RD), 0, "shutdown(cloned_fd, SHUT_RD) failed");
+    ASSERT_EQ(shutdown(transferred_fd, SHUT_WR), 0, "shutdown(transferred_fd, SHUT_WR) failed");
+
+    if (cloned_fd != -1)
+        ASSERT_EQ(close(cloned_fd), 0, "Failed to close cloned_fd");
+    if (transferred_fd != -1)
+        ASSERT_EQ(close(transferred_fd), 0, "Failed to close transferred_fd");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fdio_socketpair_test)
 RUN_TEST(socketpair_test);
 RUN_TEST(socketpair_shutdown_rd_test);
@@ -408,4 +448,5 @@ RUN_TEST(socketpair_shutdown_self_rd_during_recv_test);
 RUN_TEST(socketpair_shutdown_peer_wr_during_recv_test);
 RUN_TEST(socketpair_shutdown_self_wr_during_send_test);
 RUN_TEST(socketpair_shutdown_peer_rd_during_send_test);
+RUN_TEST(socketpair_clone_or_unwrap_and_wrap_test);
 END_TEST_CASE(fdio_socketpair_test)

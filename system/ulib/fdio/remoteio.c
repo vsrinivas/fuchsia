@@ -526,6 +526,15 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
         }
         info.socket.s = handles[0];
         break;
+    case PA_FDIO_SOCKETPAIR:
+        info.tag = FDIO_PROTOCOL_SOCKETPAIR;
+        // Expected: Single socket handle
+        if (hcount != 1) {
+            r = ZX_ERR_INVALID_ARGS;
+            goto fail;
+        }
+        info.pipe.s = handles[0];
+        break;
     default:
         r = ZX_ERR_IO;
         goto fail;
@@ -632,6 +641,14 @@ zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
         }
         return ZX_OK;
     }
+    case FDIO_PROTOCOL_SOCKETPAIR:
+        if (handle != ZX_HANDLE_INVALID) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        } else if ((*out = fdio_socketpair_create(info->pipe.s)) == NULL) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+        return ZX_OK;
     default:
         printf("fdio_from_handles: Not supported\n");
         r = ZX_ERR_NOT_SUPPORTED;
