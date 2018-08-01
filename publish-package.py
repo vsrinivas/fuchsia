@@ -228,6 +228,8 @@ def main():
                                                   "packages as package manager "
                                                   "packages."))
     parser.add_argument('--build-dir', action='store', required=True)
+    parser.add_argument('--host-tools-dir', action='store', required=False,
+                        help="""Directory where host tools such as 'pm' live""")
     parser.add_argument('--update-repo', action='store', required=False)
     parser.add_argument('--update-keys', action='store', required=False)
     parser.add_argument('--pkg-key', action='store', required=False)
@@ -248,8 +250,11 @@ def main():
     args = parser.parse_args()
 
     build_dir = args.build_dir
-    ptr_size = 8 * struct.calcsize("P")
-    host_tools_dir = os.path.join(build_dir, "host_x%d" % ptr_size)
+
+    host_tools_dir = args.host_tools_dir
+    if not host_tools_dir:
+      ptr_size = 8 * struct.calcsize("P")
+      host_tools_dir = os.path.join(build_dir, "host_x%d" % ptr_size)
     pm_bin = os.path.join(host_tools_dir, "pm")
     if not os.path.exists(pm_bin):
         print "Could not find 'pm' tool at %s" % pm_bin
@@ -308,7 +313,7 @@ def main():
     if not pkgs_dir:
       pkgs_dir = os.path.join(build_dir, "package")
 
-    return publish(pm_bin, amber_bin, pkg_key, build_dir, pkg_stg_dir, repo_dir,
+    return publish(pm_bin, amber_bin, pkg_key, keys_src_dir, pkg_stg_dir, repo_dir,
                    pkgs_dir, pkg_list, args.ver_scheme, not args.quiet)
 
 if __name__ == '__main__':
