@@ -292,22 +292,7 @@ zx_status_t sys_thread_set_priority(int32_t prio) {
 #endif
 }
 
-zx_status_t sys_task_suspend(zx_handle_t task_handle) {
-    LTRACE_ENTRY;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    // TODO(ZX-1840): Add support for tasks other than threads
-    fbl::RefPtr<ThreadDispatcher> thread;
-    zx_status_t status = up->GetDispatcherWithRights(task_handle, ZX_RIGHT_WRITE,
-                                                     &thread);
-    if (status != ZX_OK)
-        return status;
-
-    return thread->Suspend();
-}
-
-zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* token) {
+zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
     LTRACE_ENTRY;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -325,6 +310,10 @@ zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* tok
     if (status == ZX_OK)
         status = token->make(fbl::move(suspend_token), rights);
     return status;
+}
+
+zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* token) {
+    return sys_task_suspend(task_handle, token);
 }
 
 zx_status_t sys_process_create(zx_handle_t job_handle,
