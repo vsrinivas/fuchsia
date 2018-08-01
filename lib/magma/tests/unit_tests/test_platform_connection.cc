@@ -8,6 +8,10 @@
 #include <poll.h>
 #include <thread>
 
+namespace {
+constexpr uint32_t kImmediateCommandSize = 4096 / 128;
+}
+
 class TestPlatformConnection {
 public:
     static std::unique_ptr<TestPlatformConnection> Create();
@@ -129,12 +133,14 @@ public:
 
     void TestExecuteImmediateCommands()
     {
-        uint8_t commands_buffer[512] = {};
+        uint8_t commands_buffer[4096] = {};
         uint64_t semaphore_ids[]{0, 1, 2};
         magma_system_inline_command_buffer commands[128];
+        static_assert(kImmediateCommandSize * 128 == sizeof(commands_buffer),
+                      "Incorrect command size");
         for (size_t i = 0; i < 128; i++) {
             commands[i].data = commands_buffer;
-            commands[i].size = 4;
+            commands[i].size = kImmediateCommandSize;
             commands[i].semaphore_count = 3;
             commands[i].semaphores = semaphore_ids;
         }
@@ -264,10 +270,10 @@ public:
                                            void* commands, uint64_t semaphore_count,
                                            uint64_t* semaphores) override
     {
-        EXPECT_GE(256u, commands_size);
-        uint8_t received_bytes[256] = {};
+        EXPECT_GE(2048u, commands_size);
+        uint8_t received_bytes[2048] = {};
         EXPECT_EQ(0, memcmp(received_bytes, commands, commands_size));
-        uint64_t command_count = commands_size / 4;
+        uint64_t command_count = commands_size / kImmediateCommandSize;
         EXPECT_EQ(3u * command_count, semaphore_count);
         for (uint32_t i = 0; i < command_count; i++) {
             EXPECT_EQ(0u, semaphores[0]);
@@ -277,7 +283,7 @@ public:
         }
 
         immediate_commands_bytes_executed_ += commands_size;
-        TestPlatformConnection::test_complete = immediate_commands_bytes_executed_ == 512;
+        TestPlatformConnection::test_complete = immediate_commands_bytes_executed_ == 4096;
 
         return MAGMA_STATUS_OK;
     }

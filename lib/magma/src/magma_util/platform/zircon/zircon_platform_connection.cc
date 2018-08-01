@@ -18,7 +18,7 @@
 
 namespace magma {
 
-constexpr size_t kReceiveBufferSize = 256;
+constexpr size_t kReceiveBufferSize = 2048;
 
 enum OpCode {
     ImportBuffer,
