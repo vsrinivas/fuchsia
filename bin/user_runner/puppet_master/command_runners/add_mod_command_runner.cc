@@ -76,7 +76,13 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
       operation_queue_.Add(new InitializeChainCall(
           story_storage_, std::move(full_module_path),
           std::move(parameter_info_),
-          [this, flow](fuchsia::modular::ModuleParameterMapPtr map) {
+          [this, flow](fuchsia::modular::ExecuteResult result,
+                       fuchsia::modular::ModuleParameterMapPtr map) {
+            if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+              result_ = std::move(result);
+              return;
+              // Operation finishes since |flow| goes out of scope.
+            }
             Cont2(flow, std::move(map));
           }));
     });
@@ -129,9 +135,14 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult> {
         }
         case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
           // Create a link, but don't populate it. This is useful in the event
-          // that the link is used as an 'output' link.
+          // that the link is used as an 'output' link. Setting a valid JSON
+          // value for null in the vmo.
+          fsl::SizedVmo vmo;
+          FXL_CHECK(fsl::VmoFromString("null", &vmo));
+          fuchsia::modular::CreateLinkInfo create_link;
+          create_link.initial_data = std::move(vmo).ToTransport();
           entry->key = param.name;
-          entry->value.set_create_link(fuchsia::modular::CreateLinkInfo{});
+          entry->value.set_create_link(std::move(create_link));
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::kJson: {

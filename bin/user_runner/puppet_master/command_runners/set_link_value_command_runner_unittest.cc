@@ -13,6 +13,15 @@ namespace modular {
 namespace {
 
 class SetLinkValueCommandRunnerTest : public testing::TestWithSessionStorage {
+ public:
+  void SetUp() override {
+    testing::TestWithSessionStorage::SetUp();
+    session_storage_ = MakeSessionStorage("page");
+    runner_ = MakeRunner();
+    story_id_ = CreateStory(session_storage_.get());
+    story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
+  }
+
  protected:
   std::unique_ptr<SetLinkValueCommandRunner> MakeRunner() {
     return std::make_unique<SetLinkValueCommandRunner>();
@@ -30,44 +39,79 @@ class SetLinkValueCommandRunnerTest : public testing::TestWithSessionStorage {
     command.set_set_link_value(std::move(set_link_value));
     return command;
   }
+
+  std::unique_ptr<SessionStorage> session_storage_;
+  std::unique_ptr<StoryStorage> story_storage_;
+  std::unique_ptr<SetLinkValueCommandRunner> runner_;
+  std::string story_id_;
 };
 
 // On an empty story, it sets a link with a value, then updates it. Each time
 // verifying that the link value is the expected one.
 TEST_F(SetLinkValueCommandRunnerTest, Execute) {
-  auto storage = MakeSessionStorage("page");
-  auto runner = MakeRunner();
-  auto story_id = CreateStory(storage.get());
-  auto story_storage = GetStoryStorage(storage.get(), story_id);
   bool done{};
 
   // Let's set a value.
   auto command = MakeSetLinkValueCommand("link", "10");
-  runner->Execute(story_id, story_storage.get(), std::move(command),
-                  [&](fuchsia::modular::ExecuteResult result) {
-                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                              result.status);
-                    done = true;
-                  });
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                               result.status);
+                     done = true;
+                   });
   RunLoopUntil([&] { return done; });
   done = false;
 
   // Let's get the value.
-  EXPECT_EQ("10", GetLinkValue(story_storage.get(), "link"));
+  EXPECT_EQ("10", GetLinkValue(story_storage_.get(), "link"));
 
   // Mutate again.
   auto command2 = MakeSetLinkValueCommand("link", "20");
-  runner->Execute(story_id, story_storage.get(), std::move(command2),
-                  [&](fuchsia::modular::ExecuteResult result) {
-                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                              result.status);
-                    done = true;
-                  });
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command2),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                               result.status);
+                     done = true;
+                   });
   RunLoopUntil([&] { return done; });
   done = false;
 
   // Let's get the value again, we should see the new one.
-  EXPECT_EQ("20", GetLinkValue(story_storage.get(), "link"));
+  EXPECT_EQ("20", GetLinkValue(story_storage_.get(), "link"));
+}
+
+TEST_F(SetLinkValueCommandRunnerTest, ExecuteInvalidJson) {
+  bool done{};
+
+  // Let's set a value.
+  auto command = MakeSetLinkValueCommand("link", "10");
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                               result.status);
+                     done = true;
+                   });
+  RunLoopUntil([&] { return done; });
+  done = false;
+
+  // Let's get the value.
+  EXPECT_EQ("10", GetLinkValue(story_storage_.get(), "link"));
+
+  // Mutate with invalid JSON.
+  auto command2 = MakeSetLinkValueCommand("link", "x}");
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command2),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
+                               result.status);
+                     EXPECT_EQ("Attempted to update link with invalid JSON",
+                               result.error_message);
+                     done = true;
+                   });
+  RunLoopUntil([&] { return done; });
+  done = false;
+
+  // Let's get the value again, we should see the original one.
+  EXPECT_EQ("10", GetLinkValue(story_storage_.get(), "link"));
 }
 
 }  // namespace

@@ -578,6 +578,35 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonParam) {
   // Set up command
   fuchsia::modular::Intent intent;
   intent.action = "intent_action";
+  intent.handler = "mod_url";
+  AddJsonParameter(&intent, "invalid_param", "x}");
+  auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
+
+  // Set up fake module resolver.
+  auto manifest = fuchsia::modular::ModuleManifest::New();
+  manifest->action = "intent_action";
+  manifest->binary = "mod_url";
+  fuchsia::modular::ModuleManifestPtr manifest_out;
+  fidl::Clone(manifest, &manifest_out);
+  fake_module_resolver_->SetManifest(std::move(manifest_out));
+
+  // Run the command and assert results.
+  bool done{};
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
+                               result.status);
+                     EXPECT_EQ("Attempted to update link with invalid JSON",
+                               result.error_message);
+                     done = true;
+                   });
+  RunLoopUntil([&] { return done; });
+}
+
+TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonParamResolution) {
+  // Set up command
+  fuchsia::modular::Intent intent;
+  intent.action = "intent_action";
   AddJsonParameter(&intent, "invalid_param", "x}");
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 

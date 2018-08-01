@@ -19,10 +19,10 @@ InitializeChainCall::InitializeChainCall(
       create_parameter_map_info_(std::move(create_parameter_map_info)) {}
 
 void InitializeChainCall::Run() {
-  FlowToken flow{this, &result_};
+  FlowToken flow{this, &result_, &parameter_map_};
 
-  result_ = fuchsia::modular::ModuleParameterMap::New();
-  result_->entries.resize(0);
+  parameter_map_ = fuchsia::modular::ModuleParameterMap::New();
+  parameter_map_->entries.resize(0);
 
   if (!create_parameter_map_info_) {
     return;
@@ -59,21 +59,23 @@ void InitializeChainCall::Run() {
       // should handle it.
       fuchsia::modular::LinkPath out_path;
       mapping->link_path.Clone(&out_path);
-      operations_.Add(
-          new SetLinkValueCall(story_storage_, std::move(out_path),
-                               [initial_json](fidl::StringPtr* value) {
-                                 if (value->is_null()) {
-                                   // This is a new link. If it weren't, *value
-                                   // would be set to some valid JSON.
-                                   *value = initial_json;
-                                 }
-                               },
-                               [flow](fuchsia::modular::ExecuteResult result) {
-                                 // TODO(miguelfrde): propagate errors
-                               }));
+      operations_.Add(new SetLinkValueCall(
+          story_storage_, std::move(out_path),
+          [initial_json](fidl::StringPtr* value) {
+            if (value->is_null()) {
+              // This is a new link. If it weren't, *value
+              // would be set to some valid JSON.
+              *value = initial_json;
+            }
+          },
+          [this, flow](fuchsia::modular::ExecuteResult result) {
+            if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+              result_ = std::move(result);
+            }
+          }));
     }
 
-    result_->entries.push_back(std::move(*mapping));
+    parameter_map_->entries.push_back(std::move(*mapping));
   }
 }
 

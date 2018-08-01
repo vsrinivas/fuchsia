@@ -20,6 +20,9 @@ void SetLinkValueCall::Run() {
   did_update->Then([this, flow](StoryStorage::Status status) {
     if (status == StoryStorage::Status::OK) {
       result_.status = fuchsia::modular::ExecuteStatus::OK;
+    } else if (status == StoryStorage::Status::LINK_INVALID_JSON) {
+      result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+      result_.error_message = "Attempted to update link with invalid JSON";
     } else {
       result_.status = fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
       std::stringstream stream;

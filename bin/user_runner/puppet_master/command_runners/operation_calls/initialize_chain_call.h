@@ -16,7 +16,8 @@ namespace modular {
 // for any fuchsia::modular::CreateModuleParameterMapInfo.property_info if
 // property_info[i].is_create_link_info().
 class InitializeChainCall
-    : public Operation<fuchsia::modular::ModuleParameterMapPtr> {
+    : public Operation<fuchsia::modular::ExecuteResult,
+                       fuchsia::modular::ModuleParameterMapPtr> {
  public:
   InitializeChainCall(StoryStorage* const story_storage,
                       fidl::VectorPtr<fidl::StringPtr> module_path,
@@ -31,7 +32,8 @@ class InitializeChainCall
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
   const fuchsia::modular::CreateModuleParameterMapInfoPtr
       create_parameter_map_info_;
-  fuchsia::modular::ModuleParameterMapPtr result_;
+  fuchsia::modular::ModuleParameterMapPtr parameter_map_;
+  fuchsia::modular::ExecuteResult result_;
   OperationCollection operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeChainCall);
