@@ -65,11 +65,7 @@
 
   gic: interrupt-controller@e82b0000 {
     interrupt-controller;
-    compatible = "arm,gic-400";
-    reg = <0xe82b1000 0x1000>, // GICD
-          <0xe82b2000 0x2000>; // GICC
-    #address-cells = <0>;
-    #interrupt-cells = <3>;
+    // Interrupt controller is populated at run-time.
   };
 
   pci@10000000 {

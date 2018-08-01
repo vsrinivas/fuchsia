@@ -333,7 +333,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
                                     const std::string& cmdline,
                                     const int dtb_overlay_fd,
                                     const size_t initrd_size,
-                                    uint8_t num_cpus) {
+                                    const GuestConfig& cfg) {
   void* dtb;
   size_t dtb_size;
   zx_status_t status = read_device_tree(dtb_fd, phys_mem, kDtbOffset,
@@ -393,7 +393,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
     FXL_LOG(ERROR) << "Failed to find \"/cpus\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  for (uint8_t cpu = 0; cpu != num_cpus; ++cpu) {
+  for (uint8_t cpu = 0; cpu != cfg.num_cpus(); ++cpu) {
     char subnode_name[10];
     sprintf(subnode_name, "cpu@%u", cpu);
     int cpu_off = fdt_add_subnode(dtb, cpus_off, subnode_name);
@@ -460,8 +460,79 @@ static zx_status_t load_device_tree(const int dtb_fd,
     }
   }
   for (auto entry : memory_map) {
-    add_memory_entry(dtb, memory_off, entry);
+    status = add_memory_entry(dtb, memory_off, entry);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
+
+  int gic_off = fdt_path_offset(dtb, "/interrupt-controller@e82b0000");
+  if (gic_off < 0) {
+    FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
+    return ZX_ERR_BAD_STATE;
+  }
+#if __aarch64__
+  if (cfg.gic_version() == machina::GicVersion::V2) {
+    ret = fdt_setprop_string(dtb, gic_off, "compatible", "arm,gic-400");
+    if (ret != 0) {
+      device_tree_error_msg("compatible");
+      return ZX_ERR_BAD_STATE;
+    }
+    // GICD memory map
+    status =
+        add_memory_entry(dtb, gic_off,
+                         MemRange{.addr = machina::kGicv2DistributorPhysBase,
+                                  .size = machina::kGicv2DistributorSize});
+    if (status != ZX_OK) {
+      return status;
+    }
+  } else {
+    ret = fdt_setprop_string(dtb, gic_off, "compatible", "arm,gic-v3");
+    if (ret != 0) {
+      device_tree_error_msg("compatible");
+      return ZX_ERR_BAD_STATE;
+    }
+    // GICD memory map
+    status =
+        add_memory_entry(dtb, gic_off,
+                         MemRange{.addr = machina::kGicv3DistributorPhysBase,
+                                  .size = machina::kGicv3DistributorSize});
+    if (status != ZX_OK) {
+      return status;
+    }
+    ret = fdt_setprop_u32(dtb, gic_off, "#redistributor-regions", 1);
+    if (ret != 0) {
+      device_tree_error_msg("#redistributor-regions");
+      return ZX_ERR_BAD_STATE;
+    }
+    // GICR memory map
+    uint32_t gicr_size = static_cast<uint32_t>(
+        machina::kGicv3RedistributorStride * cfg.num_cpus());
+    status =
+        add_memory_entry(dtb, gic_off,
+                         MemRange{.addr = machina::kGicv3RedistributorPhysBase,
+                                  .size = gicr_size});
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  // GICC memory map
+  status = add_memory_entry(dtb, gic_off,
+                            MemRange{.addr = 0xe82b2000, .size = 0x2000});
+  if (status != ZX_OK) {
+    return status;
+  }
+  ret = fdt_setprop_u32(dtb, gic_off, "#address-cells", 0);
+  if (ret != 0) {
+    device_tree_error_msg("#address-cells");
+    return ZX_ERR_BAD_STATE;
+  }
+  ret = fdt_setprop_u32(dtb, gic_off, "#interrupt-cells", 3);
+  if (ret != 0) {
+    device_tree_error_msg("#interrupt-cells");
+    return ZX_ERR_BAD_STATE;
+  }
+#endif // __aarch64__
 
   return ZX_OK;
 }
@@ -533,9 +604,8 @@ zx_status_t setup_linux(const GuestConfig& cfg,
       FXL_LOG(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
-    status =
-        load_device_tree(dtb_fd.get(), phys_mem, cmdline, dtb_overlay_fd.get(),
-                         initrd_size, cfg.num_cpus());
+    status = load_device_tree(dtb_fd.get(), phys_mem, cmdline,
+                              dtb_overlay_fd.get(), initrd_size, cfg);
     if (status != ZX_OK) {
       return status;
     }
