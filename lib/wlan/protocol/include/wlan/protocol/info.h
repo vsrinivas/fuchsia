@@ -115,12 +115,16 @@ typedef struct wlan_vht_caps {
 //   Standard 2.4GHz channels:
 //     base_freq = 2407 MHz
 //     n = 1-14
+
+#define WLAN_CHANNELS_MAX_LEN 64
 typedef struct wlan_chan_list {
     uint16_t base_freq;
     // Each entry in this array represents a value of n in the above channel numbering formula.
     // The array size is roughly based on what is needed to represent the most common 5GHz
     // operating classes.
-    uint8_t channels[64];
+    // List up valid channels. A value of 0 indicates the end of the list if less than
+    // WLAN_CHANNELS_MAX_LEN channels are defined.
+    uint8_t channels[WLAN_CHANNELS_MAX_LEN];
 } wlan_chan_list_t;
 
 #define WLAN_BAND_DESC_MAX_LEN 16
