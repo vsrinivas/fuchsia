@@ -569,16 +569,13 @@ void Realm::CreateComponentFromPackage(
   // we fall back to the default runner, which is running an ELF binary.
   fsl::SizedVmo app_data;
   if (runtime.IsNull()) {
-    ProgramMetadata program;
-    if (cmx.program_meta().IsNull()) {
-      VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
-    } else {
-      ProgramMetadata program = cmx.program_meta();
-      VmoFromFilenameAt(fd.get(), program.binary(), &app_data);
-    }
+    const ProgramMetadata program = cmx.program_meta();
+    const std::string bin_path = program.IsNull() ? kAppPath : program.binary();
+    VmoFromFilenameAt(fd.get(), bin_path, &app_data);
     if (!app_data) {
-      FXL_LOG(ERROR) << "component has neither runner nor elf binary: "
-                     << runtime_parse_error;
+      FXL_LOG(ERROR) << "component has neither runner (error: '"
+                     << runtime_parse_error << "') nor elf binary: '"
+                     << bin_path << "'";
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);
       return;
