@@ -3,6 +3,7 @@
 package(default_visibility = ["//visibility:public"])
 
 load("//build_defs:package_files.bzl", "package_files")
+load("//build_defs:fuchsia_select.bzl", "fuchsia_select")
 
 # Note: the cc_library / cc_import combo serves two purposes:
 #  - it allows the use of a select clause to target the proper architecture;
@@ -15,7 +16,7 @@ cc_library(
         "${header}",
         % endfor
     ],
-    deps = select({
+    deps = fuchsia_select({
         "//build_defs/target_cpu:arm64": [":arm64_prebuilts"],
         "//build_defs/target_cpu:x64": [":x64_prebuilts"],
     }) + [
@@ -28,7 +29,7 @@ cc_library(
         "${include}",
         % endfor
     ],
-    data = select({
+    data = fuchsia_select({
         "//build_defs/target_cpu:arm64": [":arm64_dist"],
         "//build_defs/target_cpu:x64": [":x64_dist"],
     }),

@@ -1,5 +1,7 @@
 <%include file="header.mako" />
 
+load("//build_defs:fuchsia_select.bzl", "fuchsia_select")
+
 # This target exists solely for packaging purposes.
 # The double indirection with target-specific aliases is a by-product of Bazel
 # requiring that labels in a select clause correspond to existing packages,
@@ -8,7 +10,7 @@
 # though some of the local targets might not exist at all.
 alias(
     name = "sysroot",
-    actual = select({
+    actual = fuchsia_select({
         "//build_defs/target_cpu:arm64": ":arm64_dist",
         "//build_defs/target_cpu:x64": ":x64_dist",
     }),
