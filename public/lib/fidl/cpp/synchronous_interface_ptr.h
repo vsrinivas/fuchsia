@@ -14,7 +14,7 @@
 
 namespace fidl {
 
-// A syclient interface to a remote implementation of |Interface|.
+// A synchronous client interface to a remote implementation of |Interface|.
 //
 // An |SynchronousInterfacePtr| implements |Interface| by proxying calls through
 // a |channel| to a remote implementation of |Interface|. Method calls on the
