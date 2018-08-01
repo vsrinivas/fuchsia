@@ -7,6 +7,8 @@
 use device::ethernet::Mac;
 use ip::Ipv4Addr;
 use std::collections::HashMap;
+use std::hash::Hash;
+use wire::arp::{ArpPacket, HType, PType};
 
 /// The type of an ARP operation.
 #[derive(Debug, PartialEq)]
@@ -57,38 +59,38 @@ impl ArpHardwareType {
     }
 }
 
-struct ArpTable {
-    table: HashMap<ArpKey, ArpValue>,
+struct ArpTable<H: HType, P: PType + Eq + Hash> {
+    table: HashMap<ArpKey<P>, ArpValue<H>>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-struct ArpKey {
-    addr: Ipv4Addr,
+struct ArpKey<P: PType + Eq + Hash> {
+    addr: P,
 }
 
 /// A struct to represent the data stored in an entry in the ARP table.
 #[derive(Debug, PartialEq)]
-pub struct ArpValue {
+pub struct ArpValue<H: HType> {
     /// The MAC address associated with this entry.
     // Using Mac as the value is actually incorrect - there should be a generic
     // hardware address type, if this ARP code is to actually be extensible.
     // However, this can be dealt with if/once we add more hardware types.
-    pub mac: Mac,
+    pub mac: H,
 }
 
-impl ArpTable {
+impl<H: HType, P: PType + Eq + Hash> ArpTable<H, P> {
     pub fn new() -> Self {
         ArpTable {
             table: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, addr: Ipv4Addr, mac: Mac) {
+    pub fn insert(&mut self, addr: P, mac: H) {
         self.table
             .insert(ArpKey { addr }, ArpValue { mac });
     }
 
-    pub fn lookup(&self, addr: Ipv4Addr) -> Option<&ArpValue> {
+    pub fn lookup(&self, addr: P) -> Option<&ArpValue<H>> {
         self.table.get(&ArpKey { addr })
     }
 }
@@ -99,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_arp_table() {
-        let mut t: ArpTable = ArpTable::new();
+        let mut t: ArpTable<Mac, Ipv4Addr> = ArpTable::new();
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
         t.insert(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(

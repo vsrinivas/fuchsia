@@ -176,13 +176,19 @@ impl<HwAddr: Copy, ProtoAddr: Copy> Body<HwAddr, ProtoAddr> {
     }
 }
 
-trait HType {
+/// A trait to represent a ARP hardware type.
+pub trait HType {
+    /// The hardware type.
     fn htype() -> ArpHardwareType;
+    /// The in-memory size of an instance of the type.
     fn hlen() -> u8;
 }
 
-trait PType {
+/// A trait to represent a ARP protocol type.
+pub trait PType {
+    /// The protocol type.
     fn ptype() -> EtherType;
+    /// The in-memory size of an instance of the type.
     fn plen() -> u8;
 }
 
