@@ -337,7 +337,7 @@ idle:
     btci->bt_state = BRCMF_BT_DHCP_IDLE;
     btci->timer_on = false;
     brcmf_btcoex_boost_wifi(btci, false);
-    cfg80211_crit_proto_stopped(&btci->vif->wdev, GFP_KERNEL);
+    cfg80211_crit_proto_stopped(&btci->vif->wdev);
     brcmf_btcoex_restore_part1(btci);
     btci->vif = NULL;
 }

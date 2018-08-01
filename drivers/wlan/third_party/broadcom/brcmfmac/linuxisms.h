@@ -336,8 +336,6 @@ enum {
     SIGTERM = (55),
     TASK_INTERRUPTIBLE = (0),
     TASK_RUNNING = (1),
-    GFP_ATOMIC = (1),
-    GFP_KERNEL = (2),
     IFNAMSIZ = (16),
     WLAN_PMKID_LEN = (16),
     WLAN_MAX_KEY_LEN = (128),

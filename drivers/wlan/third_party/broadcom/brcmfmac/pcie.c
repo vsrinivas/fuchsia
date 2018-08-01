@@ -868,7 +868,7 @@ static void* brcmf_pcie_init_dmabuffer_for_device(struct brcmf_pciedev_info* dev
     void* ring;
     uint64_t address;
 
-    ring = dma_alloc_coherent(&devinfo->pdev->dev, size, dma_handle, GFP_KERNEL);
+    ring = dma_alloc_coherent(&devinfo->pdev->dev, size, dma_handle);
     if (!ring) {
         return NULL;
     }
@@ -984,7 +984,7 @@ static zx_status_t brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinf
     if (devinfo->dma_idx_sz != 0) {
         bufsz = (max_submissionrings + max_completionrings) * devinfo->dma_idx_sz * 2;
         devinfo->idxbuf =
-            dma_alloc_coherent(&devinfo->pdev->dev, bufsz, &devinfo->idxbuf_dmahandle, GFP_KERNEL);
+            dma_alloc_coherent(&devinfo->pdev->dev, bufsz, &devinfo->idxbuf_dmahandle);
         if (!devinfo->idxbuf) {
             devinfo->dma_idx_sz = 0;
         }
@@ -1110,7 +1110,7 @@ static zx_status_t brcmf_pcie_init_scratchbuffers(struct brcmf_pciedev_info* dev
 
     devinfo->shared.scratch =
         dma_zalloc_coherent(&devinfo->pdev->dev, BRCMF_DMA_D2H_SCRATCH_BUF_LEN,
-                            &devinfo->shared.scratch_dmahandle, GFP_KERNEL);
+                            &devinfo->shared.scratch_dmahandle);
     if (!devinfo->shared.scratch) {
         goto fail;
     }
@@ -1124,7 +1124,7 @@ static zx_status_t brcmf_pcie_init_scratchbuffers(struct brcmf_pciedev_info* dev
 
     devinfo->shared.ringupd =
         dma_zalloc_coherent(&devinfo->pdev->dev, BRCMF_DMA_D2H_RINGUPD_BUF_LEN,
-                            &devinfo->shared.ringupd_dmahandle, GFP_KERNEL);
+                            &devinfo->shared.ringupd_dmahandle);
     if (!devinfo->shared.ringupd) {
         goto fail;
     }

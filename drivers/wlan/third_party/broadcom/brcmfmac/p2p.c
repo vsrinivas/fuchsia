@@ -944,7 +944,7 @@ zx_status_t brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev
 
     memcpy(&p2p->remain_on_channel, channel, sizeof(*channel));
     *cookie = p2p->remain_on_channel_cookie;
-    cfg80211_ready_on_channel(wdev, *cookie, channel, duration, GFP_KERNEL);
+    cfg80211_ready_on_channel(wdev, *cookie, channel, duration);
 
 exit:
     return err;
@@ -973,7 +973,7 @@ zx_status_t brcmf_p2p_notify_listen_complete(struct brcmf_if* ifp, const struct 
         }
 
         cfg80211_remain_on_channel_expired(&ifp->vif->wdev, p2p->remain_on_channel_cookie,
-                                           &p2p->remain_on_channel, GFP_KERNEL);
+                                           &p2p->remain_on_channel);
     }
     return ZX_OK;
 }

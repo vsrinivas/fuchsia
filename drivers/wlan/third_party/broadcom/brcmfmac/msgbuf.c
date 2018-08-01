@@ -551,7 +551,7 @@ static uint32_t brcmf_msgbuf_flowring_create_worker(struct brcmf_msgbuf* msgbuf,
     flowid = work->flowid;
     dma_sz = BRCMF_H2D_TXFLOWRING_MAX_ITEM * BRCMF_H2D_TXFLOWRING_ITEMSIZE;
     dma_buf = dma_alloc_coherent(msgbuf->drvr->bus_if->dev, dma_sz,
-                                 &msgbuf->flowring_dma_handle[flowid], GFP_KERNEL);
+                                 &msgbuf->flowring_dma_handle[flowid]);
     if (!dma_buf) {
         brcmf_err("dma_alloc_coherent failed\n");
         brcmf_flowring_delete(msgbuf->flow, flowid);
@@ -1346,7 +1346,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
 
     msgbuf->drvr = drvr;
     msgbuf->ioctbuf = dma_alloc_coherent(drvr->bus_if->dev, BRCMF_TX_IOCTL_MAX_MSG_SIZE,
-                                         &msgbuf->ioctbuf_handle, GFP_KERNEL);
+                                         &msgbuf->ioctbuf_handle);
     if (!msgbuf->ioctbuf) {
         goto fail;
     }
