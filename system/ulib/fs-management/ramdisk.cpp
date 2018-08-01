@@ -138,9 +138,28 @@ int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
     if (fd.get() < 0) {
         return -1;
     }
-    ramdisk_ioctl_config_t config;
+    ramdisk_ioctl_config_t config = {};
     config.blk_size = blk_size;
     config.blk_count = blk_count;
+    memset(config.type_guid, 0, ZBI_PARTITION_GUID_LEN);
+    ramdisk_ioctl_config_response_t response;
+    return finish_create(&response, out_path,
+                         ioctl_ramdisk_config(fd.get(), &config, &response));
+}
+
+int create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count, const uint8_t* type_guid,
+                             size_t guid_len, char* out_path) {
+    fbl::unique_fd fd(open_ramctl());
+    if (fd.get() < 0) {
+        return -1;
+    }
+    if (type_guid == NULL || guid_len < ZBI_PARTITION_GUID_LEN) {
+        return -1;
+    }
+    ramdisk_ioctl_config_t config = {};
+    config.blk_size = blk_size;
+    config.blk_count = blk_count;
+    memcpy(config.type_guid, type_guid, ZBI_PARTITION_GUID_LEN);
     ramdisk_ioctl_config_response_t response;
     return finish_create(&response, out_path,
                          ioctl_ramdisk_config(fd.get(), &config, &response));

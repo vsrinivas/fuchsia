@@ -18,6 +18,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
@@ -35,6 +36,7 @@ typedef struct ramdisk_device {
     uintptr_t mapped_addr;
     uint64_t blk_size;
     uint64_t blk_count;
+    uint8_t type_guid[ZBI_PARTITION_GUID_LEN];
 
     mtx_t lock;
     sync_completion_t signal;
@@ -291,6 +293,13 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
+    case IOCTL_BLOCK_GET_TYPE_GUID: {
+        if (max < ZBI_PARTITION_GUID_LEN)
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        memcpy(reply, ramdev->type_guid, sizeof(ramdev->type_guid));
+        *out_actual = sizeof(ramdev->type_guid);
+        return ZX_OK;
+    }
     case IOCTL_DEVICE_SYNC: {
         // Wow, we sync so quickly!
         return ZX_OK;
@@ -387,7 +396,8 @@ static uint64_t ramdisk_count = 0;
 // This always consumes the VMO handle.
 static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
                                  uint64_t blk_size, uint64_t blk_count,
-                                 void* reply, size_t max, size_t* out_actual) {
+                                 uint8_t* type_guid, void* reply, size_t max,
+                                 size_t* out_actual) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
     if (max < 32) {
         goto fail;
@@ -404,6 +414,11 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
     ramdev->vmo = vmo;
     ramdev->blk_size = blk_size;
     ramdev->blk_count = blk_count;
+    if (type_guid) {
+        memcpy(ramdev->type_guid, type_guid, ZBI_PARTITION_GUID_LEN);
+    } else {
+        memset(ramdev->type_guid, 0, ZBI_PARTITION_GUID_LEN);
+    }
     snprintf(ramdev->name, sizeof(ramdev->name),
              "ramdisk-%" PRIu64, ramdisk_count++);
 
@@ -464,6 +479,7 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         if (status == ZX_OK) {
             status = ramctl_config(ramctl, vmo,
                                    config->blk_size, config->blk_count,
+                                   config->type_guid,
                                    reply, max, out_actual);
         }
         return status;
@@ -472,29 +488,29 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         if (cmdlen != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        zx_handle_t vmo = *(zx_handle_t*)cmd;
+        zx_handle_t* vmo = (zx_handle_t*)cmd;
 
         // Ensure this is the last handle to this VMO; otherwise, the size
         // may change from underneath us.
         zx_info_handle_count_t info;
-        zx_status_t status = zx_object_get_info(vmo, ZX_INFO_HANDLE_COUNT,
+        zx_status_t status = zx_object_get_info(*vmo, ZX_INFO_HANDLE_COUNT,
                                                 &info, sizeof(info),
                                                 NULL, NULL);
         if (status != ZX_OK || info.handle_count != 1) {
-            zx_handle_close(vmo);
+            zx_handle_close(*vmo);
             return ZX_ERR_INVALID_ARGS;
         }
 
         uint64_t vmo_size;
-        status = zx_vmo_get_size(vmo, &vmo_size);
+        status = zx_vmo_get_size(*vmo, &vmo_size);
         if (status != ZX_OK) {
-            zx_handle_close(vmo);
+            zx_handle_close(*vmo);
             return status;
         }
 
-        return ramctl_config(ramctl, vmo,
+        return ramctl_config(ramctl, *vmo,
                              PAGE_SIZE, (vmo_size + PAGE_SIZE - 1) / PAGE_SIZE,
-                             reply, max, out_actual);
+                             NULL, reply, max, out_actual);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;

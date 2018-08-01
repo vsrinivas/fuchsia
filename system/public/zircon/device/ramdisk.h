@@ -5,6 +5,7 @@
 #pragma once
 
 #include <limits.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
@@ -30,6 +31,7 @@
 typedef struct ramdisk_ioctl_config {
     uint64_t blk_size;
     uint64_t blk_count;
+    uint8_t type_guid[ZBI_PARTITION_GUID_LEN];
 } ramdisk_ioctl_config_t;
 
 typedef struct ramdisk_ioctl_config_response {

@@ -38,10 +38,13 @@
 
 namespace tests {
 
-static int get_ramdisk(uint64_t blk_size, uint64_t blk_count) {
+static int get_ramdisk(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid = nullptr,
+                       size_t guid_len = 0) {
     char ramdisk_path[PATH_MAX];
-    if (create_ramdisk(blk_size, blk_count, ramdisk_path)) {
-        return -1;
+    int rc = guid ? create_ramdisk_with_guid(blk_size, blk_count, guid, guid_len, ramdisk_path)
+                  : create_ramdisk(blk_size, blk_count, ramdisk_path);
+    if (rc) {
+      return -1;
     }
 
     int fd = open(ramdisk_path, O_RDWR);
@@ -56,6 +59,16 @@ public:
     static bool Create(uint64_t blk_size, uint64_t blk_count, fbl::unique_ptr<RamdiskTest>* out) {
         BEGIN_HELPER;
         int raw_fd = get_ramdisk(blk_size, blk_count);
+        fbl::unique_fd fd(raw_fd);
+        ASSERT_TRUE(fd, "Could not open ramdisk device");
+        *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(fbl::move(fd)));
+        END_HELPER;
+    }
+
+    static bool CreateWithGuid(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid,
+                               size_t guid_len, fbl::unique_ptr<RamdiskTest>* out) {
+        BEGIN_HELPER;
+        int raw_fd = get_ramdisk(blk_size, blk_count, guid, guid_len);
         fbl::unique_fd fd(raw_fd);
         ASSERT_TRUE(fd, "Could not open ramdisk device");
         *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(fbl::move(fd)));
@@ -138,6 +151,21 @@ static bool ramdisk_test_simple(void) {
     ASSERT_EQ(lseek(ramdisk->fd(), 0, SEEK_SET), 0);
     ASSERT_EQ(read(ramdisk->fd(), out, sizeof(out)), (ssize_t)sizeof(out));
     ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0);
+
+    END_TEST;
+}
+
+static bool ramdisk_test_guid(void) {
+    constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] =
+        {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
+
+    BEGIN_TEST;
+    fbl::unique_ptr<RamdiskTest> ramdisk;
+    ASSERT_TRUE(RamdiskTest::CreateWithGuid(PAGE_SIZE / 2, 512, kGuid, sizeof(kGuid), &ramdisk));
+
+    uint8_t guid[ZBI_PARTITION_GUID_LEN] = {};
+    ioctl_block_get_type_guid(ramdisk->fd(), guid, sizeof(guid));
+    ASSERT_TRUE(memcmp(guid, kGuid, sizeof(guid)) == 0);
 
     END_TEST;
 }
@@ -1549,6 +1577,7 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
 BEGIN_TEST_CASE(ramdisk_tests)
 RUN_TEST_SMALL(ramdisk_test_wait_for_device)
 RUN_TEST_SMALL(ramdisk_test_simple)
+RUN_TEST_SMALL(ramdisk_test_guid)
 RUN_TEST_SMALL(ramdisk_test_vmo)
 RUN_TEST_SMALL(ramdisk_test_filesystem)
 RUN_TEST_SMALL(ramdisk_test_rebind)
