@@ -49,6 +49,7 @@ executable("mac_tests") {
     "frame_validation_unittest.cpp",
     "mac_frame_unittest.cpp",
     "macaddr_unittest.cpp",
+    "mcs_unittest.cpp",
     "packet_unittest.cpp",
     "sequence_unittest.cpp",
     "tim_unittest.cpp",
