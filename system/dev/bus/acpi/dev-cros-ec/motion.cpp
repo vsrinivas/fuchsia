@@ -64,7 +64,7 @@ zx_status_t AcpiCrOsEcMotionDevice::ConsumeFifoLocked() {
         if (data.sensor_num >= sensors_.size() || !sensors_[data.sensor_num].valid) {
             continue;
         }
-        if (data.flags != 0) {
+        if (data.flags & (MOTIONSENSE_SENSOR_FLAG_TIMESTAMP | MOTIONSENSE_SENSOR_FLAG_FLUSH)) {
             // This is a special packet, not a report.
             continue;
         }
