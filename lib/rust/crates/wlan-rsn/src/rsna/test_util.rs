@@ -14,7 +14,7 @@ use key::exchange::{self, handshake::fourway::{Fourway, Config}};
 use key::ptk::Ptk;
 use key_data;
 use key_data::kde;
-use rsna::esssa::EssSa;
+use rsna::{esssa::EssSa, NegotiatedRsne};
 use rsne::Rsne;
 use suite_selector::OUI;
 
@@ -68,6 +68,8 @@ pub fn get_s_rsne() -> Rsne {
 pub fn get_esssa() -> EssSa {
     let a_rsne = get_a_rsne();
     let s_rsne = get_s_rsne();
+    let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)
+        .expect("could not derive negotiated RSNE");
     let auth_cfg = auth::Config::for_psk("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("could not construct authentication config");
     let ptk_exch_cfg =
@@ -75,7 +77,7 @@ pub fn get_esssa() -> EssSa {
             .expect("could not construct PTK exchange method");
     let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, S_ADDR, A_ADDR)
         .expect("could not construct GTK exchange method");
-    EssSa::new(Role::Supplicant, auth_cfg, ptk_exch_cfg, gtk_cfg)
+    EssSa::new(Role::Supplicant, negotiated_rsne, auth_cfg, ptk_exch_cfg, gtk_cfg)
         .expect("error constructing ESS Security Assocation")
 }
 
@@ -167,7 +169,7 @@ pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F)
 }
 
 pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F)
-    -> eapol::KeyFrame
+    -> (eapol::KeyFrame, Bytes)
     where F: Fn(&mut eapol::KeyFrame)
 {
     let mut buf = Vec::with_capacity(256);
@@ -210,7 +212,7 @@ pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F)
     let mic = compute_mic(ptk.kck(), &msg);
     msg.key_mic = Bytes::from(mic);
 
-    msg
+    (msg, Bytes::from(&buf[..]))
 }
 
 pub fn is_zero(slice: &[u8]) -> bool {
@@ -261,8 +263,9 @@ pub fn send_msg1<F>(msg_modifier: F) -> (FourwayHandshakeTestEnv, SecAssocResult
 
     // Send first message of Handshake to Supplicant and verify result.
     let a_nonce = get_nonce();
-    let mut msg1 = get_4whs_msg1(&a_nonce[..], msg_modifier);
-    let result = handshake.on_eapol_key_frame(&msg1);
+    let frame = get_4whs_msg1(&a_nonce[..], msg_modifier);
+    let msg1 = VerifiedKeyFrame{ frame: &frame, kd_plaintext: Bytes::from(vec![])};
+    let result = handshake.on_eapol_key_frame(msg1);
 
     let ptk = compute_ptk(&a_nonce[..], &result);
     (FourwayHandshakeTestEnv{ handshake, a_nonce, ptk }, result)
@@ -273,8 +276,9 @@ impl FourwayHandshakeTestEnv {
         where F: Fn(&mut eapol::KeyFrame) {
         // Send third message of 4-Way Handshake to Supplicant.
         let ptk = self.ptk.as_ref().unwrap();
-        let mut msg3 =
+        let (frame, kd_plaintext) =
             get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
-        self.handshake.on_eapol_key_frame(&msg3)
+        let msg3 = VerifiedKeyFrame{ frame: &frame, kd_plaintext};
+        self.handshake.on_eapol_key_frame(msg3)
     }
 }

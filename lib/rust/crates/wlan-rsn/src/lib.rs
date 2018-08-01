@@ -88,26 +88,38 @@ pub enum Error {
     InvalidKeyDescriptor(u8, eapol::KeyDescriptor),
     #[fail(display = "unsupported Key Descriptor Version: {:?}", _0)]
     UnsupportedKeyDescriptorVersion(u16),
-    #[fail(display = "only PTK derivation is supported")]
+    #[fail(display = "only PTK and GTK derivation is supported")]
     UnsupportedKeyDerivation,
     #[fail(display = "unexpected message: {:?}", _0)]
     Unexpected4WayHandshakeMessage(MessageNumber),
     #[fail(display = "invalid install bit value; message: {:?}", _0)]
     InvalidInstallBitValue(MessageNumber),
+    #[fail(display = "error, install bit set for Group-/SMK-Handshake")]
+    InvalidInstallBitGroupSmkHandshake,
     #[fail(display = "invalid key_ack bit value; message: {:?}", _0)]
     InvalidKeyAckBitValue(MessageNumber),
     #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
     InvalidKeyMicBitValue(MessageNumber),
     #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
     InvalidSecureBitValue(MessageNumber),
+    #[fail(display = "error, secure bit set by Authenticator before PTK is known")]
+    SecureBitWithUnknownPtk,
+    #[fail(display = "error, secure bit set must be set by Supplicant once PTK and GTK are known")]
+    SecureBitNotSetWithKnownPtkGtk,
     #[fail(display = "invalid error bit value; message: {:?}", _0)]
     InvalidErrorBitValue(MessageNumber),
     #[fail(display = "invalid request bit value; message: {:?}", _0)]
     InvalidRequestBitValue(MessageNumber),
+    #[fail(display = "error, Authenticator set request bit")]
+    InvalidRequestBitAuthenticator,
+    #[fail(display = "error, Authenticator set error bit")]
+    InvalidErrorBitAuthenticator,
+    #[fail(display = "error, Supplicant set key_ack bit")]
+    InvalidKeyAckBitSupplicant,
     #[fail(display = "invalid encrypted_key_data bit value")]
     InvalidEncryptedKeyDataBitValue(MessageNumber),
-    #[fail(display = "invalid pairwise key length {:?}; expected {:?}", _0, _1)]
-    InvalidPairwiseKeyLength(u16, u16),
+    #[fail(display = "invalid key length {:?}; expected {:?}", _0, _1)]
+    InvalidKeyLength(u16, u16),
     #[fail(display = "unsupported cipher suite")]
     UnsupportedCipherSuite,
     #[fail(display = "unsupported AKM suite")]
@@ -144,6 +156,10 @@ pub enum Error {
     InvalidKeyDataRsne,
     #[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
     BufferTooSmall(usize, usize),
+    #[fail(display = "error, SMK-Handshake is not supported")]
+    SmkHandshakeNotSupported,
+    #[fail(display = "error, negotiated RSNE is invalid")]
+    InvalidNegotiatedRsne,
 }
 
 impl From<std::io::Error> for Error {

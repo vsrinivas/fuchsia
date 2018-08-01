@@ -4,18 +4,17 @@
 
 use eapol;
 use failure;
-use rsna::SecAssocResult;
+use key::exchange::handshake::fourway::FourwayHandshakeKeyFrame;
+use rsna::{SecAssocResult, VerifiedKeyFrame};
 
 #[derive(Debug, PartialEq)]
 pub struct Authenticator {
-    pub key_replay_counter: u64,
     pub s_nonce: [u8; 32],
 }
 
 impl Authenticator {
     pub fn new() -> Result<Authenticator, failure::Error> {
         Ok(Authenticator {
-            key_replay_counter: 0,
             s_nonce: [0u8; 32],
         })
     }
@@ -25,11 +24,7 @@ impl Authenticator {
         Ok(())
     }
 
-    pub fn on_eapol_key_frame(
-        &self,
-        _frame: &eapol::KeyFrame,
-        _plain_data: &[u8],
-    ) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&self, _frame: FourwayHandshakeKeyFrame) -> SecAssocResult {
         // TODO(hahnr): Implement.
         Ok(vec![])
     }

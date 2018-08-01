@@ -4,7 +4,7 @@ use failure;
 use fidl_mlme::BssDescription;
 use wlan_rsn::{akm, auth, cipher, rsne::{self, Rsne}, suite_selector::OUI};
 use wlan_rsn::key::exchange;
-use wlan_rsn::rsna::{esssa::EssSa, Role};
+use wlan_rsn::rsna::{esssa::EssSa, NegotiatedRsne, Role};
 
 #[derive(Debug)]
 pub struct Rsna {
@@ -64,10 +64,11 @@ fn make_ess_sa(ssid: &[u8], passphrase: &[u8], sta_addr: [u8; 6], sta_rsne: Rsne
                bss_rsne: Rsne)
     -> Result<EssSa, failure::Error>
 {
+    let negotiated_rsne = NegotiatedRsne::from_rsne(&sta_rsne)?;
     let auth_cfg = auth::Config::for_psk(passphrase, ssid)?;
     let ptk_cfg = exchange::Config::for_4way_handshake(Role::Supplicant, sta_addr, sta_rsne, bssid, bss_rsne)?;
     let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, sta_addr, bssid)?;
-    EssSa::new(Role::Supplicant, auth_cfg, ptk_cfg, gtk_cfg)
+    EssSa::new(Role::Supplicant, negotiated_rsne, auth_cfg, ptk_cfg, gtk_cfg)
 }
 
 /// Constructs Supplicant's RSNE with:

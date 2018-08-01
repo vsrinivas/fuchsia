@@ -11,11 +11,11 @@ use eapol;
 use failure;
 use integrity;
 use key::exchange::Key;
-use key::exchange::handshake::fourway;
+use key::exchange::handshake::fourway::{self, FourwayHandshakeKeyFrame};
 use key::gtk::Gtk;
 use key::ptk::Ptk;
 use key_data;
-use rsna::{SecAssocResult, SecAssocUpdate};
+use rsna::{SecAssocResult, SecAssocUpdate, VerifiedKeyFrame};
 use rsne::Rsne;
 use std::rc::Rc;
 
@@ -26,13 +26,10 @@ struct GtkInitState {}
 
 impl PtkInitState {
     // IEEE Std 802.1X-2010, 12.7.6.2
-    fn on_message_1(
-        &self,
-        shared: &mut SharedState,
-        msg1: &eapol::KeyFrame,
-        _plain_data: &[u8],
-    ) -> Result<(eapol::KeyFrame, Ptk), failure::Error> {
-        let anonce = &msg1.key_nonce;
+    fn on_message_1(&self, shared: &mut SharedState, msg1: FourwayHandshakeKeyFrame)
+        -> Result<(eapol::KeyFrame, Ptk), failure::Error>
+    {
+        let anonce = &msg1.get().key_nonce;
         let snonce = shared.nonce_rdr.next();
         let rsne = &shared.cfg.s_rsne;
         let akm = &rsne.akm_suites[0];
@@ -51,7 +48,7 @@ impl PtkInitState {
         shared.kek = ptk.kek().to_vec();
         shared.kck = ptk.kck().to_vec();
 
-        let msg2 = self.create_message_2(shared, msg1, &snonce[..])?;
+        let msg2 = self.create_message_2(shared, msg1.get(), &snonce[..])?;
 
         Ok((msg2, ptk))
     }
@@ -100,18 +97,13 @@ impl PtkInitState {
 
 impl GtkInitState {
     // IEEE Std 802.1X-2010, 12.7.6.4
-    fn on_message_3(
-        &self,
-        shared: &mut SharedState,
-        msg3: &eapol::KeyFrame,
-        plain_data: &[u8],
-    ) -> Result<(eapol::KeyFrame, Gtk), failure::Error> {
-        shared.key_replay_counter = msg3.key_replay_counter;
-
+    fn on_message_3(&self, shared: &mut SharedState, msg3: FourwayHandshakeKeyFrame)
+        -> Result<(eapol::KeyFrame, Gtk), failure::Error>
+    {
         let mut gtk: Option<key_data::kde::Gtk> = None;
         let mut rsne: Option<Rsne> = None;
         let mut _second_rsne: Option<Rsne> = None;
-        let elements = key_data::extract_elements(plain_data)?;
+        let elements = key_data::extract_elements(&msg3.key_data_plaintext()[..])?;
         for ele in elements {
             match (ele, rsne.as_ref()) {
                 (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
@@ -125,7 +117,7 @@ impl GtkInitState {
         match (gtk, rsne) {
             (Some(gtk), Some(rsne)) => {
                 if &rsne == &shared.cfg.a_rsne {
-                    let msg4 = self.create_message_4(shared, msg3)?;
+                    let msg4 = self.create_message_4(shared, msg3.get())?;
                     Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id())))
                 } else {
                     Err(Error::InvalidKeyDataRsne.into())
@@ -136,11 +128,9 @@ impl GtkInitState {
     }
 
     // IEEE Std 802.1X-2010, 12.7.6.5
-    fn create_message_4(
-        &self,
-        shared: &SharedState,
-        msg3: &eapol::KeyFrame,
-    ) -> Result<eapol::KeyFrame, failure::Error> {
+    fn create_message_4(&self, shared: &SharedState, msg3: &eapol::KeyFrame)
+        -> Result<eapol::KeyFrame, failure::Error>
+    {
         let mut key_info = eapol::KeyInformation(0);
         key_info.set_key_descriptor_version(msg3.key_info.key_descriptor_version());
         key_info.set_key_type(msg3.key_info.key_type());
@@ -182,27 +172,21 @@ enum State {
 }
 
 impl State {
-    pub fn on_eapol_key_frame(
-        self,
-        shared: &mut SharedState,
-        frame: &eapol::KeyFrame,
-        plain_data: &[u8],
-    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
-        match fourway::message_number(frame) {
+    pub fn on_eapol_key_frame(self, shared: &mut SharedState, frame: FourwayHandshakeKeyFrame)
+        -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
+    {
+        match fourway::message_number(frame.get()) {
             // Only process first and third message of the Handshake.
-            fourway::MessageNumber::Message1 => self.on_message_1(shared, frame, plain_data),
-            fourway::MessageNumber::Message3 => self.on_message_3(shared, frame, plain_data),
+            fourway::MessageNumber::Message1 => self.on_message_1(shared, frame),
+            fourway::MessageNumber::Message3 => self.on_message_3(shared, frame),
             // Drop any other message with an error.
             unexpected_msg => Err(Error::Unexpected4WayHandshakeMessage(unexpected_msg).into()),
         }
     }
 
-    fn on_message_1(
-        self,
-        shared: &mut SharedState,
-        msg1: &eapol::KeyFrame,
-        plain_data: &[u8],
-    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
+    fn on_message_1(self, shared: &mut SharedState, msg1: FourwayHandshakeKeyFrame)
+        -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
+    {
         // Always reset Handshake when first message was received.
         match self {
             // If the Handshake already completed, simply drop the message.
@@ -216,7 +200,7 @@ impl State {
         // Only the PTK-Init state processes the first message.
         match self {
             State::PtkInit(ptk_init) => {
-                let (msg2, ptk) = ptk_init.on_message_1(shared, msg1, plain_data)?;
+                let (msg2, ptk) = ptk_init.on_message_1(shared, msg1)?;
                 // If the first message was processed successfully the PTK is known and the GTK
                 // can be exchanged with the Authenticator. Move the state machine forward.
                 Ok((
@@ -232,19 +216,16 @@ impl State {
         }
     }
 
-    fn on_message_3(
-        self,
-        shared: &mut SharedState,
-        msg3: &eapol::KeyFrame,
-        plain_data: &[u8],
-    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
+    fn on_message_3(self, shared: &mut SharedState, msg3: FourwayHandshakeKeyFrame)
+        -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
+    {
         // Third message of Handshake is only processed once to prevent replay attacks such as
         // KRACK. A replayed third message will be dropped and has no effect on the Supplicant.
         // TODO(hahnr): Decide whether this client side fix should be kept, which will reduce
         // reliability, or if instead the Supplicant should trust the Authenticator to be patched.
         match self {
             State::GtkInit(gtk_init) => {
-                let (msg4, gtk) = gtk_init.on_message_3(shared, msg3, plain_data)?;
+                let (msg4, gtk) = gtk_init.on_message_3(shared, msg3)?;
                 // The third message was successfully processed and the handshake completed.
                 Ok((
                     State::Completed,
@@ -264,7 +245,6 @@ impl State {
 
 #[derive(Debug, PartialEq)]
 struct SharedState {
-    key_replay_counter: u64,
     anonce: [u8; 32],
     pmk: Vec<u8>,
     kek: Vec<u8>,
@@ -285,7 +265,6 @@ impl Supplicant {
         Ok(Supplicant {
             state: Some(State::PtkInit(PtkInitState {})),
             shared: SharedState {
-                key_replay_counter: 0,
                 anonce: [0u8; 32],
                 pmk: pmk,
                 kek: vec![],
@@ -300,17 +279,9 @@ impl Supplicant {
         &self.shared.anonce[..]
     }
 
-    pub fn key_replay_counter(&self) -> u64 {
-        self.shared.key_replay_counter
-    }
-
-    pub fn on_eapol_key_frame(
-        &mut self,
-        frame: &eapol::KeyFrame,
-        plain_data: &[u8],
-    ) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&mut self, frame: FourwayHandshakeKeyFrame) -> SecAssocResult {
         self.state.take().map_or_else(|| Ok(vec![]), |state| {
-            let (state, updates) = state.on_eapol_key_frame(&mut self.shared, frame, plain_data)?;
+            let (state, updates) = state.on_eapol_key_frame(&mut self.shared, frame)?;
             self.state = Some(state);
             Ok(updates.unwrap_or_default())
         })

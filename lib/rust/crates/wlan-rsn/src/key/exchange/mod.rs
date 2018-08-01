@@ -10,7 +10,7 @@ use eapol;
 use failure;
 use key::gtk::Gtk;
 use key::ptk::Ptk;
-use rsna::{Role, SecAssocResult};
+use rsna::{Role, SecAssocResult, VerifiedKeyFrame};
 use rsne::Rsne;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,10 +45,10 @@ impl Method {
         }
     }
 
-    pub fn on_eapol_key_frame(&mut self, frame: &eapol::KeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
         match self {
-            &mut Method::FourWayHandshake(ref mut hs) => hs.on_eapol_key_frame(frame),
-            &mut Method::GroupKeyHandshake(ref mut hs) => hs.on_eapol_key_frame(frame),
+            Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(frame),
+            Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(frame),
         }
     }
 

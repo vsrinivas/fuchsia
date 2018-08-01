@@ -4,7 +4,7 @@
 
 use eapol;
 use failure;
-use rsna::{Role, SecAssocResult};
+use rsna::{Role, SecAssocResult, VerifiedKeyFrame};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
@@ -22,7 +22,7 @@ impl GroupKey {
         Ok(GroupKey)
     }
 
-    pub fn on_eapol_key_frame(&mut self, _frame: &eapol::KeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&mut self, _frame: VerifiedKeyFrame) -> SecAssocResult {
         // TODO(hahnr): Implement
         Ok(vec![])
     }

@@ -9,7 +9,7 @@ use Error;
 use eapol;
 use failure;
 use key::exchange::Key;
-use rsna::SecAssocResult;
+use rsna::{SecAssocResult, VerifiedKeyFrame};
 
 #[derive(Debug, PartialEq)]
 pub enum Method {
@@ -20,11 +20,10 @@ impl Method {
     pub fn from_config(cfg: Config) -> Result<Method, failure::Error> {
         match cfg {
             Config::Psk(c) => Ok(Method::Psk(Psk::new(c)?)),
-            _ => Err(Error::UnknownAuthenticationMethod.into()),
         }
     }
 
-    pub fn on_eapol_key_frame(&self, _frame: &eapol::KeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&self, _frame: VerifiedKeyFrame) -> SecAssocResult {
         match self {
             // None of the supported authentication methods requires EAPOL frame exchange.
             _ => Ok(vec![]),
