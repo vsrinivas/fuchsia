@@ -19,15 +19,15 @@
  * memory to store some of the code segments.
  */
 
+#include <string.h>
+
 #include <ddk/io-buffer.h>
 #include <zircon/status.h>
 
-#include <string.h>
-
-#include "core.h"
 #include "bmi.h"
-#include "hif.h"
+#include "core.h"
 #include "debug.h"
+#include "hif.h"
 
 static zx_status_t ath10k_swap_code_seg_fill(struct ath10k* ar,
         struct ath10k_swap_code_seg_info* seg_info,

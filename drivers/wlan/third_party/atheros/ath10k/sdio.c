@@ -16,6 +16,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "sdio.h"
+
 #include <zircon/syscalls.h>
 #include <linux/module.h>
 #include <linux/mmc/card.h>
@@ -26,6 +28,7 @@
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sd.h>
 #include <linux/bitfield.h>
+
 #include "core.h"
 #include "bmi.h"
 #include "debug.h"
@@ -33,7 +36,6 @@
 #include "htc.h"
 #include "targaddrs.h"
 #include "trace.h"
-#include "sdio.h"
 
 /* inlined helper functions */
 

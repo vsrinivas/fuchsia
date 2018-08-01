@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "core.h"
+
 #include <inttypes.h>
 #include <string.h>
 
@@ -23,17 +25,16 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 
-#include "core.h"
-#include "mac.h"
-#include "htc.h"
-#include "hif.h"
-#include "wmi.h"
 #include "bmi.h"
 #include "debug.h"
+#include "hif.h"
+#include "htc.h"
 #include "htt.h"
-#include "testmode.h"
-#include "wmi-ops.h"
+#include "mac.h"
 #include "macros.h"
+#include "testmode.h"
+#include "wmi.h"
+#include "wmi-ops.h"
 
 // MODULE PARAMETERS
 // Debugging mask

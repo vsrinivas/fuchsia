@@ -14,16 +14,19 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+#include "ahb.h"
+
 #include <zircon/syscalls.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
+
 #include "core.h"
 #include "debug.h"
 #include "pci.h"
-#include "ahb.h"
 
 static const struct of_device_id ath10k_ahb_of_match[] = {
     {

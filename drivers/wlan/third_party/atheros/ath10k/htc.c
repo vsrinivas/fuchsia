@@ -18,8 +18,8 @@
 #include <string.h>
 
 #include "core.h"
-#include "hif.h"
 #include "debug.h"
+#include "hif.h"
 
 /********/
 /* Send */

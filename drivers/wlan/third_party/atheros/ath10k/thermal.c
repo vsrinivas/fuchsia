@@ -19,6 +19,7 @@
 #include <linux/thermal.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
+
 #include "core.h"
 #include "debug.h"
 #include "wmi-ops.h"

@@ -14,10 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "core.h"
-#include "wmi.h"
-#include "mac.h"
 #include "p2p.h"
+
+#include "core.h"
+#include "mac.h"
+#include "wmi.h"
 
 static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
                                    const struct wmi_p2p_noa_info* noa) {

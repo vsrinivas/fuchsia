@@ -15,12 +15,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "htt.h"
+
 #include <string.h>
 
-#include "macros.h"
-#include "htt.h"
 #include "core.h"
 #include "debug.h"
+#include "macros.h"
 
 static const enum htt_t2h_msg_type htt_main_t2h_msg_types[] = {
     [HTT_MAIN_T2H_MSG_TYPE_VERSION_CONF] = HTT_T2H_MSG_TYPE_VERSION_CONF,

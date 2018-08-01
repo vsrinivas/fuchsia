@@ -15,20 +15,24 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// The way how macros in wmi.h and wmi-tlv.h are working (read carefully how MSG() is defined before
+// ath10k_msg_type and how ATH10K_MSG_TYPE_WMI is *referred* in wmi.h) is that the .c code must
+// include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
+// properly. TODO(NET-1237): Cleanup ath10k msg_buf
+#include "msg_buf.h"
+
 #include <ddk/driver.h>
 
 #include "core.h"
-#include "htc.h"
 #include "debug.h"
-#include "wmi.h"
-#include "wmi-tlv.h"
+#include "ieee80211.h"
+#include "hif.h"
+#include "htc.h"
+#include "hw.h"
 #include "mac.h"
+#include "p2p.h"
 #include "testmode.h"
 #include "wmi-ops.h"
-#include "p2p.h"
-#include "hw.h"
-#include "hif.h"
-#include "ieee80211.h"
 
 #define ATH10K_WMI_BARRIER_ECHO_ID 0xBA991E9
 #define ATH10K_WMI_BARRIER_TIMEOUT (ZX_SEC(3))

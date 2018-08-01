@@ -15,17 +15,16 @@
  */
 
 #include "testmode.h"
+#include "testmode_i.h"
 
 #include <net/netlink.h>
 #include <linux/firmware.h>
 
+#include "core.h"
 #include "debug.h"
-#include "wmi.h"
 #include "hif.h"
 #include "hw.h"
-#include "core.h"
-
-#include "testmode_i.h"
+#include "wmi.h"
 
 static const struct nla_policy ath10k_tm_policy[ATH10K_TM_ATTR_MAX + 1] = {
     [ATH10K_TM_ATTR_CMD]        = { .type = NLA_U32 },

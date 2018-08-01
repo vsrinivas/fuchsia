@@ -14,20 +14,24 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+// The way how macros in wmi.h and wmi-tlv.h are working (read carefully how MSG() is defined before
+// ath10k_msg_type and how ATH10K_MSG_TYPE_WMI is *referred* in wmi.h) is that the .c code must
+// include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
+// properly. TODO(NET-1237): Cleanup ath10k msg_buf
+#include "msg_buf.h"
+
 #include <inttypes.h>
 
 #include <zircon/status.h>
 
 #include "core.h"
 #include "debug.h"
-#include "mac.h"
 #include "hw.h"
 #include "mac.h"
-#include "wmi.h"
-#include "wmi-ops.h"
-#include "wmi-tlv.h"
 #include "p2p.h"
 #include "testmode.h"
+#include "wmi-ops.h"
 
 /***************/
 /* TLV helpers */

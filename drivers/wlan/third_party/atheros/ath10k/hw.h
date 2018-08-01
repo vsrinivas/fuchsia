@@ -19,6 +19,10 @@
 #define _HW_H_
 
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <zircon/types.h>
 
 #include "targaddrs.h"
 

@@ -15,11 +15,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "core.h"
 #include "txrx.h"
+
+#include "core.h"
+#include "debug.h"
 #include "htt.h"
 #include "mac.h"
-#include "debug.h"
 
 #if 0 // NEEDS PORTING
 static void ath10k_report_offchan_tx(struct ath10k* ar, struct sk_buff* skb) {

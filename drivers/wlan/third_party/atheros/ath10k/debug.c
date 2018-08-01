@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "debug.h"
+
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/vmalloc.h>
@@ -24,7 +26,6 @@
 #include <linux/devcoredump.h>
 
 #include "core.h"
-#include "debug.h"
 #include "hif.h"
 #include "wmi-ops.h"
 

@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "txrx.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -23,13 +25,12 @@
 #include <zircon/misc/fnv1hash.h>
 
 #include "core.h"
+#include "debug.h"
 #include "hif.h"
 #include "htc.h"
 #include "htt.h"
-#include "macros.h"
-#include "txrx.h"
-#include "debug.h"
 #include "mac.h"
+#include "macros.h"
 
 #define HTT_RX_RING_SIZE HTT_RX_RING_SIZE_MAX
 #define HTT_RX_RING_FILL_LEVEL (((HTT_RX_RING_SIZE) / 2) - 1)

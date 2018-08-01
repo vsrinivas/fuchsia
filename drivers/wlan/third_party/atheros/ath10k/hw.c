@@ -14,14 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "hw.h"
+
 #include <stdint.h>
 
-#include "core.h"
-#include "hw.h"
-#include "hif.h"
-#include "wmi-ops.h"
-#include "macros.h"
 #include "bmi.h"
+#include "core.h"
+#include "hif.h"
+#include "macros.h"
+#include "wmi-ops.h"
 
 const struct ath10k_hw_regs qca988x_regs = {
     .rtc_soc_base_address                   = 0x00004000,

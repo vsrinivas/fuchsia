@@ -15,6 +15,7 @@
  */
 
 #include <linux/export.h>
+
 #include "ath.h"
 
 const char* ath_opmode_to_string(enum nl80211_iftype opmode) {

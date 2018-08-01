@@ -18,9 +18,9 @@
 #ifndef _CE_H_
 #define _CE_H_
 
-#include "hif.h"
-
 #include <ddk/io-buffer.h>
+
+#include "hif.h"
 
 #define CE_HTT_H2T_MSG_SRC_NENTRIES 8192
 

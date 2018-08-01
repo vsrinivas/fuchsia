@@ -18,6 +18,11 @@
 
 #include <stdlib.h>
 
+#define _ALL_SOURCE  // To get MTX_INIT and thrd_create_with_name from threads.h. This must be
+                     // defined before other project header files are included. Otherwise any
+                     // other header file may include threads.h without defining this.
+#include <threads.h>
+
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 

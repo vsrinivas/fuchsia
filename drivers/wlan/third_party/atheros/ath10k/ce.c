@@ -15,17 +15,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "hif.h"
-#include "pci.h"
 #include "ce.h"
-#include "debug.h"
-#include "macros.h"
 
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
 
 #include <zircon/status.h>
+
+#include "debug.h"
+#include "hif.h"
+#include "macros.h"
+#include "pci.h"
+
 
 /*
  * Support for Copy Engine hardware, which is mainly used for

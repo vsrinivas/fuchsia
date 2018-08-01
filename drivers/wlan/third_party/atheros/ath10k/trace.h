@@ -18,6 +18,7 @@
 #if !defined(_TRACE_H_) || defined(TRACE_HEADER_MULTI_READ)
 
 #include <linux/tracepoint.h>
+
 #include "core.h"
 
 #if !defined(_TRACE_H_)

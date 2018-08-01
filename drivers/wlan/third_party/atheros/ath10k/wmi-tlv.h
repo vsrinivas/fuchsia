@@ -17,6 +17,11 @@
 #ifndef _WMI_TLV_H
 #define _WMI_TLV_H
 
+#include <stddef.h>
+#include <stdint.h>
+
+#include "macros.h"
+
 #define WMI_TLV_CMD(grp_id) (((grp_id) << 12) | 0x1)
 #define WMI_TLV_EV(grp_id) (((grp_id) << 12) | 0x1)
 #define WMI_TLV_CMD_UNSUPPORTED 0

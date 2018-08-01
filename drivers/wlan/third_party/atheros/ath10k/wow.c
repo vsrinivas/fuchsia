@@ -14,12 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "mac.h"
-
 #include <net/mac80211.h>
-#include "hif.h"
+
 #include "core.h"
 #include "debug.h"
+#include "hif.h"
+#include "mac.h"
 #include "wmi.h"
 #include "wmi-ops.h"
 

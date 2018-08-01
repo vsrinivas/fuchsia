@@ -18,26 +18,26 @@
 #ifndef _CORE_H_
 #define _CORE_H_
 
-#define _ALL_SOURCE
 #include <stdatomic.h>
 #include <stdint.h>
+#define _ALL_SOURCE  // Define to get thrd_create_with_name from threads.h
 #include <threads.h>
 
-#include <lib/sync/completion.h>
 #include <ddk/device.h>
+#include <lib/sync/completion.h>
 #include <wlan/protocol/mac.h>
 
+#include "htc.h"
+#include "htt.h"
+#include "hw.h"
 #include "ieee80211.h"
 #include "macros.h"
-#include "htt.h"
-#include "htc.h"
-#include "hw.h"
 #include "msg_buf.h"
-#include "targaddrs.h"
-#include "wmi.h"
-#include "thermal.h"
-#include "wow.h"
 #include "swap.h"
+#include "targaddrs.h"
+#include "thermal.h"
+#include "wmi.h"
+#include "wow.h"
 
 #define MS(_v, _f) (((_v) & _f##_MASK) >> _f##_LSB)
 #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)

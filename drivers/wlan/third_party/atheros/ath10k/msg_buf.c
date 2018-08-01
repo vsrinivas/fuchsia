@@ -14,13 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#define _ALL_SOURCE
-#include <threads.h>
+#include "msg_buf.h"
 
 #include "core.h"
 #include "debug.h"
 #include "hif.h"
-#include "msg_buf.h"
 #include "wmi-tlv.h"
 
 // Information about our message types. This doesn't have to be in the same order as the

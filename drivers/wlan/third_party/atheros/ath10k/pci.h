@@ -20,9 +20,9 @@
 
 #include <ddk/protocol/pci.h>
 
-#include "hw.h"
-#include "ce.h"
 #include "ahb.h"
+#include "ce.h"
+#include "hw.h"
 
 /*
  * maximum number of bytes that can be

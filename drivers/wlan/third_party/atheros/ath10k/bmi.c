@@ -15,14 +15,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "bmi.h"
+
 #include <ddk/driver.h>
 #include <zircon/status.h>
 
 #include <string.h>
 
-#include "bmi.h"
-#include "hif.h"
 #include "debug.h"
+#include "hif.h"
 #include "htc.h"
 #include "hw.h"
 

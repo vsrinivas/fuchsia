@@ -15,14 +15,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "txrx.h"
+
 #include <assert.h>
 
+#include "debug.h"
+#include "hif.h"
 #include "htt.h"
 #include "ieee80211.h"
 #include "mac.h"
-#include "hif.h"
-#include "txrx.h"
-#include "debug.h"
 
 #if 0 // NEEDS PORTING
 static uint8_t ath10k_htt_tx_txq_calc_size(size_t count) {

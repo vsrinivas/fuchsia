@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "sparse_array.h"
+
 #include <stdlib.h>
 
 #include <zircon/assert.h>
-
-#include "sparse_array.h"
 
 // An individual element is either a part of the used list or the free list at
 // any given time, each of which is a non-circular doubly-linked list terminated

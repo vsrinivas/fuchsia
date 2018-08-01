@@ -15,6 +15,7 @@
  */
 
 #include <linux/relay.h>
+
 #include "core.h"
 #include "debug.h"
 #include "wmi-ops.h"

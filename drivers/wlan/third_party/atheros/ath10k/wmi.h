@@ -18,8 +18,13 @@
 #ifndef _WMI_H_
 #define _WMI_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
+#include <zircon/status.h>
+
+#include "hw.h"
 
 /*
  * This file specifies the WMI interface for the Unified Software

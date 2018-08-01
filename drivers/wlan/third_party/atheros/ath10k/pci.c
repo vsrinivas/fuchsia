@@ -15,33 +15,32 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "pci.h"
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define _ALL_SOURCE
-#include <threads.h>
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/binding.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "macros.h"
+#include "bmi.h"
+#include "ce.h"
 #include "core.h"
 #include "debug.h"
-#include "mac.h"
-#include "targaddrs.h"
-#include "bmi.h"
 #include "hif.h"
 #include "htc.h"
-#include "ce.h"
-#include "pci.h"
 #include "ieee80211.h"
+#include "mac.h"
+#include "macros.h"
+#include "targaddrs.h"
 
 enum ath10k_pci_reset_mode {
     ATH10K_PCI_RESET_AUTO = 0,
