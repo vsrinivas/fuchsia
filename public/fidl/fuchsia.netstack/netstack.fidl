@@ -119,18 +119,8 @@ struct RouteTableEntry {
   uint32 nicid;
 };
 
-interface NotificationListener {
-  // Called by the netstack when one or more interfaces or their properties change.
-  // TODO: include only the interface(s) that have changed?
-  1: OnInterfacesChanged(vector<NetInterface> interfaces);
-};
-
 [Discoverable]
 interface Netstack {
-  // Registers the given NotificationListener to be notified of changes. Only one
-  // NotificationListener may be active for each client's Netstack instance.
-  1: RegisterListener(NotificationListener? listener);
-
   // Finds the port number from a given service name and protocol. [service] can be a
   // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
   // the service is checked for TCP first, then UDP.

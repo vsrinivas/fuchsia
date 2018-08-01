@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"app/context"
-	"fidl/bindings"
 	"netstack/connectivity"
 	"netstack/fidlconv"
 	"netstack/link/eth"
@@ -27,7 +26,6 @@ import (
 )
 
 type netstackImpl struct {
-	listener nsfidl.NotificationListenerInterface
 }
 
 func toSubnets(addrs []tcpip.Address) []nsfidl.Subnet {
@@ -81,13 +79,6 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 		return out[i].Id < out[j].Id
 	})
 	return out
-}
-
-func (ni *netstackImpl) RegisterListener(listener nsfidl.NotificationListenerInterface) (err error) {
-	if bindings.Proxy(listener).IsValid() {
-		ni.listener = listener
-	}
-	return nil
 }
 
 func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protocol) (port uint16, err error) {
@@ -314,12 +305,6 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result 
 	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }
 
-func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {
-	if bindings.Proxy(ni.listener).IsValid() {
-		ni.listener.OnInterfacesChanged(interfaces)
-	}
-}
-
 var netstackService *nsfidl.NetstackService
 
 // AddNetstackService registers the NetstackService with the application context,
@@ -354,12 +339,10 @@ func OnInterfacesChanged() {
 	if netstackService != nil {
 		interfaces := getInterfaces()
 		connectivity.InferAndNotify(interfaces)
-		for key, client := range netstackService.Bindings {
+		for key, _ := range netstackService.Bindings {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				p.OnInterfacesChanged(interfaces)
 			}
-			// TODO(stijlist): port mDNS to use FIDL2 events instead of NotificationListener
-			client.Stub.(*nsfidl.NetstackStub).Impl.(*netstackImpl).onInterfacesChanged(interfaces)
 		}
 	}
 }
