@@ -65,9 +65,24 @@ struct SupportedImageProperties {
   std::vector<VkSurfaceFormatKHR> formats;
 };
 
-struct ImagePipeSurface {
-  fuchsia::images::ImagePipeSyncPtr image_pipe;
-  SupportedImageProperties supported_properties;
+class ImagePipeSurface {
+ public:
+  ImagePipeSurface(zx_handle_t image_pipe_handle) {
+    std::vector<VkSurfaceFormatKHR> formats(
+        {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
+    supported_image_properties_ = {formats};
+    image_pipe_.Bind(zx::channel(image_pipe_handle));
+  }
+
+  fuchsia::images::ImagePipeSyncPtr& image_pipe() { return image_pipe_; }
+
+  SupportedImageProperties& supported_image_properties() {
+    return supported_image_properties_;
+  }
+
+ private:
+  fuchsia::images::ImagePipeSyncPtr image_pipe_;
+  SupportedImageProperties supported_image_properties_;
 };
 
 struct PendingImageInfo {
@@ -77,12 +92,8 @@ struct PendingImageInfo {
 
 class ImagePipeSwapchain {
  public:
-  ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                     fuchsia::images::ImagePipeSyncPtr image_pipe)
-      : supported_properties_(supported_properties),
-        image_pipe_(std::move(image_pipe)),
-        image_pipe_closed_(false),
-        device_(VK_NULL_HANDLE) {}
+  ImagePipeSwapchain(ImagePipeSurface* surface)
+      : surface_(surface), image_pipe_closed_(false), device_(VK_NULL_HANDLE) {}
 
   VkResult Initialize(VkDevice device,
                       const VkSwapchainCreateInfoKHR* pCreateInfo,
@@ -97,8 +108,9 @@ class ImagePipeSwapchain {
                    const VkSemaphore* pWaitSemaphores);
 
  private:
-  SupportedImageProperties supported_properties_;
-  fuchsia::images::ImagePipeSyncPtr image_pipe_;
+  ImagePipeSurface* surface() { return surface_; }
+
+  ImagePipeSurface* surface_;
   std::vector<VkImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
@@ -283,9 +295,9 @@ VkResult ImagePipeSwapchain::Initialize(
     image_info.color_space = fuchsia::images::ColorSpace::SRGB;
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
-    image_pipe_->AddImage(ImageIdFromIndex(i), std::move(image_info),
-                          std::move(vmo),
-                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
+    surface()->image_pipe()->AddImage(
+        ImageIdFromIndex(i), std::move(image_info), std::move(vmo),
+        fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
 
     available_ids_.push_back(i);
 
@@ -317,11 +329,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(
 
   auto image_pipe_surface =
       reinterpret_cast<ImagePipeSurface*>(pCreateInfo->surface);
-  SupportedImageProperties supported_properties =
-      image_pipe_surface->supported_properties;
-
-  auto swapchain = std::make_unique<ImagePipeSwapchain>(
-      supported_properties, std::move(image_pipe_surface->image_pipe));
+  auto swapchain = std::make_unique<ImagePipeSwapchain>(image_pipe_surface);
 
   ret = swapchain->Initialize(device, pCreateInfo, pAllocator);
   if (ret != VK_SUCCESS) {
@@ -537,9 +545,9 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     release_fences.push_back(std::move(release_fence));
 
     fuchsia::images::PresentationInfo info;
-    image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
-                              std::move(acquire_fences),
-                              std::move(release_fences), &info);
+    surface()->image_pipe()->PresentImage(ImageIdFromIndex(index), 0,
+                                          std::move(acquire_fences),
+                                          std::move(release_fences), &info);
   }
 
   return VK_SUCCESS;
@@ -572,12 +580,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(
 VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(
     VkInstance instance, const VkMagmaSurfaceCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
-  auto surface = new ImagePipeSurface;
-  std::vector<VkSurfaceFormatKHR> formats(
-      {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
-  surface->supported_properties = {formats};
-  surface->image_pipe.Bind(zx::channel(pCreateInfo->imagePipeHandle));
-  *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
+  *pSurface = reinterpret_cast<VkSurfaceKHR>(
+      new ImagePipeSurface(pCreateInfo->imagePipeHandle));
   return VK_SUCCESS;
 }
 
@@ -623,13 +627,14 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(
     VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
     uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats) {
-  auto image_pipe_surface = reinterpret_cast<ImagePipeSurface*>(surface);
-  SupportedImageProperties supported_properties =
-      image_pipe_surface->supported_properties;
+  SupportedImageProperties& supported_properties =
+      reinterpret_cast<ImagePipeSurface*>(surface)
+          ->supported_image_properties();
   if (pSurfaceFormats == nullptr) {
     *pCount = supported_properties.formats.size();
     return VK_SUCCESS;
   }
+
   assert(*pCount >= supported_properties.formats.size());
   memcpy(pSurfaceFormats, supported_properties.formats.data(),
          supported_properties.formats.size() * sizeof(VkSurfaceFormatKHR));
