@@ -20,7 +20,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 
-#include "garnet/bin/ui/root_presenter/rk4_spring_simulation.h"
+#include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
@@ -59,7 +59,7 @@ class DisplayRotater {
   // Presentation time at which animation values were last set.
   uint64_t last_animation_update_time_ = 0;
 
-  RK4SpringSimulation spring_;
+  scenic::RK4SpringSimulation spring_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayRotater);
 };

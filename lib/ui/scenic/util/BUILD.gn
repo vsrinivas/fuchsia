@@ -18,3 +18,15 @@ source_set("util") {
     "//garnet/public/lib/fxl",
   ]
 }
+
+source_set("rk4_spring_simulation") {
+  sources = [
+    "rk4_spring_simulation.cc",
+    "rk4_spring_simulation.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fbl",
+  ]
+}

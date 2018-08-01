@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/root_presenter/rk4_spring_simulation.h"
+#include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
 
 #include <fbl/algorithm.h>
 #include <algorithm>
@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace root_presenter {
+namespace scenic {
 RK4SpringSimulation::RK4SpringSimulation(float initial_value, float tension,
                                          float friction)
     : tension_(tension),
@@ -102,4 +102,4 @@ bool RK4SpringSimulation::EvaluateRK(float step_size) {
   return net_value_is_low && net_velocity_is_low;
 }
 
-}  // namespace root_presenter
+}  // namespace scenic
