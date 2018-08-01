@@ -123,14 +123,14 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
             brcmf_sdiod_writeb(sdiodev, SBSDIO_GPIO_EN, 0x2, &ret);
         }
 
-        /* must configure SDIO_CCCR_IENx to enable irq */
-        data = brcmf_sdiod_func0_rb(sdiodev, SDIO_CCCR_IENx, &ret);
+        /* must configure SDIO_CCCR_INT_ENABLE to enable irq */
+        data = brcmf_sdiod_func0_rb(sdiodev, SDIO_CCCR_INT_ENABLE, &ret);
         data |= SDIO_CCCR_IEN_FUNC1 | SDIO_CCCR_IEN_FUNC2 | SDIO_CCCR_IEN_FUNC0;
-        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_IENx, data, &ret);
+        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_INT_ENABLE, data, &ret);
 
         /* redirect, configure and enable io for interrupt signal */
         data = SDIO_CCCR_BRCM_SEPINT_MASK | SDIO_CCCR_BRCM_SEPINT_OE;
-        if (pdata->oob_irq_flags & IRQF_TRIGGER_HIGH) {
+        if (pdata->oob_irq_flags & IRQ_FLAG_LEVEL_HIGH) {
             data |= SDIO_CCCR_BRCM_SEPINT_ACT_HI;
         }
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, data, &ret);
@@ -157,7 +157,7 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
         pdata = &sdiodev->settings->bus.sdio;
         sdio_claim_host(sdiodev->func1);
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
-        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_IENx, 0, NULL);
+        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_INT_ENABLE, 0, NULL);
         sdio_release_host(sdiodev->func1);
 
         sdiodev->oob_irq_requested = false;
@@ -371,8 +371,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
     addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
     if (brcmf_netbuf_list_length(pktq) == 1) {
-        err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr,
-                                      brcmf_netbuf_list_peek_head(pktq));
+        err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, brcmf_netbuf_list_peek_head(pktq));
     } else {
         glom_netbuf = brcmu_pkt_buf_get_netbuf(totlen);
         if (!glom_netbuf) {
@@ -528,7 +527,7 @@ zx_status_t brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func) {
     brcmf_dbg(SDIO, "Enter\n");
 
     /* Issue abort cmd52 command through F0 */
-    brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_ABORT, func, NULL);
+    brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_ABORT_RESET, func, NULL);
 
     brcmf_dbg(SDIO, "Exit\n");
     return ZX_OK;
@@ -639,7 +638,7 @@ static void brcmf_sdiod_host_fixup(struct mmc_host* host) {
     /* runtime-pm powers off the device */
     pm_runtime_forbid(host->parent);
     /* avoid removal detection upon resume */
-    host->caps |= MMC_CAP_NONREMOVABLE;
+    host->caps |= MMC_CAP_NONREMOVABLE; // Defined outside this driver's codebase
 }
 #endif // POWER_MANAGEMENT
 
@@ -752,7 +751,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     //brcmf_dbg(SDIO, "Function#: %d\n", func);
 
     // TODO(cphoenix): Reexamine this when SDIO is more mature - do we need to support "quirks" in
-    // Fuchsia?
+    // Fuchsia? (MMC_QUIRK_LENIENT_FN0 is defined outside this driver.)
     /* Set MMC_QUIRK_LENIENT_FN0 for this card */
     //func->card->quirks |= MMC_QUIRK_LENIENT_FN0;
 

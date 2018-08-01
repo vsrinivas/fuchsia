@@ -231,7 +231,7 @@ static void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
     workqueue_schedule_default(&ifp->multicast_work);
 }
 
-static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
+static void brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
     zx_status_t ret;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
@@ -294,9 +294,7 @@ done:
         ndev->stats.tx_packets++;
         ndev->stats.tx_bytes += netbuf->len;
     }
-
-    /* Return ok: we always eat the packet */
-    return NETDEV_TX_OK;
+    /* No status to return: we always eat the packet */
 }
 
 void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state) {
@@ -632,12 +630,10 @@ static zx_status_t brcmf_net_p2p_stop(struct net_device* ndev) {
     return brcmf_cfg80211_down(ndev);
 }
 
-static netdev_tx_t brcmf_net_p2p_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
+static void brcmf_net_p2p_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
     if (netbuf) {
         brcmf_netbuf_free(netbuf);
     }
-
-    return NETDEV_TX_OK;
 }
 
 static const struct net_device_ops brcmf_netdev_ops_p2p = {

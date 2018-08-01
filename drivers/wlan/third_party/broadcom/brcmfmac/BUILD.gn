@@ -64,7 +64,7 @@ driver_module("brcmfmac_driver") {
     "fwil_types.h",
     "fwsignal.c",
     "fwsignal.h",
-    "linuxisms.c",
+    "linuxisms.h",
     "msgbuf.c",
     "msgbuf.h",
     "netbuf.c",

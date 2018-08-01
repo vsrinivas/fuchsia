@@ -425,7 +425,12 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
 #endif
 
     if (bus_type == BRCMF_BUSTYPE_SDIO) {
+        settings->bus.sdio.sd_sgentry_align = 0; // Use default
+        settings->bus.sdio.sd_head_align = 0; // Use default
+        settings->bus.sdio.drive_strength = 0; // Use default
         settings->bus.sdio.txglomsz = brcmf_sdiod_txglomsz;
+        settings->bus.sdio.oob_irq_supported = true;    // TODO(cphoenix): Always?
+        settings->bus.sdio.oob_irq_flags = 0; // TODO(cphoenix): Maybe IRQ_FLAG_LEVEL_HIGH
     }
 #ifdef USE_PLATFORM_DATA
 // TODO(NET-831): Do we need to do this?

@@ -209,4 +209,3 @@ void brcmu_d11_attach(struct brcmu_d11inf* d11inf) {
         d11inf->decchspec = brcmu_d11ac_decchspec;
     }
 }
-EXPORT_SYMBOL(brcmu_d11_attach);

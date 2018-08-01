@@ -1661,7 +1661,7 @@ done:
  * only need to signal the bus being down and update the state.
  */
 // Was used in struct usb_driver.suspend
-static zx_status_t brcmf_usb_suspend(struct brcmf_usb_interface* intf, pm_message_t state) {
+static zx_status_t brcmf_usb_suspend(struct brcmf_usb_interface* intf, uint64_t state) {
     struct brcmf_usb_device* usb = intf_to_usbdev(intf);
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(&usb->dev);
 

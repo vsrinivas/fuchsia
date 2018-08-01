@@ -63,6 +63,11 @@
 #define SDIO_CCCR_BRCM_SEPINT_OE BIT(1)
 #define SDIO_CCCR_BRCM_SEPINT_ACT_HI BIT(2)
 
+// TODO(cphoenix): Clean up all these names to make it clearer what's an address vs. a value.
+#define SDIO_CCCR_INT_ENABLE  0x04
+#define SDIO_CCCR_INTx		  0x05
+#define SDIO_CCCR_ABORT_RESET 0x06
+
 /* function 1 miscellaneous registers */
 
 /* sprom command and status */
@@ -150,6 +155,11 @@
 
 /* watchdog polling interval */
 #define BRCMF_WD_POLL_MSEC (10)
+
+/* A couple of SDIO device IDs that need special handling */
+#define SDIO_DEVICE_ID_BROADCOM_4339      0x4339
+#define SDIO_DEVICE_ID_BROADCOM_4335_4339 0x4335
+
 
 /**
  * enum brcmf_sdiod_state - the state of the bus.

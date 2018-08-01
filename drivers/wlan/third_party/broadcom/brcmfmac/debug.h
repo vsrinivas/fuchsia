@@ -128,7 +128,7 @@ void brcmf_debugfs_init(void);
 void brcmf_debugfs_exit(void);
 zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr);
 void brcmf_debug_detach(struct brcmf_pub* drvr);
-struct dentry* brcmf_debugfs_get_devdir(struct brcmf_pub* drvr);
+zx_handle_t brcmf_debugfs_get_devdir(struct brcmf_pub* drvr);
 zx_status_t brcmf_debugfs_add_entry(struct brcmf_pub* drvr, const char* fn,
                                     zx_status_t (*read_fn)(struct seq_file* seq, void* data));
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len);

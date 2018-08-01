@@ -325,7 +325,7 @@ struct brcmf_cfg80211_info {
     bool scan_tried;
     uint8_t* dcmd_buf;
     uint8_t* extra_buf;
-    struct dentry* debugfsdir;
+    zx_handle_t debugfsdir;
     struct escan_info escan_info;
     brcmf_timer_info_t escan_timeout;
     struct work_struct escan_timeout_work;
@@ -357,11 +357,11 @@ static inline struct wiphy* cfg_to_wiphy(struct brcmf_cfg80211_info* cfg) {
 }
 
 static inline struct brcmf_cfg80211_info* wiphy_to_cfg(struct wiphy* w) {
-    return w->priv_info;
+    return w->cfg80211_info;
 }
 
 static inline struct brcmf_cfg80211_info* wdev_to_cfg(struct wireless_dev* wd) {
-    return wd->priv_info;
+    return wd->cfg80211_info;
 }
 
 static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {

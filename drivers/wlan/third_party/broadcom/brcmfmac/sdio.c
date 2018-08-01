@@ -3008,9 +3008,9 @@ static zx_status_t brcmf_debugfs_sdio_count_read(struct seq_file* seq, void* dat
 
 static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {
     struct brcmf_pub* drvr = bus->sdiodev->bus_if->drvr;
-    struct dentry* dentry = brcmf_debugfs_get_devdir(drvr);
+    zx_handle_t dentry = brcmf_debugfs_get_devdir(drvr);
 
-    if (dentry == NULL) {
+    if (dentry == ZX_HANDLE_INVALID) {
         return;
     }
 
@@ -3018,7 +3018,7 @@ static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {
 
     brcmf_debugfs_add_entry(drvr, "forensics", brcmf_sdio_forensic_read);
     brcmf_debugfs_add_entry(drvr, "counters", brcmf_debugfs_sdio_count_read);
-    debugfs_create_u32("console_interval", 0644, dentry, &bus->console_interval);
+    brcmf_debugfs_create_u32_file("console_interval", 0644, dentry, &bus->console_interval);
 }
 #else
 static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
@@ -3462,7 +3462,7 @@ static void brcmf_sdio_dataworker(struct work_struct* work) {
 
     bus->dpc_running = true;
     wmb();
-    while (READ_ONCE(bus->dpc_triggered)) {
+    while (*(volatile bool*)&(bus->dpc_triggered)) {
         bus->dpc_triggered = false;
         brcmf_sdio_dpc(bus);
         bus->idlecount = 0;

@@ -122,3 +122,31 @@ void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr) {
 void brcmf_set_bit_in_array(size_t bit_number, atomic_ulong* addr) {
     (void)brcmf_test_and_set_bit_in_array(bit_number, addr);
 }
+
+// TODO(jeffbrown): Once we have an equivalent of debugfs, implement / connect these.
+zx_status_t brcmf_debugfs_create_directory(const char *name, zx_handle_t parent,
+                                           zx_handle_t* new_directory_out) {
+    if (new_directory_out) {
+        *new_directory_out = ZX_HANDLE_INVALID;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t brcmf_debugfs_create_sequential_file(void* dev, const char* fn, zx_handle_t parent,
+                                                 zx_status_t (*read_fn)(struct seq_file* seq,
+                                                                        void* data),
+                                                 zx_handle_t* new_file_out) {
+    if (new_file_out) {
+        *new_file_out = ZX_HANDLE_INVALID;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t brcmf_debugfs_rm_recursive(zx_handle_t dir) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t brcmf_debugfs_create_u32_file(const char* name, uint32_t permissions,
+                                          zx_handle_t parent, uint32_t* data_to_access) {
+    return ZX_ERR_NOT_SUPPORTED;
+}

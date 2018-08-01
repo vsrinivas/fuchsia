@@ -24,7 +24,7 @@
 #include "linuxisms.h"
 #include "fweh.h"
 
-static struct dentry* root_folder;
+static zx_handle_t root_folder;
 
 void brcmf_hexdump(const void* buf, size_t len) {
     if (len > 4096) {
@@ -119,50 +119,51 @@ zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, 
 void brcmf_debugfs_init(void) {
     zx_status_t err;
 
-    err = debugfs_create_dir(KBUILD_MODNAME, NULL, &root_folder);
+    err = brcmf_debugfs_create_directory(KBUILD_MODNAME, ZX_HANDLE_INVALID, &root_folder);
     if (err != ZX_OK) {
-        root_folder = NULL;
+        root_folder = ZX_HANDLE_INVALID;
     }
 }
 
 void brcmf_debugfs_exit(void) {
-    if (!root_folder) {
+    if (root_folder == ZX_HANDLE_INVALID) {
         return;
     }
 
-    debugfs_remove_recursive(root_folder);
-    root_folder = NULL;
+    brcmf_debugfs_rm_recursive(root_folder);
+    root_folder = ZX_HANDLE_INVALID;
 }
 
 zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr) {
     struct brcmf_device* dev = drvr->bus_if->dev;
     zx_status_t ret;
 
-    if (!root_folder) {
+    if (root_folder == ZX_HANDLE_INVALID) {
         return ZX_ERR_NOT_FILE;
     }
 
-    ret = debugfs_create_dir(device_get_name(dev->zxdev), root_folder, &drvr->dbgfs_dir);
+    ret = brcmf_debugfs_create_directory(device_get_name(dev->zxdev), root_folder,
+                                         &drvr->dbgfs_dir);
     return ret;
 }
 
 void brcmf_debug_detach(struct brcmf_pub* drvr) {
     brcmf_fweh_unregister(drvr, BRCMF_E_PSM_WATCHDOG);
 
-    if (drvr->dbgfs_dir != NULL) {
-        debugfs_remove_recursive(drvr->dbgfs_dir);
+    if (drvr->dbgfs_dir != ZX_HANDLE_INVALID) {
+        brcmf_debugfs_rm_recursive(drvr->dbgfs_dir);
     }
 }
 
-struct dentry* brcmf_debugfs_get_devdir(struct brcmf_pub* drvr) {
+zx_handle_t brcmf_debugfs_get_devdir(struct brcmf_pub* drvr) {
     return drvr->dbgfs_dir;
 }
 
 zx_status_t brcmf_debugfs_add_entry(struct brcmf_pub* drvr, const char* fn,
                                     zx_status_t (*read_fn)(struct seq_file* seq, void* data)) {
-    struct dentry* e;
+    zx_handle_t e;
     zx_status_t ret;
 
-    ret = debugfs_create_devm_seqfile(drvr->bus_if->dev, fn, drvr->dbgfs_dir, read_fn, &e);
+    ret = brcmf_debugfs_create_sequential_file(drvr->bus_if->dev, fn, drvr->dbgfs_dir, read_fn, &e);
     return ret;
 }

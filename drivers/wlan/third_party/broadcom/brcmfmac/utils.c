@@ -39,7 +39,6 @@ struct brcmf_netbuf* brcmu_pkt_buf_get_netbuf(uint len) {
 
     return netbuf;
 }
-EXPORT_SYMBOL(brcmu_pkt_buf_get_netbuf);
 
 /* Free the driver packet. Free the tag if present */
 void brcmu_pkt_buf_free_netbuf(struct brcmf_netbuf* netbuf) {
@@ -50,7 +49,6 @@ void brcmu_pkt_buf_free_netbuf(struct brcmf_netbuf* netbuf) {
     WARN_ON(brcmf_netbuf_maybe_in_list(netbuf));
     brcmf_netbuf_free(netbuf);
 }
-EXPORT_SYMBOL(brcmu_pkt_buf_free_netbuf);
 
 /*
  * osl multiple-precedence packet queue
@@ -73,7 +71,6 @@ struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_net
 
     return p;
 }
-EXPORT_SYMBOL(brcmu_pktq_penq);
 
 struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcmf_netbuf* p) {
     struct brcmf_netbuf_list* q;
@@ -92,7 +89,6 @@ struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcm
 
     return p;
 }
-EXPORT_SYMBOL(brcmu_pktq_penq_head);
 
 struct brcmf_netbuf* brcmu_pktq_pdeq(struct pktq* pq, int prec) {
     struct brcmf_netbuf_list* q;
@@ -107,7 +103,6 @@ struct brcmf_netbuf* brcmu_pktq_pdeq(struct pktq* pq, int prec) {
     pq->len--;
     return p;
 }
-EXPORT_SYMBOL(brcmu_pktq_pdeq);
 
 /*
  * precedence based dequeue with match function. Passing a NULL pointer
@@ -132,7 +127,6 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
     }
     return NULL;
 }
-EXPORT_SYMBOL(brcmu_pktq_pdeq_match);
 
 struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec) {
     struct brcmf_netbuf_list* q;
@@ -147,7 +141,6 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec) {
     pq->len--;
     return p;
 }
-EXPORT_SYMBOL(brcmu_pktq_pdeq_tail);
 
 void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct brcmf_netbuf*, void*),
                        void* arg) {
@@ -164,7 +157,6 @@ void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct br
         }
     }
 }
-EXPORT_SYMBOL(brcmu_pktq_pflush);
 
 void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*, void*),
                       void* arg) {
@@ -173,7 +165,6 @@ void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*
         brcmu_pktq_pflush(pq, prec, dir, fn, arg);
     }
 }
-EXPORT_SYMBOL(brcmu_pktq_flush);
 
 void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len) {
     int prec;
@@ -190,7 +181,6 @@ void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len) {
         brcmf_netbuf_list_init(&pq->q[prec].netbuf_list);
     }
 }
-EXPORT_SYMBOL(brcmu_pktq_init);
 
 struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out) {
     int prec;
@@ -210,7 +200,6 @@ struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out) {
 
     return brcmf_netbuf_list_peek_tail(&pq->q[prec].netbuf_list);
 }
-EXPORT_SYMBOL(brcmu_pktq_peek_tail);
 
 /* Return sum of lengths of a specific set of precedences */
 int brcmu_pktq_mlen(struct pktq* pq, uint prec_bmp) {
@@ -225,7 +214,6 @@ int brcmu_pktq_mlen(struct pktq* pq, uint prec_bmp) {
 
     return len;
 }
-EXPORT_SYMBOL(brcmu_pktq_mlen);
 
 /* Priority dequeue from a specific set of precedences */
 struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_out) {
@@ -260,7 +248,6 @@ struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_o
 
     return p;
 }
-EXPORT_SYMBOL(brcmu_pktq_mdeq);
 
 /* Produce a human-readable string for boardrev */
 char* brcmu_boardrev_str(uint32_t brev, char* buf) {
@@ -274,7 +261,6 @@ char* brcmu_boardrev_str(uint32_t brev, char* buf) {
     }
     return buf;
 }
-EXPORT_SYMBOL(brcmu_boardrev_str);
 
 char* brcmu_dotrev_str(uint32_t dotrev, char* buf) {
     uint8_t dotval[4];
@@ -298,7 +284,6 @@ char* brcmu_dotrev_str(uint32_t dotrev, char* buf) {
 
     return buf;
 }
-EXPORT_SYMBOL(brcmu_dotrev_str);
 
 #if defined(DEBUG)
 
@@ -317,6 +302,5 @@ void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {
 
     brcmf_hexdump(data, size);
 }
-EXPORT_SYMBOL(brcmu_dbg_hex_dump);
 
 #endif /* defined(DEBUG) */

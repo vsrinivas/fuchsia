@@ -62,6 +62,9 @@
 
 #define BRCMF_ERR_FIRMWARE_UNSUPPORTED (-23)
 
+/* For use in oob_irq_flags */
+#define IRQ_FLAG_LEVEL_HIGH 0x1
+
 #define max(a, b) ((a)>(b)?(a):(b))
 
 extern async_dispatcher_t* default_dispatcher;
@@ -221,5 +224,18 @@ bool brcmf_test_bit_in_array(size_t bit_number, atomic_ulong* addr);
 void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr);
 
 void brcmf_set_bit_in_array(size_t bit_number, atomic_ulong* addr);
+
+zx_status_t brcmf_debugfs_create_directory(const char *name, zx_handle_t parent,
+                                           zx_handle_t* new_directory_out);
+
+zx_status_t brcmf_debugfs_create_sequential_file(void* dev, const char* fn, zx_handle_t parent,
+                                                 zx_status_t (*read_fn)(struct seq_file* seq,
+                                                                        void* data),
+                                                 zx_handle_t* new_file_out);
+
+zx_status_t brcmf_debugfs_rm_recursive(zx_handle_t dir);
+
+zx_status_t brcmf_debugfs_create_u32_file(const char* name, uint32_t permissions,
+                                          zx_handle_t parent, uint32_t* data_to_access);
 
 #endif /* BRCMF_DEVICE_H */

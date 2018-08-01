@@ -1021,7 +1021,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
         err = ZX_ERR_NO_MEMORY;
         goto exit;
     }
-    BUG_ON(params_size + sizeof("escan") >= BRCMF_DCMD_MEDLEN);
+    ZX_ASSERT(params_size + sizeof("escan") >= BRCMF_DCMD_MEDLEN);
     brcmf_escan_prep(cfg, &params->params_le, request);
     params->version = BRCMF_ESCAN_REQ_VERSION;
     params->action = WL_ESCAN_ACTION_START;
@@ -6707,8 +6707,8 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
         goto ops_out;
     }
     wiphy->ops = ops;
-    wiphy->priv_info = malloc(sizeof(struct brcmf_cfg80211_info));
-    if (wiphy->priv_info == NULL) {
+    wiphy->cfg80211_info = malloc(sizeof(struct brcmf_cfg80211_info));
+    if (wiphy->cfg80211_info == NULL) {
         free(wiphy);
         goto ops_out;
     }
