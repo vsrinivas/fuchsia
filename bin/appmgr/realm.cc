@@ -482,9 +482,12 @@ void Realm::CreateComponentWithRunner(std::string runner_url,
     return;
   }
 
+  // Use "web_runner" if it is installed, otherwise fall back to using
+  // "web_runner_prototype" instead.
   // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
   // web_runner.
   if (runner_url == "web_runner" &&
+      !files::IsDirectory("/pkgfs/packages/web_runner") &&
       files::IsDirectory("/pkgfs/packages/web_runner_prototype")) {
     runner_url = "web_runner_prototype";
   }
