@@ -78,14 +78,15 @@ TEST_F(ChannelTest, InvalidCombo) {
     std::vector<TestVector> tvs = {
         // clang-format off
         {0, CBW20, false},
-        {12, CBW20, false},
+        {15, CBW20, false},
         {8, CBW40ABOVE, false},
         {4, CBW40BELOW, false},
         {32, CBW20, false},
         {68, CBW20, false},
         {96, CBW20, false},
         {148, CBW20, false},
-        {169, CBW20, false},
+        {169, CBW20, true},
+        {183, CBW20, false},
         {36, CBW40BELOW, false},
         {40, CBW40ABOVE, false},
         {149, CBW40BELOW, false},

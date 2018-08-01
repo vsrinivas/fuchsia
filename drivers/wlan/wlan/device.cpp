@@ -665,9 +665,13 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
         // Validate channels
         auto& supported_channels = bandinfo.supported_channels;
         switch (supported_channels.base_freq) {
-        case 5000:
+        case common::kBaseFreq5Ghz:
             for (auto c : supported_channels.channels) {
-                if ((c > 0 && c < 36) || c > 196) {
+                if (c == 0) {  // End of the valid channel
+                    break;
+                }
+                auto chan = wlan_channel_t{.primary = c, .cbw = CBW20};
+                if (!common::IsValidChan5Ghz(chan)) {
                     errorf("wlanmac band info for %u MHz has invalid channel %u\n",
                            supported_channels.base_freq, c);
                     errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
@@ -675,9 +679,13 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
                 }
             }
             break;
-        case 2407:
+        case common::kBaseFreq2Ghz:
             for (auto c : supported_channels.channels) {
-                if (c > 14) {
+                if (c == 0) {  // End of the valid channel
+                    break;
+                }
+                auto chan = wlan_channel_t{.primary = c, .cbw = CBW20};
+                if (!common::IsValidChan2Ghz(chan)) {
                     errorf("wlanmac band info for %u MHz has invalid cahnnel %u\n",
                            supported_channels.base_freq, c);
                     errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
