@@ -22,8 +22,8 @@ constexpr char kMIDashboardUrl[] = "mi_dashboard";
 constexpr char kUsageLogUrl[] = "usage_log";
 constexpr char kStoryInfoAgentUrl[] = "story_info";
 
-constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
-    3, zx::sec(45)};
+constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {3,
+                                                                   zx::sec(45)};
 
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
 // InterfaceHandle<>.
@@ -73,11 +73,12 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         focus_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle,
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master)
+    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle)
     : context_(context), config_(config), kronk_restart_(kKronkRetryLimit) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
   focus_provider_.Bind(std::move(focus_provider_handle));
+  puppet_master_.Bind(std::move(puppet_master_handle));
   visible_stories_provider_.Bind(std::move(visible_stories_provider_handle));
 
   // Start dependent processes. We get some component-scope services from
@@ -102,7 +103,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_->Initialize(
       Duplicate(story_provider_), Duplicate(focus_provider_),
       std::move(context_writer), std::move(context_reader),
-      std::move(puppet_master));
+      Duplicate(puppet_master_));
 
   StartActionLog(suggestion_engine_.get());
 }
@@ -203,7 +204,8 @@ void UserIntelligenceProviderImpl::StartKronk() {
 
   fuchsia::modular::KronkInitializerPtr initializer;
   component::ConnectToService(kronk_services_.get(), initializer.NewRequest());
-  initializer->Initialize(Duplicate(focus_provider_));
+  initializer->Initialize(Duplicate(focus_provider_),
+                          Duplicate(puppet_master_));
 
   // fuchsia::modular::Agent runner closes the agent controller connection when
   // the agent terminates. We restart the agent (up to a limit) when we notice

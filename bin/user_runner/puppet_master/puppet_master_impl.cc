@@ -40,4 +40,9 @@ void PuppetMasterImpl::WatchSession(
   FXL_NOTIMPLEMENTED();
 }
 
+void PuppetMasterImpl::Duplicate(
+    fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+  Connect(std::move(request));
+}
+
 }  // namespace modular

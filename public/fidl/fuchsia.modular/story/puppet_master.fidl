@@ -59,6 +59,12 @@ interface PuppetMaster {
   // alive. |options| specifies filters and policy about which events are sent
   // to |watcher|.
   2: WatchSession(SessionWatcher watcher, WatchSessionOptions? options) -> ();
+
+  // Creates a duplicate connection to this PuppetMaster request.
+  // TODO(miguelfrde): framework should create new handles, we shouldn't
+  // duplicate. This is only needed right now because "maxwell" is starting
+  // kronk when it should be the framework.
+  3: Duplicate(request<PuppetMaster> @request);
 };
 
 struct WatchSessionOptions {

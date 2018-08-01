@@ -40,6 +40,10 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
       fuchsia::modular::WatchSessionOptionsPtr options,
       WatchSessionCallback done) override;
 
+  // |PuppetMaster|
+  void Duplicate(
+      fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) override;
+
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
 

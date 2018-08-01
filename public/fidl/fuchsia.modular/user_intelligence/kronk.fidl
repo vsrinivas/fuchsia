@@ -7,7 +7,12 @@ library fuchsia.modular;
 // This service is provided by a Kronk agent. When kronk is started, this
 // service is called by the intelligence framework and provided with
 // capabilities that Kronk may use.
+// TODO(miguelfrde): these services can be exposed to kronk in the namespace by
+// creating a new realm (back then environment). For that reason, we had to have
+// the component itself expose an outgoing service for initialization. Now, we
+// can give each component separate service instances, which allows us to avoid
+// this unnecessary exchange of services.
 [Discoverable]
 interface KronkInitializer {
-  1: Initialize(FocusProvider focus_provider);
+  1: Initialize(FocusProvider focus_provider, PuppetMaster puppet_master);
 };

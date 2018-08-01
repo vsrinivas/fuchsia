@@ -87,6 +87,7 @@ class UserIntelligenceProviderImpl
   fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
   fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
+  fidl::InterfacePtr<fuchsia::modular::PuppetMaster> puppet_master_;
   fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
       visible_stories_provider_;
 
