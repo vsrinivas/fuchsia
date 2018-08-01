@@ -453,6 +453,7 @@ mod tests {
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
         if let Icmpv4Body::DestUnreachable(packet) = icmp_packet.body {
+            assert_eq!(packet.code, Icmpv4DestUnreachableCode::DestHostUnreachable);
             assert_eq!(packet.origin_data.bytes(), ORIGIN_DATA);
         } else {
             panic!("Unexpected packet body");
@@ -465,6 +466,7 @@ mod tests {
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
         if let Icmpv4Body::Redirect(packet) = icmp_packet.body {
+            assert_eq!(packet.code, Icmpv4RedirectCode::RedirectForHost);
             assert_eq!(*packet.gateway, GATEWAY_ADDR);
         } else {
             panic!("Unexpected packet body");
@@ -477,6 +479,7 @@ mod tests {
         let (ip_packet, range) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let icmp_packet = Icmpv4Packet::parse(ip_packet.body()).unwrap();
         if let Icmpv4Body::TimeExceeded(packet) = icmp_packet.body {
+            assert_eq!(packet.code, Icmpv4TimeExceededCode::TTLExpired);
             assert_eq!(packet.origin_data.bytes(), ORIGIN_DATA);
         } else {
             panic!("Unexpected packet body");
