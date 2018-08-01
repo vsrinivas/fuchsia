@@ -255,13 +255,12 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         // Create a histogram for the first sample value.
         std::string h1_name = name + "_samples_0_to_0";
         std::vector<double> h1_vals(vals.begin(), vals.begin()+1);
-        auto h1_diags = helper.Copy(diagnostic_map);
         AddHistogram(output,
                      &alloc,
                      h1_name,
                      "ms_smallerIsBetter",
                      h1_vals,
-                     std::move(h1_diags),
+                     helper.Copy(diagnostic_map),
                      MakeUuid());
 
         // Create a histogram for the remaining sample values, if any.
@@ -270,13 +269,12 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           h2_name << name << "_samples_1_to_" << vals.size()-1;
 
           std::vector<double> h2_vals(vals.begin()+1, vals.end());
-          auto h2_diags = helper.Copy(diagnostic_map);
           AddHistogram(output,
                        &alloc,
                        h2_name.str(),
                        "ms_smallerIsBetter",
                        h2_vals,
-                       std::move(h2_diags),
+                       helper.Copy(diagnostic_map),
                        MakeUuid());
         }
       } else {
