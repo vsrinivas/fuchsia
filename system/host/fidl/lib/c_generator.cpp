@@ -11,6 +11,21 @@ namespace fidl {
 
 namespace {
 
+// RAII helper class to reset the iostream to its original flags.
+class IOFlagsGuard {
+public:
+    explicit IOFlagsGuard(std::ostream* stream) :
+        stream_(stream), flags_(stream_->flags()) {
+    }
+    ~IOFlagsGuard() {
+        stream_->setf(flags_);
+    }
+
+private:
+    std::ostream* stream_;
+    std::ios::fmtflags flags_;
+};
+
 // Various string values are looked up or computed in these
 // functions. Nothing else should be dealing in string literals, or
 // computing strings from these or AST values.
@@ -680,8 +695,11 @@ void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_
         file_ << "#define " << named_interface.c_name << "_Name \"" << named_interface.discoverable_name << "\"\n";
     }
     for (const auto& method_info : named_interface.methods) {
-        file_ << "#define " << method_info.ordinal_name << " ((uint32_t)0x"
-              << std::uppercase << std::hex << method_info.ordinal << std::dec << ")\n";
+        {
+            IOFlagsGuard reset_flags(&file_);
+            file_ << "#define " << method_info.ordinal_name << " ((uint32_t)0x"
+                  << std::uppercase << std::hex << method_info.ordinal << std::dec << ")\n";
+        }
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);
         if (method_info.response)
