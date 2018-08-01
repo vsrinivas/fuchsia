@@ -6,18 +6,10 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
 
-rustc_library("dhcp") {
-  with_unit_tests = true
-  deps = [
-    "//third_party/rust-crates/rustc_deps:byteorder",
-    "//third_party/rust-crates/rustc_deps:bytes",
-  ]
-}
-
 rustc_binary("dhcpd_bin") {
   source_root = "src/bin/dhcpd.rs"
   deps = [
-    ":dhcp",
+    "//garnet/lib/rust/crates/dhcp",
     "//garnet/public/rust/crates/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
@@ -27,7 +19,7 @@ rustc_binary("dhcpd_bin") {
 rustc_binary("fake_client_bin") {
   source_root = "src/bin/fake_client.rs"
   deps = [
-    ":dhcp",
+    "//garnet/lib/rust/crates/dhcp",
     "//garnet/public/rust/crates/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
@@ -52,12 +44,3 @@ package("dhcpd") {
   binary = "rust_crates/dhcpd_bin"
 }
 
-package("dhcp_tests") {
-  testonly = true
-  deps = [
-    ":dhcp",
-  ]
-  tests = [
-    { name = "dhcp_lib_test_rustc" }
-  ]
-}
