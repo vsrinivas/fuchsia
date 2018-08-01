@@ -9,11 +9,17 @@ struct ComponentInfo {
   string url;
 };
 
+// interface to control the fake component created by MockRunner.
+interface MockComponent {
+  1: Kill(uint64 errorcode);
+  2: ConnectToService(string service_name, handle chan);
+};
+
 // TODO: support more function
 // - publish service to component to test exported directory
 interface MockRunner {
   1: Crash();
-  2: KillComponent(uint64 id, uint64 errorcode);
+  2: ConnectToComponent(uint64 id, request<MockComponent> req);
 
   101: -> OnComponentCreated(ComponentInfo info);
   102: -> OnComponentKilled(uint64 id);

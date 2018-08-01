@@ -4,6 +4,8 @@
 
 #include <glob.h>
 
+#include <fidl/examples/echo/cpp/fidl.h>
+
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/path.h"
@@ -14,6 +16,7 @@ namespace component {
 namespace {
 
 using fuchsia::sys::TerminationReason;
+using test::component::mockrunner::MockComponentPtr;
 using testing::EnclosingEnvironment;
 using testing::MockRunnerRegistry;
 using testing::TestWithEnvironment;
@@ -39,6 +42,12 @@ class RealmRunnerTest : public TestWithEnvironment {
     EXPECT_TRUE(ret) << "Waiting for connection timed out: "
                      << runner_registry_.connect_count();
     return ret;
+  }
+
+  fuchsia::sys::LaunchInfo CreateLaunchInfo(const std::string& url) {
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = url;
+    return launch_info;
   }
 
   bool WaitForRunnerToDie() {
@@ -126,8 +135,10 @@ TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
   };
   auto components = runner_registry_.runner()->components();
   const int64_t ret_code = 3;
-  runner_registry_.runner()->runner_ptr()->KillComponent(
-      components[0].unique_id, ret_code);
+  MockComponentPtr component_ptr;
+  runner_registry_.runner()->runner_ptr()->ConnectToComponent(
+      components[0].unique_id, component_ptr.NewRequest());
+  component_ptr->Kill(ret_code);
   ASSERT_TRUE(WaitForComponentCount(0));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return reason == TerminationReason::EXITED; }, kTimeout));
@@ -160,6 +171,31 @@ TEST_F(RealmRunnerTest, KillComponentController) {
   ASSERT_TRUE(WaitForComponentCount(0));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return reason == TerminationReason::EXITED; }, kTimeout));
+}
+
+TEST_F(RealmRunnerTest, ComponentCanConnectToEnvService) {
+  ASSERT_EQ(ZX_OK, enclosing_environment_->AddServiceWithLaunchInfo(
+                       CreateLaunchInfo("echo2_server_cpp"),
+                       fidl::examples::echo::Echo::Name_));
+  auto component =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  ASSERT_TRUE(WaitForRunnerToRegister());
+  // make sure component was launched
+  ASSERT_TRUE(WaitForComponentCount(1));
+
+  fidl::examples::echo::EchoPtr echo;
+  MockComponentPtr component_ptr;
+  runner_registry_.runner()->runner_ptr()->ConnectToComponent(
+      runner_registry_.runner()->components()[0].unique_id,
+      component_ptr.NewRequest());
+  component_ptr->ConnectToService(fidl::examples::echo::Echo::Name_,
+                                  echo.NewRequest().TakeChannel());
+  const std::string message = "ConnectToEnvService";
+  fidl::StringPtr ret_msg = "";
+  echo->EchoString(message,
+                   [&](::fidl::StringPtr retval) { ret_msg = retval; });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return ret_msg.get() == message; }, kTimeout));
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {

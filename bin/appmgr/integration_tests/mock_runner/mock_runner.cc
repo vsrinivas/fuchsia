@@ -17,7 +17,12 @@ FakeSubComponent::FakeSubComponent(
     fuchsia::sys::StartupInfo startup_info,
     ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     MockRunner* runner)
-    : id_(id), return_code_(0), alive_(true), binding_(this), runner_(runner) {
+    : id_(id),
+      return_code_(0),
+      alive_(true),
+      binding_(this),
+      runner_(runner),
+      startup_context_(StartupContext::CreateFrom(std::move(startup_info))) {
   if (controller.is_valid()) {
     binding_.Bind(std::move(controller));
     binding_.set_error_handler([this] { Kill(); });
@@ -65,14 +70,14 @@ MockRunner::~MockRunner() = default;
 
 void MockRunner::Crash() { exit(1); }
 
-void MockRunner::KillComponent(uint64_t id, uint64_t errorcode) {
+void MockRunner::ConnectToComponent(
+    uint64_t id, ::fidl::InterfaceRequest<mockrunner::MockComponent> req) {
   auto it = components_.find(id);
   if (it == components_.end()) {
     return;
   }
   auto component = it->second.get();
-  component->SetReturnCode(errorcode);
-  component->Kill();
+  component->AddMockControllerBinding(std::move(req));
 }
 
 void MockRunner::StartComponent(
