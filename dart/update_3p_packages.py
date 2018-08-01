@@ -33,9 +33,7 @@ ROOT_PUBSPECS = [
 # project.
 PROJECT_DEPENDENCIES = [
     'build/dart',
-    'topaz/app/chat',
     'topaz/app/dashboard',
-    'topaz/app/xi',
     'topaz/public/dart/widgets',
     'topaz/tools',
 ]
