@@ -9,6 +9,7 @@
 #include <hid/acer12.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
+#include <hid/ft3x27.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 
@@ -178,6 +179,13 @@ bool HidDecoder::ParseProtocol(Protocol* protocol) {
   if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
     setup_eyoyo_touch(fd_);
     *protocol = Protocol::EyoyoTouch;
+    return true;
+  }
+  // TODO(SCN-867) Use HID parsing for all touch devices
+  // will remove the need for this
+  if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
+    setup_ft3x27_touch(fd_);
+    *protocol = Protocol::Ft3x27Touch;
     return true;
   }
 

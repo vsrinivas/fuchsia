@@ -59,7 +59,8 @@ class InputInterpreter {
     PARADISEv3,
     SAMSUNG,
     EGALAX,
-    EYOYO
+    EYOYO,
+    FT3X27,
   };
 
   enum class MouseDeviceType { NONE, BOOT, PARADISEv1, PARADISEv2, GAMEPAD };
@@ -88,6 +89,7 @@ class InputInterpreter {
   bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
   bool ParseParadiseSensorReport(uint8_t* report, size_t len);
   bool ParseEyoyoTouchscreenReport(uint8_t* report, size_t len);
+  bool ParseFt3x27TouchscreenReport(uint8_t* r, size_t len);
 
   bool ParseAmbientLightSensorReport();
 

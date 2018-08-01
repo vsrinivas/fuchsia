@@ -36,7 +36,8 @@ class HidDecoder {
     ParadiseV1TouchPad,
     ParadiseV2TouchPad,
     ParadiseSensor,
-    EyoyoTouch
+    EyoyoTouch,
+    Ft3x27Touch,
   };
 
   struct HidGamepadSimple {

@@ -8,6 +8,7 @@
 #include <hid/acer12.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
+#include <hid/ft3x27.h>
 #include <hid/hid.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
@@ -377,6 +378,26 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
+  } else if (protocol == HidDecoder::Protocol::Ft3x27Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has a touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = FT3X27_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = FT3X27_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(SCN-867) Use HID parsing for all touch devices
+    // will remove the need for this hardcoding
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::FT3X27;
   } else {
     FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
     return false;
@@ -559,6 +580,15 @@ bool InputInterpreter::Read(bool discard) {
     case TouchDeviceType::EYOYO:
       if (report[0] == EYOYO_RPT_ID_TOUCH) {
         if (ParseEyoyoTouchscreenReport(report.data(), rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::FT3X27:
+      if (report[0] == FT3X27_RPT_ID_TOUCH) {
+        if (ParseFt3x27TouchscreenReport(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -920,6 +950,39 @@ bool InputInterpreter::ParseEyoyoTouchscreenReport(uint8_t* r, size_t len) {
     touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
     touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+  }
+
+  return true;
+}
+
+bool InputInterpreter::ParseFt3x27TouchscreenReport(uint8_t* r, size_t len) {
+  if (len != sizeof(ft3x27_touch_t)) {
+    return false;
+  }
+
+  const auto& report = *(reinterpret_cast<ft3x27_touch_t*>(r));
+  touchscreen_report_->event_time = InputEventTimestampNow();
+
+  size_t index = 0;
+  touchscreen_report_->touchscreen->touches.resize(index);
+
+  for (size_t i = 0; i < countof(report.fingers); ++i) {
+    auto fid = report.fingers[i].finger_id;
+
+    if (!ft3x27_finger_id_tswitch(fid))
+      continue;
+
+    fuchsia::ui::input::Touch touch;
+    touch.finger_id = ft3x27_finger_id_contact(fid);
+    touch.x = report.fingers[i].x;
+    touch.y = report.fingers[i].y;
+    touch.width = 5;
+    touch.height = 5;
+    touchscreen_report_->touchscreen->touches.resize(index + 1);
+    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+    FXL_VLOG(2) << name()
+                << " parsed (sensor=" << static_cast<uint16_t>(touch.finger_id)
+                << ") x=" << touch.x << ", y=" << touch.y;
   }
 
   return true;
