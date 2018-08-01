@@ -12,6 +12,8 @@ source_set("lib") {
     "data_generator.h",
     "get_ledger.cc",
     "get_ledger.h",
+    "ledger_matcher.cc",
+    "ledger_matcher.h",
     "page_data_generator.cc",
     "page_data_generator.h",
     "quit_on_error.cc",
@@ -33,9 +35,11 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",
+    "//peridot/lib/convert",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//peridot/public/fidl/fuchsia.modular.auth",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",
@@ -47,7 +51,6 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/fidl",
-    "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
   ]
 
@@ -88,6 +91,7 @@ source_set("unittests") {
   sources = [
     "get_ledger_unittest.cc",
     "ledger_app_instance_factory_unittest.cc",
+    "ledger_matcher_unittest.cc",
   ]
 
   deps = [
