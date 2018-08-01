@@ -599,17 +599,26 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 
 void StoryProviderImpl::NotifyStoryStateChange(
     fidl::StringPtr story_id, const fuchsia::modular::StoryState story_state) {
-  auto i = story_controller_impls_.find(story_id);
-
-  if (i == story_controller_impls_.end()) {
-    // If this call arrives while DeleteStory() is in progress, the story
-    // controller might already be gone from here.
-    return;
-  }
-
-  const fuchsia::modular::StoryInfo* const story_info =
-      i->second.current_info.get();
-  NotifyStoryWatchers(story_info, story_state);
+  auto on_run =
+      Future<>::Create("StoryProviderImpl.NotifyStoryStateChange.on_run");
+  auto done = on_run
+                  ->AsyncMap([this, story_id] {
+                    return session_storage_->GetStoryDataById(story_id);
+                  })
+                  ->Then([this, story_id, story_state](
+                             fuchsia::modular::internal::StoryDataPtr data) {
+                    auto it = story_controller_impls_.find(story_id);
+                    if (it == story_controller_impls_.end()) {
+                      // If this call arrives while DeleteStory() is in
+                      // progress, the story controller might already be gone
+                      // from here.
+                      return;
+                    }
+                    NotifyStoryWatchers(data.get(), story_state);
+                  });
+  std::function<void()> callback = [] {};
+  operation_queue_.Add(WrapFutureAsOperation(
+      "StoryProviderImpl::NotifyStoryStateChange", on_run, done, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -695,7 +704,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(
     i->second.current_info = CloneOptional(story_data.story_info);
   }
 
-  NotifyStoryWatchers(&story_data.story_info, state);
+  NotifyStoryWatchers(&story_data, state);
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
@@ -743,10 +752,13 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(
-    const fuchsia::modular::StoryInfo* const story_info,
+    const fuchsia::modular::internal::StoryData* const story_data,
     const fuchsia::modular::StoryState story_state) {
+  if (story_data->story_options.kind_of_proto_story) {
+    return;
+  }
   for (const auto& i : watchers_.ptrs()) {
-    (*i)->OnChange(CloneStruct(*story_info), story_state);
+    (*i)->OnChange(CloneStruct(story_data->story_info), story_state);
   }
 }
 

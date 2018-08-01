@@ -118,6 +118,10 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   // Deregisters itself from the watched story provider.
   void Reset() { binding_.Unbind(); }
 
+  void SetKindOfProtoStory(fidl::StringPtr story_id) {
+    kind_of_proto_stories_.insert(story_id);
+  }
+
  private:
   TestPoint on_delete_called_once_{"OnDelete() Called"};
   int on_delete_called_{};
@@ -153,6 +157,13 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
       modular::testing::Fail("Status change notification for deleted story");
     }
 
+    if (kind_of_proto_stories_.find(story_info.id) !=
+        kind_of_proto_stories_.end()) {
+      modular::testing::Fail(
+          "Stories with kind_of_proto_story option set shouldn't notify "
+          "OnChange");
+    }
+
     // Just check that all states are covered at least once, proving that we get
     // state notifications at all from the story provider.
     switch (story_state) {
@@ -174,6 +185,8 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   // Remember deleted stories. After a story is deleted, there must be no state
   // change notifications for it.
   std::set<std::string> deleted_stories_;
+
+  std::set<std::string> kind_of_proto_stories_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
 };
@@ -429,6 +442,103 @@ class TestApp
 
   void TestStory2_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
     story2_info_after_delete_.Pass();
+    if (info) {
+      modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
+    }
+
+    TestStory3();
+  }
+
+  TestPoint story3_create_{"Story3 Create"};
+
+  void TestStory3() {
+    story_provider_state_watcher_.Reset();
+    story_provider_state_watcher_.Watch(&story_provider_);
+    fuchsia::modular::StoryOptions story_options;
+    story_options.kind_of_proto_story = true;
+    story_provider_->CreateStoryWithOptions(
+        std::move(story_options), [this](fidl::StringPtr story_id) {
+          story_provider_state_watcher_.SetKindOfProtoStory(story_id);
+          story3_create_.Pass();
+          TestStory3_GetController(story_id);
+        });
+  }
+
+  TestPoint story3_get_controller_{"Story3 GetController"};
+
+  void TestStory3_GetController(fidl::StringPtr story_id) {
+    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo story_info,
+                                      fuchsia::modular::StoryState state) {
+      story_info_ = std::move(story_info);
+      story3_get_controller_.Pass();
+      TestStory3_PreviousStories();
+    });
+  }
+
+  TestPoint story3_previous_stories_{"Story3 GetPreviousStories"};
+
+  void TestStory3_PreviousStories() {
+    story_provider_->PreviousStories(
+        [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
+          // Since this is a kind-of-proto story, it shouldn't appear in
+          // PreviousStories calls. Note that we still expect 1 story to be here
+          // since Story1 wasn't deleted.
+          if (stories->size() == 1 && stories->at(0).id != story_info_.id) {
+            story3_previous_stories_.Pass();
+          } else {
+            FXL_LOG(ERROR) << "StoryProvider.PreviousStories() "
+                           << stories->size();
+            for (const auto& item : stories.get()) {
+              FXL_LOG(INFO) << item.id;
+            }
+          }
+          TestStory3_Run();
+        });
+  }
+
+  TestPoint story3_run_{"Story3 Run"};
+
+  void TestStory3_Run() {
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
+    story_controller_->Start(story_view.NewRequest());
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      if (state == fuchsia::modular::StoryState::RUNNING) {
+        story3_run_.Pass();
+      }
+
+      TestStory3_Stop();
+    });
+  }
+
+  TestPoint story3_stop_{"Story3 Stop"};
+
+  void TestStory3_Stop() {
+    story_controller_->Stop([this] {
+      TeardownStoryController();
+      story3_stop_.Pass();
+      TestStory3_DeleteStory();
+    });
+  }
+
+  TestPoint story3_delete_{"Story3 Delete"};
+
+  void TestStory3_DeleteStory() {
+    story_provider_->DeleteStory(story_info_.id,
+                                 [this] { story3_delete_.Pass(); });
+
+    story_provider_->GetStoryInfo(
+        story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
+          TestStory3_InfoAfterDeleteIsNull(std::move(info));
+        });
+  }
+
+  TestPoint story3_info_after_delete_{"Story3 InfoAfterDeleteIsNull"};
+
+  void TestStory3_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
+    story3_info_after_delete_.Pass();
     if (info) {
       modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
     }
