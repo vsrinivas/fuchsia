@@ -43,7 +43,7 @@ source_set("lib") {
     "mmu.cc",
     "null.cc",
     "ports.cc",
-    "pseudo-dir.cc",
+    "pseudo_dir.cc",
     "pthreads.cc",
     "round_trips.cc",
     "sockets.cc",
