@@ -5,7 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rustc_binary("dhcpd_bin") {
+rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/crates/dhcp",
     "//garnet/public/rust/crates/fuchsia-async",
@@ -14,10 +14,10 @@ rustc_binary("dhcpd_bin") {
   ]
 }
 
-package("dhcpd") {
+package("dhcpd_test_client") {
   deps = [
-    ":dhcpd_bin",
+    ":bin",
   ]
-  binary = "rust_crates/dhcpd_bin"
+  binary = "rust_crates/bin"
 }
 
