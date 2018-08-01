@@ -116,8 +116,6 @@ void DwarfExprEvalTest::DoEvalTest(
     const std::vector<uint8_t> data, bool expected_success,
     DwarfExprEval::Completion expected_completion, uint64_t expected_result,
     const char* expected_message) {
-  EXPECT_FALSE(eval_.is_complete());
-
   bool callback_issued = false;
   EXPECT_EQ(expected_completion,
             eval_.Eval(&provider_, data, [&callback_issued, expected_success,
@@ -125,7 +123,7 @@ void DwarfExprEvalTest::DoEvalTest(
                                           expected_message](DwarfExprEval* eval,
                                                             const Err& err) {
               EXPECT_TRUE(eval->is_complete());
-              EXPECT_EQ(expected_success, !err.has_error());
+              EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
               if (err.ok())
                 EXPECT_EQ(expected_result, eval->GetResult());
               else if (expected_message)
@@ -152,6 +150,17 @@ void DwarfExprEvalTest::DoEvalTest(
 }
 
 }  // namespace
+
+TEST_F(DwarfExprEvalTest, NoResult) {
+  const char kNoResults[] = "DWARF expression produced no results.";
+
+  // Empty expression.
+  DoEvalTest({}, false, DwarfExprEval::Completion::kSync, 0, kNoResults);
+
+  // Nonempty expression that produces no results.
+  DoEvalTest({llvm::dwarf::DW_OP_nop}, false, DwarfExprEval::Completion::kSync,
+             0, kNoResults);
+}
 
 // Tests synchronously reading a single register.
 TEST_F(DwarfExprEvalTest, SyncRegister) {
@@ -242,6 +251,36 @@ TEST_F(DwarfExprEvalTest, ConstReadOffEnd) {
              "Bad number format in DWARF expression.");
 }
 
+TEST_F(DwarfExprEvalTest, Breg) {
+  provider().AddRegisterValue(0, true, 100);
+  provider().AddRegisterValue(9, false, 200);
+
+  // reg0 (=100) + 129 = 229 (synchronous).
+  // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
+  DoEvalTest({llvm::dwarf::DW_OP_breg0, 0x81, 0x01}, true,
+             DwarfExprEval::Completion::kSync, 229u);
+
+  // reg9 (=200) - 127 = 73 (asynchronous).
+  // -127 in SLEB is 0x81, 0x7f (example in DWARF spec).
+  DoEvalTest({llvm::dwarf::DW_OP_breg9, 0x81, 0x7f}, true,
+             DwarfExprEval::Completion::kAsync, 73u);
+}
+
+TEST_F(DwarfExprEvalTest, Bregx) {
+  provider().AddRegisterValue(0, true, 100);
+  provider().AddRegisterValue(9, false, 200);
+
+  // reg0 (=100) + 129 = 229 (synchronous).
+  // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
+  DoEvalTest({llvm::dwarf::DW_OP_bregx, 0x00, 0x81, 0x01}, true,
+             DwarfExprEval::Completion::kSync, 229u);
+
+  // reg9 (=200) - 127 = 73 (asynchronous).
+  // -127 in SLEB is 0x81, 0x7f (example in DWARF spec).
+  DoEvalTest({llvm::dwarf::DW_OP_bregx, 0x09, 0x81, 0x7f}, true,
+             DwarfExprEval::Completion::kAsync, 73u);
+}
+
 TEST_F(DwarfExprEvalTest, Const1s) {
   DoEvalTest({llvm::dwarf::DW_OP_const1s, static_cast<uint8_t>(-3)}, true,
              DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-3));
@@ -291,12 +330,279 @@ TEST_F(DwarfExprEvalTest, Consts) {
              DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-127));
 }
 
-TEST_F(DwarfExprEvalTest, Constu) {
+// Tests both "constu" and "drop".
+TEST_F(DwarfExprEvalTest, ConstuDrop) {
   // 129 in ULEB is 0x81, 0x01 (example in DWARF spec).
-  DoEvalTest({llvm::dwarf::DW_OP_constu, 0x81, 0x01}, true,
-             DwarfExprEval::Completion::kSync, 129u);
+  DoEvalTest({llvm::dwarf::DW_OP_constu, 0x81, 0x01, llvm::dwarf::DW_OP_lit0,
+              llvm::dwarf::DW_OP_drop},
+             true, DwarfExprEval::Completion::kSync, 129u);
 }
 
-// TODO(brettw) test and breg and bregx.
+// Tests both "dup" and "add".
+TEST_F(DwarfExprEvalTest, DupAdd) {
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_dup,
+              llvm::dwarf::DW_OP_plus},
+             true, DwarfExprEval::Completion::kSync, 16u);
+}
+
+TEST_F(DwarfExprEvalTest, Neg) {
+  // Negate one should give -1 casted to unsigned.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg}, true,
+             DwarfExprEval::Completion::kSync, 0xffffffffffffffffu);
+
+  // Double negate should come back to 1.
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_neg},
+      true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, Not) {
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_not}, true,
+             DwarfExprEval::Completion::kSync, 0xfffffffffffffffeu);
+}
+
+TEST_F(DwarfExprEvalTest, Or) {
+  // 8 | 1 = 9.
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_or},
+      true, DwarfExprEval::Completion::kSync, 9u);
+}
+
+TEST_F(DwarfExprEvalTest, Mul) {
+  // 8 * 9 = 72.
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit9,
+              llvm::dwarf::DW_OP_mul},
+             true, DwarfExprEval::Completion::kSync, 72u);
+}
+
+TEST_F(DwarfExprEvalTest, Minus) {
+  // 8 - 2 = 6.
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_minus},
+             true, DwarfExprEval::Completion::kSync, 6u);
+}
+
+TEST_F(DwarfExprEvalTest, Over) {
+  // Stack of (1, 2), this pushes "1" on the top.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_over},
+             true, DwarfExprEval::Completion::kSync, 1u);
+
+  // Same operation with a drop to check the next-to-top item.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_over, llvm::dwarf::DW_OP_drop},
+             true, DwarfExprEval::Completion::kSync, 2u);
+}
+
+TEST_F(DwarfExprEvalTest, Pick) {
+  // Stack of 1, 2, 3. Pick 0 -> 3.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_pick, 0},
+             true, DwarfExprEval::Completion::kSync, 3u);
+
+  // Stack of 1, 2, 3. Pick 2 -> 1.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_pick, 2},
+             true, DwarfExprEval::Completion::kSync, 1u);
+
+  // Stack of 1, 2, 3. Pick 3 -> error.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_pick, 3},
+             false, DwarfExprEval::Completion::kSync, 0u,
+             "Stack underflow for DWARF expression.");
+}
+
+TEST_F(DwarfExprEvalTest, Swap) {
+  // 1, 2, swap -> 2, 1
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_swap},
+             true, DwarfExprEval::Completion::kSync, 1u);
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_swap, llvm::dwarf::DW_OP_drop},
+             true, DwarfExprEval::Completion::kSync, 2u);
+}
+
+TEST_F(DwarfExprEvalTest, Rot) {
+  // 1, 2, 3, rot -> 3, 1, 2 (test with 0, 1, and 2 "drops" to check all 3
+  // stack elements).
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_rot},
+             true, DwarfExprEval::Completion::kSync, 2u);
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_rot,
+              llvm::dwarf::DW_OP_drop},
+             true, DwarfExprEval::Completion::kSync, 1u);
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_rot,
+              llvm::dwarf::DW_OP_drop, llvm::dwarf::DW_OP_drop},
+             true, DwarfExprEval::Completion::kSync, 3u);
+}
+
+TEST_F(DwarfExprEvalTest, Abs) {
+  // Abs of 1 -> 1.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_abs}, true,
+             DwarfExprEval::Completion::kSync, 1u);
+
+  // Abs of -1 -> 1.
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_abs},
+      true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, And) {
+  // 3 (=0b11) & 5 (=0b101) = 1
+  DoEvalTest({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_lit5,
+              llvm::dwarf::DW_OP_and},
+             true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, Div) {
+  // 8 / -2 = -4.
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_div},
+             true, DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-4));
+}
+
+TEST_F(DwarfExprEvalTest, Mod) {
+  // 7 % 2 = 1
+  DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit2,
+              llvm::dwarf::DW_OP_mod},
+             true, DwarfExprEval::Completion::kSync, 1);
+}
+
+TEST_F(DwarfExprEvalTest, PlusUconst) {
+  // 7 + 129 = 136. 129 in ULEB is 0x81, 0x01 (example in DWARF spec).
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_plus_uconst, 0x81, 0x01},
+      true, DwarfExprEval::Completion::kSync, 136u);
+}
+
+TEST_F(DwarfExprEvalTest, Shr) {
+  // 8 >> 1 = 4
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit1,
+              llvm::dwarf::DW_OP_shr},
+             true, DwarfExprEval::Completion::kSync, 4u);
+}
+
+TEST_F(DwarfExprEvalTest, Shra) {
+  // -7 (=0b1111...1111001) >> 2 = -2 (=0b1111...1110)
+  DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_neg,
+              llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_shra},
+             true, DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-2));
+}
+
+TEST_F(DwarfExprEvalTest, Shl) {
+  // 8 << 1 = 16
+  DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit1,
+              llvm::dwarf::DW_OP_shl},
+             true, DwarfExprEval::Completion::kSync, 16u);
+}
+
+TEST_F(DwarfExprEvalTest, Xor) {
+  // 7 (=0b111) ^ 9 (=0b1001) = 14 (=0b1110)
+  DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit9,
+              llvm::dwarf::DW_OP_xor},
+             true, DwarfExprEval::Completion::kSync, 14u);
+}
+
+TEST_F(DwarfExprEvalTest, Skip) {
+  // Skip 0 (execute next instruction which just gives a constant).
+  DoEvalTest({llvm::dwarf::DW_OP_skip, 0, 0, llvm::dwarf::DW_OP_lit9}, true,
+             DwarfExprEval::Completion::kSync, 9u);
+
+  // Skip 1 (skip over user-defined instruction which would normally give an
+  // error).
+  DoEvalTest({llvm::dwarf::DW_OP_skip, 1, 0, llvm::dwarf::DW_OP_lo_user,
+              llvm::dwarf::DW_OP_lit9},
+             true, DwarfExprEval::Completion::kSync, 9u);
+
+  // Skip to the end should just terminate the program. The result when nothing
+  // is left on the stack is 0.
+  DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_skip, 1, 0,
+              llvm::dwarf::DW_OP_nop},
+             true, DwarfExprEval::Completion::kSync, 0);
+
+  // Skip before the beginning is an error.
+  DoEvalTest({llvm::dwarf::DW_OP_skip, 0, 0xff}, false,
+             DwarfExprEval::Completion::kSync, 0,
+             "DWARF expression skips out-of-bounds.");
+}
+
+TEST_F(DwarfExprEvalTest, Bra) {
+  // 0 @ top of stack means don't take the branch. This jumps out of bounds
+  // which should not be taken.
+  DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_bra, 0xff, 0,
+              llvm::dwarf::DW_OP_lit9},
+             true, DwarfExprEval::Completion::kSync, 9u);
+
+  // Nonzero means take the branch. This jumps over a user-defined instruction
+  // which would give an error if executed.
+  DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_bra, 1, 0,
+              llvm::dwarf::DW_OP_lo_user, llvm::dwarf::DW_OP_lit9},
+             true, DwarfExprEval::Completion::kSync, 9u);
+}
+
+TEST_F(DwarfExprEvalTest, Eq) {
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_eq},
+      true, DwarfExprEval::Completion::kSync, 1u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_eq},
+      true, DwarfExprEval::Completion::kSync, 0u);
+}
+
+TEST_F(DwarfExprEvalTest, Ge) {
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_ge},
+      true, DwarfExprEval::Completion::kSync, 1u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_ge},
+      true, DwarfExprEval::Completion::kSync, 0u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_ge},
+      true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, Gt) {
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_gt},
+      true, DwarfExprEval::Completion::kSync, 0u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_gt},
+      true, DwarfExprEval::Completion::kSync, 0u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_gt},
+      true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, Le) {
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_le},
+      true, DwarfExprEval::Completion::kSync, 1u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_le},
+      true, DwarfExprEval::Completion::kSync, 1u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_le},
+      true, DwarfExprEval::Completion::kSync, 0u);
+}
+
+TEST_F(DwarfExprEvalTest, Lt) {
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lt},
+      true, DwarfExprEval::Completion::kSync, 0u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lt},
+      true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, Ne) {
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_ne},
+      true, DwarfExprEval::Completion::kSync, 0u);
+  DoEvalTest(
+      {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_ne},
+      true, DwarfExprEval::Completion::kSync, 1u);
+}
 
 }  // namespace zxdb

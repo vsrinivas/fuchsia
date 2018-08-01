@@ -82,7 +82,7 @@ class DwarfExprEval {
 
   // Adds a register's contents + an offset to the stack. Use 0 for the offset
   // to get the raw register value.
-  Completion PushRegisterWithOffset(int dwarf_register_number, uint64_t offset);
+  Completion PushRegisterWithOffset(int dwarf_register_number, int64_t offset);
 
   // Pushes a value on the stack.
   void Push(uint64_t value);
@@ -104,18 +104,41 @@ class DwarfExprEval {
   bool ReadLEBUnsigned(uint64_t* output);
 
   void ReportError(const std::string& msg);
+  void ReportStackUnderflow();
   void ReportUnimplementedOpcode(uint8_t op);
+
+  // Executes the given unary operation with the top stack entry as the
+  // parameter and pushes the result.
+  Completion OpUnary(uint64_t (*op)(uint64_t));
+
+  // Executes the given binary operation by popping the top two stack entries
+  // as parameters (the first is the next-to-top, the second is the top) and
+  // pushing the result on the stack.
+  Completion OpBinary(uint64_t (*op)(uint64_t, uint64_t));
 
   // Operations. On call, the expr_index_ will index the byte following the
   // opcode, and on return expr_index_ will index the next instruction (any
   // parameters will be consumed).
+  Completion OpBra();
   Completion OpBreg(uint8_t op);
+  Completion OpDrop();
+  Completion OpDup();
   Completion OpRegx();
   Completion OpBregx();
+  Completion OpOver();
+  Completion OpPick();
+  Completion OpPlusUconst();
   Completion OpPushSigned(int byte_count);
   Completion OpPushUnsigned(int byte_count);
   Completion OpPushLEBSigned();
   Completion OpPushLEBUnsigned();
+  Completion OpRot();
+  Completion OpSkip();
+  Completion OpSwap();
+
+  // Adjusts the instruction offset by the given amount, handling out-of-bounds
+  // as appropriate. This is the backend for jumps and branches.
+  void Skip(int64_t amount);
 
   SymbolDataProvider* data_provider_ = nullptr;  // Non-owning.
 
