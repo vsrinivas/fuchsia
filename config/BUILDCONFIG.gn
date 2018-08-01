@@ -215,25 +215,17 @@ if (is_fuchsia) {
     # target in the -shared toolchain.
     template("shared_library") {
       group(target_name) {
+        public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
         # Mark all variables as not needed to suppress errors for unused
         # variables.  The other variables normally passed to shared_library
         # are actually used by the shared_library instantiation in the
         # -shared toolchain, so any going truly unused will be caught there.
         not_needed(invoker, "*")
-        forward_variables_from(invoker,
-                               [
-                                 "data_deps",
-                                 "public_deps",
-                                 "all_dependent_configs",
-                                 "public_configs",
-                                 "testonly",
-                                 "visibility",
-                               ])
-
-        if (!defined(public_deps)) {
-          public_deps = []
-        }
-        public_deps += [ ":$target_name(${current_toolchain}-shared)" ]
       }
     }
   } else {

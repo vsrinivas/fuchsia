@@ -55,6 +55,9 @@ copy_description = "COPY {{source}} {{output}}"
 #   deps
 #     Optional: Dependencies of this toolchain.
 #
+#   propagates_configs
+#     Optional: public_configs should escape this toolchain via deps
+#
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.toolchain_cpu),
@@ -105,6 +108,7 @@ template("clang_toolchain") {
                              "ar",
                              "deps",
                              "ld",
+                             "propagates_configs",
                              "strip",
                            ])
 
@@ -499,7 +503,10 @@ template("clang_toolchain_suite") {
       }
       if (invoker.with_shared) {
         _clang_toolchain_variant("${target_name}${variant.suffix}-shared") {
-          clang_toolchain_args = invoker_clang_toolchain_args
+          clang_toolchain_args = {
+            forward_variables_from(invoker_clang_toolchain_args, "*")
+            propagates_configs = true
+          }
           this_variant = variant
           this_invoker = invoker
           this_pic_default = true
