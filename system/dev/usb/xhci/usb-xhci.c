@@ -129,7 +129,7 @@ static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t 
 
 static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_address) {
     xhci_t* xhci = ctx;
-    return xhci_cancel_transfers(xhci, device_id, ep_address);
+    return xhci_cancel_transfers(xhci, device_id, xhci_endpoint_index(ep_address));
 }
 
 static zx_status_t xhci_get_bti(void* ctx, zx_handle_t* out_handle) {
