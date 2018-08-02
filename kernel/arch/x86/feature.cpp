@@ -166,6 +166,8 @@ static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
         case 0x8e: /* Kabylake Y/U */
         case 0x9e: /* Kabylake H/S */
             return X86_MICROARCH_INTEL_KABYLAKE;
+        case 0x4d: /* Silvermont */
+            return X86_MICROARCH_INTEL_SILVERMONT;
         }
     } else if (x86_vendor == X86_VENDOR_AMD && info->family == 0xf) {
         switch (info->display_family) { // zen
@@ -321,6 +323,9 @@ void x86_feature_debug(void) {
         break;
     case X86_MICROARCH_INTEL_KABYLAKE:
         microarch_string = "Kaby Lake";
+        break;
+    case X86_MICROARCH_INTEL_SILVERMONT:
+        microarch_string = "Silvermont";
         break;
     case X86_MICROARCH_AMD_BULLDOZER:
         microarch_string = "Bulldozer";
@@ -526,6 +531,12 @@ static const x86_microarch_config_t nehalem_config{
     .reboot_system = unknown_reboot_system,
     .disable_c1e = true,
 };
+static const x86_microarch_config_t smt_config{
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
+    .disable_c1e = false,
+};
 static const x86_microarch_config_t intel_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -592,6 +603,9 @@ void select_microarch_config(void) {
         break;
     case X86_MICROARCH_INTEL_KABYLAKE:
         x86_microarch_config = &kbl_config;
+        break;
+    case X86_MICROARCH_INTEL_SILVERMONT:
+        x86_microarch_config = &smt_config;
         break;
     case X86_MICROARCH_AMD_BULLDOZER:
         x86_microarch_config = &bulldozer_config;
