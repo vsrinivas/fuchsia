@@ -3,6 +3,7 @@
         "garnet/packages/prod/tracing"
     ],
     "packages": [
-        "//garnet/bin/trace:trace_tests"
+        "//garnet/bin/trace:trace_tests",
+        "//garnet/bin/trace_stress"
     ]
 }
