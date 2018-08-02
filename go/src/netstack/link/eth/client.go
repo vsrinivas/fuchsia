@@ -60,9 +60,9 @@ const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
 // The protocol is described in system/public/zircon/device/ethernet.h.
 type Client struct {
-	MTU int
-	MAC [6]byte
-	Path    string
+	MTU  int
+	MAC  [6]byte
+	Path string
 
 	f       *os.File
 	tx      zx.Handle
@@ -310,15 +310,15 @@ func (c *Client) Free(b Buffer) {
 }
 
 func fifoWrite(handle zx.Handle, b []bufferEntry) (zx.Status, uint) {
-    var actual uint
-    status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
-    return status, actual
+	var actual uint
+	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
+	return status, actual
 }
 
 func fifoRead(handle zx.Handle, b []bufferEntry) (zx.Status, uint) {
-    var actual uint
-    status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
-    return status, actual
+	var actual uint
+	status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
+	return status, actual
 }
 
 func (c *Client) txCompleteLocked() (bool, error) {
