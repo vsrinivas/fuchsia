@@ -1536,6 +1536,57 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineSyncWithPeer) {
   EXPECT_TRUE(storage_->IsOnline());
 }
 
+TEST_F(PageStorageTest, PageIsEmpty) {
+  ObjectData value("Some value", InlineBehavior::PREVENT);
+  bool called;
+  Status status;
+  bool is_empty;
+
+  // Initially the page is empty.
+  storage_->IsEmpty(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(is_empty);
+
+  // Add an entry and expect that the page is not empty any more.
+  std::unique_ptr<Journal> journal;
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(PutInJournal(journal.get(), "key", value.object_identifier,
+                           KeyPriority::LAZY));
+  EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
+
+  storage_->IsEmpty(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(is_empty);
+
+  // Clear the page and expect it to be empty again.
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(DeleteFromJournal(journal.get(), "key"));
+  EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
+
+  storage_->IsEmpty(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(is_empty);
+}
+
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
 

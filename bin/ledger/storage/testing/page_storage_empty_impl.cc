@@ -88,6 +88,11 @@ bool PageStorageEmptyImpl::IsOnline() {
   return false;
 }
 
+void PageStorageEmptyImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, false);
+}
+
 void PageStorageEmptyImpl::GetUnsyncedCommits(
     fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {
@@ -121,7 +126,8 @@ void PageStorageEmptyImpl::IsPieceSynced(
   callback(Status::NOT_IMPLEMENTED, false);
 }
 
-void PageStorageEmptyImpl::MarkSyncedToPeer(fit::function<void(Status)> callback)  {
+void PageStorageEmptyImpl::MarkSyncedToPeer(
+    fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
 }
 

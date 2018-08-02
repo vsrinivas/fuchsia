@@ -100,6 +100,12 @@ class PageStorage : public PageSyncClient {
   // exclusive access to the page to ensure a correct result.
   virtual void IsSynced(fit::function<void(Status, bool)> callback) = 0;
 
+  // Checks whether this page storage is empty. A page is not empty if there is
+  // more than one head commits. Note that since the result is computed
+  // asynchronously, the caller must have exclusive access to the page to ensure
+  // a correct result.
+  virtual void IsEmpty(fit::function<void(Status, bool)> callback) = 0;
+
   // Checks whether this page is online, i.e. has been synced to the cloud or a
   // peer. The page is marked as online if any of these has occured: a local
   // commit has been synced to the cloud, commits from the cloud have been

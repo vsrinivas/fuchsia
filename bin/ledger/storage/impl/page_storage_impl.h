@@ -83,6 +83,7 @@ class PageStorageImpl : public PageStorage {
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;
   bool IsOnline() override;
+  void IsEmpty(fit::function<void(Status, bool)> callback) override;
   void GetUnsyncedCommits(
       fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) override;
@@ -219,9 +220,16 @@ class PageStorageImpl : public PageStorage {
       ChangeSource source, IsObjectSynced is_object_synced,
       std::unique_ptr<DataSource::DataChunk> data);
 
+  // Synchronous helper methods.
+
   // Marks this page as online.
   FXL_WARN_UNUSED_RESULT Status SynchronousMarkPageOnline(
       coroutine::CoroutineHandler* handler, PageDb::Batch* batch);
+
+  // Updates the given |empty_node_id| to point to the empty node's
+  // ObjectIdentifier.
+  FXL_WARN_UNUSED_RESULT Status SynchronousGetEmptyNodeIdentifier(
+      coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id);
 
   async_dispatcher_t* const dispatcher_;
   coroutine::CoroutineService* const coroutine_service_;
@@ -235,6 +243,7 @@ class PageStorageImpl : public PageStorage {
       std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
       commits_to_send_;
   bool page_is_online_ = false;
+  std::unique_ptr<ObjectIdentifier> empty_node_id_ = nullptr;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;

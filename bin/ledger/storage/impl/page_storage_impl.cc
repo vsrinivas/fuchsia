@@ -304,6 +304,36 @@ void PageStorageImpl::IsSynced(fit::function<void(Status, bool)> callback) {
 
 bool PageStorageImpl::IsOnline() { return page_is_online_; }
 
+void PageStorageImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback), [this](CoroutineHandler* handler,
+                                  fit::function<void(Status, bool)> callback) {
+        // Check there is a single head.
+        std::vector<CommitId> commit_ids;
+        Status status = db_->GetHeads(handler, &commit_ids);
+        if (status != Status::OK) {
+          callback(status, false);
+          return;
+        }
+        FXL_DCHECK(!commit_ids.empty());
+        if (commit_ids.size() > 1) {
+          // A page is not empty if there is more than one head commit.
+          callback(Status::OK, false);
+          return;
+        }
+        // Compare the root node of the head commit to that of the empty node.
+        std::unique_ptr<const Commit> commit;
+        status = SynchronousGetCommit(handler, commit_ids[0], &commit);
+        ObjectIdentifier* empty_node_id;
+        status = SynchronousGetEmptyNodeIdentifier(handler, &empty_node_id);
+        if (status != Status::OK) {
+          callback(status, false);
+          return;
+        }
+        callback(Status::OK, commit->GetRootIdentifier() == *empty_node_id);
+      });
+}
+
 void PageStorageImpl::GetUnsyncedCommits(
     fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {
@@ -1440,6 +1470,32 @@ Status PageStorageImpl::SynchronousMarkPageOnline(
     page_is_online_ = true;
   }
   return status;
+}
+
+FXL_WARN_UNUSED_RESULT Status
+PageStorageImpl::SynchronousGetEmptyNodeIdentifier(
+    coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id) {
+  if (!empty_node_id_) {
+    // Get the empty node identifier and cache it.
+    Status status;
+    ObjectIdentifier object_identifier;
+    if (coroutine::SyncCall(
+            handler,
+            [this](fit::function<void(Status, ObjectIdentifier)> callback) {
+              btree::TreeNode::Empty(this, std::move(callback));
+            },
+            &status,
+            &object_identifier) == coroutine::ContinuationStatus::INTERRUPTED) {
+      return Status::INTERRUPTED;
+    }
+    if (status != Status::OK) {
+      return status;
+    }
+    empty_node_id_ =
+        std::make_unique<ObjectIdentifier>(std::move(object_identifier));
+  }
+  *empty_node_id = empty_node_id_.get();
+  return Status::OK;
 }
 
 }  // namespace storage

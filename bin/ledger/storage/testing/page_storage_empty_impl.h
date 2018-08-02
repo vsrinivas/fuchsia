@@ -62,6 +62,8 @@ class PageStorageEmptyImpl : public PageStorage {
 
   bool IsOnline() override;
 
+  void IsEmpty(fit::function<void(Status, bool)> callback) override;
+
   void GetUnsyncedCommits(
       fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) override;
@@ -79,7 +81,7 @@ class PageStorageEmptyImpl : public PageStorage {
   void IsPieceSynced(ObjectIdentifier object_identifier,
                      fit::function<void(Status, bool)> callback) override;
 
-  void MarkSyncedToPeer(fit::function<void(Status)> callback)  override;
+  void MarkSyncedToPeer(fit::function<void(Status)> callback) override;
 
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
