@@ -89,6 +89,10 @@ impl KnownEssStore {
         self.write(guard)
     }
 
+    pub fn known_network_count(&self) -> usize {
+        self.ess_by_ssid.lock().len()
+    }
+
     fn write(&self, guard: MutexGuard<EssMap>) -> Result<(), failure::Error> {
         let temp_file = TempFile::create(&self.tmp_storage_path)?;
         let mut list = Vec::with_capacity(guard.len());
@@ -158,20 +162,25 @@ mod tests {
         let store = create_ess_store(temp_dir.path());
 
         assert_eq!(None, store.lookup(b"foo"));
+        assert_eq!(0, store.known_network_count());
         store.store(b"foo".to_vec(), ess(b"qwerty")).expect("storing 'foo' failed");
         assert_eq!(Some(ess(b"qwerty")), store.lookup(b"foo"));
+        assert_eq!(1, store.known_network_count());
         store.store(b"foo".to_vec(), ess(b"12345")).expect("storing 'foo' again failed");
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
+        assert_eq!(1, store.known_network_count());
 
         // Make sure that storage is persistent
         let store = create_ess_store(temp_dir.path());
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
+        assert_eq!(1, store.known_network_count());
 
         // Make sure that overwriting the existing file works
         store.store(b"bar".to_vec(), ess(b"zxcvb")).expect("storing 'bar' failed");
         let store = create_ess_store(temp_dir.path());
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
         assert_eq!(Some(ess(b"zxcvb")), store.lookup(b"bar"));
+        assert_eq!(2, store.known_network_count());
     }
 
     #[test]

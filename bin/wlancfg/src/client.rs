@@ -154,10 +154,6 @@ fn connect_to_known_network(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], known_e
 fn manual_connect_state(services: Services, next_req: NextReqFut, req: ConnectRequest) -> State {
     println!("wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid));
-    services.ess_store.store(req.ssid.clone(), KnownEss {
-        password: req.password.clone()
-    }).unwrap_or_else(|e| eprintln!("wlancfg: Failed to store network password: {}", e));
-
     let connect_fut = start_connect_txn(&services.sme, &req.ssid, &req.password)
         .into_future()
         .and_then(wait_until_connected);
@@ -171,6 +167,9 @@ fn manual_connect_state(services: Services, next_req: NextReqFut, req: ConnectRe
                 Ok(match error_code {
                     fidl_sme::ConnectResultCode::Success => {
                         println!("wlancfg: Successfully connected to '{}'", String::from_utf8_lossy(&req.ssid));
+                        services.ess_store.store(req.ssid.clone(), KnownEss {
+                            password: req.password.clone()
+                        }).unwrap_or_else(|e| eprintln!("wlancfg: Failed to store network password: {}", e));
                         connected_state(services, next_req)
                     },
                     other => {
@@ -335,6 +334,11 @@ mod tests {
         // Expect no other messages to SME or pending timers
         assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
         assert_eq!(None, exec.wake_next_timer());
+
+        // Network should be saved as known since we connected successfully
+        let known_ess = ess_store.lookup(b"foo")
+            .expect("expected 'foo' to be saved as a known network");
+        assert_eq!(b"qwerty", &known_ess.password[..]);
     }
 
     #[test]
@@ -472,6 +476,10 @@ mod tests {
         // Expect no other messages to SME or pending timers for now
         assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
         assert_eq!(None, exec.wake_next_timer());
+
+        // Network should not be saved as known since we failed to connect
+        assert_eq!(None, ess_store.lookup(b"foo"));
+        assert_eq!(0, ess_store.known_network_count());
     }
 
     fn send_manual_connect_request(client: &Client, ssid: &[u8])
