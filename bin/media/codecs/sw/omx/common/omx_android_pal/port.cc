@@ -9,6 +9,9 @@
 
 #include "log/log.h"
 
+#include <lib/fxl/debug/debugger.h>
+#include <lib/fxl/logging.h>
+
 extern "C" {
 
 // NOP replacement for Android's property_get:
@@ -52,6 +55,9 @@ void __android_log_assert(const char* condition, const char* tag,
     va_end(ap);
   }
   printf("\n");
+
+  fxl::BreakDebugger();
+  exit(-1);
 }
 
 void __assert2(const char* file, int line, const char* function,

@@ -14,6 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
@@ -1773,6 +1774,8 @@ void OmxCodecRunner::EnsureOmxStateLoaded(std::unique_lock<std::mutex>& lock) {
   }
   assert(omx_state_ == OMX_StateExecuting);
 
+  is_omx_recycle_enabled_ = false;
+
   // Drop the codec from executing to idle, then from idle to loaded.
 
   OmxStartStateSetLocked(OMX_StateIdle);
@@ -1979,6 +1982,7 @@ void OmxCodecRunner::EnsureOmxStateExecuting(
       OmxFillThisBufferLocked(output_packet->omx_header());
     }
   }
+  is_omx_recycle_enabled_ = true;
 }
 
 // Make sure OMX has the current buffer count for each port.
@@ -2696,6 +2700,8 @@ void OmxCodecRunner::onOmxEventPortSettingsChanged(
   }
   assert(stream_lifetime_ordinal == stream_lifetime_ordinal_);
 
+  is_omx_recycle_enabled_ = false;
+
   // Now we need to start disabling the port, wait for buffers to come back from
   // OMX, free buffer headers, wait for the port to become fully disabled,
   // unilaterally de-configure output buffers, demand a new output config from
@@ -2771,6 +2777,7 @@ void OmxCodecRunner::onOmxEventPortSettingsChanged(
     assert(packet_free_bits_[kOutput][output_packet->packet_index()]);
     OmxFillThisBufferLocked(output_packet->omx_header());
   }
+  is_omx_recycle_enabled_ = true;
 
   VLOGF("Done with mid-stream format change.\n");
 }
@@ -3243,21 +3250,20 @@ void OmxCodecRunner::CheckStreamLifetimeOrdinalLocked(
 
 void OmxCodecRunner::OmxTryRecycleOutputPacketLocked(
     OMX_BUFFERHEADERTYPE* header) {
-  // The !omx_output_enabled_desired_ part of this check is not technically
-  // required, but is here for symmetry.  The reason it's not required is
-  // because this path is shadowed by mid-stream format change also changing the
-  // buffer_lifetime_ordinal_[kOutput] which the caller of this
-  // method will check (and early out) before calling this method.
-  if (omx_state_ != OMX_StateExecuting ||
-      omx_state_desired_ != OMX_StateExecuting || !omx_output_enabled_ ||
-      !omx_output_enabled_desired_) {
-    // On entry to this method we didn't know whether OMX is in a state where
-    // OMX is willing to accept FillThisBuffer().  Turns out it's not. So we'll
-    // rely on packet_free_bits_ to track which packets need to be sent back to
-    // OMX with FillThisBuffer() just after we've finished moving the OMX codec
-    // back to a suitable state later.
+  if (!is_omx_recycle_enabled_) {
+    // We'll rely on packet_free_bits_ to track which packets need to be sent
+    // back to OMX with FillThisBuffer() just after we've finished moving the
+    // OMX codec back to a suitable state.
     return;
   }
+  // We can assert all these things whenever is_omx_recycle_enabled_ is true.
+  //
+  // However, the reverse is not a valid statement, because we don't re-enable
+  // is_omx_recycle_enabled_ until we're back under lock_ on StreamControl
+  // ordering domain.  Specifically, this condition becomes true on an OMX
+  // thread, followed by lock_ release, followed by lock_ acquire on
+  // StreamControl, followed by sending any packet_free_bits_ true packets back
+  // to OMX, followed by setting is_omx_recycle_enabled_ to true.
   assert(omx_state_ == OMX_StateExecuting &&
          omx_state_desired_ == OMX_StateExecuting && omx_output_enabled_ &&
          omx_output_enabled_desired_);

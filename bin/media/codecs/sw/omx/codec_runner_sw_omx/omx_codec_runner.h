@@ -885,6 +885,8 @@ class OmxCodecRunner : public CodecRunner {
   bool omx_output_enabled_desired_ = true;
   std::condition_variable omx_output_enabled_changed_;
 
+  bool is_omx_recycle_enabled_ = false;
+
   OMX_U32 omx_port_index_[kPortCount] = {};
 
   // These are the _initial_ OMX port defs.  This initial-ness is important
