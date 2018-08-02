@@ -231,7 +231,7 @@ func (c *Client) closeLocked() {
 	}
 
 	m := syscall.FDIOForFD(int(c.f.Fd()))
-	if err := IoctlStop(m); err == nil {
+	if err := IoctlStop(m); err != nil {
 		if fp, fperr := filepath.Abs(c.f.Name()); fperr != nil {
 			log.Printf("Failed to close ethernet file %s, error: %s", c.f.Name(), err)
 		} else {
