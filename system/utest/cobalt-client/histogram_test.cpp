@@ -290,27 +290,21 @@ bool MultiThreadCountOpsConsistencyTest() {
     END_TEST;
 }
 
-struct FlushHistogramFnArgs {
-    BaseHistogram* histogram;
-    // FlushHandler
-    BaseHistogram::FlushFn flush_handler;
-    // Notify to start the threads together.
-    sync_completion_t* start;
-    // Counter for the number of times Flush was actually called.
-    Counter* counter;
-};
-
 struct WaitBeforeCompleteFlushHandler {
     void operator()(uint64_t metric_id, const fidl::VectorView<ObservationValue>& observations,
                     BaseHistogram::FlushCompleteFn complete_fn) {
-        if (thread_ids != nullptr) {
-            for (auto thread_id : *thread_ids) {
-                if (thread_id != thrd_current()) {
-                    int res;
-                    thrd_join(thread_id, &res);
-                }
+        ZX_ASSERT(thread_ids != nullptr);
+        ZX_ASSERT(flushing_thread != nullptr);
+
+        for (auto thread_id : *thread_ids) {
+            if (thread_id != thrd_current()) {
+                int res;
+                thrd_join(thread_id, &res);
             }
         }
+
+        *flushing_thread = thrd_current();
+        counter->Increment();
         complete_fn();
         sync_completion_signal(completion);
     }
@@ -320,6 +314,21 @@ struct WaitBeforeCompleteFlushHandler {
 
     // Notify main thread that all threads finished while this thread was flushing.
     sync_completion_t* completion;
+
+    // Counter for the number of times Flush was actually called.
+    Counter* counter;
+
+    // Main thread will join this thread.
+    thrd_t* flushing_thread;
+};
+
+struct FlushHistogramFnArgs {
+    BaseHistogram* histogram;
+    // FlushHandler
+    WaitBeforeCompleteFlushHandler flush_handler;
+
+    // Notify to start the threads together.
+    sync_completion_t* start;
 };
 
 // This verifies that while a thread is flushing, all other threads fail to flush the contents
@@ -328,9 +337,7 @@ struct WaitBeforeCompleteFlushHandler {
 int FlushHistogramFn(void* void_args) {
     FlushHistogramFnArgs* args = static_cast<FlushHistogramFnArgs*>(void_args);
     sync_completion_wait(args->start, zx::sec(20).get());
-    if (args->histogram->Flush(fbl::move(args->flush_handler))) {
-        args->counter->Increment();
-    }
+    args->histogram->Flush(fbl::move(args->flush_handler));
     return thrd_success;
 }
 
@@ -340,6 +347,7 @@ bool MultiThreadFlushOpsConsistencyTest() {
     FlushHistogramFnArgs args[kThreads];
     fbl::Vector<thrd_t> thread_ids;
     sync_completion_t wait_for_start, wait_for_completion;
+    thrd_t flushing_thread;
     Counter flushes(0, 0);
 
     // Initialize all threads then signal start, and join all fo them.
@@ -353,14 +361,18 @@ bool MultiThreadFlushOpsConsistencyTest() {
         auto handler = WaitBeforeCompleteFlushHandler();
         handler.thread_ids = &thread_ids;
         handler.completion = &wait_for_completion;
+        handler.counter = &flushes;
+        handler.flushing_thread = &flushing_thread;
         args[thread].flush_handler = fbl::move(handler);
         args[thread].histogram = &histogram;
         args[thread].start = &wait_for_start;
-        args[thread].counter = &flushes;
         ASSERT_EQ(thrd_create(&thread_id, FlushHistogramFn, &args), thrd_success);
     }
     sync_completion_signal(&wait_for_start);
     sync_completion_wait(&wait_for_completion, zx::sec(20).get());
+
+    // Wait for the flushing thread to finish.
+    thrd_join(flushing_thread, nullptr);
 
     // Verify the number of times it was flushed, must be one.
     ASSERT_EQ(flushes.Load(), 1);
