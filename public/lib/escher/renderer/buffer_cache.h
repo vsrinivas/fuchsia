@@ -65,7 +65,7 @@ class BufferCache : public ResourceRecycler {
   // when the working cache size exceeds kMaxMemoryCached.
   std::map<fxl::TimePoint, CacheInfo> free_buffer_cache_;
   std::map<uint64_t, CacheInfo> free_buffers_by_id_;
-  size_t cache_size_;
+  size_t cache_size_ = 0;
 
   // Map of free buffers.
   std::map<vk::DeviceSize, std::list<std::unique_ptr<Buffer>>> free_buffers_;

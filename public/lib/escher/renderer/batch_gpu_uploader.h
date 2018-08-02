@@ -17,17 +17,22 @@
 
 namespace escher {
 
-class BatchGpuUploader;
-using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
-
 // Provides host-accessible GPU memory for clients to upload Images and Buffers
 // to the GPU. Offers the ability to batch uploads into consolidated submissions
 // to the GPU driver.
 // TODO(SCN-844) Migrate users of impl::GpuUploader to this class.
-class BatchGpuUploader : public Reffable {
+class BatchGpuUploader {
  public:
-  static BatchGpuUploaderPtr New(EscherWeakPtr weak_escher,
+  static BatchGpuUploader Create(EscherWeakPtr weak_escher,
                                  int64_t frame_trace_number = 0);
+
+  BatchGpuUploader(BatchGpuUploader&& o) {
+    this->writer_count_ = o.writer_count_;
+    o.writer_count_ = 0;
+    this->buffer_cache_ = std::move(o.buffer_cache_);
+    this->frame_ = std::move(o.frame_);
+    this->dummy_for_tests_ = o.dummy_for_tests_;
+  }
 
   ~BatchGpuUploader();
 
@@ -82,11 +87,19 @@ class BatchGpuUploader : public Reffable {
               const std::function<void()>& callback = [] {});
 
  private:
-  BatchGpuUploader(BufferCacheWeakPtr buffer_cache, FramePtr frame);
+  BatchGpuUploader() { dummy_for_tests_ = true; }
+  BatchGpuUploader(BufferCacheWeakPtr weak_buffer_cache, FramePtr frame);
+
 
   int32_t writer_count_ = 0;
-  BufferCacheWeakPtr buffer_cache_;
-  FramePtr frame_;
+  BufferCacheWeakPtr buffer_cache_ = BufferCacheWeakPtr();
+  FramePtr frame_ = nullptr;
+
+  // Temporary flag for tests that need to build and run with a null escher.
+  // Allows the uploader to be created and skips submit without crashing, but
+  // when this flag is set, BatchGpuUploader is not functional and does not 
+  // provide any dummy functiionality.
+  bool dummy_for_tests_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);
 };

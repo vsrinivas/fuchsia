@@ -9,13 +9,20 @@
 namespace escher {
 
 /* static */
-BatchGpuUploaderPtr BatchGpuUploader::New(EscherWeakPtr weak_escher,
+BatchGpuUploader BatchGpuUploader::Create(EscherWeakPtr weak_escher,
                                           int64_t frame_trace_number) {
+  if (!weak_escher) {
+    // Allow creation without an escher for tests. This class is not functional
+    // without a valid escher.
+    FXL_LOG(WARNING) << "Error, creating a BatchGpuUploader without an escher.";
+    return BatchGpuUploader();
+  }
+
+  BufferCacheWeakPtr buffer_cache = weak_escher->buffer_cache()->GetWeakPtr();
   FramePtr frame = weak_escher->NewFrame("Gpu Uploader", frame_trace_number,
                                          /* enable_gpu_logging */ false,
                                          CommandBuffer::Type::kTransfer);
-  return fxl::AdoptRef(new BatchGpuUploader(
-      weak_escher->buffer_cache()->GetWeakPtr(), std::move(frame)));
+  return BatchGpuUploader(std::move(buffer_cache), std::move(frame));
 }
 
 BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer,
@@ -76,7 +83,8 @@ CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
 
 BatchGpuUploader::BatchGpuUploader(BufferCacheWeakPtr weak_buffer_cache,
                                    FramePtr frame)
-    : buffer_cache_(std::move(weak_buffer_cache)), frame_(frame) {
+    : buffer_cache_(std::move(weak_buffer_cache)), frame_(std::move(frame)) {
+  FXL_DCHECK(buffer_cache_);
   FXL_DCHECK(frame_);
 }
 
@@ -122,6 +130,11 @@ void BatchGpuUploader::PostWriter(
 
 void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
                               const std::function<void()>& callback) {
+  if (dummy_for_tests_) {
+    FXL_LOG(WARNING) << "Dummy BatchGpuUploader for tests, skip submit";
+    return;
+  }
+
   FXL_DCHECK(frame_);
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the

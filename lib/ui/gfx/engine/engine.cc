@@ -24,6 +24,7 @@
 #include "garnet/lib/ui/gfx/swapchain/vulkan_display_swapchain.h"
 #include "garnet/lib/ui/scenic/session.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 
@@ -139,9 +140,22 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
-  if (!session_manager_->ApplyScheduledSessionUpdates(presentation_time,
-                                                      presentation_interval) &&
-      !force_render) {
+  uint64_t trace_number = timings.get() ? timings->frame_number() : 0;
+  auto gpu_uploader = escher::BatchGpuUploader::Create(escher_, trace_number);
+  command_context_.batch_gpu_uploader = &gpu_uploader;
+  command_context_.MakeValid();
+
+  bool has_updates = session_manager_->ApplyScheduledSessionUpdates(
+      presentation_time, presentation_interval);
+  // Submit regardless of whether or not there are updates to release the
+  // underlying CommandBuffer so the pool and sequencer don't stall out.
+  // TODO(ES-115) to remove this restriction.
+  command_context_.batch_gpu_uploader->Submit(escher::SemaphorePtr());
+
+  // Invalidate the commands' context.
+  command_context_.Invalidate();
+
+  if (!has_updates && !force_render) {
     return false;
   }
 

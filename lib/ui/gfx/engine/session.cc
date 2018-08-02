@@ -1309,7 +1309,8 @@ ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id, float width,
                              escher::MeshAttribute::kUV};
 
   return fxl::MakeRefCounted<RoundedRectangleShape>(
-      this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
+      this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec, 
+        engine()->GetCommandContext()->batch_gpu_uploader));
 }
 
 ResourcePtr Session::CreateMesh(scenic::ResourceId id) {

@@ -8,6 +8,7 @@
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/material/material.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/shape/modifier_wobble.h"
@@ -42,6 +43,7 @@ void RingTricks2::Init(escher::Stage* stage) {
       escher()->NewGradientImage(128, 128), vk::Filter::eLinear));
   gradient_->set_color(vec3(0.98f, 0.15f, 0.15f));
 
+  auto gpu_uploader = escher::BatchGpuUploader::Create(escher()->GetWeakPtr());
   // Create meshes for fancy wobble effect.
   {
     MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
@@ -53,8 +55,9 @@ void RingTricks2::Init(escher::Stage* stage) {
   // Create rounded rectangles.
   {
     MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-    rounded_rect1_ = factory_.NewRoundedRect(
-        RoundedRectSpec(200, 400, 90, 20, 20, 50), mesh_spec);
+    rounded_rect1_ =
+        factory_.NewRoundedRect(RoundedRectSpec(200, 400, 90, 20, 20, 50),
+                                mesh_spec, &gpu_uploader);
   }
 
   // Create sphere.
@@ -62,6 +65,9 @@ void RingTricks2::Init(escher::Stage* stage) {
     MeshSpec spec{MeshAttribute::kPosition3D | MeshAttribute::kUV};
     sphere_ = escher::NewSphereMesh(escher(), spec, 3, vec3(0, 0, 0), 100);
   }
+
+  // Upload mesh data to the GPU.
+  gpu_uploader.Submit(escher::SemaphorePtr());
 }
 
 RingTricks2::~RingTricks2() {}

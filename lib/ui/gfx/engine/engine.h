@@ -12,6 +12,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/release_fence_signaller.h"
 #include "lib/escher/impl/gpu_uploader.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/vk/simple_image_factory.h"
@@ -39,6 +40,24 @@ class ViewHolder;
 class Swapchain;
 
 using ViewLinker = ObjectLinker<ViewHolder, View>;
+
+// Graphical context for a set of session updates.
+struct CommandContext {
+  escher::BatchGpuUploader* batch_gpu_uploader = nullptr;
+
+  void Invalidate() {
+    batch_gpu_uploader = nullptr;
+    is_valid = false;
+  }
+
+ private:
+  friend class Engine;
+  void MakeValid() {
+    is_valid = batch_gpu_uploader != nullptr;
+  }
+
+  bool is_valid = false;
+};
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
@@ -116,6 +135,13 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
     return imported_memory_type_index_;
   }
 
+  CommandContext* GetCommandContext() {
+    // The CommandContext is only valid during RenderFrame() and should not be
+    // accessed outside of that.
+    FXL_DCHECK(command_context_.is_valid);
+    return &command_context_;
+  }
+
  protected:
   // Only used by subclasses used in testing.
   Engine(DisplayManager* display_manager,
@@ -166,6 +192,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   std::unique_ptr<SessionManager> session_manager_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::set<Compositor*> compositors_;
+
+  CommandContext command_context_;
 
   bool escher_cleanup_scheduled_ = false;
 

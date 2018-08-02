@@ -5,18 +5,21 @@
 #include "lib/escher/shape/rounded_rect_factory.h"
 
 #include "garnet/public/lib/escher/test/gtest_escher.h"
-
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/shape/mesh.h"
 
 namespace {
 using namespace escher;
 
 VK_TEST(RoundedRectFactory, NegativeBounds) {
-  auto escher = test::GetEscher();
+  auto escher = test::GetEscher()->GetWeakPtr();
+  BatchGpuUploader uploader = BatchGpuUploader::Create(escher, 0);
   RoundedRectSpec rect_spec(-1.f, -1.f, -2.f, -2.f, -2.f, -2.f);
   MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-  auto factory = std::make_unique<RoundedRectFactory>(escher->GetWeakPtr());
-  auto mesh = factory->NewRoundedRect(rect_spec, mesh_spec);
+  auto factory = std::make_unique<RoundedRectFactory>(escher);
+
+  auto mesh = factory->NewRoundedRect(rect_spec, mesh_spec, &uploader);
+  uploader.Submit(SemaphorePtr());
   EXPECT_NE(MeshPtr(), mesh);
 
   escher->vk_device().waitIdle();
