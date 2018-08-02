@@ -13,7 +13,7 @@
              path="third_party/leveldb"
              remote="https://fuchsia.googlesource.com/third_party/leveldb"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="1242372f0edb4ff7bb0e242bd4274393c3c6a984"/>
+             revision="06d9c9e9311912c5050fb1ca37e4cae407db8ebf"/>
     <project name="third_party/murmurhash"
              path="third_party/murmurhash"
              remote="https://fuchsia.googlesource.com/third_party/murmurhash.c"
