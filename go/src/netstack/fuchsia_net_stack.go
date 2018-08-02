@@ -15,7 +15,7 @@ import (
 	"syscall/zx"
 
 	netfidl "fidl/fuchsia/net"
-	stack "fidl/fuchsia/net/stack"
+	"fidl/fuchsia/net/stack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
