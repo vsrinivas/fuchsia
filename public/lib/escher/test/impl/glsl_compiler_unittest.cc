@@ -38,32 +38,38 @@ constexpr char fragment_src[] = R"GLSL(
   }
   )GLSL";
 
-TEST(GlslCompiler, CompileVertexShader) {
+// TODO(ES-125): disabled due to memory leak in SPIRV-tools.
+TEST(GlslCompiler, DISABLED_CompileVertexShader) {
   GlslToSpirvCompiler compiler;
   std::vector<std::string> src = {{vertex_src}};
   SpirvData spirv =
       compiler.Compile(vk::ShaderStageFlagBits::eVertex, src, "", "main").get();
-  EXPECT_GE(spirv.size(), 0U);
+  EXPECT_GT(spirv.size(), 0U);
 }
 
-TEST(GlslCompiler, CompileFragmentShader) {
+// TODO(ES-125): disabled due to memory leak in SPIRV-tools.
+TEST(GlslCompiler, DISABLED_CompileFragmentShader) {
   GlslToSpirvCompiler compiler;
   std::vector<std::string> src = {{fragment_src}};
   SpirvData spirv =
-      compiler.Compile(vk::ShaderStageFlagBits::eFragment, src, "", "").get();
-  EXPECT_GE(spirv.size(), 0U);
+      compiler.Compile(vk::ShaderStageFlagBits::eFragment, src, "", "main")
+          .get();
+  EXPECT_GT(spirv.size(), 0U);
 }
 
-TEST(GlslCompiler, CompileVertexShaderAsFragmentShader) {
+// TODO(ES-125): disabled due to memory leak in SPIRV-tools.
+TEST(GlslCompiler, DISABLED_CompileVertexShaderAsFragmentShader) {
   GlslToSpirvCompiler compiler;
   std::vector<std::string> src = {{vertex_src}};
   FXL_LOG(INFO) << "NOTE: the compiler errors below are expected.";
   SpirvData spirv =
-      compiler.Compile(vk::ShaderStageFlagBits::eFragment, src, "", "").get();
+      compiler.Compile(vk::ShaderStageFlagBits::eFragment, src, "", "main")
+          .get();
   EXPECT_EQ(spirv.size(), 0U);
 }
 
-TEST(GlslCompiler, CompileInParallel) {
+// TODO(ES-125): disabled due to memory leak in SPIRV-tools.
+TEST(GlslCompiler, DISABLED_CompileInParallel) {
   GlslToSpirvCompiler compiler;
   std::vector<std::string> src1 = {{vertex_src}};
   std::vector<std::string> src2 = {{fragment_src}};
@@ -71,8 +77,8 @@ TEST(GlslCompiler, CompileInParallel) {
       compiler.Compile(vk::ShaderStageFlagBits::eVertex, src1, "", "main");
   auto result2 =
       compiler.Compile(vk::ShaderStageFlagBits::eFragment, src2, "", "main");
-  EXPECT_GE(result1.get().size(), 0U);
-  EXPECT_GE(result2.get().size(), 0U);
+  EXPECT_GT(result1.get().size(), 0U);
+  EXPECT_GT(result2.get().size(), 0U);
 }
 
 }  // namespace

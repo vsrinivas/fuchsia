@@ -130,6 +130,10 @@ TEST(IntrusiveList, Iteration) {
     ++count;
   }
   EXPECT_EQ(count, 4U);
+
+  // Due to destruction order the TestObj instances die first.  Clear the list
+  // now, otherwise there would be a use-after-free in the TestObj destructor.
+  list.Clear();
 }
 
 TEST(IntrusiveList, Erase) {

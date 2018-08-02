@@ -5,6 +5,16 @@
 import("//build/package.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
+declare_args() {
+  # Using Vulkan on host (i.e. Linux) is an involved affair that involves
+  # downloading the Vulkan SDK, setting environment variables, and so forth...
+  # all things that are difficult to achieve in a CQ environment.  Therefore,
+  # by default we use a stub implementation of Vulkan which fails to create a
+  # VkInstance.  This allows everything to build, and also allows running Escher
+  # unit tests which don't require Vulkan.
+  escher_use_null_vulkan_config_on_host = true
+}
+
 package("escher_tests") {
   testonly = true
 
@@ -34,14 +44,32 @@ package("escher_tests") {
   ]
 }
 
+# Used by 'source_set("vulkan")' for host builds (e.g. Escher-on-Linux) for
+# build environments where Vulkan is not available.
+config("null_vulkan_config") {
+  defines = [
+    "VULKAN_HPP_NO_EXCEPTIONS",
+    "VULKAN_HPP_NO_SMART_HANDLE",
+  ]
+
+  # Only include the Vulkan headers: since this is used for host builds, we
+  # don't want to depend on e.g. //garnet/public/lib/vulkan, which brings in
+  # Zircon dependencies which cannot be compiled.
+  include_dirs = [ "//third_party/vulkan_loader_and_validation_layers/include" ]
+}
+
+# Used by 'source_set("vulkan")' target builds (i.e. Escher-on-Fuchsia), and
+# also for host builds (e.g. Escher-on-Linux) where Vulkan is made available via
+# the 'download-vulkan-sdk' script, which downloads the LunarG Vulkan SDK from
+# Google storage.
 config("vulkan_config") {
   defines = [
     "VULKAN_HPP_NO_EXCEPTIONS",
     "VULKAN_HPP_NO_SMART_HANDLE",
   ]
 
-  # When targeting Linux, we use a LunarG Vulkan SDK that we download from
-  # Google storage (see //garnet/public/lib/escher/scripts/).
+  # Specify the include/lib dirs and linked libraries for use with the
+  # downloaded LunarG Vulkan SDK.
   if (is_linux) {
     vulkan_sdk = "//garnet/public/lib/escher/third_party/vulkansdk/x86_64"
     include_dirs = [ "$vulkan_sdk/include" ]
@@ -50,12 +78,20 @@ config("vulkan_config") {
   }
 }
 
+# Cross-platform Vulkan setup; supports both host and target builds.
 source_set("vulkan") {
-  public_configs = [ ":vulkan_config" ]
-
   if (is_fuchsia) {
-    public_deps = [
-      "//garnet/public/lib/vulkan",
+    public_configs = [ ":vulkan_config" ]
+    public_deps = [ "//garnet/public/lib/vulkan" ]
+  } else if (!escher_use_null_vulkan_config_on_host) {
+    # Host build using downloaded LunarG SDK.
+    public_configs = [ ":vulkan_config" ]
+  } else {
+    # Host build using stub Vulkan implementation.
+    public_configs = [ ":null_vulkan_config" ]
+
+    sources = [
+      "//garnet/public/lib/escher/third_party/null_vulkan/escher_null_vulkan.cc",
     ]
   }
 }
