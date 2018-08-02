@@ -7,61 +7,47 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
-class Event : public benchmark::Fixture {
- private:
-  void SetUp(benchmark::State& state) override {
-    if (zx_event_create(0, &event) != ZX_OK) {
-      state.SkipWithError("Failed to create channel");
-    }
-  }
-
-  void TearDown(benchmark::State& state) override {
-    zx_handle_close(event);
-  }
-
- protected:
-  zx_handle_t event;
-};
+class Event : public benchmark::Fixture {};
 
 BENCHMARK_F(Event, Signal)(benchmark::State& state) {
+  zx::event event;
+  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+
   while (state.KeepRunning()) {
-    if (zx_object_signal(event, 0, 0) != 0) {
-      state.SkipWithError("Failed to signal event");
-      return;
-    }
+    ZX_ASSERT(event.signal(0, 0) == ZX_OK);
   }
 }
 
 BENCHMARK_F(Event, Duplicate)(benchmark::State& state) {
-  zx_handle_t dup_event;
+  zx::event event;
+  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+
   while (state.KeepRunning()) {
-    if (zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup_event) != 0) {
-      state.SkipWithError("Failed to duplicate event");
-      return;
-    }
+    zx::event dup_event;
+    ZX_ASSERT(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_event) == ZX_OK);
+
     state.PauseTiming();
-    zx_handle_close(dup_event);
+    dup_event.reset();
     state.ResumeTiming();
   }
 }
 
 BENCHMARK_F(Event, Replace)(benchmark::State& state) {
-  zx_handle_t dup_event;
-  zx_handle_t replaced_event;
+  zx::event event;
+  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+
   while (state.KeepRunning()) {
     state.PauseTiming();
-    if (zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup_event) != 0) {
-      state.SkipWithError("Failed to duplicate event");
-      return;
-    }
+    zx::event dup_event;
+    ZX_ASSERT(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_event) == ZX_OK);
     state.ResumeTiming();
-    if (zx_handle_replace(dup_event, ZX_RIGHT_SAME_RIGHTS, &replaced_event) != 0) {
-      zx_handle_close(dup_event);
-      state.SkipWithError("Failed to replace event");
-      return;
-    }
+
+    zx::event replaced_event;
+    ZX_ASSERT(dup_event.replace(ZX_RIGHT_SAME_RIGHTS, &replaced_event)
+              == ZX_OK);
+
     state.PauseTiming();
-    zx_handle_close(replaced_event);
+    replaced_event.reset();
     state.ResumeTiming();
   }
 }
