@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <benchmark/benchmark.h>
+#include <lib/zx/event.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 class Event : public benchmark::Fixture {
@@ -64,52 +66,33 @@ BENCHMARK_F(Event, Replace)(benchmark::State& state) {
   }
 }
 
-class WaitItems : public benchmark::Fixture {
- private:
-  void SetUp(benchmark::State& state) override {
-    for (size_t i = 0; i < num_items; i++) {
-      if (zx_event_create(0, &(items[i].handle)) != 0) {
-        state.SkipWithError("Failed to create event");
-        return;
-      }
-      items[i].waitfor = ZX_EVENT_SIGNALED;
-    }
-  }
-
-  void TearDown(benchmark::State& state) override {
-    for (size_t i = 0; i < num_items; i++) {
-      zx_handle_close(items[i].handle);
-    }
-  }
-
- protected:
-  static constexpr size_t num_items = 4u;
-  zx_wait_item_t items[num_items];
-};
+class WaitItems : public benchmark::Fixture {};
 
 BENCHMARK_F(WaitItems, WaitForAlreadySignaledEvent)(benchmark::State& state) {
-  if (zx_object_signal(items[0].handle, 0u, ZX_EVENT_SIGNALED) != 0) {
-    state.SkipWithError("Failed to signal event");
-    return;
-  }
+  zx::event event;
+  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+  ZX_ASSERT(event.signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
+
   while (state.KeepRunning()) {
     zx_signals_t pending = 0;
-    if (zx_object_wait_one(items[0].handle, ZX_EVENT_SIGNALED, 0u, &pending) != 0) {
-      state.SkipWithError("Failed to get signaled event");
-      return;
-    }
+    ZX_ASSERT(event.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending)
+              == ZX_OK);
   }
 }
 
 BENCHMARK_F(WaitItems, WaitForManyWithAlreadySignaledEvent)(benchmark::State& state) {
-  if (zx_object_signal(items[0].handle, 0u, ZX_EVENT_SIGNALED) != 0) {
-    state.SkipWithError("Failed to signal event");
-    return;
+  constexpr size_t kNumItems = 4;
+  zx::event events[kNumItems];
+  zx_wait_item_t wait_items[kNumItems] = {};
+  for (size_t i = 0; i < kNumItems; ++i) {
+    ZX_ASSERT(zx::event::create(0, &events[i]) == ZX_OK);
+    wait_items[i].handle = events[i].get();
+    wait_items[i].waitfor = ZX_EVENT_SIGNALED;
   }
+  ZX_ASSERT(events[0].signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
+
   while (state.KeepRunning()) {
-    if (zx_object_wait_many(items, num_items, 0u) != 0) {
-      state.SkipWithError("Failed to get signaled event");
-      return;
-    }
+    ZX_ASSERT(zx::event::wait_many(wait_items, kNumItems, zx::time(0))
+              == ZX_OK);
   }
 }
