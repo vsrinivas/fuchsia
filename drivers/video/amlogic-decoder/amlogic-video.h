@@ -26,6 +26,7 @@
 #include "firmware_blob.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "registers.h"
+#include "stream_buffer.h"
 #include "video_decoder.h"
 
 class AmlogicVideo final : public VideoDecoder::Owner,
@@ -96,8 +97,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
-  // The stream buffer is a FIFO between the parser and the decoder.
-  io_buffer_t stream_buffer_ = {};
+  std::unique_ptr<StreamBuffer> stream_buffer_;
 
   // This buffer holds an ES start code that's used to get an interrupt when the
   // parser is finished.

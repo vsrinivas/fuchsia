@@ -79,7 +79,6 @@ AmlogicVideo::~AmlogicVideo() {
   io_buffer_release(&mmio_hiubus_);
   io_buffer_release(&mmio_aobus_);
   io_buffer_release(&mmio_dmc_);
-  io_buffer_release(&stream_buffer_);
   io_buffer_release(&search_pattern_);
 }
 
@@ -118,19 +117,21 @@ void AmlogicVideo::GateClocks() {
 
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
                                                  uint32_t size) {
-  zx_status_t status = io_buffer_init(&stream_buffer_, bti_.get(), size,
-                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  stream_buffer_ = std::make_unique<StreamBuffer>();
+  zx_status_t status = io_buffer_init(stream_buffer_->buffer(), bti_.get(),
+                                      size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make video fifo");
     return ZX_ERR_NO_MEMORY;
   }
 
-  io_buffer_cache_flush(&stream_buffer_, 0, io_buffer_size(&stream_buffer_, 0));
+  io_buffer_cache_flush(stream_buffer_->buffer(), 0,
+                        io_buffer_size(stream_buffer_->buffer(), 0));
 
   uint32_t buffer_address =
-      static_cast<uint32_t>(io_buffer_phys(&stream_buffer_));
+      truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
   core_->InitializeStreamInput(use_parser, buffer_address,
-                               io_buffer_size(&stream_buffer_, 0));
+                               io_buffer_size(stream_buffer_->buffer(), 0));
 
   return ZX_OK;
 }
@@ -233,10 +234,12 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
       .WriteTo(parser_.get());
 
   // Set up output fifo.
-  uint32_t buffer_address = truncate_to_32(io_buffer_phys(&stream_buffer_));
+  uint32_t buffer_address =
+      truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
   ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(parser_.get());
   ParserVideoEndPtr::Get()
-      .FromValue(buffer_address + io_buffer_size(&stream_buffer_, 0) - 8)
+      .FromValue(buffer_address + io_buffer_size(stream_buffer_->buffer(), 0) -
+                 8)
       .WriteTo(parser_.get());
 
   ParserEsControl::Get()
@@ -368,16 +371,16 @@ zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len) {
 
 zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(
     void* data, uint32_t len, uint32_t current_offset) {
-  if (len + current_offset > io_buffer_size(&stream_buffer_, 0)) {
+  if (len + current_offset > io_buffer_size(stream_buffer_->buffer(), 0)) {
     DECODE_ERROR("Video too large\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
-  memcpy(
-      static_cast<uint8_t*>(io_buffer_virt(&stream_buffer_)) + current_offset,
-      data, len);
-  io_buffer_cache_flush(&stream_buffer_, current_offset, len);
-  core_->UpdateWritePointer(io_buffer_phys(&stream_buffer_) + current_offset +
-                            len);
+  memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) +
+             current_offset,
+         data, len);
+  io_buffer_cache_flush(stream_buffer_->buffer(), current_offset, len);
+  core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
+                            current_offset + len);
   return ZX_OK;
 }
 

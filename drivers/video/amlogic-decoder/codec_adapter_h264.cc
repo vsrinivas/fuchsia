@@ -311,7 +311,7 @@ void CodecAdapterH264::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
   // The lifetime of this buffer is different than the others in video_, so we
   // have to release it here to avoid leaking when we re-init in
   // CoreCodecStartStream(), for now.
-  io_buffer_release(&video_->stream_buffer_);
+  video_->stream_buffer_.reset();
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port,
