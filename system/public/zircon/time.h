@@ -17,7 +17,7 @@
 // TODO(maniscalco): Consider expanding the set of operations to include division, modulo, unit
 // conversion, and floating point math.
 
-static inline zx_time_t zx_time_add_duration(zx_time_t time, zx_duration_t duration) {
+__CONSTEXPR static inline zx_time_t zx_time_add_duration(zx_time_t time, zx_duration_t duration) {
     zx_time_t x = 0;
     if (unlikely(add_overflow(time, duration, &x))) {
         return ZX_TIME_INFINITE;
@@ -25,7 +25,7 @@ static inline zx_time_t zx_time_add_duration(zx_time_t time, zx_duration_t durat
     return x;
 }
 
-static inline zx_time_t zx_time_sub_duration(zx_time_t time, zx_duration_t duration) {
+__CONSTEXPR static inline zx_time_t zx_time_sub_duration(zx_time_t time, zx_duration_t duration) {
     zx_time_t x = 0;
     if (unlikely(sub_overflow(time, duration, &x))) {
         return 0;
@@ -33,7 +33,7 @@ static inline zx_time_t zx_time_sub_duration(zx_time_t time, zx_duration_t durat
     return x;
 }
 
-static inline zx_duration_t zx_time_sub_time(zx_time_t time1, zx_time_t time2) {
+__CONSTEXPR static inline zx_duration_t zx_time_sub_time(zx_time_t time1, zx_time_t time2) {
     zx_duration_t x = 0;
     if (unlikely(sub_overflow(time1, time2, &x))) {
         return 0;
@@ -41,7 +41,8 @@ static inline zx_duration_t zx_time_sub_time(zx_time_t time1, zx_time_t time2) {
     return x;
 }
 
-static inline zx_duration_t zx_duration_add_duration(zx_duration_t dur1, zx_duration_t dur2) {
+__CONSTEXPR static inline zx_duration_t zx_duration_add_duration(zx_duration_t dur1,
+                                                                 zx_duration_t dur2) {
     zx_duration_t x = 0;
     if (unlikely(add_overflow(dur1, dur2, &x))) {
         return ZX_TIME_INFINITE;
@@ -49,7 +50,8 @@ static inline zx_duration_t zx_duration_add_duration(zx_duration_t dur1, zx_dura
     return x;
 }
 
-static inline zx_duration_t zx_duration_sub_duration(zx_duration_t dur1, zx_duration_t dur2) {
+__CONSTEXPR static inline zx_duration_t zx_duration_sub_duration(zx_duration_t dur1,
+                                                                 zx_duration_t dur2) {
     zx_duration_t x = 0;
     if (unlikely(sub_overflow(dur1, dur2, &x))) {
         return 0;
@@ -57,7 +59,8 @@ static inline zx_duration_t zx_duration_sub_duration(zx_duration_t dur1, zx_dura
     return x;
 }
 
-static inline zx_duration_t zx_duration_mul_uint64(zx_duration_t duration, uint64_t multiplier) {
+__CONSTEXPR static inline zx_duration_t zx_duration_mul_uint64(zx_duration_t duration,
+                                                               uint64_t multiplier) {
     zx_duration_t x = 0;
     if (unlikely(mul_overflow(duration, multiplier, &x))) {
         return ZX_TIME_INFINITE;

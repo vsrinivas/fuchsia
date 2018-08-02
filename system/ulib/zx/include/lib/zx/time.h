@@ -20,15 +20,15 @@ public:
 
     constexpr zx_duration_t get() const { return value_; }
 
-    duration operator+(duration other) const {
+    constexpr duration operator+(duration other) const {
         return duration(zx_duration_add_duration(value_, other.value_));
     }
 
-    duration operator-(duration other) const {
+    constexpr duration operator-(duration other) const {
         return duration(zx_duration_sub_duration(value_, other.value_));
     }
 
-    duration operator*(uint64_t multiplier) const {
+    constexpr duration operator*(uint64_t multiplier) const {
         return duration(zx_duration_mul_uint64(value_, multiplier));
     }
 
@@ -44,22 +44,22 @@ public:
         return value_ / other.value_;
     }
 
-    duration& operator+=(duration other) {
+    constexpr duration& operator+=(duration other) {
         value_ = zx_duration_add_duration(value_, other.value_);
         return *this;
     }
 
-    duration& operator-=(duration other) {
+    constexpr duration& operator-=(duration other) {
         value_ = zx_duration_sub_duration(value_, other.value_);
         return *this;
     }
 
-    duration& operator*=(uint64_t multiplier) {
+    constexpr duration& operator*=(uint64_t multiplier) {
         value_ = zx_duration_mul_uint64(value_, multiplier);
         return *this;
     }
 
-    duration& operator/=(uint64_t divisor) {
+    constexpr duration& operator/=(uint64_t divisor) {
       value_ /= divisor;
       return *this;
     }
@@ -122,22 +122,22 @@ public:
         return value_ / other.value_;
     }
 
-    ticks& operator+=(ticks other) {
+    constexpr ticks& operator+=(ticks other) {
         value_ += other.value_;
         return *this;
     }
 
-    ticks& operator-=(ticks other) {
+    constexpr ticks& operator-=(ticks other) {
       value_ -= other.value_;
       return *this;
     }
 
-    ticks& operator*=(uint64_t multiplier) {
+    constexpr ticks& operator*=(uint64_t multiplier) {
         value_ *= multiplier;
         return *this;
     }
 
-    ticks& operator/=(uint64_t divisor) {
+    constexpr ticks& operator/=(uint64_t divisor) {
       value_ /= divisor;
       return *this;
     }
@@ -178,12 +178,12 @@ public:
         return basic_time<kClockId>(zx_time_sub_duration(value_, delta.get()));
     }
 
-    basic_time<kClockId>& operator+=(duration delta) {
+    constexpr basic_time<kClockId>& operator+=(duration delta) {
       value_ = zx_time_add_duration(value_, delta.get());
       return *this;
     }
 
-    basic_time<kClockId>& operator-=(duration delta) {
+    constexpr basic_time<kClockId>& operator-=(duration delta) {
       value_ = zx_time_sub_duration(value_, delta.get());
       return *this;
     }
