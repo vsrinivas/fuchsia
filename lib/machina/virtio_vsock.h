@@ -11,6 +11,7 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
+#include <zx/channel.h>
 #include <zx/socket.h>
 
 #include "garnet/lib/machina/virtio_device.h"
@@ -44,6 +45,9 @@ class VirtioVsock
   VirtioQueue* tx_queue() { return queue(1); }
 
   class Connection;
+  class NullConnection;
+  class SocketConnection;
+  class ChannelConnection;
 
  private:
   struct ConnectionKey {
@@ -120,17 +124,20 @@ class VirtioVsock
   fidl::BindingSet<fuchsia::guest::GuestVsockEndpoint> endpoint_bindings_;
   fidl::BindingSet<fuchsia::guest::GuestVsockAcceptor> acceptor_bindings_;
   fuchsia::guest::HostVsockConnectorPtr connector_;
-
-  class NullConnection;
-  class SocketConnection;
 };
 
 class VirtioVsock::Connection {
  public:
-  virtual ~Connection(){};
+  Connection(async_dispatcher_t* dispatcher,
+             fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+             fit::closure queue_callback);
+  virtual ~Connection();
+  virtual zx_status_t Init() = 0;
 
   uint32_t flags() const { return flags_; }
   uint16_t op() const { return op_; }
+
+  zx_status_t Accept();
   void UpdateOp(uint16_t op);
 
   uint32_t PeerFree() const;
@@ -143,7 +150,6 @@ class VirtioVsock::Connection {
   // - Anything else, it indicates to the device the connection should be reset.
   virtual zx_status_t WriteCredit(virtio_vsock_hdr_t* header) = 0;
 
-  virtual zx_status_t Accept() = 0;
   virtual zx_status_t Shutdown(uint32_t flags) = 0;
   virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                            virtio_desc_t* desc, uint32_t* used) = 0;
@@ -154,14 +160,6 @@ class VirtioVsock::Connection {
   zx_status_t WaitOnReceive(zx_status_t status);
 
  protected:
-  // The number of bytes the guest expects us to have in our socket buffer.
-  // This is the last credit_update sent minus any bytes we've received since
-  // that update was sent.
-  //
-  // When this is 0 we'll need to send a CREDIT_UPDATE once buffer space has
-  // been free'd so that the guest knows it can resume transmitting.
-  size_t reported_buf_avail_ = 0;
-
   uint32_t flags_ = 0;
   uint32_t rx_cnt_ = 0;
   uint32_t tx_cnt_ = 0;
@@ -169,15 +167,28 @@ class VirtioVsock::Connection {
   uint32_t peer_fwd_cnt_ = 0;
   uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
 
-  async_dispatcher_t* dispatcher_ = nullptr;
+  async_dispatcher_t* dispatcher_;
   async::Wait rx_wait_;
+  // We require a separate waiter due to the way zx_object_wait_async works with
+  // ZX_WAIT_ASYNC_ONCE. If the handle was just created, its transmit buffer
+  // would be empty, and therefore __ZX_OBJECT_WRITABLE would be asserted. When
+  // invoking zx_object_wait_async, it will see that this signal is asserted and
+  // create a port packet immediately and stop listening for further signals.
+  // This masks our ability to listen for any other signals, therefore we split
+  // waiting on __ZX_OBJECT_WRITABLE.
   async::Wait tx_wait_;
+
+  fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback_;
+  fit::closure queue_callback_;
 };
 
 class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
+ public:
+  NullConnection() : Connection(nullptr, nullptr, nullptr) {}
+
+  zx_status_t Init() override { return ZX_OK; }
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }
 
-  zx_status_t Accept() override { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t Shutdown(uint32_t flags) override { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                    virtio_desc_t* desc, uint32_t* used) override {
@@ -191,14 +202,15 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
 
 class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
  public:
-  SocketConnection(zx::handle handle,
-                   fuchsia::guest::GuestVsockAcceptor::AcceptCallback callback);
+  SocketConnection(
+      zx::handle handle, async_dispatcher_t* dispatcher,
+      fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+      fit::closure queue_callback);
   ~SocketConnection() override;
 
-  zx_status_t Init(async_dispatcher_t* dispatcher, fit::closure queue_callback);
+  zx_status_t Init() override;
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
-  zx_status_t Accept() override;
   zx_status_t Shutdown(uint32_t flags) override;
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                    virtio_desc_t* desc, uint32_t* used) override;
@@ -208,9 +220,38 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
  private:
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
 
+  // The number of bytes the guest expects us to have in our socket buffer.
+  // This is the last credit_update sent minus any bytes we've received since
+  // that update was sent.
+  //
+  // When this is 0 we'll need to send a CREDIT_UPDATE once buffer space has
+  // been free'd so that the guest knows it can resume transmitting.
+  size_t reported_buf_avail_ = 0;
+
   zx::socket socket_;
-  fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback_;
-  fit::closure queue_callback_;
+};
+
+class VirtioVsock::ChannelConnection final : public VirtioVsock::Connection {
+ public:
+  ChannelConnection(
+      zx::handle handle, async_dispatcher_t* dispatcher,
+      fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+      fit::closure queue_callback);
+  ~ChannelConnection() override;
+
+  zx_status_t Init() override;
+  zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
+
+  zx_status_t Shutdown(uint32_t flags) override;
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                   virtio_desc_t* desc, uint32_t* used) override;
+  zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                    virtio_desc_t* desc) override;
+
+ private:
+  void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
+
+  zx::channel channel_;
 };
 
 }  // namespace machina

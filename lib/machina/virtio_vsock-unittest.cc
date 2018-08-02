@@ -51,16 +51,11 @@ struct ConnectionRequest {
   fuchsia::guest::HostVsockConnector::ConnectCallback callback;
 };
 
-struct TestConnection {
+template <typename Handle>
+class TestConnectionBase {
+ public:
   uint32_t count = 0;
   zx_status_t status = ZX_ERR_BAD_STATE;
-  zx::socket socket;
-  zx::socket remote_socket;
-
-  TestConnection() {
-    FXL_CHECK(zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket) ==
-              ZX_OK);
-  }
 
   fuchsia::guest::GuestVsockAcceptor::AcceptCallback callback() {
     return [this](zx_status_t st) {
@@ -69,21 +64,93 @@ struct TestConnection {
     };
   }
 
+  Handle take_remote() { return std::move(*remote_handle); }
+
   bool remote_closed() const {
     zx_signals_t observed = 0;
     zx_status_t status =
-        socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time(), &observed);
+        handle->wait_one(__ZX_OBJECT_PEER_CLOSED, zx::time(), &observed);
     switch (status) {
       case ZX_ERR_TIMED_OUT:
         return false;
       case ZX_OK:
-        return observed & ZX_SOCKET_PEER_CLOSED;
+        return observed & __ZX_OBJECT_PEER_CLOSED;
       default:
         FXL_CHECK(false) << "Unexpected status " << status;
         __UNREACHABLE;
     }
   }
+
+ protected:
+  TestConnectionBase(Handle* h, Handle* rh) : handle(h), remote_handle(rh) {}
+
+ private:
+  Handle* handle;
+  Handle* remote_handle;
 };
+
+struct TestSocketConnection : public TestConnectionBase<zx::socket> {
+  zx::socket socket;
+  zx::socket remote_socket;
+
+  TestSocketConnection() : TestConnectionBase(&socket, &remote_socket) {
+    FXL_CHECK(zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket) ==
+              ZX_OK);
+  }
+
+  zx_status_t write(const uint8_t* data, size_t size, size_t* actual) {
+    return socket.write(0, data, size, actual);
+  }
+
+  zx_status_t read(uint8_t* data, size_t size, size_t* actual) {
+    return socket.read(0, data, size, actual);
+  }
+};
+
+struct TestChannelConnection : public TestConnectionBase<zx::channel> {
+  zx::channel channel;
+  zx::channel remote_channel;
+
+  TestChannelConnection() : TestConnectionBase(&channel, &remote_channel) {
+    FXL_CHECK(zx::channel::create(0, &channel, &remote_channel) == ZX_OK);
+  }
+
+  zx_status_t write(const uint8_t* data, size_t size, size_t* actual) {
+    zx_status_t status = channel.write(0, data, size, nullptr, 0);
+    if (status == ZX_OK) {
+      *actual = size;
+    }
+    return status;
+  }
+
+  zx_status_t read(uint8_t* data, size_t size, size_t* actual) {
+    uint32_t actual_bytes;
+    zx_status_t status =
+        channel.read(0, data, size, &actual_bytes, nullptr, 0, nullptr);
+    if (status == ZX_OK) {
+      *actual = actual_bytes;
+    }
+    return status;
+  }
+};
+
+using CreateCallback = fit::function<void(zx::handle*, zx::handle*)>;
+
+static void CreateSocket(zx::handle* handle, zx::handle* remote_handle) {
+  zx::socket socket, remote_socket;
+  ASSERT_EQ(ZX_OK,
+            zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket));
+  *handle = std::move(socket);
+  *remote_handle = std::move(remote_socket);
+}
+
+static void CreateChannel(zx::handle* handle, zx::handle* remote_handle) {
+  zx::channel channel, remote_channel;
+  ASSERT_EQ(ZX_OK,
+            zx::channel::create(ZX_SOCKET_STREAM, &channel, &remote_channel));
+  *handle = std::move(channel);
+  *remote_handle = std::move(remote_channel);
+}
 
 class VirtioVsockTest : public ::gtest::TestLoopFixture,
                         public fuchsia::guest::HostVsockConnector {
@@ -113,7 +180,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   fuchsia::guest::GuestVsockEndpointPtr endpoint_;
   fuchsia::guest::GuestVsockAcceptorPtr acceptor_;
   fidl::Binding<fuchsia::guest::HostVsockConnector> connector_binding_{this};
-  std::vector<zx::socket> remote_sockets_;
+  std::vector<zx::handle> remote_handles_;
   std::vector<ConnectionRequest> connection_requests_;
   std::vector<ConnectionRequest> connections_established_;
   RxBuffer rx_buffers[kVirtioVsockRxBuffers] = {};
@@ -180,11 +247,11 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     RunLoopUntilIdle();
   }
 
-  void HostConnectOnPortRequest(uint32_t host_port,
-                                TestConnection* connection) {
+  template <typename Connection>
+  void HostConnectOnPortRequest(uint32_t host_port, Connection* connection) {
     acceptor_->Accept(
         fuchsia::guest::kHostCid, host_port, kVirtioVsockGuestPort,
-        std::move(connection->remote_socket), connection->callback());
+        std::move(connection->take_remote()), connection->callback());
 
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
@@ -210,12 +277,13 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     }
   }
 
-  void HostReadOnPort(uint32_t host_port, zx::socket* socket,
+  template <typename Connection>
+  void HostReadOnPort(uint32_t host_port, Connection* connection,
                       std::vector<uint8_t> expected = kDefaultData) {
     size_t actual;
-    ASSERT_EQ(socket->write(0, expected.data(), expected.size(), &actual),
-              ZX_OK);
-    EXPECT_EQ(actual, expected.size());
+    ASSERT_EQ(ZX_OK,
+              connection->write(expected.data(), expected.size(), &actual));
+    EXPECT_EQ(expected.size(), actual);
 
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
@@ -252,7 +320,8 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
         ZX_OK);
   }
 
-  void HostWriteOnPort(uint32_t host_port, zx::socket* socket) {
+  template <typename Connection>
+  void HostWriteOnPort(uint32_t host_port, Connection* connection) {
     uint8_t tx_buffer[sizeof(virtio_vsock_hdr_t) + kDataSize] = {};
     uint8_t expected_data[kDataSize] = {2, 3, 0, 1};
     memcpy(tx_buffer + sizeof(virtio_vsock_hdr_t), expected_data, kDataSize);
@@ -262,21 +331,21 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
 
     uint8_t actual_data[kDataSize];
     size_t actual;
-    ASSERT_EQ(socket->read(0, actual_data, sizeof(actual_data), &actual),
-              ZX_OK);
+    ASSERT_EQ(ZX_OK,
+              connection->read(actual_data, sizeof(actual_data), &actual));
     EXPECT_EQ(actual, kDataSize);
     EXPECT_EQ(memcmp(actual_data, expected_data, kDataSize), 0);
   }
 
-  void HostConnectOnPort(uint32_t host_port) {
-    TestConnection connection;
-    HostConnectOnPortRequest(host_port, &connection);
+  template <typename Connection>
+  void HostConnectOnPort(uint32_t host_port, Connection* connection) {
+    HostConnectOnPortRequest(host_port, connection);
     HostConnectOnPortResponse(host_port);
     RunLoopUntilIdle();
-    ASSERT_EQ(1u, connection.count);
-    ASSERT_EQ(ZX_OK, connection.status);
-    ASSERT_FALSE(connection.remote_closed());
-    HostReadOnPort(host_port, &connection.socket);
+    ASSERT_EQ(1u, connection->count);
+    ASSERT_EQ(ZX_OK, connection->status);
+    ASSERT_FALSE(connection->remote_closed());
+    HostReadOnPort(host_port, connection);
   }
 
   void HostShutdownOnPort(uint32_t host_port, uint32_t flags) {
@@ -292,17 +361,17 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     RunLoopUntilIdle();
   }
 
-  void GuestConnectInvokeCallbacks(zx_status_t status) {
+  void GuestConnectInvokeCallbacks(zx_status_t status,
+                                   CreateCallback create_callback) {
     for (auto it = connection_requests_.begin();
          it != connection_requests_.end();
          it = connection_requests_.erase(it)) {
-      zx::socket socket, remote_socket;
+      zx::handle handle, remote_handle;
       if (status == ZX_OK) {
-        ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &socket,
-                                            &remote_socket));
-        remote_sockets_.emplace_back(std::move(remote_socket));
+        create_callback(&handle, &remote_handle);
+        remote_handles_.emplace_back(std::move(remote_handle));
       }
-      it->callback(status, std::move(socket));
+      it->callback(status, std::move(handle));
       connections_established_.emplace_back(ConnectionRequest{
           it->src_cid, it->src_port, it->cid, it->port, nullptr});
       RunLoopUntilIdle();
@@ -314,7 +383,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
     VerifyHeader(rx_buffer, host_port, guest_port, 0, op, 0);
-    if (remote_sockets_.empty()) {
+    if (remote_handles_.empty()) {
       EXPECT_EQ(rx_buffer->header.buf_alloc, 0u);
     } else {
       EXPECT_GT(rx_buffer->header.buf_alloc, 0u);
@@ -322,9 +391,10 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     EXPECT_EQ(rx_buffer->header.fwd_cnt, 0u);
   }
 
-  void GuestConnectOnPort(uint32_t host_port, uint32_t guest_port) {
+  void GuestConnectOnPort(uint32_t host_port, uint32_t guest_port,
+                          CreateCallback create_callback) {
     GuestConnectOnPortRequest(host_port, guest_port);
-    GuestConnectInvokeCallbacks(ZX_OK);
+    GuestConnectInvokeCallbacks(ZX_OK, std::move(create_callback));
     GuestConnectOnPortResponse(host_port, VIRTIO_VSOCK_OP_RESPONSE, guest_port);
   }
 
@@ -346,20 +416,37 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   }
 };
 
-TEST_F(VirtioVsockTest, Connect) { HostConnectOnPort(kVirtioVsockHostPort); }
+TEST_F(VirtioVsockTest, Connect) {
+  TestSocketConnection connection;
+  HostConnectOnPort(kVirtioVsockHostPort, &connection);
+}
+
+TEST_F(VirtioVsockTest, ConnectWithChannel) {
+  TestChannelConnection connection;
+  HostConnectOnPort(kVirtioVsockHostPort, &connection);
+}
 
 TEST_F(VirtioVsockTest, ConnectMultipleTimes) {
-  HostConnectOnPort(kVirtioVsockHostPort);
+  {
+    TestSocketConnection connection;
+    HostConnectOnPort(kVirtioVsockHostPort, &connection);
+  }
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH);
-  HostConnectOnPort(kVirtioVsockHostPort + 1000);
+  {
+    TestSocketConnection connection;
+    HostConnectOnPort(kVirtioVsockHostPort + 1000, &connection);
+  }
 }
 
 TEST_F(VirtioVsockTest, ConnectMultipleTimesSamePort) {
-  HostConnectOnPort(kVirtioVsockHostPort);
+  {
+    TestSocketConnection connection;
+    HostConnectOnPort(kVirtioVsockHostPort, &connection);
+  }
 
-  TestConnection connection;
+  TestSocketConnection connection;
   acceptor_->Accept(fuchsia::guest::kHostCid, kVirtioVsockHostPort,
-                    kVirtioVsockGuestPort, std::move(connection.remote_socket),
+                    kVirtioVsockGuestPort, std::move(connection.take_remote()),
                     connection.callback());
   RunLoopUntilIdle();
   ASSERT_EQ(1u, connection.count);
@@ -368,7 +455,7 @@ TEST_F(VirtioVsockTest, ConnectMultipleTimesSamePort) {
 }
 
 TEST_F(VirtioVsockTest, ConnectRefused) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
 
   // Test connection reset.
@@ -384,7 +471,17 @@ TEST_F(VirtioVsockTest, ConnectRefused) {
 }
 
 TEST_F(VirtioVsockTest, Listen) {
-  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort);
+  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
+                     CreateSocket);
+  ASSERT_EQ(1u, connections_established_.size());
+  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+                                   kVirtioVsockHostPort,
+                                   kVirtioVsockGuestEphemeralPort));
+}
+
+TEST_F(VirtioVsockTest, ListenWithChannel) {
+  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
+                     CreateChannel);
   ASSERT_EQ(1u, connections_established_.size());
   ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
                                    kVirtioVsockHostPort,
@@ -393,9 +490,9 @@ TEST_F(VirtioVsockTest, Listen) {
 
 TEST_F(VirtioVsockTest, ListenMultipleTimes) {
   GuestConnectOnPort(kVirtioVsockHostPort + 1,
-                     kVirtioVsockGuestEphemeralPort + 1);
+                     kVirtioVsockGuestEphemeralPort + 1, CreateSocket);
   GuestConnectOnPort(kVirtioVsockHostPort + 2,
-                     kVirtioVsockGuestEphemeralPort + 2);
+                     kVirtioVsockGuestEphemeralPort + 2, CreateSocket);
   ASSERT_EQ(2u, connections_established_.size());
   ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
                                    kVirtioVsockHostPort + 1,
@@ -406,8 +503,10 @@ TEST_F(VirtioVsockTest, ListenMultipleTimes) {
 }
 
 TEST_F(VirtioVsockTest, ListenMultipleTimesSameHostPort) {
-  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort);
-  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort + 1);
+  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
+                     CreateSocket);
+  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort + 1,
+                     CreateSocket);
 
   EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
                                    kVirtioVsockHostPort,
@@ -418,7 +517,8 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesSameHostPort) {
 }
 
 TEST_F(VirtioVsockTest, ListenMultipleTimesSamePort) {
-  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort);
+  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
+                     CreateSocket);
   EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort));
@@ -435,7 +535,7 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesSamePort) {
 TEST_F(VirtioVsockTest, ListenRefused) {
   GuestConnectOnPortRequest(kVirtioVsockHostPort,
                             kVirtioVsockGuestEphemeralPort);
-  GuestConnectInvokeCallbacks(ZX_ERR_CONNECTION_REFUSED);
+  GuestConnectInvokeCallbacks(ZX_ERR_CONNECTION_REFUSED, CreateSocket);
   GuestConnectOnPortResponse(kVirtioVsockHostPort, VIRTIO_VSOCK_OP_RST,
                              kVirtioVsockGuestEphemeralPort);
   EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::kHostCid,
@@ -455,7 +555,7 @@ TEST_F(VirtioVsockTest, ListenWrongCid) {
 }
 
 TEST_F(VirtioVsockTest, Reset) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
   connection.socket.reset();
@@ -464,7 +564,7 @@ TEST_F(VirtioVsockTest, Reset) {
 }
 
 TEST_F(VirtioVsockTest, ShutdownRead) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -475,7 +575,7 @@ TEST_F(VirtioVsockTest, ShutdownRead) {
 }
 
 TEST_F(VirtioVsockTest, ShutdownWrite) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -486,7 +586,7 @@ TEST_F(VirtioVsockTest, ShutdownWrite) {
 }
 
 TEST_F(VirtioVsockTest, WriteAfterShutdown) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -510,11 +610,23 @@ TEST_F(VirtioVsockTest, Read) {
   std::vector<uint8_t> data = {1, 2, 3, 4};
   ASSERT_EQ(data.size(), kDataSize);
 
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
-  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
-  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection, data);
+}
+
+TEST_F(VirtioVsockTest, ReadWithChannel) {
+  // Fill a single data buffer in the RxBuffer.
+  std::vector<uint8_t> data = {1, 2, 3, 4};
+  ASSERT_EQ(data.size(), kDataSize);
+
+  TestChannelConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+  HostReadOnPort(kVirtioVsockHostPort, &connection, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection, data);
 }
 
 TEST_F(VirtioVsockTest, ReadChained) {
@@ -522,11 +634,11 @@ TEST_F(VirtioVsockTest, ReadChained) {
   std::vector<uint8_t> data = {1, 2, 3, 4, 5, 6, 7, 8};
   ASSERT_EQ(data.size(), 2 * kDataSize);
 
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
-  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
-  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection, data);
 }
 
 TEST_F(VirtioVsockTest, ReadNoBuffer) {
@@ -536,7 +648,7 @@ TEST_F(VirtioVsockTest, ReadNoBuffer) {
   ASSERT_EQ(expected.size(), 2 * buf_alloc);
 
   // Setup connection.
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -567,11 +679,19 @@ TEST_F(VirtioVsockTest, ReadNoBuffer) {
 }
 
 TEST_F(VirtioVsockTest, Write) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
-  HostWriteOnPort(kVirtioVsockHostPort, &connection.socket);
-  HostWriteOnPort(kVirtioVsockHostPort, &connection.socket);
+  HostWriteOnPort(kVirtioVsockHostPort, &connection);
+  HostWriteOnPort(kVirtioVsockHostPort, &connection);
+}
+
+TEST_F(VirtioVsockTest, WriteWithChannel) {
+  TestChannelConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+  HostWriteOnPort(kVirtioVsockHostPort, &connection);
+  HostWriteOnPort(kVirtioVsockHostPort, &connection);
 }
 
 struct SingleBytePacket {
@@ -582,7 +702,7 @@ struct SingleBytePacket {
 } __PACKED;
 
 TEST_F(VirtioVsockTest, WriteMultiple) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -605,7 +725,7 @@ TEST_F(VirtioVsockTest, WriteMultiple) {
 }
 
 TEST_F(VirtioVsockTest, WriteUpdateCredit) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -648,7 +768,7 @@ TEST_F(VirtioVsockTest, WriteSocketFullReset) {
   //
   // 5.7.6.3.1: VIRTIO_VSOCK_OP_RW data packets MUST only be transmitted when
   // the peer has sufficient free buffer space for the payload.
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -672,7 +792,7 @@ TEST_F(VirtioVsockTest, WriteSocketFullReset) {
 }
 
 TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
@@ -708,24 +828,24 @@ TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
 }
 
 TEST_F(VirtioVsockTest, MultipleConnections) {
-  TestConnection a_connection;
+  TestSocketConnection a_connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort + 1000, &a_connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort + 1000);
 
-  TestConnection b_connection;
+  TestSocketConnection b_connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort + 2000, &b_connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort + 2000);
 
   for (auto i = 0; i < (kVirtioVsockRxBuffers / 4); i++) {
-    HostReadOnPort(kVirtioVsockHostPort + 1000, &a_connection.socket);
-    HostReadOnPort(kVirtioVsockHostPort + 2000, &b_connection.socket);
-    HostWriteOnPort(kVirtioVsockHostPort + 1000, &a_connection.socket);
-    HostWriteOnPort(kVirtioVsockHostPort + 2000, &b_connection.socket);
+    HostReadOnPort(kVirtioVsockHostPort + 1000, &a_connection);
+    HostReadOnPort(kVirtioVsockHostPort + 2000, &b_connection);
+    HostWriteOnPort(kVirtioVsockHostPort + 1000, &a_connection);
+    HostWriteOnPort(kVirtioVsockHostPort + 2000, &b_connection);
   }
 }
 
 TEST_F(VirtioVsockTest, CreditRequest) {
-  TestConnection connection;
+  TestSocketConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
