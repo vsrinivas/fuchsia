@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/lazy-dir-tests.cpp \
     $(LOCAL_DIR)/pseudo-dir-tests.cpp \
     $(LOCAL_DIR)/pseudo-file-tests.cpp \
     $(LOCAL_DIR)/remote-dir-tests.cpp \

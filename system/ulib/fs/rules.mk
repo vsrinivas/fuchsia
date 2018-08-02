@@ -13,6 +13,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 MODULE_SRCS += \
     $(LOCAL_DIR)/connection.cpp \
     $(LOCAL_DIR)/fvm.cpp \
+    $(LOCAL_DIR)/lazy-dir.cpp \
     $(LOCAL_DIR)/managed-vfs.cpp \
     $(LOCAL_DIR)/mount.cpp \
     $(LOCAL_DIR)/pseudo-dir.cpp \
@@ -32,6 +33,7 @@ MODULE_FIDL_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/fit \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \
