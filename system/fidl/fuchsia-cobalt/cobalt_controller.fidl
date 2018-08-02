@@ -4,32 +4,32 @@
 
 library fuchsia.cobalt;
 
-// The Controller is primarily useful for testing the Cobalt service.
-// Cobalt clients should use the Encoder.
+// The CobaltController is primarily useful for testing the Cobalt service.
+// Cobalt clients should use the CobaltEncoder.
 
 [Discoverable]
-interface Controller {
-    // Requests that the collection of Observations that are currently cached
-    // locally be sent to the Cobalt server soon. Cobalt will send the
-    // Observations in one or more batches and will retry several times upon
-    // failure. The response occurs only after that procedure is completed. A
-    // return value of true indicates that all Observations were successfully
-    // sent. A return value of false indicates otherwise.
-    1: RequestSendSoon() -> (bool success);
+interface CobaltController {
+  // Requests that the collection of Observations that are currently cached
+  // locally be sent to the Cobalt server soon. Cobalt will send the
+  // Observations in one or more batches and will retry several times upon
+  // failure. The response occurs only after that procedure is completed. A
+  // return value of true indicates that all Observations were successfully
+  // sent. A return value of false indicates otherwise.
+  1: RequestSendSoon() -> (bool success);
 
-    // The Cobalt FIDL service will block, not processing any further FIDL
-    // requests or responses, on either this interface or the Encoder interface,
-    // until either |max_wait_seconds| have elapsed or the Cobalt service's
-    // worker thread has successfully sent all previously added Observations to
-    // the Shuffler. The response will be returned after the blocking period has
-    // ended. Note that this method does not request an expedited send and so it
-    // is possible that the worker thread is currently waiting for the next
-    // scheduled send time and so the empty state will not be achieved prior
-    // that time.
-    2: BlockUntilEmpty(uint32 max_wait_seconds) -> ();
+  // The Cobalt FIDL service will block, not processing any further FIDL
+  // requests or responses, on either this interface or the CobaltEncoder
+  // interface, until either |max_wait_seconds| have elapsed or the Cobalt
+  // service's worker thread has successfully sent all previously added
+  // Observations to the Shuffler. The response will be returned after the
+  // blocking period has ended. Note that this method does not request
+  // an expedited send and so it is possible that the worker thread is
+  // currently waiting for the next scheduled send time and so the empty
+  // state will not be achieved prior that time.
+  2: BlockUntilEmpty(uint32 max_wait_seconds) -> ();
 
-    // These diagnostic stats are mostly useful in a testing environment but
-    // may possibly prove useful in production also.
-    3: GetNumSendAttempts() -> (uint32 num);
-    4: GetFailedSendAttempts() -> (uint32 num);
+  // These diagnostic stats are mostly useful in a testing environment but
+  // may possibly prove useful in production also.
+  3: NumSendAttempts() -> (uint32 num);
+  4: FailedSendAttempts() -> (uint32 num);
 };
