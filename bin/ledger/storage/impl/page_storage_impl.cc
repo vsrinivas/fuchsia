@@ -78,11 +78,10 @@ PageStorageImpl::PageStorageImpl(
     ledger::Environment* environment,
     encryption::EncryptionService* encryption_service,
     ledger::DetachedPath page_dir, PageId page_id)
-    : PageStorageImpl(
-          environment, encryption_service,
-          std::make_unique<PageDbImpl>(environment->dispatcher(),
-                                       page_dir.SubPath(kLevelDbDir)),
-          std::move(page_id)) {}
+    : PageStorageImpl(environment, encryption_service,
+                      std::make_unique<PageDbImpl>(
+                          environment, page_dir.SubPath(kLevelDbDir)),
+                      std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(
     ledger::Environment* environment,

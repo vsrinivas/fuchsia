@@ -11,8 +11,10 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fxl/functional/auto_call.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
@@ -25,7 +27,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
+  PageDbImpl(ledger::Environment* environment, ledger::DetachedPath db_path);
   ~PageDbImpl() override;
 
   Status Init(coroutine::CoroutineHandler* handler) override;
@@ -107,6 +109,12 @@ class PageDbImpl : public PageDb {
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
 
  private:
+  struct DbInitializationState;
+
+  void InitOnIOThread(fxl::RefPtr<DbInitializationState> initialization_state,
+                      fit::function<void(Status)> callback);
+
+  ledger::Environment* environment_;
   LevelDb db_;
 };
 

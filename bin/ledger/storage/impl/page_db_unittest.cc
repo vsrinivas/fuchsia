@@ -48,7 +48,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
       : encryption_service_(dispatcher()),
         page_storage_(&environment_, &encryption_service_,
                       ledger::DetachedPath(tmpfs_.root_fd()), "page_id"),
-        page_db_(dispatcher(), ledger::DetachedPath(tmpfs_.root_fd())) {}
+        page_db_(&environment_, ledger::DetachedPath(tmpfs_.root_fd())) {}
 
   ~PageDbTest() override {}
 
