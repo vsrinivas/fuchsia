@@ -14,10 +14,10 @@ rustc_binary("bin") {
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/lib/wlan/fidl:sme-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//garnet/public/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",
@@ -62,8 +62,8 @@ package("wlancfg-tests") {
   tests = [
     {
       name = "wlancfg_bin_test_rustc"
-      dest =  "wlancfg_bin_test_rustc"
-    }
+      dest = "wlancfg_bin_test_rustc"
+    },
   ]
 }
 

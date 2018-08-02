@@ -7,7 +7,10 @@ use failure;
 use fidl::endpoints2::create_endpoints;
 use fidl_sme;
 use future_util::retry_until;
-use futures::{prelude::*, channel::oneshot, channel::mpsc, future::Either, stream};
+use futures::channel::{oneshot, mpsc};
+use futures::future::{self, Either};
+use futures::prelude::*;
+use futures::stream;
 use state_machine::{self, IntoStateExt};
 use std::sync::Arc;
 use zx::prelude::*;
@@ -108,6 +111,11 @@ fn auto_connect(services: Services)
 fn attempt_auto_connect(services: Services)
     -> impl Future<Item = Option<Vec<u8>>, Error = failure::Error>
 {
+    // first check if we have saved networks
+    if services.ess_store.known_network_count() < 1 {
+        return Either::Left(future::ok(None))
+    }
+
     start_scan_txn(&services.sme)
         .into_future()
         .and_then(fetch_scan_results)
@@ -129,6 +137,7 @@ fn attempt_auto_connect(services: Services)
                 .map_err(|(e, _stream)| e)
         })
         .map(|(item, _)| item.map(|(ssid, _)| ssid))
+        .right_future()
 }
 
 fn connect_to_known_network(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], known_ess: &KnownEss)
@@ -259,24 +268,53 @@ mod tests {
     use tempdir;
 
     #[test]
-    fn auto_connect_to_known_ess() {
+    fn scans_only_requested_with_saved_networks() {
         let mut exec = async::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (_client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.next();
 
+        // the ess store should be empty
+        assert_eq!(0, ess_store.known_network_count());
+
+        // now verify that a scan was not requested
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        // we do not cancel the timer
+        assert!(exec.wake_next_timer().is_some());
+
+        // now add a network, and verify the count reflects it
+        ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
+            .expect("failed to store a network password");
+        assert_eq!(1, ess_store.known_network_count());
+
         // Expect the state machine to initiate the scan, then send results back
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
         send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..], &b"bar"[..]]);
+    }
+
+    #[test]
+    fn auto_connect_to_known_ess() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        // save the network to trigger a scan
+        ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
+            .expect("failed to store a network password");
+
+        let (_client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.next();
+
+        // Expect the state machine to initiate the scan, then send results back without the saved
+        // network
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
 
         // None of the returned ssids are known though, so expect the state machine to simply sleep
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
         assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
 
-        // Now save a known ESS and "wait" for the next try
-        ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
-            .expect("failed to store a network password");
         assert!(exec.wake_next_timer().is_some());
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
 
@@ -306,16 +344,6 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.next();
-
-        // Expect the state machine to initiate a scan to find a known network to connect to
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
-        let _scan_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
-            Async::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
-            _ => panic!("expected a Scan request"),
-        };
-
-        // Expect no other messages to SME for now
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
 
         // Send a manual connect request and expect the state machine
         // to start connecting to the network immediately
@@ -348,16 +376,6 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.next();
-
-        // Expect the state machine to initiate a scan to find a known network to connect to
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
-        let _scan_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
-            Async::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
-            _ => panic!("expected a Scan request"),
-        };
-
-        // Expect no other messages to SME for now
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
 
         // Send the first manual connect request
         let mut receiver_one = send_manual_connect_request(&client, b"foo");
@@ -400,12 +418,14 @@ mod tests {
         let mut exec = async::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
+        // save the network that will be autoconnected
+        ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
+            .expect("failed to store a network password");
+
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.next();
 
         // Get the state machine into the connected state by auto-connecting to a known network
-        ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
-            .expect("failed to store a network password");
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
         send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
@@ -443,16 +463,6 @@ mod tests {
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.next();
 
-        // Expect the state machine to initiate a scan to find a known network to connect to
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
-        let _scan_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
-            Async::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
-            _ => panic!("expected a Scan request"),
-        };
-
-        // Expect no other messages to SME for now
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
-
         // Send a manual connect request and expect the state machine
         // to start connecting to the network immediately.
         // Reply with a failure.
@@ -460,6 +470,9 @@ mod tests {
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
         send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
                             fidl_sme::ConnectResultCode::Failed);
+        // auto connect will only scan with a saved network, make sure we have one
+        ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
+            .expect("failed to store a network password");
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
 
         // State machine should be in the auto-connect state now and is expected to
@@ -479,7 +492,7 @@ mod tests {
 
         // Network should not be saved as known since we failed to connect
         assert_eq!(None, ess_store.lookup(b"foo"));
-        assert_eq!(0, ess_store.known_network_count());
+        assert_eq!(1, ess_store.known_network_count());
     }
 
     fn send_manual_connect_request(client: &Client, ssid: &[u8])
