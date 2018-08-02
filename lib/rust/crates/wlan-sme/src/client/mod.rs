@@ -235,8 +235,8 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                         let cmd = self.get_connect_command(token, best_bss);
                         match cmd {
                             None => state,
-                            some_cmd => {
-                                state.disconnect(some_cmd, &self.mlme_sink, &self.user_sink)
+                            Some(cmd) => {
+                                state.connect(cmd, &self.mlme_sink, &self.user_sink)
                             }
                         }
                     },
