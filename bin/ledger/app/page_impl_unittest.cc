@@ -26,11 +26,11 @@
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/testing/storage_matcher.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/convert/convert.h"
 
 using testing::Contains;
@@ -51,10 +51,9 @@ std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   return value;
 }
 
-class PageImplTest : public gtest::TestLoopFixture {
+class PageImplTest : public TestWithEnvironment {
  public:
-  PageImplTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+  PageImplTest() {}
   ~PageImplTest() override {}
 
  protected:
@@ -190,7 +189,6 @@ class PageImplTest : public gtest::TestLoopFixture {
   MergeResolver* resolver_;
 
   PagePtr page_ptr_;
-  Environment environment_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);

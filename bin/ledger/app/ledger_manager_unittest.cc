@@ -28,6 +28,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -214,10 +215,9 @@ class FakePageEvictionManager : public PageEvictionManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionManager);
 };
 
-class LedgerManagerTest : public gtest::TestLoopFixture {
+class LedgerManagerTest : public TestWithEnvironment {
  public:
-  LedgerManagerTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+  LedgerManagerTest() {}
 
   ~LedgerManagerTest() override {}
 
@@ -239,7 +239,6 @@ class LedgerManagerTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  Environment environment_;
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<FakePageEvictionManager> page_eviction_manager_;

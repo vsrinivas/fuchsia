@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 #include <lib/fit/function.h>
 
-namespace test {
+namespace ledger {
 
 namespace {
 
@@ -50,22 +50,27 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
 }  // namespace
 
-TestWithCoroutines::TestWithCoroutines() {}
+TestWithEnvironment::TestWithEnvironment()
+    : environment_(EnvironmentBuilder()
+                       .SetAsync(dispatcher())
+                       .SetIOAsync(dispatcher())
+                       .Build()) {}
 
-void TestWithCoroutines::RunInCoroutine(
+void TestWithEnvironment::RunInCoroutine(
     fit::function<void(coroutine::CoroutineHandler*)> run_test) {
   std::unique_ptr<TestCoroutineHandler> test_handler;
   volatile bool ended = false;
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
-    test_handler =
-        std::make_unique<TestCoroutineHandler>(handler, [this] { QuitLoop(); });
-    run_test(test_handler.get());
-    ended = true;
-  });
+  environment_.coroutine_service()->StartCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        test_handler = std::make_unique<TestCoroutineHandler>(
+            handler, [this] { QuitLoop(); });
+        run_test(test_handler.get());
+        ended = true;
+      });
   while (!ended) {
     test_handler->ResumeIfNeeded();
     RunLoopUntilIdle();
   }
 }
 
-}  // namespace test
+}  // namespace ledger

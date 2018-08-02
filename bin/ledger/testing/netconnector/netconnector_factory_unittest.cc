@@ -13,7 +13,6 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/netconnector/cpp/message_relay.h>
 
-#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -22,16 +21,11 @@ namespace {
 
 class NetConnectorFactoryTest : public gtest::TestLoopFixture {
  public:
-  NetConnectorFactoryTest()
-      : environment_(EnvironmentBuilder()
-                         .SetAsync(dispatcher())
-                         .SetIOAsync(dispatcher())
-                         .Build()) {}
+  NetConnectorFactoryTest() {}
   ~NetConnectorFactoryTest() override {}
 
  protected:
   NetConnectorFactory factory_;
-  ledger::Environment environment_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorFactoryTest);

@@ -15,7 +15,7 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
@@ -28,7 +28,7 @@ std::string RandomString(size_t size) {
   return result;
 }
 
-class PageUsageDbTest : public ::test::TestWithCoroutines {
+class PageUsageDbTest : public TestWithEnvironment {
  public:
   PageUsageDbTest() : db_(dispatcher(), DetachedPath(tmpfs_.root_fd())) {}
 

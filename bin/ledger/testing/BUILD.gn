@@ -22,8 +22,8 @@ source_set("lib") {
     "run_with_tracing.h",
     "sync_params.cc",
     "sync_params.h",
-    "test_with_coroutines.cc",
-    "test_with_coroutines.h",
+    "test_with_environment.cc",
+    "test_with_environment.h",
   ]
 
   public_deps = [
@@ -32,6 +32,7 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",

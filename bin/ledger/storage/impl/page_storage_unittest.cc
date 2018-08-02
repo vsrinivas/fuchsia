@@ -38,7 +38,7 @@
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace storage {
@@ -160,7 +160,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
   }
 };
 
-class PageStorageTest : public ::test::TestWithCoroutines {
+class PageStorageTest : public ledger::TestWithEnvironment {
  public:
   PageStorageTest() : encryption_service_(dispatcher()) {}
 
@@ -177,7 +177,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
-        dispatcher(), &coroutine_service_, &encryption_service_,
+        &environment_, &encryption_service_,
         ledger::DetachedPath(tmpfs_->root_fd()), id);
 
     bool called;
@@ -559,7 +559,6 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     return ::testing::AssertionSuccess();
   }
 
-  coroutine::CoroutineServiceImpl coroutine_service_;
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
@@ -977,8 +976,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // Using FakePageDbImpl will cause all PageDb operations that have to do
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
   auto test_storage = std::make_unique<PageStorageImpl>(
-      dispatcher(), &coroutine_service_, &encryption_service_,
-      std::make_unique<FakePageDbImpl>(), RandomString(10));
+      &environment_, &encryption_service_, std::make_unique<FakePageDbImpl>(),
+      RandomString(10));
 
   bool called;
   Status status;

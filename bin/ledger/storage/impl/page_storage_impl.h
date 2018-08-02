@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
@@ -29,12 +30,10 @@ namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(async_dispatcher_t* dispatcher,
-                  coroutine::CoroutineService* coroutine_service,
+  PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
                   ledger::DetachedPath page_dir, PageId page_id);
-  PageStorageImpl(async_dispatcher_t* dispatcher,
-                  coroutine::CoroutineService* coroutine_service,
+  PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db, PageId page_id);
 
@@ -236,8 +235,7 @@ class PageStorageImpl : public PageStorage {
   FXL_WARN_UNUSED_RESULT Status SynchronousGetEmptyNodeIdentifier(
       coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id);
 
-  async_dispatcher_t* const dispatcher_;
-  coroutine::CoroutineService* const coroutine_service_;
+  ledger::Environment* environment_;
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
   std::unique_ptr<PageDb> db_;

@@ -14,6 +14,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace cloud_sync {
@@ -28,12 +29,10 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
-class UserSyncImplTest : public gtest::TestLoopFixture {
+class UserSyncImplTest : public ledger::TestWithEnvironment {
  public:
   UserSyncImplTest()
-      : environment_(
-            ledger::EnvironmentBuilder().SetAsync(dispatcher()).Build()),
-        cloud_provider_(cloud_provider_ptr_.NewRequest()),
+      : cloud_provider_(cloud_provider_ptr_.NewRequest()),
         encryption_service_(dispatcher()) {
     UserConfig user_config;
     user_config.user_directory = ledger::DetachedPath(tmpfs_.root_fd());
@@ -62,7 +61,6 @@ class UserSyncImplTest : public gtest::TestLoopFixture {
   }
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  ledger::Environment environment_;
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
   TestCloudProvider cloud_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;

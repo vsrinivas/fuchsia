@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
@@ -46,10 +47,9 @@ class FakePageEvictionManager : public PageEvictionManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionManager);
 };
 
-class LedgerRepositoryImplTest : public gtest::TestLoopFixture {
+class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
-  LedgerRepositoryImplTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {
+  LedgerRepositoryImplTest() {
     auto fake_page_eviction_manager =
         std::make_unique<FakePageEvictionManager>();
     page_eviction_manager_ = fake_page_eviction_manager.get();
@@ -63,7 +63,6 @@ class LedgerRepositoryImplTest : public gtest::TestLoopFixture {
 
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  Environment environment_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
   FakePageEvictionManager* page_eviction_manager_;
 

@@ -25,7 +25,7 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace storage {
@@ -42,11 +42,11 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   }
 }
 
-class PageDbTest : public ::test::TestWithCoroutines {
+class PageDbTest : public ledger::TestWithEnvironment {
  public:
   PageDbTest()
       : encryption_service_(dispatcher()),
-        page_storage_(dispatcher(), &coroutine_service_, &encryption_service_,
+        page_storage_(&environment_, &encryption_service_,
                       ledger::DetachedPath(tmpfs_.root_fd()), "page_id"),
         page_db_(dispatcher(), ledger::DetachedPath(tmpfs_.root_fd())) {}
 
@@ -492,30 +492,32 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
   });
   CoroutineHandler* handler1 = nullptr;
   CoroutineHandler* handler2 = nullptr;
-  coroutine_service_.StartCoroutine([&](CoroutineHandler* handler) {
-    handler1 = handler;
-    std::unique_ptr<PageDb::Batch> batch;
-    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
-    EXPECT_EQ(Status::OK,
-              batch->SetObjectStatus(handler, id, PageDbObjectStatus::SYNCED));
-    if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
-      return;
-    }
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
-    handler1 = nullptr;
-  });
-  coroutine_service_.StartCoroutine([&](CoroutineHandler* handler) {
-    handler2 = handler;
-    std::unique_ptr<PageDb::Batch> batch;
-    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
-    if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
-      return;
-    }
-    EXPECT_EQ(Status::OK,
-              batch->SetObjectStatus(handler, id, PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
-    handler2 = nullptr;
-  });
+  environment_.coroutine_service()->StartCoroutine(
+      [&](CoroutineHandler* handler) {
+        handler1 = handler;
+        std::unique_ptr<PageDb::Batch> batch;
+        EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+        EXPECT_EQ(Status::OK, batch->SetObjectStatus(
+                                  handler, id, PageDbObjectStatus::SYNCED));
+        if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
+          return;
+        }
+        EXPECT_EQ(Status::OK, batch->Execute(handler));
+        handler1 = nullptr;
+      });
+  environment_.coroutine_service()->StartCoroutine(
+      [&](CoroutineHandler* handler) {
+        handler2 = handler;
+        std::unique_ptr<PageDb::Batch> batch;
+        EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+        if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
+          return;
+        }
+        EXPECT_EQ(Status::OK, batch->SetObjectStatus(
+                                  handler, id, PageDbObjectStatus::LOCAL));
+        EXPECT_EQ(Status::OK, batch->Execute(handler));
+        handler2 = nullptr;
+      });
   ASSERT_TRUE(handler1);
   ASSERT_TRUE(handler2);
 

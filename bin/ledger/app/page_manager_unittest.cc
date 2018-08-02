@@ -21,13 +21,13 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
 #include "peridot/bin/ledger/sync_coordinator/testing/page_sync_empty_impl.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 namespace ledger {
 namespace {
@@ -71,10 +71,9 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
   fit::closure on_idle;
 };
 
-class PageManagerTest : public gtest::TestLoopFixture {
+class PageManagerTest : public TestWithEnvironment {
  public:
-  PageManagerTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+  PageManagerTest() {}
   ~PageManagerTest() override {}
 
  protected:
@@ -89,7 +88,6 @@ class PageManagerTest : public gtest::TestLoopFixture {
   }
 
   storage::PageId page_id_;
-  Environment environment_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerTest);

@@ -65,8 +65,7 @@ class RecordingTestStrategy : public MergeStrategy {
 
 class MergeResolverTest : public test::TestWithPageStorage {
  public:
-  MergeResolverTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+  MergeResolverTest() {}
   ~MergeResolverTest() override {}
 
  protected:
@@ -158,7 +157,6 @@ class MergeResolverTest : public test::TestWithPageStorage {
   }
 
   std::unique_ptr<storage::PageStorage> page_storage_;
-  Environment environment_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolverTest);

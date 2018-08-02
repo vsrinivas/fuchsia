@@ -18,6 +18,7 @@
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
@@ -36,7 +37,7 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-class TestWithPageStorage : public gtest::TestLoopFixture {
+class TestWithPageStorage : public TestWithEnvironment {
  public:
   TestWithPageStorage();
   ~TestWithPageStorage() override;
@@ -64,7 +65,6 @@ class TestWithPageStorage : public gtest::TestLoopFixture {
 
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
   encryption::FakeEncryptionService encryption_service_;
 };
 

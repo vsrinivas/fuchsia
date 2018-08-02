@@ -13,7 +13,7 @@
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 namespace storage {
 
@@ -79,7 +79,7 @@ EntryChange NewRemoveEntryChange(std::string key);
 //     ASSERT_TRUE(AddObject("value", &object));
 // or an EXPECT/ASSERT_FALSE if the function is expected to fail.
 //     ASSERT_FALSE(AddObject("value", &object));
-class StorageTest : public ::test::TestWithCoroutines {
+class StorageTest : public ledger::TestWithEnvironment {
  protected:
   StorageTest();
 

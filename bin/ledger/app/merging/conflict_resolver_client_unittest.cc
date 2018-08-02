@@ -22,13 +22,13 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 namespace ledger {
 namespace {
 class ConflictResolverClientTest : public test::TestWithPageStorage {
  public:
-  ConflictResolverClientTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+  ConflictResolverClientTest() {}
   ~ConflictResolverClientTest() override {}
 
  protected:
@@ -80,7 +80,6 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
   MergeResolver* merge_resolver_;
 
  private:
-  Environment environment_;
   std::unique_ptr<PageManager> page_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClientTest);

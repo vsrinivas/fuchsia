@@ -38,6 +38,8 @@ const char kUserId[] = "user";
 ledger::Environment BuildEnvironment(async_dispatcher_t* dispatcher) {
   return ledger::EnvironmentBuilder()
       .SetAsync(dispatcher)
+      // TODO(qsr) LE-558 Consider using a different dispatcher here.
+      .SetIOAsync(dispatcher)
       .SetBackoffFactory([] {
         return std::make_unique<backoff::ExponentialBackoff>(
             kBackoffDuration, 1u, kBackoffDuration);

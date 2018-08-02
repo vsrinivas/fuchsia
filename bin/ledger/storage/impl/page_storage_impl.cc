@@ -75,27 +75,25 @@ struct StringPointerComparator {
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(
-    async_dispatcher_t* dispatcher,
-    coroutine::CoroutineService* coroutine_service,
+    ledger::Environment* environment,
     encryption::EncryptionService* encryption_service,
     ledger::DetachedPath page_dir, PageId page_id)
-    : PageStorageImpl(dispatcher, coroutine_service, encryption_service,
-                      std::make_unique<PageDbImpl>(
-                          dispatcher, page_dir.SubPath(kLevelDbDir)),
-                      std::move(page_id)) {}
+    : PageStorageImpl(
+          environment, encryption_service,
+          std::make_unique<PageDbImpl>(environment->dispatcher(),
+                                       page_dir.SubPath(kLevelDbDir)),
+          std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(
-    async_dispatcher_t* dispatcher,
-    coroutine::CoroutineService* coroutine_service,
+    ledger::Environment* environment,
     encryption::EncryptionService* encryption_service,
     std::unique_ptr<PageDb> page_db, PageId page_id)
-    : dispatcher_(dispatcher),
-      coroutine_service_(coroutine_service),
+    : environment_(environment),
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
       db_(std::move(page_db)),
       page_sync_(nullptr),
-      coroutine_manager_(coroutine_service_) {}
+      coroutine_manager_(environment->coroutine_service()) {}
 
 PageStorageImpl::~PageStorageImpl() {}
 
@@ -184,8 +182,9 @@ void PageStorageImpl::StartCommit(
           return;
         }
 
-        std::unique_ptr<Journal> journal = JournalImpl::Simple(
-            journal_type, coroutine_service_, this, journal_id, commit_id);
+        std::unique_ptr<Journal> journal =
+            JournalImpl::Simple(journal_type, environment_->coroutine_service(),
+                                this, journal_id, commit_id);
         callback(Status::OK, std::move(journal));
       });
 }
@@ -207,7 +206,7 @@ void PageStorageImpl::StartMergeCommit(
         }
 
         std::unique_ptr<Journal> journal = JournalImpl::Merge(
-            coroutine_service_, this, journal_id, left, right);
+            environment_->coroutine_service(), this, journal_id, left, right);
         callback(Status::OK, std::move(journal));
       });
 }
@@ -612,7 +611,8 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
                                         fit::function<bool(Entry)> on_next,
                                         fit::function<void(Status)> on_done) {
   btree::ForEachEntry(
-      coroutine_service_, this, commit.GetRootIdentifier(), min_key,
+      environment_->coroutine_service(), this, commit.GetRootIdentifier(),
+      min_key,
       [on_next = std::move(on_next)](btree::EntryAndNodeIdentifier next) {
         return on_next(next.entry);
       },
@@ -644,15 +644,17 @@ void PageStorageImpl::GetEntryFromCommit(
     }
     callback(s, Entry());
   };
-  btree::ForEachEntry(coroutine_service_, this, commit.GetRootIdentifier(),
-                      std::move(key), std::move(on_next), std::move(on_done));
+  btree::ForEachEntry(environment_->coroutine_service(), this,
+                      commit.GetRootIdentifier(), std::move(key),
+                      std::move(on_next), std::move(on_done));
 }
 
 void PageStorageImpl::GetCommitContentsDiff(
     const Commit& base_commit, const Commit& other_commit, std::string min_key,
     fit::function<bool(EntryChange)> on_next_diff,
     fit::function<void(Status)> on_done) {
-  btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootIdentifier(),
+  btree::ForEachDiff(environment_->coroutine_service(), this,
+                     base_commit.GetRootIdentifier(),
                      other_commit.GetRootIdentifier(), std::move(min_key),
                      std::move(on_next_diff), std::move(on_done));
 }
@@ -663,7 +665,7 @@ void PageStorageImpl::GetThreeWayContentsDiff(
     fit::function<bool(ThreeWayChange)> on_next_diff,
     fit::function<void(Status)> on_done) {
   btree::ForEachThreeWayDiff(
-      coroutine_service_, this, base_commit.GetRootIdentifier(),
+      environment_->coroutine_service(), this, base_commit.GetRootIdentifier(),
       left_commit.GetRootIdentifier(), right_commit.GetRootIdentifier(),
       std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
@@ -1090,8 +1092,9 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
                      << ". journal id: " << id;
       return s;
     }
-    std::unique_ptr<Journal> journal = JournalImpl::Simple(
-        JournalType::IMPLICIT, coroutine_service_, this, id, base);
+    std::unique_ptr<Journal> journal =
+        JournalImpl::Simple(JournalType::IMPLICIT,
+                            environment_->coroutine_service(), this, id, base);
 
     CommitJournal(
         std::move(journal), [status_callback = waiter->NewCallback()](
@@ -1213,7 +1216,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
-    btree::GetObjectsFromSync(coroutine_service_, this,
+    btree::GetObjectsFromSync(environment_->coroutine_service(), this,
                               leaf.second->GetRootIdentifier(),
                               waiter->NewCallback());
   }

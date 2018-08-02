@@ -279,7 +279,7 @@ StorageTest::~StorageTest(){};
   Status status;
   std::set<ObjectIdentifier> new_nodes;
   btree::ApplyChanges(
-      &coroutine_service_, GetStorage(), base_node_identifier,
+      environment_.coroutine_service(), GetStorage(), base_node_identifier,
       std::make_unique<btree::EntryChangeIterator>(entries.begin(),
                                                    entries.end()),
       callback::Capture(callback::SetWhenCalled(&called), &status,

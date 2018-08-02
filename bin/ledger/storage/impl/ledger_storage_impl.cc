@@ -70,8 +70,7 @@ void LedgerStorageImpl::CreatePageStorage(
     return;
   }
   auto result = std::make_unique<PageStorageImpl>(
-      environment_->dispatcher(), environment_->coroutine_service(),
-      encryption_service_, std::move(path), std::move(page_id));
+      environment_, encryption_service_, std::move(path), std::move(page_id));
   result->Init([callback = std::move(timed_callback),
                 result = std::move(result)](Status status) mutable {
     if (status != Status::OK) {
@@ -95,8 +94,7 @@ void LedgerStorageImpl::GetPageStorage(
   }
 
   auto result = std::make_unique<PageStorageImpl>(
-      environment_->dispatcher(), environment_->coroutine_service(),
-      encryption_service_, std::move(path), std::move(page_id));
+      environment_, encryption_service_, std::move(path), std::move(page_id));
   result->Init([callback = std::move(timed_callback),
                 result = std::move(result)](Status status) mutable {
     if (status != Status::OK) {
