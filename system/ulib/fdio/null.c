@@ -8,10 +8,63 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <lib/fdio/io.h>
 
 #include "private.h"
+
+zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_get_attr(fdio_t* io, vnattr_t* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_set_attr(fdio_t* io, const vnattr_t* attr) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_sync(fdio_t* io) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_rewind(fdio_t* io) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_unlink(fdio_t* io, const char* path, size_t len) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_truncate(fdio_t* io, off_t off) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_rename(fdio_t* io, const char* src, size_t srclen,
+                                zx_handle_t dst_token, const char* dst, size_t dstlen) {
+    zx_handle_close(dst_token);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_link(fdio_t* io, const char* src, size_t srclen,
+                              zx_handle_t dst_token, const char* dst, size_t dstlen) {
+    zx_handle_close(dst_token);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
 
 ssize_t fdio_default_read(fdio_t* io, void* _data, size_t len) {
     return 0;
@@ -99,10 +152,6 @@ static fdio_ops_t zx_null_ops = {
     .read_at = fdio_default_read_at,
     .write = fdio_default_write,
     .write_at = fdio_default_write_at,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
     .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = fdio_default_close,
@@ -112,9 +161,25 @@ static fdio_ops_t zx_null_ops = {
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
-    .shutdown = fdio_default_shutdown,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = fdio_default_get_attr,
+    .set_attr = fdio_default_set_attr,
+    .sync = fdio_default_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_default_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_default_get_flags,
+    .set_flags = fdio_default_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
 };
 
 fdio_t* fdio_null_create(void) {

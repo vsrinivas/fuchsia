@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
 
@@ -54,6 +55,12 @@ bool pipe_test(void) {
     int fds[2];
     int status = pipe(fds);
     ASSERT_EQ(status, 0, "pipe() failed");
+
+    struct stat st;
+    ASSERT_EQ(fstat(fds[0], &st), 0, "fstat() on pipe failed");
+    ASSERT_EQ(st.st_mode & S_IFMT, (mode_t) S_IFIFO, "Unexpected mode");
+    ASSERT_EQ(fstat(fds[1], &st), 0, "fstat() on pipe failed");
+    ASSERT_EQ(st.st_mode & S_IFMT, (mode_t) S_IFIFO, "Unexpected mode");
 
     status = fcntl(fds[0], F_GETFL);
     ASSERT_EQ(status, 0, "fcntl(F_GETFL) failed");

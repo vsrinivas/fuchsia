@@ -17,7 +17,7 @@ typedef struct zx_pipe {
 
 ssize_t zx_pipe_read(fdio_t* io, void* data, size_t len);
 ssize_t zx_pipe_write(fdio_t* io, const void* data, size_t len);
-zx_status_t zx_pipe_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len);
+zx_status_t zx_pipe_get_attr(fdio_t* io, vnattr_t* attr);
 zx_status_t zx_pipe_close(fdio_t* io);
 zx_status_t zx_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types);
 void zx_pipe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals);

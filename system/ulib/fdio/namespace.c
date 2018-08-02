@@ -363,39 +363,33 @@ static zx_status_t mxdir_readdir_locked(mxdir_t* dir, void* buf, size_t len) {
     return ptr - buf;
 }
 
-static zx_status_t mxdir_misc(fdio_t* io, uint32_t op, int64_t off,
-                              uint32_t maxreply, void* ptr, size_t len) {
+static zx_status_t mxdir_get_attr(fdio_t* io, vnattr_t* attr) {
+    memset(attr, 0, sizeof(*attr));
+    attr->mode = V_TYPE_DIR | V_IRUSR;
+    attr->inode = 1;
+    attr->nlink = 1;
+    return ZX_OK;
+}
+
+static zx_status_t mxdir_rewind(fdio_t* io) {
+    return ZX_OK;
+}
+
+static zx_status_t mxdir_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual) {
     mxdir_t* dir = (mxdir_t*) io;
-    zx_status_t r;
-    switch (op) {
-    case ZXFIDL_READDIR:
-        LOG(6, "READDIR\n");
-        mtx_lock(&dir->ns->lock);
-        int n = atomic_fetch_add(&dir->seq, 1);
-        if (n == 0) {
-            r = mxdir_readdir_locked(dir, ptr, maxreply);
-        } else {
-            r = 0;
-        }
-        mtx_unlock(&dir->ns->lock);
-        return r;
-    case ZXFIDL_STAT:
-        LOG(6, "STAT\n");
-        if (maxreply < sizeof(vnattr_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        vnattr_t* attr = ptr;
-        memset(attr, 0, sizeof(*attr));
-        attr->mode = V_TYPE_DIR | V_IRUSR;
-        attr->inode = 1;
-        attr->nlink = 1;
-        return sizeof(vnattr_t);
-    case ZXFIDL_UNLINK:
-        return ZX_ERR_UNAVAILABLE;
-    default:
-        LOG(6, "MISC OP %u\n", op);
-        return ZX_ERR_NOT_SUPPORTED;
+    mtx_lock(&dir->ns->lock);
+    int n = atomic_fetch_add(&dir->seq, 1);
+    if (n == 0) {
+        *actual = mxdir_readdir_locked(dir, ptr, max);
+    } else {
+        *actual = 0;
     }
+    mtx_unlock(&dir->ns->lock);
+    return ZX_OK;
+}
+
+static zx_status_t mxdir_unlink(fdio_t* io, const char* path, size_t len) {
+    return ZX_ERR_UNAVAILABLE;
 }
 
 ssize_t mxdir_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
@@ -408,12 +402,9 @@ static fdio_ops_t dir_ops = {
     .read_at = fdio_default_read_at,
     .write = fdio_default_write,
     .write_at = fdio_default_write_at,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
-    .misc = mxdir_misc,
     .seek = fdio_default_seek,
+    .get_attr = mxdir_get_attr,
+    .misc = fdio_default_misc,
     .close = mxdir_close,
     .open = mxdir_open,
     .clone = mxdir_clone,
@@ -421,9 +412,24 @@ static fdio_ops_t dir_ops = {
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
-    .shutdown = fdio_default_shutdown,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .set_attr = fdio_default_set_attr,
+    .sync = fdio_default_sync,
+    .readdir = mxdir_readdir,
+    .rewind = mxdir_rewind,
+    .unlink = mxdir_unlink,
+    .truncate = fdio_default_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_default_get_flags,
+    .set_flags = fdio_default_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
 };
 
 static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn) {

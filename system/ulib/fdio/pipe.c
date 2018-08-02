@@ -98,29 +98,11 @@ ssize_t zx_pipe_read(fdio_t* io, void* data, size_t len) {
     zx_pipe_t* p = (zx_pipe_t*)io;
     return zx_pipe_read_internal(p->h, data, len, io->ioflag & IOFLAG_NONBLOCK);
 }
-zx_status_t zx_pipe_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len) {
-    switch (op) {
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
 
-    case ZXFIDL_STAT: {
-        vnattr_t attr = {};
-        if (maxreply < sizeof(attr)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        attr.mode = V_TYPE_PIPE | V_IRUSR | V_IWUSR;
-        vnattr_t* attr_out = data;
-        *attr_out = attr;
-        return sizeof(attr);
-    }
-    case ZXFIDL_GET_FLAGS: {
-        uint32_t* flags = (uint32_t*) data;
-        if (flags) {
-            *flags = 0;
-        }
-        return 0;
-    }
-    }
+zx_status_t zx_pipe_get_attr(fdio_t* io, vnattr_t* attr) {
+    memset(attr, 0, sizeof(*attr));
+    attr->mode = V_TYPE_PIPE | V_IRUSR | V_IWUSR;
+    return ZX_OK;
 }
 
 zx_status_t zx_pipe_close(fdio_t* io) {
@@ -204,12 +186,8 @@ static fdio_ops_t zx_pipe_ops = {
     .read_at = fdio_default_read_at,
     .write = zx_pipe_write,
     .write_at = fdio_default_write_at,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
     .seek = fdio_default_seek,
-    .misc = zx_pipe_misc,
+    .misc = fdio_default_misc,
     .close = zx_pipe_close,
     .open = fdio_default_open,
     .clone = zx_pipe_clone,
@@ -217,9 +195,25 @@ static fdio_ops_t zx_pipe_ops = {
     .wait_begin = zx_pipe_wait_begin,
     .wait_end = zx_pipe_wait_end,
     .unwrap = zx_pipe_unwrap,
-    .shutdown = fdio_default_shutdown,
     .posix_ioctl = zx_pipe_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = zx_pipe_get_attr,
+    .set_attr = fdio_default_set_attr,
+    .sync = fdio_default_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_default_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_default_get_flags,
+    .set_flags = fdio_default_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t h) {

@@ -779,14 +779,11 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* _pending, zx_time_t 
     return status;
 }
 
-int fdio_stat(fdio_t* io, struct stat* s) {
+static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
     vnattr_t attr;
-    int r = io->ops->misc(io, ZXFIDL_STAT, 0, sizeof(attr), &attr, 0);
-    if (r < 0) {
-        return r;
-    }
-    if (r < (int)sizeof(attr)) {
-        return ZX_ERR_IO;
+    zx_status_t status = io->ops->get_attr(io, &attr);
+    if (status != ZX_OK) {
+        return status;
     }
     memset(s, 0, sizeof(struct stat));
     s->st_mode = attr.mode;
@@ -799,19 +796,8 @@ int fdio_stat(fdio_t* io, struct stat* s) {
     s->st_ctim.tv_nsec = attr.create_time % ZX_SEC(1);
     s->st_mtim.tv_sec = attr.modify_time / ZX_SEC(1);
     s->st_mtim.tv_nsec = attr.modify_time % ZX_SEC(1);
-    return 0;
+    return ZX_OK;
 }
-
-
-zx_status_t fdio_setattr(fdio_t* io, vnattr_t* vn){
-    zx_status_t r = io->ops->misc(io, ZXFIDL_SETATTR, 0, 0, vn, sizeof(*vn));
-    if (r < 0) {
-        return ZX_ERR_BAD_HANDLE;
-    }
-
-    return  r;
-}
-
 
 // TODO(ZX-974): determine complete correct mapping
 int fdio_status_to_errno(zx_status_t status) {
@@ -897,32 +883,24 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
-zx_status_t _mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, int fd,
-                       off_t fd_off, uintptr_t* out) {
+zx_status_t _mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags,
+                       int fd, off_t fd_off, uintptr_t* out) {
     fdio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    // At the moment, these parameters are sent to filesystem servers purely
-    // for validation, since there is no mechanism to create a "subset vmo"
-    // from the original VMO.
-    // TODO(smklein): Once (if?) we can create 'subset' vmos, remove the
-    // fd_off argument to zx_vmar_map below.
-    zxrio_mmap_data_t data;
-    data.offset = fd_off;
-    data.length = len;
-    data.flags = zx_flags | (flags & MAP_PRIVATE ? FDIO_MMAP_FLAG_PRIVATE : 0);
-
-    zx_status_t r = io->ops->misc(io, ZXFIDL_GET_VMO, 0, sizeof(data), &data, sizeof(data));
+    int vflags = zx_flags | (flags & MAP_PRIVATE ? FDIO_MMAP_FLAG_PRIVATE : 0);
+    zx_handle_t vmo;
+    zx_status_t r = io->ops->get_vmo(io, vflags, &vmo);
     fdio_release(io);
     if (r < 0) {
         return r;
     }
-    zx_handle_t vmo = r;
 
     uintptr_t ptr = 0;
-    r = zx_vmar_map(zx_vmar_root_self(), offset, vmo, data.offset, data.length, zx_flags, &ptr);
+    r = zx_vmar_map(zx_vmar_root_self(), offset, vmo, fd_off, len,
+                    zx_flags, &ptr);
     zx_handle_close(vmo);
     // TODO: map this as shared if we ever implement forking
     if (r < 0) {
@@ -940,7 +918,7 @@ int unlinkat(int dirfd, const char* path, int flags) {
     if ((r = __fdio_opendir_containing_at(&io, dirfd, path, name)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, ZXFIDL_UNLINK, 0, 0, (void*)name, strlen(name));
+    r = io->ops->unlink(io, name, strlen(name));
     io->ops->close(io);
     fdio_release(io);
     return STATUS(r);
@@ -1177,7 +1155,7 @@ int fcntl(int fd, int cmd, ...) {
             return ERRNO(EBADF);
         }
         uint32_t flags = 0;
-        zx_status_t r = io->ops->misc(io, ZXFIDL_GET_FLAGS, 0, 0, &flags, 0);
+        zx_status_t r = io->ops->get_flags(io, &flags);
         if (r == ZX_ERR_NOT_SUPPORTED) {
             // We treat this as non-fatal, as it's valid for a remote to
             // simply not support FCNTL, but we still want to correctly
@@ -1210,7 +1188,7 @@ int fcntl(int fd, int cmd, ...) {
             r = ZX_OK;
         } else {
             uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
-            r = io->ops->misc(io, ZXFIDL_SET_FLAGS, flags, 0, NULL, 0);
+            r = io->ops->set_flags(io, flags);
         }
         if (r != ZX_OK) {
             n = STATUS(r);
@@ -1261,13 +1239,24 @@ off_t lseek(int fd, off_t offset, int whence) {
 }
 
 static int getdirents(int fd, void* ptr, size_t len, long cmd) {
+    size_t actual;
+    zx_status_t status;
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, ZXFIDL_READDIR, cmd, len, ptr, 0));
+    if (cmd == READDIR_CMD_RESET) {
+        if ((status = io->ops->rewind(io)) != ZX_OK) {
+            goto done;
+        }
+    }
+    if ((status = io->ops->readdir(io, ptr, len, &actual)) != ZX_OK) {
+        goto done;
+    }
+
+done:
     fdio_release(io);
-    return r;
+    return status == ZX_OK ? (int) actual : ERROR(status);
 }
 
 static int truncateat(int dirfd, const char* path, off_t len) {
@@ -1277,7 +1266,7 @@ static int truncateat(int dirfd, const char* path, off_t len) {
     if ((r = __fdio_open_at(&io, dirfd, path, O_WRONLY, 0)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, ZXFIDL_TRUNCATE, len, 0, NULL, 0);
+    r = io->ops->truncate(io, len);
     fdio_close(io);
     fdio_release(io);
     return STATUS(r);
@@ -1292,9 +1281,10 @@ int ftruncate(int fd, off_t len) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, ZXFIDL_TRUNCATE, len, 0, NULL, 0));
-     fdio_release(io);
-     return r;
+
+    zx_status_t r = io->ops->truncate(io, len);
+    fdio_release(io);
+    return STATUS(r);
 }
 
 // Filesystem operations (such as rename and link) which act on multiple paths
@@ -1329,24 +1319,22 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
     }
 
     zx_handle_t token;
-    status = io_newparent->ops->ioctl(io_newparent, IOCTL_VFS_GET_TOKEN,
-                                      NULL, 0, &token, sizeof(token));
+    status = io_newparent->ops->get_token(io_newparent, &token);
     if (status < 0) {
         goto newparent_open;
     }
 
-    char name[FDIO_CHUNK_SIZE];
-    size_t oldlen = strlen(oldname);
-    size_t newlen = strlen(newname);
-    static_assert(sizeof(oldname) + sizeof(newname) + 2 < sizeof(name),
-                  "Dual-path operation names should fit in FDIO name buffer");
-    memcpy(name, oldname, oldlen);
-    name[oldlen] = '\0';
-    memcpy(name + oldlen + 1, newname, newlen);
-    name[oldlen + newlen + 1] = '\0';
-    status = io_oldparent->ops->misc(io_oldparent, op, token, 0,
-                                     (void*)name, oldlen + newlen + 2);
-    goto newparent_open;
+    if (op == ZXFIDL_RENAME) {
+        status = io_oldparent->ops->rename(io_oldparent, oldname,
+                                           strlen(oldname), token, newname,
+                                           strlen(newname));
+    } else if (op == ZXFIDL_LINK) {
+        status = io_oldparent->ops->link(io_oldparent, oldname, strlen(oldname),
+                                         token, newname, strlen(newname));
+    } else {
+        zx_handle_close(token);
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
 newparent_open:
     io_newparent->ops->close(io_newparent);
     fdio_release(io_newparent);
@@ -1440,9 +1428,9 @@ int fsync(int fd) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, ZXFIDL_SYNC, 0, 0, 0, 0));
+    zx_status_t r = io->ops->sync(io);
     fdio_release(io);
-    return r;
+    return STATUS(r);
 }
 
 int fdatasync(int fd) {
@@ -1540,27 +1528,23 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
     return resolved ? strcpy(resolved, tmp) : strdup(tmp);
 }
 
-static int zx_utimens(fdio_t* io, const struct timespec times[2], int flags) {
+static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
+                              int flags) {
     vnattr_t vn;
-    zx_status_t r;
-
     vn.valid = 0;
 
-    // extract modify time
+    // Extract modify time.
     vn.modify_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
         ? zx_clock_get(ZX_CLOCK_UTC)
         : zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
-        // TODO(orr) UTIME_NOW requires write access or euid == owner or "appropriate privilege"
-        vn.valid = ATTR_MTIME;      // for setattr, tell which fields are valid
+        // For setattr, tell which fields are valid.
+        vn.valid = ATTR_MTIME;
     }
 
-    // TODO(orr): access time not implemented for now
-
     // set time(s) on underlying object
-    r = fdio_setattr(io, &vn);
-    return r;
+    return io->ops->set_attr(io, &vn);
 }
 
 int utimensat(int dirfd, const char *fn,
@@ -1587,8 +1571,8 @@ int utimensat(int dirfd, const char *fn,
 
 int futimens(int fd, const struct timespec times[2]) {
     fdio_t* io = fd_to_io(fd);
-
     zx_status_t r = zx_utimens(io, times, 0);
+    fdio_release(io);
     return STATUS(r);
 }
 

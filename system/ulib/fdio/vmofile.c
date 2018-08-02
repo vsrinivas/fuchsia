@@ -111,62 +111,12 @@ static zx_status_t vmofile_close(fdio_t* io) {
     return 0;
 }
 
-static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* ptr, size_t len) {
+static zx_status_t vmofile_get_attr(fdio_t* io, vnattr_t* attr) {
     vmofile_t* vf = (vmofile_t*)io;
-    switch (op) {
-    case ZXFIDL_STAT: {
-        vnattr_t attr;
-        memset(&attr, 0, sizeof(attr));
-        attr.size = vf->end - vf->off;
-        attr.mode = V_TYPE_FILE | V_IRUSR;
-        if (maxreply < sizeof(attr)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(ptr, &attr, sizeof(attr));
-        return sizeof(attr);
-    }
-    case ZXFIDL_GET_VMO: {
-        if (len != sizeof(zxrio_mmap_data_t) || maxreply < sizeof(zxrio_mmap_data_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zxrio_mmap_data_t* data = ptr;
-        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-        if (data->flags & FDIO_MMAP_FLAG_WRITE) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-        rights |= (data->flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
-        rights |= (data->flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-
-        // Make a tiny clone of the portion of the portion of the VMO representing this file
-        zx_handle_t h;
-        // TODO(smklein): In the future, "vf->vmo" will already be a cloned vmo
-        // representing this file (logically, making "vf->off" always zero), and
-        // nothing past "vf->end". As a consequence, we will be able to
-        // duplicate "vf->vmo" instead of cloning it.
-        zx_status_t status = zx_vmo_clone(vf->vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
-                                          vf->off, vf->end - vf->off, &h);
-        if (status != ZX_OK) {
-            return status;
-        }
-        // Only return this clone with the requested rights
-        zx_handle_t out;
-        if ((status = zx_handle_replace(h, rights, &out)) != ZX_OK) {
-            return status;
-        }
-        return out;
-    }
-    case ZXFIDL_GET_FLAGS: {
-        uint32_t* flags = (uint32_t*) ptr;
-        if (flags) {
-            *flags = 0;
-        }
-        return ZX_OK;
-    }
-    case ZXFIDL_SET_FLAGS:
-        return ZX_OK;
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
+    memset(attr, 0, sizeof(*attr));
+    attr->size = vf->end - vf->off;
+    attr->mode = V_TYPE_FILE | V_IRUSR;
+    return ZX_OK;
 }
 
 zx_status_t vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
@@ -199,12 +149,8 @@ static fdio_ops_t vmofile_ops = {
     .read_at = vmofile_read_at,
     .write = fdio_default_write,
     .write_at = vmofile_write_at,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
     .seek = vmofile_seek,
-    .misc = vmofile_misc,
+    .misc = fdio_default_misc,
     .close = vmofile_close,
     .open = fdio_default_open,
     .clone = fdio_default_clone,
@@ -212,9 +158,25 @@ static fdio_ops_t vmofile_ops = {
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
-    .shutdown = fdio_default_shutdown,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = vmofile_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = vmofile_get_attr,
+    .set_attr = fdio_default_set_attr,
+    .sync = fdio_default_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_default_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_default_get_flags,
+    .set_flags = fdio_default_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
 };
 
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len) {

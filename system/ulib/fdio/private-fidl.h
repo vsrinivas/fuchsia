@@ -32,11 +32,12 @@ zx_status_t fidl_writeat(zxrio_t* rio, const void* data, uint64_t length, off_t 
 zx_status_t fidl_read(zxrio_t* rio, void* data, uint64_t length, uint64_t* actual);
 zx_status_t fidl_readat(zxrio_t* rio, void* data, uint64_t length, off_t offset, uint64_t* actual);
 zx_status_t fidl_seek(zxrio_t* rio, off_t offset, int whence, off_t* out);
-zx_status_t fidl_stat(zxrio_t* rio, size_t len, vnattr_t* out, size_t* out_sz);
+zx_status_t fidl_stat(zxrio_t* rio, vnattr_t* out);
 zx_status_t fidl_setattr(zxrio_t* rio, const vnattr_t* attr);
 zx_status_t fidl_sync(zxrio_t* rio);
 zx_status_t fidl_readdirents(zxrio_t* rio, void* data, size_t length, size_t* out_sz);
 zx_status_t fidl_rewind(zxrio_t* rio);
+zx_status_t fidl_gettoken(zxrio_t* rio, zx_handle_t* out);
 zx_status_t fidl_unlink(zxrio_t* rio, const char* name, size_t namelen);
 zx_status_t fidl_truncate(zxrio_t* rio, uint64_t length);
 zx_status_t fidl_rename(zxrio_t* rio, const char* src, size_t srclen,

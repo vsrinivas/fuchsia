@@ -203,9 +203,7 @@ zx_status_t fidl_seek(zxrio_t* rio, off_t offset, int whence, off_t* out) {
     return status;
 }
 
-zx_status_t fidl_stat(zxrio_t* rio, size_t len, vnattr_t* out, size_t* out_sz) {
-    ZX_DEBUG_ASSERT(len >= sizeof(vnattr_t));
-
+zx_status_t fidl_stat(zxrio_t* rio, vnattr_t* out) {
     fuchsia_io_NodeAttributes attr;
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_NodeGetAttr(zxrio_handle(rio),
@@ -226,7 +224,6 @@ zx_status_t fidl_stat(zxrio_t* rio, size_t len, vnattr_t* out, size_t* out_sz) {
     out->create_time = attr.creation_time;
     out->modify_time = attr.modification_time;
 
-    *out_sz = sizeof(vnattr_t);
     return ZX_OK;
 }
 
@@ -274,7 +271,17 @@ zx_status_t fidl_readdirents(zxrio_t* rio, void* data, size_t length, size_t* ou
 
 zx_status_t fidl_rewind(zxrio_t* rio) {
     zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_DirectoryRewind(zxrio_handle(rio), &status)) != ZX_OK) {
+    if ((io_status = fuchsia_io_DirectoryRewind(zxrio_handle(rio), &status)) !=
+        ZX_OK) {
+        return io_status;
+    }
+    return status;
+}
+
+zx_status_t fidl_gettoken(zxrio_t* rio, zx_handle_t* out) {
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_DirectoryGetToken(zxrio_handle(rio), &status,
+                                                  out)) != ZX_OK) {
         return io_status;
     }
     return status;

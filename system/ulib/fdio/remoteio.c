@@ -226,6 +226,11 @@ static ssize_t zxrio_write_at(fdio_t* io, const void* data, size_t len, off_t of
     return count;
 }
 
+static zx_status_t zxrio_get_attr(fdio_t* io, vnattr_t* out) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_stat(rio, out);
+}
+
 static ssize_t zxrio_read(fdio_t* io, void* data, size_t len) {
     zxrio_t* rio = (zxrio_t*) io;
     zx_status_t status = ZX_OK;
@@ -452,7 +457,6 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags, zx_h
     return zxrio_connect(dir, h, ZXFIDL_OPEN, flags, 0755, path);
 }
 
-
 zx_handle_t fdio_service_clone(zx_handle_t svc) {
     zx_handle_t cli, srv;
     zx_status_t r;
@@ -480,92 +484,6 @@ zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
     }
     return zxrio_connect(svc, srv, ZXFIDL_CLONE, ZX_FS_RIGHT_READABLE |
                          ZX_FS_RIGHT_WRITABLE, 0755, "");
-}
-
-zx_status_t zxrio_misc(fdio_t* io, uint32_t op, int64_t off,
-                       uint32_t maxreply, void* ptr, size_t len) {
-    zxrio_t* rio = (zxrio_t*)io;
-    zx_status_t r;
-
-    // Reroute FIDL operations
-    switch (op) {
-    case ZXFIDL_STAT: {
-        size_t out_sz;
-        if ((r = fidl_stat(rio, maxreply, ptr, &out_sz)) != ZX_OK) {
-            return r;
-        }
-        return out_sz;
-    }
-    case ZXFIDL_SETATTR: {
-        if (len != sizeof(vnattr_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return fidl_setattr(rio, (const vnattr_t*) ptr);
-    }
-    case ZXFIDL_SYNC: {
-        return fidl_sync(rio);
-    }
-    case ZXFIDL_READDIR: {
-        switch (off) {
-        case READDIR_CMD_RESET:
-            if ((r = fidl_rewind(rio)) != ZX_OK) {
-                return r;
-            }
-            __FALLTHROUGH;
-        case READDIR_CMD_NONE: {
-            size_t out_sz;
-            if ((r = fidl_readdirents(rio, ptr, maxreply, &out_sz)) != ZX_OK) {
-                return r;
-            }
-            return out_sz;
-        }
-        default:
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-    case ZXFIDL_UNLINK: {
-        return fidl_unlink(rio, ptr, len);
-    }
-    case ZXFIDL_TRUNCATE: {
-        return fidl_truncate(rio, off);
-    }
-    case ZXFIDL_RENAME: {
-        size_t srclen = strlen(ptr);
-        size_t dstlen = len - (srclen + 2);
-        const char* src = ptr;
-        const char* dst = ptr + srclen + 1;
-        return fidl_rename(rio, src, srclen, (zx_handle_t) off, dst, dstlen);
-    }
-    case ZXFIDL_LINK: {
-        size_t srclen = strlen(ptr);
-        size_t dstlen = len - (srclen + 2);
-        const char* src = ptr;
-        const char* dst = ptr + srclen + 1;
-        return fidl_link(rio, src, srclen, (zx_handle_t) off, dst, dstlen);
-    }
-    case ZXFIDL_GET_FLAGS: {
-        uint32_t* outflags = ptr;
-        return fidl_getflags(rio, outflags);
-    }
-    case ZXFIDL_SET_FLAGS: {
-        uint32_t flags = off;
-        return fidl_setflags(rio, flags);
-    }
-    case ZXFIDL_GET_VMO: {
-        if (len != sizeof(zxrio_mmap_data_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zxrio_mmap_data_t* data = ptr;
-        zx_handle_t vmo;
-        zx_status_t r = fidl_getvmo(rio, data->flags, &vmo);
-        if (r != ZX_OK) {
-            return r;
-        }
-        return vmo;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 }
 
 zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
@@ -861,17 +779,70 @@ static zx_status_t zxrio_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
     return ZX_OK;
 }
 
+static zx_status_t zxrio_get_token(fdio_t* io, zx_handle_t* out) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_gettoken(rio, out);
+}
+
+static zx_status_t zxrio_set_attr(fdio_t* io, const vnattr_t* attr) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_setattr(rio, attr);
+}
+
+static zx_status_t zxrio_sync(fdio_t* io) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_sync(rio);
+}
+
+static zx_status_t zxrio_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_readdirents(rio, ptr, max, actual);
+}
+
+static zx_status_t zxrio_rewind(fdio_t* io) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_rewind(rio);
+}
+
+static zx_status_t zxrio_unlink(fdio_t* io, const char* path, size_t len) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_unlink(rio, path, len);
+}
+
+static zx_status_t zxrio_truncate(fdio_t* io, off_t off) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_truncate(rio, off);
+}
+
+static zx_status_t zxrio_rename(fdio_t* io, const char* src, size_t srclen,
+                                zx_handle_t dst_token, const char* dst, size_t dstlen) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_rename(rio, src, srclen, dst_token, dst, dstlen);
+}
+
+static zx_status_t zxrio_link(fdio_t* io, const char* src, size_t srclen,
+                              zx_handle_t dst_token, const char* dst, size_t dstlen) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_link(rio, src, srclen, dst_token, dst, dstlen);
+}
+
+static zx_status_t zxrio_get_flags(fdio_t* io, uint32_t* out_flags) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_getflags(rio, out_flags);
+}
+
+static zx_status_t zxrio_set_flags(fdio_t* io, uint32_t flags) {
+    zxrio_t* rio = (zxrio_t*)io;
+    return fidl_setflags(rio, flags);
+}
+
 static fdio_ops_t zx_remote_ops = {
     .read = zxrio_read,
     .read_at = zxrio_read_at,
     .write = zxrio_write,
     .write_at = zxrio_write_at,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
-    .misc = zxrio_misc,
     .seek = zxrio_seek,
+    .misc = fdio_default_misc,
     .close = zxrio_close,
     .open = zxrio_open,
     .clone = zxrio_clone,
@@ -879,9 +850,25 @@ static fdio_ops_t zx_remote_ops = {
     .wait_begin = zxrio_wait_begin,
     .wait_end = zxrio_wait_end,
     .unwrap = zxrio_unwrap,
-    .shutdown = fdio_default_shutdown,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = zxrio_get_vmo,
+    .get_token = zxrio_get_token,
+    .get_attr = zxrio_get_attr,
+    .set_attr = zxrio_set_attr,
+    .sync = zxrio_sync,
+    .readdir = zxrio_readdir,
+    .rewind = zxrio_rewind,
+    .unlink = zxrio_unlink,
+    .truncate = zxrio_truncate,
+    .rename = zxrio_rename,
+    .link = zxrio_link,
+    .get_flags = zxrio_get_flags,
+    .set_flags = zxrio_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
 };
 
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e) {

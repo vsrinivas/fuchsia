@@ -55,18 +55,13 @@ static ssize_t zx_socketpair_sendto(fdio_t* io, const void* data, size_t len, in
     return zx_pipe_write_internal(p->h, data, len, nonblock);
 }
 
-
 static fdio_ops_t zx_socketpair_ops = {
     .read = zx_pipe_read,
     .read_at = fdio_default_read_at,
     .write = zx_pipe_write,
     .write_at = fdio_default_write_at,
-    .recvfrom = zx_socketpair_recvfrom,
-    .sendto = zx_socketpair_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
     .seek = fdio_default_seek,
-    .misc = zx_pipe_misc,
+    .misc = fdio_default_misc,
     .close = zx_pipe_close,
     .open = fdio_default_open,
     .clone = zx_pipe_clone,
@@ -74,11 +69,26 @@ static fdio_ops_t zx_socketpair_ops = {
     .wait_begin = zx_pipe_wait_begin,
     .wait_end = zx_pipe_wait_end,
     .unwrap = zx_pipe_unwrap,
-    .shutdown = fdio_socketpair_shutdown,
     .posix_ioctl = zx_pipe_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = zx_pipe_get_attr,
+    .set_attr = fdio_default_set_attr,
+    .sync = fdio_default_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_default_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_default_get_flags,
+    .set_flags = fdio_default_set_flags,
+    .recvfrom = zx_socketpair_recvfrom,
+    .sendto = zx_socketpair_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_socketpair_shutdown,
 };
-
 
 int socketpair(int domain, int type, int protocol, int fd[2]) {
     if (type != SOCK_STREAM) {  // TODO(jamesr): SOCK_DGRAM
