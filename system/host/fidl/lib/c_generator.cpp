@@ -517,6 +517,8 @@ void CGenerator::GeneratePrologues() {
     for (const auto& pair : *library_->dependencies_) {
         if (pair.second.get() == library_)
             continue;
+        if (pair.second->HasAttribute("Internal"))
+            continue;
         EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(pair.first) + ">");
     }
     EmitBlank(&file_);

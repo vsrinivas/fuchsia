@@ -17,6 +17,7 @@ source_set("compiler") {
     "lib/identifier_table.cpp",
     "lib/json_generator.cpp",
     "lib/lexer.cpp",
+    "lib/library_zx.cpp",
     "lib/parser.cpp",
     "lib/source_file.cpp",
     "lib/source_location.cpp",

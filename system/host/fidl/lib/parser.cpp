@@ -269,15 +269,23 @@ std::unique_ptr<raw::Using> Parser::ParseUsing() {
         return Fail();
 
     std::unique_ptr<raw::Identifier> maybe_alias;
+    std::unique_ptr<raw::PrimitiveType> maybe_primitive;
+
     if (MaybeConsumeToken(Token::Kind::kAs)) {
         if (!Ok())
             return Fail();
         maybe_alias = ParseIdentifier();
         if (!Ok())
             return Fail();
+    } else if (MaybeConsumeToken(Token::Kind::kEqual)) {
+        if (!Ok() || using_path->components.size() != 1u)
+            return Fail();
+        maybe_primitive = ParsePrimitiveType();
+        if (!Ok())
+            return Fail();
     }
 
-    return std::make_unique<raw::Using>(std::move(using_path), std::move(maybe_alias));
+    return std::make_unique<raw::Using>(std::move(using_path), std::move(maybe_alias), std::move(maybe_primitive));
 }
 
 std::unique_ptr<raw::ArrayType> Parser::ParseArrayType() {
@@ -897,6 +905,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
 
+    auto attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
     ConsumeToken(Token::Kind::kLibrary);
     if (!Ok())
         return Fail();
@@ -973,9 +984,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return Fail();
 
     return std::make_unique<raw::File>(
-        std::move(library_name), std::move(using_list), std::move(const_declaration_list),
-        std::move(enum_declaration_list), std::move(interface_declaration_list),
-        std::move(struct_declaration_list), std::move(union_declaration_list));
+        std::move(attributes), std::move(library_name), std::move(using_list),
+        std::move(const_declaration_list), std::move(enum_declaration_list),
+        std::move(interface_declaration_list), std::move(struct_declaration_list),
+        std::move(union_declaration_list));
 }
 
 } // namespace fidl

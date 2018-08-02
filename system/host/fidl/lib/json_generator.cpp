@@ -447,9 +447,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     });
 }
 
-void JSONGenerator::Generate(
-    const std::pair<const std::vector<StringView>, std::unique_ptr<flat::Library>>& library_dependency) {
-    const flat::Library* library = library_dependency.second.get();
+void JSONGenerator::Generate(const flat::Library* library) {
     GenerateObject([&]() {
         auto library_name = flat::LibraryName(library, ".");
         GenerateObjectMember("name", library_name, Position::kFirst);
@@ -497,7 +495,14 @@ std::ostringstream JSONGenerator::Produce() {
 
         GenerateObjectPunctuation(Position::kSubsequent);
         EmitObjectKey(&json_file_, indent_level_, "library_dependencies");
-        GenerateArray(library_->dependencies_->begin(), library_->dependencies_->end());
+        std::vector<flat::Library*> dependencies;
+        for (const auto& entry : *library_->dependencies_) {
+            if (entry.second->HasAttribute("Internal"))
+                continue;
+            dependencies.push_back(entry.second.get());
+        }
+
+        GenerateArray(dependencies.begin(), dependencies.end());
 
         GenerateObjectMember("const_declarations", library_->const_declarations_);
         GenerateObjectMember("enum_declarations", library_->enum_declarations_);

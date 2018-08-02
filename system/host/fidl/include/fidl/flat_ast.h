@@ -345,6 +345,14 @@ inline bool Type::operator<(const Type& other) const {
     }
 }
 
+struct Using {
+    Using(Name name, std::unique_ptr<PrimitiveType> type)
+        : name(std::move(name)), type(std::move(type)) {}
+
+    const Name name;
+    const std::unique_ptr<PrimitiveType> type;
+};
+
 struct Const : public Decl {
     Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type,
           std::unique_ptr<Constant> value)
@@ -477,7 +485,7 @@ private:
     bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
-                                   SourceLocation location, Name* name_out);
+                                   SourceLocation location, Name* out_name);
 
     bool ParseSize(std::unique_ptr<Constant> constant, Size* out_size);
 
@@ -489,6 +497,7 @@ private:
     bool ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation location,
                      std::unique_ptr<Type>* out_type);
 
+    bool ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
@@ -504,6 +513,10 @@ private:
     //     const type foo = name;
     // return the declaration corresponding to name.
     Decl* LookupConstant(const Type* type, const Name& name);
+
+    // Given a name, checks whether that name corresponds to a type alias. If
+    // so, returns the type. Otherwise, returns nullptr.
+    PrimitiveType* LookupTypeAlias(const Name& name) const;
 
     // Returns nullptr when |type| does not correspond directly to a
     // declaration. For example, if |type| refers to int32 or if it is
@@ -612,10 +625,13 @@ public:
         }
     }
 
+    bool HasAttribute(fidl::StringView name) const;
+
     const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies_;
 
     std::vector<StringView> library_name_;
 
+    std::vector<std::unique_ptr<Using>> using_;
     std::vector<std::unique_ptr<Const>> const_declarations_;
     std::vector<std::unique_ptr<Enum>> enum_declarations_;
     std::vector<std::unique_ptr<Interface>> interface_declarations_;
@@ -627,8 +643,11 @@ public:
     std::vector<Decl*> declaration_order_;
 
 private:
-    // All Name, Constant, and Decl pointers here are non-null and are
+    std::unique_ptr<raw::AttributeList> attributes_;
+
+    // All Name, Constant, Using, and Decl pointers here are non-null and are
     // owned by the various foo_declarations_.
+    std::map<const Name*, Using*, PtrCompare<Name>> type_aliases_;
     std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
     std::map<const Name*, Const*, PtrCompare<Name>> string_constants_;
     std::map<const Name*, Const*, PtrCompare<Name>> primitive_constants_;

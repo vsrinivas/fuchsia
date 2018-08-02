@@ -19,12 +19,23 @@ struct FuelLevel {
     uint32 reaction_mass;
 };
 
+struct ZxTypes {
+    zx.@status a;
+    zx.time b;
+    zx.duration c;
+    zx.koid d;
+    zx.vaddr e;
+    zx.paddr f;
+    zx.paddr32 g;
+    zx.off h;
+};
+
 [Layout="Simple"]
 interface SpaceShip {
     1: AdjustHeading(vector<uint32>:64 stars) -> (int8 result);
     2: ScanForLifeforms() -> (vector<uint32>:64 lifesigns);
     3: SetAstrometricsListener(AstrometricsListener listener);
     4: SetDefenseCondition(Alert alert);
-    5: GetFuelRemaining(handle<eventpair>? cancel) -> (status @status, FuelLevel? level);
+    5: GetFuelRemaining(handle<eventpair>? cancel) -> (zx.@status @status, FuelLevel? level);
     6: AddFuelTank(FuelLevel? level) -> (uint32 consumed);
 };

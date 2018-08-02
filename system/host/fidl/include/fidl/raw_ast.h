@@ -122,6 +122,14 @@ struct AttributeList {
         : attribute_list(std::move(attribute_list)) {}
 
     std::vector<std::unique_ptr<Attribute>> attribute_list;
+
+    bool HasAttribute(fidl::StringView name) const {
+        for (const auto& attribute : attribute_list) {
+            if (attribute->name->location.data() == name)
+                return true;
+        }
+        return false;
+    }
 };
 
 struct Type {
@@ -205,11 +213,12 @@ struct IdentifierType : public Type {
 };
 
 struct Using {
-    Using(std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias)
-        : using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)) {}
+    Using(std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias, std::unique_ptr<PrimitiveType> maybe_primitive)
+        : using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)), maybe_primitive(std::move(maybe_primitive)) {}
 
     std::unique_ptr<CompoundIdentifier> using_path;
     std::unique_ptr<Identifier> maybe_alias;
+    std::unique_ptr<PrimitiveType> maybe_primitive;
 };
 
 struct ConstDeclaration {
@@ -336,20 +345,24 @@ struct UnionDeclaration {
 };
 
 struct File {
-    File(std::unique_ptr<CompoundIdentifier> library_name,
+    File(std::unique_ptr<AttributeList> attributes,
+         std::unique_ptr<CompoundIdentifier> library_name,
          std::vector<std::unique_ptr<Using>> using_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
          std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
-        : library_name(std::move(library_name)), using_list(std::move(using_list)),
+        : attributes(std::move(attributes)),
+          library_name(std::move(library_name)),
+          using_list(std::move(using_list)),
           const_declaration_list(std::move(const_declaration_list)),
           enum_declaration_list(std::move(enum_declaration_list)),
           interface_declaration_list(std::move(interface_declaration_list)),
           struct_declaration_list(std::move(struct_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<CompoundIdentifier> library_name;
     std::vector<std::unique_ptr<Using>> using_list;
     std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;

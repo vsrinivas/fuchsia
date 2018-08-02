@@ -17,6 +17,7 @@ class SourceManager {
 public:
     // Returns whether the filename was successfully read.
     bool CreateSource(StringView filename);
+    void AddSourceFile(std::unique_ptr<SourceFile> file);
 
     const std::vector<std::unique_ptr<SourceFile>>& sources() const { return sources_; }
 

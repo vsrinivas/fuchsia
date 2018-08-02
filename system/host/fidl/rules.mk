@@ -18,6 +18,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/identifier_table.cpp \
     $(LOCAL_DIR)/lib/json_generator.cpp \
     $(LOCAL_DIR)/lib/lexer.cpp \
+    $(LOCAL_DIR)/lib/library_zx.cpp \
     $(LOCAL_DIR)/lib/names.cpp \
     $(LOCAL_DIR)/lib/parser.cpp \
     $(LOCAL_DIR)/lib/source_file.cpp \

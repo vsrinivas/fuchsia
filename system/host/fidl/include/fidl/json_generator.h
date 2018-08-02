@@ -27,7 +27,8 @@ namespace fidl {
 
 class JSONGenerator {
 public:
-    explicit JSONGenerator(const flat::Library* library) : library_(library) {}
+    explicit JSONGenerator(const flat::Library* library)
+        : library_(library) {}
 
     ~JSONGenerator() = default;
 
@@ -41,23 +42,28 @@ private:
 
     void GenerateEOF();
 
-    template <typename Iterator> void GenerateArray(Iterator begin, Iterator end);
+    template <typename Iterator>
+    void GenerateArray(Iterator begin, Iterator end);
 
-    template <typename Collection> void GenerateArray(const Collection& collection);
+    template <typename Collection>
+    void GenerateArray(const Collection& collection);
 
     void GenerateObjectPunctuation(Position position);
 
-    template <typename Callback> void GenerateObject(Callback callback);
+    template <typename Callback>
+    void GenerateObject(Callback callback);
 
     template <typename Type>
     void GenerateObjectMember(StringView key, const Type& value,
                               Position position = Position::kSubsequent);
 
-    template <typename T> void Generate(const std::unique_ptr<T>& value);
+    template <typename T>
+    void Generate(const std::unique_ptr<T>& value);
 
     void Generate(const flat::Decl* decl);
 
-    template <typename T> void Generate(const std::vector<T>& value);
+    template <typename T>
+    void Generate(const std::vector<T>& value);
 
     void Generate(bool value);
     void Generate(StringView value);
@@ -88,8 +94,7 @@ private:
     void Generate(const flat::Struct::Member& value);
     void Generate(const flat::Union& value);
     void Generate(const flat::Union::Member& value);
-    void
-    Generate(const std::pair<const std::vector<StringView>, std::unique_ptr<flat::Library>>& library_dependency);
+    void Generate(const flat::Library* library);
 
     void GenerateDeclarationsEntry(int count, const flat::Name& name, StringView decl);
     void GenerateDeclarationsMember(const flat::Library* library,

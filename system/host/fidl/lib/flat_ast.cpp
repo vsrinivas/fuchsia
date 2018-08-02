@@ -209,16 +209,16 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
     }
 }
 
+std::unique_ptr<PrimitiveType> MakePrimitiveType(const raw::PrimitiveType* primitive_type) {
+    return std::make_unique<PrimitiveType>(primitive_type->subtype);
+}
+
 } // namespace
 
 bool Decl::HasAttribute(fidl::StringView name) const {
     if (!attributes)
         return false;
-    for (const auto& attribute : attributes->attribute_list) {
-        if (attribute->name->location.data() == name)
-            return true;
-    }
-    return false;
+    return attributes->HasAttribute(name);
 }
 
 fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
@@ -315,6 +315,8 @@ Library::Library(const std::map<std::vector<StringView>, std::unique_ptr<Library
         const std::unique_ptr<Library>& library = dep.second;
         const auto& declarations = library->declarations_;
         declarations_.insert(declarations.begin(), declarations.end());
+        const auto& type_aliases = library->type_aliases_;
+        type_aliases_.insert(type_aliases.begin(), type_aliases.end());
     }
 }
 
@@ -476,7 +478,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
     }
     case raw::Type::Kind::kPrimitive: {
         auto primitive_type = static_cast<raw::PrimitiveType*>(raw_type.get());
-        *out_type = std::make_unique<PrimitiveType>(primitive_type->subtype);
+        *out_type = MakePrimitiveType(primitive_type);
         break;
     }
     case raw::Type::Kind::kIdentifier: {
@@ -485,10 +487,29 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         if (!CompileCompoundIdentifier(identifier_type->identifier.get(), location, &name)) {
             return false;
         }
-        *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
+        auto primitive_type = LookupTypeAlias(name);
+        if (primitive_type != nullptr) {
+            *out_type = std::make_unique<PrimitiveType>(*primitive_type);
+        } else {
+            *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
+        }
         break;
     }
     }
+    return true;
+}
+
+bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
+    // TODO(FIDL-111): We should require "using" directives for types used by
+    // this library.
+    if (!using_directive->maybe_primitive)
+        return true;
+
+    auto location = using_directive->using_path->components[0]->location;
+    auto name = Name(this, location);
+    auto using_dir = std::make_unique<Using>(std::move(name), MakePrimitiveType(using_directive->maybe_primitive.get()));
+    type_aliases_.emplace(&using_dir->name, using_dir.get());
+    using_.push_back(std::move(using_dir));
     return true;
 }
 
@@ -642,6 +663,16 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
+    if (file->attributes) {
+        if (!attributes_) {
+            attributes_ = std::move(file->attributes);
+        } else {
+            for (auto& attribute : std::move(file->attributes)->attribute_list) {
+                attributes_->attribute_list.push_back(std::move(attribute));
+            }
+        }
+    }
+
     // All fidl files in a library should agree on the library name.
     std::vector<StringView> new_name;
     for (const auto& part : file->library_name->components) {
@@ -657,6 +688,11 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     }
 
     auto using_list = std::move(file->using_list);
+    for (auto& using_directive : using_list) {
+        if (!ConsumeUsing(std::move(using_directive))) {
+            return false;
+        }
+    }
 
     auto const_declaration_list = std::move(file->const_declaration_list);
     for (auto& const_declaration : const_declaration_list) {
@@ -845,6 +881,13 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
     }
     // The enum didn't have a member of that name!
     return nullptr;
+}
+
+PrimitiveType* Library::LookupTypeAlias(const Name& name) const {
+    auto it = type_aliases_.find(&name);
+    if (it == type_aliases_.end())
+        return nullptr;
+    return it->second->type.get();
 }
 
 Decl* Library::LookupDeclByType(const Type* type, LookupOption option) const {
@@ -1399,6 +1442,12 @@ bool Library::CompileType(Type* type, TypeShape* out_typeshape) {
         return CompileIdentifierType(identifier_type, out_typeshape);
     }
     }
+}
+
+bool Library::HasAttribute(fidl::StringView name) const {
+    if (!attributes_)
+        return false;
+    return attributes_->HasAttribute(name);
 }
 
 } // namespace flat

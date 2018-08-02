@@ -4,6 +4,8 @@
 
 #include "fidl/source_manager.h"
 
+#include <utility>
+
 namespace fidl {
 
 bool SourceManager::CreateSource(StringView filename) {
@@ -21,8 +23,12 @@ bool SourceManager::CreateSource(StringView filename) {
     data[filesize] = 0;
     fclose(file);
 
-    sources_.push_back(std::make_unique<SourceFile>(filename, std::move(data)));
+    AddSourceFile(std::make_unique<SourceFile>(filename, std::move(data)));
     return true;
+}
+
+void SourceManager::AddSourceFile(std::unique_ptr<SourceFile> file) {
+    sources_.push_back(std::move(file));
 }
 
 } // namespace fidl
