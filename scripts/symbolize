@@ -300,8 +300,11 @@ def main():
     done_dso_list = True
 
     # Regex for parsing
-    # Either nothing, or something like "[00007.268] 00304.00325> "
-    full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> ?)"
+    # Full prefix can be:
+    #   - nothing
+    #   - something like "[00007.268] 00304.00325> "
+    #   - something like "[00041.807507][1105][1119][klog] INFO: "
+    full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> ?|\[\d{5}\.\d{6}\]\[\d+\]\[\d+\]\[[\w ,]+\] INFO: ?)"
     btre = re.compile(full_prefix + "bt#(\d+):")
     bt_with_offset_re = re.compile(full_prefix +
         "bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \(([^,]+),(0x[0-9a-f]+)\)$")
