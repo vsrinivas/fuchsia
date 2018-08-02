@@ -24,5 +24,5 @@ pub fn receive_ip_packet<A: IpAddr, B: AsMut<[u8]>>(
             // TODO(joshlf): Do something with ICMP here?
             return;
         };
-    unimplemented!()
+    log_unimplemented!((), "transport::udp::receive_ip_packet: Not implemented")
 }

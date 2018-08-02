@@ -129,7 +129,7 @@ fn deliver<A: IpAddr>(state: &mut StackState, device: DeviceId, dst_ip: A) -> bo
                     .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
                     .unwrap_or(dst_ip == Ipv4::BROADCAST_ADDRESS)
             }
-            Ipv6Addr => { unimplemented!() }
+            Ipv6Addr => { log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted") }
         }
     );
     A::deliver(dst_ip, ::device::get_ip_addr::<A>(state, device))
@@ -273,7 +273,7 @@ fn max_header_len<I: Ip>() -> usize {
     specialize_ip!(
         fn max_header_len() -> usize {
             Ipv4 => { ::wire::ipv4::MAX_HEADER_LEN }
-            Ipv6 => { unimplemented!() }
+            Ipv6 => { log_unimplemented!(0, "ip::max_header_len: Ipv6 not implemented") }
         }
     );
     I::max_header_len()
@@ -284,7 +284,7 @@ fn min_header_len<I: Ip>() -> usize {
     specialize_ip!(
         fn min_header_len() -> usize {
             Ipv4 => { ::wire::ipv4::MIN_HEADER_LEN }
-            Ipv6 => { unimplemented!() }
+            Ipv6 => { log_unimplemented!(0, "ip::min_header_len: Ipv6 not implemented") }
         }
     );
     I::min_header_len()
@@ -308,7 +308,7 @@ fn serialize_packet<A: IpAddr, B: AsMut<[u8]>>(
             B: AsMutU8,
         {
             Ipv4 => { Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto).serialize(buffer) }
-            Ipv6 => { unimplemented!() }
+            Ipv6 => { log_unimplemented!(buffer, "ip::serialize_packet: Ipv6 not implemented") }
         }
     );
     A::Version::serialize(src_ip, dst_ip, ttl, proto, buffer)

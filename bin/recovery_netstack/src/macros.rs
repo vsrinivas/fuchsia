@@ -480,6 +480,24 @@ macro_rules! specialize_ip_inner {
     )
 }
 
+macro_rules! log_unimplemented {
+    ($nocrash:expr, $fmt:expr $(,$arg:expr)*) => {{
+
+        #[cfg(feature = "crash_on_unimplemented")]
+        unimplemented!($fmt, $($arg),*);
+
+        #[cfg(not(feature = "crash_on_unimplemented"))]
+        {
+          trace!(concat!("Unimplemented: ", $fmt), $($arg),*);
+          $nocrash
+        }
+    }};
+
+    ($nocrash:expr, $fmt:expr $(,$arg:expr)*,) =>{
+      log_unimplemented!($nocrash, $fmt $(,$arg)*)
+    };
+}
+
 mod test {
     // don't 'use' anything from the ip module so we can be sure that the
     // absolute paths used in the definitions of these macros work properly

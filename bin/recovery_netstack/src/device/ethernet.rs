@@ -173,7 +173,10 @@ pub fn receive_frame(state: &mut StackState, device_id: u64, bytes: &mut [u8]) {
         let device = DeviceId::new_ethernet(device_id);
         let buffer = BufferAndRange::new(bytes, body_range);
         match ethertype {
-            EtherType::Arp => unimplemented!(), // TODO(joshlf)
+            EtherType::Arp => log_unimplemented!(
+                return,
+                "device::ethernet::receive_frame: ARP not implemented"
+            ),
             EtherType::Ipv4 => ::ip::receive_ip_packet::<Ipv4>(state, device, buffer),
             EtherType::Ipv6 => ::ip::receive_ip_packet::<Ipv6>(state, device, buffer),
         }
