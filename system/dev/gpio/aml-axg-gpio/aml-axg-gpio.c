@@ -118,12 +118,17 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
         uint32_t pull = flags & GPIO_PULL_MASK;
         uint32_t pull_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_offset);
         uint32_t pull_en_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_en_offset);
-        if (pull & GPIO_PULL_UP) {
-            pull_reg_val |= (1 << pinmask);
+        if (pull & GPIO_NO_PULL) {
+            pull_en_reg_val &= ~(1 << pinmask);
         } else {
-            pull_reg_val &= ~(1 << pinmask);
+            if (pull & GPIO_PULL_UP) {
+                pull_reg_val |= (1 << pinmask);
+            } else {
+                pull_reg_val &= ~(1 << pinmask);
+            }
+            pull_en_reg_val |= (1 << pinmask);
         }
-        pull_en_reg_val |= (1 << pinmask);
+
         WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
         WRITE32_GPIO_REG(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
         regval |= pinmask;

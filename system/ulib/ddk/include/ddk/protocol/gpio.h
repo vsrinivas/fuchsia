@@ -27,10 +27,11 @@ enum {
     GPIO_TRIGGER_HIGH       = 1 << 2,
     GPIO_TRIGGER_LOW        = 1 << 3,
 
-    // for pull-up/pull-down
-    GPIO_PULL_DOWN            = 0 << 4,
-    GPIO_PULL_UP              = 1 << 4,
-    GPIO_PULL_MASK            = 1 << 4,
+    // for pull-up/pull-down/no-pull
+    GPIO_PULL_DOWN          = 0 << 4,
+    GPIO_PULL_UP            = 1 << 4,
+    GPIO_NO_PULL            = 2 << 4,
+    GPIO_PULL_MASK          = 3 << 4,
 };
 
 enum

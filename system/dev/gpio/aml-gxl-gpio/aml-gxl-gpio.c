@@ -145,12 +145,16 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
             // different for OEN/OUT/PU-PD for GPIOA0 block
             pull_pin_index += block->output_write_shift;
         }
-        if (pull & GPIO_PULL_UP) {
-            pull_reg_val |= (1 << pull_pin_index);
+        if (pull & GPIO_NO_PULL) {
+            pull_en_reg_val &= ~(1 << pin_index);
         } else {
-            pull_reg_val &= ~(1 << pull_pin_index);
+            if (pull & GPIO_PULL_UP) {
+                pull_reg_val |= (1 << pull_pin_index);
+            } else {
+                pull_reg_val &= ~(1 << pull_pin_index);
+            }
+            pull_en_reg_val |= (1 << pin_index);
         }
-        pull_en_reg_val |= (1 << pin_index);
         WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
         WRITE32_GPIO_REG(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
         regval |= (1 << pin_index);
