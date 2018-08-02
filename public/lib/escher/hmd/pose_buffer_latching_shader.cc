@@ -146,9 +146,9 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(
       ((latch_time - pose_buffer.base_time) / pose_buffer.time_interval) %
       pose_buffer.num_entries;
 
-  FXL_DCHECK(vp_matrices_buffer->ptr() != nullptr);
+  FXL_DCHECK(vp_matrices_buffer->host_ptr() != nullptr);
   glm::mat4* vp_matrices =
-      reinterpret_cast<glm::mat4*>(vp_matrices_buffer->ptr());
+      reinterpret_cast<glm::mat4*>(vp_matrices_buffer->host_ptr());
   vp_matrices[0] = left_camera.transform();
   vp_matrices[1] = left_camera.projection();
   vp_matrices[2] = right_camera.transform();

@@ -63,7 +63,7 @@ Buffer::Buffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer,
       mem_(std::move(mem)),
       buffer_(buffer),
       range_(range),
-      ptr_(mem_->mapped_ptr() + range_.offset) {
+      host_ptr_(mem_->mapped_ptr() + range_.offset) {
   FXL_DCHECK(range_.size + range_.offset <= mem_->size());
   vulkan_context().device.bindBufferMemory(buffer_, mem_->base(),
                                            mem_->offset() + range_.offset);

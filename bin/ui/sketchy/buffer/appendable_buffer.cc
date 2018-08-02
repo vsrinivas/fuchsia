@@ -55,7 +55,7 @@ void AppendableBuffer::SetData(escher::impl::CommandBuffer* command,
                                  kMemoryPropertyFlags);
   }
   auto staging_buffer = GetStagingBuffer(factory, size);
-  memcpy(staging_buffer->ptr(), data, size);
+  memcpy(staging_buffer->host_ptr(), data, size);
   command->CopyBuffer(staging_buffer, buffer_, {0, 0, size});
   size_ = stable_size_ = size;
 }
@@ -80,7 +80,7 @@ void AppendableBuffer::AppendData(escher::impl::CommandBuffer* command,
     buffer_ = std::move(new_buffer);
   }
   auto staging_buffer = GetStagingBuffer(factory, size);
-  memcpy(staging_buffer->ptr(), data, size);
+  memcpy(staging_buffer->host_ptr(), data, size);
   command->CopyBuffer(staging_buffer, buffer_, {0, stable_size_, size});
   size_ = total_size;
   if (is_stable) {

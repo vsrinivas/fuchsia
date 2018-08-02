@@ -21,14 +21,14 @@ UniformAllocation UniformBlockAllocator::Allocate(size_t size,
   write_index_ = AlignedToNext(write_index_, alignment);
   if (write_index_ + size > buffer_size_) {
     buffers_.push_back(pool_->Allocate());
-    FXL_DCHECK(buffers_.back()->ptr());
+    FXL_DCHECK(buffers_.back()->host_ptr());
     write_index_ = 0;
   }
   auto& buf = buffers_.back();
   UniformAllocation allocation = {.buffer = buf.get(),
                                   .offset = write_index_,
                                   .size = size,
-                                  .host_ptr = buf->ptr() + write_index_};
+                                  .host_ptr = buf->host_ptr() + write_index_};
   write_index_ += size;
   return allocation;
 }

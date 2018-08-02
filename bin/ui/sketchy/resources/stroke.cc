@@ -165,7 +165,7 @@ void Stroke::TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
       .division_count =
           stable_path_.division_count() + delta_unstable_path.division_count(),
       .total_length = stable_path_.length() + delta_unstable_path.length()};
-  memcpy(stroke_info_buffer_->ptr(), &stroke_info, sizeof(StrokeInfo));
+  memcpy(stroke_info_buffer_->host_ptr(), &stroke_info, sizeof(StrokeInfo));
 
   tessellator_->Dispatch(
       stroke_info_buffer_, control_points_buffer_.get(),

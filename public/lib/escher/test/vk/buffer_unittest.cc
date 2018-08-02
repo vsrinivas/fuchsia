@@ -43,8 +43,8 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
   auto buf1 =
       Buffer::New(recycler, mem1, kBufferUsageFlags, kBufferSize, kOffset);
   auto buf2 = Buffer::New(recycler, mem2, kBufferUsageFlags, kBufferSize, 0);
-  EXPECT_EQ(buf1->ptr(), buf2->ptr());
-  EXPECT_EQ(mem2->mapped_ptr(), buf2->ptr());
+  EXPECT_EQ(buf1->host_ptr(), buf2->host_ptr());
+  EXPECT_EQ(mem2->mapped_ptr(), buf2->host_ptr());
 }
 
 }  // namespace escher

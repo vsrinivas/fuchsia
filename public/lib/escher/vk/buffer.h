@@ -50,7 +50,7 @@ class Buffer : public WaitableResource {
 
   // If the buffer is host-accessible, then this returns a direct pointer to
   // cache-coherent device memory.  Otherwise, returns nullptr.
-  uint8_t* ptr() const { return ptr_; }
+  uint8_t* host_ptr() const { return host_ptr_; }
 
   const GpuMemPtr& mem() const { return mem_; }
 
@@ -61,7 +61,7 @@ class Buffer : public WaitableResource {
   // Size of the buffer.
   BufferRange range_;
   // Pointer to mapped, cache-coherent, host-accessible memory.  Or nullptr.
-  uint8_t* ptr_;
+  uint8_t* host_ptr_;
 };
 
 }  // namespace escher

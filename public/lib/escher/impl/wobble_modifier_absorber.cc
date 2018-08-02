@@ -117,7 +117,7 @@ WobbleModifierAbsorber::WobbleModifierAbsorber(EscherWeakPtr weak_escher)
       kernel_(NewKernel()),
       per_model_uniform_buffer_(NewUniformBuffer(sizeof(ModelData::PerModel))),
       per_model_uniform_data_(reinterpret_cast<ModelData::PerModel*>(
-          per_model_uniform_buffer_->ptr())) {}
+          per_model_uniform_buffer_->host_ptr())) {}
 
 void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
   // frag_coord_to_uv_multiplier is not used; won't populate.
@@ -141,7 +141,7 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
     auto per_object_uniform_buffer =
         NewUniformBuffer(sizeof(ModelData::PerObject));
     auto per_object_uniform_data = reinterpret_cast<ModelData::PerObject*>(
-        per_object_uniform_buffer->ptr());
+        per_object_uniform_buffer->host_ptr());
 
     // For memory transfer.
     CommandBuffer* command_buffer = command_buffer_pool_->GetCommandBuffer();

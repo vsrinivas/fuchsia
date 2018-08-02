@@ -24,7 +24,7 @@ GpuUploader::Writer::Writer(BufferPtr buffer, CommandBuffer* command_buffer,
       queue_(queue),
       size_(size),
       offset_(offset),
-      ptr_(buffer_->ptr() + offset_),
+      ptr_(buffer_->host_ptr() + offset_),
       has_writes_(false) {
   FXL_DCHECK(buffer_ && command_buffer_ && queue_ && ptr_);
 }

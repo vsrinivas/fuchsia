@@ -69,7 +69,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel),
                                      kMinUniformBufferOffsetAlignment);
   auto per_model = reinterpret_cast<ModelData::PerModel*>(
-      &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
+      &(uniform_buffer_->host_ptr()[uniform_buffer_write_index_]));
   per_model->frag_coord_to_uv_multiplier =
       vec2(1.f / volume_.width(), 1.f / volume_.height());
   per_model->ambient_light_intensity = ambient_light_intensity;
@@ -137,7 +137,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     PrepareUniformBufferForWriteOfSize(sizeof(ModelData::ViewProjection),
                                        kMinUniformBufferOffsetAlignment);
     auto view_projection = reinterpret_cast<ModelData::ViewProjection*>(
-        &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
+        &(uniform_buffer_->host_ptr()[uniform_buffer_write_index_]));
     view_projection->vp_matrix = projection_transform_ * view_transform_;
     vp_uniform_buffer = uniform_buffer_;
     vp_uniform_buffer_offset = uniform_buffer_write_index_;
@@ -307,7 +307,7 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
 void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
     const Object& object, vk::DescriptorSet descriptor_set) {
   auto per_object = reinterpret_cast<ModelData::PerObject*>(
-      &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
+      &(uniform_buffer_->host_ptr()[uniform_buffer_write_index_]));
   *per_object = ModelData::PerObject();  // initialize with default values
 
   auto& mat = object.material();

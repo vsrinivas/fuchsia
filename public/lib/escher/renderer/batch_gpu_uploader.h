@@ -51,7 +51,7 @@ class BatchGpuUploader : public ResourceRecycler, public Reffable {
     void WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
                     SemaphorePtr semaphore);
 
-    uint8_t* host_ptr() const { return buffer_->ptr(); }
+    uint8_t* host_ptr() const { return buffer_->host_ptr(); }
     vk::DeviceSize size() const { return buffer_->size(); }
 
    private:
