@@ -11,6 +11,9 @@
 #define S905D2_GPIO_INTERRUPT_BASE      0xffd00000
 #define S905D2_GPIO_INTERRUPT_LENGTH    0x10000
 
+#define S905D2_TEMP_SENSOR_BASE         0xff634000
+#define S905D2_TEMP_SENSOR_LENGTH       0x1000
+
 #define S905D2_USB0_BASE                0xff500000
 #define S905D2_USB0_LENGTH              0x100000
 
@@ -130,6 +133,7 @@
 #define S905D2_USB0_IRQ                 62
 #define S905D2_PARSER_IRQ               64
 #define S905D2_RAW_NAND_IRQ             66
+#define S905D2_TS_PLL_IRQ               67
 #define S905D2_DOS_MBOX_0_IRQ           75
 #define S905D2_DOS_MBOX_1_IRQ           76
 #define S905D2_DOS_MBOX_2_IRQ           77

@@ -68,3 +68,5 @@ zx_status_t aml_sdio_init(aml_bus_t* bus);
 zx_status_t aml_canvas_init(aml_bus_t* bus);
 // astro-light.c
 zx_status_t ams_light_init(aml_bus_t* bus);
+// astro-thermal.c
+zx_status_t aml_thermal_init(aml_bus_t* bus);

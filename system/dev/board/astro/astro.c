@@ -183,6 +183,11 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = aml_thermal_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_thermal_init failed: %d\n", status);
+        goto fail;
+    }
+
     return ZX_OK;
 fail:
     zxlogf(ERROR, "aml_start_thread failed, not all devices have been initialized\n");
