@@ -485,7 +485,7 @@ int getaddrinfo(const char* __restrict node,
         struct addrinfo ai;
         struct sockaddr_storage addr_storage;
     };
-    struct res_entry* entry = calloc(1, sizeof(sizeof(struct res_entry)*nres));
+    struct res_entry* entry = calloc(nres, sizeof(struct res_entry));
 
     for (int i = 0; i < nres; i++) {
         entry[i].ai.ai_flags = ai[i].flags;
