@@ -592,6 +592,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
 
     uint32_t used = 0;
     status = transmit(conn, rx_queue(), header, &desc, &used);
+    used += sizeof(*header);
     rx_queue()->Return(index, used);
     index_valid = false;
     status = conn->WaitOnReceive(status);
