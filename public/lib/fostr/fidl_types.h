@@ -5,6 +5,7 @@
 #ifndef LIB_FOSTR_FIDL_TYPES_H_
 #define LIB_FOSTR_FIDL_TYPES_H_
 
+#include "garnet/public/lib/fostr/hex_dump.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -16,6 +17,9 @@
 
 namespace fostr {
 namespace internal {
+
+static constexpr size_t kMaxBytesToDump = 256;
+static constexpr size_t kTruncatedDumpSize = 64;
 
 template <typename Iter>
 void insert_sequence_container(std::ostream& os, Iter begin, Iter end) {
@@ -43,12 +47,48 @@ std::ostream& operator<<(std::ostream& os, const Array<T, N>& value) {
   return os;
 }
 
+template <size_t N>
+std::ostream& operator<<(std::ostream& os, const Array<uint8_t, N>& value) {
+  if (N <= fostr::internal::kMaxBytesToDump) {
+    return os << fostr::HexDump(value.data(), N, 0);
+  }
+
+  return os << fostr::HexDump(value.data(), fostr::internal::kTruncatedDumpSize,
+                              0)
+            << fostr::NewLine << "(truncated, " << N << " bytes total)";
+}
+
+template <size_t N>
+std::ostream& operator<<(std::ostream& os, const Array<int8_t, N>& value) {
+  if (N <= fostr::internal::kMaxBytesToDump) {
+    return os << fostr::HexDump(value.data(), N, 0);
+  }
+
+  return os << fostr::HexDump(value.data(), fostr::internal::kTruncatedDumpSize,
+                              0)
+            << fostr::NewLine << "(truncated, " << N << " bytes total)";
+}
+
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<T>& value) {
+  if (value.is_null()) {
+    return os << "<null>";
+  }
+
+  if (value.get().empty()) {
+    return os << "<empty>";
+  }
+
   fostr::internal::insert_sequence_container(os, value.get().cbegin(),
                                              value.get().cend());
   return os;
 }
+
+template <>
+std::ostream& operator<<(std::ostream& os, const VectorPtr<uint8_t>& value);
+
+template <>
+std::ostream& operator<<(std::ostream& os, const VectorPtr<int8_t>& value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const Binding<T>& value) {

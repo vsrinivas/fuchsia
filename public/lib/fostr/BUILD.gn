@@ -7,6 +7,7 @@ import("//build/test.gni")
 
 source_set("fostr") {
   sources = [
+    "fidl_types.cc",
     "fidl_types.h",
     "hex_dump.cc",
     "hex_dump.h",
