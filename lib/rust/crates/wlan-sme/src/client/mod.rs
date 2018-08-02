@@ -171,15 +171,15 @@ impl<T: Tokens> ClientSme<T> {
         let a_rsne = bss.rsn.as_ref().and_then(|a_rsne| {
             let r = rsne::from_bytes(&a_rsne[..]).to_full_result();
             if let Err(e) = &r {
-                eprintln!("BSS {:?} carries invalid RSNE: {:?}; error: {:?}",
-                          bss.bssid, &a_rsne[..], e);
+                error!("BSS {:?} carries invalid RSNE: {:?}; error: {:?}",
+                       bss.bssid, &a_rsne[..], e);
             }
             r.ok()
         });
 
         match a_rsne {
             None if bss.rsn.is_some() => {
-                eprintln!("cannot join BSS {:?}; invalid RSNE", bss.bssid);
+                error!("cannot join BSS {:?}; invalid RSNE", bss.bssid);
                 None
             },
             None => Some(ConnectCommand {
@@ -189,7 +189,7 @@ impl<T: Tokens> ClientSme<T> {
             }),
             Some(a_rsne) => {
                 if !bss::is_rsn_compatible(&a_rsne) {
-                    eprintln!("cannot join BSS {:?}; incompatible RSNE {:?}", bss.bssid, a_rsne);
+                    error!("cannot join BSS {:?}; incompatible RSNE {:?}", bss.bssid, a_rsne);
                     return None
                 }
 
@@ -209,8 +209,8 @@ impl<T: Tokens> ClientSme<T> {
                         })
                     },
                     Err(e) => {
-                        eprintln!("cannot join BSS {:?} error creating ESS-SA: {}",
-                                  bss.bssid, e);
+                        error!("cannot join BSS {:?} error creating ESS-SA: {}",
+                               bss.bssid, e);
                         None
                     },
                 }
@@ -241,7 +241,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                         }
                     },
                     ScanResult::CannotJoin { token, reason } => {
-                        eprintln!("Cannot join network because scan failed: {:?}", reason);
+                        error!("cannot join network because scan failed: {:?}", reason);
                         self.user_sink.send(UserEvent::ConnectFinished {
                             token: token.user_token,
                             result: match reason {

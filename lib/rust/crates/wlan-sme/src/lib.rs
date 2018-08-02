@@ -10,6 +10,7 @@ extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fuchsia_zircon as zx;
 #[macro_use] extern crate failure;
 extern crate futures;
+#[macro_use] extern crate log;
 extern crate wlan_rsn;
 
 pub mod client;

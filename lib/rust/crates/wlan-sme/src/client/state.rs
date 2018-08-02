@@ -76,7 +76,7 @@ impl<T: Tokens> State<T> {
                          user_sink: &UserSink<T>) -> Self {
         match self {
             State::Idle => {
-                eprintln!("Unexpected MLME message while Idle: {:?}", event);
+                warn!("Unexpected MLME message while Idle: {:?}", event);
                 State::Idle
             },
             State::Joining{ cmd } => match event {
@@ -91,7 +91,7 @@ impl<T: Tokens> State<T> {
                         State::Authenticating { cmd }
                     },
                     other => {
-                        eprintln!("Join request failed with result code {:?}", other);
+                        error!("Join request failed with result code {:?}", other);
                         report_connect_finished(cmd.token, user_sink, ConnectResult::Failed);
                         State::Idle
                     }
@@ -106,7 +106,7 @@ impl<T: Tokens> State<T> {
                         to_associating_state(cmd, mlme_sink)
                     },
                     other => {
-                        eprintln!("Authenticate request failed with result code {:?}", other);
+                        error!("Authenticate request failed with result code {:?}", other);
                         report_connect_finished(cmd.token, user_sink, ConnectResult::Failed);
                         State::Idle
                     }
@@ -133,7 +133,7 @@ impl<T: Tokens> State<T> {
                         }
                     },
                     other => {
-                        eprintln!("Associate request failed with result code {:?}", other);
+                        error!("Associate request failed with result code {:?}", other);
                         report_connect_finished(cmd.token, user_sink, ConnectResult::Failed);
                         State::Idle
                     }
@@ -191,7 +191,7 @@ impl<T: Tokens> State<T> {
                             RsnaStatus::Unchanged => {},
                             // Once re-keying is supported, the RSNA can fail in LinkUp as well
                             // and cause deauthentication.
-                            s => eprintln!("unexpected RsnaStatus in LinkUp state: {:?}", s),
+                            s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
                         };
                         let link_state = LinkState::LinkUp(Some(rsna));
                         State::Associated { bss, last_rssi, link_state }
@@ -276,7 +276,7 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
     let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_len).to_full_result() {
         Ok(key_frame) => Some(eapol::Frame::Key(key_frame)),
         Err(e) => {
-            eprintln!("received invalid EAPOL Key frame: {:?}", e);
+            error!("received invalid EAPOL Key frame: {:?}", e);
             None
         }
     };
@@ -312,7 +312,7 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
                     },
                 }
             }
-            Err(e) => eprintln!("error processing EAPOL key frame: {}", e),
+            Err(e) => error!("error processing EAPOL key frame: {}", e),
         };
     }
 
@@ -376,7 +376,7 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &Rsne, key: Key)
                 }
             ));
         },
-        _ => eprintln!("error, derived unexpected key")
+        _ => error!("derived unexpected key")
     };
 }
 

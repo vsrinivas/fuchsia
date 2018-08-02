@@ -308,7 +308,7 @@ fn convert_discovery_result(msg: fidl_mlme::ScanEnd,
         ScanResultCodes::Success => Ok(group_networks(bss_list)),
         ScanResultCodes::NotSupported => Err(DiscoveryError::NotSupported),
         ScanResultCodes::InvalidArgs => {
-            eprintln!("Scan returned INVALID_ARGS");
+            error!("Scan returned INVALID_ARGS");
             Err(DiscoveryError::InternalError)
         },
         ScanResultCodes::InternalError => Err(DiscoveryError::InternalError),
