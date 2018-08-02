@@ -112,6 +112,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "code_block_unittest.cc",
     "dwarf_expr_eval_unittest.cc",
     "dwarf_symbol_factory_unittest.cc",
     "dwarf_test_util.cc",

@@ -10,12 +10,17 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/code_block.h"
+#include "garnet/bin/zxdb/client/symbols/function.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/client/symbols/value.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_frame.h"
 #include "garnet/bin/zxdb/console/format_table.h"
+#include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/format_register.h"
@@ -184,6 +189,72 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
     if (err.has_error())
       Console::get()->Output(err);
   });
+  return Err();
+}
+
+// locals ----------------------------------------------------------------------
+
+const char kLocalsShortHelp[] = "locals: Print local variables.";
+const char kLocalsHelp[] =
+    R"(locals
+
+  Prints all local variables. By default it will print the variables for
+  the default stack frame.
+
+Examples
+
+  locals
+
+  frame 4 locals
+    Prints locals for a specific stack frame.
+)";
+Err DoLocals(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+  if (err.has_error())
+    return err;
+  if (!cmd.frame())
+    return Err("There isn't a current frame to read locals from.");
+
+  const Location& location = cmd.frame()->GetLocation();
+  if (!location.function())
+    return Err("There is no symbol information for the frame.");
+  const Function* function = location.function().Get()->AsFunction();
+  if (!function)
+    return Err("Symbols are corrupt.");
+
+  // Find the innermost lexical block for the current IP.
+  const CodeBlock* block = function->GetMostSpecificChild(location.address());
+  if (!block)
+    return Err("There is no symbol information for the current IP.");
+
+  // Walk upward in the hierarchy to collect local variables until hitting a
+  // function. Using the map allows collecting only the innermost version of
+  // a given name, and sorts them as we go.
+  std::map<std::string, const Value*> vars;
+  while (block) {
+    for (const auto& var : block->variables()) {
+      const Value* value = var.Get()->AsValue();
+      if (!value)
+        continue;  // Symbols are corrupt.
+      const std::string& name = value->GetAssignedName();
+      if (vars.find(name) == vars.end())
+        vars[name] = value;  // New one.
+    }
+
+    if (block == function)
+      break;
+    block = block->parent().Get()->AsCodeBlock();
+  }
+
+  OutputBuffer out;
+  for (const auto& pair : vars) {
+    FormatValue(pair.second, &out);
+    out.Append("\n");
+  }
+  if (vars.empty())
+    out.Append("No local varialbes in scope.");
+
+  Console::get()->Output(std::move(out));
   return Err();
 }
 
@@ -584,6 +655,9 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kFinish] =
       VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
                  CommandGroup::kStep);
+  (*verbs)[Verb::kLocals] =
+      VerbRecord(&DoLocals, {"locals"}, kLocalsShortHelp, kLocalsHelp,
+                 CommandGroup::kQuery);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
                  CommandGroup::kProcess);

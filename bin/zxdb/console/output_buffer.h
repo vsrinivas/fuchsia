@@ -20,7 +20,8 @@ enum class Syntax {
   kError,
   kWarning,
   kSpecial,
-  kReversed
+  kReversed,
+  kVariable  // Use for variable names.
 };
 
 // This class collects output from commands so it can be put on the screen in

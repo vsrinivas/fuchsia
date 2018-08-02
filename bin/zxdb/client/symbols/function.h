@@ -36,8 +36,7 @@ class Function final : public CodeBlock {
   const Function* AsFunction() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
-  // TODO(brettw) this needs more stuff like DW_AT_frame_base,
-  // DW_AT_linkage_name, parameters, inner blocks, local variables.
+  // TODO(brettw) this needs more stuff like DW_AT_frame_base.
 
   // Unmangled name. Does not include any class or namespace qualifications.
   // (see Symbol::GetAssignedName)

@@ -209,7 +209,7 @@ bool DwarfDieDecoder::Decode(const llvm::DWARFDebugInfoEntry& die) {
       form_value.skipValue(extractor_, &offset, unit_->getFormParams());
     }
   }
-  return decoded_any;
+  return true;
 }
 
 }  // namespace zxdb

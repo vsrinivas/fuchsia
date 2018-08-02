@@ -60,6 +60,7 @@ enum class Verb {
   kLibs,
   kList,
   kListProcesses,
+  kLocals,
   kMemAnalyze,
   kMemRead,
   kNew,

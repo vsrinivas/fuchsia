@@ -7,17 +7,32 @@
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/frame.h"
+#include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/client/symbols/value.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 namespace {
+
+void ListFunctionParams(const Function* func, OutputBuffer* out) {
+  // Always list function parameters in the order specified.
+  for (const auto& param : func->parameters()) {
+    const Value* value = param.Get()->AsValue();
+      continue;  // Symbols are corrupt.
+    out->Append("    ");  // Indent.
+    FormatValue(value, out);
+    out->Append("\n");
+  }
+}
 
 void ListCompletedFrames(Thread* thread, bool long_format) {
   Console* console = Console::get();
@@ -44,6 +59,15 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
       FormatFrame(frames[i], &out, long_format);
 
       out.Append("\n");
+
+      if (long_format) {
+        const Location& location = frames[i]->GetLocation();
+        if (location.function()) {
+          const Function* func = location.function().Get()->AsFunction();
+          if (func)
+            ListFunctionParams(func, &out);
+        }
+      }
     }
   }
   console->Output(std::move(out));

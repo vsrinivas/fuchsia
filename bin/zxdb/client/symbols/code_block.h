@@ -28,6 +28,10 @@ class CodeBlock : public Symbol {
   // some blocks, especially inlined subroutines, may be at multiple
   // discontiguous ranges in the code (DW_AT_ranges are specified).
   //
+  // Some lexical blocks won't have location information in them. These are
+  // often strictly to hold groups of variables, each of which has their own
+  // range of validity.
+  //
   // Function declarations will have no ranges associated with them. These
   // arent't strictly "code blocks" but many functions won't have a
   // declaration/implementation split and there's so much overlap it's more
@@ -44,6 +48,16 @@ class CodeBlock : public Symbol {
   // Variables contained within this block.
   const std::vector<LazySymbol>& variables() const { return variables_; }
   void set_variables(std::vector<LazySymbol> v) { variables_ = std::move(v); }
+
+  // Returns true if the block's code ranges contain the given address. A
+  // block with no specified range will always return true.
+  bool ContainsAddress(uint64_t address) const;
+
+  // Recursively searches all children of this block for the innermost block
+  // covering the given address. Returns |this| if the current block is
+  // already the most specific, or nullptr if the current block doesn't
+  // contain the address.
+  const CodeBlock* GetMostSpecificChild(uint64_t address) const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);

@@ -91,8 +91,8 @@ class DwarfDieDecoder {
   void AddCustom(llvm::dwarf::Attribute attribute,
                  std::function<void(const llvm::DWARFFormValue&)> callback);
 
-  // Decode one info entry. Returns true if any attributes were decoded. THe
-  // outputs for each encountered attribute will be set.
+  // Decode one info entry. Returns true on success, false means the DIE
+  // was corrupt. The outputs for each encountered attribute will be set.
   //
   // A return value of false means either that the entry was a null one (which
   // is used as a placeholder internally), or that it contained none of the

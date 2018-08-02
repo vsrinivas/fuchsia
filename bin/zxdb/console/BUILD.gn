@@ -27,6 +27,8 @@ static_library("console") {
     "format_frame.h",
     "format_table.cc",
     "format_table.h",
+    "format_value.cc",
+    "format_value.h",
     "input_location_parser.cc",
     "input_location_parser.h",
     "line_input.cc",

@@ -17,8 +17,9 @@ const char kBoldEscapeCode[] = "\x1b[1m";      // "[1m" = Bold.
 const char kCommentEscapeCode[] = "\x1b[2m";   // "[2m" = Faint.
 const char kErrorEscapeCode[] = "\x1b[31m";    // "[31m" = Red.
 const char kWarningEscapeCode[] = "\x1b[33m";  // "[33m" = Yellow.
-const char kSpecialEscapeCode[] = "\x1b[34m";  // "[34m" = blue.
+const char kSpecialEscapeCode[] = "\x1b[34m";  // "[34m" = Blue.
 const char kReversedEscapeCode[] = "\x1b[7m";  // "[7m' = Reverse video.
+const char kVariableEscapeCode[] = "\x1b[36m";  // "[36m' = Cyan.
 
 }  // namespace
 
@@ -89,6 +90,8 @@ void OutputBuffer::WriteToStdout() const {
       fwrite(kSpecialEscapeCode, 1, strlen(kSpecialEscapeCode), stdout);
     else if (span.syntax == Syntax::kReversed)
       fwrite(kReversedEscapeCode, 1, strlen(kReversedEscapeCode), stdout);
+    else if (span.syntax == Syntax::kVariable)
+      fwrite(kVariableEscapeCode, 1, strlen(kVariableEscapeCode), stdout);
 
     fwrite(span.text.data(), 1, span.text.size(), stdout);
 
