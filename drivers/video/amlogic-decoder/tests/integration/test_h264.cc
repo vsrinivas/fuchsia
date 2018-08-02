@@ -71,6 +71,10 @@ class TestH264 {
 
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
+    }
     status = video->InitializeStreamBuffer(
         use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
     video->InitializeInterrupts();
@@ -83,7 +87,6 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
       video->video_decoder_->SetFrameReadyNotifier(
           [&video, &frame_count, &first_wait_valid,
@@ -140,6 +143,10 @@ class TestH264 {
     ASSERT_NE(nullptr, bear_h264);
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
+    }
     status = video->InitializeStreamBuffer(true, PAGE_SIZE);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
@@ -148,7 +155,6 @@ class TestH264 {
     std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
       uint32_t frame_count = 0;
@@ -200,6 +206,10 @@ class TestH264 {
 
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
+    }
     status = video->InitializeStreamBuffer(
         use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
     video->InitializeInterrupts();
@@ -208,7 +218,6 @@ class TestH264 {
     std::set<uint64_t> received_pts_set;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
       uint32_t frame_count = 0;

@@ -23,13 +23,17 @@ class TestMpeg2 {
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
 
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()));
+    }
+
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
 
     video->InitializeInterrupts();
     std::promise<void> wait_valid;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<Mpeg12Decoder>(video.get());
 
       uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(
@@ -64,13 +68,17 @@ class TestMpeg2 {
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
 
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()));
+    }
+
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false, PAGE_SIZE * 1024));
 
     video->InitializeInterrupts();
     std::promise<void> wait_valid;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<Mpeg12Decoder>(video.get());
 
       uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(

@@ -105,8 +105,10 @@ Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type)
 }
 
 Vp9Decoder::~Vp9Decoder() {
-  owner_->core()->StopDecoding();
-  owner_->core()->WaitForIdle();
+  if (owner_->IsDecoderCurrent(this)) {
+    owner_->core()->StopDecoding();
+    owner_->core()->WaitForIdle();
+  }
 }
 
 void Vp9Decoder::UpdateLoopFilterThresholds() {
@@ -202,6 +204,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
 }
 
 zx_status_t Vp9Decoder::InitializeHardware() {
+  assert(owner_->IsDecoderCurrent(this));
   uint8_t* firmware;
   uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =

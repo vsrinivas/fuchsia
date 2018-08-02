@@ -144,16 +144,16 @@ void CodecAdapterH264::CoreCodecStartStream() {
     is_input_end_of_stream_queued_ = false;
     video_->core_ = std::make_unique<Vdec1>(video_);
     video_->core()->PowerOn();
+  }  // ~lock
+
+  {
+    std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
+    video_->SetDefaultInstance(std::make_unique<H264Decoder>(video_));
     status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
       return;
     }
-  }  // ~lock
-
-  {
-    std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-    video_->video_decoder_ = std::make_unique<H264Decoder>(video_);
     status = video_->video_decoder_->Initialize();
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec(
@@ -291,18 +291,16 @@ void CodecAdapterH264::CoreCodecStopStream() {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-    video_->video_decoder_.reset();
+    assert(video_->decoder_instances_.size() <= 1u);
+    video_->decoder_instances_.clear();
+    video_->video_decoder_ = nullptr;
+    video_->stream_buffer_ = nullptr;
   }  // ~lock
 
   if (video_->core_) {
     video_->core_->PowerOff();
     video_->core_.reset();
   }
-
-  // The lifetime of this buffer is different than the others in video_, so we
-  // have to release it here to avoid leaking when we re-init in
-  // CoreCodecStartStream(), for now.
-  video_->stream_buffer_.reset();
 
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);

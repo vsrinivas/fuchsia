@@ -63,6 +63,7 @@ class FakeOwner : public VideoDecoder::Owner {
     return ZX_OK;
   }
   PtsManager* pts_manager() override { return &pts_manager_; }
+  bool IsDecoderCurrent(VideoDecoder* decoder) override { return true; }
 
  private:
   DosRegisterIo* dosbus_;

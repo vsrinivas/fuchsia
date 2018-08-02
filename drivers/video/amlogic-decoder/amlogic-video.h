@@ -22,6 +22,7 @@
 #include <thread>
 
 #include "decoder_core.h"
+#include "decoder_instance.h"
 #include "device_ctx.h"
 #include "firmware_blob.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -55,6 +56,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                                uint32_t alignment_log2,
                                uint32_t flags) override;
   PtsManager* pts_manager() override { return pts_manager_.get(); }
+  bool IsDecoderCurrent(VideoDecoder* decoder) override
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    assert(decoder);
+    return decoder == video_decoder_;
+  }
 
   // DecoderCore::Owner implementation.
   MmioRegisters* mmio() override { return registers_.get(); }
@@ -68,6 +74,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestFrameProvider;
   friend class CodecAdapterH264;
 
+  zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size);
+
+  void InitializeStreamInput(bool use_parser);
+  void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(video_decoder_lock_);
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
   zx_status_t InitializeEsParser();
   zx_status_t ParseVideo(void* data, uint32_t len);
@@ -98,8 +109,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
-  std::unique_ptr<StreamBuffer> stream_buffer_;
-
   // This buffer holds an ES start code that's used to get an interrupt when the
   // parser is finished.
   io_buffer_t search_pattern_ = {};
@@ -120,8 +129,14 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   std::unique_ptr<PtsManager> pts_manager_;
   std::mutex video_decoder_lock_;
+  // This is the video decoder that's currently attached to the hardware.
   FXL_GUARDED_BY(video_decoder_lock_)
-  std::unique_ptr<VideoDecoder> video_decoder_;
+  VideoDecoder* video_decoder_ = nullptr;
+
+  // This is the stream buffer that's currently attached to the hardware.
+  StreamBuffer* stream_buffer_ = nullptr;
+
+  std::list<DecoderInstance> decoder_instances_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_

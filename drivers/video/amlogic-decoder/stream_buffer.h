@@ -12,8 +12,17 @@ class StreamBuffer {
 
   io_buffer_t* buffer() { return &buffer_; }
 
+  void set_data_size(uint32_t data_size) { data_size_ = data_size; }
+  uint32_t data_size() const { return data_size_; }
+
+  void set_padding_size(uint32_t padding_size) { padding_size_ = padding_size; }
+  uint32_t padding_size() const { return padding_size_; }
+
  private:
   io_buffer_t buffer_ = {};
+  // Amount of data written to this buffer, in bytes.
+  uint32_t data_size_ = 0;
+  uint32_t padding_size_ = 0;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_STREAM_BUFFER_H_

@@ -279,6 +279,9 @@ void HevcDec::SaveInputContext(InputContext* context) {
   // TODO: return error on failure.
   FXL_CHECK(finished);
   HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+
+  context->processed_video =
+      HevcShiftByteCount::Get().ReadFrom(mmio()->dosbus).reg_value();
 }
 
 void HevcDec::RestoreInputContext(InputContext* context) {

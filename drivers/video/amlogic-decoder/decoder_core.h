@@ -22,6 +22,8 @@ struct InputContext {
   ~InputContext() { io_buffer_release(&buffer); }
 
   io_buffer_t buffer = {};
+
+  uint32_t processed_video = 0;
 };
 
 class DecoderCore {

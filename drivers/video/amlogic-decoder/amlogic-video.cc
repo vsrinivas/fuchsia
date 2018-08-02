@@ -71,7 +71,7 @@ AmlogicVideo::~AmlogicVideo() {
     if (vdec1_interrupt_thread_.joinable())
       vdec1_interrupt_thread_.join();
   }
-  video_decoder_.reset();
+  decoder_instances_.clear();
   if (core_)
     core_->PowerOff();
   io_buffer_release(&mmio_cbus_);
@@ -80,6 +80,13 @@ AmlogicVideo::~AmlogicVideo() {
   io_buffer_release(&mmio_aobus_);
   io_buffer_release(&mmio_dmc_);
   io_buffer_release(&search_pattern_);
+}
+
+void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder) {
+  assert(!stream_buffer_);
+  decoder_instances_.push_back(DecoderInstance(std::move(decoder)));
+  video_decoder_ = decoder_instances_.back().decoder();
+  stream_buffer_ = decoder_instances_.back().stream_buffer();
 }
 
 void AmlogicVideo::UngateClocks() {
@@ -115,24 +122,35 @@ void AmlogicVideo::GateClocks() {
       .WriteTo(hiubus_.get());
 }
 
-zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
-                                                 uint32_t size) {
-  stream_buffer_ = std::make_unique<StreamBuffer>();
-  zx_status_t status = io_buffer_init(stream_buffer_->buffer(), bti_.get(),
-                                      size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer,
+                                               uint32_t size) {
+  zx_status_t status = io_buffer_init(buffer->buffer(), bti_.get(), size,
+                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make video fifo");
-    return ZX_ERR_NO_MEMORY;
+    DECODE_ERROR("Failed to make video fifo: %d", status);
+    return status;
   }
 
-  io_buffer_cache_flush(stream_buffer_->buffer(), 0,
-                        io_buffer_size(stream_buffer_->buffer(), 0));
+  io_buffer_cache_flush(buffer->buffer(), 0,
+                        io_buffer_size(buffer->buffer(), 0));
+  return ZX_OK;
+}
 
+void AmlogicVideo::InitializeStreamInput(bool use_parser) {
   uint32_t buffer_address =
       truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
   core_->InitializeStreamInput(use_parser, buffer_address,
                                io_buffer_size(stream_buffer_->buffer(), 0));
+}
 
+zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
+                                                 uint32_t size) {
+  zx_status_t status = AllocateStreamBuffer(stream_buffer_, size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  InitializeStreamInput(use_parser);
   return ZX_OK;
 }
 
@@ -379,6 +397,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(
              current_offset,
          data, len);
   io_buffer_cache_flush(stream_buffer_->buffer(), current_offset, len);
+  stream_buffer_->set_data_size(current_offset + len);
   core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
                             current_offset + len);
   return ZX_OK;

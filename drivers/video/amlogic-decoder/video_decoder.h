@@ -79,6 +79,7 @@ class VideoDecoder {
                                          uint32_t alignement_log2,
                                          uint32_t flags) = 0;
     virtual PtsManager* pts_manager() = 0;
+    virtual bool IsDecoderCurrent(VideoDecoder* decoder) = 0;
   };
 
   virtual zx_status_t Initialize() = 0;
