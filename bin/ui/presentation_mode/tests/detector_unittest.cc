@@ -78,7 +78,7 @@ fuchsia::ui::input::InputReport CreateVector(int16_t x, int16_t y, int16_t z) {
   return report;
 }
 
-TEST(Closed, Detector) {
+TEST(Detector, Closed) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, 0, kMaxVal);
@@ -96,7 +96,7 @@ TEST(Closed, Detector) {
   EXPECT_FALSE(result.first);
 }
 
-TEST(Laptop, Detector) {
+TEST(Detector, Laptop) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, 0, kMaxVal);
@@ -114,7 +114,7 @@ TEST(Laptop, Detector) {
   EXPECT_FALSE(result.first);
 }
 
-TEST(Tablet, Detector) {
+TEST(Detector, Tablet) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, 0, kMinVal);
@@ -132,7 +132,7 @@ TEST(Tablet, Detector) {
   EXPECT_FALSE(result.first);
 }
 
-TEST(Tent, Detector) {
+TEST(Detector, Tent) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, kMaxVal, 0);
@@ -147,6 +147,18 @@ TEST(Tent, Detector) {
 
   fuchsia::ui::input::InputReport base_shift = CreateVector(0, kMinVal, 0);
   result = detector.Update(kBaseSensor, std::move(base_shift));
+  EXPECT_FALSE(result.first);
+}
+
+TEST(Detector, NonAccelerometer) {
+  Detector detector(/*history*/ 2);
+
+  fuchsia::ui::input::SensorDescriptor sensor;
+  sensor.type = fuchsia::ui::input::SensorType::LIGHTMETER;
+  sensor.loc = fuchsia::ui::input::SensorLocation::LID;
+
+  fuchsia::ui::input::InputReport report = {};
+  auto result = detector.Update(sensor, std::move(report));
   EXPECT_FALSE(result.first);
 }
 
