@@ -145,7 +145,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
  public:
   FakePageDbImpl() {}
 
-  Status Init() override { return Status::OK; }
+  Status Init(CoroutineHandler* /*handler*/) override { return Status::OK; }
   Status CreateJournalId(CoroutineHandler* /*handler*/,
                          JournalType /*journal_type*/, const CommitId& /*base*/,
                          JournalId* journal_id) override {

@@ -15,7 +15,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   ~PageDbEmptyImpl() override {}
 
   // PageDb:
-  Status Init() override;
+  Status Init(coroutine::CoroutineHandler* handler) override;
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<PageDb::Batch>* batch) override;
   Status GetHeads(coroutine::CoroutineHandler* handler,

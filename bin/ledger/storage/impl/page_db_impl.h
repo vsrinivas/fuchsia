@@ -28,7 +28,7 @@ class PageDbImpl : public PageDb {
   PageDbImpl(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
   ~PageDbImpl() override;
 
-  Status Init() override;
+  Status Init(coroutine::CoroutineHandler* handler) override;
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<PageDb::Batch>* batch) override;
   Status GetHeads(coroutine::CoroutineHandler* handler,

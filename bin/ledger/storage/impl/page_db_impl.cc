@@ -118,7 +118,7 @@ PageDbImpl::PageDbImpl(async_dispatcher_t* dispatcher,
 
 PageDbImpl::~PageDbImpl() {}
 
-Status PageDbImpl::Init() { return db_.Init(); }
+Status PageDbImpl::Init(coroutine::CoroutineHandler* handler) { return db_.Init(); }
 
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
                               std::unique_ptr<Batch>* batch) {

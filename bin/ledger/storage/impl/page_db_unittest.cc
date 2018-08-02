@@ -64,7 +64,9 @@ class PageDbTest : public ::test::TestWithCoroutines {
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
 
-    ASSERT_EQ(Status::OK, page_db_.Init());
+    RunInCoroutine([&](CoroutineHandler* handler) {
+      ASSERT_EQ(Status::OK, page_db_.Init(handler));
+    });
   }
 
  protected:

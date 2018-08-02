@@ -8,7 +8,9 @@ namespace storage {
 
 using coroutine::CoroutineHandler;
 
-Status PageDbEmptyImpl::Init() { return Status::NOT_IMPLEMENTED; }
+Status PageDbEmptyImpl::Init(CoroutineHandler* /*handler*/) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::StartBatch(CoroutineHandler* /*handler*/,
                                    std::unique_ptr<PageDb::Batch>* /*batch*/) {
   return Status::NOT_IMPLEMENTED;

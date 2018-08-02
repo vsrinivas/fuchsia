@@ -153,7 +153,7 @@ class PageDb : public PageDbMutator {
   ~PageDb() override {}
 
   // Initializes PageDb or returns an |IO_ERROR| on failure.
-  FXL_WARN_UNUSED_RESULT virtual Status Init() = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status Init(coroutine::CoroutineHandler* handler) = 0;
 
   // Starts a new batch. The batch will be written when Execute is called on the
   // returned object. The PageDb object must outlive the batch object. If the

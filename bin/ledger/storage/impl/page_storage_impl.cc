@@ -998,7 +998,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Initialize PageDb.
-  Status s = db_->Init();
+  Status s = db_->Init(handler);
   if (s != Status::OK) {
     return s;
   }
