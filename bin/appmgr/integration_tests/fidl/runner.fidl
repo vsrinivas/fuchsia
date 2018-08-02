@@ -12,11 +12,17 @@ struct ComponentInfo {
 // interface to control the fake component created by MockRunner.
 interface MockComponent {
   1: Kill(uint64 errorcode);
-  2: ConnectToService(string service_name, handle chan);
+  2: ConnectToService(string service_name, handle<channel> channel);
+
+  // Set backend service directory which can be used by |PublishService| to
+  // publish mock services.
+  3: SetServiceDirectory(handle<channel> channel);
+
+  // Publishes |service_name| and connects to |backend service directory| when
+  // request comes in.
+  4: PublishService(string service_name) -> ();
 };
 
-// TODO: support more function
-// - publish service to component to test exported directory
 interface MockRunner {
   1: Crash();
   2: ConnectToComponent(uint64 id, request<MockComponent> req);

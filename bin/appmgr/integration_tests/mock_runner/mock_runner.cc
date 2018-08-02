@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <lib/fdio/util.h>
+
 #include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
@@ -52,6 +54,21 @@ void FakeSubComponent::SendReturnCodeIfTerminated() {
 }
 
 void FakeSubComponent::Detach() { binding_.set_error_handler(nullptr); }
+
+void FakeSubComponent::PublishService(::fidl::StringPtr service_name,
+                                      PublishServiceCallback callback) {
+  // publish to root as appmgr assumes that all the components started by
+  // runners publish services using legacy style
+  std::string sname = service_name;
+  startup_context_->outgoing().root_dir()->AddEntry(
+      sname.c_str(),
+      fbl::AdoptRef(new fs::Service([sname, this](zx::channel channel) {
+        fdio_service_connect_at(service_dir_.get(), sname.c_str(),
+                                channel.release());
+        return ZX_OK;
+      })));
+  callback();
+}
 
 MockRunner::MockRunner()
     : loop_(&kAsyncLoopConfigAttachToThread),

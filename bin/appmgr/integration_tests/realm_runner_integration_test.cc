@@ -7,6 +7,7 @@
 #include <fidl/examples/echo/cpp/fidl.h>
 
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
+#include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/auto_call.h"
@@ -17,6 +18,7 @@ namespace {
 
 using fuchsia::sys::TerminationReason;
 using test::component::mockrunner::MockComponentPtr;
+using test::component::mockrunner::MockComponentSyncPtr;
 using testing::EnclosingEnvironment;
 using testing::MockRunnerRegistry;
 using testing::TestWithEnvironment;
@@ -196,6 +198,46 @@ TEST_F(RealmRunnerTest, ComponentCanConnectToEnvService) {
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return ret_msg.get() == message; }, kTimeout));
+}
+
+TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
+  constexpr char dummy_service_name[] = "dummy_service";
+
+  // launch component with service.
+  Services services;
+  auto launch_info = CreateLaunchInfo(kComponentForRunner);
+  launch_info.directory_request = services.NewRequest();
+  auto component =
+      enclosing_environment_->CreateComponent(std::move(launch_info));
+
+  ASSERT_TRUE(WaitForRunnerToRegister());
+  // make sure component was launched
+  ASSERT_TRUE(WaitForComponentCount(1));
+
+  // create and publish fake service
+  auto fake_service_dir = fbl::AdoptRef(new fs::PseudoDir());
+  bool connect_called = false;
+  fake_service_dir->AddEntry(
+      dummy_service_name,
+      fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
+        connect_called = true;
+        return ZX_OK;
+      })));
+  fs::SynchronousVfs vfs(async_get_default_dispatcher());
+  MockComponentSyncPtr component_ptr;
+  runner_registry_.runner()->runner_ptr()->ConnectToComponent(
+      runner_registry_.runner()->components()[0].unique_id,
+      component_ptr.NewRequest());
+  ASSERT_EQ(ZX_OK, component_ptr->SetServiceDirectory(
+                       testing::OpenAsDirectory(&vfs, fake_service_dir)));
+  ASSERT_EQ(ZX_OK, component_ptr->PublishService(dummy_service_name));
+
+  // try to connect to fake service
+  fidl::examples::echo::EchoPtr echo;
+  services.ConnectToService(echo.NewRequest().TakeChannel(),
+                            dummy_service_name);
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return connect_called; }, kTimeout));
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {

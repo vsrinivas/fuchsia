@@ -50,10 +50,17 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   }
 
   void ConnectToService(::fidl::StringPtr service_name,
-                        zx::handle chan) override {
+                        zx::channel channel) override {
     startup_context_->ConnectToEnvironmentService(service_name,
-                                                  zx::channel(chan.release()));
+                                                  std::move(channel));
   }
+
+  void SetServiceDirectory(zx::channel channel) override {
+    service_dir_.reset(channel.release());
+  }
+
+  void PublishService(::fidl::StringPtr service_name,
+                      PublishServiceCallback callback) override;
 
   void SendReturnCodeIfTerminated();
 
@@ -66,6 +73,7 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   uint64_t id_;
   uint64_t return_code_;
   bool alive_;
+  zx::channel service_dir_;
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fidl::BindingSet<mockrunner::MockComponent> mock_bindings_;
   std::vector<WaitCallback> wait_callbacks_;
