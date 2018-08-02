@@ -207,13 +207,12 @@ func (c *Client) Down() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.state != StateDown {
-		c.changeStateLocked(StateDown)
-
 		m := syscall.FDIOForFD(int(c.f.Fd()))
 		err := IoctlStop(m)
 		if err != nil {
 			return err
 		}
+		c.changeStateLocked(StateDown)
 	}
 	return nil
 }
