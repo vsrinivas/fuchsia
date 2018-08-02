@@ -12,10 +12,14 @@ source_set("testing") {
     "commit_empty_impl.h",
     "page_storage_empty_impl.cc",
     "page_storage_empty_impl.h",
+    "storage_matcher.cc",
+    "storage_matcher.h",
   ]
 
   public_deps = [
     "//peridot/bin/ledger/storage/public",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 
   deps = [
@@ -25,6 +29,23 @@ source_set("testing") {
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/socket",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "storage_matcher_unittest.cc",
+  ]
+
+  deps = [
+    ":testing",
+    "//peridot/bin/ledger/storage/public",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

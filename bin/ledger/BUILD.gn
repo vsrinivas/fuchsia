@@ -129,6 +129,7 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/storage/impl:unittests",
     "//peridot/bin/ledger/storage/impl/btree:unittests",
     "//peridot/bin/ledger/storage/public:unittests",
+    "//peridot/bin/ledger/storage/testing:unittests",
     "//peridot/bin/ledger/testing:unittests",
     "//peridot/bin/ledger/testing/netconnector:unittests",
     "//third_party/googletest:gtest_main",
