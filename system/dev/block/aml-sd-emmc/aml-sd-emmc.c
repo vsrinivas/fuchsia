@@ -881,7 +881,6 @@ zx_status_t aml_sd_emmc_request(void *ctx, sdmmc_req_t* req) {
         //Read desc from external DDR
         start_reg &= ~AML_SD_EMMC_START_DESC_INT;
     } else {
-        io_buffer_physmap(&dev->mmio);
         desc_phys = (io_buffer_phys(&dev->mmio)) + AML_SD_EMMC_SRAM_MEMORY_BASE;
         start_reg |= AML_SD_EMMC_START_DESC_INT;
     }
