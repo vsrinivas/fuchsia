@@ -360,14 +360,14 @@ void MediaPlayerTestView::OnEndOfStream() {
     return;
   }
 
-  if (++current_url_index_ == params_.urls().size() && !params_.loop()) {
-    // No more files, not looping.
-    state_ = State::kEnded;
-    return;
-  }
-
-  if (current_url_index_ == params_.urls().size()) {
+  if (++current_url_index_ == params_.urls().size()) {
     current_url_index_ = 0;
+
+    if (!params_.loop()) {
+      // No more files, not looping.
+      state_ = State::kEnded;
+      return;
+    }
   }
 
   if (params_.urls().size() > 1) {
