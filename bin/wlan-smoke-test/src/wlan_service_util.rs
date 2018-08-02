@@ -33,7 +33,7 @@ pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy)
         -> Result<Vec<u16>, Error> {
     let response = await!(wlan_svc.list_ifaces()).context("Error getting iface list")?;
     let mut wlan_iface_ids = Vec::new();
-    for iface in response.ifaces{
+    for iface in response.ifaces {
         wlan_iface_ids.push(iface.iface_id);
     }
     Ok(wlan_iface_ids)

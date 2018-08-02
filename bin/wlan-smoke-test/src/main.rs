@@ -15,17 +15,18 @@ use failure::{Error, ResultExt, bail, err_msg,};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
 use fidl_fuchsia_wlan_device_service as wlan_service;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
+use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{self as syslog, fx_log, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::io::{AllowStdIo, AsyncReadExt};
-use serde::{Serialize};
-use serde::ser::{Serializer, SerializeMap, SerializeStruct};
-use std::collections::HashMap;
-use std::process;
+use serde::ser::{Serialize, Serializer, SerializeMap, SerializeStruct};
 use std::fmt;
+use std::process;
+use std::{thread, time};
+use std::collections::HashMap;
 use structopt::StructOpt;
 use crate::opts::Opt;
 
@@ -67,6 +68,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
     let http_svc = connect_to_service::<http::HttpServiceMarker>()?;
     test_results.connect_to_http_service = true;
 
+    let network_svc = connect_to_service::<StackMarker>()?;
+    test_results.connect_to_netstack_service = true;
+
     let fut = async {
         let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&wlan_svc))
                 .context("wlan-smoke-test: failed to query wlanservice iface list")?;
@@ -95,7 +99,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
         }
 
         // now that we have interfaces...  let's try to use them!
-        for (_, wlan_iface) in test_results.iface_objects.iter_mut() {
+        for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             let mut requires_disconnect = false;
             // first check if we are connected to the target network already
             if is_connect_to_target_network_needed(opt.stay_connected,
@@ -116,6 +120,24 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
             } else {
                 // connection already established, mark as successful
                 wlan_iface.connection_success = true;
+            }
+
+            let mut dhcp_check_attempts = 0;
+
+            while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
+                // check if there is a non-zero ip addr as a first check for dhcp success
+                let mut ip_addrs = match await!(
+                        get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id)) {
+                    Ok(result) => result,
+                    Err(e) => continue
+                };
+                if check_dhcp_complete(ip_addrs) {
+                    wlan_iface.dhcp_success = true;
+                } else {
+                    // dhcp takes some time...  loop again to give it a chance
+                    dhcp_check_attempts += 1;
+                    thread::sleep(time::Duration::from_millis(4000));
+                }
             }
 
             // after testing, check if we need to disconnect
@@ -164,6 +186,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
 struct TestResults {
     connect_to_wlan_service: bool,
     connect_to_http_service: bool,
+    connect_to_netstack_service: bool,
     query_wlan_service_iface_list: bool,
     wlan_discovered: bool,
     interface_status: bool,
@@ -262,4 +285,75 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy, mut url_request: 
     fx_log_info!("Received {:?} bytes", bytes_received);
 
     Ok(())
+}
+
+async fn get_ip_addrs_for_wlan_iface(wlan_svc: &'static DeviceServiceProxy,
+                                     network_svc: &'static StackProxy,
+                                     wlan_iface_id: u16)
+        -> Result<Vec<netstack::InterfaceAddress>, Error> {
+    // temporary implementation for getting the ip addrs for a wlan iface.  A more robust
+    // lookup will be designed and implemented in the future (TODO: <bug already filed?>)
+
+    let mut iface_path = String::new();
+
+    //first get info on the wlan iface
+    let response = await!(wlan_svc.list_ifaces())?;
+    for iface in response.ifaces {
+        if wlan_iface_id == iface.iface_id {
+            // trim off any leading '@'s
+            iface_path = iface.path.trim_left_matches('@').to_string();
+        }
+    }
+
+    //now, if we got a valid path, we can check the netstack iface info
+    if iface_path.is_empty() {
+        // could not find a path...  throw an error
+        bail!("Could not find the path for iface {}", wlan_iface_id);
+    }
+
+    let mut net_iface_response = await!(network_svc.list_interfaces())?;
+
+    let mut wlan_iface_ip_addrs = Vec::new();
+
+    for net_iface in net_iface_response.iter_mut() {
+        if net_iface.path.is_empty() {
+            continue;
+        }
+        // trim off any leading '@'s
+        let net_path = net_iface.path.trim_left_matches('@').to_string();
+        if net_path.starts_with(&iface_path) {
+            // now get the ip addrs
+            wlan_iface_ip_addrs.append(&mut net_iface.addresses);
+
+            // Note: Until proper interface mappings between wlanstack and netstack,
+            // we return all ip_addrs that match the device path to handle
+            // multiple interfaces on a single device.
+        }
+    }
+
+    Ok(wlan_iface_ip_addrs)
+}
+
+fn check_dhcp_complete(ip_addrs: Vec<netstack::InterfaceAddress>) -> bool {
+    for ip_addr in ip_addrs {
+        // for now, assume a valid address if we see anything that isn't a 0
+        fx_log_info!("checking validity of ip address: {:?}", ip_addr.ip_address);
+        match ip_addr.ip_address {
+            fidl_fuchsia_net::IpAddress::Ipv4(address) => {
+                for &a in address.addr.iter() {
+                    if a != 0 as u8 {
+                        return true;
+                    }
+                }
+            },
+            fidl_fuchsia_net::IpAddress::Ipv6(address) => {
+                for &a in address.addr.iter() {
+                    if a != 0 as u8 {
+                        return true;
+                    }
+                }
+            }
+        };
+    }
+    return false;
 }
