@@ -343,10 +343,11 @@ static zx_driver_ops_t intel_ethernet_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 12)
+ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 13)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1f45), // Atom c2000 2.5Gbe backplane
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1502), // Ivy Bridge
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
