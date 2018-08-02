@@ -121,7 +121,7 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	obs0, err := zxwait.Wait(ios.dataHandle,
+	_, err := zxwait.Wait(ios.dataHandle,
 		zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
 			zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 		zx.TimensecInfinite)
@@ -134,12 +134,9 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 		log.Printf("loopSocketWrite: warmup failed: %v", err)
 	}
 
-	switch {
-	case obs0&LOCAL_SIGNAL_CLOSING != 0:
-		return
-	case obs0&zx.SignalSocketPeerClosed != 0:
-		return
-	}
+	// The client might have written some data into the socket.
+	// Always continue to the 'for' loop below and try to read them
+	// even if the signals show the client has closed the dataHandle.
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
