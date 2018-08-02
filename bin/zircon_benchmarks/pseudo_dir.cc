@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,18 +13,9 @@
 #include <perftest/perftest.h>
 #include <zircon/syscalls.h>
 
+#include "util.h"
+
 namespace {
-
-std::vector<std::string> MakeDeterministicNamesList(int length) {
-  std::vector<std::string> ret;
-  for (int i = 0; i < length; ++i) {
-    ret.emplace_back(fxl::StringPrintf("%07d", i));
-  }
-
-  std::shuffle(ret.begin(), ret.end(), std::default_random_engine(0x2128847));
-
-  return ret;
-}
 
 // Benchmark baseline creation time.
 bool PseudoDirCreateTest(perftest::RepeatState* state) {
@@ -37,7 +28,7 @@ bool PseudoDirCreateTest(perftest::RepeatState* state) {
 // Benchmark the time to remove an existing entry and add it back.
 // Parameterized by the number of files.
 bool PseudoDirRemoveAddTest(perftest::RepeatState* state, int file_count) {
-  auto file_names = MakeDeterministicNamesList(file_count);
+  auto file_names = util::MakeDeterministicNamesList(file_count);
 
   auto dir = fbl::AdoptRef(new fs::PseudoDir());
   auto file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
@@ -59,7 +50,7 @@ bool PseudoDirRemoveAddTest(perftest::RepeatState* state, int file_count) {
 // Benchmark the time to lookup an existing entry.
 // Parameterized by the number of files.
 bool PseudoDirLookupTest(perftest::RepeatState* state, int file_count) {
-  auto file_names = MakeDeterministicNamesList(file_count);
+  auto file_names = util::MakeDeterministicNamesList(file_count);
 
   auto dir = fbl::AdoptRef(new fs::PseudoDir());
   auto file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
@@ -82,7 +73,7 @@ bool PseudoDirLookupTest(perftest::RepeatState* state, int file_count) {
 // Parameterized by the number of files and the size of the output buffer.
 bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count,
                           int buffer_size) {
-  auto file_names = MakeDeterministicNamesList(file_count);
+  auto file_names = util::MakeDeterministicNamesList(file_count);
   std::vector<char> buffer(buffer_size);
 
   auto dir = fbl::AdoptRef(new fs::PseudoDir());
@@ -124,6 +115,7 @@ void RegisterTests() {
     }
   }
 }
+
 PERFTEST_CTOR(RegisterTests);
 
 }  // namespace

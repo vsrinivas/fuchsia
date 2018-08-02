@@ -40,6 +40,7 @@ source_set("lib") {
     "channels.cc",
     "events.cc",
     "filesystem.cc",
+    "lazy_dir.cc",
     "mmu.cc",
     "null.cc",
     "ports.cc",
@@ -49,6 +50,7 @@ source_set("lib") {
     "sockets.cc",
     "test_runner.cc",
     "threads.cc",
+    "util.cc",
     "vmo.cc",
   ]
   deps = [
