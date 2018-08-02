@@ -1,0 +1,40 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.setui.service;
+
+enum ReturnCode {
+  OK = 0;
+  FAILED = 1;
+}
+
+struct SettingsObject {
+  SettingType type;
+  bool readOnly;
+  SettingData data;
+}
+
+struct SetResponse {
+  ReturnCode returnCode;
+}
+
+// The main interface for UIs to change system settings. Currently, the 
+// settings are scoped to the device, but will eventually be scoped to the user
+// as is applicable.
+interface SetUIService {
+  // Begins listening to changes to a given settings object. This may cause the
+  // SetUiService to connect to any applicable device services until all listeners
+  // for a given type are closed.
+  // The service will call the listener with the current state immediately on
+  // initialization.
+  1: AddListener(SettingType type, SetUIListener listener);
+
+  // Sets the value of a given settings object. Will only return once the operation
+  // has completed.
+  2: Set(SettingType type, SettingsObject value) -> (SetResponse response);
+};
+
+interface SetUIListener {
+  1: Notify(SettingType type, SettingsObject object);
+}

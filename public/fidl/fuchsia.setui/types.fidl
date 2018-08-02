@@ -1,0 +1,11 @@
+library fuchsia.setui.service;
+
+using fuchsia.setui.wifi;
+
+enum SettingType {
+    UNKNOWN = 0;
+};
+
+union SettingData {
+    string stringValue;
+};
