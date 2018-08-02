@@ -212,8 +212,6 @@ LINUX_FUNCII(irq_get_irq_data) // OF only
 LINUX_FUNCII(allow_signal) // SDIO only
 LINUX_FUNCX(kthread_should_stop) // SDIO only
 LINUX_FUNCVS(kthread_run) // SDIO only
-LINUX_FUNCX(wmb) // SDIO only
-LINUX_FUNCX(rmb) // SDIO only
 
 LINUX_FUNCVI(device_release_driver)
 #define module_param_string(a, b, c, d)

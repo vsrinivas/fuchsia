@@ -504,7 +504,7 @@ struct brcmf_sdio {
 
     struct workqueue_struct* brcmf_wq;
     struct work_struct datawork;
-    bool dpc_triggered;
+    atomic_bool dpc_triggered;
     bool dpc_running;
 
     bool txoff; /* Transmit flow-controlled */
@@ -2506,7 +2506,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         if (bus->ctrl_frame_stat) {
             err = brcmf_sdio_tx_ctrlframe(bus, bus->ctrl_frame_buf, bus->ctrl_frame_len);
             bus->ctrl_frame_err = err;
-            wmb();
+            atomic_thread_fence(memory_order_seq_cst);
             bus->ctrl_frame_stat = false;
         }
         sdio_release_host(bus->sdiodev->func1);
@@ -2526,7 +2526,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
             sdio_claim_host(bus->sdiodev->func1);
             if (bus->ctrl_frame_stat) {
                 bus->ctrl_frame_err = ZX_ERR_IO_REFUSED;
-                wmb();
+                atomic_thread_fence(memory_order_seq_cst);
                 bus->ctrl_frame_stat = false;
                 brcmf_sdio_wait_event_wakeup(bus);
             }
@@ -2535,7 +2535,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     } else if (atomic_load(&bus->intstatus) || atomic_load(&bus->ipend) > 0 ||
                (!atomic_load(&bus->fcstate) && brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) &&
                 data_ok(bus))) {
-        bus->dpc_triggered = true;
+        atomic_store(&bus->dpc_triggered, true);
     }
 }
 
@@ -2748,7 +2748,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     /* Send from dpc */
     bus->ctrl_frame_buf = msg;
     bus->ctrl_frame_len = msglen;
-    wmb();
+    atomic_thread_fence(memory_order_seq_cst);
     bus->ctrl_frame_stat = true;
 
     brcmf_sdio_trigger_dpc(bus);
@@ -2765,7 +2765,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     }
     if (ret == ZX_OK) {
         brcmf_dbg(SDIO, "ctrl_frame complete, err=%d\n", bus->ctrl_frame_err);
-        rmb();
+        atomic_thread_fence(memory_order_seq_cst);
         ret = bus->ctrl_frame_err;
     }
 
@@ -3335,8 +3335,8 @@ done:
 }
 
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
-    if (!bus->dpc_triggered) {
-        bus->dpc_triggered = true;
+    if (!atomic_load(&bus->dpc_triggered)) {
+        atomic_store(&bus->dpc_triggered, true);
         workqueue_schedule(bus->brcmf_wq, &bus->datawork);
     }
 }
@@ -3360,7 +3360,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
         brcmf_err("isr w/o interrupt configured!\n");
     }
 
-    bus->dpc_triggered = true;
+    atomic_store(&bus->dpc_triggered, true);
     workqueue_schedule(bus->brcmf_wq, &bus->datawork);
 }
 
@@ -3376,7 +3376,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 
         /* Check device if no interrupts */
         if (!bus->intr || (bus->sdcnt.intrcount == bus->sdcnt.lastintrs)) {
-            if (!bus->dpc_triggered) {
+            if (!atomic_load(&bus->dpc_triggered)) {
                 uint8_t devpend;
 
                 sdio_claim_host(bus->sdiodev->func1);
@@ -3391,7 +3391,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
                 bus->sdcnt.pollcnt++;
                 atomic_store(&bus->ipend, 1);
 
-                bus->dpc_triggered = true;
+                atomic_store(&bus->dpc_triggered, true);
                 workqueue_schedule(bus->brcmf_wq, &bus->datawork);
             }
         }
@@ -3417,8 +3417,8 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 #endif /* DEBUG */
 
     /* On idle timeout clear activity flag and/or turn off clock */
-    if (!bus->dpc_triggered) {
-        rmb();
+    if (!atomic_load(&bus->dpc_triggered)) {
+        atomic_thread_fence(memory_order_seq_cst);
         if ((!bus->dpc_running) && (bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
             bus->idlecount++;
             if (bus->idlecount > bus->idletime) {
@@ -3441,9 +3441,9 @@ static void brcmf_sdio_dataworker(struct work_struct* work) {
     struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
 
     bus->dpc_running = true;
-    wmb();
-    while (*(volatile bool*)&(bus->dpc_triggered)) {
-        bus->dpc_triggered = false;
+    atomic_thread_fence(memory_order_seq_cst);
+    while (atomic_load(&bus->dpc_triggered)) {
+        atomic_store(&bus->dpc_triggered, false);
         brcmf_sdio_dpc(bus);
         bus->idlecount = 0;
     }
@@ -4002,7 +4002,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 //        bus->watchdog_tsk = NULL;
 //    }
     /* Initialize DPC thread */
-    bus->dpc_triggered = false;
+    atomic_store(&bus->dpc_triggered, false);
     bus->dpc_running = false;
 
     /* Assign bus interface call back */
