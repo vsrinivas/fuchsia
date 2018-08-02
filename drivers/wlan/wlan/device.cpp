@@ -559,6 +559,13 @@ void Device::MainLoop() {
             case PortKeyType::kMlme:
                 dispatcher_->HandlePortPacket(pkt.key);
                 break;
+            default:
+                errorf("unknown port key: %" PRIu64 "\n", pkt.key);
+                break;
+            }
+            break;
+        case ZX_PKT_TYPE_SIGNAL_ONE:
+            switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kService:
                 ProcessChannelPacketLocked(pkt);
                 break;
@@ -580,22 +587,26 @@ void Device::MainLoop() {
 }
 
 void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
-    const auto& sig = pkt.signal;
-    if (sig.observed & ZX_CHANNEL_PEER_CLOSED) {
-        infof("channel closed\n");
-        channel_.reset();
-    } else if (sig.observed & ZX_CHANNEL_READABLE) {
+    for (size_t i = 0; i < pkt.signal.count; ++i) {
         auto buffer = LargeBufferAllocator::New();
         if (buffer == nullptr) {
             errorf("no free buffers available!\n");
             // TODO: reply on the channel
+            channel_.reset();
             return;
         }
         uint32_t read = 0;
         zx_status_t status =
             channel_.read(0, buffer->data(), buffer->capacity(), &read, nullptr, 0, nullptr);
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            break;
+        }
         if (status != ZX_OK) {
-            errorf("could not read channel: %d\n", status);
+            if (status == ZX_ERR_PEER_CLOSED) {
+                infof("channel closed\n");
+            } else {
+                errorf("could not read channel: %d\n", status);
+            }
             channel_.reset();
             return;
         }
@@ -610,17 +621,18 @@ void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
                 warnf("could not send packet queued msg err=%d\n", status);
                 packet_queue_.UndoEnqueue();
                 // TODO(tkilbourn): recover as gracefully as possible
+                channel_.reset();
+                return;
             }
         }
     }
+    RegisterChannelWaitLocked();
 }
 
 zx_status_t Device::RegisterChannelWaitLocked() {
     zx_signals_t sigs = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    // TODO(tkilbourn): ZX_WAIT_ASYNC_REPEATING can go horribly wrong with multiple threads waiting
-    // on the port. If we ever go to a multi-threaded event loop, fix the channel wait.
     return channel_.wait_async(port_, ToPortKey(PortKeyType::kService, 0u), sigs,
-                               ZX_WAIT_ASYNC_REPEATING);
+                               ZX_WAIT_ASYNC_ONCE);
 }
 
 zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
