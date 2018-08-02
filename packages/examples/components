@@ -1,6 +1,7 @@
 {
     "packages": [
         "//garnet/bin/glob",
-        "//garnet/examples/components:component_hello_world"
+        "//garnet/examples/components:component_hello_world",
+        "//garnet/examples/components:component_hello_world_tests"
     ]
 }

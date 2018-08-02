@@ -54,3 +54,34 @@ package("component_hello_world") {
     },
   ]
 }
+
+executable("hello_world_test") {
+  testonly = true
+  sources = [
+    "hello_world_test.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+package("component_hello_world_tests") {
+  testonly = true
+
+  deps = [
+    ":hello_world_test",
+  ]
+
+  tests = [
+    {
+      name = "hello_world_test"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/hello_world_test.cmx")
+      dest = "hello_world_test.cmx"
+    },
+  ]
+}
