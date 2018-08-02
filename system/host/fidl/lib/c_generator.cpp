@@ -1025,7 +1025,11 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         if (method_info.response != nullptr)
             file_ << ", txn";
         file_ << ");\n";
-        file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
+        file_ << kIndent << kIndent << "if ("
+              << "status != ZX_OK && "
+              << "status != ZX_ERR_STOP && "
+              << "status != ZX_ERR_NEXT && "
+              << "status != ZX_ERR_ASYNC)\n";
         file_ << kIndent << kIndent << kIndent << "status = ZX_ERR_INTERNAL;\n";
         file_ << kIndent << kIndent << "break;\n";
         file_ << kIndent << "}\n";

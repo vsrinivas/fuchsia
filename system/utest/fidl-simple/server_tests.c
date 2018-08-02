@@ -133,7 +133,47 @@ static bool reply_test(void) {
     END_TEST;
 }
 
+static zx_status_t return_async(void* ctx, zx_handle_t process, zx_handle_t thread, fidl_txn_t* txn) {
+    zx_handle_close(process);
+    zx_handle_close(thread);
+    return ZX_ERR_ASYNC;
+}
+
+static bool error_test(void) {
+    BEGIN_TEST;
+
+    fuchsia_crash_Analyzer_ops_t ops = {
+        .Analyze = return_async,
+    };
+
+    fuchsia_crash_AnalyzerAnalyzeRequest request;
+    memset(&request, 0, sizeof(request));
+    request.hdr.txid = 42;
+    request.hdr.ordinal = fuchsia_crash_AnalyzerAnalyzeOrdinal;
+    request.process = FIDL_HANDLE_PRESENT;
+    request.thread = FIDL_HANDLE_PRESENT;
+
+    zx_handle_t handles[2];
+    fidl_msg_t msg = {
+        .bytes = &request,
+        .handles = handles,
+        .num_bytes = sizeof(request),
+        .num_handles = 2,
+    };
+
+    fidl_txn_t txn;
+    memset(&txn, 0, sizeof(txn));
+
+    zx_status_t status = zx_eventpair_create(0, &handles[0], &handles[1]);
+    ASSERT_EQ(ZX_OK, status, "");
+    status = fuchsia_crash_Analyzer_try_dispatch(NULL, &txn, &msg, &ops);
+    ASSERT_EQ(ZX_ERR_ASYNC, status, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(server_tests)
 RUN_NAMED_TEST("fuchsia.crash.Analyzer dispatch test", dispatch_test)
 RUN_NAMED_TEST("fuchsia.crash.Analyzer reply test", reply_test)
+RUN_NAMED_TEST("fuchsia.crash.Analyzer error test", error_test)
 END_TEST_CASE(server_tests);
