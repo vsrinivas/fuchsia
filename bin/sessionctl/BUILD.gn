@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("sessionctl") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+
+  meta = [
+    {
+      path = "meta/sessionctl.cmx"
+      dest = "sessionctl.cmx"
+    },
+  ]
+}

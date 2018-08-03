@@ -21,7 +21,7 @@ SessionCtl::SessionCtl(fbl::RefPtr<fs::PseudoDir> dir,
       puppet_master_impl_(puppet_master_impl) {
   auto ctl_dir = fbl::AdoptRef(new fs::PseudoDir());
   ctl_dir->AddEntry(
-      "puppet_master",
+      fuchsia::modular::PuppetMaster::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request(
             std::move(channel));

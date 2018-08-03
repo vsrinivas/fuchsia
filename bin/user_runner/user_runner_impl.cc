@@ -76,6 +76,10 @@ constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "clipboard_agent";
 constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 
+// The name in the outgoing debug directory (hub) for developer session control
+// services.
+constexpr char kSessionCtlDir[] = "sessionctl";
+
 fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig() {
   fuchsia::ledger::cloud::firestore::Config config;
   config.server_id = kFirebaseProjectId;
@@ -618,7 +622,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   puppet_master_impl_->Connect(std::move(puppet_master_request));
 
   session_ctl_.reset(new SessionCtl(startup_context_->outgoing().debug_dir(),
-                                    "sessionctl", puppet_master_impl_.get()));
+                                    kSessionCtlDir, puppet_master_impl_.get()));
 
   AtEnd(Reset(&story_command_executor_));
   AtEnd(Reset(&puppet_master_impl_));

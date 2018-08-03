@@ -42,6 +42,7 @@ struct ExecuteResult {
 // A session, concretely, is a collection of stories, their state, the modules
 // within them, any agents that run to support the mods and the various UI
 // shells (session and story shells).
+[Discoverable]
 interface PuppetMaster {
   // Requests a capability to control a story by name.
   //
