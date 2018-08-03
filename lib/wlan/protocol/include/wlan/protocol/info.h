@@ -126,13 +126,13 @@ typedef struct wlan_ht_caps {
     uint16_t ht_ext_capabilities;
     uint32_t tx_beamforming_capabilities;
     uint8_t asel_capabilities;
-} wlan_ht_caps_t;
+} __PACKED wlan_ht_caps_t;
 
 // VHT capabilities. IEEE Std 802.11-2016, 9.4.2.158
 typedef struct wlan_vht_caps {
     uint32_t vht_capability_info;
     uint64_t supported_vht_mcs_and_nss_set;
-} wlan_vht_caps_t;
+} __PACKED wlan_vht_caps_t;
 
 // Channels are numbered as in IEEE Std 802.11-2016, 17.3.8.4.2
 // Each channel is defined as base_freq + 5 * n MHz, where n is between 1 and 200 (inclusive). Here
