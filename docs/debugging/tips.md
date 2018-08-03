@@ -1,5 +1,7 @@
 # Debugging Tips
 
+For general debugging info see the [Fuchsia Debugging Workflow][fuchsia-debugging-doc].
+
 ## Generating debug info
 
 There are several make variables used to control the generation of debug info.
@@ -22,11 +24,6 @@ E.g., `ulib/launchpad,utest/debugger`
 Make-style patterns (%) are allowed, e.g., `ulib/%,utest/debugger`.
 
 The default is empty (meaning none).
-
-## Debugging zircon applications with GDB
-
-To debug zircon applications with GDB use gdbserver:
-https://fuchsia.googlesource.com/gdbserver
 
 ## Adding debug info to boot image
 
@@ -51,3 +48,5 @@ is passed.
 
 See "Debugging the kernel with GDB" in [QEMU](../qemu.md) for
 documentation on debugging zircon with QEMU+GDB.
+
+[fuchsia-debugging-doc]: https://fuchsia.googlesource.com/docs/+/master/development/workflows/debugging.md
