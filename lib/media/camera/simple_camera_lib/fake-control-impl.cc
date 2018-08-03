@@ -47,10 +47,8 @@ void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g,
 
 void FakeControlImpl::OnFrameAvailable(
     const fuchsia::camera::driver::FrameAvailableEvent& frame) {
-  stream_events_->OnFrameAvailable(frame);
+  stream_->OnFrameAvailable(frame);
 }
-
-void FakeControlImpl::Stopped() { stream_events_->Stopped(); }
 
 FakeControlImpl::FakeControlImpl(fidl::InterfaceRequest<Control> control,
                                  async_dispatcher_t* dispatcher,
@@ -133,28 +131,20 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
 void FakeControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::driver::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-    fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) {
-
+    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) {
   rate_ = frame_rate;
 
   buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
 
   stream_ = fbl::make_unique<FakeStreamImpl>(*this, fbl::move(stream));
-  stream_events_ = fbl::make_unique<FakeStreamEventsImpl>(fbl::move(events));
-
 }
 
-void FakeControlImpl::FakeStreamEventsImpl::OnFrameAvailable(
+void FakeControlImpl::FakeStreamImpl::OnFrameAvailable(
     const fuchsia::camera::driver::FrameAvailableEvent& frame) {
   binding_.events().OnFrameAvailable(frame);
 }
 
-void FakeControlImpl::FakeStreamEventsImpl::Stopped() {
-  binding_.events().Stopped();
-}
-
-void FakeControlImpl::FakeStreamImpl::Start(StartCallback callback) {
+void FakeControlImpl::FakeStreamImpl::Start() {
   // Set a timeline function to convert from framecount to monotonic time.
   // The start time is now, the start frame number is 0, and the
   // conversion function from frame to time is:
@@ -168,25 +158,12 @@ void FakeControlImpl::FakeStreamImpl::Start(StartCallback callback) {
 
   // Set the first time at which we will generate a frame:
   owner_.PostNextCaptureTask();
-
-  callback(ZX_OK);
 }
 
-void FakeControlImpl::FakeStreamImpl::Stop(StopCallback callback) {
-  owner_.task_.Cancel();
+void FakeControlImpl::FakeStreamImpl::Stop() { owner_.task_.Cancel(); }
 
-  callback(ZX_OK);
-}
-
-void FakeControlImpl::FakeStreamImpl::ReleaseFrame(
-    uint64_t buffer_index, ReleaseFrameCallback callback) {
-  zx_status_t status = owner_.buffers_.BufferRelease(buffer_index);
-  if (status == ZX_OK) {
-      callback(ZX_OK);
-      return;
-  }
-  FXL_LOG(ERROR) << "data offset does not correspond to a frame!";
-  callback(ZX_ERR_INVALID_ARGS);
+void FakeControlImpl::FakeStreamImpl::ReleaseFrame(uint32_t buffer_index) {
+  owner_.buffers_.BufferRelease(buffer_index);
 }
 
 FakeControlImpl::FakeStreamImpl::FakeStreamImpl(

@@ -57,26 +57,20 @@ interface Control {
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
   2: CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
-                FrameRate rate, request<Stream> stream,
-               request<StreamEvents> stream_events);
-};
-
-interface StreamEvents {
-  // Sent by the driver to the client when a frame is available for processing,
-  // or an error occurred.
-  1: -> OnFrameAvailable(FrameAvailableEvent frame);
-
-  // Frame streaming stopped
-  2: -> Stopped();
+                FrameRate rate, request<Stream> stream);
 };
 
 interface Stream {
   // Starts the streaming of frames.
-  2: Start() -> (zx.status status);
+  1: Start();
 
   // Stops the streaming of frames.
-  3: Stop() -> (zx.status status);
+  2: Stop();
 
   // Unlocks the specified frame, allowing the driver to reuse the memory.
-  4: ReleaseFrame(uint64 data_offset) -> (zx.status status);
+  3: ReleaseFrame(uint32 buffer_id);
+
+  // Sent by the driver to the client when a frame is available for processing,
+  // or an error occurred.
+  4:->OnFrameAvailable(FrameAvailableEvent frame);
 };

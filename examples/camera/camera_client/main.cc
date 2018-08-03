@@ -72,48 +72,36 @@ zx_status_t run_camera() {
   }
 
   int frame_counter = 0;
-  StreamSyncPtr stream;
-  StreamEventsPtr stream_events;
-  stream_events.events().OnFrameAvailable =
+  fuchsia::camera::driver::StreamPtr stream;
+
+   static constexpr uint16_t kNumberOfBuffers = 8;
+    fuchsia::sysmem::BufferCollectionInfo buffer_collection;
+    status = Gralloc(formats[0], kNumberOfBuffers, &buffer_collection);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
+      return status;
+    }
+
+  status = client.camera()->CreateStream(
+      std::move(buffer_collection), formats[0].rate,
+      stream.NewRequest());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
+    return status;
+  }
+  
+    stream.events().OnFrameAvailable =
       [&stream, &frame_counter](FrameAvailableEvent frame) {
         printf("Received FrameNotify Event %d at index: %u\n",
                frame_counter++, frame.buffer_id);
 
-        zx_status_t driver_status;
-        zx_status_t status =
-            stream->ReleaseFrame(frame.buffer_id, &driver_status);
+            stream->ReleaseFrame(frame.buffer_id);
         if (frame_counter > 10) {
-          status = stream->Stop(&driver_status);
+          stream->Stop();
         }
       };
 
-  static constexpr uint16_t kNumberOfBuffers = 8;
-  fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-  status = Gralloc(formats[0], kNumberOfBuffers, &buffer_collection);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
-    return status;
-  }
-
-  stream_events.events().Stopped = [&loop, &frame_counter]() {
-    printf("Received Stopped Event %d\n", frame_counter++);
-    if (frame_counter > 10)
-      loop.Quit();
-  };
-
-  status = client.camera()->CreateStream(
-      std::move(buffer_collection), formats[0].rate,
-      stream.NewRequest(), stream_events.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't set camera format (status " << status << ")";
-    return status;
-  }
-
-  status = stream->Start(&driver_status);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't start camera (status " << status << ")";
-    return status;
-  }
+  stream->Start();
 
   printf("all done, waiting for frames...\n");
 

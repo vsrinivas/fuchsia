@@ -425,10 +425,6 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
       zxlogf(TRACE, "setting video buffer as stopped, got %u frames\n",
              num_frames_);
       streaming_state_ = StreamingState::STOPPED;
-
-      if (camera_control_) {
-        camera_control_->Stopped();
-      }
     }
     return;
   }
@@ -639,6 +635,7 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
     }
 
     // Initialize the frame state for the new frame.
+
     cur_frame_state_ = {};
     cur_frame_state_.fid = fid;
     num_frames_++;

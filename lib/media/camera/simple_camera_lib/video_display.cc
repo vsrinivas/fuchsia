@@ -18,14 +18,7 @@ const bool use_fake_camera = false;
 // When a buffer is released, signal that it is available to the writer
 // In this case, that means directly write to the buffer then re-present it
 void VideoDisplay::BufferReleased(uint32_t buffer_id) {
-  zx_status_t driver_status;
-  zx_status_t status = camera_client_->stream_->ReleaseFrame(
-      buffer_id, &driver_status);
-  if (status != ZX_OK || driver_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't release frame (status " << status << " : "
-                   << driver_status << ")";
-    on_shut_down_callback_();
-  }
+  camera_client_->stream_->ReleaseFrame(buffer_id);
 }
 
 // When an incoming buffer is filled, VideoDisplay releases the acquire fence
@@ -228,24 +221,19 @@ zx_status_t VideoDisplay::ConnectToCamera(
   // Create the FIDL interface and bind events
   camera_client_ = std::make_unique<CameraClient>();
 
-  camera_client_->events_.events().OnFrameAvailable =
+  camera_client_->stream_.events().OnFrameAvailable =
       [video_display =
            this](fuchsia::camera::driver::FrameAvailableEvent frame) {
         video_display->IncomingBufferFilled(frame);
       };
 
-  camera_client_->events_.events().Stopped = []() {
-    FXL_LOG(INFO) << "Received Stopped Event";
-  };
-
-  camera_client_->events_.set_error_handler(
+  camera_client_->stream_.set_error_handler(
       [this] {
         DisconnectFromCamera();
         on_shut_down_callback_();
         });
 
   // Open a connection to the Camera
-  zx_status_t driver_status;
   zx_status_t status =
       use_fake_camera ? OpenFakeCamera() : OpenCamera(camera_id);
   if (status != ZX_OK) {
@@ -306,8 +294,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
     status = camera_client_->control_->CreateStream(
         std::move(buffer_collection), chosen_format.rate,
-        camera_client_->stream_.NewRequest(),
-        camera_client_->events_.NewRequest());
+        camera_client_->stream_.NewRequest());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
       DisconnectFromCamera();
@@ -316,13 +303,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
   }
 
   // Start streaming
-  status = camera_client_->stream_->Start(&driver_status);
-  if (status != ZX_OK || driver_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't start camera (status " << status << " : "
-                   << driver_status << ")";
-     DisconnectFromCamera();
-     return status;
-  }
+  camera_client_->stream_->Start();
 
   FXL_LOG(INFO) << "Camera Client Initialization Successful!";
 

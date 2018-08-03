@@ -11,10 +11,8 @@ namespace camera {
 
 void ControlImpl::OnFrameAvailable(
     const fuchsia::camera::driver::FrameAvailableEvent& frame) {
-  stream_events_->OnFrameAvailable(frame);
+  stream_->OnFrameAvailable(frame);
 }
-
-void ControlImpl::Stopped() { stream_events_->Stopped(); }
 
 ControlImpl::ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
                          fidl::InterfaceRequest<Control> control,
@@ -60,8 +58,7 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
 void ControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::driver::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-    fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) {
+    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) {
   zx_status_t status =
       usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
 
@@ -72,30 +69,35 @@ void ControlImpl::CreateStream(
   }
 
   stream_ = fbl::make_unique<StreamImpl>(*this, fbl::move(stream));
-  stream_events_ = fbl::make_unique<StreamEventsImpl>(fbl::move(events));
 }
 
-void ControlImpl::StreamEventsImpl::OnFrameAvailable(
+void ControlImpl::StreamImpl::OnFrameAvailable(
     const fuchsia::camera::driver::FrameAvailableEvent& frame) {
   binding_.events().OnFrameAvailable(frame);
 }
 
-void ControlImpl::StreamEventsImpl::Stopped() { binding_.events().Stopped(); }
-
-void ControlImpl::StreamImpl::Start(StartCallback callback) {
+void ControlImpl::StreamImpl::Start() {
   zx_status_t status = owner_.usb_video_stream_->StartStreaming();
-  callback(status);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to start. Closing channel.\n");
+    binding_.Unbind();  // Close the channel on error.
+  }
 }
 
-void ControlImpl::StreamImpl::Stop(StopCallback callback) {
+void ControlImpl::StreamImpl::Stop() {
   zx_status_t status = owner_.usb_video_stream_->StopStreaming();
-  callback(status);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to stop. Closing channel.\n");
+    binding_.Unbind();  // Close the channel on error.
+  }
 }
 
-void ControlImpl::StreamImpl::ReleaseFrame(uint64_t data_offset,
-                                           ReleaseFrameCallback callback) {
-  zx_status_t status = owner_.usb_video_stream_->FrameRelease(data_offset);
-  callback(status);
+void ControlImpl::StreamImpl::ReleaseFrame(uint32_t buffer_index) {
+  zx_status_t status = owner_.usb_video_stream_->FrameRelease(buffer_index);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to release frame. Closing channel.\n");
+    binding_.Unbind();  // Close the channel on error.
+  }
 }
 
 ControlImpl::StreamImpl::StreamImpl(

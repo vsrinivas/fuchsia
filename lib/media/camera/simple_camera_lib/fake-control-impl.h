@@ -43,9 +43,6 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   void OnFrameAvailable(
       const fuchsia::camera::driver::FrameAvailableEvent& frame);
 
-  // Frame streaming stopped
-  void Stopped();
-
   void PostNextCaptureTask();
 
  private:
@@ -57,28 +54,9 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   void CreateStream(
       fuchsia::sysmem::BufferCollectionInfo buffer_collection,
       fuchsia::camera::driver::FrameRate frame_rate,
-      fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-      fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) override;
+      fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) override;
 
  private:
-  class FakeStreamEventsImpl : public fuchsia::camera::driver::StreamEvents {
-   public:
-    FakeStreamEventsImpl(
-        fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> stream)
-        : binding_(this, fbl::move(stream)) {}
-
-    // Sent by the driver to the client when a frame is available for
-    // processing, or an error occurred.
-    void OnFrameAvailable(
-        const fuchsia::camera::driver::FrameAvailableEvent& frame);
-
-    // Frame streaming stopped
-    void Stopped();
-
-   private:
-    fidl::Binding<StreamEvents> binding_;
-  };
-
   class FakeStreamImpl : public fuchsia::camera::driver::Stream {
    public:
     FakeStreamImpl(
@@ -86,21 +64,24 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
         fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream);
 
     // Starts the streaming of frames.
-    void Start(StartCallback callback) override;
+    void Start() override;
 
     // Stops the streaming of frames.
-    void Stop(StopCallback callback) override;
+    void Stop() override;
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
-    void ReleaseFrame(uint64_t data_offset,
-                      ReleaseFrameCallback callback) override;
+    void ReleaseFrame(uint32_t buffer_index) override;
+
+    // Sent by the driver to the client when a frame is available for
+    // processing, or an error occurred.
+    void OnFrameAvailable(
+        const fuchsia::camera::driver::FrameAvailableEvent& frame);
 
    private:
     FakeControlImpl& owner_;
     fidl::Binding<Stream> binding_;
   };
 
-  fbl::unique_ptr<FakeStreamEventsImpl> stream_events_;
   fbl::unique_ptr<FakeStreamImpl> stream_;
 
   FakeControlImpl(const FakeControlImpl&) = delete;

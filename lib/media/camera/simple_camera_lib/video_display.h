@@ -72,8 +72,7 @@ class VideoDisplay {
   class CameraClient {
    public:
     fuchsia::camera::driver::ControlSyncPtr control_;
-    fuchsia::camera::driver::StreamSyncPtr stream_;
-    fuchsia::camera::driver::StreamEventsPtr events_;
+    fuchsia::camera::driver::StreamPtr stream_;
   };
   std::unique_ptr<CameraClient> camera_client_;
 
