@@ -30,7 +30,7 @@ zx::duration TestBackoff::GetNext() {
 void TestBackoff::Reset() {}
 
 TestWithPageStorage::TestWithPageStorage()
-    : encryption_service_(dispatcher()){};
+    : encryption_service_(dispatcher()) {}
 
 TestWithPageStorage::~TestWithPageStorage() {}
 

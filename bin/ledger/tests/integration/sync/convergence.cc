@@ -219,7 +219,7 @@ class ConvergenceTest
       public ::testing::WithParamInterface<
           std::tuple<MergeType, int, LedgerAppInstanceFactory*>> {
  public:
-  ConvergenceTest(){};
+  ConvergenceTest() {}
   ~ConvergenceTest() override{};
 
   void SetUp() override {

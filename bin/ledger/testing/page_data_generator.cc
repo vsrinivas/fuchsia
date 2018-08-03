@@ -33,7 +33,7 @@ bool LogOnError(ledger::Status status, fxl::StringView description) {
 namespace test {
 namespace benchmark {
 
-PageDataGenerator::PageDataGenerator() : generator_(fxl::RandUint64()){};
+PageDataGenerator::PageDataGenerator() : generator_(fxl::RandUint64()) {}
 
 void PageDataGenerator::PutEntry(ledger::PagePtr* page,
                                  fidl::VectorPtr<uint8_t> key,

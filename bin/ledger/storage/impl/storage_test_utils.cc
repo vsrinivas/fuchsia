@@ -133,9 +133,9 @@ EntryChange NewRemoveEntryChange(std::string key) {
       true};
 }
 
-StorageTest::StorageTest(){};
+StorageTest::StorageTest() {}
 
-StorageTest::~StorageTest(){};
+StorageTest::~StorageTest() {}
 
 ::testing::AssertionResult StorageTest::AddObject(
     std::string value, std::unique_ptr<const Object>* object) {

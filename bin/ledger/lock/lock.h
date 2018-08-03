@@ -18,7 +18,7 @@ namespace lock {
 // operations.
 class Lock {
  public:
-  virtual ~Lock(){};
+  virtual ~Lock() {}
 };
 
 // Creates and acquires a lock.
