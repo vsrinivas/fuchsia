@@ -42,6 +42,10 @@ this automatically.
 #pragma once
 
 {{ template "ThisFidlInclude" . }}
+    {{- if getOption "include" }}
+#include "{{ getOption "include" }}"
+{{/* keep the newline */}}
+    {{- end }}
     {{- range .Name.Parts }}
 namespace {{ . }} {
     {{- end }}

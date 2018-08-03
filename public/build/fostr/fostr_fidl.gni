@@ -19,6 +19,16 @@ import("//build/cpp/fidlmerge_cpp.gni")
 #     Specifies the template to use to generate the formatting code. Default
 #     //garnet/public/build/fostr/fostr.fidlmerge.
 #
+#   additional_include (optional)
+#     Specifies a file to be included in the generated formatting.h file.
+#     For example "lib/ui/views/cpp/formatting.h".
+#
+#   amendments_path (optional)
+#     Specifies a JSON file that contains amendments to be made to the fidl
+#     model before the template is applied. For example,
+#     "//garnet/public/build/fostr/fidl/fuchsia.media/amendments.fidlmerge".
+#     See the fidlmerge README for details.
+#
 #   deps, public_deps, test_only, visibility (optional)
 #     These parameters are forwarded to the source_set. This template lists
 #     //garnet/public/lib/fostr and the value of fidl_target as public_deps.
@@ -43,6 +53,7 @@ template("fostr_fidl") {
                              "deps",
                              "testonly",
                              "visibility",
+                             "amendments_path",
                            ])
 
     fidl_target = "$fidl_target"
@@ -50,6 +61,10 @@ template("fostr_fidl") {
     template_path = "$template_path"
 
     generated_source_base = "formatting"
+
+    if (defined(invoker.additional_include)) {
+      options = "include=${invoker.additional_include}"
+    }
 
     public_deps = [
       "$fidl_target",
