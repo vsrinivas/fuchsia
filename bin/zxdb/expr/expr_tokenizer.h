@@ -16,8 +16,8 @@ class ExprTokenizer {
  public:
   explicit ExprTokenizer(const std::string& input);
 
-  // Returns true on successful parsing. In this case, the tokens can be read
-  // from tokens(). On failure, err() will contain the error message, and
+  // Returns true on successful tokenizing. In this case, the tokens can be
+  // read from tokens(). On failure, err() will contain the error message, and
   // error_location() will contain the error location.
   bool Tokenize();
 
@@ -32,6 +32,8 @@ class ExprTokenizer {
 
   // When parsing is successful, this contains the extracted tokens.
   const std::vector<ExprToken>& tokens() const { return tokens_; }
+
+  std::vector<ExprToken> TakeTokens() { return std::move(tokens_); }
 
  private:
   void AdvanceOneChar();

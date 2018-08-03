@@ -13,8 +13,10 @@ namespace zxdb {
 // parsed.
 class ExprToken {
  public:
-  enum Type {
-    kInvalid,
+  // This type must start at 0 and increment monotonically since it is used
+  // as an index into the parser lookup table.
+  enum Type : int {
+    kInvalid = 0,
     kName,         // random_text
     kInteger,      // 123
     kDot,          // .

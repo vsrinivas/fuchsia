@@ -4,6 +4,10 @@
 
 static_library("expr") {
   sources = [
+    "expr_node.cc",
+    "expr_node.h",
+    "expr_parser.cc",
+    "expr_parser.h",
     "expr_token.h",
     "expr_tokenizer.cc",
     "expr_tokenizer.h",
@@ -19,6 +23,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",
   ]
 
