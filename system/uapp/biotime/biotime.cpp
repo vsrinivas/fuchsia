@@ -10,6 +10,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fbl/atomic.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/block.h>
 #include <zircon/misc/xorshiftrand.h>
@@ -122,14 +123,14 @@ typedef struct {
     int max_pending;
     bool linear;
 
-    atomic_int pending;
+    fbl::atomic<int> pending;
     sync_completion_t signal;
 } bio_random_args_t;
 
-static atomic_int_fast32_t next_reqid = 0;
+static fbl::atomic<reqid_t> next_reqid(0);
 
 static int bio_random_thread(void* arg) {
-    bio_random_args_t* a = arg;
+    auto* a = reinterpret_cast<bio_random_args_t*>(arg);
 
     size_t off = 0;
     size_t count = a->count;
@@ -144,18 +145,17 @@ static int bio_random_thread(void* arg) {
     size_t dev_off = 0;
 
     while (count > 0) {
-        while (atomic_load(&a->pending) == a->max_pending) {
+        while (a->pending.load() == a->max_pending) {
             sync_completion_wait(&a->signal, ZX_TIME_INFINITE);
             sync_completion_reset(&a->signal);
         }
 
-        block_fifo_request_t req = {
-            .reqid = atomic_fetch_add(&next_reqid, 1),
-            .vmoid = a->blk->vmoid,
-            .opcode = BLOCKIO_READ,
-            .length = xfer,
-            .vmo_offset = off,
-        };
+        block_fifo_request_t req = {};
+        req.reqid = next_reqid.fetch_add(1);
+        req.vmoid = a->blk->vmoid;
+        req.opcode = BLOCKIO_READ;
+        req.length = static_cast<uint32_t>(xfer);
+        req.vmo_offset = off;
 
         if (a->linear) {
             req.dev_offset = dev_off;
@@ -168,7 +168,7 @@ static int bio_random_thread(void* arg) {
             off = 0;
         }
 
-        req.length /= blksize;
+        req.length /= static_cast<uint32_t>(blksize);
         req.dev_offset /= blksize;
         req.vmo_offset /= blksize;
 
@@ -192,7 +192,7 @@ static int bio_random_thread(void* arg) {
             return -1;
         }
 
-        atomic_fetch_add(&a->pending, 1);
+        a->pending.fetch_add(1);
         count--;
     }
     return 0;
@@ -231,12 +231,13 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
             goto fail;
         }
         count--;
-        if (atomic_fetch_sub(&a->pending, 1) == a->max_pending) {
+        if (a->pending.fetch_sub(1) == a->max_pending) {
             sync_completion_signal(&a->signal);
         }
     }
 
-    zx_time_t t1 = zx_clock_get_monotonic();
+    zx_time_t t1;
+    t1 = zx_clock_get_monotonic();
 
     fprintf(stderr, "waiting for thread to exit...\n");
     thrd_join(t, &r);
@@ -274,16 +275,12 @@ void usage(void) {
 int main(int argc, char** argv) {
     blkdev_t blk;
 
-    bio_random_args_t a = {
-        .blk = &blk,
-        .xfer = 32768,
-        .seed = 7891263897612ULL,
-        .max_pending = 128,
-        .pending = 0,
-        .linear = true,
-    };
-
-    a.signal = SYNC_COMPLETION_INIT;
+    bio_random_args_t a = {};
+    a.blk = &blk;
+    a.xfer = 32768;
+    a.seed = 7891263897612ULL;
+    a.max_pending = 128;
+    a.linear = true;
 
     size_t total = 0;
 
@@ -307,7 +304,7 @@ int main(int argc, char** argv) {
             if ((n < 1) || (n > 128)) {
                 error("error: max pending must be between 1 and 128\n");
             }
-            a.max_pending = n;
+            a.max_pending = static_cast<int>(n);
         } else if (!strcmp(argv[0], "-linear")) {
             a.linear = true;
         } else if (!strcmp(argv[0], "-random")) {
