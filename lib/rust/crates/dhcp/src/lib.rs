@@ -12,6 +12,7 @@ extern crate byteorder;
 extern crate bytes;
 #[macro_use]
 extern crate failure;
+extern crate fuchsia_zircon as zx;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;

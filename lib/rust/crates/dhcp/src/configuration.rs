@@ -22,6 +22,7 @@ pub struct ServerConfig {
     /// The IPv4 address of the host running the server.
     pub server_ip: Ipv4Addr,
     /// The default time (in seconds) assigned to IP address leases assigned by the server.
+    // TODO(atait): change field type to zx::Duration
     pub default_lease_time: u32,
     /// The number of bits to mask the subnet address from the host address in an IPv4Addr.
     pub subnet_mask: u8,
@@ -34,7 +35,7 @@ impl ServerConfig {
     pub fn new() -> Self {
         ServerConfig {
             server_ip: Ipv4Addr::new(0, 0, 0, 0),
-            default_lease_time: 0,
+            default_lease_time: 60 * 60 * 24, // One day in seconds
             subnet_mask: 24,
             managed_addrs: vec![],
         }

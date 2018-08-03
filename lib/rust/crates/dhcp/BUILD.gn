@@ -8,6 +8,7 @@ import("//build/package.gni")
 rustc_library("dhcp") {
   with_unit_tests = true
   deps = [
+    "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",

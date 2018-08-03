@@ -4,10 +4,10 @@
 
 use byteorder::{BigEndian, ByteOrder};
 use configuration::ServerConfig;
-use protocol;
-use protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
+use protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
+use zx;
 
 /// A minimal DHCP server.
 ///
@@ -65,7 +65,7 @@ impl Server {
 
     fn get_addr(&mut self, client: &Message) -> Option<Ipv4Addr> {
         if let Some(config) = self.cache.get(&client.chaddr) {
-            if !config.expired {
+            if !config.expired() {
                 return Some(config.client_addr);
             } else if self.pool.addr_is_available(config.client_addr) {
                 self.pool.allocate_addr(config.client_addr);
@@ -91,7 +91,7 @@ impl Server {
         let config = CachedConfig {
             client_addr: client_addr,
             options: client_opts,
-            expired: false,
+            expiration: zx::Duration::from_seconds(self.config.default_lease_time as u64).after_now(),
         };
         self.cache.insert(client_mac, config);
         self.pool.allocate_addr(client_addr);
@@ -153,7 +153,7 @@ type MacAddr = [u8; 6];
 struct CachedConfig {
     client_addr: Ipv4Addr,
     options: Vec<ConfigOption>,
-    expired: bool,
+    expiration: zx::Time,
 }
 
 impl CachedConfig {
@@ -161,8 +161,12 @@ impl CachedConfig {
         CachedConfig {
             client_addr: Ipv4Addr::new(0, 0, 0, 0),
             options: vec![],
-            expired: false,
+            expiration: zx::Time::INFINITE,
         }
+    }
+
+    fn expired(&self) -> bool {
+        self.expiration <= zx::Time::get(zx::ClockId::UTC) 
     }
 }
 
@@ -268,7 +272,7 @@ fn is_assigned(
     req: &Message, requested_ip: Ipv4Addr, cache: &CachedClients, pool: &AddressPool,
 ) -> bool {
     if let Some(client_config) = cache.get(&req.chaddr) {
-        return client_config.client_addr == requested_ip && !client_config.expired
+        return client_config.client_addr == requested_ip && !client_config.expired()
             && pool.addr_is_allocated(requested_ip);
     }
     false
@@ -524,7 +528,7 @@ mod tests {
         let mut server = new_test_server();
         let mut client_config = CachedConfig::new();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.expired = true;
+        client_config.expiration = zx::Time::from_nanos(0);
         server.cache.insert(disc.chaddr, client_config);
         server
             .pool
@@ -545,7 +549,7 @@ mod tests {
         let mut server = new_test_server();
         let mut client_config = CachedConfig::new();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.expired = true;
+        client_config.expiration = zx::Time::from_nanos(0);
         server.cache.insert(disc.chaddr, client_config);
         server
             .pool
@@ -629,7 +633,7 @@ mod tests {
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expired: false,
+                expiration: zx::Time::INFINITE,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -665,7 +669,7 @@ mod tests {
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expired: false,
+                expiration: zx::Time::INFINITE,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -688,7 +692,7 @@ mod tests {
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expired: false,
+                expiration: zx::Time::INFINITE,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -724,7 +728,7 @@ mod tests {
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expired: false,
+                expiration: zx::Time::INFINITE,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -751,7 +755,7 @@ mod tests {
             CachedConfig {
                 client_addr: assigned_ip,
                 options: vec![],
-                expired: false,
+                expiration: zx::Time::INFINITE,
             },
         );
         server.pool.allocate_addr(assigned_ip);
@@ -803,7 +807,7 @@ mod tests {
             CachedConfig {
                 client_addr: client_ip,
                 options: vec![],
-                expired: false,
+                expiration: zx::Time::INFINITE,
             },
         );
         server.pool.allocate_addr(client_ip);
