@@ -89,6 +89,7 @@ pub enum ConnectResult {
 }
 
 // A message from the Client to a user or a group of listeners
+#[derive(Debug)]
 pub enum UserEvent<T: Tokens> {
     ScanFinished {
         token: T::ScanToken,

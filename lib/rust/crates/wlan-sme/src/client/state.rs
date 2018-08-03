@@ -506,6 +506,7 @@ mod tests {
     use super::*;
     use futures::channel::mpsc;
     use client::test_utils::fake_bss_description;
+    use client::UserEvent;
     use std::collections::HashSet;
     use std::iter::FromIterator;
     use Ssid;
@@ -520,20 +521,16 @@ mod tests {
 
     #[test]
     fn associate_happy_path_unprotected() {
-        let state = State::Idle::<FakeTokens>;
         let (mlme_sink, mut mlme_stream) = mpsc::unbounded();
-        let (user_sink, mut _user_stream) = mpsc::unbounded();
+        let (user_sink, mut user_stream) = mpsc::unbounded();
         let mlme_sink = MlmeSink{ sink: mlme_sink };
         let user_sink = UserSink{ sink: user_sink };
         let device_info = fake_device_info();
 
+        let state = State::Idle::<FakeTokens>;
+
         // Issue a "connect" command
-        let cmd = ConnectCommand {
-            bss: Box::new(bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
-            token: Some(123_u32),
-            rsna: None,
-        };
-        let state = state.connect(cmd, &mlme_sink, &user_sink);
+        let state = state.connect(connect_command(), &mlme_sink, &user_sink);
 
         // (sme->mlme) Expect a JoinRequest
         match mlme_stream.try_next().unwrap() {
@@ -584,18 +581,111 @@ mod tests {
                 association_id: 55,
             }
         };
-        let state = state.on_mlme_event(&device_info, assoc_conf, &mlme_sink, &user_sink);
+        let _state = state.on_mlme_event(&device_info, assoc_conf, &mlme_sink, &user_sink);
 
-        // We should now be in the associated state
+        // User should be notified that we are connected
+        match user_stream.try_next().unwrap() {
+            Some(UserEvent::ConnectFinished{ token: 123, result: ConnectResult::Success }) => {},
+            other => panic!("expected a ConnectFinished event, got {:?}", other)
+        }
+    }
+
+    #[test]
+    fn join_failure() {
+        let (mlme_sink, mut _mlme_stream) = mpsc::unbounded();
+        let (user_sink, mut user_stream) = mpsc::unbounded();
+        let mlme_sink = MlmeSink{ sink: mlme_sink };
+        let user_sink = UserSink{ sink: user_sink };
+        let device_info = fake_device_info();
+
+        // Start in a "Joining" state
+        let state = State::Joining::<FakeTokens> { cmd: connect_command() };
+
+        // (mlme->sme) Send an unsuccessful JoinConf
+        let join_conf = MlmeEvent::JoinConf {
+            resp: fidl_mlme::JoinConfirm {
+                result_code: fidl_mlme::JoinResultCodes::JoinFailureTimeout
+            }
+        };
+        let state = state.on_mlme_event(&device_info, join_conf, &mlme_sink, &user_sink);
+        assert_idle(state);
+
+        // User should be notified that connection attempt failed
+        match user_stream.try_next().unwrap() {
+            Some(UserEvent::ConnectFinished{ token: 123, result: ConnectResult::Failed }) => {},
+            other => panic!("expected a ConnectFinished event, got {:?}", other)
+        }
+    }
+
+    #[test]
+    fn authenticate_failure() {
+        let (mlme_sink, mut _mlme_stream) = mpsc::unbounded();
+        let (user_sink, mut user_stream) = mpsc::unbounded();
+        let mlme_sink = MlmeSink{ sink: mlme_sink };
+        let user_sink = UserSink{ sink: user_sink };
+        let device_info = fake_device_info();
+
+        // Start in an "Authenticating" state
+        let state = State::Authenticating::<FakeTokens> { cmd: connect_command() };
+
+        // (mlme->sme) Send an unsuccessful AuthenticateConf
+        let auth_conf = MlmeEvent::AuthenticateConf {
+            resp: fidl_mlme::AuthenticateConfirm {
+                peer_sta_address: [7, 7, 7, 7, 7, 7],
+                auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+                result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+            }
+        };
+        let state = state.on_mlme_event(&device_info, auth_conf, &mlme_sink, &user_sink);
+        assert_idle(state);
+
+        // User should be notified that connection attempt failed
+        match user_stream.try_next().unwrap() {
+            Some(UserEvent::ConnectFinished{ token: 123, result: ConnectResult::Failed }) => {},
+            other => panic!("expected a ConnectFinished event, got {:?}", other)
+        }
+    }
+
+    #[test]
+    fn associate_failure() {
+        let (mlme_sink, mut _mlme_stream) = mpsc::unbounded();
+        let (user_sink, mut user_stream) = mpsc::unbounded();
+        let mlme_sink = MlmeSink{ sink: mlme_sink };
+        let user_sink = UserSink{ sink: user_sink };
+        let device_info = fake_device_info();
+
+        // Start in an "Associating" state
+        let state = State::Associating::<FakeTokens> { cmd: connect_command() };
+
+        // (mlme->sme) Send an unsuccessful AssociateConf
+        let assoc_conf = MlmeEvent::AssociateConf {
+            resp: fidl_mlme::AssociateConfirm {
+                result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                association_id: 0,
+            }
+        };
+        let state = state.on_mlme_event(&device_info, assoc_conf, &mlme_sink, &user_sink);
+        assert_idle(state);
+
+        // User should be notified that connection attempt failed
+        match user_stream.try_next().unwrap() {
+            Some(UserEvent::ConnectFinished{ token: 123, result: ConnectResult::Failed }) => {},
+            other => panic!("expected a ConnectFinished event, got {:?}", other)
+        }
+    }
+
+    fn assert_idle(state: State<FakeTokens>) {
         match state {
-            State::Associated { bss, link_state, .. } => {
-                assert_eq!([ 7, 7, 7, 7, 7, 7 ], bss.bssid);
-                match link_state {
-                    LinkState::LinkUp(None) => {},
-                    other => panic!("Wrong link state {:?}", other)
-                }
-            },
-            other => panic!("Expected an Associated state, got {:?}", other)
+            State::Idle => {},
+            other => panic!("Expected Idle state, got {:?}", other)
+        }
+    }
+
+    fn connect_command() -> ConnectCommand<u32> {
+        ConnectCommand {
+            bss: Box::new(bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
+            token: Some(123_u32),
+            rsna: None,
         }
     }
 
