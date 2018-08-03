@@ -1,0 +1,29 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("expr") {
+  sources = [
+    "expr_token.h",
+    "expr_tokenizer.cc",
+    "expr_tokenizer.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/zxdb/client:common",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "expr_tokenizer_unittest.cc",
+  ]
+
+  deps = [
+    ":expr",
+    "//third_party/googletest:gtest",
+  ]
+}

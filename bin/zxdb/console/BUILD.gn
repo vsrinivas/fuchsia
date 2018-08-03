@@ -58,6 +58,7 @@ static_library("console") {
   deps = []
   public_deps = [
     "//garnet/bin/zxdb/client",
+    "//garnet/bin/zxdb/expr",
     "//garnet/public/lib/fxl",
   ]
 

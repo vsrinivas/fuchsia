@@ -28,6 +28,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       "//garnet/bin/zxdb/client:tests",
       "//garnet/bin/zxdb/console:tests",
+      "//garnet/bin/zxdb/expr:tests",
       "//garnet/lib/debug_ipc:tests",
       "//garnet/lib/debug_ipc/helper:tests",
       "//third_party/googletest:gtest_main",
