@@ -10,7 +10,7 @@
 
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/console.h"
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/client/session.h"
 
 namespace zxdb {

@@ -6,10 +6,10 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/client/file_util.h"
-#include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbol_index_node.h"
+#include "garnet/bin/zxdb/common/file_util.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"

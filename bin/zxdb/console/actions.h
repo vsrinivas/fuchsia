@@ -6,8 +6,8 @@
 #include <functional>
 #include <limits>
 
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/console.h"
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/public/lib/fxl/command_line.h"
 
 #pragma once

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"

@@ -10,7 +10,7 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

@@ -7,7 +7,7 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/ref_counted.h"
 

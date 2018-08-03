@@ -8,7 +8,7 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "gtest/gtest.h"

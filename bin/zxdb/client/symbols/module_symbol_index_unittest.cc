@@ -6,9 +6,9 @@
 #include <time.h>
 #include <ostream>
 
-#include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

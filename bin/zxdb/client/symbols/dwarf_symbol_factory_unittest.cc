@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
-#include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/data_member.h"
 #include "garnet/bin/zxdb/client/symbols/dwarf_test_util.h"
@@ -14,6 +13,7 @@
 #include "garnet/bin/zxdb/client/symbols/symbol.h"
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

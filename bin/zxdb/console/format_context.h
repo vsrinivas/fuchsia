@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 
 namespace zxdb {

@@ -15,6 +15,7 @@ static_library("client") {
     "breakpoint_location.h",
     "breakpoint_observer.h",
     "breakpoint_settings.h",
+    "client_object.h",
     "disassembler.h",
     "frame.h",
     "input_location.h",
@@ -41,6 +42,7 @@ static_library("client") {
     "breakpoint_location.cc",
     "breakpoint_location_impl.cc",
     "breakpoint_location_impl.h",
+    "client_object.cc",
     "disassembler.cc",
     "frame.cc",
     "frame_impl.cc",
@@ -73,8 +75,8 @@ static_library("client") {
   ]
 
   public_deps = [
-    ":common",
     "symbols",
+    "//garnet/bin/zxdb/common",
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
@@ -85,30 +87,6 @@ static_library("client") {
   deps = [
     "//third_party/llvm/lib/MC",
     "//third_party/llvm/lib/Object",
-  ]
-}
-
-# Shared low-level stuff between "client" and "symbols".
-static_library("common") {
-  public = [
-    "address_range.h",
-    "client_object.h",
-    "err.h",
-    "file_util.h",
-    "host_util.h",
-    "string_util.h",
-  ]
-  sources = [
-    "address_range.cc",
-    "client_object.cc",
-    "err.cc",
-    "file_util.cc",
-    "host_util.cc",
-    "string_util.cc",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -135,7 +113,6 @@ source_set("tests") {
   sources = [
     "breakpoint_impl_unittest.cc",
     "disassembler_unittest.cc",
-    "file_util_unittest.cc",
     "memory_dump_unittest.cc",
     "process_impl_unittest.cc",
     "register_unittest.cc",

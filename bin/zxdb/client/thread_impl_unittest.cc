@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/thread_impl.h"
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/remote_api_test.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "gtest/gtest.h"
 

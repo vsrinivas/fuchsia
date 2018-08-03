@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"

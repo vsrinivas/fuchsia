@@ -10,7 +10,7 @@ static_library("expr") {
   ]
 
   public_deps = [
-    "//garnet/bin/zxdb/client:common",
+    "//garnet/bin/zxdb/common",
     "//garnet/public/lib/fxl",
   ]
 }

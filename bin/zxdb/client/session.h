@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/public/lib/fxl/memory/ref_ptr.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 

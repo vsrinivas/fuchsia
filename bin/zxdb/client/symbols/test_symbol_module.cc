@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
 
-#include "garnet/bin/zxdb/client/host_util.h"
+#include "garnet/bin/zxdb/common/host_util.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"

@@ -4,9 +4,9 @@
 
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 
-#include "garnet/bin/zxdb/client/file_util.h"
-#include "garnet/bin/zxdb/client/host_util.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
+#include "garnet/bin/zxdb/common/file_util.h"
+#include "garnet/bin/zxdb/common/host_util.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "garnet/public/lib/fxl/strings/string_view.h"
 #include "garnet/public/lib/fxl/strings/trim.h"

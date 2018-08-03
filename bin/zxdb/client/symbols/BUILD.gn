@@ -83,7 +83,7 @@ static_library("symbols") {
   # This library can not use any part of the debugger other than the "common"
   # base helpers.
   public_deps = [
-    "..:common",
+    "//garnet/bin/zxdb/common",
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",

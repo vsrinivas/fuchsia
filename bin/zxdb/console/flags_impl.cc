@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/flags.h"
 #include "garnet/bin/zxdb/console/flags_impl.h"
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/public/lib/fxl/files/file.h"
 #include "garnet/public/lib/fxl/files/path.h"
 #include "garnet/public/lib/fxl/strings/split_string.h"

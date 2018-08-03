@@ -10,7 +10,6 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_controller.h"
 #include "garnet/bin/zxdb/client/breakpoint_location_impl.h"
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -21,6 +20,7 @@
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
 namespace zxdb {

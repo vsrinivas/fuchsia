@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/console/output_buffer.h"
 
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/public/lib/fxl/strings/split_string.h"
 

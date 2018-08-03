@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/client/mock_process.h"
 
-#include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/records.h"
 

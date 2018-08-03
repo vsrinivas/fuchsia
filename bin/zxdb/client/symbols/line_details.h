@@ -9,8 +9,8 @@
 #include <iosfwd>
 #include <vector>
 
-#include "garnet/bin/zxdb/client/address_range.h"
 #include "garnet/bin/zxdb/client/symbols/file_line.h"
+#include "garnet/bin/zxdb/common/address_range.h"
 
 namespace zxdb {
 

@@ -8,7 +8,7 @@
 #include <map>
 #include <set>
 
-#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/nouns.h"
 #include "garnet/public/lib/fxl/logging.h"

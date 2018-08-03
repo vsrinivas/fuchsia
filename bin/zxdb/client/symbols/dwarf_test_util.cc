@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_test_util.h"
 
-#include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/dwarf_die_decoder.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 
 namespace zxdb {
 
