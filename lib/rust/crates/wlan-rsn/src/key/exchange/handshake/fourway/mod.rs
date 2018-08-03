@@ -37,12 +37,46 @@ pub enum MessageNumber {
 // IEEE Std 802.11-2016, 12.7.6.
 // TODO(hahnr): Make constructable only from a VerifiedKeyFrame.
 pub struct FourwayHandshakeKeyFrame<'a> {
-    pub frame: &'a eapol::KeyFrame,
-    pub kd_plaintext: Bytes,
+    frame: &'a eapol::KeyFrame,
+    kd_plaintext: Bytes,
 }
 
 impl <'a> FourwayHandshakeKeyFrame<'a> {
-    pub fn get(&self) -> &eapol::KeyFrame {
+
+    pub fn from_verified(
+        valid_frame: VerifiedKeyFrame<'a>, role: &Role, nonce: &[u8])
+        -> Result<FourwayHandshakeKeyFrame<'a>, failure::Error>
+    {
+        let frame = valid_frame.get();
+        let kd_plaintext = valid_frame.key_data_plaintext();
+
+        // Drop messages which were not expected by the configured role.
+        let msg_no = message_number(frame);
+        match role {
+            // Authenticator should only receive message 2 and 4.
+            Role::Authenticator => match msg_no {
+                MessageNumber::Message2 | MessageNumber::Message4 => {},
+                _ => return Err(Error::Unexpected4WayHandshakeMessage(msg_no).into()),
+            },
+            Role::Supplicant => match msg_no {
+                MessageNumber::Message1 | MessageNumber::Message3 => {},
+                _ => return Err(Error::Unexpected4WayHandshakeMessage(msg_no).into()),
+            },
+        };
+
+        // Explicit validation based on the frame's message number.
+        let msg_no = message_number(frame);
+        match msg_no {
+            MessageNumber::Message1 => validate_message_1(frame),
+            MessageNumber::Message2 => validate_message_2(frame),
+            MessageNumber::Message3 => validate_message_3(frame, nonce),
+            MessageNumber::Message4 => validate_message_4(frame),
+        }?;
+
+        Ok(FourwayHandshakeKeyFrame{ frame, kd_plaintext: Bytes::from(kd_plaintext) })
+    }
+
+    pub fn get(&self) -> &'a eapol::KeyFrame {
         self.frame
     }
     pub fn key_data_plaintext(&self) -> &[u8] {
@@ -99,55 +133,17 @@ impl Fourway {
         })
     }
 
-    pub fn on_eapol_key_frame(&mut self, valid_frame: VerifiedKeyFrame) -> SecAssocResult {
-        let fourway_frame = self.verify_eapol_key_frame(valid_frame)?;
-        match &mut self.handler {
-            RoleHandler::Authenticator(a) => a.on_eapol_key_frame(fourway_frame),
-            RoleHandler::Supplicant(s) => s.on_eapol_key_frame(fourway_frame),
-        }
-    }
-
-    fn verify_eapol_key_frame<'a>(&self, valid_frame: VerifiedKeyFrame<'a>)
-        -> Result<FourwayHandshakeKeyFrame<'a>, failure::Error>
-    {
-        let VerifiedKeyFrame{frame, kd_plaintext} = valid_frame;
-
-        // Drop messages which were not expected by the configured role.
-        let msg_no = message_number(frame);
-        match self.cfg.role {
-            // Authenticator should only receive message 2 and 4.
-            Role::Authenticator => match msg_no {
-                MessageNumber::Message2 | MessageNumber::Message4 => Ok(()),
-                _ => Err(Error::Unexpected4WayHandshakeMessage(msg_no)),
+    pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
+         match &mut self.handler {
+            RoleHandler::Authenticator(a) => {
+                let frame = FourwayHandshakeKeyFrame::from_verified(frame, &self.cfg.role, a.snonce())?;
+                a.on_eapol_key_frame(frame)
             },
-            Role::Supplicant => match msg_no {
-                MessageNumber::Message1 | MessageNumber::Message3 => Ok(()),
-                _ => Err(Error::Unexpected4WayHandshakeMessage(msg_no)),
+            RoleHandler::Supplicant(s) => {
+                let frame = FourwayHandshakeKeyFrame::from_verified(frame, &self.cfg.role, s.anonce())?;
+                s.on_eapol_key_frame(frame)
             },
-        }.map_err(|e| failure::Error::from(e))?;
-
-        // Explicit validation based on the frame's message number.
-        let msg_no = message_number(frame);
-        match msg_no {
-            MessageNumber::Message1 => validate_message_1(frame),
-            MessageNumber::Message2 => validate_message_2(frame),
-            MessageNumber::Message3 => validate_message_3(frame),
-            MessageNumber::Message4 => validate_message_4(frame),
-        }?;
-
-        // IEEE Std 802.11-2016, 12.7.2, e)
-        // Nonce is validated based on the frame's message number.
-        // Verify that nonce from 3rd message matches the one from the 1st message.
-        if let MessageNumber::Message3 = msg_no {
-            match &self.handler {
-                RoleHandler::Supplicant(s) if &frame.key_nonce[..] != s.anonce() => {
-                    return Err(Error::ErrorNonceDoesntMatch.into())
-                },
-                _ => {},
-            };
         }
-
-        Ok(FourwayHandshakeKeyFrame{ frame, kd_plaintext: Bytes::from(kd_plaintext) })
     }
 
 }
@@ -238,7 +234,9 @@ fn validate_message_2(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     }
 }
 
-fn validate_message_3(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
+fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8])
+    -> Result<(), failure::Error>
+{
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     // Install = 0 is only used in key mapping with TKIP and WEP, neither is supported by Fuchsia.
     if !frame.key_info.install() {
@@ -262,7 +260,7 @@ fn validate_message_3(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     } else if !frame.key_info.encrypted_key_data() {
         Err(Error::InvalidEncryptedKeyDataBitValue(message_number(frame)).into())
     // IEEE Std 802.11-2016, 12.7.2 e)
-    } else if is_zero(&frame.key_nonce[..]) {
+    } else if is_zero(&frame.key_nonce[..]) || &frame.key_nonce[..] != nonce {
         Err(Error::InvalidNonce(message_number(frame)).into())
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.4

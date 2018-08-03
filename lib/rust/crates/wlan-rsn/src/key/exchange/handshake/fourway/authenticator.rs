@@ -28,4 +28,8 @@ impl Authenticator {
         // TODO(hahnr): Implement.
         Ok(vec![])
     }
+
+    pub fn snonce(&self) -> &[u8]{
+        &self.s_nonce[..]
+    }
 }
