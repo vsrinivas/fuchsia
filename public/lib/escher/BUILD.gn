@@ -12,7 +12,9 @@ package("escher_tests") {
     "test:escher_unittests",
   ]
 
-  binary = "escher_unittests"
+  tests = [
+    { name = "escher_unittests" },
+  ]
 
   meta = [
     {

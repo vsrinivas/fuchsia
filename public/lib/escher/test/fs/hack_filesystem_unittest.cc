@@ -9,7 +9,12 @@
 namespace {
 using namespace escher;
 
+// TODO(ES-116): figure out how to make files available to 'fx run-test'
+#ifdef __Fuchsia__
+TEST(HackFilesystem, DISABLED_Init) {
+#else
 TEST(HackFilesystem, Init) {
+#endif
   auto fs = HackFilesystem::New();
   bool success =
       fs->InitializeWithRealFiles({"shaders/model_renderer/main.vert"});
