@@ -16,7 +16,7 @@ import (
 type socketProviderImpl struct{}
 
 func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p net.SocketProtocol) (zx.Socket, int32, error) {
-	spath := socketPath{version: 4, domain: int(d), typ: int(t), protocol: int(p)}
+	spath := socketPath{domain: int(d), typ: int(t), protocol: int(p)}
 	var s zx.Handle
 	if err := ns.dispatcher.opSocket(zx.Handle(0), spath, func(peerS zx.Handle) { s = peerS }); err != nil {
 		return zx.Socket(zx.Handle(0)), 0, err
