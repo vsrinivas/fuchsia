@@ -6,6 +6,7 @@
 
 #include "amlogic-video.h"
 #include "h264_decoder.h"
+#include "pts_manager.h"
 #include "vdec1.h"
 
 #include <lib/fidl/cpp/clone.h>
@@ -135,6 +136,7 @@ void CodecAdapterH264::CoreCodecInit(
 // create/init from stream init further down.
 void CodecAdapterH264::CoreCodecStartStream(
     std::unique_lock<std::mutex>& lock) {
+  video_->pts_manager_ = std::make_unique<PtsManager>();
   video_->core_ = std::make_unique<Vdec1>(video_);
   video_->core()->PowerOn();
   zx_status_t status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
