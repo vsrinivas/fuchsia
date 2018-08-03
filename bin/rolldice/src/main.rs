@@ -2,103 +2,57 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use] extern crate structopt;
 extern crate rand;
+extern crate rolldice;
+#[macro_use] extern crate structopt;
 
-use rand::{thread_rng, Rng, Rand};
-use std::fmt;
+use rand::{thread_rng, Rng};
 use structopt::StructOpt;
-
-const corner : char = '+';
-const horiz  : char = '-';
-const vert   : char = '|';
-const pip    : char = '*';
-const blank  : char = ' ';
-
-enum RollResult {
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-}
-
-impl Rand for RollResult {
-    fn rand<R: Rng>(rng: &mut R) -> RollResult {
-        match rng.gen_range(0, 6) {
-            0 => RollResult::One,
-            1 => RollResult::Two,
-            2 => RollResult::Three,
-            3 => RollResult::Four,
-            4 => RollResult::Five,
-            _ => RollResult::Six,
-        }
-    }
-}
-
-impl fmt::Display for RollResult {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pips = match self {
-            RollResult::One => [
-                [blank, blank, blank],
-                [blank, pip,   blank],
-                [blank, blank, blank],
-            ],
-            RollResult::Two => [
-                [blank, blank, pip],
-                [blank, blank, blank],
-                [pip,   blank, blank],
-            ],
-            RollResult::Three => [
-                [blank, blank, pip],
-                [blank, pip,   blank],
-                [pip,   blank, blank],
-            ],
-            RollResult::Four => [
-                [pip,   blank, pip],
-                [blank, blank, blank],
-                [pip,   blank, pip],
-            ],
-            RollResult::Five => [
-                [pip,   blank, pip],
-                [blank, pip,   blank],
-                [pip,   blank, pip],
-            ],
-            RollResult::Six => [
-                [pip,   blank, pip],
-                [pip,   blank, pip],
-                [pip,   blank, pip],
-            ],
-        };
-
-        writeln!(f, "{}{}{}{}{}", corner, horiz, horiz, horiz, corner);
-        for row in &pips {
-            write!(f, "{}", vert);
-            for c in row {
-                write!(f, "{}", c);
-            }
-            writeln!(f, "{}", vert);
-        }
-        writeln!(f, "{}{}{}{}{}", corner, horiz, horiz, horiz, corner);
-
-        Ok(())
-    }
-}
+use rolldice::*;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name="rolldice", bin_name="rolldice", about="Rolls some number of 6 sided dice.")]
 struct Config {
     #[structopt(help="Number of dice", default_value="1")]
-    number_of_dice: u16
+    number_of_dice: u16,
+
+    #[structopt(short="r", long="rowsize", help="Maximum dice per row", default_value="8")]
+    dice_per_row: u16,
+}
+
+fn print_row(rolls : &[RollResult]) {
+    // A RollResult can be formatted into a multiline String. Using this primitive:
+
+    // 1. Format all the provided RollResult instances into Strings.
+    let formatted : Vec<_> = rolls.iter().map(|roll| format!("{}", roll)).collect();
+
+    // 2. Create iterators for each string that yield lines from the string.
+    let iters : Vec<_> = formatted.iter().map(|s| s.lines()).collect();
+
+    // 3. Print each String's first line as a single line, then each String's second line, etc.
+    for parts in multizip(iters) {
+        let line = parts.as_slice().join(" ");
+        println!("{}", line);
+    }
 }
 
 fn main() {
     let config = Config::from_args();
 
+    if config.dice_per_row == 0 {
+        eprintln!("--rowsize must be greater than 0");
+        std::process::exit(1);
+    }
+
+    // Generate the requested number of die rolls.
     let mut rng = thread_rng();
-    for i in 0..config.number_of_dice {
-        let roll : RollResult = rng.gen();
-        println!("{}", roll);
+    let mut rolls = Vec::new();
+    for _ in 0..config.number_of_dice {
+        rolls.push(rng.gen());
+    }
+
+    // Format and display them in rows no larger than dice_per_row.
+    for group in rolls.as_slice().chunks(config.dice_per_row as usize) {
+        print_row(group);
     }
 }

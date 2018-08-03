@@ -3,13 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "rolldice"
   deps = [
+    ":lib",
     "//third_party/rust-crates/rustc_deps:rand",
     "//third_party/rust-crates/rustc_deps:structopt",
+  ]
+}
+
+rustc_library("lib") {
+  name = "rolldice"
+  with_unit_tests = true
+  deps = [
+    "//third_party/rust-crates/rustc_deps:rand",
   ]
 }
 
@@ -19,4 +29,16 @@ package("rolldice") {
   ]
 
   binary = "rolldice"
+}
+
+package("rolldice-tests") {
+  testonly = true
+
+  deps = [
+    ":lib",
+  ]
+
+  tests = [
+    { name = "rolldice_lib_test_rustc" },
+  ]
 }
