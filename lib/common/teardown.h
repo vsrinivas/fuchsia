@@ -20,18 +20,16 @@ constexpr auto kBasicTimeout = zx::sec(1);
 // automatically as needed rather than hardcoded.
 
 // fuchsia::modular::Agent + overhead.
-constexpr auto kAgentRunnerTimeout = zx::duration(kBasicTimeout.get() * 2);
+constexpr auto kAgentRunnerTimeout = kBasicTimeout * 2;
 
 // Stories + overhead.
-constexpr auto kStoryProviderTimeout = zx::duration(kBasicTimeout.get() * 2);
+constexpr auto kStoryProviderTimeout = kBasicTimeout * 2;
 
 // Multiple parts as described.
 constexpr auto kUserRunnerTimeout =
-    zx::duration(kBasicTimeout.get() * 3 + kAgentRunnerTimeout.get() +
-                 kStoryProviderTimeout.get());
+    kBasicTimeout * 3 + kAgentRunnerTimeout + kStoryProviderTimeout;
 
-constexpr auto kUserProviderTimeout =
-    zx::duration(kBasicTimeout.get() + kUserRunnerTimeout.get());
+constexpr auto kUserProviderTimeout = kBasicTimeout + kUserRunnerTimeout;
 
 }  // namespace modular
 
