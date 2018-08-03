@@ -51,10 +51,12 @@ pub fn new_client(iface_id: u16,
         sme,
         ess_store: Arc::clone(&ess_store)
     };
-    let state_machine = auto_connect_state(services, req_receiver.next()).into_future()
-        .map(Never::never_into::<()>)
-        .recover::<Never, _>(move |e| eprintln!("wlancfg: Client station state machine \
-                    for iface {} terminated with an error: {}", iface_id, e));
+    let state_machine = future::lazy(move |_| {
+        auto_connect_state(services, req_receiver.next()).into_future()
+            .map(Never::never_into::<()>)
+            .recover::<Never, _>(move |e| eprintln!("wlancfg: Client station state machine \
+                    for iface {} terminated with an error: {}", iface_id, e))
+    });
     let removal_watcher = sme_event_stream.for_each(|_| Ok(()))
         .map(move |_| println!("wlancfg: Client station removed (iface {})", iface_id))
         .recover::<Never, _>(move |e|
