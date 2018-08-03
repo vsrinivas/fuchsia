@@ -239,24 +239,11 @@ void CodecAdapterH264::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
   }
   FXL_DCHECK(!is_cancelling_input_processing_);
 
-  // BEGIN TEMPORARY HACK
-  //
-  // TODO(dustingreen): This method needs to actually ensure the old stream is
-  // completely off the HW - as in won't generate any more output, won't
-  // interfere with the rest of this method or with starting a new stream.  At
-  // the moment I don't yet know how to detect HW totally done or how to cleanly
-  // stop the HW before it's done with already-queued input, so for the moment
-  // this timing-based hack will sometimes/maybe avoid having the HW still
-  // producing output beyond this arbitrary delay here.  This delay is obviously
-  // very bad for multiple reasons and is intended to be entirely temporary.
-  // We'll need to either cleanly stop the HW from processing any more of the
-  // already-queued input, or keep less queued at the HW's input to make waiting
-  // for idle HW nice and fast here.
-  lock.unlock();
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-  lock.lock();
-  //
-  // END TEMPORARY HACK
+  // Stop processing queued frames.
+  if (video_->core()) {
+    video_->core()->StopDecoding();
+    video_->core()->WaitForIdle();
+  }
 
   is_cancelling_output_processing_ = true;
   std::condition_variable stop_output_processing_condition;
