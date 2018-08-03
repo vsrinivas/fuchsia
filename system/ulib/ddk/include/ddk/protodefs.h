@@ -41,6 +41,7 @@ DDK_PROTOCOL_DEF(USB_FUNCTION,   'pUSF', "usb-function", 0)
 DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci", 0)  // Host Controller Interface
 DDK_PROTOCOL_DEF(USB_MODE_SWITCH,'pUMS', "usb-mode-switch", 0)
 DDK_PROTOCOL_DEF(USB_DBC,        'pUDB', "usb-dbc", 0) // Debug Capability
+DDK_PROTOCOL_DEF(USB_TESTER,     'pUTR', "usb-tester", 0)
 DDK_PROTOCOL_DEF(USB_TEST_FWLOADER, 'pUTF', "usb-test-fwloader", 0)
 DDK_PROTOCOL_DEF(BT_HCI,         'pBHC', "bt-hci", 0)
 DDK_PROTOCOL_DEF(BT_TRANSPORT,   'pBTR', "bt-transport", 0)
