@@ -72,8 +72,6 @@ class FakeChannel : public Channel {
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
 
  private:
-  void set_peer(fxl::WeakPtr<FakeChannel> peer) { peer_ = peer; }
-
   hci::ConnectionHandle handle_;
   Fragmenter fragmenter_;
 
@@ -89,10 +87,6 @@ class FakeChannel : public Channel {
 
   bool activate_fails_;
   bool link_error_;
-
-  // Another fake channel that this was paired with, if any. Paired channels
-  // bounce packets between eachother.
-  fxl::WeakPtr<FakeChannel> peer_;
 
   fxl::WeakPtrFactory<FakeChannel> weak_ptr_factory_;
 

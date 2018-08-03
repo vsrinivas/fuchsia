@@ -92,14 +92,8 @@ void FakeChannel::SignalLinkError() {
 bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(sdu);
 
-  if (!send_cb_) {
-    if (peer_) {
-      peer_->Receive(*sdu);
-      return true;
-    }
-
+  if (!send_cb_)
     return false;
-  }
 
   FXL_DCHECK(send_dispatcher_);
   async::PostTask(send_dispatcher_,
