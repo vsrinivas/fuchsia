@@ -32,6 +32,10 @@ class DeviceCtx {
 
   DeviceFidl* device_fidl() { return device_fidl_.get(); }
 
+  CodecAdmissionControl* codec_admission_control() {
+    return &codec_admission_control_;
+  }
+
  private:
   DriverCtx* driver_ = nullptr;
 
@@ -56,6 +60,12 @@ class DeviceCtx {
   //
 
   std::unique_ptr<DeviceFidl> device_fidl_;
+
+  //
+  // Codec admission control:
+  //
+
+  CodecAdmissionControl codec_admission_control_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_CTX_H_

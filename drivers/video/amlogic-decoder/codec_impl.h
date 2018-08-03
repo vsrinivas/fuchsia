@@ -7,6 +7,7 @@
 
 #include "codec_adapter.h"
 #include "codec_adapter_events.h"
+#include "codec_admission_control.h"
 #include "codec_buffer.h"
 #include "codec_packet.h"
 
@@ -64,7 +65,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
                   public CodecAdapterEvents,
                   private CodecAdapter {
  public:
-  CodecImpl(DeviceCtx* device,
+  CodecImpl(std::unique_ptr<CodecAdmission> codec_admission, DeviceCtx* device,
             std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params>
                 video_decoder_params,
             fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request);
@@ -226,6 +227,18 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
     bool input_end_of_stream_ = false;
     bool output_end_of_stream_ = false;
   };
+
+  // While we list this first in the member variables to hint that this gets
+  // destructed last, the actual mechanism of destruction of the CodecAdmission
+  // is via posting to the shared_fidl_thread(), because if we add more stuff in
+  // various base classes of this class we want the destruction of
+  // CodecAdmission to happen last.  The close processing won't be considered
+  // done until after this is destructed.
+  //
+  // See codec_admission_control.h for comments re. how we'll avoid failing a
+  // create that is requested by a client shortly after the client closes the
+  // previous Codec channel, when there's a concurrency cap of 1 (for example).
+  std::unique_ptr<CodecAdmission> codec_admission_;
 
   // Parts of CodecImpl are accessed from shared_fidl_thread(),
   // stream_control_thread_, and decoder thread(s) such as interrupt handling

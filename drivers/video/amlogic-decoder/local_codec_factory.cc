@@ -8,9 +8,12 @@
 
 #include "codec_adapter_h264.h"
 #include "codec_adapter_mpeg2.h"
+#include "codec_admission_control.h"
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/logging.h>
+
+#include <optional>
 
 namespace {
 
@@ -103,11 +106,19 @@ LocalCodecFactory::~LocalCodecFactory() {
 
 void LocalCodecFactory::SetErrorHandler(fit::closure error_handler) {
   FXL_DCHECK(!factory_binding_.is_bound());
-  factory_binding_.set_error_handler(
-      [this, error_handler = std::move(error_handler)] {
-        FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
-        error_handler();
-      });
+  factory_binding_.set_error_handler([this, error_handler = std::move(
+                                                error_handler)]() mutable {
+    FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+    // This queues after the similar posting in CreateDecoder() (via
+    // TryAddCodec()), so that LocalCodecFactory won't get deleted until
+    // after previously-started TryAddCodec()s are done.
+    device_->codec_admission_control()->PostAfterPreviouslyStartedClosesDone(
+        [this, error_handler = std::move(error_handler)] {
+          FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+          error_handler();
+          // "this" is gone
+        });
+  });
   is_error_handler_set_ = true;
 }
 
@@ -152,14 +163,32 @@ void LocalCodecFactory::CreateDecoder(
     return;
   }
 
-  std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
-      device_,
-      std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
-          std::move(video_decoder_params)),
-      std::move(video_decoder));
+  // We also post to the same queue in the set_error_handler() lambda, so that
+  // we know the LocalCodecFactory will remain alive until after this lambda
+  // completes.
+  //
+  // The factory pointer remains valid for whole lifetime of this devhost
+  // process.
+  device_->codec_admission_control()->TryAddCodec(
+      [this, video_decoder_params = std::move(video_decoder_params),
+       video_decoder = std::move(video_decoder),
+       factory](std::unique_ptr<CodecAdmission> codec_admission) mutable {
+        if (!codec_admission) {
+          // We can't create another Codec presently.
+          //
+          // ~video_decoder will take care of closing the channel.
+          return;
+        }
 
-  codec->SetCoreCodecAdapter(
-      factory->create(codec->lock(), codec.get(), device_->video()));
+        std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
+            std::move(codec_admission), device_,
+            std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
+                std::move(video_decoder_params)),
+            std::move(video_decoder));
 
-  device_->device_fidl()->BindCodecImpl(std::move(codec));
+        codec->SetCoreCodecAdapter(
+            factory->create(codec->lock(), codec.get(), device_->video()));
+
+        device_->device_fidl()->BindCodecImpl(std::move(codec));
+      });
 }

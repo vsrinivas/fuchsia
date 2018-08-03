@@ -293,8 +293,10 @@ void CodecAdapterH264::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
     video_->video_decoder_.reset();
   }  // ~lock
   if (video_->core_) {
+    printf("video_->core_->PowerOff()...\n");
     video_->core_->PowerOff();
     video_->core_.reset();
+    printf("video_->core_.reset() done\n");
   }
 
   // The lifetime of this buffer is different than the others in video_, so we

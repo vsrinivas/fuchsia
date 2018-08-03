@@ -131,11 +131,12 @@ uint32_t BufferCountFromPortSettings(
 }  // namespace
 
 CodecImpl::CodecImpl(
-    DeviceCtx* device,
+    std::unique_ptr<CodecAdmission> codec_admission, DeviceCtx* device,
     std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
     fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request)
     // The parameters to CodecAdapter constructor here aren't important.
     : CodecAdapter(lock_, this),
+      codec_admission_(std::move(codec_admission)),
       device_(device),
       // TODO(dustingreen): Maybe have another parameter for encoder params, or
       // maybe separate constructor.
@@ -161,6 +162,15 @@ CodecImpl::~CodecImpl() {
 
   FXL_DCHECK(was_unbind_started_ && was_unbind_completed_ ||
              !was_logically_bound_);
+
+  // Ensure the CodecAdmission is deleted entirely after ~this, including after
+  // any relevant base class destructors have run.
+  device_->driver()->PostToSharedFidl(
+      [codec_admission = std::move(codec_admission_)] {
+        // Nothing else to do here.
+        //
+        // ~codec_admission
+      });
 }
 
 std::mutex& CodecImpl::lock() { return lock_; }
@@ -1461,14 +1471,17 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   // Now we have input configured, and output configured if needed by the core
   // codec, so we can move the core codec to running state.
   CoreCodecStartStream(lock);
+
   // Track this so the core codec doesn't have to bother with "ensure"
   // semantics, just start/stop, where stop isn't called unless the core codec
   // has a started stream.
   is_core_codec_stream_started_ = true;
+
   return true;
 }
 
 void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
+  FXL_DCHECK(thrd_current() == stream_control_thread_);
   // Stop the core codec, by using this thread to directly drive the core codec
   // from running to stopped (if not already stopped).  We do this first so the
   // core codec won't try to send us output while we have no stream at the Codec

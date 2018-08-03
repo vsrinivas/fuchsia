@@ -80,6 +80,8 @@ source_set("sources") {
     "codec_adapter_h264.h",
     "codec_adapter_mpeg2.cc",
     "codec_adapter_mpeg2.h",
+    "codec_admission_control.cc",
+    "codec_admission_control.h",
     "codec_buffer.cc",
     "codec_buffer.h",
     "codec_impl.cc",
