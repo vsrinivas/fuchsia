@@ -118,6 +118,7 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
 
   flushed_ = true;
   SetEndOfStreamPts(fuchsia::media::kUnspecifiedTime);
+  input_packet_request_outstanding_ = false;
 
   audio_renderer_->Flush(
       fxl::MakeCopyable([this, callback = std::move(callback)]() {
@@ -132,6 +133,8 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK(packet);
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(bytes_per_frame_ != 0);
+
+  input_packet_request_outstanding_ = false;
 
   int64_t now = media::Timeline::local_now();
   UpdateTimeline(now);
@@ -363,10 +366,15 @@ bool FidlAudioRenderer::NeedMorePackets() {
 bool FidlAudioRenderer::SignalCurrentDemand() {
   FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
 
+  if (input_packet_request_outstanding_) {
+    return false;
+  }
+
   if (!NeedMorePackets()) {
     return false;
   }
 
+  input_packet_request_outstanding_ = true;
   stage()->RequestInputPacket();
   return true;
 }

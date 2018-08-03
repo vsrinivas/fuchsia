@@ -94,6 +94,7 @@ class FidlAudioRenderer
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = 0;
   int64_t last_departed_pts_ns_ = 0;
+  bool input_packet_request_outstanding_ = false;
   fit::closure prime_callback_;
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
