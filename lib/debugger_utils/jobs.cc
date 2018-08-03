@@ -208,7 +208,7 @@ static zx_status_t DoThreads(const WalkContext* ctx, zx_handle_t process,
     }
     zx::thread thread(child);
 
-    status = (*ctx->thread_callback)(thread, tid, pid, depth);
+    status = (*ctx->thread_callback)(&thread, tid, pid, depth);
     if (status != ZX_OK) {
       return status;
     }
@@ -238,7 +238,7 @@ static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job,
     }
     zx::process process(child);
     if (ctx->process_callback) {
-      status = (*ctx->process_callback)(process, pid, jid, depth);
+      status = (*ctx->process_callback)(&process, pid, jid, depth);
       if (status != ZX_OK) {
         return status;
       }
@@ -258,13 +258,13 @@ static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job,
 }
 
 static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
-                         zx::job& job, bool job_is_top_level_job, zx_koid_t jid,
+                         zx::job* job, bool job_is_top_level_job, zx_koid_t jid,
                          zx_koid_t parent_jid, int depth) {
   zx_status_t status;
 
   // Things are a bit tricky here as |job_callback| could take ownership of
   // the job, but we still need to call DoProcesses().
-  auto job_h = job.get();
+  auto job_h = job->get();
   if (ctx->job_callback) {
     status = (*ctx->job_callback)(job, jid, parent_jid, depth);
     if (status != ZX_OK) {
@@ -281,7 +281,7 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
 
   // If the job callback took ownership of the handle, that's it, we
   // can't continue.
-  if (!job.is_valid()) {
+  if (!job->is_valid()) {
     return ZX_ERR_STOP;
   }
 
@@ -297,13 +297,13 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
       // We've already processed the job, so if the callback was going to
       // consume it, it already would have.
       zx::job dupe_job;
-      status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe_job);
+      status = job->duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe_job);
       if (status != ZX_OK)
         return status;
       stack->emplace_front(std::move(dupe_job), jid, depth + 1,
                            std::move(subjob_koids));
     } else {
-      stack->emplace_front(std::move(job), jid, depth + 1,
+      stack->emplace_front(std::move(*job), jid, depth + 1,
                            std::move(subjob_koids));
     }
   }
@@ -329,7 +329,7 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack,
       }
 
       zx::job job(job_h);
-      status = DoJob(stack, ctx, job, false, jid, parent_jid, depth);
+      status = DoJob(stack, ctx, &job, false, jid, parent_jid, depth);
       if (status != ZX_OK) {
         return status;
       }
@@ -339,12 +339,12 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack,
   return ZX_OK;
 }
 
-zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
+zx_status_t WalkJobTree(zx::job* job, JobTreeJobCallback* job_callback,
                         JobTreeProcessCallback* process_callback,
                         JobTreeThreadCallback* thread_callback) {
-  FXL_DCHECK(job != ZX_HANDLE_INVALID);
+  FXL_DCHECK(job->is_valid());
   zx_info_handle_basic_t info;
-  auto status = zx_object_get_info(job.get(), ZX_INFO_HANDLE_BASIC, &info,
+  auto status = zx_object_get_info(job->get(), ZX_INFO_HANDLE_BASIC, &info,
                                    sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
@@ -370,13 +370,13 @@ zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
   return WalkJobTreeInternal(&stack, &ctx);
 }
 
-zx::process FindProcess(zx::job& job, zx_koid_t pid) {
+zx::process FindProcess(zx::job* job, zx_koid_t pid) {
   zx::process process;
   JobTreeProcessCallback find_process_callback =
-      [&](zx::process& task, zx_koid_t koid, zx_koid_t parent_koid,
+      [&](zx::process* task, zx_koid_t koid, zx_koid_t parent_koid,
           int depth) -> zx_status_t {
     if (koid == pid) {
-      process.reset(task.release());
+      process.reset(task->release());
       return ZX_ERR_STOP;
     }
     return ZX_OK;
@@ -388,7 +388,7 @@ zx::process FindProcess(zx::job& job, zx_koid_t pid) {
 
 zx::process FindProcess(zx_handle_t job_h, zx_koid_t pid) {
   zx::job job(job_h);
-  auto result = FindProcess(job, pid);
+  auto result = FindProcess(&job, pid);
   // Don't close |job_h| when we return.
   auto released_handle __UNUSED = job.release();
   return result;
