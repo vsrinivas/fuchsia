@@ -135,7 +135,10 @@ class VirtioVsock::Connection {
   virtual zx_status_t Init() = 0;
 
   uint32_t flags() const { return flags_; }
-  uint16_t op() const { return op_; }
+  uint16_t op() const {
+    fbl::AutoLock lock(&op_update_mutex_);
+    return op_;
+  }
 
   zx_status_t Accept();
   void UpdateOp(uint16_t op);
@@ -165,7 +168,8 @@ class VirtioVsock::Connection {
   uint32_t tx_cnt_ = 0;
   uint32_t peer_buf_alloc_ = 0;
   uint32_t peer_fwd_cnt_ = 0;
-  uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
+  uint16_t op_ __TA_GUARDED(op_update_mutex_) = VIRTIO_VSOCK_OP_REQUEST;
+  mutable fbl::Mutex op_update_mutex_;
 
   async_dispatcher_t* dispatcher_;
   async::Wait rx_wait_;

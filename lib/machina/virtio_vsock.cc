@@ -72,6 +72,8 @@ zx_status_t VirtioVsock::Connection::Accept() {
 //                         |CREDIT_REQUEST|
 //                          -------------
 void VirtioVsock::Connection::UpdateOp(uint16_t new_op) {
+  fbl::AutoLock lock(&op_update_mutex_);
+
   if (new_op == op_) {
     return;
   }
