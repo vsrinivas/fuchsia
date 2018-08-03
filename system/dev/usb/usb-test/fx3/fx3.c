@@ -8,7 +8,9 @@
 #include <ddk/usb/usb.h>
 #include <zircon/device/usb-test-fwloader.h>
 #include <zircon/hw/usb.h>
+#include <zircon/assert.h>
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "fx3.h"

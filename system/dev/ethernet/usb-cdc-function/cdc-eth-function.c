@@ -16,7 +16,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-function.h>
-#include <ddk/usb-request.h>
 #include <inet6/inet6.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>

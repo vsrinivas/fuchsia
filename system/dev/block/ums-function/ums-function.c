@@ -13,7 +13,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-function.h>
-#include <ddk/usb-request.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/usb-device.h>

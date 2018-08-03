@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/usb-request.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <lib/cksum.h>
 #include <pretty/hexdump.h>

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/usb-request.h>
+#include <ddk/protocol/usb.h>
 #include <zircon/listnode.h>
 
 #include "xhci-trb.h"

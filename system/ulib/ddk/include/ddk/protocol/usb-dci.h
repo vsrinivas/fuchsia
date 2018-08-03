@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb-request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

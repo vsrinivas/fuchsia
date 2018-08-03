@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/hidbus.h>
-#include <ddk/usb-request.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <zircon/hw/usb-hid.h>
 

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb-request.h>
 #include <lib/sync/completion.h>
 #include <xdc-server-utils/packet.h>

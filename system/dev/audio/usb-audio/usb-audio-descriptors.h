@@ -10,6 +10,10 @@
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
+#include <zircon/syscalls.h>
+
+#include <threads.h>
+#include <sys/types.h>
 
 namespace audio {
 namespace usb {
