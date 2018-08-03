@@ -2363,21 +2363,6 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
     bus->tx_seq = bus->rx_seq = 0;
 }
 
-static inline void brcmf_sdio_clrintr(struct brcmf_sdio* bus) {
-    struct brcmf_sdio_dev* sdiodev;
-
-    sdiodev = bus->sdiodev;
-    if (sdiodev->oob_irq_requested) {
-        //spin_lock_irqsave(&sdiodev->irq_en_lock, flags);
-        pthread_mutex_lock(&irq_callback_lock);
-        if (!sdiodev->irq_en && !atomic_load(&bus->ipend)) {
-            sdiodev->irq_en = true;
-        }
-        //spin_unlock_irqrestore(&sdiodev->irq_en_lock, flags);
-        pthread_mutex_unlock(&irq_callback_lock);
-    }
-}
-
 static zx_status_t brcmf_sdio_intr_rstatus(struct brcmf_sdio* bus) {
     struct brcmf_core* core = bus->sdio_core;
     uint32_t addr;
@@ -2515,8 +2500,6 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     if (intstatus) {
         atomic_fetch_or(&bus->intstatus, intstatus);
     }
-
-    brcmf_sdio_clrintr(bus);
 
     if (bus->ctrl_frame_stat && (bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
         sdio_claim_host(bus->sdiodev->func1);

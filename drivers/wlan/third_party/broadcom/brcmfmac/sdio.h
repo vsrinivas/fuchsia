@@ -196,8 +196,6 @@ struct brcmf_sdio_dev {
     struct brcmf_mp_device* settings;
     bool oob_irq_requested;
     bool sd_irq_requested;
-    bool irq_en; /* irq enable flags */
-    //spinlock_t irq_en_lock;
     bool irq_wake; /* irq wake enable flags */
     uint txglomsz;
     char fw_name[BRCMF_FW_NAME_LEN];

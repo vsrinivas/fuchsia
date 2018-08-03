@@ -66,14 +66,6 @@ static int brcmf_sdiod_oob_irqhandler(void* cookie) {
     while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
         brcmf_dbg(INTR, "OOB intr triggered\n");
 
-        /* out-of-band interrupt is level-triggered which won't
-        * be cleared until dpc
-        */
-        if (sdiodev->irq_en) {
-            //disable_irq_nosync(irq); Not needed with Fuchsia interrupt handling.
-            sdiodev->irq_en = false;
-        }
-
         brcmf_sdio_isr(sdiodev->bus);
     }
 
@@ -101,11 +93,9 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     pdata->oob_irq_supported = true;
     if (pdata->oob_irq_supported) {
         brcmf_dbg(SDIO, "Enter, register OOB IRQ\n");
-        //spin_lock_init(&sdiodev->irq_en_lock);
         // TODO(cphoenix): Add error handling for sdio_get_oob_irq, thrd_create_with_name, and
         // thrd_detach. Note that the thrd_ functions don't return zx_status_t; check for
         // thrd_success and maybe thrd_nomem. See zircon/third_party/ulib/musl/include/threads.h
-        sdiodev->irq_en = true;
         sdio_get_oob_irq(sdiodev->sdio_proto, &sdiodev->irq_handle);
         thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
                               "brcmf-sdio-isr");
@@ -176,7 +166,6 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
             sdiodev->irq_wake = false;
         }
         zx_handle_close(sdiodev->irq_handle);
-        sdiodev->irq_en = false;
         sdiodev->oob_irq_requested = false;
     }
 
