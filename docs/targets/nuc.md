@@ -33,6 +33,8 @@ drive pulls your freshly-built OS across the network, from host machine to NUC.
   + Deselect __USB Legacy__ support
   + In Boot section, select Priority tab
   + Deselect __Legacy Boot__ (in right-side Legacy Boot Priority pane)
+  + If you see a Secure Boot tab,
+  + Deselect Secure Boot in the tab (otherwise you will see an "Image Authorization Fail" while booting USB).
 6. Configure boot ordering
   + Select Boot Configuration tab
   + Enable __Boot USB Devices First__, __Boot Network Devices Last__, and
