@@ -39,7 +39,7 @@ class CodecAdapterEvents {
   virtual void onCoreCodecMidStreamOutputConfigChange(
       bool output_re_config_required) = 0;
 
-  virtual void onCoreCodecInputPacketDone(CodecPacket* packet) = 0;
+  virtual void onCoreCodecInputPacketDone(const CodecPacket* packet) = 0;
 
   virtual void onCoreCodecOutputPacket(CodecPacket* packet,
                                        bool error_detected_before,

@@ -652,7 +652,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   void onCoreCodecMidStreamOutputConfigChange(
       bool output_re_config_required) override;
 
-  void onCoreCodecInputPacketDone(CodecPacket* packet) override;
+  void onCoreCodecInputPacketDone(const CodecPacket* packet) override;
 
   void onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected_before,
                                bool error_detected_during) override;

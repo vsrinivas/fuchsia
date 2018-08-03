@@ -157,7 +157,7 @@ void CodecAdapterH264::CoreCodecStartStream(
 
     video_->video_decoder_->SetFrameReadyNotifier(
         [this](std::shared_ptr<VideoFrame> frame) {
-          printf("Got frame - width: %d height: %d", frame->width,
+          printf("Got frame - width: %d height: %d\n", frame->width,
                  frame->height);
           FXL_LOG(INFO) << "Got frame - width: " << frame->width
                         << " height: " << frame->height;
@@ -613,6 +613,13 @@ void CodecAdapterH264::ProcessInput() {
     printf("before video_->ParseVideo()... - len: %u\n", len);
     video_->ParseVideo(data, len);
     printf("after video_->ParseVideo()\n");
+
+    events_->onCoreCodecInputPacketDone(item.packet());
+    // At this point CodecInputItem is holding a packet pointer which may get
+    // re-used in a new CodecInputItem, but that's ok since CodecInputItem is
+    // going away here.
+    //
+    // ~item
   }
 }
 
@@ -670,6 +677,11 @@ void CodecAdapterH264::ProcessOutput() {
       memcpy(to_uv + frame->width * y, from_uv + frame->stride * y,
              frame->width);
     }
+
+    {  // scope lock
+      std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
+      video_->video_decoder_->ReturnFrame(frame);
+    }  // ~lock
 
     packet->SetStartOffset(0);
     packet->SetValidLengthBytes(total_dst_size_needed);

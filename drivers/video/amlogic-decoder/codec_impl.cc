@@ -1850,8 +1850,7 @@ void CodecImpl::SendFreeInputPacketLocked(
   // Because the InputData ordering domain thread isn't visible to this code,
   // if this isn't the StreamControl then we can only assert that this thread
   // isn't the FIDL thread, because we know the codec's InputData thread isn't
-  // the FIDL thread.  This assert could be simplified but it more closely
-  // matches its actual purpose as-is.
+  // the FIDL thread.
   FXL_DCHECK(thrd_current() == stream_control_thread_ ||
              thrd_current() != fidl_thread());
   // We only send using fidl_thread().
@@ -2103,7 +2102,7 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
       });
 }
 
-void CodecImpl::onCoreCodecInputPacketDone(CodecPacket* packet) {
+void CodecImpl::onCoreCodecInputPacketDone(const CodecPacket* packet) {
   // Free/busy coherency from Codec interface to OMX doesn't involve trusting
   // the client, so assert we're doing it right server-side.
   {  // scope lock

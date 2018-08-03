@@ -24,7 +24,7 @@ constexpr char kInputFilePath[] =
     "bear.h264";
 
 constexpr char kGoldenSha256[SHA256_DIGEST_LENGTH * 2 + 1] =
-    "8ebcdc93a2c51af6e59d7914fd3032750fed57400c5dee5cfc0f386530780dc7";
+    "295349c97871fd6f103a739f24d25d7893f41527962e0b7209883f4320f8a3a1";
 
 }  // namespace
 

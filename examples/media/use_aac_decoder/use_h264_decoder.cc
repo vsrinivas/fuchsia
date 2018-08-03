@@ -10,8 +10,10 @@
 #include <fbl/auto_call.h>
 #include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 
+#include <string.h>
 #include <thread>
 
 namespace {
@@ -24,12 +26,41 @@ constexpr bool kRawVideoWriterEnabled = true;
 // stream, even if it's just to decode the same data again.
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
 
-constexpr uint8_t kStartCodeArray[] = {0x00, 0x00, 0x00, 0x01};
+constexpr uint8_t kLongStartCodeArray[] = {0x00, 0x00, 0x00, 0x01};
+constexpr uint8_t kShortStartCodeArray[] = {0x00, 0x00, 0x01};
 
-// Caller must take care to ensure there are at least 4 readable bytes at ptr.
-bool is_start_code(uint8_t* ptr) {
-  return *(reinterpret_cast<const uint32_t*>(kStartCodeArray)) ==
-         *(reinterpret_cast<const uint32_t*>(ptr));
+// If readable_bytes is 0, that's considered a "start code", to allow the caller
+// to terminate a NAL the same way regardless of whether another start code is
+// found or the end of the buffer is found.
+//
+// ptr has readable_bytes of data - the function only evaluates whether there is
+// a start code at the begining of the data at ptr.
+//
+// readable_bytes - the caller indicates how many bytes are readable starting at
+// ptr.
+//
+// *start_code_size_bytes will have length of the start code in bytes when the
+// function returns true - unchanged otherwise.  Normally this would be 3 or 4,
+// but a 0 is possible if readable_bytes is 0.
+bool is_start_code(uint8_t* ptr, size_t readable_bytes,
+                   size_t* start_code_size_bytes_out) {
+  if (readable_bytes == 0) {
+    *start_code_size_bytes_out = 0;
+    return true;
+  }
+  if (readable_bytes >= 4) {
+    if (!memcmp(ptr, kLongStartCodeArray, sizeof(kLongStartCodeArray))) {
+      *start_code_size_bytes_out = 4;
+      return true;
+    }
+  }
+  if (readable_bytes >= 3) {
+    if (!memcmp(ptr, kShortStartCodeArray, sizeof(kShortStartCodeArray))) {
+      *start_code_size_bytes_out = 3;
+      return true;
+    }
+  }
+  return false;
 }
 
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
@@ -126,14 +157,18 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
     // interferes with ongoing parsing, or maybe some of the non-frame NALs
     // need to be grouped with frame NALs for the HW's benefit, or...  In
     // any case, this hack needs to go away.
-    constexpr bool kQueueAllAtOnceHack = true;
+    constexpr bool kQueueAllAtOnceHack = false;
     if (kQueueAllAtOnceHack) {
       FXL_CHECK(input_size >= 4);
-      FXL_CHECK(is_start_code(&input_bytes[0]));
+      size_t ignore_start_code_size_bytes;
+      FXL_CHECK(is_start_code(&input_bytes[0], input_size - 0,
+                              &ignore_start_code_size_bytes));
       queue_access_unit(&input_bytes[0], input_size);
     } else {
-      for (size_t i = 0; i < input_size - 3;) {
-        if (!is_start_code(&input_bytes[i])) {
+      for (size_t i = 0; i < input_size;) {
+        size_t start_code_size_bytes;
+        if (!is_start_code(&input_bytes[i], input_size - i,
+                           &start_code_size_bytes)) {
           if (i == 0) {
             Exit(
                 "Didn't find a start code at the start of the file, and this "
@@ -144,26 +179,29 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                 "NAL length not a start code.");
           }
         }
-        size_t nal_start_offset = i + 4;
+        if (i + start_code_size_bytes == input_size) {
+          Exit("Start code at end of file unexpected");
+        }
+        size_t nal_start_offset = i + start_code_size_bytes;
         // Scan for end of NAL.  The end of NAL can be because we're out of
         // data, or because we hit another start code.
         size_t find_end_iter = nal_start_offset;
-        while (find_end_iter < input_size &&
-               !is_start_code(&input_bytes[find_end_iter])) {
+        size_t ignore_start_code_size_bytes;
+        while (find_end_iter <= input_size &&
+               !is_start_code(&input_bytes[find_end_iter],
+                              input_size - find_end_iter,
+                              &ignore_start_code_size_bytes)) {
           find_end_iter++;
         }
+        FXL_DCHECK(find_end_iter <= input_size);
         if (find_end_iter == nal_start_offset) {
-          if (find_end_iter == input_size) {
-            Exit("Start code at end of file unexpected");
-          } else {
-            Exit("Two adjacent start codes unexpected.");
-          }
+          Exit("Two adjacent start codes unexpected.");
         }
         FXL_DCHECK(find_end_iter > nal_start_offset);
         size_t nal_length = find_end_iter - nal_start_offset;
-        queue_access_unit(&input_bytes[nal_start_offset - 4], 4 + nal_length);
+        queue_access_unit(&input_bytes[i], start_code_size_bytes + nal_length);
         // start code + NAL payload
-        i += 4 + nal_length;
+        i += start_code_size_bytes + nal_length;
       }
     }
 
