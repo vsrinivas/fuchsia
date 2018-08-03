@@ -141,7 +141,9 @@ void MdnsTransceiver::OnLinkChange() {
   for (const auto& interface_descr : interface_monitor_->GetInterfaces()) {
     auto interface_transceiver = GetInterfaceTransceiver(index);
 
-    if (!interface_descr || !InterfaceEnabled(*interface_descr)) {
+    if (!interface_descr ||
+        interface_descr->address_ == IpAddress(0, 0, 0, 0) ||
+        !InterfaceEnabled(*interface_descr)) {
       if (interface_transceiver != nullptr) {
         // Interface went away.
         RemoveInterfaceTransceiver(index);

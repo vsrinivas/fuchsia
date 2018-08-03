@@ -50,8 +50,9 @@ class NetstackClient {
 // address.
 IpAddress GetHostAddress() {
   static IpAddress ip_address;
-  if (ip_address)
+  if (ip_address) {
     return ip_address;
+  }
 
   NetstackClient::GetInterfaces(
       [](const fidl::VectorPtr<fuchsia::netstack::NetInterface>& interfaces) {
@@ -59,12 +60,21 @@ IpAddress GetHostAddress() {
           if (interface.addr.family ==
               fuchsia::netstack::NetAddressFamily::IPV4) {
             ip_address = MdnsFidlUtil::IpAddressFrom(&interface.addr);
-            break;
+            if (ip_address.is_loopback() ||
+                ip_address == IpAddress(0, 0, 0, 0)) {
+              ip_address = IpAddress::kInvalid;
+            } else {
+              break;
+            }
           }
           if (interface.addr.family ==
               fuchsia::netstack::NetAddressFamily::IPV6) {
             ip_address = MdnsFidlUtil::IpAddressFrom(&interface.addr);
-            // Keep looking...v4 is preferred.
+            if (ip_address.is_loopback()) {
+              ip_address = IpAddress::kInvalid;
+            }
+
+            // Keep looking regardless...v4 is preferred.
           }
         }
       });
