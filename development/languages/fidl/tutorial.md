@@ -317,7 +317,6 @@ Here is the summary of how the client makes a connection to the echo service.
 1.  `main` then blocks on a response on the interface.
 1.  Eventually, the response arrives, and the callback is called with the
     result.
-1.  `WaitForResponse()` returns, and the component exits.
 
 ### main
 
@@ -338,10 +337,11 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   echo2::EchoClientApp app;
   app.Start(server_url);
-  app.echo()->EchoString(msg, [](fidl::StringPtr value) {
+  app.echo()->EchoString(msg, [&loop](fidl::StringPtr value) {
     printf("***** Response: %s\n", value->data());
+    loop.Quit();
   });
-  return app.echo().WaitForResponse();
+  return loop.Run();
 }
 ```
 
@@ -375,9 +375,9 @@ complete remotely before returning. `EchoString()` returns void because of the
 async behavior.
 
 Since the client has nothing to do until the server response arrives, and is
-done working immediately after, `main()` then blocks using `WaitForResponse()`,
+done working immediately after, `main()` then blocks using `loop.Run()`,
 then exits. When the response will arrive, then the callback given to
-`EchoString()`, will execute first, then `WaitForResponse()` will return,
+`EchoString()`, will execute first, then `Run()` will return,
 allowing `main()` to return and the program to terminate.
 
 ### Run the sample
@@ -550,7 +550,7 @@ fn spawn_echo_server(chan: async::Channel) {
 ```
 
 When a request for an echo service is received, `spawn_echo_server` is called
-with the channel to host the `Echo` service on. 
+with the channel to host the `Echo` service on.
 
 When a request is received, the closure inside `for_each` is called. It
 uses pattern-matching to extract the contents of the `EchoString` variant
