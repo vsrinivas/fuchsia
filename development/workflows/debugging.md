@@ -3,6 +3,10 @@
 This document is a work-in-progress and provides various suggestions
 for debugging Fuchsia programs.
 
+## The ZX debugger
+
+For C/C++ code, try zxdb. See the [zxdb docs](https://fuchsia.googlesource.com/garnet/+/master/docs/debugger.md) for more details.
+
 ## Backtraces
 
 ### Automagic backtraces
