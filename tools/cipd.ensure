@@ -16,6 +16,10 @@ fuchsia_internal/firmware/wlan/broadcom/brcmfmac git_revision:397a604e081fa4a7a6
 @Subdir drivers/bluetooth/hci/intel/firmware
 fuchsia_internal/firmware/bluetooth/intel git_revision:2451bb228f6401ca3f2ecd498bf3bab613c532a7
 
+# Atheros bluetooth firmware
+@Subdir drivers/bluetooth/hci/atheros/firmware
+fuchsia_internal/firmware/bluetooth/qualcomm_atheros git_revision:7b5835fd37630d18ac0c755329172f6a17c1af29
+
 # Atheros wlan firmware
 @Subdir drivers/wlan/third_party/atheros/ath10k/firmware
 fuchsia_internal/firmware/wlan/atheros/ath10k git_revision:7518922bd5b98b137af7aaf3c836f5a498e91609
