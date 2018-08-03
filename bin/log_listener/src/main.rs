@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 
+extern crate chrono;
 extern crate failure;
 extern crate fuchsia_async as async;
 extern crate fuchsia_syslog_listener as syslog_listener;
@@ -53,6 +54,7 @@ struct LocalOptions {
     file: Option<String>,
     ignore_tags: HashSet<String>,
     clock: ClockId,
+    time_format: String,
 }
 
 impl Default for LocalOptions {
@@ -61,6 +63,7 @@ impl Default for LocalOptions {
             file: None,
             ignore_tags: HashSet::new(),
             clock: ClockId::Monotonic,
+            time_format: "%Y-%m-%d %H:%M:%S".to_string(),
         }
     }
 }
@@ -77,12 +80,11 @@ impl LocalOptions {
                 let monotonic_zero_as_utc =
                     Time::get(ClockId::UTC).nanos() - Time::get(ClockId::Monotonic).nanos();
                 let utc_timestamp = monotonic_zero_as_utc + timestamp;
-                // TODO(CP-111): format as wall time
-                format!(
-                    "{:05}.{:06}",
-                    utc_timestamp / 1000000000,
-                    (utc_timestamp / 1000) % 1000000
-                )
+                let seconds = (utc_timestamp / 1000000000) as i64;
+                let nanos = (utc_timestamp % 1000000000) as u32;
+                chrono::NaiveDateTime::from_timestamp(seconds, nanos)
+                    .format(&self.time_format)
+                    .to_string()
             }
             ClockId::Monotonic | _ => format!(
                 "{:05}.{:06}",
@@ -95,7 +97,7 @@ impl LocalOptions {
 
 fn help(name: &str) -> String {
     format!(
-        r"Usage: {} [flags]
+        r#"Usage: {} [flags]
         Flags:
         --tag <string>:
             Tag to filter on. Multiple tags can be specified by using multiple --tag flags.
@@ -124,8 +126,13 @@ fn help(name: &str) -> String {
             Select clock to use for timestamps.
             Defaults to MONOTONIC for ZX_CLOCK_MONOTONIC.
 
+        --time_format <format>:
+            If --clock is not MONOTONIC, specify timestamp format.
+            See chrono::format::strftime for format specifiers.
+            Defaults to "%Y-%m-%d %H:%M:%S".
+
         --help | -h:
-            Prints usage.",
+            Prints usage."#,
         name
     )
 }
@@ -226,6 +233,9 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 "UTC" => options.local.clock = ClockId::UTC,
                 a => return Err(format!("Invalid clock: {}", a)),
             },
+            "--time_format" => {
+                options.local.time_format = args[i + 1].clone();
+            }
             a => {
                 return Err(format!("Invalid option {}", a));
             }
@@ -461,18 +471,38 @@ mod tests {
     }
 
     #[test]
-    fn test_format_time() {
+    fn test_format_monotonic_time() {
         let mut local_options = LocalOptions::default();
+        let timestamp = 636253000631621;
 
-        // Monotonic time as nanos
-        assert_eq!(local_options.format_time(636253000631621), "636253.000631");
+        let formatted = local_options.format_time(timestamp); // Test default
+        assert_eq!(formatted, "636253.000631");
         local_options.clock = ClockId::Monotonic;
-        assert_eq!(local_options.format_time(636253000631621), "636253.000631");
+        let formatted = local_options.format_time(timestamp);
+        assert_eq!(formatted, "636253.000631");
+    }
 
-        // UTC time as nanos
+    #[test]
+    fn test_format_utc_time() {
+        let mut local_options = LocalOptions::default();
+        let timestamp = 636253000631621;
         local_options.clock = ClockId::UTC;
-        // TODO(CP-111): figure out how to mock UTC time in test
-        assert_ne!(local_options.format_time(636253000631621), "636253.000631");
+        //local_options.time_format = "%H:%M:%S %d/%m/%Y".to_string();
+        local_options.time_format = "%H:%M:%S %d/%m/%Y".to_string();
+
+        let timestamp_utc_formatted = local_options.format_time(timestamp);
+        let timestamp_utc_struct = chrono::NaiveDateTime::parse_from_str(
+            &timestamp_utc_formatted,
+            &local_options.time_format,
+        ).unwrap();
+        assert_eq!(
+            timestamp_utc_struct
+                .format(&local_options.time_format)
+                .to_string(),
+            timestamp_utc_formatted
+        );
+        let zero_utc_formatted = local_options.format_time(0);
+        assert_ne!(zero_utc_formatted, timestamp_utc_formatted);
     }
 
     mod parse_flags {
@@ -658,6 +688,14 @@ mod tests {
         fn clock_fail() {
             let args = vec!["--clock".to_string(), "CLUCK!!".to_string()];
             parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
+        fn time_format() {
+            let args = vec!["--time_format".to_string(), "%H:%M:%S".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.time_format = "%H:%M:%S".to_string();
+            parse_flag_test_helper(&args, Some(&expected));
         }
 
         #[test]
