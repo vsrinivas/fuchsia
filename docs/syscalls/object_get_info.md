@@ -90,12 +90,11 @@ typedef struct zx_info_handle_count {
     uint32_t handle_count;
 } zx_info_handle_count_t;
 ```
-
-The *handle_count* is only meaningful if the number is equal to the number
-of handles to the object controlled by the caller process. For example,
-if the caller has one handle and the *handle_count* is equal to 2 it
-means that another process has a reference to this object which can be
-duplicated at any time.
+The *handle_count* should only be used as a debugging aid. Do not use it
+to check that an untrusted processes cannot modify a kernel object. Due to
+asynchronous nature of the system scheduler, there might be a time window
+during which it is possible for an object to be modified by a previous handle
+owner even as the last handle is transfered from one process to another.
 
 ### ZX_INFO_PROCESS_HANDLE_STATS
 
