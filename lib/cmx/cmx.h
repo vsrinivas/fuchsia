@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_CMX_METADATA_H_
-#define GARNET_BIN_APPMGR_CMX_METADATA_H_
+#ifndef GARNET_LIB_CMX_CMX_H_
+#define GARNET_LIB_CMX_CMX_H_
 
 #include <regex>
 #include <string>
 
-#include "garnet/bin/appmgr/program_metadata.h"
-#include "garnet/bin/appmgr/runtime_metadata.h"
-#include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "garnet/lib/cmx/program.h"
+#include "garnet/lib/cmx/runtime.h"
+#include "garnet/lib/cmx/sandbox.h"
 #include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
@@ -53,4 +53,4 @@ class CmxMetadata {
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_CMX_METADATA_H_
+#endif  // GARNET_LIB_CMX_CMX_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/cmx_metadata.h"
+#include "garnet/lib/cmx/cmx.h"
 
 #include <algorithm>
 #include <regex>

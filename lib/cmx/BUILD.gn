@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cmx") {
+  sources = [
+    "cmx.cc",
+    "cmx.h",
+    "program.cc",
+    "program.h",
+    "runtime.cc",
+    "runtime.h",
+    "sandbox.cc",
+    "sandbox.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/json",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "cmx_unittest.cc",
+    "program_unittest.cc",
+    "runtime_unittest.cc",
+    "sandbox_unittest.cc",
+  ]
+
+  public_deps = [
+    ":cmx",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gmock",
+  ]
+}

@@ -9,8 +9,8 @@
 
 #include <utility>
 
-#include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
+#include "garnet/lib/cmx/cmx.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"

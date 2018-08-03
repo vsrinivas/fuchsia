@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "garnet/lib/cmx/sandbox.h"
 
 #include <string>
 
@@ -54,8 +54,8 @@ TEST_F(SandboxMetadataTest, Parse) {
   {
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "dev": [ "class/input" ] })JSON",
-                          &error));
+    EXPECT_TRUE(
+        ParseFrom(&sandbox, R"JSON({ "dev": [ "class/input" ] })JSON", &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
@@ -65,8 +65,8 @@ TEST_F(SandboxMetadataTest, Parse) {
   {
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "system": [ "data" ] })JSON",
-                          &error));
+    EXPECT_TRUE(
+        ParseFrom(&sandbox, R"JSON({ "system": [ "data" ] })JSON", &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.system(), ::testing::ElementsAre("data"));
@@ -76,8 +76,8 @@ TEST_F(SandboxMetadataTest, Parse) {
   {
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "pkgfs": [ "packages" ] })JSON",
-                          &error));
+    EXPECT_TRUE(
+        ParseFrom(&sandbox, R"JSON({ "pkgfs": [ "packages" ] })JSON", &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.pkgfs(), ::testing::ElementsAre("packages"));
@@ -87,9 +87,8 @@ TEST_F(SandboxMetadataTest, Parse) {
   {
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox,
-                          R"JSON({ "features": [ "vulkan", "shell" ] })JSON",
-                          &error));
+    EXPECT_TRUE(ParseFrom(
+        &sandbox, R"JSON({ "features": [ "vulkan", "shell" ] })JSON", &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.features(), ::testing::ElementsAre("vulkan", "shell"));
@@ -102,8 +101,8 @@ TEST_F(SandboxMetadataTest, Parse) {
   {
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({ "boot": [ "log" ] })JSON",
-                          &error));
+    EXPECT_TRUE(
+        ParseFrom(&sandbox, R"JSON({ "boot": [ "log" ] })JSON", &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.boot(), ::testing::ElementsAre("log"));

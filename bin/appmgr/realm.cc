@@ -17,17 +17,17 @@
 
 #include <utility>
 
-#include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/fuchsia_pkg_url.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
-#include "garnet/bin/appmgr/program_metadata.h"
-#include "garnet/bin/appmgr/runtime_metadata.h"
-#include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "garnet/bin/appmgr/scheme_map.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/bin/appmgr/util.h"
+#include "garnet/lib/cmx/cmx.h"
+#include "garnet/lib/cmx/program.h"
+#include "garnet/lib/cmx/runtime.h"
+#include "garnet/lib/cmx/sandbox.h"
 #include "garnet/lib/json/json_parser.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"

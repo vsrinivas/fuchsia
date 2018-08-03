@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "garnet/lib/cmx/sandbox.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -19,9 +19,8 @@ void CopyArrayToVector(const std::string& name, const Value& value,
                        json::JSONParser* json_parser,
                        std::vector<std::string>* vec) {
   if (!value.IsArray()) {
-    json_parser->ReportError(fxl::StringPrintf(
-        "'%s' in sandbox is not an array.",
-        name.c_str()));
+    json_parser->ReportError(
+        fxl::StringPrintf("'%s' in sandbox is not an array.", name.c_str()));
     return;
   }
   for (const auto& entry : value.GetArray()) {
@@ -56,12 +55,12 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     return false;
   }
 
-  const std::unordered_map<std::string, std::vector<std::string>*>
-      name_to_vec = {{kDev, &dev_},
-                     {kSystem, &system_},
-                     {kPkgfs, &pkgfs_},
-                     {kFeatures, &features_},
-                     {kBoot, &boot_}};
+  const std::unordered_map<std::string, std::vector<std::string>*> name_to_vec =
+      {{kDev, &dev_},
+       {kSystem, &system_},
+       {kPkgfs, &pkgfs_},
+       {kFeatures, &features_},
+       {kBoot, &boot_}};
   for (const auto& entry : name_to_vec) {
     const std::string& name = entry.first;
     auto* vec = entry.second;

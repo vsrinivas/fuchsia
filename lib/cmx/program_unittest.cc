@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/program_metadata.h"
+#include "garnet/lib/cmx/program.h"
 
 #include <string>
 
@@ -43,8 +43,8 @@ TEST_F(ProgramMetadataTest, Parse) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsNull());
   std::string error;
-  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "binary": "bin/app" })JSON",
-                        &error));
+  EXPECT_TRUE(
+      ParseFrom(&program, R"JSON({ "binary": "bin/app" })JSON", &error));
   EXPECT_FALSE(program.IsNull());
   EXPECT_EQ("bin/app", program.binary());
 }

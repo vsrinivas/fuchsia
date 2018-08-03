@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "garnet/bin/appmgr/realm.h"
-#include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "garnet/lib/cmx/sandbox.h"
 #include "lib/fxl/macros.h"
 
 #include <fuchsia/sys/cpp/fidl.h>

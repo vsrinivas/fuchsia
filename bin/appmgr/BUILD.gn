@@ -6,8 +6,6 @@ import("//build/package.gni")
 
 source_set("lib") {
   sources = [
-    "cmx_metadata.cc",
-    "cmx_metadata.h",
     "component_controller_impl.cc",
     "component_controller_impl.h",
     "dynamic_library_loader.cc",
@@ -30,18 +28,12 @@ source_set("lib") {
     "namespace.h",
     "namespace_builder.cc",
     "namespace_builder.h",
-    "program_metadata.cc",
-    "program_metadata.h",
     "realm.cc",
     "realm.h",
     "root_loader.cc",
     "root_loader.h",
     "runner_holder.cc",
     "runner_holder.h",
-    "runtime_metadata.cc",
-    "runtime_metadata.h",
-    "sandbox_metadata.cc",
-    "sandbox_metadata.h",
     "scheme_map.cc",
     "scheme_map.h",
     "service_provider_dir_impl.cc",
@@ -53,6 +45,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/lib/cmx",
     "//garnet/lib/json",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/backoff",
@@ -111,14 +104,10 @@ executable("tests") {
 
   sources = [
     "appmgr_unittest.cc",
-    "cmx_metadata_unittest.cc",
     "component_controller_unittest.cc",
     "fuchsia_pkg_url_unittest.cc",
     "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
-    "program_metadata_unittest.cc",
-    "runtime_metadata_unittest.cc",
-    "sandbox_metadata_unittest.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
     "url_resolver_unittest.cc",
