@@ -7,9 +7,11 @@
 #include <zircon/assert.h>
 #include <fbl/new.h>
 
+#if !__has_include(<new>)
 namespace std {
 struct nothrow_t {};
 } // namespace std
+#endif
 
 namespace fbl {
 namespace {
