@@ -18,6 +18,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/max_bytes_tests.cpp \
     $(LOCAL_DIR)/max_handle_tests.cpp \
+    $(LOCAL_DIR)/superinterface_tests.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/unittest/include \

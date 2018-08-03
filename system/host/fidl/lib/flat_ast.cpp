@@ -34,6 +34,12 @@ private:
     std::set<T> scope_;
 };
 
+struct MethodScope {
+    Scope<uint32_t> ordinals;
+    Scope<StringView> names;
+    Scope<const Interface*> interfaces;
+};
+
 // A helper class to track when a Decl is compiling and compiled.
 class Compiling {
 public:
@@ -1105,15 +1111,38 @@ bool Library::CompileEnum(Enum* enum_declaration) {
 
 bool Library::CompileInterface(Interface* interface_declaration) {
     Compiling guard(interface_declaration);
-    // TODO(TO-703) Add subinterfaces here.
-    Scope<StringView> name_scope;
-    Scope<uint32_t> ordinal_scope;
-    bool is_simple = HasSimpleLayout(interface_declaration);
+    MethodScope method_scope;
+    auto CheckScopes = [this, &interface_declaration, &method_scope](const Interface* interface, auto Visitor) -> bool {
+        for (const auto& name : interface->superinterfaces) {
+            auto decl = LookupDeclByName(name);
+            if (decl == nullptr)
+                return Fail(name, "There is no declaration with this name");
+            if (decl->kind != Decl::Kind::kInterface)
+                return Fail(name, "This superinterface declaration is not an interface");
+            auto superinterface = static_cast<const Interface*>(decl);
+            if (method_scope.interfaces.Insert(superinterface)) {
+                if (!Visitor(superinterface, Visitor))
+                    return false;
+            } else {
+                // Otherwise we have already seen this interface in
+                // the inheritance graph.
+            }
+        }
+        for (const auto& method : interface->methods) {
+            if (!method_scope.names.Insert(method.name.data()))
+                return Fail(method.name, "Multiple methods with the same name in an interface");
+            if (!method_scope.ordinals.Insert(method.ordinal.Value()))
+                return Fail(method.name, "Mulitple methods with the same ordinal in an interface");
+
+            // Add a pointer to this method to the interface_declarations list.
+            interface_declaration->all_methods.push_back(&method);
+        }
+        return true;
+    };
+    if (!CheckScopes(interface_declaration, CheckScopes))
+        return false;
+
     for (auto& method : interface_declaration->methods) {
-        if (!name_scope.Insert(method.name.data()))
-            return Fail(method.name, "Multiple methods with the same name in an interface");
-        if (!ordinal_scope.Insert(method.ordinal.Value()))
-            return Fail(method.name, "Mulitple methods with the same ordinal in an interface");
         auto CreateMessage = [&](Interface::Method::Message* message) -> bool {
             Scope<StringView> scope;
             auto header_field_shape = FieldShape(TypeShape(16u, 4u));
@@ -1125,8 +1154,6 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 message_struct.push_back(&param.fieldshape);
-                if (is_simple && !param.IsSimple())
-                    return Fail(param.name, "Non-simple parameter in interface with [Layout=\"Simple\"]");
             }
             message->typeshape = FidlStructTypeShape(&message_struct);
             return true;
@@ -1140,6 +1167,27 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return false;
         }
     }
+
+    if (HasSimpleLayout(interface_declaration)) {
+        for (const auto& method_pointer : interface_declaration->all_methods) {
+            auto CheckSimpleMessage = [&](const Interface::Method::Message* message) -> bool {
+                for (const auto& parameter : message->parameters) {
+                    if (!parameter.IsSimple())
+                        return Fail(parameter.name, "Non-simple parameter in interface with [Layout=\"Simple\"]");
+                }
+                return true;
+            };
+            if (method_pointer->maybe_request) {
+                if (!CheckSimpleMessage(method_pointer->maybe_request.get()))
+                    return false;
+            }
+            if (method_pointer->maybe_response) {
+                if (!CheckSimpleMessage(method_pointer->maybe_response.get()))
+                    return false;
+            }
+        }
+    }
+
     return true;
 }
 

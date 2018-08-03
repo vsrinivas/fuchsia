@@ -424,6 +424,9 @@ struct Interface : public Decl {
 
     std::vector<Name> superinterfaces;
     std::vector<Method> methods;
+    // Pointers here are set after superinterfaces are compiled, and
+    // are owned by the correspending superinterface.
+    std::vector<const Method*> all_methods;
 };
 
 struct Struct : public Decl {

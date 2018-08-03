@@ -363,11 +363,13 @@ void JSONGenerator::Generate(const flat::Interface& value) {
         GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
-        GenerateObjectMember("methods", value.methods);
+        GenerateObjectMember("methods", value.all_methods);
     });
 }
 
-void JSONGenerator::Generate(const flat::Interface::Method& value) {
+void JSONGenerator::Generate(const flat::Interface::Method* method) {
+    assert(method != nullptr);
+    const auto& value = *method;
     GenerateObject([&]() {
         GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
         GenerateObjectMember("name", value.name);

@@ -615,7 +615,9 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
         if (interface_info->HasAttribute("Discoverable")) {
             named_interface.discoverable_name = NameDiscoverable(*interface_info);
         }
-        for (const auto& method : interface_info->methods) {
+        for (const auto& method_pointer : interface_info->all_methods) {
+            assert(method_pointer != nullptr);
+            const auto& method = *method_pointer;
             NamedMethod named_method;
             std::string method_name = NameMethod(named_interface.c_name, method);
             named_method.ordinal = method.ordinal.Value();
