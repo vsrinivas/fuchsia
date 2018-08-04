@@ -5,9 +5,9 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 #include <fcntl.h>
-#include <lib/fdio/util.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
+#include <lib/fdio/util.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
@@ -76,8 +76,7 @@ ServiceProviderBridge::ServiceProviderDir::ServiceProviderDir(
 ServiceProviderBridge::ServiceProviderDir::~ServiceProviderDir() = default;
 
 zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(
-    fbl::RefPtr<fs::Vnode>* out,
-    fbl::StringPiece name) {
+    fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
   *out = fbl::AdoptRef(new fs::Service(
       [bridge = bridge_,
        name = std::string(name.data(), name.length())](zx::channel channel) {

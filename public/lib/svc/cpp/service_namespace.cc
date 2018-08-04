@@ -5,9 +5,9 @@
 #include "lib/svc/cpp/service_namespace.h"
 
 #include <fcntl.h>
-#include <lib/fdio/util.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
+#include <lib/fdio/util.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
@@ -36,9 +36,7 @@ void ServiceNamespace::AddBinding(
     bindings_.AddBinding(this, std::move(request));
 }
 
-void ServiceNamespace::Close() {
-  bindings_.CloseAll();
-}
+void ServiceNamespace::Close() { bindings_.CloseAll(); }
 
 void ServiceNamespace::AddServiceForName(ServiceConnector connector,
                                          const std::string& service_name) {

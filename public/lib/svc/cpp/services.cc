@@ -10,8 +10,7 @@
 
 namespace component {
 
-void ConnectToService(const zx::channel& directory,
-                      zx::channel request,
+void ConnectToService(const zx::channel& directory, zx::channel request,
                       const std::string& service_path) {
   fdio_service_connect_at(directory.get(), service_path.c_str(),
                           request.release());

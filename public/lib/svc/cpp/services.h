@@ -19,8 +19,7 @@ namespace component {
 // an untyped interface request.
 // TODO(ZX-1358): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
-void ConnectToService(const zx::channel& directory,
-                      zx::channel request,
+void ConnectToService(const zx::channel& directory, zx::channel request,
                       const std::string& service_path);
 
 // Connects to a service located at a path within the directory and binds it to
@@ -30,8 +29,7 @@ void ConnectToService(const zx::channel& directory,
 // once RIO is ported to FIDL.
 template <typename Interface>
 inline void ConnectToService(
-    const zx::channel& directory,
-    fidl::InterfaceRequest<Interface> request,
+    const zx::channel& directory, fidl::InterfaceRequest<Interface> request,
     const std::string& service_path = Interface::Name_) {
   ConnectToService(directory, request.TakeChannel(), service_path);
 }
@@ -111,6 +109,6 @@ class Services {
   FXL_DISALLOW_COPY_AND_ASSIGN(Services);
 };
 
-}  // component
+}  // namespace component
 
 #endif  // LIB_SVC_CPP_SERVICES_H_

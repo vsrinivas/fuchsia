@@ -16,8 +16,8 @@ struct svc_dir {
   fbl::RefPtr<fs::PseudoDir> root;
 };
 
-zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
-                           svc_dir_t** result) {
+zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
+                           zx_handle_t dir_request, svc_dir_t** result) {
   svc_dir_t* dir = new svc_dir_t(dispatcher);
   dir->root = fbl::AdoptRef(new fs::PseudoDir());
   zx_status_t status =
