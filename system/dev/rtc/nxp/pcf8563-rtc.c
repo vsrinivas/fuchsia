@@ -17,6 +17,12 @@ typedef struct {
     i2c_protocol_t i2c;
 } pcf8563_context;
 
+static zx_status_t set_utc_offset(const rtc_t* rtc) {
+    uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
+    int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
+    return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
+}
+
 static ssize_t pcf8563_rtc_get(pcf8563_context *ctx, void* buf, size_t count) {
     ZX_DEBUG_ASSERT(ctx);
 

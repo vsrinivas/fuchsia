@@ -25,47 +25,40 @@ static const uint64_t days_in_month[] = {
     31, // December
 };
 
-// Start with seconds from the Unix epoch to 2016/1/1T00:00:00.
-static const uint64_t local_epoc = 1451606400;
-static const uint16_t local_epoc_year = 2016;
+// Start with seconds from the Unix epoch to 2000/1/1T00:00:00.
+static const uint64_t local_epoch = 946684800;
+static const uint16_t local_epoch_year = 2000;
+static const uint16_t default_year = 2018;
 
 static bool is_leap_year(uint16_t year) {
     return ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
 }
 
-// This is run on boot (after validation of the RTC) and whenever the
-// RTC is adjusted.
-zx_status_t set_utc_offset(const rtc_t* rtc) {
-    // First add all of the prior years
-    uint64_t days_since_local_epoc = 0;
-    for (uint16_t year = local_epoc_year; year < rtc->year; year++) {
-        days_since_local_epoc += is_leap_year(year) ? 366 : 365;
+uint64_t seconds_since_epoch(const rtc_t* rtc) {
+    // First add all of the prior years.
+    uint64_t days_since_local_epoch = 0;
+    for (uint16_t year = local_epoch_year; year < rtc->year; year++) {
+        days_since_local_epoch += is_leap_year(year) ? 366 : 365;
     }
 
     // Next add all the prior complete months this year.
     for (size_t month = 1; month < rtc->month; month++) {
-        days_since_local_epoc += days_in_month[month];
+        days_since_local_epoch += days_in_month[month];
     }
     if (rtc->month > 2 && is_leap_year(rtc->year)) {
-        days_since_local_epoc++;
+        days_since_local_epoch++;
     }
 
     // Add all the prior complete days.
-    days_since_local_epoc += rtc->day - 1;
+    days_since_local_epoch += rtc->day - 1;
 
     // Hours, minutes, and seconds are 0 indexed.
-    uint64_t hours_since_local_epoc = (days_since_local_epoc * 24) + rtc->hours;
-    uint64_t minutes_since_local_epoc = (hours_since_local_epoc * 60) + rtc->minutes;
-    uint64_t seconds_since_local_epoc = (minutes_since_local_epoc * 60) + rtc->seconds;
+    uint64_t hours_since_local_epoch = (days_since_local_epoch * 24) + rtc->hours;
+    uint64_t minutes_since_local_epoch = (hours_since_local_epoch * 60) + rtc->minutes;
+    uint64_t seconds_since_local_epoch = (minutes_since_local_epoch * 60) + rtc->seconds;
 
-    uint64_t rtc_seconds = local_epoc + seconds_since_local_epoc;
-    uint64_t rtc_nanoseconds = rtc_seconds * 1000000000;
-
-    uint64_t monotonic_nanoseconds = zx_clock_get_monotonic();
-    int64_t offset = rtc_nanoseconds - monotonic_nanoseconds;
-
-    zx_status_t status = zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
-    return status;
+    uint64_t rtc_seconds = local_epoch + seconds_since_local_epoch;
+    return rtc_seconds;
 }
 
 uint8_t to_bcd(uint8_t binary) {
@@ -82,7 +75,7 @@ bool rtc_is_invalid(const rtc_t* rtc) {
         rtc->hours > 23 ||
         rtc->day > 31 ||
         rtc->month > 12 ||
-        rtc->year < 2000 ||
+        rtc->year < local_epoch_year ||
         rtc->year > 2099;
 }
 
@@ -93,11 +86,11 @@ void sanitize_rtc(void* ctx, zx_protocol_device_t* dev, rtc_t* rtc) {
     static const rtc_t default_rtc = {
         .day = 1,
         .month = 1,
-        .year = 2016,
+        .year = default_year,
     };
     size_t out_actual;
     dev->ioctl(ctx, IOCTL_RTC_GET, NULL, 0, rtc, sizeof *rtc, &out_actual);
-    if (rtc_is_invalid(rtc) || rtc->year < local_epoc_year) {
+    if (rtc_is_invalid(rtc) || rtc->year < default_year) {
         dev->ioctl(ctx, IOCTL_RTC_SET, &default_rtc, sizeof default_rtc, NULL, 0, NULL);
         *rtc = default_rtc;
     }

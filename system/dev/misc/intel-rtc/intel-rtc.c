@@ -132,6 +132,12 @@ static void write_reg_hour(uint8_t hour, bool reg_is_binary, bool reg_is_24_hour
     write_reg_raw(REG_HOURS, data);
 }
 
+static zx_status_t set_utc_offset(const rtc_t* rtc) {
+    uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
+    int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
+    return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
+}
+
 // Retrieve the hour format and data mode bits. Note that on some
 // platforms (including the acer) these bits can not be reliably
 // written. So we must instead parse and provide the data in whatever
