@@ -75,7 +75,8 @@ impl HeaderPrefix {
         self.version_ihl >> 4
     }
 
-    fn ihl(&self) -> u8 {
+    /// Get the Internet Header Length (IHL).
+    pub fn ihl(&self) -> u8 {
         self.version_ihl & 0xF
     }
 
@@ -125,26 +126,31 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         }
         let (options, body) = rest.split_at(hdr_bytes - HEADER_PREFIX_SIZE);
         let options = Options::parse(options).map_err(|_| ParseError::Format)?;
+        if hdr_prefix.version() != 4 {
+            return debug_err!(
+                Err(ParseError::Format),
+                "unexpected IP version: {}",
+                hdr_prefix.version()
+            );
+        }
+        let body = if (hdr_prefix.total_length() as usize) < total_len {
+            let (body, _) = body.split_at(hdr_prefix.total_length() as usize - hdr_bytes);
+            body
+        } else if hdr_prefix.total_length() as usize == total_len {
+            body
+        } else {
+            // we don't yet support IPv4 fragmentation
+            return debug_err!(Err(ParseError::NotSupported), "fragmentation not supported");
+        };
+
         let packet = Ipv4Packet {
             hdr_prefix,
             options,
             body,
         };
-        if packet.hdr_prefix.version() != 4 {
-            return debug_err!(
-                Err(ParseError::Format),
-                "unexpected IP version: {}",
-                packet.hdr_prefix.version()
-            );
-        }
         if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum() {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
-        if packet.hdr_prefix.total_length() as usize != total_len {
-            // we don't yet support IPv4 fragmentation
-            return debug_err!(Err(ParseError::NotSupported), "fragmentation not supported");
-        }
-
         let hdr_len = packet.hdr_prefix.bytes().len() + packet.options.bytes().len();
         Ok((packet, hdr_len..total_len))
     }

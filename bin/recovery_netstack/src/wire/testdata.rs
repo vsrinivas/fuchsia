@@ -121,8 +121,8 @@ pub mod tls_client_hello {
     pub const TCP_FIN_FLAG: bool = false;
     pub const TCP_SYN_FLAG: bool = false;
     pub const TCP_OPTIONS: &[TcpOption] = &[TcpOption::Timestamp {
-        ts_val: 644726309,
-        ts_echo_reply: 2960127454,
+        ts_val: 644_726_309,
+        ts_echo_reply: 2_960_127_454,
     }];
     pub const TCP_BODY_RANGE: Range<usize> = 32..557;
     pub const TCP_BODY: &[u8] = &[
@@ -246,12 +246,11 @@ pub mod icmp_timestamp {
     pub const RESPONSE_IP_PACKET_BYTES: &[u8] = &[
         0x45, 0x00, 0x00, 0x28, 0x0f, 0x3a, 0x00, 0x00, 0x80, 0x01, 0xa9, 0x7d, 0xc0, 0xa8, 0x00,
         0x67, 0xc0, 0xa8, 0x00, 0x66, 0x0e, 0x00, 0xab, 0x87, 0x39, 0x30, 0x00, 0x00, 0x00, 0xf6,
-        0x23, 0xf6, 0xfe, 0x2c, 0xf6, 0x00, 0xfe, 0x2c, 0xf6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00,
+        0x23, 0xf6, 0xfe, 0x2c, 0xf6, 0x00, 0xfe, 0x2c, 0xf6, 0x00,
     ];
     pub const IDENTIFIER: u16 = 0x3930;
     pub const SEQUENCE_NUM: u16 = 0;
-    pub const ORIGIN_TIMESTAMP: u32 = 16131062;
+    pub const ORIGIN_TIMESTAMP: u32 = 16_131_062;
     pub const RX_TX_TIMESTAMP: u32 = 0;
 }
 

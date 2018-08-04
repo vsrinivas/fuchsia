@@ -361,12 +361,14 @@ pub enum IpProto {
     Icmp = IpProto::ICMP,
     Tcp = IpProto::TCP,
     Udp = IpProto::UDP,
+    Icmpv6 = IpProto::ICMPV6,
 }
 
 impl IpProto {
     const ICMP: u8 = 1;
     const TCP: u8 = 6;
     const UDP: u8 = 17;
+    const ICMPV6: u8 = 58;
 
     /// Construct an `IpProto` from a `u8`.
     ///
@@ -374,9 +376,10 @@ impl IpProto {
     /// if the value is unrecognized.
     pub fn from_u8(u: u8) -> Option<IpProto> {
         match u {
+            Self::ICMP => Some(IpProto::Icmp),
             Self::TCP => Some(IpProto::Tcp),
             Self::UDP => Some(IpProto::Udp),
-            Self::ICMP => Some(IpProto::Icmp),
+            Self::ICMPV6 => Some(IpProto::Icmpv6),
             _ => None,
         }
     }
@@ -388,9 +391,10 @@ impl Display for IpProto {
             f,
             "{}",
             match self {
+                IpProto::Icmp => "ICMP",
                 IpProto::Tcp => "TCP",
                 IpProto::Udp => "UDP",
-                IpProto::Icmp => "ICMP",
+                IpProto::Icmpv6 => "ICMPv6",
             }
         )
     }

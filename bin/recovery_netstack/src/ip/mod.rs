@@ -41,7 +41,7 @@ struct IpLayerStateInner<I: Ip> {
     table: ForwardingTable<I>,
 }
 
-fn dispatch_receive_ip_packet<I: IpAddr, B: AsMut<[u8]>>(
+fn dispatch_receive_ip_packet<I: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
     proto: IpProto, state: &mut StackState, src_ip: I, dst_ip: I, mut buffer: BufferAndRange<B>,
 ) -> bool {
     increment_counter!(state, "dispatch_receive_ip_packet");
