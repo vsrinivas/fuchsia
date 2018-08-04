@@ -25,11 +25,10 @@ namespace {
 // 0   0  E  E  E  E  E  E  E  E  E  E  E  E  E  E  E
 // 1   E  E  E  E  E  E  E  E  E  E  E  E  E  E  E  E
 // 2   E  +  E  E  +  E  +  +  +  +  +  +  +  U  U  0
-// 3                                 %  %  E  +  E  0  <-- Those are  : ; < = > ?
-// 4   %
-// 5                                    U  0  U  U  U  <-- Those are  [ \ ] ^ _
-// 6   E                                               <-- That's  `
-// 7                                    E  E  E  U  E  <-- Those are { | } ~ (UNPRINTABLE)
+// 3                                 %  %  E  +  E  0  <-- Those are  : ; < = >
+// ? 4   % 5                                    U  0  U  U  U  <-- Those are  [
+// \ ] ^ _ 6   E                                               <-- That's  ` 7
+// E  E  E  U  E  <-- Those are { | } ~ (UNPRINTABLE)
 //
 // NOTE: I didn't actually test all the control characters. Some may be
 // disallowed in the input, but they are all accepted escaped except for 0.
@@ -72,7 +71,8 @@ const unsigned char kHostCharLookup[0x80] = {
 // Scans a host name and fills in the output flags according to what we find.
 // |has_non_ascii| will be true if there are any non-7-bit characters, and
 // |has_escaped| will be true if there is a percent sign.
-void ScanHostname(const char* spec, const Component& host, bool* has_non_ascii, bool* has_escaped) {
+void ScanHostname(const char* spec, const Component& host, bool* has_non_ascii,
+                  bool* has_escaped) {
   int end = host.end();
   *has_non_ascii = false;
   *has_escaped = false;
@@ -106,8 +106,8 @@ void ScanHostname(const char* spec, const Component& host, bool* has_non_ascii, 
 //
 // The return value indicates if the output is a potentially valid host name.
 template <typename INCHAR, typename OUTCHAR>
-bool DoSimpleHost(const INCHAR* host, size_t host_len, CanonOutputT<OUTCHAR>* output,
-                  bool* has_non_ascii) {
+bool DoSimpleHost(const INCHAR* host, size_t host_len,
+                  CanonOutputT<OUTCHAR>* output, bool* has_non_ascii) {
   *has_non_ascii = false;
 
   bool success = true;
@@ -116,7 +116,8 @@ bool DoSimpleHost(const INCHAR* host, size_t host_len, CanonOutputT<OUTCHAR>* ou
     if (source == '%') {
       // Unescape first, if possible.
       // Source will be used only if decode operation was successful.
-      if (!DecodeEscaped(host, &i, host_len, reinterpret_cast<unsigned char*>(&source))) {
+      if (!DecodeEscaped(host, &i, host_len,
+                         reinterpret_cast<unsigned char*>(&source))) {
         // Invalid escaped character. There is nothing that can make this
         // host valid. We append an escaped percent so the URL looks reasonable
         // and mark as failed.
@@ -163,7 +164,8 @@ bool DoIDNHost(const uint16_t* src, size_t src_len, CanonOutput* output) {
   DoSimpleHost(src, src_len, &url_escaped_host, &has_non_ascii);
 
   RawCanonOutputW<> wide_output;
-  if (!IDNToASCII(url_escaped_host.data(), url_escaped_host.length(), &wide_output)) {
+  if (!IDNToASCII(url_escaped_host.data(), url_escaped_host.length(),
+                  &wide_output)) {
     // Some error, give up. This will write some reasonable looking
     // representation of the string to the output.
     AppendInvalidNarrowString(src, 0, src_len, output);
@@ -173,7 +175,8 @@ bool DoIDNHost(const uint16_t* src, size_t src_len, CanonOutput* output) {
   // Now we check the ASCII output like a normal host. It will also handle
   // unescaping. Although we unescaped everything before this function call, if
   // somebody does %00 as fullwidth, ICU will convert this to ASCII.
-  bool success = DoSimpleHost(wide_output.data(), wide_output.length(), output, &has_non_ascii);
+  bool success = DoSimpleHost(wide_output.data(), wide_output.length(), output,
+                              &has_non_ascii);
   FXL_DCHECK(!has_non_ascii);
   return success;
 }
@@ -181,8 +184,8 @@ bool DoIDNHost(const uint16_t* src, size_t src_len, CanonOutput* output) {
 // 8-bit convert host to its ASCII version: this converts the UTF-8 input to
 // UTF-16. The has_escaped flag should be set if the input string requires
 // unescaping.
-bool DoComplexHost(const char* host, size_t host_len, bool has_non_ascii, bool has_escaped,
-                   CanonOutput* output) {
+bool DoComplexHost(const char* host, size_t host_len, bool has_non_ascii,
+                   bool has_escaped, CanonOutput* output) {
   // Save the current position in the output. We may write stuff and rewind it
   // below, so we need to know where to rewind to.
   size_t begin_length = output->length();
@@ -228,7 +231,8 @@ bool DoComplexHost(const char* host, size_t host_len, bool has_non_ascii, bool h
   if (!ConvertUTF8ToUTF16(utf8_source, utf8_source_len, &utf16)) {
     // In this error case, the input may or may not be the output.
     RawCanonOutput<> utf8;
-    for (size_t i = 0; i < utf8_source_len; i++) utf8.push_back(utf8_source[i]);
+    for (size_t i = 0; i < utf8_source_len; i++)
+      utf8.push_back(utf8_source[i]);
     output->set_length(begin_length);
     AppendInvalidNarrowString(utf8.data(), 0, utf8.length(), output);
     return false;
@@ -242,8 +246,8 @@ bool DoComplexHost(const char* host, size_t host_len, bool has_non_ascii, bool h
 
 }  // namespace
 
-void CanonicalizeHostVerbose(const char* spec, const Component& host, CanonOutput* output,
-                             CanonHostInfo* host_info) {
+void CanonicalizeHostVerbose(const char* spec, const Component& host,
+                             CanonOutput* output, CanonHostInfo* host_info) {
   if (host.is_invalid_or_empty()) {
     // Empty hosts don't need anything.
     host_info->family = CanonHostInfo::NEUTRAL;
@@ -259,10 +263,12 @@ void CanonicalizeHostVerbose(const char* spec, const Component& host, CanonOutpu
 
   bool success;
   if (!has_non_ascii && !has_escaped) {
-    success = DoSimpleHost(&spec[host.begin], host.len(), output, &has_non_ascii);
+    success =
+        DoSimpleHost(&spec[host.begin], host.len(), output, &has_non_ascii);
     FXL_DCHECK(!has_non_ascii);
   } else {
-    success = DoComplexHost(&spec[host.begin], host.len(), has_non_ascii, has_escaped, output);
+    success = DoComplexHost(&spec[host.begin], host.len(), has_non_ascii,
+                            has_escaped, output);
   }
 
   if (!success) {
@@ -273,7 +279,8 @@ void CanonicalizeHostVerbose(const char* spec, const Component& host, CanonOutpu
     // address. IP addresses are small, so writing into this temporary buffer
     // should not cause an allocation.
     RawCanonOutput<64> canon_ip;
-    CanonicalizeIPAddress(output->data(), MakeRange(output_begin, output->length()), &canon_ip,
+    CanonicalizeIPAddress(output->data(),
+                          MakeRange(output_begin, output->length()), &canon_ip,
                           host_info);
 
     // If we got an IPv4/IPv6 address, copy the canonical form back to the
@@ -288,8 +295,8 @@ void CanonicalizeHostVerbose(const char* spec, const Component& host, CanonOutpu
   host_info->out_host = MakeRange(output_begin, output->length());
 }
 
-bool CanonicalizeHost(const char* spec, const Component& host, CanonOutput* output,
-                      Component* out_host) {
+bool CanonicalizeHost(const char* spec, const Component& host,
+                      CanonOutput* output, Component* out_host) {
   CanonHostInfo host_info;
   CanonicalizeHostVerbose(spec, host, output, &host_info);
   *out_host = host_info.out_host;

@@ -40,7 +40,8 @@ int BaseForType(SharedCharTypes type) {
 // The input is assumed to be ASCII. FindIPv4Components should have stripped
 // out any input that is greater than 7 bits. The components are assumed
 // to be non-empty.
-CanonHostInfo::Family IPv4ComponentToNumber(const char* spec, const Component& component,
+CanonHostInfo::Family IPv4ComponentToNumber(const char* spec,
+                                            const Component& component,
                                             uint32_t* number) {
   // Figure out the base
   SharedCharTypes base;
@@ -49,7 +50,8 @@ CanonHostInfo::Family IPv4ComponentToNumber(const char* spec, const Component& c
     // Either hex or dec, or a standalone zero.
     if (component.len() == 1) {
       base = CHAR_DEC;
-    } else if (spec[component.begin + 1] == 'X' || spec[component.begin + 1] == 'x') {
+    } else if (spec[component.begin + 1] == 'X' ||
+               spec[component.begin + 1] == 'x') {
       base = CHAR_HEX;
       base_prefix_len = 2;
     } else {
@@ -61,7 +63,8 @@ CanonHostInfo::Family IPv4ComponentToNumber(const char* spec, const Component& c
   }
 
   // Extend the prefix to consume all leading zeros.
-  while (base_prefix_len < component.len() && spec[component.begin + base_prefix_len] == '0')
+  while (base_prefix_len < component.len() &&
+         spec[component.begin + base_prefix_len] == '0')
     base_prefix_len++;
 
   // Put the component, minus any base prefix, into a NULL-terminated buffer so
@@ -77,11 +80,13 @@ CanonHostInfo::Family IPv4ComponentToNumber(const char* spec, const Component& c
     char input = static_cast<char>(spec[i]);
 
     // Validate that this character is OK for the given base.
-    if (!IsCharOfType(input, base)) return CanonHostInfo::NEUTRAL;
+    if (!IsCharOfType(input, base))
+      return CanonHostInfo::NEUTRAL;
 
     // Fill the buffer, if there's space remaining. This check allows us to
     // verify that all characters are numeric, even those that don't fit.
-    if (dest_i < kMaxComponentLen) buf[dest_i++] = input;
+    if (dest_i < kMaxComponentLen)
+      buf[dest_i++] = input;
   }
 
   buf[dest_i] = '\0';
@@ -91,7 +96,8 @@ CanonHostInfo::Family IPv4ComponentToNumber(const char* spec, const Component& c
   uint64_t num = _strtoui64(buf, NULL, BaseForType(base));
 
   // Check for 32-bit overflow.
-  if (num > std::numeric_limits<uint32_t>::max()) return CanonHostInfo::BROKEN;
+  if (num > std::numeric_limits<uint32_t>::max())
+    return CanonHostInfo::BROKEN;
 
   // No overflow. Success!
   *number = static_cast<uint32_t>(num);
@@ -99,11 +105,14 @@ CanonHostInfo::Family IPv4ComponentToNumber(const char* spec, const Component& c
 }
 
 // See declaration of IPv4AddressToNumber for documentation.
-CanonHostInfo::Family DoIPv4AddressToNumber(const char* spec, const Component& host,
-                                            unsigned char address[4], int* num_ipv4_components) {
+CanonHostInfo::Family DoIPv4AddressToNumber(const char* spec,
+                                            const Component& host,
+                                            unsigned char address[4],
+                                            int* num_ipv4_components) {
   // The identified components. Not all may exist.
   Component components[4];
-  if (!FindIPv4Components(spec, host, components)) return CanonHostInfo::NEUTRAL;
+  if (!FindIPv4Components(spec, host, components))
+    return CanonHostInfo::NEUTRAL;
 
   // Convert existing components to digits. Values up to
   // |existing_components| will be valid.
@@ -115,9 +124,10 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const char* spec, const Component& h
   // 12345678912345.de returns NEUTRAL rather than broken.
   bool broken = false;
   for (int i = 0; i < 4; i++) {
-    if (!components[i].is_nonempty()) continue;
-    CanonHostInfo::Family family =
-        IPv4ComponentToNumber(spec, components[i], &component_values[existing_components]);
+    if (!components[i].is_nonempty())
+      continue;
+    CanonHostInfo::Family family = IPv4ComponentToNumber(
+        spec, components[i], &component_values[existing_components]);
 
     if (family == CanonHostInfo::BROKEN) {
       broken = true;
@@ -129,14 +139,16 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const char* spec, const Component& h
     existing_components++;
   }
 
-  if (broken) return CanonHostInfo::BROKEN;
+  if (broken)
+    return CanonHostInfo::BROKEN;
 
   // Use that sequence of numbers to fill out the 4-component IP address.
 
   // First, process all components but the last, while making sure each fits
   // within an 8-bit field.
   for (int i = 0; i < existing_components - 1; i++) {
-    if (component_values[i] > std::numeric_limits<uint8_t>::max()) return CanonHostInfo::BROKEN;
+    if (component_values[i] > std::numeric_limits<uint8_t>::max())
+      return CanonHostInfo::BROKEN;
     address[i] = static_cast<unsigned char>(component_values[i]);
   }
 
@@ -156,7 +168,8 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const char* spec, const Component& h
   }
 
   // If the last component has residual bits, report overflow.
-  if (last_value != 0) return CanonHostInfo::BROKEN;
+  if (last_value != 0)
+    return CanonHostInfo::BROKEN;
 
   // Tell the caller how many components we saw.
   *num_ipv4_components = existing_components;
@@ -167,10 +180,10 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const char* spec, const Component& h
 
 // Return true if we've made a final IPV4/BROKEN decision, false if the result
 // is NEUTRAL, and we could use a second opinion.
-bool DoCanonicalizeIPv4Address(const char* spec, const Component& host, CanonOutput* output,
-                               CanonHostInfo* host_info) {
-  host_info->family =
-      IPv4AddressToNumber(spec, host, host_info->address, &host_info->num_ipv4_components);
+bool DoCanonicalizeIPv4Address(const char* spec, const Component& host,
+                               CanonOutput* output, CanonHostInfo* host_info) {
+  host_info->family = IPv4AddressToNumber(spec, host, host_info->address,
+                                          &host_info->num_ipv4_components);
 
   switch (host_info->family) {
     case CanonHostInfo::IPV4:
@@ -254,7 +267,8 @@ bool DoParseIPv6(const char* spec, const Component& host, IPv6Parsed* parsed) {
   // Zero-out the info.
   parsed->reset();
 
-  if (host.is_invalid_or_empty()) return false;
+  if (host.is_invalid_or_empty())
+    return false;
 
   // The index for start and end of address range (no brackets).
   size_t begin = host.begin;
@@ -275,33 +289,38 @@ bool DoParseIPv6(const char* spec, const Component& host, IPv6Parsed* parsed) {
       size_t component_len = i - cur_component_begin;
 
       // A component should not have more than 4 hex digits.
-      if (component_len > 4) return false;
+      if (component_len > 4)
+        return false;
 
       // Don't allow empty components.
       if (component_len == 0) {
         // The exception is when contractions appear at beginning of the
         // input or at the end of the input.
         if (!((is_contraction && i == begin) ||
-              (i == end && parsed->index_of_contraction == parsed->num_hex_components)))
+              (i == end &&
+               parsed->index_of_contraction == parsed->num_hex_components)))
           return false;
       }
 
       // Add the hex component we just found to running list.
       if (component_len > 0) {
         // Can't have more than 8 components!
-        if (parsed->num_hex_components >= 8) return false;
+        if (parsed->num_hex_components >= 8)
+          return false;
 
         parsed->hex_components[parsed->num_hex_components++] =
             Component(cur_component_begin, component_len);
       }
     }
 
-    if (i == end) break;  // Reached the end of the input, DONE.
+    if (i == end)
+      break;  // Reached the end of the input, DONE.
 
     // We found a "::" contraction.
     if (is_contraction) {
       // There can be at most one contraction in the literal.
-      if (parsed->index_of_contraction != -1) return false;
+      if (parsed->index_of_contraction != -1)
+        return false;
       parsed->index_of_contraction = parsed->num_hex_components;
       ++i;  // Consume the colon we peeked.
     }
@@ -311,7 +330,8 @@ bool DoParseIPv6(const char* spec, const Component& host, IPv6Parsed* parsed) {
       // current component started (after this colon).
       cur_component_begin = i + 1;
     } else {
-      if (static_cast<unsigned char>(spec[i]) >= 0x80) return false;  // Not ASCII.
+      if (static_cast<unsigned char>(spec[i]) >= 0x80)
+        return false;  // Not ASCII.
 
       if (!IsHexChar(static_cast<unsigned char>(spec[i]))) {
         // Regular components are hex numbers. It is also possible for
@@ -320,7 +340,8 @@ bool DoParseIPv6(const char* spec, const Component& host, IPv6Parsed* parsed) {
           // Since IPv4 address can only appear at the end, assume the rest
           // of the string is an IPv4 address. (We will parse this separately
           // later).
-          parsed->ipv4_component = Component(cur_component_begin, end - cur_component_begin);
+          parsed->ipv4_component =
+              Component(cur_component_begin, end - cur_component_begin);
           break;
         } else {
           // The character was neither a hex digit, nor an IPv4 character.
@@ -339,23 +360,27 @@ bool DoParseIPv6(const char* spec, const Component& host, IPv6Parsed* parsed) {
 // 16 or more bits). Returns true if sizes match up, false otherwise. On
 // success writes the length of the contraction (if any) to
 // |out_num_bytes_of_contraction|.
-bool CheckIPv6ComponentsSize(const IPv6Parsed& parsed, size_t* out_num_bytes_of_contraction) {
+bool CheckIPv6ComponentsSize(const IPv6Parsed& parsed,
+                             size_t* out_num_bytes_of_contraction) {
   // Each group of four hex digits contributes 16 bits.
   size_t num_bytes_without_contraction = parsed.num_hex_components * 2;
 
   // If an IPv4 address was embedded at the end, it contributes 32 bits.
-  if (parsed.ipv4_component.is_valid()) num_bytes_without_contraction += 4;
+  if (parsed.ipv4_component.is_valid())
+    num_bytes_without_contraction += 4;
 
   // If there was a "::" contraction, its size is going to be:
   // MAX([16bits], [128bits] - num_bytes_without_contraction).
   size_t num_bytes_of_contraction = 0;
   if (parsed.index_of_contraction != -1) {
     num_bytes_of_contraction = 16 - num_bytes_without_contraction;
-    if (num_bytes_of_contraction < 2) num_bytes_of_contraction = 2;
+    if (num_bytes_of_contraction < 2)
+      num_bytes_of_contraction = 2;
   }
 
   // Check that the numbers add up.
-  if (num_bytes_without_contraction + num_bytes_of_contraction != 16) return false;
+  if (num_bytes_without_contraction + num_bytes_of_contraction != 16)
+    return false;
 
   *out_num_bytes_of_contraction = num_bytes_of_contraction;
   return true;
@@ -364,7 +389,8 @@ bool CheckIPv6ComponentsSize(const IPv6Parsed& parsed, size_t* out_num_bytes_of_
 // Converts a hex component into a number. This cannot fail since the caller has
 // already verified that each character in the string was a hex digit, and
 // that there were no more than 4 characters.
-uint16_t IPv6HexComponentToNumber(const char* spec, const Component& component) {
+uint16_t IPv6HexComponentToNumber(const char* spec,
+                                  const Component& component) {
   FXL_DCHECK(component.len() <= 4);
 
   // Copy the hex string into a C-string.
@@ -380,10 +406,13 @@ uint16_t IPv6HexComponentToNumber(const char* spec, const Component& component) 
 
 // Converts an IPv6 address to a 128-bit number (network byte order), returning
 // true on success. False means that the input was not a valid IPv6 address.
-bool DoIPv6AddressToNumber(const char* spec, const Component& host, unsigned char address[16]) {
+bool DoIPv6AddressToNumber(const char* spec, const Component& host,
+                           unsigned char address[16]) {
   // Make sure the component is bounded by '[' and ']'.
   size_t end = host.end();
-  if (host.is_invalid_or_empty() || spec[host.begin] != '[' || spec[end - 1] != ']') return false;
+  if (host.is_invalid_or_empty() || spec[host.begin] != '[' ||
+      spec[end - 1] != ']')
+    return false;
 
   // Exclude the square brackets.
   Component ipv6_comp(host.begin + 1, host.len() - 2);
@@ -391,13 +420,15 @@ bool DoIPv6AddressToNumber(const char* spec, const Component& host, unsigned cha
   // Parse the IPv6 address -- identify where all the colon separated hex
   // components are, the "::" contraction, and the embedded IPv4 address.
   IPv6Parsed ipv6_parsed;
-  if (!DoParseIPv6(spec, ipv6_comp, &ipv6_parsed)) return false;
+  if (!DoParseIPv6(spec, ipv6_comp, &ipv6_parsed))
+    return false;
 
   // Do some basic size checks to make sure that the address doesn't
   // specify more than 128 bits or fewer than 128 bits. This also resolves
   // how may zero bytes the "::" contraction represents.
   size_t num_bytes_of_contraction;
-  if (!CheckIPv6ComponentsSize(ipv6_parsed, &num_bytes_of_contraction)) return false;
+  if (!CheckIPv6ComponentsSize(ipv6_parsed, &num_bytes_of_contraction))
+    return false;
 
   size_t cur_index_in_address = 0;
 
@@ -405,12 +436,14 @@ bool DoIPv6AddressToNumber(const char* spec, const Component& host, unsigned cha
   for (int i = 0; i <= ipv6_parsed.num_hex_components; ++i) {
     // Append the contraction if it appears before this component.
     if (i == ipv6_parsed.index_of_contraction) {
-      for (size_t j = 0; j < num_bytes_of_contraction; ++j) address[cur_index_in_address++] = 0;
+      for (size_t j = 0; j < num_bytes_of_contraction; ++j)
+        address[cur_index_in_address++] = 0;
     }
     // Append the hex component's value.
     if (i != ipv6_parsed.num_hex_components) {
       // Get the 16-bit value for this hex component.
-      uint16_t number = IPv6HexComponentToNumber(spec, ipv6_parsed.hex_components[i]);
+      uint16_t number =
+          IPv6HexComponentToNumber(spec, ipv6_parsed.hex_components[i]);
       // Append to |address|, in network byte order.
       address[cur_index_in_address++] = (number & 0xFF00) >> 8;
       address[cur_index_in_address++] = (number & 0x00FF);
@@ -422,9 +455,10 @@ bool DoIPv6AddressToNumber(const char* spec, const Component& host, unsigned cha
   if (ipv6_parsed.ipv4_component.is_valid()) {
     // Append the 32-bit number to |address|.
     int ignored_num_ipv4_components;
-    if (CanonHostInfo::IPV4 != IPv4AddressToNumber(spec, ipv6_parsed.ipv4_component,
-                                                   &address[cur_index_in_address],
-                                                   &ignored_num_ipv4_components))
+    if (CanonHostInfo::IPV4 !=
+        IPv4AddressToNumber(spec, ipv6_parsed.ipv4_component,
+                            &address[cur_index_in_address],
+                            &ignored_num_ipv4_components))
       return false;
   }
 
@@ -434,7 +468,8 @@ bool DoIPv6AddressToNumber(const char* spec, const Component& host, unsigned cha
 // Searches for the longest sequence of zeros in |address|, and writes the
 // range into |contraction_range|. The run of zeros must be at least 16 bits,
 // and if there is a tie the first is chosen.
-void ChooseIPv6ContractionRange(const unsigned char address[16], Component* contraction_range) {
+void ChooseIPv6ContractionRange(const unsigned char address[16],
+                                Component* contraction_range) {
   // The longest run of zeros in |address| seen so far.
   Component max_range;
 
@@ -447,7 +482,8 @@ void ChooseIPv6ContractionRange(const unsigned char address[16], Component* cont
 
     if (is_zero) {
       // Add the zero to the current range (or start a new one).
-      if (!cur_range.is_valid()) cur_range = Component(i, 0);
+      if (!cur_range.is_valid())
+        cur_range = Component(i, 0);
       cur_range.set_len(cur_range.len() + 2);
     }
 
@@ -466,8 +502,8 @@ void ChooseIPv6ContractionRange(const unsigned char address[16], Component* cont
 
 // Return true if we've made a final IPV6/BROKEN decision, false if the result
 // is NEUTRAL, and we could use a second opinion.
-bool DoCanonicalizeIPv6Address(const char* spec, const Component& host, CanonOutput* output,
-                               CanonHostInfo* host_info) {
+bool DoCanonicalizeIPv6Address(const char* spec, const Component& host,
+                               CanonOutput* output, CanonHostInfo* host_info) {
   // Turn the IP address into a 128 bit number.
   if (!IPv6AddressToNumber(spec, host, host_info->address)) {
     // If it's not an IPv6 address, scan for characters that should *only*
@@ -499,10 +535,12 @@ bool DoCanonicalizeIPv6Address(const char* spec, const Component& host, CanonOut
 
 }  // namespace
 
-bool FindIPv4Components(const char* spec, const Component& host, Component components[4]) {
-  if (host.is_invalid_or_empty()) return false;
+bool FindIPv4Components(const char* spec, const Component& host,
+                        Component components[4]) {
+  if (host.is_invalid_or_empty())
+    return false;
 
-  int cur_component = 0;                    // Index of the component we're working on.
+  int cur_component = 0;  // Index of the component we're working on.
   size_t cur_component_begin = host.begin;  // Start of the current component.
   size_t end = host.end();
   for (size_t i = host.begin; /* nothing */; i++) {
@@ -519,14 +557,17 @@ bool FindIPv4Components(const char* spec, const Component& host, Component compo
       // allow an empty component at the end (this would indicate that the
       // input ends in a dot). We also want to error if the component is
       // empty and it's the only component (cur_component == 1).
-      if (component_len == 0 && (i < end || cur_component == 1)) return false;
+      if (component_len == 0 && (i < end || cur_component == 1))
+        return false;
 
-      if (i >= end) break;  // End of the input.
+      if (i >= end)
+        break;  // End of the input.
 
       if (cur_component == 4) {
         // Anything else after the 4th component is an error unless it is a
         // dot that would otherwise be treated as the end of input.
-        if (spec[i] == '.' && i + 1 == end) break;
+        if (spec[i] == '.' && i + 1 == end)
+          break;
         return false;
       }
     } else if (static_cast<unsigned char>(spec[i]) >= 0x80 ||
@@ -537,7 +578,8 @@ bool FindIPv4Components(const char* spec, const Component& host, Component compo
   }
 
   // Fill in any unused components.
-  while (cur_component < 4) components[cur_component++] = Component();
+  while (cur_component < 4)
+    components[cur_component++] = Component();
   return true;
 }
 
@@ -546,9 +588,11 @@ void AppendIPv4Address(const unsigned char address[4], CanonOutput* output) {
     char str[16];
     IntToString(address[i], str, 10);
 
-    for (size_t ch = 0; str[ch] != 0; ch++) output->push_back(str[ch]);
+    for (size_t ch = 0; str[ch] != 0; ch++)
+      output->push_back(str[ch]);
 
-    if (i != 3) output->push_back('.');
+    if (i != 3)
+      output->push_back('.');
   }
 }
 
@@ -566,7 +610,8 @@ void AppendIPv6Address(const unsigned char address[16], CanonOutput* output) {
     if (contraction_range.is_valid() && i == contraction_range.begin &&
         contraction_range.is_nonempty()) {
       // Jump over the contraction.
-      if (i == 0) output->push_back(':');
+      if (i == 0)
+        output->push_back(':');
       output->push_back(':');
       i = contraction_range.end();
     } else {
@@ -578,26 +623,33 @@ void AppendIPv6Address(const unsigned char address[16], CanonOutput* output) {
       // Stringify the 16 bit number (at most requires 4 hex digits).
       char str[5];
       IntToString(x, str, 16);
-      for (size_t ch = 0; str[ch] != 0; ++ch) output->push_back(str[ch]);
+      for (size_t ch = 0; str[ch] != 0; ++ch)
+        output->push_back(str[ch]);
 
       // Put a colon after each number, except the last.
-      if (i < 16) output->push_back(':');
+      if (i < 16)
+        output->push_back(':');
     }
   }
 }
 
-void CanonicalizeIPAddress(const char* spec, const Component& host, CanonOutput* output,
-                           CanonHostInfo* host_info) {
-  if (DoCanonicalizeIPv4Address(spec, host, output, host_info)) return;
-  if (DoCanonicalizeIPv6Address(spec, host, output, host_info)) return;
+void CanonicalizeIPAddress(const char* spec, const Component& host,
+                           CanonOutput* output, CanonHostInfo* host_info) {
+  if (DoCanonicalizeIPv4Address(spec, host, output, host_info))
+    return;
+  if (DoCanonicalizeIPv6Address(spec, host, output, host_info))
+    return;
 }
 
-CanonHostInfo::Family IPv4AddressToNumber(const char* spec, const Component& host,
-                                          unsigned char address[4], int* num_ipv4_components) {
+CanonHostInfo::Family IPv4AddressToNumber(const char* spec,
+                                          const Component& host,
+                                          unsigned char address[4],
+                                          int* num_ipv4_components) {
   return DoIPv4AddressToNumber(spec, host, address, num_ipv4_components);
 }
 
-bool IPv6AddressToNumber(const char* spec, const Component& host, unsigned char address[16]) {
+bool IPv6AddressToNumber(const char* spec, const Component& host,
+                         unsigned char address[16]) {
   return DoIPv6AddressToNumber(spec, host, address);
 }
 

@@ -6,7 +6,8 @@
 
 namespace url {
 
-StdStringCanonOutput::StdStringCanonOutput(std::string* str) : CanonOutput(), str_(str) {
+StdStringCanonOutput::StdStringCanonOutput(std::string* str)
+    : CanonOutput(), str_(str) {
   cur_len_ = static_cast<int>(str_->size());  // Append to existing data.
   str_->resize(str_->capacity());
   buffer_ = str_->empty() ? NULL : &(*str_)[0];

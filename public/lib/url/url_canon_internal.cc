@@ -20,7 +20,8 @@ namespace {
 // This function assumes the input values are all contained in 8-bit,
 // although it allows any type. Returns true if input is valid, false if not.
 template <typename CHAR, typename UCHAR>
-void DoAppendInvalidNarrowString(const CHAR* spec, size_t begin, size_t end, CanonOutput* output) {
+void DoAppendInvalidNarrowString(const CHAR* spec, size_t begin, size_t end,
+                                 CanonOutput* output) {
   for (size_t i = begin; i < end; i++) {
     UCHAR uch = static_cast<UCHAR>(spec[i]);
     if (uch >= 0x80) {
@@ -38,17 +39,19 @@ void DoAppendInvalidNarrowString(const CHAR* spec, size_t begin, size_t end, Can
   }
 }
 
-static inline bool ReadUnicodeCharacter(const uint16_t* src, size_t src_len, size_t* char_index,
+static inline bool ReadUnicodeCharacter(const uint16_t* src, size_t src_len,
+                                        size_t* char_index,
                                         uint32_t* code_point) {
   if (FXL_U16_IS_SURROGATE(src[*char_index])) {
-    if (!FXL_U16_IS_SURROGATE_LEAD(src[*char_index]) || *char_index + 1 >= src_len ||
-        !FXL_U16_IS_TRAIL(src[*char_index + 1])) {
+    if (!FXL_U16_IS_SURROGATE_LEAD(src[*char_index]) ||
+        *char_index + 1 >= src_len || !FXL_U16_IS_TRAIL(src[*char_index + 1])) {
       // Invalid surrogate pair.
       return false;
     }
 
     // Valid surrogate pair.
-    *code_point = FXL_U16_GET_SUPPLEMENTARY(src[*char_index], src[*char_index + 1]);
+    *code_point =
+        FXL_U16_GET_SUPPLEMENTARY(src[*char_index], src[*char_index + 1]);
     (*char_index)++;
   } else {
     // Not a surrogate, just one 16-bit word.
@@ -173,7 +176,8 @@ const unsigned char kSharedCharTypeTable[0x100] = {
 // clang-format on
 
 const char kHexCharLookup[0x10] = {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
 };
 
 const char kCharToHexLookup[8] = {
@@ -209,7 +213,8 @@ void AppendStringOfType(const char* source, size_t length, SharedCharTypes type,
   }
 }
 
-bool ReadUTFChar(const char* str, size_t* begin, size_t length, uint32_t* code_point_out) {
+bool ReadUTFChar(const char* str, size_t* begin, size_t length,
+                 uint32_t* code_point_out) {
   // This depends on ints and int32s being the same thing. If they're not, it
   // will fail to compile.
   // TODO(mmenke): This should probably be fixed.
@@ -221,7 +226,8 @@ bool ReadUTFChar(const char* str, size_t* begin, size_t length, uint32_t* code_p
   return true;
 }
 
-bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length, unsigned* code_point_out) {
+bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length,
+                 unsigned* code_point_out) {
   // This depends on ints and int32s being the same thing. If they're not, it
   // will fail to compile.
   // TODO(mmenke): This should probably be fixed.
@@ -233,7 +239,8 @@ bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length, unsigned* co
   return true;
 }
 
-void AppendInvalidNarrowString(const char* spec, size_t begin, size_t end, CanonOutput* output) {
+void AppendInvalidNarrowString(const char* spec, size_t begin, size_t end,
+                               CanonOutput* output) {
   DoAppendInvalidNarrowString<char, unsigned char>(spec, begin, end, output);
 }
 
@@ -242,7 +249,8 @@ void AppendInvalidNarrowString(const uint16_t* spec, size_t begin, size_t end,
   DoAppendInvalidNarrowString<uint16_t, uint16_t>(spec, begin, end, output);
 }
 
-bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len, CanonOutput* output) {
+bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len,
+                        CanonOutput* output) {
   bool success = true;
   for (size_t i = 0; i < input_len; i++) {
     unsigned code_point;
@@ -252,7 +260,8 @@ bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len, CanonOutput* ou
   return success;
 }
 
-bool ConvertUTF8ToUTF16(const char* input, size_t input_len, CanonOutputT<uint16_t>* output) {
+bool ConvertUTF8ToUTF16(const char* input, size_t input_len,
+                        CanonOutputT<uint16_t>* output) {
   bool success = true;
   for (size_t i = 0; i < input_len; i++) {
     unsigned code_point;

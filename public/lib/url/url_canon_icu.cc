@@ -8,11 +8,11 @@
 #include <string.h>
 
 #include "lib/fxl/logging.h"
+#include "lib/url/url_canon_icu.h"
+#include "lib/url/url_canon_internal.h"  // for IntToString
 #include "third_party/icu/source/common/unicode/ucnv.h"
 #include "third_party/icu/source/common/unicode/ucnv_cb.h"
 #include "third_party/icu/source/common/unicode/uidna.h"
-#include "lib/url/url_canon_icu.h"
-#include "lib/url/url_canon_internal.h"  // for IntToString
 
 namespace url {
 
@@ -22,14 +22,17 @@ namespace {
 // append an escaped version of the numerical character reference for that code
 // point. It is of the form "&#1234;" and we will escape the non-digits to
 // "%26%231234%3B". Why? This is what Netscape did back in the olden days.
-void appendURLEscapedChar(const void* context, UConverterFromUnicodeArgs* from_args,
-                          const UChar* code_units, int32_t length, UChar32 code_point,
-                          UConverterCallbackReason reason, UErrorCode* err) {
+void appendURLEscapedChar(const void* context,
+                          UConverterFromUnicodeArgs* from_args,
+                          const UChar* code_units, int32_t length,
+                          UChar32 code_point, UConverterCallbackReason reason,
+                          UErrorCode* err) {
   if (reason == UCNV_UNASSIGNED) {
     *err = U_ZERO_ERROR;
 
     const static size_t prefix_len = 6;
-    const static char prefix[prefix_len + 1] = "%26%23";  // "&#" percent-escaped
+    const static char prefix[prefix_len + 1] =
+        "%26%23";  // "&#" percent-escaped
     ucnv_cbFromUWriteBytes(from_args, prefix, prefix_len, 0, err);
 
     FXL_DCHECK(code_point < 0x110000);
@@ -51,7 +54,8 @@ class AppendHandlerInstaller {
   // duration of this object's lifetime.
   AppendHandlerInstaller(UConverter* converter) : converter_(converter) {
     UErrorCode err = U_ZERO_ERROR;
-    ucnv_setFromUCallBack(converter_, appendURLEscapedChar, 0, &old_callback_, &old_context_, &err);
+    ucnv_setFromUCallBack(converter_, appendURLEscapedChar, 0, &old_callback_,
+                          &old_context_, &err);
   }
 
   ~AppendHandlerInstaller() {
@@ -104,11 +108,13 @@ struct UIDNAWrapper {
 
 }  // namespace
 
-ICUCharsetConverter::ICUCharsetConverter(UConverter* converter) : converter_(converter) {}
+ICUCharsetConverter::ICUCharsetConverter(UConverter* converter)
+    : converter_(converter) {}
 
 ICUCharsetConverter::~ICUCharsetConverter() {}
 
-void ICUCharsetConverter::ConvertFromUTF16(const uint16_t* input, size_t input_len,
+void ICUCharsetConverter::ConvertFromUTF16(const uint16_t* input,
+                                           size_t input_len,
                                            CanonOutput* output) {
   // Install our error handler. It will be called for character that can not
   // be represented in the destination character set.
@@ -121,8 +127,8 @@ void ICUCharsetConverter::ConvertFromUTF16(const uint16_t* input, size_t input_l
   do {
     UErrorCode err = U_ZERO_ERROR;
     char* dest = &output->data()[begin_offset];
-    size_t required_capacity =
-        ucnv_fromUChars(converter_, dest, dest_capacity, input, input_len, &err);
+    size_t required_capacity = ucnv_fromUChars(converter_, dest, dest_capacity,
+                                               input, input_len, &err);
     if (err != U_BUFFER_OVERFLOW_ERROR) {
       output->set_length(begin_offset + required_capacity);
       return;
@@ -158,8 +164,8 @@ bool IDNToASCII(const uint16_t* src, size_t src_len, CanonOutputW* output) {
   while (true) {
     UErrorCode err = U_ZERO_ERROR;
     UIDNAInfo info = UIDNA_INFO_INITIALIZER;
-    size_t output_length =
-        uidna_nameToASCII(uidna, src, src_len, output->data(), output->capacity(), &info, &err);
+    size_t output_length = uidna_nameToASCII(
+        uidna, src, src_len, output->data(), output->capacity(), &info, &err);
     if (U_SUCCESS(err) && info.errors == 0) {
       output->set_length(output_length);
       return true;

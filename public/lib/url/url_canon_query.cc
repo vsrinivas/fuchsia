@@ -44,7 +44,8 @@ namespace {
 bool IsAllASCII(const char* spec, const Component& query) {
   int end = query.end();
   for (int i = query.begin; i < end; i++) {
-    if (static_cast<unsigned char>(spec[i]) >= 0x80) return false;
+    if (static_cast<unsigned char>(spec[i]) >= 0x80)
+      return false;
   }
   return true;
 }
@@ -53,7 +54,8 @@ bool IsAllASCII(const char* spec, const Component& query) {
 // match the given |type| in SharedCharTypes. This version will accept 8 or 16
 // bit characters, but assumes that they have only 7-bit values. It also assumes
 // that all UTF-8 values are correct, so doesn't bother checking
-void AppendRaw8BitQueryString(const char* source, int length, CanonOutput* output) {
+void AppendRaw8BitQueryString(const char* source, int length,
+                              CanonOutput* output) {
   for (int i = 0; i < length; i++) {
     if (!IsQueryChar(static_cast<unsigned char>(source[i])))
       AppendEscapedChar(static_cast<unsigned char>(source[i]), output);
@@ -64,8 +66,8 @@ void AppendRaw8BitQueryString(const char* source, int length, CanonOutput* outpu
 
 // Runs the converter on the given UTF-8 input. Since the converter expects
 // UTF-16, we have to convert first. The converter must be non-NULL.
-void RunConverter(const char* spec, const Component& query, CharsetConverter* converter,
-                  CanonOutput* output) {
+void RunConverter(const char* spec, const Component& query,
+                  CharsetConverter* converter, CanonOutput* output) {
   // This function will replace any misencoded values with the invalid
   // character. This is what we want so we don't have to check for error.
   RawCanonOutputW<1024> utf16;
@@ -73,7 +75,8 @@ void RunConverter(const char* spec, const Component& query, CharsetConverter* co
   converter->ConvertFromUTF16(utf16.data(), utf16.length(), output);
 }
 
-void DoConvertToQueryEncoding(const char* spec, const Component& query, CharsetConverter* converter,
+void DoConvertToQueryEncoding(const char* spec, const Component& query,
+                              CharsetConverter* converter,
                               CanonOutput* output) {
   if (IsAllASCII(spec, query)) {
     // Easy: the input can just appended with no character set conversions.
@@ -97,8 +100,9 @@ void DoConvertToQueryEncoding(const char* spec, const Component& query, CharsetC
 
 }  // namespace
 
-void CanonicalizeQuery(const char* spec, const Component& query, CharsetConverter* converter,
-                       CanonOutput* output, Component* out_query) {
+void CanonicalizeQuery(const char* spec, const Component& query,
+                       CharsetConverter* converter, CanonOutput* output,
+                       Component* out_query) {
   if (!query.is_valid()) {
     *out_query = Component();
     return;

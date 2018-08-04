@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/url/url_util.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_stdstring.h"
 #include "lib/url/url_test_utils.h"
-#include "lib/url/url_util.h"
 
 namespace url {
 
@@ -17,23 +17,27 @@ TEST(URLUtilTest, FindAndCompareScheme) {
 
   // Simple case where the scheme is found and matches.
   const char kStr1[] = "http://www.com/";
-  EXPECT_TRUE(FindAndCompareScheme(kStr1, static_cast<int>(strlen(kStr1)), "http", NULL));
-  EXPECT_TRUE(FindAndCompareScheme(kStr1, static_cast<int>(strlen(kStr1)), "http", &found_scheme));
+  EXPECT_TRUE(FindAndCompareScheme(kStr1, static_cast<int>(strlen(kStr1)),
+                                   "http", NULL));
+  EXPECT_TRUE(FindAndCompareScheme(kStr1, static_cast<int>(strlen(kStr1)),
+                                   "http", &found_scheme));
   EXPECT_TRUE(found_scheme == Component(0, 4));
 
   // A case where the scheme is found and doesn't match.
-  EXPECT_FALSE(
-      FindAndCompareScheme(kStr1, static_cast<int>(strlen(kStr1)), "https", &found_scheme));
+  EXPECT_FALSE(FindAndCompareScheme(kStr1, static_cast<int>(strlen(kStr1)),
+                                    "https", &found_scheme));
   EXPECT_TRUE(found_scheme == Component(0, 4));
 
   // A case where there is no scheme.
   const char kStr2[] = "httpfoobar";
-  EXPECT_FALSE(FindAndCompareScheme(kStr2, static_cast<int>(strlen(kStr2)), "http", &found_scheme));
+  EXPECT_FALSE(FindAndCompareScheme(kStr2, static_cast<int>(strlen(kStr2)),
+                                    "http", &found_scheme));
   EXPECT_TRUE(found_scheme == Component());
 
   // When there is an empty scheme, it should match the empty scheme.
   const char kStr3[] = ":foo.com/";
-  EXPECT_TRUE(FindAndCompareScheme(kStr3, static_cast<int>(strlen(kStr3)), "", &found_scheme));
+  EXPECT_TRUE(FindAndCompareScheme(kStr3, static_cast<int>(strlen(kStr3)), "",
+                                   &found_scheme));
   EXPECT_TRUE(found_scheme == Component(0, 0));
 
   // But when there is no scheme, it should fail.
@@ -43,15 +47,17 @@ TEST(URLUtilTest, FindAndCompareScheme) {
   // When there is a whitespace char in scheme, it should canonicalize the URL
   // before comparison.
   const char whtspc_str[] = " \r\n\tjav\ra\nscri\tpt:alert(1)";
-  EXPECT_TRUE(FindAndCompareScheme(whtspc_str, static_cast<int>(strlen(whtspc_str)), "javascript",
-                                   &found_scheme));
+  EXPECT_TRUE(FindAndCompareScheme(whtspc_str,
+                                   static_cast<int>(strlen(whtspc_str)),
+                                   "javascript", &found_scheme));
   EXPECT_TRUE(found_scheme == Component(1, 10));
 
   // Control characters should be stripped out on the ends, and kept in the
   // middle.
   const char ctrl_str[] = "\02jav\02scr\03ipt:alert(1)";
-  EXPECT_FALSE(FindAndCompareScheme(ctrl_str, static_cast<int>(strlen(ctrl_str)), "javascript",
-                                    &found_scheme));
+  EXPECT_FALSE(FindAndCompareScheme(ctrl_str,
+                                    static_cast<int>(strlen(ctrl_str)),
+                                    "javascript", &found_scheme));
   EXPECT_TRUE(found_scheme == Component(1, 11));
 }
 
@@ -99,26 +105,33 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
       // A non-standard hierarchical base is resolved with path URL
       // canonicalization rules.
       {"data:/Blah:Blah/", "file.html", true, "data:/Blah:Blah/file.html"},
-      {"data:/Path/../part/part2", "file.html", true, "data:/Path/../part/file.html"},
+      {"data:/Path/../part/part2", "file.html", true,
+       "data:/Path/../part/file.html"},
       // Path URL canonicalization rules also apply to non-standard authority-
       // based URLs.
-      {"custom://Authority/", "file.html", true, "custom://Authority/file.html"},
+      {"custom://Authority/", "file.html", true,
+       "custom://Authority/file.html"},
       {"custom://Authority/", "other://Auth/", true, "other://Auth/"},
-      {"custom://Authority/", "../../file.html", true, "custom://Authority/file.html"},
-      {"custom://Authority/path/", "file.html", true, "custom://Authority/path/file.html"},
+      {"custom://Authority/", "../../file.html", true,
+       "custom://Authority/file.html"},
+      {"custom://Authority/path/", "file.html", true,
+       "custom://Authority/path/file.html"},
       {"custom://Authority:NoCanon/path/", "file.html", true,
        "custom://Authority:NoCanon/path/file.html"},
       // It's still possible to get an invalid path URL.
       {"custom://Invalid:!#Auth/", "file.html", false, ""},
       // A path with an authority section gets canonicalized under standard URL
       // rules, even though the base was non-standard.
-      {"content://content.Provider/", "//other.Provider", true, "content://other.provider/"},
+      {"content://content.Provider/", "//other.Provider", true,
+       "content://other.provider/"},
       // Resolving an absolute URL doesn't cause canonicalization of the
       // result.
       {"about:blank", "custom://Authority", true, "custom://Authority"},
       // Fragment URLs can be resolved against a non-standard base.
-      {"scheme://Authority/path", "#fragment", true, "scheme://Authority/path#fragment"},
-      {"scheme://Authority/", "#fragment", true, "scheme://Authority/#fragment"},
+      {"scheme://Authority/path", "#fragment", true,
+       "scheme://Authority/path#fragment"},
+      {"scheme://Authority/", "#fragment", true,
+       "scheme://Authority/#fragment"},
       // Resolving should fail if the base URL is authority-based but is
       // missing a path component (the '/' at the end).
       {"scheme://Authority", "path", false, ""},
@@ -128,7 +141,8 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
       {"about:blank#oldfrag", "#newfrag", true, "about:blank#newfrag"},
       // A surprising side effect of allowing fragments to resolve against
       // any URL scheme is we might break javascript: URLs by doing so...
-      {"javascript:alert('foo#bar')", "#badfrag", true, "javascript:alert('foo#badfrag"},
+      {"javascript:alert('foo#bar')", "#badfrag", true,
+       "javascript:alert('foo#badfrag"},
       // In this case, the backslashes will not be canonicalized because it's a
       // non-standard URL, but they will be treated as a path separators,
       // giving the base URL here a path of "\".
@@ -146,12 +160,14 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
     std::string resolved;
     StdStringCanonOutput output(&resolved);
     Parsed resolved_parsed;
-    bool valid = ResolveRelative(test_data.base, strlen(test_data.base), base_parsed, test_data.rel,
-                                 strlen(test_data.rel), NULL, &output, &resolved_parsed);
+    bool valid = ResolveRelative(
+        test_data.base, strlen(test_data.base), base_parsed, test_data.rel,
+        strlen(test_data.rel), NULL, &output, &resolved_parsed);
     output.Complete();
 
     EXPECT_EQ(test_data.is_valid, valid);
-    if (test_data.is_valid && valid) EXPECT_EQ(test_data.out, resolved);
+    if (test_data.is_valid && valid)
+      EXPECT_EQ(test_data.out, resolved);
   }
 }
 
@@ -168,8 +184,8 @@ TEST(URLUtilTest, TestNoRefComponent) {
   StdStringCanonOutput output(&resolved);
   Parsed resolved_parsed;
 
-  bool valid = ResolveRelative(base, strlen(base), base_parsed, rel, strlen(rel), NULL, &output,
-                               &resolved_parsed);
+  bool valid = ResolveRelative(base, strlen(base), base_parsed, rel,
+                               strlen(rel), NULL, &output, &resolved_parsed);
   EXPECT_TRUE(valid);
   EXPECT_FALSE(resolved_parsed.ref.is_valid());
 }

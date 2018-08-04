@@ -11,17 +11,19 @@
 
 namespace url {
 
-bool CanonicalizeStandardURL(const char* spec, size_t spec_len, const Parsed& parsed,
-                             CharsetConverter* query_converter, CanonOutput* output,
-                             Parsed* new_parsed) {
+bool CanonicalizeStandardURL(const char* spec, size_t spec_len,
+                             const Parsed& parsed,
+                             CharsetConverter* query_converter,
+                             CanonOutput* output, Parsed* new_parsed) {
   URLComponentSource source(spec);
   // Scheme: this will append the colon.
-  bool success = CanonicalizeScheme(source.scheme, parsed.scheme, output, &new_parsed->scheme);
+  bool success = CanonicalizeScheme(source.scheme, parsed.scheme, output,
+                                    &new_parsed->scheme);
 
   // Authority (username, password, host, port)
   bool have_authority;
-  if (parsed.username.is_valid() || parsed.password.is_valid() || parsed.host.is_nonempty() ||
-      parsed.port.is_valid()) {
+  if (parsed.username.is_valid() || parsed.password.is_valid() ||
+      parsed.host.is_nonempty() || parsed.port.is_valid()) {
     have_authority = true;
 
     // Only write the authority separators when we have a scheme.
@@ -31,19 +33,22 @@ bool CanonicalizeStandardURL(const char* spec, size_t spec_len, const Parsed& pa
     }
 
     // User info: the canonicalizer will handle the : and @.
-    success &=
-        CanonicalizeUserInfo(source.username, parsed.username, source.password, parsed.password,
-                             output, &new_parsed->username, &new_parsed->password);
+    success &= CanonicalizeUserInfo(
+        source.username, parsed.username, source.password, parsed.password,
+        output, &new_parsed->username, &new_parsed->password);
 
-    success &= CanonicalizeHost(source.host, parsed.host, output, &new_parsed->host);
+    success &=
+        CanonicalizeHost(source.host, parsed.host, output, &new_parsed->host);
 
     // Host must not be empty for standard URLs.
-    if (parsed.host.is_invalid_or_empty()) success = false;
+    if (parsed.host.is_invalid_or_empty())
+      success = false;
 
     // Port: the port canonicalizer will handle the colon.
-    int default_port =
-        DefaultPortForScheme(&output->data()[new_parsed->scheme.begin], new_parsed->scheme.len());
-    success &= CanonicalizePort(source.port, parsed.port, default_port, output, &new_parsed->port);
+    int default_port = DefaultPortForScheme(
+        &output->data()[new_parsed->scheme.begin], new_parsed->scheme.len());
+    success &= CanonicalizePort(source.port, parsed.port, default_port, output,
+                                &new_parsed->port);
   } else {
     // No authority, clear the components.
     have_authority = false;
@@ -56,8 +61,10 @@ bool CanonicalizeStandardURL(const char* spec, size_t spec_len, const Parsed& pa
 
   // Path
   if (parsed.path.is_valid()) {
-    success &= CanonicalizePath(source.path, parsed.path, output, &new_parsed->path);
-  } else if (have_authority || parsed.query.is_valid() || parsed.ref.is_valid()) {
+    success &=
+        CanonicalizePath(source.path, parsed.path, output, &new_parsed->path);
+  } else if (have_authority || parsed.query.is_valid() ||
+             parsed.ref.is_valid()) {
     // When we have an empty path, make up a path when we have an authority
     // or something following the path. The only time we allow an empty
     // output path is when there is nothing else.
@@ -69,7 +76,8 @@ bool CanonicalizeStandardURL(const char* spec, size_t spec_len, const Parsed& pa
   }
 
   // Query
-  CanonicalizeQuery(source.query, parsed.query, query_converter, output, &new_parsed->query);
+  CanonicalizeQuery(source.query, parsed.query, query_converter, output,
+                    &new_parsed->query);
 
   // Ref: ignore failure for this, since the page can probably still be loaded.
   CanonicalizeRef(source.ref, parsed.ref, output, &new_parsed->ref);
@@ -83,10 +91,12 @@ int DefaultPortForScheme(const char* scheme, size_t scheme_len) {
   int default_port = PORT_UNSPECIFIED;
   switch (scheme_len) {
     case 4:
-      if (!strncmp(scheme, kHttpScheme, scheme_len)) default_port = 80;
+      if (!strncmp(scheme, kHttpScheme, scheme_len))
+        default_port = 80;
       break;
     case 5:
-      if (!strncmp(scheme, kHttpsScheme, scheme_len)) default_port = 443;
+      if (!strncmp(scheme, kHttpsScheme, scheme_len))
+        default_port = 443;
       break;
     case 3:
       if (!strncmp(scheme, kFtpScheme, scheme_len))
@@ -95,10 +105,12 @@ int DefaultPortForScheme(const char* scheme, size_t scheme_len) {
         default_port = 443;
       break;
     case 6:
-      if (!strncmp(scheme, kGopherScheme, scheme_len)) default_port = 70;
+      if (!strncmp(scheme, kGopherScheme, scheme_len))
+        default_port = 70;
       break;
     case 2:
-      if (!strncmp(scheme, kWsScheme, scheme_len)) default_port = 80;
+      if (!strncmp(scheme, kWsScheme, scheme_len))
+        default_port = 80;
       break;
   }
   return default_port;

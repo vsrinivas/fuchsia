@@ -27,13 +27,16 @@ namespace {
 // against the canonical scheme of the base.
 //
 // The base URL should always be canonical, therefore it should be ASCII.
-bool AreSchemesEqual(const char* base, const Component& base_scheme, const char* cmp,
-                     const Component& cmp_scheme) {
-  if (base_scheme.len() != cmp_scheme.len()) return false;
+bool AreSchemesEqual(const char* base, const Component& base_scheme,
+                     const char* cmp, const Component& cmp_scheme) {
+  if (base_scheme.len() != cmp_scheme.len())
+    return false;
   for (size_t i = 0; i < base_scheme.len(); i++) {
     // We assume the base is already canonical, so we don't have to
     // canonicalize it.
-    if (CanonicalSchemeChar(cmp[cmp_scheme.begin + i]) != base[base_scheme.begin + i]) return false;
+    if (CanonicalSchemeChar(cmp[cmp_scheme.begin + i]) !=
+        base[base_scheme.begin + i])
+      return false;
   }
   return true;
 }
@@ -44,7 +47,8 @@ bool AreSchemesEqual(const char* base, const Component& base_scheme, const char*
 //
 // For stardard URLs the input should be canonical, but when resolving relative
 // URLs on a non-standard base (like "data:") the input can be anything.
-void CopyToLastSlash(const char* spec, int begin, int end, CanonOutput* output) {
+void CopyToLastSlash(const char* spec, int begin, int end,
+                     CanonOutput* output) {
   // Find the last slash.
   int last_slash = -1;
   for (int i = end - 1; i >= begin; i--) {
@@ -53,18 +57,20 @@ void CopyToLastSlash(const char* spec, int begin, int end, CanonOutput* output) 
       break;
     }
   }
-  if (last_slash < 0) return;  // No slash.
+  if (last_slash < 0)
+    return;  // No slash.
 
   // Copy.
-  for (int i = begin; i <= last_slash; i++) output->push_back(spec[i]);
+  for (int i = begin; i <= last_slash; i++)
+    output->push_back(spec[i]);
 }
 
 // Copies a single component from the source to the output. This is used
 // when resolving relative URLs and a given component is unchanged. Since the
 // source should already be canonical, we don't have to do anything special,
 // and the input is ASCII.
-void CopyOneComponent(const char* source, const Component& source_component, CanonOutput* output,
-                      Component* output_component) {
+void CopyOneComponent(const char* source, const Component& source_component,
+                      CanonOutput* output, Component* output_component) {
   if (!source_component.is_valid()) {
     // This component is not present.
     *output_component = Component();
@@ -73,16 +79,18 @@ void CopyOneComponent(const char* source, const Component& source_component, Can
 
   output_component->begin = output->length();
   int source_end = source_component.end();
-  for (int i = source_component.begin; i < source_end; i++) output->push_back(source[i]);
+  for (int i = source_component.begin; i < source_end; i++)
+    output->push_back(source[i]);
   output_component->set_len(output->length() - output_component->begin);
 }
 
 // A subroutine of DoResolveRelativeURL, this resolves the URL knowning that
 // the input is a relative path or less (qyuery or ref).
-bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool base_is_file,
-                           const char* relative_url, const Component& relative_component,
-                           CharsetConverter* query_converter, CanonOutput* output,
-                           Parsed* out_parsed) {
+bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed,
+                           bool base_is_file, const char* relative_url,
+                           const Component& relative_component,
+                           CharsetConverter* query_converter,
+                           CanonOutput* output, Parsed* out_parsed) {
   bool success = true;
 
   // We know the authority section didn't change, copy it to the output. We
@@ -102,21 +110,25 @@ bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool
       // just replace everything from the path on with the new versions.
       // Since the input should be canonical hierarchical URL, we should
       // always have a path.
-      success &= CanonicalizePath(relative_url, path, output, &out_parsed->path);
+      success &=
+          CanonicalizePath(relative_url, path, output, &out_parsed->path);
     } else {
       // Relative path, replace the query, and reference. We take the
       // original path with the file part stripped, and append the new path.
       // The canonicalizer will take care of resolving ".." and "."
       int path_begin = output->length();
-      CopyToLastSlash(base_url, base_path_begin, base_parsed.path.end(), output);
-      success &= CanonicalizePartialPath(relative_url, path, path_begin, output);
+      CopyToLastSlash(base_url, base_path_begin, base_parsed.path.end(),
+                      output);
+      success &=
+          CanonicalizePartialPath(relative_url, path, path_begin, output);
       out_parsed->path = MakeRange(path_begin, output->length());
 
       // Copy the rest of the stuff after the path from the relative path.
     }
 
     // Finish with the query and reference part (these can't fail).
-    CanonicalizeQuery(relative_url, query, query_converter, output, &out_parsed->query);
+    CanonicalizeQuery(relative_url, query, query_converter, output,
+                      &out_parsed->query);
     CanonicalizeRef(relative_url, ref, output, &out_parsed->ref);
 
     // Fix the path beginning to add back the "C:" we may have written above.
@@ -130,7 +142,8 @@ bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool
   if (query.is_valid()) {
     // Just the query specified, replace the query and reference (ignore
     // failures for refs)
-    CanonicalizeQuery(relative_url, query, query_converter, output, &out_parsed->query);
+    CanonicalizeQuery(relative_url, query, query_converter, output,
+                      &out_parsed->query);
     CanonicalizeRef(relative_url, ref, output, &out_parsed->ref);
     return success;
   }
@@ -138,7 +151,8 @@ bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool
   // If we get here, the query is unchanged: copy to output. Note that the
   // range of the query parameter doesn't include the question mark, so we
   // have to add it manually if there is a component.
-  if (base_parsed.query.is_valid()) output->push_back('?');
+  if (base_parsed.query.is_valid())
+    output->push_back('?');
   CopyOneComponent(base_url, base_parsed.query, output, &out_parsed->query);
 
   if (ref.is_valid()) {
@@ -155,24 +169,28 @@ bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool
 
 // Resolves a relative URL that happens to be an absolute file path. Examples
 // include: "//hostname/path", "/c:/foo", and "//hostname/c:/foo".
-bool DoResolveAbsoluteFile(const char* relative_url, const Component& relative_component,
-                           CharsetConverter* query_converter, CanonOutput* output,
-                           Parsed* out_parsed) {
+bool DoResolveAbsoluteFile(const char* relative_url,
+                           const Component& relative_component,
+                           CharsetConverter* query_converter,
+                           CanonOutput* output, Parsed* out_parsed) {
   // Parse the file URL. The file URl parsing function uses the same logic
   // as we do for determining if the file is absolute, in which case it will
   // not bother to look for a scheme.
   Parsed relative_parsed;
-  ParseFileURL(&relative_url[relative_component.begin], relative_component.len(), &relative_parsed);
+  ParseFileURL(&relative_url[relative_component.begin],
+               relative_component.len(), &relative_parsed);
 
-  return CanonicalizeFileURL(&relative_url[relative_component.begin], relative_component.len(),
-                             relative_parsed, query_converter, output, out_parsed);
+  return CanonicalizeFileURL(&relative_url[relative_component.begin],
+                             relative_component.len(), relative_parsed,
+                             query_converter, output, out_parsed);
 }
 
 }  // namespace
 
 // See IsRelativeURL in the header file for usage.
-bool IsRelativeURL(const char* base, const Parsed& base_parsed, const char* url, size_t url_len,
-                   bool is_base_hierarchical, bool* is_relative, Component* relative_component) {
+bool IsRelativeURL(const char* base, const Parsed& base_parsed, const char* url,
+                   size_t url_len, bool is_base_hierarchical, bool* is_relative,
+                   Component* relative_component) {
   *is_relative = false;  // So we can default later to not relative.
 
   // Trim whitespace and construct a new range for the substring.
@@ -190,7 +208,8 @@ bool IsRelativeURL(const char* base, const Parsed& base_parsed, const char* url,
   // "http:foo.html" is a relative URL with path "foo.html". If the scheme is
   // empty, we treat it as relative (":foo"), like IE does.
   Component scheme;
-  const bool scheme_is_empty = !ExtractScheme(url, url_len, &scheme) || scheme.len() == 0;
+  const bool scheme_is_empty =
+      !ExtractScheme(url, url_len, &scheme) || scheme.len() == 0;
   if (scheme_is_empty) {
     if (url[begin] == '#') {
       // |url| is a bare fragment (e.g. "#foo"). This can be resolved against
@@ -220,12 +239,14 @@ bool IsRelativeURL(const char* base, const Parsed& base_parsed, const char* url,
   }
 
   // If the scheme is not the same, then we can't count it as relative.
-  if (!AreSchemesEqual(base, base_parsed.scheme, url, scheme)) return true;
+  if (!AreSchemesEqual(base, base_parsed.scheme, url, scheme))
+    return true;
 
   // When the scheme that they both share is not hierarchical, treat the
   // incoming scheme as absolute (this way with the base of "data:foo",
   // "data:bar" will be reported as absolute.
-  if (!is_base_hierarchical) return true;
+  if (!is_base_hierarchical)
+    return true;
 
   size_t colon_offset = scheme.end();
 
@@ -247,8 +268,9 @@ bool IsRelativeURL(const char* base, const Parsed& base_parsed, const char* url,
 }
 
 // TODO(brettw) treat two slashes as root like Mozilla for FTP?
-bool ResolveRelativeURL(const char* base_url, const Parsed& base_parsed, bool base_is_file,
-                        const char* relative_url, const Component& relative_component,
+bool ResolveRelativeURL(const char* base_url, const Parsed& base_parsed,
+                        bool base_is_file, const char* relative_url,
+                        const Component& relative_component,
                         CharsetConverter* query_converter, CanonOutput* output,
                         Parsed* out_parsed) {
   // Starting point for our output parsed. We'll fix what we change.
@@ -263,7 +285,8 @@ bool ResolveRelativeURL(const char* base_url, const Parsed& base_parsed, bool ba
     // On error, return the input (resolving a relative URL on a non-relative
     // base = the base).
     size_t base_len = base_parsed.Length();
-    for (size_t i = 0; i < base_len; i++) output->push_back(base_url[i]);
+    for (size_t i = 0; i < base_len; i++)
+      output->push_back(base_url[i]);
     return false;
   }
 
@@ -278,8 +301,8 @@ bool ResolveRelativeURL(const char* base_url, const Parsed& base_parsed, bool ba
     return true;
   }
 
-  size_t num_slashes =
-      CountConsecutiveSlashes(relative_url, relative_component.begin, relative_component.end());
+  size_t num_slashes = CountConsecutiveSlashes(
+      relative_url, relative_component.begin, relative_component.end());
 
   // Other platforms need explicit handling for file: URLs with multiple
   // slashes because the generic scheme parsing always extracts a host, but a
@@ -289,30 +312,35 @@ bool ResolveRelativeURL(const char* base_url, const Parsed& base_parsed, bool ba
   // detection logic, for consistency with parsing file URLs from scratch.
   // This also handles the special case where the URL is only slashes,
   // since that doesn't have a host part either.
-  if (base_is_file && (num_slashes >= 2 || num_slashes == relative_component.len())) {
-    return DoResolveAbsoluteFile(relative_url, relative_component, query_converter, output,
-                                 out_parsed);
+  if (base_is_file &&
+      (num_slashes >= 2 || num_slashes == relative_component.len())) {
+    return DoResolveAbsoluteFile(relative_url, relative_component,
+                                 query_converter, output, out_parsed);
   }
 
   // Any other double-slashes mean that this is relative to the scheme.
   if (num_slashes >= 2) {
-    // Make & parse an url with base_url's scheme and everything else from relative_url.
+    // Make & parse an url with base_url's scheme and everything else from
+    // relative_url.
     std::string new_url;
     new_url.reserve(base_parsed.scheme.len() + 1 + relative_component.len());
-    new_url.append(&base_url[base_parsed.scheme.begin], base_parsed.scheme.len());
+    new_url.append(&base_url[base_parsed.scheme.begin],
+                   base_parsed.scheme.len());
     new_url.push_back(':');
-    new_url.append(&relative_url[relative_component.begin], relative_component.len());
+    new_url.append(&relative_url[relative_component.begin],
+                   relative_component.len());
     Parsed new_parsed;
     ParseStandardURL(new_url.c_str(), new_url.size(), &new_parsed);
 
     // Canonicalize the combined url.
-    return CanonicalizeStandardURL(new_url.c_str(), new_url.size(), new_parsed, query_converter,
-                                   output, out_parsed);
+    return CanonicalizeStandardURL(new_url.c_str(), new_url.size(), new_parsed,
+                                   query_converter, output, out_parsed);
   }
 
   // When we get here, we know that the relative URL is on the same host.
-  return DoResolveRelativePath(base_url, base_parsed, base_is_file, relative_url,
-                               relative_component, query_converter, output, out_parsed);
+  return DoResolveRelativePath(base_url, base_parsed, base_is_file,
+                               relative_url, relative_component,
+                               query_converter, output, out_parsed);
 }
 
 }  // namespace url

@@ -47,7 +47,8 @@ namespace {
 // the scheme given in |after_slashes|. This will initialize the host, path,
 // query, and ref, and leave the other output components untouched
 // (DoInitFileURL handles these for us).
-void DoParseUNC(const char* spec, size_t after_slashes, size_t spec_len, Parsed* parsed) {
+void DoParseUNC(const char* spec, size_t after_slashes, size_t spec_len,
+                Parsed* parsed) {
   size_t next_slash = FindNextSlash(spec, after_slashes, spec_len);
   if (next_slash == spec_len) {
     // No additional slash found, as in "file://foo", treat the text as the
@@ -72,8 +73,8 @@ void DoParseUNC(const char* spec, size_t after_slashes, size_t spec_len, Parsed*
   else
     parsed->host.reset();
   if (next_slash < spec_len) {
-    ParsePathInternal(spec, MakeRange(next_slash, spec_len), &parsed->path, &parsed->query,
-                      &parsed->ref);
+    ParsePathInternal(spec, MakeRange(next_slash, spec_len), &parsed->path,
+                      &parsed->query, &parsed->ref);
   } else {
     parsed->path.reset();
   }
@@ -83,10 +84,11 @@ void DoParseUNC(const char* spec, size_t after_slashes, size_t spec_len, Parsed*
 // beginning of the path indicated by the index in |path_begin|. This will
 // initialize the host, path, query, and ref, and leave the other output
 // components untouched (DoInitFileURL handles these for us).
-void DoParseLocalFile(const char* spec, size_t path_begin, size_t spec_len, Parsed* parsed) {
+void DoParseLocalFile(const char* spec, size_t path_begin, size_t spec_len,
+                      Parsed* parsed) {
   parsed->host.reset();
-  ParsePathInternal(spec, MakeRange(path_begin, spec_len), &parsed->path, &parsed->query,
-                    &parsed->ref);
+  ParsePathInternal(spec, MakeRange(path_begin, spec_len), &parsed->path,
+                    &parsed->query, &parsed->ref);
 }
 
 }  // namespace
@@ -121,7 +123,8 @@ void ParseFileURL(const char* spec, size_t spec_len, Parsed* parsed) {
     // colons in them, in which case it returns the entire spec up to the
     // colon as the scheme. So handle /foo.c:5 as a file but foo.c:5 as
     // the foo.c: scheme.
-    if (!num_slashes && ExtractScheme(&spec[begin], spec_len - begin, &parsed->scheme)) {
+    if (!num_slashes &&
+        ExtractScheme(&spec[begin], spec_len - begin, &parsed->scheme)) {
       // Offset the results since we gave ExtractScheme a substring.
       parsed->scheme.begin += begin;
       after_scheme = parsed->scheme.end() + 1;
@@ -152,8 +155,9 @@ void ParseFileURL(const char* spec, size_t spec_len, Parsed* parsed) {
   // (modulo slashes), as in "file://c:/foo". Just treat everything from
   // there to the end as the path. Empty hosts have 0 length instead of -1.
   // We include the last slash as part of the path if there is one.
-  DoParseLocalFile(spec, num_slashes > 0 ? after_scheme + num_slashes - 1 : after_scheme, spec_len,
-                   parsed);
+  DoParseLocalFile(
+      spec, num_slashes > 0 ? after_scheme + num_slashes - 1 : after_scheme,
+      spec_len, parsed);
 }
 
 }  // namespace url

@@ -12,10 +12,12 @@
 namespace url {
 
 // Writes the given IPv4 address to |output|.
-URL_EXPORT void AppendIPv4Address(const unsigned char address[4], CanonOutput* output);
+URL_EXPORT void AppendIPv4Address(const unsigned char address[4],
+                                  CanonOutput* output);
 
 // Writes the given IPv6 address to |output|.
-URL_EXPORT void AppendIPv6Address(const unsigned char address[16], CanonOutput* output);
+URL_EXPORT void AppendIPv6Address(const unsigned char address[16],
+                                  CanonOutput* output);
 
 // Searches the host name for the portions of the IPv4 address. On success,
 // each component will be placed into |components| and it will return true.
@@ -49,7 +51,8 @@ URL_EXPORT bool FindIPv4Components(const char* spec, const Component& host,
 //
 // On success, |num_ipv4_components| will be populated with the number of
 // components in the IPv4 address.
-URL_EXPORT CanonHostInfo::Family IPv4AddressToNumber(const char* spec, const Component& host,
+URL_EXPORT CanonHostInfo::Family IPv4AddressToNumber(const char* spec,
+                                                     const Component& host,
                                                      unsigned char address[4],
                                                      int* num_ipv4_components);
 

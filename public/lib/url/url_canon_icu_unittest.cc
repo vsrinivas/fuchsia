@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/url/url_canon_icu.h"
 #include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/url_canon.h"
-#include "lib/url/url_canon_icu.h"
 #include "lib/url/url_canon_stdstring.h"
 #include "lib/url/url_test_utils.h"
 #include "third_party/icu/source/common/unicode/ucnv.h"
@@ -19,6 +19,7 @@ class URLCanonIcuTest : public url::test::IcuUnitTestBase {
  public:
   URLCanonIcuTest() {}
   ~URLCanonIcuTest() override {}
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(URLCanonIcuTest);
 };
@@ -32,7 +33,8 @@ class UConvScoper {
   }
 
   ~UConvScoper() {
-    if (converter_) ucnv_close(converter_);
+    if (converter_)
+      ucnv_close(converter_);
   }
 
   // Returns the converter object, may be NULL.
@@ -56,7 +58,8 @@ TEST_F(URLCanonIcuTest, ICUCharsetConverter) {
       // Big5
       {L"\x4f60\x597d", "big5", "\xa7\x41\xa6\x6e"},
       // Unrepresentable character in the destination set.
-      {L"hello\x4f60\x06de\x597dworld", "big5", "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
+      {L"hello\x4f60\x06de\x597dworld", "big5",
+       "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
   };
 
   for (const auto& icu_case : icu_cases) {
@@ -84,10 +87,12 @@ TEST_F(URLCanonIcuTest, ICUCharsetConverter) {
   for (int i = static_size - 2; i <= static_size + 2; i++) {
     // Make a string with the appropriate length.
     std::basic_string<uint16_t> input;
-    for (int ch = 0; ch < i; ch++) input.push_back('a');
+    for (int ch = 0; ch < i; ch++)
+      input.push_back('a');
 
     RawCanonOutput<static_size> output;
-    converter.ConvertFromUTF16(input.c_str(), static_cast<int>(input.length()), &output);
+    converter.ConvertFromUTF16(input.c_str(), static_cast<int>(input.length()),
+                               &output);
     EXPECT_EQ(input.length(), static_cast<size_t>(output.length()));
   }
 }
@@ -123,7 +128,8 @@ TEST_F(URLCanonIcuTest, QueryWithConverter) {
     std::string out_str;
 
     StdStringCanonOutput output(&out_str);
-    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output, &out_comp);
+    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output,
+                      &out_comp);
     output.Complete();
 
     EXPECT_EQ(query_case.expected, out_str);

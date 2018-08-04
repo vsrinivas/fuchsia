@@ -15,7 +15,9 @@ namespace {
 
 // Returns true if the given character should be removed from the middle of a
 // URL.
-inline bool IsRemovableURLWhitespace(int ch) { return ch == '\r' || ch == '\n' || ch == '\t'; }
+inline bool IsRemovableURLWhitespace(int ch) {
+  return ch == '\r' || ch == '\n' || ch == '\t';
+}
 
 // Helper functions for converting port integers to strings.
 inline void WritePortInt(char* output, int output_len, int port) {
@@ -50,19 +52,21 @@ const char kSchemeCanonical[0x80] = {
 inline bool IsSchemeFirstChar(unsigned char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
-}
+}  // namespace
 
 // Backend for RemoveURLWhitespace (see declaration in url_canon.h).
 // It sucks that we have to do this, since this takes about 13% of the total URL
 // canonicalization time.
-const char* RemoveURLWhitespace(const char* input, size_t input_len, CanonOutputT<char>* buffer,
+const char* RemoveURLWhitespace(const char* input, size_t input_len,
+                                CanonOutputT<char>* buffer,
                                 size_t* output_len) {
   // Fast verification that there's nothing that needs removal. This is the 99%
   // case, so we want it to be fast and don't care about impacting the speed
   // when we do find whitespace.
   bool found_whitespace = false;
   for (size_t i = 0; i < input_len; i++) {
-    if (!IsRemovableURLWhitespace(input[i])) continue;
+    if (!IsRemovableURLWhitespace(input[i]))
+      continue;
     found_whitespace = true;
     break;
   }
@@ -76,14 +80,15 @@ const char* RemoveURLWhitespace(const char* input, size_t input_len, CanonOutput
 
   // Remove the whitespace into the new buffer and return it.
   for (size_t i = 0; i < input_len; i++) {
-    if (!IsRemovableURLWhitespace(input[i])) buffer->push_back(input[i]);
+    if (!IsRemovableURLWhitespace(input[i]))
+      buffer->push_back(input[i]);
   }
   *output_len = buffer->length();
   return buffer->data();
 }
 
-bool CanonicalizeScheme(const char* spec, const Component& scheme, CanonOutput* output,
-                        Component* out_scheme) {
+bool CanonicalizeScheme(const char* spec, const Component& scheme,
+                        CanonOutput* output, Component* out_scheme) {
   if (scheme.is_invalid_or_empty()) {
     // Scheme is unspecified or empty, convert to empty by appending a colon.
     *out_scheme = Component(output->length(), 0);
@@ -107,7 +112,8 @@ bool CanonicalizeScheme(const char* spec, const Component& scheme, CanonOutput* 
     if (ch < 0x80) {
       if (i == scheme.begin) {
         // Need to do a special check for the first letter of the scheme.
-        if (IsSchemeFirstChar(static_cast<unsigned char>(ch))) replacement = kSchemeCanonical[ch];
+        if (IsSchemeFirstChar(static_cast<unsigned char>(ch)))
+          replacement = kSchemeCanonical[ch];
       } else {
         replacement = kSchemeCanonical[ch];
       }
@@ -143,8 +149,9 @@ bool CanonicalizeScheme(const char* spec, const Component& scheme, CanonOutput* 
 // canonicalizing a single source string), but may be different when
 // replacing components.
 bool CanonicalizeUserInfo(const char* username_spec, const Component& username,
-                          const char* password_spec, const Component& password, CanonOutput* output,
-                          Component* out_username, Component* out_password) {
+                          const char* password_spec, const Component& password,
+                          CanonOutput* output, Component* out_username,
+                          Component* out_password) {
   if (username.is_invalid_or_empty() && password.is_invalid_or_empty()) {
     // Common case: no user info. We strip empty username/passwords.
     *out_username = Component();
@@ -156,7 +163,8 @@ bool CanonicalizeUserInfo(const char* username_spec, const Component& username,
   out_username->begin = output->length();
   if (username.is_nonempty()) {
     // This will escape characters not valid for the username.
-    AppendStringOfType(&username_spec[username.begin], username.len(), CHAR_USERINFO, output);
+    AppendStringOfType(&username_spec[username.begin], username.len(),
+                       CHAR_USERINFO, output);
   }
   out_username->set_len(output->length() - out_username->begin);
 
@@ -165,7 +173,8 @@ bool CanonicalizeUserInfo(const char* username_spec, const Component& username,
   if (password.is_nonempty()) {
     output->push_back(':');
     out_password->begin = output->length();
-    AppendStringOfType(&password_spec[password.begin], password.len(), CHAR_USERINFO, output);
+    AppendStringOfType(&password_spec[password.begin], password.len(),
+                       CHAR_USERINFO, output);
     out_password->set_len(output->length() - out_password->begin);
   } else {
     *out_password = Component();
@@ -176,8 +185,9 @@ bool CanonicalizeUserInfo(const char* username_spec, const Component& username,
 }
 
 // This function will prepend the colon if there will be a port.
-bool CanonicalizePort(const char* spec, const Component& port, int default_port_for_scheme,
-                      CanonOutput* output, Component* out_port) {
+bool CanonicalizePort(const char* spec, const Component& port,
+                      int default_port_for_scheme, CanonOutput* output,
+                      Component* out_port) {
   int port_num = ParsePort(spec, port);
   if (port_num == PORT_UNSPECIFIED || port_num == default_port_for_scheme) {
     *out_port = Component();
@@ -203,14 +213,15 @@ bool CanonicalizePort(const char* spec, const Component& port, int default_port_
   // Append the port number to the output, preceded by a colon.
   output->push_back(':');
   out_port->begin = output->length();
-  for (size_t i = 0; i < buf_size && buf[i]; i++) output->push_back(buf[i]);
+  for (size_t i = 0; i < buf_size && buf[i]; i++)
+    output->push_back(buf[i]);
 
   out_port->set_len(output->length() - out_port->begin);
   return true;
 }
 
-void CanonicalizeRef(const char* spec, const Component& ref, CanonOutput* output,
-                     Component* out_ref) {
+void CanonicalizeRef(const char* spec, const Component& ref,
+                     CanonOutput* output, Component* out_ref) {
   if (!ref.is_valid()) {
     // Common case of no ref.
     *out_ref = Component();
@@ -250,6 +261,8 @@ void CanonicalizeRef(const char* spec, const Component& ref, CanonOutput* output
   out_ref->set_len(output->length() - out_ref->begin);
 }
 
-char CanonicalSchemeChar(char ch) { return url::kSchemeCanonical[static_cast<int>(ch)]; }
+char CanonicalSchemeChar(char ch) {
+  return url::kSchemeCanonical[static_cast<int>(ch)];
+}
 
 }  // namespace url

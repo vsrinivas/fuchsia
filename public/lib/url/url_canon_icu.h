@@ -27,7 +27,8 @@ class URL_EXPORT ICUCharsetConverter : public CharsetConverter {
 
   ~ICUCharsetConverter() override;
 
-  void ConvertFromUTF16(const uint16_t* input, size_t input_len, CanonOutput* output) override;
+  void ConvertFromUTF16(const uint16_t* input, size_t input_len,
+                        CanonOutput* output) override;
 
  private:
   // The ICU converter, not owned by this class.

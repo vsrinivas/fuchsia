@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/url/gurl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/url/gurl.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_test_utils.h"
 
@@ -26,7 +26,8 @@ std::string TypesTestCase(const char* src) {
 TEST(GURLTest, Types) {
   // URLs with unknown schemes should be treated as path URLs, even when they
   // have things like "://".
-  EXPECT_EQ("something:///HOSTNAME.com/", TypesTestCase("something:///HOSTNAME.com/"));
+  EXPECT_EQ("something:///HOSTNAME.com/",
+            TypesTestCase("something:///HOSTNAME.com/"));
 
   // Conversely, URLs with known schemes should always trigger standard URL
   // handling.
@@ -150,10 +151,17 @@ TEST(GURLTest, Assign) {
 
 TEST(GURLTest, IsValid) {
   const char* valid_cases[] = {
-      "http://google.com", "unknown://google.com", "http://user:pass@google.com",
-      "http://google.com:12345", "http://google.com/path", "http://google.com//path",
-      "http://google.com?k=v#fragment", "http://user:pass@google.com:12345/path?k=v#fragment",
-      "http:/path", "http:path", "://google.com",
+      "http://google.com",
+      "unknown://google.com",
+      "http://user:pass@google.com",
+      "http://google.com:12345",
+      "http://google.com/path",
+      "http://google.com//path",
+      "http://google.com?k=v#fragment",
+      "http://user:pass@google.com:12345/path?k=v#fragment",
+      "http:/path",
+      "http:path",
+      "://google.com",
   };
 
   for (const char* valid_case : valid_cases) {
@@ -161,7 +169,10 @@ TEST(GURLTest, IsValid) {
   }
 
   const char* invalid_cases[] = {
-      "http://?k=v", "http:://google.com", "http//google.com", "http://google.com:12three45",
+      "http://?k=v",
+      "http:://google.com",
+      "http//google.com",
+      "http://google.com:12three45",
       "path",
   };
   for (const char* invalid_case : invalid_cases) {
@@ -205,16 +216,20 @@ TEST(GURLTest, Resolve) {
     bool expected_valid;
     const char* expected;
   } resolve_cases[] = {
-      {"http://www.google.com/", "foo.html", true, "http://www.google.com/foo.html"},
-      {"http://www.google.com/foo/", "bar", true, "http://www.google.com/foo/bar"},
+      {"http://www.google.com/", "foo.html", true,
+       "http://www.google.com/foo.html"},
+      {"http://www.google.com/foo/", "bar", true,
+       "http://www.google.com/foo/bar"},
       {"http://www.google.com/foo/", "/bar", true, "http://www.google.com/bar"},
       {"http://www.google.com/foo", "bar", true, "http://www.google.com/bar"},
       {"http://www.google.com/", "http://images.google.com/foo.html", true,
        "http://images.google.com/foo.html"},
-      {"http://www.google.com/blah/bloo?c#d", "../../../hello/./world.html?a#b", true,
-       "http://www.google.com/hello/world.html?a#b"},
-      {"http://www.google.com/foo#bar", "#com", true, "http://www.google.com/foo#com"},
-      {"http://www.google.com/", "Https:images.google.com", true, "https://images.google.com/"},
+      {"http://www.google.com/blah/bloo?c#d", "../../../hello/./world.html?a#b",
+       true, "http://www.google.com/hello/world.html?a#b"},
+      {"http://www.google.com/foo#bar", "#com", true,
+       "http://www.google.com/foo#com"},
+      {"http://www.google.com/", "Https:images.google.com", true,
+       "https://images.google.com/"},
       // A non-standard base can be replaced with a standard absolute URL.
       {"data:blahblah", "http://google.com/", true, "http://google.com/"},
       {"data:blahblah", "http:google.com", true, "http://google.com/"},
@@ -223,7 +238,8 @@ TEST(GURLTest, Resolve) {
   for (const auto& resolve_case : resolve_cases) {
     GURL input(resolve_case.base);
     GURL output = input.Resolve(resolve_case.relative);
-    EXPECT_EQ(resolve_case.expected_valid, output.is_valid()) << resolve_case.expected;
+    EXPECT_EQ(resolve_case.expected_valid, output.is_valid())
+        << resolve_case.expected;
     EXPECT_EQ(resolve_case.expected, output.spec()) << resolve_case.expected;
   }
 }
@@ -444,11 +460,13 @@ TEST(GURLTest, ContentAndPathForNonStandardURLs) {
     const char* expected;
   } cases[] = {
       {"null", ""},
-      {"not-a-standard-scheme:this is arbitrary content", "this is arbitrary content"},
+      {"not-a-standard-scheme:this is arbitrary content",
+       "this is arbitrary content"},
       {"view-source:http://example.com/path", "http://example.com/path"},
       {"blob:http://example.com/GUID", "http://example.com/GUID"},
       {"blob://http://example.com/GUID", "//http://example.com/GUID"},
-      {"blob:http://user:password@example.com/GUID", "http://user:password@example.com/GUID"},
+      {"blob:http://user:password@example.com/GUID",
+       "http://user:password@example.com/GUID"},
   };
 
   for (const auto& test : cases) {
