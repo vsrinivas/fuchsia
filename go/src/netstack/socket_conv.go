@@ -12,30 +12,6 @@ import (
 	"github.com/google/netstack/tcpip"
 )
 
-func (v *c_mxrio_gai_req) Unpack() (node, service string, hints *c_addrinfo) {
-	if v.node_is_null == 0 {
-		for i := 0; i < len(v.node); i++ {
-			if v.node[i] == 0 {
-				node = string(v.node[:i])
-				break
-			}
-		}
-	}
-	if v.service_is_null == 0 {
-		for i := 0; i < len(v.service); i++ {
-			if v.service[i] == 0 {
-				service = string(v.service[:i])
-				break
-			}
-		}
-	}
-	if v.hints_is_null == 0 {
-		hints = new(c_addrinfo)
-		*hints = v.hints
-	}
-	return node, service, hints
-}
-
 func isZeros(buf []byte) bool {
 	for i := 0; i < len(buf); i++ {
 		if buf[i] != 0 {

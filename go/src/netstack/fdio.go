@@ -1260,72 +1260,6 @@ func addrInfoStatusToEAI(status net.AddrInfoStatus) int32 {
 	return 0
 }
 
-func (s *socketServer) opGetAddrInfo(ios *iostate, msg *zxsocket.Msg) zx.Status {
-	var val c_mxrio_gai_req
-	if err := val.Decode(msg); err != nil {
-		return errStatus(err)
-	}
-	node, service, hints := val.Unpack()
-
-	nodeP := &node
-	if val.node_is_null == 1 {
-		nodeP = nil
-	}
-
-	serviceP := &service
-	if val.service_is_null == 1 {
-		serviceP = nil
-	}
-
-	h := &net.AddrInfoHints{
-		Flags:    hints.ai_flags,
-		Family:   hints.ai_family,
-		SockType: hints.ai_socktype,
-		Protocol: hints.ai_protocol,
-	}
-	if val.hints_is_null == 1 {
-		h = nil
-	}
-
-	status, addrInfo := s.GetAddrInfo(nodeP, serviceP, h)
-	retval := addrInfoStatusToEAI(status)
-
-	rep := c_mxrio_gai_reply{retval: retval}
-	if retval != 0 {
-		rep.Encode(msg)
-		return zx.ErrOk
-	}
-
-	rep.nres = 0
-	for i := 0; i < len(addrInfo) && rep.nres < ZXRIO_GAI_REPLY_MAX; i++ {
-		res := &rep.res[rep.nres]
-		res.ai.ai_family = addrInfo[i].Family
-		res.ai.ai_socktype = addrInfo[i].SockType
-		res.ai.ai_protocol = addrInfo[i].Protocol
-		// The 0xdeadbeef constant indicates the other side needs to
-		// adjust ai_addr with the value passed below.
-		res.ai.ai_addr = 0xdeadbeef
-		switch addrInfo[i].Family {
-		case AF_INET:
-			sockaddr := c_sockaddr_in{sin_family: AF_INET}
-			sockaddr.sin_port.setPort(addrInfo[i].Port)
-			copy(sockaddr.sin_addr[:], addrInfo[i].Addr.Val[:4])
-			writeSockaddrStorage4(&res.addr, &sockaddr)
-			res.ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
-			rep.nres++
-		case AF_INET6:
-			sockaddr := c_sockaddr_in6{sin6_family: AF_INET6}
-			sockaddr.sin6_port.setPort(addrInfo[i].Port)
-			copy(sockaddr.sin6_addr[:], addrInfo[i].Addr.Val[:16])
-			writeSockaddrStorage6(&res.addr, &sockaddr)
-			res.ai.ai_addrlen = c_socklen(c_sockaddr_in6_len)
-			rep.nres++
-		}
-	}
-	rep.Encode(msg)
-	return zx.ErrOk
-}
-
 func (s *socketServer) GetAddrInfo(node *string, service *string, hints *net.AddrInfoHints) (net.AddrInfoStatus, []*net.AddrInfo) {
 	s.mu.Lock()
 	dnsClient := s.dnsClient
@@ -1535,8 +1469,6 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 		return s.opListen(ios, msg)
 	case fdio.OpIoctl:
 		return s.opIoctl(ios, msg)
-	case fdio.OpGetAddrInfo:
-		return s.opGetAddrInfo(ios, msg)
 	case fdio.OpGetSockname:
 		return s.opGetSockName(ios, msg)
 	case fdio.OpGetPeerName:

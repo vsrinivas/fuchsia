@@ -23,16 +23,11 @@ package main
 //		_ = C.struct_addrinfo{}
 //		_ = C.struct_sockaddr_in{}
 //		_ = C.struct_sockaddr_in6{}
-//		_ = C.struct_mxrio_gai_req{}
-//		_ = C.struct_mxrio_gai_reply{}
 //		_ = C.struct_mxrio_sockaddr_reply{}
 //		_ = C.struct_mxrio_sockopt_req_reply{}
 //		_ = C.struct_fdio_socket_msg{}
 //		_ = C.AF_INET
 //		_ = C.AF_INET6
-//		_ = C.ZXRIO_GAI_REQ_NODE_MAXLEN
-//		_ = C.ZXRIO_GAI_REQ_SERVICE_MAXLEN
-//		_ = C.ZXRIO_GAI_REPLY_MAX
 //		_ = C.SOL_SOCKET
 //		_ = C.SOL_TCP
 //
@@ -103,9 +98,6 @@ const AF_UNSPEC = 0
 const AF_INET = 2
 const AF_INET6 = 10
 
-const ZXRIO_GAI_REQ_NODE_MAXLEN = 256
-const ZXRIO_GAI_REQ_SERVICE_MAXLEN = 256
-const ZXRIO_GAI_REPLY_MAX = 4
 const SOL_IP = 0
 const SOL_SOCKET = 0x1
 const SOL_TCP = 0x6
@@ -175,39 +167,6 @@ type c_in_port [2]byte // uint16 in C, but stored in network order
 type c_sa_family uint16
 type c_in_addr [4]byte // uint32 in C, but stored in network order
 type c_ulong uint64
-
-type c_addrinfo struct {
-	ai_flags    int32
-	ai_family   int32
-	ai_socktype int32
-	ai_protocol int32
-	ai_addrlen  c_socklen
-	_           [4]byte
-	// The following pointers are unused on the wire.
-	ai_addr      uintptr // *c_sockaddr
-	ai_canonname uintptr // *int8
-	ai_next      uintptr // *c_addrinfo
-}
-
-type c_mxrio_gai_reply struct {
-	res [ZXRIO_GAI_REPLY_MAX]struct {
-		ai   c_addrinfo
-		addr c_sockaddr_storage
-	}
-	nres   int32
-	retval int32
-}
-
-type c_mxrio_gai_req struct {
-	node_is_null    uint8
-	service_is_null uint8
-	hints_is_null   uint8
-	reserved        uint8
-	reserved2       uint32
-	node            [ZXRIO_GAI_REQ_NODE_MAXLEN]uint8
-	service         [ZXRIO_GAI_REQ_SERVICE_MAXLEN]uint8
-	hints           c_addrinfo
-}
 
 type c_mxrio_sockaddr_reply struct {
 	addr c_sockaddr_storage
