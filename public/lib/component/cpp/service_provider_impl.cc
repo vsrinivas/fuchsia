@@ -19,7 +19,8 @@ ServiceProviderImpl::~ServiceProviderImpl() = default;
 
 void ServiceProviderImpl::AddBinding(
     fidl::InterfaceRequest<ServiceProvider> request) {
-  if (request) bindings_.AddBinding(this, std::move(request));
+  if (request)
+    bindings_.AddBinding(this, std::move(request));
 }
 
 void ServiceProviderImpl::Close() { bindings_.CloseAll(); }
@@ -57,11 +58,11 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
     return;
   }
 
-  default_service_connector_ =
-      [provider = std::move(provider)](std::string service_name,
-                                       zx::channel client_handle) {
-        provider->ConnectToService(service_name, std::move(client_handle));
-      };
+  default_service_connector_ = [provider = std::move(provider)](
+                                   std::string service_name,
+                                   zx::channel client_handle) {
+    provider->ConnectToService(service_name, std::move(client_handle));
+  };
 }
 
 }  // namespace component

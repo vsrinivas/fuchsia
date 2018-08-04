@@ -24,7 +24,8 @@ namespace subtle {
 // static
 zx::channel CreateStaticServiceRootHandle() {
   zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK) return zx::channel();
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
   // TODO(abarth): Use kServiceRootPath once that actually works.
   if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
     return zx::channel();

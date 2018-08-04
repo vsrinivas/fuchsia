@@ -42,12 +42,15 @@ class StartupContext {
   // and provide meaningful error messages.
   static std::unique_ptr<StartupContext> CreateFromStartupInfoNotChecked();
 
-  static std::unique_ptr<StartupContext> CreateFrom(fuchsia::sys::StartupInfo startup_info);
+  static std::unique_ptr<StartupContext> CreateFrom(
+      fuchsia::sys::StartupInfo startup_info);
 
   // Gets the component's environment.
   //
   // May be null if the component does not have access to its environment.
-  const fuchsia::sys::EnvironmentPtr& environment() const { return environment_; }
+  const fuchsia::sys::EnvironmentPtr& environment() const {
+    return environment_;
+  }
 
   // Whether this component was given services by its environment.
   bool has_environment_services() const {
@@ -101,6 +104,6 @@ class StartupContext {
   fuchsia::sys::EnvironmentPtr environment_;
 };
 
-}  // component
+}  // namespace component
 
 #endif  // LIB_APP_CPP_STARTUP_CONTEXT_H_

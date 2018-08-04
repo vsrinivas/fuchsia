@@ -15,8 +15,9 @@ FakeComponent::~FakeComponent() = default;
 
 void FakeComponent::Register(std::string url, FakeLauncher& fake_launcher) {
   fake_launcher.RegisterComponent(
-      url, [this](fuchsia::sys::LaunchInfo launch_info,
-               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+      url,
+      [this](fuchsia::sys::LaunchInfo launch_info,
+             fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         zx_status_t status = directory_vfs_.ServeDirectory(
             directory_, std::move(launch_info.directory_request));
         ZX_ASSERT(status == ZX_OK);

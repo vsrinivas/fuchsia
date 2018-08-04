@@ -101,6 +101,6 @@ class Outgoing {
   mutable ServiceNamespace deprecated_outgoing_services_;
 };
 
-}  // component
+}  // namespace component
 
 #endif  // LIB_APP_CPP_OUTGOING_H_
