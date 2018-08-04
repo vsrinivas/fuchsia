@@ -81,13 +81,18 @@ files_read - a list of files used to compute all of the above
     host_tests = set()
     data_deps = set()
     for res in (monolith_results, preinstall_results, available_results):
-        host_tests.update(res["host_tests"])
-        data_deps.update(res["data_deps"])
-        build_packages["files_read"].update(res["files_read"])
+        if res is None:
+            continue
+        if res["host_tests"]:
+            host_tests.update(res["host_tests"])
+        if res["data_deps"]:
+            data_deps.update(res["data_deps"])
+        if res["files_read"]:
+            build_packages["files_read"].update(res["files_read"])
 
-    monolith_targets = set(monolith_results["targets"])
-    preinstall_targets = set(preinstall_results["targets"])
-    available_targets = set(available_results["targets"])
+    monolith_targets = set(monolith_results["targets"] if monolith_results else ())
+    preinstall_targets = set(preinstall_results["targets"] if preinstall_results else ())
+    available_targets = set(available_results["targets"] if available_results else ())
 
     # preinstall_targets must not include monolith targets
     preinstall_targets -= monolith_targets
