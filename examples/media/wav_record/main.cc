@@ -17,8 +17,9 @@ int main(int argc, const char** argv) {
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   examples::WavRecorder wav_recorder(
-      fxl::CommandLineFromArgcArgv(argc, argv),
-      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
+      fxl::CommandLineFromArgcArgv(argc, argv), [&loop]() {
+        async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
+      });
   wav_recorder.Run(startup_context.get());
   loop.Run();
 

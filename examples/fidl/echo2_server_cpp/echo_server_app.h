@@ -17,8 +17,7 @@ class EchoServerApp : public fidl::examples::echo::Echo {
   virtual void EchoString(fidl::StringPtr value, EchoStringCallback callback);
 
  protected:
-  EchoServerApp(std::unique_ptr<component::StartupContext> context,
-                bool quiet);
+  EchoServerApp(std::unique_ptr<component::StartupContext> context, bool quiet);
 
  private:
   EchoServerApp(const EchoServerApp&) = delete;

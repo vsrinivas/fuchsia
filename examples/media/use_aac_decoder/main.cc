@@ -8,8 +8,8 @@
 #include "use_aac_decoder.h"
 #include "use_h264_decoder.h"
 
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 
 void usage(const char* prog_name) {

@@ -28,7 +28,8 @@ TtsClient::TtsClient(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
   auto app_ctx = component::StartupContext::CreateFromStartupInfo();
-  tts_service_ = app_ctx->ConnectToEnvironmentService<fuchsia::tts::TtsService>();
+  tts_service_ =
+      app_ctx->ConnectToEnvironmentService<fuchsia::tts::TtsService>();
   tts_service_.set_error_handler([this]() {
     printf("Connection error when trying to talk to the TtsService\n");
     quit_callback_();
@@ -49,8 +50,9 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  TtsClient client(
-      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
+  TtsClient client([&loop]() {
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
+  });
 
   std::string words(argv[1]);
   for (int i = 2; i < argc; ++i) {

@@ -4,8 +4,8 @@
 
 #include "echo_server_app.h"
 
-#include <string>
 #include <lib/async-loop/cpp/loop.h>
+#include <string>
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

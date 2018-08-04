@@ -9,11 +9,11 @@
 namespace echo2 {
 
 EchoServerApp::EchoServerApp(bool quiet)
-    : EchoServerApp(component::StartupContext::CreateFromStartupInfo(),
-                    quiet) {}
+    : EchoServerApp(component::StartupContext::CreateFromStartupInfo(), quiet) {
+}
 
-EchoServerApp::EchoServerApp(
-    std::unique_ptr<component::StartupContext> context, bool quiet)
+EchoServerApp::EchoServerApp(std::unique_ptr<component::StartupContext> context,
+                             bool quiet)
     : context_(std::move(context)), quiet_(quiet) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }

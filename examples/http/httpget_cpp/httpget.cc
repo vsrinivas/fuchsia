@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
@@ -76,8 +76,7 @@ class WGetApp {
   WGetApp(async::Loop* loop)
       : loop_(loop),
         context_(component::StartupContext::CreateFromStartupInfo()) {
-    http_service_ =
-        context_->ConnectToEnvironmentService<http::HttpService>();
+    http_service_ = context_->ConnectToEnvironmentService<http::HttpService>();
     FXL_DCHECK(http_service_);
   }
 
@@ -99,11 +98,10 @@ class WGetApp {
     request.method = "GET";
     request.auto_follow_redirects = true;
 
-    url_loader_->Start(std::move(request),
-                       [this](http::URLResponse response) {
-                         ResponsePrinter printer;
-                         printer.Run(loop_, std::move(response));
-                       });
+    url_loader_->Start(std::move(request), [this](http::URLResponse response) {
+      ResponsePrinter printer;
+      printer.Run(loop_, std::move(response));
+    });
     return true;
   }
 

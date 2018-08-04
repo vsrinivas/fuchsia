@@ -29,8 +29,8 @@ bool CodecBuffer::Init() {
   // Map the VMO in the local address space.
   uintptr_t tmp;
   res = zx::vmar::root_self()->map(0, local_vmo, 0, size_bytes_,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  &tmp);
+                                   ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                                   &tmp);
   if (res != ZX_OK) {
     printf("Failed to map %zu byte buffer vmo (res %d)\n", size_bytes_, res);
     return false;

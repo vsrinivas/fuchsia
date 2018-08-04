@@ -6,9 +6,9 @@
 
 #include <cstdio>
 
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
@@ -77,8 +77,7 @@ class PostFileApp {
   PostFileApp(async::Loop* loop)
       : loop_(loop),
         context_(component::StartupContext::CreateFromStartupInfo()) {
-    http_service_ =
-        context_->ConnectToEnvironmentService<http::HttpService>();
+    http_service_ = context_->ConnectToEnvironmentService<http::HttpService>();
   }
 
   bool Start(const std::vector<std::string>& args) {
@@ -130,11 +129,10 @@ class PostFileApp {
 
     http_service_->CreateURLLoader(url_loader_.NewRequest());
 
-    url_loader_->Start(std::move(request),
-                       [this](http::URLResponse response) {
-                         ResponsePrinter printer;
-                         printer.Run(loop_, std::move(response));
-                       });
+    url_loader_->Start(std::move(request), [this](http::URLResponse response) {
+      ResponsePrinter printer;
+      printer.Run(loop_, std::move(response));
+    });
     return true;
   }
 

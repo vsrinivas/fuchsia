@@ -4,6 +4,4 @@
 
 #include "gtest/gtest.h"
 
-TEST(HelloWorldTest, True) {
-  EXPECT_TRUE(true);
-}
+TEST(HelloWorldTest, True) { EXPECT_TRUE(true); }

@@ -33,9 +33,9 @@ void Exit(const char* format, ...);
 
 std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 
-// Post to dispatcher in a way that's guaranteed to run the posted work in the same
-// order as the posting order (is the intent - if async::PostTask ever changes
-// to not guarantee order, we'll need to work around that here).
+// Post to dispatcher in a way that's guaranteed to run the posted work in the
+// same order as the posting order (is the intent - if async::PostTask ever
+// changes to not guarantee order, we'll need to work around that here).
 //
 // TODO(dustingreen): Determine if async::PostTask() intends to strictly
 // guarantee order.

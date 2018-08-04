@@ -11,8 +11,7 @@ namespace echo2 {
 EchoClientApp::EchoClientApp()
     : EchoClientApp(component::StartupContext::CreateFromStartupInfo()) {}
 
-EchoClientApp::EchoClientApp(
-    std::unique_ptr<component::StartupContext> context)
+EchoClientApp::EchoClientApp(std::unique_ptr<component::StartupContext> context)
     : context_(std::move(context)) {}
 
 void EchoClientApp::Start(std::string server_url) {
