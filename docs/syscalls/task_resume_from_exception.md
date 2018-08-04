@@ -71,4 +71,4 @@ Currently only thread handles are supported.
 
 ## SEE ALSO
 
-[task_bind_exceptino_port](task_bind_exception_port.md),
+[task_bind_exception_port](task_bind_exception_port.md),
