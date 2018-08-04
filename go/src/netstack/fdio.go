@@ -493,10 +493,7 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	}
 }
 
-type iostateResponse func(zx.Handle)
-
-func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool, responder iostateResponse) (reterr error) {
-	var peerS zx.Handle
+func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (localS, peerS zx.Handle, reterr error) {
 	ios := &iostate{
 		netProto:   netProto,
 		transProto: transProto,
@@ -518,18 +515,15 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 		}
 		s0, s1, err := zx.NewSocket(t)
 		if err != nil {
-			return err
+			return zx.HandleInvalid, zx.HandleInvalid, err
 		}
 		// TODO: Why cast these to Handle? Why not store as Socket?
-		ios.dataHandle = zx.Handle(s0)
+		localS = zx.Handle(s0)
 		peerS = zx.Handle(s1)
-		if err != nil {
-			ios.dataHandle.Close()
-			return err
-		}
 	default:
 		panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 	}
+	ios.dataHandle = localS
 
 	s.mu.Lock()
 	newCookie := s.next
@@ -547,30 +541,6 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 			s.mu.Unlock()
 		}
 	}()
-
-	if isAccept {
-		s := zx.Socket(h)
-		if err := s.Share(peerS); err != nil {
-			return err
-		}
-		// SignalPeer CONNECTED first, then locally Signal CONNECTED.
-		err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
-		switch status := mxerror.Status(err); status {
-		case zx.ErrOk:
-		case zx.ErrPeerClosed:
-			// The peer might have closed the handle.
-		default:
-			log.Printf("signal-peer failed: %v", err)
-			return err
-		}
-		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
-		if err != nil {
-			log.Printf("signal failed: %v", err)
-			return err
-		}
-	} else {
-		responder(peerS)
-	}
 
 	if ep != nil {
 		// This must be initialized before starting the control loop below, or it will race with opClose.
@@ -592,7 +562,7 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 		go ios.loopDgramWrite(s.stack)
 	}
 
-	return nil
+	return localS, peerS, nil
 }
 
 type socketServer struct {
@@ -605,26 +575,20 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-type socketPath struct {
-	domain   int
-	typ      int
-	protocol int
-}
-
-func (s *socketServer) opSocket(h zx.Handle, path socketPath, iostateResponder iostateResponse) (err error) {
+func (s *socketServer) opSocket(domain, typ, protocol int) (zx.Handle, error) {
 	var n tcpip.NetworkProtocolNumber
-	switch path.domain {
+	switch domain {
 	case AF_INET:
 		n = ipv4.ProtocolNumber
 	case AF_INET6:
 		n = ipv6.ProtocolNumber
 	default:
-		return mxerror.Errorf(zx.ErrNotSupported, "socket: unknown network protocol: %d", path.domain)
+		return zx.HandleInvalid, mxerror.Errorf(zx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
 	}
 
-	transProto, err := sockProto(path.typ, path.protocol)
+	transProto, err := sockProto(typ, protocol)
 	if err != nil {
-		return err
+		return zx.HandleInvalid, err
 	}
 
 	wq := new(waiter.Queue)
@@ -633,22 +597,22 @@ func (s *socketServer) opSocket(h zx.Handle, path socketPath, iostateResponder i
 		if debug {
 			log.Printf("socket: new endpoint: %v", e)
 		}
-		return mxerror.Errorf(zx.ErrInternal, "socket: new endpoint: %v", err)
+		return zx.HandleInvalid, mxerror.Errorf(zx.ErrInternal, "socket: new endpoint: %v", err)
 	}
 	if n == ipv6.ProtocolNumber {
 		if err := ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	err = s.newIostate(h, n, transProto, wq, ep, false, iostateResponder)
+	_, peerS, err := s.newIostate(n, transProto, wq, ep, false)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
 		}
-		return err
+		return zx.HandleInvalid, err
 	}
 
-	return nil
+	return peerS, nil
 }
 
 func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
@@ -1066,11 +1030,32 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 			}
 		}
 
-		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true, func(peerS zx.Handle) {})
+		localS, peerS, err := s.newIostate(ios.netProto, ios.transProto, newwq, newep, true)
 		if err != nil {
 			if debug {
 				log.Printf("listen: newIostate failed: %v", err)
 			}
+			return
+		}
+
+		listenS := zx.Socket(ios.dataHandle)
+		if err := listenS.Share(peerS); err != nil {
+			log.Printf("listen: Share failed: %v", err)
+			return
+		}
+		// SignalPeer CONNECTED first, then locally Signal CONNECTED.
+		err = localS.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
+		switch status := mxerror.Status(err); status {
+		case zx.ErrOk:
+		case zx.ErrPeerClosed:
+			// The peer might have closed the handle.
+		default:
+			log.Printf("listen: signal-peer failed: %v", err)
+			return
+		}
+		err = localS.Signal(0, ZXSIO_SIGNAL_CONNECTED)
+		if err != nil {
+			log.Printf("listen: signal failed: %v", err)
 			return
 		}
 	}
