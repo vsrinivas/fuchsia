@@ -70,6 +70,7 @@ source_set("ffmpeg") {
     "FF_API_DESTRUCT_PACKET=0",
     "FF_API_GET_BUFFER=0",
     "FF_API_CONVERGENCE_DURATION=0",
+    "__STDC_CONSTANT_MACROS",
   ]
 
   if (use_prebuilt_ffmpeg) {
