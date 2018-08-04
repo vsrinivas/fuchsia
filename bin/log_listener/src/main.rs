@@ -5,12 +5,13 @@
 #![deny(warnings)]
 
 extern crate chrono;
+use chrono::TimeZone;
+
 extern crate failure;
 extern crate fuchsia_async as async;
 extern crate fuchsia_syslog_listener as syslog_listener;
 
 extern crate fuchsia_zircon as zx;
-use zx::{ClockId, Time};
 
 use failure::{Error, ResultExt};
 use std::collections::hash_set::HashSet;
@@ -53,7 +54,7 @@ impl Default for LogListenerOptions {
 struct LocalOptions {
     file: Option<String>,
     ignore_tags: HashSet<String>,
-    clock: ClockId,
+    clock: Clock,
     time_format: String,
 }
 
@@ -62,7 +63,7 @@ impl Default for LocalOptions {
         LocalOptions {
             file: None,
             ignore_tags: HashSet::new(),
-            clock: ClockId::Monotonic,
+            clock: Clock::Monotonic,
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
         }
     }
@@ -71,28 +72,40 @@ impl Default for LocalOptions {
 impl LocalOptions {
     fn format_time(&self, timestamp: u64) -> String {
         match self.clock {
-            ClockId::UTC => {
-                // Find UTC offset for Monotonic.
-                // Must compute this every time since UTC time can be adjusted.
-                // Note that when printing old messages from memory buffer then
-                // this may offset them from UTC time as set when logged in
-                // case of UTC time adjustments since.
-                let monotonic_zero_as_utc =
-                    Time::get(ClockId::UTC).nanos() - Time::get(ClockId::Monotonic).nanos();
-                let utc_timestamp = monotonic_zero_as_utc + timestamp;
-                let seconds = (utc_timestamp / 1000000000) as i64;
-                let nanos = (utc_timestamp % 1000000000) as u32;
-                chrono::NaiveDateTime::from_timestamp(seconds, nanos)
-                    .format(&self.time_format)
-                    .to_string()
-            }
-            ClockId::Monotonic | _ => format!(
+            Clock::Monotonic =>
+            format!(
                 "{:05}.{:06}",
                 timestamp / 1000000000,
                 (timestamp / 1000) % 1000000
             ),
+            Clock::UTC => self._monotonic_to_utc(timestamp).format(&self.time_format).to_string(),
+            Clock::Local => chrono::Local
+                .from_utc_datetime(&self._monotonic_to_utc(timestamp))
+                .format(&self.time_format)
+                .to_string(),
         }
     }
+
+    fn _monotonic_to_utc(&self, timestamp: u64) -> chrono::NaiveDateTime {
+        // Find UTC offset for Monotonic.
+        // Must compute this every time since UTC time can be adjusted.
+        // Note that when printing old messages from memory buffer then
+        // this may offset them from UTC time as set when logged in
+        // case of UTC time adjustments since.
+        let monotonic_zero_as_utc = zx::Time::get(zx::ClockId::UTC).nanos()
+            - zx::Time::get(zx::ClockId::Monotonic).nanos();
+        let shifted_timestamp = monotonic_zero_as_utc + timestamp;
+        let seconds = (shifted_timestamp / 1000000000) as i64;
+        let nanos = (shifted_timestamp % 1000000000) as u32;
+        chrono::NaiveDateTime::from_timestamp(seconds, nanos)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+enum Clock {
+    Monotonic, // Corresponds to ZX_CLOCK_MONOTONIC
+    UTC,       // Corresponds to ZX_UTC_MONOTONIC
+    Local,     // Localized wall time
 }
 
 fn help(name: &str) -> String {
@@ -122,9 +135,11 @@ fn help(name: &str) -> String {
         --file <string>:
             File to write logs to. If omitted, logs are written to stdout.
 
-        --clock <MONOTONIC|UTC>:
+        --clock <Monotonic|UTC|Local>:
             Select clock to use for timestamps.
-            Defaults to MONOTONIC for ZX_CLOCK_MONOTONIC.
+            Monotonic (default): same as ZX_CLOCK_MONOTONIC.
+            UTC: same as ZX_CLOCK_UTC.
+            Local: localized wall time.
 
         --time_format <format>:
             If --clock is not MONOTONIC, specify timestamp format.
@@ -228,9 +243,10 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             "--file" => {
                 options.local.file = Some((&args[i + 1]).clone());
             }
-            "--clock" => match args[i + 1].as_ref() {
-                "MONOTONIC" => options.local.clock = ClockId::Monotonic,
-                "UTC" => options.local.clock = ClockId::UTC,
+            "--clock" => match args[i + 1].to_lowercase().as_ref() {
+                "monotonic" => options.local.clock = Clock::Monotonic,
+                "utc" => options.local.clock = Clock::UTC,
+                "local" => options.local.clock = Clock::Local,
                 a => return Err(format!("Invalid clock: {}", a)),
             },
             "--time_format" => {
@@ -477,7 +493,7 @@ mod tests {
 
         let formatted = local_options.format_time(timestamp); // Test default
         assert_eq!(formatted, "636253.000631");
-        local_options.clock = ClockId::Monotonic;
+        local_options.clock = Clock::Monotonic;
         let formatted = local_options.format_time(timestamp);
         assert_eq!(formatted, "636253.000631");
     }
@@ -486,8 +502,7 @@ mod tests {
     fn test_format_utc_time() {
         let mut local_options = LocalOptions::default();
         let timestamp = 636253000631621;
-        local_options.clock = ClockId::UTC;
-        //local_options.time_format = "%H:%M:%S %d/%m/%Y".to_string();
+        local_options.clock = Clock::UTC;
         local_options.time_format = "%H:%M:%S %d/%m/%Y".to_string();
 
         let timestamp_utc_formatted = local_options.format_time(timestamp);
@@ -680,7 +695,7 @@ mod tests {
         fn clock() {
             let args = vec!["--clock".to_string(), "UTC".to_string()];
             let mut expected = LogListenerOptions::default();
-            expected.local.clock = ClockId::UTC;
+            expected.local.clock = Clock::UTC;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
