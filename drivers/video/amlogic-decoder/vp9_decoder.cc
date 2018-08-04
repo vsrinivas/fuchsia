@@ -294,7 +294,6 @@ zx_status_t Vp9Decoder::InitializeHardware() {
         .WriteTo(owner_->dosbus());
   }
 
-
   InitializeHardwarePictureList();
   InitializeParser();
   InitLoopFilter();

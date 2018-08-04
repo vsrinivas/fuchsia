@@ -84,7 +84,7 @@ class TestMpeg2 {
               wait_valid.set_value();
             ReturnFrame(video.get(), frame);
           });
-    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
     video->core_->InitializeDirectInput();
     video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len);

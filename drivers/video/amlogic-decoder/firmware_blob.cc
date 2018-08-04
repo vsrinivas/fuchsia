@@ -119,7 +119,7 @@ std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
       return "";
   }
 }
-}
+}  // namespace
 zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
                                           uint8_t** data_out,
                                           uint32_t* size_out) {

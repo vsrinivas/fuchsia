@@ -76,7 +76,8 @@ DriverCtx::DriverCtx() {
   // We use kAsyncLoopConfigNoAttachToThread here, because we don't really want
   // to be setting the default async_t for the the thread that creates the
   // DriverCtx.  We'll plumb async_t(s) explicitly instead.
-  shared_fidl_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  shared_fidl_loop_ =
+      std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   shared_fidl_loop_->StartThread("shared_fidl_thread", &shared_fidl_thread_);
 }
 
@@ -121,7 +122,8 @@ void DriverCtx::FatalError(const char* format, ...) {
 }
 
 // Run to_run on given dispatcher, in order.
-void DriverCtx::PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
+void DriverCtx::PostSerial(async_dispatcher_t* dispatcher,
+                           fit::closure to_run) {
   zx_status_t post_result = async::PostTask(dispatcher, std::move(to_run));
   if (post_result != ZX_OK) {
     FatalError("async::PostTask() failed - result: %d", post_result);

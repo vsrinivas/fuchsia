@@ -95,7 +95,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
   if (status != ZX_OK)
     return status;
 
-  enum { kWorkspaceSize = 2 * (1 << 16) }; // 128 kB
+  enum { kWorkspaceSize = 2 * (1 << 16) };  // 128 kB
 
   status = io_buffer_init(&workspace_buffer_, owner_->bti(), kWorkspaceSize,
                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
@@ -109,7 +109,8 @@ zx_status_t Mpeg12Decoder::Initialize() {
   // stores metadata that was encoded in the stream.
   enum { kCcBufSize = 5 * 1024 };
   MregCoMvStart::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&workspace_buffer_)) + kCcBufSize)
+      .FromValue(truncate_to_32(io_buffer_phys(&workspace_buffer_)) +
+                 kCcBufSize)
       .WriteTo(owner_->dosbus());
 
   Mpeg12Reg::Get().FromValue(0).WriteTo(owner_->dosbus());

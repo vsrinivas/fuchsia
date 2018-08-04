@@ -73,7 +73,7 @@ class FakeOwner : public VideoDecoder::Owner {
 };
 
 constexpr uint32_t kDosbusMemorySize = 0x4000;
-}
+}  // namespace
 
 class Vp9UnitTest {
  public:

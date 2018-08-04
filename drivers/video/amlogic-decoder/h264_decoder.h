@@ -34,7 +34,8 @@ class H264Decoder : public VideoDecoder {
   zx_status_t LoadSecondaryFirmware(const uint8_t* data,
                                     uint32_t firmware_size);
   zx_status_t InitializeFrames(uint32_t frame_count, uint32_t width,
-                               uint32_t height, uint32_t display_width, uint32_t display_height);
+                               uint32_t height, uint32_t display_width,
+                               uint32_t display_height);
   void InitializeStream();
   void ReceivedFrames(uint32_t frame_count);
   void SwitchStreams();
