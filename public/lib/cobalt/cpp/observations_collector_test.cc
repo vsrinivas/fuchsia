@@ -267,7 +267,8 @@ TEST(EventLogger, Normal) {
   int64_t histogram[kMaxStatus + 1] = {0, 0, 0, 0, 0};
   for (auto iter = sink.observations.begin(); sink.observations.end() != iter;
        iter++) {
-    if (iter->metric_id != kEventMetricId) continue;
+    if (iter->metric_id != kEventMetricId)
+      continue;
 
     for (auto part_iter = iter->parts.begin(); iter->parts.end() != part_iter;
          part_iter++) {

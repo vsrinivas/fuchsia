@@ -107,8 +107,7 @@ class ValuePart {
     return value;
   }
 
-  ValuePart(Type type, Value value)
-      : type_(type), value_(value) {}
+  ValuePart(Type type, Value value) : type_(type), value_(value) {}
 
   Type type_;
   Value value_;
