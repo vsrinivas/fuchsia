@@ -33,3 +33,15 @@ package("recovery_netstack") {
     },
   ]
 }
+
+package("recovery_netstack_tests") {
+  testonly = true
+  deps = [
+    ":bin",
+  ]
+  tests = [
+    {
+      name = "recovery_netstack_bin_test_rustc"
+    },
+  ]
+}
