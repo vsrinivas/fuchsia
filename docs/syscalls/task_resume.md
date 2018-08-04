@@ -3,6 +3,8 @@
 This function is deprecated. When you suspend a thread with
 [task_suspend_token](task_suspend_token.md) closing the suspend token will
 automatically resume the thread.
+And when you want to resume a thread from an exception,
+use [task_resume_from_exception](task_resume_from_exception.md].
 
 ## NAME
 
