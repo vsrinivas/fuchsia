@@ -20,13 +20,12 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 function listen {
   trap "exit 0" INT
   while true; do
-    addr=$(fx-command-run netaddr --fuchsia "${device}")
+    addr=$(fx-command-run netaddr --fuchsia --nowait --timeout=1000 "${device}")
     if [[ $? -eq 0 ]]; then
       echo "Connecting to device..."
       (fx-command-exec ssh "${addr}" /system/bin/log_listener "$@" || true)
       echo "Connection lost, looking for device"
     fi
-    sleep 1
   done
 }
 
