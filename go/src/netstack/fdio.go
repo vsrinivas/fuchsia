@@ -1554,24 +1554,3 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 	return zx.ErrBadState
 	// TODO do_halfclose
 }
-
-type openReply struct {
-	Status zx.Status
-	Handle zx.Handle
-}
-
-func (r *openReply) Write(h zx.Handle) {
-	data := make([]byte, 4)
-	binary.LittleEndian.PutUint32(data, uint32(r.Status))
-	handles := []zx.Handle{r.Handle}
-	c := zx.Channel(h)
-	c.Write(data, handles, 0)
-}
-
-func init() {
-	// The marshalling in openReply.Write assumes that
-	// zx.Status is a 32bit integer.
-	if binary.Size(zx.Status(0)) != 4 {
-		panic("zx.Status is not 4 bytes")
-	}
-}
