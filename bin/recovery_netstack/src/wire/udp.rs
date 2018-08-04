@@ -541,8 +541,10 @@ mod tests {
         );
     }
 
+    // This test tries to allocate 4GB of memory. Run at your own risk.
     #[test]
     #[should_panic]
+    #[ignore]
     #[cfg(target_pointer_width = "64")] // 2^32 overflows on 32-bit platforms
     fn test_serialize_fail_packet_too_long_ipv6() {
         // total length of 2^32 or greater is disallowed in IPv6
