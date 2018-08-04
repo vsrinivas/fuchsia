@@ -41,7 +41,8 @@ void MessageRelayBase::SendMessage(std::vector<uint8_t> message) {
   messages_to_write_.push(std::move(message));
 
   if (channel_ && !write_wait_.is_pending()) {
-    WriteChannelMessages(async_get_default_dispatcher(), &write_wait_, ZX_OK, nullptr);
+    WriteChannelMessages(async_get_default_dispatcher(), &write_wait_, ZX_OK,
+                         nullptr);
   }
 }
 

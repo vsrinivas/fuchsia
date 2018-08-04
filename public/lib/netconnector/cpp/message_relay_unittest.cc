@@ -23,9 +23,8 @@ TEST_F(MessageRelayTest, DestructionInCallback) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &c1, &c2));
 
   message_relay->SetChannel(std::move(c2));
-  message_relay->SetMessageReceivedCallback([&] (std::vector<uint8_t> data) {
-    message_relay.reset();
-  });
+  message_relay->SetMessageReceivedCallback(
+      [&](std::vector<uint8_t> data) { message_relay.reset(); });
   c1.write(0u, "0", 1, nullptr, 0u);
   RunLoopUntilIdle();
   EXPECT_FALSE(message_relay);
