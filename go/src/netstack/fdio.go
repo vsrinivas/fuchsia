@@ -54,12 +54,12 @@ var (
 	ioctlNetcGetNodename = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
 )
 
-func socketDispatcher(stk *stack.Stack, ctx *context.Context) (*socketServer, error) {
+func newSocketServer(stk *stack.Stack, ctx *context.Context) (*socketServer, error) {
 	a := socketServer{
-		stack:      stk,
-		dnsClient:  dns.NewClient(stk),
-		io:         make(map[cookie]*iostate),
-		next:       1,
+		stack:     stk,
+		dnsClient: dns.NewClient(stk),
+		io:        make(map[cookie]*iostate),
+		next:      1,
 	}
 	return &a, nil
 }
@@ -596,9 +596,9 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 }
 
 type socketServer struct {
-	stack      *stack.Stack
-	dnsClient  *dns.Client
-	ns         *netstack
+	stack     *stack.Stack
+	dnsClient *dns.Client
+	ns        *netstack
 
 	mu   sync.Mutex
 	next cookie

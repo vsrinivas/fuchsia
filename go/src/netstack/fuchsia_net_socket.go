@@ -18,7 +18,7 @@ type socketProviderImpl struct{}
 func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p net.SocketProtocol) (zx.Socket, int32, error) {
 	spath := socketPath{domain: int(d), typ: int(t), protocol: int(p)}
 	var s zx.Handle
-	if err := ns.dispatcher.opSocket(zx.Handle(0), spath, func(peerS zx.Handle) { s = peerS }); err != nil {
+	if err := ns.socketServer.opSocket(zx.Handle(0), spath, func(peerS zx.Handle) { s = peerS }); err != nil {
 		return zx.Socket(zx.Handle(0)), int32(errStatus(err)), nil
 	}
 	return zx.Socket(s), 0, nil
@@ -50,7 +50,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, h *net.A
 		service = &str
 	}
 
-	status, addrInfo := ns.dispatcher.GetAddrInfo(node, service, h)
+	status, addrInfo := ns.socketServer.GetAddrInfo(node, service, h)
 	if status != 0 {
 		return status, 0, nil, nil, nil, nil, nil
 	}

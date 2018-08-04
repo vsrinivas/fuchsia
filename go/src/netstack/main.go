@@ -49,7 +49,7 @@ func main() {
 		tcp.ProtocolName,
 		udp.ProtocolName,
 	})
-	s, err := socketDispatcher(stk, ctx)
+	s, err := newSocketServer(stk, ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func main() {
 	ns = &netstack{
 		arena:          arena,
 		stack:          stk,
-		dispatcher:     s,
+		socketServer:   s,
 		deviceSettings: ds,
 		ifStates:       make(map[tcpip.NICID]*ifState),
 	}

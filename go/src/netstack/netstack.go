@@ -37,9 +37,9 @@ const (
 
 // A netstack tracks all of the running state of the network stack.
 type netstack struct {
-	arena      *eth.Arena
-	stack      *stack.Stack
-	dispatcher *socketServer
+	arena        *eth.Arena
+	stack        *stack.Stack
+	socketServer *socketServer
 
 	deviceSettings *devicesettings.DeviceSettingsManagerInterface
 
@@ -167,7 +167,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.dispatcher.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+	ifs.ns.socketServer.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
 
 	OnInterfacesChanged()
 }
@@ -243,7 +243,7 @@ func (ifs *ifState) onEthStop() {
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.dispatcher.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+	ifs.ns.socketServer.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
 }
 
 func (ns *netstack) flattenRouteTables() []tcpip.Route {

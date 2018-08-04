@@ -99,7 +99,7 @@ func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protoc
 func (ni *netstackImpl) GetAddress(name string, port uint16) (out []nsfidl.SocketAddress, netErr nsfidl.NetErr, retErr error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
 	// fdio's getaddrinfo into here.
-	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
+	addrs, err := ns.socketServer.dnsClient.LookupIP(name)
 	if err == nil {
 		out = make([]nsfidl.SocketAddress, len(addrs))
 		netErr = nsfidl.NetErr{Status: nsfidl.StatusOk}
