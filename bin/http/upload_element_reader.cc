@@ -67,7 +67,7 @@ size_t VmoUploadElementReader::size() { return size_; }
 
 bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {
   const size_t remaining_bytes = size_ - offset_;
-  const size_t bytes_to_process = std::min(remaining_bytes, BUFSIZE);
+  const size_t bytes_to_process = std::min(remaining_bytes, buf_.size());
 
   err_ = vmo_.read(buf_.data(), offset_, bytes_to_process);
   if (err_ != ZX_OK) {

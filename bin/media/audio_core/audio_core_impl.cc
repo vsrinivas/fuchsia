@@ -15,6 +15,8 @@
 namespace media {
 namespace audio {
 
+constexpr float AudioCoreImpl::kMaxSystemAudioGain;
+
 AudioCoreImpl::AudioCoreImpl() : device_manager_(this) {
   // Stash a pointer to our async object.
   dispatcher_ = async_get_default_dispatcher();
