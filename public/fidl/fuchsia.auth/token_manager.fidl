@@ -142,8 +142,8 @@ interface TokenManager {
   // image_url, profile_url, first and last names as configured on the auth
   // provider backend system.
   1: Authorize(AppConfig app_config, vector<string> app_scopes,
-      string? user_profile_id)
-      -> (Status status, UserProfileInfo? user_profile_info);
+      string? user_profile_id, string? auth_code)
+      -> (Status @status, UserProfileInfo? user_profile_info);
 
   // Returns a downscoped access token from an auth provider for the given user
   // |user_profile_id| and |scopes| to a Fuchsia component. The component's

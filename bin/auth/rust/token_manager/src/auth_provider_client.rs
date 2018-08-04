@@ -72,9 +72,7 @@ impl AuthProviderClient {
     /// been created previously this is returned, otherwise a new proxy is
     /// created by launching a factory interface and then acquiring a
     /// provider interface from this factory.
-    pub fn get_proxy(
-        &self,
-    ) -> FutureObj<'static, Result<Arc<AuthProviderProxy>, Error>> {
+    pub fn get_proxy(&self) -> FutureObj<'static, Result<Arc<AuthProviderProxy>, Error>> {
         // First check if a proxy has already been created, and if so return
         // immediately.
         if let Some(client_state) = self.deferred_state.read().unwrap().get() {
@@ -94,19 +92,20 @@ impl AuthProviderClient {
             factory_proxy
                 .get_auth_provider(ServerEnd::new(server_chan))
                 .map_err(|err| format_err!("GetAuthProvider method failed with {:?}", err))
-                .and_then(move |status| {
-                    match status {
-                        AuthProviderStatus::Ok => {
-                            let client_async = async::Channel::from_channel(client_chan).unwrap();
-                            let provider_proxy = Arc::new(AuthProviderProxy::new(client_async));
-                            deferred_state.write().unwrap().set(ConnectionState {
-                                _app: app,
-                                provider_proxy: provider_proxy.clone(),
-                            });
-                            fready(Ok(provider_proxy))
-                        }
-                        _ => fready(Err(format_err!("Error getting auth provider: {:?}", status))),
+                .and_then(move |status| match status {
+                    AuthProviderStatus::Ok => {
+                        let client_async = async::Channel::from_channel(client_chan).unwrap();
+                        let provider_proxy = Arc::new(AuthProviderProxy::new(client_async));
+                        deferred_state.write().unwrap().set(ConnectionState {
+                            _app: app,
+                            provider_proxy: provider_proxy.clone(),
+                        });
+                        fready(Ok(provider_proxy))
                     }
+                    _ => fready(Err(format_err!(
+                        "Error getting auth provider: {:?}",
+                        status
+                    ))),
                 }),
         ))
     }

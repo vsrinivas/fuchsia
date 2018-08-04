@@ -64,9 +64,11 @@ impl AuthProvider {
     /// according to the actual variant of the `AuthProviderRequest` enum.
     fn handle_request(req: AuthProviderRequest) -> Result<(), Error> {
         match req {
-            AuthProviderRequest::GetPersistentCredential { responder, .. } => {
-                Self::get_persistent_credential(responder)
-            }
+            AuthProviderRequest::GetPersistentCredential {
+                user_profile_id,
+                responder,
+                ..
+            } => Self::get_persistent_credential(user_profile_id, responder),
 
             AuthProviderRequest::GetAppAccessToken {
                 credential,
@@ -105,10 +107,14 @@ impl AuthProvider {
     /// `AuthProvider` fidl interface. The field auth_ui_context is removed here
     /// as we will never use it in the dev auth provider.
     fn get_persistent_credential(
-        responder: AuthProviderGetPersistentCredentialResponder,
+        user_profile_id: Option<String>, responder: AuthProviderGetPersistentCredentialResponder,
     ) -> Result<(), Error> {
+        let mut user_id = user_profile_id.unwrap_or("".to_string());
+        if user_id.is_empty() {
+            user_id = generate_random_string() + USER_PROFILE_INFO_ID_DOMAIN;
+        }
         let mut user_profile_info = Some(UserProfileInfo {
-            id: generate_random_string() + USER_PROFILE_INFO_ID_DOMAIN,
+            id: user_id,
             display_name: Some(USER_PROFILE_INFO_DISPLAY_NAME.to_string()),
             url: Some(USER_PROFILE_INFO_URL.to_string()),
             image_url: Some(USER_PROFILE_INFO_IMAGE_URL.to_string()),

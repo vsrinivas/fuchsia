@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::dev_auth_provider::AuthProvider;
+extern crate fidl_fuchsia_auth;
+extern crate fuchsia_async as async;
+extern crate futures;
+
+use super::dev_auth_provider_iotid::AuthProvider;
 use fidl::endpoints2::RequestStream;
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderFactoryRequestStream,
                         AuthProviderStatus};
-
-use fuchsia_async as fasync;
-
 use futures::prelude::*;
-use log::{info, log, warn};
 
 /// The AuthProviderFactory struct is holding implementation of
 /// the `AuthProviderFactory` fidl interface.
@@ -20,8 +20,8 @@ pub struct AuthProviderFactory;
 impl AuthProviderFactory {
     /// Spawn a new task of handling request from the `AuthProviderFactoryRequestStream`
     /// by calling the `handle_request` method.
-    pub fn spawn(chan: fasync::Channel) {
-        fasync::spawn(
+    pub fn spawn(chan: async::Channel) {
+        async::spawn(
             AuthProviderFactoryRequestStream::from_channel(chan)
                 .try_for_each(|r| future::ready(Self::handle_request(r)))
                 .unwrap_or_else(|e| warn!("Error running AuthProviderFactory {:?}", e)),

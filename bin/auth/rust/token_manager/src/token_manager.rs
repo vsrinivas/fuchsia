@@ -13,18 +13,20 @@ use failure;
 use fidl;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AppConfig, AuthProviderConfig, AuthProviderProxy, AuthProviderStatus,
-                        AuthenticationContextProviderMarker, Status,
-                        TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
-                        TokenManagerGetAccessTokenResponder,
+use fidl_fuchsia_auth::{AppConfig, AssertionJwtParams, AttestationJwtParams,
+                        AttestationSignerMarker, AuthProviderConfig, AuthProviderProxy,
+                        AuthProviderStatus, AuthenticationContextProviderMarker, CredentialEcKey,
+                        Status, TokenManagerAuthorizeResponder,
+                        TokenManagerDeleteAllTokensResponder, TokenManagerGetAccessTokenResponder,
                         TokenManagerGetFirebaseTokenResponder, TokenManagerGetIdTokenResponder,
                         TokenManagerMarker, TokenManagerRequest, UserProfileInfo};
-use futures::future::{self, ready as fready, FutureObj};
+use futures::future::{ready as fready, FutureObj};
 use futures::prelude::*;
 use futures::FutureExt;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use zx;
 
 const CACHE_SIZE: usize = 128;
 const DB_DIR: &str = "/data/auth";
@@ -100,8 +102,7 @@ impl TokenManager {
                     apc.auth_provider_type.clone(),
                     AuthProviderClient::from_config(apc),
                 )
-            })
-            .collect();
+            }).collect();
 
         let auth_context = AuthContextClient::from_client_end(auth_context_provider)
             .map_err(|err| format_err!("Error creating AuthContext {:?}", err))?;
@@ -124,9 +125,10 @@ impl TokenManager {
                 app_config,
                 user_profile_id,
                 app_scopes,
+                auth_code,
                 responder,
             } => FutureObj::new(Box::new(
-                self.authorize(app_config, user_profile_id, app_scopes)
+                self.authorize(app_config, user_profile_id, app_scopes, auth_code)
                     .then(move |result| fready(responder.send_result(result))),
             )),
             TokenManagerRequest::GetAccessToken {
@@ -172,6 +174,120 @@ impl TokenManager {
     /// TODO: |app_scopes| will be used in the future for Authenticators.
     fn authorize(
         &self, app_config: AppConfig, user_profile_id: Option<String>, app_scopes: Vec<String>,
+        auth_code: Option<String>,
+    ) -> TokenManagerFuture<UserProfileInfo> {
+        // TODO(ukode, jsankey): This iotid check against the auth_provider_type
+        // is brittle and is only a short-term solution. Eventually, this
+        // information will be coming from the AuthProviderConfig params in
+        // some form.
+        if app_config
+            .auth_provider_type
+            .to_ascii_lowercase()
+            .contains("iotid")
+        {
+            self.handle_iotid_authorize(app_config, user_profile_id, app_scopes, auth_code)
+        } else {
+            self.handle_authorize(app_config, user_profile_id, app_scopes, auth_code)
+        }
+    }
+
+    /// Performs authorization for connected devices flow for the supplied
+    /// 'AppConfig' and returns an 'UserProfileInfo' on successful user consent.
+    fn handle_iotid_authorize(
+        &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
+        auth_code: Option<String>,
+    ) -> TokenManagerFuture<UserProfileInfo> {
+        let auth_provider_type = app_config.auth_provider_type.clone();
+        let store = self.token_store.clone();
+        let ui_context = future_try!(
+            self.auth_context
+                .get_new_ui_context()
+                .map_err(|err| TokenManagerError::new(Status::InvalidAuthContext).with_cause(err))
+        );
+
+        FutureObj::new(Box::new(
+            self.get_auth_provider_proxy(&app_config.auth_provider_type)
+                .and_then(move |proxy| {
+                    // TODO(ukode): Create a new attestation signer handle for
+                    // each request using the device attestation key with better
+                    // error handling.
+                    let (_server_chan, client_chan) = zx::Channel::create()
+                        .map_err(|err| {
+                            TokenManagerError::new(Status::InternalError).with_cause(err)
+                        }).expect("Failed to create attestation_signer");
+                    let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
+
+                    // TODO(ukode): Add product root certificates and device
+                    // attestation certificate to this certificate chain.
+                    let certificate_chain = Vec::<String>::new();
+
+                    // TODO(ukode): Create an ephemeral credential key and
+                    // add the public key params here.
+                    let credential_key = CredentialEcKey {
+                        curve: String::from("P-256"),
+                        key_x_val: String::from("TODO"),
+                        key_y_val: String::from("TODO"),
+                        fingerprint_sha_256: String::from("TODO"),
+                    };
+
+                    let mut attestation_jwt_params = AttestationJwtParams {
+                        credential_eckey: credential_key,
+                        certificate_chain: certificate_chain,
+                        auth_code: auth_code.clone().unwrap_or("".to_string()),
+                    };
+
+                    proxy
+                        .get_persistent_credential_from_attestation_jwt(
+                            attestation_signer,
+                            &mut attestation_jwt_params,
+                            Some(ui_context),
+                            user_profile_id.as_ref().map(|x| &**x),
+                        ).map_err(|err| {
+                            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                        })
+                }).and_then(
+                    move |(
+                        status,
+                        credential,
+                        _access_token,
+                        auth_challenge,
+                        user_profile_info,
+                    )| {
+                        match (credential, auth_challenge, user_profile_info) {
+                            (Some(credential), Some(_auth_challenge), Some(user_profile_info)) => {
+                                // Store persistent credential
+                                let db_value = CredentialValue::new(
+                                    auth_provider_type,
+                                    user_profile_info.id.clone(),
+                                    credential,
+                                    None,
+                                ).map_err(|_| Status::AuthProviderServerError);
+                                let db_value = match db_value {
+                                    Ok(db) => db,
+                                    Err(e) => return future::ready(Err(e.into())),
+                                };
+                                match store.lock().unwrap().add_credential(db_value) {
+                                    Ok(_) => {}
+                                    Err(e) => return future::ready(Err(e.into())),
+                                }
+
+                                // TODO(ukode): Store credential keys
+
+                                // TODO(ukode): Cache auth_challenge
+                                fready(Ok(*user_profile_info))
+                            }
+                            _ => fready(Err(TokenManagerError::from(status))),
+                        }
+                    },
+                ),
+        ))
+    }
+
+    /// Performs OAuth authorization for the supplied 'AppConfig' and returns an
+    /// 'UserProfileInfo' on successful user consent.
+    fn handle_authorize(
+        &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
+        _auth_code: Option<String>,
     ) -> TokenManagerFuture<UserProfileInfo> {
         let auth_provider_type = app_config.auth_provider_type.clone();
         let store = self.token_store.clone();
@@ -185,14 +301,13 @@ impl TokenManager {
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
                     proxy
-                        .get_persistent_credential(Some(ui_context),
-                            user_profile_id.as_ref().map(|x| &**x)
-                            )
-                        .map_err(|err| {
+                        .get_persistent_credential(
+                            Some(ui_context),
+                            user_profile_id.as_ref().map(|x| &**x),
+                        ).map_err(|err| {
                             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                         })
-                })
-                .and_then(move |(status, credential, user_profile_info)| {
+                }).and_then(move |(status, credential, user_profile_info)| {
                     match (credential, user_profile_info) {
                         (Some(credential), Some(user_profile_info)) => {
                             let db_value = CredentialValue::new(
@@ -203,15 +318,15 @@ impl TokenManager {
                             ).map_err(|_| Status::AuthProviderServerError);
                             let db_value = match db_value {
                                 Ok(db) => db,
-                                Err(e) => return future::ready(Err(e.into())),
+                                Err(e) => return fready(Err(e.into())),
                             };
                             match store.lock().unwrap().add_credential(db_value) {
                                 Ok(_) => {}
-                                Err(e) => return future::ready(Err(e.into())),
+                                Err(e) => return fready(Err(e.into())),
                             }
-                            future::ready(Ok(*user_profile_info))
+                            fready(Ok(*user_profile_info))
                         }
-                        _ => future::ready(Err(TokenManagerError::from(status))),
+                        _ => fready(Err(TokenManagerError::from(status))),
                     }
                 }),
         ))
@@ -231,15 +346,137 @@ impl TokenManager {
             .unwrap()
             .get_access_token(&cache_key, &app_scopes)
         {
-            return FutureObj::new(Box::new(future::ready(Ok(cached_token))));
+            return FutureObj::new(Box::new(fready(Ok(cached_token))));
         }
 
         // If no cached entry was found use an auth provider to mint a new one from the
         // refresh token, then place it in the cache.
         let refresh_token = future_try!(self.get_refresh_token(&db_key));
+
+        // TODO(ukode, jsankey): This iotid check against the auth_provider_type
+        // is brittle and is only a short-term solution. Eventually, this
+        // information will be coming from the AuthProviderConfig params in
+        // some form or based on existence of credential_key for the given user.
+        if app_config
+            .auth_provider_type
+            .to_ascii_lowercase()
+            .contains("iotid")
+        {
+            self.handle_iotid_get_access_token(
+                app_config,
+                user_profile_id,
+                refresh_token,
+                app_scopes,
+                cache_key,
+            )
+        } else {
+            self.handle_get_access_token(app_config, refresh_token, app_scopes, cache_key)
+        }
+    }
+
+    // Exchanges an existing user grant for supplied 'AppConfig' to a shortlived
+    // access token 'AuthToken' using the connected devices flow.
+    fn handle_iotid_get_access_token(
+        &self, app_config: AppConfig, user_profile_id: String, refresh_token: String,
+        app_scopes: Vec<String>, cache_key: CacheKey,
+    ) -> TokenManagerFuture<Arc<OAuthToken>> {
         let cache = self.token_cache.clone();
         let app_scopes_1 = Arc::new(app_scopes);
         let app_scopes_2 = app_scopes_1.clone();
+
+        let store = self.token_store.clone();
+        let auth_provider_type = app_config.auth_provider_type.clone();
+        FutureObj::new(Box::new(
+            self.get_auth_provider_proxy(&app_config.auth_provider_type)
+                .and_then(move |proxy| {
+                    // TODO(ukode): Retrieve the ephemeral credential key from
+                    // store and add the public key params here.
+                    let credential_key = CredentialEcKey {
+                        curve: String::from("P-256"),
+                        key_x_val: String::from("TODO"),
+                        key_y_val: String::from("TODO"),
+                        fingerprint_sha_256: String::from("TODO"),
+                    };
+
+                    // TODO(ukode): Create a new attestation signer handle for
+                    // each request using the device attestation key with better
+                    // error handling.
+                    let (_server_chan, client_chan) = zx::Channel::create()
+                        .map_err(|err| {
+                            TokenManagerError::new(Status::InternalError).with_cause(err)
+                        }).expect("Failed to create attestation_signer");
+                    let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
+
+                    // TODO(ukode): Read challenge from cache.
+                    let mut assertion_jwt_params = AssertionJwtParams {
+                        credential_eckey: credential_key,
+                        challenge: Some("".to_string()),
+                    };
+
+                    let scopes_copy = app_scopes_1.iter().map(|x| &**x).collect::<Vec<_>>();
+
+                    proxy
+                        .get_app_access_token_from_assertion_jwt(
+                            attestation_signer,
+                            &mut assertion_jwt_params,
+                            &refresh_token,
+                            &mut scopes_copy.into_iter(),
+                        ).map_err(|err| {
+                            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                        })
+                }).and_then(
+                    move |(status, updated_credential, access_token, auth_challenge)| {
+                        match (updated_credential, access_token, auth_challenge) {
+                            (
+                                Some(updated_credential),
+                                Some(access_token),
+                                Some(_auth_challenge),
+                            ) => {
+                                // Store updated_credential in token store
+                                let db_value = CredentialValue::new(
+                                    auth_provider_type,
+                                    user_profile_id.clone(),
+                                    updated_credential,
+                                    None,
+                                ).map_err(|_| Status::AuthProviderServerError);
+
+                                let db_value = match db_value {
+                                    Ok(db) => db,
+                                    Err(e) => return future::ready(Err(e.into())),
+                                };
+                                match store.lock().unwrap().add_credential(db_value) {
+                                    Ok(_) => {}
+                                    Err(e) => return future::ready(Err(e.into())),
+                                }
+
+                                // Cache access token
+                                let native_token = Arc::new(OAuthToken::from(*access_token));
+                                cache.lock().unwrap().put_access_token(
+                                    cache_key,
+                                    &app_scopes_2,
+                                    native_token.clone(),
+                                );
+
+                                // TODO(ukode): Cache auth_challenge
+                                fready(Ok(native_token))
+                            }
+                            _ => fready(Err(TokenManagerError::from(status))),
+                        }
+                    },
+                ),
+        ))
+    }
+
+    // Exchanges an existing user grant for supplied 'AppConfig' to a shortlived
+    // access token 'AuthToken' using the traditional OAuth flow.
+    fn handle_get_access_token(
+        &self, app_config: AppConfig, refresh_token: String, app_scopes: Vec<String>,
+        cache_key: CacheKey,
+    ) -> TokenManagerFuture<Arc<OAuthToken>> {
+        let cache = self.token_cache.clone();
+        let app_scopes_1 = Arc::new(app_scopes);
+        let app_scopes_2 = app_scopes_1.clone();
+
         FutureObj::new(Box::new(
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
@@ -249,12 +486,10 @@ impl TokenManager {
                             &refresh_token,
                             app_config.client_id.as_ref().map(|x| &**x),
                             &mut scopes_copy.into_iter(),
-                        )
-                        .map_err(|err| {
+                        ).map_err(|err| {
                             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                         })
-                })
-                .and_then(move |(status, provider_token)| match provider_token {
+                }).and_then(move |(status, provider_token)| match provider_token {
                     Some(provider_token) => {
                         let native_token = Arc::new(OAuthToken::from(*provider_token));
                         cache.lock().unwrap().put_access_token(
@@ -262,9 +497,9 @@ impl TokenManager {
                             &app_scopes_2,
                             native_token.clone(),
                         );
-                        future::ready(Ok(native_token))
+                        fready(Ok(native_token))
                     }
-                    None => future::ready(Err(TokenManagerError::from(status))),
+                    None => fready(Err(TokenManagerError::from(status))),
                 }),
         ))
     }
@@ -284,7 +519,7 @@ impl TokenManager {
             .unwrap()
             .get_id_token(&cache_key, &audience_str)
         {
-            return FutureObj::new(Box::new(future::ready(Ok(cached_token))));
+            return FutureObj::new(Box::new(fready(Ok(cached_token))));
         }
 
         // If no cached entry was found use an auth provider to mint a new one from the
@@ -299,8 +534,7 @@ impl TokenManager {
                         .map_err(|err| {
                             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                         })
-                })
-                .and_then(move |(status, provider_token)| match provider_token {
+                }).and_then(move |(status, provider_token)| match provider_token {
                     Some(provider_token) => {
                         let native_token = Arc::new(OAuthToken::from(*provider_token));
                         cache.lock().unwrap().put_id_token(
@@ -329,7 +563,7 @@ impl TokenManager {
             .unwrap()
             .get_firebase_token(&cache_key, &api_key)
         {
-            return FutureObj::new(Box::new(future::ready(Ok(cached_token))));
+            return FutureObj::new(Box::new(fready(Ok(cached_token))));
         }
 
         // If no cached entry was found use ourselves to fetch or mint an ID token then
@@ -348,8 +582,7 @@ impl TokenManager {
                         .map_err(|err| {
                             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                         })
-                })
-                .and_then(move |(status, provider_token)| match provider_token {
+                }).and_then(move |(status, provider_token)| match provider_token {
                     Some(provider_token) => {
                         let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
                         cache.lock().unwrap().put_firebase_token(
@@ -390,8 +623,7 @@ impl TokenManager {
                         .map_err(|err| {
                             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                         })
-                })
-                .and_then(move |status| {
+                }).and_then(move |status| {
                     // In the case of probably-temporary AuthProvider failures we fail this method
                     // and expect the client to retry. For other AuthProvider failures we continue
                     // to delete our copy of the credential even if the server can't revoke it.

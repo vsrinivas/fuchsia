@@ -4,48 +4,40 @@
 
 #![feature(futures_api)]
 
-extern crate auth_cache;
-extern crate auth_store;
-#[macro_use]
 extern crate failure;
 extern crate fidl;
 extern crate fidl_fuchsia_auth;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_syslog as syslog;
-extern crate fuchsia_zircon as zx;
 extern crate futures;
 #[macro_use]
 extern crate log;
+extern crate rand;
 
-#[macro_use]
-mod macros;
-mod auth_context_client;
-mod auth_provider_client;
-mod error;
-mod token_manager;
-mod token_manager_factory;
+mod dev_auth_provider_iotid;
+mod dev_auth_provider_iotid_factory;
 
 use component::server::ServicesServer;
+use dev_auth_provider_iotid_factory::AuthProviderFactory;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
-use fidl_fuchsia_auth::TokenManagerFactoryMarker;
-use token_manager_factory::TokenManagerFactory;
+use fidl_fuchsia_auth::AuthProviderFactoryMarker;
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["auth"]).expect("Can't init logger");
-    info!("Starting token manager");
+    info!("Starting dev auth provider");
 
     let mut executor = async::Executor::new().context("Error creating executor")?;
+
     let fut = ServicesServer::new()
-        .add_service((TokenManagerFactoryMarker::NAME, |chan| {
-            TokenManagerFactory::spawn(chan)
+        .add_service((AuthProviderFactoryMarker::NAME, |chan| {
+            AuthProviderFactory::spawn(chan)
         })).start()
-        .context("Error starting Auth TokenManager server")?;
+        .context("Error starting dev auth provider server")?;
 
     executor
         .run_singlethreaded(fut)
-        .context("Failed to execute Auth TokenManager future")?;
-    info!("Stopping token manager");
+        .context("Failed to execute dev auth provider future")?;
     Ok(())
 }

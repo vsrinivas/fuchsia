@@ -113,6 +113,7 @@ TokenManagerImpl::~TokenManagerImpl() {}
 void TokenManagerImpl::Authorize(AppConfig app_config,
                                  fidl::VectorPtr<fidl::StringPtr> app_scopes,
                                  fidl::StringPtr user_profile_id,
+                                 fidl::StringPtr auth_code,
                                  AuthorizeCallback callback) {
   auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
