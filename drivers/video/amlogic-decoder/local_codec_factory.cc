@@ -23,7 +23,7 @@ struct CodecAdapterFactory {
   // This typedef is just for local readability here, not for use outside this
   // struct.
   using CreateFunction = std::function<std::unique_ptr<CodecAdapter>(
-      std::mutex& lock, CodecAdapterEvents*, AmlogicVideo*)>;
+      std::mutex& lock, CodecAdapterEvents*, DeviceCtx*)>;
 
   CreateFunction create;
 };
@@ -53,8 +53,8 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
-        [](std::mutex& lock, CodecAdapterEvents* events, AmlogicVideo* video) {
-          return std::make_unique<CodecAdapterH264>(lock, events, video);
+        [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
+          return std::make_unique<CodecAdapterH264>(lock, events, device);
         },
     },
     {
@@ -77,8 +77,8 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
-        [](std::mutex& lock, CodecAdapterEvents* events, AmlogicVideo* video) {
-          return std::make_unique<CodecAdapterMpeg2>(lock, events, video);
+        [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
+          return std::make_unique<CodecAdapterMpeg2>(lock, events, device);
         },
     },
 };
@@ -187,7 +187,7 @@ void LocalCodecFactory::CreateDecoder(
             std::move(video_decoder));
 
         codec->SetCoreCodecAdapter(
-            factory->create(codec->lock(), codec.get(), device_->video()));
+            factory->create(codec->lock(), codec.get(), device_));
 
         device_->device_fidl()->BindCodecImpl(std::move(codec));
       });

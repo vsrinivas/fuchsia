@@ -214,6 +214,20 @@ struct CodecBufferConstraints {
   // Support for buffer-per-packet mode is always required on both input and
   // output, regardless of codec type.
   bool single_buffer_mode_allowed;
+
+  // If true, the buffers need to be physically contiguous pages, such as can be
+  // allocated using zx_vmo_create_contiguous().
+  bool is_physically_contiguous_required;
+  // VERY TEMPORARY HACK / KLUDGE - we want the BufferAllocator (or one of the
+  // participant drivers that needs physically contiguous buffers) to call
+  // zx_vmo_create_contiguous(), definitely not the Codec client, but until the
+  // BufferAllocator can be reached from a driver, this is to grant the client
+  // special powers it really shouldn't have, very temporarily until
+  // BufferAllocator is hooked up properly at which point this can be removed.
+  // Strictly speaking we could reverse which end allocates buffers in the Codec
+  // interface to avoid this hack even before BufferAllocator, but the overall
+  // path seems shorter if we jump directly from this to using BufferAllocator.
+  handle? very_temp_kludge_bti_handle;
 };
 
 // CodecOutputConfig

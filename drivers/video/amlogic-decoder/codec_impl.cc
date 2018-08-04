@@ -41,7 +41,9 @@ constexpr uint64_t kInputBufferConstraintsVersionOrdinal = 1;
 constexpr uint64_t kInputDefaultBufferConstraintsVersionOrdinal =
     kInputBufferConstraintsVersionOrdinal;
 
-// TODO(dustingreen): This stuff should be up to the core codec, not CodecImpl.
+// TODO(dustingreen): Make these defaults/settings overridable per CodecAdapter
+// implementation.  For a few of them, maybe require the CodecAdapter to
+// specify (as in no default for some of them).
 
 constexpr uint32_t kInputPacketCountForCodecMin = 2;
 // This is fairly arbitrary, but roughly speaking, 1 to be decoding, 1 to be in

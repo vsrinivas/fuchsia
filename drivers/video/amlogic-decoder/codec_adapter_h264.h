@@ -10,12 +10,13 @@
 #include <lib/async-loop/cpp/loop.h>
 
 class AmlogicVideo;
+class DeviceCtx;
 struct VideoFrame;
 class CodecAdapterH264 : public CodecAdapter {
  public:
   explicit CodecAdapterH264(std::mutex& lock,
                             CodecAdapterEvents* codec_adapter_events,
-                            AmlogicVideo* video);
+                            DeviceCtx* device);
   ~CodecAdapterH264();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
@@ -52,6 +53,7 @@ class CodecAdapterH264 : public CodecAdapter {
   void ProcessInput();
   void ProcessOutput();
 
+  DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
 
   fuchsia::mediacodec::CodecFormatDetails initial_input_format_details_;

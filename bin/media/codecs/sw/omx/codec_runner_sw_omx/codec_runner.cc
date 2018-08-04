@@ -5,6 +5,7 @@
 #include "codec_runner.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/clone.h>
 
 namespace codec_runner {
 
@@ -66,7 +67,7 @@ void CodecRunner::BindAndOwnSelf(
   // to send output constraints before input constraints to encourage client to
   // configure output before starting to deliver input data.
   async::PostTask(fidl_dispatcher_, [this] {
-    binding_->events().OnInputConstraints(*input_constraints_);
+    binding_->events().OnInputConstraints(fidl::Clone(*input_constraints_));
   });
 
   onSetupDone();

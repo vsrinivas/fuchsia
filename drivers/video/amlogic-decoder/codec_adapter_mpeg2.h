@@ -7,12 +7,13 @@
 
 #include "codec_adapter.h"
 
+class DeviceCtx;
 class AmlogicVideo;
 class CodecAdapterMpeg2 : public CodecAdapter {
  public:
   explicit CodecAdapterMpeg2(std::mutex& lock,
                              CodecAdapterEvents* codec_adapter_events,
-                             AmlogicVideo* video);
+                             DeviceCtx* device);
   ~CodecAdapterMpeg2();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
@@ -41,6 +42,7 @@ class CodecAdapterMpeg2 : public CodecAdapter {
       std::unique_lock<std::mutex>& lock) override;
 
  private:
+  DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapterMpeg2);

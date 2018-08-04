@@ -4,12 +4,18 @@
 
 #include "codec_adapter_mpeg2.h"
 
+#include "device_ctx.h"
+
 #include <lib/fxl/logging.h>
 
 CodecAdapterMpeg2::CodecAdapterMpeg2(std::mutex& lock,
                                      CodecAdapterEvents* codec_adapter_events,
-                                     AmlogicVideo* video)
-    : CodecAdapter(lock, codec_adapter_events), video_(video) {
+                                     DeviceCtx* device)
+    : CodecAdapter(lock, codec_adapter_events),
+      device_(device),
+      video_(device_->video()) {
+  FXL_DCHECK(device_);
+  FXL_DCHECK(video_);
   FXL_DCHECK(false) << "not yet implemented";
   (void)video_;
 }

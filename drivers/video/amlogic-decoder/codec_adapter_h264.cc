@@ -4,13 +4,14 @@
 
 #include "codec_adapter_h264.h"
 
-#include "amlogic-video.h"
+#include "device_ctx.h"
 #include "h264_decoder.h"
 #include "pts_manager.h"
 #include "vdec1.h"
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/logging.h>
+#include <lib/zx/bti.h>
 
 // TODO(dustingreen):
 //
@@ -53,8 +54,8 @@
 //     partial input packets to permit large input packets with many AUs in
 //     them.
 //   * At least when promise_separate_access_units_on_input is set, propagate
-//     timstamp_ish values from input AU to correct output video frame.  This
-//     may require watching/driving the decoder portion more close-in.
+//     timstamp_ish values from input AU to correct output video frame (using
+//     PtsManager).
 
 namespace {
 
@@ -68,13 +69,14 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
 
 CodecAdapterH264::CodecAdapterH264(std::mutex& lock,
                                    CodecAdapterEvents* codec_adapter_events,
-                                   AmlogicVideo* video)
+                                   DeviceCtx* device)
     : CodecAdapter(lock, codec_adapter_events),
-      video_(video),
+      device_(device),
+      video_(device_->video()),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToThread),
       output_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
+  FXL_DCHECK(device_);
   FXL_DCHECK(video_);
-  // nothing else to do here
 }
 
 CodecAdapterH264::~CodecAdapterH264() {
@@ -181,6 +183,8 @@ void CodecAdapterH264::CoreCodecStartStream(
                 fit::bind_member(this, &CodecAdapterH264::ProcessOutput));
           }
         });
+    video_->video_decoder_->SetErrorHandler(
+        [this] { events_->onCoreCodecFailStream(); });
   }
   status = video_->InitializeEsParser();
   if (status != ZX_OK) {
@@ -441,6 +445,23 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
   config->buffer_constraints.single_buffer_mode_allowed = false;
+
+  config->buffer_constraints.is_physically_contiguous_required = true;
+
+  ::zx::bti very_temp_kludge_bti;
+  zx_status_t dup_status =
+      ::zx::unowned<::zx::bti>(video_->bti())
+          ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
+  if (dup_status != ZX_OK) {
+    events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d",
+                                  dup_status);
+    return nullptr;
+  }
+
+  // This is very temporary.  The BufferAllocator should handle this directly,
+  // not the client.
+  config->buffer_constraints.very_temp_kludge_bti_handle =
+      std::move(very_temp_kludge_bti);
 
   config->format_details.format_details_version_ordinal =
       new_output_format_details_version_ordinal;
