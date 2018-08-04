@@ -12,10 +12,7 @@ use StackState;
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<A: IpAddr, B: AsMut<[u8]>>(
-    state: &mut StackState,
-    src_ip: A,
-    dst_ip: A,
-    mut buffer: BufferAndRange<B>,
+    state: &mut StackState, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
 ) -> bool {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
     let packet = match Icmpv4Packet::parse(buffer.as_mut()) {

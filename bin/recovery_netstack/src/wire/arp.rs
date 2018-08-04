@@ -257,9 +257,9 @@ where
             LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
                 debug_err_fn!(ParseError::Format, "too few bytes for header"),
             )?;
-        let (body, _) = LayoutVerified::<B, Body<HwAddr, ProtoAddr>>::new_unaligned_from_prefix(
-            body,
-        ).ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for body"))?;
+        let (body, _) =
+            LayoutVerified::<B, Body<HwAddr, ProtoAddr>>::new_unaligned_from_prefix(body)
+                .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for body"))?;
 
         if header.hardware_protocol() != <HwAddr as HType>::htype() as u16
             || header.network_protocol() != <ProtoAddr as PType>::ptype() as u16
@@ -359,9 +359,9 @@ where
         // SECURITY: Use _zeroed constructors to ensure we zero memory to
         // prevent leaking information from packets previously stored in
         // this buffer.
-        let (mut header, rest) = LayoutVerified::<_, Header>::new_unaligned_from_prefix_zeroed(
-            buffer.as_mut(),
-        ).expect("not enough bytes for an ARP packet");
+        let (mut header, rest) =
+            LayoutVerified::<_, Header>::new_unaligned_from_prefix_zeroed(buffer.as_mut())
+                .expect("not enough bytes for an ARP packet");
         let (mut body, _) =
             LayoutVerified::<_, Body<HwAddr, ProtoAddr>>::new_unaligned_from_prefix_zeroed(rest)
                 .expect("not enough bytes for an ARP packet");

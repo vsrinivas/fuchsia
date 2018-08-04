@@ -86,8 +86,7 @@ impl<H: HType, P: PType + Eq + Hash> ArpTable<H, P> {
     }
 
     pub fn insert(&mut self, addr: P, mac: H) {
-        self.table
-            .insert(ArpKey { addr }, ArpValue { mac });
+        self.table.insert(ArpKey { addr }, ArpValue { mac });
     }
 
     pub fn lookup(&self, addr: P) -> Option<&ArpValue<H>> {

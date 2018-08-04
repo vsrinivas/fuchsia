@@ -44,8 +44,8 @@ pub mod transport;
 pub mod wire;
 
 use device::DeviceLayerState;
-use ip::IpLayerState;
 use eventloop::EventLoop;
+use ip::IpLayerState;
 use transport::TransportLayerState;
 
 fn main() -> Result<(), failure::Error> {
@@ -53,7 +53,7 @@ fn main() -> Result<(), failure::Error> {
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-1);
 
-    let event_loop = EventLoop{};
+    let event_loop = EventLoop {};
     Ok(())
 }
 

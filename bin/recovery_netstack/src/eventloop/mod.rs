@@ -5,5 +5,4 @@
 //! The special-purpose event loop used by the recovery stack.
 
 /// The event loop.
-pub struct EventLoop {
-}
+pub struct EventLoop {}

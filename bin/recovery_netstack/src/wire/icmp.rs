@@ -152,9 +152,9 @@ impl<B: ByteSlice> Icmpv4Echo<B> {
     fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
         let (_, body, _) = buffer.parts_mut();
 
-        let (mut id_seq, body) = LayoutVerified::<_, IdAndSeq>::new_unaligned_from_prefix_zeroed(
-            body,
-        ).expect("Unable to allocate data for IdAndSeq");
+        let (mut id_seq, body) =
+            LayoutVerified::<_, IdAndSeq>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for IdAndSeq");
         id_seq.bytes_mut().clone_from_slice(self.id_seq.bytes());
 
         let len = min(self.data.len(), body.len());
@@ -196,9 +196,9 @@ impl<B: ByteSlice> Icmpv4DestUnreachable<B> {
         // Eat the 4 unused bytes at the start of the packet.
         let (_, bytes) =
             LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(
-            bytes,
-        ).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(bytes)
+                .ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
         let code = Icmpv4DestUnreachableCode::from_u8(code).ok_or(ParseError::Format)?;
@@ -257,9 +257,9 @@ impl<B: ByteSlice> Icmpv4Redirect<B> {
     fn parse(bytes: B, code: u8) -> Result<Icmpv4Redirect<B>, ParseError> {
         let (gateway, bytes) =
             LayoutVerified::<B, Ipv4Addr>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(
-            bytes,
-        ).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(bytes)
+                .ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
         let code = Icmpv4RedirectCode::from_u8(code).ok_or(ParseError::Format)?;
@@ -280,9 +280,9 @@ impl<B: ByteSlice> Icmpv4Redirect<B> {
     fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
         let (_, body, _) = buffer.parts_mut();
 
-        let (mut gateway, body) = LayoutVerified::<_, Ipv4Addr>::new_unaligned_from_prefix_zeroed(
-            body,
-        ).expect("Unable to allocate data for Ipv4Addr");
+        let (mut gateway, body) =
+            LayoutVerified::<_, Ipv4Addr>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for Ipv4Addr");
         gateway.bytes_mut().clone_from_slice(self.gateway.bytes());
 
         let (mut internet_header, body) =
@@ -321,9 +321,9 @@ impl<B: ByteSlice> Icmpv4TimeExceeded<B> {
         // Eat the 4 unused bytes at the start of the packet
         let (_, bytes) =
             LayoutVerified::<B, [u8; 4]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(
-            bytes,
-        ).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(bytes)
+                .ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
         let code = Icmpv4TimeExceededCode::from_u8(code).ok_or(ParseError::Format)?;
@@ -384,9 +384,9 @@ impl<B: ByteSlice> Icmpv4ParameterProblem<B> {
             LayoutVerified::<B, u8>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
         let (_, bytes) =
             LayoutVerified::<B, [u8; 3]>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
-        let (internet_header, bytes) = LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(
-            bytes,
-        ).ok_or(ParseError::Format)?;
+        let (internet_header, bytes) =
+            LayoutVerified::<B, ipv4::HeaderPrefix>::new_from_prefix(bytes)
+                .ok_or(ParseError::Format)?;
         let origin_data =
             LayoutVerified::<B, IcmpOriginData>::new(bytes).ok_or(ParseError::Format)?;
         let code = Icmpv4ParameterProblemCode::from_u8(code).ok_or(ParseError::Format)?;
@@ -493,9 +493,9 @@ impl<B: ByteSlice> Icmpv4Timestamp<B> {
     fn serialize<C: AsMut<[u8]>>(self, mut buffer: BufferAndRange<C>) -> BufferAndRange<C> {
         let (_, body, _) = buffer.parts_mut();
 
-        let (mut id_seq, body) = LayoutVerified::<_, IdAndSeq>::new_unaligned_from_prefix_zeroed(
-            body,
-        ).expect("Unable to allocate data for IdAndSeq");
+        let (mut id_seq, body) =
+            LayoutVerified::<_, IdAndSeq>::new_unaligned_from_prefix_zeroed(body)
+                .expect("Unable to allocate data for IdAndSeq");
         id_seq.bytes_mut().clone_from_slice(self.id_seq.bytes());
 
         let (mut timestamps, _) =
@@ -524,8 +524,7 @@ pub enum Icmpv4Body<B> {
 
 impl<B: ByteSlice> Icmpv4Body<B> {
     fn serialize<C: AsMut<[u8]>>(
-        self,
-        mut buffer: BufferAndRange<C>,
+        self, mut buffer: BufferAndRange<C>,
     ) -> (Icmpv4Type, u8, BufferAndRange<C>) {
         match self {
             Icmpv4Body::EchoReply(echo_reply) => {
@@ -647,9 +646,9 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
 
         let (header_bytes, body, _) = buffer.parts_mut();
 
-        let (_, mut header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(
-            header_bytes,
-        ).expect("Unable to allocate data for Header");
+        let (_, mut header) =
+            LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(header_bytes)
+                .expect("Unable to allocate data for Header");
 
         header.code = code;
         header.set_msg_type(msg_type);
