@@ -12,10 +12,14 @@
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
+#if __has_include(<new>)
+#include <new>
+#else
 // Declare placement allocation functions.
 // Note: This library does not provide an implementation of these functions.
 void* operator new(size_t size, void* ptr) noexcept;
 void* operator new[](size_t size, void* ptr) noexcept;
+#endif
 
 namespace fidl {
 
