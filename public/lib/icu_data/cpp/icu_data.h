@@ -11,7 +11,8 @@ class StartupContext;
 
 namespace icu_data {
 
-bool Initialize(component::StartupContext* context, const char* optional_data_path = 0);
+bool Initialize(component::StartupContext* context,
+                const char* optional_data_path = 0);
 bool Release();
 
 }  // namespace icu_data

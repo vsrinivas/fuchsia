@@ -28,9 +28,9 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
     return 0u;
 
   uintptr_t data = 0u;
-  zx_status_t status =
-      zx::vmar::root_self()->map(0, icu_data.vmo(), 0, static_cast<size_t>(data_size),
-                                ZX_VM_FLAG_PERM_READ, &data);
+  zx_status_t status = zx::vmar::root_self()->map(
+      0, icu_data.vmo(), 0, static_cast<size_t>(data_size),
+      ZX_VM_FLAG_PERM_READ, &data);
   if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;
@@ -47,7 +47,8 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 // Then, initializes ICU with the data received.
 //
 // Return value indicates if initialization was successful.
-bool Initialize(component::StartupContext* context, const char* optional_data_path) {
+bool Initialize(component::StartupContext* context,
+                const char* optional_data_path) {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
     return false;
