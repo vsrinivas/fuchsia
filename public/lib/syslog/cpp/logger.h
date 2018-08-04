@@ -22,11 +22,8 @@ class LogMessageVoidify {
 
 class LogMessage {
  public:
-  LogMessage(fx_log_severity_t severity,
-             const char* file,
-             int line,
-             const char* tag,
-             const char* condition);
+  LogMessage(fx_log_severity_t severity, const char* file, int line,
+             const char* tag, const char* condition);
   ~LogMessage();
 
   std::ostream& stream() { return stream_; }

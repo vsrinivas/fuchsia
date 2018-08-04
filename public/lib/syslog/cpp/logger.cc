@@ -27,11 +27,8 @@ const char* StripPath(const char* path) {
 
 namespace internal {
 
-LogMessage::LogMessage(fx_log_severity_t severity,
-                       const char* file,
-                       int line,
-                       const char* tag,
-                       const char* condition)
+LogMessage::LogMessage(fx_log_severity_t severity, const char* file, int line,
+                       const char* tag, const char* condition)
     : severity_(severity), file_(file), line_(line), tag_(tag) {
   stream_ << (severity > FX_LOG_INFO ? StripDots(file_) : StripPath(file_))
           << "(" << line_ << "): ";

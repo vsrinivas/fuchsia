@@ -35,8 +35,7 @@ bool ends_with(const char* str, const char* suffix) {
   return strcmp(str, suffix) == 0;
 }
 
-inline zx_status_t init_helper(zx_handle_t handle,
-                               const char** tags,
+inline zx_status_t init_helper(zx_handle_t handle, const char** tags,
                                size_t ntags) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
@@ -47,11 +46,8 @@ inline zx_status_t init_helper(zx_handle_t handle,
   return fx_log_init_with_config(&config);
 }
 
-void output_compare_helper(zx::socket local,
-                           fx_log_severity_t severity,
-                           const char* msg,
-                           const char** tags,
-                           int num_tags) {
+void output_compare_helper(zx::socket local, fx_log_severity_t severity,
+                           const char* msg, const char** tags, int num_tags) {
   fx_log_packet_t packet;
   ASSERT_EQ(ZX_OK, local.read(0, &packet, sizeof(packet), nullptr));
   EXPECT_EQ(severity, packet.metadata.severity);

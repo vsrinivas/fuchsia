@@ -35,8 +35,6 @@ zx_status_t InitLogger(const std::initializer_list<std::string>& tags) {
   return InitLogger(settings, tags);
 }
 
-zx_status_t InitLogger() {
-  return InitLogger({});
-}
+zx_status_t InitLogger() { return InitLogger({}); }
 
 }  // namespace syslog
