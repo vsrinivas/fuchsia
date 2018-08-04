@@ -18,8 +18,7 @@ void TestRunnerStoreImpl::Get(fidl::StringPtr key, GetCallback cb) {
   MaybeNotify(key);
 }
 
-void TestRunnerStoreImpl::Put(fidl::StringPtr key,
-                              fidl::StringPtr value,
+void TestRunnerStoreImpl::Put(fidl::StringPtr key, fidl::StringPtr value,
                               PutCallback cb) {
   store_[key].push(value);
   MaybeNotify(key);

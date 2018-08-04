@@ -116,18 +116,20 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
     Fail(program_name_ + " called WillTerminate more than once.");
     return;
   }
-  termination_task_.set_handler(
-      [this, withinSeconds](async_dispatcher_t*, async::Task*, zx_status_t status) {
-        FXL_LOG(ERROR) << program_name_ << " termination timed out after "
-                       << withinSeconds << "s.";
-        binding_.set_error_handler(nullptr);
-        Fail("Termination timed out.");
-        if (teardown_after_termination_) {
-          Teardown([] {});
-        }
-        test_run_context_->StopTrackingClient(this, false);
-      });
-  termination_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(withinSeconds));
+  termination_task_.set_handler([this, withinSeconds](async_dispatcher_t*,
+                                                      async::Task*,
+                                                      zx_status_t status) {
+    FXL_LOG(ERROR) << program_name_ << " termination timed out after "
+                   << withinSeconds << "s.";
+    binding_.set_error_handler(nullptr);
+    Fail("Termination timed out.");
+    if (teardown_after_termination_) {
+      Teardown([] {});
+    }
+    test_run_context_->StopTrackingClient(this, false);
+  });
+  termination_task_.PostDelayed(async_get_default_dispatcher(),
+                                zx::sec(withinSeconds));
 }
 
 void TestRunnerImpl::SetTestPointCount(int64_t count) {
