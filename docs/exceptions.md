@@ -284,7 +284,7 @@ When it is suspended **ZX_THREAD_RUNNING** is deasserted, and
 asserted. When a thread terminates both **ZX_THREAD_RUNNING** and
 **ZX_THREAD_SUSPENDED** are deasserted and **ZX_THREAD_TERMINATED**
 is asserted. However, signals are OR'd into the state maintained by
-by the port thus you may see any combination of requested signals
+the port thus you may see any combination of requested signals
 when **zx_port_wait**() returns.
 
 ## Comparison with Posix (and Linux)
