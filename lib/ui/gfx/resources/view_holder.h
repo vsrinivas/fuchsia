@@ -83,9 +83,10 @@ class ViewHolder final : public Resource {
 
   // Send an event to the child View's SessionListener.
   void SendViewPropertiesChangedEvent();
+  void SendViewConnectedEvent();
   void SendViewDisconnectedEvent();
-  void SendViewAddedToSceneEvent();
-  void SendViewRemovedFromSceneEvent();
+  void SendViewAttachedToSceneEvent();
+  void SendViewDetachedFromSceneEvent();
 
   ViewLinker::ExportLink link_;
   Scene* scene_ = nullptr;

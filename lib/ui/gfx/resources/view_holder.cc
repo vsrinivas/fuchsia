@@ -75,10 +75,10 @@ void ViewHolder::RefreshScene() {
 
   if (new_scene != scene_) {
     if (scene_) {
-      SendViewRemovedFromSceneEvent();
+      SendViewDetachedFromSceneEvent();
     }
     if (new_scene) {
-      SendViewAddedToSceneEvent();
+      SendViewAttachedToSceneEvent();
     }
     scene_ = new_scene;
   }
@@ -89,6 +89,8 @@ void ViewHolder::LinkResolved(View* view) {
   // linking up the Nodes.
   FXL_DCHECK(!view_ && view);
   view_ = view;
+
+  SendViewConnectedEvent();
 
   // This guarantees that the View is notified of any previously-set
   // ViewProperties.  Otherwise, e.g. if the ViewHolder properties were set
@@ -110,22 +112,28 @@ void ViewHolder::SendViewPropertiesChangedEvent() {
   view_->session()->EnqueueEvent(std::move(event));
 }
 
-void ViewHolder::SendViewDisconnectedEvent() {
+void ViewHolder::SendViewConnectedEvent() {
   fuchsia::ui::gfx::Event event;
-  event.set_view_holder_disconnected({.view_holder_id = id()});
+  event.set_view_connected({.view_holder_id = id()});
   session()->EnqueueEvent(std::move(event));
 }
 
-void ViewHolder::SendViewAddedToSceneEvent() {
+void ViewHolder::SendViewDisconnectedEvent() {
   fuchsia::ui::gfx::Event event;
-  event.set_view_added_to_scene(
+  event.set_view_disconnected({.view_holder_id = id()});
+  session()->EnqueueEvent(std::move(event));
+}
+
+void ViewHolder::SendViewAttachedToSceneEvent() {
+  fuchsia::ui::gfx::Event event;
+  event.set_view_attached_to_scene(
       {.view_id = view_->id(), .properties = view_properties_});
   view_->session()->EnqueueEvent(std::move(event));
 }
 
-void ViewHolder::SendViewRemovedFromSceneEvent() {
+void ViewHolder::SendViewDetachedFromSceneEvent() {
   fuchsia::ui::gfx::Event event;
-  event.set_view_removed_from_scene({.view_id = view_->id()});
+  event.set_view_detached_from_scene({.view_id = view_->id()});
   view_->session()->EnqueueEvent(std::move(event));
 }
 

@@ -75,8 +75,8 @@ class View final : public Resource {
   // and View.
   void RemoveChild(Node* child);
 
-  // Send an event to the parent ViewHolder's SessionListener.
-  void SendViewDisconnectedEvent();
+  // Sends an event to our SessionListener.
+  void SendViewHolderDisconnectedEvent();
 
   ViewLinker::ImportLink link_;
   ViewHolder* view_holder_ = nullptr;

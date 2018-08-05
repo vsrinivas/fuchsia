@@ -16,10 +16,11 @@ union Event {
 
   // Events which are always delivered, regardless of mask.
   ImportUnboundEvent import_unbound;
+  ViewConnectedEvent view_connected;
   ViewDisconnectedEvent view_disconnected;
   ViewHolderDisconnectedEvent view_holder_disconnected;
-  ViewAddedToSceneEvent view_added_to_scene;
-  ViewRemovedFromSceneEvent view_removed_from_scene;
+  ViewAttachedToSceneEvent view_attached_to_scene;
+  ViewDetachedFromSceneEvent view_detached_from_scene;
   ViewPropertiesChangedEvent view_properties_changed;
 };
 
@@ -45,13 +46,9 @@ struct ImportUnboundEvent {
   uint32 resource_id;
 };
 
-// Delivered to a View's Session when its peer ViewHolder is disconnected or
-// destroyed.
-//
-// If the ViewHolder is destroyed before the connection is established, then
-// this event will be delivered immediately when the View attempts to connect.
-struct ViewDisconnectedEvent {
-  uint32 view_id;
+// Delivered to a ViewHolder's Session when its peer View is connected.
+struct ViewConnectedEvent {
+  uint32 view_holder_id;
 };
 
 // Delivered to a ViewHolder's Session when its peer View is disconnected or
@@ -59,23 +56,32 @@ struct ViewDisconnectedEvent {
 //
 // If the View is destroyed before the connection is established, then this
 // event will be delivered immediately when the ViewHolder attempts to connect.
-struct ViewHolderDisconnectedEvent {
+struct ViewDisconnectedEvent {
   uint32 view_holder_id;
 };
 
-// Delivered when the parent ViewHolder for the given View becomes a part of
-// a Scene.
+// Delivered to a View's Session when its peer ViewHolder is disconnected or
+// destroyed.
+//
+// If the ViewHolder is destroyed before the connection is established, then
+// this event will be delivered immediately when the View attempts to connect.
+struct ViewHolderDisconnectedEvent {
+  uint32 view_id;
+};
+
+// Delivered to a View's Session when the parent ViewHolder for the given View
+// becomes a part of a Scene.
 //
 // A ViewHolder is considered to be part of a Scene if there is an unbroken
 // chain of parent-child relationships between the Scene node and the
 // ViewHolder node.
-struct ViewAddedToSceneEvent {
+struct ViewAttachedToSceneEvent {
   uint32 view_id;
   ViewProperties properties;
 };
 
-// Delivered when the parent ViewHolder for the given View is no longer part
-// of a scene.
+// Delivered to a View's Session when the parent ViewHolder for the given View
+// is no longer part of a scene.
 //
 // This can happen if the ViewHolder is detached directly from the scene, or
 // if one of its parent nodes is.
@@ -83,7 +89,7 @@ struct ViewAddedToSceneEvent {
 // A ViewHolder is considered to be part of a Scene if there is an unbroken
 // chain of parent-child relationships between the Scene node and the
 // ViewHolder node.
-struct ViewRemovedFromSceneEvent {
+struct ViewDetachedFromSceneEvent {
   uint32 view_id;
 };
 

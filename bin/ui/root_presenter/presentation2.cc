@@ -165,8 +165,8 @@ void Presentation2::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
   switch (event.Which()) {
     case fuchsia::ui::scenic::Event::Tag::kGfx:
       switch (event.gfx().Which()) {
-        case fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected: {
-          auto& evt = event.gfx().view_holder_disconnected();
+        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+          auto& evt = event.gfx().view_disconnected();
           // TODO(SCN-874): All Presentation2 instances share the same Scenic
           // Session.  Therefore, there is no guarantee that the disconnection
           // event is intended for this presentation.

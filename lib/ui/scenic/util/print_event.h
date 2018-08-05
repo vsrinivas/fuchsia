@@ -19,18 +19,22 @@ std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ImportUnboundEvent& event);
 
 std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewConnectedEvent& event);
+
+std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ViewDisconnectedEvent& event);
 
 std::ostream& operator<<(
     std::ostream& stream,
     const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event);
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::ViewAddedToSceneEvent& event);
+std::ostream& operator<<(
+    std::ostream& stream,
+    const fuchsia::ui::gfx::ViewAttachedToSceneEvent& event);
 
 std::ostream& operator<<(
     std::ostream& stream,
-    const fuchsia::ui::gfx::ViewRemovedFromSceneEvent& event);
+    const fuchsia::ui::gfx::ViewDetachedFromSceneEvent& event);
 
 std::ostream& operator<<(
     std::ostream& stream,

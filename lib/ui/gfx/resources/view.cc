@@ -85,7 +85,7 @@ void View::LinkDisconnected() {
   }
 
   view_holder_ = nullptr;
-  SendViewDisconnectedEvent();
+  SendViewHolderDisconnectedEvent();
 }
 
 void View::RemoveChild(Node* child) {
@@ -96,9 +96,9 @@ void View::RemoveChild(Node* child) {
   FXL_DCHECK(erase_count == 1);
 }
 
-void View::SendViewDisconnectedEvent() {
+void View::SendViewHolderDisconnectedEvent() {
   fuchsia::ui::gfx::Event event;
-  event.set_view_disconnected({.view_id = id()});
+  event.set_view_holder_disconnected({.view_id = id()});
   session()->EnqueueEvent(std::move(event));
 }
 
