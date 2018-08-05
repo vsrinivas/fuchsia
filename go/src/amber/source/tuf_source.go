@@ -138,10 +138,6 @@ type TUFSource struct {
 
 	dir string
 
-	// `initialized` is set after we initialize in order to save us from
-	// doing unnecessary network accesses.
-	initialized bool
-
 	// We save a reference to the tuf local store so that when we update
 	// the tuf client, we can reuse the store. This avoids us from having
 	// multiple database connections to the same file, which could corrupt
@@ -264,7 +260,7 @@ func (f *TUFSource) initSource() error {
 
 	// We might have multiple things in the store directory, so put tuf in
 	// it's own directory.
-	localStore, err := tuf.FileLocalStore(filepath.Join(f.dir, "tuf"))
+	localStore, err := NewFileStore(filepath.Join(f.dir, "tuf.json"))
 	if err != nil {
 		return IOError{fmt.Errorf("couldn't open datastore: %s", err)}
 	}
@@ -405,23 +401,13 @@ func newTLSClientConfig(cfg *amber.TlsClientConfig) (*tls.Config, error) {
 
 // Note, the mutex should be held when this is called.
 func (f *TUFSource) initLocalStoreLocked() error {
-	if f.initialized {
-		return nil
-	}
-
-	needs, err := needsInit(f.localStore)
-	if err != nil {
-		return fmt.Errorf("source status check failed: %s", err)
-	}
-
-	if needs {
+	if needsInit(f.localStore) {
+		log.Print("initializing local TUF store")
 		err := f.tufClient.Init(f.keys, len(f.keys))
 		if err != nil {
 			return fmt.Errorf("TUF init failed: %s", err)
 		}
 	}
-
-	f.initialized = true
 
 	return nil
 }
@@ -769,12 +755,12 @@ func (f *TUFSource) saveLocked() error {
 	return nil
 }
 
-func needsInit(s tuf.LocalStore) (bool, error) {
+func needsInit(s tuf.LocalStore) bool {
 	meta, err := s.GetMeta()
 	if err != nil {
-		return false, err
+		return true
 	}
 
-	_, ok := meta["root.json"]
-	return !ok, nil
+	_, found := meta["root.json"]
+	return !found
 }
