@@ -15,9 +15,10 @@ class VmObject;
 
 class GuestDispatcher final : public SoloDispatcher {
 public:
-    static zx_status_t Create(fbl::RefPtr<VmObject> physmem,
-                              fbl::RefPtr<Dispatcher>* dispatcher,
-                              zx_rights_t* rights);
+    static zx_status_t Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
+                              zx_rights_t* guest_rights,
+                              fbl::RefPtr<Dispatcher>* vmar_dispatcher,
+                              zx_rights_t* vmar_rights);
     ~GuestDispatcher();
 
     zx_obj_type_t get_type() const { return ZX_OBJ_TYPE_GUEST; }

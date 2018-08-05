@@ -6,15 +6,17 @@
 
 #include <zircon/syscalls.h>
 
+#include <lib/zx/vmar.h>
+
 namespace zx {
 
 zx_status_t guest::create(const resource& resource, uint32_t options,
-                          const vmo& physmem, guest* guest) {
-    // Assume |guest| uses a distinct container from |resource| and
-    // |physmem|, due to strict aliasing.
+                          guest* guest, vmar* vmar) {
+    // Assume |resource|, |guest| and |vmar| must refer to different containers,
+    // due to strict aliasing.
     return zx_guest_create(
-        resource.get(), options, physmem.get(),
-        guest->reset_and_get_address());
+        resource.get(), options, guest->reset_and_get_address(),
+        vmar->reset_and_get_address());
 }
 
 } // namespace zx

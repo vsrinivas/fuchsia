@@ -28,7 +28,7 @@ namespace {
 // that use is_valid_mapping_protection()
 zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mmu_flags) {
     // Figure out arch_mmu_flags
-    uint mmu_flags = ARCH_MMU_FLAG_PERM_USER;
+    uint mmu_flags = 0;
     switch (flags & (ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE)) {
         case ZX_VM_FLAG_PERM_READ:
             mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
@@ -84,13 +84,14 @@ zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch
         return ZX_ERR_INVALID_ARGS;
 
     *vmar_flags = vmar;
-    *arch_mmu_flags = mmu_flags;
+    *arch_mmu_flags |= mmu_flags;
     return ZX_OK;
 }
 
 } // namespace
 
 zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
+                                              uint base_arch_mmu_flags,
                                               fbl::RefPtr<Dispatcher>* dispatcher,
                                               zx_rights_t* rights) {
 
@@ -108,7 +109,7 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VmAddressRegionDispatcher(fbl::move(vmar));
+    auto disp = new (&ac) VmAddressRegionDispatcher(fbl::move(vmar), base_arch_mmu_flags);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -117,8 +118,9 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
     return ZX_OK;
 }
 
-VmAddressRegionDispatcher::VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar)
-    : vmar_(fbl::move(vmar)) {}
+VmAddressRegionDispatcher::VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar,
+                                                     uint base_arch_mmu_flags)
+    : vmar_(fbl::move(vmar)), base_arch_mmu_flags_(base_arch_mmu_flags) {}
 
 VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {}
 
@@ -130,13 +132,13 @@ zx_status_t VmAddressRegionDispatcher::Allocate(
     canary_.Assert();
 
     uint32_t vmar_flags;
-    uint arch_mmu_flags;
+    uint arch_mmu_flags = 0;
     zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
     if (status != ZX_OK)
         return status;
 
-    // Check if any MMU-related flags were requested (USER is always implied)
-    if (arch_mmu_flags != ARCH_MMU_FLAG_PERM_USER) {
+    // Check if any MMU-related flags were requested.
+    if (arch_mmu_flags != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -149,6 +151,7 @@ zx_status_t VmAddressRegionDispatcher::Allocate(
     // Create the dispatcher.
     fbl::RefPtr<Dispatcher> dispatcher;
     status = VmAddressRegionDispatcher::Create(fbl::move(new_vmar),
+                                               base_arch_mmu_flags_,
                                                &dispatcher, new_rights);
     if (status != ZX_OK)
         return status;
@@ -174,7 +177,7 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
 
     // Split flags into vmar_flags and arch_mmu_flags
     uint32_t vmar_flags;
-    uint arch_mmu_flags;
+    uint arch_mmu_flags = base_arch_mmu_flags_;
     zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
     if (status != ZX_OK)
         return status;
@@ -209,7 +212,7 @@ zx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_
         return ZX_ERR_INVALID_ARGS;
 
     uint32_t vmar_flags;
-    uint arch_mmu_flags;
+    uint arch_mmu_flags = base_arch_mmu_flags_;
     zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
     if (status != ZX_OK)
         return status;

@@ -673,7 +673,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
 
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
-    zx_paddr_t table = gpas->aspace()->arch_aspace().arch_table_phys();
+    zx_paddr_t table = gpas->arch_aspace()->arch_table_phys();
     status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
                        table, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
     if (status != ZX_OK)

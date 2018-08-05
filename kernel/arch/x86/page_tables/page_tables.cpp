@@ -907,7 +907,7 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, paddr, count, mmu_flags);
 
-    if ((!check_paddr(paddr)))
+    if (!check_paddr(paddr))
         return ZX_ERR_INVALID_ARGS;
     if (!check_vaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;

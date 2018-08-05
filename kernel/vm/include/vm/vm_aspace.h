@@ -22,6 +22,10 @@
 #include <vm/vm_address_region.h>
 #include <zircon/types.h>
 
+namespace hypervisor {
+    class GuestPhysicalAddressSpace;
+} // namespace hypervisor
+
 class VmObject;
 
 class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCounted<VmAspace> {
@@ -180,8 +184,7 @@ private:
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
     zx_status_t PageFault(vaddr_t va, uint flags);
     friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);
-    friend zx_status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags,
-                                                    fbl::RefPtr<VmAspace> aspace);
+    friend class hypervisor::GuestPhysicalAddressSpace;
 
     // magic
     fbl::Canary<fbl::magic("VMAS")> canary_;

@@ -7,26 +7,35 @@
 #include <object/guest_dispatcher.h>
 
 #include <arch/hypervisor.h>
-#include <vm/vm_object.h>
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
+#include <object/vm_address_region_dispatcher.h>
+#include <zircon/rights.h>
 
 // static
-zx_status_t GuestDispatcher::Create(fbl::RefPtr<VmObject> physmem,
-                                    fbl::RefPtr<Dispatcher>* dispatcher,
-                                    zx_rights_t* rights) {
+zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
+                                    zx_rights_t* guest_rights,
+                                    fbl::RefPtr<Dispatcher>* vmar_dispatcher,
+                                    zx_rights_t* vmar_rights) {
     fbl::unique_ptr<Guest> guest;
-    zx_status_t status = Guest::Create(fbl::move(physmem), &guest);
-    if (status != ZX_OK)
+    zx_status_t status = Guest::Create(&guest);
+    if (status != ZX_OK) {
         return status;
+    }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) GuestDispatcher(fbl::move(guest));
-    if (!ac.check())
+    auto disp = fbl::AdoptRef(new (&ac) GuestDispatcher(fbl::move(guest)));
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
-    *rights = ZX_DEFAULT_GUEST_RIGHTS;
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    status = VmAddressRegionDispatcher::Create(disp->guest()->AddressSpace()->RootVmar(), 0,
+                                               vmar_dispatcher, vmar_rights);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *guest_rights = ZX_DEFAULT_GUEST_RIGHTS;
+    *guest_dispatcher = fbl::move(disp);
     return ZX_OK;
 }
 

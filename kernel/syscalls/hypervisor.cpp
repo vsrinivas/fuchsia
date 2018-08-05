@@ -18,8 +18,8 @@
 
 #include "priv.h"
 
-zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t physmem_vmo,
-                             user_out_handle* out) {
+zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_handle* guest_handle,
+                             user_out_handle* vmar_handle) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -27,19 +27,16 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t
     if (status != ZX_OK)
         return status;
 
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<VmObjectDispatcher> physmem;
-    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP;
-    status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
+    fbl::RefPtr<Dispatcher> guest_dispatcher, vmar_dispatcher;
+    zx_rights_t guest_rights, vmar_rights;
+    status = GuestDispatcher::Create(&guest_dispatcher, &guest_rights, &vmar_dispatcher, &vmar_rights);
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<Dispatcher> dispatcher;
-    status = GuestDispatcher::Create(physmem->vmo(), &dispatcher, &rights);
+    status = guest_handle->make(fbl::move(guest_dispatcher), guest_rights);
     if (status != ZX_OK)
         return status;
-
-    return out->make(fbl::move(dispatcher), rights);
+    return vmar_handle->make(fbl::move(vmar_dispatcher), vmar_rights);
 }
 
 zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr_t addr, size_t len,

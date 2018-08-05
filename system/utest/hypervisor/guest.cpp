@@ -21,7 +21,9 @@
 
 #include "constants_priv.h"
 
-static constexpr uint32_t kMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+static constexpr uint32_t kGuestMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+                                           ZX_VM_FLAG_PERM_EXECUTE | ZX_VM_FLAG_SPECIFIC;
+static constexpr uint32_t kHostMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
 static constexpr uint64_t kTrapKey = 0x1234;
 static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
 
@@ -70,14 +72,15 @@ typedef struct test {
     bool interrupts_enabled = false;
 
     zx::vmo vmo;
-    uintptr_t addr;
+    uintptr_t host_addr;
     zx::guest guest;
+    zx::vmar vmar;
     zx::vcpu vcpu;
 } test_t;
 
 static bool teardown(test_t* test) {
     BEGIN_HELPER;
-    ASSERT_EQ(zx::vmar::root_self()->unmap(test->addr, VMO_SIZE), ZX_OK);
+    ASSERT_EQ(zx::vmar::root_self()->unmap(test->host_addr, VMO_SIZE), ZX_OK);
     return true;
     END_HELPER;
 }
@@ -93,11 +96,13 @@ static zx_status_t guest_get_resource(zx::resource* resource) {
 
 static bool setup(test_t* test, const char* start, const char* end) {
     ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
-    ASSERT_EQ(zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kMapFlags, &test->addr), ZX_OK);
+    ASSERT_EQ(zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kHostMapFlags,
+                                         &test->host_addr),
+              ZX_OK);
 
     zx::resource resource;
     ASSERT_EQ(guest_get_resource(&resource), ZX_OK);
-    zx_status_t status = zx::guest::create(resource, 0, test->vmo, &test->guest);
+    zx_status_t status = zx::guest::create(resource, 0, &test->guest, &test->vmar);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create guest\n");
         return status;
@@ -110,6 +115,9 @@ static bool setup(test_t* test, const char* start, const char* end) {
     }
     ASSERT_EQ(status, ZX_OK);
 
+    zx_gpaddr_t guest_addr;
+    ASSERT_EQ(test->vmar.map(0, test->vmo, 0, VMO_SIZE, kGuestMapFlags, &guest_addr),
+              ZX_OK);
     ASSERT_EQ(test->guest.set_trap(ZX_GUEST_TRAP_MEM, EXIT_TEST_ADDR, PAGE_SIZE,
                                    zx::port(), 0),
               ZX_OK);
@@ -118,14 +126,14 @@ static bool setup(test_t* test, const char* start, const char* end) {
     uintptr_t entry = 0;
 #if __x86_64__
     // PML4 entry pointing to (addr + 0x1000)
-    uint64_t* pte_off = reinterpret_cast<uint64_t*>(test->addr);
+    uint64_t* pte_off = reinterpret_cast<uint64_t*>(test->host_addr);
     *pte_off = PAGE_SIZE | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
     // PDP entry with 1GB page.
-    pte_off = reinterpret_cast<uint64_t*>(test->addr + PAGE_SIZE);
+    pte_off = reinterpret_cast<uint64_t*>(test->host_addr + PAGE_SIZE);
     *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
     entry = GUEST_ENTRY;
 #endif // __x86_64__
-    memcpy((void*)(test->addr + entry), start, end - start);
+    memcpy((void*)(test->host_addr + entry), start, end - start);
 
     status = zx::vcpu::create(test->guest, 0, entry, &test->vcpu);
     test->supported = status != ZX_ERR_NOT_SUPPORTED;

@@ -15,6 +15,11 @@
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 
+static constexpr uint kMmuFlags =
+    ARCH_MMU_FLAG_PERM_READ |
+    ARCH_MMU_FLAG_PERM_WRITE |
+    ARCH_MMU_FLAG_PERM_EXECUTE;
+
 static bool hypervisor_supported() {
 #if ARCH_ARM64
     if (arm64_get_boot_el() < 2) {
@@ -50,10 +55,17 @@ static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo_out) {
 static zx_status_t create_gpas(fbl::RefPtr<VmObject> guest_phys_mem,
                                fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace>* gpas) {
 #if ARCH_ARM64
-    return hypervisor::GuestPhysicalAddressSpace::Create(guest_phys_mem, 1 /* vmid */, gpas);
+    zx_status_t status = hypervisor::GuestPhysicalAddressSpace::Create(1 /* vmid */, gpas);
 #elif ARCH_X86
-    return hypervisor::GuestPhysicalAddressSpace::Create(guest_phys_mem, gpas);
+    zx_status_t status = hypervisor::GuestPhysicalAddressSpace::Create(gpas);
 #endif
+    if (status != ZX_OK) {
+        return status;
+    }
+    fbl::RefPtr<VmMapping> mapping;
+    return (*gpas)->RootVmar()->CreateVmMapping(0, guest_phys_mem->size(), false,
+                                                VMAR_FLAG_SPECIFIC, guest_phys_mem, 0, kMmuFlags,
+                                                "guest_phys_mem_vmo", &mapping);
 }
 
 static bool guest_physical_address_space_unmap_range() {
@@ -174,7 +186,7 @@ static bool guest_physical_address_space_get_page_complex() {
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
 
     // Allocate second VMAR, offset one page into the root.
-    fbl::RefPtr<VmAddressRegion> root_vmar = gpas->aspace()->RootVmar();
+    fbl::RefPtr<VmAddressRegion> root_vmar = gpas->RootVmar();
     fbl::RefPtr<VmAddressRegion> shadow_vmar;
     status = root_vmar->CreateSubVmar(ROOT_VMO_SIZE, root_vmar->size() - ROOT_VMO_SIZE,
                                       /* align_pow2 */ 0, root_vmar->flags() | VMAR_FLAG_SPECIFIC,

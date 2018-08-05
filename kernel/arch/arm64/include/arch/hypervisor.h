@@ -27,11 +27,10 @@ typedef struct zx_port_packet zx_port_packet_t;
 using InterruptBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>>;
 
 class PortDispatcher;
-class VmObject;
 
 class Guest {
 public:
-    static zx_status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
+    static zx_status_t Create(fbl::unique_ptr<Guest>* out);
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 

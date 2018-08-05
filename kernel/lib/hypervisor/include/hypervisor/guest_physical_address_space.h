@@ -54,7 +54,7 @@ private:
 
 class GuestPhysicalAddressSpace {
 public:
-    static zx_status_t Create(fbl::RefPtr<VmObject> guest_phys_mem,
+    static zx_status_t Create(
 #ifdef ARCH_ARM64
                               uint8_t vmid,
 #endif
@@ -62,25 +62,24 @@ public:
 
     ~GuestPhysicalAddressSpace();
 
-    size_t size() const { return paspace_->size(); }
-    const fbl::RefPtr<VmAspace>& aspace() const { return paspace_; }
+    size_t size() const { return guest_aspace_->size(); }
+    ArchVmAspace* arch_aspace() { return &guest_aspace_->arch_aspace(); }
+    fbl::RefPtr<VmAddressRegion> RootVmar() { return guest_aspace_->RootVmar(); }
 
-    zx_status_t MapInterruptController(vaddr_t guest_paddr, paddr_t host_paddr, size_t size);
-    zx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);
-    zx_status_t GetPage(vaddr_t guest_paddr, paddr_t* host_paddr);
-    zx_status_t CreateGuestPtr(zx_vaddr_t guest_paddr, size_t size, const char* name,
+    zx_status_t MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
+    zx_status_t UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
+    zx_status_t GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr);
+    zx_status_t PageFault(zx_gpaddr_t guest_paddr, uint flags);
+    zx_status_t CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name,
                                GuestPtr* guest_ptr);
 
 private:
-    fbl::RefPtr<VmAspace> paspace_;
-    fbl::RefPtr<VmObject> guest_phys_mem_;
-
-    explicit GuestPhysicalAddressSpace(fbl::RefPtr<VmObject> guest_phys_mem);
+    fbl::RefPtr<VmAspace> guest_aspace_;
 };
 
 static inline zx_status_t guest_lookup_page(void* context, size_t offset, size_t index,
-                                            paddr_t pa) {
-    *static_cast<paddr_t*>(context) = pa;
+                                            zx_paddr_t pa) {
+    *static_cast<zx_paddr_t*>(context) = pa;
     return ZX_OK;
 }
 

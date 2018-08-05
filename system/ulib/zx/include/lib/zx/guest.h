@@ -30,7 +30,7 @@ public:
     }
 
     static zx_status_t create(const resource& resource, uint32_t options,
-                              const vmo& physmem, guest* guest);
+                              guest* guest, vmar* vmar);
 
     zx_status_t set_trap(uint32_t kind, zx_gpaddr_t addr, size_t len,
                          const port& port, uint64_t key) {

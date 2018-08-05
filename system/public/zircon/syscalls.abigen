@@ -716,8 +716,9 @@ syscall resource_create
 # Hypervisor
 
 syscall guest_create
-    (resource: zx_handle_t, options: uint32_t, physmem_vmo: zx_handle_t)
-    returns (zx_status_t, out: zx_handle_t handle_acquire);
+    (resource: zx_handle_t, options: uint32_t)
+    returns (zx_status_t, guest_handle: zx_handle_t handle_acquire,
+        vmar_handle: zx_handle_t handle_acquire);
 
 syscall guest_set_trap
     (handle: zx_handle_t, kind: uint32_t, addr: zx_vaddr_t, size: size_t, port: zx_handle_t,

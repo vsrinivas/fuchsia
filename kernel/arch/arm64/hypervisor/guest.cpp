@@ -12,18 +12,20 @@
 
 #include "el2_cpu_state_priv.h"
 
-static const vaddr_t kGicvAddress = 0xe82b2000;
-static const size_t kGicvSize = 0x2000;
+static constexpr zx_gpaddr_t kGicvAddress = 0xe82b2000;
+static constexpr size_t kGicvSize = 0x2000;
 
 // static
-zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out) {
-    if (arm64_get_boot_el() < 2)
+zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
+    if (arm64_get_boot_el() < 2) {
         return ZX_ERR_NOT_SUPPORTED;
+    }
 
     uint8_t vmid;
     zx_status_t status = alloc_vmid(&vmid);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
@@ -34,14 +36,16 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
 
     fbl::AutoLock lock(&guest->vcpu_mutex_);
     status = guest->vpid_allocator_.Init();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
-    status = hypervisor::GuestPhysicalAddressSpace::Create(fbl::move(physmem), vmid, &guest->gpas_);
-    if (status != ZX_OK)
+    status = hypervisor::GuestPhysicalAddressSpace::Create(vmid, &guest->gpas_);
+    if (status != ZX_OK) {
         return status;
+    }
 
-    paddr_t gicv_paddr;
+    zx_paddr_t gicv_paddr;
     status = gic_get_gicv(&gicv_paddr);
 
     // If status == ZX_ERR_NOT_FOUND, we are running GICv3
@@ -67,16 +71,18 @@ Guest::~Guest() {
     free_vmid(vmid_);
 }
 
-zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
                            fbl::RefPtr<PortDispatcher> port, uint64_t key) {
     switch (kind) {
     case ZX_GUEST_TRAP_MEM:
-        if (port)
+        if (port) {
             return ZX_ERR_INVALID_ARGS;
+        }
         break;
     case ZX_GUEST_TRAP_BELL:
-        if (!port)
+        if (!port) {
             return ZX_ERR_INVALID_ARGS;
+        }
         break;
     case ZX_GUEST_TRAP_IO:
         return ZX_ERR_NOT_SUPPORTED;
@@ -84,13 +90,15 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (SIZE_MAX - len < addr)
+    if (SIZE_MAX - len < addr) {
         return ZX_ERR_OUT_OF_RANGE;
-    if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len) || len == 0)
+    } else if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len) || len == 0) {
         return ZX_ERR_INVALID_ARGS;
+    }
     zx_status_t status = gpas_->UnmapRange(addr, len);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
     return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
 }
 

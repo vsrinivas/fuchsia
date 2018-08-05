@@ -19,6 +19,7 @@ class VmObject;
 class VmAddressRegionDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
+                              uint base_arch_mmu_flags,
                               fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
 
@@ -47,8 +48,10 @@ public:
     static bool is_valid_mapping_protection(uint32_t flags);
 
 private:
-    explicit VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar);
+    explicit VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar,
+                                       uint base_arch_mmu_flags);
 
     fbl::Canary<fbl::magic("VARD")> canary_;
     fbl::RefPtr<VmAddressRegion> vmar_;
+    const uint base_arch_mmu_flags_;
 };

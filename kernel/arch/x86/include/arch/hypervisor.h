@@ -9,7 +9,6 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/vmx_state.h>
-#include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
@@ -22,7 +21,6 @@
 #include <kernel/timer.h>
 #include <zircon/types.h>
 
-class VmObject;
 struct VmxInfo;
 
 class VmxPage : public hypervisor::Page {
@@ -36,7 +34,7 @@ private:
 // Represents a guest within the hypervisor.
 class Guest {
 public:
-    static zx_status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
+    static zx_status_t Create(fbl::unique_ptr<Guest>* out);
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
@@ -56,7 +54,7 @@ private:
     VmxPage msr_bitmaps_page_;
 
     fbl::Mutex vcpu_mutex_;
-    // TODO(alexlegg): Find a good place for this constant to live (max vcpus).
+    // TODO(alexlegg): Find a good place for this constant to live (max VCPUs).
     hypervisor::IdAllocator<uint16_t, 64> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 
     Guest() = default;

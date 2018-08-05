@@ -684,6 +684,12 @@ bool invalid_args_test() {
                           &map_addr),
               ZX_ERR_INVALID_ARGS);
 
+    // Allocate with ZX_VM_FLAG_PERM_READ.
+    EXPECT_EQ(zx_vmar_allocate(vmar, PAGE_SIZE, 10 * PAGE_SIZE,
+                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_PERM_READ,
+                               &region, &region_addr),
+              ZX_ERR_INVALID_ARGS);
+
     // Using MAP_RANGE with SPECIFIC_OVERWRITE
     EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE,
                           ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_SPECIFIC_OVERWRITE |

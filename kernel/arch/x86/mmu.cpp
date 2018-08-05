@@ -61,7 +61,7 @@ uint64_t kernel_relocated_base = 0xffffffff00000000;
 static const paddr_t kernel_pt_phys =
     (vaddr_t)KERNEL_PT - (vaddr_t)__code_start + KERNEL_LOAD_OFFSET;
 
-/* valid EPT MMU flags */
+// Valid EPT MMU flags.
 static const uint kValidEptFlags =
     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE;
 

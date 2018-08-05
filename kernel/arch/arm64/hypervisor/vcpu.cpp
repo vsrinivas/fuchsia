@@ -191,7 +191,7 @@ Vcpu::~Vcpu() {
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
-    const ArchVmAspace& aspace = guest_->AddressSpace()->aspace()->arch_aspace();
+    const ArchVmAspace& aspace = *guest_->AddressSpace()->arch_aspace();
     zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
     GuestState* guest_state = &el2_state_->guest_state;
     bool force_virtual_interrupt = false;

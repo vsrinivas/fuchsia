@@ -183,8 +183,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
             if (sctlr_el1 & SCTLR_ELX_C) {
                 *hcr &= ~HCR_EL2_TVM;
             }
-            const ArchVmAspace& aspace = gpas->aspace()->arch_aspace();
-            clean_invalidate_cache(aspace.arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+            clean_invalidate_cache(gpas->arch_aspace()->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
         }
         guest_state->system_state.sctlr_el1 = sctlr_el1;
 
@@ -240,8 +239,8 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
 
 static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr,
                                      hypervisor::GuestPhysicalAddressSpace* gpas) {
-    uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
-    return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
+    constexpr uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
+    return gpas->PageFault(guest_paddr, pf_flags);
 }
 
 static zx_status_t handle_instruction_abort(GuestState* guest_state,

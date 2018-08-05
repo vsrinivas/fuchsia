@@ -78,7 +78,9 @@ zx_status_t ProcessDispatcher::Create(
 
     // Create a dispatcher for the root VMAR.
     fbl::RefPtr<Dispatcher> new_vmar_dispatcher;
-    result = VmAddressRegionDispatcher::Create(vmar, &new_vmar_dispatcher, root_vmar_rights);
+    result = VmAddressRegionDispatcher::Create(vmar, ARCH_MMU_FLAG_PERM_USER,
+                                               &new_vmar_dispatcher,
+                                               root_vmar_rights);
     if (result != ZX_OK) {
         process->aspace_->Destroy();
         return result;
