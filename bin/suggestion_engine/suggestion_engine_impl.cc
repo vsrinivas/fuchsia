@@ -19,10 +19,12 @@
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
+#include "peridot/bin/suggestion_engine/filters/ranked_passive_filter.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/interrupting_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
@@ -191,20 +193,34 @@ void SuggestionEngineImpl::NotifyInteraction(
     auto& proposal = suggestion->prototype->proposal;
     auto proposal_id = proposal.id;
     auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
-    if (interaction.type == fuchsia::modular::InteractionType::SELECTED) {
-      if (preloaded_story_id.empty()) {
+    suggestion->interrupting = false;
+    switch (interaction.type) {
+      case fuchsia::modular::InteractionType::SELECTED: {
+        if (!preloaded_story_id.empty()) {
+          // Notify before we promote + remove from next since the proposal
+          // won't be available when that happens.
+          if (proposal.listener) {
+            auto listener = proposal.listener.Bind();
+            listener->OnProposalAccepted(proposal.id, preloaded_story_id);
+          }
+          PromoteNextProposal(component_url, preloaded_story_id, proposal_id);
+          // Only next suggestions can be rich so we can finish early.
+          // No need to remove.
+          return;
+        }
         PerformActions(std::move(proposal.on_selected),
                        std::move(proposal.listener), proposal.id,
                        proposal.story_name, component_url, proposal.story_id);
-      } else {
-        // Notify before we promote + remove from next since the proposal
-        // won't be available when that happens.
-        if (proposal.listener) {
-          auto listener = proposal.listener.Bind();
-          listener->OnProposalAccepted(proposal.id, preloaded_story_id);
-        }
-        PromoteNextProposal(component_url, preloaded_story_id, proposal_id);
-        // Only next suggestions can be rich so we can finish early.
+        break;
+      }
+      case fuchsia::modular::InteractionType::DISMISSED: {
+        break;  // Remove suggestion since it was dismissed by user.
+      }
+      // These actions .
+      case fuchsia::modular::InteractionType::EXPIRED:
+      case fuchsia::modular::InteractionType::SNOOZED: {
+        // No need to remove since it was either expired by a timeout in
+        // user shell or snoozed by the user.
         return;
       }
     }
@@ -272,6 +288,8 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
       std::make_shared<AnnoyanceRankingFeature>();
   ranking_features["dead_story_rf"] =
       std::make_shared<DeadStoryRankingFeature>();
+  ranking_features["is_interrupting_rf"] =
+      std::make_shared<InterruptingRankingFeature>();
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
@@ -316,6 +334,8 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   std::vector<std::unique_ptr<SuggestionPassiveFilter>> passive_filters;
   passive_filters.push_back(std::make_unique<ConjugateRankedPassiveFilter>(
       ranking_features["focused_story_rf"]));
+  passive_filters.push_back(std::make_unique<RankedPassiveFilter>(
+      ranking_features["is_interrupting_rf"]));
   next_processor_.SetPassiveFilters(std::move(passive_filters));
 }
 

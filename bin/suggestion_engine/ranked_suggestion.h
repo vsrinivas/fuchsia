@@ -15,9 +15,20 @@ namespace modular {
 // sorted set of ranked suggestions, |rank| is increasing and
 // |adjusted_confidence| is nonincreasing.
 struct RankedSuggestion {
+  // Metadata of the suggestion.
   SuggestionPrototype* prototype;
+
+  // Confidence of the suggestion. Updated during ranking.
   double confidence;
+
+  // Whether or not the suggestion should be hidden (filtered by passive
+  // filters) in the list and not returned when fetching next suggestions.
   bool hidden;
+
+  // Whether or not the suggesiton is currently being used as interruption. It
+  // should be filtered from the list that returns next suggestions.
+  bool interrupting;
+
   static std::unique_ptr<RankedSuggestion> New(SuggestionPrototype* prototype);
 };
 

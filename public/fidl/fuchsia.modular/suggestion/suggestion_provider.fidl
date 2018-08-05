@@ -99,9 +99,25 @@ interface QueryListener {
 };
 
 enum InteractionType {
+  // Set when a suggestion was accepted by the user. In the case of an
+  // interruption, it won't be placed in the next suggestions.
   SELECTED = 0;
+
+  // Set when a suggestion was removed by the user. In the case of an
+  // interruption, it won't be placed in the next suggestions and in the case of
+  // a non-interruptive suggestion it will be removed from it.
   DISMISSED = 1;
-  // SNOOZED
+
+  // Set when a suggestion was hidden by the user. An interruption that is
+  // snoozed will be placed in next.
+  // Note: as of 08/03/2018 this interaction is only defined for interruptions.
+  // TODO(miguelfrde): define for regular suggestions.
+  SNOOZED = 2;
+
+  // Set when a suggestion is hidden by the user shell with no user interaction.
+  // An interruption that is expired is placed in the next space.
+  // This has no effect on regular suggestions, only on interruptions.
+  EXPIRED = 3;
 };
 
 struct Interaction {

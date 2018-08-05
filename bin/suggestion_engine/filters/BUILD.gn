@@ -9,6 +9,7 @@ group("all") {
     ":base",
     ":conjugate_ranked_passive_filter",
     ":ranked_active_filter",
+    ":ranked_passive_filter",
   ]
 }
 
@@ -68,6 +69,36 @@ executable("conjugate_ranked_passive_filter_unittest") {
 
   deps = [
     ":conjugate_ranked_passive_filter",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("ranked_passive_filter") {
+  sources = [
+    "ranked_passive_filter.cc",
+    "ranked_passive_filter.h",
+  ]
+
+  deps = [
+    ":suggestion_passive_filter",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+
+  public_deps = [
+    "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
+  ]
+}
+
+executable("ranked_passive_filter_unittest") {
+  testonly = true
+
+  sources = [
+    "ranked_passive_filter_unittest.cc",
+  ]
+
+  deps = [
+    ":ranked_passive_filter",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
   ]

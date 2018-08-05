@@ -9,6 +9,7 @@ group("all") {
     ":annoyance_ranking_feature",
     ":dead_story_ranking_feature",
     ":focused_story_ranking_feature",
+    ":interrupting_ranking_feature",
     ":kronk_ranking_feature",
     ":mod_pair_ranking_feature",
     ":proposal_hint_ranking_feature",
@@ -79,6 +80,32 @@ executable("focused_story_ranking_feature_unittest") {
 
   deps = [
     ":focused_story_ranking_feature",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("interrupting_ranking_feature") {
+  sources = [
+    "interrupting_ranking_feature.cc",
+    "interrupting_ranking_feature.h",
+  ]
+
+  deps = [
+    ":ranking_feature",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+executable("interrupting_ranking_feature_unittest") {
+  testonly = true
+
+  sources = [
+    "interrupting_ranking_feature_unittest.cc",
+  ]
+
+  deps = [
+    ":interrupting_ranking_feature",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
   ]
