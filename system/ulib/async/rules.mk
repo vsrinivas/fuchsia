@@ -21,6 +21,7 @@ MODULE_SRCS = \
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/dispatcher.h \
+    $(LOCAL_INC)/exception.h \
     $(LOCAL_INC)/receiver.h \
     $(LOCAL_INC)/task.h \
     $(LOCAL_INC)/time.h \
@@ -46,6 +47,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
+    $(LOCAL_DIR)/exception.cpp \
     $(LOCAL_DIR)/receiver.cpp \
     $(LOCAL_DIR)/task.cpp \
     $(LOCAL_DIR)/trap.cpp \
@@ -53,6 +55,7 @@ MODULE_SRCS = \
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
+    $(LOCAL_INC)/cpp/exception.h \
     $(LOCAL_INC)/cpp/receiver.h \
     $(LOCAL_INC)/cpp/task.h \
     $(LOCAL_INC)/cpp/time.h \

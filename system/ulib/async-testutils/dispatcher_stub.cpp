@@ -39,8 +39,18 @@ zx_status_t stub_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest
         trap, *zx::unowned_guest(guest), addr, length);
 }
 
+zx_status_t stub_bind_exception_port(async_dispatcher_t* dispatcher,
+                                     async_exception_t* exception) {
+    return static_cast<DispatcherStub*>(dispatcher)->BindExceptionPort(exception);
+}
+
+zx_status_t stub_unbind_exception_port(async_dispatcher_t* dispatcher,
+                                       async_exception_t* exception) {
+    return static_cast<DispatcherStub*>(dispatcher)->UnbindExceptionPort(exception);
+}
+
 const async_ops_t g_stub_ops = {
-    .version = ASYNC_OPS_V1,
+    .version = ASYNC_OPS_V2,
     .reserved = 0,
     .v1 = {
         .now = stub_now,
@@ -50,6 +60,10 @@ const async_ops_t g_stub_ops = {
         .cancel_task = stub_cancel_task,
         .queue_packet = stub_queue_packet,
         .set_guest_bell_trap = stub_set_guest_bell_trap,
+    },
+    .v2 = {
+        .bind_exception_port = stub_bind_exception_port,
+        .unbind_exception_port = stub_unbind_exception_port,
     },
 };
 
@@ -88,6 +102,14 @@ zx_status_t DispatcherStub::QueuePacket(async_receiver_t* receiver,
 zx_status_t DispatcherStub::SetGuestBellTrap(async_guest_bell_trap_t* trap,
                                         const zx::guest& guest,
                                         zx_vaddr_t addr, size_t length) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DispatcherStub::BindExceptionPort(async_exception_t* exception) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DispatcherStub::UnbindExceptionPort(async_exception_t* exception) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

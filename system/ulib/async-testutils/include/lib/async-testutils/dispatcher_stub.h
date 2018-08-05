@@ -25,6 +25,8 @@ public:
     virtual zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap,
                                          const zx::guest& guest,
                                          zx_vaddr_t addr, size_t length);
+    virtual zx_status_t BindExceptionPort(async_exception_t* exception);
+    virtual zx_status_t UnbindExceptionPort(async_exception_t* exception);
 };
 
 } // namespace async

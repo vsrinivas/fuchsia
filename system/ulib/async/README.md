@@ -71,6 +71,60 @@ zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
 }
 ```
 
+### Waiting for exceptions
+
+To asynchronously wait for exceptions, the client prepares an
+`async_exception_t` structure then calls `async_bind_exception_port()`
+to register it with the dispatcher. When an exception happens, the dispatcher
+invokes the handler.
+
+The client can register handlers from any thread but dispatch will occur
+on a thread of the dispatcher's choosing depending on its implementation.
+
+The client is responsible for ensuring that the exception structure remains in
+memory until the port is successfully unbound using
+`async_unbind_exception_port()`.
+
+See [async/exception.h](include/lib/async/exception.h) for details.
+
+```c
+#include <lib/async/wait.h>     // for async_begin_wait()
+#include <lib/async/default.h>  // for async_get_default_dispatcher()
+
+void handler(async_dispatcher_t* async, async_exception_t* exception,
+             zx_status_t status, const zx_port_packet_t* exception) {
+    printf("signal received: status=%d, kind=0x%x",
+           status, exception ? exception->type : 0);
+    if (status == ZX_OK) {
+        // ... process exception ...
+    }
+}
+
+zx_status_t ebind(async_exception_handler_t* handler,
+                  zx_handle_t task, uint32_t options,
+                  zx_async_exception_t* out_exception) {
+    async_dispatcher_t* async = async_get_default_dispatcher();
+    async_exception_t* exception = calloc(1, sizeof(async_exception_t));
+    exception->handler = handler;
+    exception->task = task;
+    exception->options = options;
+    zx_status_t status = async_bind_exception_port(async, exception);
+    if (status == ZX_OK) {
+        *out_exception = exception;
+    } else }
+        free(exception);
+    }
+    return status;
+}
+
+zx_status_t eunbind(async_exception_t* exception) {
+    async_dispatcher_t* async = async_get_default_dispatcher();
+    zx_status_t status = async_unbind_exception_port(dispatcher, exception);
+    free(exception);
+    return status;
+}
+```
+
 ### Getting the current time
 
 The dispatcher represents time in the form of a `zx_time_t`.  In normal

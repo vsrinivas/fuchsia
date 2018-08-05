@@ -4,10 +4,13 @@
 
 #include <threads.h>
 
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/time.h>
+#include <lib/async/exception.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
@@ -19,6 +22,7 @@
 #include <fbl/mutex.h>
 #include <lib/zx/event.h>
 #include <unittest/unittest.h>
+#include <zircon/threads.h>
 
 namespace {
 
@@ -242,6 +246,50 @@ private:
     }
 
     zx_packet_user_t last_data_storage_{};
+};
+
+class TestException : public async_exception_t {
+public:
+    TestException(zx_handle_t task, uint32_t options)
+        : async_exception_t{{ASYNC_STATE_INIT}, &TestException::CallHandler, task, options} {
+    }
+
+    ~TestException() = default;
+
+    uint32_t run_count = 0u;
+    zx_status_t last_status = ZX_ERR_INTERNAL;
+    const zx_port_packet_t* last_report = nullptr;
+
+    zx_status_t Bind(async_dispatcher_t* dispatcher) {
+        return async_bind_exception_port(dispatcher, this);
+    }
+
+    zx_status_t Unbind(async_dispatcher_t* dispatcher) {
+        return async_unbind_exception_port(dispatcher, this);
+    }
+
+protected:
+    virtual void Handle(async_dispatcher_t* dispatcher, zx_status_t status,
+                        const zx_port_packet_t* report) {
+        run_count++;
+        last_status = status;
+        if (report) {
+            last_report_storage_ = *report;
+            last_report = &last_report_storage_;
+        } else {
+            last_report = nullptr;
+        }
+    }
+
+private:
+    static void CallHandler(async_dispatcher_t* dispatcher,
+                            async_exception_t* receiver,
+                            zx_status_t status,
+                            const zx_port_packet_t* report) {
+        static_cast<TestException*>(receiver)->Handle(dispatcher, status, report);
+    }
+
+    zx_port_packet_t last_report_storage_;
 };
 
 // The C++ loop wrapper is one-to-one with the underlying C API so for the
@@ -734,6 +782,91 @@ bool receiver_shutdown_test() {
     END_TEST;
 }
 
+uint32_t get_thread_state(zx_handle_t thread) {
+    zx_info_thread_t info;
+    __UNUSED zx_status_t status =
+        zx_object_get_info(thread, ZX_INFO_THREAD,
+                           &info, sizeof(info), NULL, NULL);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    return info.state;
+}
+
+zx_koid_t get_koid(zx_handle_t handle) {
+    zx_info_handle_basic_t info;
+    __UNUSED zx_status_t status =
+        zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC,
+                           &info, sizeof(info), NULL, NULL);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    return info.koid;
+}
+
+zx_status_t create_crashing_thread(zx_handle_t* out_thread) {
+    static const char kThreadName[] = "crasher";
+    // Use zx_thread_create() so that the only cleanup we need to do is
+    // zx_task_kill/zx_handle_close.
+    auto status = zx_thread_create(zx_process_self(), kThreadName,
+                                   strlen(kThreadName), 0, out_thread);
+    if (status != ZX_OK)
+        return status;
+    // We want the thread to crash so we'll get an exception report.
+    // Easiest to just pass crashing values for pc,sp.
+    return zx_thread_start(*out_thread, 0u, 0u, 0u, 0u);
+}
+
+bool exception_test() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+    zx_handle_t self = zx_process_self();
+    TestException exception(self, 0);
+
+    EXPECT_EQ(ZX_OK, exception.Bind(loop.dispatcher()));
+
+    // Initially nothing is signaled.
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(0u, exception.run_count);
+
+    zx_handle_t crashing_thread;
+    EXPECT_EQ(ZX_OK, create_crashing_thread(&crashing_thread));
+
+    // Wait until thread has crashed.
+    uint32_t state;
+    do {
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        state = get_thread_state(crashing_thread);
+    } while (state != ZX_THREAD_STATE_BLOCKED_EXCEPTION);
+
+    // There should now be an exception to read.
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(1u, exception.run_count);
+    EXPECT_EQ(ZX_OK, exception.last_status);
+    EXPECT_NONNULL(exception.last_report);
+    EXPECT_EQ(ZX_EXCP_FATAL_PAGE_FAULT, exception.last_report->type);
+    EXPECT_EQ(get_koid(self), exception.last_report->exception.pid);
+    EXPECT_EQ(get_koid(crashing_thread), exception.last_report->exception.tid);
+    zx_task_kill(crashing_thread);
+    zx_handle_close(crashing_thread);
+
+    loop.Shutdown();
+    EXPECT_EQ(ZX_ERR_CANCELED, exception.last_status);
+
+    END_TEST;
+}
+
+bool exception_shutdown_test() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    loop.Shutdown();
+
+    // Try to bind a port after shutdown.
+    TestException exception(zx_process_self(), 0);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, exception.Bind(loop.dispatcher()));
+
+    END_TEST;
+}
+
 class GetDefaultDispatcherTask : public QuitTask {
 public:
     async_dispatcher_t* last_default_dispatcher;
@@ -829,6 +962,29 @@ protected:
         {
             fbl::AutoLock lock(&mutex_);
             TestReceiver::Handle(dispatcher, status, data);
+        }
+        measure_->Tally(dispatcher);
+    }
+};
+
+class ThreadAssertException : public TestException {
+public:
+    ThreadAssertException(zx_handle_t task, uint32_t options,
+                          ConcurrencyMeasure* measure)
+        : TestException(task, options), measure_(measure) {}
+
+protected:
+    ConcurrencyMeasure* measure_;
+
+    // This receiver's handler will run concurrently on multiple threads
+    // (unlike the Waits and Tasks) so we must guard its state.
+    fbl::Mutex mutex_;
+
+    void Handle(async_dispatcher_t* dispatcher, zx_status_t status,
+                const zx_port_packet_t* report) override {
+        {
+            fbl::AutoLock lock(&mutex_);
+            TestException::Handle(dispatcher, status, report);
         }
         measure_->Tally(dispatcher);
     }
@@ -1008,6 +1164,66 @@ bool threads_receivers_run_concurrently_test() {
     END_TEST;
 }
 
+// The goal here is to schedule a lot of work and see whether it runs
+// on as many threads as we expected it to.
+bool threads_exceptions_run_concurrently_test() {
+    const size_t num_threads = 4;
+    // We generate this number of exceptions, and therefore this number of
+    // crashing threads, so this number isn't that large (e.g., not 100).
+    const size_t num_items = 10;
+
+    BEGIN_TEST;
+
+    ConcurrencyMeasure measure(num_items);
+
+    // The exception receiver object must survive the lifetime of the async
+    // loop.
+    ThreadAssertException receiver(zx_process_self(), 0, &measure);
+
+    {
+        zx_handle_t crashing_threads[num_items];
+        async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+        EXPECT_EQ(ZX_OK, receiver.Bind(loop.dispatcher()));
+
+        for (size_t i = 0; i < num_threads; i++) {
+            EXPECT_EQ(ZX_OK, loop.StartThread());
+        }
+
+        // Post a number of packets all at once.
+        for (size_t i = 0; i < num_items; i++) {
+            EXPECT_EQ(ZX_OK, create_crashing_thread(&crashing_threads[i]));
+        }
+        // We don't need to wait for the threads to crash here as the loop
+        // will continue until |measure| receives |num_items|.
+
+        // Wait until quitted.
+        loop.JoinThreads();
+
+        // Make sure the threads are gone before we unbind the exception port,
+        // otherwise the global crash-handler will see the exceptions.
+        for (size_t i = 0; i < num_items; i++) {
+            zx_task_kill(crashing_threads[i]);
+            zx_handle_close(crashing_threads[i]);
+        }
+
+        // Ensure all work items completed.
+        // When |loop| goes out of scope |receiver| will get ZX_ERR_CANCELED,
+        // which will add one to the packet received count. Do these tests
+        // here before |loop| goes out of scope.
+        EXPECT_EQ(num_items, measure.count());
+        EXPECT_EQ(num_items, receiver.run_count);
+        EXPECT_EQ(ZX_OK, receiver.last_status);
+    }
+
+    // Loop shutdown -> ZX_ERR_CANCELED.
+    EXPECT_EQ(ZX_ERR_CANCELED, receiver.last_status);
+
+    // Ensure that we actually processed many packets concurrently on different threads.
+    EXPECT_NE(1u, measure.max_threads());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(loop_tests)
@@ -1023,6 +1239,8 @@ RUN_TEST(task_test)
 RUN_TEST(task_shutdown_test)
 RUN_TEST(receiver_test)
 RUN_TEST(receiver_shutdown_test)
+RUN_TEST(exception_test)
+RUN_TEST(exception_shutdown_test)
 RUN_TEST(threads_have_default_dispatcher)
 for (int i = 0; i < 3; i++) {
     RUN_TEST(threads_quit)
@@ -1030,5 +1248,6 @@ for (int i = 0; i < 3; i++) {
     RUN_TEST(threads_waits_run_concurrently_test)
     RUN_TEST(threads_tasks_run_sequentially_test)
     RUN_TEST(threads_receivers_run_concurrently_test)
+    RUN_TEST(threads_exceptions_run_concurrently_test)
 }
 END_TEST_CASE(loop_tests)

@@ -37,3 +37,17 @@ zx_status_t async_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_gues
                                       zx_handle_t guest, zx_vaddr_t addr, size_t length) {
     return dispatcher->ops->v1.set_guest_bell_trap(dispatcher, trap, guest, addr, length);
 }
+
+zx_status_t async_bind_exception_port(async_dispatcher_t* dispatcher,
+                                      async_exception_t* exception) {
+    if (dispatcher->ops->version < ASYNC_OPS_V2)
+        return ZX_ERR_NOT_SUPPORTED;
+    return dispatcher->ops->v2.bind_exception_port(dispatcher, exception);
+}
+
+zx_status_t async_unbind_exception_port(async_dispatcher_t* dispatcher,
+                                        async_exception_t* exception) {
+    if (dispatcher->ops->version < ASYNC_OPS_V2)
+        return ZX_ERR_NOT_SUPPORTED;
+    return dispatcher->ops->v2.unbind_exception_port(dispatcher, exception);
+}
