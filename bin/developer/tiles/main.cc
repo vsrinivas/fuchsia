@@ -12,7 +12,7 @@
 
 void Usage() {
   printf(
-      "Usage: tiles [--border=...]n"
+      "Usage: tiles [--border=...]\n"
       "\n"
       "Tiles displays a set of views as tiles. Add or remove tiles with\n"
       "the 'tiles_ctl' command line utility or connecting to the\n"
