@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
 
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async/dispatcher.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/ref_ptr.h>

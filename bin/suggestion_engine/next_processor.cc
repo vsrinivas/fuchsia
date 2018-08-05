@@ -49,19 +49,18 @@ void NextProcessor::AddProposal(const std::string& component_url,
               std::move(proposal));
 }
 
-void NextProcessor::AddProposal(
-      const std::string& component_url,
-      const std::string& story_id,
-      const std::string& preloaded_story_id,
-      fuchsia::modular::Proposal proposal) {
+void NextProcessor::AddProposal(const std::string& component_url,
+                                const std::string& story_id,
+                                const std::string& preloaded_story_id,
+                                fuchsia::modular::Proposal proposal) {
   NotifyOfProcessingChange(true);
   // The component_url and proposal ID form a unique identifier for a proposal.
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal.id);
 
-  auto prototype = CreateSuggestionPrototype(&prototypes_, component_url,
-                                             story_id, preloaded_story_id,
-                                             std::move(proposal));
+  auto prototype =
+      CreateSuggestionPrototype(&prototypes_, component_url, story_id,
+                                preloaded_story_id, std::move(proposal));
   auto ranked_suggestion = RankedSuggestion::New(prototype);
 
   // TODO(miguelfrde): Make NextProcessor not depend on InterruptionsProcessor.

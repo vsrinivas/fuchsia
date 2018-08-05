@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_TESTS_BENCHMARK_STORY_TRACING_WAITER_H_
-#define PERIDOT_TESTS_BENCHMARK_STORY_TRACING_WAITER_H_
+#ifndef PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
+#define PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
 
 #include <functional>
 #include <memory>
@@ -35,4 +35,4 @@ class TracingWaiter {
 
 }  // namespace modular
 
-#endif  // PERIDOT_TESTS_BENCHMARK_STORY_TRACING_WAITER_H_
+#endif  // PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_

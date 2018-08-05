@@ -41,7 +41,8 @@ class TestApp {
         FXL_LOG(INFO) << "Module initialized " << init_count_
                       << " times, link value is " << link_value << ".";
         if (link_value != std::to_string(init_count_)) {
-          FXL_LOG(INFO) << "FAILURE: I was re-initialized when I shouldn't have been.";
+          FXL_LOG(INFO)
+              << "FAILURE: I was re-initialized when I shouldn't have been.";
           Fail("Child module initialized when not expected");
         }
         Signal(std::string("child_module_init_") + std::to_string(init_count_));

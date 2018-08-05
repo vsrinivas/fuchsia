@@ -219,8 +219,8 @@ class CobaltTest : public gtest::TestLoopFixture {
   std::unique_ptr<component::StartupContext> InitStartupContext() {
     factory_impl_.reset(new FakeCobaltEncoderFactoryImpl());
     service_provider.AddService<fuchsia::cobalt::EncoderFactory>(
-        [this](fidl::InterfaceRequest<fuchsia::cobalt::EncoderFactory>
-                   request) {
+        [this](
+            fidl::InterfaceRequest<fuchsia::cobalt::EncoderFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
     service_provider.AddService<fuchsia::sys::Environment>(

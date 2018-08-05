@@ -21,11 +21,11 @@ executable_package("link_update_test_user_shell") {
 
   deps = [
     ":defs",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.testing.runner",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",

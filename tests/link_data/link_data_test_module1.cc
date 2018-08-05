@@ -40,27 +40,26 @@ class TestApp {
   }
 
   void Loop() {
-    link_->Get(path_.Clone(),
-               [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
-                 std::string content_string;
-                 if (content) {
-                   FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-                   Put("module1_link", content_string);
-                 }
+    link_->Get(
+        path_.Clone(), [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+          std::string content_string;
+          if (content) {
+            FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+            Put("module1_link", content_string);
+          }
 
-                 rapidjson::Document doc;
-                 doc.Parse(content_string);
-                 if (doc.IsInt()) {
-                   doc.SetInt(doc.GetInt() + 1);
-                 } else {
-                   doc.SetInt(0);
-                 }
-                 fsl::SizedVmo vmo;
-                 FXL_CHECK(
-                     fsl::VmoFromString(modular::JsonValueToString(doc), &vmo));
-                 link_->Set(path_.Clone(), std::move(vmo).ToTransport());
-                 link_->Sync([this] { Loop(); });
-               });
+          rapidjson::Document doc;
+          doc.Parse(content_string);
+          if (doc.IsInt()) {
+            doc.SetInt(doc.GetInt() + 1);
+          } else {
+            doc.SetInt(0);
+          }
+          fsl::SizedVmo vmo;
+          FXL_CHECK(fsl::VmoFromString(modular::JsonValueToString(doc), &vmo));
+          link_->Set(path_.Clone(), std::move(vmo).ToTransport());
+          link_->Sync([this] { Loop(); });
+        });
   }
 
   // Called from ModuleDriver.

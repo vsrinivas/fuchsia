@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fsl/vmo/strings.h>

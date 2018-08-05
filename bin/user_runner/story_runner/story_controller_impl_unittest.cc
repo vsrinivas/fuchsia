@@ -90,5 +90,5 @@ TEST(StoryControllerImplTest, ShouldRestartModuleForNewIntent) {
   EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
 }
 
-}
+}  // namespace
 }  // namespace modular

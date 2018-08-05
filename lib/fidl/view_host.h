@@ -22,10 +22,9 @@ namespace modular {
 // out horizontally.
 class ViewHost : public mozart::BaseView {
  public:
-  explicit ViewHost(
-      fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request);
+  explicit ViewHost(fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+                    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+                        view_owner_request);
   ~ViewHost() override;
 
   // Connects one more view. Calling this method multiple times adds

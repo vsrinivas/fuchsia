@@ -37,8 +37,8 @@ class ModuleManifestSource {
   // |new_fn| takes a string Entry id and the Entry itself.
   //
   // |removed_fn| takes only the string Entry id.
-  virtual void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn, NewEntryFn new_fn,
-                     RemovedEntryFn removed_fn) = 0;
+  virtual void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
+                     NewEntryFn new_fn, RemovedEntryFn removed_fn) = 0;
 };
 
 }  // namespace modular

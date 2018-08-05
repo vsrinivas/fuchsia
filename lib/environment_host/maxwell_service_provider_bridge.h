@@ -11,8 +11,7 @@
 namespace maxwell {
 
 // Environment surfacing only explicitly given environment services.
-class MaxwellServiceProviderBridge
-    : public component::ServiceProviderBridge {
+class MaxwellServiceProviderBridge : public component::ServiceProviderBridge {
  public:
   MaxwellServiceProviderBridge(fuchsia::sys::Environment* parent_env);
 };

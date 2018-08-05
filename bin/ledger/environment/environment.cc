@@ -50,12 +50,14 @@ EnvironmentBuilder::EnvironmentBuilder() {}
 
 EnvironmentBuilder::~EnvironmentBuilder() {}
 
-EnvironmentBuilder& EnvironmentBuilder::SetAsync(async_dispatcher_t* dispatcher) {
+EnvironmentBuilder& EnvironmentBuilder::SetAsync(
+    async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(async_dispatcher_t* io_dispatcher) {
+EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(
+    async_dispatcher_t* io_dispatcher) {
   io_dispatcher_ = io_dispatcher;
   return *this;
 }

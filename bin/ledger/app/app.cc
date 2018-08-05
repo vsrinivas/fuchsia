@@ -8,9 +8,9 @@
 #include <utility>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
@@ -60,7 +60,8 @@ class App : public ledger_internal::LedgerController {
         trace_provider_(loop_.dispatcher()),
         startup_context_(component::StartupContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
-                                    loop_.dispatcher(), startup_context_.get())) {
+                                    loop_.dispatcher(),
+                                    startup_context_.get())) {
     FXL_DCHECK(startup_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);

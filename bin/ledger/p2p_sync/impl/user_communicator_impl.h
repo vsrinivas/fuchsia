@@ -10,8 +10,8 @@
 #include <string>
 
 #include <fuchsia/netconnector/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/callback/auto_cleanable.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/netconnector/cpp/message_relay.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"

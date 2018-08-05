@@ -128,7 +128,7 @@ class MyEntityProvider : AgentImpl::Delegate,
     auto additional_services =
         launch_info_.additional_services->provider.Bind();
     component::ConnectToService(additional_services.get(),
-                                   agent_context_.NewRequest());
+                                agent_context_.NewRequest());
     fuchsia::modular::ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());
     component_context->GetEntityResolver(entity_resolver_.NewRequest());

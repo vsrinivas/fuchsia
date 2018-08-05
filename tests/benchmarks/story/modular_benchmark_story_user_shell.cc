@@ -134,8 +134,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
   using Base = modular::SingleServiceApp<fuchsia::modular::UserShell>;
-  TestApp(component::StartupContext* const startup_context,
-          Settings settings)
+  TestApp(component::StartupContext* const startup_context, Settings settings)
       : Base(startup_context), settings_(std::move(settings)) {}
 
   ~TestApp() override = default;
@@ -162,7 +161,8 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
     if (story_count_ < settings_.story_count) {
       FXL_LOG(INFO) << "Loop at " << story_count_ << " of "
                     << settings_.story_count;
-      async::PostTask(async_get_default_dispatcher(), [this] { StoryCreate(); });
+      async::PostTask(async_get_default_dispatcher(),
+                      [this] { StoryCreate(); });
 
     } else {
       TRACE_ASYNC_BEGIN("benchmark", "user/logout", 0);

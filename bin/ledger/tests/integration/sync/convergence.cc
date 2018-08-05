@@ -440,12 +440,12 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
       }
       return false;
     }
-      merge_done = false;
-      if (waiter) {
-        waiter->Cancel();
-        waiter = nullptr;
-      }
-      return false;
+    merge_done = false;
+    if (waiter) {
+      waiter->Cancel();
+      waiter = nullptr;
+    }
+    return false;
   };
 
   // If |RunLoopUntil| returns, the condition is met, thus the ledgers have

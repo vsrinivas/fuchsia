@@ -5,10 +5,10 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/maxwell/agent_launcher.h"

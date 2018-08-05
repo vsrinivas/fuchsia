@@ -36,7 +36,8 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
 // synced.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  explicit TestPageStorage(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher) {}
 
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
@@ -49,13 +50,14 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       });
       return;
     }
-    async::PostTask(dispatcher_, [this, ids_and_bytes = std::move(ids_and_bytes),
-                             callback = std::move(callback)]() mutable {
-      for (auto& commit : ids_and_bytes) {
-        received_commits[std::move(commit.id)] = std::move(commit.bytes);
-      }
-      callback(storage::Status::OK);
-    });
+    async::PostTask(
+        dispatcher_, [this, ids_and_bytes = std::move(ids_and_bytes),
+                      callback = std::move(callback)]() mutable {
+          for (auto& commit : ids_and_bytes) {
+            received_commits[std::move(commit.id)] = std::move(commit.bytes);
+          }
+          callback(storage::Status::OK);
+        });
   }
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,

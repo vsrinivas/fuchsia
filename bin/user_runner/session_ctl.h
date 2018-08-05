@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_USER_RUNNER_SESSION_CTL_H_
+#define PERIDOT_BIN_USER_RUNNER_SESSION_CTL_H_
 
 #include <fs/pseudo-dir.h>
 #include <string>
@@ -33,3 +34,5 @@ class SessionCtl {
 };
 
 }  // namespace modular
+
+#endif  // PERIDOT_BIN_USER_RUNNER_SESSION_CTL_H_

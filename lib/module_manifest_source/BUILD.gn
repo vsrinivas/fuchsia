@@ -39,9 +39,9 @@ source_set("firebase_source") {
   public_deps = [
     ":module_manifest_source",
     ":xdr",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/firebase",
     "//third_party/rapidjson",

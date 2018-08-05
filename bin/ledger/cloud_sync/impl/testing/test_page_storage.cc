@@ -19,7 +19,8 @@
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 
 namespace cloud_sync {
-TestPageStorage::TestPageStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+TestPageStorage::TestPageStorage(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher) {}
 
 std::unique_ptr<TestCommit> TestPageStorage::NewCommit(std::string id,
                                                        std::string content,
@@ -68,7 +69,7 @@ void TestPageStorage::GetCommit(
   }
 
   async::PostTask(dispatcher_, [this, commit_id = commit_id.ToString(),
-                           callback = std::move(callback)] {
+                                callback = std::move(callback)] {
     callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
   });
   new_commits_to_return.erase(commit_id.ToString());
@@ -151,7 +152,7 @@ void TestPageStorage::GetUnsyncedCommits(
                    return commit->Clone();
                  });
   async::PostTask(dispatcher_, [results = std::move(results),
-                           callback = std::move(callback)]() mutable {
+                                callback = std::move(callback)]() mutable {
     callback(storage::Status::OK, std::move(results));
   });
 }

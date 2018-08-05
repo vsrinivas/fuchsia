@@ -90,8 +90,7 @@ class TestApp
 
   void StartStory() {
     // Start and show the new story.
-    fidl::InterfacePtr<fuchsia::ui::viewsv1token::ViewOwner>
-        story_view_binding;
+    fidl::InterfacePtr<fuchsia::ui::viewsv1token::ViewOwner> story_view_binding;
     story_controller_->Start(story_view_binding.NewRequest());
   }
 

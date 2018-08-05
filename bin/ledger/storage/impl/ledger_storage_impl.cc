@@ -116,8 +116,9 @@ void LedgerStorageImpl::DeletePageStorage(
                          callback =
                              std::move(callback)](Status status) mutable {
     // Call the callback in the main thread.
-    async::PostTask(
-        dispatcher, [status, callback = std::move(callback)] { callback(status); });
+    async::PostTask(dispatcher, [status, callback = std::move(callback)] {
+      callback(status);
+    });
   };
 
   async::PostTask(

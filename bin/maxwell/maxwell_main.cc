@@ -5,8 +5,8 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/strings/split_string.h>

@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 

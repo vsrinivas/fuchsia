@@ -98,39 +98,38 @@ void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
   story_storage_->GetLinkValue(link_path_)
       ->WeakMap(
           GetWeakPtr(),
-          fxl::MakeCopyable(
-              [this /* for link_path_ */, path = std::move(path)](
-                  StoryStorage::Status status, fidl::StringPtr value) mutable {
-                if (status != StoryStorage::Status::OK) {
-                  FXL_LOG(ERROR) << "Getting link " << link_path_
-                                 << " failed: " << static_cast<int>(status);
+          fxl::MakeCopyable([this /* for link_path_ */, path = std::move(path)](
+                                StoryStorage::Status status,
+                                fidl::StringPtr value) mutable {
+            if (status != StoryStorage::Status::OK) {
+              FXL_LOG(ERROR) << "Getting link " << link_path_
+                             << " failed: " << static_cast<int>(status);
 
-                  return std::string("null");
-                }
+              return std::string("null");
+            }
 
-                else if (!path || path->empty()) {
-                  // Common case requires no parsing of the JSON.
-                  return *value;
-                } else {
-                  // Extract just the |path| portion of the value.
-                  CrtJsonDoc json;
-                  json.Parse(value);
-                  FXL_DCHECK(!json.HasParseError());  // StoryStorage guarantees
-                                                      // we get valid JSON.
-                  auto& value_at_path =
-                      CreatePointer(json, *path)
-                          .GetWithDefault(json, CrtJsonValue());
-                  return JsonValueToString(value_at_path);
-                }
-              }))
-      ->WeakThen(GetWeakPtr(), [callback =
-                                    std::move(callback)](std::string json) {
-        fsl::SizedVmo vmo;
-        FXL_CHECK(fsl::VmoFromString(json, &vmo));
-        auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(
-            std::move(vmo).ToTransport());
-        callback(std::move(vmo_ptr));
-      });
+            else if (!path || path->empty()) {
+              // Common case requires no parsing of the JSON.
+              return *value;
+            } else {
+              // Extract just the |path| portion of the value.
+              CrtJsonDoc json;
+              json.Parse(value);
+              FXL_DCHECK(!json.HasParseError());  // StoryStorage guarantees
+                                                  // we get valid JSON.
+              auto& value_at_path = CreatePointer(json, *path)
+                                        .GetWithDefault(json, CrtJsonValue());
+              return JsonValueToString(value_at_path);
+            }
+          }))
+      ->WeakThen(GetWeakPtr(),
+                 [callback = std::move(callback)](std::string json) {
+                   fsl::SizedVmo vmo;
+                   FXL_CHECK(fsl::VmoFromString(json, &vmo));
+                   auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(
+                       std::move(vmo).ToTransport());
+                   callback(std::move(vmo_ptr));
+                 });
 }
 
 void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,

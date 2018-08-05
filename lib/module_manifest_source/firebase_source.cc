@@ -162,8 +162,8 @@ FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
   }
 }
 
-void FirebaseModuleManifestSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
-                                         NewEntryFn new_fn,
+void FirebaseModuleManifestSource::Watch(async_dispatcher_t* dispatcher,
+                                         IdleFn idle_fn, NewEntryFn new_fn,
                                          RemovedEntryFn removed_fn) {
   auto watcher = std::make_unique<Watcher>(
       dispatcher, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),

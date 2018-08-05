@@ -6,11 +6,11 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/ui/view_framework/base_view.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
@@ -93,8 +93,8 @@ class RecipeApp : public modular::ViewApp {
   void SwapModule() {
     StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
-    async::PostDelayedTask(async_get_default_dispatcher(), [this] { SwapModule(); },
-                           zx::sec(kSwapSeconds));
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [this] { SwapModule(); }, zx::sec(kSwapSeconds));
   }
 
   void StartModule(const std::string& module_query) {

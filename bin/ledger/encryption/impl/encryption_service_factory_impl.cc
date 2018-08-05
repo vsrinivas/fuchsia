@@ -8,7 +8,8 @@
 
 namespace encryption {
 
-EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(async_dispatcher_t* dispatcher)
+EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(
+    async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
 
 EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() {}

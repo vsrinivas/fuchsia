@@ -5,8 +5,8 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -16,8 +16,7 @@ namespace modular {
 class DeviceRunnerMonitorApp : fuchsia::modular::DeviceRunnerMonitor {
  public:
   DeviceRunnerMonitorApp()
-      : context_(
-            component::StartupContext::CreateFromStartupInfoNotChecked()) {
+      : context_(component::StartupContext::CreateFromStartupInfoNotChecked()) {
     context_->outgoing()
         .AddPublicService<fuchsia::modular::DeviceRunnerMonitor>(
             [this](fidl::InterfaceRequest<fuchsia::modular::DeviceRunnerMonitor>

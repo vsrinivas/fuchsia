@@ -21,10 +21,10 @@ executable_package("link_data_test_user_shell") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.testing.runner",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/common:names",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",

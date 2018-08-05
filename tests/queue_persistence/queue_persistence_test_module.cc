@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/fxl/memory/weak_ptr.h>
 #include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
@@ -43,7 +43,8 @@ class TestApp {
     fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
+    component::ConnectToService(agent_services.get(),
+                                agent_service_.NewRequest());
 
     Await("queue_persistence_test_agent_connected",
           [this] { AgentConnected(); });
@@ -95,7 +96,8 @@ class TestApp {
     fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
+    component::ConnectToService(agent_services.get(),
+                                agent_service_.NewRequest());
 
     Await("queue_persistence_test_agent_connected",
           [this] { AgentConnectedAgain(); });

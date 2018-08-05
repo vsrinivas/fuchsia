@@ -30,8 +30,7 @@ class AgentImpl : public fuchsia::modular::Agent {
                          const std::function<void()>& done) = 0;
   };
 
-  AgentImpl(component::ServiceNamespace* service_namespace,
-            Delegate* delegate);
+  AgentImpl(component::ServiceNamespace* service_namespace, Delegate* delegate);
 
   AgentImpl(fbl::RefPtr<fs::PseudoDir> directory, Delegate* delegate);
 

@@ -28,8 +28,9 @@ std::string FindModulePackageIndexerService() {
   // The ModulePackageIndexer service is run by the module_resolver component
   // under current sys realm. The structured path of to this service is:
   // /hub//r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
-  auto glob_str = fxl::StringPrintf(
-      "/hub/r/user-*/*/c/module_resolver/*/out/debug/%s", ModulePackageIndexer::Name_);
+  auto glob_str =
+      fxl::StringPrintf("/hub/r/user-*/*/c/module_resolver/*/out/debug/%s",
+                        ModulePackageIndexer::Name_);
 
   glob_t globbuf;
   std::string service_path;

@@ -18,7 +18,8 @@ namespace storage {
 
 class LevelDb : public Db {
  public:
-  explicit LevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
+  explicit LevelDb(async_dispatcher_t* dispatcher,
+                   ledger::DetachedPath db_path);
 
   ~LevelDb() override;
 

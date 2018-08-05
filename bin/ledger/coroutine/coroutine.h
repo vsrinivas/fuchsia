@@ -72,9 +72,9 @@ class CoroutineService {
 // |async_call| will be never be called after this method returns. As such, it
 // can capture local variables by reference.
 //
-// For instance, suppose you have the following asynchronous function LongAsyncComputation that
-// signals its completion by passing the computed string and integer to a
-// callback:
+// For instance, suppose you have the following asynchronous function
+// LongAsyncComputation that signals its completion by passing the computed
+// string and integer to a callback:
 //
 // void LongAsyncComputation(fit::function<void(std::string, int)> on_done);
 //

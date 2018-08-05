@@ -95,16 +95,16 @@ class TestApp {
 
   void VerifyLinkThree() {
     module_context_->GetLink("three", link_three_.NewRequest());
-    link_three_->Get(
-        nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
-          std::string content_string;
-          FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-          if (content_string == "67890") {
-            link_three_correct_.Pass();
-          }
+    link_three_->Get(nullptr,
+                     [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+                       std::string content_string;
+                       FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+                       if (content_string == "67890") {
+                         link_three_correct_.Pass();
+                       }
 
-          VerifyDefaultLink();
-        });
+                       VerifyDefaultLink();
+                     });
   }
 
   TestPoint default_link_correct_{"Default Link value is correct."};

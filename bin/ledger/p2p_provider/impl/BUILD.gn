@@ -17,11 +17,11 @@ source_set("impl") {
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.netconnector",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netconnector/cpp",
-    "//garnet/public/fidl/fuchsia.netconnector",
     "//peridot/bin/ledger/filesystem",
     "//peridot/bin/ledger/p2p_provider/public",
     "//peridot/lib/convert",

@@ -18,7 +18,8 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage* storage,
+PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
+                           storage::PageStorage* storage,
                            storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr page_cloud,

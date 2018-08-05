@@ -12,11 +12,10 @@ package("cloud_provider_firestore") {
 
   resources = [
     {
-      path = rebase_path(
-              get_label_info(
-                             "//peridot/bin/ledger/cobalt:generate_ledger_config",
-                             "target_gen_dir")
-              + "/cobalt_config.binproto")
+      path =
+          rebase_path(get_label_info(
+                          "//peridot/bin/ledger/cobalt:generate_ledger_config",
+                          "target_gen_dir") + "/cobalt_config.binproto")
       dest = "firebase_auth_cobalt_config.binproto"
     },
   ]

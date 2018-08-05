@@ -13,7 +13,8 @@ TracingWaiter::~TracingWaiter() = default;
 
 void TracingWaiter::WaitForTracing(std::function<void()> cont) {
   // Cf. RunWithTracing() used by ledger benchmarks.
-  trace_provider_ = std::make_unique<trace::TraceProvider>(async_get_default_dispatcher());
+  trace_provider_ =
+      std::make_unique<trace::TraceProvider>(async_get_default_dispatcher());
   trace_observer_ = std::make_unique<trace::TraceObserver>();
 
   std::function<void()> on_trace_state_changed = [this, cont] {
@@ -27,7 +28,8 @@ void TracingWaiter::WaitForTracing(std::function<void()> cont) {
   on_trace_state_changed();
 
   if (!started_) {
-    trace_observer_->Start(async_get_default_dispatcher(), on_trace_state_changed);
+    trace_observer_->Start(async_get_default_dispatcher(),
+                           on_trace_state_changed);
   }
 }
 

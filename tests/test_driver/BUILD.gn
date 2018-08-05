@@ -12,10 +12,10 @@ executable_package("test_driver_module") {
   ]
   deps = [
     ":defs",
+    "//garnet/public/fidl/fuchsia.testing.runner",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.testing.runner",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:test_driver",

@@ -4,9 +4,9 @@
 
 #include <memory>
 
-#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/macros.h>

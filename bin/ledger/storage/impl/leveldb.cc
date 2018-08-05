@@ -52,8 +52,8 @@ class BatchImpl : public Db::Batch {
   // leveldb. If the destructor is called without a previous execution of the
   // batch, |callback| will be called with a |nullptr|.
   BatchImpl(
-      async_dispatcher_t* dispatcher, std::unique_ptr<leveldb::WriteBatch> batch,
-      leveldb::DB* db,
+      async_dispatcher_t* dispatcher,
+      std::unique_ptr<leveldb::WriteBatch> batch, leveldb::DB* db,
       fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
       : dispatcher_(dispatcher),
         batch_(std::move(batch)),
@@ -68,7 +68,8 @@ class BatchImpl : public Db::Batch {
   Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,
              fxl::StringView value) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
+        Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     batch_->Put(key, convert::ToSlice(value));
@@ -90,7 +91,8 @@ class BatchImpl : public Db::Batch {
          it->Next()) {
       batch_->Delete(it->key());
     }
-    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
+        Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return ConvertStatus(it->status());
@@ -98,7 +100,8 @@ class BatchImpl : public Db::Batch {
 
   Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
+        Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return callback_(std::move(batch_));

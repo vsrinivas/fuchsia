@@ -15,8 +15,7 @@
 namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
     ledger::Environment* environment,
-    component::StartupContext* startup_context,
-    std::string cobalt_client_name)
+    component::StartupContext* startup_context, std::string cobalt_client_name)
     : environment_(environment),
       startup_context_(startup_context),
       cobalt_client_name_(std::move(cobalt_client_name)) {}

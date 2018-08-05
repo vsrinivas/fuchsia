@@ -5,12 +5,12 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/fxl/memory/weak_ptr.h>
 #include <lib/message_queue/cpp/message_queue_client.h>
 #include <test/peridot/tests/componentcontext/cpp/fidl.h>
@@ -90,7 +90,7 @@ class TestApp {
                                        one_agent_services.NewRequest(),
                                        one_agent_controller.NewRequest());
     component::ConnectToService(one_agent_services.get(),
-                     one_agent_interface_.NewRequest());
+                                one_agent_interface_.NewRequest());
 
     Await("one_agent_connected", [this] {
       one_agent_connected_.Pass();

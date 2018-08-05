@@ -16,8 +16,8 @@ executable("ledger_benchmark_disk_space") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/callback",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

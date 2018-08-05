@@ -21,7 +21,8 @@ SocketWriter::SocketWriter(Client* client, async_dispatcher_t* dispatcher)
     : client_(client), dispatcher_(dispatcher) {
   wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
   wait_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+      [this](async_dispatcher_t* dispatcher, async::Wait* wait,
+             zx_status_t status,
              const zx_packet_signal_t* signal) { WriteData(data_view_); });
 }
 

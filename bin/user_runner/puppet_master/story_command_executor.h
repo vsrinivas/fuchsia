@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 
 #include <functional>
-#include <vector>
 #include <list>
+#include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fit/function.h>

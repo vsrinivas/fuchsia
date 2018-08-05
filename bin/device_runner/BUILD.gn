@@ -57,9 +57,8 @@ executable_package("device_runner") {
     {
       path = rebase_path(
               get_label_info(
-                             "//peridot/bin/device_runner/cobalt:generate_device_runner_config",
-                             "target_gen_dir")
-              + "/cobalt_config.binproto")
+                  "//peridot/bin/device_runner/cobalt:generate_device_runner_config",
+                  "target_gen_dir") + "/cobalt_config.binproto")
       dest = "cobalt_config.binproto"
     },
   ]

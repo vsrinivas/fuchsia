@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_COMMON_TESTING_TEST_DRIVER_H_
-#define PERIDOT_LIB_COMMON_TESTING_TEST_DRIVER_H_
+#ifndef PERIDOT_LIB_TESTING_TEST_DRIVER_H_
+#define PERIDOT_LIB_TESTING_TEST_DRIVER_H_
 
 // Header for definitions for Link communication with a test driver module.
 namespace modular {
@@ -23,4 +23,4 @@ constexpr char kTestDriverLinkName[] = "test_driver_module";
 }  // namespace testing
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_COMMON_TESTING_TEST_DRIVER_H_
+#endif  // PERIDOT_LIB_TESTING_TEST_DRIVER_H_

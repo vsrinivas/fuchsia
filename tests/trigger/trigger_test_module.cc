@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/trigger/cpp/fidl.h>
 
@@ -40,7 +40,8 @@ class TestApp {
     fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
+    component::ConnectToService(agent_services.get(),
+                                agent_service_.NewRequest());
 
     // The message queue that is used to verify deletion triggers from explicit
     // deletes.
@@ -101,7 +102,8 @@ class TestApp {
     fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
+    component::ConnectToService(agent_services.get(),
+                                agent_service_.NewRequest());
 
     // First wait for the agent to connect, and then kill it.
     Await("trigger_test_agent_connected", [this] {

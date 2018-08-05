@@ -6,8 +6,8 @@
 #define LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/cloud_provider/validation/types.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 

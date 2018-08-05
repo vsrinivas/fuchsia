@@ -10,11 +10,11 @@
 #include <string>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/scoped_task_runner.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 
 #include "peridot/lib/cobalt/cobalt.h"

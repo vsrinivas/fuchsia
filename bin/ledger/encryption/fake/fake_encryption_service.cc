@@ -28,7 +28,8 @@ storage::ObjectIdentifier MakeDefaultObjectIdentifier(
   return {1u, 1u, std::move(digest)};
 }
 
-FakeEncryptionService::FakeEncryptionService(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+FakeEncryptionService::FakeEncryptionService(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher) {}
 
 FakeEncryptionService::~FakeEncryptionService() {}
 
@@ -42,7 +43,7 @@ void FakeEncryptionService::EncryptCommit(
     fit::function<void(Status, std::string)> callback) {
   std::string encrypted_commit = EncryptCommitSynchronous(commit_storage);
   async::PostTask(dispatcher_, [encrypted_commit = std::move(encrypted_commit),
-                           callback = std::move(callback)]() mutable {
+                                callback = std::move(callback)]() mutable {
     callback(Status::OK, std::move(encrypted_commit));
   });
 }
@@ -52,7 +53,7 @@ void FakeEncryptionService::DecryptCommit(
     fit::function<void(Status, std::string)> callback) {
   std::string commit = DecryptCommitSynchronous(storage_bytes);
   async::PostTask(dispatcher_, [commit = std::move(commit),
-                           callback = std::move(callback)]() mutable {
+                                callback = std::move(callback)]() mutable {
     callback(Status::OK, std::move(commit));
   });
 }
@@ -62,7 +63,7 @@ void FakeEncryptionService::GetObjectName(
     fit::function<void(Status, std::string)> callback) {
   std::string result = GetObjectNameSynchronous(object_identifier);
   async::PostTask(dispatcher_, [callback = std::move(callback),
-                           result = std::move(result)]() mutable {
+                                result = std::move(result)]() mutable {
     callback(Status::OK, std::move(result));
   });
 }
@@ -77,7 +78,7 @@ void FakeEncryptionService::EncryptObject(
   }
   std::string result = EncryptObjectSynchronous(content_as_string);
   async::PostTask(dispatcher_, [callback = std::move(callback),
-                           result = std::move(result)]() mutable {
+                                result = std::move(result)]() mutable {
     callback(Status::OK, std::move(result));
   });
 }
@@ -87,7 +88,7 @@ void FakeEncryptionService::DecryptObject(
     fit::function<void(Status, std::string)> callback) {
   std::string result = DecryptObjectSynchronous(encrypted_data);
   async::PostTask(dispatcher_, [callback = std::move(callback),
-                           result = std::move(result)]() mutable {
+                                result = std::move(result)]() mutable {
     callback(Status::OK, std::move(result));
   });
 }
