@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
@@ -71,6 +72,7 @@ static int irq_thread(void* arg) {
         if (irq & ETH_IRQ_LSC) {
             bool was_online = edev->online;
             bool online = eth_status_online(&edev->eth);
+            zxlogf(TRACE, "intel-eth: ETH_IRQ_LSC fired: %d->%d\n", was_online, online);
             if (online != was_online) {
                 edev->online = online;
                 if (edev->ifc) {
@@ -299,6 +301,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
 
     eth_setup_buffers(&edev->eth, io_buffer_virt(&edev->buffer), io_buffer_phys(&edev->buffer));
     eth_init_hw(&edev->eth);
+    edev->online = eth_status_online(&edev->eth);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
