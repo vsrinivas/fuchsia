@@ -29,9 +29,13 @@ class PackageImportsResolver:
 
     def __init__(self, observer=None):
         self.observer = observer
+        self._errored = False
 
     def resolve(self, imports):
         return self.resolve_imports(imports)
+
+    def errored(self):
+        return self._errored
 
     def resolve_imports(self, import_queue):
 
@@ -65,8 +69,10 @@ class PackageImportsResolver:
                         sys.stderr.write(
                             "Failed to parse config %s, error %s\n" %
                             (config_path, str(e)))
+                        self._errored = True
                         return None
             except IOError, e:
+                self._errored = True
                 sys.stderr.write("Failed to read package '%s' from '%s'.\n" %
                                  (config_name, config_path))
                 if "/" not in config_name:

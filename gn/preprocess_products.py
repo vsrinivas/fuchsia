@@ -36,6 +36,9 @@ def preprocess_packages(packages):
     imports_resolver = PackageImportsResolver(observer)
     imported = imports_resolver.resolve_imports(packages)
 
+    if imports_resolver.errored():
+        raise ImportError
+
     if imported == None:
         return None
 
@@ -74,9 +77,12 @@ files_read - a list of files used to compute all of the above
     if args.packages:
         build_packages["monolith"].update(json.loads(args.packages))
 
-    monolith_results = preprocess_packages(list(build_packages["monolith"]))
-    preinstall_results = preprocess_packages(list(build_packages["preinstall"]))
-    available_results = preprocess_packages(list(build_packages["available"]))
+    try:
+        monolith_results = preprocess_packages(list(build_packages["monolith"]))
+        preinstall_results = preprocess_packages(list(build_packages["preinstall"]))
+        available_results = preprocess_packages(list(build_packages["available"]))
+    except ImportError:
+        return 1
 
     host_tests = set()
     data_deps = set()
