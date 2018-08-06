@@ -211,11 +211,6 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     if (element.HasMember("values")) {
       std::string name = element["label"].GetString();
       ConvertSpacesToUnderscores(&name);
-      rapidjson::Value histogram;
-      histogram.SetObject();
-      histogram.AddMember("name", name, alloc);
-      histogram.AddMember("unit", "ms_smallerIsBetter", alloc);
-      histogram.AddMember("description", "", alloc);
 
       // The "test_suite" field in the input becomes the "benchmarks"
       // diagnostic in the output.
