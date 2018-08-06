@@ -7,7 +7,6 @@
 /// Avoid introducing dependencies on fuchsia-* crates. By avoiding
 /// use of those crates, it will be possible to support host-side
 /// test targets once we have build support (TC-161).
-
 extern crate byteorder;
 extern crate bytes;
 #[macro_use]
@@ -22,3 +21,4 @@ pub mod configuration;
 pub mod protocol;
 pub mod server;
 
+//TODO(atait): Add tests exercising the public API of this library.

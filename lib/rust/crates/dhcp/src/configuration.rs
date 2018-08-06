@@ -63,4 +63,3 @@ impl From<serde_json::Error> for ConfigError {
         ConfigError::JsonError(e)
     }
 }
-

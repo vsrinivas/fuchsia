@@ -233,7 +233,12 @@ impl ConfigOption {
         let code = OptionCode::option_code_from_u8(*raw_code)?;
         let len: usize = match buf.get(1) {
             Some(l) => *l as usize,
-            None => return Some(ConfigOption { code: code, value: vec![] }),
+            None => {
+                return Some(ConfigOption {
+                    code: code,
+                    value: vec![],
+                })
+            }
         };
         let mut value = Vec::with_capacity(len);
         let val_offset = 2;

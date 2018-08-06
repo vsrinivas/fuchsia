@@ -66,9 +66,10 @@ impl Server {
     fn get_addr(&mut self, client: &Message) -> Option<Ipv4Addr> {
         if let Some(config) = self.cache.get(&client.chaddr) {
             if !config.expired() {
+                // Free cached address so that it can be reallocated to same client.
+                self.pool.free_addr(config.client_addr);
                 return Some(config.client_addr);
             } else if self.pool.addr_is_available(config.client_addr) {
-                self.pool.allocate_addr(config.client_addr);
                 return Some(config.client_addr);
             }
         }
@@ -77,7 +78,6 @@ impl Server {
                 let requested_addr = protocol::ip_addr_from_buf_at(&opt.value, 0)
                     .expect("out of range indexing on opt.value");
                 if self.pool.addr_is_available(requested_addr) {
-                    self.pool.allocate_addr(requested_addr);
                     return Some(requested_addr);
                 }
             }
@@ -91,7 +91,8 @@ impl Server {
         let config = CachedConfig {
             client_addr: client_addr,
             options: client_opts,
-            expiration: zx::Duration::from_seconds(self.config.default_lease_time as u64).after_now(),
+            expiration: zx::Time::get(zx::ClockId::UTC)
+                + zx::Duration::from_seconds(self.config.default_lease_time as u64),
         };
         self.cache.insert(client_mac, config);
         self.pool.allocate_addr(client_addr);
@@ -137,6 +138,24 @@ impl Server {
         }
         Some(build_ack(req, client_ip, &self.config))
     }
+
+    /// Releases all allocated IP addresses whose leases have expired back to
+    /// the pool of addresses available for allocation.
+    pub fn release_expired_leases(&mut self) {
+        let now = zx::Time::get(zx::ClockId::UTC);
+        let expired_clients: Vec<(MacAddr, Ipv4Addr)> = self
+            .cache
+            .iter()
+            .filter(|(_mac, config)| config.has_expired_after(now))
+            .map(|(mac, config)| (*mac, config.client_addr))
+            .collect();
+        // Expired client entries must be removed in a separate statement because otherwise we
+        // would be attempting to change a cache as we iterate over it.
+        expired_clients.iter().for_each(|(mac, ip)| {
+            self.pool.free_addr(*ip);
+            self.cache.remove(mac);
+        });
+    }
 }
 
 /// A cache mapping clients to their configuration data.
@@ -166,7 +185,11 @@ impl CachedConfig {
     }
 
     fn expired(&self) -> bool {
-        self.expiration <= zx::Time::get(zx::ClockId::UTC) 
+        self.expiration <= zx::Time::get(zx::ClockId::UTC)
+    }
+
+    fn has_expired_after(&self, t: zx::Time) -> bool {
+        self.expiration <= t
     }
 }
 
@@ -209,8 +232,19 @@ impl AddressPool {
     }
 
     fn allocate_addr(&mut self, addr: Ipv4Addr) {
-        self.available_addrs.remove(&addr);
-        self.allocated_addrs.insert(addr);
+        if self.available_addrs.remove(&addr) {
+            self.allocated_addrs.insert(addr);
+        } else {
+            panic!("Invalid Server State: attempted to allocate unavailable address");
+        }
+    }
+
+    fn free_addr(&mut self, addr: Ipv4Addr) {
+        if self.allocated_addrs.remove(&addr) {
+            self.available_addrs.insert(addr);
+        } else {
+            panic!("Invalid Server State: attempted to free unallocated address");
+        }
     }
 
     fn addr_is_available(&self, addr: Ipv4Addr) -> bool {
@@ -272,10 +306,12 @@ fn is_assigned(
     req: &Message, requested_ip: Ipv4Addr, cache: &CachedClients, pool: &AddressPool,
 ) -> bool {
     if let Some(client_config) = cache.get(&req.chaddr) {
-        return client_config.client_addr == requested_ip && !client_config.expired()
-            && pool.addr_is_allocated(requested_ip);
+        client_config.client_addr == requested_ip
+            && !client_config.expired()
+            && pool.addr_is_allocated(requested_ip)
+    } else {
+        false
     }
-    false
 }
 
 fn build_ack(req: Message, requested_ip: Ipv4Addr, config: &ServerConfig) -> Message {
@@ -338,9 +374,7 @@ fn get_client_state(msg: &Message) -> ClientState {
     let maybe_requested_ip = get_requested_ip_addr(&msg);
     let zero_ciaddr = Ipv4Addr::new(0, 0, 0, 0);
 
-    if maybe_server_id.is_some()
-        && maybe_requested_ip.is_none()
-        && msg.ciaddr != zero_ciaddr {
+    if maybe_server_id.is_some() && maybe_requested_ip.is_none() && msg.ciaddr != zero_ciaddr {
         return ClientState::Selecting;
     } else if maybe_requested_ip.is_some() && msg.ciaddr == zero_ciaddr {
         return ClientState::InitReboot;
@@ -352,7 +386,8 @@ fn get_client_state(msg: &Message) -> ClientState {
 }
 
 fn get_requested_ip_addr(req: &Message) -> Option<Ipv4Addr> {
-    let req_ip_opt = req.options
+    let req_ip_opt = req
+        .options
         .iter()
         .find(|opt| opt.code == OptionCode::RequestedIpAddr)?;
     let raw_ip = BigEndian::read_u32(&req_ip_opt.value);
@@ -360,7 +395,8 @@ fn get_requested_ip_addr(req: &Message) -> Option<Ipv4Addr> {
 }
 
 fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
-    let server_id_opt = req.options
+    let server_id_opt = req
+        .options
         .iter()
         .find(|opt| opt.code == OptionCode::ServerId)?;
     let raw_server_id = BigEndian::read_u32(&server_id_opt.value);
@@ -511,7 +547,9 @@ mod tests {
         let disc = new_test_discover();
         let mut server = new_test_server();
         let mut client_config = CachedConfig::new();
-        client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
+        let client_addr = Ipv4Addr::new(192, 168, 1, 42);
+        client_config.client_addr = client_addr;
+        server.pool.allocated_addrs.insert(client_addr);
         server.cache.insert(disc.chaddr, client_config);
 
         let got = server.dispatch(disc).unwrap();
@@ -873,5 +911,154 @@ mod tests {
         let got = get_client_state(&msg);
 
         assert_eq!(got, ClientState::Unknown);
+    }
+
+    #[test]
+    fn test_release_expired_leases_with_none_expired_releases_none() {
+        let mut server = new_test_server();
+        server.pool.available_addrs.clear();
+        server.cache.insert(
+            [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 2),
+                options: vec![],
+                expiration: zx::Time::INFINITE,
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 2));
+        server.cache.insert(
+            [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 3),
+                options: vec![],
+                expiration: zx::Time::INFINITE,
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 3));
+        server.cache.insert(
+            [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 4),
+                options: vec![],
+                expiration: zx::Time::INFINITE,
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 4));
+
+        server.release_expired_leases();
+
+        assert_eq!(server.cache.len(), 3);
+        assert_eq!(server.pool.available_addrs.len(), 0);
+        assert_eq!(server.pool.allocated_addrs.len(), 3);
+    }
+
+    #[test]
+    fn test_release_expired_leases_with_all_expired_releases_all() {
+        let mut server = new_test_server();
+        server.pool.available_addrs.clear();
+        server.cache.insert(
+            [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 2),
+                options: vec![],
+                expiration: zx::Time::from_nanos(0),
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 2));
+        server.cache.insert(
+            [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 3),
+                options: vec![],
+                expiration: zx::Time::from_nanos(0),
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 3));
+        server.cache.insert(
+            [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 4),
+                options: vec![],
+                expiration: zx::Time::from_nanos(0),
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 4));
+
+        server.release_expired_leases();
+
+        assert_eq!(server.cache.len(), 0);
+        assert_eq!(server.pool.available_addrs.len(), 3);
+        assert_eq!(server.pool.allocated_addrs.len(), 0);
+    }
+
+    #[test]
+    fn test_release_expired_leases_with_some_expired_releases_expired() {
+        let mut server = new_test_server();
+        server.pool.available_addrs.clear();
+        server.cache.insert(
+            [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 2),
+                options: vec![],
+                expiration: zx::Time::INFINITE,
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 2));
+        server.cache.insert(
+            [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 3),
+                options: vec![],
+                expiration: zx::Time::from_nanos(0),
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 3));
+        server.cache.insert(
+            [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            CachedConfig {
+                client_addr: Ipv4Addr::new(192, 168, 1, 4),
+                options: vec![],
+                expiration: zx::Time::INFINITE,
+            },
+        );
+        server
+            .pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 4));
+
+        server.release_expired_leases();
+
+        assert_eq!(server.cache.len(), 2);
+        assert!(
+            !server
+                .cache
+                .contains_key(&[0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB])
+        );
+        assert_eq!(server.pool.available_addrs.len(), 1);
+        assert_eq!(server.pool.allocated_addrs.len(), 2);
     }
 }
