@@ -40,8 +40,7 @@ class FakeViewManager : public fuchsia::ui::viewsv1::ViewManager {
 
 class TilesTest : public gtest::TestLoopFixture {
  public:
-  TilesTest()
-      : context_(component::testing::StartupContextForTest::Create()) {
+  TilesTest() : context_(component::testing::StartupContextForTest::Create()) {
     // Drop original starting context to make sure nothing depends on it.
     component::StartupContext::CreateFromStartupInfo();
   }
@@ -62,13 +61,13 @@ class TilesTest : public gtest::TestLoopFixture {
     tiles_impl_.reset();
   }
 
-  fuchsia::developer::tiles::Tiles* tiles() const { return tiles_; }
+  fuchsia::developer::tiles::Controller* tiles() const { return tiles_; }
 
  private:
   FakeViewManager view_manager_;
   std::unique_ptr<component::testing::StartupContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
-  fuchsia::developer::tiles::Tiles* tiles_;
+  fuchsia::developer::tiles::Controller* tiles_;
 };
 
 TEST_F(TilesTest, Trivial) {}

@@ -19,7 +19,7 @@ namespace tiles {
 
 class Tiles : public fuchsia::ui::viewsv1::ViewListener,
               public fuchsia::ui::viewsv1::ViewContainerListener,
-              public fuchsia::developer::tiles::Tiles {
+              public fuchsia::developer::tiles::Controller {
  public:
   Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
         fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
@@ -57,7 +57,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) final;
 
-  // |fuchsia::developer::tiles::Tiles|:
+  // |fuchsia::developer::tiles::Controller|:
   void AddTileFromURL(fidl::StringPtr url,
                       fidl::VectorPtr<fidl::StringPtr> args,
                       AddTileFromURLCallback callback) final;
@@ -72,8 +72,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
 
   void AddChildView(
       uint32_t child_key,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       const std::string& url, fuchsia::sys::ComponentControllerPtr);
 
   void InvalidateScene();
@@ -98,7 +97,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
   fuchsia::ui::viewsv1::ViewContainerPtr view_container_;
 
   fuchsia::sys::LauncherPtr launcher_;
-  fidl::BindingSet<fuchsia::developer::tiles::Tiles> tiles_binding_;
+  fidl::BindingSet<fuchsia::developer::tiles::Controller> tiles_binding_;
 
   fuchsia::math::SizeF size_;
 

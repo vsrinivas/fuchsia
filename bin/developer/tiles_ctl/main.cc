@@ -19,7 +19,7 @@
 #include "lib/fxl/memory/unique_object.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
-using TilesPtr = fuchsia::developer::tiles::TilesSyncPtr;
+using ControllerPtr = fuchsia::developer::tiles::ControllerSyncPtr;
 
 struct UniqueDIRTraits {
   static DIR* InvalidValue() { return nullptr; }
@@ -51,7 +51,7 @@ std::string FirstNumericEntryInDir(const UniqueDIR& dir) {
   return "";
 }
 
-TilesPtr FindTiles() {
+ControllerPtr FindTiles() {
   std::string sys_realm_entry;
   UniqueDIR sys(opendir("/hub/r/sys/"));
   if (sys.is_valid()) {
@@ -89,9 +89,9 @@ TilesPtr FindTiles() {
   }
 
   zx::channel svc_channel = fsl::CloneChannelFromFileDescriptor(tile_svc.get());
-  TilesPtr tiles;
+  ControllerPtr tiles;
   zx_status_t st = fdio_service_connect_at(
-      svc_channel.release(), fuchsia::developer::tiles::Tiles::Name_,
+      svc_channel.release(), fuchsia::developer::tiles::Controller::Name_,
       tiles.NewRequest().TakeChannel().get());
   if (st != ZX_OK) {
     fprintf(stderr, "Couldn't connect to tile service: %d\n", st);
