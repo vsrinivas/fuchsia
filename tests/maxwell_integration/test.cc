@@ -31,8 +31,10 @@ component::Services MaxwellTestBase::StartServices(const std::string& url) {
   child_app_services_.AddBinding(service_list->provider.NewRequest());
   launch_info.additional_services = std::move(service_list);
 
+  fuchsia::sys::ComponentControllerPtr component_ptr;
   startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                nullptr);
+                                                component_ptr.NewRequest());
+  component_ptrs_.push_back(std::move(component_ptr));
   return services;
 }
 

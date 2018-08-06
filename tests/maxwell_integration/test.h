@@ -46,6 +46,7 @@ class MaxwellTestBase : public testing::Test {
  private:
   std::unique_ptr<component::StartupContext> startup_context_;
   std::unique_ptr<AgentLauncher> agent_launcher_;
+  std::vector<fuchsia::sys::ComponentControllerPtr> component_ptrs_;
 
   component::ServiceProviderImpl child_app_services_;
   modular::ComponentContextFake child_component_context_;
