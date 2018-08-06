@@ -60,7 +60,6 @@ constexpr TypeShape kUint16TypeShape = TypeShape(2u, 2u);
 constexpr TypeShape kUint32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kUint64TypeShape = TypeShape(8u, 8u);
 constexpr TypeShape kBoolTypeShape = TypeShape(1u, 1u);
-constexpr TypeShape kStatusTypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat64TypeShape = TypeShape(8u, 8u);
 
@@ -200,8 +199,6 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
         return kUint64TypeShape;
     case types::PrimitiveSubtype::kBool:
         return kBoolTypeShape;
-    case types::PrimitiveSubtype::kStatus:
-        return kStatusTypeShape;
     case types::PrimitiveSubtype::kFloat32:
         return kFloat32TypeShape;
     case types::PrimitiveSubtype::kFloat64:
@@ -811,8 +808,6 @@ bool Library::TypecheckConst(const Const* const_declaration) {
                     return true;
                 case types::PrimitiveSubtype::kBool:
                     return Fail("Tried to assign a numeric literal into a bool");
-                case types::PrimitiveSubtype::kStatus:
-                    return Fail("Tried to assign a numeric literal into a status");
                 }
             case raw::Literal::Kind::kTrue:
             case raw::Literal::Kind::kFalse:
@@ -830,8 +825,6 @@ bool Library::TypecheckConst(const Const* const_declaration) {
                 case types::PrimitiveSubtype::kFloat32:
                 case types::PrimitiveSubtype::kFloat64:
                     return Fail("Tried to assign a bool into a numeric type");
-                case types::PrimitiveSubtype::kStatus:
-                    return Fail("Tried to assign a bool into a status");
                 }
             }
         }
@@ -1100,7 +1093,6 @@ bool Library::CompileEnum(Enum* enum_declaration) {
         break;
 
     case types::PrimitiveSubtype::kBool:
-    case types::PrimitiveSubtype::kStatus:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
         // These are not allowed as enum subtypes.

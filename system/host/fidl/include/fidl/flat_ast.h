@@ -269,7 +269,6 @@ struct PrimitiveType : public Type {
             return 2u;
 
         case types::PrimitiveSubtype::kFloat32:
-        case types::PrimitiveSubtype::kStatus:
         case types::PrimitiveSubtype::kInt32:
         case types::PrimitiveSubtype::kUint32:
             return 4u;

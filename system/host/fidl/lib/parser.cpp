@@ -8,7 +8,6 @@ namespace fidl {
 
 #define TOKEN_PRIMITIVE_TYPE_CASES \
     case Token::Kind::kBool:       \
-    case Token::Kind::kStatus:     \
     case Token::Kind::kInt8:       \
     case Token::Kind::kInt16:      \
     case Token::Kind::kInt32:      \
@@ -398,9 +397,6 @@ std::unique_ptr<raw::PrimitiveType> Parser::ParsePrimitiveType() {
     switch (Peek()) {
     case Token::Kind::kBool:
         subtype = types::PrimitiveSubtype::kBool;
-        break;
-    case Token::Kind::kStatus:
-        subtype = types::PrimitiveSubtype::kStatus;
         break;
     case Token::Kind::kInt8:
         subtype = types::PrimitiveSubtype::kInt8;

@@ -743,7 +743,6 @@
                     "type": "string",
                     "enum": [
                         "bool",
-                        "status",
                         "float32",
                         "float64"
                     ]

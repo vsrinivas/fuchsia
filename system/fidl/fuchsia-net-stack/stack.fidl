@@ -58,7 +58,7 @@ struct InterfaceInfo {
 
     // The status of the interface. This is a bitfield containing the "Status constants" in this
     // file.
-    uint32 @status;
+    uint32 status;
 
     // The list of addresses currently assigned to the interface.
     vector<InterfaceAddress> addresses;

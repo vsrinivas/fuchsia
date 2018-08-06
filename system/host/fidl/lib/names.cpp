@@ -60,8 +60,6 @@ std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
         return "uint64_t";
     case types::PrimitiveSubtype::kBool:
         return "bool";
-    case types::PrimitiveSubtype::kStatus:
-        return "zx_status_t";
     case types::PrimitiveSubtype::kFloat32:
         return "float";
     case types::PrimitiveSubtype::kFloat64:
@@ -89,8 +87,6 @@ std::string NamePrimitiveSubtype(types::PrimitiveSubtype subtype) {
         return "uint64";
     case types::PrimitiveSubtype::kBool:
         return "bool";
-    case types::PrimitiveSubtype::kStatus:
-        return "status";
     case types::PrimitiveSubtype::kFloat32:
         return "float32";
     case types::PrimitiveSubtype::kFloat64:
@@ -105,7 +101,6 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
     case types::PrimitiveSubtype::kInt16:
         return "INT16_C";
     case types::PrimitiveSubtype::kInt32:
-    case types::PrimitiveSubtype::kStatus:
         return "INT32_C";
     case types::PrimitiveSubtype::kInt64:
         return "INT64_C";

@@ -15,7 +15,7 @@ interface Resolver {
     // For example, the resolver might locate the given |name| inside a package
     // and return the exectuable binary from the package as well as a shared
     // library loader scoped to that package.
-    1: Resolve(string:4096 name) -> (zx.@status @status,
+    1: Resolve(string:4096 name) -> (zx.status status,
                                      handle<vmo>? executable,
                                      handle<channel>? ldsvc);
 };

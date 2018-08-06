@@ -130,7 +130,7 @@ interface EncoderFactory {
     //          single project_id.
     2: GetEncoderForProject(ProjectProfile profile,
                             request<Encoder> encoder)
-        -> (Status @status);
+        -> (Status status);
 };
 
 // Encoder accumulates Observations in a local cache and periodically
@@ -154,7 +154,7 @@ interface Encoder {
     //               restrict the set of values to a pre-defined list.
     1: AddStringObservation(uint32 metric_id, uint32 encoding_id,
                             string observation)
-        -> (Status @status);
+        -> (Status status);
 
     // Adds an integer observation. It will eventually be sent to the Cobalt
     // server.
@@ -171,7 +171,7 @@ interface Encoder {
     //               restrict the set of values to a pre-defined list.
     4: AddIntObservation(uint32 metric_id, uint32 encoding_id,
                          int64 observation)
-        -> (Status @status);
+        -> (Status status);
 
     // Adds a double observation. It will eventually be sent to the Cobalt
     // server.
@@ -187,7 +187,7 @@ interface Encoder {
     //               the definition of the metric and encoding.
     5: AddDoubleObservation(uint32 metric_id, uint32 encoding_id,
                             float64 observation)
-        -> (Status @status);
+        -> (Status status);
 
     // Adds an observation specified by its index. This only makes sense if
     // the specified metric and encoding are consistent with values of type
@@ -215,7 +215,7 @@ interface Encoder {
     //          a label with an index in order to use the index here. Also the
     //          label may be added or changed later.
     2: AddIndexObservation(uint32 metric_id, uint32 encoding_id, uint32 index)
-        -> (Status @status);
+        -> (Status status);
 
     // Adds an observation. It will eventually be sent to the Cobalt server.
     // This version of Add*Observation() allows the user to specify the
@@ -232,7 +232,7 @@ interface Encoder {
     // |observation| The Observation to be encoded. The runtime type must be
     //               consistent with the definition of the metric and encoding.
     8: AddObservation(uint32 metric_id, uint32 encoding_id, Value observation)
-        -> (Status @status);
+        -> (Status status);
 
     // Adds a distribution of int observations. It will eventually be sent to
     // the Cobalt server.
@@ -251,7 +251,7 @@ interface Encoder {
     //                with Cobalt.
     7: AddIntBucketDistribution(uint32 metric_id, uint32 encoding_id,
                                 vector<BucketDistributionEntry> distribution)
-        -> (Status @status);
+        -> (Status status);
 
     // Adds a multi-part observation. It will eventually be sent to the Cobalt
     // server.
@@ -263,7 +263,7 @@ interface Encoder {
     //               consistent with the definition of the metric and encoding.
     6: AddMultipartObservation(uint32 metric_id,
                                vector<ObservationValue> observation)
-        -> (Status @status);
+        -> (Status status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This starts
@@ -326,7 +326,7 @@ interface Encoder {
     //              Observation with the given arguments and fails. See
     //              Cobalt::Status for more information.
     9: StartTimer(uint32 metric_id, uint32 encoding_id, string timer_id,
-                  uint64 timestamp, uint32 timeout_s) -> (Status @status);
+                  uint64 timestamp, uint32 timeout_s) -> (Status status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This ends the
@@ -378,7 +378,7 @@ interface Encoder {
     //              Observation with the given arguments and fails. See
     //              Cobalt::Status for more information.
     10: EndTimer(string timer_id, uint64 timestamp, uint32 timeout_s)
-        -> (Status @status);
+        -> (Status status);
 
     // This version of EndTimer() supports multi-part observations in which
     // there are other parts in addition to the time delta. See the
@@ -439,8 +439,8 @@ interface Encoder {
     11: EndTimerMultiPart(string timer_id, uint64 timestamp, string part_name,
                           vector<ObservationValue> observation,
                           uint32 timeout_s)
-        -> (Status @status);
+        -> (Status status);
 
     // Obsolete. This does nothing and always returns OK.
-    3: SendObservations() -> (Status @status);
+    3: SendObservations() -> (Status status);
 };

@@ -39,7 +39,7 @@ struct LaunchInfo {
 
 struct LaunchResult {
     // A status code describing the result of the launch.
-    zx.@status @status;
+    zx.status status;
 
     // A string describing the failure.
     //
@@ -94,7 +94,7 @@ struct ProcessStartData {
 
 struct CreateWithoutStartingResult {
     // A status code describing the result of the launch.
-    zx.@status @status;
+    zx.status status;
 
     // A string describing the failure.
     //

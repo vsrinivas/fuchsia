@@ -72,8 +72,8 @@ struct AddrInfo {
 [Discoverable, Layout="Simple"]
 interface LegacySocketProvider {
     1: OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
-        -> (handle<socket> s, int32 @status);
+        -> (handle<socket> s, int32 status);
     2: GetAddrInfo(String? node, String? service, AddrInfoHints? hints)
-        -> (AddrInfoStatus @status, int32 nres, AddrInfo? ai0, AddrInfo? ai1, AddrInfo? ai2, AddrInfo? ai3);
+        -> (AddrInfoStatus status, int32 nres, AddrInfo? ai0, AddrInfo? ai1, AddrInfo? ai2, AddrInfo? ai3);
     // TODO: change (nres, ai0, ai1, ai2, ai3) to a vector once we can.
 };
