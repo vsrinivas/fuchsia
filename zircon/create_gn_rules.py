@@ -382,10 +382,7 @@ def main():
     ]
 
     env = {}
-    if sys.platform == 'darwin':
-        # The Darwin bash does not know the path to its built-in commands in an
-        # empty environment. Thus, we always pass the PATH.
-        env['PATH'] = os.environ['PATH']
+    env['PATH'] = os.environ['PATH']
     if not debug:
         env['QUIET'] = '1'
     subprocess.check_call(make_args, cwd=ZIRCON_ROOT, env=env)
