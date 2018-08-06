@@ -6,7 +6,7 @@
 
 #include <ddk/driver.h>
 #include <ddk/device.h>
-#include <ddk/usb-request.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
