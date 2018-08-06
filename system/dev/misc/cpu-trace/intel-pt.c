@@ -68,7 +68,7 @@ typedef struct ipt_per_trace_state {
     io_buffer_t* topas;
 } ipt_per_trace_state_t;
 
-typedef struct ipt_device {
+typedef struct insntrace_device {
     ipt_trace_mode_t mode;
 
     // # of entries in |per_trace_state|.
@@ -85,19 +85,7 @@ typedef struct ipt_device {
 
     // Borrowed handle from cpu_trace_device.  Must not close
     zx_handle_t bti;
-} ipt_device_t;
-
-// This struct is temporary, pending subsuming the "ipt" device driver
-// within a more general "cpu-trace" device driver.
-typedef struct ipt_uber_device {
-    mtx_t lock;
-
-    // Only one open of this device is supported at a time.
-    bool opened;
-
-    // At present we only support one allocated IPT session at a time.
-    ipt_device_t* ipt;
-} ipt_uber_device_t;
+} insntrace_device_t;
 
 static uint32_t ipt_config_family;
 static uint32_t ipt_config_model;
@@ -146,12 +134,12 @@ static bool ipt_config_lip = false;
 
 #define BIT(x, b) ((x) & (1u << (b)))
 
-static zx_status_t x86_pt_free(ipt_device_t* ipt_dev);
+static zx_status_t x86_pt_free(insntrace_device_t* ipt_dev);
 
 
 // The userspace side of the driver
 
-void ipt_init_once(void)
+void insntrace_init_once(void)
 {
     unsigned a, b, c, d, max_leaf;
 
@@ -221,7 +209,7 @@ void ipt_init_once(void)
 // Create the ToPA for the configured number of pages for |cpu|.
 // A circular collection of buffers is set up, even if we're going to apply
 // the stop bit to the last entry.
-static void make_topa(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
+static void make_topa(insntrace_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
     const size_t run_len_log2 = per_trace->chunk_order;
     assert(run_len_log2 + PAGE_SIZE_SHIFT <= IPT_TOPA_MAX_SHIFT);
     assert(run_len_log2 + PAGE_SIZE_SHIFT >= IPT_TOPA_MIN_SHIFT);
@@ -295,7 +283,8 @@ static void make_topa(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
 // Compute the number of ToPA entries needed for the configured number of
 // buffers.
 // The output count includes the END entries across all needed tables.
-static uint32_t compute_topa_entry_count(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
+static uint32_t compute_topa_entry_count(insntrace_device_t* ipt_dev,
+                                         ipt_per_trace_state_t* per_trace) {
     uint32_t num_entries = per_trace->num_chunks;
     uint32_t num_end_entries = (num_entries + IPT_TOPA_MAX_TABLE_ENTRIES - 2) /
         (IPT_TOPA_MAX_TABLE_ENTRIES - 1);
@@ -310,7 +299,8 @@ static uint32_t compute_topa_entry_count(ipt_device_t* ipt_dev, ipt_per_trace_st
 
 // Walk the tables to discover how much data has been captured for |per_trace|.
 // Note: If this is a circular buffer this is just where tracing stopped.
-static size_t compute_capture_size(ipt_device_t* ipt_dev, const ipt_per_trace_state_t* per_trace) {
+static size_t compute_capture_size(insntrace_device_t* ipt_dev,
+                                   const ipt_per_trace_state_t* per_trace) {
     uint64_t curr_table_paddr = per_trace->output_base;
     uint32_t curr_table_entry_idx = (uint32_t)per_trace->output_mask_ptrs >> 7;
     uint32_t curr_entry_offset = (uint32_t)(per_trace->output_mask_ptrs >> 32);
@@ -342,8 +332,10 @@ static size_t compute_capture_size(ipt_device_t* ipt_dev, const ipt_per_trace_st
     return 0;
 }
 
-static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace,
-                                        uint32_t num, uint32_t order, bool is_circular) {
+static zx_status_t x86_pt_alloc_buffer1(insntrace_device_t* ipt_dev,
+                                        ipt_per_trace_state_t* per_trace,
+                                        uint32_t num, uint32_t order,
+                                        bool is_circular) {
     zx_status_t status;
     size_t chunk_pages = 1 << order;
 
@@ -418,7 +410,7 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
     return ZX_OK;
 }
 
-static void x86_pt_free_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
+static void x86_pt_free_buffer1(insntrace_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
     for (uint32_t i = 0; i < per_trace->num_chunks; ++i) {
         io_buffer_release(&per_trace->chunks[i]);
     }
@@ -434,7 +426,7 @@ static void x86_pt_free_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_state_t* pe
     per_trace->allocated = false;
 }
 
-static zx_status_t x86_pt_alloc_buffer(ipt_device_t* ipt_dev,
+static zx_status_t x86_pt_alloc_buffer(insntrace_device_t* ipt_dev,
                                        const ioctl_ipt_buffer_config_t* config,
                                        uint32_t* out_index) {
     zxlogf(DEBUG1, "%s: num_chunks %u, chunk_order %u\n",
@@ -535,19 +527,21 @@ static zx_status_t x86_pt_alloc_buffer(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t x86_pt_assign_buffer_thread(ipt_device_t* ipt_dev, uint32_t index, zx_handle_t thread) {
+static zx_status_t x86_pt_assign_buffer_thread(insntrace_device_t* ipt_dev,
+                                               uint32_t index, zx_handle_t thread) {
     zx_handle_close(thread);
     // TODO(dje): Thread support is still work-in-progress.
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t x86_pt_release_buffer_thread(ipt_device_t* ipt_dev, uint32_t index, zx_handle_t thread) {
+static zx_status_t x86_pt_release_buffer_thread(insntrace_device_t* ipt_dev,
+                                                uint32_t index, zx_handle_t thread) {
     zx_handle_close(thread);
     // TODO(dje): Thread support is still work-in-progress.
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t x86_pt_free_buffer(ipt_device_t* ipt_dev, uint32_t index) {
+static zx_status_t x86_pt_free_buffer(insntrace_device_t* ipt_dev, uint32_t index) {
     if (ipt_dev->active)
         return ZX_ERR_BAD_STATE;
     if (index >= ipt_dev->num_traces)
@@ -592,10 +586,10 @@ static zx_status_t ipt_alloc_trace(cpu_trace_device_t* dev,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (dev->ipt)
+    if (dev->insntrace)
         return ZX_ERR_BAD_STATE;
 
-    ipt_device_t* ipt_dev = calloc(1, sizeof(*dev->ipt));
+    insntrace_device_t* ipt_dev = calloc(1, sizeof(*dev->insntrace));
     if (!ipt_dev)
         return ZX_ERR_NO_MEMORY;
 
@@ -619,12 +613,12 @@ static zx_status_t ipt_alloc_trace(cpu_trace_device_t* dev,
     }
 
     ipt_dev->mode = internal_mode;
-    dev->ipt = ipt_dev;
+    dev->insntrace = ipt_dev;
     return ZX_OK;
 }
 
 static zx_status_t ipt_free_trace(cpu_trace_device_t* dev) {
-    ipt_device_t* ipt_dev = dev->ipt;
+    insntrace_device_t* ipt_dev = dev->insntrace;
     if (ipt_dev->active)
         return ZX_ERR_BAD_STATE;
 
@@ -644,11 +638,11 @@ static zx_status_t ipt_free_trace(cpu_trace_device_t* dev) {
 
     free(ipt_dev->per_trace_state);
     free(ipt_dev);
-    dev->ipt = NULL;
+    dev->insntrace = NULL;
     return ZX_OK;
 }
 
-static zx_status_t ipt_get_trace_config(ipt_device_t* ipt_dev,
+static zx_status_t ipt_get_trace_config(insntrace_device_t* ipt_dev,
                                         void* reply, size_t replymax,
                                         size_t* out_actual) {
     ioctl_ipt_trace_config_t config;
@@ -670,7 +664,7 @@ static zx_status_t ipt_get_trace_config(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_alloc_buffer(ipt_device_t* ipt_dev,
+static zx_status_t ipt_alloc_buffer(insntrace_device_t* ipt_dev,
                                     const void* cmd, size_t cmdlen,
                                     void* reply, size_t replymax,
                                     size_t* out_actual) {
@@ -690,7 +684,7 @@ static zx_status_t ipt_alloc_buffer(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_assign_buffer_thread(ipt_device_t* ipt_dev,
+static zx_status_t ipt_assign_buffer_thread(insntrace_device_t* ipt_dev,
                                             const void* cmd, size_t cmdlen) {
     ioctl_ipt_assign_buffer_thread_t assign;
     if (cmdlen != sizeof(assign))
@@ -700,7 +694,7 @@ static zx_status_t ipt_assign_buffer_thread(ipt_device_t* ipt_dev,
     return x86_pt_assign_buffer_thread(ipt_dev, assign.descriptor, assign.thread);
 }
 
-static zx_status_t ipt_release_buffer_thread(ipt_device_t* ipt_dev,
+static zx_status_t ipt_release_buffer_thread(insntrace_device_t* ipt_dev,
                                              const void* cmd, size_t cmdlen) {
     ioctl_ipt_assign_buffer_thread_t assign;
     if (cmdlen != sizeof(assign))
@@ -710,7 +704,7 @@ static zx_status_t ipt_release_buffer_thread(ipt_device_t* ipt_dev,
     return x86_pt_release_buffer_thread(ipt_dev, assign.descriptor, assign.thread);
 }
 
-static zx_status_t ipt_get_buffer_config(ipt_device_t* ipt_dev,
+static zx_status_t ipt_get_buffer_config(insntrace_device_t* ipt_dev,
                                          const void* cmd, size_t cmdlen,
                                          void* reply, size_t replymax,
                                          size_t* out_actual) {
@@ -742,7 +736,7 @@ static zx_status_t ipt_get_buffer_config(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_get_buffer_info(ipt_device_t* ipt_dev,
+static zx_status_t ipt_get_buffer_info(insntrace_device_t* ipt_dev,
                                        const void* cmd, size_t cmdlen,
                                        void* reply, size_t replymax,
                                        size_t* out_actual) {
@@ -771,7 +765,7 @@ static zx_status_t ipt_get_buffer_info(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_get_chunk_handle(ipt_device_t* ipt_dev,
+static zx_status_t ipt_get_chunk_handle(insntrace_device_t* ipt_dev,
                                         const void* cmd, size_t cmdlen,
                                         void* reply, size_t replymax,
                                         size_t* out_actual) {
@@ -800,7 +794,7 @@ static zx_status_t ipt_get_chunk_handle(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_free_buffer(ipt_device_t* ipt_dev,
+static zx_status_t ipt_free_buffer(insntrace_device_t* ipt_dev,
                                    const void* cmd, size_t cmdlen) {
     uint32_t index;
     if (cmdlen != sizeof(index))
@@ -812,7 +806,7 @@ static zx_status_t ipt_free_buffer(ipt_device_t* ipt_dev,
 }
 
 // Begin tracing.
-static zx_status_t ipt_start(ipt_device_t* ipt_dev) {
+static zx_status_t ipt_start(insntrace_device_t* ipt_dev) {
     if (ipt_dev->active)
         return ZX_ERR_BAD_STATE;
     if (ipt_dev->mode != IPT_TRACE_CPUS)
@@ -858,7 +852,7 @@ static zx_status_t ipt_start(ipt_device_t* ipt_dev) {
 }
 
 // Stop tracing.
-static zx_status_t ipt_stop(ipt_device_t* ipt_dev) {
+static zx_status_t ipt_stop(insntrace_device_t* ipt_dev) {
     if (!ipt_dev->active)
         return ZX_ERR_BAD_STATE;
     assert(ipt_dev->per_trace_state);
@@ -898,13 +892,13 @@ static zx_status_t ipt_stop(ipt_device_t* ipt_dev) {
     return ZX_OK;
 }
 
-zx_status_t ipt_ioctl(cpu_trace_device_t* dev, uint32_t op,
-                      const void* cmd, size_t cmdlen,
-                      void* reply, size_t replymax,
-                      size_t* out_actual) {
-    assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_IPT);
+zx_status_t insntrace_ioctl(cpu_trace_device_t* dev, uint32_t op,
+                            const void* cmd, size_t cmdlen,
+                            void* reply, size_t replymax,
+                            size_t* out_actual) {
+    assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_INSNTRACE);
 
-    ipt_device_t* ipt_dev = dev->ipt;
+    insntrace_device_t* ipt_dev = dev->insntrace;
     if (op != IOCTL_IPT_ALLOC_TRACE) {
         if (!ipt_dev)
             return ZX_ERR_BAD_STATE;
@@ -968,11 +962,11 @@ zx_status_t ipt_ioctl(cpu_trace_device_t* dev, uint32_t op,
     }
 }
 
-void ipt_release(cpu_trace_device_t* dev) {
+void insntrace_release(cpu_trace_device_t* dev) {
     // TODO(dje): None of these should fail. What to do?
     // For now flag things as busted and prevent further use.
-    if (dev->ipt) {
-        ipt_stop(dev->ipt);
+    if (dev->insntrace) {
+        ipt_stop(dev->insntrace);
         ipt_free_trace(dev);
     }
 }

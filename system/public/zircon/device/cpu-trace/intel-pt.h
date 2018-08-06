@@ -200,19 +200,19 @@ typedef struct {
 // Input: ioctl_ipt_trace_config_t
 // TODO(dje): Later return a trace descriptor.
 #define IOCTL_IPT_ALLOC_TRACE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 0)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 0)
 IOCTL_WRAPPER_IN(ioctl_ipt_alloc_trace, IOCTL_IPT_ALLOC_TRACE, ioctl_ipt_trace_config_t);
 
 // release resources allocated with IOCTL_IPT_ALLOC_TRACE
 // TODO(dje): Later allow allocating multiple traces.
 #define IOCTL_IPT_FREE_TRACE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 1)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 1)
 IOCTL_WRAPPER(ioctl_ipt_free_trace, IOCTL_IPT_FREE_TRACE);
 
 // fetch the config of a trace
 // Output: ioctl_ipt_trace_config_t
 #define IOCTL_IPT_GET_TRACE_CONFIG \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 2)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 2)
 IOCTL_WRAPPER_OUT(ioctl_ipt_get_trace_config, IOCTL_IPT_GET_TRACE_CONFIG, ioctl_ipt_trace_config_t);
 
 typedef struct {
@@ -235,7 +235,7 @@ typedef struct {
 // When tracing cpus, buffers are auto-assigned to cpus: the resulting trace
 // buffer descriptor is the number of the cpu using the buffer.
 #define IOCTL_IPT_ALLOC_BUFFER \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 3)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 3)
 IOCTL_WRAPPER_INOUT(ioctl_ipt_alloc_buffer, IOCTL_IPT_ALLOC_BUFFER, ioctl_ipt_buffer_config_t, uint32_t);
 
 typedef struct {
@@ -247,14 +247,14 @@ typedef struct {
 // assign a buffer to a thread
 // Input: ioctl_ipt_assign_buffer_thread_t
 #define IOCTL_IPT_ASSIGN_BUFFER_THREAD \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_IPT, 4)
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 4)
 IOCTL_WRAPPER_IN(ioctl_ipt_assign_buffer_thread, IOCTL_IPT_ASSIGN_BUFFER_THREAD,
                  ioctl_ipt_assign_buffer_thread_t);
 
 // release a buffer from a thread
 // Input: ioctl_ipt_assign_buffer_thread_t
 #define IOCTL_IPT_RELEASE_BUFFER_THREAD \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_IPT, 5)
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 5)
 IOCTL_WRAPPER_IN(ioctl_ipt_release_buffer_thread, IOCTL_IPT_RELEASE_BUFFER_THREAD,
                  ioctl_ipt_assign_buffer_thread_t);
 
@@ -262,7 +262,7 @@ IOCTL_WRAPPER_IN(ioctl_ipt_release_buffer_thread, IOCTL_IPT_RELEASE_BUFFER_THREA
 // Input: trace buffer descriptor
 // Output: ioctl_ipt_trace_buffer_config_t
 #define IOCTL_IPT_GET_BUFFER_CONFIG \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 6)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 6)
 IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_config, IOCTL_IPT_GET_BUFFER_CONFIG,
                     uint32_t, ioctl_ipt_buffer_config_t);
 
@@ -280,7 +280,7 @@ typedef struct {
 // Input: trace buffer descriptor
 // Output: ioctl_ipt_buffer_info_t
 #define IOCTL_IPT_GET_BUFFER_INFO \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 7)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 7)
 IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_info, IOCTL_IPT_GET_BUFFER_INFO,
                     uint32_t, ioctl_ipt_buffer_info_t);
 
@@ -294,25 +294,25 @@ typedef struct {
 // [There's no point in trying to micro-optimize this and, say, get 3 at
 // a time.]
 #define IOCTL_IPT_GET_CHUNK_HANDLE \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_IPT, 8)
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_INSNTRACE, 8)
 IOCTL_WRAPPER_INOUT(ioctl_ipt_get_chunk_handle, IOCTL_IPT_GET_CHUNK_HANDLE,
                     ioctl_ipt_chunk_handle_req_t, zx_handle_t);
 
 // free a trace buffer
 // Input: trace buffer descriptor
 #define IOCTL_IPT_FREE_BUFFER \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 9)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 9)
 IOCTL_WRAPPER_IN(ioctl_ipt_free_buffer, IOCTL_IPT_FREE_BUFFER,
                  uint32_t);
 
 // turn on processor tracing
 #define IOCTL_IPT_START \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 10)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 10)
 IOCTL_WRAPPER(ioctl_ipt_start, IOCTL_IPT_START);
 
 // turn off processor tracing
 #define IOCTL_IPT_STOP \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 11)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 11)
 IOCTL_WRAPPER(ioctl_ipt_stop, IOCTL_IPT_STOP);
 
 #endif // __Fuchsia__

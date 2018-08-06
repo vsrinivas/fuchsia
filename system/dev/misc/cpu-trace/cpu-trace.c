@@ -48,14 +48,16 @@ static zx_status_t cpu_trace_ioctl(void* ctx, uint32_t op,
 
     ssize_t result;
     switch (IOCTL_FAMILY(op)) {
+#ifdef __x86_64__
         case IOCTL_FAMILY_CPUPERF:
-            result = ipm_ioctl(dev, op, cmd, cmdlen,
-                               reply, replymax, out_actual);
+            result = cpuperf_ioctl(dev, op, cmd, cmdlen,
+                                   reply, replymax, out_actual);
             break;
-        case IOCTL_FAMILY_IPT:
-            result = ipt_ioctl(dev, op, cmd, cmdlen,
-                               reply, replymax, out_actual);
+        case IOCTL_FAMILY_INSNTRACE:
+            result = insntrace_ioctl(dev, op, cmd, cmdlen,
+                                     reply, replymax, out_actual);
             break;
+#endif
         default:
             result = ZX_ERR_INVALID_ARGS;
             break;
@@ -69,8 +71,10 @@ static zx_status_t cpu_trace_ioctl(void* ctx, uint32_t op,
 static void cpu_trace_release(void* ctx) {
     cpu_trace_device_t* dev = ctx;
 
-    ipt_release(dev);
-    ipm_release(dev);
+#ifdef __x86_64__
+    insntrace_release(dev);
+    cpuperf_release(dev);
+#endif
 
     zx_handle_close(dev->bti);
     free(dev);
@@ -85,8 +89,10 @@ static zx_protocol_device_t cpu_trace_device_proto = {
 };
 
 static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
-    ipt_init_once();
-    ipm_init_once();
+#ifdef __x86_64__
+    insntrace_init_once();
+    cpuperf_init_once();
+#endif
 
     platform_device_protocol_t pdev;
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
