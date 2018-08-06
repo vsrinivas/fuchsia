@@ -28,7 +28,7 @@ int usage(void) {
     fprintf(stderr, " N and BYTES may be followed by the following multiplicitive\n"
                     " suffixes: c = 1, w = 2, b = 512, kB = 1000, K = 1024,\n"
                     "           MB = 1000 * 1000, M = 1024 * 1024, xM = M,\n"
-                    "           GB = 1000 * 1000 * 1000, GB = 1024 * 1024 * 1024\n");
+                    "           GB = 1000 * 1000 * 1000, G = 1024 * 1024 * 1024\n");
     fprintf(stderr, " --help : Show this help message\n");
     return -1;
 }
