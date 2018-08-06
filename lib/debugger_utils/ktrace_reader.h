@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 
 namespace debugger_utils {
 

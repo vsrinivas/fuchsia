@@ -16,7 +16,7 @@ namespace {
   {num, KTRACE_GRP_##group, TAG_TYPE_##type, #name},
 
 constexpr TagInfo kTags[] = {
-#include <zircon/ktrace-def.h>
+#include <lib/zircon-internal/ktrace-def.h>
 };
 
 std::once_flag g_tags_once;

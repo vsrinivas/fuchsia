@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_READER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_READER_H_
 
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"

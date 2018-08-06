@@ -13,7 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 
 #include "ktrace_reader.h"
 
@@ -56,7 +56,7 @@ const char* KtraceRecName(uint32_t tag) {
 #define KTRACE_DEF(num, type, name, group)     \
   case KTRACE_TAG(num, KTRACE_GRP_##group, 0): \
     return #name;
-#include <zircon/ktrace-def.h>
+#include <lib/zircon-internal/ktrace-def.h>
     default:
       return "UNKNOWN";
   }
@@ -94,7 +94,7 @@ static void DumpRecord(const debugger_utils::KtraceRecord* rec) {
   case KTRACE_TAG(num, KTRACE_GRP_##group, 0): \
     Dump_##type(&rec->r_##type);               \
     break;
-#include <zircon/ktrace-def.h>
+#include <lib/zircon-internal/ktrace-def.h>
     default:
       printf(" ???");
       break;

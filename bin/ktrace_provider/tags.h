@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_TAGS_H_
 #define GARNET_BIN_KTRACE_PROVIDER_TAGS_H_
 
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 
 #include "stdint.h"
 

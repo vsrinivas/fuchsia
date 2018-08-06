@@ -46,12 +46,16 @@ static_library("debugger_utils") {
     ]
   }
 
+  public_deps = [
+    "//zircon/public/lib/zircon-internal",
+  ]
+
   deps = [
     "//garnet/public/lib/fxl",
   ]
 
   if (is_fuchsia) {
-    public_deps = [ "//zircon/public/lib/zx" ]
+    public_deps += [ "//zircon/public/lib/zx" ]
   } else {
     deps += [ "//zircon/system/public" ]
   }
