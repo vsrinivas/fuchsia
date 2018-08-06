@@ -24,7 +24,9 @@ function listen {
     if [[ $? -eq 0 ]]; then
       echo "Connecting to device..."
       (fx-command-exec ssh "${addr}" /system/bin/log_listener "$@" || true)
-      echo "Connection lost, looking for device"
+      if [[ $? -eq 0 ]]; then
+        break
+      fi
     fi
   done
 }
@@ -43,4 +45,4 @@ case $1 in
 esac
 
 echo "Looking for device"
-listen
+listen $@
