@@ -11,6 +11,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
+#include <fbl/unique_fd.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -22,17 +23,19 @@
 #include "lib/fxl/logging.h"
 
 static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
-
 // Number of threads reading from the async device port.
 static constexpr size_t kNumAsyncWorkers = 2;
+static constexpr uint32_t kMapFlags =
+    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE |
+    ZX_VM_FLAG_SPECIFIC;
 
-static zx_status_t guest_get_resource(zx_handle_t* resource) {
-  int fd = open(kResourcePath, O_RDWR);
-  if (fd < 0) {
+static zx_status_t guest_get_resource(zx::resource* resource) {
+  fbl::unique_fd fd(open(kResourcePath, O_RDWR));
+  if (!fd) {
     return ZX_ERR_IO;
   }
-  ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, resource);
-  close(fd);
+  ssize_t n = ioctl_sysinfo_get_hypervisor_resource(
+      fd.get(), resource->reset_and_get_address());
   return n < 0 ? ZX_ERR_IO : ZX_OK;
 }
 
@@ -52,8 +55,6 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
 
 namespace machina {
 
-Guest::Guest() : device_loop_(&kAsyncLoopConfigNoAttachToThread) {}
-
 zx_status_t Guest::Init(size_t mem_size) {
   zx_status_t status = phys_mem_.Init(mem_size);
   if (status != ZX_OK) {
@@ -61,19 +62,25 @@ zx_status_t Guest::Init(size_t mem_size) {
     return status;
   }
 
-  zx_handle_t resource;
+  zx::resource resource;
   status = guest_get_resource(&resource);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get hypervisor resource";
     return status;
   }
 
-  status = zx_guest_create(resource, 0, phys_mem_.vmo().get(), &guest_);
+  status = zx::guest::create(resource, 0, &guest_, &vmar_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create guest";
     return status;
   }
-  zx_handle_close(resource);
+
+  zx_gpaddr_t addr;
+  status = vmar_.map(0, phys_mem_.vmo(), 0, mem_size, kMapFlags, &addr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to map guest physical memory";
+    return status;
+  }
 
   for (size_t i = 0; i < kNumAsyncWorkers; ++i) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
@@ -87,8 +94,6 @@ zx_status_t Guest::Init(size_t mem_size) {
 
   return ZX_OK;
 }
-
-Guest::~Guest() { zx_handle_close(guest_); }
 
 zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
                                  uint64_t offset, IoHandler* handler) {

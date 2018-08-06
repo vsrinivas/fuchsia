@@ -4,10 +4,11 @@
 
 #include "garnet/lib/machina/io.h"
 
+#include <lib/fxl/logging.h>
 #include <zircon/syscalls/hypervisor.h>
+#include <zx/port.h>
 
 #include "garnet/lib/machina/guest.h"
-#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -24,13 +25,11 @@ IoMapping::IoMapping(uint32_t kind, uint64_t base, size_t size, uint64_t offset,
 
 zx_status_t IoMapping::SetTrap(Guest* guest) {
   if (kind_ == ZX_GUEST_TRAP_BELL) {
-    return async_trap_.SetTrap(guest->device_dispatcher(),
-                               *zx::unowned_guest(guest->handle()), base_,
-                               size_);
+    return async_trap_.SetTrap(guest->device_dispatcher(), *guest->object(),
+                               base_, size_);
   } else {
     uintptr_t key = reinterpret_cast<uintptr_t>(this);
-    return zx_guest_set_trap(guest->handle(), kind_, base_, size_,
-                             ZX_HANDLE_INVALID, key);
+    return guest->object()->set_trap(kind_, base_, size_, zx::port(), key);
   }
 }
 

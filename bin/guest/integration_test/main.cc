@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <limits.h>
 
+#include <fbl/unique_fd.h>
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -83,25 +84,19 @@ TEST_F(ZirconGuestTest, LaunchGuest) {
 }
 
 zx_status_t hypervisor_supported() {
-  zx::vmo vmo;
-  size_t vmo_size = PAGE_SIZE;
-  zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  int fd = open("/dev/misc/sysinfo", O_RDWR);
-  if (fd < 0) {
+  fbl::unique_fd fd(open("/dev/misc/sysinfo", O_RDWR));
+  if (!fd) {
     return ZX_ERR_IO;
   }
-  zx_handle_t h;
-  ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, &h);
-  close(fd);
+  zx::resource resource;
+  ssize_t n = ioctl_sysinfo_get_hypervisor_resource(
+      fd.get(), resource.reset_and_get_address());
   if (n < 0) {
     return ZX_ERR_IO;
   }
-  zx::resource resource(std::move(h));
   zx::guest guest;
-  return zx::guest::create(resource, 0, vmo, &guest);
+  zx::vmar vmar;
+  return zx::guest::create(resource, 0, &guest, &vmar);
 }
 
 int main(int argc, char** argv) {

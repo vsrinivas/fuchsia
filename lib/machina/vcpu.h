@@ -12,6 +12,7 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+#include <zx/vcpu.h>
 
 typedef struct zx_vcpu_state zx_vcpu_state_t;
 
@@ -49,9 +50,6 @@ class Vcpu {
   // TODO(tjdetwiler): These should be made private as they're not thread-
   // safe.
   zx_status_t Interrupt(uint32_t vector);
-
-  zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
-  zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
   uint64_t id() const { return id_; }
 
@@ -117,7 +115,7 @@ class Vcpu {
   Guest* guest_;
   uint64_t id_;
   thrd_t thread_;
-  zx_handle_t vcpu_ = ZX_HANDLE_INVALID;
+  zx::vcpu vcpu_;
   State state_ __TA_GUARDED(mutex_) = State::UNINITIALIZED;
   cnd_t state_cnd_;
   fbl::Mutex mutex_;
