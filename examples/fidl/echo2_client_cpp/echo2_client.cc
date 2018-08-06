@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
@@ -31,9 +29,10 @@ int main(int argc, const char** argv) {
   echo2::EchoClientApp app;
   app.Start(server_url);
 
-  app.echo()->EchoString(msg, [](fidl::StringPtr value) {
+  app.echo()->EchoString(msg, [&loop](fidl::StringPtr value) {
     printf("***** Response: %s\n", value->data());
+    loop.Quit();
   });
 
-  return app.echo().WaitForResponse();
+  return loop.Run();
 }
