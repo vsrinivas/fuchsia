@@ -52,6 +52,7 @@ import (
 	"unsafe"
 
 	"netstack/trace"
+	nsfidl "fidl/fuchsia/netstack"
 )
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
@@ -116,7 +117,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 	if err != nil {
 		return nil, err
 	}
-	if info.Features&FeatureSynth != 0 {
+	if info.Features&nsfidl.InterfaceFeatureSynth != 0 {
 		return nil, fmt.Errorf("eth: ignoring synthetic device")
 	}
 

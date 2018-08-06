@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"fidl/fuchsia/devicesettings"
+	nsfidl "fidl/fuchsia/netstack"
 	"netstack/filter"
 	"netstack/link/eth"
 	"netstack/link/stats"
@@ -272,7 +273,7 @@ func (ifs *ifState) onEthRestart() {
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 	// TODO(NET-298): remove special case for WLAN after fix for multiple DHCP clients
 	// is enabled
-	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&eth.FeatureWlan != 0)
+	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&nsfidl.InterfaceFeatureWlan != 0)
 }
 
 func (ifs *ifState) onEthStop() {
@@ -347,7 +348,7 @@ func (ns *netstack) addLoopback() error {
 		ID:       nicid,
 		Addr:     header.IPv4Loopback,
 		Netmask:  tcpip.AddressMask(strings.Repeat("\xff", 4)),
-		Features: eth.FeatureLoopback,
+		Features: nsfidl.InterfaceFeatureLoopback,
 		Routes: []tcpip.Route{
 			{
 				Destination: header.IPv4Loopback,
@@ -500,7 +501,7 @@ func (ns *netstack) addEth(path string) error {
 
 	// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
 	// in third_party/netstack.
-	if client.Features&eth.FeatureWlan != 0 {
+	if client.Features&nsfidl.InterfaceFeatureWlan != 0 {
 		// WLAN: Upon 802.1X port open, the state change will ensue, which
 		// will invoke the DHCP Client.
 		return nil
@@ -515,9 +516,9 @@ func (ns *netstack) addEth(path string) error {
 }
 
 func setNICName(nic *netiface.NIC) {
-	if nic.Features&eth.FeatureLoopback != 0 {
+	if nic.Features&nsfidl.InterfaceFeatureLoopback != 0 {
 		nic.Name = "lo"
-	} else if nic.Features&eth.FeatureWlan != 0 {
+	} else if nic.Features&nsfidl.InterfaceFeatureWlan != 0 {
 		nic.Name = fmt.Sprintf("wlan%d", nic.ID)
 	} else {
 		nic.Name = fmt.Sprintf("en%d", nic.ID)

@@ -16,6 +16,7 @@ import (
 
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
+	nsfidl "fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -45,13 +46,13 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	features := []stack.InterfaceFeature{}
-	if ifs.nic.Features&eth.FeatureWlan != 0 {
+	if ifs.nic.Features&nsfidl.InterfaceFeatureWlan != 0 {
 		features = append(features, stack.InterfaceFeatureWlan)
 	}
-	if ifs.nic.Features&eth.FeatureSynth != 0 {
+	if ifs.nic.Features&nsfidl.InterfaceFeatureSynth != 0 {
 		features = append(features, stack.InterfaceFeatureSynthetic)
 	}
-	if ifs.nic.Features&eth.FeatureLoopback != 0 {
+	if ifs.nic.Features&nsfidl.InterfaceFeatureLoopback != 0 {
 		features = append(features, stack.InterfaceFeatureLoopback)
 	}
 

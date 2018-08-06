@@ -36,18 +36,6 @@ type EthInfo struct {
 	_        [12]uint32
 } // eth_info_t
 
-// LINT.IfChange
-const (
-	FeatureWlan     = 0x01
-	FeatureSynth    = 0x02
-	FeatureLoopback = 0x04
-)
-
-// LINT.ThenChange(
-//	 //zircon/system/public/zircon/device/ethernet.h,
-//	 //garnet/public/fidl/fuchsia.netstack/netstack.fidl
-// )
-
 type ethfifos struct {
 	// fifo handles
 	tx zx.Handle
