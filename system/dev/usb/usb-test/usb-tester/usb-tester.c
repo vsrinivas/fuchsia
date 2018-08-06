@@ -31,6 +31,8 @@ typedef struct {
 typedef struct {
     usb_request_t* req;
     sync_completion_t completion;  // This will be passed as the request cookie.
+
+    list_node_t node;
 } test_req_t;
 
 static void test_req_complete(usb_request_t* req, void* cookie) {
@@ -72,8 +74,7 @@ static void test_req_release(usb_tester_t* usb_tester, test_req_t* test_req) {
 // Waits for the request to complete and verifies its completion status and transferred length.
 // Returns ZX_OK if the request completed successfully, and the transferred length equals the
 // requested length.
-static zx_status_t usb_tester_wait_req_complete(usb_tester_t* usb_tester,
-                                                test_req_t* test_req) {
+static zx_status_t test_req_wait_complete(usb_tester_t* usb_tester, test_req_t* test_req) {
     usb_request_t* req = test_req->req;
 
     zx_status_t status = sync_completion_wait(&test_req->completion, ZX_SEC(REQ_TIMEOUT_SECS));
@@ -104,9 +105,15 @@ static zx_status_t usb_tester_wait_req_complete(usb_tester_t* usb_tester,
     }
 }
 
-// Fills the given buffer with data of the requested pattern, of len number of bytes.
-static zx_status_t usb_tester_fill_data(uint8_t* buf, uint32_t data_pattern, size_t len) {
-    for (size_t i = 0; i < len; ++i) {
+// Fills the given test request with data of the requested pattern.
+static zx_status_t test_req_fill_data(usb_tester_t* usb_tester, test_req_t* test_req,
+                                      uint32_t data_pattern) {
+    uint8_t* buf;
+    zx_status_t status = usb_req_mmap(&usb_tester->usb, test_req->req, (void**)&buf);
+    if (status != ZX_OK) {
+        return status;
+    }
+    for (size_t i = 0; i < test_req->req->header.length; ++i) {
         switch (data_pattern) {
         case USB_TESTER_DATA_PATTERN_CONSTANT:
             buf[i] = TEST_DUMMY_DATA;
@@ -121,6 +128,60 @@ static zx_status_t usb_tester_fill_data(uint8_t* buf, uint32_t data_pattern, siz
     return ZX_OK;
 }
 
+// Removes and frees the requests contained in the test_reqs list.
+static void test_req_list_release_reqs(usb_tester_t* usb_tester, list_node_t* test_reqs) {
+    test_req_t* test_req;
+    test_req_t* temp;
+    list_for_every_entry_safe(test_reqs, test_req, temp, test_req_t, node) {
+        list_delete(&test_req->node);
+        test_req_release(usb_tester, test_req);
+    }
+}
+
+// Allocates the test requests and adds them to the out_test_reqs list.
+static zx_status_t test_req_list_alloc(usb_tester_t* usb_tester, int num_reqs, size_t len,
+                                       uint8_t ep_addr, list_node_t* out_test_reqs) {
+    for (int i = 0; i < num_reqs; ++i) {
+        test_req_t* test_req;
+        zx_status_t status = test_req_alloc(usb_tester, len, ep_addr, &test_req);
+        if (status != ZX_OK) {
+            test_req_list_release_reqs(usb_tester, out_test_reqs);
+            return status;
+        }
+        list_add_tail(out_test_reqs, &test_req->node);
+    }
+    return ZX_OK;
+}
+
+// Waits for the completion of each request contained in the test_reqs list in sequential order.
+// The caller should check each request for its completion status.
+static void test_req_list_wait_complete(usb_tester_t* usb_tester, list_node_t* test_reqs) {
+    test_req_t* test_req;
+    list_for_every_entry(test_reqs, test_req, test_req_t, node) {
+        test_req_wait_complete(usb_tester, test_req);
+    }
+}
+
+// Fills each request in the test_reqs list with data of the requested data_pattern.
+static zx_status_t test_req_list_fill_data(usb_tester_t* usb_tester, list_node_t* test_reqs,
+                                           uint32_t data_pattern) {
+    test_req_t* test_req;
+    list_for_every_entry(test_reqs, test_req, test_req_t, node) {
+        zx_status_t status = test_req_fill_data(usb_tester, test_req, data_pattern);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    return ZX_OK;
+}
+
+// Queues all requests contained in the test_reqs list.
+static void test_req_list_queue(usb_tester_t* usb_tester, list_node_t* test_reqs) {
+    test_req_t* test_req;
+    list_for_every_entry(test_reqs, test_req, test_req_t, node) {
+        usb_request_queue(&usb_tester->usb, test_req->req);
+    }
+}
 // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
 static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
                                             const usb_tester_params_t* params) {
@@ -139,22 +200,22 @@ static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
     if (status != ZX_OK) {
         goto done;
     }
-
-    uint8_t* out_data;
-    status = usb_req_mmap(&usb_tester->usb, out_req->req, (void**)&out_data);
-    if (status != ZX_OK) {
-        goto done;
-    }
-    status = usb_tester_fill_data(out_data, params->data_pattern, params->len);
+    status = test_req_fill_data(usb_tester, out_req, params->data_pattern);
     if (status != ZX_OK) {
         goto done;
     }
     usb_request_queue(&usb_tester->usb, out_req->req);
     usb_request_queue(&usb_tester->usb, in_req->req);
 
-    zx_status_t out_status = usb_tester_wait_req_complete(usb_tester, out_req);
-    zx_status_t in_status = usb_tester_wait_req_complete(usb_tester, in_req);
+    zx_status_t out_status = test_req_wait_complete(usb_tester, out_req);
+    zx_status_t in_status = test_req_wait_complete(usb_tester, in_req);
     status = out_status != ZX_OK ? out_status : in_status;
+    if (status != ZX_OK) {
+        goto done;
+    }
+
+    void* out_data;
+    status = usb_req_mmap(&usb_tester->usb, out_req->req, &out_data);
     if (status != ZX_OK) {
         goto done;
     }
