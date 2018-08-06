@@ -7,7 +7,7 @@ library fidl.examples.ordinals;
 interface Foo {
     1: SomeMethod();
     2: SomeMethodWithAResponse() -> ();
-    3: -> SomeEvent(status response);
+    3: -> SomeEvent(zx.@status response);
 };
 
 interface Bar {

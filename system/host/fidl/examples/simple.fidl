@@ -20,7 +20,7 @@ enum Direction : uint32 {
 interface Drawing {
     1: Draw(Point p, Direction d);
     2: DrawLots(handle<vmo> commands) -> (int32 result, Point p);
-    3: DrawArray(array<Point>:4 points) -> (status rv);
+    3: DrawArray(array<Point>:4 points) -> (zx.@status rv);
     4: -> DrawSucceeded(uint32 draws);
     5: Describe(string:64 one) -> (string:128 two);
 };

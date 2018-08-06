@@ -178,7 +178,7 @@ interface Controller {
   // Imports a VMO backed image. If tiling is not typeSimple, it is up to
   // the driver and client to agree on its meaning through some mechanism
   // outside the scope of this API.
-  2: ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (status res, uint64 image_id);
+  2: ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (zx.@status res, uint64 image_id);
 
   // Releases an image.
   //
@@ -209,7 +209,7 @@ interface Controller {
   // use from the time it is passed to SetDisplayLayers until a subsequent
   // configuration is applied which does not include the layer or until its
   // display is removed.
-  6: CreateLayer() -> (status res, uint64 layer_id);
+  6: CreateLayer() -> (zx.@status res, uint64 layer_id);
 
   // Destroys the given layer.
   //
@@ -380,5 +380,5 @@ interface Controller {
 
   // Allocates a VMO of the requested size which can be used for images.
   // TODO: move this into a seperate video buffer management system.
-  25: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
+  25: AllocateVmo(uint64 size) -> (zx.@status res, handle<vmo>? vmo);
 };

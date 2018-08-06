@@ -83,7 +83,7 @@ interface Object {
   0x80000001: Clone(uint32 flags, request<Object> object);
 
   // Terminates connection with object.
-  0x80000002: Close() -> (status s);
+  0x80000002: Close() -> (zx.@status s);
 
   // Closes handle if the requested interface not supported.
   0x80000005: Bind(string:kMaxPath interface_name);
@@ -100,7 +100,7 @@ interface Object {
   // to open, |info| contains descriptive information about
   // the object (the same as would be returned by |Describe|),
   // otherwise it is null.
-  0x80000007: -> OnOpen(status s, ObjectInfo? info);
+  0x80000007: -> OnOpen(zx.@status s, ObjectInfo? info);
 };
 
 // Bits reserved for posix protections. Native fuchsia filesystems
@@ -150,16 +150,16 @@ const uint32 kNodeAttributeFlagModificationTime = 0x00000002;
 [Layout="Simple"]
 interface Node : Object {
   // Synchronizes updates to the node to the underlying media, if it exists.
-  0x81000001: Sync() -> (status s);
+  0x81000001: Sync() -> (zx.@status s);
 
   // Acquire information about the node.
-  0x81000002: GetAttr() -> (status s, NodeAttributes attributes);
+  0x81000002: GetAttr() -> (zx.@status s, NodeAttributes attributes);
 
   // Update information about the node.
-  0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (status s);
+  0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.@status s);
 
   0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf in)
-      -> (status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
+      -> (zx.@status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
 };
 
 // Update the Seek offset.
@@ -183,39 +183,39 @@ const uint32 kVmoFlagPrivate = 0x00010000;
 interface File : Node {
   // Read 'count' bytes at the seek offset.
   // The seek offset is moved forward by the number of bytes read.
-  0x82000001: Read(uint64 count) -> (status s, vector<uint8>:kMaxBuf data);
+  0x82000001: Read(uint64 count) -> (zx.@status s, vector<uint8>:kMaxBuf data);
 
   // Read 'count' bytes at the provided offset.
   // Does not affect the seek offset.
-  0x82000002: ReadAt(uint64 count, uint64 offset) -> (status s, vector<uint8>:kMaxBuf data);
+  0x82000002: ReadAt(uint64 count, uint64 offset) -> (zx.@status s, vector<uint8>:kMaxBuf data);
 
   // Write data at the seek offset.
   // The seek offset is moved forward by the number of bytes written.
-  0x82000003: Write(vector<uint8>:kMaxBuf data) -> (status s, uint64 actual);
+  0x82000003: Write(vector<uint8>:kMaxBuf data) -> (zx.@status s, uint64 actual);
 
   // Write data to the provided offset.
   // Does not affect the seek offset.
-  0x82000004: WriteAt(vector<uint8>:kMaxBuf data, uint64 offset) -> (status s, uint64 actual);
+  0x82000004: WriteAt(vector<uint8>:kMaxBuf data, uint64 offset) -> (zx.@status s, uint64 actual);
 
-  0x82000005: Seek(int64 offset, SeekOrigin start) -> (status s, uint64 offset);
+  0x82000005: Seek(int64 offset, SeekOrigin start) -> (zx.@status s, uint64 offset);
 
   // Shrink the file size to 'length' bytes.
-  0x82000006: Truncate(uint64 length) -> (status s);
+  0x82000006: Truncate(uint64 length) -> (zx.@status s);
 
   // Acquire the Directory::Open rights and flags used to access this file.
-  0x82000007: GetFlags() -> (status s, uint32 flags);
+  0x82000007: GetFlags() -> (zx.@status s, uint32 flags);
 
   // Change the Directory::Open flags used to access the file.
   // Supported flags which can be turned on / off:
   // - kOpenFlagAppend
-  0x82000008: SetFlags(uint32 flags) -> (status s);
+  0x82000008: SetFlags(uint32 flags) -> (zx.@status s);
 
   // Acquire a VMO representing this file, if there is one, with the
   // requested access rights.
-  0x82000009: GetVmo(uint32 flags) -> (status s, handle<vmo>? vmo);
+  0x82000009: GetVmo(uint32 flags) -> (zx.@status s, handle<vmo>? vmo);
 
   // Acquire a VMO representing this file, limited to a particular range.
-  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (status s, handle<vmo>? vmo);
+  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (zx.@status s, handle<vmo>? vmo);
 };
 
 // Dirent type information associated with the results of ReadDirents.
@@ -233,7 +233,7 @@ interface Directory : Node {
   0x83000001: Open(uint32 flags, uint32 mode, string:kMaxPath path, request<Object> object);
 
   // Remove an object relative to this directory object.
-  0x83000002: Unlink(string:kMaxPath path) -> (status s);
+  0x83000002: Unlink(string:kMaxPath path) -> (zx.@status s);
 
   // Reads a collection of variably sized dirents into a buffer.
   // The number of dirents in a directory may be very large: akin to
@@ -250,20 +250,20 @@ interface Directory : Node {
   //   // Null-terminated name of entry.
   //   char name[0];
   // }
-  0x83000003: ReadDirents(uint64 max_out) -> (status s, vector<uint8>:kMaxBuf dirents);
+  0x83000003: ReadDirents(uint64 max_out) -> (zx.@status s, vector<uint8>:kMaxBuf dirents);
 
   // Reset the directory seek offset.
-  0x83000004: Rewind() -> (status s);
+  0x83000004: Rewind() -> (zx.@status s);
 
   // Acquire a token to a Directory which can be used to identify
   // access to it at a later point in time.
-  0x83000005: GetToken() -> (status s, handle? token);
+  0x83000005: GetToken() -> (zx.@status s, handle? token);
 
   // Within the directory, rename an object named src to the name dst, in
   // a directory represented by token.
-  0x83000006: Rename(string:kMaxPath src, handle dst_parent_token, string:kMaxPath dst) -> (status s);
+  0x83000006: Rename(string:kMaxPath src, handle dst_parent_token, string:kMaxPath dst) -> (zx.@status s);
 
   // Within the directory, create a link to an object named src by the name
   // dst, within a directory represented by token.
-  0x83000007: Link(string:kMaxPath src, handle dst_parent_token, string:kMaxPath dst) -> (status s);
+  0x83000007: Link(string:kMaxPath src, handle dst_parent_token, string:kMaxPath dst) -> (zx.@status s);
 };

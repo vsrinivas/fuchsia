@@ -26,7 +26,7 @@ interface Allocator {
     1: AllocateCollection(uint32 buffer_count,
                           BufferSpec spec,
                           BufferUsage usage)
-        -> (status @status, BufferCollectionInfo collection);
+        -> (zx.@status @status, BufferCollectionInfo collection);
 
     // Allocates a collection of buffers which will be shared among one
     // or more clients.  This operation occurs in two phases (which may
@@ -68,7 +68,7 @@ interface Allocator {
     2: AllocateSharedCollection(uint32 buffer_count,
                                 BufferSpec spec,
                                 handle<eventpair> token_peer)
-        -> (status @status);
+        -> (zx.@status @status);
 
     // Enlists a client into a shared collection of buffers, taking into
     // account how the client intends to use the buffers.
@@ -89,6 +89,6 @@ interface Allocator {
     // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
     // satisfied, perhaps due to hardware limitations.
     3: BindSharedCollection(BufferUsage usage, handle<eventpair> token)
-        -> (status @status, BufferCollectionInfo collection);
+        -> (zx.@status @status, BufferCollectionInfo collection);
 };
 
