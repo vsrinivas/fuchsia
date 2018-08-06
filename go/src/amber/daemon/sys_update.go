@@ -70,10 +70,11 @@ func (upMon *SystemUpdateMonitor) Start() {
 		contentsPath = filepath.Join(path, "meta", "contents")
 		m, err := statMerkle(contentsPath)
 		if err != nil {
-			log.Printf("sys_upd_mon: merkle computation of contents file failed")
-			return
+			log.Printf("sys_upd_mon: merkle computation of contents file failed " +
+				"treating 'update' package as nonexistent")
+		} else {
+			merkle = m
 		}
-		merkle = m
 	}
 
 	amber, err := connectToUpdateSrvc()
