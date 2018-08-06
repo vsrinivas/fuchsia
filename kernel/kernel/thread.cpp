@@ -1377,13 +1377,19 @@ size_t thread_append_current_backtrace(char* out, const size_t out_len) {
     size_t remain = out_len;
     size_t len;
     for (size_t n = 0; n < count; n++) {
-        len = snprintf(buf, remain, "%02zu %p\n", n, tb.pc[n]);
+        len = snprintf(buf, remain, "bt#%02zu: %p\n", n, tb.pc[n]);
         if (len > remain) {
             return out_len;
         }
         remain -= len;
         buf += len;
     }
+    len = snprintf(buf, remain, "bt#%02zu: end\n", count);
+    if (len > remain) {
+        return out_len;
+    }
+    remain -= len;
+    buf += len;
 
     return out_len - remain;
 }

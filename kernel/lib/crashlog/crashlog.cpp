@@ -37,14 +37,14 @@ size_t crashlog_to_string(char* out, const size_t out_len) {
     remain -= len;
     buf += len;
 
-    len = snprintf(buf, remain, "VERSION\nbuild_id %s\nelf_build_id %s\n\n", version.buildid, version.elf_build_id);
-    if (len > remain) {
-        return out_len;
-    }
-    remain -= len;
-    buf += len;
-
-    len = snprintf(buf, remain, "BASE ADDRESS\n%#lx\n\n", crashlog.base_address);
+    // Keep the format and values in sync with the symbolizer.
+    // Print before the registers (KASLR offset).
+#if defined(__x86_64__)
+    const char* arch = "x86_64";
+#elif defined(__aarch64__)
+    const char* arch = "aarch64";
+#endif
+    len = snprintf(buf, remain, "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx name=zircon.elf\n\n", arch, version.buildid, version.elf_build_id, crashlog.base_address);
     if (len > remain) {
         return out_len;
     }
@@ -54,40 +54,40 @@ size_t crashlog_to_string(char* out, const size_t out_len) {
     if (crashlog.iframe) {
 #if defined(__aarch64__)
         len = snprintf(buf, remain, "REGISTERS\n"
-                                    "  x0 %#18" PRIx64 "\n"
-                                    "  x1 %#18" PRIx64 "\n"
-                                    "  x2 %#18" PRIx64 "\n"
-                                    "  x3 %#18" PRIx64 "\n"
-                                    "  x4 %#18" PRIx64 "\n"
-                                    "  x5 %#18" PRIx64 "\n"
-                                    "  x6 %#18" PRIx64 "\n"
-                                    "  x7 %#18" PRIx64 "\n"
-                                    "  x8 %#18" PRIx64 "\n"
-                                    "  x9 %#18" PRIx64 "\n"
-                                    " x10 %#18" PRIx64 "\n"
-                                    " x11 %#18" PRIx64 "\n"
-                                    " x12 %#18" PRIx64 "\n"
-                                    " x13 %#18" PRIx64 "\n"
-                                    " x14 %#18" PRIx64 "\n"
-                                    " x15 %#18" PRIx64 "\n"
-                                    " x16 %#18" PRIx64 "\n"
-                                    " x17 %#18" PRIx64 "\n"
-                                    " x18 %#18" PRIx64 "\n"
-                                    " x19 %#18" PRIx64 "\n"
-                                    " x20 %#18" PRIx64 "\n"
-                                    " x21 %#18" PRIx64 "\n"
-                                    " x22 %#18" PRIx64 "\n"
-                                    " x23 %#18" PRIx64 "\n"
-                                    " x24 %#18" PRIx64 "\n"
-                                    " x25 %#18" PRIx64 "\n"
-                                    " x26 %#18" PRIx64 "\n"
-                                    " x27 %#18" PRIx64 "\n"
-                                    " x28 %#18" PRIx64 "\n"
-                                    " x29 %#18" PRIx64 "\n"
-                                    " lr  %#18" PRIx64 "\n"
-                                    " usp %#18" PRIx64 "\n"
-                                    " elr %#18" PRIx64 "\n"
-                                    "spsr %#18" PRIx64 "\n"
+                                    "  x0: %#18" PRIx64 "\n"
+                                    "  x1: %#18" PRIx64 "\n"
+                                    "  x2: %#18" PRIx64 "\n"
+                                    "  x3: %#18" PRIx64 "\n"
+                                    "  x4: %#18" PRIx64 "\n"
+                                    "  x5: %#18" PRIx64 "\n"
+                                    "  x6: %#18" PRIx64 "\n"
+                                    "  x7: %#18" PRIx64 "\n"
+                                    "  x8: %#18" PRIx64 "\n"
+                                    "  x9: %#18" PRIx64 "\n"
+                                    " x10: %#18" PRIx64 "\n"
+                                    " x11: %#18" PRIx64 "\n"
+                                    " x12: %#18" PRIx64 "\n"
+                                    " x13: %#18" PRIx64 "\n"
+                                    " x14: %#18" PRIx64 "\n"
+                                    " x15: %#18" PRIx64 "\n"
+                                    " x16: %#18" PRIx64 "\n"
+                                    " x17: %#18" PRIx64 "\n"
+                                    " x18: %#18" PRIx64 "\n"
+                                    " x19: %#18" PRIx64 "\n"
+                                    " x20: %#18" PRIx64 "\n"
+                                    " x21: %#18" PRIx64 "\n"
+                                    " x22: %#18" PRIx64 "\n"
+                                    " x23: %#18" PRIx64 "\n"
+                                    " x24: %#18" PRIx64 "\n"
+                                    " x25: %#18" PRIx64 "\n"
+                                    " x26: %#18" PRIx64 "\n"
+                                    " x27: %#18" PRIx64 "\n"
+                                    " x28: %#18" PRIx64 "\n"
+                                    " x29: %#18" PRIx64 "\n"
+                                    "  lr: %#18" PRIx64 "\n"
+                                    " usp: %#18" PRIx64 "\n"
+                                    " elr: %#18" PRIx64 "\n"
+                                    "spsr: %#18" PRIx64 "\n"
                                     "\n",
                        crashlog.iframe->r[0],
                        crashlog.iframe->r[1],
@@ -130,27 +130,27 @@ size_t crashlog_to_string(char* out, const size_t out_len) {
         buf += len;
 #elif defined(__x86_64__)
         len = snprintf(buf, remain, "REGISTERS\n"
-                                    "  CS %#18" PRIx64 "\n"
-                                    " RIP %#18" PRIx64 "\n"
-                                    " EFL %#18" PRIx64 "\n"
-                                    " CR2 %#18lx\n"
-                                    " RAX %#18" PRIx64 "\n"
-                                    " RBX %#18" PRIx64 "\n"
-                                    " RCX %#18" PRIx64 "\n"
-                                    " RDX %#18" PRIx64 "\n"
-                                    " RSI %#18" PRIx64 "\n"
-                                    " RDI %#18" PRIx64 "\n"
-                                    " RBP %#18" PRIx64 "\n"
-                                    " RSP %#18" PRIx64 "\n"
-                                    "  R8 %#18" PRIx64 "\n"
-                                    "  R9 %#18" PRIx64 "\n"
-                                    " R10 %#18" PRIx64 "\n"
-                                    " R11 %#18" PRIx64 "\n"
-                                    " R12 %#18" PRIx64 "\n"
-                                    " R13 %#18" PRIx64 "\n"
-                                    " R14 %#18" PRIx64 "\n"
-                                    " R15 %#18" PRIx64 "\n"
-                                    "errc %#18" PRIx64 "\n"
+                                    "  CS: %#18" PRIx64 "\n"
+                                    " RIP: %#18" PRIx64 "\n"
+                                    " EFL: %#18" PRIx64 "\n"
+                                    " CR2: %#18lx\n"
+                                    " RAX: %#18" PRIx64 "\n"
+                                    " RBX: %#18" PRIx64 "\n"
+                                    " RCX: %#18" PRIx64 "\n"
+                                    " RDX: %#18" PRIx64 "\n"
+                                    " RSI: %#18" PRIx64 "\n"
+                                    " RDI: %#18" PRIx64 "\n"
+                                    " RBP: %#18" PRIx64 "\n"
+                                    " RSP: %#18" PRIx64 "\n"
+                                    "  R8: %#18" PRIx64 "\n"
+                                    "  R9: %#18" PRIx64 "\n"
+                                    " R10: %#18" PRIx64 "\n"
+                                    " R11: %#18" PRIx64 "\n"
+                                    " R12: %#18" PRIx64 "\n"
+                                    " R13: %#18" PRIx64 "\n"
+                                    " R14: %#18" PRIx64 "\n"
+                                    " R15: %#18" PRIx64 "\n"
+                                    "errc: %#18" PRIx64 "\n"
                                     "\n",
                        crashlog.iframe->cs,
                        crashlog.iframe->ip,
