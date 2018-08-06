@@ -17,7 +17,7 @@ const uint32 kHostCid = 2;
 // Also see |GuestVsockEndpoint|.
 interface GuestVsockAcceptor {
   1: Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? @handle)
-      -> (status @status);
+      -> (zx.@status @status);
 };
 
 // Exposed by a host capable of listening via vsocks. A variant of a
@@ -25,7 +25,7 @@ interface GuestVsockAcceptor {
 // to communicate.
 interface HostVsockAcceptor {
   1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
-      -> (status @status, handle? @handle);
+      -> (zx.@status @status, handle? @handle);
 };
 
 // Exposed by a host capable of connecting via vsocks. This allows a guest to
@@ -34,7 +34,7 @@ interface HostVsockAcceptor {
 // to communicate.
 interface HostVsockConnector {
   1: Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
-      -> (status @status, handle? @handle);
+      -> (zx.@status @status, handle? @handle);
 };
 
 // Exposed by guests capable of handling vsock traffic. During
@@ -53,10 +53,10 @@ interface GuestVsockEndpoint {
 interface HostVsockEndpoint {
   // Register |acceptor| to be invoked for any connection requests to |port|.
   1: Listen(uint32 port, HostVsockAcceptor acceptor)
-      -> (status @status);
+      -> (zx.@status @status);
 
   // Similar to |HostVsockConnector.Connect| except the |src_cid| is
   // |kHostCid| and |src_port| is generated automatically.
   2: Connect(uint32 cid, uint32 port, handle? @handle)
-      -> (status @status);
+      -> (zx.@status @status);
 };
