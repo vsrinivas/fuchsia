@@ -50,4 +50,5 @@ bool Display::SetBrightness(double brightness) {
 
   return true;
 }
+
 }  // namespace display

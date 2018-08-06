@@ -10,7 +10,7 @@ namespace display {
 
 // This class is a thin wrapper around a Display object, implementing
 // the DisplayManager FIDL interface.
-class DisplayManagerImpl : public fuchsia::device::display::DisplayManager {
+class DisplayManagerImpl : public fuchsia::device::display::Manager {
  public:
   DisplayManagerImpl();
   virtual void GetBrightness(GetBrightnessCallback callback);
@@ -20,11 +20,11 @@ class DisplayManagerImpl : public fuchsia::device::display::DisplayManager {
   DisplayManagerImpl(std::unique_ptr<component::StartupContext> context);
 
  private:
-  DisplayManagerImpl(const DisplayManager&) = delete;
-  DisplayManager& operator=(const DisplayManager&) = delete;
+  DisplayManagerImpl(const DisplayManagerImpl&) = delete;
+  DisplayManagerImpl& operator=(const DisplayManagerImpl&) = delete;
 
   std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<DisplayManager> bindings_;
+  fidl::BindingSet<Manager> bindings_;
   std::unique_ptr<Display> display_;
 };
 }  // namespace display
