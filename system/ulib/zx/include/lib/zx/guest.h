@@ -30,9 +30,9 @@ public:
     }
 
     static zx_status_t create(const resource& resource, uint32_t options,
-                              const vmo& physmem, guest* result);
+                              const vmo& physmem, guest* guest);
 
-    zx_status_t set_trap(uint32_t kind, zx_vaddr_t addr, size_t len,
+    zx_status_t set_trap(uint32_t kind, zx_gpaddr_t addr, size_t len,
                          const port& port, uint64_t key) {
         return zx_guest_set_trap(get(), kind, addr, len, port.get(), key);
     }

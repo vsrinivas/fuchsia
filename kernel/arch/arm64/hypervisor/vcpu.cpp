@@ -263,28 +263,28 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     return ZX_OK;
 }
 
-zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, size_t len) const {
+zx_status_t Vcpu::ReadState(uint32_t kind, void* buf, size_t len) const {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
         return ZX_ERR_BAD_STATE;
     } else if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    auto state = static_cast<zx_vcpu_state_t*>(buffer);
+    auto state = static_cast<zx_vcpu_state_t*>(buf);
     memcpy(state->x, el2_state_->guest_state.x, sizeof(uint64_t) * GS_NUM_REGS);
     state->sp = el2_state_->guest_state.system_state.sp_el1;
     state->cpsr = el2_state_->guest_state.system_state.spsr_el2 & kSpsrNzcv;
     return ZX_OK;
 }
 
-zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, size_t len) {
+zx_status_t Vcpu::WriteState(uint32_t kind, const void* buf, size_t len) {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
         return ZX_ERR_BAD_STATE;
     } else if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    auto state = static_cast<const zx_vcpu_state_t*>(buffer);
+    auto state = static_cast<const zx_vcpu_state_t*>(buf);
     memcpy(el2_state_->guest_state.x, state->x, sizeof(uint64_t) * GS_NUM_REGS);
     el2_state_->guest_state.system_state.sp_el1 = state->sp;
     el2_state_->guest_state.system_state.spsr_el2 |= state->cpsr & kSpsrNzcv;

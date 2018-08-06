@@ -801,14 +801,14 @@ static void register_copy(Out* out, const In& in) {
     out->r15 = in.r15;
 }
 
-zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, size_t len) const {
+zx_status_t Vcpu::ReadState(uint32_t kind, void* buf, size_t len) const {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     switch (kind) {
     case ZX_VCPU_STATE: {
         if (len != sizeof(zx_vcpu_state_t))
             break;
-        auto state = static_cast<zx_vcpu_state_t*>(buffer);
+        auto state = static_cast<zx_vcpu_state_t*>(buf);
         register_copy(state, vmx_state_.guest_state);
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
@@ -819,14 +819,14 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, size_t len) const {
     return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, size_t len) {
+zx_status_t Vcpu::WriteState(uint32_t kind, const void* buf, size_t len) {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     switch (kind) {
     case ZX_VCPU_STATE: {
         if (len != sizeof(zx_vcpu_state_t))
             break;
-        auto state = static_cast<const zx_vcpu_state_t*>(buffer);
+        auto state = static_cast<const zx_vcpu_state_t*>(buf);
         register_copy(&vmx_state_.guest_state, *state);
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         vmcs.Write(VmcsFieldXX::GUEST_RSP, state->rsp);
@@ -841,7 +841,7 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, size_t len) {
     case ZX_VCPU_IO: {
         if (len != sizeof(zx_vcpu_io_t))
             break;
-        auto io = static_cast<const zx_vcpu_io_t*>(buffer);
+        auto io = static_cast<const zx_vcpu_io_t*>(buf);
         memcpy(&vmx_state_.guest_state.rax, io->data, io->access_size);
         return ZX_OK;
     }

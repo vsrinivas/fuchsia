@@ -22,6 +22,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/zx \
 
 include make/module.mk

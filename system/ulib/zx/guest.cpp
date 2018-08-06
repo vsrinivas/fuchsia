@@ -9,12 +9,12 @@
 namespace zx {
 
 zx_status_t guest::create(const resource& resource, uint32_t options,
-                          const vmo& physmem, guest* result) {
-    // Assume |result| uses a distinct container from |resource| and
+                          const vmo& physmem, guest* guest) {
+    // Assume |guest| uses a distinct container from |resource| and
     // |physmem|, due to strict aliasing.
     return zx_guest_create(
         resource.get(), options, physmem.get(),
-        result->reset_and_get_address());
+        guest->reset_and_get_address());
 }
 
 } // namespace zx
