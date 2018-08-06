@@ -11,5 +11,5 @@ library fuchsia.auth;
 interface AuthProviderFactory {
   // Creates an auth provider instance for the given OAuth provider.
   1: GetAuthProvider(request<AuthProvider> auth_provider) ->
-      (AuthProviderStatus @status);
+      (AuthProviderStatus status);
 };

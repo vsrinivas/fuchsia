@@ -19,7 +19,7 @@ interface Timezone {
       -> (int32 local_offset_minutes, int32 dst_offset_minutes);
 
   // Sets the timezone for the machine based on an ICU ID.
-  2: SetTimezone(string timezone_id) -> (bool @status);
+  2: SetTimezone(string timezone_id) -> (bool status);
 
   // Gets the timezone ID string.
   3: GetTimezoneId() -> (string timezone_id);

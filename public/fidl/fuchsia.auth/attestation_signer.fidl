@@ -27,5 +27,5 @@ interface AttestationSigner {
     // Returns the raw bytes of the |signature| string on success. Otherwise,
     // an error status is returned.
     1: SignData(vector<uint8> plaintext) ->
-        (AttestationSignerStatus @status, vector<uint8>? signature);
+        (AttestationSignerStatus status, vector<uint8>? signature);
 };

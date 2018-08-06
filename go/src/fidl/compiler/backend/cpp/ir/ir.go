@@ -311,7 +311,6 @@ var reservedWords = map[string]bool{
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
 	types.Bool:    "bool",
-	types.Status:  "zx_status_t",
 	types.Int8:    "int8_t",
 	types.Int16:   "int16_t",
 	types.Int32:   "int32_t",

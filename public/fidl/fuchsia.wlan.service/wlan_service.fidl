@@ -81,7 +81,7 @@ interface Wlan {
   1: Scan(ScanRequest req) -> (ScanResult result);
   2: Connect(ConnectConfig req) -> (Error error);
   3: Disconnect() -> (Error error);
-  4: Status() -> (WlanStatus @status);
+  4: Status() -> (WlanStatus status);
   5: StartBss(BssConfig cfg) -> (Error error);
   6: StopBss() -> (Error error);
   7: Stats() -> (WlanStats stats);

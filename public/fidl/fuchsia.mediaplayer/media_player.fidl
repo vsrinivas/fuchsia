@@ -48,7 +48,7 @@ interface MediaPlayer {
 
   // Provides current status immediately after binding and whenever status
   // changes thereafter.
-  11: -> StatusChanged(MediaPlayerStatus @status);
+  11: -> StatusChanged(MediaPlayerStatus status);
 };
 
 // MediaPlayer status information.

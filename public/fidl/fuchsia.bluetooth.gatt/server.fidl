@@ -150,11 +150,11 @@ interface LocalServiceDelegate {
   // read request resulted in an error it should be returned in |error_code|.
   // On success, |error_code| should be set to NO_ERROR and a |value| should be
   // provided.
-  2: OnReadValue(uint64 id, int32 offset) -> (vector<uint8>? value, ErrorCode @status);
+  2: OnReadValue(uint64 id, int32 offset) -> (vector<uint8>? value, ErrorCode status);
 
   // Called when a remote device issues a request to write the value of the
   // characteristic or descriptor with the given identifier.
-  3: OnWriteValue(uint64 id, uint16 offset, vector<uint8> value) -> (ErrorCode @status);
+  3: OnWriteValue(uint64 id, uint16 offset, vector<uint8> value) -> (ErrorCode status);
 
   // Called when a remote device issues a request to write the value of the
   // characteristic with the given identifier. This can be called on a
@@ -192,7 +192,7 @@ interface Server {
   // |service| can be used to interact with the pubished service. If this
   // service cannot be published then the handle for |service| will be closed.
   //
-  // Returns the success or failure @status of the call and a unique identifier
+  // Returns the success or failure status of the call and a unique identifier
   // that can be used to unregister the service.
-  1: PublishService(ServiceInfo info, LocalServiceDelegate delegate, request<LocalService> service) -> (fuchsia.bluetooth.Status @status);
+  1: PublishService(ServiceInfo info, LocalServiceDelegate delegate, request<LocalService> service) -> (fuchsia.bluetooth.Status status);
 };

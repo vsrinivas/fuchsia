@@ -34,10 +34,10 @@ interface Peripheral {
   //     is supported on the current platform and parameters.
   //   - If |anonymous| advertising is requested but the controller cannot support it.
   1: StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
-         uint32 interval_ms, bool anonymous) -> (fuchsia.bluetooth.Status @status, string? advertisement_id);
+         uint32 interval_ms, bool anonymous) -> (fuchsia.bluetooth.Status status, string? advertisement_id);
 
   // Stop a an advertising session that was previously started by this application.
-  2: StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status @status);
+  2: StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status status);
 
   // Called when a remote central device has connected to a connectable advertisement.
   // Provides a GATT client handle which can be used to interact with GATT service

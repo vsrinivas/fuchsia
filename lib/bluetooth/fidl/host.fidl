@@ -28,7 +28,7 @@ interface Host {
   6: GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo @info);
 
   // Sets the local name for this adapter.
-  7: SetLocalName(string local_name) -> (fuchsia.bluetooth.Status @status);
+  7: SetLocalName(string local_name) -> (fuchsia.bluetooth.Status status);
 
   // Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
   // devices will be reported via AdapterDelegate.OnDeviceDiscovered().
@@ -37,7 +37,7 @@ interface Host {
   //
   // Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
   // Adapter gets disconnected.
-  8: StartDiscovery() -> (fuchsia.bluetooth.Status @status);
+  8: StartDiscovery() -> (fuchsia.bluetooth.Status status);
 
   // Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
   // receiving device discovery notifications.
@@ -45,13 +45,13 @@ interface Host {
   // NOTE: If another client is performing discovery (e.g. via its own Adapter interface handle),
   // then the system will continue performing device discovery even if this method results in
   // success.
-  9: StopDiscovery() -> (fuchsia.bluetooth.Status @status);
+  9: StopDiscovery() -> (fuchsia.bluetooth.Status status);
 
   // Sets whether this host should be connectable.
-  10: SetConnectable(bool enabled) -> (fuchsia.bluetooth.Status @status);
+  10: SetConnectable(bool enabled) -> (fuchsia.bluetooth.Status status);
 
   // Sets whether this host should be discoverable.
-  11: SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status @status);
+  11: SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status status);
 
   // Assigns the pairing delegate that will respond to authentication challenges using the given
   // I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
@@ -66,7 +66,7 @@ interface Host {
   // Adds existing bonded devices to the host. The host will be configured to automatically connect
   // to these devices when they are in range and connectable. Future connections will be encrypted
   // using the provided bonding data.
-  110: AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status @status);
+  110: AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
 
   // Events
   101: -> OnAdapterStateChanged(fuchsia.bluetooth.control.AdapterState state);

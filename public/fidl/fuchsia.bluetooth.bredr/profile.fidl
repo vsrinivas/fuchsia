@@ -28,7 +28,7 @@ interface Profile {
   // If successful, a unique |service_id| is returned to identify this service.
   1: AddService(ServiceDefinition definition, SecurityLevel sec_level,
                 bool devices) ->
-       (fuchsia.bluetooth.Status @status, string service_id);
+       (fuchsia.bluetooth.Status status, string service_id);
 
   // Disconnects all channels associated with |device_id| from a service
   // specified by |service_id|.

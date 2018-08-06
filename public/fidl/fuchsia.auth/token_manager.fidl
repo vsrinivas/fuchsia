@@ -143,7 +143,7 @@ interface TokenManager {
   // provider backend system.
   1: Authorize(AppConfig app_config, vector<string> app_scopes,
       string? user_profile_id)
-      -> (Status @status, UserProfileInfo? user_profile_info);
+      -> (Status status, UserProfileInfo? user_profile_info);
 
   // Returns a downscoped access token from an auth provider for the given user
   // |user_profile_id| and |scopes| to a Fuchsia component. The component's
@@ -159,7 +159,7 @@ interface TokenManager {
   // provider is used to exchange the user's persistent credential for a new
   // access token.
   2: GetAccessToken(AppConfig app_config, string user_profile_id,
-      vector<string> app_scopes) -> (Status @status, string? access_token);
+      vector<string> app_scopes) -> (Status status, string? access_token);
 
   // Returns a JWT Identity token from an auth provider to a Fuchsia component
   // intended for the given |audience| and the given user |user_profile_id|. The
@@ -173,7 +173,7 @@ interface TokenManager {
   // provider is used to exchange the user's persistant credential for a new
   // identity token.
   3: GetIdToken(AppConfig app_config, string user_profile_id, string? audience)
-      -> (Status @status, string? id_token);
+      -> (Status status, string? id_token);
 
   // Returns a |FirebaseToken| from an auth provider to a Fuchsia component for
   // the existing user |user_profile_id| and for the Firebase client identified
@@ -189,7 +189,7 @@ interface TokenManager {
   // refreshed from the auth provider.
   4: GetFirebaseToken(AppConfig app_config, string user_profile_id,
       string audience, string firebase_api_key)
-      -> (Status @status, FirebaseToken? firebase_token);
+      -> (Status status, FirebaseToken? firebase_token);
 
   // Deletes and revokes all long lived and short lived tokens generated for
   // user |user_profile_id| and the given Fuchsia component. The component's
@@ -201,5 +201,5 @@ interface TokenManager {
   //     - deleting short lived tokens from the in-memory cache.
   //     - deleting persistent credentials stored locally on disk.
   5: DeleteAllTokens(AppConfig app_config, string user_profile_id)
-      -> (Status @status);
+      -> (Status status);
 };

@@ -136,7 +136,7 @@ impl Frame {
             .controller
             .allocate_vmo(framebuffer.byte_size() as u64)
             .map(|(status, allocated_vmo)| {
-                if status == Status::OK {
+                if status == zx::sys::ZX_OK {
                     vmo.replace(allocated_vmo);
                 }
             });
@@ -165,7 +165,7 @@ impl Frame {
             .controller
             .import_vmo_image(&mut image_config, image_vmo, 0)
             .map(|(status, id)| {
-                if status == Status::OK {
+                if status == zx::sys::ZX_OK {
                     image_id.replace(Some(id));
                 }
             });
@@ -373,7 +373,7 @@ impl FrameBuffer {
         let layer_id_response = proxy
             .create_layer()
             .map(|(status, id)| {
-                if status == Status::OK {
+                if status == zx::sys::ZX_OK {
                     layer_id.replace(Some(id));
                 }
             });

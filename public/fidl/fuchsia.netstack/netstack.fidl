@@ -20,7 +20,7 @@ enum Status {
 };
 
 struct NetErr {
-  Status @status;
+  Status status;
   string message;
 };
 

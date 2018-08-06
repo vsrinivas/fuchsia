@@ -7,9 +7,9 @@ package ir
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
-	"sort"
 
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
@@ -361,7 +361,6 @@ var reservedWords = map[string]bool{
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
 	types.Bool:    "bool",
-	types.Status:  "_zx.Status",
 	types.Int8:    "int8",
 	types.Int16:   "int16",
 	types.Int32:   "int32",
@@ -470,10 +469,6 @@ func (c *compiler) compileConstant(val types.Constant) string {
 }
 
 func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
-	if val == types.Status {
-		// The Status type is defined in syscall/zx.
-		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
-	}
 	t, ok := primitiveTypes[val]
 	if !ok {
 		log.Fatal("Unknown primitive type: ", val)
@@ -730,9 +725,9 @@ func Compile(fidlData types.Root) Root {
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls:       fidlData.Decls,
-		library:     libraryName,
-		libraryDeps: godeps,
+		decls:           fidlData.Decls,
+		library:         libraryName,
+		libraryDeps:     godeps,
 		usedLibraryDeps: make(map[string]string),
 	}
 

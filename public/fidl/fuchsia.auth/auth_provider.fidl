@@ -177,7 +177,7 @@ interface AuthProvider {
   // flow.
   1: GetPersistentCredential(AuthenticationUIContext? auth_ui_context,
       string? user_profile_id) ->
-      (AuthProviderStatus @status, string? credential,
+      (AuthProviderStatus status, string? credential,
       UserProfileInfo? user_profile_info);
 
   // Exchanges a persistent user |credential| for a short lived app specific
@@ -193,7 +193,7 @@ interface AuthProvider {
   // Otherwise, an error status is returned.
   2: GetAppAccessToken(string credential, string? client_id,
       vector<string> scopes) ->
-      (AuthProviderStatus @status, AuthToken? auth_token);
+      (AuthProviderStatus status, AuthToken? auth_token);
 
   // Exchanges a persistent user |credential| for an OAuth Identity token for
   // the specified |audience|. The audience is the intended recipient of the
@@ -206,7 +206,7 @@ interface AuthProvider {
   // Returns an |auth_token| response containing an id token, if successful.
   // Otherwise, an error status is returned.
   3: GetAppIdToken(string credential, string? audience) ->
-      (AuthProviderStatus @status, AuthToken? auth_token);
+      (AuthProviderStatus status, AuthToken? auth_token);
 
   // Gets a firebase auth token for the user identified by |id_token| and the
   // requested |firebase_api key|. The |id_token| is a JWT Identity token
@@ -215,14 +215,14 @@ interface AuthProvider {
   // Returns a |firebase_token| from the server if successful. Otherwise, an
   // error status is returned.
   4: GetAppFirebaseToken(string id_token, string firebase_api_key) ->
-      (AuthProviderStatus @status, FirebaseToken? firebase_token);
+      (AuthProviderStatus status, FirebaseToken? firebase_token);
 
   // Revokes user's grants at the Auth Provider by revoking a credential. The
   // |credential| is either a long lived OAuth token as returned by the
   // GetPersistentCredential() call or an app specific access token as returned
   // by the GetAppAccessToken() call.
   5: RevokeAppOrPersistentCredential(string credential) ->
-      (AuthProviderStatus @status);
+      (AuthProviderStatus status);
 
   // Authenticates and authorizes a user against a remote attestation based
   // auth provider backend system that mints bound persistent credentials.
@@ -252,7 +252,7 @@ interface AuthProvider {
       AttestationSigner attestation_signer, AttestationJWTParams jwt_params,
       AuthenticationUIContext? auth_ui_context,
       string? user_profile_id) ->
-      (AuthProviderStatus @status, string? credential, AuthToken? auth_token,
+      (AuthProviderStatus status, string? credential, AuthToken? auth_token,
       AuthChallenge? auth_challenge, UserProfileInfo? user_profile_info);
 
   // Exchanges a bound persistent user |credential| for a short lived app
@@ -269,7 +269,7 @@ interface AuthProvider {
   1001: GetAppAccessTokenFromAssertionJWT(AttestationSigner attestation_signer,
       AssertionJWTParams jwt_params, string credential,
       vector<string> scopes) ->
-      (AuthProviderStatus @status, string? updated_credential,
+      (AuthProviderStatus status, string? updated_credential,
       AuthToken? auth_token, AuthChallenge? auth_challenge);
 
   // TODO(ukode): Add methods for bound IDToken and FirebaseToken.

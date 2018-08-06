@@ -92,7 +92,7 @@ struct PhyInfo {
 };
 
 struct QueryResponse {
-  int32 @status;
+  int32 status;
   PhyInfo info;
 };
 
@@ -101,7 +101,7 @@ struct CreateIfaceRequest {
 };
 
 struct CreateIfaceResponse {
-  int32 @status;
+  int32 status;
   uint16 iface_id;
 };
 
@@ -110,7 +110,7 @@ struct DestroyIfaceRequest {
 };
 
 struct DestroyIfaceResponse {
-  int32 @status;
+  int32 status;
 };
 
 interface Phy {

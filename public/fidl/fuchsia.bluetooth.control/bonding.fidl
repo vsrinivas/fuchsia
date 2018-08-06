@@ -75,7 +75,7 @@ struct BondingData {
 interface Bonding {
   // Initializes bonded devices for the local host identified by |local_id|. This is the same
   // as the ID provided in OnDeviceBonded().
-  1: AddBondedDevices(string local_id, vector<BondingData> bonds) -> (fuchsia.bluetooth.Status @status);
+  1: AddBondedDevices(string local_id, vector<BondingData> bonds) -> (fuchsia.bluetooth.Status status);
 
   // TODO(NET-1156) Make an interface to bootstrap bt-gap with the BondingData
 

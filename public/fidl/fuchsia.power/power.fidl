@@ -12,7 +12,7 @@ enum Status {
 // Provides battery status
 struct BatteryStatus {
   // Error status
-  Status @status;
+  Status status;
 
   // If battery is present
   bool batteryPresent;
@@ -43,7 +43,7 @@ struct BatteryStatus {
 [Discoverable]
 interface PowerManager {
   // Gets battery status
-  1: GetBatteryStatus() -> (BatteryStatus @status);
+  1: GetBatteryStatus() -> (BatteryStatus status);
 
   // watcher called when battery status changes
   2: Watch(PowerManagerWatcher watcher);

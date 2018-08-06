@@ -663,7 +663,7 @@ struct DisassociateRequest {
 // MLME-DISASSOCIATE.confirm (IEEE Std 802.11-2016, 6.3.9.2)
 
 struct DisassociateConfirm {
-    int32 @status;
+    int32 status;
 };
 
 // MLME-DISASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.9.3)

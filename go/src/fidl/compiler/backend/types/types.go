@@ -100,7 +100,6 @@ type PrimitiveSubtype string
 
 const (
 	Bool    PrimitiveSubtype = "bool"
-	Status                   = "status"
 	Int8                     = "int8"
 	Int16                    = "int16"
 	Int32                    = "int32"

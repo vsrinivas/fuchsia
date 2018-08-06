@@ -50,7 +50,7 @@ type UnionMember struct {
 }
 
 type Struct struct {
-	Name	    string
+	Name        string
 	Members     []StructMember
 	Size        int
 	Alignment   int
@@ -85,10 +85,10 @@ type Method struct {
 }
 
 type Parameter struct {
-	Type   string
+	Type         string
 	BorrowedType string
-	Name   string
-	Offset int
+	Name         string
+	Offset       int
 }
 
 type Root struct {
@@ -216,7 +216,6 @@ func changeIfReserved(val types.Identifier) string {
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
 	types.Bool:    "bool",
-	types.Status:  "::zx::Status",
 	types.Int8:    "i8",
 	types.Int16:   "i16",
 	types.Int32:   "i32",
@@ -250,8 +249,8 @@ var handleSubtypes = map[types.HandleSubtype]string{
 }
 
 type compiler struct {
-	decls   *types.DeclMap
-	library types.LibraryIdentifier
+	decls        *types.DeclMap
+	library      types.LibraryIdentifier
 	externCrates map[string]bool
 }
 
@@ -480,8 +479,8 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 	}
 
 	return Type{
-		Decl:     r,
-		DeclType: declType,
+		Decl:       r,
+		DeclType:   declType,
 		LargeArray: largeArray,
 	}
 }
@@ -561,10 +560,10 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Name:		 name,
-		Members:	 []StructMember{},
-		Size:		 val.Size,
-		Alignment:	 val.Alignment,
+		Name:        name,
+		Members:     []StructMember{},
+		Size:        val.Size,
+		Alignment:   val.Alignment,
 		LargeArrays: false,
 	}
 

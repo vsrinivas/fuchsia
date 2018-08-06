@@ -30,5 +30,5 @@ interface URLLoader {
   2: FollowRedirect() -> (URLResponse response);
 
   // Query status about the URLLoader.
-  3: QueryStatus() -> (URLLoaderStatus @status);
+  3: QueryStatus() -> (URLLoaderStatus status);
 };

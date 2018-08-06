@@ -29,7 +29,7 @@ interface Central {
   // will be notified for all discoverable devices that are found. This is not recommended; clients
   // should generally filter results by at least one of |filter.service_uuids|,
   // |filter.service_data|, and/or |filter.manufacturer_identifier|.
-  3: StartScan(ScanFilter? filter) -> (fuchsia.bluetooth.Status @status);
+  3: StartScan(ScanFilter? filter) -> (fuchsia.bluetooth.Status status);
 
   // Terminate a previously started scan session.
   4: StopScan();
@@ -40,10 +40,10 @@ interface Central {
   // On success, |gatt_client| will be bound and can be used for GATT client
   // role procedures. On failure, |gatt_client| will be closed and |status| will
   // indicate an error.
-  5: ConnectPeripheral(string identifier, request<fuchsia.bluetooth.gatt.Client> gatt_client) -> (fuchsia.bluetooth.Status @status);
+  5: ConnectPeripheral(string identifier, request<fuchsia.bluetooth.gatt.Client> gatt_client) -> (fuchsia.bluetooth.Status status);
 
   // Disconnects this Central's connection to the peripheral with the given identifier.
-  6: DisconnectPeripheral(string identifier) -> (fuchsia.bluetooth.Status @status);
+  6: DisconnectPeripheral(string identifier) -> (fuchsia.bluetooth.Status status);
 
   // Called when the scan state changes, e.g. when a scan session terminates due to a call to
   // Central.StopScan() or another unexpected condition.
