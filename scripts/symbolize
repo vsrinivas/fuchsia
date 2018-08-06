@@ -161,7 +161,7 @@ def run_tool(path, *args):
         tool = os.path.basename(path)
         print "Calling %s failed: command %s error %s" % (tool, cmd, e)
         return False
-    return output
+    return output.rstrip()
 
 
 # Note: addr2line requires hex addresses.
@@ -197,7 +197,7 @@ def writelines(lines):
 def writeline(line):
     while True:
         try:
-            sys.stdout.write(line)
+            sys.stdout.write(line + "\n")
         except IOError as e:
             if e.errno == errno.EAGAIN:
                 continue
@@ -330,18 +330,15 @@ def main():
     asan_bt = False
 
     while True:
-        line = args.file.readline()
+        line = args.file.readline().rstrip()
         if args.echo and not args.file.isatty():
-            writeline(line)
+          writeline(line)
         end_of_file = (line == '')
-        # Strip any trailing carriage return character ("\r"), since
-        # these appear in the serial console output from QEMU.
-        line = line.rstrip()
         bt_end = bt_end_re.match(line)
         asan_bt_end = asan_bt and asan_bt_end_re.match(line)
         if bt_end or asan_bt_end or end_of_file:
             if len(processed_lines) != 0:
-                writeline("\nstart of symbolized stack:\n")
+                writeline("\nstart of symbolized stack:")
                 writelines(processed_lines)
                 writeline("end of symbolized stack\n")
 
@@ -350,10 +347,10 @@ def main():
                         message = "Overflowed stack"
                     else:
                         message = "Potentially overflowed stack"
-                    writeline("WARNING: %s (total usage: %d, stack size: %d)\n" %
+                    writeline("WARNING: %s (total usage: %d, stack size: %d)" %
                         (message, total_stack_size, args.stack_size))
                     for frame, size in frame_sizes:
-                        writeline("#%s: %d bytes\n" % (frame, size))
+                        writeline("#%s: %d bytes" % (frame, size))
                 # Since we don't have the last stack frame, leave some leeway
                 # when warning about stackoverflow
                 processed_lines = []
@@ -446,15 +443,15 @@ def main():
                                     else:
                                         prefix = "   "
                                     line = "%s%#.16x%s" % (prefix, bias + addr, rest)
-                                    processed_lines.append(line + "\n")
+                                    processed_lines.append(line)
                     continue
                 else:
                     # can't find dso_full_path
-                    processed_lines.append("#%s: unknown, can't find full path for %s\n" %
+                    processed_lines.append("#%s: unknown, can't find full path for %s" %
                         (frame_num, dso))
             else:
                 # bt_with_offset_re failed
-                processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line\n" %
+                processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line" %
                     (frame_num,))
 
         # Zircon Specific Handling
@@ -462,7 +459,7 @@ def main():
             zircon_elf_path = find_file_in_build_dir("zircon.elf", build_dirs)
             if not zircon_elf_path:
                 sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need "
-                                  "to build zircon or specify the build directory with -b?\n")
+                                  "to build zircon or specify the build directory with -b?")
                 continue
             zircon_bt = True
             nm_result = run_tool(arch, "nm", zircon_elf_path)
@@ -516,12 +513,12 @@ def main():
                         offset = candidate_offset
                         dso = candidate_dso
             if offset is None:
-                processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x\n" %
+                processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x" %
                     (frame_num, addr))
                 continue
             dso_full_path = find_dso_full_path(dso, args.app, name_to_buildid, build_dirs)
             if not dso_full_path:
-                processed_lines.append("#%s: unknown, can't find full path for %s\n" %
+                processed_lines.append("#%s: unknown, can't find full path for %s" %
                     (frame_num, dso))
                 continue
 
