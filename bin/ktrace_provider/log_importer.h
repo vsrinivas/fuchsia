@@ -28,8 +28,8 @@ class LogImporter {
               const zx_packet_signal_t* signal);
 
   zx::log log_;
-  trace_ticks_t start_ticks_;
   zx_time_t start_time_;
+  double time_scale_;
   async::WaitMethod<LogImporter, &LogImporter::Handle> wait_{this};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogImporter);
