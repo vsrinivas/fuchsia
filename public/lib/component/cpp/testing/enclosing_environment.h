@@ -94,8 +94,8 @@ class EnclosingEnvironment {
 
   // Allows child components to access parent service with name |service_name|.
   //
-  // This will only work if parent environment actually provides said service.
-  //
+  // This will only work if parent environment actually provides said service
+  // and the service is in the test component's service whitelist.
   zx_status_t AllowParentService(const std::string& service_name) {
     return svc_->AddEntry(
         service_name.c_str(),

@@ -11,11 +11,6 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
-NamespaceTest::NamespaceTest() {
-  component::ConnectToEnvironmentService(env_.NewRequest());
-  env_->GetServices(service_provider_.NewRequest());
-}
-
 bool NamespaceTest::Exists(const char* path) {
   struct stat stat_;
   return stat(path, &stat_) == 0;

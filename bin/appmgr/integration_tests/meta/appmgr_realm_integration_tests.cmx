@@ -3,6 +3,10 @@
         "binary": "test/appmgr_realm_integration_tests"
     },
     "sandbox": {
-        "features": [ "shell", "deprecated-all-services" ]
+        "features": [ "shell" ],
+	"services": [
+	    "fuchsia.sys.Environment",
+	    "fuchsia.sys.Loader"
+	]
     }
 }

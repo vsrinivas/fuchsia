@@ -4,6 +4,6 @@
     },
     "runner": "appmgr_mock_runner",
     "sandbox": {
-        "features": [ "deprecated-all-services" ]
+        "services": [ "fuchsia.sys.Environment", "fidl.examples.echo.Echo" ]
     }
 }

@@ -37,8 +37,8 @@ void ServiceProviderDirImpl::ConnectToService(fidl::StringPtr service_name,
                                               zx::channel channel) {
   if (has_services_whitelist_ &&
       services_whitelist_.count(service_name.get()) == 0) {
-    FXL_LOG(WARNING) << "Component is not allowed to connect to "
-                     << service_name.get();
+    FXL_LOG(WARNING) << "Component " << component_url_
+                     << " is not allowed to connect to " << service_name.get();
     return;
   }
   fbl::RefPtr<fs::Vnode> child;

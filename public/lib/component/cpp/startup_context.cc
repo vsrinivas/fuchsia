@@ -27,6 +27,8 @@ StartupContext::StartupContext(zx::channel service_root,
   incoming_services_->Bind(std::move(service_root));
   outgoing_.Serve(std::move(directory_request));
 
+  // TODO(CP-25): Change ConnectToService to Lookup and leave unset if
+  // ZX_ERR_NOT_FOUND.
   incoming_services_->ConnectToService(environment_.NewRequest());
   incoming_services_->ConnectToService(launcher_.NewRequest());
 }

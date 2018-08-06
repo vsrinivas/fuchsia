@@ -333,6 +333,7 @@ void Realm::CreateComponent(
           fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
               default_namespace_, this,
               std::move(launch_info.additional_services));
+          ns->set_component_url(launch_info.url);
           if (package) {
             if (package->data) {
               // TODO(CP-25): Deprecate and remove CreateComponentWithProcess.

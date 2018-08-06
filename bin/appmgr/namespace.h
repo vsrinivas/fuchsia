@@ -56,11 +56,16 @@ class Namespace : public fuchsia::sys::Environment,
     ServeServiceDirectory(std::move(directory_request));
   }
 
+  void set_component_url(const std::string& url) {
+    services_->set_component_url(url);
+  }
+
   // fuchsia::sys::Launcher implementation:
 
   void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
                        fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                            controller) override;
+
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);

@@ -45,6 +45,10 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
     }
   }
 
+  void set_component_url(const std::string& url) {
+    component_url_ = url;
+  }
+
   void AddService(fbl::RefPtr<fs::Service> service,
                   const std::string& service_name);
 
@@ -76,6 +80,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   // equivalent to no services.
   bool has_services_whitelist_ = false;
   std::unordered_set<std::string> services_whitelist_;
+  std::string component_url_ = "NO_COMPONENT";
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderDirImpl);
 };
