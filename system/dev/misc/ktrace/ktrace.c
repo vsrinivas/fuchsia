@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 

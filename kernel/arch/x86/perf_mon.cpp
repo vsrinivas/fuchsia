@@ -66,7 +66,7 @@
 #include <lib/pci/pio.h>
 #include <zircon/device/cpu-trace/cpu-perf.h>
 #include <zircon/device/cpu-trace/intel-pm.h>
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <zircon/mtrace.h>
 #include <zircon/thread_annotations.h>
 #include <zxcpp/new.h>

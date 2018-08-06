@@ -77,7 +77,7 @@ typedef struct ktrace_rec_name {
 
 #define KTRACE_DEF(num,type,name,group) TAG_##name = KTRACE_TAG_##type(num,KTRACE_GRP_##group),
 enum {
-#include <zircon/ktrace-def.h>
+#include <lib/zircon-internal/ktrace-def.h>
 };
 
 #define TAG_PROBE_16(n) KTRACE_TAG(((n)|0x800),KTRACE_GRP_PROBE,16)

@@ -7,8 +7,8 @@
 #pragma once
 
 #include <err.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <zircon/compiler.h>
-#include <zircon/ktrace.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS

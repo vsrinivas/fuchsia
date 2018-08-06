@@ -34,7 +34,8 @@ MODULE_FIDL_LIBS := \
 
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \
-    system/ulib/ddk
+    system/ulib/ddk \
+    system/ulib/zircon-internal
 
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \

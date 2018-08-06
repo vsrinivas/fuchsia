@@ -16,6 +16,7 @@ MODULE_DEPS := \
 	kernel/lib/heap \
 	kernel/lib/libc \
 	kernel/lib/fbl \
+	kernel/lib/zircon-internal \
 	kernel/vm
 
 MODULE_SRCS := \

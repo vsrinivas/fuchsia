@@ -15,7 +15,6 @@
 #include <driver-info/driver-info.h>
 #include <launchpad/launchpad.h>
 #include <zircon/assert.h>
-#include <zircon/ktrace.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
@@ -23,6 +22,7 @@
 #include <zircon/device/dmctl.h>
 #include <zircon/boot/bootdata.h>
 #include <lib/fdio/io.h>
+#include <lib/zircon-internal/ktrace.h>
 
 #include "devcoordinator.h"
 #include "devmgr.h"

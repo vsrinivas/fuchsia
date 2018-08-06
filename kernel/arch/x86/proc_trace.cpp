@@ -46,7 +46,7 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/device/cpu-trace/intel-pt.h>
-#include <zircon/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <zircon/mtrace.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>

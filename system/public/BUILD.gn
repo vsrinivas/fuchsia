@@ -14,8 +14,6 @@ source_set("public") {
   public = [
     "zircon/compiler.h",
     "zircon/errors.h",
-    "zircon/ktrace-def.h",
-    "zircon/ktrace.h",
     "zircon/syscalls/object.h",
     "zircon/types.h",
   ]
