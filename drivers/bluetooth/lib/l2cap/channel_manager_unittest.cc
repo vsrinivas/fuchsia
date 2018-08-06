@@ -186,6 +186,16 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
   EXPECT_FALSE(smp_closed);
 }
 
+TEST_F(L2CAP_ChannelManagerTest,
+       CallingDeactivateFromClosedCallbackDoesNotCrashOrHang) {
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster,
+                         DoNothing, dispatcher());
+  auto chan = chanmgr()->OpenFixedChannel(kTestHandle1, kSMPChannelId);
+  chan->Activate(NopRxCallback, [chan] { chan->Deactivate(); }, dispatcher());
+  chanmgr()->Unregister(kTestHandle1);  // Triggers ClosedCallback.
+  RunLoopUntilIdle();
+}
+
 TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   // LE-U link
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
