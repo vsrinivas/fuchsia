@@ -169,55 +169,35 @@ impl<T: Tokens> ClientSme<T> {
     fn get_connect_command(&self, token: ConnectConfig<T::ConnectToken>, bss: BssDescription)
         -> Option<ConnectCommand<T::ConnectToken>>
     {
-        let a_rsne = bss.rsn.as_ref().and_then(|a_rsne| {
-            let r = rsne::from_bytes(&a_rsne[..]).to_full_result();
-            if let Err(e) = &r {
-                error!("BSS {:?} carries invalid RSNE: {:?}; error: {:?}",
-                       bss.bssid, &a_rsne[..], e);
-            }
-            r.ok()
-        });
-
-        match a_rsne {
-            None if bss.rsn.is_some() => {
-                error!("cannot join BSS {:?}; invalid RSNE", bss.bssid);
+        match get_rsna(&self.device_info, &token.password, &bss) {
+            Err(e) => {
+                error!("cannot join BSS {:?}: {:?}", bss.bssid, e);
                 None
             },
-            None => Some(ConnectCommand {
-                bss: Box::new(bss),
-                token: Some(token.user_token),
-                rsna: None
-            }),
-            Some(a_rsne) => {
-                if !bss::is_rsn_compatible(&a_rsne) {
-                    error!("cannot join BSS {:?}; incompatible RSNE {:?}", bss.bssid, a_rsne);
-                    return None
-                }
-
-                let s_rsne = derive_s_rsne(&a_rsne);
-                match make_esssa(bss.ssid.as_bytes(),
-                                 &token.password[..],
-                                 self.device_info.addr,
-                                 s_rsne.clone(),
-                                 bss.bssid,
-                                 a_rsne) {
-                    Ok(esssa) => {
-                        let rsna =  Some(Rsna::new(s_rsne, esssa));
-                        Some(ConnectCommand {
-                            bss: Box::new(bss),
-                            token: Some(token.user_token),
-                            rsna
-                        })
-                    },
-                    Err(e) => {
-                        error!("cannot join BSS {:?} error creating ESS-SA: {}",
-                               bss.bssid, e);
-                        None
-                    },
-                }
-            }
+            Ok(rsna) => Some(
+                ConnectCommand {
+                    bss: Box::new(bss),
+                    token: Some(token.user_token),
+                    rsna
+                })
         }
     }
+}
+
+fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
+    -> Result<Option<Rsna>, Error>
+{
+    let a_rsne_bytes = match bss.rsn.as_ref() {
+        None => return Ok(None),
+        Some(x) => x
+    };
+    let a_rsne = rsne::from_bytes(&a_rsne_bytes[..]).to_full_result()
+        .map_err(|e| format_err!("invalid RSNE {:?}: {:?}", &a_rsne_bytes[..], e))?;
+    let s_rsne = derive_s_rsne(&a_rsne)?;
+    let esssa = make_esssa(bss.ssid.as_bytes(), &password[..], device_info.addr,
+                           s_rsne.clone(), bss.bssid, a_rsne)
+        .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
+    Ok(Some(Rsna::new(s_rsne, esssa)))
 }
 
 impl<T: Tokens> super::Station for ClientSme<T> {
@@ -277,15 +257,15 @@ fn make_esssa(ssid: &[u8], passphrase: &[u8], sta_addr: [u8; 6], sta_rsne: Rsne,
     EssSa::new(Role::Supplicant, auth_cfg, ptk_cfg, gtk_cfg)
 }
 
-
 /// Constructs Supplicant's RSNE with:
 /// Group Data Cipher: same as A-RSNE (CCMP-128 or TKIP)
 /// Pairwise Cipher: CCMP-128
 /// AKM: PSK
-fn derive_s_rsne(a_rsne: &Rsne) -> Rsne
+fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, Error>
 {
-    assert!(bss::is_rsn_compatible(&a_rsne),
-            "expected to never attempt to connect to an incompatible network");
+    if !bss::is_rsn_compatible(&a_rsne) {
+        bail!("incompatible RSNE {:?}", a_rsne);
+    }
 
     // If Authenticator's RSNE is supported, construct Supplicant's RSNE.
     let mut s_rsne = Rsne::new();
@@ -295,7 +275,7 @@ fn derive_s_rsne(a_rsne: &Rsne) -> Rsne
     s_rsne.pairwise_cipher_suites.push(pairwise_cipher);
     let akm = akm::Akm{oui: Bytes::from(&OUI[..]), suite_type: akm::PSK };
     s_rsne.akm_suites.push(akm);
-    s_rsne
+    Ok(s_rsne)
 }
 
 #[cfg(test)]
@@ -419,7 +399,7 @@ mod tests {
         let a_rsne = make_rsne(Some(cipher::TKIP), vec![cipher::CCMP_128], vec![akm::PSK]);
         assert_eq!(bss::is_rsn_compatible(&a_rsne), true);
 
-        let s_rsne = derive_s_rsne(&a_rsne);
+        let s_rsne = derive_s_rsne(&a_rsne).unwrap();
         let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 2, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
         assert_eq!(rsne_as_bytes(s_rsne), expected_rsne_bytes);
     }
@@ -429,7 +409,7 @@ mod tests {
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         assert_eq!(bss::is_rsn_compatible(&a_rsne), true);
 
-        let s_rsne = derive_s_rsne(&a_rsne);
+        let s_rsne = derive_s_rsne(&a_rsne).unwrap();
         let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
         assert_eq!(rsne_as_bytes(s_rsne), expected_rsne_bytes);
     }
@@ -439,7 +419,7 @@ mod tests {
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128, cipher::TKIP], vec![akm::PSK, akm::FT_PSK]);
         assert_eq!(bss::is_rsn_compatible(&a_rsne), true);
 
-        let s_rsne = derive_s_rsne(&a_rsne);
+        let s_rsne = derive_s_rsne(&a_rsne).unwrap();
         let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
         assert_eq!(rsne_as_bytes(s_rsne), expected_rsne_bytes);
     }
