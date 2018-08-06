@@ -8,6 +8,7 @@
         "garnet/packages/tests/boringssl",
         "garnet/packages/tests/broadcom",
         "garnet/packages/tests/chrealm",
+        "garnet/packages/tests/cmx",
         "garnet/packages/tests/cobalt_client",
         "garnet/packages/tests/crashpad",
         "garnet/packages/tests/debug_agent",

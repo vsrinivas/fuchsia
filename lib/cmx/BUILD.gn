@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 source_set("cmx") {
   sources = [
     "cmx.cc",
@@ -14,7 +16,7 @@ source_set("cmx") {
     "sandbox.h",
   ]
 
-  public_deps = [
+  deps = [
     "//garnet/lib/json",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
@@ -22,8 +24,10 @@ source_set("cmx") {
   ]
 }
 
-source_set("unittests") {
+executable("tests") {
   testonly = true
+
+  output_name = "cmx_unittests"
 
   sources = [
     "cmx_unittest.cc",
@@ -32,9 +36,25 @@ source_set("unittests") {
     "sandbox_unittest.cc",
   ]
 
-  public_deps = [
+  deps = [
     ":cmx",
+    "//garnet/lib/json",
+    "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gmock",
+    "//third_party/rapidjson",
+  ]
+}
+
+package("cmx_unittests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "cmx_unittests"
+    },
   ]
 }
