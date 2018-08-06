@@ -26,14 +26,17 @@ FakeChannel::FakeChannel(ChannelId id, ChannelId remote_id,
 }
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
-  FXL_DCHECK(rx_cb_);
-  FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(!!rx_cb_ == !!dispatcher_);
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
-  async::PostTask(dispatcher_,
-                  [cb = rx_cb_.share(), pdu = std::move(pdu)]() mutable {
-                    cb(std::move(pdu));
-                  });
+  if (dispatcher_) {
+    async::PostTask(dispatcher_,
+                    [cb = rx_cb_.share(), pdu = std::move(pdu)]() mutable {
+                      cb(std::move(pdu));
+                    });
+  } else {
+    pending_rx_sdus_.push(std::move(pdu));
+  }
 }
 
 void FakeChannel::SetSendCallback(SendCallback callback,
@@ -71,6 +74,11 @@ bool FakeChannel::Activate(RxCallback rx_callback,
   dispatcher_ = dispatcher;
   closed_cb_ = std::move(closed_callback);
   rx_cb_ = std::move(rx_callback);
+
+  while (!pending_rx_sdus_.empty()) {
+    rx_cb_(std::move(pending_rx_sdus_.front()));
+    pending_rx_sdus_.pop();
+  }
 
   return true;
 }
