@@ -350,6 +350,8 @@ enum class Digitizer : uint32_t {
     kMultiplePointDigitizer         = 0x0c,
     kFreeSpaceWand                  = 0x0d,
 
+    kFinger                         = 0x22,
+
     kTipPressure                    = 0x30,
     kBarrelPressure                 = 0x31,
     kInRange                        = 0x32,

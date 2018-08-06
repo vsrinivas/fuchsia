@@ -966,6 +966,42 @@ static bool parse_eve_touchpad_v2() {
    END_TEST;
 }
 
+static bool usage_helper() {
+   BEGIN_TEST;
+   auto usage = hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID);
+   EXPECT_EQ(usage.page, static_cast<uint16_t>(hid::usage::Page::kDigitizer));
+   EXPECT_EQ(usage.usage, static_cast<uint32_t>(hid::usage::Digitizer::kContactID));
+   END_TEST;
+}
+
+static bool minmax_operators() {
+   BEGIN_TEST;
+   EXPECT_TRUE((hid::MinMax{-1, 1} == hid::MinMax{-1, 1}));
+   EXPECT_FALSE((hid::MinMax{0, 1} == hid::MinMax{-1, 1}));
+   EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{0, 1}));
+   EXPECT_FALSE((hid::MinMax{-1, 2} == hid::MinMax{-1, 1}));
+   EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{-1, 2}));
+   EXPECT_FALSE((hid::MinMax{0, 2} == hid::MinMax{-1, 1}));
+   END_TEST;
+}
+
+static bool usage_operators() {
+   BEGIN_TEST;
+   EXPECT_TRUE(
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID) ==
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)
+   );
+   EXPECT_FALSE(
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch) ==
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)
+   );
+   EXPECT_FALSE(
+      hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX) ==
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)
+   );
+   END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
@@ -978,6 +1014,9 @@ RUN_TEST(parse_acer12_touch)
 RUN_TEST(parse_eve_tablet)
 RUN_TEST(parse_asus_touch)
 RUN_TEST(parse_eve_touchpad_v2)
+RUN_TEST(usage_helper)
+RUN_TEST(minmax_operators)
+RUN_TEST(usage_operators)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {

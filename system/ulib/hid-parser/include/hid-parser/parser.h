@@ -247,5 +247,22 @@ ReportField* GetFirstInputField(const DeviceDescriptor* dev_desc,
 
 Collection* GetAppCollection(const ReportField* field);
 
+// Helper for creating Usage constants.
+template <typename P, typename U>
+constexpr Usage USAGE(P page, U usage) {
+  return Usage{static_cast<uint16_t>(page), static_cast<uint32_t>(usage)};
+}
 
 }  // namespace hid
+
+inline bool operator==(hid::Usage a, hid::Usage b) {
+    return (a.page == b.page) && (a.usage == b.usage);
+}
+
+inline bool operator!=(hid::Usage a, hid::Usage b) {
+    return (a.page != b.page) || (a.usage != b.usage);
+}
+
+inline bool operator==(hid::MinMax a, hid::MinMax b) {
+    return (a.min == b.min) && (a.max == b.max);
+}
