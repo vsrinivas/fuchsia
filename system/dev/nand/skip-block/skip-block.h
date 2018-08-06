@@ -25,7 +25,7 @@
 namespace nand {
 
 class SkipBlockDevice;
-using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Ioctlable>;
+using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Ioctlable, ddk::Unbindable>;
 
 class SkipBlockDevice : public DeviceType,
                         public ddk::SkipBlockProtocol {

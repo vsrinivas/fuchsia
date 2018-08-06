@@ -20,7 +20,8 @@
 namespace nand {
 
 class NandPartDevice;
-using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable>;
+using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable,
+                               ddk::Unbindable>;
 
 class NandPartDevice : public DeviceType,
                        public ddk::NandProtocol<NandPartDevice>,
