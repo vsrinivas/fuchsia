@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/tests/mock_hid_decoder.h"
+#include "garnet/bin/ui/input_reader/touchscreen.h"
 
 #include "lib/fxl/logging.h"
 
@@ -65,6 +66,16 @@ bool MockHidDecoder::Read(HidAmbientLightSimple* light) {
 
 bool MockHidDecoder::Read(HidButtons* data) {
   return MockRead(ReportType::kButtons, report_.buttons, data);
+}
+
+bool MockHidDecoder::Read(Touchscreen::Report* report) {
+  // TODO(TC-319): Implement
+  return true;
+}
+
+bool MockHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
+  // TODO(TC-319): Implement
+  return true;
 }
 
 void MockHidDecoder::Send(std::vector<uint8_t> bytes, int content_length) {

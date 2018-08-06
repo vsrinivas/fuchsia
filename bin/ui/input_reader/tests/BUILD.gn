@@ -7,6 +7,7 @@ group("tests") {
 
   public_deps = [
     ":input_apptests",
+    ":input_reader_unittests",
   ]
 }
 
@@ -35,6 +36,7 @@ source_set("interface_tests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/tests/mocks",
     "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
   ]
 }
 
@@ -52,6 +54,7 @@ source_set("reader_interpreter_tests") {
     "//garnet/bin/ui/input_reader",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/tests/mocks",
+    "//zircon/public/lib/hid-parser",
   ]
 }
 
@@ -67,6 +70,7 @@ source_set("mock_device_watcher") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/hid-parser",
   ]
 }
 
@@ -84,5 +88,24 @@ source_set("mock_hid_decoder") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/hid-parser",
+  ]
+}
+
+executable("input_reader_unittests") {
+  output_name = "input_reader_unittests"
+
+  testonly = true
+
+  sources = [
+    "touchscreen_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/ui/input_reader",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
   ]
 }

@@ -10,6 +10,8 @@
 
 #include <zx/event.h>
 
+#include "garnet/bin/ui/input_reader/touchscreen.h"
+
 namespace mozart {
 
 // This interface wraps the file descriptor associated with a HID input
@@ -86,6 +88,9 @@ class HidDecoder {
   virtual bool Read(HidGamepadSimple* gamepad) = 0;
   virtual bool Read(HidAmbientLightSimple* light) = 0;
   virtual bool Read(HidButtons* data) = 0;
+  virtual bool Read(Touchscreen::Report* report) = 0;
+
+  virtual bool SetDescriptor(Touchscreen::Descriptor* touch_desc) = 0;
 };
 
 }  // namespace mozart

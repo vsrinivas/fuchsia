@@ -15,6 +15,8 @@ source_set("input_reader") {
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/ui/input/cpp",
     "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
   ]
 
@@ -59,10 +61,14 @@ source_set("device") {
     "device_watcher.h",
     "hid_decoder.cc",
     "hid_decoder.h",
+    "touchscreen.cc",
+    "touchscreen.h",
   ]
 
   public_deps = [
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zx",
   ]
 }

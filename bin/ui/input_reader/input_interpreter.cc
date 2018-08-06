@@ -113,6 +113,28 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
+  } else if (protocol == HidDecoder::Protocol::Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has hid touch";
+
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+    Touchscreen::Descriptor touch_desc;
+    hid_decoder_->SetDescriptor(&touch_desc);
+    touchscreen_descriptor_->x.range.min = touch_desc.x_logical_min;
+    touchscreen_descriptor_->x.range.max = touch_desc.x_logical_max;
+    touchscreen_descriptor_->x.resolution = touch_desc.x_resolution;
+
+    touchscreen_descriptor_->y.range.min = touch_desc.y_logical_min;
+    touchscreen_descriptor_->y.range.max = touch_desc.y_logical_max;
+    touchscreen_descriptor_->y.resolution = touch_desc.x_resolution;
+
+    touchscreen_descriptor_->max_finger_id = touch_desc.max_finger_id;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::HID;
   } else if (protocol == HidDecoder::Protocol::Acer12Touch) {
     FXL_VLOG(2) << "Device " << name() << " has stylus";
     has_stylus_ = true;
@@ -549,6 +571,19 @@ bool InputInterpreter::Read(bool discard) {
   }
 
   switch (touch_device_type_) {
+    case TouchDeviceType::HID:
+      Touchscreen::Report touch_report;
+      if (!hid_decoder_->Read(&touch_report)) {
+        FXL_LOG(ERROR) << " failed reading from touchscreen ";
+        return false;
+      }
+
+      if (ParseTouchscreenReport(&touch_report)) {
+        if (!discard) {
+          input_device_->DispatchReport(CloneReport(touchscreen_report_));
+        }
+      }
+      break;
     case TouchDeviceType::ACER12:
       if (report[0] == ACER12_RPT_ID_STYLUS) {
         if (ParseAcer12StylusReport(report.data(), rc)) {
@@ -708,6 +743,24 @@ void InputInterpreter::ParseGamepadMouseReport(
   mouse_report_->mouse->rel_x = gamepad->left_x;
   mouse_report_->mouse->rel_y = gamepad->left_y;
   mouse_report_->mouse->pressed_buttons = gamepad->hat_switch;
+}
+
+bool InputInterpreter::ParseTouchscreenReport(Touchscreen::Report* report) {
+  touchscreen_report_->event_time = InputEventTimestampNow();
+  touchscreen_report_->touchscreen->touches.resize(report->contact_count);
+
+  for (size_t i = 0; i < report->contact_count; ++i) {
+    fuchsia::ui::input::Touch touch;
+    touch.finger_id = report->contacts[i].id;
+    touch.x = report->contacts[i].x;
+    touch.y = report->contacts[i].y;
+    // TODO(SCN-1188): Add support for contact ellipse.
+    touch.width = 5;
+    touch.height = 5;
+    touchscreen_report_->touchscreen->touches->at(i) = std::move(touch);
+  }
+
+  return true;
 }
 
 bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {

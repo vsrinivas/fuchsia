@@ -55,6 +55,7 @@ class InputInterpreter {
 
   enum class TouchDeviceType {
     NONE,
+    HID,
     ACER12,
     PARADISEv1,
     PARADISEv2,
@@ -78,6 +79,7 @@ class InputInterpreter {
   void ParseKeyboardReport(uint8_t* report, size_t len);
   void ParseMouseReport(uint8_t* report, size_t len);
   void ParseGamepadMouseReport(const HidDecoder::HidGamepadSimple* gamepad);
+  bool ParseTouchscreenReport(Touchscreen::Report* report);
   bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);

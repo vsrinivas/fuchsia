@@ -47,6 +47,9 @@ class MockHidDecoder : public HidDecoder {
   bool Read(HidAmbientLightSimple* light) override;
   // |HidDecoder|
   bool Read(HidButtons* data) override;
+  bool Read(Touchscreen::Report* report) override;
+
+  bool SetDescriptor(Touchscreen::Descriptor* touch_desc) override;
 
   // Legacy emulation, which will allow |Read(int* bytes_read)| returning
   // |bytes| and setting |bytes_read| to |content_length|. There must not be a

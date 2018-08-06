@@ -9,8 +9,10 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
+#include "garnet/bin/ui/input_reader/touchscreen.h"
 
 namespace fzl {
 class FdioCaller;
@@ -47,6 +49,10 @@ class FdioHidDecoder : public HidDecoder {
   bool Read(HidAmbientLightSimple* light) override;
   // |HidDecoder|
   bool Read(HidButtons* data) override;
+  // |HidDecoder|
+  bool Read(Touchscreen::Report* report) override;
+
+  bool SetDescriptor(Touchscreen::Descriptor* touch_desc) override;
 
  private:
   struct DataLocator {
@@ -66,6 +72,7 @@ class FdioHidDecoder : public HidDecoder {
   Protocol protocol_;
   std::vector<uint8_t> report_;
   std::vector<DataLocator> decoder_;
+  Touchscreen ts_;
 };
 
 }  // namespace mozart

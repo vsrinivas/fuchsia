@@ -12,7 +12,7 @@ HidDecoder::~HidDecoder() = default;
 bool HidDecoder::use_legacy_mode() const {
   Protocol p = protocol();
   return p != Protocol::Gamepad && p != Protocol::Buttons &&
-         p != Protocol::LightSensor;
+         p != Protocol::LightSensor && p != Protocol::Touch;
 }
 
 }  // namespace mozart

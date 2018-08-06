@@ -118,6 +118,7 @@ zx::event FdioHidDecoder::GetEvent() {
 
 FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Consumer;
+  using ::hid::usage::Digitizer;
   using ::hid::usage::Page;
   using ::hid::usage::Sensor;
   struct {
@@ -130,6 +131,9 @@ FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
       {{static_cast<uint16_t>(Page::kConsumer),
         static_cast<uint32_t>(Consumer::kConsumerControl)},
        HidDecoder::Protocol::Buttons},
+      {{static_cast<uint16_t>(Page::kDigitizer),
+        static_cast<uint32_t>(Digitizer::kTouchScreen)},
+       HidDecoder::Protocol::Touch},
       // Add more sensors here
   };
   for (auto& j : usage_to_protocol) {
@@ -249,24 +253,22 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
   }
 
   // Find the first input report.
-  const hid::ReportField* input_fields = nullptr;
-  size_t field_count = 0;
+  const hid::ReportDescriptor* input_desc = nullptr;
   for (size_t rep = 0; rep < count; rep++) {
-    const hid::ReportField* fields = dev_desc->report[rep].first_field;
-    if (fields[0].type == hid::kInput) {
-      input_fields = fields;
-      field_count = dev_desc->report[rep].count;
+    const hid::ReportDescriptor* desc = &dev_desc->report[rep];
+    if (desc->first_field[0].type == hid::kInput) {
+      input_desc = desc;
       break;
     }
   }
 
-  if (input_fields == nullptr) {
+  if (input_desc == nullptr) {
     FXL_LOG(ERROR) << "no input report fields for " << name_;
     return false;
   }
 
   // Traverse up the nested collections to the Application collection.
-  auto collection = input_fields[0].col;
+  auto collection = input_desc->first_field[0].col;
   while (collection != nullptr) {
     if (collection->type == hid::CollectionType::kApplication) {
       break;
@@ -286,17 +288,25 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
   // Most modern gamepads report themselves as Joysticks. Madness.
   if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
       collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
-      ParseGamepadDescriptor(input_fields, field_count)) {
+      ParseGamepadDescriptor(input_desc->first_field, input_desc->count)) {
     protocol_ = Protocol::Gamepad;
   } else {
     protocol_ = ExtractProtocol(collection->usage);
     switch (protocol_) {
       case Protocol::LightSensor:
-        ParseAmbientLightDescriptor(input_fields, field_count);
+        ParseAmbientLightDescriptor(input_desc->first_field, input_desc->count);
         break;
       case Protocol::Buttons:
-        ParseButtonsDescriptor(input_fields, field_count);
+        ParseButtonsDescriptor(input_desc->first_field, input_desc->count);
         break;
+      case Protocol::Touch: {
+        bool success = ts_.ParseTouchscreenDescriptor(input_desc);
+        if (!success) {
+          FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name_;
+          return false;
+        }
+        break;
+      }
       // Add more protocols here
       default:
         break;
@@ -555,6 +565,38 @@ bool FdioHidDecoder::Read(HidButtons* data) {
     return false;
   }
   data->mic_mute = extract_uint8(report, cur->begin, 1u);
+  return true;
+}
+
+bool FdioHidDecoder::Read(Touchscreen::Report* report) {
+  int rc;
+  auto r = Read(&rc);
+
+  if (rc < 1) {
+    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
+    return false;
+  }
+
+  if (r[0] != ts_.report_id()) {
+    FXL_VLOG(0) << name() << " Touchscreen report " << r[0]
+                << " does not match report id " << ts_.report_id();
+    return false;
+  }
+
+  return ts_.ParseReport(r.data(), rc, report);
+}
+
+bool FdioHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
+  touch_desc->x_logical_min = ts_.x_logical_min();
+  touch_desc->x_logical_max = ts_.x_logical_max();
+  touch_desc->x_resolution = 1;
+
+  touch_desc->y_logical_min = ts_.y_logical_min();
+  touch_desc->y_logical_max = ts_.y_logical_max();
+  touch_desc->y_resolution = 1;
+
+  touch_desc->max_finger_id = ts_.contact_id_max();
+
   return true;
 }
 
