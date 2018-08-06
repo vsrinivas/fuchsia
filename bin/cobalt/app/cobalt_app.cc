@@ -7,7 +7,8 @@
 #include "garnet/bin/cobalt/app/utils.h"
 #include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
 #include "lib/backoff/exponential_backoff.h"
-#include "third_party/cobalt/encoder/memory_observation_store.h"
+#include "third_party/cobalt/encoder/file_observation_store.h"
+#include "third_party/cobalt/encoder/posix_file_system.h"
 
 namespace cobalt {
 
@@ -18,8 +19,9 @@ using config::ClientConfig;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::CobaltEncoderFactoryImpl;
+using encoder::FileObservationStore;
 using encoder::LegacyShippingManager;
-using encoder::MemoryObservationStore;
+using encoder::PosixFileSystem;
 using encoder::ShippingManager;
 using utils::FuchsiaHTTPClient;
 
@@ -39,6 +41,10 @@ constexpr char kAnalyzerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/analyzer_public.pem";
 constexpr char kShufflerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
+
+constexpr char kLegacyObservationStorePath[] =
+    "/data/cobalt_legacy_observation_store";
+constexpr char kV1ObservationStorePath[] = "/data/cobalt_v1_observation_store";
 
 CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds schedule_interval,
@@ -60,14 +66,18 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       timer_manager_(dispatcher),
       controller_impl_(
           new CobaltControllerImpl(dispatcher, &shipping_dispatcher_)) {
-  store_dispatcher_.Register(ObservationMetadata::LEGACY_BACKEND,
-                             std::make_unique<MemoryObservationStore>(
-                                 fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION,
-                                 kMaxBytesPerEnvelope, kMaxBytesTotal));
-  store_dispatcher_.Register(ObservationMetadata::V1_BACKEND,
-                             std::make_unique<MemoryObservationStore>(
-                                 fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION,
-                                 kMaxBytesPerEnvelope, kMaxBytesTotal));
+  store_dispatcher_.Register(
+      ObservationMetadata::LEGACY_BACKEND,
+      std::make_unique<FileObservationStore>(
+          fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION, kMaxBytesPerEnvelope,
+          kMaxBytesTotal, std::make_unique<PosixFileSystem>(),
+          kLegacyObservationStorePath));
+  store_dispatcher_.Register(
+      ObservationMetadata::V1_BACKEND,
+      std::make_unique<FileObservationStore>(
+          fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION, kMaxBytesPerEnvelope,
+          kMaxBytesPerEnvelope, std::make_unique<PosixFileSystem>(),
+          kV1ObservationStorePath));
 
   auto schedule_params =
       ShippingManager::ScheduleParams(schedule_interval, min_interval);

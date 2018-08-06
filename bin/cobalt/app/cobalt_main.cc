@@ -30,17 +30,18 @@ constexpr fxl::StringView kScheduleIntervalSecondsFlagName =
 // Used to override kMinIntervalDefault;
 constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 
-// Because we don't yet persist Observations to local, non-volatile storage,
-// we send accumulated Observations every 10 seconds. After persistence is
-// implemented this value should be changed to something more like one hour.
-const std::chrono::seconds kScheduleIntervalDefault(10);
+// As an initial test of the persistent storage system, we are scheduling
+// uploads every 3 minutes rather than every 10 seconds. In order to properly
+// support scheduling every hour, we need to add some kind of "fast track" for
+// systems that don't run for an hour (and thus won't ever upload observations).
+const std::chrono::seconds kScheduleIntervalDefault(60 * 3);
 
 // We send Observations to the Shuffler more frequently than kScheduleInterval
 // under some circumstances, namely, if there is memory pressure or if we
 // are explicitly asked to do so via the RequestSendSoon() method. This value
 // is a safety parameter. We do not make two attempts within a period of this
 // specified length.
-const std::chrono::seconds kMinIntervalDefault(1);
+const std::chrono::seconds kMinIntervalDefault(10);
 
 int main(int argc, const char** argv) {
   setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/config/ssl/cert.pem", 1);
