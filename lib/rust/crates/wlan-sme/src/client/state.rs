@@ -6,11 +6,12 @@ use client::bss::convert_bss_description;
 use fidl_mlme::{self, BssDescription, MlmeEvent};
 use client::{ConnectResult, Status, Tokens};
 use client::internal::{MlmeSink, UserSink};
+use client::rsn::Rsna;
 use MlmeRequest;
 use super::DeviceInfo;
 use wlan_rsn::rsne::Rsne;
 use wlan_rsn::key::exchange::Key;
-use wlan_rsn::rsna::{esssa::EssSa, SecAssocUpdate, SecAssocStatus};
+use wlan_rsn::rsna::{SecAssocUpdate, SecAssocStatus};
 use eapol;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -27,22 +28,6 @@ pub struct ConnectCommand<T> {
     pub bss: Box<BssDescription>,
     pub token: Option<T>,
     pub rsna: Option<Rsna>,
-}
-
-#[derive(Debug)]
-pub struct Rsna {
-    s_rsne: Rsne,
-    esssa: EssSa,
-}
-
-impl Rsna {
-    pub fn new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
-        assert_eq!(s_rsne.pairwise_cipher_suites.len(), 1);
-        assert_eq!(s_rsne.akm_suites.len(), 1);
-        assert!(s_rsne.group_data_cipher_suite.is_some());
-
-        Rsna {s_rsne, esssa}
-    }
 }
 
 #[derive(Debug)]
