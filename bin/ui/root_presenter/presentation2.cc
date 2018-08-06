@@ -77,6 +77,9 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
 
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
+  // TODO(SCN-874): All instances of Presentation2 share the same Session.
+  // Therefore, this stomps the event_handler set by any previously-created
+  // instance of Presentation2.
   session_->set_event_handler(
       fit::bind_member(this, &Presentation2::HandleScenicEvents));
 
@@ -164,6 +167,9 @@ void Presentation2::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
       switch (event.gfx().Which()) {
         case fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected: {
           auto& evt = event.gfx().view_holder_disconnected();
+          // TODO(SCN-874): All Presentation2 instances share the same Scenic
+          // Session.  Therefore, there is no guarantee that the disconnection
+          // event is intended for this presentation.
           FXL_DCHECK(view_holder_.id() == evt.view_holder_id);
           FXL_LOG(ERROR)
               << "Root presenter: Content view terminated unexpectedly.";
