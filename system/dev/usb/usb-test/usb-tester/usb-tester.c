@@ -20,6 +20,12 @@
 #define REQ_TIMEOUT_SECS 5
 #define TEST_DUMMY_DATA 42
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
+
+#define ISOCH_START_FRAME_DELAY  5
+#define ISOCH_ADDITIONAL_IN_REQS 8
+
 typedef struct {
     uint8_t intf_num;
     uint8_t alt_setting;
@@ -31,6 +37,7 @@ typedef struct {
 } isoch_loopback_intf_t;
 
 typedef struct {
+    zx_device_t* parent;
     zx_device_t* zxdev;
     usb_protocol_t usb;
 
@@ -188,9 +195,17 @@ static zx_status_t test_req_list_fill_data(usb_tester_t* usb_tester, list_node_t
 }
 
 // Queues all requests contained in the test_reqs list.
-static void test_req_list_queue(usb_tester_t* usb_tester, list_node_t* test_reqs) {
+static void test_req_list_queue(usb_tester_t* usb_tester, list_node_t* test_reqs,
+                                uint64_t start_frame) {
+    bool first = true;
     test_req_t* test_req;
     list_for_every_entry(test_reqs, test_req, test_req_t, node) {
+        // Set the frame ID for the first request.
+        // The following requests will be scheduled for ASAP after that.
+        if (first) {
+            test_req->req->header.frame = start_frame;
+            first = false;
+        }
         usb_request_queue(&usb_tester->usb, test_req->req);
     }
 }
@@ -207,6 +222,7 @@ static zx_status_t usb_tester_set_mode_fwloader(usb_tester_t* usb_tester) {
     }
     return ZX_OK;
 }
+
 // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
 static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
                                             const usb_tester_params_t* params) {
@@ -257,8 +273,133 @@ done:
     return status;
 }
 
+// Counts how many requests were successfully loopbacked between the OUT and IN EPs.
+// Returns ZX_OK if no fatal error occurred during verification.
+// out_num_passed will be populated with the number of successfully loopbacked requests.
+static zx_status_t usb_tester_verify_loopback(usb_tester_t* usb_tester, list_node_t* out_reqs,
+                                              list_node_t* in_reqs, size_t* out_num_passed) {
+    size_t num_passed = 0;
+    test_req_t* out_req_unmatched_start = list_next_type(out_reqs, out_reqs, test_req_t, node);
+    test_req_t* in_req;
+    list_for_every_entry(in_reqs, in_req, test_req_t, node) {
+        // You can't transfer an isochronous request of length zero.
+        if (in_req->req->response.status != ZX_OK || in_req->req->response.actual == 0) {
+            zxlogf(TRACE, "skipping isoch req, status %d, read len %lu\n",
+                   in_req->req->response.status, in_req->req->response.actual);
+            continue;
+        }
+        void* in_data;
+        zx_status_t status = usb_req_mmap(&usb_tester->usb, in_req->req, &in_data);
+        if (status != ZX_OK) {
+            return status;
+        }
+        // We will start searching the OUT requests from after the last matched OUT request to
+        // preserve expected ordering.
+        test_req_t* out_req = out_req_unmatched_start;
+        bool matched = false;
+        while (out_req && !matched) {
+            if (out_req->req->response.status == ZX_OK &&
+                out_req->req->response.actual == in_req->req->response.actual) {
+                void* out_data;
+                status = usb_req_mmap(&usb_tester->usb, out_req->req, &out_data);
+                if (status != ZX_OK) {
+                    return status;
+                }
+                matched = memcmp(in_data, out_data, out_req->req->response.actual) == 0;
+            }
+            out_req = list_next_type(out_reqs, &out_req->node, test_req_t, node);
+        }
+        if (matched) {
+            out_req_unmatched_start = out_req;
+            num_passed++;
+        } else {
+            // Maybe IN data was corrupted.
+            zxlogf(TRACE, "could not find matching isoch req\n");
+        }
+    }
+    *out_num_passed = num_passed;
+    return ZX_OK;
+}
+
+static zx_status_t usb_tester_isoch_loopback(usb_tester_t* usb_tester,
+                                             const usb_tester_params_t* params,
+                                             usb_tester_result_t* result) {
+    if (params->len > REQ_MAX_LEN) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    isoch_loopback_intf_t* intf = &usb_tester->isoch_loopback_intf;
+
+    zx_status_t status = usb_set_interface(&usb_tester->usb, intf->intf_num, intf->alt_setting);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "usb_set_interface got err: %d\n", status);
+        goto done;
+    }
+    // TODO(jocelyndang): optionally allow the user to specify a packet size.
+    uint16_t packet_size = MIN(intf->in_max_packet, intf->out_max_packet);
+    size_t num_reqs = DIV_ROUND_UP(params->len, packet_size);
+
+    zxlogf(TRACE, "allocating %lu reqs of packet size %u, total bytes %lu\n",
+           num_reqs, packet_size, params->len);
+
+    list_node_t in_reqs = LIST_INITIAL_VALUE(in_reqs);
+    list_node_t out_reqs = LIST_INITIAL_VALUE(out_reqs);
+    // We will likely get a few empty IN requests, as there is a delay between the start of an
+    // OUT transfer and it being received. Allocate a few more IN requests to account for this.
+    status = test_req_list_alloc(usb_tester, num_reqs + ISOCH_ADDITIONAL_IN_REQS, packet_size,
+                                 intf->in_addr, &in_reqs);
+    if (status != ZX_OK) {
+        goto done;
+    }
+    status = test_req_list_alloc(usb_tester, num_reqs, packet_size, intf->out_addr, &out_reqs);
+    if (status != ZX_OK) {
+        goto done;
+    }
+    status = test_req_list_fill_data(usb_tester, &out_reqs, params->data_pattern);
+    if (status != ZX_OK) {
+        goto done;
+    }
+
+    // Find the current frame so we can schedule OUT and IN requests to start simultaneously.
+    uint64_t frame;
+    size_t read_len;
+    status = device_ioctl(usb_tester->parent, IOCTL_USB_GET_CURRENT_FRAME,
+                          NULL, 0, &frame, sizeof(frame), &read_len);
+    if (status != ZX_OK || read_len != sizeof(frame)) {
+        zxlogf(ERROR, "failed to get frame, err: %d, read %lu, want %lu\n",
+               status, read_len, sizeof(frame));
+        goto done;
+    }
+    // Adds some delay so we don't miss the scheduled start frame.
+    uint64_t start_frame = frame + ISOCH_START_FRAME_DELAY;
+    zxlogf(TRACE, "scheduling isoch loopback to start on frame %lu\n", start_frame);
+
+    test_req_list_queue(usb_tester, &in_reqs, start_frame);
+    test_req_list_queue(usb_tester, &out_reqs, start_frame);
+
+    test_req_list_wait_complete(usb_tester, &out_reqs);
+    test_req_list_wait_complete(usb_tester, &in_reqs);
+
+    size_t num_passed = 0;
+    status = usb_tester_verify_loopback(usb_tester, &out_reqs, &in_reqs, &num_passed);
+    if (status != ZX_OK) {
+        goto done;
+    }
+    result->num_passed = num_passed;
+    result->num_packets = num_reqs;
+    zxlogf(TRACE, "%lu / %lu passed\n", num_passed, num_reqs);
+
+done:;
+    zx_status_t res = usb_set_interface(&usb_tester->usb, intf->intf_num, 0);
+    if (res != ZX_OK) {
+        zxlogf(ERROR, "could not switch back to isoch interface default alternate setting\n");
+    }
+    test_req_list_release_reqs(usb_tester, &out_reqs);
+    test_req_list_release_reqs(usb_tester, &in_reqs);
+    return status;
+}
+
 static zx_status_t usb_tester_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                  void* out_buf, size_t out_len, size_t* out_actual) {
+                                    void* out_buf, size_t out_len, size_t* out_actual) {
     usb_tester_t* usb_tester = ctx;
 
     switch (op) {
@@ -269,6 +410,19 @@ static zx_status_t usb_tester_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             return ZX_ERR_INVALID_ARGS;
         }
         return usb_tester_bulk_loopback(usb_tester, in_buf);
+    }
+    case IOCTL_USB_TESTER_ISOCH_LOOPBACK: {
+        if (in_buf == NULL || in_len != sizeof(usb_tester_params_t) ||
+            out_buf == NULL || out_len != sizeof(usb_tester_result_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        usb_tester_result_t* result = out_buf;
+        zx_status_t status = usb_tester_isoch_loopback(usb_tester, in_buf, result);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *out_actual = sizeof(*result);
+        return ZX_OK;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -309,6 +463,8 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
     if (!usb_tester) {
         return ZX_ERR_NO_MEMORY;
     }
+    usb_tester->parent = device;
+
     zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb_tester->usb);
     if (status != ZX_OK) {
         goto error_return;

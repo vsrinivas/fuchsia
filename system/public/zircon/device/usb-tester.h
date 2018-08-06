@@ -22,7 +22,20 @@ typedef struct usb_tester_params {
 #define IOCTL_USB_TESTER_SET_MODE_FWLOADER IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_TEST, 0)
 IOCTL_WRAPPER(ioctl_usb_tester_set_mode_fwloader, IOCTL_USB_TESTER_SET_MODE_FWLOADER);
 
-// ssize_t ioctl_usb_tester_bulk_loopback(int fd, const usb_tester_params_t* buf);
+// ssize_t ioctl_usb_tester_bulk_loopback(int fd, const usb_tester_params_t* params);
 #define IOCTL_USB_TESTER_BULK_LOOPBACK IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_TEST, 1)
 IOCTL_WRAPPER_IN(ioctl_usb_tester_bulk_loopback,
                  IOCTL_USB_TESTER_BULK_LOOPBACK, usb_tester_params_t);
+
+typedef struct {
+    // Number of packets loopbacked successfully.
+    size_t num_passed;
+    // Number of packets transferred to each EP.
+    size_t num_packets;
+} usb_tester_result_t;
+
+// ssize_t ioctl_usb_tester_isoch_loopback(int fd, const usb_tester_params_t* params,
+//                                         usb_tester_result_t* result);
+#define IOCTL_USB_TESTER_ISOCH_LOOPBACK IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_TEST, 2)
+IOCTL_WRAPPER_INOUT(ioctl_usb_tester_isoch_loopback, IOCTL_USB_TESTER_ISOCH_LOOPBACK,
+                    usb_tester_params_t, usb_tester_result_t);
