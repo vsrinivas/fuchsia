@@ -20,7 +20,6 @@ use failure::{Error, ResultExt};
 use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
 use netstack::{NetstackMarker, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
 use std::fs;
-use std::io::Read;
 use futures::{future, FutureExt, StreamExt};
 
 mod device_id;
@@ -30,10 +29,6 @@ const DEFAULT_CONFIG_FILE: &str = "/pkg/data/default.json";
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub device_name: Option<String>,
-}
-
-fn parse_config(config: String) -> Result<Config, Error> {
-    serde_json::from_str(&config).map_err(Into::into)
 }
 
 fn is_physical(n: &NetInterface) -> bool {
@@ -47,19 +42,12 @@ fn derive_device_name(interfaces: Vec<NetInterface>) -> Option<String> {
         .map(|iface| device_id::device_id(&iface.hwaddr))
 }
 
-// Workaround for https://fuchsia.atlassian.net/browse/TC-141
-fn read_to_string(s: &str) -> Result<String, Error> {
-    let mut f = fs::File::open(s).context("Failed to read file")?;
-    let mut out = String::new();
-    f.read_to_string(&mut out)?;
-    Ok(out)
-}
-
 static DEVICE_NAME_KEY: &str = "DeviceName";
 
 fn main() -> Result<(), Error> {
     println!("netcfg: started");
-    let default_config = parse_config(read_to_string(DEFAULT_CONFIG_FILE)?)?;
+    let default_config_file = fs::File::open(DEFAULT_CONFIG_FILE)?;
+    let default_config: Config = serde_json::from_reader(default_config_file)?;
     let mut executor = async::Executor::new().context("error creating event loop")?;
     let netstack = app::client::connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let device_settings_manager = app::client::connect_to_service::<DeviceSettingsManagerMarker>()
