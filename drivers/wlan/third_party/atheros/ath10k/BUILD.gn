@@ -70,6 +70,7 @@ driver_module("ath10k_driver") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
 

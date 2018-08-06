@@ -22,7 +22,7 @@
 
 #include <ddk/driver.h>
 #include <hw/arch_ops.h>
-#include <zircon/misc/fnv1hash.h>
+#include <lib/zircon-internal/fnv1hash.h>
 
 #include "core.h"
 #include "debug.h"
