@@ -9,7 +9,7 @@ executable("bt-host-unittests") {
 
   deps = [
     "//garnet/drivers/bluetooth/lib:tests",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/drivers/bluetooth/lib/testing:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }

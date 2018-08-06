@@ -6,6 +6,7 @@
 
 #include <zircon/status.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/lib/bluetooth/c/bt_host.h"
 
@@ -24,7 +25,7 @@ HostDevice::HostDevice(zx_device_t* device)
 }
 
 zx_status_t HostDevice::Bind() {
-  FXL_VLOG(1) << "bt-host: bind";
+  bt_log(TRACE, "bt-host", "bind");
 
   std::lock_guard<std::mutex> lock(mtx_);
 

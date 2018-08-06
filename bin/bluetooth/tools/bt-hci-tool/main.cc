@@ -8,10 +8,14 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <ddk/driver.h>
+#include <syslog/global.h>
+
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/bluetooth/tools/lib/command_dispatcher.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
@@ -34,6 +38,10 @@ const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
 
 }  // namespace
 
+// TODO(armansito): Make this tool not depend on drivers/bluetooth/lib and avoid
+// this hack.
+BT_DECLARE_FAKE_DRIVER();
+
 int main(int argc, char* argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -50,7 +58,9 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  fxl::SetLogSettings(log_settings);
+  fx_log_init();
+  fx_logger_set_min_severity(fx_log_get_logger(), log_settings.min_log_level);
+  btlib::common::UseSyslog();
 
   std::string hci_dev_path = kDefaultHCIDev;
   if (cl.GetOptionValue("dev", &hci_dev_path) && hci_dev_path.empty()) {

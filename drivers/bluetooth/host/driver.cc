@@ -10,9 +10,8 @@
 
 namespace {
 
-// TODO(armansito): Switch from FXL logging to DDK logging. We'll want to first
-// come up with a system within btlib so that logging works both in a devmgr
-// environment and outside (e.g. tools and unit tests) (NET-357).
+// TODO(NET-357): Remove these once the host library is switched over to
+// lib/common/log.h
 
 #define BT_DEBUG 0
 #if BT_DEBUG

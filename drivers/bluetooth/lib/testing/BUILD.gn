@@ -51,3 +51,22 @@ source_set("fake_controller") {
     "//zircon/public/lib/zx",
   ]
 }
+
+# Main entry point for host library unittests.
+source_set("gtest_main") {
+  testonly = true
+
+  sources = [
+    "run_all_unittests.cc",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/driver",
+  ]
+
+  public_deps = [
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <unistd.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
@@ -84,7 +85,7 @@ bool Adapter::Initialize(InitializeCallback callback,
   FXL_DCHECK(transport_closed_cb);
 
   if (IsInitialized()) {
-    FXL_LOG(WARNING) << "gap: Already initialized";
+    bt_log(WARN, "gap", "Adapter already initialized");
     return false;
   }
 

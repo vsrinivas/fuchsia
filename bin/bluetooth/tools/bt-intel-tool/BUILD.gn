@@ -17,6 +17,7 @@ executable("bt-intel-tool") {
 
   deps = [
     "//garnet/bin/bluetooth/tools/lib",
+    "//garnet/drivers/bluetooth/lib/common",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
   ]

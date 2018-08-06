@@ -8,6 +8,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 
 #include "device_wrapper.h"
@@ -106,7 +107,7 @@ void Transport::ShutDown() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(IsInitialized());
 
-  FXL_LOG(INFO) << "hci: Transport: shutting down";
+  bt_log(INFO, "hci", "transport shutting down");
 
   if (acl_data_channel_) {
     acl_data_channel_->ShutDown();
