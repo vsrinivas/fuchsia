@@ -283,20 +283,15 @@ TEST_F(ComponentControllerTest, CreateAndDeleteWithoutKilling) {
 }
 
 TEST_F(ComponentControllerTest, ControllerScope) {
-  bool wait = false;
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component(component_ptr);
-    component->Wait([&wait](int64_t errcode) { wait = true; });
     realm_.AddComponent(std::move(component));
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
-
-  // make sure all messages are processed after wait was called
-  RunLoopUntilIdle();
-  EXPECT_EQ(realm_.ComponentCount(), 0u);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this]() { return realm_.ComponentCount() == 0; }));
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
