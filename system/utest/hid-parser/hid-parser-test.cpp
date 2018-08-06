@@ -8,6 +8,7 @@
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
+#include <hid-parser/report.h>
 
 #include <unistd.h>
 #include <unittest/unittest.h>
@@ -1041,6 +1042,81 @@ static bool usage_operators() {
    END_TEST;
 }
 
+static bool extract_tests() {
+    BEGIN_TEST;
+    uint8_t data[] = {0x0F, 0x0F, 0x0F, 0x0F, 0x0F};
+    hid::Report report = {data, 5};
+    hid::Attributes attr;
+    bool ret;
+
+    uint8_t int8;
+    attr.offset = 0;
+    attr.bit_sz = 8;
+    ret = ExtractUint(report, attr, &int8);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int8, 0x0F);
+
+    attr.offset = 2;
+    attr.bit_sz = 6;
+    ret = ExtractUint(report, attr, &int8);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int8, 0x03);
+
+    attr.offset = 3;
+    attr.bit_sz = 2;
+    ret = ExtractUint(report, attr, &int8);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int8, 0x01);
+
+    // Test over a byte boundary
+    attr.offset = 4;
+    attr.bit_sz = 8;
+    ret = ExtractUint(report, attr, &int8);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int8, 0xF0);
+
+    uint16_t int16;
+    attr.offset = 0;
+    attr.bit_sz = 16;
+    ret = ExtractUint(report, attr, &int16);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int16, 0x0F0F);
+
+    attr.offset = 4;
+    attr.bit_sz = 16;
+    ret = ExtractUint(report, attr, &int16);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int16, 0xF0F0);
+
+    uint32_t int32;
+    attr.offset = 0;
+    attr.bit_sz = 32;
+    ret = ExtractUint(report, attr, &int32);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int32, 0x0F0F0F0F);
+
+    attr.offset = 4;
+    attr.bit_sz = 32;
+    ret = ExtractUint(report, attr, &int32);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(int32, 0xF0F0F0F0);
+
+    // Test that it fails if the attr is too large
+    attr.offset = 0;
+    attr.bit_sz = 9;
+    ret = ExtractUint(report, attr, &int8);
+    EXPECT_FALSE(ret);
+
+    // Test that it fails if it goes past the end of the report
+    attr.offset = 36;
+    attr.bit_sz = 16;
+    ret = ExtractUint(report, attr, &int16);
+    EXPECT_FALSE(ret);
+
+    END_TEST;
+
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
@@ -1056,6 +1132,7 @@ RUN_TEST(parse_eve_touchpad_v2)
 RUN_TEST(usage_helper)
 RUN_TEST(minmax_operators)
 RUN_TEST(usage_operators)
+RUN_TEST(extract_tests)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {

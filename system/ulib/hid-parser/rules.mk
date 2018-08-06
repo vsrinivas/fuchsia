@@ -15,6 +15,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 MODULE_SRCS += \
     $(LOCAL_DIR)/item.cpp \
     $(LOCAL_DIR)/parser.cpp \
+    $(LOCAL_DIR)/report.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
