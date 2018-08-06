@@ -21,6 +21,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-canvas.c \
     $(LOCAL_DIR)/astro-light.c \
     $(LOCAL_DIR)/astro-thermal.c \
+    $(LOCAL_DIR)/astro-video.c \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \

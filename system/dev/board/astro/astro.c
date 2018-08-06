@@ -38,72 +38,6 @@ static zx_protocol_device_t aml_bus_device_protocol = {
     .release = aml_bus_release,
 };
 
-static pbus_mmio_t astro_video_mmios[] = {
-    {
-        .base =     S905D2_CBUS_BASE,
-        .length =   S905D2_CBUS_LENGTH,
-    },
-    {
-        .base =     S905D2_DOS_BASE,
-        .length =   S905D2_DOS_LENGTH,
-    },
-    {
-        .base =     S905D2_HIU_BASE,
-        .length =   S905D2_HIU_LENGTH,
-    },
-    {
-        .base =     S905D2_AOBUS_BASE,
-        .length =   S905D2_AOBUS_LENGTH,
-    },
-    {
-        .base =     S905D2_DMC_BASE,
-        .length =   S905D2_DMC_LENGTH,
-    },
-};
-
-static const pbus_bti_t astro_video_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_VIDEO,
-    },
-};
-
-static const pbus_irq_t astro_video_irqs[] = {
-    {
-        .irq = S905D2_DEMUX_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
-        .irq = S905D2_PARSER_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
-        .irq = S905D2_DOS_MBOX_0_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
-        .irq = S905D2_DOS_MBOX_1_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
-        .irq = S905D2_DOS_MBOX_2_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-};
-
-static const pbus_dev_t video_dev = {
-    .name = "video",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_AMLOGIC_S905D2,
-    .did = PDEV_DID_AMLOGIC_VIDEO,
-    .mmios = astro_video_mmios,
-    .mmio_count = countof(astro_video_mmios),
-    .btis = astro_video_btis,
-    .bti_count = countof(astro_video_btis),
-    .irqs = astro_video_irqs,
-    .irq_count = countof(astro_video_irqs),
-};
-
 static const pbus_dev_t rtc_dev = {
     .name = "rtc",
     .vid = PDEV_VID_GENERIC,
@@ -151,8 +85,8 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &video_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "aml_start_thread could not add video_dev: %d\n", status);
+    if ((status = aml_video_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_video_init failed: %d\n", status);
         goto fail;
     }
 
