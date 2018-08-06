@@ -609,6 +609,15 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         return ZX_ERR_BAD_STATE;
     }
 
+    auto status = SetAssocContext(*assoc);
+    if (status != ZX_OK) {
+        errorf("failed to set association context (status %d)\n", status);
+        service::SendAssocConfirm(device_,
+                                  wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // TODO(porce): Move into |assoc_ctx_|
     common::MacAddr bssid(bss_->bssid.data());
     state_ = WlanState::kAssociated;
     assoc_timeout_ = zx::time();
@@ -1498,6 +1507,16 @@ uint8_t Station::GetTid() {
 
 uint8_t Station::GetTid(const EthFrame& frame) {
     return GetTid();
+}
+
+// TODO(NET-1261): Intersect capabilities and configurations
+zx_status_t Station::SetAssocContext(const AssociationResponse& resp) {
+    assoc_ctx_ = AssocContext{};
+    assoc_ctx_.ts_start = zx::time();
+
+    // Stub function
+
+    return ZX_OK;
 }
 
 wlan_stats::ClientMlmeStats Station::stats() const {

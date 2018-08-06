@@ -27,6 +27,23 @@ namespace wlan_mlme = wlan_mlme;
 class Packet;
 class Timer;
 
+// Information defined only within a context of association
+struct AssocContext {
+    // TODO(porce): Move association-related variables of class Station to here
+    zx::time ts_start;  // timestamp of the beginning of the association
+
+    // Negotiated configurations
+    // This is an outcome of intersection of capabilities and configurations.
+    std::vector<uint8_t> supported_rates;
+    std::vector<uint8_t> ext_supported_rates;
+
+    CapabilityInfo cap;
+    bool has_ht;
+    HtCapabilities ht_cap;
+    bool has_vht;
+    VhtCapabilities vht_cap;
+};
+
 class Station {
    public:
     Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
@@ -132,6 +149,7 @@ class Station {
     zx_status_t BuildHtCapabilities(HtCapabilities* htc) const;
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
+    zx_status_t SetAssocContext(const AssociationResponse& resp);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
@@ -152,7 +170,9 @@ class Station {
 
     wlan_channel_t join_chan_;
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
+    AssocContext assoc_ctx_{};
 };
 
 const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
+
 }  // namespace wlan
