@@ -12,8 +12,6 @@
 #include <fbl/macros.h>
 #include <fbl/type_support.h>
 
-#include <zircon/misc/fnv1hash.h>
-
 #include <zircon/types.h>
 
 #include <assert.h>

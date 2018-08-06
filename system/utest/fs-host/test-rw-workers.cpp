@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <zircon/misc/xorshiftrand.h>
+#include <lib/zircon-internal/xorshiftrand.h>
 
 #include "util.h"
 

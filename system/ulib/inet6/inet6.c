@@ -9,7 +9,7 @@
 #include <threads.h>
 
 #include <inet6/inet6.h>
-#include <zircon/misc/fnv1hash.h>
+#include <lib/zircon-internal/fnv1hash.h>
 #include <zircon/syscalls.h>
 
 #define REPORT_BAD_PACKETS 0

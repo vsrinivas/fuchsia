@@ -64,6 +64,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \
+    system/ulib/zircon-internal \
     system/ulib/zxcpp \
     third_party/ulib/uboringssl \
 

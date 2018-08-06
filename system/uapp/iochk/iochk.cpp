@@ -25,7 +25,7 @@
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/device/skip-block.h>
-#include <zircon/misc/xorshiftrand.h>
+#include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>

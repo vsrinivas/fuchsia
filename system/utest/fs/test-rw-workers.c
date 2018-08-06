@@ -15,7 +15,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
-#include <zircon/misc/xorshiftrand.h>
+#include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/types.h>
 
 #include "filesystems.h"

@@ -33,6 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/trace \
     system/ulib/zx \
+    system/ulib/zircon-internal \
     system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/sync \
@@ -73,6 +74,8 @@ MODULE_TYPE := hostlib
 MODULE_SRCS := $(MODULE_HOST_SRCS)
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
+
+MODULE_HEADER_DEPS += system/ulib/zircon-internal
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib

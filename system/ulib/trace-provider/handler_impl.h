@@ -14,7 +14,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <zircon/misc/fnv1hash.h>
+#include <lib/zircon-internal/fnv1hash.h>
 
 namespace trace {
 namespace internal {

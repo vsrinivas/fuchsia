@@ -37,6 +37,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/zxcpp/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fdio/include \
+    -Isystem/ulib/zircon-internal/include \
     -Isystem/ulib/zircon/include \
 
 MODULE_HOST_LIBS := \

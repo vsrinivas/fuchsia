@@ -14,7 +14,7 @@
 #include <perftest/results.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/block.h>
-#include <zircon/misc/xorshiftrand.h>
+#include <lib/zircon-internal/xorshiftrand.h>
 #include <lib/sync/completion.h>
 
 static uint64_t number(const char* str) {

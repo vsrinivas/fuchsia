@@ -15,6 +15,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/perftest \
     system/ulib/sync \
+    system/ulib/zircon-internal \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
