@@ -24,7 +24,7 @@ namespace hid {
 //                              +col -------> Collection
 //                                            +type
 //                                            +parent ---> Collection
-//                             1
+//
 // The structure describes all the information returned by the device;
 // no information present in the original stream is lost.
 //
@@ -50,36 +50,45 @@ namespace hid {
 //                        usage           button,1
 //                        flags           data,var
 //                        bit_sz          1
+//                        // For descriptors that have more than 1 report,
+//                        // the first 8 bits are always the report id
+//                        offset          8
 //
 //                    [1] report_id:      1
 //                        usage           button,2
 //                        flags           data,var
 //                        bit_sz          1
+//                        offset          9
 //
 //                    [2] report_id:      1
 //                        usage           button,none
 //                        flags           const
 //                        bit_sz          6
+//                        offset          10
 //    report[1]
 //    .first_field--> [3] report_id:      3
 //                        usage           desktop,X
 //                        flags           data,var
 //                        bit_sz          8
+//                        offset          8
 //
 //                    [4] report_id:      3
 //                        usage           desktop,Y
 //                        flags           data,var
 //                        bit_sz          8
+//                        offset          16
 //    report[2]
 //    .first_field--> [5] report_id:      4
 //                        usage           desktop,wheel
 //                        flags           data,var
 //                        bit_sz          5
+//                        offset          8
 //
 //                    [6] report_id:      4
 //                        usage           desktop,none
 //                        flags           const
 //                        bit_sz          3
+//                        offset          13
 //
 // Now given the following report stream, with byte-order
 // left to right:
@@ -194,6 +203,7 @@ struct Attributes {
     MinMax logc_mm;
     MinMax phys_mm;
     uint8_t bit_sz;
+    uint32_t offset;
 };
 
 struct ReportField {
@@ -206,9 +216,11 @@ struct ReportField {
 
 struct ReportDescriptor {
     uint8_t report_id;
+    size_t byte_sz;
     size_t count;
     ReportField* first_field;
 };
+
 
 struct DeviceDescriptor {
     size_t rep_count;

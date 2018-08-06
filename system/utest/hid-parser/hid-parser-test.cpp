@@ -101,9 +101,11 @@ static bool parse_boot_mouse() {
     ASSERT_EQ(dev->rep_count, 1u);
     EXPECT_EQ(dev->report[0].report_id, 0);
 
-    // The only report has 6 fields.
+    // The only report has 6 fields and is 32 bits long.
     EXPECT_EQ(dev->report[0].count, 6);
+    EXPECT_EQ(dev->report[0].byte_sz, 3);
     const auto fields = dev->report[0].first_field;
+
 
     // All fields are input type with report id = 0.
     for (uint8_t ix = 0; ix != dev->report[0].count; ++ix) {
@@ -118,6 +120,7 @@ static bool parse_boot_mouse() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
         EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 1));
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.offset, ix);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
@@ -125,6 +128,7 @@ static bool parse_boot_mouse() {
 
     // Next field is 5 bits constant. Aka padding.
     EXPECT_EQ(fields[3].attr.bit_sz, 5);
+    EXPECT_EQ(fields[3].attr.offset, 3);
     EXPECT_EQ(hid::kConstant & fields[3].flags, hid::kConstant);
 
     // Next comes 'X' field, 8 bits data, relative.
@@ -133,6 +137,7 @@ static bool parse_boot_mouse() {
     EXPECT_EQ(fields[4].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[4].attr.usage.usage, hid::usage::GenericDesktop::kX);
     EXPECT_EQ(fields[4].attr.bit_sz, 8);
+    EXPECT_EQ(fields[4].attr.offset, 8);
     EXPECT_EQ(fields[4].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[4].attr.logc_mm.max, 127);
     EXPECT_EQ(fields[4].attr.phys_mm.min, 0);
@@ -143,6 +148,7 @@ static bool parse_boot_mouse() {
     EXPECT_EQ(fields[5].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[5].attr.usage.usage, hid::usage::GenericDesktop::kY);
     EXPECT_EQ(fields[5].attr.bit_sz, 8);
+    EXPECT_EQ(fields[5].attr.offset, 16);
     EXPECT_EQ(fields[5].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[5].attr.logc_mm.max, 127);
     EXPECT_EQ(fields[5].attr.phys_mm.min, 0);
@@ -287,9 +293,10 @@ static bool parse_adaf_trinket() {
     // First report is the same as boot_mouse, except for the report id.
     EXPECT_EQ(dev->report[0].report_id, 1);
     ASSERT_EQ(dev->report[0].count, 6);
+    EXPECT_EQ(dev->report[0].byte_sz, 4);
     const hid::ReportField* fields = dev->report[0].first_field;
 
-    // All fields are scalar input type with report id = 0.
+    // All fields are scalar input type with report id = 1.
     for (uint8_t ix = 0; ix != dev->report[0].count; ++ix) {
         EXPECT_EQ(fields[ix].report_id, 1);
         EXPECT_EQ(fields[ix].type, hid::kInput);
@@ -303,6 +310,7 @@ static bool parse_adaf_trinket() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
         EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 1));
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.offset, 8u + ix);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
@@ -318,6 +326,7 @@ static bool parse_adaf_trinket() {
     EXPECT_EQ(fields[4].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[4].attr.usage.usage, hid::usage::GenericDesktop::kX);
     EXPECT_EQ(fields[4].attr.bit_sz, 8);
+    EXPECT_EQ(fields[4].attr.offset, 16);
     EXPECT_EQ(fields[4].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[4].attr.logc_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
@@ -326,6 +335,7 @@ static bool parse_adaf_trinket() {
     EXPECT_EQ(fields[5].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[5].attr.usage.usage, hid::usage::GenericDesktop::kY);
     EXPECT_EQ(fields[5].attr.bit_sz, 8);
+    EXPECT_EQ(fields[5].attr.offset, 24);
     EXPECT_EQ(fields[5].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[5].attr.logc_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
@@ -349,9 +359,10 @@ static bool parse_adaf_trinket() {
     EXPECT_TRUE(collection->parent == nullptr);
 
     //////////////////////////////////////////////////////////////////////////////////
-    // Second  report is a keyboard with 20 fields.
+    // Second  report is a keyboard with 20 fields and is 72 bits long.
     EXPECT_EQ(dev->report[1].report_id, 2);
     ASSERT_EQ(dev->report[1].count, 20);
+    EXPECT_EQ(dev->report[1].byte_sz, 9);
 
     fields = dev->report[1].first_field;
 
@@ -363,6 +374,7 @@ static bool parse_adaf_trinket() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kKeyboardKeypad);
         EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 0xe0));
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.offset, 8u + ix);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
@@ -370,6 +382,7 @@ static bool parse_adaf_trinket() {
 
     // Next field is 8 bits padding (input).
     EXPECT_EQ(fields[8].attr.bit_sz, 8);
+    EXPECT_EQ(fields[8].attr.offset, 16);
     EXPECT_EQ(fields[8].type, hid::kInput);
     EXPECT_EQ(hid::kConstant & fields[8].flags, hid::kConstant);
 
@@ -380,12 +393,14 @@ static bool parse_adaf_trinket() {
         EXPECT_EQ(fields[ix].type, hid::kOutput);
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kLEDs);
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.offset, 24u + (ix - 9u));
         EXPECT_EQ(fields[ix].attr.usage.usage, led_usage++);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
     // Next field is 3 bits padding (output).
     EXPECT_EQ(fields[14].attr.bit_sz, 3);
+    EXPECT_EQ(fields[14].attr.offset, 29u);
     EXPECT_EQ(fields[14].type, hid::kOutput);
     EXPECT_EQ(hid::kConstant & fields[14].flags, hid::kConstant);
 
@@ -396,6 +411,7 @@ static bool parse_adaf_trinket() {
         EXPECT_EQ(fields[ix].type, hid::kInput);
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kKeyboardKeypad);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 32u + 8u * (ix - 15u));
         EXPECT_EQ(fields[ix].attr.usage.usage, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 164);
@@ -417,9 +433,10 @@ static bool parse_adaf_trinket() {
     EXPECT_TRUE(collection->parent == nullptr);
 
     //////////////////////////////////////////////////////////////////////////////////
-    // Third report, single 16 bit input array field (consumer control).
+    // Third report, single 16 bit input array field (consumer control).  24 bits long.
     EXPECT_EQ(dev->report[2].report_id, 3);
     ASSERT_EQ(dev->report[2].count, 1);
+    EXPECT_EQ(dev->report[2].byte_sz, 3);
 
     fields = dev->report[2].first_field;
 
@@ -431,6 +448,7 @@ static bool parse_adaf_trinket() {
     EXPECT_EQ(fields[0].attr.logc_mm.min, 0);
     EXPECT_EQ(fields[0].attr.logc_mm.max, 572);
     EXPECT_EQ(fields[0].attr.bit_sz, 16);
+    EXPECT_EQ(fields[0].attr.offset, 8);
     EXPECT_EQ(expected_flags & fields[0].flags, expected_flags);
 
     collection = fields[0].col;
@@ -443,9 +461,11 @@ static bool parse_adaf_trinket() {
 
     //////////////////////////////////////////////////////////////////////////////////
     // Fourth report is a 2 bit input (system control: sleep, wake-up, power-down)
+    // 16 bits in total.
 
     EXPECT_EQ(dev->report[3].report_id, 4);
     ASSERT_EQ(dev->report[3].count, 2);
+    ASSERT_EQ(dev->report[3].byte_sz, 2);
 
     fields = dev->report[3].first_field;
 
@@ -461,10 +481,12 @@ static bool parse_adaf_trinket() {
     EXPECT_EQ(fields[0].attr.logc_mm.min, 1);
     EXPECT_EQ(fields[0].attr.logc_mm.max, 3);
     EXPECT_EQ(fields[0].attr.bit_sz, 2);
+    EXPECT_EQ(fields[0].attr.offset, 8);
     EXPECT_EQ(expected_flags & fields[0].flags, expected_flags);
 
     // Last field is 6 bits padding (output).
     EXPECT_EQ(fields[1].attr.bit_sz, 6);
+    EXPECT_EQ(fields[1].attr.offset, 10);
     EXPECT_EQ(fields[1].type, hid::kInput);
     EXPECT_EQ(hid::kConstant & fields[1].flags, hid::kConstant);
 
@@ -492,9 +514,10 @@ static bool parse_ps3_controller() {
     ASSERT_EQ(dev->rep_count, 4u);
 
     //////////////////////////////////////////////////////////////////////////////////
-    // First report has 172 fields!!
+    // First report has 172 fields!!  1160 bits long!!!
     EXPECT_EQ(dev->report[0].report_id, 1);
     ASSERT_EQ(dev->report[0].count, 172);
+    ASSERT_EQ(dev->report[0].byte_sz, 145);
     const hid::ReportField* fields = dev->report[0].first_field;
 
     // First field is 8 bits, constant GenericDesktop page, but no usage described.
@@ -507,6 +530,7 @@ static bool parse_ps3_controller() {
     EXPECT_EQ(fields[0].attr.logc_mm.min, 0);
     EXPECT_EQ(fields[0].attr.logc_mm.max, 255);
     EXPECT_EQ(fields[0].attr.bit_sz, 8);
+    EXPECT_EQ(fields[0].attr.offset, 8);
     EXPECT_EQ(expected_flags & fields[0].flags, expected_flags);
 
     // Next 19 fields are one-bit input representing the buttons.
@@ -517,6 +541,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
         EXPECT_EQ(fields[ix].attr.usage.usage, ix);
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.offset, 16u + (ix - 1u));
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
         EXPECT_EQ(fields[ix].attr.phys_mm.min, 0);
@@ -530,6 +555,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kVendorDefinedStart);
         EXPECT_EQ(fields[ix].attr.usage.usage, 0);
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.offset, 35u + (ix - 20u));
         EXPECT_EQ(hid::kConstant & fields[ix].flags, hid::kConstant);
     }
 
@@ -540,6 +566,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].type, hid::kInput);
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 48u + 8u * (ix - 33u));
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 255);
         EXPECT_EQ(fields[ix].attr.phys_mm.min, 0);
@@ -558,6 +585,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kPointer);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 80u + 8u * (ix - 37u));
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
@@ -567,6 +595,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kPointer);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 392u + 8u * (ix - 76u));
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
@@ -576,15 +605,17 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kPointer);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 776u + 8u * (ix - 124u));
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
     //////////////////////////////////////////////////////////////////////////////////
     // Second report has 48 fields. It is pretty much identical to last 48 fields
-    // of the first report.
+    // of the first report.  392 bits long.
 
     EXPECT_EQ(dev->report[1].report_id, 2);
     ASSERT_EQ(dev->report[1].count, 48);
+    ASSERT_EQ(dev->report[1].byte_sz, 49);
     fields = dev->report[1].first_field;
 
     expected_flags = hid::kData | hid::kAbsolute | hid::kScalar;
@@ -594,6 +625,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kPointer);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 8u + 8u * ix);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
@@ -602,6 +634,7 @@ static bool parse_ps3_controller() {
 
     EXPECT_EQ(dev->report[2].report_id, 0xee);
     ASSERT_EQ(dev->report[2].count, 48);
+    ASSERT_EQ(dev->report[2].byte_sz, 49);
     fields = dev->report[2].first_field;
 
     for (uint8_t ix = 0; ix != 48; ++ix) {
@@ -609,6 +642,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kPointer);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 8u + 8u * ix);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
@@ -617,6 +651,7 @@ static bool parse_ps3_controller() {
 
     EXPECT_EQ(dev->report[3].report_id, 0xef);
     ASSERT_EQ(dev->report[3].count, 48);
+    ASSERT_EQ(dev->report[2].byte_sz, 49);
     fields = dev->report[3].first_field;
 
     for (uint8_t ix = 0; ix != 48; ++ix) {
@@ -624,6 +659,7 @@ static bool parse_ps3_controller() {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop);
         EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kPointer);
         EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        EXPECT_EQ(fields[ix].attr.offset, 8u + 8u * ix);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
 
@@ -718,8 +754,9 @@ static bool parse_eve_tablet() {
     ASSERT_EQ(dev->rep_count, 1u);
     EXPECT_EQ(dev->report[0].report_id, 0);
 
-    // Report has two fields.
+    // Report has two fields.  8 bits long
     ASSERT_EQ(dev->report[0].count, 2u);
+    ASSERT_EQ(dev->report[0].byte_sz, 1u);
 
     const hid::ReportField* fields = dev->report[0].first_field;
 
@@ -730,6 +767,7 @@ static bool parse_eve_tablet() {
     EXPECT_EQ(fields[0].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[0].attr.usage.usage, 0xff000001);
     EXPECT_EQ(fields[0].attr.bit_sz, 1);
+    EXPECT_EQ(fields[0].attr.offset, 0);
     EXPECT_EQ(expected_flags & fields[0].flags, expected_flags);
 
     // Second field is padding, 7 bits.
@@ -739,6 +777,7 @@ static bool parse_eve_tablet() {
     EXPECT_EQ(fields[1].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[1].attr.usage.usage, 0);
     EXPECT_EQ(fields[1].attr.bit_sz, 7);
+    EXPECT_EQ(fields[1].attr.offset, 1);
     EXPECT_EQ(expected_flags & fields[1].flags, expected_flags);
 
     hid::FreeDeviceDescriptor(dev);

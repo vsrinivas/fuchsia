@@ -11,6 +11,9 @@
 #include <fbl/vector.h>
 
 namespace {
+
+#define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
+
 // Takes a every bit from 0 to 15 and converts them into a
 // 01 if 1 or 10 if 0.
 uint32_t expand_bitfield(uint32_t bitfield) {
@@ -113,6 +116,8 @@ public:
           table_(),
           parent_coll_(nullptr),
           report_id_count_(0) {
+        // First 8 bits of a report are the report ID.
+        table_.attributes.offset = 8;
     }
 
     bool Init() {
@@ -173,6 +178,10 @@ public:
         int32_t last_id = -1;
         size_t count = 0;
 
+        // First byte of most reports are report ID.  Reports that do not follow this rules are
+        // fixed up at the end of the function.
+        size_t bit_sz = 8;
+
         for (const auto& f: fields_) {
             dest_fields[ix] = f;
             dest_fields[ix].col = coll_fixup(f.col);
@@ -180,17 +189,21 @@ public:
             if (static_cast<int32_t>(f.report_id) != last_id) {
                 // New report id. Fill the next ReportDescriptor entry with the address
                 // of the first field, the new report id.
-                dev->report[ifr] = ReportDescriptor { f.report_id, 0, &dest_fields[ix] };
+                dev->report[ifr] = ReportDescriptor { f.report_id, 0, 0, &dest_fields[ix] };
 
                 if (ifr != 0) {
                     // Update the previous ReportDescriptor with the field count.
                     dev->report[ifr - 1].count = count;
+                    dev->report[ifr - 1].byte_sz = DIV_ROUND_UP(bit_sz, 8);
                 }
 
                 last_id = f.report_id;
                 count = 0;
+                bit_sz = 8;
                 ++ifr;
             }
+            dest_fields[ix].attr.offset = static_cast<uint32_t>(bit_sz);
+            bit_sz += f.attr.bit_sz;
 
             ++count;
             ++ix;
@@ -199,6 +212,15 @@ public:
         if (ifr != 0) {
             // Last ReportDescriptor need field count updated.
             dev->report[ifr - 1].count = count;
+            dev->report[ifr - 1].byte_sz = DIV_ROUND_UP(bit_sz, 8);
+        }
+
+        // If there is only one report and the ID is 0, the report ID is not sent in the report.
+        if (ifr == 1 && dev->report[0].report_id == 0){
+            dev->report[0].byte_sz -= 1;
+            for (size_t ix = 0; ix < dev->report[0].count; ix++ ) {
+                dev->report[0].first_field[ix].attr.offset -= 8;
+            }
         }
 
         *device = dev;
@@ -254,7 +276,6 @@ public:
 
         auto flags = expand_bitfield(data);
         Attributes attributes = table_.attributes;
-
         UsageIterator usage_it(this, flags);
 
         for (uint32_t ix = 0; ix != table_.report_count; ++ ix) {
@@ -617,4 +638,5 @@ Collection* GetAppCollection(const ReportField* field) {
     return collection;
 }
 
+#undef DIV_ROUND_UP
 }  // namespace hid
