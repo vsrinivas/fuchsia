@@ -50,9 +50,9 @@ typedef struct {
     zx_status_t (*set_alt_function)(void* ctx, uint32_t index, uint64_t function);
     zx_status_t (*read)(void* ctx, uint32_t index, uint8_t* out_value);
     zx_status_t (*write)(void* ctx, uint32_t index, uint8_t value);
-    zx_status_t (*get_interrupt)(void *ctx, uint32_t pin, uint32_t flags, zx_handle_t *out_handle);
-    zx_status_t (*release_interrupt)(void *ctx, uint32_t pin);
-    zx_status_t (*set_polarity)(void *ctx, uint32_t pin, uint32_t polarity);
+    zx_status_t (*get_interrupt)(void* ctx, uint32_t pin, uint32_t flags, zx_handle_t* out_handle);
+    zx_status_t (*release_interrupt)(void* ctx, uint32_t pin);
+    zx_status_t (*set_polarity)(void* ctx, uint32_t pin, uint32_t polarity);
 } gpio_protocol_ops_t;
 
 typedef struct {
@@ -85,7 +85,7 @@ static inline zx_status_t gpio_write(gpio_protocol_t* gpio, uint32_t index, uint
 
 // gets an interrupt object pertaining to a particular GPIO pin
 static inline zx_status_t gpio_get_interrupt(gpio_protocol_t* gpio, uint32_t index,
-                                            uint32_t flags, zx_handle_t *out_handle) {
+                                             uint32_t flags, zx_handle_t* out_handle) {
     return gpio->ops->get_interrupt(gpio->ctx, index, flags, out_handle);
 }
 

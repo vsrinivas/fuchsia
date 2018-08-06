@@ -4,120 +4,111 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/scpi.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/usb-mode-switch.h>
-#include <ddk/protocol/canvas.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/canvas.h>
+#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/i2c.h>
+#include <ddktl/protocol/platform-device.h>
+#include <ddktl/protocol/scpi.h>
+#include <ddktl/protocol/usb-mode-switch.h>
+#include <fbl/vector.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/handle.h>
 
-// maximum transfer size we can proxy.
-#define PDEV_I2C_MAX_TRANSFER_SIZE 4096
+#include "proxy-protocol.h"
 
-// RPC ops
-enum {
-    // ZX_PROTOCOL_PLATFORM_DEV
-    PDEV_GET_MMIO = 1,
-    PDEV_GET_INTERRUPT,
-    PDEV_GET_BTI,
-    PDEV_GET_DEVICE_INFO,
+namespace platform_bus {
 
-    // ZX_PROTOCOL_USB_MODE_SWITCH
-    PDEV_UMS_SET_MODE,
+class PlatformProxy;
+using PlatformProxyType = ddk::Device<PlatformProxy, ddk::GetProtocolable>;
 
-    // ZX_PROTOCOL_GPIO
-    PDEV_GPIO_CONFIG,
-    PDEV_GPIO_SET_ALT_FUNCTION,
-    PDEV_GPIO_READ,
-    PDEV_GPIO_WRITE,
-    PDEV_GPIO_GET_INTERRUPT,
-    PDEV_GPIO_RELEASE_INTERRUPT,
-    PDEV_GPIO_SET_POLARITY,
+class PlatformProxy : public PlatformProxyType, public ddk::PlatformDevProtocol<PlatformProxy>,
+                      public ddk::CanvasProtocol<PlatformProxy>, public ddk::ClkProtocol<PlatformProxy>,
+                      public ddk::GpioProtocol<PlatformProxy>, public ddk::I2cProtocol<PlatformProxy>,
+                      public ddk::ScpiProtocol<PlatformProxy>, public ddk::UmsProtocol<PlatformProxy> {
+public:
+    static zx_status_t Create(zx_device_t* parent, const char* name, zx_handle_t rpc_channel);
 
-    // ZX_PROTOCOL_I2C
-    PDEV_I2C_GET_MAX_TRANSFER,
-    PDEV_I2C_TRANSACT,
+    // Device protocol implementation.
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+    void DdkRelease();
 
-    // ZX_PROTOCOL_CLK
-    PDEV_CLK_ENABLE,
-    PDEV_CLK_DISABLE,
+    // Platform device protocol implementation.
+    zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, size_t* out_size,
+                        zx_paddr_t* out_paddr, zx_handle_t* out_handle);
+    zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
+    zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
+    zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
 
-    // ZX_PROTOCOL_SCPI
-    PDEV_SCPI_GET_SENSOR,
-    PDEV_SCPI_GET_SENSOR_VALUE,
-    PDEV_SCPI_GET_DVFS_INFO,
-    PDEV_SCPI_GET_DVFS_IDX,
-    PDEV_SCPI_SET_DVFS_IDX,
+    // Canvas protocol implementation.
+    zx_status_t CanvasConfig(zx_handle_t vmo, size_t offset, canvas_info_t* info,
+                             uint8_t* canvas_idx);
+    zx_status_t CanvasFree(uint8_t canvas_idx);
 
-    // ZX_PROTOCOL_CANVAS
-    PDEV_CANVAS_CONFIG,
-    PDEV_CANCAS_FREE,
+    // Clock protocol implementation.
+    zx_status_t ClkEnable(uint32_t index);
+    zx_status_t ClkDisable(uint32_t index);
+
+    // GPIO protocol implementation.
+    zx_status_t GpioConfig(uint32_t index, uint32_t flags);
+    zx_status_t GpioSetAltFunction(uint32_t index, uint64_t function);
+    zx_status_t GpioRead(uint32_t index, uint8_t* out_value);
+    zx_status_t GpioWrite(uint32_t index, uint8_t value);
+    zx_status_t GpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
+    zx_status_t GpioReleaseInterrupt(uint32_t index);
+    zx_status_t GpioSetPolarity(uint32_t index, uint32_t polarity);
+
+    // I2C protocol implementation.
+    zx_status_t I2cTransact(uint32_t index, const void* write_buf, size_t write_length,
+                            size_t read_length, i2c_complete_cb complete_cb, void* cookie);
+    zx_status_t I2cGetMaxTransferSize(uint32_t index, size_t* out_size);
+
+    // SCPI protocol implementation.
+    zx_status_t ScpiGetSensor(const char* name, uint32_t* sensor_id);
+    zx_status_t ScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_value);
+    zx_status_t ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps);
+    zx_status_t ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx);
+    zx_status_t ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx);
+
+    // USB mode switch protocol implementation.
+    zx_status_t UmsSetMode(usb_mode_t mode);
+
+private:
+    struct Mmio {
+        zx_paddr_t base;
+        size_t length;
+        zx::handle resource;
+    };
+    struct Irq {
+        uint32_t irq;
+        // ZX_INTERRUPT_MODE_* flags
+        uint32_t mode;
+        zx::handle resource;
+    };
+
+    explicit PlatformProxy(zx_device_t* parent, zx_handle_t rpc_channel)
+        : PlatformProxyType(parent), rpc_channel_(rpc_channel) {}
+
+    zx_status_t Init();
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformProxy);
+
+    zx_status_t Rpc(pdev_req_t* req, uint32_t req_length, pdev_resp_t* resp, uint32_t resp_length,
+                    zx_handle_t* in_handles, uint32_t in_handle_count, zx_handle_t* out_handles,
+                    uint32_t out_handle_count, uint32_t* out_data_received);
+
+    inline zx_status_t Rpc(pdev_req_t* req, pdev_resp_t* resp) {
+        return Rpc(req, sizeof(*req), resp, sizeof(*resp), nullptr, 0, nullptr, 0, nullptr);
+    }
+
+    zx::channel rpc_channel_;
+    fbl::Vector<Mmio> mmios_;
+    fbl::Vector<Irq> irqs_;
+    char name_[ZX_MAX_NAME_LEN];
 };
 
-// context for canvas
-typedef struct {
-    canvas_info_t info;
-    size_t offset;
-} pdev_canvas_ctx_t;
-
-// context for i2c_transact
-typedef struct {
-    size_t write_length;
-    size_t read_length;
-    i2c_complete_cb complete_cb;
-    void* cookie;
-} pdev_i2c_txn_ctx_t;
-
-typedef struct {
-    size_t size;
-    uint32_t align_log2;
-    uint32_t cache_policy;
-} pdev_config_vmo_t;
-
-typedef struct pdev_req {
-    zx_txid_t txid;
-    uint32_t op;
-    uint32_t index;
-    union {
-        usb_mode_t usb_mode;
-        uint32_t gpio_flags;
-        uint64_t gpio_alt_function;
-        uint8_t gpio_value;
-        uint8_t canvas_idx;
-        pdev_i2c_txn_ctx_t i2c_txn;
-        uint32_t i2c_bitrate;
-        uint32_t flags;
-        pdev_canvas_ctx_t canvas;
-        uint8_t scpi_power_domain;
-        uint32_t scpi_sensor_id;
-        char scpi_name[20];
-    };
-} pdev_req_t;
-
-typedef struct {
-    zx_txid_t txid;
-    zx_status_t status;
-    union {
-        usb_mode_t usb_mode;
-        uint8_t gpio_value;
-        uint8_t canvas_idx;
-        pdev_i2c_txn_ctx_t i2c_txn;
-        size_t i2c_max_transfer;
-        struct {
-            zx_paddr_t paddr;
-            size_t length;
-        } mmio;
-        uint32_t irq;
-        pdev_device_info_t info;
-        uint32_t scpi_sensor_value;
-        uint16_t scpi_dvfs_idx;
-        uint32_t scpi_sensor_id;
-        scpi_opp_t scpi_opps;
-    };
-} pdev_resp_t;
-
+} // namespace platform_bus
 
 __BEGIN_CDECLS
 zx_status_t platform_proxy_create(void* ctx, zx_device_t* parent, const char* name,

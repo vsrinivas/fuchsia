@@ -24,16 +24,11 @@ typedef struct {
 } __PACKED scpi_opp_t;
 
 typedef struct {
-    zx_status_t (*get_sensor)(void* ctx, const char* name,
-                 uint32_t* sensor_value);
-    zx_status_t (*get_sensor_value)(void* ctx, uint32_t sensor_id,
-                 uint32_t* sensor_value);
-    zx_status_t (*get_dvfs_info)(void* ctx, uint8_t power_domain,
-                 scpi_opp_t* opps);
-    zx_status_t (*get_dvfs_idx)(void* ctx, uint8_t power_domain,
-                 uint16_t* idx);
-    zx_status_t (*set_dvfs_idx)(void* ctx, uint8_t power_domain,
-                 uint16_t idx);
+    zx_status_t (*get_sensor)(void* ctx, const char* name, uint32_t* sensor_value);
+    zx_status_t (*get_sensor_value)(void* ctx, uint32_t sensor_id, uint32_t* sensor_value);
+    zx_status_t (*get_dvfs_info)(void* ctx, uint8_t power_domain, scpi_opp_t* opps);
+    zx_status_t (*get_dvfs_idx)(void* ctx, uint8_t power_domain, uint16_t* idx);
+    zx_status_t (*set_dvfs_idx)(void* ctx, uint8_t power_domain, uint16_t idx);
 } scpi_protocol_ops_t;
 
 typedef struct {

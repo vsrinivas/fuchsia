@@ -14,7 +14,7 @@
 #include <zircon/syscalls/resource.h>
 
 #include "platform-bus.h"
-#include "platform-proxy.h"
+#include "proxy-protocol.h"
 
 // An overview of platform-device and platform proxy.
 //
@@ -179,6 +179,7 @@ static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev,
 static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev,
                                           uint32_t index,
                                           uint32_t* out_irq,
+                                          uint32_t* out_mode,
                                           zx_handle_t* out_handle,
                                           uint32_t* out_handle_count) {
 
@@ -198,6 +199,7 @@ static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev,
     }
 
     *out_irq = irq->irq;
+    *out_mode = irq->mode;
     *out_handle_count = 1;
     *out_handle = handle;
     return status;
@@ -464,8 +466,8 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
                                         &handle, &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
-        resp.status = pdev_rpc_get_interrupt(dev, req->index, &resp.irq, &handle,
-                                             &handle_count);
+        resp.status = pdev_rpc_get_interrupt(dev, req->index, &resp.irq.irq, &resp.irq.mode,
+                                             &handle, &handle_count);
         break;
     case PDEV_GET_BTI:
         resp.status = pdev_rpc_get_bti(dev, req->index, &handle, &handle_count);
@@ -499,22 +501,22 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         resp.status = pdev_rpc_set_gpio_polarity(dev, req->index, req->flags);
         break;
     case PDEV_SCPI_GET_SENSOR:
-        resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi_name, &resp.scpi_sensor_id);
+        resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi.name, &resp.scpi.sensor_id);
         break;
     case PDEV_SCPI_GET_SENSOR_VALUE:
-        resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi_sensor_id,
-                                                     &resp.scpi_sensor_value);
+        resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi.sensor_id,
+                                                     &resp.scpi.sensor_value);
         break;
     case PDEV_SCPI_GET_DVFS_INFO:
-        resp.status = pdev_rpc_scpi_get_dvfs_info(dev, req->scpi_power_domain,
-                                                  &resp.scpi_opps);
+        resp.status = pdev_rpc_scpi_get_dvfs_info(dev, req->scpi.power_domain,
+                                                  &resp.scpi.opps);
         break;
     case PDEV_SCPI_GET_DVFS_IDX:
-        resp.status = pdev_rpc_scpi_get_dvfs_idx(dev, req->scpi_power_domain,
-                                                 &resp.scpi_dvfs_idx);
+        resp.status = pdev_rpc_scpi_get_dvfs_idx(dev, req->scpi.power_domain,
+                                                 &resp.scpi.dvfs_idx);
         break;
     case PDEV_SCPI_SET_DVFS_IDX:
-        resp.status = pdev_rpc_scpi_set_dvfs_idx(dev, req->scpi_power_domain,
+        resp.status = pdev_rpc_scpi_set_dvfs_idx(dev, req->scpi.power_domain,
                                                  static_cast<uint16_t>(req->index));
         break;
     case PDEV_I2C_GET_MAX_TRANSFER:
@@ -540,7 +542,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
                                              req->canvas.offset, &req->canvas.info,
                                              &resp.canvas_idx);
         break;
-    case PDEV_CANCAS_FREE:
+    case PDEV_CANVAS_FREE:
         resp.status = pdev_rpc_canvas_free(dev, req->canvas_idx);
         break;
     default:

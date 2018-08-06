@@ -5,7 +5,8 @@
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 
-#include "platform-proxy.h"
+extern zx_status_t platform_proxy_create(void* ctx, zx_device_t* parent, const char* name,
+                                         const char* args, zx_handle_t rpc_channel);
 
 static zx_driver_ops_t platform_bus_proxy_driver_ops = {
     .version = DRIVER_OPS_VERSION,

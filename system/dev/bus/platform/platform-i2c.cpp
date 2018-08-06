@@ -10,7 +10,7 @@
 #include <threads.h>
 
 #include "platform-bus.h"
-#include "platform-proxy.h"
+#include "proxy-protocol.h"
 
 typedef struct platform_i2c_bus {
     i2c_impl_protocol_t i2c;
