@@ -1,0 +1,10 @@
+{
+  "imports": [
+    "garnet/packages/prod/runtime",
+    "garnet/packages/prod/vboot_reference",
+    "garnet/packages/prod/scenic_tools",
+    "garnet/packages/tools/tiles",
+    "garnet/packages/prod/run",
+    "garnet/packages/products/graphical"
+  ]
+}

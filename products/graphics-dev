@@ -1,0 +1,11 @@
+{
+  "monolith": [
+    "garnet/packages/products/graphics-dev"
+  ],
+  "preinstall": [
+
+  ],
+  "available": [
+
+  ]
+}
