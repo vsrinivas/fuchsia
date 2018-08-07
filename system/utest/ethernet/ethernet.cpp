@@ -488,17 +488,12 @@ static bool EthernetStartTest() {
     ASSERT_TRUE(OpenFirstClientHelper(&sock, &client, info));
 
     // Verify no signals asserted on the rx fifo
-    zx_signals_t obs = 0;
+    zx_signals_t obs;
     client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::time(), &obs);
     EXPECT_FALSE(obs & ETH_SIGNAL_STATUS);
 
     // Start the ethernet client
     EXPECT_EQ(ZX_OK, client.Start());
-
-    // Verify that the ethernet driver signaled a status change for the initial state.
-    obs = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     // Default link status should be OFFLINE
     uint32_t eth_status = 0;
@@ -526,11 +521,6 @@ static bool EthernetLinkStatusTest() {
     EthernetOpenInfo info(__func__);
     ASSERT_TRUE(OpenFirstClientHelper(&sock, &client, info));
 
-    // Verify that the ethernet driver signaled a status change for the initial state.
-    zx_signals_t obs = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
-
     // Link status should be ONLINE since it's set in OpenFirstClientHelper
     uint32_t eth_status = 0;
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -540,7 +530,7 @@ static bool EthernetLinkStatusTest() {
     sock.signal_peer(0, ETHERTAP_SIGNAL_OFFLINE);
 
     // Verify the link status
-    obs = 0;
+    zx_signals_t obs;
     EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 

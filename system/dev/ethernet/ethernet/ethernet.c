@@ -692,8 +692,6 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
         list_add_tail(&edev0->list_active, &edev->node);
         // TODO - After we get IGMP, don't automatically set multicast promisc true
         eth_set_multicast_promisc_locked(edev, true);
-        // Trigger the status signal so the client will query the status at the start.
-        zx_object_signal_peer(edev->rx_fifo, 0, ETH_SIGNAL_STATUS);
     } else {
         zxlogf(ERROR, "eth [%s]: failed to start mac: %d\n", edev->name, status);
     }
