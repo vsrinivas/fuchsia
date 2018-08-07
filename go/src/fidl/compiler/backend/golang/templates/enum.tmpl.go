@@ -12,5 +12,14 @@ const (
 	{{ $.Name }}{{ .Name }} {{ $.Name }} = {{ .Value }}
 	{{- end }}
 )
+func (x {{.Name}}) String() string {
+	switch x {
+	{{- range .Members }}
+	case {{ .Value }}:
+		return "{{.Name}}"
+	{{- end }}
+	}
+	return "Unknown"
+}
 {{- end -}}
 `
