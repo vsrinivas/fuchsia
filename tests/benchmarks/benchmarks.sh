@@ -32,8 +32,34 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
 
 if `run vulkan_is_supported`; then
   # Scenic performance tests.
-  runbench_exec "${OUT_DIR}/benchmark_hello_scenic.json" \
-      /pkgfs/packages/scenic_benchmarks/0/data/hello_scenic_benchmark.sh "${OUT_DIR}" "${OUT_DIR}/benchmark_hello_scenic.json"
+  SCENIC_BENCHMARK="/pkgfs/packages/scenic_benchmarks/0/data/scenic_benchmark.sh"
+
+  # hello_scenic
+  runbench_exec "${OUT_DIR}/hello_scenic_noclipping_noshadows_benchmark.json" \
+      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
+      "${OUT_DIR}/hello_scenic_noclipping_noshadows_benchmark.json" \
+      fuchsia.hello_scenic_noclipping_noshadows \
+      "hello_scenic" --unshadowed --clipping_disabled
+  runbench_exec "${OUT_DIR}/hello_scenic_noshadows_benchmark.json" \
+      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
+      "${OUT_DIR}/hello_scenic_noshadows_benchmark.json" \
+      fuchsia.hello_scenic_noshadows \
+      "hello_scenic" --unshadowed --clipping_enabled
+  runbench_exec "${OUT_DIR}/hello_scenic_ssdo_benchmark.json" \
+      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
+      "${OUT_DIR}/hello_scenic_ssdo_benchmark.json" \
+      fuchsia.hello_scenic_ssdo \
+      "hello_scenic" --screen_space_shadows --clipping_enabled
+  runbench_exec "${OUT_DIR}/hello_scenic_shadow_map_benchmark.json" \
+      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
+      "${OUT_DIR}/hello_scenic_shadow_map_benchmark.json" \
+      fuchsia.hello_scenic_shadow_map \
+      "hello_scenic" --shadow_map --clipping_enabled
+  runbench_exec "${OUT_DIR}/hello_scenic_moment_shadow_map_benchmark.json" \
+      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
+      "${OUT_DIR}/hello_scenic_moment_shadow_map_benchmark.json" \
+      fuchsia.hello_scenic_moment_shadow_map \
+      "hello_scenic" --moment_shadow_map --clipping_enabled
 else
   echo "Vulkan not supported; Scenic tests skipped."
 fi
