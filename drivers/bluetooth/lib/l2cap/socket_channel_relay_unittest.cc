@@ -40,6 +40,7 @@ class SocketChannelRelayTest : public ::testing::Test {
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
   zx::socket* remote_socket() { return &remote_socket_; }
   zx::socket ConsumeLocalSocket() { return std::move(local_socket_); }
+  void CloseRemoteSocket() { remote_socket_.reset(); }
   void RunLoopUntilIdle() { loop_.RunUntilIdle(); }
   void ShutdownLoop() { loop_.Shutdown(); }
 
@@ -129,6 +130,15 @@ TEST_F(SocketChannelRelayLifetimeTest, RelayIsDeactivatedWhenChannelIsClosed) {
   ASSERT_TRUE(relay().Activate());
 
   channel()->Close();
+  EXPECT_TRUE(was_deactivation_callback_invoked());
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       RelayIsDeactivatedWhenRemoteSocketIsClosed) {
+  ASSERT_TRUE(relay().Activate());
+
+  CloseRemoteSocket();
+  RunLoopUntilIdle();
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 

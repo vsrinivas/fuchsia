@@ -109,7 +109,8 @@ void SocketChannelRelay::OnSocketReadable(zx_status_t status) {
 }
 
 void SocketChannelRelay::OnSocketClosed(zx_status_t status) {
-  FXL_NOTIMPLEMENTED();
+  FXL_DCHECK(state_ == RelayState::kActivated);
+  DeactivateAndRequestDestruction();
 }
 
 void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
