@@ -47,7 +47,7 @@ struct LogMessage {
   uint64 tid;
   // Nanoseconds since the system was powered on, aka ZX_CLOCK_MONOTONIC.
   // https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md#supported-clock-ids
-  uint64 time;
+  zx.time time;
   int32 severity;
 
   // See //zircon/system/ulib/syslog/include/syslog/wire_format.h. As messages
