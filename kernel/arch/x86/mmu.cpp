@@ -239,18 +239,18 @@ X86PageTableBase::PtFlags X86PageTableMmu::terminal_flags(PageTableLevel level,
                                                           uint flags) {
     X86PageTableBase::PtFlags terminal_flags = 0;
 
-    if (flags & ARCH_MMU_FLAG_PERM_WRITE)
+    if (flags & ARCH_MMU_FLAG_PERM_WRITE) {
         terminal_flags |= X86_MMU_PG_RW;
-
-    if (flags & ARCH_MMU_FLAG_PERM_USER)
+    }
+    if (flags & ARCH_MMU_FLAG_PERM_USER) {
         terminal_flags |= X86_MMU_PG_U;
-
+    }
     if (use_global_mappings_) {
         terminal_flags |= X86_MMU_PG_G;
     }
-
-    if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE))
+    if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
         terminal_flags |= X86_MMU_PG_NX;
+    }
 
     if (level > 0) {
         switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
@@ -313,14 +313,15 @@ void X86PageTableMmu::TlbInvalidate(PendingTlbInvalidation* pending) {
 uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
     uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
 
-    if (flags & X86_MMU_PG_RW)
+    if (flags & X86_MMU_PG_RW) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
-
-    if (flags & X86_MMU_PG_U)
+    }
+    if (flags & X86_MMU_PG_U) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
-
-    if (!(flags & X86_MMU_PG_NX))
+    }
+    if (!(flags & X86_MMU_PG_NX)) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
 
     if (level > 0) {
         switch (flags & X86_MMU_LARGE_PAT_MASK) {
@@ -392,18 +393,32 @@ X86PageTableBase::PtFlags X86PageTableEpt::intermediate_flags() {
 
 X86PageTableBase::PtFlags X86PageTableEpt::terminal_flags(PageTableLevel level,
                                                           uint flags) {
-    DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHE_MASK) == ARCH_MMU_FLAG_CACHED);
-    // Only the write-back memory type is supported.
-    X86PageTableBase::PtFlags terminal_flags = X86_EPT_WB;
+    X86PageTableBase::PtFlags terminal_flags = 0;
 
-    if (flags & ARCH_MMU_FLAG_PERM_READ)
+    if (flags & ARCH_MMU_FLAG_PERM_READ) {
         terminal_flags |= X86_EPT_R;
-
-    if (flags & ARCH_MMU_FLAG_PERM_WRITE)
+    }
+    if (flags & ARCH_MMU_FLAG_PERM_WRITE) {
         terminal_flags |= X86_EPT_W;
-
-    if (flags & ARCH_MMU_FLAG_PERM_EXECUTE)
+    }
+    if (flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
         terminal_flags |= X86_EPT_X;
+    }
+
+    switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
+    case ARCH_MMU_FLAG_CACHED:
+        terminal_flags |= X86_EPT_WB;
+        break;
+    case ARCH_MMU_FLAG_UNCACHED_DEVICE:
+    case ARCH_MMU_FLAG_UNCACHED:
+        terminal_flags |= X86_EPT_UC;
+        break;
+    case ARCH_MMU_FLAG_WRITE_COMBINING:
+        terminal_flags |= X86_EPT_WC;
+        break;
+    default:
+        PANIC_UNIMPLEMENTED;
+    }
 
     return terminal_flags;
 }
@@ -422,17 +437,31 @@ void X86PageTableEpt::TlbInvalidate(PendingTlbInvalidation* pending) {
 }
 
 uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
-    // Only the write-back memory type is supported.
-    uint mmu_flags = ARCH_MMU_FLAG_CACHED;
+    uint mmu_flags = 0;
 
-    if (flags & X86_EPT_R)
+    if (flags & X86_EPT_R) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
-
-    if (flags & X86_EPT_W)
+    }
+    if (flags & X86_EPT_W) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
-
-    if (flags & X86_EPT_X)
+    }
+    if (flags & X86_EPT_X) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
+
+    switch (flags & X86_EPT_MEMORY_TYPE_MASK) {
+    case X86_EPT_WB:
+        mmu_flags |= ARCH_MMU_FLAG_CACHED;
+        break;
+    case X86_EPT_UC:
+        mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+        break;
+    case X86_EPT_WC:
+        mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+        break;
+    default:
+        PANIC_UNIMPLEMENTED;
+    }
 
     return mmu_flags;
 }

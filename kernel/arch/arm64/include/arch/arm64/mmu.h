@@ -236,6 +236,8 @@
 #define MMU_S2_PTE_ATTR_ATTR_INDEX_MASK         BM(2, 4, 0xf)
 /* Normal, Outer Write-Back Cacheable, Inner Write-Back Cacheable. */
 #define MMU_S2_PTE_ATTR_NORMAL_MEMORY           BM(2, 4, 0xf)
+/* Normal, Outer Non-cacheable, Inner Non-cacheable. */
+#define MMU_S2_PTE_ATTR_NORMAL_UNCACHED         BM(2, 4, 0x5)
 /* Device, Device-nGnRnE memory. */
 #define MMU_S2_PTE_ATTR_STRONGLY_ORDERED        BM(2, 4, 0x0)
 /* Device, Device-nGnRE memory. */

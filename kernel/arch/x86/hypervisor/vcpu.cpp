@@ -238,7 +238,7 @@ static uint64_t ept_pointer(paddr_t pml4_address) {
     return
         // Physical address of the PML4 page, page aligned.
         pml4_address |
-        // Use write back memory.
+        // Use write-back memory type for paging structures.
         VMX_MEMORY_TYPE_WRITE_BACK << 0 |
         // Page walk length of 4 (defined as N minus 1).
         3u << 3;

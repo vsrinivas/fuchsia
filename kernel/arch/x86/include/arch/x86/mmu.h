@@ -13,23 +13,27 @@
 /* top level defines for the x86 mmu */
 /* NOTE: the top part can be included from assembly */
 
-#define X86_EPT_R               (1u << 0)       /* R    Read        */
-#define X86_EPT_W               (1u << 1)       /* W    Write       */
-#define X86_EPT_X               (1u << 2)       /* X    Execute     */
-#define X86_EPT_A               (1u << 8)       /* A    Accessed    */
-#define X86_EPT_D               (1u << 9)       /* D    Dirty       */
+#define X86_EPT_R                 (1u << 0) /* R    Read     */
+#define X86_EPT_W                 (1u << 1) /* W    Write    */
+#define X86_EPT_X                 (1u << 2) /* X    Execute  */
+#define X86_EPT_A                 (1u << 8) /* A    Accessed */
+#define X86_EPT_D                 (1u << 9) /* D    Dirty    */
 
 /* From Volume 3, Section 28.2.6: EPT and Memory Typing */
-#define X86_EPT_WB              (6u << 3)       /* WB   Write-back memory type  */
+#define X86_EPT_MEMORY_TYPE_MASK  (7u << 3)
+#define X86_EPT_UC                (0u << 3) /* UC   Uncached memory type        */
+#define X86_EPT_WC                (1u << 3) /* WC   Write-combining memory type */
+#define X86_EPT_WT                (4u << 3) /* WT   Write-through memory type   */
+#define X86_EPT_WP                (5u << 3) /* WP   Write-protected memory type */
+#define X86_EPT_WB                (6u << 3) /* WB   Write-back memory type      */
 
 /* Page Attribute Table memory types, defined in Table 11-10 of Intel 3A */
-#define X86_PAT_UC              0x00 /* Uncached */
-#define X86_PAT_WC              0x01 /* Write-combining */
-#define X86_PAT_WT              0x04 /* Write-through */
-#define X86_PAT_WP              0x05 /* Write protected */
-#define X86_PAT_WB              0X06 /* Write-back */
-#define X86_PAT_UC_             0x07 /* Weakly Uncached (can be overrided by a
-                                      * WC MTRR setting) */
+#define X86_PAT_UC                0x00 /* Uncached */
+#define X86_PAT_WC                0x01 /* Write-combining */
+#define X86_PAT_WT                0x04 /* Write-through */
+#define X86_PAT_WP                0x05 /* Write protected */
+#define X86_PAT_WB                0X06 /* Write-back */
+#define X86_PAT_UC_               0x07 /* Weakly Uncached (can be overridden by a WC MTRR setting) */
 
 /* Our configuration for the PAT indexes.  This must be kept in sync with the
  * selector definitions below it.  For safety, it is important to ensure that
