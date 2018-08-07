@@ -75,8 +75,13 @@ class SocketChannelRelay final {
 
   // Deactivates and unbinds all callbacks from the zx::socket and the
   // l2cap::Channel.
+  //
   // * It is an error to call this when |state_ == kDeactivated|.
   // * Closing |socket_| is left to the dtor.
+  //
+  // Note that Deactivate() _may_ be called from the dtor. As such, this method
+  // avoids doing any "real work", and constrains itself to just tearing things
+  // down.
   void Deactivate();
 
   // Deactivates |this|, and invokes deactivation_cb_.
@@ -85,6 +90,7 @@ class SocketChannelRelay final {
 
   // Callbacks for zx::socket events.
   void OnSocketReadable(zx_status_t status);
+  void OnSocketWritable(zx_status_t status);
   void OnSocketClosed(zx_status_t status);
 
   // Callbacks for l2cap::Channel events.
@@ -120,6 +126,7 @@ class SocketChannelRelay final {
   DeactivationCallback deactivation_cb_;
 
   async::Wait sock_read_waiter_;
+  async::Wait sock_write_waiter_;
   async::Wait sock_close_waiter_;
 
   // We use a std::deque here to minimize the number dynamic memory

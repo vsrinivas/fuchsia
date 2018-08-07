@@ -32,6 +32,8 @@ SocketChannelRelay::SocketChannelRelay(zx::socket socket,
   // of a lambda which verifies that |this| hasn't been destroyed.
   BindWait(ZX_SOCKET_READABLE, "socket read waiter", &sock_read_waiter_,
            fit::bind_member(this, &SocketChannelRelay::OnSocketReadable));
+  BindWait(ZX_SOCKET_WRITABLE, "socket write waiter", &sock_write_waiter_,
+           fit::bind_member(this, &SocketChannelRelay::OnSocketWritable));
   BindWait(ZX_SOCKET_PEER_CLOSED, "socket close waiter", &sock_close_waiter_,
            fit::bind_member(this, &SocketChannelRelay::OnSocketClosed));
 }
@@ -112,6 +114,12 @@ void SocketChannelRelay::OnSocketReadable(zx_status_t status) {
   }
 }
 
+void SocketChannelRelay::OnSocketWritable(zx_status_t status) {
+  FXL_DCHECK(state_ == RelayState::kActivated);
+  FXL_DCHECK(!socket_write_queue_.empty());
+  ServiceSocketWriteQueue();
+}
+
 void SocketChannelRelay::OnSocketClosed(zx_status_t status) {
   FXL_DCHECK(state_ == RelayState::kActivated);
   DeactivateAndRequestDestruction();
@@ -146,6 +154,9 @@ void SocketChannelRelay::OnChannelClosed() {
   }
 
   FXL_DCHECK(state_ == RelayState::kActivated);
+  if (!socket_write_queue_.empty()) {
+    ServiceSocketWriteQueue();
+  }
   DeactivateAndRequestDestruction();
 }
 
@@ -239,6 +250,11 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
       socket_write_queue_.pop_front();
     }
   } while (write_res == ZX_OK && !socket_write_queue_.empty());
+
+  if (!socket_write_queue_.empty() &&
+      !BeginWait("socket write waiter", &sock_write_waiter_)) {
+    DeactivateAndRequestDestruction();
+  }
 }
 
 void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
