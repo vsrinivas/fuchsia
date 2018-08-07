@@ -238,7 +238,7 @@ class ConvergenceTest
       pages_.emplace_back();
       ledger::LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
       ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-      test::GetPageEnsureInitialized(
+      ledger::GetPageEnsureInitialized(
           &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
@@ -311,7 +311,7 @@ class ConvergenceTest
   std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>>
       ledger_instances_;
   std::vector<ledger::PagePtr> pages_;
-  test::DataGenerator data_generator_;
+  ledger::DataGenerator data_generator_;
 };
 
 // Verify that the Ledger converges over different settings of merging functions

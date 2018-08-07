@@ -41,8 +41,7 @@ void PrintUsage(const char* executable_name) {
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int transaction_size)
@@ -63,39 +62,38 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
 void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_;
-  test::GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "update_entry", ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-      [this](ledger::Status status, ledger::LedgerPtr ledger) {
-        if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-          return;
-        }
-        ledger_ = std::move(ledger);
-        test::GetPageEnsureInitialized(
-            &ledger_, nullptr, QuitLoopClosure(),
-            [this](ledger::Status status, ledger::PagePtr page,
-                   ledger::PageId id) {
-              if (QuitOnError(QuitLoopClosure(), status,
-                              "GetPageEnsureInitialized")) {
+  GetLedger(startup_context_.get(), component_controller_.NewRequest(), nullptr,
+            "update_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+            [this](Status status, LedgerPtr ledger) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
                 return;
               }
-              page_ = std::move(page);
-              fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
-              if (transaction_size_ > 0) {
-                page_->StartTransaction([this, key = std::move(key)](
-                                            ledger::Status status) mutable {
-                  if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                             "Page::StartTransaction")) {
-                    return;
-                  }
-                  TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                  RunSingle(0, std::move(key));
-                });
-              } else {
-                RunSingle(0, std::move(key));
-              }
+              ledger_ = std::move(ledger);
+              GetPageEnsureInitialized(
+                  &ledger_, nullptr, QuitLoopClosure(),
+                  [this](Status status, PagePtr page, PageId id) {
+                    if (QuitOnError(QuitLoopClosure(), status,
+                                    "GetPageEnsureInitialized")) {
+                      return;
+                    }
+                    page_ = std::move(page);
+                    fidl::VectorPtr<uint8_t> key =
+                        generator_.MakeKey(0, key_size_);
+                    if (transaction_size_ > 0) {
+                      page_->StartTransaction(
+                          [this, key = std::move(key)](Status status) mutable {
+                            if (QuitOnError(QuitLoopClosure(), status,
+                                            "Page::StartTransaction")) {
+                              return;
+                            }
+                            TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+                            RunSingle(0, std::move(key));
+                          });
+                    } else {
+                      RunSingle(0, std::move(key));
+                    }
+                  });
             });
-      });
 }
 
 void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
@@ -106,28 +104,27 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
 
   fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  page_->Put(
-      fidl::Clone(key), std::move(value),
-      [this, i, key = std::move(key)](ledger::Status status) mutable {
-        if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
-          return;
-        }
-        TRACE_ASYNC_END("benchmark", "put", i);
-        if (transaction_size_ > 0 &&
-            (i % transaction_size_ == transaction_size_ - 1 ||
-             i + 1 == entry_count_)) {
-          CommitAndRunNext(i, std::move(key));
-        } else {
-          RunSingle(i + 1, std::move(key));
-        }
-      });
+  page_->Put(fidl::Clone(key), std::move(value),
+             [this, i, key = std::move(key)](Status status) mutable {
+               if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
+                 return;
+               }
+               TRACE_ASYNC_END("benchmark", "put", i);
+               if (transaction_size_ > 0 &&
+                   (i % transaction_size_ == transaction_size_ - 1 ||
+                    i + 1 == entry_count_)) {
+                 CommitAndRunNext(i, std::move(key));
+               } else {
+                 RunSingle(i + 1, std::move(key));
+               }
+             });
 }
 
 void UpdateEntryBenchmark::CommitAndRunNext(int i,
                                             fidl::VectorPtr<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit([this, i, key = std::move(key)](ledger::Status status) mutable {
-    if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
+  page_->Commit([this, i, key = std::move(key)](Status status) mutable {
+    if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
@@ -137,21 +134,20 @@ void UpdateEntryBenchmark::CommitAndRunNext(int i,
       RunSingle(i + 1, std::move(key));
       return;
     }
-    page_->StartTransaction(
-        [this, i = i + 1, key = std::move(key)](ledger::Status status) mutable {
-          if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                     "Page::StartTransaction")) {
-            return;
-          }
-          TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
-          RunSingle(i, std::move(key));
-        });
+    page_->StartTransaction([this, i = i + 1,
+                             key = std::move(key)](Status status) mutable {
+      if (QuitOnError(QuitLoopClosure(), status, "Page::StartTransaction")) {
+        return;
+      }
+      TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
+      RunSingle(i, std::move(key));
+    });
   });
 }
 
 void UpdateEntryBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
-  test::KillLedgerProcess(&component_controller_);
+  KillLedgerProcess(&component_controller_);
   loop_->Quit();
 }
 
@@ -159,8 +155,7 @@ fit::closure UpdateEntryBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -188,7 +183,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::UpdateEntryBenchmark app(&loop, entry_count, value_size,
-                                            transaction_size);
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  ledger::UpdateEntryBenchmark app(&loop, entry_count, value_size,
+                                   transaction_size);
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

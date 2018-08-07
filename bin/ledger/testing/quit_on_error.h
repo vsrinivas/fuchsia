@@ -13,19 +13,17 @@
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Logs an error and calls |quit_callback| which quits a related message loop if
-// the given ledger status is not ledger::Status::OK. Returns true if the loop
+// the given ledger status is not Status::OK. Returns true if the loop
 // was quit .
-bool QuitOnError(fit::closure quit_callback, ledger::Status status,
+bool QuitOnError(fit::closure quit_callback, Status status,
                  fxl::StringView description);
 
-fit::function<void(ledger::Status)> QuitOnErrorCallback(
-    fit::closure quit_callback, std::string description);
+fit::function<void(Status)> QuitOnErrorCallback(fit::closure quit_callback,
+                                                std::string description);
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTING_QUIT_ON_ERROR_H_

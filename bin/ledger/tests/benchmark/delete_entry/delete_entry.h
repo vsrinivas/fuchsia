@@ -16,8 +16,7 @@
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures the time taken to delete an entry from a page.
 //
@@ -44,7 +43,7 @@ class DeleteEntryBenchmark {
 
   async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
-  test::DataGenerator generator_;
+  DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
   const size_t entry_count_;
@@ -52,14 +51,13 @@ class DeleteEntryBenchmark {
   const size_t key_size_;
   const size_t value_size_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  ledger::LedgerPtr ledger_;
-  ledger::PagePtr page_;
+  LedgerPtr ledger_;
+  PagePtr page_;
   std::vector<fidl::VectorPtr<uint8_t>> keys_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_DELETE_ENTRY_DELETE_ENTRY_H_

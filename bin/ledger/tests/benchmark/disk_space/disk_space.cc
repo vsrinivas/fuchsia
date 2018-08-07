@@ -44,8 +44,7 @@ void PrintUsage(const char* executable_name) {
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
                                        size_t unique_key_count,
@@ -68,40 +67,38 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
 }
 
 void DiskSpaceBenchmark::Run() {
-  test::GetLedger(
+  GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "disk_space", ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-      [this](ledger::Status status, ledger::LedgerPtr ledger) {
+      "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+      [this](Status status, LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
           return;
         }
         ledger_ = std::move(ledger);
 
-        auto waiter = fxl::MakeRefCounted<
-            callback::Waiter<ledger::Status, ledger::PagePtr>>(
-            ledger::Status::OK);
+        auto waiter =
+            fxl::MakeRefCounted<callback::Waiter<Status, PagePtr>>(Status::OK);
 
         for (size_t page_number = 0; page_number < page_count_; page_number++) {
-          test::GetPageEnsureInitialized(
-              &ledger_, nullptr, QuitLoopClosure(),
-              [callback = waiter->NewCallback()](
-                  ledger::Status status, ledger::PagePtr page,
-                  ledger::PageId id) { callback(status, std::move(page)); });
+          GetPageEnsureInitialized(&ledger_, nullptr, QuitLoopClosure(),
+                                   [callback = waiter->NewCallback()](
+                                       Status status, PagePtr page, PageId id) {
+                                     callback(status, std::move(page));
+                                   });
         }
 
-        waiter->Finalize(
-            [this](ledger::Status status, std::vector<ledger::PagePtr> pages) {
-              if (QuitOnError(QuitLoopClosure(), status,
-                              "GetPageEnsureInitialized")) {
-                return;
-              }
-              pages_ = std::move(pages);
-              if (commit_count_ == 0) {
-                ShutDownAndRecord();
-                return;
-              }
-              Populate();
-            });
+        waiter->Finalize([this](Status status, std::vector<PagePtr> pages) {
+          if (QuitOnError(QuitLoopClosure(), status,
+                          "GetPageEnsureInitialized")) {
+            return;
+          }
+          pages_ = std::move(pages);
+          if (commit_count_ == 0) {
+            ShutDownAndRecord();
+            return;
+          }
+          Populate();
+        });
       });
 }
 
@@ -111,16 +108,15 @@ void DiskSpaceBenchmark::Populate() {
   int insertions = std::max(unique_key_count_, commit_count_);
   FXL_LOG(INFO) << "Transaction size: " << transaction_size
                 << ", insertions: " << insertions << ".";
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
-      ledger::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& page : pages_) {
     auto keys = generator_.MakeKeys(insertions, key_size_, unique_key_count_);
     page_data_generator_.Populate(
         &page, std::move(keys), value_size_, transaction_size,
-        PageDataGenerator::ReferenceStrategy::REFERENCE,
-        ledger::Priority::EAGER, waiter->NewCallback());
+        PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER,
+        waiter->NewCallback());
   }
-  waiter->Finalize([this](ledger::Status status) {
+  waiter->Finalize([this](Status status) {
     if (QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate")) {
       return;
     }
@@ -129,12 +125,12 @@ void DiskSpaceBenchmark::Populate() {
 }
 
 void DiskSpaceBenchmark::ShutDownAndRecord() {
-  test::KillLedgerProcess(&component_controller_);
+  KillLedgerProcess(&component_controller_);
   loop_->Quit();
 
   uint64_t tmp_dir_size = 0;
-  FXL_CHECK(ledger::GetDirectoryContentSize(
-      ledger::DetachedPath(tmp_dir_.path()), &tmp_dir_size));
+  FXL_CHECK(
+      GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
   TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                 TA_UINT64(tmp_dir_size));
 }
@@ -143,8 +139,7 @@ fit::closure DiskSpaceBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -179,8 +174,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::DiskSpaceBenchmark app(&loop, page_count, unique_key_count,
-                                          commit_count, key_size, value_size);
+  ledger::DiskSpaceBenchmark app(&loop, page_count, unique_key_count,
+                                 commit_count, key_size, value_size);
 
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

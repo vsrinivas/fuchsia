@@ -11,8 +11,7 @@
 #include <trace/event.h>
 #include <trace/observer.h>
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
   trace::TraceProvider trace_provider(loop->dispatcher());
@@ -52,5 +51,4 @@ int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
   return err;
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger

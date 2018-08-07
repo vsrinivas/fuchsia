@@ -42,8 +42,7 @@ void PrintUsage(const char* executable_name) {
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
                                            size_t entry_count,
@@ -64,28 +63,26 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
 }
 
 void DeleteEntryBenchmark::Run() {
-  ledger::LedgerPtr ledger;
-  test::GetLedger(startup_context_.get(), component_controller_.NewRequest(),
-                  nullptr, "delete_entry",
-                  ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-                  [this](ledger::Status status, ledger::LedgerPtr ledger) {
-                    if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+  LedgerPtr ledger;
+  GetLedger(startup_context_.get(), component_controller_.NewRequest(), nullptr,
+            "delete_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+            [this](Status status, LedgerPtr ledger) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+                return;
+              }
+              ledger_ = std::move(ledger);
+
+              GetPageEnsureInitialized(
+                  &ledger_, nullptr, QuitLoopClosure(),
+                  [this](Status status, PagePtr page, PageId id) {
+                    if (QuitOnError(QuitLoopClosure(), status,
+                                    "Page initialization")) {
                       return;
                     }
-                    ledger_ = std::move(ledger);
-
-                    test::GetPageEnsureInitialized(
-                        &ledger_, nullptr, QuitLoopClosure(),
-                        [this](ledger::Status status, ledger::PagePtr page,
-                               ledger::PageId id) {
-                          if (QuitOnError(QuitLoopClosure(), status,
-                                          "Page initialization")) {
-                            return;
-                          }
-                          page_ = std::move(page);
-                          Populate();
-                        });
+                    page_ = std::move(page);
+                    Populate();
                   });
+            });
 }
 
 void DeleteEntryBenchmark::Populate() {
@@ -96,17 +93,16 @@ void DeleteEntryBenchmark::Populate() {
 
   page_data_generator_.Populate(
       &page_, std::move(keys), value_size_, entry_count_,
-      test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
-      ledger::Priority::EAGER, [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          benchmark::QuitOnError(QuitLoopClosure(), status,
-                                 "PageGenerator::Populate");
+      PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER,
+      [this](Status status) {
+        if (status != Status::OK) {
+          QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate");
           return;
         }
         if (transaction_size_ > 0) {
-          page_->StartTransaction([this](ledger::Status status) {
-            if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                       "Page::StartTransaction")) {
+          page_->StartTransaction([this](Status status) {
+            if (QuitOnError(QuitLoopClosure(), status,
+                            "Page::StartTransaction")) {
               return;
             }
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
@@ -123,16 +119,16 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
     ShutDown();
 
     uint64_t tmp_dir_size = 0;
-    FXL_CHECK(ledger::GetDirectoryContentSize(
-        ledger::DetachedPath(tmp_dir_.path()), &tmp_dir_size));
+    FXL_CHECK(
+        GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
     TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                   TA_UINT64(tmp_dir_size));
     return;
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "delete_entry", i);
-  page_->Delete(std::move(keys_[i]), [this, i](ledger::Status status) {
-    if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Delete")) {
+  page_->Delete(std::move(keys_[i]), [this, i](Status status) {
+    if (QuitOnError(QuitLoopClosure(), status, "Page::Delete")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "delete_entry", i);
@@ -148,8 +144,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 
 void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit([this, i](ledger::Status status) {
-    if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
+  page_->Commit([this, i](Status status) {
+    if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
@@ -159,9 +155,8 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
       RunSingle(i + 1);
       return;
     }
-    page_->StartTransaction([this, i = i + 1](ledger::Status status) {
-      if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                 "Page::StartTransaction")) {
+    page_->StartTransaction([this, i = i + 1](Status status) {
+      if (QuitOnError(QuitLoopClosure(), status, "Page::StartTransaction")) {
         return;
       }
       TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
@@ -171,7 +166,7 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
 }
 
 void DeleteEntryBenchmark::ShutDown() {
-  test::KillLedgerProcess(&component_controller_);
+  KillLedgerProcess(&component_controller_);
   loop_->Quit();
 }
 
@@ -179,8 +174,7 @@ fit::closure DeleteEntryBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -211,8 +205,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::DeleteEntryBenchmark app(
-      &loop, entry_count, transaction_size, key_size, value_size);
+  ledger::DeleteEntryBenchmark app(&loop, entry_count, transaction_size,
+                                   key_size, value_size);
 
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

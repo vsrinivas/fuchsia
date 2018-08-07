@@ -19,8 +19,7 @@
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures time to fetch lazy values from server.
 // Parameters:
@@ -31,15 +30,15 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firestore instance to use for syncing
 //   --api-key=<string> the API key used to access the Firestore instance
 //   --credentials-path=<file path> Firestore service account credentials
-class FetchBenchmark : public ledger::SyncWatcher {
+class FetchBenchmark : public SyncWatcher {
  public:
   FetchBenchmark(async::Loop* loop, size_t entry_count, size_t value_size,
-                 size_t part_size, ledger::SyncParams sync_params);
+                 size_t part_size, SyncParams sync_params);
 
   void Run();
 
-  // ledger::SyncWatcher:
-  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
+  // SyncWatcher:
+  void SyncStateChanged(SyncState download, SyncState upload,
                         SyncStateChangedCallback callback) override;
 
  private:
@@ -48,18 +47,18 @@ class FetchBenchmark : public ledger::SyncWatcher {
   void ConnectReader();
   void WaitForReaderDownload();
 
-  void FetchValues(ledger::PageSnapshotPtr snapshot, size_t i);
-  void FetchPart(ledger::PageSnapshotPtr snapshot, size_t i, size_t part);
+  void FetchValues(PageSnapshotPtr snapshot, size_t i);
+  void FetchPart(PageSnapshotPtr snapshot, size_t i, size_t part);
 
   void ShutDown();
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
-  test::DataGenerator generator_;
-  test::benchmark::PageDataGenerator page_data_generator_;
+  DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
-  fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
+  fidl::Binding<SyncWatcher> sync_watcher_binding_;
   const size_t entry_count_;
   const size_t value_size_;
   const size_t part_size_;
@@ -68,19 +67,17 @@ class FetchBenchmark : public ledger::SyncWatcher {
   files::ScopedTempDir reader_tmp_dir_;
   fuchsia::sys::ComponentControllerPtr writer_controller_;
   fuchsia::sys::ComponentControllerPtr reader_controller_;
-  ledger::LedgerPtr writer_;
-  ledger::LedgerPtr reader_;
-  ledger::PageId page_id_;
-  ledger::PagePtr writer_page_;
-  ledger::PagePtr reader_page_;
+  LedgerPtr writer_;
+  LedgerPtr reader_;
+  PageId page_id_;
+  PagePtr writer_page_;
+  PagePtr reader_page_;
   std::vector<fidl::VectorPtr<uint8_t>> keys_;
-  fit::function<void(ledger::SyncState, ledger::SyncState)>
-      on_sync_state_changed_;
+  fit::function<void(SyncState, SyncState)> on_sync_state_changed_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FetchBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_FETCH_FETCH_H_

@@ -44,22 +44,21 @@ constexpr size_t kKeySize = 100;
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Instances needed to control the Ledger process associated with a device and
 // interact with it.
 struct ConvergenceBenchmark::DeviceContext {
   std::unique_ptr<files::ScopedTempDir> storage_directory;
   fuchsia::sys::ComponentControllerPtr controller;
-  ledger::LedgerPtr ledger;
-  ledger::PagePtr page_connection;
-  std::unique_ptr<fidl::Binding<ledger::PageWatcher>> page_watcher;
+  LedgerPtr ledger;
+  PagePtr page_connection;
+  std::unique_ptr<fidl::Binding<PageWatcher>> page_watcher;
 };
 
 ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int device_count,
-                                           ledger::SyncParams sync_params)
+                                           SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_factory_(
@@ -79,15 +78,14 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
     device_context->storage_directory =
         std::make_unique<files::ScopedTempDir>(kStoragePath);
     device_context->page_watcher =
-        std::make_unique<fidl::Binding<ledger::PageWatcher>>(this);
+        std::make_unique<fidl::Binding<PageWatcher>>(this);
   }
   page_id_ = generator_.MakePageId();
   cloud_provider_factory_.Init();
 }
 
 void ConvergenceBenchmark::Run() {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
-      ledger::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& device_context : devices_) {
     // Initialize ledgers in different paths to emulate separate devices,
     // but with the same lowest-level directory name, so they correspond to the
@@ -101,30 +99,30 @@ void ConvergenceBenchmark::Run() {
     cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
         user_id_, cloud_provider.NewRequest());
 
-    test::GetLedger(
-        startup_context_.get(), device_context->controller.NewRequest(),
-        std::move(cloud_provider), "convergence",
-        ledger::DetachedPath(synced_dir_path), QuitLoopClosure(),
-        [this, device_context = device_context.get(),
-         callback = waiter->NewCallback()](ledger::Status status,
-                                           ledger::LedgerPtr ledger) mutable {
-          if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-            return;
-          }
-          device_context->ledger = std::move(ledger);
-          device_context->ledger->GetPage(
-              fidl::MakeOptional(page_id_),
-              device_context->page_connection.NewRequest(),
-              benchmark::QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
-          ledger::PageSnapshotPtr snapshot;
-          // Register a watcher; we don't really need the snapshot.
-          device_context->page_connection->GetSnapshot(
-              snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-              device_context->page_watcher->NewBinding(), std::move(callback));
-        });
+    GetLedger(startup_context_.get(), device_context->controller.NewRequest(),
+              std::move(cloud_provider), "convergence",
+              DetachedPath(synced_dir_path), QuitLoopClosure(),
+              [this, device_context = device_context.get(),
+               callback = waiter->NewCallback()](Status status,
+                                                 LedgerPtr ledger) mutable {
+                if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+                  return;
+                }
+                device_context->ledger = std::move(ledger);
+                device_context->ledger->GetPage(
+                    fidl::MakeOptional(page_id_),
+                    device_context->page_connection.NewRequest(),
+                    QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
+                PageSnapshotPtr snapshot;
+                // Register a watcher; we don't really need the snapshot.
+                device_context->page_connection->GetSnapshot(
+                    snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                    device_context->page_watcher->NewBinding(),
+                    std::move(callback));
+              });
   }
-  waiter->Finalize([this](ledger::Status status) {
-    if (benchmark::QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
+  waiter->Finalize([this](Status status) {
+    if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
       return;
     }
     Start(0);
@@ -149,7 +147,7 @@ void ConvergenceBenchmark::Start(int step) {
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
     devices_[device_id]->page_connection->Put(
         std::move(key), std::move(value),
-        benchmark::QuitOnErrorCallback(QuitLoopClosure(), "Put"));
+        QuitOnErrorCallback(QuitLoopClosure(), "Put"));
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);
@@ -158,10 +156,10 @@ void ConvergenceBenchmark::Start(int step) {
   current_step_ = step;
 }
 
-void ConvergenceBenchmark::OnChange(ledger::PageChange page_change,
-                                    ledger::ResultState result_state,
+void ConvergenceBenchmark::OnChange(PageChange page_change,
+                                    ResultState result_state,
                                     OnChangeCallback callback) {
-  FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
+  FXL_DCHECK(result_state == ResultState::COMPLETED);
   for (auto& change : *page_change.changed_entries) {
     auto find_one = remaining_keys_.find(convert::ToString(change.key));
     remaining_keys_.erase(find_one);
@@ -175,7 +173,7 @@ void ConvergenceBenchmark::OnChange(ledger::PageChange page_change,
 
 void ConvergenceBenchmark::ShutDown() {
   for (auto& device_context : devices_) {
-    test::KillLedgerProcess(&device_context->controller);
+    KillLedgerProcess(&device_context->controller);
   }
   loop_->Quit();
 }
@@ -184,8 +182,7 @@ fit::closure ConvergenceBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -209,13 +206,13 @@ int main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::ConvergenceBenchmark app(
-      &loop, entry_count, value_size, device_count, std::move(sync_params));
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  ledger::ConvergenceBenchmark app(&loop, entry_count, value_size, device_count,
+                                   std::move(sync_params));
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

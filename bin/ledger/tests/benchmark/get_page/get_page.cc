@@ -34,8 +34,7 @@ void PrintUsage(const char* executable_name) {
 }
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
                                    bool reuse)
@@ -49,18 +48,17 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
 }
 
 void GetPageBenchmark::Run() {
-  test::GetLedger(startup_context_.get(), component_controller_.NewRequest(),
-                  nullptr, "get_page", ledger::DetachedPath(tmp_dir_.path()),
-                  QuitLoopClosure(),
-                  [this](ledger::Status status, ledger::LedgerPtr ledger) {
-                    if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-                      return;
-                    }
-                    ledger_ = std::move(ledger);
+  GetLedger(startup_context_.get(), component_controller_.NewRequest(), nullptr,
+            "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+            [this](Status status, LedgerPtr ledger) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+                return;
+              }
+              ledger_ = std::move(ledger);
 
-                    page_id_ = fidl::MakeOptional(generator_.MakePageId());
-                    RunSingle(requests_count_);
-                  });
+              page_id_ = fidl::MakeOptional(generator_.MakePageId());
+              RunSingle(requests_count_);
+            });
 }
 
 void GetPageBenchmark::RunSingle(size_t request_number) {
@@ -70,10 +68,10 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "get page", requests_count_ - request_number);
-  ledger::PagePtr page;
+  PagePtr page;
   ledger_->GetPage(
       reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
-      [this, request_number](ledger::Status status) {
+      [this, request_number](Status status) {
         if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
           return;
         }
@@ -85,7 +83,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 }
 
 void GetPageBenchmark::ShutDown() {
-  test::KillLedgerProcess(&component_controller_);
+  KillLedgerProcess(&component_controller_);
   loop_->Quit();
 }
 
@@ -93,8 +91,7 @@ fit::closure GetPageBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -111,7 +108,7 @@ int main(int argc, const char** argv) {
   bool reuse = command_line.HasOption(kReuseFlag);
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::GetPageBenchmark app(&loop, requests_count, reuse);
+  ledger::GetPageBenchmark app(&loop, requests_count, reuse);
 
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
-namespace test {
+namespace ledger {
 namespace {
 
 TEST(GetLedgerTest, CreateAndDeleteLedger) {
@@ -20,16 +20,15 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
 
-  ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-  ledger::LedgerPtr ledger;
+  Status status = Status::UNKNOWN_ERROR;
+  LedgerPtr ledger;
 
   GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
-            "ledger_name", ledger::DetachedPath(tmpfs.root_fd()),
-            [&] { loop.Quit(); },
+            "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
             callback::Capture([&] { loop.Quit(); }, &status, &ledger));
   loop.Run();
 
-  EXPECT_EQ(ledger::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
 
   KillLedgerProcess(&controller);
 }
@@ -41,31 +40,30 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
 
-  ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-  ledger::LedgerPtr ledger;
+  Status status = Status::UNKNOWN_ERROR;
+  LedgerPtr ledger;
 
   GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
-            "ledger_name", ledger::DetachedPath(tmpfs.root_fd()),
-            [&] { loop.Quit(); },
+            "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
             callback::Capture([&] { loop.Quit(); }, &status, &ledger));
   loop.Run();
   loop.ResetQuit();
 
-  ASSERT_EQ(ledger::Status::OK, status);
+  ASSERT_EQ(Status::OK, status);
 
-  status = ledger::Status::UNKNOWN_ERROR;
-  ledger::PagePtr page;
-  ledger::PageId page_id;
+  status = Status::UNKNOWN_ERROR;
+  PagePtr page;
+  PageId page_id;
 
   GetPageEnsureInitialized(
       &ledger, nullptr, [&] { loop.Quit(); },
       callback::Capture([&] { loop.Quit(); }, &status, &page, &page_id));
   loop.Run();
 
-  EXPECT_EQ(ledger::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
 
   KillLedgerProcess(&controller);
 }
 
 }  // namespace
-}  // namespace test
+}  // namespace ledger

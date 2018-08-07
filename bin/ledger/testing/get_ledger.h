@@ -19,7 +19,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 
-namespace test {
+namespace ledger {
 
 // Creates a new Ledger application instance and returns a LedgerPtr connection
 // to it.
@@ -28,22 +28,21 @@ void GetLedger(component::StartupContext* context,
                    controller_request,
                cloud_provider::CloudProviderPtr cloud_provider,
                std::string ledger_name,
-               const ledger::DetachedPath& ledger_repository_path,
+               const DetachedPath& ledger_repository_path,
                fit::function<void()> error_handler,
-               fit::function<void(ledger::Status, ledger::LedgerPtr)> callback);
+               fit::function<void(Status, LedgerPtr)> callback);
 
 // Retrieves the requested page of the given Ledger instance amd returns after
 // ensuring that it is initialized. If |id| is nullptr, a new page with a unique
 // id is created.
 void GetPageEnsureInitialized(
-    ledger::LedgerPtr* ledger, ledger::PageIdPtr requested_id,
+    LedgerPtr* ledger, PageIdPtr requested_id,
     fit::function<void()> error_handler,
-    fit::function<void(ledger::Status, ledger::PagePtr, ledger::PageId)>
-        callback);
+    fit::function<void(Status, PagePtr, PageId)> callback);
 
 // Kills the remote ledger process controlled by |controller|.
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller);
 
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTING_GET_LEDGER_H_

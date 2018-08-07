@@ -49,8 +49,7 @@ void PrintUsage(const char* executable_name) {
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 SyncBenchmark::SyncBenchmark(
     async::Loop* loop, size_t change_count, size_t value_size,
@@ -91,7 +90,7 @@ void SyncBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_alpha;
   cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
       user_id_, cloud_provider_alpha.NewRequest());
-  test::GetLedger(
+  GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
       std::move(cloud_provider_alpha), "sync",
       ledger::DetachedPath(std::move(alpha_path)), QuitLoopClosure(),
@@ -106,7 +105,7 @@ void SyncBenchmark::Run() {
         cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
             user_id_, cloud_provider_beta.NewRequest());
 
-        test::GetLedger(
+        GetLedger(
             startup_context_.get(), beta_controller_.NewRequest(),
             std::move(cloud_provider_beta), "sync",
             ledger::DetachedPath(beta_path), QuitLoopClosure(),
@@ -115,7 +114,7 @@ void SyncBenchmark::Run() {
                 return;
               }
               beta_ = std::move(ledger);
-              test::GetPageEnsureInitialized(
+              GetPageEnsureInitialized(
                   &alpha_, nullptr, QuitLoopClosure(),
                   [this](ledger::Status status, ledger::PagePtr page,
                          ledger::PageId id) {
@@ -190,8 +189,8 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
 }
 
 void SyncBenchmark::ShutDown() {
-  test::KillLedgerProcess(&alpha_controller_);
-  test::KillLedgerProcess(&beta_controller_);
+  KillLedgerProcess(&alpha_controller_);
+  KillLedgerProcess(&beta_controller_);
   loop_->Quit();
 }
 
@@ -199,8 +198,7 @@ fit::closure SyncBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -232,13 +230,12 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  test::benchmark::PageDataGenerator::ReferenceStrategy reference_strategy;
+  ledger::PageDataGenerator::ReferenceStrategy reference_strategy;
   if (reference_strategy_str == kRefsOnFlag) {
     reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE;
+        ledger::PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (reference_strategy_str == kRefsOffFlag) {
-    reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::INLINE;
+    reference_strategy = ledger::PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
@@ -247,8 +244,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::SyncBenchmark app(&loop, change_count, value_size,
-                                     entries_per_change, reference_strategy,
-                                     std::move(sync_params));
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  ledger::SyncBenchmark app(&loop, change_count, value_size, entries_per_change,
+                            reference_strategy, std::move(sync_params));
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

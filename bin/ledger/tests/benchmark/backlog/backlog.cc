@@ -51,14 +51,13 @@ void PrintUsage(const char* executable_name) {
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 BacklogBenchmark::BacklogBenchmark(
     async::Loop* loop, size_t unique_key_count, size_t value_size,
     size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
-    ledger::SyncParams sync_params)
+    SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_factory_(
@@ -79,8 +78,7 @@ BacklogBenchmark::BacklogBenchmark(
   cloud_provider_factory_.Init();
 }
 
-void BacklogBenchmark::SyncStateChanged(ledger::SyncState download,
-                                        ledger::SyncState upload,
+void BacklogBenchmark::SyncStateChanged(SyncState download, SyncState upload,
                                         SyncStateChangedCallback callback) {
   if (on_sync_state_changed_) {
     on_sync_state_changed_(download, upload);
@@ -97,32 +95,31 @@ void BacklogBenchmark::ConnectWriter() {
   bool ret = files::CreateDirectory(writer_path);
   FXL_DCHECK(ret);
 
-  test::GetLedger(
-      startup_context_.get(), writer_controller_.NewRequest(), nullptr,
-      "backlog", ledger::DetachedPath(std::move(writer_path)),
-      []() { FXL_LOG(INFO) << "Writer closed."; },
-      [this](ledger::Status status, ledger::LedgerPtr writer) {
-        if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
-          return;
-        }
-        writer_ = std::move(writer);
-
-        test::GetPageEnsureInitialized(
-            &writer_, nullptr, []() { FXL_LOG(INFO) << "Writer page closed."; },
-            [this](ledger::Status status, ledger::PagePtr writer_page,
-                   ledger::PageId page_id) {
-              if (QuitOnError(QuitLoopClosure(), status,
-                              "Writer page initialization")) {
+  GetLedger(startup_context_.get(), writer_controller_.NewRequest(), nullptr,
+            "backlog", DetachedPath(std::move(writer_path)),
+            []() { FXL_LOG(INFO) << "Writer closed."; },
+            [this](Status status, LedgerPtr writer) {
+              if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
                 return;
               }
+              writer_ = std::move(writer);
 
-              writer_page_ = std::move(writer_page);
-              page_id_ = page_id;
+              GetPageEnsureInitialized(
+                  &writer_, nullptr,
+                  []() { FXL_LOG(INFO) << "Writer page closed."; },
+                  [this](Status status, PagePtr writer_page, PageId page_id) {
+                    if (QuitOnError(QuitLoopClosure(), status,
+                                    "Writer page initialization")) {
+                      return;
+                    }
 
-              TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
-              Populate();
+                    writer_page_ = std::move(writer_page);
+                    page_id_ = page_id;
+
+                    TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
+                    Populate();
+                  });
             });
-      });
 }
 
 void BacklogBenchmark::Populate() {
@@ -134,9 +131,8 @@ void BacklogBenchmark::Populate() {
   auto keys = generator_.MakeKeys(key_count, kKeySize, unique_key_count_);
   page_data_generator_.Populate(
       &writer_page_, std::move(keys), value_size_, transaction_size,
-      reference_strategy_, ledger::Priority::EAGER,
-      [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
+      reference_strategy_, Priority::EAGER, [this](Status status) {
+        if (status != Status::OK) {
           if (QuitOnError(QuitLoopClosure(), status,
                           "PageGenerator::Populate")) {
             return;
@@ -149,7 +145,7 @@ void BacklogBenchmark::Populate() {
 }
 
 void BacklogBenchmark::DisconnectAndRecordWriter() {
-  test::KillLedgerProcess(&writer_controller_);
+  KillLedgerProcess(&writer_controller_);
   RecordDirectorySize("writer_directory_size", writer_tmp_dir_.path());
   ConnectUploader();
 }
@@ -162,11 +158,11 @@ void BacklogBenchmark::ConnectUploader() {
   cloud_provider::CloudProviderPtr cloud_provider_uploader;
   cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
       user_id_, cloud_provider_uploader.NewRequest());
-  test::GetLedger(
+  GetLedger(
       startup_context_.get(), uploader_controller_.NewRequest(),
       std::move(cloud_provider_uploader), "backlog",
-      ledger::DetachedPath(std::move(uploader_path)), QuitLoopClosure(),
-      [this](ledger::Status status, ledger::LedgerPtr uploader) {
+      DetachedPath(std::move(uploader_path)), QuitLoopClosure(),
+      [this](Status status, LedgerPtr uploader) {
         if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
           return;
         }
@@ -176,7 +172,7 @@ void BacklogBenchmark::ConnectUploader() {
         TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
         uploader_->GetPage(
             fidl::MakeOptional(fidl::Clone(page_id_)),
-            uploader_page_.NewRequest(), [this](ledger::Status status) {
+            uploader_page_.NewRequest(), [this](Status status) {
               if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
                 return;
               }
@@ -187,9 +183,8 @@ void BacklogBenchmark::ConnectUploader() {
 }
 
 void BacklogBenchmark::WaitForUploaderUpload() {
-  on_sync_state_changed_ = [this](ledger::SyncState download,
-                                  ledger::SyncState upload) {
-    if (upload == ledger::SyncState::IDLE) {
+  on_sync_state_changed_ = [this](SyncState download, SyncState upload) {
+    if (upload == SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       TRACE_ASYNC_END("benchmark", "upload", 0);
       // Stop watching sync state for this page.
@@ -211,34 +206,32 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
       user_id_, cloud_provider_reader.NewRequest());
-  test::GetLedger(
-      startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "backlog",
-      ledger::DetachedPath(std::move(reader_path)), QuitLoopClosure(),
-      [this](ledger::Status status, ledger::LedgerPtr reader) {
-        if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
-          return;
-        }
-        reader_ = std::move(reader);
-
-        TRACE_ASYNC_BEGIN("benchmark", "download", 0);
-        TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
-        reader_->GetPage(
-            fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
-            [this](ledger::Status status) {
-              if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+  GetLedger(startup_context_.get(), reader_controller_.NewRequest(),
+            std::move(cloud_provider_reader), "backlog",
+            DetachedPath(std::move(reader_path)), QuitLoopClosure(),
+            [this](Status status, LedgerPtr reader) {
+              if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
                 return;
               }
-              TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
-              WaitForReaderDownload();
+              reader_ = std::move(reader);
+
+              TRACE_ASYNC_BEGIN("benchmark", "download", 0);
+              TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
+              reader_->GetPage(
+                  fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
+                  [this](Status status) {
+                    if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                      return;
+                    }
+                    TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
+                    WaitForReaderDownload();
+                  });
             });
-      });
 }
 
 void BacklogBenchmark::WaitForReaderDownload() {
-  on_sync_state_changed_ = [this](ledger::SyncState download,
-                                  ledger::SyncState upload) {
-    if (download == ledger::SyncState::IDLE) {
+  on_sync_state_changed_ = [this](SyncState download, SyncState upload) {
+    if (download == SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       TRACE_ASYNC_END("benchmark", "download", 0);
       GetReaderSnapshot();
@@ -259,16 +252,14 @@ void BacklogBenchmark::GetReaderSnapshot() {
 }
 
 void BacklogBenchmark::CheckStatusAndGetMore(
-    ledger::Status status, size_t entries_left,
-    std::unique_ptr<ledger::Token> next_token) {
-  if ((status != ledger::Status::OK) &&
-      (status != ledger::Status::PARTIAL_RESULT)) {
+    Status status, size_t entries_left, std::unique_ptr<Token> next_token) {
+  if ((status != Status::OK) && (status != Status::PARTIAL_RESULT)) {
     if (QuitOnError(QuitLoopClosure(), status, "PageSnapshot::GetEntries")) {
       return;
     }
   }
 
-  if (status == ledger::Status::OK) {
+  if (status == Status::OK) {
     TRACE_ASYNC_END("benchmark", "get_all_entries", 0);
     FXL_DCHECK(entries_left == 0);
     FXL_DCHECK(!next_token);
@@ -281,14 +272,14 @@ void BacklogBenchmark::CheckStatusAndGetMore(
   GetEntriesStep(std::move(next_token), entries_left);
 }
 
-void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
+void BacklogBenchmark::GetEntriesStep(std::unique_ptr<Token> token,
                                       size_t entries_left) {
   FXL_DCHECK(entries_left > 0);
   TRACE_ASYNC_BEGIN("benchmark", "get_entries_partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     reader_snapshot_->GetEntriesInline(
         fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-        [this, entries_left](ledger::Status status, auto entries,
+        [this, entries_left](Status status, auto entries,
                              auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries->size(),
@@ -297,7 +288,7 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
   } else {
     reader_snapshot_->GetEntries(
         fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-        [this, entries_left](ledger::Status status, auto entries,
+        [this, entries_left](Status status, auto entries,
                              auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries->size(),
@@ -309,15 +300,14 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
 void BacklogBenchmark::RecordDirectorySize(const std::string& event_name,
                                            const std::string& path) {
   uint64_t tmp_dir_size = 0;
-  FXL_CHECK(ledger::GetDirectoryContentSize(ledger::DetachedPath(path),
-                                            &tmp_dir_size));
+  FXL_CHECK(GetDirectoryContentSize(DetachedPath(path), &tmp_dir_size));
   TRACE_COUNTER("benchmark", event_name.c_str(), 0, "directory_size",
                 TA_UINT64(tmp_dir_size));
 }
 
 void BacklogBenchmark::ShutDown() {
-  test::KillLedgerProcess(&uploader_controller_);
-  test::KillLedgerProcess(&reader_controller_);
+  KillLedgerProcess(&uploader_controller_);
+  KillLedgerProcess(&reader_controller_);
   loop_->Quit();
 }
 
@@ -325,8 +315,7 @@ fit::closure BacklogBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -358,13 +347,12 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  test::benchmark::PageDataGenerator::ReferenceStrategy reference_strategy;
+  ledger::PageDataGenerator::ReferenceStrategy reference_strategy;
   if (reference_strategy_str == kRefsOnFlag) {
     reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE;
+        ledger::PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (reference_strategy_str == kRefsOffFlag) {
-    reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::INLINE;
+    reference_strategy = ledger::PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
@@ -373,8 +361,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::BacklogBenchmark app(&loop, unique_key_count, value_size,
-                                        commit_count, reference_strategy,
-                                        std::move(sync_params));
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  ledger::BacklogBenchmark app(&loop, unique_key_count, value_size,
+                               commit_count, reference_strategy,
+                               std::move(sync_params));
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

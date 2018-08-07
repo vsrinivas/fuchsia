@@ -19,15 +19,15 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
-void GetLedger(
-    component::StartupContext* context,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-        controller_request,
-    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
-    const ledger::DetachedPath& ledger_repository_path,
-    fit::function<void()> error_handler,
-    fit::function<void(ledger::Status, ledger::LedgerPtr)> callback) {
+namespace ledger {
+void GetLedger(component::StartupContext* context,
+               fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+                   controller_request,
+               cloud_provider::CloudProviderPtr cloud_provider,
+               std::string ledger_name,
+               const DetachedPath& ledger_repository_path,
+               fit::function<void()> error_handler,
+               fit::function<void(Status, LedgerPtr)> callback) {
   auto repository_factory =
       std::make_unique<ledger_internal::LedgerRepositoryFactoryPtr>();
   component::Services child_services;
@@ -49,7 +49,7 @@ void GetLedger(
   if (!dir.is_valid()) {
     FXL_LOG(ERROR) << "Unable to open directory at "
                    << ledger_repository_path.path() << ". errno: " << errno;
-    callback(ledger::Status::IO_ERROR, nullptr);
+    callback(Status::IO_ERROR, nullptr);
     return;
   }
 
@@ -60,22 +60,22 @@ void GetLedger(
        repository = std::move(repository), ledger_name = std::move(ledger_name),
        ledger_repository_path = std::move(ledger_repository_path),
        error_handler = std::move(error_handler),
-       callback = std::move(callback)](ledger::Status status) mutable {
-        if (status != ledger::Status::OK) {
+       callback = std::move(callback)](Status status) mutable {
+        if (status != Status::OK) {
           FXL_LOG(ERROR) << "Failure while getting repository.";
           callback(status, nullptr);
           return;
         }
 
         auto repository_ptr = repository->get();
-        auto ledger = std::make_unique<ledger::LedgerPtr>();
+        auto ledger = std::make_unique<LedgerPtr>();
         auto request = ledger->NewRequest();
         repository_ptr->GetLedger(
             convert::ToArray(ledger_name), std::move(request),
             [repository = std::move(repository), ledger = std::move(ledger),
              error_handler = std::move(error_handler),
-             callback = std::move(callback)](ledger::Status status) mutable {
-              if (status != ledger::Status::OK) {
+             callback = std::move(callback)](Status status) mutable {
+              if (status != Status::OK) {
                 FXL_LOG(ERROR) << "Failure while getting ledger.";
                 callback(status, nullptr);
                 return;
@@ -85,23 +85,22 @@ void GetLedger(
                 FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
                 error_handler();
               });
-              callback(ledger::Status::OK, std::move(*ledger));
+              callback(Status::OK, std::move(*ledger));
             });
       });
 }
 
 void GetPageEnsureInitialized(
-    ledger::LedgerPtr* ledger, ledger::PageIdPtr requested_id,
+    LedgerPtr* ledger, PageIdPtr requested_id,
     fit::function<void()> error_handler,
-    fit::function<void(ledger::Status, ledger::PagePtr, ledger::PageId)>
-        callback) {
-  auto page = std::make_unique<ledger::PagePtr>();
+    fit::function<void(Status, PagePtr, PageId)> callback) {
+  auto page = std::make_unique<PagePtr>();
   auto request = page->NewRequest();
   (*ledger)->GetPage(
       std::move(requested_id), std::move(request),
       [page = std::move(page), error_handler = std::move(error_handler),
-       callback = std::move(callback)](ledger::Status status) mutable {
-        if (status != ledger::Status::OK) {
+       callback = std::move(callback)](Status status) mutable {
+        if (status != Status::OK) {
           FXL_LOG(ERROR) << "Failure while getting a page.";
           callback(status, nullptr, {});
           return;
@@ -113,11 +112,10 @@ void GetPageEnsureInitialized(
         });
 
         auto page_ptr = (*page).get();
-        page_ptr->GetId(
-            [page = std::move(page),
-             callback = std::move(callback)](ledger::PageId page_id) {
-              callback(ledger::Status::OK, std::move(*page), page_id);
-            });
+        page_ptr->GetId([page = std::move(page),
+                         callback = std::move(callback)](PageId page_id) {
+          callback(Status::OK, std::move(*page), page_id);
+        });
       });
 }
 
@@ -129,4 +127,4 @@ void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {
                    &observed);
 }
 
-}  // namespace test
+}  // namespace ledger

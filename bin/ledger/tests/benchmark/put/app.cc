@@ -78,13 +78,11 @@ int main(int argc, const char** argv) {
     PrintUsage(argv[0]);
     return -1;
   }
-  test::benchmark::PageDataGenerator::ReferenceStrategy ref_strategy;
+  ledger::PageDataGenerator::ReferenceStrategy ref_strategy;
   if (ref_strategy_str == kRefsOnFlag) {
-    ref_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE;
+    ref_strategy = ledger::PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (ref_strategy_str == kRefsOffFlag) {
-    ref_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::INLINE;
+    ref_strategy = ledger::PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << ref_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
@@ -104,9 +102,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  test::benchmark::PutBenchmark app(&loop, entry_count, transaction_size,
-                                    key_size, value_size, update, ref_strategy,
-                                    seed);
+  ledger::PutBenchmark app(&loop, entry_count, transaction_size, key_size,
+                           value_size, update, ref_strategy, seed);
 
-  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
+  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
 }

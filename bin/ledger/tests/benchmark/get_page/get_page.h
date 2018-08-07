@@ -15,8 +15,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures the time taken to get a page.
 //
@@ -37,19 +36,18 @@ class GetPageBenchmark {
 
   async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
-  test::DataGenerator generator_;
+  DataGenerator generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
   const size_t requests_count_;
   const bool reuse_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  ledger::LedgerPtr ledger_;
-  ledger::PageIdPtr page_id_;
-  std::vector<ledger::PagePtr> pages_;
+  LedgerPtr ledger_;
+  PageIdPtr page_id_;
+  std::vector<PagePtr> pages_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_

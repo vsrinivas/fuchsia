@@ -19,8 +19,7 @@
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures time taken by a page connection to upload all local
 // changes to the cloud; and for another connection to the same page to download
@@ -47,17 +46,17 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firestore instance to use for syncing
 //   --api-key=<string> the API key used to access the Firestore instance
 //   --credentials-path=<file path> Firestore service account credentials
-class BacklogBenchmark : public ledger::SyncWatcher {
+class BacklogBenchmark : public SyncWatcher {
  public:
   BacklogBenchmark(async::Loop* loop, size_t unique_key_count,
                    size_t value_size, size_t commit_count,
                    PageDataGenerator::ReferenceStrategy reference_strategy,
-                   ledger::SyncParams sync_params);
+                   SyncParams sync_params);
 
   void Run();
 
-  // ledger::SyncWatcher:
-  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
+  // SyncWatcher:
+  void SyncStateChanged(SyncState download, SyncState upload,
                         SyncStateChangedCallback callback) override;
 
  private:
@@ -70,10 +69,9 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   void WaitForReaderDownload();
 
   void GetReaderSnapshot();
-  void GetEntriesStep(std::unique_ptr<ledger::Token> token,
-                      size_t entries_left);
-  void CheckStatusAndGetMore(ledger::Status status, size_t entries_left,
-                             std::unique_ptr<ledger::Token> next_token);
+  void GetEntriesStep(std::unique_ptr<Token> token, size_t entries_left);
+  void CheckStatusAndGetMore(Status status, size_t entries_left,
+                             std::unique_ptr<Token> next_token);
 
   void RecordDirectorySize(const std::string& event_name,
                            const std::string& path);
@@ -85,7 +83,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
-  fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
+  fidl::Binding<SyncWatcher> sync_watcher_binding_;
   const size_t unique_key_count_;
   const size_t value_size_;
   const size_t commit_count_;
@@ -96,21 +94,19 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   fuchsia::sys::ComponentControllerPtr writer_controller_;
   fuchsia::sys::ComponentControllerPtr uploader_controller_;
   fuchsia::sys::ComponentControllerPtr reader_controller_;
-  ledger::LedgerPtr uploader_;
-  ledger::LedgerPtr writer_;
-  ledger::LedgerPtr reader_;
-  ledger::PageId page_id_;
-  ledger::PagePtr writer_page_;
-  ledger::PagePtr uploader_page_;
-  ledger::PagePtr reader_page_;
-  ledger::PageSnapshotPtr reader_snapshot_;
-  fit::function<void(ledger::SyncState, ledger::SyncState)>
-      on_sync_state_changed_;
+  LedgerPtr uploader_;
+  LedgerPtr writer_;
+  LedgerPtr reader_;
+  PageId page_id_;
+  PagePtr writer_page_;
+  PagePtr uploader_page_;
+  PagePtr reader_page_;
+  PageSnapshotPtr reader_snapshot_;
+  fit::function<void(SyncState, SyncState)> on_sync_state_changed_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BacklogBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_BACKLOG_BACKLOG_H_

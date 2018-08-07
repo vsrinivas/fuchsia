@@ -20,8 +20,7 @@ constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
 }  // namespace
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 PutBenchmark::PutBenchmark(
     async::Loop* loop, int entry_count, int transaction_size, int key_size,
@@ -55,20 +54,19 @@ void PutBenchmark::Run() {
                         ? "off"
                         : "on")
                 << (update_ ? " --update" : "");
-  test::GetLedger(
+  GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "put", ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-      [this](ledger::Status status, ledger::LedgerPtr ledger) {
+      "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+      [this](Status status, LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
           return;
         }
 
         ledger_ = std::move(ledger);
 
-        test::GetPageEnsureInitialized(
+        GetPageEnsureInitialized(
             &ledger_, nullptr, QuitLoopClosure(),
-            [this](ledger::Status status, ledger::PagePtr page,
-                   ledger::PageId id) mutable {
+            [this](Status status, PagePtr page, PageId id) mutable {
               if (QuitOnError(QuitLoopClosure(), status,
                               "GetPageEnsureInitialized")) {
                 return;
@@ -78,16 +76,15 @@ void PutBenchmark::Run() {
               InitializeKeys(
                   [this](std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
                     if (transaction_size_ > 0) {
-                      page_->StartTransaction(
-                          [this, keys = std::move(keys)](
-                              ledger::Status status) mutable {
-                            if (QuitOnError(QuitLoopClosure(), status,
-                                            "Page::StartTransaction")) {
-                              return;
-                            }
-                            TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                            BindWatcher(std::move(keys));
-                          });
+                      page_->StartTransaction([this, keys = std::move(keys)](
+                                                  Status status) mutable {
+                        if (QuitOnError(QuitLoopClosure(), status,
+                                        "Page::StartTransaction")) {
+                          return;
+                        }
+                        TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+                        BindWatcher(std::move(keys));
+                      });
                     } else {
                       BindWatcher(std::move(keys));
                     }
@@ -96,8 +93,8 @@ void PutBenchmark::Run() {
       });
 }
 
-void PutBenchmark::OnChange(ledger::PageChange page_change,
-                            ledger::ResultState /*result_state*/,
+void PutBenchmark::OnChange(PageChange page_change,
+                            ResultState /*result_state*/,
                             OnChangeCallback callback) {
   for (auto const& change : *page_change.changed_entries) {
     size_t key_number = std::stoul(convert::ToString(change.key));
@@ -133,9 +130,9 @@ void PutBenchmark::InitializeKeys(
   }
   page_data_generator_.Populate(
       &page_, std::move(keys_cloned), value_size_, keys_cloned.size(),
-      reference_strategy_, ledger::Priority::EAGER,
+      reference_strategy_, Priority::EAGER,
       [this, keys = std::move(keys),
-       on_done = std::move(on_done)](ledger::Status status) mutable {
+       on_done = std::move(on_done)](Status status) mutable {
         if (QuitOnError(QuitLoopClosure(), status,
                         "PageDataGenerator::Populate")) {
           return;
@@ -145,11 +142,11 @@ void PutBenchmark::InitializeKeys(
 }
 
 void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
-  ledger::PageSnapshotPtr snapshot;
+  PageSnapshotPtr snapshot;
   page_->GetSnapshot(
       snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
       page_watcher_binding_.NewBinding(),
-      [this, keys = std::move(keys)](ledger::Status status) mutable {
+      [this, keys = std::move(keys)](Status status) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
           return;
         }
@@ -187,15 +184,15 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
-    page_->Put(std::move(key), std::move(value),
-               [this, trace_event_id,
-                on_done = std::move(on_done)](ledger::Status status) {
-                 if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
-                   return;
-                 }
-                 TRACE_ASYNC_END("benchmark", "put", trace_event_id);
-                 on_done();
-               });
+    page_->Put(
+        std::move(key), std::move(value),
+        [this, trace_event_id, on_done = std::move(on_done)](Status status) {
+          if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
+            return;
+          }
+          TRACE_ASYNC_END("benchmark", "put", trace_event_id);
+          on_done();
+        });
     return;
   }
   fsl::SizedVmo vmo;
@@ -204,8 +201,8 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
   page_->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
       [this, trace_event_id, key = std::move(key),
-       on_done = std::move(on_done)](ledger::Status status,
-                                     ledger::ReferencePtr reference) mutable {
+       on_done = std::move(on_done)](Status status,
+                                     ReferencePtr reference) mutable {
         if (QuitOnError(QuitLoopClosure(), status,
                         "Page::CreateReferenceFromVmo")) {
           return;
@@ -213,9 +210,9 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
         TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
         TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
         page_->PutReference(
-            std::move(key), std::move(*reference), ledger::Priority::EAGER,
+            std::move(key), std::move(*reference), Priority::EAGER,
             [this, trace_event_id,
-             on_done = std::move(on_done)](ledger::Status status) {
+             on_done = std::move(on_done)](Status status) {
               if (QuitOnError(QuitLoopClosure(), status,
                               "Page::PutReference")) {
                 return;
@@ -231,8 +228,7 @@ void PutBenchmark::CommitAndRunNext(
     int i, size_t key_number, std::vector<fidl::VectorPtr<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit([this, i,
-                 keys = std::move(keys)](ledger::Status status) mutable {
+  page_->Commit([this, i, keys = std::move(keys)](Status status) mutable {
     if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
       return;
     }
@@ -243,8 +239,8 @@ void PutBenchmark::CommitAndRunNext(
       RunSingle(i + 1, std::move(keys));
       return;
     }
-    page_->StartTransaction([this, i = i + 1, keys = std::move(keys)](
-                                ledger::Status status) mutable {
+    page_->StartTransaction([this, i = i + 1,
+                             keys = std::move(keys)](Status status) mutable {
       if (QuitOnError(QuitLoopClosure(), status, "Page::StartTransaction")) {
         return;
       }
@@ -256,7 +252,7 @@ void PutBenchmark::CommitAndRunNext(
 
 void PutBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
-  test::KillLedgerProcess(&component_controller_);
+  KillLedgerProcess(&component_controller_);
   loop_->Quit();
 }
 
@@ -264,5 +260,4 @@ fit::closure PutBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger

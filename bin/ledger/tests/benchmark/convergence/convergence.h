@@ -19,8 +19,7 @@
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures the time it takes to sync and reconcile concurrent
 // writes.
@@ -36,16 +35,15 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firestore instance to use for syncing
 //   --api-key=<string> the API key used to access the Firestore instance
 //   --credentials-path=<file path> Firestore service account credentials
-class ConvergenceBenchmark : public ledger::PageWatcher {
+class ConvergenceBenchmark : public PageWatcher {
  public:
   ConvergenceBenchmark(async::Loop* loop, int entry_count, int value_size,
-                       int device_count, ledger::SyncParams sync_params);
+                       int device_count, SyncParams sync_params);
 
   void Run();
 
-  // ledger::PageWatcher:
-  void OnChange(ledger::PageChange page_change,
-                ledger::ResultState result_state,
+  // PageWatcher:
+  void OnChange(PageChange page_change, ResultState result_state,
                 OnChangeCallback callback) override;
 
  private:
@@ -57,7 +55,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
-  test::DataGenerator generator_;
+  DataGenerator generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   const int entry_count_;
@@ -67,14 +65,13 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   // Track all Ledger instances running for this test and allow to interact with
   // it.
   std::vector<std::unique_ptr<DeviceContext>> devices_;
-  ledger::PageId page_id_;
+  PageId page_id_;
   std::multiset<std::string> remaining_keys_;
   int current_step_ = -1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_CONVERGENCE_CONVERGENCE_H_

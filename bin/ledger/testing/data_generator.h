@@ -13,7 +13,7 @@
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 
-namespace test {
+namespace ledger {
 
 class DataGenerator {
  public:
@@ -29,7 +29,7 @@ class DataGenerator {
   fidl::VectorPtr<uint8_t> MakeKey(int i, size_t size);
 
   // Builds a random value that can be used as a page id.
-  ledger::PageId MakePageId();
+  PageId MakePageId();
 
   // Builds a random value of the given length.
   fidl::VectorPtr<uint8_t> MakeValue(size_t size);
@@ -45,6 +45,6 @@ class DataGenerator {
       generator_;
 };
 
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTING_DATA_GENERATOR_H_

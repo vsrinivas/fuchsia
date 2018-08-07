@@ -15,7 +15,7 @@
 
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
+namespace ledger {
 
 DataGenerator::DataGenerator() : generator_(fxl::RandUint64()) {}
 
@@ -32,8 +32,8 @@ fidl::VectorPtr<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
       fxl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
 }
 
-ledger::PageId DataGenerator::MakePageId() {
-  ledger::PageId value;
+PageId DataGenerator::MakePageId() {
+  PageId value;
   std::generate(value.id.begin(), value.id.end(), std::ref(generator_));
   return value;
 }
@@ -57,4 +57,4 @@ std::vector<fidl::VectorPtr<uint8_t>> DataGenerator::MakeKeys(
   return keys;
 }
 
-}  // namespace test
+}  // namespace ledger

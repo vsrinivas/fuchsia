@@ -18,8 +18,7 @@
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures performance of the Put() operation.
 //
@@ -34,7 +33,7 @@ namespace benchmark {
 //   --update whether operations will update existing entries (put with existing
 //     keys and new values)
 //   --seed=<int> (optional) the seed for key and value generation
-class PutBenchmark : public ledger::PageWatcher {
+class PutBenchmark : public PageWatcher {
  public:
   PutBenchmark(async::Loop* loop, int entry_count, int transaction_size,
                int key_size, int value_size, bool update,
@@ -43,9 +42,8 @@ class PutBenchmark : public ledger::PageWatcher {
 
   void Run();
 
-  // ledger::PageWatcher:
-  void OnChange(ledger::PageChange page_change,
-                ledger::ResultState result_state,
+  // PageWatcher:
+  void OnChange(PageChange page_change, ResultState result_state,
                 OnChangeCallback callback) override;
 
  private:
@@ -66,7 +64,7 @@ class PutBenchmark : public ledger::PageWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
-  test::DataGenerator generator_;
+  DataGenerator generator_;
   PageDataGenerator page_data_generator_;
 
   files::ScopedTempDir tmp_dir_;
@@ -77,12 +75,12 @@ class PutBenchmark : public ledger::PageWatcher {
   const int value_size_;
   const bool update_;
 
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  fidl::Binding<PageWatcher> page_watcher_binding_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  ledger::LedgerPtr ledger_;
-  ledger::PagePtr page_;
+  LedgerPtr ledger_;
+  PagePtr page_;
   // Keys that we use to identify a change event. For transaction_size = 1 it
   // contains all the keys, otherwise only the last changed key for each
   // transaction.
@@ -91,7 +89,6 @@ class PutBenchmark : public ledger::PageWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_PUT_PUT_H_

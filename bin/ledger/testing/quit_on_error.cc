@@ -6,12 +6,11 @@
 
 #include <lib/fit/function.h>
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
-bool QuitOnError(fit::closure quit_callback, ledger::Status status,
+bool QuitOnError(fit::closure quit_callback, Status status,
                  fxl::StringView description) {
-  if (status != ledger::Status::OK) {
+  if (status != Status::OK) {
     FXL_LOG(ERROR) << description << " failed with status "
                    << fidl::ToUnderlying(status) << ".";
     quit_callback();
@@ -20,13 +19,12 @@ bool QuitOnError(fit::closure quit_callback, ledger::Status status,
   return false;
 }
 
-fit::function<void(ledger::Status)> QuitOnErrorCallback(
-    fit::closure quit_callback, std::string description) {
+fit::function<void(Status)> QuitOnErrorCallback(fit::closure quit_callback,
+                                                std::string description) {
   return [quit_callback = std::move(quit_callback),
-          description = std::move(description)](ledger::Status status) mutable {
+          description = std::move(description)](Status status) mutable {
     QuitOnError(quit_callback.share(), status, description);
   };
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger

@@ -16,8 +16,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Benchmark that measures a performance of Put() operation under the condition
 // that it modifies the same entry.
@@ -43,7 +42,7 @@ class UpdateEntryBenchmark {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
-  test::DataGenerator generator_;
+  DataGenerator generator_;
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -53,13 +52,12 @@ class UpdateEntryBenchmark {
   const int value_size_;
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  ledger::LedgerPtr ledger_;
-  ledger::PagePtr page_;
+  LedgerPtr ledger_;
+  PagePtr page_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);
 };
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_UPDATE_ENTRY_UPDATE_ENTRY_H_
