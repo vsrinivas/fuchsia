@@ -300,19 +300,22 @@ bool VhtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw
 
 SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs) {
     // Find an intersection.
-    // Perform bitwise-AND bitmasksi fields, which represent MCS
+    // Perform bitwise-AND on bitmask fields, which represent MCS
     // Take minimum of numeric values
 
     auto result = SupportedMcsSet{};
-    result.rx_mcs_head.set_bitmask(lhs.rx_mcs_head.bitmask() & rhs.rx_mcs_head.bitmask());
-    result.rx_mcs_tail.set_bitmask(lhs.rx_mcs_tail.bitmask() & rhs.rx_mcs_tail.bitmask());
-    result.rx_mcs_tail.set_highest_rate(
-        std::min(lhs.rx_mcs_tail.highest_rate(), rhs.rx_mcs_tail.highest_rate()));
-    result.tx_mcs.set_set_defined(lhs.tx_mcs.set_defined() & rhs.tx_mcs.set_defined());
-    result.tx_mcs.set_rx_diff(lhs.tx_mcs.rx_diff() & rhs.tx_mcs.rx_diff());
+    auto& rx_mcs_head = result.rx_mcs_head;
+    SET_BITFIELD_AND(rx_mcs_head, bitmask);
 
-    result.tx_mcs.set_max_ss(std::min(lhs.tx_mcs.max_ss(), rhs.tx_mcs.max_ss()));
-    result.tx_mcs.set_ueqm(lhs.tx_mcs.ueqm() & rhs.tx_mcs.ueqm());
+    auto& rx_mcs_tail = result.rx_mcs_tail;
+    SET_BITFIELD_AND(rx_mcs_tail, bitmask);
+    SET_BITFIELD_MIN(rx_mcs_tail, highest_rate);
+
+    auto& tx_mcs = result.tx_mcs;
+    SET_BITFIELD_AND(tx_mcs, set_defined);
+    SET_BITFIELD_AND(tx_mcs, rx_diff);
+    SET_BITFIELD_MIN(tx_mcs, max_ss);
+    SET_BITFIELD_AND(tx_mcs, ueqm);
 
     return result;
 }
