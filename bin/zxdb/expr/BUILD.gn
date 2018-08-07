@@ -4,6 +4,7 @@
 
 static_library("expr") {
   sources = [
+    "expr_eval_context.h",
     "expr_node.cc",
     "expr_node.h",
     "expr_parser.cc",
@@ -11,9 +12,12 @@ static_library("expr") {
     "expr_token.h",
     "expr_tokenizer.cc",
     "expr_tokenizer.h",
+    "expr_value.cc",
+    "expr_value.h",
   ]
 
   public_deps = [
+    "//garnet/bin/zxdb/client/symbols",
     "//garnet/bin/zxdb/common",
     "//garnet/public/lib/fxl",
   ]
@@ -23,6 +27,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "expr_node_unittest.cc",
     "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",
   ]
