@@ -281,10 +281,14 @@ extern enum x86_hypervisor_list x86_hypervisor;
 /* returns 0 if unknown, otherwise value in Hz */
 typedef uint64_t (*x86_get_timer_freq_func_t)(void);
 
+/* attempt to reboot the system; may fail and simply return */
+typedef void (*x86_reboot_system_func_t)(void);
+
 /* Structure for supporting per-microarchitecture kernel configuration */
 typedef struct {
     x86_get_timer_freq_func_t get_apic_freq;
     x86_get_timer_freq_func_t get_tsc_freq;
+    x86_reboot_system_func_t reboot_system;
 
     bool disable_c1e;
 } x86_microarch_config_t;

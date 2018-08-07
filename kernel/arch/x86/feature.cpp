@@ -468,50 +468,68 @@ static uint64_t zen_tsc_freq() {
     return amd_compute_p_state_clock(p0_state);
 }
 
+static void unknown_reboot_system(void) {
+    return;
+}
+
+static void hsw_reboot_system(void) {
+    // 100-Series Chipset Reset Control Register: CPU + SYS Reset
+    outp(0xcf9, 0x06);
+}
+
 // Intel microarches
 static const x86_microarch_config_t kbl_config{
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = hsw_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t skl_config{
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = hsw_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t bdw_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = hsw_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t hsw_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = hsw_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t ivb_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t snb_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t westmere_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t nehalem_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = true,
 };
 static const x86_microarch_config_t intel_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = false,
 };
 
@@ -519,21 +537,25 @@ static const x86_microarch_config_t intel_default_config{
 static const x86_microarch_config_t zen_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = zen_tsc_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = false,
 };
 static const x86_microarch_config_t jaguar_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = false,
 };
 static const x86_microarch_config_t bulldozer_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = false,
 };
 static const x86_microarch_config_t amd_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = unknown_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = false,
 };
 
@@ -541,6 +563,7 @@ static const x86_microarch_config_t amd_default_config{
 static const x86_microarch_config_t unknown_vendor_config{
     .get_apic_freq = unknown_freq,
     .get_tsc_freq = unknown_freq,
+    .reboot_system = unknown_reboot_system,
     .disable_c1e = false,
 };
 

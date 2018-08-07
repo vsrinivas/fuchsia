@@ -452,8 +452,10 @@ void platform_init_keyboard(cbuf_t* buffer) {
 }
 
 void pc_keyboard_reboot(void) {
-    while (i8042_read_status() & I8042_STR_IBF)
-        ;
+    if (i8042_wait_write() != 0) {
+        return;
+    }
+
     i8042_write_command(I8042_CMD_PULSE_RESET);
     // Wait a second for the command to process before declaring failure
     spin(1000000);

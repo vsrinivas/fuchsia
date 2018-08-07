@@ -8,6 +8,7 @@
 #include <arch/mp.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
+#include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <fbl/atomic.h>
 #include <stdio.h>
@@ -34,11 +35,9 @@ static_assert(kQEMUExitCode != 0 && kQEMUExitCode % 2 != 0,
               "QEMU exit code must be non-zero and odd.");
 
 static void reboot(void) {
-    // Try legacy reboot path first
+    x86_get_microarch_config()->reboot_system();
+    // We fell through. Try rebooting via keyboard controller.
     pc_keyboard_reboot();
-
-    // Try 100-Series Chipset Reset Control Register: CPU + SYS Reset
-    outp(0xCF9, 0x06);
 }
 
 static fbl::atomic<cpu_mask_t> halted_cpus(0);
