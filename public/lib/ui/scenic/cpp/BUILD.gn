@@ -9,24 +9,12 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
-    ":fidl_math",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.scenic",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
-  ]
-}
-
-source_set("fidl_math") {
-  sources = [
-    "fidl_math.cc",
-    "fidl_math.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.gfx",
   ]
 }
 

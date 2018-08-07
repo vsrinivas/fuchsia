@@ -14,6 +14,7 @@ source_set("cpp") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.ui.app",
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/ui/gfx/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
   ]
 
