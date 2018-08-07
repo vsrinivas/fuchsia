@@ -72,7 +72,7 @@ static const pbus_metadata_t raw_nand_metadata[] = {
         .type = DEVICE_METADATA_PRIVATE,
         .extra = 0,
         .data = &config,
-        .len = sizeof(config) + sizeof(nand_partition_config_t),
+        .len = sizeof(config),
     },
 };
 
