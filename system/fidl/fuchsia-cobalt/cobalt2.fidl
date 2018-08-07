@@ -89,7 +89,7 @@ interface LoggerFactory {
     //  project_id.
     2: CreateLogger(ProjectProfile2 profile,
                     request<Logger> logger)
-        -> (Status2 @status);
+        -> (Status2 status);
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -144,7 +144,7 @@ interface Logger {
     // |event_type_index| The index of the event type that occurred. The indexed
     //     set of all event types is specified in the metric definition.
     1: LogEvent(string metric_name, uint32 event_type_index)
-        -> (Status2 @status);
+        -> (Status2 status);
 
     // Logs that an event has occurred a given number of times.
     //
@@ -172,7 +172,7 @@ interface Logger {
     2: LogEventCount(string metric_name, uint32 event_type_index,
                      string component, int64 period_duration_micros,
                      uint32 count)
-        -> (Status @status);
+        -> (Status status);
 
     // Logs that an event lasted a given amount of time.
     //
@@ -192,7 +192,7 @@ interface Logger {
     //     of microseconds.
     3: LogElapsedTime(string metric_name, uint32 event_type_index,
                       string component, int64 elapsed_micros)
-        -> (Status2 @status);
+        -> (Status2 status);
 
     // Logs a measured average frame rate.
     //
@@ -212,7 +212,7 @@ interface Logger {
     // |fps| The average-frame rate in frames-per-second.
     4: LogFrameRate(string metric_name, uint32 event_type_index,
                     string component, float32 fps)
-        -> (Status2 @status);
+        -> (Status2 status);
 
     // Logs a measured memory usage.
     //
@@ -232,7 +232,7 @@ interface Logger {
     // |bytes| The memory used, in bytes.
     5: LogMemoryUsage(string metric_name, uint32 event_type_index,
                       string component, int64 bytes)
-        -> (Status2 @status);
+        -> (Status2 status);
 
 
     // Logs a histogram over a set of integer buckets. The meaning of the
@@ -263,7 +263,7 @@ interface Logger {
     //     given in the Metric definition.
     6: LogIntHistogram(string metric_name, uint32 event_type_index,
                        string component, vector<HistogramBucket> histogram)
-        -> (Status2 @status);
+        -> (Status2 status);
 
     // Logs the fact that a given string was used, in a specific context.
     // The semantics of the context and the string is specified in the
@@ -283,7 +283,7 @@ interface Logger {
     //
     // |s| The string to log. This should be a human-readable string of
     //      size no more than 1k bytes.
-    7: LogString(string metric_name, string s) -> (Status2 @status);
+    7: LogString(string metric_name, string s) -> (Status2 status);
 
     // Logs a custom Event. The semantics of the Metric are specified in the
     // Metric defintion.
@@ -297,7 +297,7 @@ interface Logger {
     // be consistent with the dimensions declared in the Metric definition.
     8: LogCustomEvent(string metric_name,
                       vector<CustomEventValue> event_values)
-        -> (Status2 @status);
+        -> (Status2 status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This starts
@@ -363,7 +363,7 @@ interface Logger {
     //     method.
     9: StartTimer(string metric_name, uint32 event_type_index, string component,
                   string timer_id, uint64 timestamp, uint32 timeout_s)
-        -> (Status2 @status);
+        -> (Status2 status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This ends
@@ -418,5 +418,5 @@ interface Logger {
     //     Any error returned by LogElapsedTime() may also be returned by this
     //     method.
     10: EndTimer(string timer_id, uint64 timestamp, uint32 timeout_s)
-        -> (Status2 @status);
+        -> (Status2 status);
 };
