@@ -28,7 +28,6 @@ source_set("simple_camera_lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline:timeline",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",

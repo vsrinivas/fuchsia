@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 #include "gtest/gtest.h"
 

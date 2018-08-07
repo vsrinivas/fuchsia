@@ -2,19 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("fidl_helpers") {
+source_set("commands") {
   sources = [
-    "fidl_helpers.cc",
-    "fidl_helpers.h",
+    "commands.cc",
+    "commands.h",
   ]
 
   public_deps = [
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.scenic",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/images/cpp",
   ]
 }
 
@@ -31,7 +28,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    ":fidl_helpers",
+    ":commands",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]

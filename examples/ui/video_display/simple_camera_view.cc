@@ -19,7 +19,7 @@
 #include <lib/fxl/logging.h>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <lib/ui/scenic/fidl_helpers.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
 namespace video_display {
 

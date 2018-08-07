@@ -31,7 +31,7 @@ source_set("testing_deps") {
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_vulkan",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
+    "//garnet/public/lib/ui/scenic/cpp:commands",
     "//third_party/googletest:gtest_main",
   ]
 }

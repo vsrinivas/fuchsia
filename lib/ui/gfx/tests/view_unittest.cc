@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace gfx {
@@ -31,15 +31,15 @@ TEST_F(ViewTest, Children) {
 
   const scenic::ResourceId view_id = 1;
   EXPECT_TRUE(Apply(
-      scenic_lib::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+      scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   const scenic::ResourceId node1_id = 2;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(node1_id)));
+  EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node1_id)));
   EXPECT_ERROR_COUNT(0);
 
   const scenic::ResourceId node2_id = 3;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(node2_id)));
+  EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node2_id)));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
@@ -49,7 +49,7 @@ TEST_F(ViewTest, Children) {
   EXPECT_TRUE(node1);
   EXPECT_TRUE(node2);
 
-  EXPECT_TRUE(Apply(scenic_lib::NewAddChildCmd(view_id, node1_id)));
+  EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node1_id)));
   EXPECT_ERROR_COUNT(0);
 
   const std::unordered_set<NodePtr>& children = view->children();
@@ -61,7 +61,7 @@ TEST_F(ViewTest, Children) {
   EXPECT_TRUE(equal_to(*child_iter, node1));
   EXPECT_EQ(hash(*child_iter), hash(node1));
 
-  EXPECT_TRUE(Apply(scenic_lib::NewAddChildCmd(view_id, node2_id)));
+  EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node2_id)));
   EXPECT_ERROR_COUNT(0);
 
   child_iter = children.begin();  // Iterator was invalidated before.
@@ -79,7 +79,7 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
   const scenic::ResourceId view_holder_id = 1;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateViewHolderCmd(
+  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
@@ -99,7 +99,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
 
   const scenic::ResourceId view_id = 1;
   EXPECT_TRUE(Apply(
-      scenic_lib::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+      scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
@@ -117,7 +117,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
   const scenic::ResourceId view_holder_id = 1u;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateViewHolderCmd(
+  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]")));
   EXPECT_ERROR_COUNT(0);
 
@@ -132,7 +132,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
 
   const scenic::ResourceId view_id = 2u;
   EXPECT_TRUE(Apply(
-      scenic_lib::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+      scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
@@ -156,7 +156,7 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   }
 
   const scenic::ResourceId view_holder_id = 1;
-  EXPECT_FALSE(Apply(scenic_lib::NewCreateViewHolderCmd(
+  EXPECT_FALSE(Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token_out), "Test")));
   EXPECT_ERROR_COUNT(1);  // Dead handles cause a session error.
 

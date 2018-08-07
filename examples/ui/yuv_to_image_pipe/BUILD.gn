@@ -21,7 +21,6 @@ executable("yuv_to_image_pipe") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/images/cpp",
     "//garnet/public/lib/media/timeline:timeline",
-    "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//zircon/public/lib/async-cpp",

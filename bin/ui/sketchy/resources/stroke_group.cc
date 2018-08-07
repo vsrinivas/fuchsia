@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace {
 

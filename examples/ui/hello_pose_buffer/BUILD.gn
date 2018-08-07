@@ -19,7 +19,6 @@ executable("hello_pose_buffer") {
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
   ]
 
   include_dirs = [

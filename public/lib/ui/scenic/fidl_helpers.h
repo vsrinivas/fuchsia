@@ -7,7 +7,7 @@
 #ifndef LIB_UI_SCENIC_FIDL_HELPERS_H_
 #define LIB_UI_SCENIC_FIDL_HELPERS_H_
 
-#include "lib/ui/scenic/cpp/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_lib {
 

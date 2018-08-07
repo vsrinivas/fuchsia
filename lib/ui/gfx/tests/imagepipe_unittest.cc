@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/util/image_utils.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace gfx {

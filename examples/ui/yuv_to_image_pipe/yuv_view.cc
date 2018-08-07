@@ -7,7 +7,7 @@
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
-#include <lib/ui/scenic/fidl_helpers.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
 #include <iostream>
 

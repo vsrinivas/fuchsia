@@ -45,7 +45,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/view_framework/view_provider_service.h"
 #include "vkcube_view.h"
 #endif  // defined(CUBE_USE_IMAGE_PIPE)

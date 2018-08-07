@@ -8,7 +8,7 @@
 #include <lib/zx/vmo.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/ui/scenic/cpp/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace {

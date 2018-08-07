@@ -5,7 +5,7 @@
 #include "lib/ui/base_view/cpp/base_view.h"
 
 #include "lib/ui/gfx/cpp/math.h"
-#include "lib/ui/scenic/cpp/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 

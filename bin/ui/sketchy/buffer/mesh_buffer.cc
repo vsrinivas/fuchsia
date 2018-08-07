@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace {
 

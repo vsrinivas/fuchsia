@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/cpp/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 #include <array>
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 namespace scenic {
 
@@ -370,7 +370,7 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
 
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
                                            const std::string& debug_name) {
-  FXL_DCHECK(token);
+  ZX_DEBUG_ASSERT(token);
   fuchsia::ui::gfx::ViewArgs view;
   view.token = std::move(token);
   view.debug_name = debug_name;
@@ -382,7 +382,7 @@ fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
 
 fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
     uint32_t id, zx::eventpair token, const std::string& debug_name) {
-  FXL_DCHECK(token);
+  ZX_DEBUG_ASSERT(token);
   fuchsia::ui::gfx::ViewHolderArgs view_holder;
   view_holder.token = std::move(token);
   view_holder.debug_name = debug_name;
@@ -452,7 +452,7 @@ fuchsia::ui::gfx::Command NewReleaseResourceCmd(uint32_t id) {
 
 fuchsia::ui::gfx::Command NewExportResourceCmd(uint32_t resource_id,
                                                zx::eventpair export_token) {
-  FXL_DCHECK(export_token);
+  ZX_DEBUG_ASSERT(export_token);
 
   fuchsia::ui::gfx::ExportResourceCmd export_resource;
   export_resource.id = resource_id;
@@ -467,7 +467,7 @@ fuchsia::ui::gfx::Command NewExportResourceCmd(uint32_t resource_id,
 fuchsia::ui::gfx::Command NewImportResourceCmd(
     uint32_t resource_id, fuchsia::ui::gfx::ImportSpec spec,
     zx::eventpair import_token) {
-  FXL_DCHECK(import_token);
+  ZX_DEBUG_ASSERT(import_token);
 
   fuchsia::ui::gfx::ImportResourceCmd import_resource;
   import_resource.id = resource_id;
@@ -482,26 +482,26 @@ fuchsia::ui::gfx::Command NewImportResourceCmd(
 
 fuchsia::ui::gfx::Command NewExportResourceCmdAsRequest(
     uint32_t resource_id, zx::eventpair* out_import_token) {
-  FXL_DCHECK(out_import_token);
-  FXL_DCHECK(!*out_import_token);
+  ZX_DEBUG_ASSERT(out_import_token);
+  ZX_DEBUG_ASSERT(!*out_import_token);
 
   zx::eventpair export_token;
   zx_status_t status =
       zx::eventpair::create(0u, &export_token, out_import_token);
-  FXL_CHECK(status == ZX_OK) << "event pair create failed: status=" << status;
+  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "event pair create failed: status=%d", status);
   return NewExportResourceCmd(resource_id, std::move(export_token));
 }
 
 fuchsia::ui::gfx::Command NewImportResourceCmdAsRequest(
     uint32_t resource_id, fuchsia::ui::gfx::ImportSpec import_spec,
     zx::eventpair* out_export_token) {
-  FXL_DCHECK(out_export_token);
-  FXL_DCHECK(!*out_export_token);
+  ZX_DEBUG_ASSERT(out_export_token);
+  ZX_DEBUG_ASSERT(!*out_export_token);
 
   zx::eventpair import_token;
   zx_status_t status =
       zx::eventpair::create(0u, &import_token, out_export_token);
-  FXL_CHECK(status == ZX_OK) << "event pair create failed: status=" << status;
+  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "event pair create failed: status=%d", status);
   return NewImportResourceCmd(resource_id, import_spec,
                               std::move(import_token));
 }

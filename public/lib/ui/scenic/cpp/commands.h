@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_SCENIC_CPP_FIDL_HELPERS_H_
-#define LIB_UI_SCENIC_CPP_FIDL_HELPERS_H_
+#ifndef LIB_UI_SCENIC_CPP_COMMANDS_H_
+#define LIB_UI_SCENIC_CPP_COMMANDS_H_
 
 #include <string>
 
@@ -253,6 +253,7 @@ fuchsia::ui::gfx::vec4 NewVector4(const float value[4]);
 
 bool ImageInfoEquals(const fuchsia::images::ImageInfo& a,
                      const fuchsia::images::ImageInfo& b);
+
 }  // namespace scenic
 
-#endif  // LIB_UI_SCENIC_CPP_FIDL_HELPERS_H_
+#endif  // LIB_UI_SCENIC_CPP_COMMANDS_H_

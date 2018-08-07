@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 
 #include "garnet/lib/ui/scenic/session.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace gfx {

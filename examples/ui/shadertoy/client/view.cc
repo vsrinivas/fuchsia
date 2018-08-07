@@ -18,7 +18,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace shadertoy_client {
 

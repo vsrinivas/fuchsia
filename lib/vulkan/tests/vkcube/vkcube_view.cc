@@ -4,7 +4,7 @@
 
 #include "vkcube_view.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 VkCubeView::VkCubeView(
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,

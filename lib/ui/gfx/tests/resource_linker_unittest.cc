@@ -11,7 +11,7 @@
 
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace gfx {
