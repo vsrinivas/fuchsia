@@ -42,6 +42,7 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
     const uint32_t key;
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
+    scenic::ShapeNode clip_shape_node;
 
     ::fuchsia::ui::viewsv1::ViewProperties view_properties;
     ::fuchsia::ui::viewsv1::ViewInfo view_info;

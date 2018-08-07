@@ -9,6 +9,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
 
@@ -45,8 +46,20 @@ void TileView::ConnectViews() {
     fuchsia::sys::ComponentControllerPtr controller;
 
     fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = url;
+
+    // Pass arguments to children, if there are any.
+    std::vector<std::string> split_url = fxl::SplitStringCopy(
+        url, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    FXL_CHECK(split_url.size() >= 1);
+    launch_info.url = split_url[0];
     launch_info.directory_request = services.NewRequest();
+
+    if (split_url.size() > 1) {
+      launch_info.arguments = fidl::VectorPtr<fidl::StringPtr>::New(0);
+      for (auto it = split_url.begin() + 1; it != split_url.end(); it++) {
+        launch_info.arguments.push_back(*it);
+      }
+    }
 
     // |env_launcher_| launches the app with our nested environment.
     env_launcher_->CreateComponent(std::move(launch_info),
@@ -110,6 +123,10 @@ void TileView::AddChildView(
   zx::eventpair host_import_token;
   view_data->host_node.ExportAsRequest(&host_import_token);
   container_node_.AddChild(view_data->host_node);
+
+  view_data->host_node.AddPart(view_data->clip_shape_node);
+  view_data->host_node.SetClip(0, true);
+
   views_.emplace(view_key, std::move(view_data));
 
   GetViewContainer()->AddChild(view_key, std::move(child_view_owner),
@@ -180,6 +197,16 @@ void TileView::OnSceneInvalidated(
     }
 
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
+
+    // Clip
+    scenic::Rectangle shape(session(),            // session
+                            layout_bounds.width,  // width
+                            layout_bounds.height  // height
+    );
+    view_data->clip_shape_node.SetShape(shape);
+    view_data->clip_shape_node.SetTranslation(layout_bounds.width * 0.5f,
+                                              layout_bounds.height * 0.5f, 0.f);
+    ;
   }
 }
 
@@ -189,7 +216,8 @@ TileView::ViewData::ViewData(const std::string& url, uint32_t key,
     : url(url),
       key(key),
       controller(std::move(controller)),
-      host_node(session) {}
+      host_node(session),
+      clip_shape_node(session) {}
 
 TileView::ViewData::~ViewData() {}
 
