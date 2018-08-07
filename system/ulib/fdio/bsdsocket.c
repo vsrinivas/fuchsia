@@ -95,12 +95,15 @@ int socket(int domain, int type, int protocol) {
     }
 
     zx_handle_t s = ZX_HANDLE_INVALID;
-    int32_t unused = 0;
+    int32_t rr = 0;
     r = fuchsia_net_LegacySocketProviderOpenSocket(
-        sp, domain, type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol, &s, &unused);
+        sp, domain, type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol, &s, &rr);
 
     if (r != ZX_OK) {
         return ERRNO(EIO);
+    }
+    if (rr != ZX_OK) {
+        return STATUS(rr);
     }
 
     io = fdio_socket_create(s, 0);
