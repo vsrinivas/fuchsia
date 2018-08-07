@@ -57,7 +57,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
         story_id_(std::move(story_id)),
         commands_(std::move(commands)) {}
 
-  ~ExecuteStoryCommandsCall() = default;
+  ~ExecuteStoryCommandsCall() override = default;
 
  private:
   void Run() override {

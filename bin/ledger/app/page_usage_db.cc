@@ -46,7 +46,7 @@ class PageInfoIterator : public storage::Iterator<const PageUsageDb::PageInfo> {
     PrepareEntry();
   }
 
-  ~PageInfoIterator() {}
+  ~PageInfoIterator() override {}
 
   storage::Iterator<const PageUsageDb::PageInfo>& Next() override {
     it_->Next();

@@ -42,7 +42,7 @@ class AppClientBase : public AsyncHolderBase {
                 fuchsia::modular::AppConfig config,
                 std::string data_origin = "",
                 fuchsia::sys::ServiceListPtr additional_services = nullptr);
-  virtual ~AppClientBase();
+  ~AppClientBase() override;
 
   // Gives access to the services of the started application. Services
   // obtained from it are not involved in life cycle management provided by

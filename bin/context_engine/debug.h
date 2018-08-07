@@ -20,7 +20,7 @@ class ContextDebugImpl : public fuchsia::modular::ContextDebug {
 
  public:
   ContextDebugImpl(const ContextRepository* repository);
-  ~ContextDebugImpl();
+  ~ContextDebugImpl() override;
 
   fxl::WeakPtr<ContextDebugImpl> GetWeakPtr();
 

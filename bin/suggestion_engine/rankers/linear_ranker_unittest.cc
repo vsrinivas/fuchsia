@@ -16,7 +16,7 @@ class ConstantRankingFeature : public RankingFeature {
 
  private:
   double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
-                                const RankedSuggestion& suggestion) {
+                                const RankedSuggestion& suggestion) override {
     return value_;
   };
 

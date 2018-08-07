@@ -38,7 +38,7 @@ class MessageQueueManager : PageClient {
  public:
   MessageQueueManager(LedgerClient* ledger_client,
                       fuchsia::ledger::PageId page_id, std::string local_path);
-  ~MessageQueueManager();
+  ~MessageQueueManager() override;
 
   // An enum describing the types of events that can be watched via
   // |RegisterWatcher|.

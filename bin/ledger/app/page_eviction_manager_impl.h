@@ -24,7 +24,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   PageEvictionManagerImpl(async_dispatcher_t* dispatcher,
                           coroutine::CoroutineService* coroutine_service,
                           ledger::DetachedPath db_path);
-  ~PageEvictionManagerImpl();
+  ~PageEvictionManagerImpl() override;
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
   // of an error while initializing the underlying database.

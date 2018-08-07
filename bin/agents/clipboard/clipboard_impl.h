@@ -19,7 +19,7 @@ namespace modular {
 class ClipboardImpl : fuchsia::modular::Clipboard {
  public:
   explicit ClipboardImpl(LedgerClient* ledger_client);
-  ~ClipboardImpl();
+  ~ClipboardImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::Clipboard> request);
 

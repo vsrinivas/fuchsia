@@ -122,11 +122,11 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
 
  private:
   // |fuchsia::modular::Entity|
-  void GetTypes(GetTypesCallback result) {
+  void GetTypes(GetTypesCallback result) override {
     result(fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types_));
   }
   // |fuchsia::modular::Entity|
-  void GetData(fidl::StringPtr type, GetDataCallback result) {
+  void GetData(fidl::StringPtr type, GetDataCallback result) override {
     auto it = data_.find(type);
     if (it != data_.end()) {
       fsl::SizedVmo vmo;

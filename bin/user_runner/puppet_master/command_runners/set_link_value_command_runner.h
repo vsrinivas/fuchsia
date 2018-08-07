@@ -15,7 +15,7 @@ namespace modular {
 class SetLinkValueCommandRunner : public CommandRunner {
  public:
   SetLinkValueCommandRunner();
-  ~SetLinkValueCommandRunner();
+  ~SetLinkValueCommandRunner() override;
 
   void Execute(
       fidl::StringPtr story_id, StoryStorage* story_storage,

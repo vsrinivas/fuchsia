@@ -13,7 +13,7 @@ namespace modular {
 class ModuleResolverFake : fuchsia::modular::ModuleResolver {
  public:
   ModuleResolverFake();
-  ~ModuleResolverFake();
+  ~ModuleResolverFake() override;
 
   // |ModuleResolver|
   void FindModules(fuchsia::modular::FindModulesQuery query,

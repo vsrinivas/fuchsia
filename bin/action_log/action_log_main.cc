@@ -26,7 +26,8 @@ class UserActionLogFactoryImpl : public fuchsia::modular::UserActionLogFactory {
   void GetUserActionLog(
       fidl::InterfaceHandle<fuchsia::modular::ProposalPublisher>
           proposal_publisher_handle,
-      fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request) {
+      fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request)
+      override {
     fuchsia::modular::ProposalPublisherPtr proposal_publisher =
         proposal_publisher_handle.Bind();
     std::unique_ptr<UserActionLogImpl> user_action_log_impl(

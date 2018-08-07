@@ -300,7 +300,7 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
         wait_for_write_fn_(std::move(wait_for_write_fn)) {}
 
  private:
-  void Run() {
+  void Run() override {
     FlowToken flow{this, &status_, &new_value_};
 
     operation_queue_.Add(

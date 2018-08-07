@@ -419,7 +419,7 @@ class FutureOperation : public Operation<Args...> {
 
  private:
   // |OperationBase|
-  void Run() {
+  void Run() override {
     // FuturePtr is a shared ptr, so the Then() callback is not necessarily
     // cancelled by the destructor of this Operation instance. Hence the
     // callback must be protected against invocation after delete of this.
@@ -472,7 +472,7 @@ class FutureOperation2 : public Operation<Args...> {
 
  private:
   // |OperationBase|
-  void Run() {
+  void Run() override {
     // FuturePtr is a shared ptr, so the Then() callback is not necessarily
     // cancelled by the destructor of this Operation instance. Hence the
     // callback must be protected against invocation after delete of this.

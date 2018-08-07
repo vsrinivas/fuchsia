@@ -15,7 +15,7 @@ namespace modular {
 class RemoveModCommandRunner : public CommandRunner {
  public:
   RemoveModCommandRunner();
-  ~RemoveModCommandRunner();
+  ~RemoveModCommandRunner() override;
 
   void Execute(
       fidl::StringPtr story_id, StoryStorage* story_storage,

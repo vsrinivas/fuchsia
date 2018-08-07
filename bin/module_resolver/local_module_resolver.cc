@@ -83,7 +83,7 @@ class LocalModuleResolver::FindModulesCall
   // the associated parameters are required to match in both name and type. If
   // |query_.module_handler| is specified, then the search for the action and
   // parameters are restricted to the specified handler.
-  void Run() {
+  void Run() override {
     FlowToken flow{this, &response_};
 
     auto action_it =
@@ -198,7 +198,7 @@ class LocalModuleResolver::FindModulesByTypesCall
         local_module_resolver_(local_module_resolver),
         query_(std::move(query)) {}
 
-  void Run() {
+  void Run() override {
     FlowToken flow{this, &response_};
 
     response_ = CreateEmptyResponse();

@@ -20,7 +20,7 @@ namespace maxwell {
 class MaxwellTestBase : public testing::Test {
  protected:
   MaxwellTestBase();
-  virtual ~MaxwellTestBase() = default;
+  ~MaxwellTestBase() override = default;
 
   void StartAgent(const std::string& url,
                   std::unique_ptr<MaxwellServiceProviderBridge> bridge) {

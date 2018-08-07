@@ -17,7 +17,7 @@ namespace modular {
 class UpdateModCommandRunner : public CommandRunner {
  public:
   UpdateModCommandRunner();
-  ~UpdateModCommandRunner();
+  ~UpdateModCommandRunner() override;
 
   void Execute(
       fidl::StringPtr story_id, StoryStorage* story_storage,

@@ -203,7 +203,7 @@ class CobaltContextImpl : public CobaltContext {
                     component::StartupContext* context, int32_t project_id);
   CobaltContextImpl(async_dispatcher_t* dispatcher,
                     component::StartupContext* context, fsl::SizedVmo config);
-  ~CobaltContextImpl();
+  ~CobaltContextImpl() override;
 
   void ReportObservation(CobaltObservation observation) override;
 

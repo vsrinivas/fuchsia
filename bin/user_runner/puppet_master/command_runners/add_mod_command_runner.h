@@ -16,7 +16,7 @@ class AddModCommandRunner : public CommandRunner {
  public:
   AddModCommandRunner(fuchsia::modular::ModuleResolver* const module_resolver,
                       fuchsia::modular::EntityResolver* const entity_resolver);
-  ~AddModCommandRunner();
+  ~AddModCommandRunner() override;
 
   void Execute(
       fidl::StringPtr story_id, StoryStorage* story_storage,

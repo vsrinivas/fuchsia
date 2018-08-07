@@ -24,7 +24,7 @@ namespace modular {
 class ClipboardStorage : public PageClient {
  public:
   ClipboardStorage(LedgerClient* ledger_client, LedgerPageId page_id);
-  ~ClipboardStorage();
+  ~ClipboardStorage() override;
 
   // Stores the provided text.
   void Push(const fidl::StringPtr& text);

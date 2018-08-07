@@ -14,7 +14,7 @@ namespace modular {
 class SetFocusStateCommandRunner : public CommandRunner {
  public:
   SetFocusStateCommandRunner(fuchsia::modular::FocusProviderPtr focus_provider);
-  ~SetFocusStateCommandRunner();
+  ~SetFocusStateCommandRunner() override;
 
   void Execute(
       fidl::StringPtr story_id, StoryStorage* story_storage,

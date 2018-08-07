@@ -94,7 +94,8 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
-  void MarkSyncedToPeer(fit::function<void(storage::Status)> callback) {
+  void MarkSyncedToPeer(
+      fit::function<void(storage::Status)> callback) override {
     callback(mark_synced_to_peer_status);
   }
 

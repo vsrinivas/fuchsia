@@ -43,7 +43,8 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_; }
 
-  void MarkSyncedToPeer(fit::function<void(storage::Status)> callback) {
+  void MarkSyncedToPeer(
+      fit::function<void(storage::Status)> callback) override {
     callback(storage::Status::OK);
   }
 
