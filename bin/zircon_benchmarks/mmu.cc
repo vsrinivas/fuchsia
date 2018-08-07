@@ -16,7 +16,7 @@ namespace {
 #define MB(n) (KB(n) * 1024ull)
 #define GB(n) (MB(n) * 1024ull)
 
-constexpr size_t kSize = MB(128);
+constexpr size_t kSize = MB(1);
 
 class Mmu : public benchmark::Fixture {
  private:
