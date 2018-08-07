@@ -105,7 +105,11 @@ void SocketChannelRelay::DeactivateAndRequestDestruction() {
 }
 
 void SocketChannelRelay::OnSocketReadable(zx_status_t status) {
-  FXL_NOTIMPLEMENTED();
+  FXL_DCHECK(state_ == RelayState::kActivated);
+  if (!CopyFromSocketToChannel() ||
+      !BeginWait("socket read waiter", &sock_read_waiter_)) {
+    DeactivateAndRequestDestruction();
+  }
 }
 
 void SocketChannelRelay::OnSocketClosed(zx_status_t status) {
@@ -130,6 +134,58 @@ void SocketChannelRelay::OnChannelClosed() {
 
   FXL_DCHECK(state_ == RelayState::kActivated);
   DeactivateAndRequestDestruction();
+}
+
+bool SocketChannelRelay::CopyFromSocketToChannel() {
+  // Subtle: we make the read buffer larger than the TX MTU, so that we can
+  // detect truncated datagrams.
+  const size_t read_buf_size = channel_->tx_mtu() + 1;
+
+  // TODO(NET-1390): Consider yielding occasionally. As-is, we run the risk of
+  // starving other SocketChannelRelays on the same |dispatcher| (and anyone
+  // else on |dispatcher|), if a misbehaving process spams its L2CAP socket. And
+  // even if starvation isn't an issue, latency/jitter might be.
+  zx_status_t read_res;
+  uint8_t read_buf[read_buf_size];
+  do {
+    size_t n_bytes_read = 0;
+    read_res = socket_.read(0, read_buf, read_buf_size, &n_bytes_read);
+    FXL_DCHECK(read_res == ZX_OK || read_res == ZX_ERR_SHOULD_WAIT ||
+               read_res == ZX_ERR_PEER_CLOSED)
+        << ": " << zx_status_get_string(read_res);
+    FXL_DCHECK(n_bytes_read <= read_buf_size)
+        << "(n_bytes_read=" << n_bytes_read
+        << ", read_buf_size=" << read_buf_size << ")";
+
+    if (read_res == ZX_ERR_SHOULD_WAIT) {
+      FXL_VLOG(5) << "l2cap: Failed to read from socket for channel "
+                  << channel_->id() << ": " << zx_status_get_string(read_res);
+      return true;
+    }
+
+    if (read_res == ZX_ERR_PEER_CLOSED) {
+      FXL_VLOG(5) << "l2cap: Failed to read from socket for channel "
+                  << channel_->id() << ": " << zx_status_get_string(read_res);
+      return false;
+    }
+
+    FXL_DCHECK(n_bytes_read > 0);
+    if (n_bytes_read > channel_->tx_mtu()) {
+      return false;
+    }
+
+    // TODO(NET-1391): For low latency and low jitter, IWBN to avoid allocating
+    // dynamic memory on every read.
+    bool write_success =
+        channel_->Send(std::make_unique<common::DynamicByteBuffer>(
+            common::BufferView(read_buf, n_bytes_read)));
+    if (!write_success) {
+      FXL_VLOG(5) << "l2cap: Failed to write " << n_bytes_read
+                  << " bytes to channel " << channel_->id();
+    }
+  } while (read_res == ZX_OK);
+
+  return true;
 }
 
 void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,

@@ -91,6 +91,12 @@ class SocketChannelRelay final {
   void OnChannelDataReceived(SDU sdu);
   void OnChannelClosed();
 
+  // Copies any data currently available on |socket_| to |channel_|. Does not
+  // block for data on |socket_|, and does not retry failed writes to
+  // |channel_|. Returns true if we should attempt to read from this socket
+  // again, and false otherwise.
+  __WARN_UNUSED_RESULT bool CopyFromSocketToChannel();
+
   // Binds an async::Wait to a |handler|, but does not enable the wait.
   // The handler will be wrapped in code that verifies that |this| has not begun
   // destruction.
