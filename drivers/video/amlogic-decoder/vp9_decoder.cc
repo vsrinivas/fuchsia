@@ -788,6 +788,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
       DECODE_ERROR("Failed to make video_frame: %d\n", status);
       return false;
     }
+    io_buffer_cache_flush(&video_frame->buffer, 0,
+                          io_buffer_size(&video_frame->buffer, 0));
 
     new_frame->frame = std::move(video_frame);
 

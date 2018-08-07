@@ -279,6 +279,8 @@ zx_status_t H264Decoder::Initialize() {
     DECODE_ERROR("Failed to make sei data buffer: %d", status);
     return status;
   }
+  io_buffer_cache_flush(&sei_data_buffer_, 0,
+                        io_buffer_size(&sei_data_buffer_, 0));
 
   AvScratchI::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&sei_data_buffer_)) -
@@ -382,6 +384,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                    status);
       return status;
     }
+    io_buffer_cache_flush(&frame->buffer, 0, io_buffer_size(&frame->buffer, 0));
 
     frame->uv_plane_offset = width * height;
     frame->stride = width;
@@ -483,6 +486,8 @@ zx_status_t H264Decoder::InitializeStream() {
     DECODE_ERROR("Couldn't allocate reference mv buffer\n");
     return status;
   }
+  io_buffer_cache_flush(&reference_mv_buffer_, 0,
+                        io_buffer_size(&reference_mv_buffer_, 0));
 
   AvScratch1::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&reference_mv_buffer_)))
