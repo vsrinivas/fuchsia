@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/media:audio_server"
+        "//garnet/bin/media:audio_core"
     ]
 }

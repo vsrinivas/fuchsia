@@ -1,0 +1,38 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+test("tests") {
+  testonly = true
+  output_name = "audio_mixer_tests"
+
+  sources = [
+    "test/audio_analysis.cc",
+    "test/audio_analysis.h",
+    "test/audio_analysis_tests.cc",
+    "test/audio_performance.cc",
+    "test/audio_performance.h",
+    "test/audio_result.cc",
+    "test/audio_result.h",
+    "test/frequency_set.cc",
+    "test/frequency_set.h",
+    "test/main.cc",
+    "test/mixer_bitwise_tests.cc",
+    "test/mixer_gain_tests.cc",
+    "test/mixer_interpolation_tests.cc",
+    "test/mixer_range_tests.cc",
+    "test/mixer_response_tests.cc",
+    "test/mixer_tests_recap.cc",
+    "test/mixer_tests_shared.cc",
+    "test/mixer_tests_shared.h",
+  ]
+
+  deps = [
+    "//garnet/bin/media/audio_core:audio_mixer_lib",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}

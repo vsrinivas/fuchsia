@@ -18,17 +18,17 @@ group("tools") {
   ]
 }
 
-package("audio_server") {
+package("audio_core") {
   deps = [
-    "//garnet/bin/media/audio_server",
+    "//garnet/bin/media/audio_core",
   ]
 
-  binary = "audio_server"
+  binary = "audio_core"
 
   meta = [
     {
-      path = rebase_path("audio_server/meta/audio_server.cmx")
-      dest = "audio_server.cmx"
+      path = rebase_path("audio_core/meta/audio_core.cmx")
+      dest = "audio_core.cmx"
     },
   ]
 }
@@ -73,8 +73,8 @@ package("tests") {
   package_name = "media_tests"
 
   deps = [
-    "//garnet/bin/media/audio_server:tests",
-    "//garnet/bin/media/audio_server/mixer:tests",
+    "//garnet/bin/media/audio_core:tests",
+    "//garnet/bin/media/audio_core/mixer:tests",
     "//garnet/bin/media/media_player:tests",
     "//garnet/bin/media/media_player/demux:tests",
     "//garnet/bin/media/media_player/player:tests",
@@ -101,7 +101,7 @@ package("tests") {
     },
 
     {
-      name = "audio_server_tests"
+      name = "audio_core_tests"
     },
 
     {
