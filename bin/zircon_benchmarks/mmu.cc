@@ -9,9 +9,13 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+namespace {
+
 #define KB(n) ((n)*1024ull)
 #define MB(n) (KB(n) * 1024ull)
 #define GB(n) (MB(n) * 1024ull)
+
+constexpr size_t kSize = MB(128);
 
 class Mmu : public benchmark::Fixture {
  private:
@@ -75,27 +79,26 @@ BENCHMARK_F(Mmu, MapUnmap)(benchmark::State& state) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    zx_status_t status = MapInChunks(511 * KB(4), vmar_size_, /* force_into_mmu */ true);
+    zx_status_t status = MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ true);
     if (status != ZX_OK) {
       state.SkipWithError("Failed to map");
       return;
     }
 
-    status = vmar_.unmap(vmar_base_, vmar_size_);
+    status = vmar_.unmap(vmar_base_, kSize);
     if (status != ZX_OK) {
       state.SkipWithError("Failed to unmap");
       return;
     }
   }
   // Report number of pages
-  state.SetItemsProcessed((vmar_size_ / KB(4)) * state.iterations());
+  state.SetItemsProcessed((kSize / KB(4)) * state.iterations());
 }
 
 // This attempts to measure the amount of time it takes to add mappings in
 // the kernel VM layer, page fault the mappings into the arch MMU layer, and
 // then remove the mappings from both.
 BENCHMARK_F(Mmu, MapUnmapWithFaults)(benchmark::State& state) {
-  constexpr size_t kSize = MB(128);
   while (state.KeepRunning()) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
@@ -121,3 +124,5 @@ BENCHMARK_F(Mmu, MapUnmapWithFaults)(benchmark::State& state) {
   // Report number of pages
   state.SetItemsProcessed((kSize / KB(4)) * state.iterations());
 }
+
+}  // namespace
