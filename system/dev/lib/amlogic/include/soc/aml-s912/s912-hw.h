@@ -385,7 +385,7 @@
 #define S912_AUDIN_BASE         ((uint32_t)0xC110A000)
 #define S912_AUDIN_LEN          ((uint32_t)0x1000)
 #define S912_AUDOUT_BASE        ((uint32_t)0xC1105400)
-#define S912_AUDOUT_LEN         ((uint32_t)0x1000)
+#define S912_AUDOUT_LEN         ((uint32_t)0x400)
 
 // Pin defs and alt functions for SPDIF in/out
 #define S912_SPDIF_H4           S912_GPIOH(4)
