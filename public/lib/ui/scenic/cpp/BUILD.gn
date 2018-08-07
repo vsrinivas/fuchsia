@@ -30,18 +30,6 @@ source_set("fidl_math") {
   ]
 }
 
-source_set("fidl_print") {
-  sources = [
-    "fidl_print.cc",
-    "fidl_print.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
-  ]
-}
-
 source_set("cpp") {
   sources = [
     "host_image_cycler.cc",
