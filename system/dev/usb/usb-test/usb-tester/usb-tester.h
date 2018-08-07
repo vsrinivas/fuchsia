@@ -4,3 +4,6 @@
 
 #define GOOGLE_VID     0x18D1
 #define USB_TESTER_PID 0xAF10 // Zircon USB Testing Gadget
+
+// Vendor commands
+#define USB_TESTER_SET_MODE_FWLOADER 0xE0

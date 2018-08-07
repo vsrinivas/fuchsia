@@ -182,6 +182,19 @@ static void test_req_list_queue(usb_tester_t* usb_tester, list_node_t* test_reqs
         usb_request_queue(&usb_tester->usb, test_req->req);
     }
 }
+
+static zx_status_t usb_tester_set_mode_fwloader(usb_tester_t* usb_tester) {
+    size_t out_len;
+    zx_status_t status = usb_control(&usb_tester->usb,
+                                     USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                     USB_TESTER_SET_MODE_FWLOADER, 0, 0, NULL, 0,
+                                     ZX_SEC(REQ_TIMEOUT_SECS), &out_len);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "failed to set mode fwloader, err: %d\n", status);
+        return status;
+    }
+    return ZX_OK;
+}
 // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
 static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
                                             const usb_tester_params_t* params) {
@@ -237,6 +250,8 @@ static zx_status_t usb_tester_ioctl(void* ctx, uint32_t op, const void* in_buf, 
     usb_tester_t* usb_tester = ctx;
 
     switch (op) {
+    case IOCTL_USB_TESTER_SET_MODE_FWLOADER:
+        return usb_tester_set_mode_fwloader(usb_tester);
     case IOCTL_USB_TESTER_BULK_LOOPBACK: {
         if (in_buf == NULL || in_len != sizeof(usb_tester_params_t)) {
             return ZX_ERR_INVALID_ARGS;

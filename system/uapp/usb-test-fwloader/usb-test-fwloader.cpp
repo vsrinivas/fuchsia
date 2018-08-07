@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/usb-test-fwloader.h>
+#include <zircon/device/usb-tester.h>
 #include <zircon/types.h>
 
 #include <dirent.h>
@@ -15,13 +18,50 @@
 #include <string.h>
 #include <sys/stat.h>
 
-static const char* const DEV_DIR = "/dev/class/usb-test-fwloader";
+static const char* const DEV_FX3_DIR = "/dev/class/usb-test-fwloader";
+static const char* const DEV_USB_TESTER_DIR = "/dev/class/usb-tester";
+
+static const int ENUMERATION_WAIT_SECS = 5;
+
 static constexpr uint32_t BUFFER_SIZE = 8 * 1024;
 
-zx_status_t open_fwloader_dev(fbl::unique_fd& out_fd) {
-    DIR* d = opendir(DEV_DIR);
+zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return ZX_OK;
+    }
+    int fd = openat(dirfd, filename, O_RDWR);
+    if (fd < 0) {
+        return ZX_OK;
+    }
+    auto out_fd = reinterpret_cast<int*>(cookie);
+    *out_fd = fd;
+    return ZX_ERR_STOP;
+}
+
+// Waits for a device to enumerate and be added to the given directory.
+zx_status_t wait_dev_enumerate(const char* dir, fbl::unique_fd& out_fd) {
+    DIR* d = opendir(dir);
     if (d == nullptr) {
-        fprintf(stderr, "Could not open dir: \"%s\"\n", DEV_DIR);
+        fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
+        return ZX_ERR_BAD_STATE;
+    }
+    auto close_dir = fbl::MakeAutoCall([&] { closedir(d); });
+    int fd = 0;
+    zx_status_t status = fdio_watch_directory(dirfd(d), watch_dir_cb,
+                                              zx_deadline_after(ZX_SEC(ENUMERATION_WAIT_SECS)),
+                                              reinterpret_cast<void*>(&fd));
+    if (status == ZX_ERR_STOP) {
+        out_fd.reset(fd);
+        return ZX_OK;
+    } else {
+        return status;
+    }
+}
+
+zx_status_t open_dev(const char* dir, fbl::unique_fd& out_fd) {
+    DIR* d = opendir(dir);
+    if (d == nullptr) {
+        fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -37,10 +77,16 @@ zx_status_t open_fwloader_dev(fbl::unique_fd& out_fd) {
     }
     closedir(d);
 
-    fprintf(stderr, "No test fwloader device found\n");
     return ZX_ERR_NOT_FOUND;
 }
 
+zx_status_t open_fwloader_dev(fbl::unique_fd& out_fd) {
+    return open_dev(DEV_FX3_DIR, out_fd);
+}
+
+zx_status_t open_usb_tester_dev(fbl::unique_fd& out_fd) {
+    return open_dev(DEV_USB_TESTER_DIR, out_fd);
+}
 // Reads the firmware file and populates the provided vmo with the contents.
 static zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
     struct stat s;
@@ -95,8 +141,23 @@ int main(int argc, char** argv) {
     fbl::unique_fd fd;
     status = open_fwloader_dev(fd);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to open device, err: %d\n", status);
-        return -1;
+        // Check if there is a usb tester device we can switch to firmware loading mode.
+        status = open_usb_tester_dev(fd);
+        if (status != ZX_OK) {
+            fprintf(stderr, "No usb test fwloader or tester device found, err: %d\n", status);
+            return -1;
+        }
+        printf("Switching usb tester device to fwloader mode\n");
+        ssize_t res = ioctl_usb_tester_set_mode_fwloader(fd.get());
+        if (res != 0) {
+            fprintf(stderr, "Failed to switch usb test device to fwloader mode, err: %zd\n", res);
+            return -1;
+        }
+        status = wait_dev_enumerate(DEV_FX3_DIR, fd);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Failed to wait for fwloader to re-enumerate, err: %d\n", status);
+            return -1;
+        }
     }
     zx_handle_t handle = fw_vmo.release();
     ssize_t res = ioctl_usb_test_fwloader_load_firmware(fd.get(), &handle);
