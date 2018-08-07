@@ -25,10 +25,13 @@ source_set("ranking_feature") {
   ]
 
   deps = [
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
     "//peridot/bin/suggestion_engine:models",
     "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/lib/context/cpp:context_helper",
     "//third_party/rapidjson",
   ]
 }
@@ -39,7 +42,7 @@ source_set("annoyance_ranking_feature") {
     "annoyance_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -65,7 +68,7 @@ source_set("focused_story_ranking_feature") {
     "focused_story_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -91,7 +94,7 @@ source_set("interrupting_ranking_feature") {
     "interrupting_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -117,7 +120,7 @@ source_set("kronk_ranking_feature") {
     "kronk_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -143,15 +146,15 @@ source_set("mod_pair_ranking_feature") {
     "mod_pair_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
-    "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",
-    "//third_party/rapidjson",
   ]
 
-  public_deps = [
+  deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -175,7 +178,7 @@ source_set("proposal_hint_ranking_feature") {
     "proposal_hint_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -201,7 +204,7 @@ source_set("query_match_ranking_feature") {
     "query_match_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -227,7 +230,7 @@ source_set("dead_story_ranking_feature") {
     "dead_story_ranking_feature.h",
   ]
 
-  deps = [
+  public_deps = [
     ":ranking_feature",
     "//peridot/public/fidl/fuchsia.modular",
   ]

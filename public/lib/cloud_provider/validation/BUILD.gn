@@ -18,7 +18,12 @@ executable("validation") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+  ]
+
+  public_deps = [
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/public/fidl/fuchsia.ledger.cloud",

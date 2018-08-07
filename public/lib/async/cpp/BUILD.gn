@@ -9,8 +9,8 @@ source_set("future") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
   ]
 }
@@ -24,11 +24,10 @@ source_set("operation") {
   public_deps = [
     ":future",
     "//garnet/public/lib/fxl",
-    "//zircon/public/lib/trace",
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/trace",
   ]
 }
 
@@ -51,6 +50,7 @@ source_set("future_unittest") {
   deps = [
     ":future",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
   ]
 }
 

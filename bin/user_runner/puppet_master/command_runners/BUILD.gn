@@ -21,9 +21,13 @@ source_set("set_link_value_command_runner") {
   ]
 
   deps = [
-    ":command_runner",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls:set_link_value_call",
+  ]
+
+  public_deps = [
+    ":command_runner",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
   ]
@@ -52,11 +56,15 @@ source_set("update_mod_command_runner") {
   ]
 
   deps = [
-    ":command_runner",
+    "//garnet/public/lib/fsl",
     "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls:set_link_value_call",
     "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/entity/cpp:json",
+  ]
+
+  public_deps = [
+    ":command_runner",
+    "//peridot/public/lib/async/cpp:operation",
   ]
 }
 
@@ -84,13 +92,17 @@ source_set("add_mod_command_runner") {
   ]
 
   deps = [
-    ":command_runner",
     "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls",
     "//peridot/lib/fidl:clone",
-    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/entity/cpp:json",
+  ]
+
+  public_deps = [
+    ":command_runner",
+    "//peridot/public/lib/async/cpp:operation",
   ]
 }
 
@@ -121,8 +133,11 @@ source_set("remove_mod_command_runner") {
   ]
 
   deps = [
-    ":command_runner",
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    ":command_runner",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -149,8 +164,11 @@ source_set("set_focus_state_command_runner") {
   ]
 
   deps = [
-    ":command_runner",
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    ":command_runner",
   ]
 }
 
