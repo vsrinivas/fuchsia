@@ -107,17 +107,29 @@ void ComputeStatistics(const std::vector<double>& vals,
 void AddHistogram(rapidjson::Document* output,
                   rapidjson::Document::AllocatorType* alloc,
                   const std::string& test_name,
-                  const std::string& unit,
-                  const std::vector<double>& vals,
+                  const char* input_unit,
+                  std::vector<double>&& vals,
                   rapidjson::Value diagnostic_map,
                   rapidjson::Value guid) {
+  // Check units and convert if necessary.
+  if (strcmp(input_unit, "nanoseconds") == 0 || strcmp(input_unit, "ns") == 0) {
+    // Convert from nanoseconds to milliseconds.
+    for (auto& val : vals) {
+      val /= 1e6;
+    }
+  } else if (!(strcmp(input_unit, "milliseconds") == 0 ||
+               strcmp(input_unit, "ms") == 0)) {
+    fprintf(stderr, "Units not recognized: %s\n", input_unit);
+    exit(1);
+  }
+
   rapidjson::Value stats;
   ComputeStatistics(vals, &stats, alloc);
 
   rapidjson::Value histogram;
   histogram.SetObject();
   histogram.AddMember("name", test_name, *alloc);
-  histogram.AddMember("unit", unit, *alloc);
+  histogram.AddMember("unit", "ms_smallerIsBetter", *alloc);
   histogram.AddMember("description", "", *alloc);
   histogram.AddMember("diagnostics", diagnostic_map, *alloc);
   histogram.AddMember("running", stats, *alloc);
@@ -231,18 +243,6 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         vals.push_back(val.GetDouble());
       }
 
-      // Check time units and convert if necessary.
-      const char* unit = element["unit"].GetString();
-      if (strcmp(unit, "nanoseconds") == 0 || strcmp(unit, "ns") == 0) {
-        // Convert from nanoseconds to milliseconds.
-        for (auto& val : vals) {
-          val /= 1e6;
-        }
-      } else if (!(strcmp(unit, "milliseconds") == 0 ||
-                   strcmp(unit, "ms") == 0)) {
-        fprintf(stderr, "Units not recognized: %s\n", unit);
-        exit(1);
-      }
       // Create the histogram.
       if (element.HasMember("split_first") &&
           element["split_first"].IsBool() &&
@@ -253,8 +253,8 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         AddHistogram(output,
                      &alloc,
                      h1_name,
-                     "ms_smallerIsBetter",
-                     h1_vals,
+                     element["unit"].GetString(),
+                     std::move(h1_vals),
                      helper.Copy(diagnostic_map),
                      MakeUuid());
 
@@ -267,8 +267,8 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           AddHistogram(output,
                        &alloc,
                        h2_name.str(),
-                       "ms_smallerIsBetter",
-                       h2_vals,
+                       element["unit"].GetString(),
+                       std::move(h2_vals),
                        helper.Copy(diagnostic_map),
                        MakeUuid());
         }
@@ -277,8 +277,8 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         AddHistogram(output,
                      &alloc,
                      name,
-                     "ms_smallerIsBetter",
-                     vals,
+                     element["unit"].GetString(),
+                     std::move(vals),
                      std::move(diagnostic_map),
                      MakeUuid());
       }
@@ -316,24 +316,11 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           vals.push_back(val.GetDouble());
         }
 
-        // Check time units and convert if necessary.
-        const char* unit = element["unit"].GetString();
-        if (strcmp(unit, "nanoseconds") == 0 || strcmp(unit, "ns") == 0) {
-          // Convert from nanoseconds to milliseconds.
-          for (auto& val : vals) {
-            val /= 1e6;
-          }
-        } else if (!(strcmp(unit, "milliseconds") == 0 ||
-                     strcmp(unit, "ms") == 0)) {
-          fprintf(stderr, "Units not recognized: %s\n", unit);
-          exit(1);
-        }
-
         AddHistogram(output,
                      &alloc,
                      name,
-                     "ms_smallerIsBetter",
-                     vals,
+                     element["unit"].GetString(),
+                     std::move(vals),
                      std::move(diagnostic_map),
                      MakeUuid());
       }
