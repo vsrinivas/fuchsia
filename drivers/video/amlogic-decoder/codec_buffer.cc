@@ -61,3 +61,7 @@ uint8_t* CodecBuffer::buffer_base() const {
 size_t CodecBuffer::buffer_size() const {
   return buffer_.data.vmo().vmo_usable_size;
 }
+
+const fuchsia::mediacodec::CodecBuffer& CodecBuffer::codec_buffer() const {
+  return buffer_;
+}

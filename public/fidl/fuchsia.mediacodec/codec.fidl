@@ -178,6 +178,11 @@ struct CodecBufferConstraints {
   // for the client's scenario.
   uint32 packet_count_for_codec_max;
 
+  // Normally this would be an implicit 0, but for now we have a min so we can
+  // force the total number of packets to be a specific number that we know
+  // works for the moment.
+  uint32 packet_count_for_client_min;
+
   // packet_count_for_client_max
   //
   // The client must set packet_count_for_client to be <=

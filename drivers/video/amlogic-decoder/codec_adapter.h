@@ -31,12 +31,15 @@ class CodecBuffer;
 class CodecAdapter {
  public:
   // At least for now, the CodecImpl and CodecAdapter share their main lock.
-  // While the CodecAdapter should never call CodecAdapterEvents methods with
-  // the lock held, for some CodecAdapter methods, the method will get called
-  // with lock already held.  This is indicated by "Locked" as the last part of
-  // the method name (if unlocking/relocking is not allowed), or by the method
-  // taking a std::unique_lock<std::mutex>& parameter (if unlocking/re-locking
-  // during the method is allowed).
+  //
+  // The CodecImpl won't call CodecAdapter methods with the lock_ held, mainly
+  // to avoid building up dependencies on the lock sharing, and also to avoid
+  // situations where the core codec code would just have to release the lock_
+  // in order to acquire video_decoder_lock_ (which is "before" lock_, due to
+  // calls from interrupt handlers that already have video_decoder_lock_ held).
+  //
+  // The CodecAdapter should never call CodecAdapterEvents methods with lock_
+  // held.
   explicit CodecAdapter(std::mutex& lock,
                         CodecAdapterEvents* codec_adapter_events);
   virtual ~CodecAdapter();
@@ -112,7 +115,7 @@ class CodecAdapter {
 
   // The "Queue" methods will only be called in between CoreCodecStartStream()
   // and CoreCodecStopStream().
-  virtual void CoreCodecStartStream(std::unique_lock<std::mutex>& lock) = 0;
+  virtual void CoreCodecStartStream() = 0;
 
   // The parameter includes the codec_oob_bytes. The core codec is free to call
   // onCoreCodecFailCodec() (immediately on this stack or async) if the
@@ -140,7 +143,7 @@ class CodecAdapter {
 
   // Stop the core codec from processing any more data for the stream that was
   // active and is now stopping.
-  virtual void CoreCodecStopStream(std::unique_lock<std::mutex>& lock) = 0;
+  virtual void CoreCodecStopStream() = 0;
 
   // Add input or output buffer.
   //
@@ -160,7 +163,9 @@ class CodecAdapter {
   // to sharing the shared_fidl_thread().  If we see an example of that
   // happening, we could switch to not sharing any FIDL threads across Codec
   // instances.
-  virtual void CoreCodecConfigureBuffers(CodecPort port) = 0;
+  virtual void CoreCodecConfigureBuffers(
+      CodecPort port,
+      const std::vector<std::unique_ptr<CodecPacket>>& packets) = 0;
 
   // This method can be called at any time while output buffers are (fully)
   // configured, including while there's no active stream.
@@ -169,7 +174,7 @@ class CodecAdapter {
   // CoreCodecConfigureBuffers() is called.  This is implicit in the Codec
   // interface, but explicit (via calls to this method) in the CodecAdapter
   // interface.
-  virtual void CoreCodecRecycleOutputPacketLocked(CodecPacket* packet) = 0;
+  virtual void CoreCodecRecycleOutputPacket(CodecPacket* packet) = 0;
 
   // De-configure input or output buffers.  This will never occur at a time
   // when the core codec is expected to be processing data.  For input, this
@@ -187,7 +192,7 @@ class CodecAdapter {
   // but CoreCodecConfigureBuffers() hasn't been called yet (and won't be, if
   // this method is called instead), or if CoreCodecAddBuffer() has been called
   // N times and CoreCodecConfigureBuffers() has also been called.
-  virtual void CoreCodecEnsureBuffersNotConfiguredLocked(CodecPort port) = 0;
+  virtual void CoreCodecEnsureBuffersNotConfigured(CodecPort port) = 0;
 
   // The core codec needs to specify what output config is needed.
   //
@@ -245,11 +250,9 @@ class CodecAdapter {
   // seamless-ness for a situation which for other reasons might end up being
   // non-seamless at least in terms of timing consistency in any case.
   //
-  // Waiting during this call is permitted, but only if lock is
-  // dropped/re-acquired while waiting.  As always, calls to CodecAdapterEvents
-  // must not be made while holding the lock.
-  virtual void CoreCodecMidStreamOutputBufferReConfigPrepare(
-      std::unique_lock<std::mutex>& lock) = 0;
+  // As always, calls to CodecAdapterEvents must not be made while holding
+  // lock_.
+  virtual void CoreCodecMidStreamOutputBufferReConfigPrepare() = 0;
 
   // This method is called when the mid-stream output buffer re-configuration
   // has completed.  This is called after all the calls to CoreCodecAddBuffer()
@@ -257,11 +260,7 @@ class CodecAdapter {
   //
   // The core codec should do whatever is necessary to get back into normal
   // steady-state operation in this method.
-  //
-  // Waiting during this call is permitted, but only if lock is
-  // dropped/re-acquired while waiting.
-  virtual void CoreCodecMidStreamOutputBufferReConfigFinish(
-      std::unique_lock<std::mutex>& lock) = 0;
+  virtual void CoreCodecMidStreamOutputBufferReConfigFinish() = 0;
 
  protected:
   // See comment on the constructor re. sharing this lock with the caller of

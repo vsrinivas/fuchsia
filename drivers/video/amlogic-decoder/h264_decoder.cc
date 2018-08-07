@@ -5,6 +5,8 @@
 #include "h264_decoder.h"
 #include <zx/vmo.h>
 
+#include "codec_frame.h"
+#include "codec_packet.h"
 #include "firmware_blob.h"
 #include "macros.h"
 #include "pts_manager.h"
@@ -322,7 +324,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
   // first represent the frames this way.  This representation conveys the
   // potentially-non-zero offset into the VMO, and allows sharing code further
   // down.
-  std::vector<fuchsia::mediacodec::CodecBuffer> buffers;
+  std::vector<CodecFrame> frames;
   if (initialize_frames_handler_) {
     ::zx::bti duplicated_bti;
     zx_status_t dup_result =
@@ -333,8 +335,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
       return dup_result;
     }
     zx_status_t initialize_result = initialize_frames_handler_(
-        std::move(duplicated_bti), frame_count, width, height, display_width,
-        display_height, &buffers);
+        std::move(duplicated_bti), frame_count, width, height, width,
+        display_width, display_height, &frames);
     if (initialize_result != ZX_OK) {
       DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
                    initialize_result);
@@ -359,17 +361,22 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
           .vmo_usable_start = 0,
           .vmo_usable_size = frame_vmo_bytes,
       });
-      buffers.emplace_back(fuchsia::mediacodec::CodecBuffer{
-          .buffer_lifetime_ordinal = next_non_codec_buffer_lifetime_ordinal_,
-          .buffer_index = i,
-          .data = std::move(codec_buffer_data),
+      frames.emplace_back(CodecFrame{
+          .codec_buffer =
+              fuchsia::mediacodec::CodecBuffer{
+                  .buffer_lifetime_ordinal =
+                      next_non_codec_buffer_lifetime_ordinal_,
+                  .buffer_index = i,
+                  .data = std::move(codec_buffer_data),
+              },
+          .codec_packet = nullptr,
       });
     }
     next_non_codec_buffer_lifetime_ordinal_++;
   }
 
   for (uint32_t i = 0; i < frame_count; ++i) {
-    auto frame = std::make_unique<VideoFrame>();
+    auto frame = std::make_shared<VideoFrame>();
     // While we'd like to pass in IO_BUFFER_CONTIG, since we know the VMO was
     // allocated with zx_vmo_create_contiguous(), the io_buffer_init_vmo()
     // treats that flag as an invalid argument, so instead we have to pretend as
@@ -377,8 +384,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     // contiguous later in aml_canvas_config() called by
     // owner_->ConfigureCanvas() below.
     zx_status_t status = io_buffer_init_vmo(
-        &frame->buffer, owner_->bti(), buffers[i].data.vmo().vmo_handle.get(),
-        0, IO_BUFFER_RW);
+        &frame->buffer, owner_->bti(),
+        frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
                    status);
@@ -393,6 +400,12 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     frame->display_width = display_width;
     frame->display_height = display_height;
     frame->index = i;
+
+    // can be nullptr
+    frame->codec_packet = frames[i].codec_packet;
+    if (frames[i].codec_packet) {
+      frames[i].codec_packet->SetVideoFrame(frame);
+    }
 
     // The ConfigureCanvas() calls validate that the VMO is physically
     // contiguous, regardless of how the VMO was created.

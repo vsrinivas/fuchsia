@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef VIDEO_FRAME_H_
-#define VIDEO_FRAME_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
 
 #include <ddk/io-buffer.h>
 
 #include <cstdint>
 
+class CodecPacket;
 struct VideoFrame {
   ~VideoFrame() { io_buffer_release(&buffer); }
 
@@ -23,10 +24,12 @@ struct VideoFrame {
   uint32_t index = 0xffffffff;
   bool has_pts = false;
   uint64_t pts = 0;
+
+  CodecPacket* codec_packet = nullptr;
 };
 
 // The video frame must be in NV12 format. The output file can be read using
 // mplayer -demuxer rawvideo -rawvideo w=320:h=240:format=nv12
 void DumpVideoFrameToFile(VideoFrame* frame, const char* filename);
 
-#endif  // VIDEO_FRAME_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_

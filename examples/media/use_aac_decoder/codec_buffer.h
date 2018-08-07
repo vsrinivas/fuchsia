@@ -5,8 +5,11 @@
 #ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_BUFFER_H_
 #define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_BUFFER_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
+
 #include <stddef.h>
 #include <stdint.h>
+#include <zx/bti.h>
 #include <zx/vmo.h>
 #include <memory>
 
@@ -19,8 +22,9 @@ class CodecBuffer {
   //
   // In this example, we're using one buffer per packet mode, so each buffer has
   // a corresponding packet.
-  static std::unique_ptr<CodecBuffer> Allocate(uint32_t buffer_index,
-                                               size_t size_bytes);
+  static std::unique_ptr<CodecBuffer> Allocate(
+      uint32_t buffer_index,
+      const fuchsia::mediacodec::CodecBufferConstraints& constraints);
 
   // Each successful call to this method dups the VMO handle, with basic rights
   // + read + optional write depending on is_for_write.
@@ -34,10 +38,15 @@ class CodecBuffer {
 
  private:
   explicit CodecBuffer(uint32_t buffer_index, size_t size_bytes);
+  void SetPhysicallyContiguousRequired(
+      const ::zx::handle& very_temp_kludge_bti_handle);
   bool Init();
 
   uint32_t buffer_index_ = 0;
   size_t size_bytes_ = 0;
+
+  bool is_physically_contiguous_required_ = false;
+  ::zx::bti very_temp_kludge_bti_handle_;
 
   zx::vmo vmo_;
   uint8_t* base_ = nullptr;

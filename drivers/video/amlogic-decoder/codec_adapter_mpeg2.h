@@ -19,27 +19,27 @@ class CodecAdapterMpeg2 : public CodecAdapter {
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   void CoreCodecInit(const fuchsia::mediacodec::CodecFormatDetails&
                          initial_input_format_details) override;
-  void CoreCodecStartStream(std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::mediacodec::CodecFormatDetails&
           per_stream_override_format_details) override;
   void CoreCodecQueueInputPacket(const CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
-  void CoreCodecStopStream(std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecStopStream() override;
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
-  void CoreCodecConfigureBuffers(CodecPort port) override;
-  void CoreCodecRecycleOutputPacketLocked(CodecPacket* packet) override;
-  void CoreCodecEnsureBuffersNotConfiguredLocked(CodecPort port) override;
+  void CoreCodecConfigureBuffers(
+      CodecPort port,
+      const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
+  void CoreCodecRecycleOutputPacket(CodecPacket* packet) override;
+  void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
   std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
   CoreCodecBuildNewOutputConfig(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,
       uint64_t new_output_format_details_version_ordinal,
       bool buffer_constraints_action_required) override;
-  void CoreCodecMidStreamOutputBufferReConfigPrepare(
-      std::unique_lock<std::mutex>& lock) override;
-  void CoreCodecMidStreamOutputBufferReConfigFinish(
-      std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
+  void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
  private:
   DeviceCtx* device_ = nullptr;

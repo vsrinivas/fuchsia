@@ -69,6 +69,18 @@ void CodecPacket::SetFree(bool is_free) {
 
 bool CodecPacket::is_free() const { return is_free_; }
 
+void CodecPacket::SetIsNew(bool is_new) { is_new_ = is_new; }
+
+bool CodecPacket::is_new() const { return is_new_; }
+
+void CodecPacket::SetVideoFrame(std::weak_ptr<VideoFrame> video_frame) {
+  video_frame_ = video_frame;
+}
+
+std::weak_ptr<VideoFrame> CodecPacket::video_frame() const {
+  return video_frame_;
+}
+
 void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 
 void CodecPacket::ClearValidLengthBytes() {

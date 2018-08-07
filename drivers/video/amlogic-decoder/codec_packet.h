@@ -9,8 +9,17 @@
 
 #include <stdint.h>
 #include <limits>
+#include <memory>
 
 class CodecBuffer;
+
+// Core codec representation of a video frame.  Different core codecs may have
+// very different implementations of this.
+//
+// TODO(dustingreen): Have this be a base class that's defined by the
+// CodecImpl source_set, and have amlogic-video VideoFrame derive from that base
+// class.
+struct VideoFrame;
 
 // Instances of this class are 1:1 with fuchsia::mediacodec::CodecPacket.
 class CodecPacket {
@@ -37,6 +46,16 @@ class CodecPacket {
 
   void SetFree(bool is_free);
   bool is_free() const;
+
+  void SetIsNew(bool is_new);
+  bool is_new() const;
+
+  // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
+  // to keep the VideoFrame(s) alive.  We'd use a raw pointer here if it weren't
+  // for needing to convert to a shared_ptr<> to call certain methods that
+  // expect shared_ptr<>.
+  void SetVideoFrame(std::weak_ptr<VideoFrame> video_frame);
+  std::weak_ptr<VideoFrame> video_frame() const;
 
  private:
   // The public section is for the core codec to call - the private section is
@@ -82,6 +101,17 @@ class CodecPacket {
   // An input packet starts out free with the client, and and output packet
   // starts out free with the codec server.  Either way, it starts free.
   bool is_free_ = true;
+
+  // Starts true when a packet is truly new.  In addition, a CodecAdapter may
+  // set this back to true whenever the packet is logically new from the
+  // CodecAdapter's point of view.  This allows for the CodecAdapter to
+  // determine whether to recycle a packet to the core codec depending on
+  // whether the packet is new or not, on first call to
+  // CoreCodecRecycleOutputPacket().  Some core codecs want an internal recycle
+  // call or equivalent for new packets (OMX), and some don't (amlogic-video).
+  bool is_new_ = true;
+
+  std::weak_ptr<VideoFrame> video_frame_;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecPacket);
 };

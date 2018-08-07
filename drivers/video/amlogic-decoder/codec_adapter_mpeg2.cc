@@ -34,8 +34,7 @@ void CodecAdapterMpeg2::CoreCodecInit(
   FXL_DCHECK(false) << "not yet implemented";
 }
 
-void CodecAdapterMpeg2::CoreCodecStartStream(
-    std::unique_lock<std::mutex>& lock) {
+void CodecAdapterMpeg2::CoreCodecStartStream() {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
@@ -53,8 +52,7 @@ void CodecAdapterMpeg2::CoreCodecQueueInputEndOfStream() {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
-void CodecAdapterMpeg2::CoreCodecStopStream(
-    std::unique_lock<std::mutex>& lock) {
+void CodecAdapterMpeg2::CoreCodecStopStream() {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
@@ -63,17 +61,16 @@ void CodecAdapterMpeg2::CoreCodecAddBuffer(CodecPort port,
   FXL_DCHECK(false) << "not yet implemented";
 }
 
-void CodecAdapterMpeg2::CoreCodecConfigureBuffers(CodecPort port) {
+void CodecAdapterMpeg2::CoreCodecConfigureBuffers(
+    CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
-void CodecAdapterMpeg2::CoreCodecRecycleOutputPacketLocked(
-    CodecPacket* packet) {
+void CodecAdapterMpeg2::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
-void CodecAdapterMpeg2::CoreCodecEnsureBuffersNotConfiguredLocked(
-    CodecPort port) {
+void CodecAdapterMpeg2::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
@@ -87,12 +84,10 @@ CodecAdapterMpeg2::CoreCodecBuildNewOutputConfig(
   return std::make_unique<const fuchsia::mediacodec::CodecOutputConfig>();
 }
 
-void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigPrepare(
-    std::unique_lock<std::mutex>& lock) {
+void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigPrepare() {
   FXL_DCHECK(false) << "not yet implemented";
 }
 
-void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigFinish(
-    std::unique_lock<std::mutex>& lock) {
+void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigFinish() {
   FXL_DCHECK(false) << "not yet implemented";
 }

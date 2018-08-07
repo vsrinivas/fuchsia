@@ -311,8 +311,8 @@ void CodecImpl::SetInputBufferSettings_StreamControl(
       Fail("client sent SetInputBufferSettings() with stream active");
       return;
     }
-    SetBufferSettingsCommonLocked(kInputPort, input_settings,
-                                  *input_constraints_);
+    SetBufferSettingsCommon(lock, kInputPort, input_settings,
+                            *input_constraints_);
   }  // ~lock
 }
 
@@ -375,8 +375,8 @@ void CodecImpl::SetOutputBufferSettings(
       return;
     }
 
-    SetBufferSettingsCommonLocked(kOutputPort, output_settings,
-                                  output_config_->buffer_constraints);
+    SetBufferSettingsCommon(lock, kOutputPort, output_settings,
+                            output_config_->buffer_constraints);
   }  // ~lock
 }
 
@@ -500,10 +500,10 @@ void CodecImpl::CloseCurrentStream_StreamControl(
   }
   EnsureStreamClosed(lock);
   if (release_input_buffers) {
-    EnsureBuffersNotConfiguredLocked(kInputPort);
+    EnsureBuffersNotConfigured(lock, kInputPort);
   }
   if (release_output_buffers) {
-    EnsureBuffersNotConfiguredLocked(kOutputPort);
+    EnsureBuffersNotConfigured(lock, kOutputPort);
   }
 }
 
@@ -530,59 +530,63 @@ void CodecImpl::Sync_StreamControl(SyncCallback callback) {
 void CodecImpl::RecycleOutputPacket(
     fuchsia::mediacodec::CodecPacketHeader available_output_packet) {
   FXL_DCHECK(thrd_current() == fidl_thread());
-  std::unique_lock<std::mutex> lock(lock_);
-  if (!CheckOldBufferLifetimeOrdinalLocked(
-          kOutputPort, available_output_packet.buffer_lifetime_ordinal)) {
-    return;
-  }
-  if (available_output_packet.buffer_lifetime_ordinal <
-      buffer_lifetime_ordinal_[kOutputPort]) {
-    // ignore arbitrarily-stale required by protocol
-    //
-    // Thanks to even values from the client being prohibited, this also covers
-    // mid-stream output config change where the server has already
-    // de-configured output buffers but the client doesn't know about that yet.
-    // We include that case here by setting
-    // buffer_lifetime_ordinal_[kOutputPort] to the next even value
-    // when de-configuring output server-side until the client has re-configured
-    // output.
-    return;
-  }
-  FXL_DCHECK(available_output_packet.buffer_lifetime_ordinal ==
-             buffer_lifetime_ordinal_[kOutputPort]);
-  if (!IsOutputConfiguredLocked()) {
-    FailLocked(
-        "client sent RecycleOutputPacket() for buffer_lifetime_ordinal that "
-        "isn't fully configured yet - bad client behavior");
-    return;
-  }
-  FXL_DCHECK(IsOutputConfiguredLocked());
-  if (available_output_packet.packet_index >=
-      all_packets_[kOutputPort].size()) {
-    FailLocked(
-        "out of range packet_index from client in RecycleOutputPacket()");
-    return;
-  }
-  uint32_t packet_index = available_output_packet.packet_index;
-  if (all_packets_[kOutputPort][packet_index]->is_free()) {
-    FailLocked(
-        "packet_index already free at protocol level - invalid client message");
-    return;
-  }
-  // Mark free at protocol level.
-  all_packets_[kOutputPort][packet_index]->SetFree(true);
+  CodecPacket* packet = nullptr;
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    if (!CheckOldBufferLifetimeOrdinalLocked(
+            kOutputPort, available_output_packet.buffer_lifetime_ordinal)) {
+      return;
+    }
+    if (available_output_packet.buffer_lifetime_ordinal <
+        buffer_lifetime_ordinal_[kOutputPort]) {
+      // ignore arbitrarily-stale required by protocol
+      //
+      // Thanks to even values from the client being prohibited, this also
+      // covers mid-stream output config change where the server has already
+      // de-configured output buffers but the client doesn't know about that
+      // yet. We include that case here by setting
+      // buffer_lifetime_ordinal_[kOutputPort] to the next even value
+      // when de-configuring output server-side until the client has
+      // re-configured output.
+      return;
+    }
+    FXL_DCHECK(available_output_packet.buffer_lifetime_ordinal ==
+               buffer_lifetime_ordinal_[kOutputPort]);
+    if (!IsOutputConfiguredLocked()) {
+      FailLocked(
+          "client sent RecycleOutputPacket() for buffer_lifetime_ordinal that "
+          "isn't fully configured yet - bad client behavior");
+      return;
+    }
+    FXL_DCHECK(IsOutputConfiguredLocked());
+    if (available_output_packet.packet_index >=
+        all_packets_[kOutputPort].size()) {
+      FailLocked(
+          "out of range packet_index from client in RecycleOutputPacket()");
+      return;
+    }
+    uint32_t packet_index = available_output_packet.packet_index;
+    if (all_packets_[kOutputPort][packet_index]->is_free()) {
+      FailLocked(
+          "packet_index already free at protocol level - invalid client "
+          "message");
+      return;
+    }
+    // Mark free at protocol level.
+    all_packets_[kOutputPort][packet_index]->SetFree(true);
 
-  // Before handing the packet to the core codec, clear some fields that the
-  // core codec is expected to set (or optionally set in the case of
-  // timstamp_ish).  In addition to these parameters, a core codec can emit
-  // output config changes via onCoreCodecMidStreamOutputConfigChange().
-  CodecPacket* packet = all_packets_[kOutputPort][packet_index].get();
-  packet->ClearStartOffset();
-  packet->ClearValidLengthBytes();
-  packet->ClearTimestampIsh();
+    // Before handing the packet to the core codec, clear some fields that the
+    // core codec is expected to set (or optionally set in the case of
+    // timstamp_ish).  In addition to these parameters, a core codec can emit
+    // output config changes via onCoreCodecMidStreamOutputConfigChange().
+    packet = all_packets_[kOutputPort][packet_index].get();
+    packet->ClearStartOffset();
+    packet->ClearValidLengthBytes();
+    packet->ClearTimestampIsh();
+  }
 
   // Recycle to core codec.
-  CoreCodecRecycleOutputPacketLocked(packet);
+  CoreCodecRecycleOutputPacket(packet);
 }
 
 void CodecImpl::QueueInputFormatDetails(
@@ -1023,8 +1027,8 @@ bool CodecImpl::IsStreamActiveLocked() {
   return stream_lifetime_ordinal_ % 2 == 1;
 }
 
-void CodecImpl::SetBufferSettingsCommonLocked(
-    CodecPort port,
+void CodecImpl::SetBufferSettingsCommon(
+    std::unique_lock<std::mutex>& lock, CodecPort port,
     const fuchsia::mediacodec::CodecPortBufferSettings& settings,
     const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
   FXL_DCHECK(port == kInputPort && thrd_current() == stream_control_thread_ ||
@@ -1090,11 +1094,8 @@ void CodecImpl::SetBufferSettingsCommonLocked(
     return;
   }
 
-  // Ensure that buffers aren't with the core codec.
-  CoreCodecEnsureBuffersNotConfiguredLocked(port);
-
   // Little if any reason to do this outside the lock.
-  EnsureBuffersNotConfiguredLocked(port);
+  EnsureBuffersNotConfigured(lock, port);
 
   // This also starts the new buffer_lifetime_ordinal.
   port_settings_[port] =
@@ -1104,7 +1105,8 @@ void CodecImpl::SetBufferSettingsCommonLocked(
       port_settings_[port]->buffer_lifetime_ordinal;
 }
 
-void CodecImpl::EnsureBuffersNotConfiguredLocked(CodecPort port) {
+void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
+                                           CodecPort port) {
   // This method can be called on input only if there's no current stream.
   //
   // On output, this method can be called if there's no current stream or if
@@ -1115,6 +1117,14 @@ void CodecImpl::EnsureBuffersNotConfiguredLocked(CodecPort port) {
   // On output, this can be called on stream_control_thread_ or output_thread_.
   FXL_DCHECK(thrd_current() == stream_control_thread_ ||
              (port == kOutputPort && (thrd_current() == fidl_thread())));
+
+  is_port_configured_[port] = false;
+
+  // Ensure that buffers aren't with the core codec.
+  {  // scope unlock
+    ScopedUnlock unlock(lock);
+    CoreCodecEnsureBuffersNotConfigured(port);
+  }
 
   // For mid-stream output config change, the caller is responsible for ensuring
   // that buffers are not with the HW first.
@@ -1172,7 +1182,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
              port == kOutputPort && (thrd_current() == fidl_thread()));
   bool done_configuring = false;
   {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
+    std::unique_lock<std::mutex> lock(lock_);
 
     if (buffer.buffer_lifetime_ordinal % 2 == 0) {
       FailLocked(
@@ -1264,20 +1274,23 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
                 port_settings_[port]->buffer_lifetime_ordinal, i, buffer)));
       }
 
-      // A core codec can take action here to finish configuring buffers if it's
-      // able, or can delay configuring buffers until CoreCodecStartStream() if
-      // that works better for the core codec.
-      CoreCodecConfigureBuffers(port);
+      {  // scope unlock
+        ScopedUnlock unlock(lock);
 
-      // All output packets need to start with the core codec.  This is implicit
-      // for the Codec interface (implied by adding the last output buffer) but
-      // explicit in the CodecAdapter interface.
-      if (port == kOutputPort) {
-        for (uint32_t i = 0; i < packet_count; i++) {
-          CoreCodecRecycleOutputPacketLocked(
-              all_packets_[kOutputPort][i].get());
+        // A core codec can take action here to finish configuring buffers if
+        // it's able, or can delay configuring buffers until
+        // CoreCodecStartStream() if that works better for the core codec.
+        CoreCodecConfigureBuffers(port, all_packets_[port]);
+
+        // All output packets need to start with the core codec.  This is
+        // implicit for the Codec interface (implied by adding the last output
+        // buffer) but explicit in the CodecAdapter interface.
+        if (port == kOutputPort) {
+          for (uint32_t i = 0; i < packet_count; i++) {
+            CoreCodecRecycleOutputPacket(all_packets_[kOutputPort][i].get());
+          }
         }
-      }
+      }  // ~unlock
 
       // For OMX case, we tell OMX about the potentially-new buffer count
       // separately later, just before moving from OMX loaded to OMX idle, or as
@@ -1288,6 +1301,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       // currently, and OMX UseBuffer() isn't valid until we're moving from
       // OMX_StateLoaded to OMX_StateIdle.
 
+      is_port_configured_[port] = true;
       done_configuring = true;
     }
   }
@@ -1376,18 +1390,20 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   // stream is active, but the client may still be responding to a previous
   // server-initiated mid-stream format change.
   //
+  // ###########################################################################
   // We don't attempt to optimize every case as much as might be possible here.
   // The main overall optimization is that it's possible to switch streams
   // without reallocating buffers.  We also need to make sure it's possible to
   // detect output format at the start of a stream regardless of what happened
   // before, and possible to perform a mid-stream format change.
+  // ###########################################################################
   //
-  // Given the above, our main concern here is that we get to a state where we
-  // know the client isn't trying to re-configure output during format
+  // Given the above, our *main concern* here is that we get to a state where we
+  // *know* the client isn't trying to re-configure output during format
   // detection, which at best would be confusing to allow, so we avoid that
   // possiblity here by forcing a client to catch up with the server, if there's
-  // any possibility that the client might still be working on catching up with
-  // the server.
+  // *any possibility* that the client might still be working on catching up
+  // with the server.
   //
   // If the client's most recently fully-completed output config is less than
   // the most recently sent output constraints with action_required true, then
@@ -1451,7 +1467,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 
   if (is_new_config_needed) {
     StartIgnoringClientOldOutputConfigLocked();
-    EnsureBuffersNotConfiguredLocked(kOutputPort);
+    EnsureBuffersNotConfigured(lock, kOutputPort);
     // This does count as a mid-stream output config change, even when this is
     // at the start of a stream - it's still while a stream is active, and still
     // prevents this stream from outputting any data to the Codec client until
@@ -1472,7 +1488,10 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 
   // Now we have input configured, and output configured if needed by the core
   // codec, so we can move the core codec to running state.
-  CoreCodecStartStream(lock);
+  {  // scope unlock
+    ScopedUnlock unlock(lock);
+    CoreCodecStartStream();
+  }  // ~unlock
 
   // Track this so the core codec doesn't have to bother with "ensure"
   // semantics, just start/stop, where stop isn't called unless the core codec
@@ -1489,7 +1508,10 @@ void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
   // core codec won't try to send us output while we have no stream at the Codec
   // layer.
   if (is_core_codec_stream_started_) {
-    CoreCodecStopStream(lock);
+    {  // scope unlock
+      ScopedUnlock unlock(lock);
+      CoreCodecStopStream();
+    }
     is_core_codec_stream_started_ = false;
   }
 
@@ -1808,49 +1830,54 @@ void CodecImpl::onStreamFailed_StreamControl(uint64_t stream_lifetime_ordinal) {
 
 void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
   FXL_DCHECK(thrd_current() == stream_control_thread_);
-  std::unique_lock<std::mutex> lock(lock_);
-  if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
-    // ignore; The omx_meh_output_buffer_constraints_version_ordinal_ took care
-    // of it.
-    return;
-  }
-  FXL_DCHECK(stream_lifetime_ordinal == stream_lifetime_ordinal_);
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
+      // ignore; The omx_meh_output_buffer_constraints_version_ordinal_ took
+      // care of it.
+      return;
+    }
+    FXL_DCHECK(stream_lifetime_ordinal == stream_lifetime_ordinal_);
 
-  // Now we need to start disabling the port, wait for buffers to come back from
-  // OMX, free buffer headers, wait for the port to become fully disabled,
-  // unilaterally de-configure output buffers, demand a new output config from
-  // the client, wait for the client to configure output (but be willing to bail
-  // on waiting for the client if we notice future stream discard), re-enable
-  // the output port, allocate headers, wait for the port to be fully enabled,
-  // call FillThisBuffer() on the protocol-free buffers.
+    // Now we need to start disabling the port, wait for buffers to come back
+    // from OMX, free buffer headers, wait for the port to become fully
+    // disabled, unilaterally de-configure output buffers, demand a new output
+    // config from the client, wait for the client to configure output (but be
+    // willing to bail on waiting for the client if we notice future stream
+    // discard), re-enable the output port, allocate headers, wait for the port
+    // to be fully enabled, call FillThisBuffer() on the protocol-free buffers.
 
-  // This is what starts the interval during which
-  // OmxTryRecycleOutputPacketLocked() won't call OMX, and the interval during
-  // which we'll ingore any in-progress client output config until the client
-  // catches up.
-  StartIgnoringClientOldOutputConfigLocked();
+    // This is what starts the interval during which
+    // OmxTryRecycleOutputPacketLocked() won't call OMX, and the interval during
+    // which we'll ingore any in-progress client output config until the client
+    // catches up.
+    StartIgnoringClientOldOutputConfigLocked();
 
-  CoreCodecMidStreamOutputBufferReConfigPrepare(lock);
+    {  // scope unlock
+      ScopedUnlock unlock(lock);
+      CoreCodecMidStreamOutputBufferReConfigPrepare();
+    }  // ~unlock
 
-  EnsureBuffersNotConfiguredLocked(kOutputPort);
+    EnsureBuffersNotConfigured(lock, kOutputPort);
 
-  GenerateAndSendNewOutputConfig(lock, true);
+    GenerateAndSendNewOutputConfig(lock, true);
 
-  // Now we can wait for the client to catch up to the current output config
-  // or for the client to tell the server to discard the current stream.
-  while (!stream_->future_discarded() && !IsOutputConfiguredLocked()) {
-    wake_stream_control_condition_.wait(lock);
-  }
+    // Now we can wait for the client to catch up to the current output config
+    // or for the client to tell the server to discard the current stream.
+    while (!stream_->future_discarded() && !IsOutputConfiguredLocked()) {
+      wake_stream_control_condition_.wait(lock);
+    }
 
-  if (stream_->future_discarded()) {
-    // We already know how to handle this case, and
-    // core_codec_meh_output_buffer_constraints_version_ordinal_ is still set
-    // such that the client will be forced to re-configure output buffers at the
-    // start of the new stream.
-    return;
-  }
+    if (stream_->future_discarded()) {
+      // We already know how to handle this case, and
+      // core_codec_meh_output_buffer_constraints_version_ordinal_ is still set
+      // such that the client will be forced to re-configure output buffers at
+      // the start of the new stream.
+      return;
+    }
+  }  // ~lock
 
-  CoreCodecMidStreamOutputBufferReConfigFinish(lock);
+  CoreCodecMidStreamOutputBufferReConfigFinish();
 
   VLOGF("Done with mid-stream format change.\n");
 }
@@ -1883,13 +1910,14 @@ bool CodecImpl::IsOutputConfiguredLocked() {
 }
 
 bool CodecImpl::IsPortConfiguredCommonLocked(CodecPort port) {
-  if (!port_settings_[port]) {
-    return false;
-  }
-  FXL_DCHECK(all_buffers_[port].size() <=
-             BufferCountFromPortSettings(*port_settings_[port]));
-  return all_buffers_[port].size() ==
-         BufferCountFromPortSettings(*port_settings_[port]);
+  // In addition to what we're able to assert here, when
+  // is_port_configured_[port], the core codec also has the port
+  // configured.
+  FXL_DCHECK(!is_port_configured_[port] ||
+             port_settings_[port] &&
+                 all_buffers_[port].size() ==
+                     BufferCountFromPortSettings(*port_settings_[port]));
+  return is_port_configured_[port];
 }
 
 void CodecImpl::Fail(const char* format, ...) {
@@ -2052,6 +2080,7 @@ void CodecImpl::onCoreCodecFailStream() {
 
 void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
     bool output_re_config_required) {
+  printf("onCoreCodecMidStreamOutputConfigChange() this: %p\n", this);
   // For now, the core codec thread is the only thread this gets called from.
   FXL_DCHECK(IsPotentiallyCoreCodecThread());
   // For a OMX_EventPortSettingsChanged that doesn't demand output buffer
@@ -2097,14 +2126,16 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
   //     nBufferCountMin or anything like that.
   uint64_t local_stream_lifetime_ordinal;
   {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     // This part is not speculative.  OMX has indicated that it's at least
     // meh about the current output config, so ensure we do a required
     // OnOutputConfig() before the next stream starts, even if the client
     // moves on to a new stream such that the speculative part below becomes
     // stale.
     core_codec_meh_output_buffer_constraints_version_ordinal_ =
-        port_settings_[kOutputPort]->buffer_constraints_version_ordinal;
+        port_settings_[kOutputPort]
+            ? port_settings_[kOutputPort]->buffer_constraints_version_ordinal
+            : 0;
     // Speculative part - this part is speculative, in that we don't know if
     // this post over to StreamControl will beat any client driving to a new
     // stream.  So we snap the stream_lifetime_ordinal so we know whether to
@@ -2265,21 +2296,23 @@ void CodecImpl::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
   codec_adapter_->CoreCodecAddBuffer(port, buffer);
 }
 
-void CodecImpl::CoreCodecConfigureBuffers(CodecPort port) {
+void CodecImpl::CoreCodecConfigureBuffers(
+    CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
   FXL_DCHECK(port == kInputPort && thrd_current() == stream_control_thread_ ||
              port == kOutputPort && thrd_current() == fidl_thread());
-  codec_adapter_->CoreCodecConfigureBuffers(port);
+  codec_adapter_->CoreCodecConfigureBuffers(port, packets);
 }
 
-void CodecImpl::CoreCodecEnsureBuffersNotConfiguredLocked(CodecPort port) {
+void CodecImpl::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   FXL_DCHECK(port == kInputPort && thrd_current() == stream_control_thread_ ||
-             port == kOutputPort && thrd_current() == fidl_thread());
-  codec_adapter_->CoreCodecEnsureBuffersNotConfiguredLocked(port);
+             port == kOutputPort && (thrd_current() == fidl_thread() ||
+                                     thrd_current() == stream_control_thread_));
+  codec_adapter_->CoreCodecEnsureBuffersNotConfigured(port);
 }
 
-void CodecImpl::CoreCodecStartStream(std::unique_lock<std::mutex>& lock) {
+void CodecImpl::CoreCodecStartStream() {
   FXL_DCHECK(thrd_current() == stream_control_thread_);
-  codec_adapter_->CoreCodecStartStream(lock);
+  codec_adapter_->CoreCodecStartStream();
 }
 
 void CodecImpl::CoreCodecQueueInputFormatDetails(
@@ -2300,9 +2333,9 @@ void CodecImpl::CoreCodecQueueInputEndOfStream() {
   codec_adapter_->CoreCodecQueueInputEndOfStream();
 }
 
-void CodecImpl::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
+void CodecImpl::CoreCodecStopStream() {
   FXL_DCHECK(thrd_current() == stream_control_thread_);
-  codec_adapter_->CoreCodecStopStream(lock);
+  codec_adapter_->CoreCodecStopStream();
 }
 
 bool CodecImpl::IsCoreCodecRequiringOutputConfigForFormatDetection() {
@@ -2329,19 +2362,17 @@ CodecImpl::CoreCodecBuildNewOutputConfig(
       buffer_constraints_action_required);
 }
 
-void CodecImpl::CoreCodecMidStreamOutputBufferReConfigPrepare(
-    std::unique_lock<std::mutex>& lock) {
+void CodecImpl::CoreCodecMidStreamOutputBufferReConfigPrepare() {
   FXL_DCHECK(thrd_current() == stream_control_thread_);
-  codec_adapter_->CoreCodecMidStreamOutputBufferReConfigPrepare(lock);
+  codec_adapter_->CoreCodecMidStreamOutputBufferReConfigPrepare();
 }
 
-void CodecImpl::CoreCodecMidStreamOutputBufferReConfigFinish(
-    std::unique_lock<std::mutex>& lock) {
+void CodecImpl::CoreCodecMidStreamOutputBufferReConfigFinish() {
   FXL_DCHECK(thrd_current() == stream_control_thread_);
-  codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish(lock);
+  codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
 }
 
-void CodecImpl::CoreCodecRecycleOutputPacketLocked(CodecPacket* packet) {
+void CodecImpl::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   FXL_DCHECK(thrd_current() == fidl_thread());
-  codec_adapter_->CoreCodecRecycleOutputPacketLocked(packet);
+  codec_adapter_->CoreCodecRecycleOutputPacket(packet);
 }

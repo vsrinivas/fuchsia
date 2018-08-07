@@ -14,13 +14,6 @@
 #include <lib/zx/bti.h>
 
 // TODO(dustingreen):
-//
-// The initial version of this adapter is the minimum required to get any
-// decoding to happen at all, and should be read as a very early draft.  This
-// version avoids making substantial modifications to layers below for the
-// moment.
-//
-//   * Overall, eliminate copying at the output.
 //   * Split InitializeStream() into two parts, one to get the format info from
 //     the HW and send it to the Codec client, the other part to configure
 //     output buffers once the client has configured Codec output config based
@@ -30,32 +23,22 @@
 //     info (whether still mid-stream, or at the start of a new stream that's
 //     starting before the mid-stream format change was processed for the old
 //     stream).
-//   * On output side, bidirectional association between VideoFrame and
-//     CodecPacket, with underlying memory being the same memory for both
-//     representations (it's fine to still have separate "VideoFrame" and
-//     "CodecPacket" parts of the overall representation to separate generic
-//     concerns from HW-specific concerns, but the underlying memory should be
-//     the same memory).
-//   * A free output CodecPacket should have its CodecBuffer memory with the
-//     HW.
-//   * Let the HW's output stride propagate downstream as-is, to permit the
-//     output buffers being used as decoder reference frames concurrently with
-//     output of same frames.
-//   * Allocate output video buffers contig, probably a bool in
-//     OnOutputConfig().  Later, set any relevant buffer constraints to indicate
-//     contig to BufferAllocator / BufferCollection.
-//   * Remove output_processing_thread_ when output copying is no longer a
-//     thing.
+//   * Allocate output video buffers contig by setting relevant buffer
+//     constraints to indicate contig to BufferAllocator / BufferCollection.
 //   * On EndOfStream at input, push all remaining data through the HW decoder
 //     and detect when the EndOfStream is appropriate to generate at the output.
 //   * Split video_->Parse() into start/complete and/or switch to feeding the
-//     ring buffer directly.
+//     ring buffer directly, or whatever is wanted by multi-concurrent-stream
+//     mode.
 //   * Detect when there's sufficient space in the ring buffer, and feed in
 //     partial input packets to permit large input packets with many AUs in
 //     them.
 //   * At least when promise_separate_access_units_on_input is set, propagate
 //     timstamp_ish values from input AU to correct output video frame (using
 //     PtsManager).
+//   * Consider if there's a way to get AmlogicVideo to re-use buffers across
+//     a stream switch without over-writing buffers that are still in-use
+//     downstream.
 
 namespace {
 
@@ -73,8 +56,7 @@ CodecAdapterH264::CodecAdapterH264(std::mutex& lock,
     : CodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToThread),
-      output_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
   FXL_DCHECK(device_);
   FXL_DCHECK(video_);
 }
@@ -87,24 +69,12 @@ CodecAdapterH264::~CodecAdapterH264() {
   input_processing_loop_.Shutdown();
   printf("~CodecAdapterH264() done stopping input_processing_loop_.\n");
 
-  // TODO(dustingreen): Remove the printfs or switch them to VLOG.
-  printf("~CodecAdapterH264() stopping output_processing_loop_...\n");
-  output_processing_loop_.Quit();
-  output_processing_loop_.JoinThreads();
-  output_processing_loop_.Shutdown();
-  printf("~CodecAdapterH264() done stopping output_processing_loop_.\n");
-
   // nothing else to do here, at least not until we aren't calling PowerOff() in
   // CoreCodecStopStream().
 }
 
 bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() {
-  // bear.h264 is 320x192
-  //
-  // For the moment, we hotwire those dimensions and require output buffers to
-  // be set up in advance of starting decode.
-
-  return true;
+  return false;
 }
 
 void CodecAdapterH264::CoreCodecInit(
@@ -118,15 +88,6 @@ void CodecAdapterH264::CoreCodecInit(
     return;
   }
 
-  result = output_processing_loop_.StartThread(
-      "CodecAdapterH264::output_processing_thread_",
-      &output_processing_thread_);
-  if (result != ZX_OK) {
-    events_->onCoreCodecFailCodec(
-        "In CodecAdapterH264::CoreCodecInit(), StartThread() failed (output)");
-    return;
-  }
-
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
 
   // TODO(dustingreen): We do most of the setup in CoreCodecStartStream()
@@ -136,16 +97,20 @@ void CodecAdapterH264::CoreCodecInit(
 // TODO(dustingreen): A lot of the stuff created in this method should be able
 // to get re-used from stream to stream. We'll probably want to factor out
 // create/init from stream init further down.
-void CodecAdapterH264::CoreCodecStartStream(
-    std::unique_lock<std::mutex>& lock) {
-  video_->pts_manager_ = std::make_unique<PtsManager>();
-  video_->core_ = std::make_unique<Vdec1>(video_);
-  video_->core()->PowerOn();
-  zx_status_t status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
-  if (status != ZX_OK) {
-    events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
-    return;
-  }
+void CodecAdapterH264::CoreCodecStartStream() {
+  zx_status_t status;
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    video_->pts_manager_ = std::make_unique<PtsManager>();
+    video_->core_ = std::make_unique<Vdec1>(video_);
+    video_->core()->PowerOn();
+    status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
+    if (status != ZX_OK) {
+      events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
+      return;
+    }
+  }  // ~lock
 
   {
     std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
@@ -164,33 +129,37 @@ void CodecAdapterH264::CoreCodecStartStream(
           FXL_LOG(INFO) << "Got frame - width: " << frame->width
                         << " height: " << frame->height;
 
-          // TODO(dustingreen): Avoid posting/copying. Bidirectional association
-          // between VideoFrame and output CodecPacket.  Get CodecPacket from
-          // VideoFrame here, and emit from here.
+          // The Codec interface requires that emitted frames are cache clean
+          // at least for now.
+          io_buffer_cache_flush_invalidate(&frame->buffer, 0,
+                                           frame->stride * frame->height);
+          io_buffer_cache_flush_invalidate(&frame->buffer,
+                                           frame->uv_plane_offset,
+                                           frame->stride * frame->height / 2);
 
-          bool is_trigger_needed = false;
-          {  // scope lock
-            std::lock_guard<std::mutex> lock(lock_);
-            if (!is_process_output_queued_) {
-              is_trigger_needed =
-                  ready_output_frames_.empty() && !free_output_packets_.empty();
-              is_process_output_queued_ = is_trigger_needed;
-            }
-            ready_output_frames_.push_back(frame);
-          }  // ~lock
-          if (is_trigger_needed) {
-            PostToOutputProcessingThread(
-                fit::bind_member(this, &CodecAdapterH264::ProcessOutput));
-          }
+          CodecPacket* packet = frame->codec_packet;
+          FXL_DCHECK(packet);
+
+          packet->SetStartOffset(0);
+          uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
+          packet->SetValidLengthBytes(total_size_bytes);
+
+          events_->onCoreCodecOutputPacket(packet, false, false);
         });
+    video_->video_decoder_->SetInitializeFramesHandler(
+        fit::bind_member(this, &CodecAdapterH264::InitializeFramesHandler));
     video_->video_decoder_->SetErrorHandler(
         [this] { events_->onCoreCodecFailStream(); });
   }
-  status = video_->InitializeEsParser();
-  if (status != ZX_OK) {
-    events_->onCoreCodecFailCodec("InitializeEsParser() failed");
-    return;
-  }
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    status = video_->InitializeEsParser();
+    if (status != ZX_OK) {
+      events_->onCoreCodecFailCodec("InitializeEsParser() failed");
+      return;
+    }
+  }  // ~lock
 }
 
 void CodecAdapterH264::CoreCodecQueueInputFormatDetails(
@@ -223,65 +192,41 @@ void CodecAdapterH264::CoreCodecQueueInputEndOfStream() {
 
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
-void CodecAdapterH264::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
-  // This helps any previously-queued ProcessInput() calls return faster.
-  is_cancelling_input_processing_ = true;
-  std::condition_variable stop_input_processing_condition;
-  // We know there won't be any new queuing of input, so once this posted work
-  // runs, we know all previously-queued ProcessInput() calls have returned.
-  PostToInputProcessingThread([this, &stop_input_processing_condition] {
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(lock_);
-      FXL_DCHECK(is_cancelling_input_processing_);
-      input_queue_.clear();
-      is_cancelling_input_processing_ = false;
-    }  // ~lock
-    stop_input_processing_condition.notify_all();
-  });
-  while (is_cancelling_input_processing_) {
-    stop_input_processing_condition.wait(lock);
-  }
-  FXL_DCHECK(!is_cancelling_input_processing_);
+void CodecAdapterH264::CoreCodecStopStream() {
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+
+    // This allows InitializeFramesHandler() to essentially cancel and return.
+    // The InitializeFramesHandler() is like output and is ordered with respect
+    // to output packets, and CoreCodecStopStream() stops both output and
+    // InitializeFramesHandler().
+    is_stopping_ = true;
+    wake_initialize_frames_handler_.notify_all();
+
+    // This helps any previously-queued ProcessInput() calls return faster.
+    is_cancelling_input_processing_ = true;
+    std::condition_variable stop_input_processing_condition;
+    // We know there won't be any new queuing of input, so once this posted work
+    // runs, we know all previously-queued ProcessInput() calls have returned.
+    PostToInputProcessingThread([this, &stop_input_processing_condition] {
+      {  // scope lock
+        std::lock_guard<std::mutex> lock(lock_);
+        FXL_DCHECK(is_cancelling_input_processing_);
+        input_queue_.clear();
+        is_cancelling_input_processing_ = false;
+      }  // ~lock
+      stop_input_processing_condition.notify_all();
+    });
+    while (is_cancelling_input_processing_) {
+      stop_input_processing_condition.wait(lock);
+    }
+    FXL_DCHECK(!is_cancelling_input_processing_);
+  }  // ~lock
 
   // Stop processing queued frames.
   if (video_->core()) {
     video_->core()->StopDecoding();
     video_->core()->WaitForIdle();
-  }
-
-  is_cancelling_output_processing_ = true;
-  std::condition_variable stop_output_processing_condition;
-  PostToOutputProcessingThread([this, &stop_output_processing_condition] {
-    std::list<std::shared_ptr<VideoFrame>> to_return;
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(lock_);
-      FXL_DCHECK(is_cancelling_output_processing_);
-      to_return.swap(ready_output_frames_);
-      FXL_DCHECK(ready_output_frames_.empty());
-      // We intentionally don't mess with free_output_packets_.  Those remain
-      // free and can be used for the next stream's output.
-    }  // ~lock
-    // By returning VideoFrame(s) instead of deleting them, we can use them for
-    // a new stream.
-    //
-    // TODO(dustingreen): Stop deleting all the VideoFrame(s) a bit further
-    // down.
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-      for (auto& frame : to_return) {
-        // This won't result in more output frames being emitted, because the HW
-        // was stopped above.
-        video_->video_decoder_->ReturnFrame(frame);
-      }
-    }  // ~lock
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(lock_);
-      is_cancelling_output_processing_ = false;
-    }  // ~lock
-    stop_output_processing_condition.notify_all();
-  });
-  while (is_cancelling_output_processing_) {
-    stop_output_processing_condition.wait(lock);
   }
 
   // TODO(dustingreen): Currently, we have to tear down a few pieces of video_,
@@ -296,6 +241,7 @@ void CodecAdapterH264::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
     std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
     video_->video_decoder_.reset();
   }  // ~lock
+
   if (video_->core_) {
     printf("video_->core_->PowerOff()...\n");
     video_->core_->PowerOff();
@@ -307,45 +253,65 @@ void CodecAdapterH264::CoreCodecStopStream(std::unique_lock<std::mutex>& lock) {
   // have to release it here to avoid leaking when we re-init in
   // CoreCodecStartStream(), for now.
   video_->stream_buffer_.reset();
+
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    // InitializeFramesHandler() has returned by this point and won't run again
+    // until there's a new stream.
+    is_stopping_ = false;
+  }  // ~lock
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port,
                                           const CodecBuffer* buffer) {
-  // no per-buffer configuration here yet - maybe later
+  all_output_buffers_.push_back(buffer);
 }
 
-void CodecAdapterH264::CoreCodecConfigureBuffers(CodecPort port) {
-  // no buffer-setup-done work here yet - maybe later
-}
-
-void CodecAdapterH264::CoreCodecRecycleOutputPacketLocked(CodecPacket* packet) {
-  bool is_trigger_needed = false;
-  if (!is_process_output_queued_) {
-    is_trigger_needed =
-        free_output_packets_.empty() && !ready_output_frames_.empty();
-    is_process_output_queued_ = is_trigger_needed;
+void CodecAdapterH264::CoreCodecConfigureBuffers(
+    CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
+  if (port == kOutputPort) {
+    FXL_DCHECK(all_output_packets_.empty());
+    FXL_DCHECK(!all_output_buffers_.empty());
+    FXL_DCHECK(all_output_buffers_.size() == packets.size());
+    for (auto& packet : packets) {
+      all_output_packets_.push_back(packet.get());
+    }
   }
-  free_output_packets_.push_back(packet);
-  if (is_trigger_needed) {
-    PostToOutputProcessingThread(
-        fit::bind_member(this, &CodecAdapterH264::ProcessOutput));
-  }
-  // video_->video_decoder_->ReturnFrame(frame) happens on
-  // output_processing_thread_.
 }
 
-void CodecAdapterH264::CoreCodecEnsureBuffersNotConfiguredLocked(
-    CodecPort port) {
-  // Given lack of per-buffer or per-buffer-set config so far, what this means
-  // for this adapter for now is that this adapter should ensure that zero
-  // old CodecPacket* or CodecBuffer* remain in this adapter (or below).  This
-  // means the old free_output_packets_ are no longer valid.  There shouldn't be
-  // any queued input at this point, but if there is any, fail here even in a
-  // release build.
-  FXL_CHECK(input_queue_.empty());
-  // CodecImpl will later CoreCodecRecycleOutputPacketLocked() on each new
-  // packet once those exist.
-  free_output_packets_.clear();
+void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
+  if (packet->is_new()) {
+    packet->SetIsNew(false);
+    return;
+  }
+  FXL_DCHECK(!packet->is_new());
+
+  std::shared_ptr<VideoFrame> frame = packet->video_frame().lock();
+  FXL_DCHECK(frame);
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
+    video_->video_decoder_->ReturnFrame(frame);
+  }  // ~lock
+}
+
+void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  // This adapter should ensure that zero old CodecPacket* or CodecBuffer*
+  // remain in this adapter (or below).
+
+  if (port == kInputPort) {
+    // There shouldn't be any queued input at this point, but if there is any,
+    // fail here even in a release build.
+    FXL_CHECK(input_queue_.empty());
+  } else {
+    FXL_DCHECK(port == kOutputPort);
+
+    // The old all_output_buffers_ are no longer valid.
+    all_output_buffers_.clear();
+    all_output_packets_.clear();
+  }
 }
 
 std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
@@ -354,7 +320,6 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
     uint64_t new_output_buffer_constraints_version_ordinal,
     uint64_t new_output_format_details_version_ordinal,
     bool buffer_constraints_action_required) {
-  //
   // bear.h264 decodes into 320x192 YUV buffers, but the video display
   // dimensions are 320x180.  A the bottom of the buffer only .25 of the last
   // 16 height macroblock row is meant to be displayed.
@@ -368,31 +333,18 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // width/height (%16==0) vs. the video dimensions being allowed to not use all
   // of the last macroblock.
   //
-  // For the moment, we assume those dimensions and require output buffers to
-  // be set up in advance of starting decode.
-  //
-  // We assume NV12 for the moment.
-  //
-  // We'll memcpy into NV12 with no extra padding, for the momement.
-  //
+  // This decoder produces NV12.
 
-  constexpr uint32_t kWidth = 320;
-  constexpr uint32_t kHeight = 192;
-
-  // For the moment, we'll memcpy so this value doesn't need to be real.
-  constexpr uint32_t kMaxReferenceFrames = 6;
-  // Reference frames, plus one to be decoding into, plus 1 slack.
-  constexpr uint32_t kRecommededPacketCountForCodec = kMaxReferenceFrames + 2;
+  // For the moment, this codec splits 24 into 22 for the codec and 2 for the
+  // client.
+  //
+  // TODO(dustingreen): Plumb actual frame counts.
+  constexpr uint32_t kPacketCountForClientForced = 2;
   // Fairly arbitrary.  The client should set a higher value if the client needs
   // to camp on more frames than this.
-  constexpr uint32_t kDefaultPacketCountForClient = 2;
-  // No particular limit is enforced by this codec, at least for now.
-  constexpr uint32_t kPacketCountForClientMax =
-      std::numeric_limits<uint32_t>::max();
+  constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
 
-  uint32_t width = kWidth;
-  uint32_t height = kHeight;
-  uint32_t per_packet_buffer_bytes = width * height * 3 / 2;
+  uint32_t per_packet_buffer_bytes = width_ * height_ * 3 / 2;
 
   std::unique_ptr<fuchsia::mediacodec::CodecOutputConfig> config =
       std::make_unique<fuchsia::mediacodec::CodecOutputConfig>();
@@ -412,7 +364,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
       .buffer_constraints_version_ordinal =
       new_output_buffer_constraints_version_ordinal;
   config->buffer_constraints.default_settings.packet_count_for_codec =
-      kRecommededPacketCountForCodec;
+      packet_count_total_ - kPacketCountForClientForced;
   config->buffer_constraints.default_settings.packet_count_for_client =
       kDefaultPacketCountForClient;
   // Packed NV12 (no extra padding, min UV offset, min stride).
@@ -431,23 +383,24 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
   config->buffer_constraints.packet_count_for_codec_min =
-      kRecommededPacketCountForCodec;
+      packet_count_total_ - kPacketCountForClientForced;
   config->buffer_constraints.packet_count_for_codec_recommended =
-      kRecommededPacketCountForCodec;
+      packet_count_total_ - kPacketCountForClientForced;
   config->buffer_constraints.packet_count_for_codec_recommended_max =
-      kRecommededPacketCountForCodec;
+      packet_count_total_ - kPacketCountForClientForced;
   config->buffer_constraints.packet_count_for_codec_max =
-      kRecommededPacketCountForCodec;
+      packet_count_total_ - kPacketCountForClientForced;
 
+  config->buffer_constraints.packet_count_for_client_min =
+      kPacketCountForClientForced;
   config->buffer_constraints.packet_count_for_client_max =
-      kPacketCountForClientMax;
+      kPacketCountForClientForced;
 
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
   config->buffer_constraints.single_buffer_mode_allowed = false;
 
   config->buffer_constraints.is_physically_contiguous_required = true;
-
   ::zx::bti very_temp_kludge_bti;
   zx_status_t dup_status =
       ::zx::unowned<::zx::bti>(video_->bti())
@@ -457,7 +410,6 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
                                   dup_status);
     return nullptr;
   }
-
   // This is very temporary.  The BufferAllocator should handle this directly,
   // not the client.
   config->buffer_constraints.very_temp_kludge_bti_handle =
@@ -470,20 +422,20 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::mediacodec::VideoUncompressedFormat video_uncompressed;
   video_uncompressed.fourcc = make_fourcc('N', 'V', '1', '2');
-  video_uncompressed.primary_width_pixels = width;
-  video_uncompressed.primary_height_pixels = height;
-  video_uncompressed.secondary_width_pixels = width / 2;
-  video_uncompressed.secondary_height_pixels = height / 2;
+  video_uncompressed.primary_width_pixels = width_;
+  video_uncompressed.primary_height_pixels = height_;
+  video_uncompressed.secondary_width_pixels = width_ / 2;
+  video_uncompressed.secondary_height_pixels = height_ / 2;
   // TODO(dustingreen): remove this field from the VideoUncompressedFormat or
   // specify separately for primary / secondary.
   video_uncompressed.planar = true;
   video_uncompressed.swizzled = false;
-  video_uncompressed.primary_line_stride_bytes = width;
-  video_uncompressed.secondary_line_stride_bytes = width;
+  video_uncompressed.primary_line_stride_bytes = stride_;
+  video_uncompressed.secondary_line_stride_bytes = stride_;
   video_uncompressed.primary_start_offset = 0;
-  video_uncompressed.secondary_start_offset = width * height;
-  video_uncompressed.tertiary_start_offset = width * height + 1;
-  video_uncompressed.primary_pixel_stride = width;
+  video_uncompressed.secondary_start_offset = stride_ * height_;
+  video_uncompressed.tertiary_start_offset = stride_ * height_ + 1;
+  video_uncompressed.primary_pixel_stride = 1;
   video_uncompressed.secondary_pixel_stride = 2;
 
   // TODO(dustingreen): Switching to FIDL table should make this not be
@@ -500,22 +452,34 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   return config;
 }
 
-void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigPrepare(
-    std::unique_lock<std::mutex>& lock) {
-  // For the moment, this won't be called because
-  // onCoreCodecMidStreamOutputConfigChange() won't be called.
+void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigPrepare() {
+  // For this adapter, the core codec just needs us to get new frame buffers
+  // set up (while the core codec's interrupt thread sits in
+  // InitializeFramesHandler(), so nothing to do here.
   //
-  // TODO(dustingreen): Implement - see TODO section at top of file.
-  FXL_DCHECK(false) << "not yet implemented";
+  // CoreCodecEnsureBuffersNotConfigured() will run soon.
 }
 
-void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish(
-    std::unique_lock<std::mutex>& lock) {
-  // For the moment, this won't be called because
-  // onCoreCodecMidStreamOutputConfigChange() won't be called.
+void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
+  // Now that the client has configured output buffers, we need to hand those
+  // back to the core codec via return of InitializeFramesHandler() which is
+  // presently running on the core codec's interrupt thread.
   //
-  // TODO(dustingreen): Implement - see TODO section at top of file.
-  FXL_DCHECK(false) << "not yet implemented";
+  // We'll let InitializeFramesHandler() deal with converting
+  // all_output_buffers_ into a suitable form for return.  Here we just need to
+  // wake InitializeFramesHandler().
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    is_mid_stream_output_config_change_done_ = true;
+  }
+  wake_initialize_frames_handler_.notify_all();
+
+  // This thread (StreamControl thread) can return immediately here.  Because
+  // InitializeFramesHandler() runs with video_decoder_lock_ held the entire
+  // time, any further stream switches or similar will be forced to wait for the
+  // core codec's interrupt thread to be done processing return of
+  // InitializeFramesHandler() before ripping down the frames configured via
+  // that return.
 }
 
 void CodecAdapterH264::PostSerial(async_dispatcher_t* dispatcher,
@@ -527,10 +491,6 @@ void CodecAdapterH264::PostSerial(async_dispatcher_t* dispatcher,
 
 void CodecAdapterH264::PostToInputProcessingThread(fit::closure to_run) {
   PostSerial(input_processing_loop_.dispatcher(), std::move(to_run));
-}
-
-void CodecAdapterH264::PostToOutputProcessingThread(fit::closure to_run) {
-  PostSerial(output_processing_loop_.dispatcher(), std::move(to_run));
 }
 
 void CodecAdapterH264::QueueInputItem(CodecInputItem input_item) {
@@ -646,71 +606,128 @@ void CodecAdapterH264::ProcessInput() {
   }
 }
 
-void CodecAdapterH264::ProcessOutput() {
+zx_status_t CodecAdapterH264::InitializeFramesHandler(
+    ::zx::bti bti, uint32_t frame_count, uint32_t width, uint32_t height,
+    uint32_t stride, uint32_t display_width, uint32_t display_height,
+    std::vector<CodecFrame>* frames_out) {
+  FXL_DCHECK(frames_out->empty());
+  // This is called on a core codec thread, ordered with respect to emitted
+  // output frames.  This method needs to block until either:
+  //   * Format details have been delivered to the Codec client and the Codec
+  //     client has configured corresponding output buffers.
+  //   * The client has moved on by closing the current stream, in which case
+  //     this method needs to fail quickly so the core codec can be stopped.
+  //
+  // The video_decoder_lock_ is held during this method.  We don't release the
+  // video_decoder_lock_ while waiting for the client, because we want close of
+  // the current stream to wait for this method to return before starting the
+  // portion of stream close protected by video_decoder_lock_.
+  //
+  // The signalling to un-block this thread uses lock_.
+  //
+  // TODO(dustingreen): It can happen that the current set of buffers is already
+  // suitable for use under the new buffer constraints.  However, some of the
+  // buffers can still be populated with data and used by other parts of the
+  // system, so to re-use buffers, we'll need a way to communicate which buffers
+  // are not presently available to decode into, even for what h264_decoder.cc
+  // sees as a totally new set of buffers.  The h264_decoder.cc doesn't seem to
+  // separate configuration of a buffer from marking that buffer ready to fill.
+  // It seems like "new" buffers are immediately ready to fill.  At the moment,
+  // the AmlogicVideo code doesn't appear to show any way to tell the HW which
+  // frames are presently still in use (not yet available to decode into),
+  // during InitializeStream().  Maybe delaying configuring of a canvas would
+  // work, but in that case would the delayed configuring adversely impact
+  // decoding performance consistency?  If we can do this, detect when we can,
+  // and call onCoreCodecMidStreamOutputConfigChange() but pass false instead of
+  // true, and don't expect a response or block in here.  Still have to return
+  // the vector of buffers, and will need to indicate which are actually
+  // available to decode into.  The rest will get indicated via
+  // CoreCodecRecycleOutputPacket(), despite not necessarily getting signalled
+  // to the HW by H264Decoder::ReturnFrame further down.  For now, we always
+  // re-allocate buffers.  Old buffers still active elsewhere in the system can
+  // continue to be referenced by those parts of the system - the importan thing
+  // for now is we avoid overwriting the content of those buffers by using an
+  // entirely new set of buffers for each stream for now.
+
+  // First, mark that we're processing a mid-stream output config change.  This
+  // will get set to false in only two ways:
+  //   * CoreCodecStopStream(), in which case the mid-stream output config
+  //     change is essentially cancelled.
+  //   * In this method, in which case the mid-stream output config change
+  //     is finishing with success.
+  // All failures will fall under the first bullet, but not all instances of the
+  // first bullet are failures, as the client is allowed to move on to a new
+  // stream if the client wants to.
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    is_process_output_queued_ = false;
+    is_mid_stream_output_config_change_done_ = false;
+
+    // For the moment, force this exact number of frames.
+    //
+    // TODO(dustingreen): plumb actual frame counts.
+    packet_count_total_ = frame_count;
+    width_ = width;
+    height_ = height;
+    stride_ = stride;
+    display_width_ = display_width;
+    display_height_ = display_height;
   }  // ~lock
-  FXL_DCHECK(thrd_current() == output_processing_thread_);
-  while (true) {
-    // first ready frame
-    std::shared_ptr<VideoFrame> frame;
-    // first free packet
-    CodecPacket* packet = nullptr;
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(lock_);
-      if (is_cancelling_output_processing_) {
-        return;
-      }
-      if (ready_output_frames_.empty()) {
-        return;
-      }
-      if (free_output_packets_.empty()) {
-        return;
-      }
-      frame = ready_output_frames_.front();
-      ready_output_frames_.pop_front();
-      packet = free_output_packets_.front();
-      free_output_packets_.pop_front();
+
+  // This will snap the current stream_lifetime_ordinal_, and call
+  // CoreCodecMidStreamOutputBufferReConfigPrepare() and
+  // CoreCodecMidStreamOutputBufferReConfigFinish() from the StreamControl
+  // thread, _iff_ the client hasn't already moved on to a new stream by then.
+  events_->onCoreCodecMidStreamOutputConfigChange(true);
+
+  // The current thread still needs to block until either of the two conditions
+  // listed above are true.  The detection strategy for each follows:
+  //   * if !is_processing_mid_stream_output_config_change_ already, that means
+  //     CoreCodecStopStream() has at least started, which means the config
+  //     change is cancelled and this method should return no frames.
+  //   * if is_processing_mid_stream_output_config_change_ and
+  //     is_done_processing_mid_stream_output_config_change_, that means
+  //     while the lock remains held here, CoreCodecStopStream()'s first lock
+  //     hold interval has not yet started, and it's safe to build and return
+  //     the vector of frames to the caller here.  Even if CoreCodecStopStream()
+  //     happens immediately afterward, the point at which CoreCodecStopStream()
+  //     acquires video_decoder_lock_ will force CoreCodecStopStream() to wait
+  //     until this thread has dealt with frames_out from this method.  In
+  //     addition, the CodecPacket*(s) returned remain valid until after
+  //     CoreCodecStopStream() has returned - only then is
+  //     CoreCodecEnsureBuffersNotConfigured(kOutputPort) called.
+
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    while (!is_stopping_ && !is_mid_stream_output_config_change_done_) {
+      wake_initialize_frames_handler_.wait(lock);
     }
 
-    // Copy outside the lock.  When stopping the stream we wait for this to be
-    // done by posting a subsequent item to output_processing_thread_ and
-    // waiting for that item to execute.
-
-    // TODO(dustingreen): Don't copy - see TODO section at top of this file.
-
-    uint64_t total_dst_size_needed = frame->stride * frame->height * 3 / 2;
-    FXL_CHECK(total_dst_size_needed <= packet->buffer().buffer_size());
-
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
-                                     frame->stride * frame->height);
-    io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                     frame->stride * frame->height / 2);
-
-    uint8_t* to_y = packet->buffer().buffer_base();
-    uint8_t* to_uv =
-        packet->buffer().buffer_base() + frame->width * frame->height;
-    uint8_t* from_y = static_cast<uint8_t*>(io_buffer_virt(&frame->buffer));
-    uint8_t* from_uv = from_y + frame->uv_plane_offset;
-    for (uint32_t y = 0; y < frame->height; y++) {
-      memcpy(to_y + frame->width * y, from_y + frame->stride * y, frame->width);
-    }
-    for (uint32_t y = 0; y < frame->height / 2; y++) {
-      memcpy(to_uv + frame->width * y, from_uv + frame->stride * y,
-             frame->width);
+    if (is_stopping_) {
+      // CoreCodecStopStream() is essentially cancelling the mid-stream config
+      // change.  Return an empty vector.  We need to return so the
+      // video_decoder_lock_ can be acquired by CoreCodecStopStream().
+      FXL_DCHECK(frames_out->empty());
+      return ZX_ERR_CANCELED;
     }
 
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-      video_->video_decoder_->ReturnFrame(frame);
-    }  // ~lock
+    // Well, it's mostly done.  The remaining portion is to convert the
+    // configured buffers into the form needed by frames_out.
+    FXL_DCHECK(is_mid_stream_output_config_change_done_);
 
-    packet->SetStartOffset(0);
-    packet->SetValidLengthBytes(total_dst_size_needed);
+    // At least for now, we don't implement single_buffer_mode on output of a
+    // video decoder, so every frame will have a buffer.
+    FXL_DCHECK(all_output_buffers_.size() == packet_count_total_);
 
-    // TODO(dustingreen): See if we can detect and report errors instead of just
-    // "false", if the HW supports that.
-    events_->onCoreCodecOutputPacket(packet, false, false);
-  }
+    // Now we need to populate the frames_out vector.
+    for (uint32_t i = 0; i < frame_count; i++) {
+      FXL_DCHECK(all_output_buffers_[i]->buffer_index() == i);
+      FXL_DCHECK(all_output_buffers_[i]->codec_buffer().buffer_index == i);
+      frames_out->emplace_back(CodecFrame{
+          .codec_buffer = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
+          .codec_packet = all_output_packets_[i],
+      });
+    }
+  }  // ~lock
+
+  return ZX_OK;
 }

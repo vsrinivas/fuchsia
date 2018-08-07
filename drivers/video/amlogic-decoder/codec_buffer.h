@@ -18,6 +18,9 @@ class CodecImpl;
 //
 // These are 1:1 with Codec buffers, but not necessarily 1:1 with core codec
 // buffers.
+//
+// The const-ness of a CodecBuffer refers to the fields of the CodecBuffer
+// instance, not to the data pointed at by buffer_base().
 class CodecBuffer {
  public:
   uint64_t buffer_lifetime_ordinal() const;
@@ -27,6 +30,8 @@ class CodecBuffer {
   uint8_t* buffer_base() const;
 
   size_t buffer_size() const;
+
+  const fuchsia::mediacodec::CodecBuffer& codec_buffer() const;
 
  private:
   friend class CodecImpl;

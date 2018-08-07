@@ -361,11 +361,12 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   void QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ordinal);
 
   __WARN_UNUSED_RESULT bool IsStreamActiveLocked();
-  void SetBufferSettingsCommonLocked(
-      CodecPort port,
+  void SetBufferSettingsCommon(
+      std::unique_lock<std::mutex>& lock, CodecPort port,
       const fuchsia::mediacodec::CodecPortBufferSettings& settings,
       const fuchsia::mediacodec::CodecBufferConstraints& constraints);
-  void EnsureBuffersNotConfiguredLocked(CodecPort port);
+  void EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
+                                  CodecPort port);
   // Returns true if validation passed.  Returns false if validation failed and
   // FailLocked() has already been called with a specific error string (in which
   // case the caller will likely want to just return).
@@ -562,6 +563,10 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   // These are 1:1 with logical CodecBuffer(s).
   std::vector<std::unique_ptr<CodecBuffer>> all_buffers_[kPortCount];
 
+  // For this bool to be true, there must be enough buffers in all_buffers_ and
+  // the core codec must also be fully configured with regard to those buffers.
+  bool is_port_configured_[kPortCount] = {};
+
   // This vector owns these buffers.
   //
   // TODO(dustingreen): Figure out if the HW has any particular interest in
@@ -685,7 +690,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   void CoreCodecInit(const fuchsia::mediacodec::CodecFormatDetails&
                          initial_input_format_details) override;
 
-  void CoreCodecStartStream(std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecStartStream() override;
 
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::mediacodec::CodecFormatDetails&
@@ -695,15 +700,17 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
 
   void CoreCodecQueueInputEndOfStream() override;
 
-  void CoreCodecStopStream(std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecStopStream() override;
 
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
 
-  void CoreCodecConfigureBuffers(CodecPort port) override;
+  void CoreCodecConfigureBuffers(
+      CodecPort port,
+      const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
 
-  void CoreCodecRecycleOutputPacketLocked(CodecPacket* packet) override;
+  void CoreCodecRecycleOutputPacket(CodecPacket* packet) override;
 
-  void CoreCodecEnsureBuffersNotConfiguredLocked(CodecPort port) override;
+  void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
 
   __WARN_UNUSED_RESULT
   std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
@@ -713,11 +720,9 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
       uint64_t new_output_format_details_version_ordinal,
       bool buffer_constraints_action_required) override;
 
-  void CoreCodecMidStreamOutputBufferReConfigPrepare(
-      std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
 
-  void CoreCodecMidStreamOutputBufferReConfigFinish(
-      std::unique_lock<std::mutex>& lock) override;
+  void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecImpl);
 };

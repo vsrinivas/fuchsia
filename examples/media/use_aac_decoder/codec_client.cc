@@ -142,8 +142,8 @@ void CodecClient::Start() {
   input_free_bits_.resize(input_packet_count, true);
   all_input_buffers_.reserve(input_packet_count);
   for (uint32_t i = 0; i < input_packet_count; i++) {
-    std::unique_ptr<CodecBuffer> local_buffer = CodecBuffer::Allocate(
-        i, input_constraints_->per_packet_buffer_bytes_recommended);
+    std::unique_ptr<CodecBuffer> local_buffer =
+        CodecBuffer::Allocate(i, *input_constraints_);
     if (!local_buffer) {
       Exit("CodecBuffer::Allocate() failed");
     }
@@ -483,8 +483,8 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 
     all_output_buffers_.reserve(packet_count);
     for (uint32_t i = 0; i < packet_count; i++) {
-      std::unique_ptr<CodecBuffer> buffer = CodecBuffer::Allocate(
-          i, constraints.per_packet_buffer_bytes_recommended);
+      std::unique_ptr<CodecBuffer> buffer =
+          CodecBuffer::Allocate(i, constraints);
       if (!buffer) {
         Exit("CodecBuffer::Allocate() failed (output)");
       }

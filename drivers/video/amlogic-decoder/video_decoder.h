@@ -17,6 +17,7 @@
 
 #include <functional>
 
+#include "codec_frame.h"
 #include "decoder_core.h"
 #include "registers.h"
 #include "video_frame.h"
@@ -50,17 +51,19 @@ class CanvasEntry {
   bool valid_ = true;
 };
 
+class CodecPacket;
 class VideoDecoder {
  public:
   using FrameReadyNotifier = std::function<void(std::shared_ptr<VideoFrame>)>;
-  using InitializeFramesHandler = std::function<zx_status_t(
-      ::zx::bti,
-      uint32_t,                                          // frame_count
-      uint32_t,                                          // width
-      uint32_t,                                          // height
-      uint32_t,                                          // display_width
-      uint32_t,                                          // display_height
-      std::vector<fuchsia::mediacodec::CodecBuffer>*)>;  // buffers_out
+  using InitializeFramesHandler =
+      std::function<zx_status_t(::zx::bti,
+                                uint32_t,                    // frame_count
+                                uint32_t,                    // width
+                                uint32_t,                    // height
+                                uint32_t,                    // stride
+                                uint32_t,                    // display_width
+                                uint32_t,                    // display_height
+                                std::vector<CodecFrame>*)>;  // frames_out
   class Owner {
    public:
     virtual DosRegisterIo* dosbus() = 0;
