@@ -25,6 +25,9 @@ class HostData : public fxl::RefCountedThreadSafe<HostData> {
            uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
                             ZX_VM_FLAG_MAP_RANGE);
 
+  HostData(const HostData&) = delete;
+  HostData& operator=(const HostData&) = delete;
+
   // Gets the size of the data in bytes.
   size_t size() const { return size_; }
 
@@ -37,8 +40,6 @@ class HostData : public fxl::RefCountedThreadSafe<HostData> {
 
   size_t const size_;
   void* ptr_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HostData);
 };
 
 // Represents a host-accessible shared memory backed memory resource in a
@@ -52,6 +53,9 @@ class HostMemory final : public Memory {
   HostMemory(Session* session, size_t size);
   HostMemory(HostMemory&& moved);
   ~HostMemory();
+
+  HostMemory(const HostMemory&) = delete;
+  HostMemory& operator=(const HostMemory&) = delete;
 
   // Gets a reference to the underlying shared memory region.
   const fxl::RefPtr<HostData>& data() const { return data_; }
@@ -67,8 +71,6 @@ class HostMemory final : public Memory {
                       std::pair<zx::vmo, fxl::RefPtr<HostData>> init);
 
   fxl::RefPtr<HostData> data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HostMemory);
 };
 
 // Represents an image resource backed by host-accessible shared memory bound to
@@ -85,6 +87,9 @@ class HostImage final : public Image {
   HostImage(HostImage&& moved);
   ~HostImage();
 
+  HostImage(const HostImage&) = delete;
+  HostImage& operator=(const HostImage&) = delete;
+
   // Gets a reference to the underlying shared memory region.
   const fxl::RefPtr<HostData>& data() const { return data_; }
 
@@ -95,8 +100,6 @@ class HostImage final : public Image {
 
  private:
   fxl::RefPtr<HostData> data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HostImage);
 };
 
 // Represents a pool of image resources backed by host-accessible shared memory
@@ -106,6 +109,9 @@ class HostImagePool {
   // Creates a pool which can supply up to |num_images| images on demand.
   explicit HostImagePool(Session* session, uint32_t num_images);
   ~HostImagePool();
+
+  HostImagePool(const HostImagePool&) = delete;
+  HostImagePool& operator=(const HostImagePool&) = delete;
 
   // The number of images which this pool can manage.
   uint32_t num_images() const { return image_ptrs_.size(); }
@@ -138,8 +144,6 @@ class HostImagePool {
   fuchsia::images::ImageInfo image_info_;
   std::vector<std::unique_ptr<HostImage>> image_ptrs_;
   std::vector<std::unique_ptr<HostMemory>> memory_ptrs_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HostImagePool);
 };
 
 }  // namespace scenic

@@ -13,8 +13,11 @@ namespace scenic {
 // in host memory.
 class HostImageCycler : public scenic::EntityNode {
  public:
-  HostImageCycler(scenic::Session* session);
+  explicit HostImageCycler(scenic::Session* session);
   ~HostImageCycler();
+
+  HostImageCycler(const HostImageCycler&) = delete;
+  HostImageCycler& operator=(const HostImageCycler&) = delete;
 
   // Acquires an image for rendering.
   // At most one image can be acquired at a time.
@@ -40,8 +43,6 @@ class HostImageCycler : public scenic::EntityNode {
   bool acquired_image_ = false;
   bool reconfigured_ = false;
   uint32_t image_index_ = 0u;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HostImageCycler);
 };
 
 }  // namespace scenic

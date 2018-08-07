@@ -5,15 +5,15 @@
 #ifndef LIB_UI_SCENIC_CPP_SESSION_H_
 #define LIB_UI_SCENIC_CPP_SESSION_H_
 
-#include <lib/fit/function.h>
-#include <lib/zx/event.h>
-
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/zx/event.h>
+
+#include <utility>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 
 namespace scenic {
 
@@ -54,6 +54,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   explicit Session(fuchsia::ui::scenic::Scenic* scenic);
 
   explicit Session(SessionPtrAndListenerRequest session_and_listener);
+
+  Session(const Session&) = delete;
+  Session& operator=(const Session&) = delete;
 
   // Destroys the session.
   // All resources must be released prior to destruction.
@@ -133,8 +136,6 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   EventHandler event_handler_;
   fidl::Binding<fuchsia::ui::scenic::SessionListener> session_listener_binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };
 
 }  // namespace scenic

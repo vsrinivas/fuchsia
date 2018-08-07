@@ -4,7 +4,7 @@
 
 #include "lib/ui/scenic/cpp/host_image_cycler.h"
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 namespace scenic {
 
@@ -23,7 +23,7 @@ const HostImage* HostImageCycler::AcquireImage(
     uint32_t width, uint32_t height, uint32_t stride,
     fuchsia::images::PixelFormat pixel_format,
     fuchsia::images::ColorSpace color_space) {
-  FXL_DCHECK(!acquired_image_);
+  ZX_DEBUG_ASSERT(!acquired_image_);
 
   // Update the image pool and content shape.
   fuchsia::images::ImageInfo image_info;
@@ -36,17 +36,17 @@ const HostImage* HostImageCycler::AcquireImage(
   reconfigured_ = image_pool_.Configure(&image_info);
 
   const HostImage* image = image_pool_.GetImage(image_index_);
-  FXL_DCHECK(image);
+  ZX_DEBUG_ASSERT(image);
   acquired_image_ = true;
   return image;
 }
 
 void HostImageCycler::ReleaseAndSwapImage() {
-  FXL_DCHECK(acquired_image_);
+  ZX_DEBUG_ASSERT(acquired_image_);
   acquired_image_ = false;
 
   const HostImage* image = image_pool_.GetImage(image_index_);
-  FXL_DCHECK(image);
+  ZX_DEBUG_ASSERT(image);
   content_material_.SetTexture(*image);
 
   if (reconfigured_) {

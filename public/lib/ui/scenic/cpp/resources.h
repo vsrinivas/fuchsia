@@ -7,9 +7,7 @@
 
 #include "lib/ui/scenic/cpp/session.h"
 
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include <zircon/assert.h>
 
 namespace scenic {
 
@@ -22,7 +20,7 @@ class Resource {
  public:
   // Gets the session which owns this resource.
   Session* session() const {
-    FXL_DCHECK(session_);
+    ZX_DEBUG_ASSERT(session_);
     return session_;
   }
 
@@ -47,13 +45,14 @@ class Resource {
   explicit Resource(Session* session);
   Resource(Resource&& moved);
 
+  Resource(const Resource&) = delete;
+  Resource& operator=(const Resource&) = delete;
+
   virtual ~Resource();
 
  private:
   Session* const session_;
   uint32_t const id_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Resource);
 };
 
 // Represents a memory resource in a session.
@@ -72,8 +71,6 @@ class Memory : public Resource {
   Memory(Memory&& moved);
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Memory);
-
   fuchsia::images::MemoryType const memory_type_;
 };
 
@@ -84,9 +81,6 @@ class Shape : public Resource {
   explicit Shape(Session* session);
   Shape(Shape&& moved);
   ~Shape();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Shape);
 };
 
 // Represents a circle shape resource in a session.
@@ -95,9 +89,6 @@ class Circle final : public Shape {
   Circle(Session* session, float radius);
   Circle(Circle&& moved);
   ~Circle();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Circle);
 };
 
 // Represents a rectangle shape resource in a session.
@@ -106,9 +97,6 @@ class Rectangle final : public Shape {
   Rectangle(Session* session, float width, float height);
   Rectangle(Rectangle&& moved);
   ~Rectangle();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Rectangle);
 };
 
 // Represents a rounded rectangle shape resource in a session.
@@ -119,9 +107,6 @@ class RoundedRectangle final : public Shape {
                    float bottom_right_radius, float bottom_left_radius);
   RoundedRectangle(RoundedRectangle&& moved);
   ~RoundedRectangle();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(RoundedRectangle);
 };
 
 // Represents an image resource in a session.
@@ -150,8 +135,6 @@ class Image : public Resource {
  private:
   off_t const memory_offset_;
   fuchsia::images::ImageInfo const info_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
 
 // Represents a buffer that is immutably bound to a range of a memory resource.
@@ -162,9 +145,6 @@ class Buffer final : public Resource {
          size_t buffer_size);
   Buffer(Buffer&& moved);
   ~Buffer();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Buffer);
 };
 
 // Represents a mesh resource in a session.  Before it can be rendered, it
@@ -185,9 +165,6 @@ class Mesh final : public Shape {
                    uint64_t vertex_offset, uint32_t vertex_count,
                    const float bounding_box_min[3],
                    const float bounding_box_max[3]);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Mesh);
 };
 
 // Represents a material resource in a session.
@@ -199,16 +176,13 @@ class Material final : public Resource {
 
   // Sets the material's texture.
   void SetTexture(const Image& image) {
-    FXL_DCHECK(session() == image.session());
+    ZX_DEBUG_ASSERT(session() == image.session());
     SetTexture(image.id());
   }
   void SetTexture(uint32_t image_id);
 
   // Sets the material's color.
   void SetColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Material);
 };
 
 // Represents an abstract node resource in a session.
@@ -250,9 +224,6 @@ class Node : public Resource {
   explicit Node(Session* session);
   Node(Node&& moved);
   ~Node();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Node);
 };
 
 // Represents an shape node resource in a session.
@@ -264,20 +235,17 @@ class ShapeNode final : public Node {
 
   // Sets the shape that the shape node should draw.
   void SetShape(const Shape& shape) {
-    FXL_DCHECK(session() == shape.session());
+    ZX_DEBUG_ASSERT(session() == shape.session());
     SetShape(shape.id());
   }
   void SetShape(uint32_t shape_id);
 
   // Sets the material with which to draw the shape.
   void SetMaterial(const Material& material) {
-    FXL_DCHECK(session() == material.session());
+    ZX_DEBUG_ASSERT(session() == material.session());
     SetMaterial(material.id());
   }
   void SetMaterial(uint32_t material_id);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ShapeNode);
 };
 
 // Abstract base class for nodes which can have child nodes.
@@ -286,13 +254,13 @@ class ContainerNode : public Node {
  public:
   // Adds a child to the node.
   void AddChild(const Node& child) {
-    FXL_DCHECK(session() == child.session());
+    ZX_DEBUG_ASSERT(session() == child.session());
     AddChild(child.id());
   }
   void AddChild(uint32_t child_node_id);
 
   void AddPart(const Node& part) {
-    FXL_DCHECK(session() == part.session());
+    ZX_DEBUG_ASSERT(session() == part.session());
     AddPart(part.id());
   }
   void AddPart(uint32_t part_node_id);
@@ -304,8 +272,6 @@ class ContainerNode : public Node {
   explicit ContainerNode(Session* session);
   ContainerNode(ContainerNode&& moved);
   ~ContainerNode();
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ContainerNode);
 };
 
 // Required by EntityNode::Attach().
@@ -321,9 +287,6 @@ class EntityNode : public ContainerNode {
   void SetClip(uint32_t clip_id, bool clip_to_self);
 
   void Attach(const ViewHolder& view_holder);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(EntityNode);
 };
 
 // Represents an imported node resource in a session.
@@ -346,8 +309,6 @@ class ImportNode final : public ContainerNode {
   bool is_bound() const { return is_bound_; }
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
-
   bool is_bound_ = false;
 };
 
@@ -400,9 +361,6 @@ class ClipNode final : public ContainerNode {
   explicit ClipNode(Session* session);
   ClipNode(ClipNode&& moved);
   ~ClipNode();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ClipNode);
 };
 
 // Creates a node that renders its hierarchy with the specified opacity.
@@ -415,9 +373,6 @@ class OpacityNode final : public ContainerNode {
   // The opacity with which to render the contents of the hierarchy rooted at
   // this node. The opacity values are clamped 0.0 to 1.0.
   void SetOpacity(float opacity);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);
 };
 
 // A value that can be used in place of a constant value.
@@ -426,9 +381,6 @@ class Variable final : public Resource {
   explicit Variable(Session* session, fuchsia::ui::gfx::Value initial_value);
   Variable(Variable&& moved);
   ~Variable();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Variable);
 };
 
 // Represents an abstract light resource in a session.
@@ -449,9 +401,6 @@ class Light : public Resource {
   explicit Light(Session* session);
   Light(Light&& moved);
   ~Light();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Light);
 };
 
 // Represents a directional light resource in a session.
@@ -460,9 +409,6 @@ class AmbientLight final : public Light {
   explicit AmbientLight(Session* session);
   AmbientLight(AmbientLight&& moved);
   ~AmbientLight();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AmbientLight);
 };
 
 // Represents a directional light resource in a session.
@@ -478,9 +424,6 @@ class DirectionalLight final : public Light {
   }
   void SetDirection(const float direction[3]);
   void SetDirection(uint32_t variable_id);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(DirectionalLight);
 };
 
 // Represents a scene resource in a session.
@@ -491,7 +434,7 @@ class Scene final : public ContainerNode {
   ~Scene();
 
   void AddLight(const Light& light) {
-    FXL_DCHECK(session() == light.session());
+    ZX_DEBUG_ASSERT(session() == light.session());
     AddLight(light.id());
   }
   void AddLight(uint32_t light_id);
@@ -499,8 +442,6 @@ class Scene final : public ContainerNode {
 
  private:
   void Detach() = delete;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
 class CameraBase : public Resource {
@@ -514,9 +455,6 @@ class CameraBase : public Resource {
   // Sets the camera pose buffer
   void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
                      uint64_t base_time, uint64_t time_interval);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(CameraBase);
 };
 
 // Represents a camera resource in a session.
@@ -529,9 +467,6 @@ class Camera : public CameraBase {
 
   // Sets the camera's projection parameters.
   void SetProjection(const float fovy);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Camera);
 };
 
 // Represents a StereoCamera resource in a session.
@@ -545,9 +480,6 @@ class StereoCamera final : public CameraBase {
   // Sets the camera's projection parameters.
   void SetStereoProjection(const float left_projection[16],
                            const float right_projection[16]);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(StereoCamera);
 };
 
 // Represents a renderer resource in a session.
@@ -559,7 +491,7 @@ class Renderer final : public Resource {
 
   // Sets the camera whose view will be rendered.
   void SetCamera(const Camera& camera) {
-    FXL_DCHECK(session() == camera.session());
+    ZX_DEBUG_ASSERT(session() == camera.session());
     SetCamera(camera.id());
   }
   void SetCamera(uint32_t camera_id);
@@ -573,9 +505,6 @@ class Renderer final : public Resource {
   // NOTE: disabling clipping only has a visual effect; hit-testing is not
   // affected.
   void SetDisableClipping(bool disable_clipping);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
 
 // Represents a layer resource in a session.
@@ -597,13 +526,10 @@ class Layer final : public Resource {
   void SetSize(const float size[2]);
 
   void SetRenderer(const Renderer& renderer) {
-    FXL_DCHECK(session() == renderer.session());
+    ZX_DEBUG_ASSERT(session() == renderer.session());
     SetRenderer(renderer.id());
   }
   void SetRenderer(uint32_t renderer_id);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Layer);
 };
 
 // Represents a layer-stack resource in a session.
@@ -614,19 +540,16 @@ class LayerStack final : public Resource {
   ~LayerStack();
 
   void AddLayer(const Layer& layer) {
-    FXL_DCHECK(session() == layer.session());
+    ZX_DEBUG_ASSERT(session() == layer.session());
     AddLayer(layer.id());
   }
   void AddLayer(uint32_t layer_id);
   void RemoveLayer(const Layer& layer) {
-    FXL_DCHECK(session() == layer.session());
+    ZX_DEBUG_ASSERT(session() == layer.session());
     RemoveLayer(layer.id());
   }
   void RemoveLayer(uint32_t layer_id);
   void RemoveAllLayers();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LayerStack);
 };
 
 // Represents a display-compositor resource in a session.
@@ -638,13 +561,10 @@ class DisplayCompositor final : public Resource {
 
   // Sets the layer-stack that is to be composited.
   void SetLayerStack(const LayerStack& layer_stack) {
-    FXL_DCHECK(session() == layer_stack.session());
+    ZX_DEBUG_ASSERT(session() == layer_stack.session());
     SetLayerStack(layer_stack.id());
   }
   void SetLayerStack(uint32_t layer_stack_id);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
 };
 
 }  // namespace scenic

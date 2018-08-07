@@ -4,13 +4,20 @@
 
 #include "lib/ui/scenic/cpp/resources.h"
 
-#include <fbl/algorithm.h>
+#include <algorithm>
 
-#include "lib/fxl/logging.h"
 #include "lib/images/cpp/images.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
+namespace {
+
+template<class T>
+constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
+    return (v < lo) ? lo : (hi < v) ? hi : v;
+}
+
+} // namespace
 
 Resource::Resource(Session* session)
     : session_(session), id_(session->AllocResourceId()) {}
@@ -147,8 +154,8 @@ void Mesh::BindBuffers(const Buffer& index_buffer,
                        uint64_t vertex_offset, uint32_t vertex_count,
                        const float bounding_box_min[3],
                        const float bounding_box_max[3]) {
-  FXL_DCHECK(session() == index_buffer.session() &&
-             session() == vertex_buffer.session());
+  ZX_DEBUG_ASSERT(session() == index_buffer.session() &&
+                  session() == vertex_buffer.session());
   session()->Enqueue(NewBindMeshBuffersCmd(
       id(), index_buffer.id(), index_format, index_offset, index_count,
       vertex_buffer.id(), std::move(vertex_format), vertex_offset, vertex_count,
@@ -274,18 +281,18 @@ ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 ImportNode::ImportNode(ImportNode&& moved) : ContainerNode(std::move(moved)) {}
 
 ImportNode::~ImportNode() {
-  FXL_DCHECK(is_bound_) << "Import was never bound.";
+  ZX_DEBUG_ASSERT_MSG(is_bound_, "Import was never bound.");
 }
 
 void ImportNode::Bind(zx::eventpair import_token) {
-  FXL_DCHECK(!is_bound_);
+  ZX_DEBUG_ASSERT(!is_bound_);
   session()->Enqueue(NewImportResourceCmd(
       id(), fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token)));
   is_bound_ = true;
 }
 
 void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
-  FXL_DCHECK(!is_bound_);
+  ZX_DEBUG_ASSERT(!is_bound_);
   session()->Enqueue(NewImportResourceCmdAsRequest(
       id(), fuchsia::ui::gfx::ImportSpec::NODE, out_export_token));
   is_bound_ = true;
@@ -321,7 +328,7 @@ View::View(Session* session, zx::eventpair token, const std::string& debug_name)
 View::~View() = default;
 
 void View::AddChild(const Node& child) const {
-  FXL_DCHECK(session() == child.session());
+  ZX_DEBUG_ASSERT(session() == child.session());
   session()->Enqueue(NewAddChildCmd(id(), child.id()));
 }
 
@@ -343,7 +350,7 @@ OpacityNode::OpacityNode(OpacityNode&& moved)
 OpacityNode::~OpacityNode() = default;
 
 void OpacityNode::SetOpacity(float opacity) {
-  opacity = fbl::clamp(opacity, 0.f, 1.f);
+  opacity = clamp(opacity, 0.f, 1.f);
   session()->Enqueue(NewSetOpacityCmd(id(), opacity));
 }
 

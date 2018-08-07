@@ -6,8 +6,8 @@
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
@@ -23,14 +23,14 @@ std::pair<zx::vmo, fxl::RefPtr<HostData>> AllocateMemory(size_t size) {
   // Create the vmo and map it into this process.
   zx::vmo local_vmo;
   zx_status_t status = zx::vmo::create(size, 0u, &local_vmo);
-  FXL_CHECK(status == ZX_OK) << "vmo create failed: status=" << status;
+  ZX_ASSERT_MSG(status == ZX_OK, "vmo create failed: status=%d", status);
   auto data = fxl::MakeRefCounted<HostData>(local_vmo, 0u, size);
 
   // Drop rights before we transfer the VMO to the session manager.
   zx::vmo remote_vmo;
   status = local_vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
                              &remote_vmo);
-  FXL_CHECK(status == ZX_OK) << "replace rights failed: status=" << status;
+  ZX_ASSERT_MSG(status == ZX_OK, "replace rights failed: status=%d", status);
   return std::make_pair(std::move(remote_vmo), std::move(data));
 }
 
@@ -42,14 +42,14 @@ HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size,
   uintptr_t ptr;
   zx_status_t status =
       zx::vmar::root_self()->map(0, vmo, offset, size, flags, &ptr);
-  FXL_CHECK(status == ZX_OK) << "map failed: status=" << status;
+  ZX_ASSERT_MSG(status == ZX_OK, "map failed: status=%d", status);
   ptr_ = reinterpret_cast<void*>(ptr);
 }
 
 HostData::~HostData() {
   zx_status_t status =
       zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
-  FXL_CHECK(status == ZX_OK) << "unmap failed: status=" << status;
+  ZX_ASSERT_MSG(status == ZX_OK, "unmap failed: status=%d", status);
 }
 
 HostMemory::HostMemory(Session* session, size_t size)
@@ -106,9 +106,9 @@ bool HostImagePool::Configure(const fuchsia::images::ImageInfo* image_info) {
     image_ptrs_[i].reset();
 
   if (configured_) {
-    FXL_DCHECK(image_info_.width > 0);
-    FXL_DCHECK(image_info_.height > 0);
-    FXL_DCHECK(image_info_.stride > 0);
+    ZX_DEBUG_ASSERT(image_info_.width > 0);
+    ZX_DEBUG_ASSERT(image_info_.height > 0);
+    ZX_DEBUG_ASSERT(image_info_.stride > 0);
 
     size_t desired_size = Image::ComputeSize(image_info_);
     for (uint32_t i = 0; i < num_images(); i++) {
@@ -120,7 +120,7 @@ bool HostImagePool::Configure(const fuchsia::images::ImageInfo* image_info) {
 }
 
 const HostImage* HostImagePool::GetImage(uint32_t index) {
-  FXL_DCHECK(index < num_images());
+  ZX_DEBUG_ASSERT(index < num_images());
 
   if (image_ptrs_[index])
     return image_ptrs_[index].get();
@@ -139,7 +139,7 @@ const HostImage* HostImagePool::GetImage(uint32_t index) {
 }
 
 void HostImagePool::DiscardImage(uint32_t index) {
-  FXL_DCHECK(index < num_images());
+  ZX_DEBUG_ASSERT(index < num_images());
 
   image_ptrs_[index].reset();
 }

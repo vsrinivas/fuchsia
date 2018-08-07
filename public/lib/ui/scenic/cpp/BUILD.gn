@@ -34,7 +34,4 @@ source_set("cpp") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
-  deps = [
-    "//zircon/public/lib/fbl",
-  ]
 }
