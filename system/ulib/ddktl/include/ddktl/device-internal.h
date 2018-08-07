@@ -261,6 +261,19 @@ constexpr void CheckResumable() {
                   "'zx_status_t DdkResume(uint32_t)'.");
 }
 
+DECLARE_HAS_MEMBER_FN(has_ddk_rxrpc, DdkRxrpc);
+
+template <typename D>
+constexpr void CheckRxrpcable() {
+    static_assert(has_ddk_rxrpc<D>::value,
+                  "Rxrpcable classes must implement DdkRxrpc");
+    static_assert(fbl::is_base_of<base_device, D>::value,
+                  "Rxrpcable classes must be derived from ddk::Device<...>.");
+    static_assert(fbl::is_same<decltype(&D::DdkRxrpc), zx_status_t (D::*)(uint32_t)>::value,
+                  "DdkRxrpc must be a public non-static member function with signature "
+                  "'zx_status_t DdkRxrpc(zx_handle_t)'.");
+}
+
 // all_mixins
 //
 // Checks a list of types to ensure that all of them are ddk mixins (i.e., they inherit from the

@@ -77,6 +77,9 @@ BEGIN_SUCCESS_CASE(Resumable)
     zx_status_t DdkResume(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
+BEGIN_SUCCESS_CASE(Rxrpcable)
+    zx_status_t DdkRxrpc(zx_handle_t channel) { return ZX_OK; }
+END_SUCCESS_CASE
 
 template <typename T>
 static bool do_test() {
@@ -156,6 +159,11 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         return ZX_OK;
     }
 
+    zx_status_t DdkRxrpc(zx_handle_t channel) {
+        rxrpc_called = true;
+        return ZX_OK;
+    }
+
     bool get_protocol_called = false;
     bool open_called = false;
     bool open_at_called = false;
@@ -168,6 +176,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     bool ioctl_called = false;
     bool suspend_called = false;
     bool resume_called = false;
+    bool rxrpc_called = false;
 };
 
 static bool test_dispatch() {
@@ -193,6 +202,7 @@ static bool test_dispatch() {
     EXPECT_EQ(ZX_OK, ops->ioctl(ctx, 0, nullptr, 0, nullptr, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, ops->suspend(ctx, 0), "");
     EXPECT_EQ(ZX_OK, ops->resume(ctx, 0), "");
+    EXPECT_EQ(ZX_OK, ops->rxrpc(ctx, 0), "");
 
     EXPECT_TRUE(dev->get_protocol_called, "");
     EXPECT_TRUE(dev->open_called, "");
@@ -206,6 +216,7 @@ static bool test_dispatch() {
     EXPECT_TRUE(dev->ioctl_called, "");
     EXPECT_TRUE(dev->suspend_called, "");
     EXPECT_TRUE(dev->resume_called, "");
+    EXPECT_TRUE(dev->rxrpc_called, "");
 
     END_TEST;
 }
@@ -236,6 +247,7 @@ DEFINE_FAIL_CASE(GetSizable)
 DEFINE_FAIL_CASE(Ioctlable)
 DEFINE_FAIL_CASE(Suspendable)
 DEFINE_FAIL_CASE(Resumable)
+DEFINE_FAIL_CASE(Rxrpcable)
 
 class TestBadOverride : public ddk::Device<TestBadOverride, ddk::Closable> {
   public:
@@ -304,6 +316,7 @@ RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
 RUN_NAMED_TEST("ddk::Ioctlable", do_test<TestIoctlable>);
 RUN_NAMED_TEST("ddk::Suspendable", do_test<TestSuspendable>);
 RUN_NAMED_TEST("ddk::Resumable", do_test<TestResumable>);
+RUN_NAMED_TEST("ddk::Rxrpcable", do_test<TestRxrpcable>);
 
 RUN_NAMED_TEST("Method dispatch test", test_dispatch);
 
@@ -321,6 +334,7 @@ RUN_NAMED_TEST("FailNoDdkGetSize", do_test<TestNotGetSizable>);
 RUN_NAMED_TEST("FailNoDdkIoctl", do_test<TestNotIoctlable>);
 RUN_NAMED_TEST("FailNoDdkSuspend", do_test<TestNotSuspendable>);
 RUN_NAMED_TEST("FailNoDdkResume", do_test<TestNotResumable>);
+RUN_NAMED_TEST("FailNoDdkRxrpc", do_test<TestNotRxrpcable>);
 RUN_NAMED_TEST("FailBadOverride", do_test<TestBadOverride>);
 RUN_NAMED_TEST("FailHiddenOverride", do_test<TestHiddenOverride>);
 RUN_NAMED_TEST("FailStaticOverride", do_test<TestStaticOverride>);

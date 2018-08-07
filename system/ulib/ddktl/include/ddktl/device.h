@@ -63,6 +63,8 @@
 // | ddk::Suspendable     | zx_status_t DdkSuspend(uint32_t flags)             |
 // |                      |                                                    |
 // | ddk::Resumable       | zx_status_t DdkResume(uint32_t flags)              |
+// |                      |                                                    |
+// | ddk::Rxrpcable       | zx_status_t DdkRxrpc(zx_handle_t channel)          |
 // +----------------------+----------------------------------------------------+
 //
 // Note: the ddk::FullDevice type alias may also be used if your device class
@@ -274,6 +276,20 @@ class Resumable : public internal::base_mixin {
     }
 };
 
+template <typename D>
+class Rxrpcable : public internal::base_mixin {
+  protected:
+    explicit Rxrpcable(zx_protocol_device_t* proto) {
+        internal::CheckRxrpcable<D>();
+        proto->rxrpc = Rxrpc;
+    }
+
+  private:
+    static zx_status_t Rxrpc(void* ctx, zx_handle_t channel) {
+        return static_cast<D*>(ctx)->DdkRxrpc(channel);
+    }
+};
+
 // Device is templated on the list of mixins that define which DDK device
 // methods are implemented. Note that internal::base_device *must* be the
 // left-most base class in order to ensure that its constructor runs before the
@@ -283,7 +299,7 @@ template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
     zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
-                       uint32_t prop_count = 0) {
+                       uint32_t prop_count = 0, const char* proxy_args = nullptr) {
         if (zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
@@ -298,6 +314,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         args.flags = flags;
         args.props = props;
         args.prop_count = prop_count;
+        args.proxy_args = proxy_args;
         AddProtocol(&args);
 
         return device_add(parent_, &args, &zxdev_);
@@ -402,6 +419,7 @@ using FullDevice = Device<D,
                           GetSizable,
                           Ioctlable,
                           Suspendable,
-                          Resumable>;
+                          Resumable,
+                          Rxrpcable>;
 
 }  // namespace ddk
