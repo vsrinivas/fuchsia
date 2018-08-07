@@ -6,11 +6,10 @@
 #include <iostream>
 #include <memory>
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
-#include "garnet/lib/ui/scenic/scenic.h"
-#include "garnet/lib/ui/scenic/system.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/command_line.h"
