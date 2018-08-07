@@ -124,8 +124,8 @@ while true; do
   fi
 
   if [[ "$direct" == false ]]; then
-    log_verbose "Updating device address"
-    update_device_addr $device_arg
+    log_verbose "Updating device address with device arg \"$device\""
+    update_device_addr $device
     if [[ -z "${device_addr}" ]]; then
       if [[ "${state}" != "discover1" ]]; then
         log "No device found, waiting..."
@@ -157,8 +157,8 @@ while true; do
   else # $direct == true
 
     if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
-      log_verbose "Updating device address"
-      update_device_addr $device_arg
+      log_verbose "Updating device address (direct) with \"$device\""
+      update_device_addr $device
       if [[ -z "${device_addr}" ]]; then
         if [[ "${state}" != "discover1" ]]; then
           log "No device found, waiting..."
