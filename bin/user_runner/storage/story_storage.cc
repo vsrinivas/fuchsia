@@ -245,8 +245,23 @@ class WriteLinkDataCall : public Operation<StoryStorage::Status> {
     FlowToken flow{this, &status_};
     status_ = StoryStorage::Status::OK;
 
-    page_client_->page()->Put(
-        to_array(key_), to_array(value_),
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(*value_, &vmo));
+    page_client_->page()->CreateReferenceFromVmo(
+        std::move(vmo).ToTransport(),
+        [this, flow, weak_ptr = GetWeakPtr()](
+            fuchsia::ledger::Status status,
+            std::unique_ptr<fuchsia::ledger::Reference> reference) {
+          if (weak_ptr && reference) {
+            PutReference(std::move(reference), flow);
+          }
+        });
+  }
+
+  void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
+                    FlowToken flow) {
+    page_client_->page()->PutReference(
+        to_array(key_), std::move(*reference), fuchsia::ledger::Priority::EAGER,
         [this, flow, weak_ptr = GetWeakPtr()](fuchsia::ledger::Status status) {
           if (!weak_ptr) {
             return;

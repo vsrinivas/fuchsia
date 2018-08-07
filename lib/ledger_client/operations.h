@@ -281,11 +281,33 @@ class WriteDataCall : public PageOperation<> {
     std::string json;
     XdrWrite(&json, &data_, filter_);
 
-    this->page()->Put(
-        to_array(key_), to_array(json),
-        this->Protect([this, flow](fuchsia::ledger::Status status) {
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(json, &vmo));
+    page()->CreateReferenceFromVmo(
+        std::move(vmo).ToTransport(),
+        [this, weak_ptr = GetWeakPtr(), flow](
+            fuchsia::ledger::Status status,
+            std::unique_ptr<fuchsia::ledger::Reference> reference) {
+          if (!weak_ptr) {
+            return;
+          }
+          PutReference(std::move(reference), flow);
+        });
+  }
+
+  void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
+                    FlowToken flow) {
+    if (!reference) {
+      FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                     << "Page.Put() could not construct reference.";
+      return;
+    }
+
+    page()->PutReference(
+        to_array(key_), std::move(*reference), fuchsia::ledger::Priority::EAGER,
+        Protect([this, flow](fuchsia::ledger::Status status) {
           if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+            FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
                            << "Page.Put() " << fidl::ToUnderlying(status);
           }
         }));

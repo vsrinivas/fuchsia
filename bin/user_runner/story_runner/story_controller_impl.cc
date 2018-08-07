@@ -847,7 +847,8 @@ class StoryControllerImpl::AddIntentCall
                      fuchsia::modular::ModuleParameterMapPtr parameter_map) {
           if (result.status != fuchsia::modular::ExecuteStatus::OK) {
             FXL_LOG(WARNING) << "StoryController::AddIntentCall got error "
-                             << "response from InitializeChainCall.";
+                             << "response from InitializeChainCall: "
+                             << result.error_message;
           }
           WriteModuleData(flow, std::move(parameter_map));
         }));
