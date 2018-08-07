@@ -97,6 +97,9 @@ class SocketChannelRelay final {
   // again, and false otherwise.
   __WARN_UNUSED_RESULT bool CopyFromSocketToChannel();
 
+  // Copies any data pending in |socket_write_queue_| to |socket_|.
+  void ServiceSocketWriteQueue();
+
   // Binds an async::Wait to a |handler|, but does not enable the wait.
   // The handler will be wrapped in code that verifies that |this| has not begun
   // destruction.
@@ -118,6 +121,15 @@ class SocketChannelRelay final {
 
   async::Wait sock_read_waiter_;
   async::Wait sock_close_waiter_;
+
+  // We use a std::deque here to minimize the number dynamic memory
+  // allocations (cf. std::list, which would require allocation on each
+  // SDU). This comes, however, at the cost of higher memory usage when the
+  // number of SDUs is small. (libc++ uses a minimum of 4KB per deque.)
+  //
+  // TODO(NET-1478): Switch to common::LinkedList.
+  // TODO(NET-1476): We should set an upper bound on the size of this queue.
+  std::deque<SDU> socket_write_queue_;
 
   const fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<SocketChannelRelay> weak_ptr_factory_;  // Keep last.

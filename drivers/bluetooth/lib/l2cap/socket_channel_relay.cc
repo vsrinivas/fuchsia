@@ -118,7 +118,20 @@ void SocketChannelRelay::OnSocketClosed(zx_status_t status) {
 }
 
 void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
-  FXL_NOTIMPLEMENTED();
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  // Note: kActivating is deliberately permitted, as ChannelImpl::Activate()
+  // will synchronously deliver any queued frames.
+  FXL_DCHECK(state_ != RelayState::kDeactivated);
+
+  if (state_ == RelayState::kDeactivating) {
+    FXL_LOG(INFO) << "l2cap: Ignorning " << __func__
+                  << " on socket for channel " << channel_->id()
+                  << " while deactivating";
+    return;
+  }
+
+  socket_write_queue_.push_back(std::move(sdu));
+  ServiceSocketWriteQueue();
 }
 
 void SocketChannelRelay::OnChannelClosed() {
@@ -186,6 +199,46 @@ bool SocketChannelRelay::CopyFromSocketToChannel() {
   } while (read_res == ZX_OK);
 
   return true;
+}
+
+void SocketChannelRelay::ServiceSocketWriteQueue() {
+  // TODO(NET-1477): Similarly to CopyFromSocketToChannel(), we may want to
+  // consider yielding occasionally. The data-rate from the Channel into the
+  // socket write queue should be bounded by PHY layer data rates, which are
+  // much lower than the CPU's data processing throughput, so starvation
+  // shouldn't be an issue. However, latency might be.
+  zx_status_t write_res;
+  do {
+    FXL_DCHECK(!socket_write_queue_.empty());
+    FXL_DCHECK(socket_write_queue_.front().is_valid());
+    FXL_DCHECK(socket_write_queue_.front().length());
+
+    const SDU& sdu = socket_write_queue_.front();
+    PDU::Reader(&sdu).ReadNext(
+        sdu.length(), [&](const common::ByteBuffer& pdu) {
+          size_t n_bytes_written = 0;
+          write_res =
+              socket_.write(0, pdu.data(), pdu.size(), &n_bytes_written);
+          FXL_DCHECK(write_res == ZX_OK || write_res == ZX_ERR_SHOULD_WAIT ||
+                     write_res == ZX_ERR_PEER_CLOSED)
+              << ": " << zx_status_get_string(write_res);
+          if (write_res != ZX_OK) {
+            FXL_DCHECK(n_bytes_written == 0);
+            FXL_VLOG(5) << "l2cap: Failed to write " << pdu.size()
+                        << " bytes to socket for channel " << channel_->id()
+                        << ": " << zx_status_get_string(write_res);
+            return;
+          }
+          FXL_DCHECK(n_bytes_written == pdu.size());
+        });
+    if (write_res == ZX_OK) {
+      // Subtle: We can't do this inside the lambda, because ReadNext requires
+      // the callback to maintain the validity of the PDU.
+      // TODO(NET-1483): Improve the interface with PDU::Reader, and update this
+      // code.
+      socket_write_queue_.pop_front();
+    }
+  } while (write_res == ZX_OK && !socket_write_queue_.empty());
 }
 
 void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
