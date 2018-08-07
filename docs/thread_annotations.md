@@ -113,3 +113,9 @@ available as well - see the Clang documentation for details. Situations that
 require disabling the analysis are likely to be complex for humans to understand
 as well as machines and should be accompanied by a comment indicating the
 invariants in use.
+
+The thread safety analysis can be defeated in a number of ways, for instance
+when using pointers.  For example, when taking the address of a guarded data
+member Clang looses track of the guard, e.g. for a foo_ protected by a lock_
+a call to `memset(&foo_, 0, sizeof(foo_))` without holding lock_ won't be caught
+as a violation.
