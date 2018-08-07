@@ -31,7 +31,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   // |LinkWatcher|
   void Notify(fuchsia::mem::Buffer json) override;
 
-  void ProcessNewValue(const fidl::StringPtr& json);
+  void ProcessNewValue(const fidl::StringPtr& value);
   void MaybeProcessContextLink(const fidl::StringPtr& value);
 
   StoryWatcherImpl* const owner_;

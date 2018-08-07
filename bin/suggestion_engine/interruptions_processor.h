@@ -25,7 +25,7 @@ class InterruptionsProcessor {
   ~InterruptionsProcessor();
 
   // Ranker that will be used to know if a suggestion should interrupt.
-  void SetDecisionPolicy(std::unique_ptr<DecisionPolicy> ranker);
+  void SetDecisionPolicy(std::unique_ptr<DecisionPolicy> decision_policy);
 
   // Add listener that will be notified when an interruption comes.
   void RegisterListener(

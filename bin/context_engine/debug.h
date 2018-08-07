@@ -48,7 +48,8 @@ class ContextDebugImpl : public fuchsia::modular::ContextDebug {
   void DispatchOneSubscription(
       fuchsia::modular::ContextDebugSubscription value);
   void DispatchSubscriptions(
-      fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> values);
+      fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription>
+          subscriptions);
 
   // Used in order to get a complete state snapshot when Watch() is called.
   const ContextRepository* const repository_;

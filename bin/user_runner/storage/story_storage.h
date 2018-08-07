@@ -155,7 +155,7 @@ class StoryStorage : public PageClient {
   //
   // |value| will never be a null StringPtr. |value| is always a JSON-encoded
   // string, so a null value will be presented as the string "null".
-  void NotifyLinkWatchers(const std::string& key, fidl::StringPtr value,
+  void NotifyLinkWatchers(const std::string& link_key, fidl::StringPtr value,
                           const void* context);
 
   // Completes the returned Future when the ledger notifies us (through

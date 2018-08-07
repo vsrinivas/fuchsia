@@ -29,7 +29,7 @@ class TestWithSessionStorage : public testing::TestWithLedger {
   fidl::StringPtr CreateStory(SessionStorage* const storage);
 
   void SetLinkValue(StoryStorage* const story_storage,
-                    const std::string& link_path,
+                    const std::string& link_name,
                     const std::string& link_value);
 
   void SetLinkValue(StoryStorage* const story_storage,

@@ -58,7 +58,7 @@ class ComponentActionLogImpl : public fuchsia::modular::ComponentActionLog {
   ComponentActionLogImpl(ActionLogger log_action);
   ~ComponentActionLogImpl() override;
 
-  void LogAction(fidl::StringPtr method, fidl::StringPtr params) override;
+  void LogAction(fidl::StringPtr method, fidl::StringPtr json_params) override;
 
  private:
   const ActionLogger log_action_;

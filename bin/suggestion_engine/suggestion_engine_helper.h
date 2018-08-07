@@ -18,9 +18,9 @@ SuggestionPrototype* CreateSuggestionPrototype(
     const std::string& story_id, fuchsia::modular::Proposal proposal);
 
 SuggestionPrototype* CreateSuggestionPrototype(
-    SuggestionPrototypeMap* suggestion_prototype_map,
-    const std::string& source_url, const std::string& story_id,
-    const std::string& preloaded_story_id, fuchsia::modular::Proposal proposal);
+    SuggestionPrototypeMap* owner, const std::string& source_url,
+    const std::string& story_id, const std::string& preloaded_story_id,
+    fuchsia::modular::Proposal proposal);
 
 }  // namespace modular
 

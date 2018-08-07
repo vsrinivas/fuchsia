@@ -75,7 +75,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
           view_owner_request) override;
 
   // |UserRunner|
-  void SwapUserShell(fuchsia::modular::AppConfig user_shell,
+  void SwapUserShell(fuchsia::modular::AppConfig user_shell_config,
                      SwapUserShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
@@ -135,7 +135,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
 
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
-      const std::string& component_id,
+      const std::string& agent_url,
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
           entity_provider_request,
       fidl::InterfaceRequest<fuchsia::modular::AgentController>

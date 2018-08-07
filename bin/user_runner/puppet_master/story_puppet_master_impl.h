@@ -23,7 +23,7 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
   StoryPuppetMasterImpl(fidl::StringPtr story_name,
                         SessionStorage* session_storage,
-                        StoryCommandExecutor* executor_);
+                        StoryCommandExecutor* executor);
   ~StoryPuppetMasterImpl() override;
 
  private:

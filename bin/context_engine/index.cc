@@ -34,16 +34,16 @@ const char kEntityTypeKey[] = "ey";
 const char kContextValueTypeKey[] = "t";
 
 std::set<std::string> EncodeMetadataAndType(
-    fuchsia::modular::ContextValueType nodeType,
+    fuchsia::modular::ContextValueType node_type,
     const fuchsia::modular::ContextMetadata& metadata) {
   fuchsia::modular::ContextMetadata meta_clone;
   fidl::Clone(metadata, &meta_clone);
-  return EncodeMetadataAndType(nodeType,
+  return EncodeMetadataAndType(node_type,
                                fidl::MakeOptional(std::move(meta_clone)));
 }
 
 std::set<std::string> EncodeMetadataAndType(
-    fuchsia::modular::ContextValueType nodeType,
+    fuchsia::modular::ContextValueType node_type,
     const fuchsia::modular::ContextMetadataPtr& metadata) {
   std::set<std::string> ret;
 
@@ -100,7 +100,7 @@ std::set<std::string> EncodeMetadataAndType(
   }
 
   std::ostringstream str;
-  str << kContextValueTypeKey << fidl::ToUnderlying(nodeType);
+  str << kContextValueTypeKey << fidl::ToUnderlying(node_type);
   ret.insert(str.str());
 
   return ret;

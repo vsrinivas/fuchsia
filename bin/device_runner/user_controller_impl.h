@@ -63,7 +63,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
 
  private:
   // |fuchsia::modular::UserController|
-  void SwapUserShell(fuchsia::modular::AppConfig user_shell,
+  void SwapUserShell(fuchsia::modular::AppConfig user_shell_config,
                      SwapUserShellCallback callback) override;
 
   // |fuchsia::modular::UserController|

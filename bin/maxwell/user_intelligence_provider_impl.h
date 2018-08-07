@@ -23,12 +23,16 @@ class UserIntelligenceProviderImpl
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
       component::StartupContext* context, const Config& config,
-      fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
-      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
+          context_engine_handle,
+      fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
+          story_provider_handle,
+      fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
+          focus_provider_handle,
       fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-          visible_stories_provider,
-      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master);
+          visible_stories_provider_handle,
+      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster>
+          puppet_master_handle);
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
@@ -44,7 +48,7 @@ class UserIntelligenceProviderImpl
       fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
 
   void StartAgents(fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
-                       component_context) override;
+                       component_context_handle) override;
 
   void GetServicesForAgent(fidl::StringPtr url,
                            GetServicesForAgentCallback callback) override;

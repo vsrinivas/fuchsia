@@ -17,8 +17,9 @@ class DeadStoryRankingFeature : public RankingFeature {
   ~DeadStoryRankingFeature() override;
 
  private:
-  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
-                                const RankedSuggestion& suggestion) override;
+  double ComputeFeatureInternal(
+      const fuchsia::modular::UserInput& query,
+      const RankedSuggestion& ranked_suggestion) override;
 
   fuchsia::modular::ContextSelectorPtr CreateContextSelectorInternal() override;
 };

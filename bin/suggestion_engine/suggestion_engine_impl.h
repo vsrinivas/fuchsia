@@ -147,9 +147,8 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
 
   // |fuchsia::modular::SuggestionEngine|
   void RegisterQueryHandler(
-      fidl::StringPtr url,
-      fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler)
-      override;
+      fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
+                               query_handler_handle) override;
 
   // |fuchsia::modular::SuggestionEngine|
   void Initialize(
@@ -222,10 +221,10 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
       const std::string& proposal_id, const std::string& override_story_id);
 
   void PerformSetLinkValueAction(const fuchsia::modular::Action& action,
-                                 const std::string& override_story_id);
+                                 const std::string& story_id);
 
   void PerformUpdateModuleAction(fuchsia::modular::Action* const action,
-                                 const std::string& override_story_id);
+                                 const std::string& story_id);
 
   void PerformQueryAction(const fuchsia::modular::Action& action);
 

@@ -50,8 +50,8 @@ class QueryProcessor {
   // Registers a handler that will be notified when a new query comes for its
   // fullfillment.
   void RegisterQueryHandler(
-      fidl::StringPtr url,
-      fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler);
+      fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
+                               query_handler_handle);
 
   void SetFilters(
       std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters,
@@ -64,7 +64,7 @@ class QueryProcessor {
   // will be returned for any |suggestion_id|. If |suggestion_id| is not in the
   // set of results given to the |listener| provided to the most recent
   // invocation of ExecuteQuery(), return nullptr.
-  RankedSuggestion* GetSuggestion(const std::string& suggestion_id) const;
+  RankedSuggestion* GetSuggestion(const std::string& suggestion_uuid) const;
 
   // Cleans up all resources associated with a query, including clearing
   // the previous ask suggestions, closing any still open SuggestionListeners,

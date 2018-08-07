@@ -94,7 +94,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   //
   // Releases ownership of |controller| and cleans up any related internal
   // storage. It is the caller's responsibility to delete |controller|.
-  void ReleaseModule(ModuleControllerImpl* controller);
+  void ReleaseModule(ModuleControllerImpl* module_controller_impl);
 
   // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;
@@ -108,7 +108,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // Called by ModuleContextImpl.
   fuchsia::modular::LinkPathPtr GetLinkPathForParameterName(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr key);
+      const fidl::VectorPtr<fidl::StringPtr>& module_path,
+      fidl::StringPtr name);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
@@ -143,8 +144,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // |fuchsia::modular::StoryController| - public so that
   // fuchsia::modular::StoryProvider can call it
   void AddModule(
-      fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr module_name,
-      fuchsia::modular::Intent intent,
+      fidl::VectorPtr<fidl::StringPtr> parent_module_path,
+      fidl::StringPtr module_name, fuchsia::modular::Intent intent,
       fuchsia::modular::SurfaceRelationPtr surface_relation) override;
 
   // Called by ModuleContextImpl.

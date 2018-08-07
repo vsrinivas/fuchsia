@@ -17,7 +17,8 @@ class ConjugateRankedPassiveFilter : public SuggestionPassiveFilter {
   ConjugateRankedPassiveFilter(std::shared_ptr<RankingFeature> ranking_feature);
   ~ConjugateRankedPassiveFilter() override;
 
-  bool Filter(const std::unique_ptr<RankedSuggestion>& suggestion) override;
+  bool Filter(
+      const std::unique_ptr<RankedSuggestion>& ranked_suggestion) override;
 
  private:
   std::shared_ptr<RankingFeature> ranking_feature_;

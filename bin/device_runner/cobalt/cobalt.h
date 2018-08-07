@@ -42,10 +42,10 @@ fxl::AutoCall<fit::closure> InitializeCobalt(
 void ReportEvent(ModularEvent event);
 
 // Report a module launch time duration to Cobalt.
-void ReportModuleLaunchTime(std::string module_url, zx_time_t time);
+void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos);
 
 // Report a story launch time duration to Cobalt.
-void ReportStoryLaunchTime(zx_time_t time);
+void ReportStoryLaunchTime(zx_time_t time_nanos);
 
 }  // namespace modular
 

@@ -84,7 +84,8 @@ class NextProcessor {
 
   void SetRanker(std::unique_ptr<Ranker> ranker);
 
-  void SetInterruptionDecisionPolicy(std::unique_ptr<DecisionPolicy> ranker);
+  void SetInterruptionDecisionPolicy(
+      std::unique_ptr<DecisionPolicy> decision_policy);
 
   // Gets a suggestion stored in the processor.
   RankedSuggestion* GetSuggestion(const std::string& suggestion_id) const;

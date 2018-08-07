@@ -112,8 +112,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // |queue_name| The name of the message queue to observe.
   // |task_id| The identifier for the task.
   void ScheduleMessageQueueNewMessageTask(const std::string& agent_url,
-                                          const std::string& queue_name,
-                                          const std::string& task_id);
+                                          const std::string& task_id,
+                                          const std::string& queue_name);
 
   // Schedules a task that triggers when a message queue is deleted.
   //
@@ -121,8 +121,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // |queue_token| The token of the queue that is to be observed.
   // |task_id| The identifier of the task.
   void ScheduleMessageQueueDeletionTask(const std::string& agent_url,
-                                        const std::string& queue_token,
-                                        const std::string& task_id);
+                                        const std::string& task_id,
+                                        const std::string& queue_token);
 
   // Deletes the task scheduled for |agent_url| and |task_id|, regardless of the
   // task type.

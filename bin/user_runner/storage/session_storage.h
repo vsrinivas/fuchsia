@@ -111,7 +111,7 @@ class SessionStorage : public PageClient {
   // Returns a Future StoryDataPtr for story with |name|. See CreateStory() for
   // more information.
   FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryDataByName(
-      fidl::StringPtr name);
+      fidl::StringPtr story_name);
 
   // Returns a Future vector of StoryData for all stories in this session.
   //

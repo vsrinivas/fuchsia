@@ -22,10 +22,10 @@ namespace internal {
 // Returns a set of strings which encode both the keys and values in |metadata|
 // and |type| for use in an inverted index.
 std::set<std::string> EncodeMetadataAndType(
-    fuchsia::modular::ContextValueType type,
+    fuchsia::modular::ContextValueType node_type,
     const fuchsia::modular::ContextMetadataPtr& metadata);
 std::set<std::string> EncodeMetadataAndType(
-    fuchsia::modular::ContextValueType type,
+    fuchsia::modular::ContextValueType node_type,
     const fuchsia::modular::ContextMetadata& metadata);
 }  // namespace internal
 

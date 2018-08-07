@@ -17,7 +17,8 @@ namespace modular {
 class ContextReaderImpl : fuchsia::modular::ContextReader {
  public:
   ContextReaderImpl(
-      fuchsia::modular::ComponentScope client, ContextRepository* repository,
+      fuchsia::modular::ComponentScope client_info,
+      ContextRepository* repository,
       fidl::InterfaceRequest<fuchsia::modular::ContextReader> request);
   ~ContextReaderImpl() override;
 

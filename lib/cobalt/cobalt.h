@@ -41,8 +41,8 @@ class CobaltObservation {
 
  private:
   bool CompareObservationValueLess(
-      const fuchsia::cobalt::ObservationValue& observationValue,
-      const fuchsia::cobalt::ObservationValue& rhsObservationValue) const;
+      const fuchsia::cobalt::ObservationValue& observation_value,
+      const fuchsia::cobalt::ObservationValue& rhs_observation_value) const;
   uint32_t metric_id_;
   fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts_;
 };

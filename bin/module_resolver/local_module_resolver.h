@@ -58,9 +58,9 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
                OnQueryCallback done) override;
 
   void OnSourceIdle(const std::string& source_name);
-  void OnNewManifestEntry(const std::string& source_name, std::string id,
-                          fuchsia::modular::ModuleManifest entry);
-  void OnRemoveManifestEntry(const std::string& source_name, std::string id);
+  void OnNewManifestEntry(const std::string& source_name, std::string id_in,
+                          fuchsia::modular::ModuleManifest new_entry);
+  void OnRemoveManifestEntry(const std::string& source_name, std::string id_in);
 
   void PeriodicCheckIfSourcesAreReady();
 

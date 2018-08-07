@@ -97,8 +97,8 @@ class MessageQueueManager : PageClient {
   //
   // Note that this is different from |RegisterMessageWatcher|, where the passed
   // in namespace, instance ids, and queue name directly describe the queue.
-  void RegisterDeletionWatcher(const std::string& watcher_namespace,
-                               const std::string& watcher_instance_id,
+  void RegisterDeletionWatcher(const std::string& component_namespace,
+                               const std::string& component_instance_id,
                                const std::string& queue_token,
                                const std::function<void()>& watcher);
 
