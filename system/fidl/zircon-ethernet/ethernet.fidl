@@ -1,0 +1,60 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.ethernet;
+
+struct MacAddress {
+    array<uint8>:6 octets;
+};
+
+// Info.features bits
+const uint32 INFO_FEATURE_WLAN     = 0x00000001;
+const uint32 INFO_FEATURE_SYNTH    = 0x00000002;
+const uint32 INFO_FEATURE_LOOPBACK = 0x00000004;
+
+// eth_info_t
+struct Info {
+    uint32 features;
+    uint32 mtu;
+    MacAddress mac;
+};
+
+// eth_fifos_t
+struct Fifos {
+    handle<fifo> rx;
+    handle<fifo> tx;
+    uint32 rx_depth;
+    uint32 tx_depth;
+};
+
+// device_status bits
+const uint32 DEVICE_STATUS_ONLINE = 0x00000001;
+
+// zircon/device/ethernet.h
+[Layout="Simple"]
+interface Device {
+    1: GetInfo() -> (zx.status status, Info? info);
+
+    2: GetFifos() -> (zx.status status, Fifos? info);
+
+    3: SetIOBuffer(handle<vmo> h) -> (zx.status status);
+
+    4: Start() -> (zx.status status);
+
+    5: Stop();
+
+    6: ListenStart() -> (zx.status status);
+
+    7: ListenStop();
+
+    // `#define DEVICE_NAME_LEN 16`
+    8: SetClientName(string:16 name) -> (zx.status status);
+
+    9: GetStatus() -> (uint32 device_status);
+
+    10: SetPromiscuousMode(bool enabled) -> (zx.status status);
+
+    // TODO(tamird): do we need to support this?
+    // 11: ConfigMulticast(eth_multicast_config_t) -> (zx.status status);
+};

@@ -6,6 +6,12 @@ library fuchsia.net.stack;
 
 using fuchsia.net;
 
+// TODO(tamird): use zircon.ethernet.MacAddress when
+// https://fuchsia.atlassian.net/browse/FIDL-254 is fixed.
+struct MacAddress {
+    array<uint8>:6 addr;
+};
+
 // Features that may be present on a network interface.
 // TODO(tkilbourn): consider a bitfield for this.
 enum InterfaceFeature : uint8 {
@@ -47,7 +53,7 @@ struct InterfaceInfo {
     string path;
 
     // The MAC address of the interface, if available.
-    fuchsia.net.MacAddress? mac;
+    MacAddress? mac;
 
     // The maximum transmission unit for the interface in bytes.
     uint32 mtu;
