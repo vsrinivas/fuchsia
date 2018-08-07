@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace ledger {
-namespace test {
 TestBackoff::TestBackoff(int* get_next_count)
     : get_next_count_(get_next_count) {}
 TestBackoff::~TestBackoff() {}
@@ -133,5 +132,4 @@ fit::closure TestWithPageStorage::MakeQuitTaskOnce() {
   };
 }
 
-}  // namespace test
 }  // namespace ledger

@@ -10,29 +10,27 @@
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
-namespace integration {
-namespace sync {
+namespace ledger {
 namespace {
 
-class SyncWatcherImpl : public ledger::SyncWatcher {
+class SyncWatcherImpl : public SyncWatcher {
  public:
   SyncWatcherImpl() : binding_(this) {}
   ~SyncWatcherImpl() override {}
 
   auto NewBinding() { return binding_.NewBinding(); }
 
-  bool Equals(ledger::SyncState download, ledger::SyncState upload) {
+  bool Equals(SyncState download, SyncState upload) {
     return download == download_state && upload == upload_state;
   }
 
-  ledger::SyncState download_state = ledger::SyncState::PENDING;
-  ledger::SyncState upload_state = ledger::SyncState::PENDING;
+  SyncState download_state = SyncState::PENDING;
+  SyncState upload_state = SyncState::PENDING;
   int state_change_count = 0;
 
  private:
-  // ledger::SyncWatcher:
-  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
+  // SyncWatcher:
+  void SyncStateChanged(SyncState download, SyncState upload,
                         SyncStateChangedCallback callback) override {
     state_change_count++;
     download_state = download;
@@ -40,28 +38,28 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
     callback();
   }
 
-  fidl::Binding<ledger::SyncWatcher> binding_;
+  fidl::Binding<SyncWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
 
 class SyncIntegrationTest : public IntegrationTest {
  protected:
-  std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(ledger::PagePtr* page) {
+  std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(PagePtr* page) {
     auto watcher = std::make_unique<SyncWatcherImpl>();
 
-    ledger::Status status = ledger::Status::INTERNAL_ERROR;
+    Status status = Status::INTERNAL_ERROR;
     (*page)->SetSyncStateWatcher(watcher->NewBinding(),
                                  callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
-    EXPECT_EQ(ledger::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
 
     return watcher;
   }
 
   bool WaitUntilSyncIsIdle(SyncWatcherImpl* watcher) {
     return RunLoopUntil([watcher] {
-      return watcher->Equals(ledger::SyncState::IDLE, ledger::SyncState::IDLE);
+      return watcher->Equals(SyncState::IDLE, SyncState::IDLE);
     });
   }
 };
@@ -73,8 +71,8 @@ class SyncIntegrationTest : public IntegrationTest {
 // first instance uploads data to the cloud and shuts down, and only after that
 // the second instance is created and connected.
 TEST_P(SyncIntegrationTest, SerialConnection) {
-  ledger::PageId page_id;
-  ledger::Status status;
+  PageId page_id;
+  Status status;
 
   // Create the first instance and write the page entry.
   auto instance1 = NewLedgerAppInstance();
@@ -86,7 +84,7 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
 
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
-  ASSERT_EQ(ledger::Status::OK, status);
+  ASSERT_EQ(Status::OK, status);
   page1->GetId(callback::Capture(QuitLoopClosure(), &page_id));
   RunLoop();
 
@@ -96,23 +94,22 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   // Create the second instance, connect to the same page and download the
   // data.
   auto instance2 = NewLedgerAppInstance();
-  auto page2 =
-      instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
   auto page2_state_watcher = WatchPageSyncState(&page2);
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
-  ledger::PageSnapshotPtr snapshot;
+  PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      nullptr, callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
-  std::unique_ptr<ledger::InlinedValue> inlined_value;
+  ASSERT_EQ(Status::OK, status);
+  std::unique_ptr<InlinedValue> inlined_value;
 
   snapshot->GetInline(
       convert::ToArray("Hello"),
       callback::Capture(QuitLoopClosure(), &status, &inlined_value));
   RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+  ASSERT_EQ(Status::OK, status);
   ASSERT_TRUE(inlined_value);
   ASSERT_EQ("World", convert::ToString(inlined_value->value));
 
@@ -132,11 +129,10 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
 
   auto page1 = instance1->GetTestPage();
   auto page1_state_watcher = WatchPageSyncState(&page1);
-  ledger::PageId page_id;
+  PageId page_id;
   page1->GetId(callback::Capture(QuitLoopClosure(), &page_id));
   RunLoop();
-  auto page2 =
-      instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
   auto page2_state_watcher = WatchPageSyncState(&page2);
   // Wait until the sync on the second device is idle and record the number of
   // state updates.
@@ -144,11 +140,11 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   int page2_initial_state_change_count =
       page2_state_watcher->state_change_count;
 
-  ledger::Status status;
+  Status status;
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
              callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+  ASSERT_EQ(Status::OK, status);
 
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -161,21 +157,20 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
       RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
         return page2_state_watcher->state_change_count >
                    page2_initial_state_change_count &&
-               page2_state_watcher->Equals(ledger::SyncState::IDLE,
-                                           ledger::SyncState::IDLE);
+               page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
       }));
 
-  ledger::PageSnapshotPtr snapshot;
+  PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      nullptr, callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
-  std::unique_ptr<ledger::InlinedValue> inlined_value;
+  ASSERT_EQ(Status::OK, status);
+  std::unique_ptr<InlinedValue> inlined_value;
   snapshot->GetInline(
       convert::ToArray("Hello"),
       callback::Capture(QuitLoopClosure(), &status, &inlined_value));
   RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+  ASSERT_EQ(Status::OK, status);
   ASSERT_TRUE(inlined_value);
   ASSERT_EQ("World", convert::ToString(inlined_value->value));
 
@@ -187,6 +182,4 @@ INSTANTIATE_TEST_CASE_P(SyncIntegrationTest, SyncIntegrationTest,
                         ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
-}  // namespace sync
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger

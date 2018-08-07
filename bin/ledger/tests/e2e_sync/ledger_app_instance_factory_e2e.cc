@@ -21,7 +21,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
-namespace test {
+namespace ledger {
 namespace {
 constexpr fxl::StringView kLedgerName = "AppTests";
 
@@ -31,7 +31,7 @@ class LedgerAppInstanceImpl final
   LedgerAppInstanceImpl(
       LedgerAppInstanceFactory::LoopController* loop_controller,
       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-      ledger::SyncParams sync_params, std::string user_id);
+      SyncParams sync_params, std::string user_id);
 
   void Init(fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
                 repository_factory_request);
@@ -49,8 +49,8 @@ class LedgerAppInstanceImpl final
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     LedgerAppInstanceFactory::LoopController* loop_controller,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    ledger::SyncParams sync_params, std::string user_id)
-    : test::LedgerAppInstanceFactory::LedgerAppInstance(
+    SyncParams sync_params, std::string user_id)
+    : LedgerAppInstanceFactory::LedgerAppInstance(
           loop_controller, convert::ToArray(kLedgerName),
           std::move(ledger_repository_factory)),
       startup_context_(
@@ -86,7 +86,7 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
 }  // namespace
 
 LedgerAppInstanceFactoryImpl::LedgerAppInstanceFactoryImpl(
-    ledger::SyncParams sync_params)
+    SyncParams sync_params)
     : sync_params_(std::move(sync_params)),
       user_id_("e2e_test_" + fxl::GenerateUUID()) {}
 
@@ -104,4 +104,4 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
   return result;
 }
 
-}  // namespace test
+}  // namespace ledger

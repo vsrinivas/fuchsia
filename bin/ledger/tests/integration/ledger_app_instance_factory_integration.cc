@@ -28,15 +28,14 @@
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 
-namespace test {
-namespace integration {
+namespace ledger {
 namespace {
 
 constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
 
-ledger::Environment BuildEnvironment(async_dispatcher_t* dispatcher) {
-  return ledger::EnvironmentBuilder()
+Environment BuildEnvironment(async_dispatcher_t* dispatcher) {
+  return EnvironmentBuilder()
       .SetAsync(dispatcher)
       // TODO(qsr) LE-558 Consider using a different dispatcher here.
       .SetIOAsync(dispatcher)
@@ -66,9 +65,8 @@ class LedgerAppInstanceImpl final
           repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
           repository_factory_ptr,
-      ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
-                                              ledger::FakeCloudProvider>*
-          cloud_provider,
+      fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                      FakeCloudProvider>* cloud_provider,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory>
           user_communicator_factory);
   ~LedgerAppInstanceImpl() override;
@@ -88,8 +86,8 @@ class LedgerAppInstanceImpl final
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
-    ledger::Environment environment_;
-    ledger::LedgerRepositoryFactoryImpl factory_impl_;
+    Environment environment_;
+    LedgerRepositoryFactoryImpl factory_impl_;
     fidl::Binding<ledger_internal::LedgerRepositoryFactory> factory_binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
@@ -100,9 +98,8 @@ class LedgerAppInstanceImpl final
   async::Loop loop_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
-  ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
-                                          ledger::FakeCloudProvider>* const
-      cloud_provider_;
+  fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                  FakeCloudProvider>* const cloud_provider_;
 
   // This must be the last field of this class.
   fxl::WeakPtrFactory<LedgerAppInstanceImpl> weak_ptr_factory_;
@@ -115,14 +112,12 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
         repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
         repository_factory_ptr,
-    ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
-                                            ledger::FakeCloudProvider>*
-        cloud_provider,
+    fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                    FakeCloudProvider>* cloud_provider,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory>
         user_communicator_factory)
-    : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          loop_controller, integration::RandomArray(1),
-          std::move(repository_factory_ptr)),
+    : LedgerAppInstanceFactory::LedgerAppInstance(
+          loop_controller, RandomArray(1), std::move(repository_factory_ptr)),
       loop_(&kAsyncLoopConfigNoAttachToThread),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
@@ -161,7 +156,7 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
 class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
  public:
   FakeUserCommunicatorFactory(async_dispatcher_t* services_dispatcher,
-                              ledger::NetConnectorFactory* netconnector_factory,
+                              NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
         environment_(BuildEnvironment(services_dispatcher)),
@@ -171,7 +166,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
   ~FakeUserCommunicatorFactory() override {}
 
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
-      ledger::DetachedPath /*user_directory*/) override {
+      DetachedPath /*user_directory*/) override {
     fuchsia::netconnector::NetConnectorPtr netconnector;
     async::PostTask(services_dispatcher_,
                     callback::MakeScoped(
@@ -190,26 +185,25 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
 
  private:
   async_dispatcher_t* const services_dispatcher_;
-  ledger::Environment environment_;
-  ledger::NetConnectorFactory* const netconnector_factory_;
+  Environment environment_;
+  NetConnectorFactory* const netconnector_factory_;
   std::string host_name_;
 
   // This must be the last field of this class.
   fxl::WeakPtrFactory<FakeUserCommunicatorFactory> weak_ptr_factory_;
 };
 
-}  // namespace
-
 enum EnableP2PMesh { NO, YES };
+
+}  // namespace
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl(ledger::InjectNetworkError inject_network_error,
+  LedgerAppInstanceFactoryImpl(InjectNetworkError inject_network_error,
                                EnableP2PMesh enable_p2p_mesh)
       : services_loop_(&kAsyncLoopConfigNoAttachToThread),
-        cloud_provider_(
-            ledger::FakeCloudProvider::Builder().SetInjectNetworkError(
-                inject_network_error)),
+        cloud_provider_(FakeCloudProvider::Builder().SetInjectNetworkError(
+            inject_network_error)),
         enable_p2p_mesh_(enable_p2p_mesh) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
@@ -220,11 +214,11 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  private:
   // Loop on which to run services.
   async::Loop services_loop_;
-  ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
-                                          ledger::FakeCloudProvider>
+  fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                  FakeCloudProvider>
       cloud_provider_;
   int app_instance_counter_ = 0;
-  ledger::NetConnectorFactory netconnector_factory_;
+  NetConnectorFactory netconnector_factory_;
   const EnableP2PMesh enable_p2p_mesh_;
 };
 
@@ -257,8 +251,6 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
   return result;
 }
 
-}  // namespace integration
-
 std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
   static std::vector<std::unique_ptr<LedgerAppInstanceFactory>> factories_impl;
   static std::once_flag flag;
@@ -266,18 +258,16 @@ std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
   auto factories_ptr = &factories_impl;
   std::call_once(flag, [factories_ptr] {
     for (auto inject_error :
-         {ledger::InjectNetworkError::NO, ledger::InjectNetworkError::YES}) {
-      for (auto enable_p2p :
-           {integration::EnableP2PMesh::NO, integration::EnableP2PMesh::YES}) {
-        if (enable_p2p == integration::EnableP2PMesh::YES &&
-            inject_error != ledger::InjectNetworkError::YES) {
+         {InjectNetworkError::NO, InjectNetworkError::YES}) {
+      for (auto enable_p2p : {EnableP2PMesh::NO, EnableP2PMesh::YES}) {
+        if (enable_p2p == EnableP2PMesh::YES &&
+            inject_error != InjectNetworkError::YES) {
           // Only enable p2p when cloud has errors. This helps ensure our tests
           // are fast enough for the CQ.
           continue;
         }
-        auto factory =
-            std::make_unique<integration::LedgerAppInstanceFactoryImpl>(
-                inject_error, enable_p2p);
+        auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>(
+            inject_error, enable_p2p);
         factory->Init();
         factories_ptr->push_back(std::move(factory));
       }
@@ -292,4 +282,4 @@ std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
   return factories;
 }
 
-}  // namespace test
+}  // namespace ledger

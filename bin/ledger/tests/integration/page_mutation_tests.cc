@@ -20,27 +20,27 @@ namespace {
 
 // Tests in this suite execute a series of operations and check the content of
 // the Page afterwards.
-class PageMutationTest : public test::integration::IntegrationTest {
+class PageMutationTest : public IntegrationTest {
  public:
   void SetUp() override {
     app_instance_ = NewLedgerAppInstance();
     page_ = app_instance_->GetTestPage();
   }
 
-  ledger::PageSnapshotPtr PageGetSnapshot() {
-    ledger::Status status;
-    ledger::PageSnapshotPtr snapshot;
+  PageSnapshotPtr PageGetSnapshot() {
+    Status status;
+    PageSnapshotPtr snapshot;
     auto waiter = NewWaiter();
     page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                        nullptr,
                        callback::Capture(waiter->GetCallback(), &status));
     waiter->RunUntilCalled();
-    EXPECT_EQ(ledger::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return snapshot;
   }
 
-  std::vector<ledger::Entry> GetEntries() {
-    ledger::PageSnapshotPtr snapshot = PageGetSnapshot();
+  std::vector<Entry> GetEntries() {
+    PageSnapshotPtr snapshot = PageGetSnapshot();
     return SnapshotGetEntries(this, &snapshot);
   }
 
@@ -101,9 +101,8 @@ class PageMutationTest : public test::integration::IntegrationTest {
   }
 
  protected:
-  std::unique_ptr<test::LedgerAppInstanceFactory::LedgerAppInstance>
-      app_instance_;
-  ledger::PagePtr page_;
+  std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance> app_instance_;
+  PagePtr page_;
 };
 
 TEST_P(PageMutationTest, InitialSnapshotIsEmpty) {
@@ -251,9 +250,8 @@ TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
   ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
 }
 
-INSTANTIATE_TEST_CASE_P(
-    PageMutationTest, PageMutationTest,
-    ::testing::ValuesIn(test::GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(PageMutationTest, PageMutationTest,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace ledger

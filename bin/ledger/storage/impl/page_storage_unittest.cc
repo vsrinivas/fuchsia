@@ -642,7 +642,7 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
 TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
   std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(new test::CommitRandomImpl());
+  parent.emplace_back(new CommitRandomImpl());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectIdentifier(), std::move(parent));
 

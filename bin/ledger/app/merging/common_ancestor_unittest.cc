@@ -23,7 +23,7 @@
 
 namespace ledger {
 namespace {
-class CommonAncestorTest : public test::TestWithPageStorage {
+class CommonAncestorTest : public TestWithPageStorage {
  public:
   CommonAncestorTest() {}
   ~CommonAncestorTest() override {}
@@ -32,7 +32,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
   storage::PageStorage* page_storage() override { return storage_.get(); }
 
   void SetUp() override {
-    ::testing::Test::SetUp();
+    TestWithPageStorage::SetUp();
     ASSERT_TRUE(CreatePageStorage(&storage_));
   }
 

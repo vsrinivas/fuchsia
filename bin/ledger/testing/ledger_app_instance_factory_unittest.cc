@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-namespace test {
+namespace ledger {
 namespace {
 
 class FakeLoopController : public LedgerAppInstanceFactory::LoopController {
@@ -153,4 +153,4 @@ TEST(CallbackWaiterTest, NotCalledYet) {
 }
 
 }  // namespace
-}  // namespace test
+}  // namespace ledger

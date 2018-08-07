@@ -18,9 +18,7 @@
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
-namespace integration {
-namespace sync {
+namespace ledger {
 namespace {
 
 fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
@@ -50,67 +48,65 @@ class RefCountedPageSnapshot
  public:
   RefCountedPageSnapshot() {}
 
-  ledger::PageSnapshotPtr& operator->() { return snapshot_; }
-  ledger::PageSnapshotPtr& operator*() { return snapshot_; }
+  PageSnapshotPtr& operator->() { return snapshot_; }
+  PageSnapshotPtr& operator*() { return snapshot_; }
 
  private:
-  ledger::PageSnapshotPtr snapshot_;
+  PageSnapshotPtr snapshot_;
 };
 
-class PageWatcherImpl : public ledger::PageWatcher {
+class PageWatcherImpl : public PageWatcher {
  public:
-  PageWatcherImpl(fidl::InterfaceRequest<ledger::PageWatcher> request,
+  PageWatcherImpl(fidl::InterfaceRequest<PageWatcher> request,
                   fxl::RefPtr<RefCountedPageSnapshot> base_snapshot)
       : binding_(this, std::move(request)),
         current_snapshot_(std::move(base_snapshot)) {}
 
   int changes = 0;
 
-  void GetInlineOnLatestSnapshot(
-      fidl::VectorPtr<uint8_t> key,
-      ledger::PageSnapshot::GetInlineCallback callback) {
+  void GetInlineOnLatestSnapshot(fidl::VectorPtr<uint8_t> key,
+                                 PageSnapshot::GetInlineCallback callback) {
     // We need to make sure the PageSnapshotPtr used to make the |GetInline|
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
     (*current_snapshot_)
-        ->GetInline(std::move(key),
-                    [snapshot = current_snapshot_.Clone(),
-                     callback = std::move(callback)](
-                        ledger::Status status,
-                        std::unique_ptr<ledger::InlinedValue> value) mutable {
-                      callback(status, std::move(value));
-                    });
+        ->GetInline(
+            std::move(key),
+            [snapshot = current_snapshot_.Clone(),
+             callback = std::move(callback)](
+                Status status, std::unique_ptr<InlinedValue> value) mutable {
+              callback(status, std::move(value));
+            });
   }
 
  private:
   // PageWatcher:
-  void OnChange(ledger::PageChange /*page_change*/,
-                ledger::ResultState /*result_state*/,
+  void OnChange(PageChange /*page_change*/, ResultState /*result_state*/,
                 OnChangeCallback callback) override {
     changes++;
     current_snapshot_ = fxl::MakeRefCounted<RefCountedPageSnapshot>();
     callback((**current_snapshot_).NewRequest());
   }
 
-  fidl::Binding<ledger::PageWatcher> binding_;
+  fidl::Binding<PageWatcher> binding_;
   fxl::RefPtr<RefCountedPageSnapshot> current_snapshot_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
 };
 
-class SyncWatcherImpl : public ledger::SyncWatcher {
+class SyncWatcherImpl : public SyncWatcher {
  public:
   SyncWatcherImpl() : binding_(this) {}
 
   auto NewBinding() { return binding_.NewBinding(); }
 
   bool new_state = false;
-  ledger::SyncState download;
-  ledger::SyncState upload;
+  SyncState download;
+  SyncState upload;
 
  private:
   // SyncWatcher
-  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
+  void SyncStateChanged(SyncState download, SyncState upload,
                         SyncStateChangedCallback callback) override {
     this->download = download;
     this->upload = upload;
@@ -118,7 +114,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
     callback();
   }
 
-  fidl::Binding<ledger::SyncWatcher> binding_;
+  fidl::Binding<SyncWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
@@ -128,77 +124,73 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
 // a different value than merging ((2, 3), 1), or ((2, 1), 3).
 // This conflict resolver only works on numeric data. For values A and B, it
 // produces the merged value (4*A+B)/3.
-class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
+class NonAssociativeConflictResolverImpl : public ConflictResolver {
  public:
   explicit NonAssociativeConflictResolverImpl(
-      fidl::InterfaceRequest<ledger::ConflictResolver> request)
+      fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {}
   ~NonAssociativeConflictResolverImpl() override {}
 
  private:
   // ConflictResolver:
-  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> /*left_version*/,
-               fidl::InterfaceHandle<ledger::PageSnapshot> /*right_version*/,
-               fidl::InterfaceHandle<ledger::PageSnapshot> /*common_version*/,
-               fidl::InterfaceHandle<ledger::MergeResultProvider>
-                   result_provider) override {
+  void Resolve(
+      fidl::InterfaceHandle<PageSnapshot> /*left_version*/,
+      fidl::InterfaceHandle<PageSnapshot> /*right_version*/,
+      fidl::InterfaceHandle<PageSnapshot> /*common_version*/,
+      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
     auto merge_result_provider =
-        std::make_unique<ledger::MergeResultProviderPtr>(
-            result_provider.Bind());
-    ledger::MergeResultProvider* merge_result_provider_ptr =
+        std::make_unique<MergeResultProviderPtr>(result_provider.Bind());
+    MergeResultProvider* merge_result_provider_ptr =
         merge_result_provider->get();
     merge_result_provider_ptr->GetFullDiff(
-        nullptr,
-        [merge_result_provider = std::move(merge_result_provider)](
-            ledger::Status status, fidl::VectorPtr<ledger::DiffEntry> changes,
-            std::unique_ptr<ledger::Token> next_token) mutable {
-          ASSERT_EQ(ledger::Status::OK, status);
+        nullptr, [merge_result_provider = std::move(merge_result_provider)](
+                     Status status, fidl::VectorPtr<DiffEntry> changes,
+                     std::unique_ptr<Token> next_token) mutable {
+          ASSERT_EQ(Status::OK, status);
           ASSERT_EQ(1u, changes->size());
 
           double d1, d2;
           EXPECT_TRUE(VmoToDouble(changes->at(0).left->value, &d1));
           EXPECT_TRUE(VmoToDouble(changes->at(0).right->value, &d2));
           double new_value = (4 * d1 + d2) / 3;
-          ledger::MergedValue merged_value;
+          MergedValue merged_value;
           merged_value.key = std::move(changes->at(0).key);
-          merged_value.source = ledger::ValueSource::NEW;
-          merged_value.new_value = ledger::BytesOrReference::New();
+          merged_value.source = ValueSource::NEW;
+          merged_value.new_value = BytesOrReference::New();
           merged_value.new_value->set_bytes(DoubleToArray(new_value));
-          fidl::VectorPtr<ledger::MergedValue> merged_values;
+          fidl::VectorPtr<MergedValue> merged_values;
           merged_values.push_back(std::move(merged_value));
           (*merge_result_provider)
               ->Merge(
                   std::move(merged_values),
                   [merge_result_provider = std::move(merge_result_provider)](
-                      ledger::Status merge_status) mutable {
-                    ASSERT_EQ(ledger::Status::OK, merge_status);
-                    (*merge_result_provider)
-                        ->Done([](ledger::Status merge_status) {
-                          ASSERT_EQ(ledger::Status::OK, merge_status);
-                        });
+                      Status merge_status) mutable {
+                    ASSERT_EQ(Status::OK, merge_status);
+                    (*merge_result_provider)->Done([](Status merge_status) {
+                      ASSERT_EQ(Status::OK, merge_status);
+                    });
                   });
         });
   }
 
-  fidl::Binding<ledger::ConflictResolver> binding_;
+  fidl::Binding<ConflictResolver> binding_;
 };
 
-class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
+class TestConflictResolverFactory : public ConflictResolverFactory {
  public:
   explicit TestConflictResolverFactory(
-      fidl::InterfaceRequest<ledger::ConflictResolverFactory> request)
+      fidl::InterfaceRequest<ConflictResolverFactory> request)
       : binding_(this, std::move(request)) {}
 
  private:
   // ConflictResolverFactory:
-  void GetPolicy(ledger::PageId /*page_id*/,
-                 GetPolicyCallback callback) override {
-    callback(ledger::MergePolicy::CUSTOM);
+  void GetPolicy(PageId /*page_id*/, GetPolicyCallback callback) override {
+    callback(MergePolicy::CUSTOM);
   }
 
   void NewConflictResolver(
-      ledger::PageId page_id,
-      fidl::InterfaceRequest<ledger::ConflictResolver> resolver) override {
+      PageId page_id,
+      fidl::InterfaceRequest<ConflictResolver> resolver) override {
     resolvers.emplace(std::piecewise_construct,
                       std::forward_as_tuple(convert::ToString(page_id.id)),
                       std::forward_as_tuple(std::move(resolver)));
@@ -206,7 +198,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
 
   std::map<storage::PageId, NonAssociativeConflictResolverImpl> resolvers;
 
-  fidl::Binding<ledger::ConflictResolverFactory> binding_;
+  fidl::Binding<ConflictResolverFactory> binding_;
 };
 
 enum class MergeType {
@@ -229,23 +221,23 @@ class ConvergenceTest
 
     ASSERT_GT(num_ledgers_, 1);
 
-    ledger::PageId page_id;
+    PageId page_id;
 
     for (int i = 0; i < num_ledgers_; i++) {
       auto ledger_instance = NewLedgerAppInstance();
       ASSERT_TRUE(ledger_instance);
       ledger_instances_.push_back(std::move(ledger_instance));
       pages_.emplace_back();
-      ledger::LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
-      ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-      ledger::GetPageEnsureInitialized(
+      LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
+      Status status = Status::UNKNOWN_ERROR;
+      GetPageEnsureInitialized(
           &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
           i == 0 ? nullptr : fidl::MakeOptional(page_id), QuitLoopClosure(),
           callback::Capture(QuitLoopClosure(), &status, &pages_[i], &page_id));
       RunLoop();
-      ASSERT_EQ(ledger::Status::OK, status);
+      ASSERT_EQ(Status::OK, status);
     }
   }
 
@@ -254,31 +246,31 @@ class ConvergenceTest
     return std::get<2>(GetParam());
   }
 
-  std::unique_ptr<PageWatcherImpl> WatchPageContents(ledger::PagePtr* page) {
-    ledger::PageWatcherPtr page_watcher;
+  std::unique_ptr<PageWatcherImpl> WatchPageContents(PagePtr* page) {
+    PageWatcherPtr page_watcher;
     auto page_snapshot = fxl::MakeRefCounted<RefCountedPageSnapshot>();
-    fidl::InterfaceRequest<ledger::PageSnapshot> page_snapshot_request =
+    fidl::InterfaceRequest<PageSnapshot> page_snapshot_request =
         (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(),
                                           std::move(page_snapshot));
-    ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+    Status status = Status::UNKNOWN_ERROR;
     (*page)->GetSnapshot(
         std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
         std::move(page_watcher), callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
-    EXPECT_EQ(ledger::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return watcher;
   }
 
-  std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(ledger::PagePtr* page) {
+  std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(PagePtr* page) {
     std::unique_ptr<SyncWatcherImpl> watcher =
         std::make_unique<SyncWatcherImpl>();
-    ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+    Status status = Status::UNKNOWN_ERROR;
     (*page)->SetSyncStateWatcher(watcher->NewBinding(),
                                  callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
-    EXPECT_EQ(ledger::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return watcher;
   }
 
@@ -286,15 +278,15 @@ class ConvergenceTest
   bool AreValuesIdentical(
       const std::vector<std::unique_ptr<PageWatcherImpl>>& watchers,
       std::string key) {
-    std::vector<std::unique_ptr<ledger::InlinedValue>> values;
+    std::vector<std::unique_ptr<InlinedValue>> values;
     for (int i = 0; i < num_ledgers_; i++) {
       values.emplace_back();
-      ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+      Status status = Status::UNKNOWN_ERROR;
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
           callback::Capture(QuitLoopClosure(), &status, &values[i]));
       RunLoop();
-      EXPECT_EQ(ledger::Status::OK, status);
+      EXPECT_EQ(Status::OK, status);
     }
 
     bool values_are_identical = true;
@@ -310,8 +302,8 @@ class ConvergenceTest
 
   std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>>
       ledger_instances_;
-  std::vector<ledger::PagePtr> pages_;
-  ledger::DataGenerator data_generator_;
+  std::vector<PagePtr> pages_;
+  DataGenerator data_generator_;
 };
 
 // Verify that the Ledger converges over different settings of merging functions
@@ -328,18 +320,18 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   std::uniform_real_distribution<> distribution(1, 100);
 
   for (int i = 0; i < num_ledgers_; i++) {
-    ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+    Status status = Status::UNKNOWN_ERROR;
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
-      ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
+      ConflictResolverFactoryPtr resolver_factory_ptr;
       resolver_factories.push_back(
           std::make_unique<TestConflictResolverFactory>(
               resolver_factory_ptr.NewRequest()));
-      ledger::LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
+      LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
       ledger->SetConflictResolverFactory(
           std::move(resolver_factory_ptr),
           callback::Capture(QuitLoopClosure(), &status));
       RunLoop();
-      EXPECT_EQ(ledger::Status::OK, status);
+      EXPECT_EQ(Status::OK, status);
     }
 
     watchers.push_back(WatchPageContents(&pages_[i]));
@@ -347,7 +339,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 
     pages_[i]->StartTransaction(callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
-    EXPECT_EQ(ledger::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
 
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
       pages_[i]->Put(convert::ToArray("value"),
@@ -358,13 +350,12 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
                      callback::Capture(QuitLoopClosure(), &status));
     }
     RunLoop();
-    EXPECT_EQ(ledger::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
   }
 
   auto commit_waiter =
-      fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
-          ledger::Status::OK);
-  ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+      fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  Status status = Status::UNKNOWN_ERROR;
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit(commit_waiter->NewCallback());
   }
@@ -392,8 +383,8 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
     // All synchronization must be idle.
     bool idle = true;
     for (int i = 0; i < num_ledgers_; i++) {
-      if (sync_watchers[i]->download != ledger::SyncState::IDLE ||
-          sync_watchers[i]->upload != ledger::SyncState::IDLE ||
+      if (sync_watchers[i]->download != SyncState::IDLE ||
+          sync_watchers[i]->upload != SyncState::IDLE ||
           sync_watchers[i]->new_state) {
         idle = false;
       }
@@ -407,10 +398,9 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   };
 
   bool merge_done = false;
-  ledger::ConflictResolutionWaitStatus wait_status =
-      ledger::ConflictResolutionWaitStatus::NO_CONFLICTS;
-  fxl::RefPtr<callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>>
-      waiter;
+  ConflictResolutionWaitStatus wait_status =
+      ConflictResolutionWaitStatus::NO_CONFLICTS;
+  fxl::RefPtr<callback::StatusWaiter<ConflictResolutionWaitStatus>> waiter;
 
   // In addition of verifying that the external states of the ledgers have
   // converged, we also verify we are not currently performing a merge in the
@@ -421,18 +411,18 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 
     if (has_state_converged()) {
       if (merge_done &&
-          wait_status == ledger::ConflictResolutionWaitStatus::NO_CONFLICTS) {
+          wait_status == ConflictResolutionWaitStatus::NO_CONFLICTS) {
         return true;
       }
       if (!waiter) {
         waiter = fxl::MakeRefCounted<
-            callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>>(
-            ledger::ConflictResolutionWaitStatus::NO_CONFLICTS);
+            callback::StatusWaiter<ConflictResolutionWaitStatus>>(
+            ConflictResolutionWaitStatus::NO_CONFLICTS);
         for (int i = 0; i < num_ledgers_; i++) {
           pages_[i]->WaitForConflictResolution(waiter->NewCallback());
         }
-        waiter->Finalize([&merge_done, &wait_status, &waiter](
-                             ledger::ConflictResolutionWaitStatus status) {
+        waiter->Finalize([&merge_done, &wait_status,
+                          &waiter](ConflictResolutionWaitStatus status) {
           merge_done = true;
           wait_status = status;
           waiter = nullptr;
@@ -460,8 +450,8 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   // All synchronization must still be idle.
   for (int i = 0; i < num_ledgers_; i++) {
     EXPECT_FALSE(sync_watchers[i]->new_state);
-    EXPECT_EQ(ledger::SyncState::IDLE, sync_watchers[i]->download);
-    EXPECT_EQ(ledger::SyncState::IDLE, sync_watchers[i]->upload);
+    EXPECT_EQ(SyncState::IDLE, sync_watchers[i]->download);
+    EXPECT_EQ(SyncState::IDLE, sync_watchers[i]->upload);
   }
 
   EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
@@ -475,6 +465,4 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn(GetLedgerAppInstanceFactories())));
 
 }  // namespace
-}  // namespace sync
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger

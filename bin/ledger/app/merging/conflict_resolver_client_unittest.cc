@@ -26,7 +26,7 @@
 
 namespace ledger {
 namespace {
-class ConflictResolverClientTest : public test::TestWithPageStorage {
+class ConflictResolverClientTest : public TestWithPageStorage {
  public:
   ConflictResolverClientTest() {}
   ~ConflictResolverClientTest() override {}
@@ -35,14 +35,14 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
   storage::PageStorage* page_storage() override { return page_storage_; }
 
   void SetUp() override {
-    ::testing::Test::SetUp();
+    TestWithPageStorage::SetUp();
     std::unique_ptr<storage::PageStorage> page_storage;
     ASSERT_TRUE(CreatePageStorage(&page_storage));
     page_storage_ = page_storage.get();
 
-    std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
-        [] {}, &environment_, page_storage_,
-        std::make_unique<test::TestBackoff>(nullptr));
+    std::unique_ptr<MergeResolver> resolver =
+        std::make_unique<MergeResolver>([] {}, &environment_, page_storage_,
+                                        std::make_unique<TestBackoff>(nullptr));
     resolver->SetMergeStrategy(nullptr);
     resolver->set_on_empty(QuitLoopClosure());
     merge_resolver_ = resolver.get();

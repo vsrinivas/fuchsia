@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
+namespace ledger {
 namespace {
 class CallbackWaiterImpl : public LedgerAppInstanceFactory::CallbackWaiter {
  public:
@@ -76,48 +76,48 @@ LedgerAppInstanceFactory::LedgerAppInstance::ledger_repository_factory() {
 ledger_internal::LedgerRepositoryPtr
 LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_internal::LedgerRepositoryPtr repository;
-  ledger::Status status;
+  Status status;
   auto waiter = loop_controller_->NewWaiter();
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
       MakeCloudProvider(), repository.NewRequest(),
       callback::Capture(waiter->GetCallback(), &status));
   waiter->RunUntilCalled();
-  EXPECT_EQ(ledger::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   return repository;
 }
 
-ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
-  ledger::LedgerPtr ledger;
+LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
+  LedgerPtr ledger;
 
   ledger_internal::LedgerRepositoryPtr repository = GetTestLedgerRepository();
-  ledger::Status status;
+  Status status;
   auto waiter = loop_controller_->NewWaiter();
   repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest(),
                         callback::Capture(waiter->GetCallback(), &status));
   waiter->RunUntilCalled();
-  EXPECT_EQ(ledger::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   return ledger;
 }
 
-ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
-  fidl::InterfaceHandle<ledger::Page> page;
-  ledger::Status status;
-  ledger::LedgerPtr ledger = GetTestLedger();
+PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
+  fidl::InterfaceHandle<Page> page;
+  Status status;
+  LedgerPtr ledger = GetTestLedger();
   auto waiter = loop_controller_->NewWaiter();
   ledger->GetPage(nullptr, page.NewRequest(),
                   callback::Capture(waiter->GetCallback(), &status));
   waiter->RunUntilCalled();
-  EXPECT_EQ(ledger::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
 
   return page.Bind();
 }
 
-ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
-    const ledger::PageIdPtr& page_id, ledger::Status expected_status) {
-  ledger::PagePtr page_ptr;
-  ledger::Status status;
-  ledger::LedgerPtr ledger = GetTestLedger();
+PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
+    const PageIdPtr& page_id, Status expected_status) {
+  PagePtr page_ptr;
+  Status status;
+  LedgerPtr ledger = GetTestLedger();
   auto waiter = loop_controller_->NewWaiter();
   ledger->GetPage(fidl::Clone(page_id), page_ptr.NewRequest(),
                   callback::Capture(waiter->GetCallback(), &status));
@@ -127,4 +127,4 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   return page_ptr;
 }
 
-}  // namespace test
+}  // namespace ledger

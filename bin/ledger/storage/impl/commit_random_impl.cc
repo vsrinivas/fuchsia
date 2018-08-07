@@ -11,7 +11,6 @@
 #include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace storage {
-namespace test {
 
 CommitRandomImpl::CommitRandomImpl()
     : id_(RandomCommitId()),
@@ -52,5 +51,4 @@ fxl::StringView CommitRandomImpl::GetStorageBytes() const {
   return storage_bytes_;
 }
 
-}  // namespace test
 }  // namespace storage

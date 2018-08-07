@@ -17,7 +17,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
-namespace test {
+namespace ledger {
 
 // Base class for client tests.
 //
@@ -75,13 +75,12 @@ class LedgerAppInstanceFactory {
     // object.
     ledger_internal::LedgerRepositoryPtr GetTestLedgerRepository();
     // Builds and returns a new connection to the default Ledger object.
-    ledger::LedgerPtr GetTestLedger();
+    LedgerPtr GetTestLedger();
     // Builds and returns a new connection to a new random page on the default
     // Ledger object.
-    ledger::PagePtr GetTestPage();
+    PagePtr GetTestPage();
     // Returns a connection to the given page on the default Ledger object.
-    ledger::PagePtr GetPage(const ledger::PageIdPtr& page_id,
-                            ledger::Status expected_status);
+    PagePtr GetPage(const PageIdPtr& page_id, Status expected_status);
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
@@ -106,6 +105,6 @@ class LedgerAppInstanceFactory {
 
 std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories();
 
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_

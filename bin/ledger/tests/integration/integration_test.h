@@ -17,8 +17,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
-namespace test {
-namespace integration {
+namespace ledger {
 
 // Base class for integration tests.
 //
@@ -75,7 +74,6 @@ class IntegrationTest
 // Returns true iff the initialization was successful.
 bool ProcessCommandLine(int argc, char** argv);
 
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_INTEGRATION_TEST_H_

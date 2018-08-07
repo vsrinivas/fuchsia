@@ -14,8 +14,7 @@
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 
-namespace test {
-namespace integration {
+namespace ledger {
 
 BaseIntegrationTest::BaseIntegrationTest()
     : loop_(&kAsyncLoopConfigNoAttachToThread) {}
@@ -60,5 +59,4 @@ LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
   return GetParam();
 }
 
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger

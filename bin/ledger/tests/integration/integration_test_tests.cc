@@ -15,8 +15,7 @@
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
-namespace integration {
+namespace ledger {
 namespace {
 
 class IntegrationTestTests : public IntegrationTest {};
@@ -33,5 +32,4 @@ INSTANTIATE_TEST_CASE_P(IntegrationTestTests, IntegrationTestTests,
                         ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger

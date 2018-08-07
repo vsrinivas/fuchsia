@@ -13,21 +13,21 @@
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 
-namespace test {
+namespace ledger {
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl(ledger::SyncParams sync_params);
+  LedgerAppInstanceFactoryImpl(SyncParams sync_params);
   ~LedgerAppInstanceFactoryImpl() override;
 
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
       LoopController* loop_controller) override;
 
  private:
-  const ledger::SyncParams sync_params_;
+  const SyncParams sync_params_;
   const std::string user_id_;
 };
 
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_E2E_SYNC_LEDGER_APP_INSTANCE_FACTORY_E2E_H_

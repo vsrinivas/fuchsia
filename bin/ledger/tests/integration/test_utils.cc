@@ -21,8 +21,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
-namespace integration {
+namespace ledger {
 
 fidl::VectorPtr<uint8_t> RandomArray(size_t size,
                                      const std::vector<uint8_t>& prefix) {
@@ -52,25 +51,24 @@ fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
-std::vector<ledger::Entry> SnapshotGetEntries(
+std::vector<Entry> SnapshotGetEntries(
     LedgerAppInstanceFactory::LoopController* loop_controller,
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
+    PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
     int* num_queries) {
-  std::vector<ledger::Entry> result;
-  std::unique_ptr<ledger::Token> token;
+  std::vector<Entry> result;
+  std::unique_ptr<Token> token;
   if (num_queries) {
     *num_queries = 0;
   }
   do {
-    ledger::Status status;
-    fidl::VectorPtr<ledger::Entry> entries;
+    Status status;
+    fidl::VectorPtr<Entry> entries;
     auto waiter = loop_controller->NewWaiter();
     (*snapshot)->GetEntries(
         start.Clone(), std::move(token),
         callback::Capture(waiter->GetCallback(), &status, &entries, &token));
     waiter->RunUntilCalled();
-    EXPECT_TRUE(status == ledger::Status::OK ||
-                status == ledger::Status::PARTIAL_RESULT)
+    EXPECT_TRUE(status == Status::OK || status == Status::PARTIAL_RESULT)
         << "Actual status: " << fidl::ToUnderlying(status);
     if (num_queries) {
       (*num_queries)++;
@@ -82,5 +80,4 @@ std::vector<ledger::Entry> SnapshotGetEntries(
   return result;
 }
 
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger

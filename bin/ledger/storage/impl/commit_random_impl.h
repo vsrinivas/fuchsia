@@ -12,7 +12,6 @@
 #include "peridot/bin/ledger/storage/public/commit.h"
 
 namespace storage {
-namespace test {
 
 // Implementaton of Commit returning random values (fixed for each instance).
 class CommitRandomImpl : public Commit {
@@ -47,7 +46,6 @@ class CommitRandomImpl : public Commit {
   std::string storage_bytes_;
 };
 
-}  // namespace test
 }  // namespace storage
 
 #endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_COMMIT_RANDOM_IMPL_H_

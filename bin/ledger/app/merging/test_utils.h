@@ -22,7 +22,6 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
-namespace test {
 // Dummy implementation of a backoff policy, which always returns zero backoff
 // time..
 class TestBackoff : public backoff::Backoff {
@@ -68,7 +67,6 @@ class TestWithPageStorage : public TestWithEnvironment {
   encryption::FakeEncryptionService encryption_service_;
 };
 
-}  // namespace test
 }  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_APP_MERGING_TEST_UTILS_H_

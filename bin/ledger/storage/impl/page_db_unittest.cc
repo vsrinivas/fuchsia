@@ -136,7 +136,7 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
 TEST_F(PageDbTest, Commits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::unique_ptr<const Commit>> parents;
-    parents.emplace_back(new test::CommitRandomImpl());
+    parents.emplace_back(new CommitRandomImpl());
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
         &page_storage_, RandomObjectIdentifier(), std::move(parents));

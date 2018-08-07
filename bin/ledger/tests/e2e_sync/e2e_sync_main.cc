@@ -11,7 +11,7 @@
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
 
-namespace test {
+namespace ledger {
 namespace {
 ledger::SyncParams* sync_params_ptr = nullptr;
 
@@ -30,7 +30,7 @@ std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
   return {factory.get()};
 }
 
-}  // namespace test
+}  // namespace ledger
 
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     std::cerr << ledger::GetSyncParamsUsage();
     return -1;
   }
-  test::sync_params_ptr = &sync_params;
+  ledger::sync_params_ptr = &sync_params;
 
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

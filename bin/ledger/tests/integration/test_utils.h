@@ -13,8 +13,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
-namespace test {
-namespace integration {
+namespace ledger {
 
 // Builds an array of length |size|, starting with |prefix| and completed with
 // random data.
@@ -30,13 +29,12 @@ fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
 // Retrieves all entries from the snapshot with a key greater of equals to
 // |start|. If |num_queries| is not null, returns the number of calls to
 // |GetEntries|. If any call fails, this function will fail the current test.
-std::vector<ledger::Entry> SnapshotGetEntries(
+std::vector<Entry> SnapshotGetEntries(
     LedgerAppInstanceFactory::LoopController* loop_controller,
-    ledger::PageSnapshotPtr* snapshot,
+    PageSnapshotPtr* snapshot,
     fidl::VectorPtr<uint8_t> start = fidl::VectorPtr<uint8_t>::New(0),
     int* num_queries = nullptr);
 
-}  // namespace integration
-}  // namespace test
+}  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_TEST_UTILS_H_
