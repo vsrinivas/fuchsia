@@ -81,6 +81,12 @@ Device Drivers.  Device drivers are implemented as ELF shared libraries loaded b
 Device Manager.
 - [DDK includes](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/ddk/include/ddk/)
 
+#### **Environment**
+
+A container for a set of components, which provides a way to manage their
+lifecycle and provision services for them. All components in an environment
+receive access to (a subset of) the environment's services.
+
 #### **Escher**
 
 Graphics library for compositing user interface content. Its design is inspired
@@ -242,7 +248,7 @@ Peridot is one of the four layers of the Fuchsia codebase.
 
 #### **Realm**
 
-TODO(jeffbrown): add definition.
+Synonym for [environment](#environment).
 
 #### **RemoteIO**
 
