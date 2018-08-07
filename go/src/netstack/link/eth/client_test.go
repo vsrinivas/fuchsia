@@ -6,7 +6,11 @@
 // https://fuchsia-review.googlesource.com/c/garnet/+/181782 is submitted.
 package eth
 
-import "testing"
+import (
+	"testing"
+
+	"fidl/zircon/ethernet"
+)
 
 func TestClient_AllocForSend(t *testing.T) {
 	arena, err := NewArena()
@@ -16,12 +20,12 @@ func TestClient_AllocForSend(t *testing.T) {
 
 	c := Client{
 		arena: arena,
-		fifos: ethfifos{
-			txDepth: 1,
+		fifos: ethernet.Fifos{
+			TxDepth: 1,
 		},
 	}
 
-	if txDepthMin := uint32(1); c.fifos.txDepth < txDepthMin {
+	if txDepthMin := uint32(1); c.fifos.TxDepth < txDepthMin {
 		t.Fatalf("%s is a no-op when txDepth is less than %d", t.Name(), txDepthMin)
 	}
 
@@ -36,7 +40,7 @@ func TestClient_AllocForSend(t *testing.T) {
 	arena.mu.freebufs = arena.mu.freebufs[:cap(arena.mu.freebufs)]
 
 	// Saturate the client.
-	for i := c.fifos.txDepth; i > 0; i-- {
+	for i := c.fifos.TxDepth; i > 0; i-- {
 		if got := c.AllocForSend(); got == nil {
 			t.Fatalf("AllocForSend() = %v, want non-nil", got)
 		}

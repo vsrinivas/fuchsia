@@ -19,7 +19,7 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv4"
 )
 
-type stackImpl struct{
+type stackImpl struct {
 	ns *Netstack
 }
 
@@ -64,7 +64,7 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	var mac net.MacAddress
 	var path string
 	if eth := ifs.eth; eth != nil {
-		mac.Addr = eth.Info.MAC
+		mac.Addr = eth.Info.Mac.Octets
 		path = eth.Path
 	}
 

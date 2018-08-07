@@ -14,6 +14,7 @@ import (
 	"netstack/link/eth"
 
 	"fidl/fuchsia/netstack"
+	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -59,7 +60,7 @@ func getInterfaces(ns *Netstack) (out []netstack.NetInterface) {
 
 		var mac []uint8
 		if eth := ifs.eth; eth != nil {
-			mac = eth.Info.MAC[:]
+			mac = eth.Info.Mac.Octets[:]
 		}
 
 		outif := netstack.NetInterface{
@@ -355,4 +356,8 @@ func (dns *dnsImpl) GetNameServers() ([]netstack.NetAddress, error) {
 	}
 
 	return out, nil
+}
+
+func (ns *netstackImpl) AddEthernetDevice(topo string, device ethernet.DeviceInterface) error {
+	return ns.ns.addEth(topo, device)
 }

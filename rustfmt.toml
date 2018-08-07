@@ -25,6 +25,9 @@ hard_tabs = false
 hide_parse_errors = false
 imports_indent = "Visual"
 imports_layout = "Mixed"
+ignore = [
+  "bin/netcfg/src/device_id.rs",
+]
 indent_style = "Block"
 match_arm_blocks = true
 match_block_trailing_comma = false

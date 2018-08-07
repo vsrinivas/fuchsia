@@ -430,7 +430,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	return nil
 }
 
-func (ns *Netstack) addEth(path string) error {
+func (ns *Netstack) addEth(topo string, device ethernet.DeviceInterface) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ifs := &ifState{
@@ -442,7 +442,7 @@ func (ns *Netstack) addEth(path string) error {
 	}
 	ifs.statsEP.Nic = ifs.nic
 
-	client, err := eth.NewClient("netstack", path, ns.arena, ifs.stateChange)
+	client, err := eth.NewClient("netstack", topo, &device, ns.arena, ifs.stateChange)
 	if err != nil {
 		return err
 	}
@@ -479,10 +479,10 @@ func (ns *Netstack) addEth(path string) error {
 	ns.countNIC++
 	ns.mu.Unlock()
 
-	log.Printf("NIC %s added using ethernet device %q", ifs.nic.Name, path)
+	log.Printf("NIC %s added using ethernet device", ifs.nic.Name)
 
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
-		return fmt.Errorf("NIC %s: could not create NIC for %q: %v", ifs.nic.Name, path, err)
+		return fmt.Errorf("NIC %s: could not create NIC: %v", ifs.nic.Name, err)
 	}
 	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
 		return fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.nic.Name, err)
@@ -511,7 +511,7 @@ func (ns *Netstack) addEth(path string) error {
 
 	status, err := client.GetStatus()
 	if err != nil {
-		return fmt.Errorf("failed to getStatus for MAC[%v], error %v", client.Info.MAC, err)
+		return fmt.Errorf("NIC %s: failed to get device status for MAC=%x: %v", ifs.nic.Name, client.Info.Mac, err)
 	}
 
 	if status == eth.LinkUp {

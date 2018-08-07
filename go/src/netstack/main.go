@@ -16,12 +16,11 @@ import (
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/link/eth"
-	"netstack/watcher"
 
 	"fidl/fuchsia/devicesettings"
 	"fidl/fuchsia/net"
-	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/net/stack"
+	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -150,16 +149,5 @@ func main() {
 		}()
 	}
 
-	const ethdir = "/dev/class/ethernet"
-	w, err := watcher.NewWatcher(ethdir)
-	if err != nil {
-		log.Fatalf("ethernet: %v", err)
-	}
-	log.Printf("watching for ethernet devices")
-	for name := range w.C {
-		path := ethdir + "/" + name
-		if err := ns.addEth(path); err != nil {
-			log.Printf("failed to add ethernet device %s: %v", path, err)
-		}
-	}
+	<-(chan struct{})(nil)
 }

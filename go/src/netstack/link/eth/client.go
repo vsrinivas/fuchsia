@@ -43,10 +43,7 @@ package eth
 import (
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"sync"
-	"syscall"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"unsafe"
@@ -63,10 +60,10 @@ const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 // The protocol is described in system/public/zircon/device/ethernet.h.
 type Client struct {
 	Path string
-	Info EthInfo
+	Info ethernet.Info
 
-	f     *os.File
-	fifos ethfifos
+	device ethernet.Device
+	fifos  ethernet.Fifos
 
 	mu        sync.Mutex
 	state     State
@@ -83,83 +80,75 @@ type Client struct {
 	rxInFlight uint32 // number of buffers in rx fifo
 }
 
-// NewClient creates a new ethernet Client, connecting to the driver
-// described by path.
-func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*Client, error) {
-	success := false
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("eth: client open: %v", err)
+func checkStatus(status int32, text string) error {
+	if status := zx.Status(status); status != zx.ErrOk {
+		return zx.Error{Status: status, Text: text}
 	}
-	defer func() {
-		if !success {
-			f.Close()
-		}
-	}()
-	m := syscall.FDIOForFD(int(f.Fd()))
-	if m == nil {
-		return nil, fmt.Errorf("eth: no fdio for %s fd: %d", path, f.Fd())
+	return nil
+}
+
+// NewClient creates a new ethernet Client.
+func NewClient(clientName string, topo string, device ethernet.Device, arena *Arena, stateFunc func(State)) (*Client, error) {
+	if status, err := device.SetClientName(clientName); err != nil {
+		return nil, err
+	} else if err := checkStatus(status, "SetClientName"); err != nil {
+		return nil, err
 	}
-
-	IoctlSetClientName(m, []byte(clientName))
-
-	topo, err := IoctlGetTopoPath(m)
+	info, err := device.GetInfo()
 	if err != nil {
 		return nil, err
 	}
-
-	info, err := IoctlGetInfo(m)
+	status, fifos, err := device.GetFifos()
 	if err != nil {
 		return nil, err
-	}
-	if info.Features&ethernet.InfoFeatureSynth != 0 {
-		return nil, fmt.Errorf("eth: ignoring synthetic device")
-	}
-
-	fifos, err := IoctlGetFifos(m)
-	if err != nil {
+	} else if err := checkStatus(status, "GetFifos"); err != nil {
 		return nil, err
 	}
 
-	maxDepth := fifos.txDepth
-	if fifos.rxDepth > maxDepth {
-		maxDepth = fifos.rxDepth
+	maxDepth := fifos.TxDepth
+	if fifos.RxDepth > maxDepth {
+		maxDepth = fifos.RxDepth
 	}
 
 	c := &Client{
-		f:         f,
 		Path:      topo,
 		Info:      info,
-		fifos:     fifos,
+		device:    device,
+		fifos:     *fifos,
 		stateFunc: stateFunc,
 		arena:     arena,
 		tmpbuf:    make([]bufferEntry, 0, maxDepth),
-		recvbuf:   make([]bufferEntry, 0, fifos.rxDepth),
-		sendbuf:   make([]bufferEntry, 0, fifos.txDepth),
+		recvbuf:   make([]bufferEntry, 0, fifos.RxDepth),
+		sendbuf:   make([]bufferEntry, 0, fifos.TxDepth),
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	h, err := c.arena.iovmo.Handle().Duplicate(zx.RightSameRights)
-	if err != nil {
-		c.closeLocked()
-		return nil, fmt.Errorf("eth: failed to duplicate vmo: %v", err)
-	}
-	if err := IoctlSetIobuf(m, h); err != nil {
-		c.closeLocked()
-		return nil, err
-	}
-	if err := c.rxCompleteLocked(); err != nil {
-		c.closeLocked()
-		return nil, fmt.Errorf("eth: failed to load rx fifo: %v", err)
-	}
-	if err := IoctlStart(m); err != nil {
+	if err := func() error {
+		h, err := c.arena.iovmo.Handle().Duplicate(zx.RightSameRights)
+		if err != nil {
+			return fmt.Errorf("eth: failed to duplicate vmo: %v", err)
+		}
+		if status, err := device.SetIoBuffer(zx.VMO(h)); err != nil {
+			return err
+		} else if err := checkStatus(status, "SetIoBuffer"); err != nil {
+			return err
+		}
+		if err := c.rxCompleteLocked(); err != nil {
+			return fmt.Errorf("eth: failed to load rx fifo: %v", err)
+		}
+		if status, err := device.Start(); err != nil {
+			return err
+		} else if err := checkStatus(status, "Start"); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
 		c.closeLocked()
 		return nil, err
 	}
 	c.changeStateLocked(StateStarted)
 
-	success = true
 	return c, nil
 }
 
@@ -175,9 +164,9 @@ func (c *Client) Up() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.state != StateStarted {
-		m := syscall.FDIOForFD(int(c.f.Fd()))
-		err := IoctlStart(m)
-		if err != nil {
+		if status, err := c.device.Start(); err != nil {
+			return err
+		} else if err := checkStatus(status, "Start"); err != nil {
 			return err
 		}
 		c.changeStateLocked(StateStarted)
@@ -191,9 +180,7 @@ func (c *Client) Down() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.state != StateDown {
-		m := syscall.FDIOForFD(int(c.f.Fd()))
-		err := IoctlStop(m)
-		if err != nil {
+		if err := c.device.Stop(); err != nil {
 			return err
 		}
 		c.changeStateLocked(StateDown)
@@ -213,21 +200,15 @@ func (c *Client) closeLocked() {
 		return
 	}
 
-	m := syscall.FDIOForFD(int(c.f.Fd()))
-	if err := IoctlStop(m); err != nil {
-		if fp, fperr := filepath.Abs(c.f.Name()); fperr != nil {
-			log.Printf("Failed to close ethernet file %s, error: %s", c.f.Name(), err)
-		} else {
-			log.Printf("Failed to close ethernet path %s, error: %s", fp, err)
-		}
+	if err := c.device.Stop(); err != nil {
+		log.Printf("Failed to close ethernet path %s, error: %s", c.Path, err)
 	}
 
-	c.fifos.tx.Close()
-	c.fifos.rx.Close()
+	c.fifos.Tx.Close()
+	c.fifos.Rx.Close()
 	c.tmpbuf = c.tmpbuf[:0]
 	c.recvbuf = c.recvbuf[:0]
 	c.sendbuf = c.sendbuf[:0]
-	c.f.Close()
 	c.arena.freeAll(c)
 	c.changeStateLocked(StateClosed)
 }
@@ -236,8 +217,12 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	m := syscall.FDIOForFD(int(c.f.Fd()))
-	return IoctlSetPromisc(m, enabled)
+	if status, err := c.device.SetPromiscuousMode(enabled); err != nil {
+		return err
+	} else if err := checkStatus(status, "SetPromiscuousMode"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // AllocForSend returns a Buffer to be passed to Send.
@@ -255,7 +240,7 @@ func (c *Client) AllocForSend() Buffer {
 	//       Send won't 'release' the buffer, we need an extra step
 	//       for that, because we will want to keep the buffer around
 	//       until the ACK comes back.
-	if c.txInFlight == c.fifos.txDepth {
+	if c.txInFlight == c.fifos.TxDepth {
 		return nil
 	}
 	buf := c.arena.alloc(c)
@@ -276,7 +261,7 @@ func (c *Client) Send(b Buffer) error {
 	}
 	c.sendbuf = append(c.sendbuf, c.arena.entry(b))
 
-	switch status, count := fifoWrite(c.fifos.tx, c.sendbuf); status {
+	switch status, count := fifoWrite(c.fifos.Tx, c.sendbuf); status {
 	case zx.ErrOk:
 		n := copy(c.sendbuf, c.sendbuf[count:])
 		c.sendbuf = c.sendbuf[:n]
@@ -310,9 +295,9 @@ func fifoRead(handle zx.Handle, b []bufferEntry) (zx.Status, uint32) {
 }
 
 func (c *Client) txCompleteLocked() error {
-	buf := c.tmpbuf[:c.fifos.txDepth]
+	buf := c.tmpbuf[:c.fifos.TxDepth]
 
-	switch status, count := fifoRead(c.fifos.tx, buf); status {
+	switch status, count := fifoRead(c.fifos.Tx, buf); status {
 	case zx.ErrOk:
 		c.txInFlight -= count
 		c.txTotal += count
@@ -337,7 +322,7 @@ func (c *Client) Recv() (Buffer, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.recvbuf) == 0 {
-		status, count := fifoRead(c.fifos.rx, c.recvbuf[:cap(c.recvbuf)])
+		status, count := fifoRead(c.fifos.Rx, c.recvbuf[:cap(c.recvbuf)])
 		if status != zx.ErrOk {
 			return nil, zx.Error{Status: status, Text: "eth.Client.Recv"}
 		}
@@ -357,7 +342,7 @@ func (c *Client) Recv() (Buffer, error) {
 
 func (c *Client) rxCompleteLocked() error {
 	buf := c.tmpbuf[:0]
-	for i := c.rxInFlight; i < c.fifos.rxDepth; i++ {
+	for i := c.rxInFlight; i < c.fifos.RxDepth; i++ {
 		b := c.arena.alloc(c)
 		if b == nil {
 			break
@@ -367,7 +352,7 @@ func (c *Client) rxCompleteLocked() error {
 	if len(buf) == 0 {
 		return nil // nothing to do
 	}
-	status, count := fifoWrite(c.fifos.rx, buf)
+	status, count := fifoWrite(c.fifos.Rx, buf)
 	if status != zx.ErrOk {
 		return zx.Error{Status: status, Text: "eth.Client.RX"}
 	}
@@ -385,7 +370,7 @@ func (c *Client) WaitSend() error {
 	for {
 		c.mu.Lock()
 		err := c.txCompleteLocked()
-		canSend := c.txInFlight < c.fifos.txDepth
+		canSend := c.txInFlight < c.fifos.TxDepth
 		c.mu.Unlock()
 		if err != nil {
 			return err
@@ -394,7 +379,7 @@ func (c *Client) WaitSend() error {
 			return nil
 		}
 		// Errors from waiting handled in txComplete.
-		zxwait.Wait(c.fifos.tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
+		zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
 	}
 }
 
@@ -402,7 +387,7 @@ func (c *Client) WaitSend() error {
 // or the client is closed.
 func (c *Client) WaitRecv() {
 	for {
-		obs, err := zxwait.Wait(c.fifos.rx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|ZXSIO_ETH_SIGNAL_STATUS, zx.TimensecInfinite)
+		obs, err := zxwait.Wait(c.fifos.Rx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|ZXSIO_ETH_SIGNAL_STATUS, zx.TimensecInfinite)
 		if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
 			c.Close()
 		} else if obs&ZXSIO_ETH_SIGNAL_STATUS != 0 {
@@ -432,9 +417,13 @@ func (c *Client) WaitRecv() {
 
 // ListenTX tells the ethernet driver to reflect all transmitted
 // packets back to this ethernet client.
-func (c *Client) ListenTX() {
-	m := syscall.FDIOForFD(int(c.f.Fd()))
-	IoctlTXListenStart(m)
+func (c *Client) ListenTX() error {
+	if status, err := c.device.ListenStart(); err != nil {
+		return err
+	} else if err := checkStatus(status, "ListenStart"); err != nil {
+		return err
+	}
+	return nil
 }
 
 type LinkStatus uint32
@@ -444,11 +433,10 @@ const (
 	LinkUp   LinkStatus = 1
 )
 
-// Check IoctlGetStatus link status, 0: link down; 1: link up
+// GetStatus returns the underlying device's status.
 func (c *Client) GetStatus() (LinkStatus, error) {
-	m := syscall.FDIOForFD(int(c.f.Fd()))
-	status, err := IoctlGetStatus(m)
-	return LinkStatus(status), err
+	status, err := c.device.GetStatus()
+	return LinkStatus(status & ethernet.DeviceStatusOnline), err
 }
 
 type State int

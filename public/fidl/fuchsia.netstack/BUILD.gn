@@ -11,4 +11,8 @@ fidl("fuchsia.netstack") {
     "net_address.fidl",
     "netstack.fidl",
   ]
+
+  public_deps = [
+    "//zircon/public/fidl/zircon-ethernet",
+  ]
 }

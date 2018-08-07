@@ -3,7 +3,6 @@
         "binary": "bin/netstack"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "dev": [ "class/ethernet" ]
+        "features": [ "deprecated-all-services" ]
     }
 }

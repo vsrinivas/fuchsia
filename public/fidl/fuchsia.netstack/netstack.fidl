@@ -4,6 +4,8 @@
 
 library fuchsia.netstack;
 
+using zircon.ethernet;
+
 enum Protocol {
   UNSPECIFIED = 0;
   UDP = 1;
@@ -167,6 +169,8 @@ interface Netstack {
 
   // TODO(NET-1263): remove once we can use the ResolverAdmin interface
   16: SetNameServers(vector<NetAddress> servers);
+
+  17: AddEthernetDevice(string topological_path, zircon.ethernet.Device device);
 
   0x1000: -> OnInterfacesChanged(vector<NetInterface> interfaces);
 };
