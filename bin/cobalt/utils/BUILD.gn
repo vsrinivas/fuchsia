@@ -7,6 +7,11 @@ source_set("fuchsia_http_client") {
     "fuchsia_http_client.cc",
     "fuchsia_http_client.h",
   ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+  ]
+
   public_deps = [
     "//garnet/public/lib/network_wrapper:network_wrapper",
     "//third_party/cobalt/third_party/clearcut:clearcut",

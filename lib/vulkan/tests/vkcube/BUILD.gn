@@ -42,6 +42,7 @@ source_set("vkcube_common") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/scenic",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/view_framework:view_provider",

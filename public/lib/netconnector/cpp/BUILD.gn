@@ -9,13 +9,17 @@ source_set("cpp") {
     "net_stub_responder.h",
   ]
 
+  deps = [
+    "//zircon/public/lib/async-default",
+  ]
+
   public_deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/callback",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.netconnector",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

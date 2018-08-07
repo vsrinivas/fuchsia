@@ -42,8 +42,11 @@ static_library("url") {
   defines = [ "URL_IMPLEMENTATION" ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//third_party/icu",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -64,9 +67,11 @@ package("url_tests") {
     ":url_apptests",
   ]
 
-  tests = [ {
-        name = "url_apptests"
-      } ]
+  tests = [
+    {
+      name = "url_apptests"
+    },
+  ]
 }
 # mojo_native_application("url_apptests") {
 #   testonly = true

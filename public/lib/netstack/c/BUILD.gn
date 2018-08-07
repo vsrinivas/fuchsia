@@ -7,9 +7,5 @@ source_set("c") {
     "netconfig.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/fdio",
-  ]
-
   public_configs = [ "//garnet/public:config" ]
 }

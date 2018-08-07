@@ -11,5 +11,6 @@ source_set("cpp") {
   deps = [
     "//garnet/public/lib/fsl",
     "//third_party/icu",
+    "//zircon/public/lib/zx",
   ]
 }

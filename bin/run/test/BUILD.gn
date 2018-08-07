@@ -14,9 +14,9 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing:fake_launcher",
-    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -35,6 +35,8 @@ executable("run_return_value_test") {
   sources = [
     "run_return_value_test.cc",
   ]
+
+  libs = [ "zircon" ]
 
   deps = [
     "//garnet/public/lib/fxl/test:gtest_main",

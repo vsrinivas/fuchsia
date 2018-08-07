@@ -15,7 +15,8 @@ source_set("testing") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fdio",
   ]
 
   public_deps = [
@@ -23,7 +24,12 @@ source_set("testing") {
     ":fake_component",
     ":fake_launcher",
     ":test_util",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/fs",
   ]
 }
 
@@ -35,8 +41,13 @@ source_set("test_util") {
     "test_util.h",
   ]
 
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//zircon/public/lib/fs",
+  ]
+
   deps = [
-    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/fdio",
   ]
 }
 
@@ -48,8 +59,10 @@ source_set("fake_launcher") {
     "fake_launcher.h",
   ]
 
-  deps = [
-    "//garnet/public/lib/component/cpp",
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/fs",
   ]
 }
 
@@ -65,7 +78,14 @@ source_set("enclosing_environment") {
 
   deps = [
     ":test_util",
-    "//garnet/public/lib/component/cpp",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fs",
   ]
 }
 
@@ -77,8 +97,9 @@ source_set("fake_component") {
     "fake_component.h",
   ]
 
-  deps = [
+  public_deps = [
     ":fake_launcher",
-    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fs",
   ]
 }

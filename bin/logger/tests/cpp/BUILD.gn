@@ -12,6 +12,7 @@ executable("logger_integration_cpp_tests") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/syslog",
   ]

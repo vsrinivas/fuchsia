@@ -10,7 +10,7 @@ source_set("test") {
     "fake_task_runner.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fxl",
   ]
 }

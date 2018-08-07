@@ -7,14 +7,12 @@ source_set("commands") {
     "commands.cc",
     "commands.h",
   ]
-
   public_deps = [
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/images/cpp",
   ]
 }
-
 source_set("cpp") {
   sources = [
     "host_image_cycler.cc",
@@ -26,15 +24,17 @@ source_set("cpp") {
     "session.cc",
     "session.h",
   ]
-
   public_deps = [
     ":commands",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//zircon/public/lib/fit",
-  ]
-
-  deps = [
     "//garnet/public/lib/images/cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+  deps = [
     "//zircon/public/lib/fbl",
   ]
 }

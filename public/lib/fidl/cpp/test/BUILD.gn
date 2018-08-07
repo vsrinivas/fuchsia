@@ -19,10 +19,11 @@ source_set("test") {
 
   public_deps = [
     ":frobinator",
+  ]
+
+  deps = [
     "//garnet/public/lib/fidl/cpp",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fidl",
   ]
 
   public_configs = [ "//garnet/public:config" ]

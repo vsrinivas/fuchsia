@@ -18,9 +18,11 @@ source_set("mocks") {
     "mock_view_tree_listener.h",
   ]
 
-  deps = [
-    "//garnet/bin/ui/view_manager:lib",
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
-    "//third_party/googletest:gtest",
+    "//garnet/public/lib/fxl",
   ]
 }

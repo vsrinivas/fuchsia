@@ -17,11 +17,18 @@ source_set("cpp") {
     "termination_reason.h",
   ]
 
+  deps = [
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fdio",
+  ]
+
   public_deps = [
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
   ]
 }

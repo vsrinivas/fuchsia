@@ -6,10 +6,10 @@ source_set("gtest") {
   testonly = true
 
   sources = [
-    "real_loop_fixture.h",
     "real_loop_fixture.cc",
-    "test_loop_fixture.h",
+    "real_loop_fixture.h",
     "test_loop_fixture.cc",
+    "test_loop_fixture.h",
     "test_loop_fixture.h",
   ]
 
@@ -18,13 +18,12 @@ source_set("gtest") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
   ]
 }
 

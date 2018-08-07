@@ -19,9 +19,8 @@ prebuilt_shared_library("svc") {
   ]
 
   deps = [
-    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/zx",
   ]
 
   include_base = "//garnet/public"

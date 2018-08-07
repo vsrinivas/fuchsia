@@ -15,14 +15,21 @@ source_set("render") {
   ]
 
   deps = [
-    ":video_converter",
     "//garnet/bin/media/media_player/fidl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/trace",
+  ]
+
+  public_deps = [
+    ":video_converter",
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/metrics",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/view_framework",
   ]
 }
@@ -38,11 +45,13 @@ source_set("video_converter") {
   ]
 
   deps = [
-    "//garnet/bin/media/media_player/framework",
-    "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/geometry/cpp",
     "//zircon/public/lib/trace",
+  ]
+
+  public_deps = [
+    "//garnet/bin/media/media_player/framework",
+    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.media",
   ]
 
   configs += [ ":optimize_video_converter" ]

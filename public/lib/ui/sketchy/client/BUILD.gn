@@ -13,12 +13,11 @@ source_set("client") {
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.sketchy",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/fidl/fuchsia.ui.sketchy",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fit",
   ]
 
   include_dirs = [ "//third_party/glm" ]

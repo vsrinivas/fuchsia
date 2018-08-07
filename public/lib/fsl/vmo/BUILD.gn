@@ -17,10 +17,13 @@ source_set("vmo") {
     "vmo.cc",
   ]
 
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+
   public_deps = [
     "//garnet/public/lib/fxl",
     "//zircon/public/fidl/fuchsia-mem",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

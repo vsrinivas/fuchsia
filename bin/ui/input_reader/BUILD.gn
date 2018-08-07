@@ -13,20 +13,21 @@ source_set("input_reader") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.scenic",
-    "//zircon/public/lib/fdio",
+    "//garnet/public/lib/ui/input/cpp",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//garnet/lib/ui/gfx:swapchain" ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/hid",
+    "//zircon/public/lib/zx",
   ]
 }

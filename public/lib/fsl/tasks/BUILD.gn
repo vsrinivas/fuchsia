@@ -9,15 +9,11 @@ source_set("tasks") {
     "fd_waiter.cc",
     "fd_waiter.h",
   ]
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
   public_deps = [
-    "//garnet/public/lib/fsl/handles",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-testutils",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zx",
   ]
 }

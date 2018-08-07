@@ -4,13 +4,7 @@
 
 import("//build/package.gni")
 
-group("fsl") {
-  public_deps = [
-    ":fsl_lib",
-  ]
-}
-
-shared_library("fsl_lib") {
+static_library("fsl") {
   output_name = "fsl"
 
   public_deps = [

@@ -8,8 +8,12 @@ source_set("cpp") {
     "formatting.h",
   ]
 
-  public_deps = [
+  deps = [
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
     "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fxl",
   ]
 }

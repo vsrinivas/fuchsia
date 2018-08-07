@@ -63,7 +63,6 @@ sdk_source_set("cpp") {
   include_base = "//garnet/public"
 
   public_deps = [
-    "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
