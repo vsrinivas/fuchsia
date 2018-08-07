@@ -1,0 +1,30 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/run_test_component/test_package.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "run_test_component_test"
+
+  sources = [
+    "run_test_component_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("run_test_component_test") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "run_test_component_test"
+    },
+  ]
+}

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/run_test_component_test"
+    }
+}

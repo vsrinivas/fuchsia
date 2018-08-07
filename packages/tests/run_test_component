@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/run_test_component",
+        "//garnet/bin/run_test_component/test:run_test_component_test"
+    ]
+}
