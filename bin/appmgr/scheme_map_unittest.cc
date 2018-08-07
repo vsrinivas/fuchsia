@@ -12,7 +12,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/substitute.h"
 
 namespace component {
 namespace {
@@ -25,17 +25,13 @@ class SchemeMapTest : public ::testing::Test {
     ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
     const std::string json_file = NewJSONFile(dir, json);
     EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
-    // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-    size_t pos;
-    while ((pos = expected_error.find("$0")) != std::string::npos) {
-      expected_error.replace(pos, 2, json_file);
-    }
-    EXPECT_EQ(scheme_map.error_str(), expected_error);
+    EXPECT_EQ(scheme_map.error_str(),
+              fxl::Substitute(expected_error, json_file));
   }
 
   std::string NewJSONFile(const std::string& dir, const std::string& json) {
     const std::string json_file =
-        fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
+        fxl::Substitute("$0/json_file$1", dir, std::to_string(unique_id_++));
     if (!files::WriteFile(json_file, json.data(), json.size())) {
       return "";
     }
@@ -129,10 +125,9 @@ TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
   const std::string json_file2 = NewJSONFile(dir, kJson2);
   EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
   EXPECT_TRUE(scheme_map.HasError());
-  // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-  const std::string expected_error = fxl::Concatenate(
-      {json_file2, ": Scheme 'http' is assigned to two launchers."});
-  EXPECT_EQ(scheme_map.error_str(), expected_error);
+  EXPECT_EQ(scheme_map.error_str(),
+            fxl::Substitute("$0: Scheme 'http' is assigned to two launchers.",
+                            json_file2));
 }
 
 }  // namespace

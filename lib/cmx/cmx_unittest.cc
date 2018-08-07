@@ -5,11 +5,13 @@
 #include "garnet/lib/cmx/cmx.h"
 
 #include <fcntl.h>
+#include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/strings/substitute.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -24,12 +26,7 @@ class CmxMetadataTest : public ::testing::Test {
     std::string json_basename;
     EXPECT_FALSE(ParseFrom(&cmx, json, &json_basename));
     EXPECT_TRUE(cmx.HasError());
-    // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-    size_t pos;
-    while ((pos = expected_error.find("$0")) != std::string::npos) {
-      expected_error.replace(pos, 2, json_basename);
-    }
-    EXPECT_EQ(cmx.error_str(), expected_error);
+    EXPECT_EQ(cmx.error_str(), fxl::Substitute(expected_error, json_basename));
   }
 
   bool ParseFrom(CmxMetadata* cmx, const std::string& json,

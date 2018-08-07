@@ -14,7 +14,7 @@
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/substitute.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace json {
@@ -29,12 +29,7 @@ class JSONParserTest : public ::testing::Test {
     const std::string json_file = NewJSONFile(json);
     std::string error;
     EXPECT_FALSE(ParseFromFile(parser, json_file, &error));
-    // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-    size_t pos;
-    while ((pos = expected_error.find("$0")) != std::string::npos) {
-      expected_error.replace(pos, 2, json_file);
-    }
-    EXPECT_EQ(error, expected_error);
+    EXPECT_EQ(error, fxl::Substitute(expected_error, json_file));
     EXPECT_EQ(0, props_found_);
   }
 
@@ -120,12 +115,11 @@ class JSONParserTest : public ::testing::Test {
 
 TEST_F(JSONParserTest, ReadInvalidFile) {
   const std::string invalid_path =
-      fxl::StringPrintf("%s/does_not_exist", tmp_dir_.path().c_str());
+      fxl::Substitute("$0/does_not_exist", tmp_dir_.path());
   std::string error;
   JSONParser parser;
   EXPECT_FALSE(ParseFromFile(&parser, invalid_path, &error));
-  EXPECT_EQ(error,
-            fxl::StringPrintf("Failed to read file: %s", invalid_path.c_str()));
+  EXPECT_EQ(error, fxl::Substitute("Failed to read file: $0", invalid_path));
 }
 
 TEST_F(JSONParserTest, ParseWithErrors) {

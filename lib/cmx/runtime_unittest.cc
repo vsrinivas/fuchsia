@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/strings/substitute.h"
 
 namespace component {
 namespace {
@@ -23,12 +24,7 @@ class RuntimeMetadataTest : public ::testing::Test {
     std::string json_basename;
     EXPECT_FALSE(ParseFrom(&runtime, json, &error, &json_basename));
     EXPECT_TRUE(runtime.IsNull());
-    // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-    size_t pos;
-    while ((pos = expected_error.find("$0")) != std::string::npos) {
-      expected_error.replace(pos, 2, json_basename);
-    }
-    EXPECT_EQ(error, expected_error);
+    EXPECT_EQ(error, fxl::Substitute(expected_error, json_basename));
   }
 
   bool ParseFrom(RuntimeMetadata* runtime, const std::string& json,

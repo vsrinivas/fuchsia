@@ -10,8 +10,8 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/substitute.h"
 
 namespace sysmgr {
 namespace {
@@ -31,17 +31,12 @@ class ConfigTest : public ::testing::Test {
     ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
     const std::string json_file = NewJSONFile(dir, json);
     EXPECT_FALSE(config.ParseFromDirectory(dir));
-    // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-    size_t pos;
-    while ((pos = expected_error.find("$0")) != std::string::npos) {
-      expected_error.replace(pos, 2, json_file);
-    }
-    EXPECT_EQ(config.error_str(), expected_error);
+    EXPECT_EQ(config.error_str(), fxl::Substitute(expected_error, json_file));
   }
 
   std::string NewJSONFile(const std::string& dir, const std::string& json) {
     const std::string json_file =
-        fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
+        fxl::Substitute("$0/json_file$1", dir, std::to_string(unique_id_++));
     if (!files::WriteFile(json_file, json.data(), json.size())) {
       return "";
     }
