@@ -147,6 +147,7 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
 
   RunLoopUntil([&]() { return done; });
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
+  EXPECT_EQ(expected_story_id, result.story_id);
   EXPECT_EQ(4, actual_execute_count);
 }
 
