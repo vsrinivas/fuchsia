@@ -4,6 +4,8 @@
 
 #include "socket_channel_relay.h"
 
+#include <memory>
+
 #include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
@@ -38,6 +40,8 @@ class SocketChannelRelayTest : public ::testing::Test {
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
   zx::socket* remote_socket() { return &remote_socket_; }
   zx::socket ConsumeLocalSocket() { return std::move(local_socket_); }
+  void RunLoopUntilIdle() { loop_.RunUntilIdle(); }
+  void ShutdownLoop() { loop_.Shutdown(); }
 
  private:
   fbl::RefPtr<testing::FakeChannel> channel_;
@@ -49,17 +53,76 @@ class SocketChannelRelayTest : public ::testing::Test {
   async::Loop loop_;
 };
 
-using SocketChannelRelayLifetimeTest = SocketChannelRelayTest;
+class SocketChannelRelayLifetimeTest : public SocketChannelRelayTest {
+ public:
+  SocketChannelRelayLifetimeTest()
+      : was_deactivation_callback_invoked_(false),
+        relay_(std::make_unique<internal::SocketChannelRelay>(
+            ConsumeLocalSocket(), channel(),
+            [this](ChannelId) { was_deactivation_callback_invoked_ = true; })) {
+  }
+
+ protected:
+  bool was_deactivation_callback_invoked() {
+    return was_deactivation_callback_invoked_;
+  }
+  internal::SocketChannelRelay& relay() {
+    FXL_DCHECK(relay_);
+    return *relay_;
+  }
+  void DestroyRelay() { relay_ = nullptr; }
+
+ private:
+  bool was_deactivation_callback_invoked_;
+  std::unique_ptr<internal::SocketChannelRelay> relay_;
+};
+
+TEST_F(SocketChannelRelayLifetimeTest, ActivateFailsIfGivenStoppedDispatcher) {
+  ShutdownLoop();
+  EXPECT_FALSE(relay().Activate());
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       ActivateDoesNotInvokeDeactivationCallbackOnSuccess) {
+  ASSERT_TRUE(relay().Activate());
+  EXPECT_FALSE(was_deactivation_callback_invoked());
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       ActivateDoesNotInvokeDeactivationCallbackOnFailure) {
+  ShutdownLoop();
+  ASSERT_FALSE(relay().Activate());
+  EXPECT_FALSE(was_deactivation_callback_invoked());
+}
 
 TEST_F(SocketChannelRelayLifetimeTest, SocketIsClosedWhenRelayIsDestroyed) {
   const char data = 'a';
-  {
-    internal::SocketChannelRelay relay(ConsumeLocalSocket(), channel(),
-                                       nullptr);
-    ASSERT_EQ(ZX_OK, remote_socket()->write(0, &data, sizeof(data), nullptr));
-  }  // Destroys |relay|.
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+  ASSERT_EQ(ZX_OK, remote_socket()->write(0, &data, sizeof(data), nullptr));
+  DestroyRelay();
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
             remote_socket()->write(0, &data, sizeof(data), nullptr));
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       RelayIsDeactivatedWhenDispatcherIsShutDown) {
+  ASSERT_TRUE(relay().Activate());
+
+  ShutdownLoop();
+  EXPECT_TRUE(was_deactivation_callback_invoked());
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       RelayActivationFailsIfChannelActivationFails) {
+  channel()->set_activate_fails(true);
+  EXPECT_FALSE(relay().Activate());
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       DestructionWithPendingSdusFromChannelDoesNotCrash) {
+  ASSERT_TRUE(relay().Activate());
+  channel()->Receive(common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o'));
+  DestroyRelay();
+  RunLoopUntilIdle();
 }
 
 }  // namespace

@@ -5,9 +5,12 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SOCKET_CHANNEL_RELAY_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SOCKET_CHANNEL_RELAY_H_
 
+#include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <zircon/status.h>
 
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/zx/socket.h"
 
@@ -49,9 +52,18 @@ class SocketChannelRelay final {
   // we never leave the thread idle), and b) to provide in-order delivery,
   // moving the data between the zx::socket and the l2cap::Channel needs to be
   // serialized even in the multi-threaded case.
-  SocketChannelRelay(zx::socket&& socket, fbl::RefPtr<Channel> channel,
+  SocketChannelRelay(zx::socket socket, fbl::RefPtr<Channel> channel,
                      DeactivationCallback deactivation_cb);
   ~SocketChannelRelay();
+
+  // Enables read and close callbacks for the zx::socket and the
+  // l2cap::Channel. (Write callbacks aren't necessary until we have data
+  // buffered.) Returns true on success.
+  //
+  // Activate() is guaranteed _not_ to invoke |deactivation_cb|, even in the
+  // event of failure. Instead, in the failure case, the caller should dispose
+  // of |this| directly.
+  __WARN_UNUSED_RESULT bool Activate();
 
  private:
   enum class RelayState {
@@ -62,17 +74,47 @@ class SocketChannelRelay final {
   };
 
   // Deactivates and unbinds all callbacks from the zx::socket and the
-  // l2cap::Channel. Note that |socket_| closure is left to the dtor.
+  // l2cap::Channel.
+  // * It is an error to call this when |state_ == kDeactivated|.
+  // * Closing |socket_| is left to the dtor.
   void Deactivate();
 
-  RelayState state_;
+  // Deactivates |this|, and invokes deactivation_cb_.
+  // It is an error to call this when |state_ == kDeactivated|.
+  void DeactivateAndRequestDestruction();
+
+  // Callbacks for zx::socket events.
+  void OnSocketReadable(zx_status_t status);
+  void OnSocketClosed(zx_status_t status);
+
+  // Callbacks for l2cap::Channel events.
+  void OnChannelDataReceived(SDU sdu);
+  void OnChannelClosed();
+
+  // Binds an async::Wait to a |handler|, but does not enable the wait.
+  // The handler will be wrapped in code that verifies that |this| has not begun
+  // destruction.
+  void BindWait(zx_signals_t trigger, const char* wait_name, async::Wait* wait,
+                fit::function<void(zx_status_t)> handler);
+
+  // Begins waiting on |wait|. Returns true on success.
+  // Note that it is safe to BeginWait() even after a socket operation has
+  // returned ZX_ERR_PEER_CLOSED. This is because "if the handle is closed, the
+  // operation will ... be terminated". (See zx_object_wait_async().)
+  bool BeginWait(const char* wait_name, async::Wait* wait);
+
+  RelayState state_;  // Initial state is kActivating.
 
   const zx::socket socket_;
   const fbl::RefPtr<Channel> channel_;
   async_dispatcher_t* const dispatcher_;
   DeactivationCallback deactivation_cb_;
 
+  async::Wait sock_read_waiter_;
+  async::Wait sock_close_waiter_;
+
   const fxl::ThreadChecker thread_checker_;
+  fxl::WeakPtrFactory<SocketChannelRelay> weak_ptr_factory_;  // Keep last.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketChannelRelay);
 };
