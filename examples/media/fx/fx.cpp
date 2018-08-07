@@ -104,8 +104,8 @@ class FxProcessor {
   void HandleKeystroke(zx_status_t status, uint32_t events);
   void Shutdown(const char* reason = "unknown");
   void ProcessInput();
-  void ProduceOutputPackets(fuchsia::media::AudioPacket* out_pkt1,
-                            fuchsia::media::AudioPacket* out_pkt2);
+  void ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
+                            fuchsia::media::StreamPacket* out_pkt2);
   void ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb_size,
                    int16_t* dst, uint32_t dst_offset, uint32_t dst_rb_size,
                    uint32_t frames, EffectFn effect);
@@ -151,7 +151,7 @@ class FxProcessor {
   fbl::unique_ptr<AudioInput> input_;
   fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
@@ -181,7 +181,7 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   }
 
   // Create a renderer.  Setup connection error handlers.
-  audio->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     Shutdown("fuchsia::media::AudioRenderer connection closed");
@@ -206,7 +206,7 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
       output_buf_sz_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
       &rend_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
-  audio_renderer_->SetPayloadBuffer(std::move(rend_vmo));
+  audio_renderer_->AddPayloadBuffer(0, std::move(rend_vmo));
 
   // We want to work in units of audio frames for our PTS units.  Configure this
   // now.
@@ -443,7 +443,7 @@ void FxProcessor::Shutdown(const char* reason) {
 }
 
 void FxProcessor::ProcessInput() {
-  fuchsia::media::AudioPacket pkt1, pkt2;
+  fuchsia::media::StreamPacket pkt1, pkt2;
 
   pkt1.payload_size = 0;
   pkt2.payload_size = 0;
@@ -483,8 +483,8 @@ void FxProcessor::ProcessInput() {
                          zx::nsec(PROCESS_CHUNK_TIME));
 }
 
-void FxProcessor::ProduceOutputPackets(fuchsia::media::AudioPacket* out_pkt1,
-                                       fuchsia::media::AudioPacket* out_pkt2) {
+void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
+                                       fuchsia::media::StreamPacket* out_pkt2) {
   // Figure out how much input data we have to process.
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   int64_t input_wp = clock_mono_to_input_wr_ptr_.Apply(now);
@@ -515,18 +515,18 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::AudioPacket* out_pkt1,
   // send and the current position of the write pointer in the output ring
   // buffer.
   uint32_t pkt1_frames = fbl::min<uint32_t>(output_space, todo);
-  out_pkt1->timestamp = output_buf_wp_ + lead_time_frames_;
+  out_pkt1->pts = output_buf_wp_ + lead_time_frames_;
   out_pkt1->payload_offset = output_start * input_->frame_sz();
   out_pkt1->payload_size = pkt1_frames * input_->frame_sz();
 
   // Does this job wrap the ring?  If so, we need to create 2 packets instead
   // of 1.
   if (pkt1_frames < todo) {
-    out_pkt2->timestamp = out_pkt1->timestamp + pkt1_frames;
+    out_pkt2->pts = out_pkt1->pts + pkt1_frames;
     out_pkt2->payload_offset = 0;
     out_pkt2->payload_size = (todo - pkt1_frames) * input_->frame_sz();
   } else {
-    out_pkt2->timestamp = fuchsia::media::kNoTimestamp;
+    out_pkt2->pts = fuchsia::media::NO_TIMESTAMP;
     out_pkt2->payload_offset = 0;
     out_pkt2->payload_size = 0;
   }

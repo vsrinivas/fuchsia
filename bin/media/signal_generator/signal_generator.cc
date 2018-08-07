@@ -92,8 +92,8 @@ void MediaApp::Run(component::StartupContext* app_context) {
     SendPacket(CreateAudioPacket(payload_num));
   }
 
-  audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
-                               fuchsia::media::kNoTimestamp);
+  audio_out_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                          fuchsia::media::NO_TIMESTAMP);
 }
 
 // Based on the user-specified values for signal frequency and milliseconds per
@@ -174,18 +174,23 @@ void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
     audio->SetRoutingPolicy(audio_policy_);
   }
 
-  audio->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_out_.NewRequest());
+  audio_out_->BindGainControl(gain_control_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
-    FXL_LOG(ERROR)
-        << "fuchsia::media::AudioRenderer connection lost. Quitting.";
+  audio_out_.set_error_handler([this]() {
+    FXL_LOG(ERROR) << "fuchsia::media::AudioOut connection lost. Quitting.";
+    Shutdown();
+  });
+
+  gain_control_.set_error_handler([this]() {
+    FXL_LOG(ERROR) << "fuchsia::media::GainControl connection lost. Quitting.";
     Shutdown();
   });
 }
 
 // Set the Mediarenderer's audio format to stereo 48kHz 16-bit (LPCM).
 void MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_renderer_);
+  FXL_DCHECK(audio_out_);
 
   fuchsia::media::AudioStreamType format;
 
@@ -196,12 +201,11 @@ void MediaApp::SetStreamType() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
-  audio_renderer_->SetPcmStreamType(std::move(format));
+  audio_out_->SetPcmStreamType(std::move(format));
 
   // Set renderer gain, and clear the mute status.
-  audio_renderer_->SetGainMuteNoReply(
-      renderer_gain_db_, false,
-      fuchsia::media::kGainFlagGainValid | fuchsia::media::kGainFlagMuteValid);
+  gain_control_->SetGain(renderer_gain_db_);
+  gain_control_->SetMute(false);
 }
 
 // Create a single Virtual Memory Object, and map enough memory for our audio
@@ -218,7 +222,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
     return status;
   }
 
-  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
+  audio_out_->AddPayloadBuffer(0, std::move(payload_vmo));
 
   return ZX_OK;
 }
@@ -263,8 +267,8 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer,
 
 // We divided our cross-proc buffer into different zones, called payloads.
 // Create a packet corresponding to this particular payload.
-fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
-  fuchsia::media::AudioPacket packet;
+fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(size_t payload_num) {
+  fuchsia::media::StreamPacket packet;
   packet.payload_offset = (payload_num * payload_size_) % payload_mapping_size_;
   packet.payload_size = payload_size_;
   return packet;
@@ -273,7 +277,7 @@ fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
 // Submit a packet, incrementing our count of packets sent. When it returns:
 // a. if there are more packets to send, create and send the next packet;
 // b. if all expected packets have completed, begin closing down the system.
-void MediaApp::SendPacket(fuchsia::media::AudioPacket packet) {
+void MediaApp::SendPacket(fuchsia::media::StreamPacket packet) {
   if (save_to_file_) {
     if (!wav_writer_.Write(reinterpret_cast<char*>(payload_buffer_.start()) +
                                packet.payload_offset,
@@ -283,8 +287,8 @@ void MediaApp::SendPacket(fuchsia::media::AudioPacket packet) {
   }
 
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(std::move(packet),
-                              [this]() { OnSendPacketComplete(); });
+  audio_out_->SendPacket(std::move(packet),
+                         [this]() { OnSendPacketComplete(); });
 }
 
 void MediaApp::OnSendPacketComplete() {

@@ -4,18 +4,13 @@
 
 library fuchsia.media;
 
-// A special value (expressed in decibels) which expressly silences an outgoing
-// audio stream, regardless of other stream|device|environment characteristics.
-// Note: this gain value is entirely separate from the stream's mute state.
-const float32 kMutedGain = -160.0;
-
-// An outgoing audio stream's maximum permitted above-unity gain, in decibels.
-const float32 kMaxGain = 24.0;
+// DEPRECATED
+// All the definitions in this file are deprecated. Please see audio_out.fidl.
 
 struct AudioPacket {
   // Time at which the audio is to be presented, or was captured, as measured on
   // the reference clock.
-  int64 timestamp = kNoTimestamp;
+  int64 timestamp = NO_TIMESTAMP;
 
   // Offset of the packet payload in the indicated shared buffer.
   uint64 payload_offset;
@@ -215,7 +210,7 @@ interface AudioRenderer2 {
   // as being related.  IOW - The audio frame at timestamp X will be presented
   // at reference time Y.  Users may explicitly provide both timestamps, one of
   // the timestamps, or neither of the timestamps, depending on their use case.
-  // A timestamp may be omitted by supplying the special value kNoTimestamp.
+  // A timestamp may be omitted by supplying the special value NO_TIMESTAMP.
   // In the case that a timestamp is omitted, the AudioRenderer automatically
   // deduce the timestamp to use based on the following rules.
   //
@@ -256,7 +251,7 @@ interface AudioRenderer2 {
   // A user has queued some audio using SendPacket.  The first of these packets
   // has a PTS of zero, and the user wishes to begin playback as soon as
   // possible, but wishes to skip the first X media timeline units worth of
-  // audio.  The user would call Play(kNoTimestamp, X).
+  // audio.  The user would call Play(NO_TIMESTAMP, X).
   //
   // A user has queued some audio using SendPacket and is attempting to present
   // media in synch with another player in a different device.  The coordinator
@@ -271,11 +266,11 @@ interface AudioRenderer2 {
   // discontinuity.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  301: Play(int64 reference_time,         // kNoTimestamp
-            int64 media_time)             // kNoTimestamp
+  301: Play(int64 reference_time,         // NO_TIMESTAMP
+            int64 media_time)             // NO_TIMESTAMP
     -> (int64 reference_time, int64 media_time);
-  302: PlayNoReply(int64 reference_time,  // kNoTimestamp
-                   int64 media_time);     // kNoTimestamp
+  302: PlayNoReply(int64 reference_time,  // NO_TIMESTAMP
+                   int64 media_time);     // NO_TIMESTAMP
 
   // Immediately put the renderer into the paused state and then report the
   // relationship between the media and reference timelines which was

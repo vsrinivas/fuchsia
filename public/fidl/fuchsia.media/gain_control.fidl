@@ -1,0 +1,23 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+// Ordinal range: 0x0100-0x1ff
+interface GainControl {
+  // Sets the gain in decibels.
+  0x0101: SetGain(float32 gain_db);
+
+  // TODO(mpuryear): Add Fade method.
+
+  // Sets the mute value.
+  0x0103: SetMute(bool muted);
+
+  // Provides current gain/mute values.
+  0x0104: -> OnGainMuteChanged(float32 gain_db, bool muted);
+};
+
+const float32 MUTED_GAIN = -160.0;
+
+const float32 MAX_GAIN = 24.0;

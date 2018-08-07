@@ -33,10 +33,11 @@ class WavRecorder {
   bool SetupPayloadBuffer();
   void SendCaptureJob();
   void OnDefaultFormatFetched(fuchsia::media::StreamType type);
-  void OnPacketCaptured(fuchsia::media::MediaPacket pkt);
+  void OnPacketProduced(fuchsia::media::StreamPacket pkt);
   void OnQuit();
 
-  fuchsia::media::AudioCapturerPtr capturer_;
+  fuchsia::media::AudioInPtr audio_in_;
+  fuchsia::media::GainControlPtr gain_control_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
 

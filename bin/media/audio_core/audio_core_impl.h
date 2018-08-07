@@ -32,12 +32,17 @@ class AudioCoreImpl : public fuchsia::media::Audio {
   // Audio implementation.
   // TODO(mpuryear): through the codebase, particularly in examples and headers,
   // change 'audio_renderer' variables to 'audio_renderer_request' (media, etc).
-  void CreateCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-                          audio_capturer_request,
-                      bool loopback) final;
+  void CreateAudioIn(
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+      bool loopback) final;
 
-  void CreateRendererV2(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
-                            audio_renderer) final;
+  void CreateAudioOut(
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer) final;
+
+  // TODO(dalesat): Remove.
+  void CreateAudioRenderer2(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer)
+      final;
 
   void SetSystemGain(float db_gain) final;
   void SetSystemMute(bool muted) final;

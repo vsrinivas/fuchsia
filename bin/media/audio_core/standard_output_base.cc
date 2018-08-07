@@ -10,8 +10,8 @@
 #include <fbl/auto_lock.h>
 
 #include "garnet/bin/media/audio_core/audio_link.h"
-#include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
-#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_core/audio_out_format_info.h"
+#include "garnet/bin/media/audio_core/audio_out_impl.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
 #include "lib/fxl/logging.h"
@@ -238,7 +238,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
     FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::Renderer);
     auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-    auto renderer = fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
+    auto renderer = fbl::RefPtr<AudioOutImpl>::Downcast(link->GetSource());
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
@@ -323,8 +323,8 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
   }
 }
 
-bool StandardOutputBase::SetupMix(
-    const fbl::RefPtr<AudioRendererImpl>& renderer, RendererBookkeeping* info) {
+bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& renderer,
+                                  RendererBookkeeping* info) {
   // If we need to recompose our transformation from output frame space to input
   // fractional frames, do so now.
   FXL_DCHECK(info);
@@ -334,9 +334,9 @@ bool StandardOutputBase::SetupMix(
   return true;
 }
 
-bool StandardOutputBase::ProcessMix(
-    const fbl::RefPtr<AudioRendererImpl>& renderer, RendererBookkeeping* info,
-    const fbl::RefPtr<AudioPacketRef>& packet) {
+bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
+                                    RendererBookkeeping* info,
+                                    const fbl::RefPtr<AudioPacketRef>& packet) {
   // Sanity check our parameters.
   FXL_DCHECK(info);
   FXL_DCHECK(packet);
@@ -477,8 +477,8 @@ bool StandardOutputBase::ProcessMix(
   return consumed_source;
 }
 
-bool StandardOutputBase::SetupTrim(
-    const fbl::RefPtr<AudioRendererImpl>& renderer, RendererBookkeeping* info) {
+bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
+                                   RendererBookkeeping* info) {
   // Compute the cutoff time we will use to decide wether or not to trim
   // packets.  ForeachLink has already updated our transformation, no need
   // for us to do so here.
@@ -499,7 +499,7 @@ bool StandardOutputBase::SetupTrim(
 }
 
 bool StandardOutputBase::ProcessTrim(
-    const fbl::RefPtr<AudioRendererImpl>& renderer, RendererBookkeeping* info,
+    const fbl::RefPtr<AudioOutImpl>& renderer, RendererBookkeeping* info,
     const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   FXL_DCHECK(pkt_ref);
 
@@ -512,8 +512,8 @@ bool StandardOutputBase::ProcessTrim(
 }
 
 void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
-    const fbl::RefPtr<AudioRendererImpl>& renderer,
-    const AudioRendererFormatInfo& format_info) {
+    const fbl::RefPtr<AudioOutImpl>& renderer,
+    const AudioOutFormatInfo& format_info) {
   FXL_DCHECK(renderer != nullptr);
   TimelineFunction timeline_function;
   uint32_t gen = local_time_to_renderer_subframes_gen;

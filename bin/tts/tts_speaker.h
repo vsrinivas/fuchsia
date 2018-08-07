@@ -70,7 +70,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   async::Loop engine_loop_;
   async_dispatcher_t* master_dispatcher_;
 
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
   vmo_utils::VmoMapper shared_buf_;
 
   std::mutex ring_buffer_lock_;

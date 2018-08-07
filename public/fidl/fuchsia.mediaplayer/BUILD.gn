@@ -11,6 +11,7 @@ fidl("fuchsia.mediaplayer") {
     "metadata.fidl",
     "problem.fidl",
     "seeking_reader.fidl",
+    "timeline_function.fidl",
   ]
 
   public_deps = [

@@ -12,8 +12,8 @@ namespace audio {
 
 AudioPacketRef::AudioPacketRef(
     fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
-    fuchsia::media::AudioRenderer2::SendPacketCallback callback,
-    fuchsia::media::AudioPacket packet, AudioCoreImpl* service,
+    fuchsia::media::AudioOut::SendPacketCallback callback,
+    fuchsia::media::StreamPacket packet, AudioCoreImpl* service,
     uint32_t frac_frame_len, int64_t start_pts)
     : vmo_ref_(std::move(vmo_ref)),
       callback_(std::move(callback)),

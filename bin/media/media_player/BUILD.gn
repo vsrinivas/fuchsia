@@ -49,8 +49,8 @@ executable("tests") {
   testonly = true
 
   sources = [
-    "test/fakes/fake_audio_renderer.cc",
-    "test/fakes/fake_audio_renderer.h",
+    "test/fakes/fake_audio_out.cc",
+    "test/fakes/fake_audio_out.h",
     "test/fakes/fake_scenic.cc",
     "test/fakes/fake_scenic.h",
     "test/fakes/fake_session.cc",

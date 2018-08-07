@@ -17,9 +17,6 @@
 #include "garnet/examples/media/tones/midi_keyboard.h"
 #include "lib/fxl/logging.h"
 
-// TODO(dalesat): Remove once the mixer supports floats.
-#define FLOAT_SAMPLES_SUPPORTED 0
-
 namespace examples {
 namespace {
 
@@ -55,37 +52,9 @@ constexpr int64_t Beat(float beat) {
                               kBeatsPerMinute);
 }
 
-#if !FLOAT_SAMPLES_SUPPORTED
-
-// Converts float samples to signed 16 samples, cheap and dirty.
-void ConvertFloatToSigned16(float* source, int16_t* dest, size_t sample_count) {
-  FXL_DCHECK(source);
-  FXL_DCHECK(dest);
-
-  for (size_t i = 0; i < sample_count; ++i) {
-    float sample = *source;
-    if (sample > 1.0f) {
-      *dest = std::numeric_limits<int16_t>::max();
-    } else if (sample < -1.0f) {
-      *dest = std::numeric_limits<int16_t>::min();
-    } else {
-      *dest = static_cast<int16_t>(sample * 0x7fff);
-    }
-
-    ++source;
-    ++dest;
-  }
-}
-
-static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
-    fuchsia::media::AudioSampleFormat::SIGNED_16;
-static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(uint16_t);
-#else
 static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
     fuchsia::media::AudioSampleFormat::FLOAT;
 static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(float);
-#endif
-
 static constexpr size_t kBytesPerBuffer = kBytesPerFrame * kFramesPerBuffer;
 
 static const std::map<int, float> notes_by_key_ = {
@@ -105,7 +74,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     std::cerr << "Unexpected error: channel to audio service closed\n";
@@ -229,7 +198,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     }
 
     // Assign our shared payload buffer to the renderer.
-    audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
+    audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
 
     // Configure the renderer to use input frames of audio as its PTS units.
     audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
@@ -257,8 +226,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     }
 
     SendPackets();
-    audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
-                                 fuchsia::media::kNoTimestamp);
+    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                                 fuchsia::media::NO_TIMESTAMP);
     started_ = true;
   } else {
     SendPackets();
@@ -270,7 +239,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
 void Tones::SendPackets() {
   while (!done() && (active_packets_in_flight_ < target_packets_in_flight_)) {
     // Allocate packet and locate its position in the buffer.
-    fuchsia::media::AudioPacket packet;
+    fuchsia::media::StreamPacket packet;
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
     packet.payload_size = kBytesPerBuffer;
 
@@ -281,14 +250,7 @@ void Tones::SendPackets() {
                        packet.payload_offset;
 
     // Fill it with audio.
-#if FLOAT_SAMPLES_SUPPORTED
     FillBuffer(reinterpret_cast<float*>(payload_ptr));
-#else
-    float buffer[kFramesPerBuffer * kChannelCount];
-    FillBuffer(buffer);
-    ConvertFloatToSigned16(buffer, reinterpret_cast<int16_t*>(payload_ptr),
-                           kFramesPerBuffer * kChannelCount);
-#endif
 
     // Send it.
     //

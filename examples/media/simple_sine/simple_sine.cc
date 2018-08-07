@@ -38,11 +38,11 @@ void MediaApp::Run(component::StartupContext* app_context) {
 
   WriteAudioIntoBuffer();
   for (size_t payload_num = 0; payload_num < kNumPayloads; ++payload_num) {
-    SendPacket(CreateAudioPacket(payload_num));
+    SendPacket(CreatePacket(payload_num));
   }
 
-  audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
-                               fuchsia::media::kNoTimestamp);
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                               fuchsia::media::NO_TIMESTAMP);
 }
 
 // Use StartupContext to acquire AudioPtr, which we only need in order to get
@@ -51,7 +51,7 @@ void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     FXL_LOG(ERROR)
@@ -90,7 +90,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
     return status;
   }
 
-  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
+  audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
 
   return ZX_OK;
 }
@@ -107,8 +107,8 @@ void MediaApp::WriteAudioIntoBuffer() {
 
 // We divide our cross-proc buffer into different zones, called payloads.
 // Create a packet that corresponds to this particular payload.
-fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
-  fuchsia::media::AudioPacket packet;
+fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
+  fuchsia::media::StreamPacket packet;
   packet.payload_offset = (payload_num * payload_size_) % total_mapping_size_;
   packet.payload_size = payload_size_;
   return packet;
@@ -117,7 +117,7 @@ fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
 // Submit a packet, incrementing our count of packets sent. When it returns:
 // a. if there are more packets to send, create and send the next packet;
 // b. if all expected packets have completed, begin closing down the system.
-void MediaApp::SendPacket(fuchsia::media::AudioPacket packet) {
+void MediaApp::SendPacket(fuchsia::media::StreamPacket packet) {
   ++num_packets_sent_;
   audio_renderer_->SendPacket(std::move(packet),
                               [this]() { OnSendPacketComplete(); });
@@ -128,7 +128,7 @@ void MediaApp::OnSendPacketComplete() {
   FXL_DCHECK(num_packets_completed_ <= kNumPayloads);
 
   if (num_packets_sent_ < kNumPayloads) {
-    SendPacket(CreateAudioPacket(num_packets_sent_));
+    SendPacket(CreatePacket(num_packets_sent_));
   } else if (num_packets_completed_ >= kNumPayloads) {
     Shutdown();
   }

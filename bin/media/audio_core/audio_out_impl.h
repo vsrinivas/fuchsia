@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_IMPL_H_
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
-#include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
+#include "garnet/bin/media/audio_core/audio_out_format_info.h"
 #include "garnet/bin/media/audio_core/utils.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -21,14 +21,14 @@ namespace audio {
 
 class AudioCoreImpl;
 
-class AudioRendererImpl
+class AudioOutImpl
     : public AudioObject,
-      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
-      public fuchsia::media::AudioRenderer2 {
+      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioOutImpl>>,
+      public fuchsia::media::AudioOut,
+      public fuchsia::media::GainControl {
  public:
-  static fbl::RefPtr<AudioRendererImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
-          audio_renderer_request,
+  static fbl::RefPtr<AudioOutImpl> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
       AudioCoreImpl* owner);
 
   void Shutdown();
@@ -50,44 +50,47 @@ class AudioRendererImpl
   // should never access format_info() directly from a renderer.  Instead, they
   // should use the format_info which was assigned to the AudioLink at the time
   // the link was created.
-  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const {
+  const fbl::RefPtr<AudioOutFormatInfo>& format_info() const {
     return format_info_;
   }
   bool format_info_valid() const { return (format_info_ != nullptr); }
 
   float db_gain() const { return db_gain_; }
 
-  // AudioRenderer Interface
+  // AudioOut interface
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
-  void SetPayloadBuffer(zx::vmo payload_buffer) final;
+  void SetStreamType(fuchsia::media::StreamType format) final;
+  void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;
+  void RemovePayloadBuffer(uint32_t id) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) final;
   void SetPtsContinuityThreshold(float threshold_seconds) final;
   void SetReferenceClock(zx::handle ref_clock) final;
-  void SendPacket(fuchsia::media::AudioPacket packet,
+  void SendPacket(fuchsia::media::StreamPacket packet,
                   SendPacketCallback callback) final;
-  void SendPacketNoReply(fuchsia::media::AudioPacket packet) final;
-  void Flush(FlushCallback callback) final;
-  void FlushNoReply() final;
+  void SendPacketNoReply(fuchsia::media::StreamPacket packet) final;
+  void EndOfStream() final;
+  void DiscardAllPackets(DiscardAllPacketsCallback callback) final;
+  void DiscardAllPacketsNoReply() final;
   void Play(int64_t reference_time, int64_t media_time,
             PlayCallback callback) final;
   void PlayNoReply(int64_t reference_time, int64_t media_time) final;
   void Pause(PauseCallback callback) final;
   void PauseNoReply() final;
-  void SetGainMute(float gain, bool mute, uint32_t flags,
-                   SetGainMuteCallback callback) final;
-  void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) final;
-  void DuplicateGainControlInterface(
-      fidl::InterfaceRequest<fuchsia::media::AudioRendererGainControl> request)
-      final;
+  void BindGainControl(
+      fidl::InterfaceRequest<fuchsia::media::GainControl> request) final;
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
+
+  // GainControl interface.
+  void SetGain(float gain_db) final;
+  void SetMute(bool muted) final;
 
  protected:
   // Hook called when the minimum clock lead time requirement changes.
   void ReportNewMinClockLeadTime();
 
-  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<AudioOutFormatInfo> format_info_;
   float db_gain_ = 0.0;
   bool mute_ = false;
   std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
@@ -96,46 +99,45 @@ class AudioRendererImpl
   int64_t min_clock_lead_nsec_ = 0;
 
  private:
-  class GainControlBinding : public fuchsia::media::AudioRendererGainControl {
+  class GainControlBinding : public fuchsia::media::GainControl {
    public:
-    static fbl::unique_ptr<GainControlBinding> Create(
-        AudioRendererImpl* owner) {
+    static fbl::unique_ptr<GainControlBinding> Create(AudioOutImpl* owner) {
       return fbl::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
     }
 
     bool gain_events_enabled() const { return gain_events_enabled_; }
 
-    // AudioRendererGainControl
-    void SetGainMute(float gain, bool mute, uint32_t flags,
-                     SetGainMuteCallback callback) override;
-    void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) override;
+    // GainControl interface.
+    void SetGain(float gain_db) final;
+    void SetMute(bool muted) final;
+    // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 
    private:
     friend class fbl::unique_ptr<GainControlBinding>;
 
-    GainControlBinding(AudioRendererImpl* owner) : owner_(owner) {}
+    GainControlBinding(AudioOutImpl* owner) : owner_(owner) {}
     ~GainControlBinding() override {}
 
-    AudioRendererImpl* owner_;
+    AudioOutImpl* owner_;
     bool gain_events_enabled_ = false;
   };
 
-  friend class fbl::RefPtr<AudioRendererImpl>;
+  friend class fbl::RefPtr<AudioOutImpl>;
   friend class GainControlBinding;
 
-  AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
-                        audio_renderer_request,
-                    AudioCoreImpl* owner);
+  AudioOutImpl(
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+      AudioCoreImpl* owner);
 
-  ~AudioRendererImpl() override;
+  ~AudioOutImpl() override;
 
   bool IsOperating();
   bool ValidateConfig();
   void ComputePtsToFracFrames(int64_t first_pts);
 
   AudioCoreImpl* owner_ = nullptr;
-  fidl::Binding<fuchsia::media::AudioRenderer2> audio_renderer_binding_;
-  fidl::BindingSet<fuchsia::media::AudioRendererGainControl,
+  fidl::Binding<fuchsia::media::AudioOut> audio_renderer_binding_;
+  fidl::BindingSet<fuchsia::media::GainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;
@@ -169,4 +171,4 @@ class AudioRendererImpl
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_IMPL_H_

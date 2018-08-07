@@ -13,6 +13,7 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/type_converters.h"
 #include "lib/url/gurl.h"
 
 #include "garnet/bin/media/media_player/framework/formatting.h"
@@ -306,10 +307,11 @@ void MediaPlayerTestView::OnChildUnavailable(uint32_t child_key) {
 void MediaPlayerTestView::HandleStatusChanged(
     const fuchsia::mediaplayer::MediaPlayerStatus& status) {
   // Process status received from the player.
-  if (status.timeline_transform) {
-    timeline_function_ = media::TimelineFunction(*status.timeline_transform);
+  if (status.timeline_function) {
+    timeline_function_ =
+        fxl::To<media::TimelineFunction>(*status.timeline_function);
 
-    if (seek_interval_start_ != fuchsia::media::kUnspecifiedTime &&
+    if (seek_interval_start_ != fuchsia::media::NO_TIMESTAMP &&
         !in_current_seek_interval_ &&
         timeline_function_.subject_time() == seek_interval_start_) {
       // The seek issued in |StartNewSeekInterval| is now reflected in the
@@ -430,7 +432,7 @@ void MediaPlayerTestView::StartNewSeekInterval() {
     // We have no duration yet. Just start over at the start of the file.
     media_player_->Seek(0);
     media_player_->Play();
-    seek_interval_end_ = fuchsia::media::kUnspecifiedTime;
+    seek_interval_end_ = fuchsia::media::NO_TIMESTAMP;
   }
 
   // For the start position, generate a number in the range [0..duration_ns_]

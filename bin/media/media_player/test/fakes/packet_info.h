@@ -15,15 +15,15 @@ class PacketInfo {
  public:
   static uint64_t Hash(const void* data, size_t data_size);
 
-  PacketInfo(int64_t timestamp, uint64_t size, uint64_t hash)
-      : timestamp_(timestamp), size_(size), hash_(hash) {}
+  PacketInfo(int64_t pts, uint64_t size, uint64_t hash)
+      : pts_(pts), size_(size), hash_(hash) {}
 
-  int64_t timestamp() const { return timestamp_; }
+  int64_t pts() const { return pts_; }
   uint64_t size() const { return size_; }
   uint64_t hash() const { return hash_; }
 
  private:
-  int64_t timestamp_;
+  int64_t pts_;
   uint64_t size_;
   uint64_t hash_;
 };

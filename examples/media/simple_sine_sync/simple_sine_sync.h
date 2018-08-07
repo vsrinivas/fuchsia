@@ -36,12 +36,12 @@ class MediaApp {
 
   bool RefillBuffer();
 
-  fuchsia::media::AudioPacket CreateAudioPacket(size_t payload_num);
-  bool SendAudioPacket(fuchsia::media::AudioPacket packet);
+  fuchsia::media::StreamPacket CreateAudioPacket(size_t payload_num);
+  bool SendAudioPacket(fuchsia::media::StreamPacket packet);
 
   void WaitForPackets(size_t num_packets);
 
-  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
+  fuchsia::media::AudioOutSyncPtr audio_renderer_;
 
   vmo_utils::VmoMapper payload_buffer_;
   size_t sample_size_;

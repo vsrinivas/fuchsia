@@ -26,15 +26,15 @@ class MediaApp {
   zx_status_t CreateMemoryMapping();
   void WriteAudioIntoBuffer();
 
-  fuchsia::media::AudioPacket CreateAudioPacket(size_t packet_num);
-  void SendPacket(fuchsia::media::AudioPacket packet);
+  fuchsia::media::StreamPacket CreatePacket(size_t packet_num);
+  void SendPacket(fuchsia::media::StreamPacket packet);
   void OnSendPacketComplete();
 
   void Shutdown();
 
   fit::closure quit_callback_;
 
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
 
   vmo_utils::VmoMapper payload_buffer_;
   size_t payload_size_;

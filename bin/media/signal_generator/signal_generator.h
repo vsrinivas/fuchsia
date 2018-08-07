@@ -75,15 +75,16 @@ class MediaApp {
                                    size_t num_frames, uint32_t num_chans,
                                    OutputSignalType signal_type);
 
-  fuchsia::media::AudioPacket CreateAudioPacket(size_t packet_num);
-  void SendPacket(fuchsia::media::AudioPacket packet);
+  fuchsia::media::StreamPacket CreateAudioPacket(size_t packet_num);
+  void SendPacket(fuchsia::media::StreamPacket packet);
   void OnSendPacketComplete();
 
   void Shutdown();
 
   fit::closure quit_callback_;
 
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_out_;
+  fuchsia::media::GainControlPtr gain_control_;
 
   vmo_utils::VmoMapper payload_buffer_;
 

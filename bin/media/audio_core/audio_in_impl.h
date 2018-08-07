@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_IN_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_IN_IMPL_H_
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-timer.h>
@@ -28,14 +28,13 @@ namespace audio {
 
 class AudioCoreImpl;
 
-class AudioCapturerImpl
-    : public AudioObject,
-      public fuchsia::media::AudioCapturer,
-      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
+class AudioInImpl : public AudioObject,
+                    public fuchsia::media::AudioIn,
+                    public fuchsia::media::GainControl,
+                    public fbl::DoublyLinkedListable<fbl::RefPtr<AudioInImpl>> {
  public:
-  static fbl::RefPtr<AudioCapturerImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-          audio_capturer_request,
+  static fbl::RefPtr<AudioInImpl> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
       AudioCoreImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
@@ -44,12 +43,12 @@ class AudioCapturerImpl
   void Shutdown() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
  protected:
-  friend class fbl::RefPtr<AudioCapturerImpl>;
-  ~AudioCapturerImpl() override;
+  friend class fbl::RefPtr<AudioInImpl>;
+  ~AudioInImpl() override;
   zx_status_t InitializeSourceLink(const AudioLinkPtr& link) override;
 
  private:
-  // Notes about the AudioCapturerImpl state machine.
+  // Notes about the AudioInImpl state machine.
   //
   // :: WaitingForVmo ::
   // Audio capturers start in this mode.  They should have a default capture
@@ -126,7 +125,7 @@ class AudioCapturerImpl
     const uint32_t num_frames;
     const CaptureAtCallback cbk;
 
-    int64_t capture_timestamp = fuchsia::media::kNoTimestamp;
+    int64_t capture_timestamp = fuchsia::media::NO_TIMESTAMP;
     uint32_t flags = 0;
     uint32_t filled_frames = 0;
     const uint32_t sequence_number = sequence_generator.Next();
@@ -149,23 +148,29 @@ class AudioCapturerImpl
     uint32_t source_trans_gen_id = kInvalidGenerationId;
   };
 
-  AudioCapturerImpl(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-                        audio_capturer_request,
-                    AudioCoreImpl* owner, bool loopback);
+  AudioInImpl(
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+      AudioCoreImpl* owner, bool loopback);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
-  void SetStreamType(fuchsia::media::StreamType media_type) final;
-  void SetGain(float gain) final;
-  void SetPayloadBuffer(zx::vmo payload_buf_vmo) final;
-  void CaptureAt(uint32_t offset_frames, uint32_t num_frames,
-                 CaptureAtCallback cbk) final;
-  void Flush() final;
-  void FlushWithCallback(FlushWithCallbackCallback cbk) final;
+  void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
+  void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
+  void RemovePayloadBuffer(uint32_t id) final;
+  void CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
+                 uint32_t num_frames, CaptureAtCallback cbk) final;
+  void ReleasePacket(fuchsia::media::StreamPacket packet) final;
+  void DiscardAllPackets(DiscardAllPacketsCallback cbk) final;
+  void DiscardAllPacketsNoReply() final;
   void StartAsyncCapture(uint32_t frames_per_packet) final;
-  void StopAsyncCapture() final;
-  void StopAsyncCaptureWithCallback(
-      StopAsyncCaptureWithCallbackCallback cbk) final;
+  void StopAsyncCapture(StopAsyncCaptureCallback cbk) final;
+  void StopAsyncCaptureNoReply() final;
+  void BindGainControl(
+      fidl::InterfaceRequest<fuchsia::media::GainControl> request) final;
+
+  // GainControl interface.
+  void SetGain(float gain_db) final;
+  void SetMute(bool muted) final;
 
   // Methods used by the capture/mixer thread(s).  Must be called from the
   // mix_domain.
@@ -200,7 +205,8 @@ class AudioCapturerImpl
   // one cannot be found.
   zx_status_t ChooseMixer(const std::shared_ptr<AudioLink>& link);
 
-  fidl::Binding<fuchsia::media::AudioCapturer> binding_;
+  fidl::Binding<fuchsia::media::AudioIn> binding_;
+  fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
   AudioCoreImpl* owner_ = nullptr;
   std::atomic<State> state_;
   const bool loopback_;
@@ -247,7 +253,7 @@ class AudioCapturerImpl
 
   uint32_t async_frames_per_packet_;
   uint32_t async_next_frame_offset_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
-  StopAsyncCaptureWithCallbackCallback pending_async_stop_cbk_;
+  StopAsyncCaptureCallback pending_async_stop_cbk_;
 
   fbl::Mutex sources_lock_;
   std::set<std::shared_ptr<AudioLink>,
@@ -258,7 +264,6 @@ class AudioCapturerImpl
 }  // namespace audio
 }  // namespace media
 
-FWD_DECL_STATIC_SLAB_ALLOCATOR(
-    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits);
+FWD_DECL_STATIC_SLAB_ALLOCATOR(::media::audio::AudioInImpl::PcbAllocatorTraits);
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_IN_IMPL_H_

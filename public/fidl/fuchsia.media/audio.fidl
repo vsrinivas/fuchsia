@@ -4,21 +4,23 @@
 
 library fuchsia.media;
 
+// NOTE: This interface will be undergoing major revision soon.
+// Ordinal range: 0x0700-0x7ff
 [Discoverable]
 interface Audio {
-  1: CreateRendererV2(request<AudioRenderer2> audio_renderer);
+  0x0701: CreateAudioOut(request<AudioOut> audio_out_request);
 
-  // Create an audio capturer which either captures from the current default
+  // Create an audio in which either captures from the current default
   // audio input device, or loops-back from the current default audio output
   // device based on value passed for the the loopback flag.
   //
-  // TODO(johngro): Get rid of the loopback flag ASAP.  Routing decisions (and
+  // TODO(mpuryear): Get rid of the loopback flag ASAP.  Routing decisions (and
   // security surrounding routing decisions) should be much more sophisticated
   // than this.  This is just a placeholder until we have a design in place.
   // Eventually, I suspect that all of this will move up into the audio policy
-  // manager and application clients will obtain capturers from and control
+  // manager and application clients will obtain AudioIns from and control
   // through the policy manager.
-  2: CreateCapturer(request<AudioCapturer> audio_capturer, bool loopback);
+  0x0702: CreateAudioIn(request<AudioIn> audio_in_request, bool loopback);
 
   // System Gain and Mute
   // TODO(mpuryear): remove this systemwide setting once device-centric settings
@@ -37,12 +39,12 @@ interface Audio {
   //
   // Sets the system-wide gain in decibels. |db| values are clamped to the range
   // -160db to 0db, inclusive. Gain changes do not affect the system Mute state.
-  3: SetSystemGain(float32 gain_db);
-  //
+  0x0703: SetSystemGain(float32 gain_db);
+
   // Sets/clears the systemwide 'Mute' state. Changes to this setting do not
   // affect the value of the system Gain.
-  4: SetSystemMute(bool muted);
-  //
+  0x0704: SetSystemMute(bool muted);
+
   // Provides current values for the systemwide Gain and Mute.
   // When a client connects to Audio, the system enqueues an action (to be
   // executed once the system regains control) to send this newly-connected
@@ -63,27 +65,31 @@ interface Audio {
   // from a FIDL message dispatch (returning control to the FIDL dispatcher),
   // then that client subsequently registers this callback, the client has no
   // way to learn the current Gain|Mute settings until they actually change.
-  5: -> SystemGainMuteChanged(float32 gain_db, bool muted);
+  0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
-  6: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+  0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+
+  // DEPRECATED
+  // TODO(dalesat): Remove.
+  0xffff: CreateAudioRenderer2(request<AudioRenderer2> renderer_request);
 };
 
 // A placeholder for various types of simple routing policies.  This should be
 // replaced when routing policy moves to a more centralized policy manager.
 enum AudioOutputRoutingPolicy {
-  // AudioRenderers are always connected to all audio outputs which currently
+  // AudioOuts are always connected to all audio outputs which currently
   // in the plugged state (eg; have a connector attached to them)
-  kAllPluggedOutputs = 0;
+  ALL_PLUGGED_OUTPUTS = 0;
 
-  // AudioRenderers are only connected to the output stream which most
-  // recently entered the plugged state.  Renderers move around from output to
+  // AudioOuts are only connected to the output stream which most
+  // recently entered the plugged state.  AudioOuts move around from output to
   // output as streams are published/unpublished and become plugged/unplugged.
   //
   // This is the initial setting for audio output routing.
-  kLastPluggedOutput = 1;
+  LAST_PLUGGED_OUTPUT = 1;
 };
 
-// Permitted ranges for AudioRendererV2 and AudioCapturer
+// Permitted ranges for AudioOut and AudioIn
 const uint32 MIN_PCM_CHANNEL_COUNT = 1;
 const uint32 MAX_PCM_CHANNEL_COUNT = 8;
 const uint32 MIN_PCM_FRAMES_PER_SECOND = 1000;

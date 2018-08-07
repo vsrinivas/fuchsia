@@ -5,8 +5,8 @@
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 
 #include "garnet/bin/media/audio_core/audio_object.h"
-#include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
-#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_core/audio_out_format_info.h"
+#include "garnet/bin/media/audio_core/audio_out_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -14,7 +14,7 @@ namespace audio {
 
 AudioLinkPacketSource::AudioLinkPacketSource(
     fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
-    fbl::RefPtr<AudioRendererFormatInfo> format_info)
+    fbl::RefPtr<AudioOutFormatInfo> format_info)
     : AudioLink(SourceType::Packet, std::move(source), std::move(dest)),
       format_info_(std::move(format_info)) {}
 
@@ -38,7 +38,7 @@ std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
     return nullptr;
   }
 
-  auto& renderer = *(static_cast<AudioRendererImpl*>(source.get()));
+  auto& renderer = *(static_cast<AudioOutImpl*>(source.get()));
 
   FXL_DCHECK(renderer.format_info_valid());
   return std::shared_ptr<AudioLinkPacketSource>(new AudioLinkPacketSource(

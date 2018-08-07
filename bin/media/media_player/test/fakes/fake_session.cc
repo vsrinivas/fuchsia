@@ -187,7 +187,7 @@ void FakeSession::Present(uint64_t presentation_time,
           expected_ = false;
         }
 
-        if (expected_packets_info_iter_->timestamp() !=
+        if (expected_packets_info_iter_->pts() !=
                 static_cast<int64_t>(presentation_time -
                                      initial_presentation_time_) ||
             expected_packets_info_iter_->size() != size ||
@@ -199,10 +199,10 @@ void FakeSession::Present(uint64_t presentation_time,
                          << ", " << size << ", 0x" << std::hex << std::setw(16)
                          << std::setfill('0')
                          << PacketInfo::Hash(image_payload, size) << std::dec;
-          FXL_LOG(ERROR) << "expected: "
-                         << expected_packets_info_iter_->timestamp() << ", "
-                         << expected_packets_info_iter_->size() << ", 0x"
-                         << std::hex << std::setw(16) << std::setfill('0')
+          FXL_LOG(ERROR) << "expected: " << expected_packets_info_iter_->pts()
+                         << ", " << expected_packets_info_iter_->size()
+                         << ", 0x" << std::hex << std::setw(16)
+                         << std::setfill('0')
                          << expected_packets_info_iter_->hash() << std::dec;
           expected_ = false;
         }

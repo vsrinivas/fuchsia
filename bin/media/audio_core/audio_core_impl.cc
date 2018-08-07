@@ -8,9 +8,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/media/audio_core/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
-#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_core/audio_in_impl.h"
+#include "garnet/bin/media/audio_core/audio_out_impl.h"
 
 namespace media {
 namespace audio {
@@ -88,23 +88,29 @@ void AudioCoreImpl::Shutdown() {
   DoPacketCleanup();
 }
 
-void AudioCoreImpl::CreateRendererV2(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer) {
+void AudioCoreImpl::CreateAudioOut(
+    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer) {
   device_manager_.AddRenderer(
-      AudioRendererImpl::Create(std::move(audio_renderer), this));
+      AudioOutImpl::Create(std::move(audio_renderer), this));
 }
 
-void AudioCoreImpl::CreateCapturer(
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-        audio_capturer_request,
+void AudioCoreImpl::CreateAudioIn(
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
     bool loopback) {
-  device_manager_.AddCapturer(AudioCapturerImpl::Create(
-      std::move(audio_capturer_request), this, loopback));
+  device_manager_.AddCapturer(
+      AudioInImpl::Create(std::move(audio_capturer_request), this, loopback));
+}
+
+// TODO(dalesat): Remove.
+void AudioCoreImpl::CreateAudioRenderer2(
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer) {
+  FXL_LOG(ERROR) << "CreateAudioRenderer2 is no longer supported.";
+  Shutdown();
 }
 
 void AudioCoreImpl::SetSystemGain(float db_gain) {
   db_gain = std::max(std::min(db_gain, kMaxSystemAudioGain),
-                     fuchsia::media::kMutedGain);
+                     fuchsia::media::MUTED_GAIN);
 
   if (system_gain_db_ == db_gain) {
     return;

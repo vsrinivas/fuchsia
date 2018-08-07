@@ -7,6 +7,8 @@
 
 #include <limits>
 
+#include <fuchsia/media/cpp/fidl.h>
+
 #include "garnet/bin/media/media_player/framework/models/async_node.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -97,7 +99,7 @@ class Renderer : public AsyncNode {
 
   // Indicates whether the end of stream packet has been encountered.
   bool end_of_stream_pending() const {
-    return end_of_stream_pts_ != fuchsia::media::kUnspecifiedTime;
+    return end_of_stream_pts_ != fuchsia::media::NO_TIMESTAMP;
   }
 
   // PTS at which end-of-stream is to occur or |kUnspecifiedTime| if an end-
@@ -127,14 +129,14 @@ class Renderer : public AsyncNode {
   // Determines if an unrealized timeline function is currently pending.
   bool TimelineFunctionPending() {
     return pending_timeline_function_.reference_time() !=
-           fuchsia::media::kUnspecifiedTime;
+           fuchsia::media::NO_TIMESTAMP;
   }
 
   async_dispatcher_t* dispatcher_;
   fit::closure update_callback_;
   media::TimelineFunction current_timeline_function_;
   media::TimelineFunction pending_timeline_function_;
-  int64_t end_of_stream_pts_ = fuchsia::media::kUnspecifiedTime;
+  int64_t end_of_stream_pts_ = fuchsia::media::NO_TIMESTAMP;
   bool end_of_stream_published_ = false;
   fit::closure set_timeline_function_callback_;
   int64_t program_0_min_pts_ = std::numeric_limits<int64_t>::min();

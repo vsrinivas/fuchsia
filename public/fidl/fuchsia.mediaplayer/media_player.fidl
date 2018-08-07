@@ -39,9 +39,9 @@ interface MediaPlayer {
   // Used only for testing.
   // TODO(dalesat): Remove when we can test with dependency injection.
   // Sets the audio renderer to use. The audio renderer can only be set on a
-  // new player for which none of the SetXxxSource methods or SetAudioRenderer
+  // new player for which none of the SetXxxSource methods or SetAudioOut
   // itself have been called. This method is ignored otherwise.
-  9: SetAudioRenderer(fuchsia.media.AudioRenderer2? audio_renderer);
+  9: SetAudioOut(fuchsia.media.AudioOut? audio_out);
 
   // Adds a new binding to this MediaPlayer.
   10: AddBinding(request<MediaPlayer> media_player);
@@ -53,9 +53,9 @@ interface MediaPlayer {
 
 // MediaPlayer status information.
 struct MediaPlayerStatus {
-  // Transform translating local time to presentation time. Reverse translation
+  // Function translating local time to presentation time. Reverse translation
   // (presentation time to local time) is only valid when media is playing.
-  fuchsia.media.TimelineTransform? timeline_transform;
+  TimelineFunction? timeline_function;
 
   // Indicates whether presentation has reached end-of-stream.
   bool end_of_stream;

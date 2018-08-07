@@ -44,15 +44,15 @@ source_set("audio_mixer_lib") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/timeline:no_converters",
     "//zircon/public/lib/fbl",
   ]
 }
 
 executable("audio_core") {
   sources = [
-    "audio_capturer_impl.cc",
-    "audio_capturer_impl.h",
+    "audio_core_impl.cc",
+    "audio_core_impl.h",
     "audio_device.cc",
     "audio_device.h",
     "audio_device_manager.cc",
@@ -61,6 +61,8 @@ executable("audio_core") {
     "audio_device_settings.h",
     "audio_driver.cc",
     "audio_driver.h",
+    "audio_in_impl.cc",
+    "audio_in_impl.h",
     "audio_input.cc",
     "audio_input.h",
     "audio_link.cc",
@@ -71,18 +73,16 @@ executable("audio_core") {
     "audio_link_ring_buffer_source.h",
     "audio_object.cc",
     "audio_object.h",
+    "audio_out_format_info.cc",
+    "audio_out_format_info.h",
+    "audio_out_impl.cc",
+    "audio_out_impl.h",
     "audio_output.cc",
     "audio_output.h",
     "audio_packet_ref.cc",
     "audio_packet_ref.h",
     "audio_plug_detector.cc",
     "audio_plug_detector.h",
-    "audio_renderer_format_info.cc",
-    "audio_renderer_format_info.h",
-    "audio_renderer_impl.cc",
-    "audio_renderer_impl.h",
-    "audio_core_impl.cc",
-    "audio_core_impl.h",
     "driver_output.cc",
     "driver_output.h",
     "driver_ring_buffer.cc",
@@ -111,7 +111,7 @@ executable("audio_core") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/audio",
-    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/timeline:no_converters",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-proto-utils",
@@ -131,8 +131,8 @@ test("tests") {
   output_name = "audio_core_tests"
 
   sources = [
-    "test/audio_renderer_tests.cc",
     "test/audio_core_tests.cc",
+    "test/audio_renderer_tests.cc",
   ]
 
   deps = [

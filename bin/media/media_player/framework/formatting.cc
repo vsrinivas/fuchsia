@@ -7,18 +7,16 @@
 #include <iomanip>
 #include <iostream>
 
+#include <fuchsia/media/cpp/fidl.h>
+
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 
 namespace media_player {
 
 // Prints an ns value in 0.123,456,789 format.
 std::ostream& operator<<(std::ostream& os, AsNs value) {
-  if (value.value_ == fuchsia::media::kUnspecifiedTime) {
-    return os << "<unspecified>";
-  }
-
-  if (value.value_ == fuchsia::media::kMaxTime) {
-    return os << "<maximum>";
+  if (value.value_ == fuchsia::media::NO_TIMESTAMP) {
+    return os << "<no timestamp>";
   }
 
   if (value.value_ == 0) {

@@ -107,7 +107,7 @@ class AudioCoreTest : public gtest::RealLoopFixture {
 
     // Leave this persistent systemwide setting in the default state!
     audio_->SetRoutingPolicy(
-        fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput);
+        fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
   }
 
   void TearDown() override {
@@ -119,8 +119,8 @@ class AudioCoreTest : public gtest::RealLoopFixture {
   }
 
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
-  fuchsia::media::AudioCapturerPtr audio_capturer_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
+  fuchsia::media::AudioInPtr audio_capturer_;
 
   float prev_system_gain_db_;
   bool prev_system_mute_;
@@ -138,7 +138,7 @@ constexpr zx::duration AudioCoreTest::kDurationResponseExpected;
 // Test creation and interface independence of AudioRenderer.
 TEST_F(AudioCoreTest, CreateRenderer) {
   // Validate Audio can create AudioRenderer interface.
-  audio_->CreateRendererV2(audio_renderer_.NewRequest());
+  audio_->CreateAudioOut(audio_renderer_.NewRequest());
   EXPECT_TRUE(audio_renderer_);
 
   // Validate that Audio persists without AudioRenderer.
@@ -147,16 +147,16 @@ TEST_F(AudioCoreTest, CreateRenderer) {
   EXPECT_TRUE(audio_);
 
   // Validate AudioRenderer persists after Audio is unbound.
-  audio_->CreateRendererV2(audio_renderer_.NewRequest());
+  audio_->CreateAudioOut(audio_renderer_.NewRequest());
   audio_.Unbind();
   EXPECT_FALSE(audio_);
   EXPECT_TRUE(audio_renderer_);
 }
 
 // Test creation and interface independence of AudioCapturer.
-TEST_F(AudioCoreTest, CreateCapturer) {
+TEST_F(AudioCoreTest, CreateAudioIn) {
   // Validate Audio can create AudioCapturer interface.
-  audio_->CreateCapturer(audio_capturer_.NewRequest(), false);
+  audio_->CreateAudioIn(audio_capturer_.NewRequest(), false);
   EXPECT_TRUE(audio_capturer_);
 
   // Validate that Audio persists without AudioCapturer.
@@ -165,7 +165,7 @@ TEST_F(AudioCoreTest, CreateCapturer) {
   EXPECT_TRUE(audio_);
 
   // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateCapturer(audio_capturer_.NewRequest(), true);
+  audio_->CreateAudioIn(audio_capturer_.NewRequest(), true);
   audio_.Unbind();
   EXPECT_FALSE(audio_);
   EXPECT_TRUE(audio_capturer_);
@@ -219,16 +219,16 @@ TEST_F(AudioCoreTest, SetSystemGain_Basic) {
 TEST_F(AudioCoreTest, SetSystemMute_Independence) {
   SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
 
-  audio_->SetSystemGain(fuchsia::media::kMutedGain);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
   // Expect: callback; Gain is mute-equivalent; Mute is unchanged.
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::kMutedGain);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
   EXPECT_FALSE(received_mute_);
 
   audio_->SetSystemMute(true);
   // Expect: callback; Mute is set (despite Gain's kMutedGain value).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::kMutedGain);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
   EXPECT_TRUE(received_mute_);
 
   audio_->SetSystemGain(-42.0f);
@@ -255,10 +255,10 @@ TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
   // Expect: timeout (no callback); no change to Mute, regardless of Gain.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
-  audio_->SetSystemGain(fuchsia::media::kMutedGain);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
   // Expect: gain-change callback received (even though Mute is set).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::kMutedGain);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
   EXPECT_TRUE(received_mute_);
   audio_->SetSystemMute(true);
   // Expect: timeout (no callback); no change to Mute, regardless of Gain.
@@ -267,7 +267,7 @@ TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
   audio_->SetSystemMute(false);
   // Expect: gain-change callback received; Mute is updated, Gain is unchanged.
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::kMutedGain);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
   EXPECT_FALSE(received_mute_);
   audio_->SetSystemMute(false);
   // Expect: timeout (no callback); no change to Mute, regardless of Gain.
@@ -305,17 +305,17 @@ TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
-  audio_->SetSystemGain(fuchsia::media::kMutedGain);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
   // Expect: gain-change callback received (Gain is now kMutedGain).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  audio_->SetSystemGain(fuchsia::media::kMutedGain);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
   audio_->SetSystemMute(false);
   // Expect: gain-change callback received (Mute is now false).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  audio_->SetSystemGain(fuchsia::media::kMutedGain);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
@@ -325,10 +325,10 @@ TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
 // Test setting (and re-setting) the audio output routing policy.
 TEST_F(AudioCoreTest, SetRoutingPolicy) {
   audio_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs);
+      fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
   // Setting policy again should have no effect.
   audio_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs);
+      fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
 
   RestoreState();
 }
@@ -350,14 +350,14 @@ class AudioCoreSyncTest : public gtest::RealLoopFixture {
   }
 
   fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
-  fuchsia::media::AudioCapturerSyncPtr audio_capturer_;
+  fuchsia::media::AudioOutSyncPtr audio_renderer_;
+  fuchsia::media::AudioInSyncPtr audio_capturer_;
 };
 
 // Test creation and interface independence of AudioRenderer.
 TEST_F(AudioCoreSyncTest, CreateRenderer) {
   // Validate Audio can create AudioRenderer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateRendererV2(audio_renderer_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
   EXPECT_TRUE(audio_renderer_);
 
   // Validate that Audio persists without AudioRenderer.
@@ -365,15 +365,15 @@ TEST_F(AudioCoreSyncTest, CreateRenderer) {
   ASSERT_TRUE(audio_);
 
   // Validate AudioRenderer persists after Audio is unbound.
-  EXPECT_EQ(ZX_OK, audio_->CreateRendererV2(audio_renderer_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
   audio_ = nullptr;
   EXPECT_TRUE(audio_renderer_);
 }
 
 // Test creation and interface independence of AudioCapturer.
-TEST_F(AudioCoreSyncTest, CreateCapturer) {
+TEST_F(AudioCoreSyncTest, CreateAudioIn) {
   // Validate Audio can create AudioCapturer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateCapturer(audio_capturer_.NewRequest(), true));
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioIn(audio_capturer_.NewRequest(), true));
   EXPECT_TRUE(audio_capturer_);
 
   // Validate that Audio persists without AudioCapturer.
@@ -381,7 +381,7 @@ TEST_F(AudioCoreSyncTest, CreateCapturer) {
   ASSERT_TRUE(audio_);
 
   // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateCapturer(audio_capturer_.NewRequest(), false);
+  audio_->CreateAudioIn(audio_capturer_.NewRequest(), false);
   audio_ = nullptr;
   EXPECT_TRUE(audio_capturer_);
 }
@@ -391,17 +391,17 @@ TEST_F(AudioCoreSyncTest, SetRoutingPolicy) {
   // Validate Audio can set last-plugged routing policy synchronously.
   EXPECT_EQ(ZX_OK,
             audio_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput));
+                fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
 
   // Validate Audio can set all-outputs routing policy synchronously.
   EXPECT_EQ(ZX_OK,
             audio_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs));
+                fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
 
   // This is a persistent systemwide setting. Leave system in the default state!
   EXPECT_EQ(ZX_OK,
             audio_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput));
+                fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
 }
 
 // TODO(mpuryear): If we ever add functionality such as parameter parsing,

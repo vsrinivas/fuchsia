@@ -10,7 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include "garnet/bin/media/media_player/test/fakes/fake_audio_renderer.h"
+#include "garnet/bin/media/media_player/test/fakes/fake_audio_out.h"
 #include "garnet/bin/media/media_player/test/fakes/fake_wav_reader.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
@@ -29,7 +29,7 @@ class MediaPlayerTestUnattended {
   std::unique_ptr<component::StartupContext> startup_context_;
   fit::function<void(int)> quit_callback_;
   FakeWavReader fake_reader_;
-  FakeAudioRenderer fake_audio_renderer_;
+  FakeAudioOut fake_audio_out_;
   fuchsia::mediaplayer::MediaPlayerPtr media_player_;
 };
 

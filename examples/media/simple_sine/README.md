@@ -81,7 +81,7 @@ be writable and readable.
 
 This example uses the VMO mapper object from FBL, to create and map this memory
 section, before instructing the audio renderer to use this section via the
-`SetPayloadBuffer` call.
+`AddPayloadBuffer` call.
 
 ##### Write Audio Data Into the Shared Buffer
 

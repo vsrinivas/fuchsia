@@ -23,7 +23,7 @@ class PendingFlushToken
  public:
   static fbl::RefPtr<PendingFlushToken> Create(
       AudioCoreImpl* const service,
-      fuchsia::media::AudioRenderer2::FlushCallback callback) {
+      fuchsia::media::AudioOut::DiscardAllPacketsCallback callback) {
     return fbl::AdoptRef(new PendingFlushToken(service, std::move(callback)));
   }
 
@@ -34,8 +34,9 @@ class PendingFlushToken
   friend class fbl::Recyclable<PendingFlushToken>;
   friend class fbl::unique_ptr<PendingFlushToken>;
 
-  PendingFlushToken(AudioCoreImpl* const service,
-                    fuchsia::media::AudioRenderer2::FlushCallback callback)
+  PendingFlushToken(
+      AudioCoreImpl* const service,
+      fuchsia::media::AudioOut::DiscardAllPacketsCallback callback)
       : service_(service), callback_(std::move(callback)) {}
 
   ~PendingFlushToken();
@@ -43,7 +44,7 @@ class PendingFlushToken
   void fbl_recycle();
 
   AudioCoreImpl* const service_;
-  fuchsia::media::AudioRenderer2::FlushCallback callback_;
+  fuchsia::media::AudioOut::DiscardAllPacketsCallback callback_;
   bool was_recycled_ = false;
 };
 

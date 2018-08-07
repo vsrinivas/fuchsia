@@ -26,9 +26,9 @@ class FidlAudioRenderer
       public std::enable_shared_from_this<FidlAudioRenderer> {
  public:
   static std::shared_ptr<FidlAudioRenderer> Create(
-      fuchsia::media::AudioRenderer2Ptr audio_renderer);
+      fuchsia::media::AudioOutPtr audio_renderer);
 
-  FidlAudioRenderer(fuchsia::media::AudioRenderer2Ptr audio_renderer);
+  FidlAudioRenderer(fuchsia::media::AudioOutPtr audio_renderer);
 
   ~FidlAudioRenderer() override;
 
@@ -90,7 +90,8 @@ class FidlAudioRenderer
   }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_out_;
+  fuchsia::media::GainControlPtr gain_control_;
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = 0;
   int64_t last_departed_pts_ns_ = 0;

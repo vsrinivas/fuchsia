@@ -1,0 +1,33 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediaplayer;
+
+// Represents the relationship between a subject timeline and a reference
+// timeline.
+//
+// To translate a reference timeline value r to the subject timeline, apply
+// the following formula:
+//
+//   (r - reference_time) * subject_delta / reference_delta + subject_time
+//
+// To translate a subject timeline value s to the reference timeline, apply
+// this formula provided subject_delta isn't zero:
+//
+//   (s - subject_time) * reference_delta / subject_delta + reference_time
+//
+struct TimelineFunction {
+  // A value from the subject timeline that correlates to reference_time.
+  int64 subject_time = 0;
+
+  // A value from the reference timeline that correlates to subject_time.
+  int64 reference_time = 0;
+
+  // The change in the subject timeline corresponding to reference_delta.
+  uint32 subject_delta = 0;
+
+  // The change in the reference timeline corresponding to subject_delta.
+  // Cannot be zero.
+  uint32 reference_delta = 1;
+};

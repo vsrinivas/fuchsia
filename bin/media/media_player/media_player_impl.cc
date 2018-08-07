@@ -27,7 +27,9 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/type_converter.h"
 #include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/type_converters.h"
 
 namespace media_player {
 namespace {
@@ -84,7 +86,7 @@ MediaPlayerImpl::MediaPlayerImpl(
              << "transitioning to:   " << ToString(target_state_);
         }
 
-        if (target_position_ != fuchsia::media::kUnspecifiedTime) {
+        if (target_position_ != fuchsia::media::NO_TIMESTAMP) {
           os << fostr::NewLine
              << "pending seek to:    " << AsNs(target_position_);
         }
@@ -127,8 +129,8 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
       if (!audio_renderer_) {
         auto audio = startup_context_
                          ->ConnectToEnvironmentService<fuchsia::media::Audio>();
-        fuchsia::media::AudioRenderer2Ptr audio_renderer;
-        audio->CreateRendererV2(audio_renderer.NewRequest());
+        fuchsia::media::AudioOutPtr audio_renderer;
+        audio->CreateAudioOut(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
         if (gain_ != 1.0f) {
           audio_renderer_->SetGain(gain_);
@@ -210,7 +212,7 @@ void MediaPlayerImpl::Update() {
 
         // Presentation time is not progressing, and the pipeline is clear of
         // packets.
-        if (target_position_ != fuchsia::media::kUnspecifiedTime) {
+        if (target_position_ != fuchsia::media::NO_TIMESTAMP) {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
@@ -221,7 +223,7 @@ void MediaPlayerImpl::Update() {
           // seeking the source, we'll notice that and do those things
           // again.
           int64_t target_position = target_position_;
-          target_position_ = fuchsia::media::kUnspecifiedTime;
+          target_position_ = fuchsia::media::NO_TIMESTAMP;
 
           // |program_range_min_pts_| will be delivered in the
           // |SetProgramRange| call, ensuring that the renderers discard
@@ -234,9 +236,8 @@ void MediaPlayerImpl::Update() {
               0.0f, media::Timeline::local_now(), [this, target_position]() {
                 if (target_position_ == target_position) {
                   // We've had a rendundant seek request. Ignore it.
-                  target_position_ = fuchsia::media::kUnspecifiedTime;
-                } else if (target_position_ !=
-                           fuchsia::media::kUnspecifiedTime) {
+                  target_position_ = fuchsia::media::NO_TIMESTAMP;
+                } else if (target_position_ != fuchsia::media::NO_TIMESTAMP) {
                   // We've had a seek request to a new position. Refrain from
                   // seeking the source and re-enter this sequence.
                   state_ = State::kFlushed;
@@ -264,8 +265,7 @@ void MediaPlayerImpl::Update() {
           // when the operation is complete.
           state_ = State::kWaiting;
           waiting_reason_ = "for priming to complete";
-          player_.SetProgramRange(0, program_range_min_pts_,
-                                  fuchsia::media::kMaxTime);
+          player_.SetProgramRange(0, program_range_min_pts_, kMaxTime);
 
           player_.Prime([this]() {
             state_ = State::kPrimed;
@@ -363,7 +363,7 @@ void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
       std::move(callback));
-  transform_subject_time_ = fuchsia::media::kUnspecifiedTime;
+  transform_subject_time_ = fuchsia::media::NO_TIMESTAMP;
   SendStatusUpdates();
 }
 
@@ -465,8 +465,8 @@ void MediaPlayerImpl::CreateView(
                               std::move(view_owner_request));
 }
 
-void MediaPlayerImpl::SetAudioRenderer(
-    fidl::InterfaceHandle<fuchsia::media::AudioRenderer2> audio_renderer) {
+void MediaPlayerImpl::SetAudioOut(
+    fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) {
   if (audio_renderer_) {
     return;
   }
@@ -499,8 +499,9 @@ void MediaPlayerImpl::SendStatusUpdates() {
 }
 
 void MediaPlayerImpl::UpdateStatus() {
-  status_.timeline_transform =
-      fidl::MakeOptional(player_.timeline_function().ToTimelineTransform());
+  status_.timeline_function =
+      fidl::MakeOptional(fxl::To<fuchsia::mediaplayer::TimelineFunction>(
+          player_.timeline_function()));
   status_.end_of_stream = player_.end_of_stream();
   status_.content_has_audio =
       player_.content_has_medium(StreamType::Medium::kAudio);

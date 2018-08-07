@@ -6,6 +6,18 @@ import("//build/test.gni")
 
 source_set("timeline") {
   sources = [
+    "type_converters.cc",
+    "type_converters.h",
+  ]
+
+  public_deps = [
+    ":no_converters",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+  ]
+}
+
+source_set("no_converters") {
+  sources = [
     "timeline.h",
     "timeline_function.cc",
     "timeline_function.h",
@@ -15,7 +27,6 @@ source_set("timeline") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.media",
   ]
 }
 

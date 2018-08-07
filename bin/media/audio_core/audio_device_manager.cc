@@ -8,8 +8,8 @@
 
 #include <fbl/algorithm.h>
 
-#include "garnet/bin/media/audio_core/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
+#include "garnet/bin/media/audio_core/audio_in_impl.h"
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
 #include "garnet/bin/media/audio_core/audio_plug_detector.h"
@@ -341,7 +341,7 @@ void AudioDeviceManager::GetDefaultOutputDevice(
   cbk(default_output_token_);
 }
 
-void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
+void AudioDeviceManager::SelectOutputsForRenderer(AudioOutImpl* renderer) {
   FXL_DCHECK(renderer);
   FXL_DCHECK(renderer->format_info_valid());
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
@@ -354,7 +354,7 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
   LinkOutputToRenderer(throttle_output_.get(), renderer);
 
   switch (routing_policy_) {
-    case fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs: {
+    case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS: {
       for (auto& obj : devices_) {
         FXL_DCHECK(obj.is_input() || obj.is_output());
         auto device = static_cast<AudioDevice*>(&obj);
@@ -364,7 +364,7 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
       }
     } break;
 
-    case fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput: {
+    case fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT: {
       fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
       if (last_plugged != nullptr) {
         LinkOutputToRenderer(last_plugged.get(), renderer);
@@ -378,13 +378,13 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
 }
 
 void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
-                                              AudioRendererImpl* renderer) {
+                                              AudioOutImpl* renderer) {
   FXL_DCHECK(output);
   FXL_DCHECK(renderer);
 
   // Do not create any links if the renderer's output format has not been set.
   // Links will be created during SelectOutputsForRenderer when the renderer
-  // finally has its format set via AudioRendererImpl::SetStreamType
+  // finally has its format set via AudioOutImpl::SetStreamType
   if (!renderer->format_info_valid())
     return;
 
@@ -398,7 +398,7 @@ void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
   }
 }
 
-void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer) {
+void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioInImpl> capturer) {
   FXL_DCHECK(capturer != nullptr);
   FXL_DCHECK(!capturer->InContainer());
   capturers_.push_back(capturer);
@@ -424,7 +424,7 @@ void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer) {
   }
 }
 
-void AudioDeviceManager::RemoveCapturer(AudioCapturerImpl* capturer) {
+void AudioDeviceManager::RemoveCapturer(AudioInImpl* capturer) {
   FXL_DCHECK(capturer != nullptr);
   FXL_DCHECK(capturer->InContainer());
   capturers_.erase(*capturer);
@@ -511,14 +511,14 @@ void AudioDeviceManager::SetRoutingPolicy(
     // We've excluded inputs, unplugged outputs and the most-recently-plugged
     // output. For each remaining output (based on the new policy), we ...
     if (routing_policy ==
-        fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput) {
+        fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
       // ...disconnect it (i.e. link renderers to Last-Plugged only), or...
       dev_obj.UnlinkSources();
     } else {
       // ...attach it (i.e. link renderers to All Outputs).
       for (auto& obj : renderers_) {
         FXL_DCHECK(obj.is_renderer());
-        auto renderer = static_cast<AudioRendererImpl*>(&obj);
+        auto renderer = static_cast<AudioOutImpl*>(&obj);
         LinkOutputToRenderer(output, renderer);
       }
     }
@@ -528,7 +528,7 @@ void AudioDeviceManager::SetRoutingPolicy(
   // requirements.
   for (auto& obj : renderers_) {
     FXL_DCHECK(obj.is_renderer());
-    auto renderer = static_cast<AudioRendererImpl*>(&obj);
+    auto renderer = static_cast<AudioOutImpl*>(&obj);
     renderer->RecomputeMinClockLeadTime();
   }
 }
@@ -568,7 +568,7 @@ void AudioDeviceManager::OnDeviceUnplugged(
       fbl::RefPtr<AudioOutput> replacement = FindLastPluggedOutput();
       if (replacement) {
         if (routing_policy_ ==
-            fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput) {
+            fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
           for (auto& renderer : renderers_) {
             LinkOutputToRenderer(replacement.get(), &renderer);
           }
@@ -619,7 +619,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
 
     bool lp_policy =
         (routing_policy_ ==
-         fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput);
+         fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
     bool is_lp = (output == last_plugged.get());
 
     if (is_lp && lp_policy) {

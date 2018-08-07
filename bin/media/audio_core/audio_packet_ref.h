@@ -30,8 +30,8 @@ class AudioPacketRef
       public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPacketRef>> {
  public:
   AudioPacketRef(fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
-                 fuchsia::media::AudioRenderer2::SendPacketCallback callback,
-                 fuchsia::media::AudioPacket packet, AudioCoreImpl* service,
+                 fuchsia::media::AudioOut::SendPacketCallback callback,
+                 fuchsia::media::StreamPacket packet, AudioCoreImpl* server,
                  uint32_t frac_frame_len, int64_t start_pts);
 
   // Accessors for starting and ending presentation time stamps expressed in
@@ -81,8 +81,8 @@ class AudioPacketRef
   bool NeedsCleanup() { return callback_ != nullptr; }
 
   fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref_;
-  fuchsia::media::AudioRenderer2::SendPacketCallback callback_;
-  fuchsia::media::AudioPacket packet_;
+  fuchsia::media::AudioOut::SendPacketCallback callback_;
+  fuchsia::media::StreamPacket packet_;
 
   AudioCoreImpl* const service_;
   uint32_t frac_frame_len_;

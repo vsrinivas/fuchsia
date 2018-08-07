@@ -23,7 +23,7 @@
 namespace media {
 namespace audio {
 
-class AudioCapturerImpl;
+class AudioInImpl;
 
 class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
  public:
@@ -56,13 +56,13 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   void AddDeviceEnumeratorClient(zx::channel ch);
 
   // Add a renderer to the set of active audio renderers.
-  void AddRenderer(fbl::RefPtr<AudioRendererImpl> renderer) {
+  void AddRenderer(fbl::RefPtr<AudioOutImpl> renderer) {
     FXL_DCHECK(renderer);
     renderers_.push_back(std::move(renderer));
   }
 
   // Remove a renderer from the set of active audio renderers.
-  void RemoveRenderer(AudioRendererImpl* renderer) {
+  void RemoveRenderer(AudioOutImpl* renderer) {
     FXL_DCHECK(renderer != nullptr);
     FXL_DCHECK(renderer->InContainer());
     renderers_.erase(*renderer);
@@ -70,14 +70,14 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   // Select the initial set of outputs for a renderer which has just been
   // configured.
-  void SelectOutputsForRenderer(AudioRendererImpl* renderer);
+  void SelectOutputsForRenderer(AudioOutImpl* renderer);
 
   // Link an output to an audio renderer
-  void LinkOutputToRenderer(AudioOutput* output, AudioRendererImpl* renderer);
+  void LinkOutputToRenderer(AudioOutput* output, AudioOutImpl* renderer);
 
   // Add/remove a capturer to/from the set of active audio capturers.
-  void AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer);
-  void RemoveCapturer(AudioCapturerImpl* capturer);
+  void AddCapturer(fbl::RefPtr<AudioInImpl> capturer);
+  void RemoveCapturer(AudioInImpl* capturer);
 
   // Schedule a closure to run on our encapsulating service's main message loop.
   void ScheduleMainThreadTask(fit::closure task);
@@ -107,8 +107,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   static inline bool ValidateRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy policy) {
     switch (policy) {
-      case fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput:
-      case fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs:
+      case fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT:
+      case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS:
         return true;
         // Note: no default: handler here.  If someone adds a new policy to the
         // enum but forgets to update this code, we want a Build Break, to
@@ -224,8 +224,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // loop thread, so no synchronization should be needed.
   fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
   fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioCapturerImpl>> capturers_;
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioRendererImpl>> renderers_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioInImpl>> capturers_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioOutImpl>> renderers_;
 
   // The special throttle output.  This output always exists, and is always used
   // by all renderers.
@@ -236,7 +236,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   // State which affects routing policy.
   fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =
-      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput;
+      fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT;
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
 

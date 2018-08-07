@@ -8,7 +8,7 @@
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_link_ring_buffer_source.h"
-#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_core/audio_out_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -38,7 +38,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
   std::shared_ptr<AudioLink> link;
   if (source->type() == AudioObject::Type::Renderer) {
     link = AudioLinkPacketSource::Create(
-        fbl::RefPtr<AudioRendererImpl>::Downcast(source), dest);
+        fbl::RefPtr<AudioOutImpl>::Downcast(source), dest);
   } else {
     link = AudioLinkRingBufferSource::Create(
         fbl::RefPtr<AudioDevice>::Downcast(source), dest);

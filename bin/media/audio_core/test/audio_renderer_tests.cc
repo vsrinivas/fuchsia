@@ -28,7 +28,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
       QuitLoop();
     });
 
-    audio_->CreateRendererV2(audio_renderer_.NewRequest());
+    audio_->CreateAudioOut(audio_renderer_.NewRequest());
     ASSERT_TRUE(audio_renderer_);
 
     audio_renderer_.set_error_handler([this]() {
@@ -40,7 +40,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
   void TearDown() override { EXPECT_FALSE(error_occurred_); }
 
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
   bool error_occurred_ = false;
 };
 
@@ -100,12 +100,12 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
     component::ConnectToEnvironmentService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    ASSERT_EQ(ZX_OK, audio_->CreateRendererV2(audio_renderer_.NewRequest()));
+    ASSERT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
     ASSERT_TRUE(audio_renderer_);
   }
 
   fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
+  fuchsia::media::AudioOutSyncPtr audio_renderer_;
 };
 
 // Basic validation of SetPcmStreamType() for the synchronous AudioRenderer.

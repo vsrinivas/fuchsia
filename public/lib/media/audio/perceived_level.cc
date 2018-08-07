@@ -35,7 +35,7 @@ float PerceivedLevel::GainToLevel(float gain) {
 // static
 float PerceivedLevel::LevelToGain(float level) {
   if (level <= 0.0f) {
-    return fuchsia::media::kMutedGain;
+    return fuchsia::media::MUTED_GAIN;
   }
 
   if (level >= 1.0f) {
@@ -65,7 +65,7 @@ float PerceivedLevel::LevelToGain(int level, int max_level) {
   FXL_DCHECK(max_level > 0);
 
   if (level <= 0) {
-    return fuchsia::media::kMutedGain;
+    return fuchsia::media::MUTED_GAIN;
   }
 
   if (level >= max_level) {

@@ -1,0 +1,90 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+// Manages a set of payload buffers for a stream.
+// Ordinal range: 0x0200-0x2ff
+interface StreamBufferSet {
+  // Add a payload buffer for stream packets.
+  0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
+
+  // Remove a payload buffer.
+  0x0202: RemovePayloadBuffer(uint32 id);
+};
+
+// Consumes a stream of packets.
+// Ordinal range: 0x0300-03ff
+interface StreamSink {
+  // Sends a packet to this object. The response is sent when this object is
+  // done with the associated payload memory.
+  0x0301: SendPacket(StreamPacket packet) -> ();
+
+  // Sends a packet to this object. This interface doesn't define how the client
+  // knows when the sink is done with the associated payload memory. The
+  // inheriting interface must define that.
+  0x0302: SendPacketNoReply(StreamPacket packet);
+
+  // Indicates the stream has ended.
+  0x0303: EndOfStream();
+
+  // Discards packets previous sent via SendPacket or SendPacketNoReply.
+  0x0304: DiscardAllPackets() -> ();
+  0x0305: DiscardAllPacketsNoReply();
+};
+
+// Produces a stream of packets.
+// Ordinal range: 0x0400-04ff
+interface StreamSource {
+  // Delivers a packet produced by this object. Each packet delivered via this
+  // event must be released with a call to ReleasePacket.
+  0x0401: -> OnPacketProduced(StreamPacket packet);
+
+  // Indicates that the stream has ended.
+  0x0402: -> OnEndOfStream();
+
+  // Releases a packet delivered via OnPacketProduced.
+  0x0403: ReleasePacket(StreamPacket packet);
+
+  // Discards packets queued packets.
+  0x0404: DiscardAllPackets() -> ();
+  0x0405: DiscardAllPacketsNoReply();
+};
+
+// Describes a packet consumed by StreamSink or produced by StreamSource.
+struct StreamPacket {
+  // Time at which the packet is to be presented, according to the presentation
+  // clock.
+  int64 pts = NO_TIMESTAMP;
+
+  // Identifies the payload buffer used for this packet. This interface doesn't
+  // define how payload buffers are defined. That's left to buffer management
+  // interfaces such as StreamBufferSet.
+  uint32 payload_buffer_id;
+
+  // Offset of the packet payload in the payload buffer.
+  uint64 payload_offset;
+
+  // Size in bytes of the payload.
+  uint64 payload_size;
+
+  // A collection of flags (see constants below) describing properties of this
+  // packet.
+  uint32 flags = 0;
+
+  // The buffer configuration associated with this packet. This interface
+  // doesn't define how buffer configurations are defined. That's left to
+  // other interfaces.
+  uint64 buffer_config = 0;
+
+  // The stream associated with this packet. This interface doesn't define how
+  // streams are defined. That's left to other interfaces.
+  uint64 stream_id = 0;
+};
+
+const uint32 STREAM_PACKET_FLAG_KEY_FRAME = 0x01;
+const uint32 STREAM_PACKET_FLAG_DROPPABLE = 0x02;
+const uint32 STREAM_PACKET_FLAG_DISCONTINUITY = 0x04;
+
+const int64 NO_TIMESTAMP = 0x7fffffffffffffff;

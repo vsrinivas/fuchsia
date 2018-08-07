@@ -24,7 +24,7 @@ shared_library("lib") {
   deps = [
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
-   ]
+  ]
 }
 
 # This standalone test expects to find a libaudio_dfx.so in this package.
@@ -47,4 +47,3 @@ test("tests") {
     "//third_party/googletest:gtest_main",
   ]
 }
- 

@@ -5,8 +5,8 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_AUDIO_DEVICE_FX_H_
-#define LIB_AUDIO_DEVICE_FX_H_
+#ifndef LIB_MEDIA_AUDIO_DFX_AUDIO_DEVICE_FX_H_
+#define LIB_MEDIA_AUDIO_DFX_AUDIO_DEVICE_FX_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -118,4 +118,4 @@ __EXPORT bool fuchsia_audio_dfx_flush(fx_token_t dfx_token);
 
 __END_CDECLS
 
-#endif  // LIB_AUDIO_DEVICE_FX_H_
+#endif  // LIB_MEDIA_AUDIO_DFX_AUDIO_DEVICE_FX_H_

@@ -4,14 +4,14 @@
 
 library fuchsia.media;
 
-// AudioCapturer
+// AudioIn
 //
-// An AudioCapturer is an interface returned from an AudioService's
-// CreateAudioCapturer method which may be used by clients to capture audio from
+// An AudioIn is an interface returned from an fuchsia.media.Audio's
+// CreateAudioIn method, which may be used by clients to capture audio from
 // either the current default audio input device, or the current default audio
 // output device depending on the flags passed during creation.
 //
-// TODO(johngro): Routing policy needs to become more capable than this.
+// TODO(mpuryear): Routing policy needs to become more capable than this.
 // Clients will need to be able to request sets of inputs/outputs/renderers,
 // make changes to theses sets, have their requests vetted by policy (do they
 // have the permission to capture this private stream, do they have the
@@ -22,7 +22,7 @@ library fuchsia.media;
 //
 // See (Get|Set)StreamType below.  By default, the captured stream type will be
 // initially determined by the currently configured stream type of the source
-// that the capturer was bound to at creation time.  Users may either fetch this
+// that the AudioIn was bound to at creation time.  Users may either fetch this
 // type using GetStreamType, or they may choose to have the media
 // resampled/converted to a type of their choosing by calling SetStreamType.
 // Note: the stream type may only be set while the system is not running,
@@ -32,7 +32,7 @@ library fuchsia.media;
 // ** Buffers and memory management **
 //
 // Audio data is captured into a shared memory buffer (a VMO) supplied by the
-// user to the capturer during the SetPayloadBuffer call.  Please note the
+// user to the AudioIn during the AddPayloadBuffer call.  Please note the
 // following requirements related to the management of the payload buffer.
 //
 // ++ The payload buffer must be supplied before any capture operation may
@@ -53,49 +53,50 @@ library fuchsia.media;
 //
 // ** Synchronous vs. Asynchronous capture mode **
 //
-// The AudioCapturer interface can be used in one of two mutually exclusive
+// The AudioIn interface can be used in one of two mutually exclusive
 // modes: Synchronous and Asynchronous.  A description of each mode and their
 // tradeoffs is given below.
 //
-// (TODO(johngro) : can we come up with better names than these?  Both are
+// (TODO(mpuryear) : can we come up with better names than these?  Both are
 // really async modes under the hood).
 //
 // ** Synchronous mode **
 //
-// By default, AudioCapturer instances are running in 'sync' mode.  They will
+// By default, AudioIn instances are running in 'sync' mode.  They will
 // only capture data when a user supplies at least one region to capture into
 // using the CaptureAt method.  Regions supplied in this way will be filled in
-// the order that they are received and returned to the client as MediaPackets
-// via the return value of the CaptureAt method.  If an AudioCapturer instance
+// the order that they are received and returned to the client as StreamPackets
+// via the return value of the CaptureAt method.  If an AudioIn instance
 // has data to capture, but no place to put it (because there are no more
 // pending regions to fill), the next payload generated will indicate that their
 // has been an overflow by setting the Discontinuity flag on the next produced
-// MediaPacket.  Synchronous mode may not be used in conjunction with
+// StreamPacket.  Synchronous mode may not be used in conjunction with
 // Asynchronous mode.  It is an error to attempt to call StartAsyncCapture while
 // the system still regions supplied by CaptureAt waiting to be filled.
 //
-// If a user has supplied regions to be filled by the AudioCapturer instance in
-// the past, but wishes to reclaim those regions, they may do so using the Flush
-// method.  Calling the Flush method will cause all pending regions to be
-// returned, but with kNoTimestamp as their MediaPacket's PTS.  See "Timing and
-// Overflows", below, for a discussion of timestamps and discontinuity flags.
-// The final buffer returned after a flush operation will have the 'kFlagEos'
-// flag set on it.  While an AudioCapturer will never overwrite any region of
-// the payload buffer after a completed region is returned, it may overwrite
-// the unfilled portions of a partially filled buffer which has been returned as
-// a result of a flush operation.
+// If a user has supplied regions to be filled by the AudioIn instance in
+// the past, but wishes to reclaim those regions, they may do so using the
+// DiscardAllPackets method.  Calling the DiscardAllPackets method will cause
+// all pending regions to be returned, but with NO_TIMESTAMP as their
+// StreamPacket's PTS.  See "Timing and Overflows", below, for a discussion of
+// timestamps and discontinuity flags. After a DiscardAllPackets operation,
+// an OnEndOfStream event will be produced.  While an AudioIn will never
+// overwrite any region of the payload buffer after a completed region is
+// returned, it may overwrite the unfilled portions of a partially filled
+// buffer which has been returned as a result of a flDiscardAllPacketsush
+// operation.
 //
 // ** Asynchronous mode **
 //
 // While running in 'async' mode, clients do not need to explicitly supply
-// regions of the shared buffer to be filled by the AudioCapturer instance.
+// regions of the shared buffer to be filled by the AudioIn instance.
 // Instead, a client enters into 'async' mode by calling StartAsyncCapture and
 // supplying a callback interface, and a number of frames to capture
-// per-callback.  Once running in async mode, the AudioCapturer instance will
+// per-callback.  Once running in async mode, the AudioIn instance will
 // choose regions of the payload buffer to capture into, capture the specified
-// number of frames, then deliver those frames as MediaPackets using the
+// number of frames, then deliver those frames as StreamPackets using the
 // OnPacketCapture FIDL event.  Users may stop capturing are return the
-// AudioCapturer instance to 'sync' mode using the StopAsyncCapture method.
+// AudioIn instance to 'sync' mode using the StopAsyncCapture method.
 //
 // It is considered an error to attempt any of the following operations.
 //
@@ -105,9 +106,9 @@ library fuchsia.media;
 //    at least two contiguous capture payloads to exist in the established
 //    shared payload buffer simultaneously.
 // ++ To send a region to capture into using the CaptureAt method while the
-//    AudioCapturer instance is running in 'async' mode.
-// ++ To attempt to call Flush while the AudioCapturer instance is running in
-//    'async' mode.
+//    AudioIn instance is running in 'async' mode.
+// ++ To attempt to call DiscardAllPackets while the AudioIn instance is running
+//    in 'async' mode.
 // ++ To attempt to re-start 'async' mode capturing without having first
 //    stopped.
 // ++ To attempt any operation except for SetGain while in the process of
@@ -117,7 +118,7 @@ library fuchsia.media;
 //
 // Stopping asynchronous capture mode and returning to synchronous capture mode
 // is an operation which takes time.  Aside from SetGain, users may not call any
-// other methods on the AudioCapturer interface after calling StopAsyncCapture
+// other methods on the AudioIn interface after calling StopAsyncCapture
 // (including calling StopAsyncCapture again) until after the stop operation has
 // completed.  Because of this, it is important for users to be able to
 // synchronize with the stop operation.  Two mechanisms are provided for doing
@@ -125,53 +126,54 @@ library fuchsia.media;
 //
 // The first is to use the StopAsyncCaptureWithCallback method.  When the user's
 // callback has been called, they can be certain that stop operation is complete
-// and that the AudioCapturer instance has returned to synchronous operation
+// and that the AudioIn instance has returned to synchronous operation
 // mode.
 //
+// TODO(mpuryear): Fix obsolete docs.
 // The second way to determine that a stop operation has completed is to use the
 // flags on the packets which get delivered via the user-supplied
 // AudioCapturerCallback interface after calling StopAsyncCapture.  When
 // asked to stop, any partially filled packet will be returned to the user, and
 // the final packet returned will always have the end-of-stream flag (kFlagsEos)
 // set on it to indicate that this is the final frame in the sequence.  If
-// there is no partially filled packet to return, the AudioCapturer will
+// there is no partially filled packet to return, the AudioIn will
 // synthesize an empty packet with no timestamp, and offset/length set to zero,
 // in order to deliver a packet with the end-of-stream flag set on it.  Once
-// users have seen the end-of-stream flag after calling stop, the AudioCapturer
+// users have seen the end-of-stream flag after calling stop, the AudioIn
 // has finished the stop operation and returned to synchronous operating mode.
 //
 // ** Timing and Overflows **
 //
-// All media packets produced by an AudioCapturer instance will have their PTS
+// All media packets produced by an AudioIn instance will have their PTS
 // field filled out with the capture time of the audio expressed as a timestamp
 // given by the CLOCK_MONOTONIC timeline.  Note: this timestamp is actually a
 // capture timestamp, not a presentation timestamp (it is more of a CTS than a
 // PTS) and is meant to represent the underlying system's best estimate of the
 // capture time of the first frame of audio, including all outboard and hardware
 // introduced buffering delay.  As a result, all timestamps produced by an
-// AudioCapturer should be expected to be in the past relative to 'now' on the
+// AudioIn should be expected to be in the past relative to 'now' on the
 // CLOCK_MONOTONIC timeline.
 //
-// TODO(johngro) : Specify the way in which timestamps relative to a different
+// TODO(mpuryear) : Specify the way in which timestamps relative to a different
 // clock (such as an audio domain clock) may be delivered to a client.
 //
 // The one exception to the "everything has an explicit timestamp" rule is when
-// Flushing submitted regions while operating in synchronous mode.  Flushed
+// discarding submitted regions while operating in synchronous mode. Discarded
 // packets have no data in them, but FIDL demands that all pending
 // method-return-value callbacks be executed.  Because of this, the regions will
 // be returned to the user, but their timestamps will be set to
 // kNoTimestamp, and their payload sizes will be set to zero.  Any
 // partially filled payload will have a valid timestamp, but a payload size
-// smaller than originally requested.  The final flushed payload (if there were
-// any to flush) will have the EOS flag set on it.
+// smaller than originally requested.  The final discarded payload (if there
+// were any to discard) will be followed by an OnEndOfStream event.
 //
-// Two MediaPackets delivered by an AudioCapturer instance are 'continuous' if
+// Two StreamPackets delivered by an AudioIn instance are 'continuous' if
 // the first frame of audio contained in the second packet was capture exactly
 // one nominal frame time after the final frame of audio in the first packet.
-// If this relationship does not hold, the second MediaPacket will have the
+// If this relationship does not hold, the second StreamPacket will have the
 // 'kFlagDiscontinuous' flag set in it's flags field.
 //
-// Even though explicit timestamps are provided on every MediaPacket produced,
+// Even though explicit timestamps are provided on every StreamPacket produced,
 // users who have very precise timing requirements are encouraged to always
 // reason about time by counting frames delivered since the last discontinuity
 // instead of simply using the raw capture timestamps.  This is because the
@@ -179,19 +181,20 @@ library fuchsia.media;
 // rounding error based on whether or not the units of the capture timeline
 // (CLOCK_MONOTONIC) are divisible by the chosen audio frame rate.
 //
-// Users should always expect the first MediaPacket produced by an AudioCapturer
+// Users should always expect the first StreamPacket produced by an AudioIn
 // to have the discontinuous flag set on it (as there is no previous packet to
-// be continuous with).  Similarly, the first MediaPacket after a Flush or a
-// Stop/Start cycle will always be discontinuous.  After that, there are only
-// two reasons that a MediaPacket will ever be discontinuous.
+// be continuous with).  Similarly, the first StreamPacket after a
+// DiscardAllPackets or a Stop/Start cycle will always be discontinuous.  After
+// that, there are only two reasons that a StreamPacket will ever be
+// discontinuous.
 //
 // 1) The user is operating an synchronous mode and does not supply regions to
 //    be filled quickly enough.  If the next continuous frame of data has not
 //    been captured by the time it needs to be purged from the source buffers,
-//    an overflow has occurred and the AudioCapturer will flag the next captured
+//    an overflow has occurred and the AudioIn will flag the next captured
 //    region as discontinuous.
 // 2) The user is operating in asynchronous mode and some internal error
-//    prevents the AudioCapturer instance from capturing the next frame of audio
+//    prevents the AudioIn instance from capturing the next frame of audio
 //    in a continuous fashion.  This might be high system load or a hardware
 //    error, but in general it is something which should never normally happen.
 //    In practice, however, if it does, the next produced packet will be flagged
@@ -214,21 +217,21 @@ library fuchsia.media;
 //
 // The primary downside of operating in synchronous mode is that two messages
 // will need to be sent for every packet to be captured.  One to inform the
-// AudioCapturer of the instance to capture into, and one to inform the user
+// AudioIn of the instance to capture into, and one to inform the user
 // that the packet has been captured.  This may end up increasing overhead and
 // potentially complicating client designs.
 //
 // Asynchronous mode has the advantage requiring only 1/2 of the messages,
-// however, when operating in 'async' mode, AudioCapturer instances have no way
-// of knowing if a user is processing the MediaPackets being sent in a timely
+// however, when operating in 'async' mode, AudioIn instances have no way
+// of knowing if a user is processing the StreamPackets being sent in a timely
 // fashion, and no way of automatically detecting an overflow condition.  Users
 // of 'async' mode should be careful to use a buffer large enough to ensure that
-// they will be able to process their data before an AudioCapturer will be
+// they will be able to process their data before an AudioIn will be
 // forced to overwrite it.
 //
 // ** Future Directions (aka TODOs) **
 //
-// ++ Consider adding a 'zero message' capture mode where the AudioCapturer
+// ++ Consider adding a 'zero message' capture mode where the AudioIn
 //    simply supplies a linear transformation and some buffer parameters (max
 //    audio hold time) each time that it is started in 'async' mode, or each
 //    time an internal overflow occurs in 'async' mode.  Based on this
@@ -248,61 +251,80 @@ library fuchsia.media;
 //    sensitive content.  Enforce using the policy manager.
 // ++ Consider allowing the mixer to produce compressed audio.
 //
-interface AudioCapturer {
-  // Gets the currently configured stream type.  Note: for a capturer which was
-  // just created and has not yet had its stream type explicitly set, this will
-  // retrieve the stream type -- at the time the capturer was created -- of the
-  // source (input or looped-back output) to which the capturer is bound.
-  //
-  // TODO(johngro) : Get rid of this.  Eventually, capturers will be bindable to
-  // a set of inputs/outputs/renderers, so the concept of a "native" stream type
-  // will go away.  Mechanisms will need to be put in place to allow users to
-  // enumerate the configuration of these bind-able endpoints (and perhaps to
-  // exercise control over them), but it will be the user of the capturer's job
-  // to specify the format they want.
-  1: GetStreamType() -> (StreamType stream_type);
+// Ordinal range: 0x0500-0x5ff
+interface AudioIn {
+  /////////////////////////////////////////////////////////////////////////////
+  // AudioIn methods
+  // These methods will remain in AudioIn.
 
   // Sets the stream type of the stream to be delivered.  Causes the source
   // material to be reformatted/resampled if needed in order to produce the
   // requested stream type.  Note that the stream type may not be changed after
   // the payload buffer has been established.
-  // TODO(dalesat): Should this be an AudioStreamType?
-  2: SetStreamType(StreamType stream_type);
-
-  // Set the gain (in dB) applied to the fuchsia.ui.input.  Gain may be adjusted
-  // at any time, but must be within the range [kMutedGain, kMaxGain].
-  //
-  // TODO(mpuryear): Genericize AudioRendererGainControl to also cover capture.
-  // This would add a stateful, independent Mute to each capture stream.
-  3: SetGain(float32 gain);
-
-  // Set the shared buffer used to transport captured data.
-  //
-  // TODO(johngro) : consider extending this so that multiple payload buffers
-  // may be assigned if needed.
-  4: SetPayloadBuffer(handle<vmo> payload_buffer);
+  0x0501: SetPcmStreamType(AudioStreamType stream_type);
 
   // Explicitly specify a region of the shared payload buffer for the audio
-  // capturer to capture into.  See the discussion of 'synchronous' vs.
-  // 'asynchronous` capture mode (above) for details.
-  5: CaptureAt(uint32 offset_frames, uint32 num_frames)
-    -> (MediaPacket captured_packet);
+  // input to capture into.
+  0x0502: CaptureAt(uint32 payload_buffer_id, uint32 payload_offset,
+                    uint32 frames) -> (StreamPacket captured_packet);
 
-  // Flush all regions specified using CaptureAt from the internal queue of
-  // regions to be captured into and (optionally) deliver a callback which may
-  // be used by the client if explicit synchronization is needed.  It is illegal
-  // to call Flush while operating in asynchronous capture mode.
-  6: Flush();
-  7: FlushWithCallback() -> ();
+  // Place the AudioIn into 'async' capture mode and begin to produce packets
+  // of exactly 'frames_per_packet' number of frames each. The
+  // OnPacketProduced event (of StreamSink) will be used to inform the client of
+  // produced packets.
+  0x0503: StartAsyncCapture(uint32 frames_per_packet);
 
-  // Place the capturer into 'async' capture mode and begin to capture packets
-  // of exactly 'frames_per_packet' number of frames each.  The OnPacketCaptured
-  // event will be used to inform the client of captured packets.
-  8: StartAsyncCapture(uint32 frames_per_packet);
-  9: -> OnPacketCaptured(MediaPacket packet);
+  // Stop capturing in 'async' capture mode and (optionally) deliver a
+  // callback that may be used by the client if explicit synchronization
+  // is needed.
+  0x0504: StopAsyncCapture() -> ();
+  0x0505: StopAsyncCaptureNoReply();
 
-  // Stop capturing in 'async' capture mode and (optionally) deliver a callback
-  // which may be used by the client if explicit synchronization is needed.
-  10: StopAsyncCapture();
-  11: StopAsyncCaptureWithCallback() -> ();
+  // Binds to the gain control for this AudioIn.
+  0x0506: BindGainControl(request<GainControl> gain_control_request);
+
+  /////////////////////////////////////////////////////////////////////////////
+  // StreamBufferSet methods
+  // These methods will inherited from the StreamBufferSet interface.
+
+  // Add a payload buffer for stream packets.
+  0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
+
+  // Remove a payload buffer.
+  0x0202: RemovePayloadBuffer(uint32 id);
+
+  /////////////////////////////////////////////////////////////////////////////
+  // StreamSource methods
+  // These methods will inherited from the StreamSource interface.
+
+  // Delivers a packet produced by this object. Each packet delivered via this
+  // event must be released with a call to ReleasePacket.
+  0x0401: -> OnPacketProduced(StreamPacket packet);
+
+  // Indicates that the stream has ended.
+  0x0402: -> OnEndOfStream();
+
+  // Releases a packet delivered via OnPacketProduced.
+  0x0403: ReleasePacket(StreamPacket packet);
+
+  // Discards packets queued packets.
+  0x0404: DiscardAllPackets() -> ();
+  0x0405: DiscardAllPacketsNoReply();
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Methods to be deprecated
+  // These methods will go away.
+
+  // Gets the currently configured stream type.  Note: for an AudioIn which was
+  // just created and has not yet had its stream type explicitly set, this will
+  // retrieve the stream type -- at the time the AudioIn was created -- of the
+  // source (input or looped-back output) to which the AudioIn is bound.
+  //
+  // TODO(mpuryear) : Get rid of this.  Eventually, AudioIns will be bindable to
+  // a set of inputs/outputs/renderers, so the concept of a "native" stream type
+  // will go away.  Mechanisms will need to be put in place to allow users to
+  // enumerate the configuration of these bind-able endpoints (and perhaps to
+  // exercise control over them), but it will be the user of the AudioIn's job
+  // to specify the format they want.
+  0xffff: GetStreamType() -> (StreamType stream_type);
 };

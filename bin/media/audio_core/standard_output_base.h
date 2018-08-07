@@ -69,8 +69,8 @@ class StandardOutputBase : public AudioOutput {
     Gain::AScale amplitude_scale;
     MixerPtr mixer;
 
-    void UpdateRendererTrans(const fbl::RefPtr<AudioRendererImpl>& renderer,
-                             const AudioRendererFormatInfo& format_info);
+    void UpdateRendererTrans(const fbl::RefPtr<AudioOutImpl>& renderer,
+                             const AudioOutFormatInfo& format_info);
     void UpdateOutputTrans(const MixJob& job);
   };
 
@@ -111,18 +111,18 @@ class StandardOutputBase : public AudioOutput {
   void ForeachLink(TaskType task_type)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& renderer,
+  bool SetupMix(const fbl::RefPtr<AudioOutImpl>& renderer,
                 RendererBookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessMix(const fbl::RefPtr<AudioRendererImpl>& renderer,
+  bool ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
                   RendererBookkeeping* info,
                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupTrim(const fbl::RefPtr<AudioRendererImpl>& renderer,
+  bool SetupTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
                  RendererBookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& renderer,
+  bool ProcessTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
                    RendererBookkeeping* info,
                    const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

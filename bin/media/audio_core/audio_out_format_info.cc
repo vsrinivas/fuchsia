@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
-#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_core/audio_out_format_info.h"
+#include "garnet/bin/media/audio_core/audio_out_impl.h"
 #include "garnet/bin/media/audio_core/constants.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
 namespace audio {
 
-AudioRendererFormatInfo::AudioRendererFormatInfo(
-    fuchsia::media::AudioStreamType format)
+AudioOutFormatInfo::AudioOutFormatInfo(fuchsia::media::AudioStreamType format)
     : format_(std::move(format)) {
   // Precompute some useful timing/format stuff.
   //
@@ -40,7 +39,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 
     default:
       // Format filtering was supposed to happen during
-      // AudioRendererImpl::SetStreamType.  It should never be attempting to
+      // AudioOutImpl::SetStreamType.  It should never be attempting to
       // create a FormatInfo structure with a sample format that we do not
       // understand.
       FXL_CHECK(false) << "unrecognized sample format";
@@ -52,9 +51,9 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 }
 
 // static
-fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
+fbl::RefPtr<AudioOutFormatInfo> AudioOutFormatInfo::Create(
     fuchsia::media::AudioStreamType format) {
-  return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
+  return fbl::AdoptRef(new AudioOutFormatInfo(std::move(format)));
 }
 
 }  // namespace audio

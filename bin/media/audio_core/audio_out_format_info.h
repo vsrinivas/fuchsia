@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_FORMAT_INFO_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_FORMAT_INFO_H_
 
 #include <fbl/ref_counted.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -15,10 +15,9 @@
 namespace media {
 namespace audio {
 
-class AudioRendererFormatInfo
-    : public fbl::RefCounted<AudioRendererFormatInfo> {
+class AudioOutFormatInfo : public fbl::RefCounted<AudioOutFormatInfo> {
  public:
-  static fbl::RefPtr<AudioRendererFormatInfo> Create(
+  static fbl::RefPtr<AudioOutFormatInfo> Create(
       fuchsia::media::AudioStreamType format);
 
   const fuchsia::media::AudioStreamType& format() const { return format_; }
@@ -29,9 +28,9 @@ class AudioRendererFormatInfo
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AudioRendererFormatInfo);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioOutFormatInfo);
 
-  AudioRendererFormatInfo(fuchsia::media::AudioStreamType format);
+  AudioOutFormatInfo(fuchsia::media::AudioStreamType format);
 
   fuchsia::media::AudioStreamType format_;
   TimelineRate frames_per_ns_;
@@ -42,4 +41,4 @@ class AudioRendererFormatInfo
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_FORMAT_INFO_H_

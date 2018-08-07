@@ -88,10 +88,10 @@ void usage(const char* prog_name) {
 
   printf(
       "\n\t--%s=<GAIN>\t\tSet Renderer gain to [%.1f, %.1f] dB (default %s)\n",
-      kRendererGainSwitch, fuchsia::media::kMutedGain, fuchsia::media::kMaxGain,
+      kRendererGainSwitch, fuchsia::media::MUTED_GAIN, fuchsia::media::MAX_GAIN,
       kRendererGainDefaultDb);
   printf("\t--%s=<GAIN>\t\tSet System gain to [%.1f, 0.0] dB (default %s)\n",
-         kSystemGainSwitch, fuchsia::media::kMutedGain, kSystemGainDefaultDb);
+         kSystemGainSwitch, fuchsia::media::MUTED_GAIN, kSystemGainDefaultDb);
   printf("\t\t\t\tNote: changes to System gain persist after playback.\n");
 
   printf("\n\t--%s\t\t\tSet 'Play to Most-Recently-Plugged' policy\n",
@@ -196,12 +196,12 @@ int main(int argc, const char** argv) {
     }
     media_app.set_will_set_audio_policy(true);
     media_app.set_audio_policy(
-        fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput);
+        fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
   }
   if (command_line.HasOption(kPlayToAllSwitch)) {
     media_app.set_will_set_audio_policy(true);
     media_app.set_audio_policy(
-        fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs);
+        fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
   }
 
   // Handle "generate to file"

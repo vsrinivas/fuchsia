@@ -94,8 +94,8 @@ class MediaPlayerTestView : public mozart::BaseView {
   bool problem_shown_ = false;
   bool was_at_end_of_stream_ = false;
 
-  int64_t seek_interval_start_ = fuchsia::media::kUnspecifiedTime;
-  int64_t seek_interval_end_ = fuchsia::media::kUnspecifiedTime;
+  int64_t seek_interval_start_ = fuchsia::media::NO_TIMESTAMP;
+  int64_t seek_interval_end_ = fuchsia::media::NO_TIMESTAMP;
   bool in_current_seek_interval_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestView);

@@ -68,7 +68,7 @@ zx_status_t TtsSpeaker::Init(
   auto audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
 
   fuchsia::media::AudioStreamType format;
   format.sample_format = kFliteSampleFormat;
@@ -76,7 +76,7 @@ zx_status_t TtsSpeaker::Init(
   format.frames_per_second = kFliteFrameRate;
 
   audio_renderer_->SetPcmStreamType(std::move(format));
-  audio_renderer_->SetPayloadBuffer(std::move(shared_vmo));
+  audio_renderer_->AddPayloadBuffer(0, std::move(shared_vmo));
 
   return ZX_OK;
 }
@@ -130,7 +130,7 @@ void TtsSpeaker::SendPendingAudio() {
       todo = bytes_till_low_water;
     }
 
-    fuchsia::media::AudioPacket pkt;
+    fuchsia::media::StreamPacket pkt;
     pkt.payload_offset = tx_ptr_;
     pkt.payload_size = todo;
 
@@ -165,8 +165,8 @@ void TtsSpeaker::SendPendingAudio() {
   }
 
   if (!clock_started_) {
-    audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
-                                 fuchsia::media::kNoTimestamp);
+    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                                 fuchsia::media::NO_TIMESTAMP);
     clock_started_ = true;
   }
 }

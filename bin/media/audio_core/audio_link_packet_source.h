@@ -37,7 +37,7 @@ class AudioLinkPacketSource : public AudioLink {
   // locks.  A lock-less single writer, single reader, triple-buffer object
   // would be perfect for this (I have one of these lying around from a previous
   // project, I just need to see if I am allowed to use it or not).
-  const AudioRendererFormatInfo& format_info() const { return *format_info_; }
+  const AudioOutFormatInfo& format_info() const { return *format_info_; }
 
   // Common pending queue ops.
   bool pending_queue_empty() const {
@@ -71,9 +71,9 @@ class AudioLinkPacketSource : public AudioLink {
  private:
   AudioLinkPacketSource(fbl::RefPtr<AudioObject> source,
                         fbl::RefPtr<AudioObject> dest,
-                        fbl::RefPtr<AudioRendererFormatInfo> format_info);
+                        fbl::RefPtr<AudioOutFormatInfo> format_info);
 
-  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<AudioOutFormatInfo> format_info_;
 
   std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;

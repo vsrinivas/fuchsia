@@ -59,14 +59,16 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
 
-  void SetAudioRenderer(fidl::InterfaceHandle<fuchsia::media::AudioRenderer2>
-                            audio_renderer) override;
+  void SetAudioOut(
+      fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) override;
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
                       request) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
+  static constexpr int64_t kMinTime = std::numeric_limits<int64_t>::min();
+  static constexpr int64_t kMaxTime = std::numeric_limits<int64_t>::max() - 1;
 
   // Internal state.
   enum class State {
@@ -98,7 +100,7 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   // Determines whether we need to flush.
   bool NeedToFlush() const {
     return setting_reader_ ||
-           target_position_ != fuchsia::media::kUnspecifiedTime ||
+           target_position_ != fuchsia::media::NO_TIMESTAMP ||
            target_state_ == State::kFlushed;
   }
 
@@ -139,15 +141,15 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
 
   // The position we want to seek to (because the client called Seek) or
   // kUnspecifiedTime, which indicates there's no desire to seek.
-  int64_t target_position_ = fuchsia::media::kUnspecifiedTime;
+  int64_t target_position_ = fuchsia::media::NO_TIMESTAMP;
 
   // The subject time to be used for SetTimelineFunction. The value is
   // kUnspecifiedTime if there's no need to seek or the position we want
   // to seek to if there is.
-  int64_t transform_subject_time_ = fuchsia::media::kUnspecifiedTime;
+  int64_t transform_subject_time_ = fuchsia::media::NO_TIMESTAMP;
 
   // The minimum program range PTS to be used for SetProgramRange.
-  int64_t program_range_min_pts_ = fuchsia::media::kMinTime;
+  int64_t program_range_min_pts_ = kMinTime;
 
   // Whether we need to set the reader, possibly with nothing. When this is
   // true, the state machine will transition to |kIdle|, removing an existing

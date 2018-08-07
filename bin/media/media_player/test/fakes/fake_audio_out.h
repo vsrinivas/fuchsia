@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_OUT_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_OUT_H_
 
 #include <memory>
 #include <queue>
@@ -14,21 +14,23 @@
 
 #include "garnet/bin/media/media_player/test/fakes/packet_info.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media_player {
 namespace test {
 
-// Implements AudioRenderer for testing.
-class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
+// Implements AudioOut for testing.
+class FakeAudioOut : public fuchsia::media::AudioOut,
+                     public fuchsia::media::GainControl {
  public:
-  FakeAudioRenderer();
+  FakeAudioOut();
 
-  ~FakeAudioRenderer() override;
+  ~FakeAudioOut() override;
 
   // Binds the renderer.
-  void Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> request);
+  void Bind(fidl::InterfaceRequest<fuchsia::media::AudioOut> request);
 
   // Indicates that the renderer should print out supplied packet info.
   void DumpPackets() { dump_packets_ = true; }
@@ -46,7 +48,11 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
   // AudioRenderer implementation.
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
 
-  void SetPayloadBuffer(::zx::vmo payload_buffer) override;
+  void SetStreamType(fuchsia::media::StreamType format) override;
+
+  void AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) override;
+
+  void RemovePayloadBuffer(uint32_t id) override;
 
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) override;
@@ -55,14 +61,16 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
 
   void SetReferenceClock(::zx::handle ref_clock) override;
 
-  void SendPacket(fuchsia::media::AudioPacket packet,
+  void SendPacket(fuchsia::media::StreamPacket packet,
                   SendPacketCallback callback) override;
 
-  void SendPacketNoReply(fuchsia::media::AudioPacket packet) override;
+  void SendPacketNoReply(fuchsia::media::StreamPacket packet) override;
 
-  void Flush(FlushCallback callback) override;
+  void EndOfStream() final;
 
-  void FlushNoReply() override;
+  void DiscardAllPackets(DiscardAllPacketsCallback callback) override;
+
+  void DiscardAllPacketsNoReply() override;
 
   void Play(int64_t reference_time, int64_t media_time,
             PlayCallback callback) override;
@@ -73,18 +81,17 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
 
   void PauseNoReply() override;
 
-  void SetGainMute(float gain, bool mute, uint32_t flags,
-                   SetGainMuteCallback callback) override;
-
-  void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) override;
-
-  void DuplicateGainControlInterface(
-      ::fidl::InterfaceRequest<fuchsia::media::AudioRendererGainControl>
-          request) override;
+  void BindGainControl(
+      ::fidl::InterfaceRequest<fuchsia::media::GainControl> request) override;
 
   void EnableMinLeadTimeEvents(bool enabled) override;
 
   void GetMinLeadTime(GetMinLeadTimeCallback callback) override;
+
+  // GainControl interface.
+  void SetGain(float gain_db) override;
+
+  void SetMute(bool muted) override;
 
  private:
   // Converts a pts in |pts_rate_| units to ns.
@@ -105,24 +112,24 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
   void MaybeScheduleRetirement();
 
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<fuchsia::media::AudioRenderer2> binding_;
+  fidl::Binding<fuchsia::media::AudioOut> binding_;
+  fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
 
   fuchsia::media::AudioStreamType format_;
   media::MappedSharedBuffer mapped_buffer_;
   float threshold_seconds_ = 0.0f;
   float gain_ = 1.0f;
   bool mute_ = false;
-  uint32_t gain_mute_flags_ = 0;
   const int64_t min_lead_time_ns_ = ZX_MSEC(100);
   media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
   media::TimelineFunction timeline_function_;
-  int64_t restart_media_time_ = fuchsia::media::kNoTimestamp;
+  int64_t restart_media_time_ = fuchsia::media::NO_TIMESTAMP;
 
   bool dump_packets_ = false;
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  std::queue<std::pair<fuchsia::media::AudioPacket, SendPacketCallback>>
+  std::queue<std::pair<fuchsia::media::StreamPacket, SendPacketCallback>>
       packet_queue_;
 
   bool expected_ = true;
@@ -131,4 +138,4 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_OUT_H_
