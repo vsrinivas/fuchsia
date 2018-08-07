@@ -394,9 +394,10 @@ response) must not have any secondary objects except strings and vectors of
 handles or primitives (see
 [wire format](https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/wire-format/index.md)
 for a definition of secondary objects). This invariant simplifies the memory
-ownership semantics. Additionally, all strings and vectors must have non-maximal
-length bounds. This requirement simplifies buffer management for clients that
-receive these values.
+ownership semantics. Additionally, all strings and vectors must have explicit
+non-maximal length bounds. `vector<int64>:64` is a vector with such a bound, while
+`vector<int64>` lacks an explicit non-maximal bound. This requirement simplifies
+buffer management for clients that receive these values.
 
 For example, structs and unions can embed other structs and unions, but they
 cannot contain nullable references to other structs or unions because nullable
