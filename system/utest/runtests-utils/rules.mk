@@ -14,6 +14,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fuchsia-test-main.cpp \
+    $(LOCAL_DIR)/fuchsia-run-test.cpp \
     $(LOCAL_DIR)/runtests-utils-test.cpp \
     $(LOCAL_DIR)/log-exporter-test.cpp \
 
