@@ -53,24 +53,18 @@ fn main() -> Result<(), Error> {
     let device_settings_manager = app::client::connect_to_service::<DeviceSettingsManagerMarker>()
         .context("failed to connect to device settings manager")?;
 
-    let f = match default_config.device_name {
-        Some(name) => device_settings_manager.set_string(DEVICE_NAME_KEY, &name).left_future(),
-        None =>
-            netstack
-                .take_event_stream()
-                .filter_map(|NetstackEvent::OnInterfacesChanged { interfaces: is }| future::ok(derive_device_name(is)))
-                .next()
-                .map_err(|(e, _)| e)
-                .and_then(|(opt, _)| {
-                    match opt {
-                        Some(name) => device_settings_manager.set_string(DEVICE_NAME_KEY, &name).left_future(),
-                        None => future::ok(false).right_future(),
-                    }
-                })
-                .right_future()
-    };
+    let device_name = match default_config.device_name {
+        Some(name) => {
+            device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map(|_| ()).left_future()
+        },
+        None => {
+            netstack.take_event_stream().filter_map(|NetstackEvent::OnInterfacesChanged { interfaces: is }| {
+                future::ok(derive_device_name(is))
+            }).take(1).for_each(|name| {
+                device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map(|_| ())
+            }).map(|_| ()).right_future()
+        },
+    }.map_err(Into::into);
 
-    let _ = executor.run_singlethreaded(f)?;
-
-    Ok(())
+    executor.run_singlethreaded(device_name)
 }
