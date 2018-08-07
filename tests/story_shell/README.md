@@ -5,6 +5,9 @@ verifications. All actions and verifications are driven by the user shell. The
 story shell just responds.
 
 * Create a story and start it.
+* Verify the contents of the link. The first time the story shell is created the
+  link content is empty. If the content is empty, write to the link and verify
+  those contents when the story shell is restarted.
 * Add a top level module to the story. The module is specified by an intent. The
   intent is resolved to a module that possesses a manifest. The manifest
   specifies a composition pattern.

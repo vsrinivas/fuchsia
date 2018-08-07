@@ -58,11 +58,11 @@ interface UserShellContext {
 // handling. An analog mechanism exists between DeviceShell and UserShell.
 [Discoverable]  // Created by user shell components.
 interface UserShellPresentationProvider {
-  // When a StoryShell calls StoryContext.GetPresentation(), this request
+  // When a StoryShell calls StoryShellContext.GetPresentation(), this request
   // arrives here.
   1: GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> @request);
 
-  // When a StoryShell calls StoryContext.WatchVisualState(), this request
+  // When a StoryShell calls StoryShellContext.WatchVisualState(), this request
   // arrives here.
   2: WatchVisualState(string story_id, StoryVisualStateWatcher watcher);
 };

@@ -31,6 +31,7 @@
 
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/ongoing_activity_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_shell_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -47,8 +48,7 @@ class StoryStorage;
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
 // clients control over the story.
-class StoryControllerImpl : fuchsia::modular::StoryController,
-                            fuchsia::modular::StoryContext {
+class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
   StoryControllerImpl(fidl::StringPtr story_id, StoryStorage* story_storage,
                       StoryProviderImpl* story_provider_impl);
@@ -193,13 +193,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   void GetLink(fuchsia::modular::LinkPath link_path,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
-  // |fuchsia::modular::StoryContext|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                           request) override;
-  void WatchVisualState(
-      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
-      override;
-
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request);
@@ -261,7 +254,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // to the story shell using their instance IDs.
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> story_shell_app_;
   fuchsia::modular::StoryShellPtr story_shell_;
-  fidl::Binding<fuchsia::modular::StoryContext> story_context_binding_;
+
+  StoryShellContextImpl story_shell_context_impl_;
 
   // The module instances (identified by their serialized module paths) already
   // known to story shell. Does not include modules whose views are pending and

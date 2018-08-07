@@ -122,16 +122,19 @@ class TestApp
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
+    // TODO(jphsiao|vardhan): remodel this |proceed_after_6| style of
+    // continuation to use Futures instead.
+    auto proceed_after_6 = modular::testing::NewBarrierClosure(6, [this] {
       story1_run1_.Pass();
       Story1_Stop1();
     });
 
-    Get("root:one", proceed_after_5);
-    Get("root:one manifest", proceed_after_5);
-    Get("root:one:two", proceed_after_5);
-    Get("root:one:two manifest", proceed_after_5);
-    Get("root:one:two ordering", proceed_after_5);
+    Get("story link data: null", proceed_after_6);
+    Get("root:one", proceed_after_6);
+    Get("root:one manifest", proceed_after_6);
+    Get("root:one:two", proceed_after_6);
+    Get("root:one:two manifest", proceed_after_6);
+    Get("root:one:two ordering", proceed_after_6);
 
     story_provider_->GetController(story1_id_, story_controller_.NewRequest());
 
@@ -169,16 +172,17 @@ class TestApp
   TestPoint story1_run2_{"Story1 Run2"};
 
   void Story1_Run2() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
+    auto proceed_after_6 = modular::testing::NewBarrierClosure(6, [this] {
       story1_run2_.Pass();
       Story1_Stop2();
     });
 
-    Get("root:one", proceed_after_5);
-    Get("root:one manifest", proceed_after_5);
-    Get("root:one:two", proceed_after_5);
-    Get("root:one:two manifest", proceed_after_5);
-    Get("root:one:two ordering", proceed_after_5);
+    Get("story link data: {\"label\":\"value\"}", proceed_after_6);
+    Get("root:one", proceed_after_6);
+    Get("root:one manifest", proceed_after_6);
+    Get("root:one:two", proceed_after_6);
+    Get("root:one:two manifest", proceed_after_6);
+    Get("root:one:two ordering", proceed_after_6);
 
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());

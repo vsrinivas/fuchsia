@@ -38,9 +38,9 @@ class TestApp
 
  private:
   // |fuchsia::modular::StoryShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryContext>
-                      story_context) override {
-    story_context_.Bind(std::move(story_context));
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
+                      story_shell_context) override {
+    story_shell_context_.Bind(std::move(story_shell_context));
   }
 
   TestPoint add_view_{"AddView root:child:child root"};
@@ -79,7 +79,7 @@ class TestApp
           fuchsia::modular::ContainerRelationEntry> /* relationships */,
       fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
 
-  fuchsia::modular::StoryContextPtr story_context_;
+  fuchsia::modular::StoryShellContextPtr story_shell_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

@@ -43,9 +43,9 @@ class DevStoryShellApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryContext>
-                      story_context) override {
-    story_context_.Bind(std::move(story_context));
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
+                      story_shell_context) override {
+    story_shell_context_.Bind(std::move(story_shell_context));
     Connect();
   }
 
@@ -83,7 +83,7 @@ class DevStoryShellApp
       fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
 
   void Connect() {
-    if (story_context_.is_bound() && view_owner_request_) {
+    if (story_shell_context_.is_bound() && view_owner_request_) {
       view_ = std::make_unique<modular::ViewHost>(
           startup_context()
               ->ConnectToEnvironmentService<
@@ -104,7 +104,7 @@ class DevStoryShellApp
 
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
-  fuchsia::modular::StoryContextPtr story_context_;
+  fuchsia::modular::StoryShellContextPtr story_shell_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };
 

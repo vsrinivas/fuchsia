@@ -19,9 +19,7 @@ using fuchsia.ui.viewsv1token;
 // by the user runner being terminated, or by the system shutting down.
 [Discoverable]  // Created by story shell applications.
 interface StoryShell {
-  // TODO(mesch): In analogy to DeviceShellContext, UserShellContext,
-  // ModuleContext, AgentContext, this should be called StoryShellContext.
-  1: Initialize(StoryContext story_context);
+  1: Initialize(StoryShellContext story_shell_context);
 
   // Adds a new View to be displayed by the StoryShell, creating a new
   // StoryShell Surface. More context that allows the story shell to decide how
@@ -71,13 +69,16 @@ struct ContainerView {
 // This interface provides the StoryShell instance with everything it needs to
 // know or be able to do about the Story. Not much right now, but we expect this
 // to increase.
-interface StoryContext {
+interface StoryShellContext {
   // Requests a Presentation connection from the UserShell. See
   // UserShellPresenationProvider in user_shell.fidl.
   1: GetPresentation(request<fuchsia.ui.policy.Presentation> @request);
 
   // Starts watching Story shell's visual state.
   2: WatchVisualState(StoryVisualStateWatcher watcher);
+
+  // Gets a Link instance that the story shell can use for persisting metadata.
+  3: GetLink(request<Link> @request);
 };
 
 // Implemented by StoryShell to get notified about visual state changes.

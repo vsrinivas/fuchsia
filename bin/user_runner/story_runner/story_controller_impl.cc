@@ -42,6 +42,7 @@
 #include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
 #include "peridot/bin/user_runner/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_shell_context_impl.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -525,10 +526,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
         ->AsyncMap([this] {
           story_controller_impl_->story_shell_app_.reset();
           story_controller_impl_->story_shell_.Unbind();
-          if (story_controller_impl_->story_context_binding_.is_bound()) {
-            // Close() checks if called while not bound.
-            story_controller_impl_->story_context_binding_.Unbind();
-          }
 
           // Ensure every story storage operation has completed.
           return story_controller_impl_->story_storage_->Sync();
@@ -1077,7 +1074,7 @@ StoryControllerImpl::StoryControllerImpl(
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       story_storage_(story_storage),
-      story_context_binding_(this) {
+      story_shell_context_impl_{story_id, story_provider_impl, this} {
   auto story_scope = fuchsia::modular::StoryScope::New();
   story_scope->story_id = story_id;
   auto scope = fuchsia::modular::ComponentScope::New();
@@ -1486,7 +1483,9 @@ void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
-  story_shell_->Initialize(story_context_binding_.NewBinding());
+  fuchsia::modular::StoryShellContextPtr story_shell_context;
+  story_shell_context_impl_.Connect(story_shell_context.NewRequest());
+  story_shell_->Initialize(std::move(story_shell_context));
 }
 
 void StoryControllerImpl::SetState(
@@ -1544,16 +1543,6 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
   }
 
   return anchor;
-}
-
-void StoryControllerImpl::GetPresentation(
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  story_provider_impl_->GetPresentation(story_id_, std::move(request));
-}
-
-void StoryControllerImpl::WatchVisualState(
-    fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
-  story_provider_impl_->WatchVisualState(story_id_, std::move(watcher));
 }
 
 void StoryControllerImpl::HandleModuleDone(
