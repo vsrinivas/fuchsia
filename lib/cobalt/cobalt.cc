@@ -71,15 +71,15 @@ CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
 CobaltObservation::CobaltObservation(CobaltObservation&& rhs)
     : CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
-void CobaltObservation::Report(fuchsia::cobalt::EncoderPtr& encoder,
+void CobaltObservation::Report(fuchsia::cobalt::EncoderPtr* encoder,
                                fit::function<void(Status)> callback) && {
   if (parts_->size() == 1) {
-    encoder->AddObservation(metric_id_, parts_->at(0).encoding_id,
-                            std::move(parts_->at(0).value),
-                            std::move(callback));
+    (*encoder)->AddObservation(metric_id_, parts_->at(0).encoding_id,
+                               std::move(parts_->at(0).value),
+                               std::move(callback));
   } else {
-    encoder->AddMultipartObservation(metric_id_, std::move(parts_),
-                                     std::move(callback));
+    (*encoder)->AddMultipartObservation(metric_id_, std::move(parts_),
+                                        std::move(callback));
   }
 }
 
@@ -331,8 +331,8 @@ void CobaltContextImpl::SendObservations() {
   for (auto observation : observations_in_transit_) {
     auto callback = waiter->NewCallback();
     std::move(observation)
-        .Report(encoder_, [this, observation,
-                           callback = std::move(callback)](Status status) {
+        .Report(&encoder_, [this, observation,
+                            callback = std::move(callback)](Status status) {
           AddObservationCallback(observation, status);
           callback();
         });
