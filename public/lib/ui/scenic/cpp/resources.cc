@@ -7,7 +7,7 @@
 #include <fbl/algorithm.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/images/images_util.h"
+#include "lib/images/cpp/images.h"
 #include "lib/ui/scenic/cpp/fidl_helpers.h"
 
 namespace scenic {
@@ -103,7 +103,7 @@ Image::Image(Image&& moved)
 Image::~Image() = default;
 
 size_t Image::ComputeSize(const fuchsia::images::ImageInfo& image_info) {
-  return images_util::ImageSize(image_info);
+  return images::ImageSize(image_info);
 }
 
 Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)

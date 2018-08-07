@@ -2,21 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("images_util") {
+source_set("cpp") {
   sources = [
-    "images_util.cc",
-    "images_util.h",
+    "images.cc",
+    "images.h",
   ]
 
   public_deps = [
     "//garnet/public/fidl/fuchsia.images:fuchsia.images",
-    "//garnet/public/lib/fxl",
-  ]
-}
-
-source_set("yuv_util") {
-  sources = [
-    "yuv_util.cc",
-    "yuv_util.h",
   ]
 }

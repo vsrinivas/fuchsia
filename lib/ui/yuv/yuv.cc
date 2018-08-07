@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "yuv_util.h"
+#include "garnet/lib/ui/yuv/yuv.h"
 
 namespace {
 
@@ -13,7 +13,7 @@ uint8_t clip(int in) {
 
 }  // namespace
 
-namespace yuv_util {
+namespace yuv {
 
 // Letting compiler decide whether to inline, for now.
 void YuvToBgra(uint8_t y_raw, uint8_t u_raw, uint8_t v_raw, uint8_t* bgra) {
@@ -26,4 +26,4 @@ void YuvToBgra(uint8_t y_raw, uint8_t u_raw, uint8_t v_raw, uint8_t* bgra) {
   bgra[3] = 0xff;                                         // alpha
 }
 
-}  // namespace yuv_util
+}  // namespace yuv

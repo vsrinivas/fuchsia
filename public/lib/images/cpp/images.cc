@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "images_util.h"
+#include "lib/images/cpp/images.h"
 
-#include <lib/fxl/logging.h>
+#include <zircon/assert.h>
 
-namespace images_util {
+namespace images {
 
 size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
   switch (pixel_format) {
@@ -17,8 +17,7 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
     case fuchsia::images::PixelFormat::NV12:
       return 12;
   }
-  FXL_CHECK(false) << "Unknown Pixel Format: "
-                   << static_cast<int>(pixel_format);
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
   return 0;
 }
 
@@ -37,13 +36,12 @@ size_t MaxSampleAlignment(const fuchsia::images::PixelFormat& pixel_format) {
       // require UV samples to remain aligned UV line to UV line.
       return 2u;
   }
-  FXL_CHECK(false) << "Unknown Pixel Format: "
-                   << static_cast<int>(pixel_format);
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
   return 0;
 }
 
 size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
-  FXL_DCHECK(image_info.tiling == fuchsia::images::Tiling::LINEAR);
+  ZX_DEBUG_ASSERT(image_info.tiling == fuchsia::images::Tiling::LINEAR);
   switch (image_info.pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
     case fuchsia::images::PixelFormat::YUY2:
@@ -51,10 +49,9 @@ size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
     case fuchsia::images::PixelFormat::NV12:
       return image_info.height * image_info.stride * 3 / 2;
   }
-  FXL_CHECK(false) << "Unknown Pixel Format: "
-                   << static_cast<int>(image_info.pixel_format);
-  FXL_NOTREACHED();
+  ZX_PANIC("Unknown Pixel Format: %d",
+           static_cast<int>(image_info.pixel_format));
   return 0;
 }
 
-}  // namespace images_util
+}  // namespace images

@@ -61,7 +61,7 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//garnet/public/lib/images:images_util",
+    "//garnet/public/lib/images/cpp",
     "//zircon/public/lib/fbl",
   ]
 }

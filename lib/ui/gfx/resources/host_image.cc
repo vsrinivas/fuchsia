@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/util/image_formats.h"
-#include "garnet/public/lib/images/images_util.h"
+#include "lib/images/cpp/images.h"
 
 namespace scenic {
 namespace gfx {
@@ -36,10 +36,9 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
                         uint64_t memory_offset, ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
-  size_t bits_per_pixel =
-      images_util::BitsPerPixel(host_image_info.pixel_format);
+  size_t bits_per_pixel = images::BitsPerPixel(host_image_info.pixel_format);
   size_t pixel_alignment =
-      images_util::MaxSampleAlignment(host_image_info.pixel_format);
+      images::MaxSampleAlignment(host_image_info.pixel_format);
 
   if (host_image_info.width <= 0) {
     error_reporter->ERROR()
@@ -84,7 +83,7 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
     return nullptr;
   }
 
-  size_t image_size = images_util::ImageSize(host_image_info);
+  size_t image_size = images::ImageSize(host_image_info);
   if (memory_offset >= host_memory->size()) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): the offset of the Image must be "

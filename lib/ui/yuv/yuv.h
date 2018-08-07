@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_IMAGES_YUV_UTIL_H_
-#define LIB_IMAGES_YUV_UTIL_H_
+#ifndef GARNET_LIB_UI_YUV_YUV_H_
+#define GARNET_LIB_UI_YUV_YUV_H_
 
 #include <stdint.h>
 
-namespace yuv_util {
+namespace yuv {
 
 void YuvToBgra(uint8_t y_raw, uint8_t u_raw, uint8_t v_raw, uint8_t* bgra);
 
-}  // namespace yuv_util
+}  // namespace yuv
 
-#endif  // LIB_IMAGES_YUV_UTIL_H_
+#endif  // GARNET_LIB_UI_YUV_YUV_H_

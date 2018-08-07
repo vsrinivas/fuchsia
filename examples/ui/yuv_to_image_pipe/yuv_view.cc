@@ -6,11 +6,12 @@
 
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
-#include <lib/images/images_util.h>
-#include <lib/images/yuv_util.h>
+#include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/fidl_helpers.h>
 
 #include <iostream>
+
+#include "garnet/lib/ui/yuv/yuv.h"
 
 namespace {
 
@@ -32,7 +33,7 @@ YuvView::YuvView(async::Loop* loop, component::StartupContext* startup_context,
       node_(session()),
       pixel_format_(pixel_format),
       stride_(static_cast<uint32_t>(
-          (kShapeWidth * images_util::BitsPerPixel(pixel_format_) + 7) / 8)) {
+          (kShapeWidth * images::BitsPerPixel(pixel_format_) + 7) / 8)) {
   FXL_VLOG(4) << "Creating View";
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();
@@ -94,7 +95,7 @@ void YuvView::StartYuv() {
       .pixel_format = pixel_format_,
   };
 
-  uint64_t image_vmo_bytes = images_util::ImageSize(image_info);
+  uint64_t image_vmo_bytes = images::ImageSize(image_info);
 
   ::zx::vmo image_vmo;
   zx_status_t status = ::zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
@@ -151,9 +152,8 @@ void YuvView::SetBgra8Pixels(uint8_t* vmo_base) {
       uint8_t y_value = GetYValue(x, y) * 255;
       uint8_t u_value = GetUValue(x, y) * 255;
       uint8_t v_value = GetVValue(x, y) * 255;
-      yuv_util::YuvToBgra(
-          y_value, u_value, v_value,
-          &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)]);
+      yuv::YuvToBgra(y_value, u_value, v_value,
+                     &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)]);
     }
   }
 }

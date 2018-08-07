@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_IMAGES_IMAGES_UTIL_H_
-#define LIB_IMAGES_IMAGES_UTIL_H_
+#ifndef LIB_IMAGES_CPP_IMAGES_H_
+#define LIB_IMAGES_CPP_IMAGES_H_
 
 #include <fuchsia/images/cpp/fidl.h>
 
 #include <stdint.h>
 
-namespace images_util {
+namespace images {
 
 // Returns the number of bits per pixel for the given format.
 size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format);
@@ -27,6 +27,6 @@ size_t MaxSampleAlignment(const fuchsia::images::PixelFormat& pixel_format);
 // isn't.  The output is bytes.
 size_t ImageSize(const fuchsia::images::ImageInfo& image_info);
 
-}  // namespace images_util
+}  // namespace images
 
-#endif  // LIB_IMAGES_IMAGES_UTIL_H_
+#endif  // LIB_IMAGES_CPP_IMAGES_H_

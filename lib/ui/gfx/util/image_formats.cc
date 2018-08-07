@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/ui/gfx/util/image_formats.h"
+#include "garnet/lib/ui/yuv/yuv.h"
 #include "lib/fxl/logging.h"
-#include "lib/images/images_util.h"
-#include "lib/images/yuv_util.h"
+#include "lib/images/cpp/images.h"
 
 namespace scenic {
 namespace gfx {
@@ -20,8 +20,8 @@ void Yuy2ToBgra(uint8_t* yuy2, uint8_t* bgra1, uint8_t* bgra2) {
   uint8_t u = yuy2[1];
   uint8_t y2 = yuy2[2];
   uint8_t v = yuy2[3];
-  yuv_util::YuvToBgra(y1, u, v, bgra1);
-  yuv_util::YuvToBgra(y2, u, v, bgra2);
+  yuv::YuvToBgra(y1, u, v, bgra1);
+  yuv::YuvToBgra(y2, u, v, bgra2);
 }
 
 void ConvertYuy2ToBgra(uint8_t* out_ptr, uint8_t* in_ptr,
@@ -103,8 +103,8 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
       // not used within the body of the loop.
       for (uint32_t x_offset = 0; x_offset < 2; ++x_offset) {
         // Unknown whether inlining each of these is better or worse.
-        yuv_util::YuvToBgra(*y1_sample_iter, u, v, bgra1_sample_iter);
-        yuv_util::YuvToBgra(*y2_sample_iter, u, v, bgra2_sample_iter);
+        yuv::YuvToBgra(*y1_sample_iter, u, v, bgra1_sample_iter);
+        yuv::YuvToBgra(*y2_sample_iter, u, v, bgra2_sample_iter);
         y1_sample_iter += sizeof(uint8_t);
         y2_sample_iter += sizeof(uint8_t);
         bgra1_sample_iter += sizeof(uint32_t);
@@ -120,7 +120,7 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
 
 escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
     const fuchsia::images::ImageInfo& image_info) {
-  size_t bits_per_pixel = images_util::BitsPerPixel(image_info.pixel_format);
+  size_t bits_per_pixel = images::BitsPerPixel(image_info.pixel_format);
   switch (image_info.pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
       if (image_info.transform == fuchsia::images::Transform::FLIP_HORIZONTAL) {
