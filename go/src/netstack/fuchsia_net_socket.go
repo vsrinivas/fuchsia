@@ -19,7 +19,7 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 	spath := socketPath{domain: int(d), typ: int(t), protocol: int(p)}
 	var s zx.Handle
 	if err := ns.dispatcher.opSocket(zx.Handle(0), spath, func(peerS zx.Handle) { s = peerS }); err != nil {
-		return zx.Socket(zx.Handle(0)), 0, err
+		return zx.Socket(zx.Handle(0)), int32(errStatus(err)), nil
 	}
 	return zx.Socket(s), 0, nil
 }
