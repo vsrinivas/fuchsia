@@ -228,6 +228,24 @@ TEST_F(SDP_DataElementTest, Write) {
   EXPECT_TRUE(ContainersEqual(expected, block));
 }
 
+TEST_F(SDP_DataElementTest, ReadSequence) {
+  auto buf = common::CreateStaticByteBuffer(
+      0x35, 0x08, 0x09, 0x00, 0x01,  // uint16_t: 1
+      0x0A, 0x00, 0x00, 0x00, 0x02   // uint32_t: 2
+  );
+
+  DataElement elem;
+  EXPECT_EQ(buf.size(), DataElement::Read(&elem, buf));
+  EXPECT_EQ(DataElement::Type::kSequence, elem.type());
+  auto* it = elem.At(0);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->type());
+  EXPECT_EQ(1u, *it->Get<uint16_t>());
+
+  it = elem.At(1);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->type());
+  EXPECT_EQ(2u, *it->Get<uint32_t>());
+}
+
 }  // namespace
 }  // namespace sdp
 }  // namespace btlib

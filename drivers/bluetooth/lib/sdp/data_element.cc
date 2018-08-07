@@ -432,13 +432,14 @@ size_t DataElement::Read(DataElement* elem, const common::ByteBuffer& buffer) {
       std::vector<DataElement> seq;
       while (remaining > 0) {
         DataElement next;
-        size_t used = Read(&next, sequence_buf);
-        if (used == 0) {
+        size_t used = Read(&next, sequence_buf.view(data_bytes - remaining));
+        if (used == 0 || used > remaining) {
           return 0;
         }
         seq.push_back(std::move(next));
         remaining -= used;
       }
+      FXL_DCHECK(remaining == 0);
       if (type_desc == Type::kAlternative) {
         elem->SetAlternative(std::move(seq));
       } else {
