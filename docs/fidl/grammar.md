@@ -128,7 +128,7 @@ handle-subtype = "process" | "thread" | "vmo" | "channel" | "event" | "port" |
 
 request-type = "request" , "<" , compound-identifier , ">" , ( "?" ) ;
 
-primitive-type = integer-type | "status" | "bool" | "float32" | "float64" ;
+primitive-type = integer-type | "bool" | "float32" | "float64" ;
 
 integer-type = "int8" | "int16" | "int32" | "int64" |
                "uint8" | "uint16" | "uint32" | "uint64" ;

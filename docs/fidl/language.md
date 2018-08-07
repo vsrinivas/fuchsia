@@ -46,8 +46,8 @@ The following keywords are reserved in FIDL.
 
 ```
 array, as, bool, const, enum, float32, float64, handle, int8, int16,
-int32, int64, interface, library, request, status, string, struct,
-uint8, uint16, uint32, uint64, union, using, vector
+int32, int64, interface, library, request, string, struct, uint8, uint16,
+uint32, uint64, union, using, vector
 ```
 
 To use these words as identifiers, they must be escaped by prepending an "@".
