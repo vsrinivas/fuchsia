@@ -62,7 +62,14 @@ struct PixelFormat {
 // The ordering of the channels in the format name reflects how
 // the actual layout of the channel.
 enum PixelFormatType {
+  INVALID = 0;
     R8G8B8A8 = 1;
+  BGRA32 = 101;        // 32bpp BGRA, 1 plane. For UVC compliance.
+  I420  = 102;         // For UVC compliance.
+  M420  = 103;         // For UVC compliance.
+  NV12  = 104;         // For UVC compliance.
+  YUY2  = 105;         // For UVC compliance.
+  MJPEG = 106;         // For UVC compliance.
 };
 
 // Describes how the pixels within an image are meant to be presented.
