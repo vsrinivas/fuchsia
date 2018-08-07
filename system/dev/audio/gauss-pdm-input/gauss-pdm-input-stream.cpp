@@ -64,13 +64,13 @@ zx_status_t GaussPdmInputStream::Bind(const char* devname,
         &audio_device_.pdev, 0 /* PDM IRQ */, &audio_device_.pdm_irq);
 
     if (status != ZX_OK) {
-        zxlogf(ERROR, "Colud not map interrupt.\n");
+        zxlogf(ERROR, "Could not map interrupt.\n");
         goto finished;
     }
 
     status = pdev_get_bti(&audio_device_.pdev, 0, &audio_device_.bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "Colud not get bti.\n");
+        zxlogf(ERROR, "Could not get bti.\n");
         goto finished;
     }
 
