@@ -5,7 +5,7 @@
 #include "garnet/lib/cmx/sandbox.h"
 
 #include <algorithm>
-#include <unordered_map>
+#include <map>
 
 #include <lib/fxl/strings/string_printf.h>
 #include "garnet/lib/json/json_parser.h"
@@ -13,6 +13,8 @@
 
 namespace component {
 namespace {
+
+constexpr char kDeprecatedAllServices[] = "deprecated-all-services";
 
 template <typename Value>
 void CopyArrayToVector(const std::string& name, const Value& value,
@@ -44,7 +46,7 @@ constexpr char kBoot[] = "boot";
 
 bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
                             json::JSONParser* json_parser) {
-  const std::unordered_map<std::string, std::vector<std::string>*> name_to_vec =
+  const std::map<std::string, std::vector<std::string>*> name_to_vec =
       {{kDev, &dev_},
        {kSystem, &system_},
        {kServices, &services_},
@@ -69,9 +71,6 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     auto member = sandbox_value.FindMember(name);
     if (member != sandbox_value.MemberEnd()) {
       CopyArrayToVector(name, member->value, json_parser, vec);
-      if (json_parser->HasError()) {
-        return false;
-      }
     }
   }
 
@@ -80,9 +79,16 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
   // component manifests are migrated.
   auto services_member = sandbox_value.FindMember(kServices);
   has_services_ = (services_member != sandbox_value.MemberEnd());
+  if (has_services_ && HasFeature(kDeprecatedAllServices)) {
+    json_parser->ReportError(fxl::StringPrintf(
+        "Sandbox may not include both 'services' and "
+        "'deprecated-all-services'."));
+  }
 
-  null_ = false;
-  return true;
+  if (!json_parser->HasError()) {
+    null_ = false;
+  }
+  return !json_parser->HasError();
 }
 
 bool SandboxMetadata::HasFeature(const std::string& feature) const {

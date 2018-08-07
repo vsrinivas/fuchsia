@@ -125,10 +125,20 @@ TEST_F(SandboxMetadataTest, Parse) {
 }
 
 TEST_F(SandboxMetadataTest, ParseWithErrors) {
-  ExpectFailedParse(R"JSON({ "dev": 3 })JSON",
-                    "test_file: 'dev' in sandbox is not an array.");
-  ExpectFailedParse(R"JSON({ "dev": [ "class/input", 3 ] })JSON",
-                    "test_file: Entry for 'dev' in sandbox is not a string.");
+  ExpectFailedParse(
+      R"JSON({
+        "dev": [ "class/input", 3 ],
+        "services": 55
+      })JSON",
+      "test_file: Entry for 'dev' in sandbox is not a string.\n"
+      "test_file: 'services' in sandbox is not an array.");
+  ExpectFailedParse(
+      R"JSON({
+        "features": [ "vulkan", "deprecated-all-services" ],
+        "services": [ "fuchsia.sys.Launcher" ]
+      })JSON",
+      "test_file: Sandbox may not include both 'services' and "
+      "'deprecated-all-services'.");
 }
 
 }  // namespace
