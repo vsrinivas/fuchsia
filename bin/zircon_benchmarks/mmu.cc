@@ -6,6 +6,7 @@
 #include <fbl/algorithm.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -21,18 +22,12 @@ class Mmu : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
     vmar_size_ = GB(1);
-    if (zx::vmar::root_self()->allocate(
+    ZX_ASSERT(zx::vmar::root_self()->allocate(
             0, vmar_size_,
             ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC, &vmar_,
-            &vmar_base_) != ZX_OK) {
-      state.SkipWithError("Failed to create vmar");
-      return;
-    }
+            &vmar_base_) == ZX_OK);
 
-    if (zx::vmo::create(MB(4), 0, &vmo_) != ZX_OK) {
-      state.SkipWithError("Failed to create vmo");
-      return;
-    }
+    ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo_) == ZX_OK);
   }
 
   void TearDown(benchmark::State& state) override {
@@ -79,17 +74,10 @@ BENCHMARK_F(Mmu, MapUnmap)(benchmark::State& state) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    zx_status_t status = MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ true);
-    if (status != ZX_OK) {
-      state.SkipWithError("Failed to map");
-      return;
-    }
+    ZX_ASSERT(MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ true) ==
+              ZX_OK);
 
-    status = vmar_.unmap(vmar_base_, kSize);
-    if (status != ZX_OK) {
-      state.SkipWithError("Failed to unmap");
-      return;
-    }
+    ZX_ASSERT(vmar_.unmap(vmar_base_, kSize) == ZX_OK);
   }
   // Report number of pages
   state.SetItemsProcessed((kSize / KB(4)) * state.iterations());
@@ -103,11 +91,8 @@ BENCHMARK_F(Mmu, MapUnmapWithFaults)(benchmark::State& state) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    zx_status_t status = MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ false);
-    if (status != ZX_OK) {
-      state.SkipWithError("Failed to map");
-      return;
-    }
+    ZX_ASSERT(MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ false) ==
+              ZX_OK);
 
     // Read fault everything in
     auto p = reinterpret_cast<volatile uint8_t*>(vmar_base_);
@@ -115,11 +100,7 @@ BENCHMARK_F(Mmu, MapUnmapWithFaults)(benchmark::State& state) {
       p[offset];
     }
 
-    status = vmar_.unmap(vmar_base_, kSize);
-    if (status != ZX_OK) {
-      state.SkipWithError("Failed to unmap");
-      return;
-    }
+    ZX_ASSERT(vmar_.unmap(vmar_base_, kSize) == ZX_OK);
   }
   // Report number of pages
   state.SetItemsProcessed((kSize / KB(4)) * state.iterations());
