@@ -116,7 +116,20 @@ void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
   FXL_NOTIMPLEMENTED();
 }
 
-void SocketChannelRelay::OnChannelClosed() { FXL_NOTIMPLEMENTED(); }
+void SocketChannelRelay::OnChannelClosed() {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(state_ != RelayState::kActivating);
+  FXL_DCHECK(state_ != RelayState::kDeactivated);
+
+  if (state_ == RelayState::kDeactivating) {
+    FXL_LOG(INFO) << "l2cap: Ignoring " << __func__ << " on socket for channel "
+                  << channel_->id() << " while deactivating";
+    return;
+  }
+
+  FXL_DCHECK(state_ == RelayState::kActivated);
+  DeactivateAndRequestDestruction();
+}
 
 void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
                                   async::Wait* wait,

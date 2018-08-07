@@ -125,6 +125,13 @@ TEST_F(SocketChannelRelayLifetimeTest,
   RunLoopUntilIdle();
 }
 
+TEST_F(SocketChannelRelayLifetimeTest, RelayIsDeactivatedWhenChannelIsClosed) {
+  ASSERT_TRUE(relay().Activate());
+
+  channel()->Close();
+  EXPECT_TRUE(was_deactivation_callback_invoked());
+}
+
 }  // namespace
 }  // namespace l2cap
 }  // namespace btlib
