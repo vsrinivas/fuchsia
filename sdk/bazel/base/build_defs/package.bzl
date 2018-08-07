@@ -66,24 +66,41 @@ def _fuchsia_package_impl(context):
     info = get_aggregate_info([], context.attr.deps)
     manifest_file_contents = ""
     package_contents = []
-    for mapping in info.contents.to_list():
-        manifest_file_contents += "%s=%s\n" % (mapping[0], mapping[1].path)
-        package_contents.append(mapping[1])
 
+    # Generate the manifest file with a script: this helps ignore empty files.
     base = context.attr.name + "_pkg/"
-    meta_package = context.actions.declare_file(base + "meta/package")
-    manifest_file_contents += "meta/package=%s\n" % meta_package.path
-
     manifest_file = context.actions.declare_file(base + "package_manifest")
-    package_dir = manifest_file.dirname
+
+    content = "#!/bin/bash\n"
+    for key, file in info.contents.to_list():
+        # Only add file to the manifest if not empty.
+        content += "if [[ -s %s ]]; then\n" % file.path
+        content += "  echo '%s=%s' >> %s\n" % (key, file.path, manifest_file.path)
+        content += "fi\n"
+        package_contents.append(file)
+
+    # Add the meta/package file to the manifest.
+    meta_package = context.actions.declare_file(base + "meta/package")
+    content += "echo 'meta/package=%s' >> %s\n" % (meta_package.path, manifest_file.path)
 
     # Write the manifest file.
+    manifest_script = context.actions.declare_file(base + "package_manifest.sh")
     context.actions.write(
-        output = manifest_file,
-        content = manifest_file_contents,
+        output = manifest_script,
+        content = content,
+        is_executable = True,
+    )
+    context.actions.run(
+        executable = manifest_script,
+        inputs = package_contents,
+        outputs = [
+            manifest_file
+        ],
+        mnemonic = "FuchsiaManifest",
     )
 
     # Initialize the package's meta directory.
+    package_dir = manifest_file.dirname
     context.actions.run(
         executable = context.executable._pm,
         arguments = [

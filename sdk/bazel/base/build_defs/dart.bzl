@@ -70,9 +70,29 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
             context.label.name + "_kernel.dil-" + dc.package + ".dilp")
         mappings['data/' + dc.package + ".dilp"] = dilp_file
 
-    # 4. Compile the kernel.
+    # 4. Create a wrapper script around the kernel compiler.
+    #    The kernel compiler only generates .dilp files for libraries that are
+    #    actually used by app. However, we declare a .dilp file for all packages
+    #    in the dependency graph: not creating that file would yield a Bazel error.
+    content = "#!/bin/bash\n"
+    content += dart_exec.path
+    content += " $@\n"
+    for dilp in mappings.values():
+        content += "if ! [[ -f %s ]]; then\n" % dilp.path
+        content += "  echo 'Warning: %s is not needed, generating empty file.' >&2\n" % dilp.path
+        content += "  touch %s\n" % dilp.path
+        content += "fi\n"
+
+    kernel_script = context.actions.declare_file(context.label.name + "_compile_kernel.sh")
+    context.actions.write(
+        output = kernel_script,
+        content = content,
+        is_executable = True,
+    )
+
+    # 5. Compile the kernel.
     context.actions.run(
-        executable = dart_exec,
+        executable = kernel_script,
         arguments = [
             kernel_compiler.path,
             "--target",
@@ -92,6 +112,7 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
             sdk_root,
             package_spec,
             main,
+            dart_exec,
         ],
         outputs = [
             main_dilp_file,

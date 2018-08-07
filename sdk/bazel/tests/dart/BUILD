@@ -17,3 +17,19 @@ fuchsia_package(
         ":dart",
     ],
 )
+
+dart_app(
+    name = "dart_with_unused_dependencies",
+    package_name = "tests.dart_app",
+    main = "hello_world.dart",
+    deps = [
+        "@vendor_meta//:meta",
+    ],
+)
+
+fuchsia_package(
+    name = "hello_unused_package",
+    deps = [
+        ":dart_with_unused_dependencies",
+    ],
+)
