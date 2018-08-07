@@ -203,9 +203,9 @@ static bool test_vmo_creation_unaligned(void) {
     zx::resource mmio;
     zx::vmo vmo;
     ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO,
-                                   mmio_test_base + 3, PAGE_SIZE + 3, NULL, 0, &mmio),
+                                   mmio_test_base + 0x7800, 0x2000, NULL, 0, &mmio),
               ZX_OK, "");
-    EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE,
+    EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base + 0x7000, 0x2000,
                                      vmo.reset_and_get_address()),
               ZX_OK, "");
     END_TEST;

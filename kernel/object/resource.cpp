@@ -67,13 +67,16 @@ zx_status_t validate_ranged_resource(zx_handle_t handle,
         return ZX_ERR_WRONG_TYPE;
     }
 
+    // TODO(cja): when more ranged types are added we will need to move this sort of adjustment to
+    // specific validation methods.
     uint64_t rbase = resource->get_base();
     size_t rsize = resource->get_size();
     if (resource->get_kind() == ZX_RSRC_KIND_MMIO) {
-        rbase = ROUNDDOWN(rbase, PAGE_SIZE);
-        rsize = PAGE_ALIGN(rsize);
+        const uint64_t aligned_rbase = ROUNDDOWN(rbase, PAGE_SIZE);
+        rsize = PAGE_ALIGN((rbase - aligned_rbase) + rsize);
+        rbase = aligned_rbase;
     }
-    LTRACEF("[base %#lx size %#lx] and range [base %#lx size %#lx]\n", base, size, rbase, rsize);
+    LTRACEF("req [base %#lx size %#lx] and resource [base %#lx size %#lx]\n", base, size, rbase, rsize);
 
     // Check for intersection and make sure the requested base+size fits within
     // the resource's address space  allocation.
