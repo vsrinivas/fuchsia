@@ -167,3 +167,28 @@ executable("set_focus_state_command_runner_unittest") {
     "//third_party/googletest:gtest_main",
   ]
 }
+
+source_set("focus_mod_command_runner") {
+  sources = [
+    "focus_mod_command_runner.cc",
+    "focus_mod_command_runner.h",
+  ]
+
+  deps = [
+    ":command_runner",
+  ]
+}
+
+executable("focus_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "focus_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":focus_mod_command_runner",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}

@@ -150,6 +150,8 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
       story_command_tag_strings_{
           {fuchsia::modular::StoryCommand::Tag::kAddMod,
            "StoryCommand::AddMod"},
+          {fuchsia::modular::StoryCommand::Tag::kFocusMod,
+           "StoryCommand::FocusMod"},
           {fuchsia::modular::StoryCommand::Tag::kUpdateMod,
            "StoryCommand::UpdateMod"},
           {fuchsia::modular::StoryCommand::Tag::kRemoveMod,

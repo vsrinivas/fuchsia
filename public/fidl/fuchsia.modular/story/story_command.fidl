@@ -29,6 +29,9 @@ union StoryCommand {
 
   // Sets the value of a Link.
   SetLinkValue set_link_value;
+
+  // Brings focus to a mod.
+  FocusMod focus_mod;
 };
 
 struct SetFocusState {
@@ -71,4 +74,9 @@ struct RemoveMod {
 struct SetLinkValue {
   LinkPath path;
   fuchsia.mem.Buffer? value;
+};
+
+// Instructs the user shell to focus the mod under |mod_name|.
+struct FocusMod {
+  vector<string> mod_name;
 };

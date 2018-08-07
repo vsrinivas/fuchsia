@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/add_mod_command_runner.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/focus_mod_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/remove_mod_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/set_focus_state_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
@@ -17,11 +18,20 @@ namespace modular {
 
 class PuppetMasterImpl;
 
+using StoryControllerFactory =
+    fit::function<fuchsia::modular::StoryControllerPtr(
+        fidl::StringPtr story_id)>;
+
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     SessionStorage* const session_storage,
     fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
-    fuchsia::modular::EntityResolver* const entity_resolver) {
+    fuchsia::modular::EntityResolver* const entity_resolver,
+    // TODO(miguelfrde): we shouldn't create this dependency here. Instead an
+    // interface similar to StoryStorage should be created for Runtime use
+    // cases.
+    fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
+        module_focuser) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners;
   command_runners.emplace(
@@ -30,6 +40,8 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
   command_runners.emplace(
       fuchsia::modular::StoryCommand::Tag::kAddMod,
       new AddModCommandRunner(module_resolver, entity_resolver));
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
+                          new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,
                           new UpdateModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
