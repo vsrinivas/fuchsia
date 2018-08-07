@@ -52,6 +52,10 @@ class WlanmacProxy {
         return proto_.ops->set_key(proto_.ctx, options, key_config);
     }
 
+    zx_status_t ConfigureAssoc(uint32_t options, wlan_assoc_ctx_t* assoc_ctx) {
+        return proto_.ops->configure_assoc(proto_.ctx, options, assoc_ctx);
+    }
+
    private:
     wlanmac_protocol_t proto_;
 };

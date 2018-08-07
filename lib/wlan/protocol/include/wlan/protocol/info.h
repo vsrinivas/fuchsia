@@ -63,6 +63,32 @@ typedef struct wlan_bss_config {
     bool remote;
 } wlan_bss_config_t;
 
+typedef struct wlan_assoc_ctx {
+    uint8_t bssid[6];
+    uint16_t aid;
+
+    // IEEE Std 802.11-2016, 9.4.2.3
+    uint8_t supported_rates_cnt;
+    uint8_t supported_rates[8];
+
+    // IEEE Std 802.11-2016, 9.4.2.13
+    uint8_t ext_supported_rates_cnt;
+    uint8_t ext_supported_rates[255];
+
+    // IEEE Std 802.11-2016, 9.4.1.4
+    uint8_t cap_info[2];
+
+    // IEEE Std 802.11-2016, 9.4.2.56, 57
+    bool has_ht;
+    uint8_t ht_cap[26];
+    uint8_t ht_op[22];
+
+    // IEEE Std 802.11-2016, 9.4.2.158, 159
+    bool has_vht;
+    uint8_t vht_cap[12];
+    uint8_t vht_op[5];
+} wlan_assoc_ctx_t;
+
 enum {
     // Device or driver implements scanning. TODO(tkilbourn): define the interface between drivers
     // for passing scan request and response.

@@ -218,6 +218,9 @@ typedef struct wlanmac_protocol_ops {
 
     // Specify a key for frame protection.
     zx_status_t (*set_key)(void* ctx, uint32_t options, wlan_key_config_t* key_config);
+
+    // Notifies MAC and PHY parameters negotiated through a successful association
+    zx_status_t (*configure_assoc)(void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx);
 } wlanmac_protocol_ops_t;
 
 typedef struct wlanmac_protocol {

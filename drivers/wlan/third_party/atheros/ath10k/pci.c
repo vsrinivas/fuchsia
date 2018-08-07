@@ -2913,6 +2913,12 @@ static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, wlan_key_conf
     return ath10k_mac_set_key(ar, key_config);
 }
 
+static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
+                                              wlan_assoc_ctx_t* assoc_ctx) {
+    // TODO(NET-818): Implement
+    return ZX_OK;
+}
+
 static wlanmac_protocol_ops_t wlanmac_ops = {
     .query = ath10k_pci_query,
     .start = ath10k_pci_start,
@@ -2921,6 +2927,7 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .set_channel = ath10k_pci_set_channel,
     .configure_bss = ath10k_pci_configure_bss,
     .set_key = ath10k_pci_set_key,
+    .configure_assoc = ath10k_pci_configure_assoc,
 };
 
 static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {

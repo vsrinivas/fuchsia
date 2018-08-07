@@ -149,6 +149,10 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .set_key = [](void* ctx, uint32_t options, wlan_key_config_t* key_config) -> zx_status_t {
         return DEV(ctx)->WlanmacSetKey(options, key_config);
     },
+    .configure_assoc = [](void* ctx, uint32_t options, wlan_assoc_ctx* assoc_ctx) -> zx_status_t {
+        // TODO(NET-1265): Configure the chipset for this association
+        return ZX_OK;
+    },
 };
 #undef DEV
 
