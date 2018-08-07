@@ -16,14 +16,14 @@ executable("client") {
   deps = [
     "//garnet/examples/ui/shadertoy/service",
     "//garnet/examples/ui/shadertoy/service/services",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/lib/ui/scenic/cpp:base_view",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

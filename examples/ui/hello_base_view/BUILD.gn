@@ -15,7 +15,7 @@ executable("hello_base_view") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/lib/ui/scenic/cpp:base_view",
+    "//garnet/public/lib/ui/base_view/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

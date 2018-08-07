@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
-#include "lib/ui/scenic/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
 namespace hello_base_view {

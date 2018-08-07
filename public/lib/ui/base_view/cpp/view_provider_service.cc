@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/cpp/view_provider_service.h"
+#include "lib/ui/base_view/cpp/view_provider_service.h"
+
+#include <zircon/assert.h>
 
 #include <algorithm>
 
 #include "lib/component/cpp/connect.h"
-#include "lib/fxl/logging.h"
 
 namespace scenic {
 
@@ -17,7 +18,7 @@ ViewProviderService::ViewProviderService(
     : startup_context_(startup_context),
       scenic_(scenic),
       view_factory_(view_factory) {
-  FXL_DCHECK(startup_context_);
+  ZX_DEBUG_ASSERT(startup_context_);
 
   startup_context_->outgoing().AddPublicService<ViewProvider>(
       [this](fidl::InterfaceRequest<ViewProvider> request) {
@@ -49,7 +50,7 @@ void ViewProviderService::CreateView(
                              [view](const std::unique_ptr<BaseView>& other) {
                                return other.get() == view;
                              });
-      FXL_DCHECK(it != views_.end());
+      ZX_DEBUG_ASSERT(it != views_.end());
       views_.erase(it);
     });
     views_.push_back(std::move(view));

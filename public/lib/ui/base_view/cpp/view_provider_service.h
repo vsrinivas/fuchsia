@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_SCENIC_CPP_VIEW_PROVIDER_SERVICE_H_
-#define LIB_UI_SCENIC_CPP_VIEW_PROVIDER_SERVICE_H_
+#ifndef LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_
+#define LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_
 
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <functional>
@@ -11,10 +11,9 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
-#include "lib/ui/scenic/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/view_factory.h"
 #include "lib/ui/scenic/cpp/session.h"
-#include "lib/ui/scenic/cpp/view_factory.h"
 
 namespace scenic {
 
@@ -38,16 +37,17 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
       override;
 
  private:
+  ViewProviderService(const ViewProviderService&) = delete;
+  ViewProviderService& operator=(const ViewProviderService&) = delete;
+
   component::StartupContext* const startup_context_;
   fuchsia::ui::scenic::Scenic* const scenic_;
   ViewFactory view_factory_;
 
   fidl::BindingSet<ViewProvider> bindings_;
   std::vector<std::unique_ptr<BaseView>> views_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderService);
 };
 
 }  // namespace scenic
 
-#endif  // LIB_UI_SCENIC_CPP_VIEW_PROVIDER_SERVICE_H_
+#endif  // LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_

@@ -53,23 +53,3 @@ source_set("cpp") {
     "//zircon/public/lib/fbl",
   ]
 }
-
-source_set("base_view") {
-  sources = [
-    "base_view.cc",
-    "base_view.h",
-    "view_factory.h",
-    "view_provider_service.cc",
-    "view_provider_service.h",
-  ]
-
-  public_deps = [
-    ":cpp",
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/lib/component/cpp",
-  ]
-
-  deps = [
-    "//zircon/public/lib/trace",
-  ]
-}

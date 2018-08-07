@@ -8,7 +8,7 @@
 #include "garnet/examples/ui/shadertoy/client/view.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/scenic/cpp/view_provider_service.h"
+#include "lib/ui/base_view/cpp/view_provider_service.h"
 #include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {

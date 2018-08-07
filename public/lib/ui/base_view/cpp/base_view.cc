@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/base_view.h"
 
 #include "lib/ui/scenic/cpp/fidl_helpers.h"
 #include "lib/ui/scenic/cpp/fidl_math.h"

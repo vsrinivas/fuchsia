@@ -10,7 +10,7 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/scenic/cpp/view_provider_service.h"
+#include "lib/ui/base_view/cpp/view_provider_service.h"
 
 using namespace hello_base_view;
 
