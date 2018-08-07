@@ -8,6 +8,6 @@ fidl("fuchsia.math") {
   sdk_category = "partner"
 
   sources = [
-    "geometry.fidl",
+    "math.fidl",
   ]
 }
