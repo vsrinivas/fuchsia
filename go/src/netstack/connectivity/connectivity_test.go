@@ -79,7 +79,7 @@ var tt = []struct {
 func TestHasDHCPAddress(t *testing.T) {
 	for _, in := range tt {
 		if got := hasDHCPAddress(in.iface); got != in.res {
-			t.Errorf("got %s, want %s; input: %+v", got, in.res, in.iface)
+			t.Errorf("got %t, want %t; input: %+v", got, in.res, in.iface)
 		}
 	}
 }

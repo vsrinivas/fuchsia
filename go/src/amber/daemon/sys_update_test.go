@@ -36,7 +36,7 @@ func TestGreatestIntFromString(t *testing.T) {
 	nan := []string{"1", "2", "red", "blue"}
 	i, s, err = GreatestIntStr(nan)
 	if err == nil {
-		t.Errorf("Expected %s to produce NaN error, but no error was produced")
+		t.Errorf("Expected %s to produce NaN error, but no error was produced", nan)
 	} else if _, ok := err.(ErrNan); !ok {
 		t.Errorf("Expected %s to produce NaN error, but instead error is %s", nan, err)
 	}
@@ -52,7 +52,7 @@ func checkResults(strs []string, err error, resultInt int, resultStr string, exp
 	expectedStr string, t *testing.T) {
 	if err != nil || resultInt != expectedInt || expectedStr != resultStr {
 		t.Errorf("Unexpected result, expected integer %d and string %q, but got integer %d and "+
-			"string %s from strings %s had error", resultInt, resultStr, expectedInt, expectedStr,
+			"string %s from strings %s had error %s", resultInt, resultStr, expectedInt, expectedStr,
 			strs, err)
 	}
 }

@@ -119,7 +119,7 @@ func FetchBlobFromRepo(r BlobRepo, blob string) (io.ReadCloser, int64, error) {
 		return resp.Body, resp.ContentLength, nil
 	} else {
 		resp.Body.Close()
-		return nil, -1, fmt.Errorf("fetch failed with status %s", resp.StatusCode)
+		return nil, -1, fmt.Errorf("fetch failed with status %d", resp.StatusCode)
 	}
 }
 

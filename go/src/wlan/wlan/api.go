@@ -25,7 +25,7 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 	case mlme.BssTypesMesh:
 		bssType = "Mesh"
 	default:
-		bssType = fmt.Sprint("unknown (%v)", bss.BssType)
+		bssType = fmt.Sprintf("unknown (%v)", bss.BssType)
 	}
 	log.Print("    Type: ", bssType)
 	log.Print("    Beacon period: ", bss.BeaconPeriod)
@@ -33,7 +33,7 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 	log.Print("    Timestamp: ", bss.Timestamp)
 	log.Print("    Local time: ", bss.LocalTime)
 	// TODO(porce): Stringfy CBW
-	log.Printf("    Channel: %u CBW: %u", bss.Chan.Primary, bss.Chan.Cbw)
+	log.Printf("    Channel: %d CBW: %d", bss.Chan.Primary, bss.Chan.Cbw)
 	log.Printf("    RSSI: %d dBm", bss.RssiDbm)
 	log.Printf("    RCPI: %.1f dBm", float32(bss.RcpiDbmh)/2.0)
 	log.Printf("    RSNI: %.1f dB", float32(bss.RsniDbh)/2.0)

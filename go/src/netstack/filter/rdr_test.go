@@ -182,7 +182,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 		t.Errorf("sender.Addr %s, want %s", got, want)
 	}
 	if got, want := sender.Port, testWanPort; got != want {
-		t.Errorf("sender.Addr %s, want %s", got, want)
+		t.Errorf("sender.Addr %d, want %d", got, want)
 	}
 	if got, want := string(recvd), "hello"; got != want {
 		t.Errorf("got %s, want %s", got, want)
@@ -212,7 +212,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 		t.Errorf("sender2.Addr %s, want %s", got, want)
 	}
 	if got, want := sender2.Port, receiverRouter.Port; got != want {
-		t.Errorf("sender2.Addr %s, want %s", got, want)
+		t.Errorf("sender2.Addr %d, want %d", got, want)
 	}
 	if got, want := string(recvd2), "hi"; got != want {
 		t.Errorf("got %s, want %s", got, want)

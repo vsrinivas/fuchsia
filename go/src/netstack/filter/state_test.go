@@ -103,10 +103,10 @@ func TestFindStateICMPv4(t *testing.T) {
 				t.Fatal("createState failed")
 			}
 			if got, want := s.srcEp.state, test.localState; got != want {
-				t.Error("localState=%s, want=%s", got, want)
+				t.Errorf("localState=%s, want=%s", got, want)
 			}
 			if got, want := s.dstEp.state, test.remoteState; got != want {
-				t.Error("remoteState=%s, want=%s", got, want)
+				t.Errorf("remoteState=%s, want=%s", got, want)
 			}
 		}
 	}
@@ -218,10 +218,10 @@ func TestFindStateUDP(t *testing.T) {
 				t.Fatal("createState failed")
 			}
 			if got, want := s.srcEp.state, test.localState; got != want {
-				t.Error("localState=%s, want=%s", got, want)
+				t.Errorf("localState=%s, want=%s", got, want)
 			}
 			if got, want := s.dstEp.state, test.remoteState; got != want {
-				t.Error("remoteState=%s, want=%s", got, want)
+				t.Errorf("remoteState=%s, want=%s", got, want)
 			}
 		}
 	}
@@ -553,10 +553,10 @@ func TestFindStateTCPv4(t *testing.T) {
 				t.Fatal("createState failed")
 			}
 			if got, want := s.srcEp.state, test.localState; got != want {
-				t.Error("localState=%s, want=%s", got, want)
+				t.Errorf("localState=%s, want=%s", got, want)
 			}
 			if got, want := s.dstEp.state, test.remoteState; got != want {
-				t.Error("remoteState=%s, want=%s", got, want)
+				t.Errorf("remoteState=%s, want=%s", got, want)
 			}
 			if debugStateTest {
 				log.Printf("s: %s\n", s)
