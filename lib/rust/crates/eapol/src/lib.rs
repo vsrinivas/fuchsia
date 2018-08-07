@@ -25,13 +25,13 @@ pub trait KeyFrameReceiver {
     fn on_eapol_key_frame(&self, frame: &KeyFrame) -> Result<(), failure::Error>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Frame {
     Key(KeyFrame),
 }
 
 // IEEE Std 802.1X-2010, 11.9, Table 11-5
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum KeyDescriptor {
     Rc4 = 1,
     Ieee802dot11 = 2,
@@ -74,6 +74,7 @@ pub enum PacketType {
 
 // IEEE Std 802.11-2016, 12.7.2, Figure 12-33
 bitfield! {
+    #[derive(PartialEq)]
     pub struct KeyInformation(u16);
     impl Debug;
     pub key_descriptor_version, set_key_descriptor_version: 2, 0;
@@ -98,7 +99,7 @@ impl Default for KeyInformation {
 }
 
 // IEEE Std 802.11-2016, 12.7.2, Figure 12-32
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct KeyFrame {
     pub version: u8,
     pub packet_type: u8,

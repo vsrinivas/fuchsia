@@ -20,13 +20,13 @@ use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum RoleHandler {
     Authenticator(Authenticator),
     Supplicant(Supplicant),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MessageNumber {
     Message1 = 1,
     Message2 = 2,
@@ -34,7 +34,7 @@ pub enum MessageNumber {
     Message4 = 4,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub role: Role,
     pub s_addr: [u8; 6],
@@ -64,7 +64,7 @@ impl Config {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Fourway {
     cfg: Rc<Config>,
     handler: RoleHandler,

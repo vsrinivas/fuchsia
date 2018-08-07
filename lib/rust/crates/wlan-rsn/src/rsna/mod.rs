@@ -10,19 +10,19 @@ pub mod esssa;
 #[cfg(test)]
 pub mod test_util;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Role {
     Authenticator,
     Supplicant,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SecAssocStatus {
     WrongPassword,
     EssSaEstablished,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SecAssocUpdate {
     TxEapolKeyFrame(eapol::KeyFrame),
     Key(Key),

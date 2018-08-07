@@ -10,12 +10,12 @@ use {Error, Result};
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases
 /// are unlikely to prevent attacks.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Psk {
     config: Config,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Config {
     ssid: Vec<u8>,
     passphrase: Vec<u8>,

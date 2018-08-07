@@ -13,7 +13,7 @@ use std::cmp::{max, min};
 /// A PTK is derived from a PMK and provides access to the PTK's key-hierarchy which yields a KEK,
 /// KCK, and TK, used for EAPOL frame protection, integrity check and unicast frame protection
 /// respectively.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ptk {
     ptk: Vec<u8>,
     kck_len: usize,

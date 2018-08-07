@@ -13,7 +13,7 @@ use key::ptk::Ptk;
 use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Key {
     Pmk(Vec<u8>),
     Ptk(Ptk),
@@ -31,7 +31,7 @@ impl Key {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Method {
     FourWayHandshake(Fourway),
     GroupKeyHandshake(GroupKey),
@@ -57,7 +57,7 @@ impl Method {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Config {
     FourWayHandshake(fourway::Config),
     GroupKeyHandshake(group_key::Config),

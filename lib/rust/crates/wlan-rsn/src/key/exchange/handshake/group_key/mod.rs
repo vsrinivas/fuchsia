@@ -6,14 +6,14 @@ use eapol;
 use failure;
 use rsna::{Role, SecAssocResult};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub role: Role,
     pub sta_addr: [u8; 6],
     pub peer_addr: [u8; 6],
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct GroupKey;
 
 impl GroupKey {
