@@ -124,9 +124,25 @@ Avoid repeating the names from the library name.  For example, in the
 appears in the library name.  In all target languages, top-level names are
 scoped by the library name in some fashion.
 
+### Primitive aliases
+
+Primitive aliases must be named in `lower_snake_case`.
+
+```
+using vaddr = uint64;
+```
+
+Primitive aliases must not repeat names from the enclosing library.  In all
+target languages, primitive aliases are replaced by the underlying primitive
+type and therefore do not cause name collisions.
+
 ### Constants
 
 Constants must be named in `ALL_CAPS_SNAKE_CASE`.
+
+```
+const uint64 FOO_BAR = 4096;
+```
 
 Constant names must not repeat names from the enclosing library.  In all target
 languages, constant names are scoped by their enclosing library.
