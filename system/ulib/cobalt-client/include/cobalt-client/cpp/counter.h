@@ -6,59 +6,41 @@
 
 #include <stdint.h>
 
-#include <cobalt-client/cpp/observation.h>
-#include <fbl/atomic.h>
-#include <fbl/string.h>
-
 namespace cobalt_client {
+namespace internal {
+// Forward declaration.
+class RemoteCounter;
+} // namespace internal
 
-// Wrapper class which fixates the memory ordering for the underlying atomic
-// to |Counter::MemoryOrder|.
+// Thin wrapper for an atomic counter with a fixed memory order. The counter handles
+// a remote count and a local count. The remote count is periodically flushed, while
+// the local count is viewed on demand (and optionally flushed depending on configuration).
 //
-// This type is not copyable, moveable or assignable.
+// This class is copyable, moveable and assignable.
+// This class is thread-safe.
 class Counter {
 public:
-    using Type = uint64_t;
-
-    // All atomic operations use this memory order.
-    static constexpr fbl::memory_order kMemoryOrder = fbl::memory_order::memory_order_relaxed;
+    // Underlying type used for representing an actual counter.
+    using Count = uint64_t;
 
     Counter() = delete;
-    // For constructing a counter that represents a Value.
-    Counter(uint64_t metric_id, uint32_t encoding_id)
-        : name_(), counter_(0), metric_id_(metric_id), encoding_id_(encoding_id) {}
-    // For constructing a counter that represents an ObservationValue..
-    Counter(const fbl::String& name, uint64_t metric_id, uint32_t encoding_id)
-        : name_(name), counter_(0), metric_id_(metric_id), encoding_id_(encoding_id) {}
-    Counter(const Counter&) = delete;
-    Counter(Counter&&);
-    Counter& operator=(const Counter&) = delete;
-    Counter& operator=(Counter&&) = delete;
+    Counter(internal::RemoteCounter* remote_counter);
+    Counter(const Counter&) = default;
+    Counter(Counter&&) = default;
     ~Counter() = default;
 
-    // Increments |counter_| by val.
-    void Increment(Type val = 1) { counter_.fetch_add(val, kMemoryOrder); }
+    // Increments the counter value by |value|. This applies to local and remote
+    // values of the counter.
+    void Increment(Count value = 1);
 
-    // Returns the current value of|counter_| and resets it to |val|.
-    Type Exchange(Type val = 0) { return counter_.exchange(val, kMemoryOrder); }
-
-    // Returns the current value of |counter_|.
-    Type Load() const { return counter_.load(kMemoryOrder); }
-
-    // Returns an ObservationValue containing the counter representation.
-    ObservationValue GetObservationValue() const;
-
-    // Returns an ObservationValue containing the counter representation, and resets the value of
-    // |counter_| to |val|.
-    ObservationValue GetObservationValueAndExchange(Type val = 0);
-
-    uint64_t metric_id() const { return metric_id_; }
+    // Returns the current value of the counter that would be
+    // sent to the remote service(cobalt).
+    Count GetRemoteCount() const;
 
 private:
-    fbl::String name_;
-    fbl::atomic<Type> counter_;
-    uint64_t metric_id_;
-    uint32_t encoding_id_;
+    // Implementation of the flushable counter. The value
+    // of this counter is flushed by the collector.
+    internal::RemoteCounter* remote_counter_;
 };
 
 } // namespace cobalt_client

@@ -4,9 +4,7 @@
 
 #include <string.h>
 
-#include <cobalt-client/cpp/counter.h>
-#include <cobalt-client/cpp/histogram.h>
-#include <cobalt-client/cpp/observation.h>
+#include <cobalt-client/cpp/histogram-internal.h>
 #include <fuchsia/cobalt/c/fidl.h>
 
 namespace cobalt_client {
@@ -14,12 +12,12 @@ namespace internal {
 namespace {
 
 ObservationValue MakeHistogramObservation(const fbl::String& name, uint32_t encoding_id,
-                                          uint64_t buckets, DistributionEntry* entries) {
+                                          uint64_t buckets, BucketDistributionEntry* entries) {
     ObservationValue value;
     value.encoding_id = encoding_id;
     value.name.size = name.empty() ? 0 : name.size();
     value.name.data = const_cast<char*>(name.data());
-    value.value = ::cobalt_client::BucketDistributionValue(buckets, entries);
+    value.value = BucketDistributionValue(buckets, entries);
     return value;
 }
 } // namespace
@@ -36,8 +34,8 @@ BaseHistogram::BaseHistogram(const fbl::String& name, const fbl::Vector<Observat
     buckets_.reserve(buckets);
     buffer_.reserve(buckets);
     for (size_t bucket = 0; bucket < buckets; ++bucket) {
-        buckets_.push_back(Counter(metric_id, encoding_id));
-        buffer_.push_back({/*index=*/0, 0});
+        buckets_.push_back(BaseCounter());
+        buffer_.push_back({/*bucket_index=*/0, /*count=*/0});
     }
 
     observations_.push_back(MakeHistogramObservation(name_, encoding_id_, buckets, buffer_.get()));

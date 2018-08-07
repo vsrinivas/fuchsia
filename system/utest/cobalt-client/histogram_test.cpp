@@ -7,8 +7,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <cobalt-client/cpp/histogram.h>
-#include <cobalt-client/cpp/observation.h>
+#include <cobalt-client/cpp/histogram-internal.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
@@ -18,9 +17,8 @@
 #include <unittest/unittest.h>
 
 namespace cobalt_client {
+namespace internal {
 namespace {
-using cobalt_client::Counter;
-using cobalt_client::internal::BaseHistogram;
 
 // Number of threads to use for multithreading sanity check.
 constexpr uint32_t kThreads = 20;
@@ -146,8 +144,8 @@ struct CheckContentsFlushFn {
             return;
         }
 
-        DistributionEntry* buckets =
-            static_cast<DistributionEntry*>(hist_obs.value.int_bucket_distribution.data);
+        BucketDistributionEntry* buckets =
+            static_cast<BucketDistributionEntry*>(hist_obs.value.int_bucket_distribution.data);
         for (size_t bucket_index = 0; bucket_index < bucket_values.size(); ++bucket_index) {
             bool index_found = false;
             for (size_t bucket = 0; bucket < bucket_values.size(); ++bucket) {
@@ -316,7 +314,7 @@ struct WaitBeforeCompleteFlushHandler {
     sync_completion_t* completion;
 
     // Counter for the number of times Flush was actually called.
-    Counter* counter;
+    BaseCounter* counter;
 
     // Main thread will join this thread.
     thrd_t* flushing_thread;
@@ -348,7 +346,7 @@ bool MultiThreadFlushOpsConsistencyTest() {
     fbl::Vector<thrd_t> thread_ids;
     sync_completion_t wait_for_start, wait_for_completion;
     thrd_t flushing_thread;
-    Counter flushes(0, 0);
+    BaseCounter flushes;
 
     // Initialize all threads then signal start, and join all fo them.
     thread_ids.reserve(kThreads);
@@ -394,4 +392,5 @@ RUN_TEST(MultiThreadCountOpsConsistencyTest)
 RUN_TEST(MultiThreadFlushOpsConsistencyTest)
 END_TEST_CASE(BaseHistogramTest)
 } // namespace
+} // namespace internal
 } // namespace cobalt_client

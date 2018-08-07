@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include <cobalt-client/cpp/counter.h>
-#include <cobalt-client/cpp/observation.h>
+#include <cobalt-client/cpp/counter-internal.h>
+#include <cobalt-client/cpp/types-internal.h>
 #include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -16,12 +16,16 @@
 
 namespace cobalt_client {
 namespace internal {
+
 // Base class for histogram, that provide a view to the data and mechanism for
 // flushing such data.
 //
 // This class is thread-safe.
 class BaseHistogram {
 public:
+    // Type used for histogram samples.
+    using Count = BaseCounter::Type;
+
     // Callback to notify that Flush has been completed, and that the observation buffer is
     // writeable again(this is buffer where the histogram is flushed).
     using FlushCompleteFn = fbl::Function<void()>;
@@ -53,18 +57,18 @@ public:
     }
 
     // Returns the count of the |bucket| bucket.
-    Counter::Type GetCount(uint64_t bucket) const {
+    Count GetCount(uint64_t bucket) const {
         ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(), "Add observation out of range.");
         return buckets_[bucket].Load();
     }
 
 protected:
-    fbl::Vector<Counter> buckets_;
+    fbl::Vector<BaseCounter> buckets_;
     fbl::Vector<ObservationValue> observations_;
     // Buffer for out of line allocation for the data being sent
     // through fidl. This buffer is rewritten on every flush, and contains
     // an entry for each bucket.
-    fbl::Vector<DistributionEntry> buffer_;
+    fbl::Vector<BucketDistributionEntry> buffer_;
     fbl::String name_;
     uint64_t metric_id_;
     uint32_t encoding_id_;
