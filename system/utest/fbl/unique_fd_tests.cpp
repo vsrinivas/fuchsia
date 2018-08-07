@@ -22,6 +22,7 @@ bool invalid_fd_test() {
         EXPECT_EQ(static_cast<int>(fd), fbl::unique_fd::InvalidValue());
         EXPECT_EQ(fbl::unique_fd::InvalidValue(), static_cast<int>(fd));
 
+        EXPECT_EQ(false, fd.is_valid());
         EXPECT_EQ(static_cast<bool>(fd), false);
         EXPECT_EQ(false, static_cast<bool>(fd));
 

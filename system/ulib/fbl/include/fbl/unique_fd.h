@@ -65,8 +65,12 @@ public:
         return fd_;
     }
 
-    explicit operator bool() const {
+    bool is_valid() const  {
         return fd_ != InvalidValue();
+    }
+
+    explicit operator bool() const {
+        return is_valid();
     }
 
     explicit operator int() const {
