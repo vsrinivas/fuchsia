@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request.h>
+#include <ddk/usb-request/usb-request.h>
 #include <ddk/debug.h>
 
 #include <zircon/process.h>

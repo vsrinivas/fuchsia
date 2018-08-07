@@ -17,6 +17,7 @@
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-function.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <ddk/usb-request/usb-request.h>
 #include <zircon/listnode.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/hw/usb-cdc.h>

@@ -11,12 +11,13 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/usb-device.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk \
+                      system/dev/lib/usb-request \
 
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
-    system/ulib/c
+    system/ulib/c \
 
 
 # Set default configuration here, rather than relying on usbctl to do it

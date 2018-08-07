@@ -4,7 +4,7 @@
 
 #include <limits.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request.h>
+#include <ddk/usb-request/usb-request.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls/iommu.h>
 

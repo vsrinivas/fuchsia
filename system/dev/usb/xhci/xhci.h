@@ -18,7 +18,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request.h>
+#include <ddk/usb-request/usb-request.h>
 
 #include "xhci-hw.h"
 #include "xhci-root-hub.h"

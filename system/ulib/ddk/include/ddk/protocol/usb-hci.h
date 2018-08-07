@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/usb-request.h>
 #include <ddk/protocol/usb.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

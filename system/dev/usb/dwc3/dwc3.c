@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/usb-function.h>
+#include <ddk/usb-request/usb-request.h>
 #include <hw/reg.h>
 #include <pretty/hexdump.h>
 

@@ -19,6 +19,7 @@
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/usb-request/usb-request.h>
 
 // Zircon USB includes
 #include <zircon/hw/usb-hub.h>

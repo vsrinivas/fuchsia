@@ -6,6 +6,8 @@
 #include <ddk/debug.h>
 #include <zircon/assert.h>
 
+#include <ddk/usb-request/usb-request.h>
+
 #include "dwc3.h"
 #include "dwc3-regs.h"
 #include "dwc3-types.h"

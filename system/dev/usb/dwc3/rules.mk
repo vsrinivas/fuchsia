@@ -15,7 +15,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/dwc3-ep0.c \
     $(LOCAL_DIR)/dwc3-events.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/pretty
+MODULE_STATIC_LIBS := system/ulib/ddk  	 \
+                      system/ulib/sync   \
+                      system/ulib/pretty \
+                      system/dev/lib/usb-request \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 

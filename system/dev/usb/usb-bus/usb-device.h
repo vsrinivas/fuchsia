@@ -7,8 +7,9 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb-hci.h>
-#include <zircon/hw/usb.h>
 #include <ddk/protocol/usb-hub.h>
+#include <ddk/usb-request/usb-request.h>
+#include <zircon/hw/usb.h>
 
 #include <threads.h>
 #include <stdatomic.h>
