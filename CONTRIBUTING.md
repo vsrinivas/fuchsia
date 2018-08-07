@@ -93,7 +93,7 @@ Test: Manually tested that the keyboard still worked after unplugging and
 
 In some cases, we are not able to test certain behavior changes because we lack
 some particular piece of infrastructure. In that case, we should have an issue
-in the tracker about creating that infrastructure and the test label shoud
+in the tracker about creating that infrastructure and the test label should
 mention the bug number in addition to describing how the change was manually
 tested:
 
