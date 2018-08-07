@@ -244,6 +244,25 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   }
 
  private:
+  void InitializePresentation(
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
+    if (settings_.test && !settings_.enable_presenter) {
+      return;
+    }
+
+    auto presentation_request =
+        presentation_state_.presentation.is_bound()
+            ? presentation_state_.presentation.Unbind().NewRequest()
+            : presentation_state_.presentation.NewRequest();
+
+    context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
+        ->Present(std::move(view_owner), std::move(presentation_request));
+
+    AddGlobalKeyboardShortcuts(presentation_state_.presentation);
+
+    SetShadowTechnique(presentation_state_.shadow_technique);
+  }
+
   void StartDeviceShell() {
     if (device_shell_running_) {
       FXL_DLOG(INFO) << "StartDeviceShell() called when already running";
@@ -264,18 +283,13 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> root_view;
-    fuchsia::ui::policy::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
-    // |enable_presenter| overrides |test| for running the presenter service.
-    if (!settings_.test || settings_.enable_presenter) {
-      context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
-          ->Present(std::move(root_view), presentation.NewRequest());
-      AddGlobalKeyboardShortcuts(presentation);
-    }
+
+    InitializePresentation(std::move(root_view));
 
     // Populate parameters and initialize the device shell.
     fuchsia::modular::DeviceShellParams params;
-    params.presentation = std::move(presentation);
+    params.presentation = std::move(presentation_state_.presentation);
     device_shell_->Initialize(device_shell_context_binding_.NewBinding(),
                               std::move(params));
 
@@ -407,16 +421,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       StopDeviceShell();
     }
 
-    auto presentation_request =
-        presentation_state_.presentation.is_bound()
-            ? presentation_state_.presentation.Unbind().NewRequest()
-            : presentation_state_.presentation.NewRequest();
-
-    context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
-        ->Present(std::move(user_shell_view_owner_),
-                  std::move(presentation_request));
-
-    AddGlobalKeyboardShortcuts(presentation_state_.presentation);
+    InitializePresentation(user_shell_view_owner_);
 
     const auto& settings_vector = UserShellSettings::GetSystemSettings();
     if (active_user_shell_index_ >= settings_vector.size()) {
@@ -560,22 +565,34 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       }
     };
 
-    presentation_state_.shadow_technique =
-        next_shadow_technique(presentation_state_.shadow_technique);
+    SetShadowTechnique(
+        next_shadow_technique(presentation_state_.shadow_technique));
+  }
+
+  void SetShadowTechnique(fuchsia::ui::gfx::ShadowTechnique shadow_technique) {
+    if (!presentation_state_.presentation)
+      return;
+
+    presentation_state_.shadow_technique = shadow_technique;
+
+    FXL_LOG(INFO) << "Setting shadow technique to "
+                  << fidl::ToUnderlying(presentation_state_.shadow_technique);
 
     fuchsia::ui::gfx::RendererParam param;
     param.set_shadow_technique(presentation_state_.shadow_technique);
 
-    FXL_DLOG(INFO) << "Setting shadow technique to "
-                   << fidl::ToUnderlying(presentation_state_.shadow_technique);
     auto renderer_params =
         fidl::VectorPtr<fuchsia::ui::gfx::RendererParam>::New(0);
     renderer_params.push_back(std::move(param));
+
     presentation_state_.presentation->SetRendererParams(
         std::move(renderer_params));
   }
 
   void ToggleClipping() {
+    if (!presentation_state_.presentation)
+      return;
+
     FXL_DLOG(INFO) << "Toggling clipping";
 
     presentation_state_.clipping_enabled =
@@ -613,7 +630,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     fuchsia::ui::policy::PresentationPtr presentation;
     fidl::BindingSet<fuchsia::ui::policy::Presentation> bindings;
 
-    fuchsia::ui::gfx::ShadowTechnique shadow_technique{};
+    fuchsia::ui::gfx::ShadowTechnique shadow_technique =
+        fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED;
     bool clipping_enabled{};
   } presentation_state_;
 
