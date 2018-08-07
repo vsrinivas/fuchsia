@@ -1,0 +1,69 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "components_test_app"
+
+  sources = [
+    "program.cc",
+  ]
+}
+
+executable("bin2") {
+  output_name = "components_test_app2"
+
+  sources = [
+    "program.cc",
+  ]
+}
+
+copy("components_binary_argv_test") {
+  sources = [
+    "components_binary_argv_test",
+  ]
+
+  outputs = [
+    "$root_out_dir/components_binary_argv_test",
+  ]
+}
+
+package("components_binary_test") {
+  testonly = true
+
+  deps = [
+    ":bin",
+    ":bin2",
+    ":components_binary_argv_test",
+  ]
+
+  tests = [
+    {
+      name = "components_binary_argv_test"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "components_test_app"
+      dest = "app"
+    },
+    {
+      name = "components_test_app2"
+      dest = "app2"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/program1.cmx")
+      dest = "program1.cmx"
+    },
+    {
+      path = rebase_path("meta/program2.cmx")
+      dest = "program2.cmx"
+    },
+  ]
+}

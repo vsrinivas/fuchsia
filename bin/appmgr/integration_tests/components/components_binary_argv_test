@@ -1,0 +1,37 @@
+#!/boot/bin/sh
+
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script runs:
+#   run fuchsia-pkg://fuchsia.com/components_binary_test#meta/program1.cmx
+#   run fuchsia-pkg://fuchsia.com/components_binary_test#meta/program2.cmx
+# which are components that print their argv0, which happens to be the binary
+# path within /pkg for ELF binary components.
+#
+# We therefore test that targeting a binary by a component manifest works, and
+# that argv0 properly propagates the binary path.
+
+program1_output="$(run fuchsia-pkg://fuchsia.com/components_binary_test#meta/program1.cmx)"
+if [ "$program1_output" != "/pkg/bin/app" ];
+then
+    echo "FAIL, expected "
+    echo "\`run fuchsia-pkg://fuchsia.com/components_binary_test#meta/program1.cmx\`"
+    echo "to output \`/pkg/bin/app\`, but was: "
+    echo $program1_output
+    exit 1
+fi
+
+program2_output="$(run fuchsia-pkg://fuchsia.com/components_binary_test#meta/program2.cmx)"
+if [ "$program2_output" != "/pkg/bin/app2" ];
+then
+    echo "FAIL, expected "
+    echo "\`run fuchsia-pkg://fuchsia.com/components_binary_test#meta/program2.cmx\`"
+    echo "to output \`/pkg/bin/app2\`, but was: "
+    echo $program2_output
+    exit 1
+fi
+
+echo "PASS"
+exit 0

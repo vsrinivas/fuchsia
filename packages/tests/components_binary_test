@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/appmgr/integration_tests/components:components_binary_test"
+    ]
+}

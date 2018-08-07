@@ -38,6 +38,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
 
@@ -46,7 +47,7 @@ namespace {
 
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
-constexpr char kAppArv0[] = "/pkg/bin/app";
+constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 // Runtime files are deprecated. Use component manifests instead.
 constexpr char kDeprecatedRuntimePath[] = "meta/deprecated_runtime";
@@ -565,9 +566,11 @@ void Realm::CreateComponentFromPackage(
   // If we cannot parse a runtime from either .cmx or deprecated_runtime, then
   // we fall back to the default runner, which is running an ELF binary.
   fsl::SizedVmo app_data;
+  std::string app_argv0;
   if (runtime.IsNull()) {
     const ProgramMetadata program = cmx.program_meta();
     const std::string bin_path = program.IsNull() ? kAppPath : program.binary();
+    app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
     VmoFromFilenameAt(fd.get(), bin_path, &app_data);
     if (!app_data) {
       FXL_LOG(ERROR) << "component has neither runner (error: '"
@@ -627,7 +630,7 @@ void Realm::CreateComponentFromPackage(
   if (runtime.IsNull()) {
     // Use the default runner: ELF binaries.
     CreateElfBinaryComponentFromPackage(
-        std::move(launch_info), app_data, exported_dir_layout,
+        std::move(launch_info), app_data, app_argv0, exported_dir_layout,
         std::move(loader_service), builder.Build(),
         std::move(component_request), std::move(ns), fbl::move(callback));
   } else {
@@ -640,9 +643,10 @@ void Realm::CreateComponentFromPackage(
 
 void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, fsl::SizedVmo& app_data,
-    ExportedDirType exported_dir_layout, zx::channel loader_service,
-    fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
-    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
+    const std::string& app_argv0, ExportedDirType exported_dir_layout,
+    zx::channel loader_service, fdio_flat_namespace_t* flat,
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    ComponentObjectCreatedCallback callback) {
   zx::job child_job;
   zx_status_t status = zx::job::create(job_, 0u, &child_job);
   if (status != ZX_OK)
@@ -652,7 +656,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
   const std::string url = launch_info.url;  // Keep a copy before moving it.
   auto channels = Util::BindDirectory(&launch_info);
   zx::process process =
-      CreateProcess(child_job, std::move(app_data), kAppArv0,
+      CreateProcess(child_job, std::move(app_data), app_argv0,
                     std::move(launch_info), std::move(loader_service), flat);
 
   if (process) {
