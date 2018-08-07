@@ -78,6 +78,7 @@ void TestSuggestionListener::ClearSuggestions() {
   // For use when the listener_binding_ is reset
   ordered_suggestions_.clear();
   suggestions_by_id_.clear();
+  query_complete_ = false;
 }
 
 void TestSuggestionListener::OnProcessingChange(bool processing) {
@@ -86,6 +87,7 @@ void TestSuggestionListener::OnProcessingChange(bool processing) {
 
 void TestSuggestionListener::OnQueryComplete() {
   FXL_LOG(INFO) << "OnQueryComplete";
+  query_complete_ = true;
 }
 
 }  // namespace modular

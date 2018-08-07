@@ -15,6 +15,10 @@ interface SuggestionDebug {
   // Waits until Suggestion Engine has reached a steady state such that no
   // further activity will occur unless acted upon from the outside.
   4: WaitUntilIdle() -> ();
+  // Calls |async::Loop::RunUntilIdle()|, which processes all immediately
+  // available messages. Unlike |WaitUntilIdle|, this does not wait for
+  // long-running delayed tasks.
+  5: RunUntilIdle() -> ();
 };
 
 interface AskProposalListener {

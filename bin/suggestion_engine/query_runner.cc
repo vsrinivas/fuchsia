@@ -19,6 +19,48 @@ constexpr zx::duration kQueryTimeout = zx::sec(9);
 
 }  // namespace
 
+class QueryRunner::HandlerRequest {
+ public:
+  HandlerRequest(fxl::WeakPtr<QueryRunner> runner,
+                 const std::string& handler_url)
+      : runner_(runner), handler_url_(handler_url) {}
+
+  ~HandlerRequest() {
+    if (!runner_)
+      return;
+
+    if (completed_) {
+      FXL_VLOG(1) << "Handler " << handler_url_ << " complete";
+    } else {
+      FXL_LOG(WARNING) << "Handler " << handler_url_
+                       << " closed without completing";
+    }
+
+    // find + erase rather than erase key to properly handle duplicate URLs
+    // (only remove one)
+    runner_->outstanding_handlers_.erase(
+        runner_->outstanding_handlers_.find(handler_url_));
+    FXL_VLOG(1) << runner_->outstanding_handlers_.size() << " remaining";
+    if (runner_->outstanding_handlers_.empty()) {
+      runner_->EndRequest();
+    }
+  }
+
+  void Complete(fuchsia::modular::QueryResponse response) {
+    if (runner_) {
+      runner_->on_query_response_callback_(handler_url_, std::move(response));
+      completed_ = true;
+    }
+  }
+
+ private:
+  fxl::WeakPtr<QueryRunner> runner_;
+  std::string handler_url_;
+  bool completed_ = false;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(HandlerRequest);
+};
+
 QueryRunner::QueryRunner(
     fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener,
     fuchsia::modular::UserInput input, int count)
@@ -66,28 +108,16 @@ void QueryRunner::SetResponseCallback(
 }
 
 void QueryRunner::DispatchQuery(const QueryHandlerRecord& handler_record) {
+  FXL_DCHECK(!request_ended_);
+
   outstanding_handlers_.insert(handler_record.url);
+
   handler_record.handler->OnQuery(
-      input_,
-      [w = weak_ptr_factory_.GetWeakPtr(), handler_url = handler_record.url](
-          fuchsia::modular::QueryResponse response) {
-        if (w) {
-          w->HandlerCallback(handler_url, std::move(response));
-        }
+      input_, [request = std::make_shared<HandlerRequest>(
+                   weak_ptr_factory_.GetWeakPtr(), handler_record.url)](
+                  fuchsia::modular::QueryResponse response) {
+        request->Complete(std::move(response));
       });
-}
-
-void QueryRunner::HandlerCallback(const std::string& handler_url,
-                                  fuchsia::modular::QueryResponse response) {
-  on_query_response_callback_(handler_url, std::move(response));
-
-  FXL_VLOG(1) << "Handler " << handler_url << " complete";
-
-  outstanding_handlers_.erase(outstanding_handlers_.find(handler_url));
-  FXL_VLOG(1) << outstanding_handlers_.size() << " remaining";
-  if (outstanding_handlers_.empty()) {
-    EndRequest();
-  }
 }
 
 void QueryRunner::EndRequest() {

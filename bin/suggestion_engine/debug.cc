@@ -103,4 +103,9 @@ void SuggestionDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
   idle_waiter_.WaitUntilIdle(callback);
 }
 
+void SuggestionDebugImpl::RunUntilIdle(RunUntilIdleCallback callback) {
+  idle_waiter_.loop()->RunUntilIdle();
+  callback();
+}
+
 }  // namespace modular

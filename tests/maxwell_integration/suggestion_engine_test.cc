@@ -298,6 +298,13 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     util::WaitUntilIdle(&suggestion_debug_, &loop_);
   }
 
+  void RunUntilIdle() {
+    suggestion_debug()->RunUntilIdle([this] { loop_.Quit(); });
+    loop_.Run();
+    loop_.ResetQuit();
+    loop_.RunUntilIdle();
+  }
+
   void AddProposalListenerBinding(
       fidl::InterfaceRequest<fuchsia::modular::ProposalListener> request) {
     proposal_listener_bindings_.AddBinding(this, std::move(request));
@@ -1144,6 +1151,50 @@ TEST_F(AskTest, AskRanking) {
   EnsureDebugMatches();
 }
 */
+
+// This test ensures that Suggestion Engine doesn't keep querying dead handlers.
+TEST_F(AskTest, DeadAgent) {
+  AskProposinator p(suggestion_engine(), &loop_);
+
+  { AskProposinator m(suggestion_engine(), &loop_); }
+
+  Query("test query");
+  p.WaitForQuery();
+  p.ProposeForAsk("1");
+  p.Commit();
+
+  // RunUntilIdle rather than WaitUntilIdle to not wait for the query handler
+  // timeout. If we'd need to wait for the timeout, the test should fail.
+  RunUntilIdle();
+
+  EXPECT_EQ(1, suggestion_count());
+  EXPECT_TRUE(listener()->query_complete());
+}
+
+// This test ensures that if a query handler dies while handling a query,
+// Suggestion Engine stops waiting for it gracefully.
+TEST_F(AskTest, AgentKilledInAction) {
+  AskProposinator p(suggestion_engine(), &loop_);
+
+  {
+    AskProposinator coulson(suggestion_engine(), &loop_);
+
+    Query("test query");
+    p.WaitForQuery();
+    p.ProposeForAsk("1");
+    p.Commit();
+
+    RunUntilIdle();
+
+    EXPECT_FALSE(listener()->query_complete());
+  }
+
+  RunUntilIdle();
+
+  EXPECT_EQ(1, suggestion_count());
+  EXPECT_TRUE(listener()->query_complete());
+}
+
 class SuggestionFilteringTest : public NextTest {};
 
 TEST_F(SuggestionFilteringTest, Baseline) {

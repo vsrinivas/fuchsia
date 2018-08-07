@@ -41,13 +41,10 @@ class QueryRunner {
   size_t max_results() const { return max_results_; }
 
  private:
+  class HandlerRequest;
+
   void DispatchQuery(const QueryHandlerRecord& handler_record);
-
-  void HandlerCallback(const std::string& handler_url,
-                       fuchsia::modular::QueryResponse response);
-
   void TimeOut();
-
   void EndRequest();
 
   fuchsia::modular::QueryListenerPtr listener_;

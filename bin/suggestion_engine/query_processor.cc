@@ -95,6 +95,19 @@ void QueryProcessor::RegisterQueryHandler(
                              query_handler_handle) {
   auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
+
+  fuchsia::modular::QueryHandlerPtr& handler = query_handlers_.back().handler;
+  handler.set_error_handler([this, ptr = handler.get()] {
+    auto it = std::find_if(query_handlers_.begin(), query_handlers_.end(),
+                           [ptr](const QueryHandlerRecord& record) {
+                             return record.handler.get() == ptr;
+                           });
+
+    FXL_DCHECK(it != query_handlers_.end());
+    auto to_erase = query_handlers_.end() - 1;
+    std::iter_swap(it, to_erase);
+    query_handlers_.erase(to_erase);
+  });
 }
 
 void QueryProcessor::SetFilters(

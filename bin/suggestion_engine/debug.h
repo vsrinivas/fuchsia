@@ -48,6 +48,8 @@ class SuggestionDebugImpl : public fuchsia::modular::SuggestionDebug {
       override;
   // |fuchsia::modular::SuggestionDebug|
   void WaitUntilIdle(WaitUntilIdleCallback callback) override;
+  // |fuchsia::modular::SuggestionDebug|
+  void RunUntilIdle(RunUntilIdleCallback callback) override;
 
   fidl::InterfacePtrSet<fuchsia::modular::AskProposalListener>
       ask_proposal_listeners_;

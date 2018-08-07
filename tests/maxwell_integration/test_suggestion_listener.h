@@ -35,6 +35,7 @@ class TestSuggestionListener : public fuchsia::modular::NextListener,
   // |fuchsia::modular::QueryListener|
   void OnQueryComplete() override;
 
+  bool query_complete() const { return query_complete_; }
   int suggestion_count() const { return (signed)ordered_suggestions_.size(); }
 
   void ClearSuggestions();
@@ -71,6 +72,7 @@ class TestSuggestionListener : public fuchsia::modular::NextListener,
 
   std::map<std::string, fuchsia::modular::Suggestion> suggestions_by_id_;
   std::vector<fuchsia::modular::Suggestion*> ordered_suggestions_;
+  bool query_complete_ = false;
 };
 
 class TestProposalListener {
