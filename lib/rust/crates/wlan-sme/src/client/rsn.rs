@@ -6,7 +6,7 @@ use wlan_rsn::{akm, auth, cipher, rsne::{self, Rsne}, suite_selector::OUI};
 use wlan_rsn::key::exchange;
 use wlan_rsn::rsna::{esssa::EssSa, NegotiatedRsne, Role};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Rsna {
     pub negotiated_rsne: NegotiatedRsne,
     pub esssa: EssSa,
