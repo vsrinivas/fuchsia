@@ -29,9 +29,11 @@ _got_errors=0
 # https://fuchsia.googlesource.com/zircon/+/master/system/uapp/runtests/summary-schema.json
 _benchmark_summaries=""
 
-# Parses command line arguments.  This sets ${OUT_DIR} to the output
-# directory specified on the command line, and it reads other arguments,
-# which are used by the Catapult converter.
+# This parses command line arguments:
+#  * It sets ${OUT_DIR} to the output directory specified on the command line.
+#  * It sets ${benchmarks_bot_name} to the name of the bot specified on the
+#    command line.
+#  * It reads other arguments that are used by the Catapult converter.
 #
 # This will normally be invoked as:
 #   runbench_read_arguments "$@"
@@ -47,6 +49,22 @@ runbench_read_arguments() {
     OUT_DIR="$1"
     shift 2
     _catapult_converter_args="$@"
+
+    # Parse the catapult_converter argument to find the bot name.
+    while [ $# -gt 0 ]; do
+        local arg="$1"
+        shift
+        case "${arg}" in
+            --execution-timestamp-ms|--masters|--log-url)
+                shift;;
+            --bots)
+                benchmarks_bot_name="$1"
+                shift;;
+            *)
+                _runbench_log "Error: Unrecognized argument: ${arg}"
+                exit 1;;
+        esac
+    done
 }
 
 # Runs a command and expects a results file to be produced.
