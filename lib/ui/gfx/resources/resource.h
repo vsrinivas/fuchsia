@@ -11,13 +11,14 @@
 
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "lib/fxl/memory/ref_counted.h"
-#include "lib/ui/scenic/types.h"
 
 namespace scenic {
 class ErrorReporter;
 }
 
 namespace scenic {
+using ResourceId = uint32_t;
+
 namespace gfx {
 
 class Import;

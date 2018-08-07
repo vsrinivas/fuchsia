@@ -32,7 +32,6 @@
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/ui/scenic/cpp/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/scenic/types.h"
 
 using namespace scenic;
 
