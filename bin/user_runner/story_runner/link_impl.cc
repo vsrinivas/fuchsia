@@ -188,7 +188,7 @@ void LinkImpl::GetEntity(GetEntityCallback callback) {
         std::string ref;
         if (!EntityReferenceFromJson(value, &ref)) {
           FXL_LOG(ERROR) << "Link value for " << link_path_
-                         << " is not an entity reference: " << value;
+                         << " is not an entity reference.";
           callback(nullptr);
           return;
         }
