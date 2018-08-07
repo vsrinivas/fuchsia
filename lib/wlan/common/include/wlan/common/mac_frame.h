@@ -793,4 +793,6 @@ struct EapolFrame {
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
+CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs);
+
 }  // namespace wlan

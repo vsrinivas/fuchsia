@@ -925,7 +925,7 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
     };
 
 } __PACKED;
-
 SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs);
-
+HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& rhs);
+VhtCapabilities IntersectVhtCap(const VhtCapabilities &lhs, const VhtCapabilities& rhs);
 }  // namespace wlan
