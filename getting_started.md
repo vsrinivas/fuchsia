@@ -275,11 +275,11 @@ you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/te
 
 ## Running tests
 
-Compiled test binaries are installed in `/system/test/`.
+Compiled test binaries are installed in `/pkgfs/packages/`.
 You can run a test by invoking it in the terminal. E.g.
 
 ```
-/system/test/ledger_unittests
+/pkgfs/packages/ledger_tests/0/test/ledger_unittests
 ```
 
 If you want to leave Fuchsia running and recompile and re-run a test, run
