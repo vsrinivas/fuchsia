@@ -36,15 +36,13 @@ class URLLoaderImpl::HTTPClient {
 
   static bool IsMethodAllowed(const std::string& method);
 
-  HTTPClient<T>(URLLoaderImpl* loader,
-                asio::io_service& io_service,
+  HTTPClient<T>(URLLoaderImpl* loader, asio::io_service& io_service,
                 asio::ssl::context& context);
 
   HTTPClient<T>(URLLoaderImpl* loader, asio::io_service& io_service);
 
   zx_status_t CreateRequest(
-      const std::string& server,
-      const std::string& path,
+      const std::string& server, const std::string& path,
       const std::string& method,
       const std::map<std::string, std::string>& extra_headers,
       std::unique_ptr<http::UploadElementReader> request_body_reader);
@@ -67,8 +65,7 @@ class URLLoaderImpl::HTTPClient {
   void OnReadStatusLine(const asio::error_code& err);
   zx_status_t SendStreamedBody();
   zx_status_t SendBufferedBody();
-  void ParseHeaderField(const std::string& header,
-                        std::string* name,
+  void ParseHeaderField(const std::string& header, std::string* name,
                         std::string* value);
   void OnReadHeaders(const asio::error_code& err);
   void OnStreamBody(const asio::error_code& err);
@@ -95,7 +92,8 @@ class URLLoaderImpl::HTTPClient {
   std::string http_version_;
   std::string status_message_;
 
-  ::fuchsia::net::oldhttp::URLResponse response_;  // used for buffered responses
+  ::fuchsia::net::oldhttp::URLResponse
+      response_;                     // used for buffered responses
   zx::socket response_body_stream_;  // used for streamed responses (default)
 };
 
@@ -110,12 +108,10 @@ bool URLLoaderImpl::HTTPClient<T>::IsMethodAllowed(const std::string& method) {
 
 template <>
 void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(
-    const asio::error_code& err,
-    tcp::resolver::iterator endpoint_iterator);
+    const asio::error_code& err, tcp::resolver::iterator endpoint_iterator);
 template <>
 void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(
-    const asio::error_code& err,
-    tcp::resolver::iterator endpoint_iterator);
+    const asio::error_code& err, tcp::resolver::iterator endpoint_iterator);
 template <>
 void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnConnect(
     const asio::error_code& err);
@@ -125,8 +121,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(
 
 template <>
 URLLoaderImpl::HTTPClient<ssl_socket_t>::HTTPClient(
-    URLLoaderImpl* loader,
-    asio::io_service& io_service,
+    URLLoaderImpl* loader, asio::io_service& io_service,
     asio::ssl::context& context)
     : loader_(loader),
       resolver_(io_service),
@@ -135,8 +130,7 @@ URLLoaderImpl::HTTPClient<ssl_socket_t>::HTTPClient(
 
 template <>
 URLLoaderImpl::HTTPClient<nonssl_socket_t>::HTTPClient(
-    URLLoaderImpl* loader,
-    asio::io_service& io_service)
+    URLLoaderImpl* loader, asio::io_service& io_service)
     : loader_(loader),
       resolver_(io_service),
       socket_(io_service),
@@ -144,8 +138,7 @@ URLLoaderImpl::HTTPClient<nonssl_socket_t>::HTTPClient(
 
 template <typename T>
 zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
-    const std::string& server,
-    const std::string& path,
+    const std::string& server, const std::string& path,
     const std::string& method,
     const std::map<std::string, std::string>& extra_headers,
     std::unique_ptr<http::UploadElementReader> request_body_reader) {
@@ -210,8 +203,7 @@ void URLLoaderImpl::HTTPClient<T>::Start(const std::string& server,
 
 template <>
 void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(
-    const asio::error_code& err,
-    tcp::resolver::iterator endpoint_iterator) {
+    const asio::error_code& err, tcp::resolver::iterator endpoint_iterator) {
   if (!err) {
 #ifdef NETWORK_SERVICE_DISABLE_CERT_VERIFY
     socket_.set_verify_mode(asio::ssl::verify_none);
@@ -232,8 +224,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(
 
 template <>
 void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(
-    const asio::error_code& err,
-    tcp::resolver::iterator endpoint_iterator) {
+    const asio::error_code& err, tcp::resolver::iterator endpoint_iterator) {
   if (!err) {
     asio::async_connect(socket_, endpoint_iterator,
                         std::bind(&HTTPClient<nonssl_socket_t>::OnConnect, this,
@@ -246,8 +237,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(
 
 template <typename T>
 bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(
-    bool preverified,
-    asio::ssl::verify_context& ctx) {
+    bool preverified, asio::ssl::verify_context& ctx) {
   // TODO(toshik): RFC 2818 describes the steps involved in doing this for
   // HTTPS.
   char subject_name[256];
@@ -301,8 +291,7 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnWriteRequestHeaders(
-    const asio::error_code& err,
-    std::size_t transferred) {
+    const asio::error_code& err, std::size_t transferred) {
   if (!err) {
     request_header_buf_.consume(transferred);
 
@@ -343,8 +332,7 @@ void URLLoaderImpl::HTTPClient<T>::WriteRequestBody() {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnWriteRequestBody(
-    const asio::error_code& err,
-    std::size_t transferred) {
+    const asio::error_code& err, std::size_t transferred) {
   if (!err) {
     request_body_buf_.consume(transferred);
     WriteRequestBody();
@@ -394,12 +382,12 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
       size_t offset = 0;
       do {
         size_t written = 0;
-        zx_status_t result =
-          response_body_stream_.write(0, buffer + offset, todo - offset, &written);
+        zx_status_t result = response_body_stream_.write(
+            0, buffer + offset, todo - offset, &written);
         if (result == ZX_ERR_SHOULD_WAIT) {
           result = response_body_stream_.wait_one(
-            ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(),
-            nullptr);
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(),
+              nullptr);
           if (result == ZX_OK)
             continue;  // retry now that the socket is ready
         }
@@ -451,7 +439,8 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       done += todo;
     } while (done < size);
 
-    if (loader_->response_body_mode_ == ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER) {
+    if (loader_->response_body_mode_ ==
+        ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER) {
       response_.body->set_buffer(std::move(vmo));
     } else {
       FXL_DCHECK(loader_->response_body_mode_ ==
@@ -587,7 +576,7 @@ void URLLoaderImpl::HTTPClient<T>::OnStreamBody(const asio::error_code& err) {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::SendResponse(
-        ::fuchsia::net::oldhttp::URLResponse response) {
+    ::fuchsia::net::oldhttp::URLResponse response) {
   loader_->SendResponse(std::move(response));
 }
 

@@ -18,9 +18,7 @@ SocketUploadElementReader::SocketUploadElementReader(zx::socket socket)
 
 SocketUploadElementReader::~SocketUploadElementReader() {}
 
-size_t SocketUploadElementReader::size() {
-  return kUnknownSize;
-}
+size_t SocketUploadElementReader::size() { return kUnknownSize; }
 
 bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
   while (true) {
@@ -65,9 +63,7 @@ VmoUploadElementReader::VmoUploadElementReader(zx::vmo vmo, uint64_t size)
 
 VmoUploadElementReader::~VmoUploadElementReader() {}
 
-size_t VmoUploadElementReader::size() {
-  return size_;
-}
+size_t VmoUploadElementReader::size() { return size_; }
 
 bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {
   const size_t remaining_bytes = size_ - offset_;

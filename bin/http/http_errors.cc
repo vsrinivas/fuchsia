@@ -19,8 +19,8 @@ std::string ErrorToShortString(int error) {
   const char* error_string;
   switch (error) {
 #define HTTP_ERROR(label, value) \
-  case HTTP_ERR_##label:     \
-    error_string = #label;      \
+  case HTTP_ERR_##label:         \
+    error_string = #label;       \
     break;
 #include "garnet/bin/http/http_error_list.h"
 #undef HTTP_ERROR

@@ -4,8 +4,8 @@
 
 #include <stdlib.h>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
@@ -63,8 +63,7 @@ class MWGetApp {
   MWGetApp(async::Loop* loop)
       : context_(component::StartupContext::CreateFromStartupInfo()),
         loop_(loop) {
-    http_service_ =
-        context_->ConnectToEnvironmentService<http::HttpService>();
+    http_service_ = context_->ConnectToEnvironmentService<http::HttpService>();
     FXL_DCHECK(loop);
     FXL_DCHECK(http_service_);
   }

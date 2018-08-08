@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/http/http_client.h"
 #include "garnet/bin/http/http_adapters.h"
+#include "garnet/bin/http/http_client.h"
 #include "garnet/bin/http/http_errors.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -33,7 +33,7 @@ URLLoaderImpl::~URLLoaderImpl() {}
 void URLLoaderImpl::Start(oldhttp::URLRequest request, Callback callback) {
   callback_ = std::move(callback);
   coordinator_->RequestNetworkSlot(fxl::MakeCopyable(
-      [ this, request = std::move(request) ](fit::closure on_inactive) mutable {
+      [this, request = std::move(request)](fit::closure on_inactive) mutable {
         StartInternal(std::move(request));
         on_inactive();
       }));
@@ -61,9 +61,7 @@ void URLLoaderImpl::SendError(int error_code) {
   SendResponse(std::move(response));
 }
 
-void URLLoaderImpl::FollowRedirectInternal() {
-  /* TODO(toshik) */
-}
+void URLLoaderImpl::FollowRedirectInternal() { /* TODO(toshik) */ }
 
 void URLLoaderImpl::SendResponse(oldhttp::URLResponse response) {
   Callback callback;
@@ -79,8 +77,7 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
 
   if (request.headers) {
     for (size_t i = 0; i < request.headers->size(); ++i)
-      extra_headers[request.headers->at(i).name] =
-          request.headers->at(i).value;
+      extra_headers[request.headers->at(i).name] = request.headers->at(i).value;
   }
 
   if (request.body) {
