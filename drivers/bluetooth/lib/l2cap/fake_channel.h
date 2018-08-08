@@ -61,9 +61,8 @@ class FakeChannel : public Channel {
   bool link_error() const { return link_error_; }
 
   // True if Deactivate has yet not been called after Activate.
-  bool activated() const { return dispatcher_ != nullptr; }
+  bool activated() const { return static_cast<bool>(rx_cb_); }
 
- protected:
   // Channel overrides:
   bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;

@@ -80,6 +80,7 @@ source_set("tests") {
     "le_signaling_channel_unittest.cc",
     "pdu_unittest.cc",
     "recombiner_unittest.cc",
+    "scoped_channel_unittest.cc",
     "signaling_channel_unittest.cc",
   ]
 

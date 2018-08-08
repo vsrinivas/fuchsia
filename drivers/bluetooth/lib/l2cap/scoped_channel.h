@@ -15,7 +15,12 @@ namespace l2cap {
 class ScopedChannel final {
  public:
   explicit ScopedChannel(fbl::RefPtr<Channel> channel);
+  ScopedChannel() = default;
   ~ScopedChannel();
+
+  // Resets the underlying channel to the one that is provided. Any previous
+  // channel will be deactivated.
+  void Reset(fbl::RefPtr<Channel> new_channel);
 
   inline void operator=(decltype(nullptr)) { Close(); }
   inline operator bool() const { return static_cast<bool>(chan_); }

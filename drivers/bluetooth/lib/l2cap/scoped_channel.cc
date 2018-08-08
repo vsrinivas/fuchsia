@@ -13,6 +13,13 @@ ScopedChannel::~ScopedChannel() {
   Close();
 }
 
+void ScopedChannel::Reset(fbl::RefPtr<Channel> new_channel) {
+  if (chan_) {
+    Close();
+  }
+  chan_ = std::move(new_channel);
+}
+
 void ScopedChannel::Close() {
   if (chan_) {
     chan_->Deactivate();

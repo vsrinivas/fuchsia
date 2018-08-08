@@ -62,8 +62,8 @@ bool FakeChannel::Activate(RxCallback rx_callback,
                            async_dispatcher_t* dispatcher) {
   FXL_DCHECK(rx_callback);
   FXL_DCHECK(closed_callback);
-  FXL_DCHECK(dispatcher);
-  FXL_DCHECK(!dispatcher_);
+  FXL_DCHECK(!rx_cb_);
+  FXL_DCHECK(!closed_cb_);
 
   if (activate_fails_)
     return false;
