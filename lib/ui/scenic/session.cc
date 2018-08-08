@@ -83,11 +83,12 @@ void Session::EnqueueEvent(fuchsia::ui::scenic::Event event) {
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
   if (buffered_events_->empty()) {
-    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
-      if (weak) {
-        weak->FlushEvents();
-      }
-    });
+    async::PostTask(async_get_default_dispatcher(),
+                    [weak = weak_factory_.GetWeakPtr()] {
+                      if (weak) {
+                        weak->FlushEvents();
+                      }
+                    });
   }
   buffered_events_.push_back(std::move(event));
 }

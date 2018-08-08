@@ -75,7 +75,8 @@ class Session final : public fuchsia::ui::scenic::Session,
   ErrorReporter* error_reporter() { return this; }
 
   // For tests.  See FlushEvents() below.
-  void set_event_callback(fit::function<void(fuchsia::ui::scenic::Event)> callback) {
+  void set_event_callback(
+      fit::function<void(fuchsia::ui::scenic::Event)> callback) {
     event_callback_ = std::move(callback);
   }
 

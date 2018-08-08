@@ -104,7 +104,8 @@ class TempSystemDelegate : public System {
   virtual void TakeScreenshot(
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
   virtual void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback
+          callback) = 0;
 };
 
 // Return the system type that knows how to handle the specified command.

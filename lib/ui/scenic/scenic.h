@@ -78,7 +78,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback)
+      override;
 
   size_t next_session_id_ = 1;
 
