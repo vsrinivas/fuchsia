@@ -7,9 +7,9 @@
 #include "fs/pseudo-dir.h"
 #include "fs/service.h"
 #include "fuchsia/sys/cpp/fidl.h"
+#include "lib/async-loop/cpp/loop.h"
 #include "lib/component/cpp/outgoing.h"
 #include "lib/component/cpp/testing/fake_launcher.h"
-#include "lib/async-loop/cpp/loop.h"
 #include "lib/fdio/spawn.h"
 #include "lib/fidl/cpp/binding_set.h"
 
