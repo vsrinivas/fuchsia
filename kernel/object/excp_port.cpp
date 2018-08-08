@@ -36,6 +36,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, zx_koid_t pid, zx_koi
 
     port_packet->packet.key = key;
     port_packet->packet.type = type;
+    port_packet->packet.status = ZX_OK;
     port_packet->packet.exception.pid = pid;
     port_packet->packet.exception.tid = tid;
     port_packet->packet.exception.reserved0 = 0;

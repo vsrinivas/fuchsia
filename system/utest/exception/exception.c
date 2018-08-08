@@ -158,6 +158,7 @@ static bool read_packet(zx_handle_t eport, zx_port_packet_t* packet)
     } else {
         ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type), "");
         ASSERT_EQ(packet->key, EXCEPTION_PORT_KEY, "bad report key");
+        ASSERT_EQ(packet->status, ZX_OK, "");
         unittest_printf("exception received: pid %"
                         PRIu64 ", tid %" PRIu64 ", type %d\n",
                         packet->exception.pid, packet->exception.tid, packet->type);
