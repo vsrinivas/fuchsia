@@ -109,8 +109,7 @@ class DestroyWatcher : public fxl::RefCountedThreadSafe<DestroyWatcher> {
 class NetworkWrapperImplTest : public gtest::TestLoopFixture {
  public:
   NetworkWrapperImplTest()
-      : network_service_(dispatcher(),
-                         std::make_unique<backoff::TestBackoff>(),
+      : network_service_(dispatcher(), std::make_unique<backoff::TestBackoff>(),
                          [this] { return NewHttpService(); }) {}
 
   void SetSocketResponse(zx::socket body, uint32_t status_code) {
@@ -134,7 +133,7 @@ class NetworkWrapperImplTest : public gtest::TestLoopFixture {
   }
 
   http::URLRequest NewRequest(const std::string& method,
-                                 const std::string& url) {
+                              const std::string& url) {
     http::URLRequest request;
     request.method = method;
     request.url = url;
@@ -251,8 +250,7 @@ TEST_F(NetworkWrapperImplTest, CancelOnCallback) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [this, &request,
-       &response](http::URLResponse received_response) mutable {
+      [this, &request, &response](http::URLResponse received_response) mutable {
         response = fidl::MakeOptional(std::move(received_response));
         request->Cancel();
         request = nullptr;

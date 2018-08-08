@@ -17,7 +17,8 @@ namespace network_wrapper {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-FakeNetworkWrapper::FakeNetworkWrapper(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+FakeNetworkWrapper::FakeNetworkWrapper(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher) {}
 
 FakeNetworkWrapper::~FakeNetworkWrapper() {}
 
