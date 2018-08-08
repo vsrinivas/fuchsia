@@ -488,7 +488,8 @@ fuchsia::ui::gfx::Command NewExportResourceCmdAsRequest(
   zx::eventpair export_token;
   zx_status_t status =
       zx::eventpair::create(0u, &export_token, out_import_token);
-  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "event pair create failed: status=%d", status);
+  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "event pair create failed: status=%d",
+                      status);
   return NewExportResourceCmd(resource_id, std::move(export_token));
 }
 
@@ -501,7 +502,8 @@ fuchsia::ui::gfx::Command NewImportResourceCmdAsRequest(
   zx::eventpair import_token;
   zx_status_t status =
       zx::eventpair::create(0u, &import_token, out_export_token);
-  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "event pair create failed: status=%d", status);
+  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "event pair create failed: status=%d",
+                      status);
   return NewImportResourceCmd(resource_id, import_spec,
                               std::move(import_token));
 }
