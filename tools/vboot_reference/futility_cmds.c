@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// clang-format off
+// clang-format is off because it will take these lists and turn them into paragraphs.
+
 const char futility_version[] = "v0.0.fuchsia";
 #define _CMD(NAME) extern const struct futil_cmd_t __cmd_##NAME;
 _CMD(bdb)
