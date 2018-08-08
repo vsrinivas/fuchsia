@@ -425,7 +425,7 @@ static zx_status_t usb_tester_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         return ZX_OK;
     }
     default:
-        return ZX_ERR_NOT_SUPPORTED;
+        return device_ioctl(usb_tester->parent, op, in_buf, in_len, out_buf, out_len, out_actual);
     }
 }
 

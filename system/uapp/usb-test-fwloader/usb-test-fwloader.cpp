@@ -7,8 +7,10 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
+#include <zircon/device/usb.h>
 #include <zircon/device/usb-test-fwloader.h>
 #include <zircon/device/usb-tester.h>
+#include <zircon/hw/usb.h>
 #include <zircon/types.h>
 
 #include <dirent.h>
@@ -24,6 +26,9 @@ static const char* const DEV_USB_TESTER_DIR = "/dev/class/usb-tester";
 static const int ENUMERATION_WAIT_SECS = 5;
 
 static constexpr uint32_t BUFFER_SIZE = 8 * 1024;
+
+static inline int MSB(int n) { return n >> 8; }
+static inline int LSB(int n) { return n & 0xFF; }
 
 zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -165,5 +170,18 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to load firmware, err: %zd\n", res);
         return -1;
     }
+    status = wait_dev_enumerate(DEV_USB_TESTER_DIR, fd);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to wait for updated usb tester to enumerate, err: %d\n", status);
+        return -1;
+    }
+    usb_device_descriptor_t device_desc;
+    res = ioctl_usb_get_device_desc(fd.get(), &device_desc);
+    if (res != sizeof(device_desc)) {
+        printf("Failed to get updated usb tester device descriptor, err: %zd\n", res);
+        return -1;
+    }
+    printf("Updated usb tester firmware to v%x.%x\n",
+           MSB(device_desc.bcdDevice), LSB(device_desc.bcdDevice));
     return 0;
 }
