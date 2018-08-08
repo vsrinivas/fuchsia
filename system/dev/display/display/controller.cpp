@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <lib/async/cpp/task.h>
 #include <audio-proto-utils/format-utils.h>
@@ -424,6 +425,10 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
 
 void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                 void** handles, uint32_t handle_count) {
+    // Emit an event called "VSYNC", which is by convention the event
+    // that Trace Viewer looks for in its "Highlight VSync" feature.
+    TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
+
     fbl::AutoLock lock(&mtx_);
     DisplayInfo* info = nullptr;
     for (auto& display_config : displays_) {
