@@ -31,7 +31,8 @@ void SessionHandler::Present(
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),
-          std::move(acquire_fences), std::move(release_fences), std::move(callback))) {
+          std::move(acquire_fences), std::move(release_fences),
+          std::move(callback))) {
     BeginTearDown();
   }
   buffered_commands_.clear();

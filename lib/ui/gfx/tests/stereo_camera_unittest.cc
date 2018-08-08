@@ -26,10 +26,8 @@ TEST_F(StereoCameraTest, Basic) {
   const scenic::ResourceId scene_id = 1;
   const scenic::ResourceId camera_id = 2;
   ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(scene_id)));
-  EXPECT_TRUE(
-      Apply(scenic::NewCreateStereoCameraCmd(camera_id, scene_id)));
-  EXPECT_FALSE(
-      Apply(scenic::NewCreateStereoCameraCmd(camera_id, invalid_id)));
+  EXPECT_TRUE(Apply(scenic::NewCreateStereoCameraCmd(camera_id, scene_id)));
+  EXPECT_FALSE(Apply(scenic::NewCreateStereoCameraCmd(camera_id, invalid_id)));
 
   // Not really projection matrices but we're just testing the setters
   glm::mat4 left_projection = glm::mat4(2);

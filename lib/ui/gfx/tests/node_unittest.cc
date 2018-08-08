@@ -35,8 +35,7 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
   EXPECT_TRUE(Apply(scenic::NewCreateMaterialCmd(kMaterialId)));
   EXPECT_TRUE(Apply(scenic::NewSetTextureCmd(kMaterialId, 0)));
-  EXPECT_TRUE(
-      Apply(scenic::NewSetColorCmd(kMaterialId, 255, 100, 100, 255)));
+  EXPECT_TRUE(Apply(scenic::NewSetColorCmd(kMaterialId, 255, 100, 100, 255)));
   EXPECT_TRUE(Apply(scenic::NewCreateCircleCmd(kShapeId, 50.f)));
   EXPECT_TRUE(Apply(scenic::NewSetMaterialCmd(kNodeId, kMaterialId)));
   EXPECT_TRUE(Apply(scenic::NewSetShapeCmd(kNodeId, kShapeId)));
@@ -71,8 +70,7 @@ TEST_F(NodeTest, NodesWithChildren) {
   // auto clip_node = FindResource<ClipNode>(kClipNodeId);
 
   // We expect to be able to add children to these types.
-  EXPECT_TRUE(
-      Apply(scenic::NewAddChildCmd(kEntityNodeId, kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic::NewAddChildCmd(kEntityNodeId, kChildNodeId)));
   EXPECT_EQ(entity_node.get(), child_node->parent());
   EXPECT_TRUE(Apply(scenic::NewDetachCmd(kChildNodeId)));
   // EXPECT_TRUE(Apply(scenic::NewDetachCmd(kChildNodeId)));
@@ -82,8 +80,7 @@ TEST_F(NodeTest, NodesWithChildren) {
   // EXPECT_FALSE(Apply(scenic::NewAddChildCmd(kClipNodeId,
   // kChildNodeId))); EXPECT_EQ(nullptr, child_node->parent());
   // EXPECT_EQ(nullptr, child_node->parent());
-  EXPECT_FALSE(
-      Apply(scenic::NewAddChildCmd(kShapeNodeId, kChildNodeId)));
+  EXPECT_FALSE(Apply(scenic::NewAddChildCmd(kShapeNodeId, kChildNodeId)));
   EXPECT_EQ(nullptr, child_node->parent());
 }
 

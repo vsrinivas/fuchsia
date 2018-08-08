@@ -84,8 +84,8 @@ class EventTimestamper {
     const zx::event& event() const { return event_; }
 
    private:
-    void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                const zx_packet_signal_t* signal);
+    void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                zx_status_t status, const zx_packet_signal_t* signal);
 
     async_dispatcher_t* const dispatcher_;
     zx::event event_;

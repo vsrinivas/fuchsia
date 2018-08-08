@@ -29,7 +29,8 @@ class GfxSystem : public TempSystemDelegate {
   void TakeScreenshot(
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
   void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback)
+      override;
 
  protected:
   // Protected so test classes can expose.

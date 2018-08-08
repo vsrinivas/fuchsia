@@ -89,7 +89,8 @@ void SessionManager::TearDownSession(SessionId id) {
 
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
-    async::PostTask(async_get_default_dispatcher(), [handler] { handler->TearDown(); });
+    async::PostTask(async_get_default_dispatcher(),
+                    [handler] { handler->TearDown(); });
   }
 }
 

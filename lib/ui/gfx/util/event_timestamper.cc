@@ -102,8 +102,9 @@ const zx::event& EventTimestamper::Watch::event() const {
   return waiter_ ? waiter_->event() : null_handle;
 }
 
-EventTimestamper::Waiter::Waiter(async_dispatcher_t* dispatcher, zx::event event,
-                                 zx_status_t trigger, Callback callback)
+EventTimestamper::Waiter::Waiter(async_dispatcher_t* dispatcher,
+                                 zx::event event, zx_status_t trigger,
+                                 Callback callback)
     : dispatcher_(dispatcher),
       event_(std::move(event)),
       callback_(std::move(callback)),
@@ -113,8 +114,8 @@ EventTimestamper::Waiter::~Waiter() {
   FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
-void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                      zx_status_t status,
+void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher,
+                                      async::WaitBase* wait, zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   async::PostTask(dispatcher_, [now, this] {

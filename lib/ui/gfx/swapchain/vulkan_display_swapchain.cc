@@ -296,15 +296,17 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
   }
   // TODO: Wait for sema before triggering callbacks. This class is only used
   // for debugging, so the precise timestamps don't matter as much.
-  async::PostTask(async_get_default_dispatcher(), [frame_timings, timing_index] {
-    frame_timings->OnFrameRendered(timing_index,
-                                   zx_clock_get(ZX_CLOCK_MONOTONIC));
-    // Emit an event called "VSYNC", which is by convention the event that
-    // Trace Viewer looks for in its "Highlight VSync" feature.
-    TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD);
-    frame_timings->OnFramePresented(timing_index,
-                                    zx_clock_get(ZX_CLOCK_MONOTONIC));
-  });
+  async::PostTask(async_get_default_dispatcher(),
+                  [frame_timings, timing_index] {
+                    frame_timings->OnFrameRendered(
+                        timing_index, zx_clock_get(ZX_CLOCK_MONOTONIC));
+                    // Emit an event called "VSYNC", which is by convention the
+                    // event that Trace Viewer looks for in its "Highlight
+                    // VSync" feature.
+                    TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD);
+                    frame_timings->OnFramePresented(
+                        timing_index, zx_clock_get(ZX_CLOCK_MONOTONIC));
+                  });
 
   return true;
 }

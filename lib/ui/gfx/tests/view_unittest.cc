@@ -30,8 +30,8 @@ TEST_F(ViewTest, Children) {
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
   const scenic::ResourceId view_id = 1;
-  EXPECT_TRUE(Apply(
-      scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+  EXPECT_TRUE(
+      Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   const scenic::ResourceId node1_id = 2;
@@ -98,8 +98,8 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
   const scenic::ResourceId view_id = 1;
-  EXPECT_TRUE(Apply(
-      scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+  EXPECT_TRUE(
+      Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
@@ -131,8 +131,8 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
 
   const scenic::ResourceId view_id = 2u;
-  EXPECT_TRUE(Apply(
-      scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+  EXPECT_TRUE(
+      Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
