@@ -20,8 +20,9 @@ fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
 }
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
-    App* app, ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                  view_owner_request,
+    App* app,
+    ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
     bool handle_input_events) {
   FXL_CHECK(false) << "unimplemented.";
   return fxl::RefPtr<ShadertoyState>();
@@ -55,24 +56,24 @@ void ShadertoyState::SetPaused(bool paused) {
 void ShadertoyState::SetShaderCode(
     fidl::StringPtr glsl,
     fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) {
-  compiler_->Compile(std::string(glsl), [
-    weak = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)
-  ](Compiler::Result result) {
-    if (weak) {
-      if (result.pipeline) {
-        // Notify client that the code was successfully
-        // compiled.
-        callback(true);
-        // Start rendering with the new pipeline.
-        weak->pipeline_ = std::move(result.pipeline);
-        weak->RequestFrame(0);
-      } else {
-        // Notify client that the code could not be
-        // successfully compiled.
-        callback(false);
-      }
-    }
-  });
+  compiler_->Compile(std::string(glsl),
+                     [weak = weak_ptr_factory_.GetWeakPtr(),
+                      callback = std::move(callback)](Compiler::Result result) {
+                       if (weak) {
+                         if (result.pipeline) {
+                           // Notify client that the code was successfully
+                           // compiled.
+                           callback(true);
+                           // Start rendering with the new pipeline.
+                           weak->pipeline_ = std::move(result.pipeline);
+                           weak->RequestFrame(0);
+                         } else {
+                           // Notify client that the code could not be
+                           // successfully compiled.
+                           callback(false);
+                         }
+                       }
+                     });
 }
 
 void ShadertoyState::SetResolution(uint32_t width, uint32_t height) {

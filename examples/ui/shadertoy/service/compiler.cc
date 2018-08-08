@@ -195,9 +195,10 @@ void Compiler::ProcessRequestQueue() {
 
     auto pipeline = CompileGlslToPipeline(req.glsl);
 
-    async::PostTask(loop_->dispatcher(), [
-      result = Result{std::move(pipeline)}, callback = std::move(req.callback)
-    ] { callback(std::move(result)); });
+    async::PostTask(loop_->dispatcher(), [result = Result{std::move(pipeline)},
+                                          callback = std::move(req.callback)] {
+      callback(std::move(result));
+    });
   }
 }
 

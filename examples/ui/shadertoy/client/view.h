@@ -11,8 +11,8 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/base_view/cpp/view_factory.h"
+#include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
 namespace shadertoy_client {
@@ -21,8 +21,8 @@ namespace shadertoy_client {
 // TODO(SCN-589): Should be folded back into the latter when the former dies.
 class ViewImpl {
  public:
-  ViewImpl(component::StartupContext* startup_context,
-           scenic::Session* session, scenic::EntityNode* parent_node);
+  ViewImpl(component::StartupContext* startup_context, scenic::Session* session,
+           scenic::EntityNode* parent_node);
 
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info,
                           const fuchsia::math::SizeF& logical_size);

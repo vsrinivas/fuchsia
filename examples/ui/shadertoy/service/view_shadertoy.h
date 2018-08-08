@@ -16,7 +16,8 @@ class ShadertoyStateForView : public ShadertoyState {
  public:
   ShadertoyStateForView(
       App* app,
-      ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
+      ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
       bool handle_input_events);
 
  private:

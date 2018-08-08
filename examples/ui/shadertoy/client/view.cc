@@ -77,8 +77,8 @@ ViewImpl::ViewImpl(component::StartupContext* startup_context,
   session()->ReleaseResource(image_pipe_id);
 
   // Create a rounded-rect shape to display the Shadertoy image on.
-  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
-                                     80, 80, 80);
+  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80,
+                                 80, 80);
 
   constexpr size_t kNodeCount = 16;
   for (size_t i = 0; i < kNodeCount; ++i) {
@@ -193,11 +193,10 @@ void ViewImpl::QuitLoop() {
   async_loop_quit(async_loop_from_dispatcher(async_get_default_dispatcher()));
 }
 
-OldView::OldView(
-    component::StartupContext* startup_context,
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request)
+OldView::OldView(component::StartupContext* startup_context,
+                 ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+                 fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                     view_owner_request)
     : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Shadertoy Example"),
       root_node_(session()),
