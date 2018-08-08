@@ -250,7 +250,7 @@ def choose_build_dirs(cli_args, arch):
         build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
     return build_dirs
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -277,7 +277,11 @@ def main():
                         help="Path of gdb program to use")
     parser.add_argument("app", nargs="?", help="Name of primary application")
     parser.set_defaults(echo=True)
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
     global debug_mode
     debug_mode = args.debug
     global addr2line_tool_path
