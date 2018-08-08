@@ -18,17 +18,18 @@ class VkCubeView : public mozart::BaseView {
  public:
   using ResizeCallback = fit::function<void(float width, float height)>;
 
-  VkCubeView(
-      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
-      ResizeCallback resize_callback);
+  VkCubeView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+             fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                 view_owner_request,
+             ResizeCallback resize_callback);
   ~VkCubeView() override;
 
   zx::channel TakeImagePipeChannel() { return std::move(image_pipe_endpoint_); }
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info) override;
 
   fuchsia::math::SizeF size_;
   fuchsia::math::Size physical_size_;

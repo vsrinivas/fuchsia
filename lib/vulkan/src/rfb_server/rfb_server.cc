@@ -78,11 +78,13 @@ bool RFBServer::Initialize(uint32_t width, uint32_t height, uint32_t port) {
     return false;
   }
 
-  if (!SendBytes(kHeader, kHeaderLength)) return false;
+  if (!SendBytes(kHeader, kHeaderLength))
+    return false;
 
   char read_header[kHeaderLength + 1];
 
-  if (ReadEntireMessage(read_header, kHeaderLength) < 0) return false;
+  if (ReadEntireMessage(read_header, kHeaderLength) < 0)
+    return false;
   if (memcmp(read_header, kHeader, kHeaderLength) != 0) {
     read_header[kHeaderLength] = 0;
     fprintf(stderr, "Received unsupported header value %s\n", read_header);
@@ -91,16 +93,20 @@ bool RFBServer::Initialize(uint32_t width, uint32_t height, uint32_t port) {
 
   constexpr uint8_t kSecurityTypeNone = 1;
   uint8_t security_header[] = {1, kSecurityTypeNone};
-  if (!SendBytes(security_header, sizeof(security_header))) return false;
+  if (!SendBytes(security_header, sizeof(security_header)))
+    return false;
   uint8_t security_type;
   if (ReadEntireMessage(&security_type, sizeof(security_type)) < 0)
     return false;
-  if (security_type != kSecurityTypeNone) return false;
+  if (security_type != kSecurityTypeNone)
+    return false;
 
   uint32_t security_status = 0;
-  if (!SendBytes(&security_status, sizeof(security_status))) return false;
+  if (!SendBytes(&security_status, sizeof(security_status)))
+    return false;
   uint8_t shared_flag;  // ignored.
-  if (ReadEntireMessage(&shared_flag, sizeof(shared_flag)) < 0) return false;
+  if (ReadEntireMessage(&shared_flag, sizeof(shared_flag)) < 0)
+    return false;
   struct server_init {
     uint16_t width;
     uint16_t height;
@@ -126,7 +132,8 @@ bool RFBServer::Initialize(uint32_t width, uint32_t height, uint32_t port) {
   server_init.name_string[2] = 'g';
   server_init.name_string[3] = 'm';
   server_init.name_string[4] = 'a';
-  if (!SendBytes(&server_init, sizeof(server_init))) return false;
+  if (!SendBytes(&server_init, sizeof(server_init)))
+    return false;
 
   initialization_succeeded_ = true;
 
@@ -134,7 +141,8 @@ bool RFBServer::Initialize(uint32_t width, uint32_t height, uint32_t port) {
 }
 
 void RFBServer::WaitForFramebufferUpdate() {
-  if (!initialization_succeeded_) return;
+  if (!initialization_succeeded_)
+    return;
   while (true) {
     uint8_t message_type;
     int return_code = ReadEntireMessage(&message_type, sizeof(message_type));
@@ -164,7 +172,8 @@ void RFBServer::WaitForFramebufferUpdate() {
           return;
         uint16_t encoding_count = ntohs(set_encodings.encoding_count);
         std::vector<int32_t> encodings(encoding_count);
-        if (ReadEntireMessage(encodings.data(), encoding_count * 4) < 0) return;
+        if (ReadEntireMessage(encodings.data(), encoding_count * 4) < 0)
+          return;
         break;
       }
       case 3: {
@@ -187,7 +196,8 @@ void RFBServer::WaitForFramebufferUpdate() {
           uint8_t padding[2];
           uint32_t key;
         } __attribute__((packed)) key_event;
-        if (ReadEntireMessage(&key_event, sizeof(key_event)) < 0) return;
+        if (ReadEntireMessage(&key_event, sizeof(key_event)) < 0)
+          return;
         break;
       }
       case 5: {
@@ -205,10 +215,12 @@ void RFBServer::WaitForFramebufferUpdate() {
           uint8_t padding[3];
           uint32_t length;
         } __attribute__((packed)) cut_text;
-        if (ReadEntireMessage(&cut_text, sizeof(cut_text)) < 0) return;
+        if (ReadEntireMessage(&cut_text, sizeof(cut_text)) < 0)
+          return;
         cut_text.length = ntohl(cut_text.length);
         std::vector<uint8_t> text(cut_text.length);
-        if (ReadEntireMessage(text.data(), cut_text.length) < 0) return;
+        if (ReadEntireMessage(text.data(), cut_text.length) < 0)
+          return;
         break;
       }
     }
@@ -216,7 +228,8 @@ void RFBServer::WaitForFramebufferUpdate() {
 }
 
 void RFBServer::StartUpdate() {
-  if (!initialization_succeeded_) return;
+  if (!initialization_succeeded_)
+    return;
   struct update_header {
     uint8_t type;
     uint8_t padding;
@@ -225,7 +238,8 @@ void RFBServer::StartUpdate() {
   update_header.type = 0;
   update_header.padding = 0;
   update_header.number_of_rectangles = htons(1);
-  if (!SendBytes(&update_header, sizeof(update_header))) return;
+  if (!SendBytes(&update_header, sizeof(update_header)))
+    return;
   struct rectangle_header {
     uint16_t x_position;
     uint16_t y_position;
@@ -242,14 +256,16 @@ void RFBServer::StartUpdate() {
 }
 
 bool RFBServer::SendBytes(const void* data, uint32_t length) {
-  if (!fd_.is_valid()) return false;
+  if (!fd_.is_valid())
+    return false;
 
   const char* current_data = static_cast<const char*>(data);
   uint32_t written = 0;
   while (written < length) {
     int current_write = send(fd_.get(), current_data, length - written, 0);
     if (current_write < 0) {
-      if (errno == EINTR) continue;
+      if (errno == EINTR)
+        continue;
       return false;
     }
     current_data += current_write;
@@ -264,7 +280,8 @@ int RFBServer::ReadEntireMessage(void* data, uint32_t size) {
   while (read < size) {
     int current_read = recv(fd_.get(), current_data, size - read, 0);
     if (current_read < 0) {
-      if (errno == EINTR) continue;
+      if (errno == EINTR)
+        continue;
       return current_read;
     }
     read += current_read;
