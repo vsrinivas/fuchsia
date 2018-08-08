@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #![deny(warnings)]
-#![allow(unused)] // TODO(atait): Remove once there are non-test clients
 
 use std::net::Ipv4Addr;
 
@@ -273,10 +272,14 @@ pub enum OptionCode {
     Pad = 0,
     End = 255,
     SubnetMask = 1,
+    Router = 3,
+    NameServer = 5,
     RequestedIpAddr = 50,
     IpAddrLeaseTime = 51,
     DhcpMessageType = 53,
     ServerId = 54,
+    RenewalTime = 58,
+    RebindingTime = 59,
 }
 
 impl OptionCode {
@@ -286,10 +289,14 @@ impl OptionCode {
             0 => Some(OptionCode::Pad),
             255 => Some(OptionCode::End),
             1 => Some(OptionCode::SubnetMask),
+            3 => Some(OptionCode::Router),
+            5 => Some(OptionCode::NameServer),
             50 => Some(OptionCode::RequestedIpAddr),
             51 => Some(OptionCode::IpAddrLeaseTime),
             53 => Some(OptionCode::DhcpMessageType),
             54 => Some(OptionCode::ServerId),
+            58 => Some(OptionCode::RenewalTime),
+            59 => Some(OptionCode::RebindingTime),
             _ => None,
         }
     }
