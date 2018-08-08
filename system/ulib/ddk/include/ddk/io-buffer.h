@@ -101,22 +101,22 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);
 
-static inline bool io_buffer_is_valid(io_buffer_t* buffer) {
+static inline bool io_buffer_is_valid(const io_buffer_t* buffer) {
     return (buffer->vmo_handle != ZX_HANDLE_INVALID);
 }
 
-static inline void* io_buffer_virt(io_buffer_t* buffer) {
+static inline void* io_buffer_virt(const io_buffer_t* buffer) {
     return (void*)(((uintptr_t)buffer->virt) + buffer->offset);
 }
 
-static inline zx_paddr_t io_buffer_phys(io_buffer_t* buffer) {
+static inline zx_paddr_t io_buffer_phys(const io_buffer_t* buffer) {
     ZX_DEBUG_ASSERT(buffer->phys != IO_BUFFER_INVALID_PHYS);
     return buffer->phys + buffer->offset;
 }
 
 // Returns the buffer size available after the given offset, relative to the
 // io_buffer vmo offset.
-static inline size_t io_buffer_size(io_buffer_t* buffer, size_t offset) {
+static inline size_t io_buffer_size(const io_buffer_t* buffer, size_t offset) {
     size_t remaining = buffer->size - buffer->offset - offset;
     // May overflow.
     if (remaining > buffer->size) {
