@@ -75,10 +75,9 @@ TEST_F(ConfigTest, ParseWithErrors) {
     "other": ["a", 3]
   }})json";
   ExpectFailedParse(
-      json,
-      StringPrintf(kBadServiceError, "services.chrome") + "\n" +
-      StringPrintf(kBadServiceError, "services.appmgr") + "\n" +
-      StringPrintf(kBadServiceError, "services.other"));
+      json, StringPrintf(kBadServiceError, "services.chrome") + "\n" +
+                StringPrintf(kBadServiceError, "services.appmgr") + "\n" +
+                StringPrintf(kBadServiceError, "services.other"));
 
   // Bad apps.
   json = R"json({"apps": 3})json";

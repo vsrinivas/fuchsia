@@ -25,7 +25,7 @@ constexpr char kStartupServices[] = "startup_services";
 }  // namespace
 
 bool Config::ParseFromDirectory(const std::string& dir) {
-  auto cb = [this] (rapidjson::Document document) {
+  auto cb = [this](rapidjson::Document document) {
     ParseDocument(std::move(document));
   };
   json_parser_.ParseFromDirectory(dir, cb);
@@ -42,13 +42,9 @@ bool Config::ParseFromString(const std::string& data,
   return !json_parser_.HasError();
 }
 
-bool Config::HasError() const {
-  return json_parser_.HasError();
-}
+bool Config::HasError() const { return json_parser_.HasError(); }
 
-std::string Config::error_str() const {
-  return json_parser_.error_str();
-}
+std::string Config::error_str() const { return json_parser_.error_str(); }
 
 void Config::ParseDocument(rapidjson::Document document) {
   if (!document.IsObject()) {
@@ -102,8 +98,8 @@ bool Config::ParseServiceMap(const rapidjson::Document& document,
   if (it != document.MemberEnd()) {
     const auto& value = it->value;
     if (!value.IsObject()) {
-      json_parser_.ReportError(StringPrintf("'%s' must be an object.",
-                                            key.c_str()));
+      json_parser_.ReportError(
+          StringPrintf("'%s' must be an object.", key.c_str()));
       return false;
     }
     for (const auto& reg : value.GetObject()) {
@@ -148,8 +144,7 @@ fuchsia::sys::LaunchInfoPtr Config::GetLaunchInfo(
   }
 
   json_parser_.ReportError(StringPrintf(
-      "'%s' must be a string or a non-empty array of strings.",
-      name.c_str()));
+      "'%s' must be a string or a non-empty array of strings.", name.c_str()));
   return nullptr;
 }
 

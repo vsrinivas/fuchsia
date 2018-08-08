@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
-  
+
   sysmgr::Config config;
   if (command_line.HasOption("config")) {
     std::string config_data;
