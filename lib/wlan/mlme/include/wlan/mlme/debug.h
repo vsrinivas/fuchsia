@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/protocol/mac.h>
@@ -33,11 +34,14 @@ std::string Describe(const AmsduSubframe& s);
 std::string DescribeSuppressed(const Packet& p);
 
 std::string DescribeArray(const uint8_t arr[], size_t size);
+std::string DescribeVector(const std::vector<uint8_t> vec);
 std::string DescribeHtCaps(const wlan_ht_caps& ht_caps);
 
 std::string DescribeSupportedChannels(const wlan_chan_list& wl);
 std::string DescribeWlanBandInfo(const wlan_band_info& bi);
 std::string DescribeWlanMacInfo(const wlanmac_info& wi);
+std::string Describe(const CapabilityInfo& cap);
+std::string Describe(const AssocContext& assoc_ctx);
 
 }  // namespace debug
 }  // namespace wlan

@@ -338,6 +338,15 @@ std::string DescribeArray(const uint8_t arr[], size_t size) {
     return std::string(buf);
 }
 
+std::string DescribeVector(const std::vector<uint8_t> vec) {
+    char buf[1024];
+    size_t offset = 0;
+    for (auto const& v : vec) {
+        BUFFER("%02x", v);
+    }
+    return std::string(buf);
+}
+
 std::string DescribeHtCaps(const wlan_ht_caps& ht_caps) {
     char buf[1024];
     size_t offset = 0;
@@ -384,6 +393,39 @@ std::string DescribeWlanMacInfo(const wlanmac_info& wi) {
     for (uint8_t i = 0; i < ii.num_bands; i++) {
         BUFFER("[band %u] %s", i, DescribeWlanBandInfo(ii.bands[i]).c_str());
     }
+    return std::string(buf);
+}
+
+std::string Describe(const CapabilityInfo& cap) {
+    char buf[512];
+    size_t offset = 0;
+    BUFFER("ess:%u", cap.ess());
+    BUFFER("ibss:%u", cap.ibss());
+    BUFFER("cf_pollable:%u", cap.cf_pollable());
+    BUFFER("cf_poll_req:%u", cap.cf_poll_req());
+    BUFFER("privacy:%u", cap.privacy());
+    BUFFER("short_preamble:%u", cap.short_preamble());
+    BUFFER("spectrum_mgmt:%u", cap.spectrum_mgmt());
+    BUFFER("qos:%u", cap.qos());
+    BUFFER("short_slot_time:%u", cap.short_slot_time());
+    BUFFER("apsd:%u", cap.apsd());
+    BUFFER("radio_msmt:%u", cap.radio_msmt());
+    BUFFER("delayed_block_ack:%u", cap.delayed_block_ack());
+    BUFFER("immediate_block_ack:%u", cap.immediate_block_ack());
+    return std::string(buf);
+}
+
+std::string Describe(const AssocContext& assoc_ctx) {
+    char buf[2048];
+    size_t offset = 0;
+    BUFFER("bssid:[%s]", assoc_ctx.bssid.ToString().c_str());
+    BUFFER("aid:%u", assoc_ctx.aid);
+    BUFFER("cap:[%s]", Describe(assoc_ctx.cap).c_str());
+    BUFFER("supp_rates:[%s]", DescribeVector(assoc_ctx.supported_rates).c_str());
+    BUFFER("ext_supp_rates:[%s]", DescribeVector(assoc_ctx.ext_supported_rates).c_str());
+
+    // TODO(NET-1278): Show HT / VHT capabilities
+
     return std::string(buf);
 }
 
