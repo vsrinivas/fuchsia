@@ -195,10 +195,12 @@ void usage(void) {
 int main(int argc, char** argv) {
   if (argc > 1) {
     if (argv[1][0] == 'c') {  // client
-      if (argc > 4) return client(argv[2], argv[3], argv[4]);
+      if (argc > 4)
+        return client(argv[2], argv[3], argv[4]);
     }
     if (argv[1][0] == 's') {  // server
-      if (argc > 2) return server(argv[2]);
+      if (argc > 2)
+        return server(argv[2]);
     }
   }
   usage();

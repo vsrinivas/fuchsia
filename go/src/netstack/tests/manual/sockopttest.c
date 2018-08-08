@@ -176,7 +176,8 @@ int main(int argc, char** argv) {
   for (ptr = sock_opts_table; ptr->opt_str != NULL; ptr++) {
     int fd = -1;
     int sock_type = SOCK_STREAM;
-    if (ptr->opt_name == IP_MULTICAST_TTL) sock_type = SOCK_DGRAM;
+    if (ptr->opt_name == IP_MULTICAST_TTL)
+      sock_type = SOCK_DGRAM;
     switch (ptr->opt_level) {
       case SOL_SOCKET:
       case IPPROTO_IP:

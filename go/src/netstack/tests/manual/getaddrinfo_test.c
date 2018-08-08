@@ -19,20 +19,20 @@ const char* sa_to_string(const struct sockaddr* sa, char* buf, size_t buflen) {
   char addrstr[INET6_ADDRSTRLEN];
   if (sa->sa_family == AF_INET) {
     struct sockaddr_in* sin = (struct sockaddr_in*)sa;
-    size_t n = snprintf(buf, buflen,
-                        "inet4: %s (port %d)\n",
-                        inet_ntop(AF_INET, &sin->sin_addr, addrstr, sizeof(addrstr)),
-                        ntohs(sin->sin_port));
+    size_t n =
+        snprintf(buf, buflen, "inet4: %s (port %d)\n",
+                 inet_ntop(AF_INET, &sin->sin_addr, addrstr, sizeof(addrstr)),
+                 ntohs(sin->sin_port));
     if (n >= buflen) {
       return "<error: buffer overflow>";
     }
     return buf;
   } else if (sa->sa_family == AF_INET6) {
     struct sockaddr_in6* sin6 = (struct sockaddr_in6*)sa;
-    size_t n = snprintf(buf, buflen,
-                        "inet6: %s (port %d)\n",
-                        inet_ntop(AF_INET6, &sin6->sin6_addr, addrstr, sizeof(addrstr)),
-                        ntohs(sin6->sin6_port));
+    size_t n = snprintf(
+        buf, buflen, "inet6: %s (port %d)\n",
+        inet_ntop(AF_INET6, &sin6->sin6_addr, addrstr, sizeof(addrstr)),
+        ntohs(sin6->sin6_port));
     if (n >= buflen) {
       return "<error: buffer overflow>";
     }
@@ -49,7 +49,7 @@ void print_ai(struct addrinfo* ai) {
          sa_to_string(ai->ai_addr, sa_string_buf, sizeof(sa_string_buf)));
 }
 
-const char *name_to_string(const char* name) {
+const char* name_to_string(const char* name) {
   if (name == NULL) {
     return "<null>";
   } else {
@@ -57,7 +57,7 @@ const char *name_to_string(const char* name) {
   }
 }
 
-const char *family_to_string(int family) {
+const char* family_to_string(int family) {
   if (family == AF_UNSPEC) {
   } else if (family == AF_INET) {
     return "inet4";
@@ -67,35 +67,35 @@ const char *family_to_string(int family) {
   return "unknown";
 }
 
-const char *eai_to_string(int eai) {
+const char* eai_to_string(int eai) {
   switch (eai) {
-  case EAI_BADFLAGS:
-    return "EAI_BADFLAGS";
-  case EAI_NONAME:
-    return "EAI_NONAME";
-  case EAI_AGAIN:
-    return "EAI_AGAIN";
-  case EAI_FAIL:
-    return "EAI_FAIL";
-  case EAI_FAMILY:
-    return "EAI_FAMILY";
-  case EAI_SOCKTYPE:
-    return "EAI_SOCKTYPE";
-  case EAI_SERVICE:
-    return "EAI_SERVICE";
-  case EAI_MEMORY:
-    return "EAI_MEMORY";
-  case EAI_SYSTEM:
-    return "EAI_SYSTEM";
-  case EAI_OVERFLOW:
-    return "EAI_OVERFLOW";
+    case EAI_BADFLAGS:
+      return "EAI_BADFLAGS";
+    case EAI_NONAME:
+      return "EAI_NONAME";
+    case EAI_AGAIN:
+      return "EAI_AGAIN";
+    case EAI_FAIL:
+      return "EAI_FAIL";
+    case EAI_FAMILY:
+      return "EAI_FAMILY";
+    case EAI_SOCKTYPE:
+      return "EAI_SOCKTYPE";
+    case EAI_SERVICE:
+      return "EAI_SERVICE";
+    case EAI_MEMORY:
+      return "EAI_MEMORY";
+    case EAI_SYSTEM:
+      return "EAI_SYSTEM";
+    case EAI_OVERFLOW:
+      return "EAI_OVERFLOW";
   }
   return "<unknown error>";
 }
 
 int getaddrinfo_test(const char* node, const char* service, int family) {
-  printf("looking up node=%s service=%s family=%s...\n",
-         name_to_string(node), name_to_string(service), family_to_string(family));
+  printf("looking up node=%s service=%s family=%s...\n", name_to_string(node),
+         name_to_string(service), family_to_string(family));
 
   struct addrinfo hints;
   struct addrinfo *result, *rp;
@@ -108,7 +108,8 @@ int getaddrinfo_test(const char* node, const char* service, int family) {
   eai = getaddrinfo(node, service, &hints, &result);
   if (eai != 0) {
     if (eai == EAI_SYSTEM) {
-      printf("getaddrinfo failed (%s, errno = %d)\n", eai_to_string(eai), errno);
+      printf("getaddrinfo failed (%s, errno = %d)\n", eai_to_string(eai),
+             errno);
     } else {
       printf("getaddrinfo failed (%s)\n", eai_to_string(eai));
     }
@@ -130,32 +131,32 @@ void usage() {
 }
 
 int main(int argc, char** argv) {
-  char *node = NULL;
-  char *service = NULL;
+  char* node = NULL;
+  char* service = NULL;
   int family = AF_UNSPEC;
 
   int opt;
   while ((opt = getopt(argc, argv, "n:s:f:")) != -1) {
     switch (opt) {
-    case 'n':
-      node = optarg;
-      break;
-    case 's':
-      service = optarg;
-      break;
-    case 'f':
-      if (strcmp(optarg, "inet4") == 0) {
-        family = AF_INET;
-      } else if (strcmp(optarg, "inet6") == 0) {
-        family = AF_INET6;
-      } else {
+      case 'n':
+        node = optarg;
+        break;
+      case 's':
+        service = optarg;
+        break;
+      case 'f':
+        if (strcmp(optarg, "inet4") == 0) {
+          family = AF_INET;
+        } else if (strcmp(optarg, "inet6") == 0) {
+          family = AF_INET6;
+        } else {
+          usage();
+          return 1;
+        }
+        break;
+      default:
         usage();
         return 1;
-      }
-      break;
-    default:
-      usage();
-      return 1;
     }
   }
 

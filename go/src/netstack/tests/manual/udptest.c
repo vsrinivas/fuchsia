@@ -165,11 +165,14 @@ int main(int argc, char** argv) {
   if (argc > 1) {
     switch (argv[1][0]) {
       case 'c':  // client sendto
-        if (argc == 5) return client(argv[2], argv[3], argv[4], false);
+        if (argc == 5)
+          return client(argv[2], argv[3], argv[4], false);
       case 'C':  // client connect & write
-        if (argc == 5) return client(argv[2], argv[3], argv[4], true);
+        if (argc == 5)
+          return client(argv[2], argv[3], argv[4], true);
       case 's':  // server
-        if (argc == 3) return server(argv[2]);
+        if (argc == 3)
+          return server(argv[2]);
     }
   }
   usage();

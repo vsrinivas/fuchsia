@@ -139,7 +139,8 @@ int server(const char* service) {
 
 end:
   for (nfds_t i = 0; i < nfds; i++) {
-    if (events[i].fd >= 0) close(events[i].fd);
+    if (events[i].fd >= 0)
+      close(events[i].fd);
   }
 
   return ret;

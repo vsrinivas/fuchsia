@@ -900,7 +900,7 @@ TEST(NetInvalidArgTest, Socket) {
   // the error (errno should not be EIO).
   int s = socket(PF_NETLINK, SOCK_RAW, 0);
   ASSERT_EQ(-1, s);
-  ASSERT_EQ(EOPNOTSUPP, errno); // TODO: should be EPFNOSUPPORT
+  ASSERT_EQ(EOPNOTSUPP, errno);  // TODO: should be EPFNOSUPPORT
 
   // Check if we can still make a successful call (i.e. the service channel
   // is still open).

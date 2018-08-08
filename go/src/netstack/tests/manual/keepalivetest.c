@@ -45,7 +45,8 @@ int client(const char* address, const char* service) {
       printf("socket failed (errno = %d)\n", errno);
       continue;
     }
-    if (connect(s, rp->ai_addr, rp->ai_addrlen) != -1) break;
+    if (connect(s, rp->ai_addr, rp->ai_addrlen) != -1)
+      break;
     printf("connect failed (errno = %d)\n", errno);
     close(s);
   }
@@ -98,7 +99,8 @@ int client(const char* address, const char* service) {
 void usage(void) { printf("       keepalivetest address port\n"); }
 
 int main(int argc, char** argv) {
-  if (argc > 2) return client(argv[1], argv[2]);
+  if (argc > 2)
+    return client(argv[1], argv[2]);
   usage();
   return -1;
 }

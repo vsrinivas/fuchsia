@@ -133,8 +133,8 @@ int server(const char* if_address, const char* mc_address,
     if (!inet_aton(if_address, &(mc_reqn.imr_address))) {
       // If if_address isn't an IP address then try parsing it as an integer and
       // pass it as NIC address in struct mc_reqn.
-        printf("Invalid if_address: %s\n", if_address);
-        return -1;
+      printf("Invalid if_address: %s\n", if_address);
+      return -1;
     }
   }
 

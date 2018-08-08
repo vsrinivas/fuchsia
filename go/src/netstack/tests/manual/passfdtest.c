@@ -75,26 +75,26 @@ static int server(const char* service) {
   const char* argv[] = {kProgram, "ECHO", NULL};
   fdio_spawn_action_t actions[] = {
 #ifdef CAN_CLONE_SOCKETS
-    {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-      .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
-    {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-      .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+       .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+       .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}},
 #else
-    {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-      .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
-    {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-      .fd = {.local_fd = STDOUT_FILENO, .target_fd = STDOUT_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+       .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+       .fd = {.local_fd = STDOUT_FILENO, .target_fd = STDOUT_FILENO}},
 #endif
-    {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-      .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+       .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
   };
   size_t actions_count = sizeof(actions) / sizeof(actions[0]);
 
   zx_handle_t proc = ZX_HANDLE_INVALID;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID,
-      FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, kProgram, argv, NULL,
-      actions_count, actions, &proc, err_msg);
+  zx_status_t status = fdio_spawn_etc(
+      ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,
+      kProgram, argv, NULL, actions_count, actions, &proc, err_msg);
 
   if (status < 0) {
     fprintf(stderr, "error from fdio_spawn_etc: %s\n", err_msg);
