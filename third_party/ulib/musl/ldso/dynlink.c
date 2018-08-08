@@ -130,7 +130,7 @@ static jmp_buf* rtld_fail;
 static pthread_rwlock_t lock;
 static struct r_debug debug;
 static struct tls_module* tls_tail;
-static size_t tls_cnt, tls_offset, tls_align = MIN_TLS_ALIGN;
+static size_t tls_cnt, tls_offset = 16, tls_align = MIN_TLS_ALIGN;
 static size_t static_tls_cnt;
 static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
 
@@ -533,7 +533,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
             break;
 #ifdef TLS_ABOVE_TP
         case REL_TPOFF:
-            *reloc_addr = tls_val + def.dso->tls.offset + TPOFF_K + addend;
+            *reloc_addr = tls_val + def.dso->tls.offset + addend;
             break;
 #else
         case REL_TPOFF:
@@ -560,7 +560,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
             } else {
                 reloc_addr[0] = (size_t)__tlsdesc_static;
 #ifdef TLS_ABOVE_TP
-                reloc_addr[1] = tls_val + def.dso->tls.offset + TPOFF_K + addend;
+                reloc_addr[1] = tls_val + def.dso->tls.offset + addend;
 #else
                 reloc_addr[1] = tls_val - def.dso->tls.offset + addend;
 #endif
@@ -1273,10 +1273,8 @@ __NO_SAFESTACK static void do_tls_layout(struct dso* p,
     p->tls_id = ++tls_cnt;
     tls_align = MAXP2(tls_align, p->tls.align);
 #ifdef TLS_ABOVE_TP
-    p->tls.offset =
-        tls_offset +
-        ((tls_align - 1) & -(tls_offset + (uintptr_t)p->tls.image));
-    tls_offset += p->tls.size;
+    p->tls.offset = (tls_offset + p->tls.align - 1) & -p->tls.align;
+    tls_offset = p->tls.offset + p->tls.size;
 #else
     tls_offset += p->tls.size + p->tls.align - 1;
     tls_offset -= (tls_offset + (uintptr_t)p->tls.image) & (p->tls.align - 1);
@@ -1789,9 +1787,8 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
         libc.tls_head = tls_tail = &app.tls;
         app.tls_id = tls_cnt = 1;
 #ifdef TLS_ABOVE_TP
-        app.tls.offset = 0;
-        tls_offset =
-            app.tls.size + (-((uintptr_t)app.tls.image + app.tls.size) & (app.tls.align - 1));
+        app.tls.offset = (tls_offset + app.tls.align - 1) & -app.tls.align;
+        tls_offset = app.tls.offset + app.tls.size;
 #else
         tls_offset = app.tls.offset =
             app.tls.size + (-((uintptr_t)app.tls.image + app.tls.size) & (app.tls.align - 1));

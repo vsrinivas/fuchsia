@@ -43,12 +43,35 @@ __NO_SAFESTACK static thrd_t copy_tls(unsigned char* mem, size_t alloc) {
     void** dtv;
 
 #ifdef TLS_ABOVE_TP
-    dtv = (void**)(mem + libc.tls_size) - (libc.tls_cnt + 1);
+    // *-----------------------------------------------------------------------*
+    // | pthread | tcb | X | tls_1 | ... | tlsN | ... | tls_cnt | dtv[1] | ... |
+    // *-----------------------------------------------------------------------*
+    // ^         ^         ^             ^            ^
+    // td        tp      dtv[1]       dtv[n+1]       dtv
+    //
+    // Note: The TCB is actually the last member of pthread.
+    // See: "Addenda to, and Errata in, the ABI for the ARM Architecture"
 
-    mem += -((uintptr_t)mem + sizeof(struct pthread)) & (libc.tls_align - 1);
-    td = (thrd_t)mem;
-    mem += sizeof(struct pthread);
+    dtv = (void**)(mem + libc.tls_size) - (libc.tls_cnt + 1);
+    // We need to make sure that the thread pointer is maximally aligned so
+    // that tp + dtv[N] is aligned to align_N no matter what N is. So we need
+    // 'mem' to be such that if mem == td then td->head is maximially aligned.
+    // To do this we need take &td->head (e.g. mem + offset of head) and align
+    // it then subtract out the offset of ->head to ensure that &td->head is
+    // aligned.
+    uintptr_t tp = (uintptr_t)mem + PTHREAD_TP_OFFSET;
+    tp = (tp + libc.tls_align - 1) & -libc.tls_align;
+    td = (thrd_t)(tp - PTHREAD_TP_OFFSET);
+    // Now mem should be the new thread pointer.
+    mem = (unsigned char*)tp;
 #else
+    // *-----------------------------------------------------------------------*
+    // | tls_cnt | dtv[1] | ... | tls_n | ... | tls_1 | tcb | pthread | unused |
+    // *-----------------------------------------------------------------------*
+    // ^                        ^             ^       ^
+    // dtv                   dtv[n+1]       dtv[1]  tp/td
+    //
+    // Note: The TCB is actually the first member of pthread.
     dtv = (void**)mem;
 
     mem += alloc - sizeof(struct pthread);
