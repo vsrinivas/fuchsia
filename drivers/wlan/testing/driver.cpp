@@ -52,9 +52,7 @@ extern "C" zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
 }
 
 extern "C" void wlanphy_test_release(void* ctx) {
-    if (loop != nullptr) {
-        loop->Shutdown();
-    }
+    if (loop != nullptr) { loop->Shutdown(); }
     delete loop;
     loop = nullptr;
 }

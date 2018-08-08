@@ -86,7 +86,9 @@ wlan_device::PhyInfo get_info() {
     wlan_device::PhyInfo info;
 
     // The "local" bit is set to prevent collisions with globally-administered MAC addresses.
-    static const uint8_t kTestMacAddr[] = { 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, };
+    static const uint8_t kTestMacAddr[] = {
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+    };
     memcpy(info.hw_mac_address.mutable_data(), kTestMacAddr, info.hw_mac_address.count());
 
     info.supported_phys.resize(0);
@@ -119,7 +121,7 @@ wlan_device::PhyInfo get_info() {
     band24.basic_rates.reset(std::vector<uint8_t>({2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108}));
     band24.supported_channels.base_freq = 2417;
     band24.supported_channels.channels.reset(
-            std::vector<uint8_t>({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}));
+        std::vector<uint8_t>({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}));
 
     info.bands->push_back(std::move(band24));
 
@@ -134,12 +136,10 @@ wlan_device::PhyInfo get_info() {
     band5mcs[12] = 0x10;
     band5.basic_rates.reset(std::vector<uint8_t>({12, 18, 24, 36, 48, 72, 96, 108}));
     band5.supported_channels.base_freq = 5000;
-    band5.supported_channels.channels.reset(
-            std::vector<uint8_t>(
-                {36, 38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
-                60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,
-                118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140,
-                149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196}));
+    band5.supported_channels.channels.reset(std::vector<uint8_t>(
+        {36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,  60,  62,  64,  100,
+         102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132,
+         134, 136, 138, 140, 149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196}));
 
     info.bands->push_back(std::move(band5));
     return info;
@@ -153,8 +153,7 @@ void PhyDevice::Query(QueryCallback callback) {
     callback(std::move(resp));
 }
 
-void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req,
-                            CreateIfaceCallback callback) {
+void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
     zxlogf(INFO, "CreateRequest: role=%u\n", req.role);
     std::lock_guard<std::mutex> guard(lock_);
     wlan_device::CreateIfaceResponse resp;
@@ -215,8 +214,7 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req,
     callback(std::move(resp));
 }
 
-void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req,
-                             DestroyIfaceCallback callback) {
+void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCallback callback) {
     zxlogf(INFO, "DestroyRequest: id=%u\n", req.id);
 
     wlan_device::DestroyIfaceResponse resp;
@@ -239,9 +237,7 @@ void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req,
 }
 
 zx_status_t PhyDevice::Connect(const void* buf, size_t len) {
-    if (buf == nullptr || len < sizeof(zx_handle_t)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+    if (buf == nullptr || len < sizeof(zx_handle_t)) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
     zx_handle_t hnd = *reinterpret_cast<const zx_handle_t*>(buf);
     zx::channel chan(hnd);

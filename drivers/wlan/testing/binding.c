@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 
 #include <zircon/types.h>
 
@@ -19,6 +19,7 @@ static zx_driver_ops_t wlanphy_test_driver_ops = {
     .release = wlanphy_test_release,
 };
 
+// clang-format: off
 ZIRCON_DRIVER_BEGIN(wlanphy_test, wlanphy_test_driver_ops, "fuchsia", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
