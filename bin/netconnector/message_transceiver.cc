@@ -354,9 +354,10 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      async::PostTask(dispatcher_, [this, service_name = ParsePayloadString()]() {
-        OnServiceNameReceived(service_name);
-      });
+      async::PostTask(dispatcher_,
+                      [this, service_name = ParsePayloadString()]() {
+                        OnServiceNameReceived(service_name);
+                      });
       break;
 
     case PacketType::kMessage:
