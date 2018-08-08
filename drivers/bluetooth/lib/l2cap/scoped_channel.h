@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SCOPED_CHANNEL_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SCOPED_CHANNEL_H_
 
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "lib/fxl/macros.h"
@@ -38,3 +39,5 @@ class ScopedChannel final {
 
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SCOPED_CHANNEL_H_
