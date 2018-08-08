@@ -85,10 +85,11 @@ dependencies on FBL, FXL, FSL, or other "base" libraries.
 
 Client libraries that need to perform asynchronous operations should depend on
 `libasync.a` and `libasync-default.so`. However, these libraries should not
-assume the client is using any specific implementation of `async_t*`. For
-example, these libraries should not assume the `async_t*` is actually
-implemented by `libasync-loop.a`. Libraries that require `async_get_default`
-to be populated should state that requirement in their documentation.
+assume the client is using any specific implementation of `async_dispatcher_t*`.
+For example, these libraries should not assume the `async_dispatcher_t*` is
+actually implemented by `libasync-loop.a`. Libraries that require
+`async_get_default_dispatcher` to be populated should state that requirement in
+their documentation.
 
 Precompiled libraries can have more extensive dependencies if those dependencies
 are hidden from their client. For example, a precompiled shared library should
