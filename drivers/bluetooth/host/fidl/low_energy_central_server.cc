@@ -20,8 +20,7 @@ namespace bthost {
 
 LowEnergyCentralServer::LowEnergyCentralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<Central> request,
-    fbl::RefPtr<GattHost> gatt_host)
+    fidl::InterfaceRequest<Central> request, fbl::RefPtr<GattHost> gatt_host)
     : AdapterServerBase(adapter, this, std::move(request)),
       gatt_host_(gatt_host),
       requesting_scan_(false),
@@ -40,9 +39,8 @@ void LowEnergyCentralServer::GetPeripherals(
   FXL_NOTIMPLEMENTED();
 }
 
-void LowEnergyCentralServer::GetPeripheral(
-    ::fidl::StringPtr identifier,
-    GetPeripheralCallback callback) {
+void LowEnergyCentralServer::GetPeripheral(::fidl::StringPtr identifier,
+                                           GetPeripheralCallback callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
@@ -207,8 +205,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
 }
 
 void LowEnergyCentralServer::DisconnectPeripheral(
-    ::fidl::StringPtr identifier,
-    DisconnectPeripheralCallback callback) {
+    ::fidl::StringPtr identifier, DisconnectPeripheralCallback callback) {
   auto iter = connections_.find(identifier.get());
   if (iter == connections_.end()) {
     auto msg = fxl::StringPrintf("Client not connected to device (id: %s)",
@@ -235,7 +232,6 @@ void LowEnergyCentralServer::DisconnectPeripheral(
 
 void LowEnergyCentralServer::OnScanResult(
     const ::btlib::gap::RemoteDevice& remote_device) {
-
   auto fidl_device = fidl_helpers::NewLERemoteDevice(remote_device);
   if (!fidl_device) {
     FXL_VLOG(1) << "Ignoring malformed scan result";

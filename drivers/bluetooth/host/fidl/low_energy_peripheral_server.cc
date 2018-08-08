@@ -43,8 +43,8 @@ std::string MessageFromStatus(btlib::hci::Status status) {
 LowEnergyPeripheralServer::InstanceData::InstanceData(
     const std::string& id, fxl::WeakPtr<LowEnergyPeripheralServer> owner)
     : id_(id), owner_(owner) {
-      FXL_DCHECK(owner_);
-    }
+  FXL_DCHECK(owner_);
+}
 
 void LowEnergyPeripheralServer::InstanceData::RetainConnection(
     ConnectionRefPtr conn_ref, RemoteDevice peer) {
@@ -59,7 +59,8 @@ void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
   FXL_DCHECK(connectable());
   FXL_DCHECK(conn_ref_);
 
-  owner_->binding()->events().OnCentralDisconnected(conn_ref_->device_identifier());
+  owner_->binding()->events().OnCentralDisconnected(
+      conn_ref_->device_identifier());
   conn_ref_ = nullptr;
 }
 
@@ -79,11 +80,8 @@ LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
 }
 
 void LowEnergyPeripheralServer::StartAdvertising(
-    AdvertisingData advertising_data,
-    AdvertisingDataPtr scan_result,
-    uint32_t interval,
-    bool anonymous,
-    StartAdvertisingCallback callback) {
+    AdvertisingData advertising_data, AdvertisingDataPtr scan_result,
+    uint32_t interval, bool anonymous, StartAdvertisingCallback callback) {
   auto* advertising_manager = adapter()->le_advertising_manager();
   FXL_DCHECK(advertising_manager);
 
@@ -100,7 +98,8 @@ void LowEnergyPeripheralServer::StartAdvertising(
   // gap::LowEnergyConnectionRef should be performed by a gap library object
   // and not in this layer (see NET-355).
   connect_cb = [self](auto adv_id, auto link) {
-    if (self) self->OnConnected(std::move(adv_id), std::move(link));
+    if (self)
+      self->OnConnected(std::move(adv_id), std::move(link));
   };
   auto advertising_status_cb = [self, callback = std::move(callback)](
                                    std::string ad_id,
@@ -115,18 +114,18 @@ void LowEnergyPeripheralServer::StartAdvertising(
       return;
     }
 
-    self->instances_[ad_id] = InstanceData(ad_id, self->weak_ptr_factory_.GetWeakPtr());
+    self->instances_[ad_id] =
+        InstanceData(ad_id, self->weak_ptr_factory_.GetWeakPtr());
     callback(Status(), ad_id);
   };
 
-  advertising_manager->StartAdvertising(ad_data, scan_data, std::move(connect_cb),
-                                        interval, anonymous,
-                                        std::move(advertising_status_cb));
+  advertising_manager->StartAdvertising(
+      ad_data, scan_data, std::move(connect_cb), interval, anonymous,
+      std::move(advertising_status_cb));
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(
-    ::fidl::StringPtr id,
-    StopAdvertisingCallback callback) {
+    ::fidl::StringPtr id, StopAdvertisingCallback callback) {
   if (StopAdvertisingInternal(id)) {
     callback(Status());
   } else {

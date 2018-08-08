@@ -141,11 +141,8 @@ void HostDevice::Release() {
   delete this;
 }
 
-zx_status_t HostDevice::Ioctl(uint32_t op,
-                              const void* in_buf,
-                              size_t in_len,
-                              void* out_buf,
-                              size_t out_len,
+zx_status_t HostDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                              void* out_buf, size_t out_len,
                               size_t* out_actual) {
   FXL_VLOG(1) << "bt-host: ioctl";
 

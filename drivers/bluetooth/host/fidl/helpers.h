@@ -94,6 +94,8 @@ bool PopulateDiscoveryFilter(
 
 // fxl::TypeConverter specializations for common::ByteBuffer and friends.
 template <>
-struct fxl::TypeConverter<fidl::VectorPtr<uint8_t>, ::btlib::common::ByteBuffer> {
-  static fidl::VectorPtr<uint8_t> Convert(const ::btlib::common::ByteBuffer& from);
+struct fxl::TypeConverter<fidl::VectorPtr<uint8_t>,
+                          ::btlib::common::ByteBuffer> {
+  static fidl::VectorPtr<uint8_t> Convert(
+      const ::btlib::common::ByteBuffer& from);
 };

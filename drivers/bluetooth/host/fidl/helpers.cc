@@ -281,8 +281,8 @@ bool PopulateDiscoveryFilter(const ble::ScanFilter& fidl_filter,
 
 // static
 fidl::VectorPtr<uint8_t>
-fxl::TypeConverter<fidl::VectorPtr<uint8_t>, ::btlib::common::ByteBuffer>::Convert(
-    const ::btlib::common::ByteBuffer& from) {
+fxl::TypeConverter<fidl::VectorPtr<uint8_t>, ::btlib::common::ByteBuffer>::
+    Convert(const ::btlib::common::ByteBuffer& from) {
   auto to = fidl::VectorPtr<uint8_t>::New(from.size());
   ::btlib::common::MutableBufferView view(to->data(), to->size());
   view.Write(from);

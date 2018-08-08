@@ -35,14 +35,12 @@ class GattRemoteServiceServer
                           ReadCharacteristicCallback callback) override;
   void ReadLongCharacteristic(uint64_t id, uint16_t offset, uint16_t max_bytes,
                               ReadLongCharacteristicCallback callback) override;
-  void WriteCharacteristic(uint64_t characteristic_id,
-                           uint16_t offset,
+  void WriteCharacteristic(uint64_t characteristic_id, uint16_t offset,
                            ::fidl::VectorPtr<uint8_t> value,
                            WriteCharacteristicCallback callback) override;
   void WriteCharacteristicWithoutResponse(
       uint64_t id, ::fidl::VectorPtr<uint8_t> value) override;
-  void NotifyCharacteristic(uint64_t id,
-                            bool enable,
+  void NotifyCharacteristic(uint64_t id, bool enable,
                             NotifyCharacteristicCallback callback) override;
 
   // The remote GATT service that backs this service.

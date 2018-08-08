@@ -22,6 +22,7 @@
 
 namespace bthost {
 
+using btlib::sm::IOCapability;
 using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::ErrorCode;
 using fuchsia::bluetooth::Status;
@@ -30,7 +31,6 @@ using fuchsia::bluetooth::control::BondingData;
 using fuchsia::bluetooth::control::Key;
 using fuchsia::bluetooth::control::LEData;
 using fuchsia::bluetooth::control::LTK;
-using btlib::sm::IOCapability;
 
 HostServer::HostServer(zx::channel channel,
                        fxl::WeakPtr<::btlib::gap::Adapter> adapter,

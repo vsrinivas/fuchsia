@@ -46,15 +46,12 @@ class GattServerServer
       PublishServiceCallback callback) override;
 
   // Called when a remote device issues a read request to one of our services.
-  void OnReadRequest(::btlib::gatt::IdType service_id,
-                     ::btlib::gatt::IdType id,
-                     uint16_t offset,
-                     ::btlib::gatt::ReadResponder responder);
+  void OnReadRequest(::btlib::gatt::IdType service_id, ::btlib::gatt::IdType id,
+                     uint16_t offset, ::btlib::gatt::ReadResponder responder);
 
   // Called when a remote device issues a write request to one of our services.
   void OnWriteRequest(::btlib::gatt::IdType service_id,
-                      ::btlib::gatt::IdType id,
-                      uint16_t offset,
+                      ::btlib::gatt::IdType id, uint16_t offset,
                       const ::btlib::common::ByteBuffer& value,
                       ::btlib::gatt::WriteResponder responder);
 
@@ -62,8 +59,7 @@ class GattServerServer
   // a local characteristic.
   void OnCharacteristicConfig(::btlib::gatt::IdType service_id,
                               ::btlib::gatt::IdType chrc_id,
-                              const std::string& peer_id,
-                              bool notify,
+                              const std::string& peer_id, bool notify,
                               bool indicate);
 
   // The mapping between service identifiers and FIDL Service implementations.

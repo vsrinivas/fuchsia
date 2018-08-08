@@ -76,8 +76,7 @@ void GattClientServer::ListServices(
 }
 
 void GattClientServer::ConnectToService(
-    uint64_t id,
-    ::fidl::InterfaceRequest<RemoteService> service) {
+    uint64_t id, ::fidl::InterfaceRequest<RemoteService> service) {
   if (connected_services_.count(id)) {
     FXL_VLOG(1) << "GattClientServer: service already requested";
     return;

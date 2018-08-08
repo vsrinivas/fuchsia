@@ -82,8 +82,7 @@ void GattRemoteServiceServer::DiscoverCharacteristics(
 }
 
 void GattRemoteServiceServer::ReadCharacteristic(
-    uint64_t id,
-    ReadCharacteristicCallback callback) {
+    uint64_t id, ReadCharacteristicCallback callback) {
   auto cb = [callback = std::move(callback)](
                 btlib::att::Status status,
                 const btlib::common::ByteBuffer& value) {
@@ -128,9 +127,7 @@ void GattRemoteServiceServer::ReadLongCharacteristic(
 }
 
 void GattRemoteServiceServer::WriteCharacteristic(
-    uint64_t id,
-    uint16_t offset,
-    ::fidl::VectorPtr<uint8_t> value,
+    uint64_t id, uint16_t offset, ::fidl::VectorPtr<uint8_t> value,
     WriteCharacteristicCallback callback) {
   auto cb = [callback = std::move(callback)](btlib::att::Status status) {
     callback(fidl_helpers::StatusToFidl(status, ""));
@@ -147,9 +144,7 @@ void GattRemoteServiceServer::WriteCharacteristicWithoutResponse(
 }
 
 void GattRemoteServiceServer::NotifyCharacteristic(
-    uint64_t id,
-    bool enable,
-    NotifyCharacteristicCallback callback) {
+    uint64_t id, bool enable, NotifyCharacteristicCallback callback) {
   if (!enable) {
     auto iter = notify_handlers_.find(id);
     if (iter == notify_handlers_.end()) {
@@ -176,7 +171,8 @@ void GattRemoteServiceServer::NotifyCharacteristic(
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto value_cb = [self, id](const ByteBuffer& value) {
-    if (!self) return;
+    if (!self)
+      return;
 
     std::vector<uint8_t> vec(value.size());
     MutableBufferView vec_view(vec.data(), vec.size());

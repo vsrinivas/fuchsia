@@ -41,9 +41,8 @@ class LowEnergyCentralServer
       ::fidl::StringPtr identifier,
       ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> client_request,
       ConnectPeripheralCallback callback) override;
-  void DisconnectPeripheral(
-      ::fidl::StringPtr identifier,
-      DisconnectPeripheralCallback callback) override;
+  void DisconnectPeripheral(::fidl::StringPtr identifier,
+                            DisconnectPeripheralCallback callback) override;
 
   // Called by |scan_session_| when a device is discovered.
   void OnScanResult(const ::btlib::gap::RemoteDevice& remote_device);

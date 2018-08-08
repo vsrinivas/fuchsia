@@ -7,7 +7,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
-
 #include "fidl/host_server.h"
 #include "gatt_host.h"
 

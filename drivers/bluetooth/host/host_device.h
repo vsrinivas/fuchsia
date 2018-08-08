@@ -33,12 +33,8 @@ class HostDevice final {
     static_cast<HostDevice*>(ctx)->Release();
   }
 
-  static zx_status_t DdkIoctl(void* ctx,
-                              uint32_t op,
-                              const void* in_buf,
-                              size_t in_len,
-                              void* out_buf,
-                              size_t out_len,
+  static zx_status_t DdkIoctl(void* ctx, uint32_t op, const void* in_buf,
+                              size_t in_len, void* out_buf, size_t out_len,
                               size_t* out_actual) {
     return static_cast<HostDevice*>(ctx)->Ioctl(op, in_buf, in_len, out_buf,
                                                 out_len, out_actual);
@@ -46,12 +42,8 @@ class HostDevice final {
 
   void Unbind();
   void Release();
-  zx_status_t Ioctl(uint32_t op,
-                    const void* in_buf,
-                    size_t in_len,
-                    void* out_buf,
-                    size_t out_len,
-                    size_t* out_actual);
+  zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                    void* out_buf, size_t out_len, size_t* out_actual);
 
   // Called when a new remote GATT service has been found.
   void OnRemoteGattServiceAdded(
