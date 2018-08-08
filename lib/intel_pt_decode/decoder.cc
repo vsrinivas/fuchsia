@@ -29,7 +29,8 @@ namespace intel_processor_trace {
 
 static void* MmapFile(const char* file, size_t* size) {
   int fd = open(file, O_RDONLY);
-  if (fd < 0) return nullptr;
+  if (fd < 0)
+    return nullptr;
   struct stat st;
   void* map = MAP_FAILED;
   if (fstat(fd, &st) >= 0) {
@@ -49,30 +50,36 @@ std::unique_ptr<DecoderState> DecoderState::Create(
   FXL_DCHECK(config.pt_file_name != "" || config.pt_list_file_name != "");
   FXL_DCHECK(config.ktrace_file_name != "");
 
-  if (!decoder->AllocImage("ipt-dump")) return nullptr;
+  if (!decoder->AllocImage("ipt-dump"))
+    return nullptr;
 
   // Read sideband data before we read anything else.
 
-  if (!decoder->ReadKtraceFile(config.ktrace_file_name)) return nullptr;
+  if (!decoder->ReadKtraceFile(config.ktrace_file_name))
+    return nullptr;
 
   for (auto& f : config.map_file_names) {
-    if (!decoder->ReadMapFile(f)) return nullptr;
+    if (!decoder->ReadMapFile(f))
+      return nullptr;
   }
 
   for (auto& f : config.ids_file_names) {
-    if (!decoder->ReadIdsFile(f)) return nullptr;
+    if (!decoder->ReadIdsFile(f))
+      return nullptr;
   }
 
   if (config.pt_file_name != "") {
     decoder->AddPtFile(files::GetCurrentDirectory(), PtFile::kIdUnset,
                        config.pt_file_name);
   } else {
-    if (!decoder->ReadPtListFile(config.pt_list_file_name)) return nullptr;
+    if (!decoder->ReadPtListFile(config.pt_list_file_name))
+      return nullptr;
   }
 
   for (auto& f : config.elf_file_names) {
     // TODO(dje): This isn't useful without base addr, cr3, etc.
-    if (!decoder->ReadElf(f, 0, 0, 0, 0)) return nullptr;
+    if (!decoder->ReadElf(f, 0, 0, 0, 0))
+      return nullptr;
   }
 
   if (config.kernel_file_name != "") {
@@ -90,9 +97,12 @@ DecoderState::DecoderState()
 }
 
 DecoderState::~DecoderState() {
-  if (config_.begin) UnmapFile(config_.begin, config_.end - config_.begin);
-  if (decoder_) pt_insn_free_decoder(decoder_);
-  if (image_) pt_image_free(image_);
+  if (config_.begin)
+    UnmapFile(config_.begin, config_.end - config_.begin);
+  if (decoder_)
+    pt_insn_free_decoder(decoder_);
+  if (image_)
+    pt_image_free(image_);
 }
 
 Process::Process(zx_koid_t p, uint64_t c, uint64_t start, uint64_t end)
@@ -109,7 +119,8 @@ PtFile::PtFile(uint64_t i, const std::string& f) : id(i), file(f) {
 const Process* DecoderState::LookupProcessByPid(zx_koid_t pid) {
   // TODO(dje): Add O(1) lookup when there's a need.
   for (const auto& p : processes_) {
-    if (p.pid == pid) return &p;
+    if (p.pid == pid)
+      return &p;
   }
 
   return nullptr;
@@ -118,11 +129,13 @@ const Process* DecoderState::LookupProcessByPid(zx_koid_t pid) {
 const Process* DecoderState::LookupProcessByCr3(uint64_t cr3) {
   // TODO(dje): Add O(1) lookup when there's a need.
   for (const auto& p : processes_) {
-    if (p.cr3 == cr3) return &p;
+    if (p.cr3 == cr3)
+      return &p;
     // If tracing just threads, cr3 values in the trace may be this.
     // If there's only one process, we're ok.
     // TODO(dje): Tracing threads with multiple processes.
-    if (cr3 == pt_asid_no_cr3 && processes_.size() == 1) return &p;
+    if (cr3 == pt_asid_no_cr3 && processes_.size() == 1)
+      return &p;
   }
 
   return nullptr;

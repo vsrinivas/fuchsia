@@ -145,7 +145,8 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
 
   for (; getline(&line, &linelen, f) > 0; ++lineno) {
     size_t n = strlen(line);
-    if (n > 0 && line[n - 1] == '\n') line[n - 1] = '\0';
+    if (n > 0 && line[n - 1] == '\n')
+      line[n - 1] = '\0';
     FXL_VLOG(2) << fxl::StringPrintf("read %d: %s", lineno, line);
 
 #define MAX_LINE_LEN 1024
@@ -154,8 +155,10 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
       continue;
     }
 
-    if (!strcmp(line, "\n")) continue;
-    if (line[0] == '#') continue;
+    if (!strcmp(line, "\n"))
+      continue;
+    if (line[0] == '#')
+      continue;
 
     unsigned long long id;
     char path[linelen];
@@ -184,8 +187,10 @@ bool DecoderState::ReadElf(const std::string& file_name, uint64_t base,
                           map_len, &symtab, &dynsym))
     return false;
 
-  if (symtab) AddSymtab(std::move(symtab));
-  if (dynsym) AddSymtab(std::move(dynsym));
+  if (symtab)
+    AddSymtab(std::move(symtab));
+  if (dynsym)
+    AddSymtab(std::move(dynsym));
   return true;
 }
 
@@ -199,8 +204,10 @@ bool DecoderState::ReadKernelElf(const std::string& file_name, uint64_t cr3) {
                                 &dynsym))
     return false;
 
-  if (symtab) AddSymtab(std::move(symtab));
-  if (dynsym) FXL_LOG(WARNING) << "Kernel has SHT_DYNSYM symtab?";
+  if (symtab)
+    AddSymtab(std::move(symtab));
+  if (dynsym)
+    FXL_LOG(WARNING) << "Kernel has SHT_DYNSYM symtab?";
   return true;
 }
 

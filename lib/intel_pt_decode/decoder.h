@@ -143,8 +143,7 @@ class DecoderState {
                              const struct pt_asid* asid, uint64_t addr,
                              void* context);
 
-  static int ProcessKtraceRecord(debugger_utils::KtraceRecord* rec,
-                                 void* arg);
+  static int ProcessKtraceRecord(debugger_utils::KtraceRecord* rec, void* arg);
 
   bool AddProcess(zx_koid_t pid, uint64_t cr3, uint64_t start_time);
   bool MarkProcessExited(zx_koid_t pid, uint64_t end_time);
