@@ -39,8 +39,26 @@ def _flutter_app_impl(context):
     flutter_jit_runner = context.actions.declare_file("runtime")
     context.actions.write(
         output = flutter_jit_runner,
-        content = _FLUTTER_JIT_RUNNER_CONTENT)
+        content = _FLUTTER_JIT_RUNNER_CONTENT,
+    )
     mappings["meta/deprecated_runtime"] = flutter_jit_runner
+
+    # Package the assets.
+    asset_manifest_dict = {}
+    package_name_len = len(context.label.package)
+    for asset in context.files.assets:
+        # Remove the package name from the path.
+        short_path = asset.short_path[package_name_len + 1:]
+        mappings["data/%s" % short_path] = asset
+        asset_manifest_dict[short_path] = [short_path]
+
+    asset_manifest = context.actions.declare_file("AssetManifest.json")
+    context.actions.write(
+        output = asset_manifest,
+        content = "%s" % asset_manifest_dict,
+    )
+    mappings["data/AssetManifest.json"] = asset_manifest
+
     return [
         DefaultInfo(files = depset([kernel_snapshot_file, manifest_file])),
         PackageLocalInfo(mappings = mappings.items()),
@@ -49,6 +67,10 @@ def _flutter_app_impl(context):
 flutter_app = rule(
     implementation = _flutter_app_impl,
     attrs = {
+        "assets": attr.label_list(
+            doc = "The app's assets",
+            allow_files = True,
+        ),
         "main": attr.label(
             doc = "The main script file",
             mandatory = True,

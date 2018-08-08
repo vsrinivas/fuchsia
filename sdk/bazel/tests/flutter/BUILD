@@ -8,6 +8,9 @@ load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
 flutter_app(
     name = "app",
     main = "main.dart",
+    assets = [
+        "assets/logo.png",
+    ],
     package_name = "tests.flutter_app",
     deps = [
         "@vendor_flutter//:flutter",
