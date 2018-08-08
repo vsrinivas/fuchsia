@@ -11,12 +11,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <lib/fxl/files/unique_fd.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fxl/files/unique_fd.h>
 
 bool InstallConfigDirectoryIntoGlobalNamespace()
 {
-  fxl::UniqueFD fd(open("/system/data/vulkan", O_RDONLY | O_DIRECTORY));
+    fxl::UniqueFD fd(open("/system/data/vulkan", O_RDONLY | O_DIRECTORY));
     if (!fd.is_valid()) {
         fprintf(stderr, "Could not open /system/data/vulkan: %s", strerror(errno));
         return false;

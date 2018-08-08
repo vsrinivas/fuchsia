@@ -55,4 +55,4 @@ bool CommandBuffer::Initialize()
     initialized_ = true;
     return true;
 }
-}
+} // namespace magma

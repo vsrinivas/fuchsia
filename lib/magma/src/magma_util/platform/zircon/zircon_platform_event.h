@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "magma_util/macros.h"
+#include "platform_event.h"
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
-#include "platform_event.h"
 
 namespace magma {
 
@@ -23,10 +23,11 @@ public:
     {
         zx_signals_t pending = 0;
 
-        zx_status_t status = zx_event_.wait_one(
-            zx_signal(),
-            timeout_ms == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::msec(timeout_ms)),
-            &pending);
+        zx_status_t status =
+            zx_event_.wait_one(zx_signal(),
+                               timeout_ms == UINT64_MAX ? zx::time::infinite()
+                                                        : zx::deadline_after(zx::msec(timeout_ms)),
+                               &pending);
         DASSERT(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
 
         return pending & zx_signal();

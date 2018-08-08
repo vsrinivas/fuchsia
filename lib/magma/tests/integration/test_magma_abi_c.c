@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_magma_abi.h"
 #include "magma.h"
+#include "test_magma_abi.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h> // for close

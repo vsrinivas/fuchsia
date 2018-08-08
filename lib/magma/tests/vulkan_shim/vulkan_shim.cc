@@ -31,7 +31,9 @@ VkResult VulkanShimInit()
         vulkan_shim_get_proc_addr(nullptr, "vkCreateInstance"));
 
     VkInstanceCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pNext = nullptr, .flags = 0,
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
     };
 
     VkInstance instance;

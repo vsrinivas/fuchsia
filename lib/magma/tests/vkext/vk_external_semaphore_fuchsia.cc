@@ -288,7 +288,7 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary)
 
     // Export semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        VkSemaphoreGetFuchsiaHandleInfoKHR info {
+        VkSemaphoreGetFuchsiaHandleInfoKHR info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
             .pNext = nullptr,
             .semaphore = t1->vk_semaphore_[i],
@@ -325,7 +325,7 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary)
         auto& platform_semaphore_export = exported[i];
 
         // Export the imported semaphores
-        VkSemaphoreGetFuchsiaHandleInfoKHR info {
+        VkSemaphoreGetFuchsiaHandleInfoKHR info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
             .pNext = nullptr,
             .semaphore = t2->vk_semaphore_[i],

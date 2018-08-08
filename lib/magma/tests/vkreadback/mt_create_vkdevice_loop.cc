@@ -385,16 +385,19 @@ bool VkReadbackTest::Readback()
 int main(void)
 {
 #if defined(MAGMA_USE_SHIM)
-  VulkanShimInit();
+    VulkanShimInit();
 #endif
 
-  VkReadbackTest app;
+    VkReadbackTest app;
 
-  if (!app.Initialize()) return DRET_MSG(-1, "could not initialize app");
+    if (!app.Initialize())
+        return DRET_MSG(-1, "could not initialize app");
 
-  if (!app.Exec()) return DRET_MSG(-1, "Exec failed");
+    if (!app.Exec())
+        return DRET_MSG(-1, "Exec failed");
 
-  if (!app.Readback()) return DRET_MSG(-1, "Readback failed");
+    if (!app.Readback())
+        return DRET_MSG(-1, "Readback failed");
 
-  return 0;
+    return 0;
 }

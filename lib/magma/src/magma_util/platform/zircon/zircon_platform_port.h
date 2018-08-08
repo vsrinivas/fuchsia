@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zircon_platform_semaphore.h"
 #include "platform_port.h"
+#include "zircon_platform_semaphore.h"
 
 #include <lib/zx/port.h>
 #include <zircon/syscalls/port.h>

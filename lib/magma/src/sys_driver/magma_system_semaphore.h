@@ -33,4 +33,4 @@ private:
     msd_semaphore_unique_ptr_t msd_semaphore_;
 };
 
-#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_SEMAPHORE_H_
+#endif // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_SEMAPHORE_H_

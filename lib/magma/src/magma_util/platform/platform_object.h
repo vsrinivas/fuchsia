@@ -23,6 +23,6 @@ public:
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 };
 
-} // namespace
+} // namespace magma
 
 #endif // PLATFORM_OBJECT_H

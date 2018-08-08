@@ -35,6 +35,6 @@ private:
     platform_device_protocol_t pdev_;
 };
 
-} // namespace
+} // namespace magma
 
 #endif // ZIRCON_PLATFORM_DEVICE_H

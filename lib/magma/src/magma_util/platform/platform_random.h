@@ -11,6 +11,6 @@ namespace magma {
 
 // Returns |size| random bytes at the location specified by |buffer|.
 void GetSecureRandomBytes(void* buffer, size_t size);
-}
+} // namespace magma
 
 #endif // PLATFORM_RANDOM_H

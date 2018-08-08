@@ -22,9 +22,7 @@ public:
         DASSERT(handle_.get() != ZX_HANDLE_INVALID);
     }
 
-    void Signal() override {
-        zx_interrupt_destroy(handle_.get());
-    }
+    void Signal() override { zx_interrupt_destroy(handle_.get()); }
 
     bool Wait() override
     {

@@ -46,6 +46,7 @@ public:
     MsdMockCommandBuffer(MsdMockBuffer* buffer) : buffer_(buffer) {}
 
     magma::PlatformBuffer* platform_buffer() override { return buffer_->platform_buffer(); }
+
 private:
     MsdMockBuffer* buffer_;
 };

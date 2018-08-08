@@ -79,7 +79,7 @@ bool VulkanTest::Initialize()
 
 bool VulkanTest::InitVulkan()
 {
-    std::vector<const char*> enabled_extensions { VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME };
+    std::vector<const char*> enabled_extensions{VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME};
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
@@ -194,7 +194,8 @@ bool VulkanTest::Exec()
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE,
+        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                 VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,     // not used since not sharing
         .pQueueFamilyIndices = nullptr, // not used since not sharing

@@ -157,7 +157,7 @@ ExecuteImmediateCommandsOp* OpCast<ExecuteImmediateCommandsOp>(uint8_t* bytes, u
 }
 
 class ZirconPlatformConnection : public PlatformConnection,
-                                  public std::enable_shared_from_this<ZirconPlatformConnection> {
+                                 public std::enable_shared_from_this<ZirconPlatformConnection> {
 public:
     struct AsyncWait : public async_wait {
         AsyncWait(ZirconPlatformConnection* connection, zx_handle_t object, zx_signals_t trigger)
@@ -329,8 +329,8 @@ public:
     async::Loop* async_loop() { return &async_loop_; }
 
 private:
-    static void AsyncWaitHandlerStatic(async_dispatcher_t* dispatcher, async_wait_t* async_wait, zx_status_t status,
-                                       const zx_packet_signal_t* signal)
+    static void AsyncWaitHandlerStatic(async_dispatcher_t* dispatcher, async_wait_t* async_wait,
+                                       zx_status_t status, const zx_packet_signal_t* signal)
     {
         auto wait = static_cast<AsyncWait*>(async_wait);
         wait->connection->AsyncWaitHandler(dispatcher, wait, status, signal);
@@ -373,7 +373,8 @@ private:
             DLOG("async_post_task failed, status %d", status);
     }
 
-    static void AsyncTaskHandlerStatic(async_dispatcher_t* dispatcher, async_task_t* async_task, zx_status_t status)
+    static void AsyncTaskHandlerStatic(async_dispatcher_t* dispatcher, async_task_t* async_task,
+                                       zx_status_t status)
     {
         auto task = static_cast<AsyncTask*>(async_task);
         task->connection->AsyncTaskHandler(dispatcher, task, status);
@@ -783,7 +784,8 @@ public:
         zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         zx_signals_t pending = 0;
 
-        zx_status_t status = channel_.wait_one(signals, blocking ? zx::time::infinite() : zx::time(), &pending);
+        zx_status_t status =
+            channel_.wait_one(signals, blocking ? zx::time::infinite() : zx::time(), &pending);
         if (status == ZX_ERR_TIMED_OUT) {
             DLOG("got ZX_ERR_TIMED_OUT, returning true");
             return 0;

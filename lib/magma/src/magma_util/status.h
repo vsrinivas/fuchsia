@@ -22,6 +22,6 @@ public:
 private:
     magma_status_t status_;
 };
-}
+} // namespace magma
 
 #endif // STATUS_H

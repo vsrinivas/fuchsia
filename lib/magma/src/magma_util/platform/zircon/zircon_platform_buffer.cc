@@ -36,9 +36,9 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr)
     uint64_t child_addr;
     zx_status_t status =
         zx::vmar::root_self()->allocate(addr - minimum_mappable, size(),
-                                       ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                                           ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
-                                       &vmar_, &child_addr);
+                                        ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
+                                            ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
+                                        &vmar_, &child_addr);
     if (status != ZX_OK)
         return DRETF(false, "Failed to create vmar, status %d", status);
     DASSERT(child_addr == addr);
@@ -172,7 +172,7 @@ bool ZirconPlatformBuffer::SetCachePolicy(magma_cache_policy_t cache_policy)
             zx_cache_policy = ZX_CACHE_POLICY_WRITE_COMBINING;
             break;
 
-       case MAGMA_CACHE_POLICY_UNCACHED:
+        case MAGMA_CACHE_POLICY_UNCACHED:
             zx_cache_policy = ZX_CACHE_POLICY_UNCACHED;
             break;
 

@@ -129,6 +129,6 @@ private:
     std::unordered_map<uint64_t, std::shared_ptr<WaitSet>> map_;
 };
 
-} // namespace
+} // namespace magma
 
 #endif // SEMAPHORE_PORT_H

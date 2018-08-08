@@ -41,6 +41,6 @@ private:
     uint32_t cacheline_size_ = 64;
 };
 
-} // namespace
+} // namespace magma
 
 #endif // CACHE_FLUSH_H

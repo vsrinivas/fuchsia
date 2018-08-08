@@ -58,6 +58,6 @@ private:
     std::chrono::high_resolution_clock::time_point t0_;
 };
 
-} // namespace
+} // namespace magma
 
 #endif // FPS_PRINTER_H

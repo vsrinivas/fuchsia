@@ -9,4 +9,4 @@
 namespace magma {
 
 void GetSecureRandomBytes(void* buffer, size_t size) { zx_cprng_draw(buffer, size); }
-}
+} // namespace magma

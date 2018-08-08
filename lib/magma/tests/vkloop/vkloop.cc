@@ -254,7 +254,7 @@ bool VkLoopTest::InitCommandBuffer()
         VkEventCreateInfo event_info = {
             .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, .pNext = nullptr, .flags = 0};
         if ((result = vkCreateEvent(vk_device_, &event_info, nullptr, &event)) != VK_SUCCESS)
-          return DRETF(false, "vkCreateEvent failed: %d", result);
+            return DRETF(false, "vkCreateEvent failed: %d", result);
 
         vkCmdWaitEvents(vk_command_buffer_, 1, &event, VK_PIPELINE_STAGE_HOST_BIT,
                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr, 0, nullptr);

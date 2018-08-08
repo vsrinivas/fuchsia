@@ -41,4 +41,4 @@ std::string PlatformProcessHelper::GetCurrentProcessName()
     return (status == ZX_OK) ? std::string(name) : std::string();
 }
 
-} // namespace
+} // namespace magma

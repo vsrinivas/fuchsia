@@ -24,8 +24,7 @@ ZirconPlatformPciDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::Cache
     void* addr;
     uint64_t size;
     zx_handle_t handle;
-    zx_status_t status =
-        pci_map_bar(&pci(), pci_bar, cache_policy, &addr, &size, &handle);
+    zx_status_t status = pci_map_bar(&pci(), pci_bar, cache_policy, &addr, &size, &handle);
     if (status != ZX_OK)
         return DRETP(nullptr, "map_resource failed");
 
@@ -62,8 +61,7 @@ std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitia
 std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
 {
     uint32_t max_irqs;
-    zx_status_t status =
-        pci_query_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
+    zx_status_t status = pci_query_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
     if (status != ZX_OK)
         return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
 
@@ -87,9 +85,7 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
     return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
 }
 
-ZirconPlatformPciDevice::~ZirconPlatformPciDevice()
-{
-}
+ZirconPlatformPciDevice::~ZirconPlatformPciDevice() {}
 
 std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle)
 {
@@ -105,4 +101,4 @@ std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle
     return std::unique_ptr<PlatformPciDevice>(new ZirconPlatformPciDevice(zx_device, pci));
 }
 
-} // namespace
+} // namespace magma

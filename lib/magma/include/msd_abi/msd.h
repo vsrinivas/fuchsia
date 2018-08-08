@@ -111,4 +111,4 @@ void msd_semaphore_release(struct msd_semaphore_t* semaphore);
 }
 #endif
 
-#endif  // GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_
+#endif // GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_

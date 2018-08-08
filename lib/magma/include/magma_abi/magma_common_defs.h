@@ -60,9 +60,9 @@ struct magma_connection_t {
 // in an exec resource. The 32 bit word at offset in the buffer will be overwritten with
 // the GPU virtual address of the 32 bit word at target_offset in target_buffer.
 struct magma_system_relocation_entry {
-    uint32_t offset;                 // offset in the batch buffer
-    uint32_t target_resource_index;  // resource index of the buffer to be relocated
-    uint32_t target_offset;          // offset in the target buffer
+    uint32_t offset;                // offset in the batch buffer
+    uint32_t target_resource_index; // resource index of the buffer to be relocated
+    uint32_t target_offset;         // offset in the target buffer
 };
 
 // a buffer plus its associated relocations referenced by a command buffer
@@ -111,4 +111,4 @@ enum MAGMA_GPU_MAP_FLAGS {
 }
 #endif
 
-#endif  // GARNET_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_COMMON_DEFS_H_
+#endif // GARNET_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_COMMON_DEFS_H_

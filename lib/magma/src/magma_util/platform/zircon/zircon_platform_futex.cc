@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zircon/syscalls.h"
 #include "platform_futex.h"
+#include "zircon/syscalls.h"
 
 namespace magma {
 
@@ -40,4 +40,4 @@ bool PlatformFutex::Wait(uint32_t* value_ptr, int32_t current_value, uint64_t ti
     return true;
 }
 
-} // namespace
+} // namespace magma

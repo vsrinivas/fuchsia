@@ -107,6 +107,6 @@ private:
     bool initialized_ = false;
     std::vector<ExecResource> resources_;
 };
-}
+} // namespace magma
 
 #endif

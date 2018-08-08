@@ -16,4 +16,4 @@ public:
 
 } // namespace magma
 
-#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_THREAD_H_
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_THREAD_H_

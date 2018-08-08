@@ -21,4 +21,4 @@ bool PlatformObject::IdFromHandle(uint32_t handle, uint64_t* id_out)
     return true;
 }
 
-} // namespace
+} // namespace magma

@@ -101,4 +101,4 @@ private:
     bool has_render_capability_;
 };
 
-#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_
+#endif // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_

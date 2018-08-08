@@ -52,10 +52,9 @@ public:
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        while (callback_count_ < 1 &&
-               std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() -
-                                                         start)
-                       .count() < 1000)
+        while (callback_count_ < 1 && std::chrono::duration<double, std::milli>(
+                                          std::chrono::high_resolution_clock::now() - start)
+                                              .count() < 1000)
             std::this_thread::yield();
 
         DLOG("closing semaphore port");

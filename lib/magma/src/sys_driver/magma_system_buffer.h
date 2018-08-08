@@ -39,4 +39,4 @@ private:
     msd_buffer_unique_ptr_t msd_buf_;
 };
 
-#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_BUFFER_H_
+#endif // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_BUFFER_H_

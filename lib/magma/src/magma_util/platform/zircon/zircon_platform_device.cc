@@ -71,4 +71,4 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
     return std::unique_ptr<PlatformDevice>(new ZirconPlatformDevice(zx_device, pdev));
 }
 
-} // namespace
+} // namespace magma

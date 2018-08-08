@@ -36,9 +36,8 @@ ZirconPlatformBusMapper::MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t
         status = zx_bti_pin(bus_transaction_initiator_->get(),
                             ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_PERM_EXECUTE,
                             static_cast<ZirconPlatformBuffer*>(buffer)->handle(),
-                            start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
-                            page_addr.data(), page_count,
-                            pmt.reset_and_get_address());
+                            start_page_index * PAGE_SIZE, page_count * PAGE_SIZE, page_addr.data(),
+                            page_count, pmt.reset_and_get_address());
     }
     if (status != ZX_OK) {
         zx_info_kmem_stats_t kmem_stats;

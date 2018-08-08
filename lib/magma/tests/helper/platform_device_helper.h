@@ -28,7 +28,7 @@ public:
             case 0x591E: // Intel(R) HD Graphics 615 (Kabylake GT2)
             case 0x5926: // Intel(R) Iris Graphics 640 (Kabylake GT3e)
             case 0x5927: // Intel(R) Iris Graphics 650 (Kabylake GT3e)
-              return true;
+                return true;
         }
         return false;
     }
