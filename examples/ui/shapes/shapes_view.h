@@ -15,15 +15,16 @@ namespace examples {
 
 class ShapesView : public mozart::BaseView {
  public:
-  ShapesView(
-      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request);
+  ShapesView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+             fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                 view_owner_request);
 
   ~ShapesView() override;
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info) override;
 
   scenic::ShapeNode background_node_;
   scenic::ShapeNode card_node_;

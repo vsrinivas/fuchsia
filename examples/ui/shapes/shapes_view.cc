@@ -18,7 +18,8 @@ constexpr float kCircleRadius = 40.f;
 
 ShapesView::ShapesView(
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request)
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shapes"),
       background_node_(session()),
@@ -51,14 +52,14 @@ void ShapesView::OnSceneInvalidated(
   const float center_y = logical_size().height * .5f;
 
   scenic::Rectangle background_shape(session(), logical_size().width,
-                                         logical_size().height);
+                                     logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
 
   scenic::RoundedRectangle card_shape(session(), logical_size().width * .9f,
-                                          logical_size().height * .9f,
-                                          kCardCornerRadius, kCardCornerRadius,
-                                          kCardCornerRadius, kCardCornerRadius);
+                                      logical_size().height * .9f,
+                                      kCardCornerRadius, kCardCornerRadius,
+                                      kCardCornerRadius, kCardCornerRadius);
   card_node_.SetShape(card_shape);
   card_node_.SetTranslation((float[]){center_x, center_y, kCardElevation});
 
