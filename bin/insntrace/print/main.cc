@@ -92,12 +92,9 @@ static constexpr char kUsageString[] =
     " 2 - ERROR\n"
     " 3 - FATAL\n";
 
-static void Usage(FILE* f) {
-  fprintf(f, "%s", kUsageString);
-}
+static void Usage(FILE* f) { fprintf(f, "%s", kUsageString); }
 
-static bool ParseOption(const char* arg,
-                        fxl::StringView* out_name,
+static bool ParseOption(const char* arg, fxl::StringView* out_name,
                         const char** out_value) {
   size_t len = strlen(arg);
   if (len < 2u || arg[0] != '-' || arg[1] != '-')
@@ -122,9 +119,7 @@ static bool ParseOption(const char* arg,
   return true;
 }
 
-static int ParseArgv(int argc,
-                     char** argv,
-                     DecoderConfig* decoder_config,
+static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
                      CommandLineSettings* printer_config) {
   // While IWBN to use fxl::CommandLine here we need to support passing
   // multiple values for certain options (akin to -I options to the compiler).
@@ -356,8 +351,8 @@ int main(int argc, char** argv) {
 
   uint64_t total_insns;
   if (printer_config.output_format == OutputFormat::kRaw) {
-    auto printer = RawPrinter::Create(decoder.get(),
-                                      printer_config.ToRawPrinterConfig());
+    auto printer =
+        RawPrinter::Create(decoder.get(), printer_config.ToRawPrinterConfig());
     if (!printer) {
       FXL_LOG(ERROR) << "Error creating printer";
       return EXIT_FAILURE;

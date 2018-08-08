@@ -44,8 +44,7 @@ std::unique_ptr<RawPrinter> RawPrinter::Create(DecoderState* state,
   return printer;
 }
 
-RawPrinter::RawPrinter(FILE* out_file,
-                       DecoderState* state,
+RawPrinter::RawPrinter(FILE* out_file, DecoderState* state,
                        const Config& config)
     : out_file_(out_file), state_(state), config_(config) {}
 
