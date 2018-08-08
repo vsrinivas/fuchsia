@@ -43,8 +43,7 @@ constexpr fxl::StringView kExtractFileUsage =
     "extract-file --archive=<archive> --file=<path> --output=<path>";
 
 bool GetOptionValue(const fxl::CommandLine& command_line,
-                    fxl::StringView option,
-                    fxl::StringView usage,
+                    fxl::StringView option, fxl::StringView usage,
                     std::string* value) {
   if (!command_line.GetOptionValue(option, value)) {
     fprintf(stderr,
