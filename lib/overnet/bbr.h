@@ -48,6 +48,8 @@ class BBR {
     return bottleneck_bandwidth_filter_.best_estimate();
   }
 
+  TimeDelta rtt() const { return rtprop_; }
+
   // Reporter should have a Put(name, value) method.
   // ... much like CsvWriter, but we don't include that here so that we can keep
   // that code testonly

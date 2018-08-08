@@ -1,0 +1,29 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("bin") {
+  name = "onet"
+
+  deps = [
+    "//garnet/public/rust/crates/fdio",
+    "//garnet/public/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:clap",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:failure",
+  ]
+}
+
+package("onet") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "onet"
+}

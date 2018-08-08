@@ -18,12 +18,30 @@ using testing::StrictMock;
 namespace overnet {
 namespace datagram_stream_tests {
 
-class MockLink : public Link {
+class MockLink {
  public:
-  MOCK_METHOD1(ForwardMock, void(std::shared_ptr<Message>));
-  virtual void Forward(Message message) {
-    assert(!message.done.empty());
-    ForwardMock(std::make_shared<Message>(std::move(message)));
+  MOCK_METHOD1(Forward, void(std::shared_ptr<Message>));
+
+  std::unique_ptr<Link> MakeLink(NodeId src, NodeId peer) {
+    class LinkInst final : public Link {
+     public:
+      LinkInst(MockLink* link, NodeId src, NodeId peer)
+          : link_(link),
+            fake_link_metrics_(src, peer, 1, reinterpret_cast<uint64_t>(this)) {
+      }
+
+      void Forward(Message message) override {
+        assert(!message.done.empty());
+        link_->Forward(std::make_shared<Message>(std::move(message)));
+      }
+
+      LinkMetrics GetLinkMetrics() override { return fake_link_metrics_; }
+
+     private:
+      MockLink* link_;
+      const LinkMetrics fake_link_metrics_;
+    };
+    return std::make_unique<LinkInst>(this, src, peer);
   }
 };
 
@@ -49,10 +67,8 @@ class MockPullCB {
 
 TEST(DatagramStream, NoOp) {
   TestTimer timer;
-
-  Router router(NodeId(1));
-
-  DatagramStream ds1(&timer, &router, NodeId(2),
+  Router router(&timer, NodeId(1), true);
+  DatagramStream ds1(&router, NodeId(2),
                      ReliabilityAndOrdering::ReliableUnordered, StreamId(1));
 }
 
@@ -62,17 +78,21 @@ TEST(DatagramStream, UnreliableSend) {
   StrictMock<MockLink> link;
   StrictMock<MockDoneCB> done_cb;
 
-  Router router(NodeId(1));
-  EXPECT_TRUE(router.RegisterLink(NodeId(2), &link).is_ok());
+  Router router(&timer, NodeId(1), true);
+  router.RegisterLink(link.MakeLink(NodeId(1), NodeId(2)));
+  while (!router.HasRouteTo(NodeId(2))) {
+    router.BlockUntilNoBackgroundUpdatesProcessing();
+    timer.StepUntilNextEvent();
+  }
 
   auto ds1 = std::make_unique<DatagramStream>(
-      &timer, &router, NodeId(2), ReliabilityAndOrdering::UnreliableUnordered,
+      &router, NodeId(2), ReliabilityAndOrdering::UnreliableUnordered,
       StreamId(1));
 
   DatagramStream::SendOp send_op(ds1.get(), 3);
   std::shared_ptr<Message> message;
-  EXPECT_CALL(link, ForwardMock(_)).WillOnce(SaveArg<0>(&message));
-  // Packet will still be outstanding at destruction
+  EXPECT_CALL(link, Forward(_)).WillOnce(SaveArg<0>(&message));
+  // Packet will still be outstanding at destruction.
   send_op.Push(Slice::FromContainer({1, 2, 3}), done_cb.MakeCallback());
   Mock::VerifyAndClearExpectations(&link);
 
@@ -101,10 +121,14 @@ TEST(DatagramStream, ReadThenRecv) {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&pull_cb));
   };
 
-  Router router(NodeId(1));
-  EXPECT_TRUE(router.RegisterLink(NodeId(2), &link).is_ok());
+  Router router(&timer, NodeId(1), true);
+  router.RegisterLink(link.MakeLink(NodeId(1), NodeId(2)));
+  while (!router.HasRouteTo(NodeId(2))) {
+    router.BlockUntilNoBackgroundUpdatesProcessing();
+    timer.StepUntilNextEvent();
+  }
 
-  DatagramStream ds1(&timer, &router, NodeId(2),
+  DatagramStream ds1(&router, NodeId(2),
                      ReliabilityAndOrdering::ReliableUnordered, StreamId(1));
 
   router.Forward(Message{
@@ -140,10 +164,14 @@ TEST(DatagramStream, RecvThenRead) {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&pull_cb));
   };
 
-  Router router(NodeId(1));
-  EXPECT_TRUE(router.RegisterLink(NodeId(2), &link).is_ok());
+  Router router(&timer, NodeId(1), true);
+  router.RegisterLink(link.MakeLink(NodeId(1), NodeId(2)));
+  while (!router.HasRouteTo(NodeId(2))) {
+    router.BlockUntilNoBackgroundUpdatesProcessing();
+    timer.StepUntilNextEvent();
+  }
 
-  DatagramStream ds1(&timer, &router, NodeId(2),
+  DatagramStream ds1(&router, NodeId(2),
                      ReliabilityAndOrdering::ReliableUnordered, StreamId(1));
 
   DatagramStream::ReceiveOp recv_op(&ds1);

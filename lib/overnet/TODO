@@ -1,6 +1,7 @@
 * one deep queue for packet_protocol
 
 * datagram stream tests
+* routing_table tests
 
 * receive mode fuzzer: add Close
 * slice take tests
@@ -12,3 +13,5 @@
 * datagram stream fuzzer
 * packet protocol fuzzer
 * timer fuzzer
+* routing_table fuzzer
+* packet_nub fuzzer

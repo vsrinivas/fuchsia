@@ -40,10 +40,9 @@ bool TestTimer::Step(uint64_t microseconds) {
   return true;
 }
 
-bool TestTimer::StepUntilNextEvent(uint64_t jitter_us) {
-  if (shutting_down_ || pending_timeouts_.empty()) return false;
-  Step(pending_timeouts_.begin()->first - now_ +
-       (jitter_us ? rand() % jitter_us : 0));
+bool TestTimer::StepUntilNextEvent() {
+  if (pending_timeouts_.empty()) return false;
+  Step(pending_timeouts_.begin()->first - now_);
   return true;
 }
 

@@ -127,14 +127,3 @@ class RoutableMessage {
 std::ostream& operator<<(std::ostream& out, const RoutableMessage& h);
 
 }  // namespace overnet
-
-namespace std {
-template <>
-struct hash<overnet::NodeId> {
-  size_t operator()(overnet::NodeId id) const { return id.Hash(); }
-};
-template <>
-struct hash<overnet::StreamId> {
-  size_t operator()(overnet::StreamId id) const { return id.Hash(); }
-};
-}  // namespace std

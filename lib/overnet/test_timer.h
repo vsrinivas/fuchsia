@@ -16,7 +16,7 @@ class TestTimer final : public Timer {
   ~TestTimer();
   virtual TimeStamp Now() override;
   bool Step(uint64_t microseconds);
-  bool StepUntilNextEvent(uint64_t jitter_us = 0);
+  bool StepUntilNextEvent();
 
  private:
   virtual void InitTimeout(Timeout* timeout, TimeStamp when) override;

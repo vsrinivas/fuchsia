@@ -64,7 +64,7 @@ class DatagramStream : private Router::StreamHandler,
   };
 
  public:
-  DatagramStream(Timer* timer, Router* router, NodeId peer,
+  DatagramStream(Router* router, NodeId peer,
                  ReliabilityAndOrdering reliability_and_ordering,
                  StreamId stream_id);
 

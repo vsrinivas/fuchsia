@@ -109,7 +109,7 @@ class InternalList {
 
   T* PopFront() {
     T* p = Front();
-    Remove(p);
+    if (p) Remove(p);
     return p;
   }
 

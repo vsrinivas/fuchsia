@@ -35,6 +35,12 @@ class TimeDelta {
   static constexpr TimeDelta FromSeconds(int64_t delta) {
     return TimeDelta(delta * kUsPerSec);
   }
+  static constexpr TimeDelta FromMinutes(int64_t delta) {
+    return FromSeconds(delta * 60);
+  }
+  static constexpr TimeDelta FromHours(int64_t delta) {
+    return FromMinutes(delta * 60);
+  }
 
   constexpr int64_t as_us() const { return delta_; }
 
@@ -171,7 +177,7 @@ class Timer {
   template <class T>
   T* TimeoutStorage(Timeout* timeout);
 
-  void FireTimeout(Timeout* timeout, Status status);
+  static void FireTimeout(Timeout* timeout, Status status);
 
  private:
   virtual void InitTimeout(Timeout* timeout, TimeStamp when) = 0;
@@ -182,7 +188,7 @@ class Timeout {
   friend class Timer;
 
  public:
-  static constexpr uint64_t kMaxTimerStorage = 4 * sizeof(void*);
+  static constexpr uint64_t kMaxTimerStorage = 5 * sizeof(void*);
 
   Timeout(const Timeout&) = delete;
   Timeout& operator=(const Timeout&) = delete;

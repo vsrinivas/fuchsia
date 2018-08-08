@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "overnetstack"
+
+  sources = [
+    "fuchsia_port.h",
+    "main.cc",
+    "mdns.h",
+    "mdns.cc",
+    "udp_nub.h"
+  ]
+
+  deps = [
+    "//garnet/lib/overnet",
+    "//garnet/public/fidl/fuchsia.mdns",
+    "//garnet/public/fidl/fuchsia.overnet",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.mdns",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("overnetstack") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "overnetstack"
+}

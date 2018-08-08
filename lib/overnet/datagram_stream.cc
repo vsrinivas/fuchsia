@@ -62,17 +62,17 @@ StatusOr<MessageFragment> MessageFragment::Parse(Slice slice) {
 ////////////////////////////////////////////////////////////////////////////////
 // DatagramStream proper
 
-DatagramStream::DatagramStream(Timer* timer, Router* router, NodeId peer,
+DatagramStream::DatagramStream(Router* router, NodeId peer,
                                ReliabilityAndOrdering reliability_and_ordering,
                                StreamId stream_id)
-    : timer_(timer),
+    : timer_(router->timer()),
       router_(router),
       peer_(peer),
       stream_id_(stream_id),
       reliability_and_ordering_(reliability_and_ordering),
       receive_mode_(reliability_and_ordering),
       // TODO(ctiller): What should mss be? Hardcoding to 65536 for now.
-      packet_protocol_(timer, this, 65536) {
+      packet_protocol_(timer_, this, 65536) {
   if (router_->RegisterStream(peer_, stream_id_, this).is_error()) {
     abort();
   }

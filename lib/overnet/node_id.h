@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <stdint.h>
+#include <functional>
 #include <iosfwd>
 #include "serialization_helpers.h"
+#include "status.h"
 
 namespace overnet {
 
@@ -20,8 +24,9 @@ class NodeId {
   uint64_t Hash() const { return id_; }
   uint64_t get() const { return id_; }
   std::string ToString() const;
+  static StatusOr<NodeId> FromString(const std::string& s);
 
-  size_t wire_length() const { return sizeof(id_); }
+  static size_t wire_length() { return sizeof(id_); }
   uint8_t* Write(uint8_t* dst) const { return WriteLE64(id_, dst); }
 
  private:
@@ -31,3 +36,10 @@ class NodeId {
 std::ostream& operator<<(std::ostream& out, NodeId node_id);
 
 }  // namespace overnet
+
+namespace std {
+template <>
+struct hash<overnet::NodeId> {
+  size_t operator()(const overnet::NodeId& id) const { return id.Hash(); }
+};
+}  // namespace std

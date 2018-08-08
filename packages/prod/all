@@ -49,6 +49,7 @@
         "garnet/packages/prod/network_loader",
         "garnet/packages/prod/network_time",
         "garnet/packages/prod/openssh",
+        "garnet/packages/prod/overnetstack",
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/pm",
         "garnet/packages/prod/power_manager",

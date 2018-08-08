@@ -14,6 +14,8 @@ namespace overnet {
 // A sequence number
 class SeqNum {
  public:
+  static constexpr size_t kMaxWireLength = 4;
+
   // Construct with the sequence number and the number of outstanding messages
   // in the same stream - the wire representation will be scaled such that the
   // correct sequence number is unambiguous.
@@ -45,7 +47,7 @@ class SeqNum {
 
  private:
   SeqNum() {}
-  uint8_t rep_[4];
+  uint8_t rep_[kMaxWireLength];
 };
 
 std::ostream& operator<<(std::ostream& out, SeqNum seq_num);

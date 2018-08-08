@@ -73,6 +73,12 @@ class PacketProtocol {
   StatusOr<Optional<Slice>> Process(TimeStamp received, SeqNum seq,
                                     Slice slice);
 
+  Bandwidth BottleneckBandwidth() {
+    return outgoing_bbr_.bottleneck_bandwidth();
+  }
+
+  TimeDelta RoundTripTime() { return outgoing_bbr_.rtt(); }
+
  private:
   struct OutstandingPacket {
     uint64_t ack_to_seq;

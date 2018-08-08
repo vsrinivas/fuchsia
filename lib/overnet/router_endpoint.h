@@ -74,9 +74,16 @@ class RouterEndpoint final {
   using SendOp = Stream::SendOp;
   using ReceiveOp = Stream::ReceiveOp;
 
-  explicit RouterEndpoint(Timer* timer, NodeId node_id);
+  explicit RouterEndpoint(Timer* timer, NodeId node_id, bool allow_threading);
 
   void RegisterPeer(NodeId peer);
+
+  template <class F>
+  void ForEachPeer(F f) {
+    for (const auto& peer : connection_streams_) {
+      f(peer.first);
+    }
+  }
 
   Router* router() { return &router_; }
   NodeId node_id() const { return router_.node_id(); }
@@ -117,7 +124,6 @@ class RouterEndpoint final {
     ManualConstructor<ForkFrame> fork_frame_;
   };
 
-  Timer* const timer_;
   Router router_;
   std::unordered_map<NodeId, ConnectionStream> connection_streams_;
   InternalList<ConnectionStream, &ConnectionStream::forking_ready_>

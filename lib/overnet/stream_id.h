@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <functional>
 #include <iosfwd>
 #include "varint.h"
 
@@ -33,3 +34,10 @@ class StreamId {
 std::ostream& operator<<(std::ostream& out, StreamId stream_id);
 
 }  // namespace overnet
+
+namespace std {
+template <>
+struct hash<overnet::StreamId> {
+  size_t operator()(overnet::StreamId id) const { return id.Hash(); }
+};
+}  // namespace std

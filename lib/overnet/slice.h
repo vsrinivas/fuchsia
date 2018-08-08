@@ -81,8 +81,9 @@ class Slice final {
   const uint8_t* end() const { return vtable_->end(&data_); }
   size_t length() const { return vtable_->length(&data_); }
 
-  void TrimBegin(size_t trim_bytes) { vtable_->trim(&data_, trim_bytes, 0); }
-  void TrimEnd(size_t trim_bytes) { vtable_->trim(&data_, 0, trim_bytes); }
+  void Trim(size_t left, size_t right) { vtable_->trim(&data_, left, right); }
+  void TrimBegin(size_t trim_bytes) { Trim(trim_bytes, 0); }
+  void TrimEnd(size_t trim_bytes) { Trim(0, trim_bytes); }
 
   Slice FromOffset(size_t offset) const {
     Slice out(*this);
@@ -107,12 +108,18 @@ class Slice final {
     return TakeUntilOffset(internal_pointer - begin());
   }
 
+  Slice Cut(size_t from_offset, size_t to_offset) {
+    Slice copy(*this);
+    copy.Trim(from_offset, copy.length() - to_offset);
+    return copy;
+  }
+
   static Slice Join(std::initializer_list<Slice> slices) {
     return Join(slices.begin(), slices.end());
   }
 
   template <class IT>
-  static Slice Join(IT begin, IT end) {
+  static Slice Join(IT begin, IT end, size_t desired_prefix = 0) {
     if (begin == end) return Slice();
     if (std::next(begin) == end) return *begin;
 
@@ -121,13 +128,14 @@ class Slice final {
       total_length += it->length();
     }
 
-    return Slice::WithInitializer(total_length, [begin, end](uint8_t* out) {
-      size_t offset = 0;
-      for (auto it = begin; it != end; ++it) {
-        memcpy(out + offset, it->begin(), it->length());
-        offset += it->length();
-      }
-    });
+    return Slice::WithInitializerAndPrefix(
+        total_length, desired_prefix, [begin, end](uint8_t* out) {
+          size_t offset = 0;
+          for (auto it = begin; it != end; ++it) {
+            memcpy(out + offset, it->begin(), it->length());
+            offset += it->length();
+          }
+        });
   }
 
   template <class F>

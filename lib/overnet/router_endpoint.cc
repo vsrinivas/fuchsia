@@ -25,25 +25,26 @@ void ReadAllAndParse(Source<Slice>* src, StatusOrCallback<T> ready) {
 }
 }  // namespace
 
-RouterEndpoint::RouterEndpoint(Timer* timer, NodeId node_id)
-    : timer_(timer), router_(node_id) {}
+RouterEndpoint::RouterEndpoint(Timer* timer, NodeId node_id,
+                               bool allow_threading)
+    : router_(timer, node_id, allow_threading) {}
 
 void RouterEndpoint::RegisterPeer(NodeId peer) {
   assert(peer != router_.node_id());
+  if (connection_streams_.count(peer) != 0) return;
   connection_streams_.emplace(std::piecewise_construct,
                               std::forward_as_tuple(peer),
                               std::forward_as_tuple(this, peer));
 }
 
 RouterEndpoint::Stream::Stream(NewStream introduction)
-    : DatagramStream(introduction.creator_->timer_,
-                     &introduction.creator_->router_, introduction.peer_,
+    : DatagramStream(&introduction.creator_->router_, introduction.peer_,
                      introduction.reliability_and_ordering_,
                      introduction.stream_id_) {}
 
 RouterEndpoint::ConnectionStream::ConnectionStream(RouterEndpoint* endpoint,
                                                    NodeId peer)
-    : DatagramStream(endpoint->timer_, &endpoint->router_, peer,
+    : DatagramStream(&endpoint->router_, peer,
                      ReliabilityAndOrdering::ReliableUnordered, StreamId(0)),
       endpoint_(endpoint),
       next_stream_id_(peer < endpoint->node_id() ? 2 : 1) {

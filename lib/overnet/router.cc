@@ -7,6 +7,9 @@
 
 namespace overnet {
 
+static constexpr TimeDelta kPollLinkChangeTimeout =
+    TimeDelta::FromMilliseconds(100);
+
 void Router::Forward(Message message) {
   assert(!message.done.empty());
   // There are three primary cases we care about here, that can be discriminated
@@ -104,14 +107,65 @@ void Router::Forward(Message message) {
   }
 }
 
+void Router::UpdateRoutingTable(std::vector<NodeMetrics> node_metrics,
+                                std::vector<LinkMetrics> link_metrics,
+                                bool flush_old_nodes) {
+  routing_table_.Update(std::move(node_metrics), std::move(link_metrics),
+                        flush_old_nodes);
+  MaybeStartPollingLinkChanges();
+}
+
+void Router::MaybeStartPollingLinkChanges() {
+  if (poll_link_changes_timeout_) return;
+  poll_link_changes_timeout_.Reset(
+      timer_, timer_->Now() + kPollLinkChangeTimeout,
+      [this](const Status& status) {
+        poll_link_changes_timeout_.Reset();
+        if (status.is_ok()) {
+          const bool keep_polling = !routing_table_.PollLinkUpdates(
+              [this](const RoutingTable::SelectedLinks& selected_links) {
+                // Clear routing information for now unreachable links.
+                for (auto& lnk : links_) {
+                  if (selected_links.count(lnk.first) == 0) {
+                    lnk.second.SetLink(nullptr);
+                  }
+                }
+                // Set routing information for other links.
+                for (const auto& sl : selected_links) {
+                  std::cout << "Select: " << sl.first << " " << sl.second
+                            << "\n";
+                  auto it = owned_links_.find(sl.second);
+                  links_[sl.first].SetLink(
+                      it == owned_links_.end() ? nullptr : it->second.get());
+                }
+                MaybeStartFlushingOldEntries();
+              });
+          if (keep_polling) MaybeStartPollingLinkChanges();
+        }
+      });
+}
+
+void Router::MaybeStartFlushingOldEntries() {
+  if (flush_old_nodes_timeout_) return;
+  flush_old_nodes_timeout_.Reset(timer_,
+                                 timer_->Now() + routing_table_.EntryExpiry(),
+                                 [this](const Status& status) {
+                                   flush_old_nodes_timeout_.Reset();
+                                   if (status.is_ok()) {
+                                     UpdateRoutingTable({}, {}, true);
+                                   }
+                                 });
+}
+
 Status Router::RegisterStream(NodeId peer, StreamId stream_id,
                               StreamHandler* stream_handler) {
   return streams_[LocalStreamId{peer, stream_id}].SetHandler(stream_handler);
 }
 
-Status Router::RegisterLink(NodeId peer, Link* link) {
-  links_[peer].SetLink(link);
-  return Status::Ok();
+void Router::RegisterLink(std::unique_ptr<Link> link) {
+  const auto& metrics = link->GetLinkMetrics();
+  owned_links_.emplace(metrics.link_label(), std::move(link));
+  UpdateRoutingTable({NodeMetrics(metrics.to(), 0)}, {metrics}, false);
 }
 
 void Router::StreamHolder::HandleMessage(Optional<SeqNum> seq,

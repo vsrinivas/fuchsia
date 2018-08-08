@@ -238,7 +238,7 @@ WORKSPACE = """
 git_repository(
     name = 'com_google_googletest',
     remote = 'https://github.com/google/googletest.git',
-    commit = '045e7f9ee4f969ac1a3fe428f79c4b880f0aff43',
+    commit = 'd5266326752f0a1dadbd310932d8f4fd8c3c5e7d',
 )
 """
 
@@ -276,6 +276,13 @@ build:msan --copt -fPIC
 build:msan --linkopt -fsanitize=memory
 build:msan --linkopt -fPIC
 build:msan --action_env=MSAN_OPTIONS=poison_in_dtor=1
+
+build:tsan --strip=never
+build:tsan --copt -fsanitize=thread
+build:tsan --copt -fno-omit-frame-pointer
+build:tsan --copt -DNDEBUG
+build:tsan --linkopt -fsanitize=thread
+build:tsan --action_env=TSAN_OPTIONS=halt_on_error=1
 
 build:ubsan --strip=never
 build:ubsan --copt -fsanitize=undefined

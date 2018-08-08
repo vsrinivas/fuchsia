@@ -12,30 +12,51 @@
 namespace overnet {
 namespace router_endpoint2node {
 
-class InProcessLink : public Link {
+class InProcessLink final : public Link {
  public:
-  explicit InProcessLink(RouterEndpoint* src, RouterEndpoint* dest)
-      : dest_(dest->router()) {
+  explicit InProcessLink(RouterEndpoint* src, RouterEndpoint* dest,
+                         uint64_t link_id)
+      : fake_metrics_(src->node_id(), dest->node_id(), 1, link_id),
+        dest_(dest->router()) {
     src->RegisterPeer(dest->node_id());
-    src->router()->RegisterLink(dest->node_id(), this);
   }
-  void Forward(Message message) { dest_->Forward(std::move(message)); }
+  void Forward(Message message) override { dest_->Forward(std::move(message)); }
+  LinkMetrics GetLinkMetrics() override { return fake_metrics_; }
 
  private:
+  const LinkMetrics fake_metrics_;
   Router* const dest_;
 };
 
 class TwoNodeFling : public ::testing::Test {
  public:
+  TwoNodeFling() {
+    endpoint1_.router()->RegisterLink(
+        std::make_unique<InProcessLink>(&endpoint1_, &endpoint2_, 99599104));
+    endpoint2_.router()->RegisterLink(
+        std::make_unique<InProcessLink>(&endpoint2_, &endpoint1_, 99594576));
+
+    while (!endpoint1_.router()->HasRouteTo(NodeId(2)) ||
+           !endpoint2_.router()->HasRouteTo(NodeId(1))) {
+      endpoint1_.router()->BlockUntilNoBackgroundUpdatesProcessing();
+      endpoint2_.router()->BlockUntilNoBackgroundUpdatesProcessing();
+      std::cout << "Waiting for route establishment: ep1->2="
+                << endpoint1_.router()->HasRouteTo(NodeId(2))
+                << " and ep2->1=" << endpoint2_.router()->HasRouteTo(NodeId(1))
+                << "\n";
+      test_timer_.StepUntilNextEvent();
+    }
+  }
+
+  ~TwoNodeFling() { std::cout << "~TwoNodeFling\n"; }
+
   RouterEndpoint* endpoint1() { return &endpoint1_; }
   RouterEndpoint* endpoint2() { return &endpoint2_; }
 
  private:
   TestTimer test_timer_;
-  RouterEndpoint endpoint1_{&test_timer_, NodeId(1)};
-  RouterEndpoint endpoint2_{&test_timer_, NodeId(2)};
-  InProcessLink link_1_to_2_{&endpoint1_, &endpoint2_};
-  InProcessLink link_2_to_1_{&endpoint2_, &endpoint1_};
+  RouterEndpoint endpoint1_{&test_timer_, NodeId(1), true};
+  RouterEndpoint endpoint2_{&test_timer_, NodeId(2), true};
 };
 
 TEST_F(TwoNodeFling, NoOp) {}
