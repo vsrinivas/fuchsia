@@ -116,7 +116,7 @@ private:
     const uint32_t pid_;
     const uint32_t did_;
     const serial_port_info_t serial_port_info_;
-    bool enabled_;
+    bool enabled_ = false;
 
     fbl::Vector<pbus_mmio_t> mmios_;
     fbl::Vector<pbus_irq_t> irqs_;
