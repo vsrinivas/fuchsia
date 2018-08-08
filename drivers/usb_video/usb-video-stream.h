@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <ddk/usb/usb.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <ddk/usb/usb.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>

@@ -33,7 +33,7 @@ UsbVideoStream::~UsbVideoStream() {
   if (free_reqs_.next) {
     while (!list_is_empty(&free_reqs_)) {
       usb_req_release(&usb_,
-          list_remove_head_type(&free_reqs_, usb_request_t, node));
+                      list_remove_head_type(&free_reqs_, usb_request_t, node));
     }
   }
 }
@@ -212,7 +212,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
   // Need to allocate new usb requests, release any existing ones.
   while (!list_is_empty(&free_reqs_)) {
     usb_req_release(&usb_,
-        list_remove_head_type(&free_reqs_, usb_request_t, node));
+                    list_remove_head_type(&free_reqs_, usb_request_t, node));
   }
 
   zxlogf(TRACE, "allocating %d usb requests of size %lu\n",
@@ -716,7 +716,7 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
   usb_video_vs_uncompressed_payload_header header = {};
   usb_req_copy_from(&usb_, req, &header,
-                       sizeof(usb_video_vs_uncompressed_payload_header), 0);
+                    sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
   // PTS should stay the same for payloads of the same frame,
   // but it's probably not a critical error if they're different.
