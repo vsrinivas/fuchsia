@@ -488,7 +488,4 @@ void msd_connection_set_notification_callback(msd_connection_t* abi_connection,
     MsdArmAbiConnection::cast(abi_connection)->ptr()->SetNotificationCallback(callback, token);
 }
 
-void msd_connection_release_buffer(msd_connection_t* abi_connection,
-                                   msd_buffer_t* abi_buffer)
-{
-}
+void msd_connection_release_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer) {}

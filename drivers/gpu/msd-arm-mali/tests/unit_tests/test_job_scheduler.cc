@@ -67,7 +67,7 @@ private:
     TestAddressSpaceObserver address_space_observer_;
     MockBusMapper bus_mapper_;
 };
-}
+} // namespace
 
 class TestJobScheduler {
 public:

@@ -5,4 +5,3 @@
 #include "msd.h"
 
 void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer) {}
-

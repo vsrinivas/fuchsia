@@ -11,7 +11,7 @@ constexpr uint32_t kPerfBufferSize = PAGE_SIZE * 4;
 
 // Start of the buffer in the GPU address space.
 constexpr uint32_t kPerfBufferStartOffset = PAGE_SIZE;
-}
+} // namespace
 
 bool PerformanceCounters::Enable()
 {

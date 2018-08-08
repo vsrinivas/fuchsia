@@ -70,7 +70,7 @@ void TestCallback(void* token, msd_notification_t* notification)
         memcpy(&g_status, notification->u.channel_send.data, g_test_data_size);
     }
 }
-}
+} // namespace
 
 class TestConnection {
 public:

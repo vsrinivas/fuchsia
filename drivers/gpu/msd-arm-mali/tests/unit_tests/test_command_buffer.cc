@@ -279,4 +279,4 @@ TEST(CommandBuffer, TestInvalidDependencyNotSubmitted)
 {
     ::Test().TestInvalidDependencyNotSubmitted();
 }
-}
+} // namespace

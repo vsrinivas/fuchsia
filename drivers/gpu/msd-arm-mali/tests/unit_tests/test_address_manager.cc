@@ -203,4 +203,4 @@ TEST(AddressManager, FlushAddressRange)
     EXPECT_EQ(registers::AsCommand::kCmdUpdate,
               as_regs.Command().ReadFrom(reg_io.get()).reg_value());
 }
-}
+} // namespace
