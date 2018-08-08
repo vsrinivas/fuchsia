@@ -29,7 +29,8 @@ const int kMinPixelsForReport = 50000;
 class ScreenshotTaker {
  public:
   explicit ScreenshotTaker(async::Loop* loop, bool output_screen)
-      : loop_(loop), output_screen_(output_screen),
+      : loop_(loop),
+        output_screen_(output_screen),
         context_(component::StartupContext::CreateFromStartupInfo()) {
     // Connect to the Scenic service.
     scenic_ =
@@ -48,83 +49,83 @@ class ScreenshotTaker {
     // If we wait for a call back from GetDisplayInfo, we are guaranteed that
     // the GFX system is initialized, which is a prerequisite for taking a
     // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
-    scenic_->GetDisplayInfo(
-        [this](fuchsia::ui::gfx::DisplayInfo /*unused*/) {
-          TakeScreenshotInternal();
-        });
+    scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo /*unused*/) {
+      TakeScreenshotInternal();
+    });
   }
 
  private:
   void TakeScreenshotInternal() {
     FXL_LOG(INFO) << "start TakeScreenshotInternal";
-    scenic_->TakeScreenshot([this](
-                                fuchsia::ui::scenic::ScreenshotData screenshot,
-                                bool status) {
-      FXL_LOG(INFO) << "start pixel capture";
-      std::vector<uint8_t> imgdata;
-      if (!status || !fsl::VectorFromVmo(screenshot.data, &imgdata)) {
-        FXL_LOG(ERROR) << "TakeScreenshot failed";
-        encountered_error_ = true;
-        loop_->Quit();
-        return;
-      }
-
-      std::map<int, int> histogram;
-      if (output_screen_) {
-        std::cout << "P6\n";
-        std::cout << screenshot.info.width << "\n";
-        std::cout << screenshot.info.height << "\n";
-        std::cout << 255 << "\n";
-      }
-
-      FXL_LOG(INFO) << "capturing pixels";
-      const uint8_t* pchannel = &imgdata[0];
-      for (uint32_t pixel = 0;
-           pixel < screenshot.info.width * screenshot.info.height; pixel++) {
-        uint8_t rgb[] = {pchannel[2], pchannel[1], pchannel[0]};
-        if (output_screen_) {
-          std::cout.write(reinterpret_cast<const char*>(rgb), 3);
-        } else {
-          int rgb_value = (rgb[0] << 16) + (rgb[1] << 8) + rgb[2];
-          if (histogram.find(rgb_value) != histogram.end()) {
-            histogram[rgb_value] = histogram[rgb_value] + 1;
-          } else {
-            histogram[rgb_value] = 1;
+    scenic_->TakeScreenshot(
+        [this](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
+          FXL_LOG(INFO) << "start pixel capture";
+          std::vector<uint8_t> imgdata;
+          if (!status || !fsl::VectorFromVmo(screenshot.data, &imgdata)) {
+            FXL_LOG(ERROR) << "TakeScreenshot failed";
+            encountered_error_ = true;
+            loop_->Quit();
+            return;
           }
-        }
-        pchannel += 4;
-      }
-      if (!output_screen_) {
-        // For success, there should be at least 1M green or red pixels combined
-        // The typical number is > 1.5M
-        if (histogram[kGreen] + histogram[kRed] > kMinExpectedPixels) {
-          FXL_LOG(INFO) << "success";
-          printf("success\n");
-        } else {
-          FXL_LOG(INFO) << "failure";
-          printf("failure\n");
-          printf("black: %d, white: %d, green: %d, red: %d\n",
-                 histogram[kBlack], histogram[kWhite], histogram[kGreen],
-                 histogram[kRed]);
-          // To help debug failures, if the majority of values aren't already
-          // expected, output the values that were over a threshold count.
-          if (histogram[kBlack] + histogram[kWhite] + histogram[kGreen] +
-                  histogram[kRed] <
-              kMinExpectedPixels) {
-            const int MIN_REPORT_THRESHOLD = kMinPixelsForReport;
-            std::map<int, int>::iterator it;
-            for (const auto& pair : histogram) {
-              if (pair.second > MIN_REPORT_THRESHOLD) {
-                printf("Pixel 0x%06x occurred %d times\n", pair.first,
-                       pair.second);
+
+          std::map<int, int> histogram;
+          if (output_screen_) {
+            std::cout << "P6\n";
+            std::cout << screenshot.info.width << "\n";
+            std::cout << screenshot.info.height << "\n";
+            std::cout << 255 << "\n";
+          }
+
+          FXL_LOG(INFO) << "capturing pixels";
+          const uint8_t* pchannel = &imgdata[0];
+          for (uint32_t pixel = 0;
+               pixel < screenshot.info.width * screenshot.info.height;
+               pixel++) {
+            uint8_t rgb[] = {pchannel[2], pchannel[1], pchannel[0]};
+            if (output_screen_) {
+              std::cout.write(reinterpret_cast<const char*>(rgb), 3);
+            } else {
+              int rgb_value = (rgb[0] << 16) + (rgb[1] << 8) + rgb[2];
+              if (histogram.find(rgb_value) != histogram.end()) {
+                histogram[rgb_value] = histogram[rgb_value] + 1;
+              } else {
+                histogram[rgb_value] = 1;
               }
             }
+            pchannel += 4;
           }
-          encountered_error_ = true;
-        }
-      }
-      loop_->Quit();
-    });
+          if (!output_screen_) {
+            // For success, there should be at least 1M green or red pixels
+            // combined The typical number is > 1.5M
+            if (histogram[kGreen] + histogram[kRed] > kMinExpectedPixels) {
+              FXL_LOG(INFO) << "success";
+              printf("success\n");
+            } else {
+              FXL_LOG(INFO) << "failure";
+              printf("failure\n");
+              printf("black: %d, white: %d, green: %d, red: %d\n",
+                     histogram[kBlack], histogram[kWhite], histogram[kGreen],
+                     histogram[kRed]);
+              // To help debug failures, if the majority of values aren't
+              // already expected, output the values that were over a threshold
+              // count.
+              if (histogram[kBlack] + histogram[kWhite] + histogram[kGreen] +
+                      histogram[kRed] <
+                  kMinExpectedPixels) {
+                const int MIN_REPORT_THRESHOLD = kMinPixelsForReport;
+                std::map<int, int>::iterator it;
+                for (const auto& pair : histogram) {
+                  if (pair.second > MIN_REPORT_THRESHOLD) {
+                    printf("Pixel 0x%06x occurred %d times\n", pair.first,
+                           pair.second);
+                  }
+                }
+              }
+              encountered_error_ = true;
+            }
+          }
+          loop_->Quit();
+        });
   }
   async::Loop* loop_;
   const bool output_screen_;
@@ -132,8 +133,6 @@ class ScreenshotTaker {
   bool encountered_error_ = false;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 };
-
-
 
 int main(int argc, const char** argv) {
   FXL_LOG(INFO) << "starting screen capture";
