@@ -47,10 +47,10 @@ class App : public fuchsia::ui::policy::Presenter,
 
  private:
   // |Presenter|
-  void Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-                   view_owner,
-               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                   presentation_request) override;
+  void Present(
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+          presentation_request) override;
 
   // |Presenter|
   void HACK_SetRendererParams(

@@ -11,8 +11,8 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 
@@ -76,11 +76,10 @@ Presentation::ShutdownCallback App::GetShutdownCallback(
   });
 }
 
-void App::Present(
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_handle,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request) {
+void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
+                      view_owner_handle,
+                  fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                      presentation_request) {
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;

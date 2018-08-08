@@ -182,8 +182,7 @@ void Presentation1::CreateViewTree(
   });
 
   // Create root view.
-  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-      root_view_owner;
+  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> root_view_owner;
   auto root_view_owner_request = root_view_owner.NewRequest();
   ::fuchsia::ui::viewsv1::ViewListenerPtr root_view_listener;
   view_listener_binding_.Bind(root_view_listener.NewRequest());

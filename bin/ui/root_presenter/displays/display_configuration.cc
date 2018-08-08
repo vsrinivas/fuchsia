@@ -12,8 +12,8 @@ namespace display_configuration {
 void LogDisplayMetrics(const DisplayMetrics& metrics);
 
 float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px);
-fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
-                                                        uint32_t height_in_px);
+fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
+    uint32_t width_in_px, uint32_t height_in_px);
 
 void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px,
                                DisplayModel* model) {
@@ -60,8 +60,8 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
   }
 }
 
-fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
-                                                        uint32_t height_in_px) {
+fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
+    uint32_t width_in_px, uint32_t height_in_px) {
   // TODO(MZ-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {

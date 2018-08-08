@@ -50,7 +50,8 @@ class DisplayModel {
   struct EnvironmentInfo {
     // The intended usage of the display.
     // Value is |kUnknown| if unknown.
-    fuchsia::ui::policy::DisplayUsage usage = fuchsia::ui::policy::DisplayUsage::kUnknown;
+    fuchsia::ui::policy::DisplayUsage usage =
+        fuchsia::ui::policy::DisplayUsage::kUnknown;
 
     // The nominal apparent viewing distance in millimeters.
     // Value is 0.0 if unknown.
