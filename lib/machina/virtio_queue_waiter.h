@@ -17,15 +17,16 @@ namespace machina {
 class VirtioQueueWaiter {
  public:
   using Handler = fit::function<void(zx_status_t, uint16_t index)>;
-  VirtioQueueWaiter(async_dispatcher_t* dispatcher, VirtioQueue* queue, Handler handler);
+  VirtioQueueWaiter(async_dispatcher_t* dispatcher, VirtioQueue* queue,
+                    Handler handler);
   ~VirtioQueueWaiter();
 
   zx_status_t Begin();
   void Cancel();
 
  private:
-  void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                   const zx_packet_signal_t* signal);
+  void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                   zx_status_t status, const zx_packet_signal_t* signal);
 
   fbl::Mutex mutex_;
   async::WaitMethod<VirtioQueueWaiter, &VirtioQueueWaiter::WaitHandler> wait_

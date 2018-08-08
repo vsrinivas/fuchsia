@@ -17,7 +17,8 @@
 
 namespace machina {
 
-VirtioNet::Stream::Stream(VirtioNet* device, async_dispatcher_t* dispatcher, VirtioQueue* queue,
+VirtioNet::Stream::Stream(VirtioNet* device, async_dispatcher_t* dispatcher,
+                          VirtioQueue* queue,
                           std::atomic<trace_async_id_t>* trace_flow_id)
     : device_(device),
       dispatcher_(dispatcher),
@@ -129,7 +130,8 @@ zx_status_t VirtioNet::Stream::WaitOnFifoWritable() {
   return fifo_writable_wait_.Begin(dispatcher_);
 }
 
-void VirtioNet::Stream::OnFifoWritable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+void VirtioNet::Stream::OnFifoWritable(async_dispatcher_t* dispatcher,
+                                       async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -172,7 +174,8 @@ zx_status_t VirtioNet::Stream::WaitOnFifoReadable() {
   return fifo_readable_wait_.Begin(dispatcher_);
 }
 
-void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
+                                       async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

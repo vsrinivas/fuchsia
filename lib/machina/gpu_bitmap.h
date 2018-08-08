@@ -55,7 +55,7 @@ class GpuBitmap {
 
   enum class DrawBitmapFlags : uint32_t {
     NONE = 0,
-    FORCE_ALPHA = 1, // force interpretation of the x-channel as alpha
+    FORCE_ALPHA = 1,  // force interpretation of the x-channel as alpha
   };
 
   // Draws a portion of another bitmap into this one.

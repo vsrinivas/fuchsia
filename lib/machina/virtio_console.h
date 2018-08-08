@@ -32,7 +32,8 @@ class VirtioConsole
     : public VirtioDeviceBase<VIRTIO_ID_CONSOLE, kVirtioConsoleNumQueues,
                               virtio_console_config_t> {
  public:
-  VirtioConsole(const PhysMem&, async_dispatcher_t* dispatcher, zx::socket socket);
+  VirtioConsole(const PhysMem&, async_dispatcher_t* dispatcher,
+                zx::socket socket);
   ~VirtioConsole();
 
   zx_status_t Start();

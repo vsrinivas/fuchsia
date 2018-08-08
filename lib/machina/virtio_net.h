@@ -59,8 +59,8 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET, kVirtioNetNumQueues,
   // A single data stream (either RX or TX).
   class Stream {
    public:
-    Stream(VirtioNet* device, async_dispatcher_t* dispatcher, VirtioQueue* queue,
-           std::atomic<trace_async_id_t>* trace_flow_id);
+    Stream(VirtioNet* device, async_dispatcher_t* dispatcher,
+           VirtioQueue* queue, std::atomic<trace_async_id_t>* trace_flow_id);
     zx_status_t Start(zx_handle_t fifo, size_t fifo_num_entries, bool rx);
 
    private:

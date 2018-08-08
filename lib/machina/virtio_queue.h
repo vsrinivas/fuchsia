@@ -208,7 +208,8 @@ class VirtioQueue {
 
   // Monitors the queue signal for available descriptors and run the callback
   // when one is available.
-  zx_status_t PollAsync(async_dispatcher_t* dispatcher, async::Wait* wait, QueuePollFn handler);
+  zx_status_t PollAsync(async_dispatcher_t* dispatcher, async::Wait* wait,
+                        QueuePollFn handler);
 
   // Handles the next available descriptor in a Virtio queue, calling handler to
   // process individual payload buffers.
@@ -225,8 +226,8 @@ class VirtioQueue {
   // Returns a circular index into a Virtio ring.
   uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
 
-  void InvokeAsyncHandler(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
-                          const QueuePollFn& handler);
+  void InvokeAsyncHandler(async_dispatcher_t* dispatcher, async::Wait* wait,
+                          zx_status_t status, const QueuePollFn& handler);
 
   mutable fbl::Mutex mutex_;
   VirtioDevice* device_;

@@ -199,9 +199,8 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
         ConnectionRequest{src_cid, src_port, cid, port, std::move(callback)});
   }
 
-  void VerifyHeader(RxBuffer* buffer, uint32_t host_port,
-                    uint32_t guest_port, uint32_t len, uint16_t op,
-                    uint32_t flags) {
+  void VerifyHeader(RxBuffer* buffer, uint32_t host_port, uint32_t guest_port,
+                    uint32_t len, uint16_t op, uint32_t flags) {
     virtio_vsock_hdr_t* header = &buffer->header;
     EXPECT_EQ(header->src_cid, fuchsia::guest::kHostCid);
     EXPECT_EQ(header->dst_cid, kVirtioVsockGuestCid);
@@ -287,8 +286,8 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
 
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
-    VerifyHeader(rx_buffer, host_port, kVirtioVsockGuestPort,
-                 expected.size(), VIRTIO_VSOCK_OP_RW, 0);
+    VerifyHeader(rx_buffer, host_port, kVirtioVsockGuestPort, expected.size(),
+                 VIRTIO_VSOCK_OP_RW, 0);
 
     // Verify the data, which may be spread across multiple descriptors.
     EXPECT_EQ(memcmp(rx_buffer->data, expected.data(),
@@ -405,8 +404,8 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     if (rx_buffer == nullptr) {
       return nullptr;
     }
-    VerifyHeader(rx_buffer, kVirtioVsockHostPort,
-                 kVirtioVsockGuestPort, 0, VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
+    VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
+                 VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
     return &rx_buffer->header;
   }
 
@@ -601,8 +600,8 @@ TEST_F(VirtioVsockTest, WriteAfterShutdown) {
 
   RxBuffer* rx_buffer = DoReceive();
   ASSERT_NE(nullptr, rx_buffer);
-  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestPort,
-               0, VIRTIO_VSOCK_OP_RST, 0);
+  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
+               VIRTIO_VSOCK_OP_RST, 0);
 }
 
 TEST_F(VirtioVsockTest, Read) {
@@ -855,8 +854,8 @@ TEST_F(VirtioVsockTest, CreditRequest) {
 
   RxBuffer* rx_buffer = DoReceive();
   ASSERT_NE(nullptr, rx_buffer);
-  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestPort,
-               0, VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
+  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
+               VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
   EXPECT_GT(rx_buffer->header.buf_alloc, 0u);
   EXPECT_EQ(rx_buffer->header.fwd_cnt, 0u);
 }
