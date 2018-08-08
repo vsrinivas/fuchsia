@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
@@ -50,7 +50,8 @@ int main(int argc, const char** argv) {
 
   // Ask the presenter to change renderer params.
   auto presenter =
-      startup_context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      startup_context_
+          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->HACK_SetRendererParams(clipping_enabled,
                                     std::move(renderer_params));
 
