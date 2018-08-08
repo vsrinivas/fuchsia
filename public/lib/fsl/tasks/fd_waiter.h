@@ -7,9 +7,9 @@
 
 #include <functional>
 
-#include <lib/fdio/private.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
+#include <lib/fdio/private.h>
 #include <zircon/types.h>
 
 #include "lib/fxl/fxl_export.h"
@@ -55,8 +55,8 @@ class FXL_EXPORT FDWaiter {
   // Release the fdio_t*
   void Release();
 
-  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-               const zx_packet_signal_t* signal);
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+               zx_status_t status, const zx_packet_signal_t* signal);
 
   async_dispatcher_t* const dispatcher_;
   fdio_t* io_;

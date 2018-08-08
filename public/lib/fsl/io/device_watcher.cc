@@ -8,8 +8,8 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
-#include <lib/fdio/io.h>
 #include <lib/async/default.h>
+#include <lib/fdio/io.h>
 #include <zircon/device/vfs.h>
 
 #include "lib/fxl/logging.h"
@@ -61,8 +61,8 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
       std::move(dir_fd), std::move(dir_watch), std::move(callback)));
 }
 
-void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                            zx_status_t status,
+void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
+                            async::WaitBase* wait, zx_status_t status,
                             const zx_packet_signal* signal) {
   if (status != ZX_OK)
     return;

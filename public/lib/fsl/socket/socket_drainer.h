@@ -25,14 +25,15 @@ class FXL_EXPORT SocketDrainer {
     virtual ~Client();
   };
 
-  explicit SocketDrainer(Client* client, async_dispatcher_t* dispatcher = async_get_default_dispatcher());
+  explicit SocketDrainer(Client* client, async_dispatcher_t* dispatcher =
+                                             async_get_default_dispatcher());
   ~SocketDrainer();
 
   void Start(zx::socket source);
 
  private:
-  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                     const zx_packet_signal_t* signal);
+  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                     zx_status_t status, const zx_packet_signal_t* signal);
 
   Client* client_;
   async_dispatcher_t* dispatcher_;

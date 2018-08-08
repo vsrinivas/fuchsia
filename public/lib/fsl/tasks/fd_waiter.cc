@@ -10,7 +10,8 @@
 
 namespace fsl {
 
-FDWaiter::FDWaiter(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), io_(nullptr) {
+FDWaiter::FDWaiter(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher), io_(nullptr) {
   FXL_DCHECK(dispatcher_);
 }
 

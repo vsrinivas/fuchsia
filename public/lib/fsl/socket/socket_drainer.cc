@@ -33,8 +33,8 @@ void SocketDrainer::Start(zx::socket source) {
   OnHandleReady(dispatcher_, &wait_, ZX_OK, nullptr);
 }
 
-void SocketDrainer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                  zx_status_t status,
+void SocketDrainer::OnHandleReady(async_dispatcher_t* dispatcher,
+                                  async::WaitBase* wait, zx_status_t status,
                                   const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     client_->OnDataComplete();

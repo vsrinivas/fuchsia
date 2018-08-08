@@ -20,7 +20,8 @@ namespace fsl {
 // The given |callback| is run upon completion. File writes and |callback| will
 // be scheduled on the given |task_runner|.
 FXL_EXPORT void CopyToFileDescriptor(
-    zx::socket source, fxl::UniqueFD destination, async_dispatcher_t* dispatcher,
+    zx::socket source, fxl::UniqueFD destination,
+    async_dispatcher_t* dispatcher,
     const std::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>&
         callback);
 
@@ -28,7 +29,8 @@ FXL_EXPORT void CopyToFileDescriptor(
 // |callback| is run upon completion. File reads and |callback| will be
 // scheduled to the given |task_runner|.
 FXL_EXPORT void CopyFromFileDescriptor(
-    fxl::UniqueFD source, zx::socket destination, async_dispatcher_t* dispatcher,
+    fxl::UniqueFD source, zx::socket destination,
+    async_dispatcher_t* dispatcher,
     const std::function<void(bool /*success*/, fxl::UniqueFD /*source*/)>&
         callback);
 
