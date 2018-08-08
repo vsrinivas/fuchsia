@@ -97,8 +97,10 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
     // If this is the first cpu, or if we're done with this cpu's records,
     // move to the next cpu.
     if (next_record_ == nullptr || next_record_ >= capture_end_) {
-      if (next_record_ != nullptr) ++current_cpu_;
-      if (current_cpu_ >= num_cpus_) break;
+      if (next_record_ != nullptr)
+        ++current_cpu_;
+      if (current_cpu_ >= num_cpus_)
+        break;
       ioctl_cpuperf_buffer_handle_req_t req;
       req.descriptor = current_cpu_;
       zx_handle_t handle;
@@ -110,10 +112,12 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
       }
 
       // Out with the old, in with the new.
-      if (!MapBufferVmo(handle)) return false;
+      if (!MapBufferVmo(handle))
+        return false;
 
       cpuperf_buffer_header_t header;
-      if (!ReadBufferHeader(buffer_start_, current_cpu_, &header)) return false;
+      if (!ReadBufferHeader(buffer_start_, current_cpu_, &header))
+        return false;
       next_record_ = buffer_start_ + sizeof(header);
       capture_end_ = buffer_start_ + header.capture_end;
       ticks_per_second_ = header.ticks_per_second;
@@ -122,7 +126,8 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
                          << ", end point within header";
         continue;
       }
-      if (next_record_ == capture_end_) continue;
+      if (next_record_ == capture_end_)
+        continue;
     }
 
     const cpuperf_record_header_t* hdr =

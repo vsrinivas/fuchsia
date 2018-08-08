@@ -59,7 +59,8 @@ bool EventIdToEventDetails(cpuperf_event_id_t id,
       return false;
   }
 
-  if (details->id == 0) return false;
+  if (details->id == 0)
+    return false;
   *out_details = details;
   return true;
 }

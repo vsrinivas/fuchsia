@@ -28,7 +28,8 @@ static bool IsSampleMode(const cpuperf_config_t& config) {
 }
 
 static uint32_t GetBufferSize(bool sample_mode, uint32_t requested_size_in_mb) {
-  if (sample_mode) return requested_size_in_mb * 1024 * 1024;
+  if (sample_mode)
+    return requested_size_in_mb * 1024 * 1024;
   // For "counting mode" we just need something large enough to hold
   // the header + records for each event.
   unsigned num_events = CPUPERF_MAX_EVENTS;
@@ -52,7 +53,8 @@ Controller::Controller(uint32_t buffer_size_in_mb,
   fd_.reset(fd);
 
   Alloc();
-  if (!alloc_) fd_.reset();
+  if (!alloc_)
+    fd_.reset();
 }
 
 Controller::~Controller() {
