@@ -4,10 +4,10 @@
 
 #include "converter.h"
 
-#include <algorithm>
 #include <getopt.h>
-#include <map>
 #include <math.h>
+#include <algorithm>
+#include <map>
 #include <numeric>
 #include <vector>
 
@@ -137,10 +137,8 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
 // Adds a Histogram to the given |output| Document.
 void AddHistogram(rapidjson::Document* output,
                   rapidjson::Document::AllocatorType* alloc,
-                  const std::string& test_name,
-                  const char* input_unit,
-                  std::vector<double>&& vals,
-                  rapidjson::Value diagnostic_map,
+                  const std::string& test_name, const char* input_unit,
+                  std::vector<double>&& vals, rapidjson::Value diagnostic_map,
                   rapidjson::Value guid) {
   std::string catapult_unit = ConvertUnits(input_unit, &vals);
   rapidjson::Value stats;
@@ -164,7 +162,7 @@ void AddHistogram(rapidjson::Document* output,
   output->PushBack(histogram, *alloc);
 }
 
-}
+}  // namespace
 
 void Convert(rapidjson::Document* input, rapidjson::Document* output,
              const ConverterArgs* args) {
@@ -264,43 +262,29 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       }
 
       // Create the histogram.
-      if (element.HasMember("split_first") &&
-          element["split_first"].IsBool() &&
+      if (element.HasMember("split_first") && element["split_first"].IsBool() &&
           element["split_first"].GetBool()) {
         // Create a histogram for the first sample value.
         std::string h1_name = name + "_samples_0_to_0";
-        std::vector<double> h1_vals(vals.begin(), vals.begin()+1);
-        AddHistogram(output,
-                     &alloc,
-                     h1_name,
-                     element["unit"].GetString(),
-                     std::move(h1_vals),
-                     helper.Copy(diagnostic_map),
+        std::vector<double> h1_vals(vals.begin(), vals.begin() + 1);
+        AddHistogram(output, &alloc, h1_name, element["unit"].GetString(),
+                     std::move(h1_vals), helper.Copy(diagnostic_map),
                      MakeUuid());
 
         // Create a histogram for the remaining sample values, if any.
         if (vals.size() > 1) {
           std::stringstream h2_name;
-          h2_name << name << "_samples_1_to_" << vals.size()-1;
+          h2_name << name << "_samples_1_to_" << vals.size() - 1;
 
-          std::vector<double> h2_vals(vals.begin()+1, vals.end());
-          AddHistogram(output,
-                       &alloc,
-                       h2_name.str(),
-                       element["unit"].GetString(),
-                       std::move(h2_vals),
-                       helper.Copy(diagnostic_map),
-                       MakeUuid());
+          std::vector<double> h2_vals(vals.begin() + 1, vals.end());
+          AddHistogram(output, &alloc, h2_name.str(),
+                       element["unit"].GetString(), std::move(h2_vals),
+                       helper.Copy(diagnostic_map), MakeUuid());
         }
       } else {
         // Create a histogram for all |vals|.
-        AddHistogram(output,
-                     &alloc,
-                     name,
-                     element["unit"].GetString(),
-                     std::move(vals),
-                     std::move(diagnostic_map),
-                     MakeUuid());
+        AddHistogram(output, &alloc, name, element["unit"].GetString(),
+                     std::move(vals), std::move(diagnostic_map), MakeUuid());
       }
     } else {
       // Convert the old schema.
@@ -336,13 +320,8 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
           vals.push_back(val.GetDouble());
         }
 
-        AddHistogram(output,
-                     &alloc,
-                     name,
-                     element["unit"].GetString(),
-                     std::move(vals),
-                     std::move(diagnostic_map),
-                     MakeUuid());
+        AddHistogram(output, &alloc, name, element["unit"].GetString(),
+                     std::move(vals), std::move(diagnostic_map), MakeUuid());
       }
 
       size_t samples_size = element["samples"].GetArray().Size();
@@ -378,13 +357,13 @@ int ConverterMain(int argc, char** argv) {
 
   // Parse command line arguments.
   static const struct option opts[] = {
-    {"help", no_argument, nullptr, 'h'},
-    {"input", required_argument, nullptr, 'i'},
-    {"output", required_argument, nullptr, 'o'},
-    {"execution-timestamp-ms", required_argument, nullptr, 'e'},
-    {"masters", required_argument, nullptr, 'm'},
-    {"bots", required_argument, nullptr, 'b'},
-    {"log-url", required_argument, nullptr, 'l'},
+      {"help", no_argument, nullptr, 'h'},
+      {"input", required_argument, nullptr, 'i'},
+      {"output", required_argument, nullptr, 'o'},
+      {"execution-timestamp-ms", required_argument, nullptr, 'e'},
+      {"masters", required_argument, nullptr, 'm'},
+      {"bots", required_argument, nullptr, 'b'},
+      {"log-url", required_argument, nullptr, 'l'},
   };
   ConverterArgs args;
   const char* input_filename = nullptr;

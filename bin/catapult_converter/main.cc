@@ -4,6 +4,4 @@
 
 #include "converter.h"
 
-int main(int argc, char** argv) {
-  return ConverterMain(argc, argv);
-}
+int main(int argc, char** argv) { return ConverterMain(argc, argv); }

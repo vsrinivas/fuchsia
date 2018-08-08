@@ -16,10 +16,9 @@
 namespace {
 
 void CheckParseResult(rapidjson::ParseResult parse_result) {
-  EXPECT_TRUE(parse_result)
-      << "JSON parse error: "
-      << rapidjson::GetParseError_En(parse_result.Code())
-      << " (offset " << parse_result.Offset() << ")";
+  EXPECT_TRUE(parse_result) << "JSON parse error: "
+                            << rapidjson::GetParseError_En(parse_result.Code())
+                            << " (offset " << parse_result.Offset() << ")";
 }
 
 // This function checks that the JSON value |actual| is a number that is
@@ -396,7 +395,6 @@ TEST(CatapultConverter, ConvertNested) {
 
   AssertJsonEqual(output, expected_output);
 }
-
 
 TEST(CatapultConverter, ConvertNewSchemaNoSplits) {
   const char* input_str = R"JSON(
@@ -789,9 +787,7 @@ class TempFile {
     EXPECT_EQ(write(fd, contents, len), len);
     EXPECT_EQ(close(fd), 0);
   }
-  ~TempFile() {
-    EXPECT_EQ(unlink(pathname_), 0);
-  }
+  ~TempFile() { EXPECT_EQ(unlink(pathname_), 0); }
   const char* pathname() { return pathname_; }
 
  private:
@@ -805,13 +801,19 @@ TEST(CatapultConverter, ConverterMain) {
   TempFile output_file("");
 
   const char* args[] = {
-    "unused_argv0",
-    "--input", input_file.pathname(),
-    "--output", output_file.pathname(),
-    "--execution-timestamp-ms", "3456",
-    "--masters", "example_arg_masters",
-    "--log-url", "https://ci.example.com/build/300",
-    "--bots", "example_arg_bots",
+      "unused_argv0",
+      "--input",
+      input_file.pathname(),
+      "--output",
+      output_file.pathname(),
+      "--execution-timestamp-ms",
+      "3456",
+      "--masters",
+      "example_arg_masters",
+      "--log-url",
+      "https://ci.example.com/build/300",
+      "--bots",
+      "example_arg_bots",
   };
   EXPECT_EQ(ConverterMain(countof(args), const_cast<char**>(args)), 0);
 
@@ -826,4 +828,4 @@ TEST(CatapultConverter, ConverterMain) {
   fclose(fp);
 }
 
-}
+}  // namespace
