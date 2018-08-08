@@ -609,7 +609,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         return ZX_ERR_BAD_STATE;
     }
 
-    auto status = SetAssocContext(*assoc);
+    auto status = SetAssocContext(frame.View());
     if (status != ZX_OK) {
         errorf("failed to set association context (status %d)\n", status);
         service::SendAssocConfirm(device_,
@@ -1509,12 +1509,27 @@ uint8_t Station::GetTid(const EthFrame& frame) {
     return GetTid();
 }
 
-// TODO(NET-1261): Intersect capabilities and configurations
-zx_status_t Station::SetAssocContext(const AssociationResponse& resp) {
+zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
     assoc_ctx_ = AssocContext{};
     assoc_ctx_.ts_start = zx::time();
 
-    // Stub function
+    AssocContext from_ap{};
+
+    from_ap.bssid = common::MacAddr(bss_->bssid.data());
+    from_ap.aid = frame.body()->aid & kAidMask;
+    from_ap.cap = frame.body()->cap;
+
+    auto ie_chains = frame.body()->elements;
+    size_t ie_chains_len = frame.body_len() - frame.body()->len();
+    auto status = ParseAssocRespIe(ie_chains, ie_chains_len, &from_ap);
+    if (status != ZX_OK) {
+        debugf("failed to parse AssocResp. status %d\n", status);
+        return status;
+    }
+
+    debugjoin("rxed AssocResp:[%s]\n", debug::Describe(from_ap).c_str());
+
+    // TODO(NET-1261): Intersect capabilities and configurations
 
     return ZX_OK;
 }
@@ -1538,6 +1553,56 @@ const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
     }
 
     return nullptr;
+}
+
+// TODO(NET-1287): Refactor together with Bss::ParseIE()
+zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
+                             AssocContext* assoc_ctx) {
+    ZX_DEBUG_ASSERT(assoc_ctx != nullptr);
+
+    ElementReader reader(ie_chains, ie_chains_len);
+    while (reader.is_valid()) {
+        const ElementHeader* hdr = reader.peek();
+        if (hdr == nullptr) { break; }
+
+        switch (hdr->id) {
+        case element_id::kSuppRates: {
+            auto ie = reader.read<SupportedRatesElement>();
+            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
+            for (uint8_t i = 0; i < ie->hdr.len; i++) {
+                assoc_ctx->supported_rates.push_back(ie->rates[i]);
+            }
+            break;
+        }
+        case element_id::kExtSuppRates: {
+            auto ie = reader.read<ExtendedSupportedRatesElement>();
+            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
+            for (uint8_t i = 0; i < ie->hdr.len; i++) {
+                assoc_ctx->ext_supported_rates.push_back(ie->rates[i]);
+            }
+            break;
+        }
+        case element_id::kHtCapabilities: {
+            auto ie = reader.read<HtCapabilities>();
+            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
+            assoc_ctx->has_ht = true;
+            assoc_ctx->ht_cap = *ie;
+            break;
+        }
+        case element_id::kVhtCapabilities: {
+            auto ie = reader.read<VhtCapabilities>();
+            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
+            assoc_ctx->has_vht = true;
+            assoc_ctx->vht_cap = *ie;
+            break;
+        }
+        default:
+            reader.skip(sizeof(ElementHeader) + hdr->len);
+            break;
+        }
+    }
+
+    return ZX_OK;
 }
 
 }  // namespace wlan

@@ -152,7 +152,7 @@ class Station {
     zx_status_t BuildHtCapabilities(HtCapabilities* htc) const;
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
-    zx_status_t SetAssocContext(const AssociationResponse& resp);
+    zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
@@ -177,5 +177,7 @@ class Station {
 };
 
 const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
+zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
+                             AssocContext* assoc_ctx);
 
 }  // namespace wlan
