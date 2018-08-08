@@ -21,7 +21,8 @@ constexpr float kSecondsPerNanosecond = .000'000'001f;
 
 SpinningSquareView::SpinningSquareView(
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request)
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Spinning Square"),
       background_node_(session()),
@@ -57,7 +58,7 @@ void SpinningSquareView::OnSceneInvalidated(
   const float angle = t * M_PI * 2;
 
   scenic::Rectangle background_shape(session(), logical_size().width,
-                                         logical_size().height);
+                                     logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(
       (float[]){center_x, center_y, kBackgroundElevation});
