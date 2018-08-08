@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -21,7 +21,8 @@
 
 namespace examples {
 
-class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter {
+class TileView : public mozart::BaseView,
+                 public fuchsia::ui::policy::Presenter {
  public:
   TileView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
@@ -58,9 +59,9 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
 
   // |Presenter|:
   void Present(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) override;
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation)
+      override;
   void HACK_SetRendererParams(
       bool enable_clipping,
       ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override{};
@@ -73,8 +74,7 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
   void ConnectViews();
 
   void AddChildView(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       const std::string& url, fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
