@@ -69,8 +69,8 @@ SimpleCameraView::SimpleCameraView(
   simple_camera_->ConnectToCamera(0, std::move(image_pipe_handle));
 
   // Create a rounded-rect shape to display the camera image on.
-  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
-                                     80, 80, 80);
+  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80,
+                                 80, 80);
 
   node_.SetShape(shape);
   node_.SetMaterial(material);
