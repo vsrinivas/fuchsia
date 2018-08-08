@@ -121,14 +121,13 @@ class Slice final {
       total_length += it->length();
     }
 
-    return Slice::WithInitializer(
-        total_length, [begin, end](uint8_t* out) {
-          size_t offset = 0;
-          for (auto it = begin; it != end; ++it) {
-            memcpy(out + offset, it->begin(), it->length());
-            offset += it->length();
-          }
-        });
+    return Slice::WithInitializer(total_length, [begin, end](uint8_t* out) {
+      size_t offset = 0;
+      for (auto it = begin; it != end; ++it) {
+        memcpy(out + offset, it->begin(), it->length());
+        offset += it->length();
+      }
+    });
   }
 
   template <class F>

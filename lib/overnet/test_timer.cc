@@ -48,7 +48,8 @@ bool TestTimer::StepUntilNextEvent(uint64_t jitter_us) {
 }
 
 void TestTimer::InitTimeout(Timeout* timeout, TimeStamp when) {
-  if (shutting_down_ || when.after_epoch().as_us() <= static_cast<int64_t>(now_)) {
+  if (shutting_down_ ||
+      when.after_epoch().as_us() <= static_cast<int64_t>(now_)) {
     FireTimeout(timeout, Status::Ok());
     return;
   }
