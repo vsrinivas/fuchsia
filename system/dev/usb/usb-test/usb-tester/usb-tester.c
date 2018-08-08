@@ -21,11 +21,23 @@
 #define TEST_DUMMY_DATA 42
 
 typedef struct {
+    uint8_t intf_num;
+    uint8_t alt_setting;
+
+    uint8_t in_addr;
+    uint8_t out_addr;
+    uint16_t in_max_packet;
+    uint16_t out_max_packet;
+} isoch_loopback_intf_t;
+
+typedef struct {
     zx_device_t* zxdev;
     usb_protocol_t usb;
 
     uint8_t bulk_in_addr;
     uint8_t bulk_out_addr;
+
+    isoch_loopback_intf_t isoch_loopback_intf;
 } usb_tester_t;
 
 typedef struct {
@@ -314,10 +326,15 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, false);
     while (intf) {
+        isoch_loopback_intf_t isoch_intf = {
+            .intf_num = intf->bInterfaceNumber,
+            .alt_setting = intf->bAlternateSetting
+        };
+
         usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
         while (endp) {
-            uint8_t ep_type = usb_ep_type(endp);
-            if (ep_type == USB_ENDPOINT_BULK) {
+            switch (usb_ep_type(endp)) {
+            case USB_ENDPOINT_BULK:
                 if (usb_ep_direction(endp) == USB_ENDPOINT_IN) {
                     usb_tester->bulk_in_addr = endp->bEndpointAddress;
                     zxlogf(TRACE, "usb_tester found bulk in ep: %x\n", usb_tester->bulk_in_addr);
@@ -325,8 +342,26 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
                     usb_tester->bulk_out_addr = endp->bEndpointAddress;
                     zxlogf(TRACE, "usb_tester found bulk out ep: %x\n", usb_tester->bulk_out_addr);
                 }
+                break;
+            case USB_ENDPOINT_ISOCHRONOUS:
+                if (usb_ep_direction(endp) == USB_ENDPOINT_IN) {
+                    isoch_intf.in_addr = endp->bEndpointAddress;
+                    isoch_intf.in_max_packet = usb_ep_max_packet(endp);
+                } else {
+                    isoch_intf.out_addr = endp->bEndpointAddress;
+                    isoch_intf.out_max_packet = usb_ep_max_packet(endp);
+                }
+                break;
             }
             endp = usb_desc_iter_next_endpoint(&iter);
+        }
+        if (isoch_intf.in_addr && isoch_intf.out_addr) {
+            // Found isoch loopback endpoints.
+            memcpy(&usb_tester->isoch_loopback_intf, &isoch_intf, sizeof(isoch_intf));
+            zxlogf(TRACE, "usb tester found isoch loopback eps: %x (%u) %x (%u), intf %u %u\n",
+                   isoch_intf.in_addr, isoch_intf.in_max_packet,
+                   isoch_intf.out_addr, isoch_intf.out_max_packet,
+                   isoch_intf.intf_num, isoch_intf.alt_setting);
         }
         intf = usb_desc_iter_next_interface(&iter, false);
     }
