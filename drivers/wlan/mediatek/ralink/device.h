@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <ddk/driver.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <fbl/unique_ptr.h>
@@ -46,9 +46,7 @@ class WlanmacIfcProxy {
     void CompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
         ifc_->complete_tx(cookie_, pkt, status);
     }
-    void Indication(uint32_t ind) {
-        ifc_->indication(cookie_, ind);
-    }
+    void Indication(uint32_t ind) { ifc_->indication(cookie_, ind); }
 
    private:
     wlanmac_ifc_t* ifc_;
@@ -251,10 +249,13 @@ class Device {
     std::vector<uint8_t> tx_endpts_;
 
     std::mutex lock_;
-    enum { PHY_RUNNING, PHY_DESTROYING }
-         phy_state_ __TA_GUARDED(lock_) = PHY_RUNNING;
-    enum { IFC_NONE, IFC_CREATING, IFC_RUNNING, IFC_DESTROYING }
-         iface_state_ __TA_GUARDED(lock_) = IFC_NONE;
+    enum { PHY_RUNNING, PHY_DESTROYING } phy_state_ __TA_GUARDED(lock_) = PHY_RUNNING;
+    enum {
+        IFC_NONE,
+        IFC_CREATING,
+        IFC_RUNNING,
+        IFC_DESTROYING
+    } iface_state_ __TA_GUARDED(lock_) = IFC_NONE;
     fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     constexpr static size_t kEepromSize = 0x0100;

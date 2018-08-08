@@ -465,7 +465,6 @@ class TbttTimer : public Register<0x01124> {
     WLAN_BIT_FIELD(tbtt_timer, 0, 16);
 };
 
-
 class IntTimerCfg : public Register<0x1128> {
    public:
     WLAN_BIT_FIELD(pre_tbtt_timer, 0, 16);
