@@ -213,7 +213,8 @@ void TimerManager::ScheduleExpiryTask(
           });
 
   zx_status_t status =
-      (*timer_val_ptr)->expiry_task.PostDelayed(dispatcher_, zx::sec(timeout_s));
+      (*timer_val_ptr)
+          ->expiry_task.PostDelayed(dispatcher_, zx::sec(timeout_s));
   if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
     FXL_DLOG(ERROR) << "Failed to post task: status = " << status;
   }

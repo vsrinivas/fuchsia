@@ -216,7 +216,7 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   factory->GetEncoderForProject(std::move(profile), encoder_.NewRequest(),
-                               &status);
+                                &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "GetEncoderForProject() => " << StatusToString(status);
 }

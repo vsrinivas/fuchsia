@@ -70,7 +70,8 @@ void NetworkRequest::OnDataComplete() {
 }
 
 FuchsiaHTTPClient::FuchsiaHTTPClient(
-    network_wrapper::NetworkWrapper* network_wrapper, async_dispatcher_t* dispatcher)
+    network_wrapper::NetworkWrapper* network_wrapper,
+    async_dispatcher_t* dispatcher)
     : network_wrapper_(network_wrapper), dispatcher_(dispatcher) {}
 
 void FuchsiaHTTPClient::HandleResponse(fxl::RefPtr<NetworkRequest> req,
@@ -137,9 +138,10 @@ void NetworkRequest::SetValueAndCleanUp(StatusOr<HTTPResponse> value) {
 
 std::future<StatusOr<HTTPResponse>> FuchsiaHTTPClient::Post(
     HTTPRequest request, std::chrono::steady_clock::time_point deadline) {
-  ZX_ASSERT_MSG(async_get_default_dispatcher() != dispatcher_,
-                "Post should not be called from the same thread as dispatcher_, as "
-                "this may cause deadlocks");
+  ZX_ASSERT_MSG(
+      async_get_default_dispatcher() != dispatcher_,
+      "Post should not be called from the same thread as dispatcher_, as "
+      "this may cause deadlocks");
   auto network_request =
       fxl::MakeRefCounted<NetworkRequest>(std::move(request));
   network_request->SetDeadlineTask(std::make_unique<async::TaskClosure>(

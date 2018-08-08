@@ -339,7 +339,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   factory->GetEncoderForProject(LoadCobaltConfig(), encoder_.NewRequest(),
-                               &status);
+                                &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "GetEncoderForProject() => " << StatusToString(status);
 
@@ -387,7 +387,7 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   factory->GetEncoderForProject(LoadCobaltConfig(), encoder_.NewRequest(),
-                               &status);
+                                &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "GetEncoderForProject() => " << StatusToString(status);
 

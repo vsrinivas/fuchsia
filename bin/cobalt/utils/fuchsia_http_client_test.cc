@@ -54,7 +54,8 @@ class CVBool {
 
 class TestFuchsiaHTTPClient : public FuchsiaHTTPClient {
  public:
-  TestFuchsiaHTTPClient(NetworkWrapper* network_wrapper, async_dispatcher_t* dispatcher)
+  TestFuchsiaHTTPClient(NetworkWrapper* network_wrapper,
+                        async_dispatcher_t* dispatcher)
       : FuchsiaHTTPClient(network_wrapper, dispatcher) {}
 
   void HandleResponse(fxl::RefPtr<NetworkRequest> req,

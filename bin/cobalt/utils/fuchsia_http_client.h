@@ -56,8 +56,9 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
  public:
   NetworkRequest(clearcut::HTTPRequest req) : request_(std::move(req)) {}
 
-  void ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
-                    uint32_t http_code, zx::socket source);
+  void ReadResponse(async_dispatcher_t* dispatcher,
+                    fxl::RefPtr<NetworkRequest> self, uint32_t http_code,
+                    zx::socket source);
   void OnDataAvailable(const void* data, size_t num_bytes);
   void OnDataComplete();
 
