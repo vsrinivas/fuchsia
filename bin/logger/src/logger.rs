@@ -24,7 +24,7 @@ pub const FX_LOG_MAX_TAG_LEN: usize = 64;
 pub struct fx_log_metadata_t {
     pub pid: ZxKoid,
     pub tid: ZxKoid,
-    pub time: ZxKoid,
+    pub time: zx::sys::zx_time_t,
     pub severity: FxLogSeverityT,
     pub dropped_logs: uint32_t,
 }
@@ -165,7 +165,7 @@ mod tests {
     pub struct fx_log_metadata_t_packed {
         pub pid: ZxKoid,
         pub tid: ZxKoid,
-        pub time: ZxKoid,
+        pub time: zx::sys::zx_time_t,
         pub severity: FxLogSeverityT,
         pub dropped_logs: uint32_t,
     }

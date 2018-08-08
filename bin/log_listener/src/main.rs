@@ -70,7 +70,7 @@ impl Default for LocalOptions {
 }
 
 impl LocalOptions {
-    fn format_time(&self, timestamp: u64) -> String {
+    fn format_time(&self, timestamp: zx::sys::zx_time_t) -> String {
         match self.clock {
             Clock::Monotonic => format!(
                 "{:05}.{:06}",
@@ -88,7 +88,7 @@ impl LocalOptions {
         }
     }
 
-    fn _monotonic_to_utc(&self, timestamp: u64) -> chrono::NaiveDateTime {
+    fn _monotonic_to_utc(&self, timestamp: zx::sys::zx_time_t) -> chrono::NaiveDateTime {
         // Find UTC offset for Monotonic.
         // Must compute this every time since UTC time can be adjusted.
         // Note that when printing old messages from memory buffer then
