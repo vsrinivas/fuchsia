@@ -99,10 +99,12 @@ void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 //
 // By default drivers have ERROR, WARN, and INFO debug levels enabled.
 // The kernel commandline option driver.NAME.log may be used to override
-// this.  Its value is a comma-separated list of log levels to enable (prefixed
-// with '+') or disable (prefixed with '-').  The levels are the strings
-// "error", "info", "trace", "spew", "debug1", "debug2", "debug3", and "debug4",
-// or an integer mask in decimal, octal, or hex.
+// this.  NAME is specified via ZIRCON_DRIVER_BEGIN/ZIRCON_DRIVER_END
+// macros on each driver's definition.  Its value is a comma-separated
+// list of log levels to enable (prefixed with '+') or disable (prefixed
+// with '-').  The levels are the strings "error", "info", "trace", "spew",
+// "debug1", "debug2", "debug3", and "debug4", or an integer mask in decimal,
+// octal, or hex.
 //
 // Example driver.floppydisk.log=-info,+trace,+0x10
 //
