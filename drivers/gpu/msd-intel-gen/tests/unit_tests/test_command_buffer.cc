@@ -140,8 +140,8 @@ public:
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
         auto addr_space = exec_address_space();
 
-        auto target_buffer_mapping = AddressSpace::MapBufferGpu(
-            addr_space, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
+        auto target_buffer_mapping =
+            AddressSpace::MapBufferGpu(addr_space, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
         ASSERT_NE(target_buffer_mapping, nullptr);
 
         void* target_cpu_addr;
@@ -206,10 +206,7 @@ private:
     std::unique_ptr<CommandBufferHelper> helper_;
 };
 
-TEST(CommandBuffer, MapUnmapResourcesGpu)
-{
-    ::Test::Create()->TestMapUnmapResourcesGpu();
-}
+TEST(CommandBuffer, MapUnmapResourcesGpu) { ::Test::Create()->TestMapUnmapResourcesGpu(); }
 
 TEST(CommandBuffer, PatchRelocations) { ::Test::Create()->TestPatchRelocations(); }
 

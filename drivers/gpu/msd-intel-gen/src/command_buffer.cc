@@ -223,8 +223,8 @@ bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
     TRACE_DURATION("magma", "MapResourcesGpu");
 
     for (auto res : exec_resources_) {
-        std::shared_ptr<GpuMapping> mapping = AddressSpace::GetSharedGpuMapping(
-            address_space, res.buffer, res.offset, res.length);
+        std::shared_ptr<GpuMapping> mapping =
+            AddressSpace::GetSharedGpuMapping(address_space, res.buffer, res.offset, res.length);
         if (!mapping)
             return DRETF(false, "failed to map resource into GPU address space");
         DLOG("MapResourcesGpu aspace %p buffer 0x%" PRIx64 " offset 0x%" PRIx64 " length 0x%" PRIx64
@@ -258,7 +258,8 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
         return DRETF(false, "failed to map buffer into CPU address space");
     DASSERT(buffer_cpu_addr);
 
-    uint8_t* reloc_page_cpu_addr = static_cast<uint8_t*>(buffer_cpu_addr) + reloc_page_index * PAGE_SIZE;
+    uint8_t* reloc_page_cpu_addr =
+        static_cast<uint8_t*>(buffer_cpu_addr) + reloc_page_index * PAGE_SIZE;
 
     gpu_addr_t address_to_patch = target_gpu_address + relocation->target_offset;
     static_assert(sizeof(gpu_addr_t) == sizeof(uint64_t), "gpu addr size mismatch");

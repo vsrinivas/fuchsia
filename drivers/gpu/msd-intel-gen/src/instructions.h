@@ -89,9 +89,8 @@ public:
     static void write(InstructionWriter* writer, uint32_t sequence_number, uint64_t gpu_addr,
                       uint32_t flags)
     {
-        DASSERT((flags &
-                 ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
-                   kGenericMediaStateClearBit | kDcFlushEnableBit)) == 0);
+        DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
+                           kGenericMediaStateClearBit | kDcFlushEnableBit)) == 0);
         writer->write_dword(kCommandType | kCommandSubType | k3dCommandOpcode |
                             k3dCommandSubOpcode | (kDwordCount - 2));
         writer->write_dword(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);

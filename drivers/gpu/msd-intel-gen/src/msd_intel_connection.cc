@@ -47,9 +47,7 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* connection, msd_bu
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer)
-{
-}
+void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer) {}
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
                                                                msd_client_id_t client_id)

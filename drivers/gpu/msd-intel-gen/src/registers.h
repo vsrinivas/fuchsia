@@ -5,11 +5,11 @@
 #ifndef REGISTERS_H
 #define REGISTERS_H
 
-#include <vector>
 #include "magma_util/macros.h"
 #include "magma_util/register_bitfields.h"
 #include "magma_util/register_io.h"
 #include "types.h"
+#include <vector>
 
 namespace registers {
 
@@ -570,6 +570,6 @@ public:
     }
 };
 
-} // namespace
+} // namespace registers
 
 #endif // REGISTERS_H

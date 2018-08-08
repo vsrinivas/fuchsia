@@ -164,8 +164,8 @@ public:
         uint32_t num_iterations = 1;
 
         for (uint32_t iteration = 0; iteration < num_iterations; iteration++) {
-            auto dst_mapping = AddressSpace::MapBufferGpu(
-                device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "dst"));
+            auto dst_mapping =
+                AddressSpace::MapBufferGpu(device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "dst"));
             ASSERT_NE(dst_mapping, nullptr);
 
             void* dst_cpu_addr;
@@ -189,7 +189,7 @@ public:
             static constexpr uint32_t kScratchRegOffset = 0x02600;
 
             uint32_t i = 0;
-            batch_ptr[i++] = (0x22 << 23) |  (3 - 2); // store to mmio
+            batch_ptr[i++] = (0x22 << 23) | (3 - 2); // store to mmio
             batch_ptr[i++] = kScratchRegOffset;
             batch_ptr[i++] = expected_val;
 

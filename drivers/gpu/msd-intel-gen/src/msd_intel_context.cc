@@ -38,8 +38,7 @@ bool MsdIntelContext::Map(std::shared_ptr<AddressSpace> address_space, EngineCom
         return DRETF(false, "already mapped to a different address space");
     }
 
-    state.context_mapping =
-        AddressSpace::MapBufferGpu(address_space, state.context_buffer);
+    state.context_mapping = AddressSpace::MapBufferGpu(address_space, state.context_buffer);
     if (!state.context_mapping)
         return DRETF(false, "context map failed");
 

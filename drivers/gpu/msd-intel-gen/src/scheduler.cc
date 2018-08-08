@@ -48,7 +48,7 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
     }
 
     if (current_context_ == nullptr || current_context_ == context) {
-        if(current_context_ == nullptr){
+        if (current_context_ == nullptr) {
             auto connection = context->connection().lock();
             uint64_t id = connection ? connection->client_id() : 0;
             nonce_ = TRACE_NONCE();
@@ -67,7 +67,7 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
 void FifoScheduler::CommandBufferCompleted(std::shared_ptr<MsdIntelContext> context)
 {
     DASSERT(current_count_);
-    if (--current_count_ == 0){
+    if (--current_count_ == 0) {
         TRACE_ASYNC_END("magma", "Context Exec", nonce_);
         current_context_.reset();
     }

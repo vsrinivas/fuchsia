@@ -368,14 +368,12 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
         return DRETF(false, "failed to get ringbuffer gpu address");
 
     void* cpu_addr;
-    if (!context->get_context_buffer(id())->platform_buffer()->MapCpu(
-            &cpu_addr))
-      return DRETF(false, "failed to map context page 1");
+    if (!context->get_context_buffer(id())->platform_buffer()->MapCpu(&cpu_addr))
+        return DRETF(false, "failed to map context page 1");
 
     RegisterStateHelper helper(
         id(), mmio_base_,
-        reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(cpu_addr) +
-                                    PAGE_SIZE));
+        reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(cpu_addr) + PAGE_SIZE));
 
     DLOG("UpdateContext ringbuffer gpu_addr 0x%lx tail 0x%x", gpu_addr, tail);
 
@@ -383,7 +381,7 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
     helper.write_ring_buffer_start(gpu_addr);
 
     if (!context->get_context_buffer(id())->platform_buffer()->UnmapCpu())
-      DLOG("UnmapPageCpu failed");
+        DLOG("UnmapPageCpu failed");
 
     return true;
 }

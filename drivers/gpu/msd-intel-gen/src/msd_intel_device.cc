@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "msd_intel_device.h"
-#include "msd_intel_gen_query.h"
 #include "device_id.h"
 #include "forcewake.h"
 #include "global_context.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "msd_intel_gen_query.h"
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
 #include "registers.h"
@@ -535,8 +535,7 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     if (context->killed())
         return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Context killed");
 
-    TRACE_DURATION_BEGIN("magma", "PrepareForExecution",
-                         "id", command_buffer->GetBatchBufferId());
+    TRACE_DURATION_BEGIN("magma", "PrepareForExecution", "id", command_buffer->GetBatchBufferId());
     if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                         "Failed to prepare command buffer for execution");

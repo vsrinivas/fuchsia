@@ -5,9 +5,9 @@
 #ifndef GTT_H
 #define GTT_H
 
-#include <memory>
 #include "address_space.h"
 #include "platform_pci_device.h"
+#include <memory>
 
 class Gtt : public AddressSpace {
 public:

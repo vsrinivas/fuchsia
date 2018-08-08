@@ -31,6 +31,6 @@ public:
         EXPECT_EQ(1, semaphore.use_count());
     }
 };
-}
+} // namespace
 
 TEST(MsdIntelSemaphore, Test) { TestMsdIntelSemaphore::Test(); }

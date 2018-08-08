@@ -257,9 +257,8 @@ public:
         uint32_t write = 0;
 
         for (auto operation : static_cast<RegisterTracer*>(register_io_->hook())->trace()) {
-            if (operation.offset ==
-                EngineCommandStreamer::kRenderEngineMmioBase +
-                    registers::ExeclistSubmitPort::kSubmitOffset) {
+            if (operation.offset == EngineCommandStreamer::kRenderEngineMmioBase +
+                                        registers::ExeclistSubmitPort::kSubmitOffset) {
                 EXPECT_EQ(operation.type, RegisterTracer::Operation::WRITE32);
                 ASSERT_LT(write, submitport_writes.size());
                 EXPECT_EQ(operation.val, submitport_writes[write++]);

@@ -37,8 +37,8 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
     if (!address_space->Alloc(length, static_cast<uint8_t>(align_pow2), &gpu_addr))
         return DRETP(nullptr, "failed to allocate gpu address");
 
-    DLOG("MapBufferGpu offset 0x%lx length 0x%lx allocated gpu_addr 0x%lx",
-         offset, length, gpu_addr);
+    DLOG("MapBufferGpu offset 0x%lx length 0x%lx allocated gpu_addr 0x%lx", offset, length,
+         gpu_addr);
 
     uint64_t page_offset = offset / PAGE_SIZE;
     uint32_t page_count = length / PAGE_SIZE;
@@ -72,8 +72,7 @@ AddressSpace::GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
     DASSERT(address_space);
     DASSERT(buffer);
 
-    std::shared_ptr<GpuMapping> mapping =
-        buffer->FindBufferMapping(address_space, offset, length);
+    std::shared_ptr<GpuMapping> mapping = buffer->FindBufferMapping(address_space, offset, length);
     if (!mapping) {
         std::unique_ptr<GpuMapping> new_mapping =
             AddressSpace::MapBufferGpu(address_space, buffer, offset, length);

@@ -5,8 +5,6 @@
 #ifndef ENGINE_COMMAND_STREAMER_H
 #define ENGINE_COMMAND_STREAMER_H
 
-#include <memory>
-#include <queue>
 #include "address_space.h"
 #include "hardware_status_page.h"
 #include "magma_util/register_io.h"
@@ -17,6 +15,8 @@
 #include "render_init_batch.h"
 #include "scheduler.h"
 #include "sequencer.h"
+#include <memory>
+#include <queue>
 
 class EngineCommandStreamer {
 public:

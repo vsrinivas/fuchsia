@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd.h"
-#include "magma_util/macros.h"
 #include "msd_intel_semaphore.h"
+#include "magma_util/macros.h"
+#include "msd.h"
 
 magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out)
 {

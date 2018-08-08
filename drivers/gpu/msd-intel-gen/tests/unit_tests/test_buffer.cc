@@ -168,15 +168,13 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
         {
-            std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(address_space, 0, size);
+            std::shared_ptr<GpuMapping> copy = buffer->FindBufferMapping(address_space, 0, size);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
 
         {
-            std::shared_ptr<GpuMapping> copy =
-                GetSharedGpuMapping(address_space, buffer);
+            std::shared_ptr<GpuMapping> copy = GetSharedGpuMapping(address_space, buffer);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -186,8 +184,7 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 0u);
 
         {
-            std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(address_space, 0, size);
+            std::shared_ptr<GpuMapping> copy = buffer->FindBufferMapping(address_space, 0, size);
             EXPECT_EQ(copy, nullptr);
         }
 
@@ -197,8 +194,7 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
         {
-            std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(address_space, 0, size);
+            std::shared_ptr<GpuMapping> copy = buffer->FindBufferMapping(address_space, 0, size);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -206,8 +202,7 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
         {
-            std::shared_ptr<GpuMapping> copy =
-                GetSharedGpuMapping(address_space, buffer);
+            std::shared_ptr<GpuMapping> copy = GetSharedGpuMapping(address_space, buffer);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -254,8 +249,7 @@ public:
 
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
-        mapping_low =
-            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2);
+        mapping_low = AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2);
         ASSERT_NE(mapping_low, nullptr);
         EXPECT_NE(mapping_low.get(), mapping_full.get());
 
