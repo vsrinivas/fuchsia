@@ -5,9 +5,9 @@
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/outgoing.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/command_line.h>
