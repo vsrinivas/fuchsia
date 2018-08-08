@@ -37,6 +37,7 @@ if (is_mac) {
       "transform_unittest.cc",
       "util/align_unittest.cc",
       "util/bit_ops_unittest.cc",
+      "util/bitmap_unittest.cc",
       "util/block_allocator_unittest.cc",
       "util/hash_cache_unittest.cc",
       "util/hash_unittest.cc",
