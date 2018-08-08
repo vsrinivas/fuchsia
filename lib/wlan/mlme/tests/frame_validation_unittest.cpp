@@ -173,7 +173,8 @@ TEST(FrameValidation, TestDynamicHdrLength) {
     hdr->is_large = false;
     ASSERT_TRUE(is_valid_hdr_length<DynamicTestHdr>(pkt->data(), len));
 
-    // Dynamically sized header is large and should not fit into the short, but into the large buffer.
+    // Dynamically sized header is large and should not fit into the short, but into the large
+    // buffer.
     hdr->is_large = true;
     ASSERT_FALSE(is_valid_hdr_length<DynamicTestHdr>(pkt->data(), len));
     ASSERT_TRUE(is_valid_hdr_length<DynamicTestHdr>(pkt->data(), DynamicTestHdr::kLargeLength));
@@ -235,11 +236,14 @@ TEST(FrameValidation, TestFrameLength_EmptyBody_Padding) {
     auto pkt = GetPacket(len);
 
     // Verifies correct behavior for frames which carry an empty body and use padding.
-    bool valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len, add4BytesPadding);
+    bool valid_len =
+        is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len, add4BytesPadding);
     ASSERT_FALSE(valid_len);
-    valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 3, add4BytesPadding);
+    valid_len =
+        is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 3, add4BytesPadding);
     ASSERT_FALSE(valid_len);
-    valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 4, add4BytesPadding);
+    valid_len =
+        is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 4, add4BytesPadding);
     ASSERT_TRUE(valid_len);
 }
 

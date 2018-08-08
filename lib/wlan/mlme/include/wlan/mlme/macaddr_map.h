@@ -44,8 +44,7 @@ template <typename V, macaddr_map_type::MapType Type> class MacAddrMap {
     }
 
     // Predicate signature is bool(V v).
-    template <typename Predicate>
-    size_type RemoveIf(Predicate p) {
+    template <typename Predicate> size_type RemoveIf(Predicate p) {
         size_type removed = 0;
         for (auto iter = begin(map_); iter != end(map_);) {
             if (p(iter->second)) {
@@ -60,8 +59,7 @@ template <typename V, macaddr_map_type::MapType Type> class MacAddrMap {
     }
 
     // Function signature is void(V v).
-    template <typename Function>
-    void ForEach(Function f) {
+    template <typename Function> void ForEach(Function f) {
         for (auto iter = begin(map_); iter != end(map_); iter++) {
             f(iter->second);
         }

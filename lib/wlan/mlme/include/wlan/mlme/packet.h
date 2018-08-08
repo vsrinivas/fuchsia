@@ -55,7 +55,7 @@ template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename Hug
 class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator, true> {
    public:
     static void Fail(const std::string& buffer_name) {
-       // TODO(eyw): Use a timer to throttle logging
+        // TODO(eyw): Use a timer to throttle logging
         if (!is_logging_) { return; }
         debugbuf("%s buffer exhausted.\n", buffer_name.c_str());
         PrintCounters();
@@ -117,7 +117,8 @@ template <size_t NumBuffers, size_t BufferSize>
 using SlabBufferTraits =
     fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
                                    sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers +
-                                       kSlabOverhead, ::fbl::Mutex, kBufferDebugEnabled>;
+                                       kSlabOverhead,
+                                   ::fbl::Mutex, kBufferDebugEnabled>;
 
 // A SlabBuffer is an implementation of a Buffer that comes from a fbl::SlabAllocator. The size of
 // the internal::FixedBuffer and the number of buffers is part of the typename of the SlabAllocator,

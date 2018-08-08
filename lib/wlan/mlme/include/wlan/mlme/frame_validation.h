@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <wlan/common/mac_frame.h>
 #include <wlan/common/action_frame.h>
+#include <wlan/common/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/protocol/mac.h>
 
@@ -17,8 +17,7 @@ struct UnknownBody : public EmptyHdr {
     uint8_t data[];
 } __PACKED;
 
-template <typename H>
-struct is_mac_hdr {
+template <typename H> struct is_mac_hdr {
     static constexpr bool value = std::is_same<H, MgmtFrameHeader>::value ||
                                   std::is_same<H, DataFrameHeader>::value ||
                                   std::is_same<H, CtrlFrameHdr>::value;
@@ -87,22 +86,19 @@ template <typename H, typename B> bool IsValidMacFrameType(const uint8_t* buf, s
     return fc->type() == H::Type() && MacSubtypeValidator<H, B>::is_valid(buf, len);
 }
 
-template<typename B>
-struct FrameTypeValidator<MgmtFrameHeader, B> {
+template <typename B> struct FrameTypeValidator<MgmtFrameHeader, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
         return IsValidMacFrameType<MgmtFrameHeader, B>(buf, len);
     }
 };
 
-template<typename B>
-struct FrameTypeValidator<DataFrameHeader, B> {
+template <typename B> struct FrameTypeValidator<DataFrameHeader, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
         return IsValidMacFrameType<DataFrameHeader, B>(buf, len);
     }
 };
 
-template<typename B>
-struct FrameTypeValidator<CtrlFrameHdr, B> {
+template <typename B> struct FrameTypeValidator<CtrlFrameHdr, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
         return IsValidMacFrameType<CtrlFrameHdr, B>(buf, len);
     }
@@ -112,8 +108,7 @@ template <typename B> struct FrameTypeValidator<EthernetII, B> {
     static bool is_valid(const uint8_t* buf, size_t len) { return true; }
 };
 
-template<typename B>
-struct FrameTypeValidator<ActionFrame, B> {
+template <typename B> struct FrameTypeValidator<ActionFrame, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
         if (len < sizeof(ActionFrame)) { return false; }
 
@@ -122,8 +117,7 @@ struct FrameTypeValidator<ActionFrame, B> {
     }
 };
 
-template<typename B>
-struct FrameTypeValidator<ActionFrameBlockAck, B> {
+template <typename B> struct FrameTypeValidator<ActionFrameBlockAck, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
         if (len < sizeof(ActionFrameBlockAck)) { return false; }
 
@@ -142,10 +136,9 @@ template <typename B> struct FrameTypeValidator<AmsduSubframeHeader, B> {
 
 }  // namespace internal
 
-typedef size_t(*add_padding_func)(size_t);
+typedef size_t (*add_padding_func)(size_t);
 
-template<typename H>
-add_padding_func get_packet_padding_func(const Packet* pkt) {
+template <typename H> add_padding_func get_packet_padding_func(const Packet* pkt) {
     auto rx = pkt->ctrl_data<wlan_rx_info_t>();
     if (is_mac_hdr<H>::value && rx != nullptr &&
         rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4) {
@@ -156,8 +149,7 @@ add_padding_func get_packet_padding_func(const Packet* pkt) {
 
 // Check if the given buffer is long enough to hold a header of type H.
 // Note: The expected length of the header can be variable and depends on the content of the buffer.
-template<typename H>
-bool is_valid_hdr_length(const uint8_t* buf, size_t len) {
+template <typename H> bool is_valid_hdr_length(const uint8_t* buf, size_t len) {
     if (buf == nullptr) { return false; }
 
     if (std::is_base_of<EmptyHdr, H>::value) { return true; }
@@ -189,8 +181,7 @@ template <typename H, typename B> bool is_valid_frame_length(const Packet* pkt, 
     return is_valid_frame_length<H, B>(buf, len, padding);
 }
 
-template<typename H, typename B>
-bool is_valid_frame_type(const uint8_t* buf, size_t len) {
+template <typename H, typename B> bool is_valid_frame_type(const uint8_t* buf, size_t len) {
     if (buf == nullptr) { return false; }
     return internal::FrameTypeValidator<H, B>::is_valid(buf, len);
 }

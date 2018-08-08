@@ -56,7 +56,7 @@ class Mlme {
     virtual zx_status_t PostChannelChange() = 0;
     virtual zx_status_t HandleTimeout(const ObjectId id) = 0;
     // Called when the hardware reports an indication such as Pre-TBTT.
-    virtual void HwIndication(uint32_t ind) {};
+    virtual void HwIndication(uint32_t ind){};
     virtual ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const { return {}; };
 };
 

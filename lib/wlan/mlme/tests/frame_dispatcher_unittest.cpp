@@ -85,7 +85,9 @@ TEST_F(FrameDispatchTest, HandleBeacon) {
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(data_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(test_data::kBeaconFrame.data(), handled_packet->data(), test_data::kBeaconFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kBeaconFrame.data(), handled_packet->data(),
+                     test_data::kBeaconFrame.size()),
+              0);
 }
 
 TEST_F(FrameDispatchTest, HandlePsPoll) {
@@ -95,7 +97,9 @@ TEST_F(FrameDispatchTest, HandlePsPoll) {
     EXPECT_TRUE(mgmt_hdr == nullptr);
     EXPECT_TRUE(data_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(test_data::kPsPollFrame.data(), handled_packet->data(), test_data::kPsPollFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kPsPollFrame.data(), handled_packet->data(),
+                     test_data::kPsPollFrame.size()),
+              0);
 }
 
 TEST_F(FrameDispatchTest, HandlePsPollUnsupported) {
@@ -114,7 +118,9 @@ TEST_F(FrameDispatchTest, HandleDeauthentication) {
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(data_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(test_data::kDeauthFrame.data(), handled_packet->data(), test_data::kDeauthFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kDeauthFrame.data(), handled_packet->data(),
+                     test_data::kDeauthFrame.size()),
+              0);
 }
 
 TEST_F(FrameDispatchTest, HandleDataFrame) {
@@ -124,7 +130,9 @@ TEST_F(FrameDispatchTest, HandleDataFrame) {
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(test_data::kDataFrame.data(), handled_packet->data(), test_data::kDataFrame.size()), 0);
+    EXPECT_EQ(
+        memcmp(test_data::kDataFrame.data(), handled_packet->data(), test_data::kDataFrame.size()),
+        0);
 }
 
 TEST_F(FrameDispatchTest, HandleNullDataFrame) {
@@ -134,7 +142,9 @@ TEST_F(FrameDispatchTest, HandleNullDataFrame) {
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(test_data::kNullDataFrame.data(), handled_packet->data(), test_data::kNullDataFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kNullDataFrame.data(), handled_packet->data(),
+                     test_data::kNullDataFrame.size()),
+              0);
 }
 
 TEST_F(FrameDispatchTest, HandleEthFrame) {
@@ -144,7 +154,9 @@ TEST_F(FrameDispatchTest, HandleEthFrame) {
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(test_data::kEthernetFrame.data(), handled_packet->data(), test_data::kEthernetFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kEthernetFrame.data(), handled_packet->data(),
+                     test_data::kEthernetFrame.size()),
+              0);
 }
 
 #undef IMPL_HANDLE_FRAME

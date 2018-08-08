@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include <cmath>
 #include <wlan/common/energy.h>
+#include <cmath>
 
 namespace wlan {
 namespace common {
@@ -133,7 +133,6 @@ TEST_F(EnergyTest, Arithmetics) {
 
     fw -= FemtoWatt(2);
     EXPECT_EQ(fw.val, 5u);
-
 }
 
 TEST_F(EnergyTest, DbmToFemtoWatt) {
@@ -174,11 +173,11 @@ TEST_F(EnergyTest, DbmToFemtoWatt) {
 
 TEST_F(EnergyTest, FemtoWattToDbm) {
     EXPECT_EQ(to_dBm(FemtoWatt(0)).val, std::numeric_limits<int8_t>::min());
-    EXPECT_EQ(to_dBm(FemtoWatt(1)).val, -120); // 1 femtowatt = -120 dBm
-    EXPECT_EQ(to_dBm(FemtoWatt(1000)).val, -90); // 1 picowatt = -90 dBm
-    EXPECT_EQ(to_dBm(FemtoWatt(1'000'000'000ull)).val, -30); // 1 microwatt = -30 dBm
-    EXPECT_EQ(to_dBm(FemtoWatt(1'000'000'000'000ull)).val, 0); // 1 milliwatt = 0 dBm
-    EXPECT_EQ(to_dBm(FemtoWatt(1'000'000'000'000'000ull)).val, 30); // 1 watt = 30 dBm
+    EXPECT_EQ(to_dBm(FemtoWatt(1)).val, -120);                       // 1 femtowatt = -120 dBm
+    EXPECT_EQ(to_dBm(FemtoWatt(1000)).val, -90);                     // 1 picowatt = -90 dBm
+    EXPECT_EQ(to_dBm(FemtoWatt(1'000'000'000ull)).val, -30);         // 1 microwatt = -30 dBm
+    EXPECT_EQ(to_dBm(FemtoWatt(1'000'000'000'000ull)).val, 0);       // 1 milliwatt = 0 dBm
+    EXPECT_EQ(to_dBm(FemtoWatt(1'000'000'000'000'000ull)).val, 30);  // 1 watt = 30 dBm
     // 2^64-1 femtowatts ~= 1.84e7 milliwats ~= 73 dBm
     EXPECT_EQ(to_dBm(FemtoWatt(std::numeric_limits<uint64_t>::max())).val, 73);
 }

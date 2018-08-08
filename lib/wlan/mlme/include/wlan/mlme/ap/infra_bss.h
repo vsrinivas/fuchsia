@@ -21,8 +21,7 @@
 namespace wlan {
 
 class ObjectId;
-template<typename T>
-class MlmeMsg;
+template <typename T> class MlmeMsg;
 
 // An infrastructure BSS which keeps track of its client and owned by the AP
 // MLME.

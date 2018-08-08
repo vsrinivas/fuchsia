@@ -35,18 +35,14 @@ static void SendScanEnd(DeviceInterface* device, uint64_t txn_id, wlan_mlme::Sca
         msg.txn_id = txn_id;
         msg.code = code;
         zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
-        if (s != ZX_OK) {
-            errorf("failed to send OnScanEnd event: %d\n", s);
-        }
+        if (s != ZX_OK) { errorf("failed to send OnScanEnd event: %d\n", s); }
     } else {
         // TODO(gbonik): remove legacy support
         wlan_mlme::ScanConfirm msg;
         msg.result_code = code;
         msg.bss_description_set.resize(0);
         zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEScanConfOrdinal);
-        if (s != ZX_OK) {
-            errorf("failed to send ScanConf event: %d\n", s);
-        }
+        if (s != ZX_OK) { errorf("failed to send ScanConf event: %d\n", s); }
     }
 }
 
@@ -57,9 +53,7 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
         r.txn_id = txn_id;
         r.bss = p.second.ToFidl();
         zx_status_t status = SendServiceMsg(device, &r, fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
-        if (status != ZX_OK) {
-            return status;
-        }
+        if (status != ZX_OK) { return status; }
     }
     return ZX_OK;
 }
@@ -73,9 +67,7 @@ static zx_status_t SendLegacyScanConf(DeviceInterface* device,
         conf.bss_description_set.push_back(p.second.ToFidl());
     }
     zx_status_t status = SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEScanConfOrdinal);
-    if (status != ZX_OK) {
-        errorf("failed to send ScanConf: %d\n", status);
-    }
+    if (status != ZX_OK) { errorf("failed to send ScanConf: %d\n", status); }
     return status;
 }
 
@@ -100,9 +92,8 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
     ZX_DEBUG_ASSERT(channel_index_ == 0);
     ZX_DEBUG_ASSERT(channel_start_.get() == 0);
 
-    if (req.body()->channel_list->size() == 0
-        || req.body()->max_channel_time < req.body()->min_channel_time)
-    {
+    if (req.body()->channel_list->size() == 0 ||
+        req.body()->max_channel_time < req.body()->min_channel_time) {
         SendScanEnd(device_, req.body()->txn_id, wlan_mlme::ScanResultCodes::INVALID_ARGS);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -193,9 +184,7 @@ bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
 
 void Scanner::HandleBeacon(const MgmtFrameView<Beacon>& frame) {
     debugfn();
-    if (!ShouldDropMgmtFrame(*frame.hdr())) {
-        ProcessBeacon(frame);
-    }
+    if (!ShouldDropMgmtFrame(*frame.hdr())) { ProcessBeacon(frame); }
 }
 
 void Scanner::HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame) {
@@ -218,13 +207,14 @@ void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame) {
             errorf("maximum number of BSS per channel reached: %lu\n", current_bss_.size());
             return;
         }
-        it = current_bss_.emplace(std::piecewise_construct,
-            std::forward_as_tuple(bssid.ToU64()),
-            std::forward_as_tuple(bssid)).first;
+        it = current_bss_
+                 .emplace(std::piecewise_construct, std::forward_as_tuple(bssid.ToU64()),
+                          std::forward_as_tuple(bssid))
+                 .first;
     }
 
-    zx_status_t status = it->second.ProcessBeacon(
-        *bcn_frame.body(), bcn_frame.body_len(), bcn_frame.rx_info());
+    zx_status_t status =
+        it->second.ProcessBeacon(*bcn_frame.body(), bcn_frame.body_len(), bcn_frame.rx_info());
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
                  MACSTR(bssid), bcn_frame.body()->timestamp);

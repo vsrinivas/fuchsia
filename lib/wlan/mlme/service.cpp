@@ -25,7 +25,8 @@ zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes 
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEJoinConfOrdinal, resp.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEJoinConfOrdinal, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize JoinConfirm: %d\n", status);
     } else {
@@ -53,8 +54,8 @@ zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal, resp.get());
+    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal,
+                                      resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize AuthenticateConfirm: %d\n", status);
     } else {
@@ -78,8 +79,8 @@ zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& pe
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal, resp.get());
+    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal,
+                                      resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateConfirm: %d\n", status);
     } else {
@@ -105,8 +106,8 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal, ind.get());
+    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal,
+                                      ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateIndication: %d\n", status);
     } else {
@@ -133,7 +134,8 @@ zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResult
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAssociateConfOrdinal, resp.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAssociateConfOrdinal, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize AssociateConfirm: %d\n", status);
     } else {
@@ -184,7 +186,8 @@ zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMESignalReportOrdinal, ind.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMESignalReportOrdinal, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize SignalReportIndication: %d\n", status);
     } else {
@@ -208,7 +211,8 @@ zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCode
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEEapolConfOrdinal, resp.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEEapolConfOrdinal, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize EapolConfirm: %d\n", status);
     } else {
@@ -242,7 +246,8 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEEapolIndOrdinal, ind.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEEapolIndOrdinal, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize MLME-Eapol.indication: %d\n", status);
     } else {

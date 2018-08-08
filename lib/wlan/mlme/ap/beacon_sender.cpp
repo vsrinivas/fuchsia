@@ -73,23 +73,23 @@ bool BeaconSender::ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>& pr
         }
 
         switch (hdr->id) {
-            case element_id::kSsid: {
-                auto ie = reader.read<SsidElement>();
-                if (ie == nullptr) { return false; };
-                if (hdr->len == 0) {
-                    // Always respond to wildcard requests.
-                    return true;
-                }
-
-                // Send ProbeResponse if request was targeted towards this BSS.
-                size_t ssid_len = strlen(req_.ssid->data());
-                bool to_bss =
-                        hdr->len == ssid_len && strncmp(ie->ssid, req_.ssid->data(), ssid_len) == 0;
-                return to_bss;
+        case element_id::kSsid: {
+            auto ie = reader.read<SsidElement>();
+            if (ie == nullptr) { return false; };
+            if (hdr->len == 0) {
+                // Always respond to wildcard requests.
+                return true;
             }
-            default:
-                reader.skip(sizeof(ElementHeader) + hdr->len);
-                break;
+
+            // Send ProbeResponse if request was targeted towards this BSS.
+            size_t ssid_len = strlen(req_.ssid->data());
+            bool to_bss =
+                hdr->len == ssid_len && strncmp(ie->ssid, req_.ssid->data(), ssid_len) == 0;
+            return to_bss;
+        }
+        default:
+            reader.skip(sizeof(ElementHeader) + hdr->len);
+            break;
         }
     }
 
@@ -149,7 +149,6 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
 
     status = WriteExtendedSupportedRates(&w);
     if (status != ZX_OK) { return status; }
-
 
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
 

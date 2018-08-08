@@ -11,7 +11,7 @@ using namespace wlan::common;
 namespace wlan {
 namespace {
 
-class MovingAverageTest : public ::testing::Test { };
+class MovingAverageTest : public ::testing::Test {};
 
 TEST_F(MovingAverageTest, MovingAverage) {
     MovingAverage<uint8_t, uint16_t, 3> avg;
@@ -62,8 +62,6 @@ TEST_F(MovingAverageTest, MovingAverageDbm) {
     d.add(dBm(-30));
     EXPECT_EQ(-30, to_dBm(d.avg()).val);
 }
-
-
 
 }  // namespace
 }  // namespace wlan

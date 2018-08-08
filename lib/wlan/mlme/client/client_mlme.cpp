@@ -81,9 +81,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     }
 
     // MLME-JOIN.request will reset the STA.
-    if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
-        HandleMlmeJoinReq(*join_req);
-    }
+    if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) { HandleMlmeJoinReq(*join_req); }
 
     // Once the STA was spawned, let it handle all incoming MLME messages.
     if (sta_ != nullptr) { sta_->HandleAnyMlmeMsg(msg); }
@@ -139,9 +137,7 @@ zx_status_t ClientMlme::PostChannelChange() {
 
 wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {
     wlan_stats::MlmeStats mlme_stats{};
-    if (sta_) {
-      mlme_stats.set_client_mlme_stats(sta_->stats());
-    }
+    if (sta_) { mlme_stats.set_client_mlme_stats(sta_->stats()); }
     return mlme_stats;
 }
 

@@ -15,8 +15,7 @@ namespace wlan {
 
 class BssInterface;
 class PsCfg;
-template<typename T>
-class MlmeMsg;
+template <typename T> class MlmeMsg;
 
 // Configures the driver to send Beacon frames periodically.
 class BeaconSender {

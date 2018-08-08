@@ -21,7 +21,7 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-template<typename T>
+template <typename T>
 static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint32_t ordinal) {
     // TODO(FIDL-2): replace this when we can get the size of the serialized response.
     size_t buf_len = 16384;
