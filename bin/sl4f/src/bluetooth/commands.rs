@@ -7,6 +7,7 @@ use async::{temp::TempFutureExt, TimeoutExt};
 use bt::error::Error as BTError;
 use failure::Error;
 use fidl_ble::{AdvertisingData, ScanFilter};
+use fidl_gatt::ServiceInfo;
 use futures::future::ready as fready;
 use futures::prelude::*;
 use futures::FutureExt;
@@ -20,17 +21,27 @@ use bluetooth::constants::*;
 use bluetooth::facade::BluetoothFacade;
 use bluetooth::types::{BleConnectPeripheralResponse, BluetoothMethod};
 
+macro_rules! parse_arg {
+    ($args:ident, $func:ident, $name:expr) => {
+        match $args.get($name) {
+            Some(v) => match v.$func() {
+                Some(val) => Ok(val),
+                None => Err(BTError::new(format!("malformed {}", $name).as_str())),
+            },
+            None => Err(BTError::new(format!("{} missing", $name).as_str())),
+        }
+    };
+}
+
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
-fn ble_advertise_to_fidl(
-    adv_args_raw: Value,
-) -> Result<(Option<AdvertisingData>, Option<u32>), Error> {
-    let adv_data_raw = match adv_args_raw.get("advertising_data") {
+fn ble_advertise_to_fidl(args_raw: Value) -> Result<(Option<AdvertisingData>, Option<u32>), Error> {
+    let adv_data_raw = match args_raw.get("advertising_data") {
         Some(adr) => Some(adr).unwrap().clone(),
         None => return Err(BTError::new("Advertising data missing.").into()),
     };
 
-    let interval_raw = match adv_args_raw.get("interval_ms") {
+    let interval_raw = match args_raw.get("interval_ms") {
         Some(ir) => Some(ir).unwrap().clone(),
         None => return Err(BTError::new("Interval_ms missing.").into()),
     };
@@ -52,25 +63,27 @@ fn ble_advertise_to_fidl(
         uris: None,
     });
 
+    fx_log_info!(tag: "ble_advertise_to_fidl", "AdvData: {:?}", ad);
+
     Ok((ad, interval))
 }
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
 // ble_scan command
 fn ble_scan_to_fidl(
-    scan_args_raw: Value,
+    args_raw: Value,
 ) -> Result<(Option<ScanFilter>, Option<u64>, Option<u64>), Error> {
-    let timeout_raw = match scan_args_raw.get("scan_time_ms") {
+    let timeout_raw = match args_raw.get("scan_time_ms") {
         Some(t) => Some(t).unwrap().clone(),
         None => return Err(BTError::new("Timeout_ms missing.").into()),
     };
 
-    let scan_filter_raw = match scan_args_raw.get("filter") {
+    let scan_filter_raw = match args_raw.get("filter") {
         Some(f) => Some(f).unwrap().clone(),
         None => return Err(BTError::new("Scan filter missing.").into()),
     };
 
-    let scan_count_raw = match scan_args_raw.get("scan_count") {
+    let scan_count_raw = match args_raw.get("scan_count") {
         Some(c) => Some(c).unwrap().clone(),
         None => return Err(BTError::new("Scan count missing.").into()),
     };
@@ -97,7 +110,7 @@ fn ble_scan_to_fidl(
 // stop_advertising command. For stop advertise, no arguments are sent, rather
 // uses current advertisement id (if it exists)
 fn ble_stop_advertise_to_fidl(
-    _stop_adv_args_raw: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
+    _args_raw: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
 ) -> Result<String, Error> {
     let adv_id = bt_facade.read().get_adv_id().clone();
 
@@ -121,6 +134,26 @@ fn parse_identifier(args_raw: Value) -> Result<String, Error> {
     }
 }
 
+fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String), Error> {
+    let id = parse_arg!(args_raw, as_u64, "id")?;
+    let primary = parse_arg!(args_raw, as_bool, "primary")?;
+    let type_ = parse_arg!(args_raw, as_str, "type")?;
+    let local_service_id = parse_arg!(args_raw, as_str, "local_service_id")?;
+
+    // TODO(NET-1293): Add support for GATT characterstics and includes
+    let characteristics = None;
+    let includes = None;
+
+    let service_info = ServiceInfo {
+        id,
+        primary,
+        type_: type_.to_string(),
+        characteristics,
+        includes,
+    };
+    Ok((service_info, local_service_id.to_string()))
+}
+
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
 // To add new methods, add to the unsafe_many_futures! macro
@@ -134,6 +167,7 @@ pub fn ble_method_to_fidl(
             BleConnectPeripheral,
             BleDisconnectPeripheral,
             BleListServices,
+            BlePublishService,
             BleScan,
             BleStopAdvertise,
             Error
@@ -194,6 +228,16 @@ pub fn ble_method_to_fidl(
             let list_services_fut = list_services_async(bt_facade.clone(), id.clone());
             Output::BleListServices(list_services_fut)
         }
+        BluetoothMethod::BlePublishService => {
+            let (service_info, local_service_id) = match ble_publish_service_to_fidl(args) {
+                Ok((si, pk)) => (si, pk),
+                Err(e) => return Output::Error(fready(Err(e))),
+            };
+
+            let publish_service_fut =
+                publish_service_async(bt_facade.clone(), service_info, local_service_id);
+            Output::BlePublishService(publish_service_fut)
+        }
         _ => Output::Error(fready(Err(BTError::new("Invalid BLE FIDL method").into()))),
     }
 }
@@ -251,8 +295,9 @@ fn start_scan_async(
             BluetoothFacade::new_devices_found_future(bt_facade.clone(), count.unwrap());
 
         // Chain the custom future with a timeout
-            custom_fut
-                .on_timeout(timeout_ms.after_now(), || ()).right_future()
+        custom_fut
+            .on_timeout(timeout_ms.after_now(), || ())
+            .right_future()
     };
 
     let fut = scan_fut.and_then(move |_| event_fut.map(Ok));
@@ -330,6 +375,21 @@ fn list_services_async(
                 Err(e) => fready(Err(e.into())),
             }
         }
+        Err(e) => fready(Err(e.into())),
+    })
+}
+
+fn publish_service_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>, service_info: ServiceInfo, local_service_id: String,
+) -> impl Future<Output = Result<Value, Error>> {
+    let publish_fut =
+        BluetoothFacade::publish_service(bt_facade.clone(), service_info, local_service_id);
+
+    publish_fut.then(move |res| match res {
+        Ok(r) => match to_value(r) {
+            Ok(val) => fready(Ok(val)),
+            Err(e) => fready(Err(e.into())),
+        },
         Err(e) => fready(Err(e.into())),
     })
 }

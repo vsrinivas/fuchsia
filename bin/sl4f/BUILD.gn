@@ -7,6 +7,7 @@ import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "sl4f"
+  with_unit_tests = true
 
   deps = [
     "//garnet/lib/rust/crates/fuchsia-bluetooth",

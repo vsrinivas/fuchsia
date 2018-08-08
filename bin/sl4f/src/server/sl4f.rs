@@ -16,7 +16,8 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 
-// Standardized sl4f types.
+// Standardized sl4f types and constants
+use server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
 use server::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse};
 
 // Bluetooth related includes (do the same for each connectivity stack)
@@ -223,10 +224,11 @@ fn client_init(
 // Returns two "", "" on invalid input which will later propagate to
 // method_to_fidl and raise an error
 fn split_string(method_name_raw: String) -> (String, String) {
-    let split = method_name_raw.split(".");
+    let split = method_name_raw.split(COMMAND_DELIMITER);
     let string_split: Vec<&str> = split.collect();
 
-    if string_split.len() < 2 {
+    // Input must be two strings separated by "."
+    if string_split.len() != COMMAND_SIZE {
         return ("".to_string(), "".to_string());
     };
 

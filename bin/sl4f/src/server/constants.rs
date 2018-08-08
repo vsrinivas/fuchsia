@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod constants;
-pub mod sl4f;
-pub mod sl4f_executor;
-pub mod sl4f_types;
+// Separation character for an ACTS command
+pub const COMMAND_DELIMITER: &str = ".";
+
+// Number of clauses for an ACTS command
+pub const COMMAND_SIZE: usize = 2;
