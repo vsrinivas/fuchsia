@@ -33,7 +33,8 @@ class QueryRunner::HandlerRequest {
       FXL_VLOG(1) << "Handler " << handler_url_ << " complete";
     } else {
       FXL_LOG(WARNING) << "Handler " << handler_url_
-                       << " closed without completing";
+                       << " closed without completing for query \""
+                       << runner_->input_.text << "\".";
     }
 
     // find + erase rather than erase key to properly handle duplicate URLs
@@ -130,9 +131,10 @@ void QueryRunner::EndRequest() {
 
 void QueryRunner::TimeOut() {
   if (!outstanding_handlers_.empty()) {
-    FXL_LOG(INFO) << "Query timeout. Still awaiting results from:";
+    FXL_LOG(WARNING) << "Query timeout for \"" << input_.text
+                     << "\". Still awaiting results from:";
     for (const std::string& handler_url : outstanding_handlers_) {
-      FXL_LOG(INFO) << "    " << handler_url;
+      FXL_LOG(WARNING) << "    " << handler_url;
     }
     EndRequest();
   }
