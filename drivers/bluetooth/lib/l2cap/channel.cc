@@ -4,6 +4,7 @@
 
 #include "channel.h"
 
+#include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -11,6 +12,8 @@
 
 namespace btlib {
 namespace l2cap {
+
+using common::RunOrPost;
 
 Channel::Channel(ChannelId id, ChannelId remote_id,
                  hci::Connection::LinkType link_type,
@@ -30,14 +33,6 @@ Channel::Channel(ChannelId id, ChannelId remote_id,
 }
 
 namespace internal {
-
-void RunTask(async_dispatcher_t* dispatcher, fit::closure task) {
-  if (dispatcher) {
-    async::PostTask(dispatcher, std::move(task));
-    return;
-  }
-  task();
-}
 
 ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
                          fxl::WeakPtr<internal::LogicalLink> link,
@@ -90,7 +85,7 @@ bool ChannelImpl::Activate(RxCallback rx_callback,
   }
 
   if (run_task) {
-    RunTask(dispatcher, std::move(task));
+    RunOrPost(std::move(task), dispatcher);
   }
 
   return true;
@@ -181,7 +176,7 @@ void ChannelImpl::OnLinkClosed() {
     dispatcher_ = nullptr;
   }
 
-  RunTask(dispatcher, std::move(task));
+  RunOrPost(std::move(task), dispatcher);
 }
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
@@ -210,7 +205,7 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
 
     FXL_DCHECK(rx_cb_);
   }
-  RunTask(dispatcher, std::move(task));
+  RunOrPost(std::move(task), dispatcher);
 }
 
 }  // namespace internal
