@@ -598,9 +598,7 @@ void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
         uint32_t read = 0;
         zx_status_t status =
             channel_.read(0, buffer->data(), buffer->capacity(), &read, nullptr, 0, nullptr);
-        if (status == ZX_ERR_SHOULD_WAIT) {
-            break;
-        }
+        if (status == ZX_ERR_SHOULD_WAIT) { break; }
         if (status != ZX_OK) {
             if (status == ZX_ERR_PEER_CLOSED) {
                 infof("channel closed\n");
