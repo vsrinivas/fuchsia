@@ -30,7 +30,8 @@ class FontProviderImpl : public fuchsia::fonts::FontProvider {
 
  private:
   // |fuchsia::fonts::FontProvider| implementation:
-  void GetFont(fuchsia::fonts::FontRequest request, GetFontCallback callback) override;
+  void GetFont(fuchsia::fonts::FontRequest request,
+               GetFontCallback callback) override;
 
   // Load fonts. Returns true if all were loaded.
   bool LoadFontsInternal(const char path[], bool fallback_required);

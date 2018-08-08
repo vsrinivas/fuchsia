@@ -107,7 +107,8 @@ void FontProviderImpl::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void FontProviderImpl::GetFont(fuchsia::fonts::FontRequest request, GetFontCallback callback) {
+void FontProviderImpl::GetFont(fuchsia::fonts::FontRequest request,
+                               GetFontCallback callback) {
   if (families_.empty()) {
     callback(nullptr);
     return;

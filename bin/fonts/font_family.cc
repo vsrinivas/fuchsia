@@ -21,7 +21,8 @@ constexpr char kItalic[] = "italic";
 constexpr char kUpright[] = "upright";
 
 struct Matcher {
-  Matcher(fuchsia::fonts::FontSlant slant, int weight) : slant_(slant), weight_(weight) {}
+  Matcher(fuchsia::fonts::FontSlant slant, int weight)
+      : slant_(slant), weight_(weight) {}
 
   bool operator()(const FontFamily::Font& a, const FontFamily::Font& b) {
     if (a.slant != b.slant) {
@@ -41,7 +42,8 @@ struct Matcher {
 
 }  // namespace
 
-FontFamily::Font::Font() : slant(fuchsia::fonts::FontSlant::UPRIGHT), weight(400) {}
+FontFamily::Font::Font()
+    : slant(fuchsia::fonts::FontSlant::UPRIGHT), weight(400) {}
 
 FontFamily::Font::Font(Font&& other)
     : asset(std::move(other.asset)),
@@ -122,7 +124,8 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
   return true;
 }
 
-fsl::SizedVmo* FontFamily::GetFontData(const fuchsia::fonts::FontRequest& request) {
+fsl::SizedVmo* FontFamily::GetFontData(
+    const fuchsia::fonts::FontRequest& request) {
   Matcher matcher(request.slant, request.weight);
   auto it = std::min_element(fonts_.begin(), fonts_.end(), matcher);
   if (it == fonts_.end())
