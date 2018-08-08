@@ -30,16 +30,12 @@ static bool wait_thread(zx_handle_t thread, uint32_t reason) {
     return true;
 }
 
-static int interrupt_test_thread(void *arg) {
-    zx_handle_t rsrc = get_root_resource();
-    zx_handle_t vinth;
-    ASSERT_EQ(zx_interrupt_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL,
-                                  &vinth), ZX_OK, "");
-
+static void thread_entry(uintptr_t arg1, uintptr_t arg2) {
+    zx_handle_t vinth = *(zx_handle_t*)arg1;
     while(1) {
-        ASSERT_EQ(zx_interrupt_wait(vinth, NULL), ZX_OK, "");
+        zx_interrupt_wait(vinth, NULL);
     }
-    return 0;
+    zx_thread_exit();
 }
 
 // Tests to bind interrupt to a non-bindable port
@@ -166,15 +162,17 @@ static bool interrupt_suspend_test(void) {
     const char* thread_name = "interrupt_test_thread";
     // preallocated stack to satisfy the thread we create
     static uint8_t stack[1024] __ALIGNED(16);
-
+    zx_handle_t rsrc = get_root_resource();
+    zx_handle_t vinth;
+    ASSERT_EQ(zx_interrupt_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL, &vinth), ZX_OK, "");
 
     // Create and start a thread which waits for an IRQ
     ASSERT_EQ(zx_thread_create(zx_process_self(), thread_name, strlen(thread_name),
                                0, &thread_h), ZX_OK, "");
 
-    ASSERT_EQ(zx_thread_start(thread_h, (uintptr_t)interrupt_test_thread,
+    ASSERT_EQ(zx_thread_start(thread_h, (uintptr_t)thread_entry,
                              (uintptr_t)stack + sizeof(stack),
-                             0, 0), ZX_OK, "");
+                             (uintptr_t)&vinth, 0), ZX_OK, "");
 
     // Wait till the thread is in blocked state
     ASSERT_TRUE(wait_thread(thread_h, ZX_THREAD_STATE_BLOCKED_INTERRUPT), "");
