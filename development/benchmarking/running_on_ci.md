@@ -1,6 +1,6 @@
 # How to write benchmarks
 
-* Updated: 2018 July 27
+* Updated: 2018 August 9
 
 [TOC]
 
@@ -21,32 +21,7 @@ Fuchsia benchmarks are command-line exectables that produce a JSON results file.
 executable must meet the following criteria:
 
 1. It accepts the location to the results file as a command line flag.
-2. It produces JSON results that match the following schema:
-
-```json
-[
-    {
-        "label":       "string",  // Name of the test case in the performance dashboard.
-        "test_suite":  "string",  // Name of the test suite in the performance dashboard.
-        "unit":        "string",  // One of the supported units (see below)
-        "values":      [number],  // Values collected in this test case
-        "split_first": bool       // Whether to split the first element in |values| from the rest.
-    },
-    {
-        ...
-    }
-]
-```
-
-Supported Units:
-* `nanoseconds`
-* `milliseconds`
-
-Rather than write code to produce this JSON yourself, you can use one of the existing
-Fuchsia libraries for your language:
-* C/C++: [//zircon/system/ulib/perftest]
-* Go: [//garnet/go/src/benchmarks]
-* Dart: [TODO(kjharland)](#)
+2. It produces JSON results that match the [benchmark results schema]:
 
 ## Building your benchmark
 
@@ -96,10 +71,13 @@ the results files of other benchmarks.
 
 Please see the [Performance Dashboard User Guide]
 
+NOTE: We do not yet have a User guide for the [Performance Dashboard Version 2].
 
+[benchmark results schema]: results_schema.md
 [Fuchsia package documentation]: https://fuchsia.googlesource.com/docs/+/master/development/build/packages.md
-[Performance Dashboard]: https://v2spa-dot-chromeperf.appspot.com/
-[Performance Dashboard User Guide]: https://fuchsia.googlesource.com/docs/+/master/development/benchmarking/catapult_user_guide.md
+[Performance Dashboard]: https://chromeperf.appspot.com/report
+[Performance Dashboard User Guide]: catapult_user_guide.md
+[Performance Dashboard Version 2]: https://v2spa-dot-chromeperf.appspot.com/
 [Runbenchmarks]: https://fuchsia.googlesource.com/garnet/+/master/testing/runbenchmarks
 [//zircon/system/ulib/perftest]: https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest/
 [//garnet/go/src/benchmarks]: https://fuchsia.googlesource.com/garnet/+/master/go/src/benchmarks
