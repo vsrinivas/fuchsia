@@ -17,7 +17,7 @@ enum class ObjectSubtype : uint8_t {
 };
 
 enum class ObjectTarget : uint8_t {
-    kScanner = 0,
+    kChannelScheduler = 0,
     kStation = 1,
     kBss = 2,
 };
@@ -49,11 +49,6 @@ class Mlme {
 
     virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) = 0;
     virtual zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) = 0;
-    // Called before a channel change happens.
-    virtual zx_status_t PreChannelChange(wlan_channel_t chan) = 0;
-    // Called after a channel change is complete. The DeviceState channel will reflect the channel,
-    // whether it changed or not.
-    virtual zx_status_t PostChannelChange() = 0;
     virtual zx_status_t HandleTimeout(const ObjectId id) = 0;
     // Called when the hardware reports an indication such as Pre-TBTT.
     virtual void HwIndication(uint32_t ind){};

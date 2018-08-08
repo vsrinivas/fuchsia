@@ -29,11 +29,6 @@ class Dispatcher {
     zx_status_t HandlePacket(fbl::unique_ptr<Packet>);
     zx_status_t HandlePortPacket(uint64_t key);
 
-    // Called before a channel change happens.
-    zx_status_t PreChannelChange(wlan_channel_t chan);
-    // Called after a channel change is complete. The DeviceState channel will reflect the channel,
-    // whether it changed or not.
-    zx_status_t PostChannelChange();
     // Called when the hardware reports an indication such as Pre-TBTT.
     void HwIndication(uint32_t ind);
     void ResetStats();

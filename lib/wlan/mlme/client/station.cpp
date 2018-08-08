@@ -33,9 +33,11 @@ using common::dBm;
 
 static constexpr size_t kAssocBcnCountTimeout = 20;
 static constexpr size_t kSignalReportBcnCountTimeout = 10;
+static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
 
-Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
-    : device_(device), timer_(std::move(timer)) {
+Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer,
+                 ChannelScheduler* chan_sched)
+    : device_(device), timer_(std::move(timer)), chan_sched_(chan_sched) {
     (void)assoc_timeout_;
     bssid_.Reset();
 }
@@ -203,7 +205,7 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     }
 
     debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
-    zx_status_t status = device_->SetChannel(chan);
+    zx_status_t status = chan_sched_->SetChannel(chan);
 
     if (status != ZX_OK) {
         errorf("could not set wlan channel to %s (status %d)\n", common::ChanStr(chan).c_str(),
@@ -213,8 +215,12 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
         return status;
     }
 
+    // Stay on channel to make sure we don't miss the beacon
+    chan_sched_->EnsureOnChannel(zx::deadline_after(kOnChannelTimeAfterSend));
+
     join_chan_ = chan;
     join_timeout_ = deadline_after_bcn_period(req.body()->join_failure_timeout);
+
     status = timer_->SetTimer(join_timeout_);
     if (status != ZX_OK) {
         errorf("could not set join timer: %d\n", status);
@@ -284,7 +290,7 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     auth->status_code = 0;  // Reserved, so set to 0
 
     finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(frame.Take());
+    status = SendNonData(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send auth packet: %d\n", status);
         service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
@@ -333,7 +339,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     deauth->reason_code = static_cast<uint16_t>(req.body()->reason_code);
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(frame.Take());
+    status = SendNonData(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
@@ -458,7 +464,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     }
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(frame.Take());
+    status = SendNonData(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(device_,
@@ -748,7 +754,7 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     finspect("Outbound ADDBA Resp frame: len %zu\n", addbaresp_frame.len());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp).c_str());
 
-    status = device_->SendWlan(addbaresp_frame.Take());
+    status = SendNonData(addbaresp_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send AddBaResponse: %d\n", status);
         return status;
@@ -918,6 +924,12 @@ zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
 zx_status_t Station::HandleEthFrame(EthFrame&& frame) {
     debugfn();
 
+    // For now, drop outgoing data frames if we are off channel
+    // TODO(NET-1294)
+    if (!chan_sched_->OnChannel()) {
+        return ZX_OK;
+    }
+
     // Drop Ethernet frames when not associated.
     auto bss_setup = (bssid() != nullptr);
     auto associated = (state_ == WlanState::kAssociated);
@@ -1083,7 +1095,7 @@ zx_status_t Station::SendKeepAliveResponse() {
     hdr->addr3 = bssid;
     SetSeqNo(hdr, &seq_);
 
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    zx_status_t status = SendNonData(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send keep alive packet: %d\n", status);
         return status;
@@ -1137,7 +1149,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     finspect("Outbound ADDBA Req frame: len %zu\n", addbareq_frame.len());
     finspect("  addba req: %s\n", debug::Describe(*addbareq).c_str());
 
-    status = device_->SendWlan(addbareq_frame.Take());
+    status = SendNonData(addbareq_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send AddBaRequest: %d\n", status);
         return status;
@@ -1179,7 +1191,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     llc->protocol_id = htobe16(kEapolProtocolId);
     std::memcpy(llc->payload, req.body()->data->data(), req.body()->data->size());
 
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    zx_status_t status = SendNonData(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
@@ -1240,26 +1252,18 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
     return ZX_OK;
 }
 
-zx_status_t Station::PreChannelChange(wlan_channel_t chan) {
+void Station::PreSwitchOffChannel() {
     debugfn();
-    if (state_ != WlanState::kAssociated) { return ZX_OK; }
-
-    if (GetJoinChan().primary == GetDeviceChan().primary) {
+    if (state_ == WlanState::kAssociated) {
         SetPowerManagementMode(true);
-        // TODO(hahnr): start buffering tx packets (not here though)
     }
-    return ZX_OK;
 }
 
-zx_status_t Station::PostChannelChange() {
+void Station::BackToMainChannel() {
     debugfn();
-    if (state_ != WlanState::kAssociated) { return ZX_OK; }
-
-    if (GetJoinChan().primary == GetDeviceChan().primary) {
+    if (state_ == WlanState::kAssociated) {
         SetPowerManagementMode(false);
-        // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.
     }
-    return ZX_OK;
 }
 
 void Station::DumpDataFrame(const DataFrameView<>& frame) {
@@ -1283,6 +1287,11 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
     finspect("Inbound data frame: len %zu\n", frame.len());
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  msdu    : %s\n", debug::HexDump(msdu, frame.body_len()).c_str());
+}
+
+zx_status_t Station::SendNonData(fbl::unique_ptr<Packet> packet) {
+    chan_sched_->EnsureOnChannel(zx::deadline_after(kOnChannelTimeAfterSend));
+    return device_->SendWlan(fbl::move(packet));
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
@@ -1343,7 +1352,7 @@ zx_status_t Station::SendPsPoll() {
     frame.body()->bssid = common::MacAddr(bss_->bssid.data());
     frame.body()->ta = mymac;
 
-    zx_status_t status = device_->SendWlan(frame.Take());
+    zx_status_t status = SendNonData(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send power management packet: %d\n", status);
         return status;

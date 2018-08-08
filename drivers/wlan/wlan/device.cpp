@@ -432,28 +432,13 @@ zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
         return ZX_OK;
     }
 
-    zx_status_t status = dispatcher_->PreChannelChange(chan);
+    zx_status_t status = wlanmac_proxy_.SetChannel(0u, &chan);
     if (status != ZX_OK) {
-        errorf("%s prechange failed (status %d)\n", buf, status);
-        return status;
-    }
-
-    status = wlanmac_proxy_.SetChannel(0u, &chan);
-    if (status != ZX_OK) {
-        // TODO(porce): Revert the successful PreChannelChange()
         errorf("%s change failed (status %d)\n", buf, status);
         return status;
     }
 
     state_->set_channel(chan);
-
-    status = dispatcher_->PostChannelChange();
-    if (status != ZX_OK) {
-        // TODO(porce): Revert the successful PreChannelChange(), wlanmac_proxy_.SetChannel(),
-        // and state_->set_channel()
-        errorf("%s postchange failed (status %d)\n", buf, status);
-        return status;
-    }
 
     verbosef("%s succeeded\n", buf);
     return ZX_OK;

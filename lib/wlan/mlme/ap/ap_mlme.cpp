@@ -102,18 +102,6 @@ zx_status_t ApMlme::HandleMlmeStopReq(const MlmeMsg<wlan_mlme::StopRequest>& req
     return ZX_OK;
 }
 
-zx_status_t ApMlme::PreChannelChange(wlan_channel_t chan) {
-    debugfn();
-    // TODO(hahnr): Implement.
-    return ZX_OK;
-}
-
-zx_status_t ApMlme::PostChannelChange() {
-    debugfn();
-    // TODO(hahnr): Implement.
-    return ZX_OK;
-}
-
 void ApMlme::HwIndication(uint32_t ind) {
     if (ind == WLAN_INDICATION_PRE_TBTT) {
         bss_->OnPreTbtt();

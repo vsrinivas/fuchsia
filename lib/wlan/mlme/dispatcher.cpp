@@ -259,18 +259,6 @@ zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     return SendServiceMessage(fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal, &resp);
 }
 
-zx_status_t Dispatcher::PreChannelChange(wlan_channel_t chan) {
-    debugfn();
-    mlme_->PreChannelChange(chan);
-    return ZX_OK;
-}
-
-zx_status_t Dispatcher::PostChannelChange() {
-    debugfn();
-    mlme_->PostChannelChange();
-    return ZX_OK;
-}
-
 void Dispatcher::HwIndication(uint32_t ind) {
     debugfn();
     mlme_->HwIndication(ind);

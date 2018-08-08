@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/client/bss.h>
+#include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/frame_handler.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -26,44 +27,41 @@ template <typename T> class MlmeMsg;
 
 class Scanner {
    public:
-    Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
+    Scanner(DeviceInterface* device, ChannelScheduler* chan_sched);
     virtual ~Scanner() {}
-
-    enum class Type {
-        kPassive,
-        kActive,
-    };
 
     zx_status_t Start(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
     void Reset();
 
     bool IsRunning() const;
-    Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
     zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
 
-    void HandleBeacon(const MgmtFrameView<Beacon>& frame);
-    void HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame);
-    zx_status_t HandleTimeout();
-    zx_status_t HandleError(zx_status_t error_code);
-
-    const Timer& timer() const { return *timer_; }
-
    private:
-    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
-    zx::time InitialTimeout() const;
-    zx_status_t SendProbeRequest();
-    void ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
+    struct OffChannelHandlerImpl : OffChannelHandler {
+        Scanner* scanner_;
 
+        explicit OffChannelHandlerImpl(Scanner* scanner) : scanner_(scanner) { }
+
+        virtual void BeginOffChannelTime() override;
+        virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) override;
+        virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) override;
+    };
+
+    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
+    void HandleBeacon(const MgmtFrameView<Beacon>& frame);
+    void ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
+    OffChannelRequest CreateOffChannelRequest();
+
+    OffChannelHandlerImpl off_channel_handler_;
     DeviceInterface* device_;
-    fbl::unique_ptr<Timer> timer_;
     ::fuchsia::wlan::mlme::ScanRequestPtr req_ = nullptr;
 
     size_t channel_index_ = 0;
-    zx::time channel_start_;
 
     std::unordered_map<uint64_t, Bss> current_bss_;
+    ChannelScheduler* chan_sched_;
 };
 
 }  // namespace wlan

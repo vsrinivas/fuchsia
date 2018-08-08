@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/mac_frame.h>
@@ -55,7 +56,7 @@ struct AssocContext {
 
 class Station {
    public:
-    Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
+    Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer, ChannelScheduler* chan_sched);
 
     enum class WlanState {
         // State 0
@@ -107,8 +108,8 @@ class Station {
     zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>);
     zx_status_t HandleTimeout();
 
-    zx_status_t PreChannelChange(wlan_channel_t chan);
-    zx_status_t PostChannelChange();
+    void PreSwitchOffChannel();
+    void BackToMainChannel();
 
     const Timer& timer() const { return *timer_; }
     ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
@@ -142,6 +143,8 @@ class Station {
 
     zx_status_t SendAddBaRequestFrame();
 
+    // Send a non-data frame
+    zx_status_t SendNonData(fbl::unique_ptr<Packet> packet);
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
     void DumpDataFrame(const DataFrameView<>&);
@@ -162,6 +165,7 @@ class Station {
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
+    ChannelScheduler* chan_sched_;
     wlan_mlme::BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
     Sequence seq_;

@@ -30,7 +30,7 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-ClientMlme::ClientMlme(DeviceInterface* device) : device_(device) {
+ClientMlme::ClientMlme(DeviceInterface* device) : device_(device), on_channel_handler_(this) {
     debugfn();
 }
 
@@ -42,21 +42,22 @@ zx_status_t ClientMlme::Init() {
     fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-    timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
+    timer_id.set_target(to_enum_type(ObjectTarget::kChannelScheduler));
     zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
     if (status != ZX_OK) {
-        errorf("could not create scan timer: %d\n", status);
+        errorf("could not create channel scheduler timer: %d\n", status);
         return status;
     }
+    chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, fbl::move(timer)));
 
-    scanner_.reset(new Scanner(device_, std::move(timer)));
+    scanner_.reset(new Scanner(device_, chan_sched_.get()));
     return status;
 }
 
 zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     switch (id.target()) {
-    case to_enum_type(ObjectTarget::kScanner):
-        scanner_->HandleTimeout();
+    case to_enum_type(ObjectTarget::kChannelScheduler):
+        chan_sched_->HandleTimeout();
         break;
     case to_enum_type(ObjectTarget::kStation):
         // TODO(porce): Fix this crash point. bssid() can be nullptr.
@@ -89,15 +90,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
-    if (auto mgmt_frame = MgmtFrameView<>::CheckType(pkt.get()).CheckLength()) {
-        if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
-            scanner_->HandleBeacon(bcn_frame);
-        } else if (auto probe_resp = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
-            scanner_->HandleProbeResponse(probe_resp);
-        }
-    }
-
-    if (sta_ != nullptr) { sta_->HandleAnyFrame(fbl::move(pkt)); }
+    chan_sched_->HandleIncomingFrame(fbl::move(pkt));
     return ZX_OK;
 }
 
@@ -114,7 +107,7 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
         return status;
     }
 
-    sta_.reset(new Station(device_, std::move(timer)));
+    sta_.reset(new Station(device_, std::move(timer), chan_sched_.get()));
     return ZX_OK;
 }
 
@@ -123,16 +116,19 @@ bool ClientMlme::IsStaValid() const {
     return sta_ != nullptr && sta_->bssid() != nullptr;
 }
 
-zx_status_t ClientMlme::PreChannelChange(wlan_channel_t chan) {
+void ClientMlme::OnChannelHandlerImpl::PreSwitchOffChannel() {
     debugfn();
-    if (IsStaValid()) { sta_->PreChannelChange(chan); }
-    return ZX_OK;
+    if (mlme_->IsStaValid()) { mlme_->sta_->PreSwitchOffChannel(); }
 }
 
-zx_status_t ClientMlme::PostChannelChange() {
+void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Packet> packet) {
     debugfn();
-    if (IsStaValid()) { sta_->PostChannelChange(); }
-    return ZX_OK;
+    if (mlme_->IsStaValid()) { mlme_->sta_->HandleAnyFrame(fbl::move(packet)); }
+}
+
+void ClientMlme::OnChannelHandlerImpl::ReturnedOnChannel() {
+    debugfn();
+    if (mlme_->IsStaValid()) { mlme_->sta_->BackToMainChannel(); }
 }
 
 wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {

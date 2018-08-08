@@ -129,6 +129,7 @@ executable("common_tests") {
   sources = [
     "moving_average_unittest.cpp",
     "stats_unittest.cpp",
+    "channel_scheduler_unittest.cpp",
   ]
 
   deps = [

@@ -25,8 +25,6 @@ class ApMlme : public Mlme {
 
     // Mlme interface methods.
     zx_status_t Init() override;
-    zx_status_t PreChannelChange(wlan_channel_t chan) override;
-    zx_status_t PostChannelChange() override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
     zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) override;
     zx_status_t HandleTimeout(const ObjectId id) override;
