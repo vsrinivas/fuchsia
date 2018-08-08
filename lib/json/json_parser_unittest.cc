@@ -61,8 +61,8 @@ class JSONParserTest : public ::testing::Test {
   bool ParseFromDirectory(JSONParser* parser, const std::string& dir,
                           std::string* error) {
     std::function<void(rapidjson::Document)> cb =
-        std::bind(&JSONParserTest::InterpretDocument,
-                  this, parser, std::placeholders::_1);
+        std::bind(&JSONParserTest::InterpretDocument, this, parser,
+                  std::placeholders::_1);
     parser->ParseFromDirectory(dir, cb);
     *error = parser->error_str();
     return !parser->HasError();
@@ -160,8 +160,7 @@ TEST_F(JSONParserTest, ParseFromString) {
   JSONParser parser;
   parser.ParseFromString(json, "test_file");
   EXPECT_TRUE(parser.HasError());
-  EXPECT_EQ(parser.error_str(),
-            "test_file:2:34: Invalid encoding in string.");
+  EXPECT_EQ(parser.error_str(), "test_file:2:34: Invalid encoding in string.");
 }
 
 TEST_F(JSONParserTest, ParseTwice) {
@@ -250,8 +249,8 @@ TEST_F(JSONParserTest, ParseFromDirectoryWithErrors) {
   JSONParser parser;
   EXPECT_FALSE(ParseFromDirectory(&parser, dir, &error));
   EXPECT_EQ(error,
-            fxl::Concatenate({json_file1,
-                              ":1:2: Missing a name for object member."}));
+            fxl::Concatenate(
+                {json_file1, ":1:2: Missing a name for object member."}));
   EXPECT_EQ(1, props_found_);
 }
 

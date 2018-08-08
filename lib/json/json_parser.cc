@@ -81,8 +81,7 @@ rapidjson::Document JSONParser::ParseFromString(const std::string& data,
 }
 
 void JSONParser::ParseFromDirectory(
-    const std::string& path,
-    fit::function<void(rapidjson::Document)> cb) {
+    const std::string& path, fit::function<void(rapidjson::Document)> cb) {
   static constexpr char kPathTooLong[] =
       "Config directory path is too long: %s";
   char buf[PATH_MAX];
@@ -92,8 +91,7 @@ void JSONParser::ParseFromDirectory(
     ReportError(fxl::StringPrintf(kPathTooLong, buf));
     return;
   }
-  if (buf[strlen(buf) - 2] != '/' &&
-      strlcat(buf, "/", PATH_MAX) >= PATH_MAX) {
+  if (buf[strlen(buf) - 2] != '/' && strlcat(buf, "/", PATH_MAX) >= PATH_MAX) {
     file_ = path;
     ReportError(fxl::StringPrintf(kPathTooLong, buf));
     return;
@@ -134,21 +132,17 @@ void JSONParser::ReportErrorInternal(size_t offset, const std::string& error) {
   int32_t column;
   GetLineAndColumnForOffset(data_, offset, &line, &column);
   if (line == 0) {
-    errors_.push_back(
-        StringPrintf("%s: %s", file_.c_str(), error.c_str()));
+    errors_.push_back(StringPrintf("%s: %s", file_.c_str(), error.c_str()));
   } else {
-    errors_.push_back(StringPrintf("%s:%d:%d: %s", file_.c_str(),
-                                   line, column, error.c_str()));
+    errors_.push_back(StringPrintf("%s:%d:%d: %s", file_.c_str(), line, column,
+                                   error.c_str()));
   }
 }
 
-bool JSONParser::HasError() const {
-  return !errors_.empty();
-}
+bool JSONParser::HasError() const { return !errors_.empty(); }
 
 std::string JSONParser::error_str() const {
   return fxl::JoinStrings(errors_, "\n");
 }
 
 }  // namespace json
-
