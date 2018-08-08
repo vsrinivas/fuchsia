@@ -31,18 +31,18 @@ In our current implementation, a process runs in a sandbox if its binary is
 contained in a package. As the package manager evolves, these details are
 likely to change.
 
-An component run from a package is given access to two namespaces by default:
+An component run from a package is given a read-only view of its package
+contents in `/pkg`. To access these resources at runtime, a process can use
+the `/pkg` namespace. For example, the `root_presenter` can access
+`cursor32.png` using the absolute path `/pkg/data/cursor32.png`.
 
- * `/svc`, which is a bundle of services from the environment in which the
-   component runs.
- * `/pkg`, which is a read-only view of the package containing the component.
-
-A typical component will interact with a number of services from `/svc` in
-order to play some useful role in the system.
-
-To access these resources at runtime, a process can use the `/pkg` namespace.
-For example, the `root_presenter` can access `cursor32.png` using the absolute
-path `/pkg/data/cursor32.png`.
+Another important part of the component's namespace is `/svc`, which renders
+access to services in the component's sandbox. A typical component will
+interact with a number of services from `/svc` in order to play some useful
+role in the system. The set of services that a component has access to is
+governed by its [`services`](package_metadata.md#Component-Manifest) sandbox.
+For example, the service `fuchsia.sys.Launcher` allows the component to launch
+other components.
 
 ## Configuring additional namespaces
 

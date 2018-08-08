@@ -58,7 +58,8 @@ Currently, the component manifest supports declaring sandboxing metadata.
         "binary": "bin/app"
     },
     "sandbox": {
-        "system": [ "data/sysmgr" ]
+        "system": [ "data/sysmgr" ],
+        "services": [ "fuchsia.sys.Launcher", "fuchsia.netstack.Netstack" ]
     }
 }
 ```
@@ -77,6 +78,12 @@ The sandbox property is a JSON object with the following schema:
     "type": "object",
     "properties": {
         "dev": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "services": {
             "type": "array",
             "items": {
                 "type": "string"
@@ -122,6 +129,15 @@ appears in the `pkgfs` array, then `/pkgfs/packages` will appear in the
 namespaces of components loaded from the package, providing access to all
 packages fully cached on the system.
 
+The `services` array defines a whitelist of services from `/svc` that the
+component may access. A typical component will require a number services from
+`/svc` in order to play some useful role in the system. For example, if
+`"services" = [ "fuchsia.sys.Launcher", "fuchsia.netstack.Netstack" ]`, the
+component will have the ability to launch other components and access network
+services. A component may declare any list of services in its `services`
+whitelist, but it will only be able to access services present in its
+[environment](../glossary.md#environment).
+
 The `features` array contains a list of well-known features that the package
 wishes to use. Including a feature in this list is a request for the environment
 in which the contents of the package execute to be given the resources required
@@ -157,6 +173,10 @@ The set of currently known features are as follows:
 - `vulkan`, which requests access to the resources required to use the Vulkan
   graphics interface. This adds layer configuration data in the `/config/vulkan`
   directory in the package's namespace.
+
+- `deprecated-all-services`, which grants the component access to all services
+  in its environment, instead of the whitelist in `services`. This feature is
+  deprecated and should not be used for new components.
 
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
