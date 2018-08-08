@@ -38,8 +38,8 @@ namespace fuchsia {
 namespace ui {
 namespace viewsv1token {
 
-std::ostream& operator<<(
-    std::ostream& os, const ::fuchsia::ui::viewsv1token::ViewToken& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const ::fuchsia::ui::viewsv1token::ViewToken& value) {
   return os << "<V" << value.value << ">";
 }
 
