@@ -46,8 +46,7 @@ class Importer {
 
   bool HandleKernelThreadName(KernelThread kernel_thread,
                               const fbl::StringPiece& name);
-  bool HandleThreadName(zx_koid_t thread,
-                        zx_koid_t process,
+  bool HandleThreadName(zx_koid_t thread, zx_koid_t process,
                         const fbl::StringPiece& name);
   bool HandleProcessName(zx_koid_t process, const fbl::StringPiece& name);
   bool HandleSyscallName(uint32_t syscall, const fbl::StringPiece& name);
@@ -55,22 +54,16 @@ class Importer {
   bool HandleProbeName(uint32_t probe, const fbl::StringPiece& name);
   bool HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name);
 
-  bool HandleIRQEnter(trace_ticks_t event_time,
-                      trace_cpu_number_t cpu_number,
+  bool HandleIRQEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                       uint32_t irq);
-  bool HandleIRQExit(trace_ticks_t event_time,
-                     trace_cpu_number_t cpu_number,
+  bool HandleIRQExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                      uint32_t irq);
   bool HandleSyscallEnter(trace_ticks_t event_time,
-                          trace_cpu_number_t cpu_number,
-                          uint32_t syscall);
+                          trace_cpu_number_t cpu_number, uint32_t syscall);
   bool HandleSyscallExit(trace_ticks_t event_time,
-                         trace_cpu_number_t cpu_number,
-                         uint32_t syscall);
-  bool HandlePageFault(trace_ticks_t event_time,
-                       trace_cpu_number_t cpu_number,
-                       uint64_t virtual_address,
-                       uint32_t flags);
+                         trace_cpu_number_t cpu_number, uint32_t syscall);
+  bool HandlePageFault(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                       uint64_t virtual_address, uint32_t flags);
   bool HandleContextSwitch(trace_ticks_t event_time,
                            trace_cpu_number_t cpu_number,
                            trace_thread_state_t outgoing_thread_state,
@@ -80,81 +73,51 @@ class Importer {
                            KernelThread outgoing_kernel_thread,
                            zx_koid_t incoming_thread,
                            KernelThread incoming_kernel_thread);
-  bool HandleObjectDelete(trace_ticks_t event_time,
-                          zx_koid_t thread,
+  bool HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread,
                           zx_koid_t object);
-  bool HandleThreadCreate(trace_ticks_t event_time,
-                          zx_koid_t thread,
+  bool HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread,
                           zx_koid_t affected_thread,
                           zx_koid_t affected_process);
-  bool HandleThreadStart(trace_ticks_t event_time,
-                         zx_koid_t thread,
+  bool HandleThreadStart(trace_ticks_t event_time, zx_koid_t thread,
                          zx_koid_t affected_thread);
   bool HandleThreadExit(trace_ticks_t event_time, zx_koid_t thread);
-  bool HandleProcessCreate(trace_ticks_t event_time,
-                           zx_koid_t thread,
+  bool HandleProcessCreate(trace_ticks_t event_time, zx_koid_t thread,
                            zx_koid_t affected_process);
-  bool HandleProcessStart(trace_ticks_t event_time,
-                          zx_koid_t thread,
+  bool HandleProcessStart(trace_ticks_t event_time, zx_koid_t thread,
                           zx_koid_t affected_thread,
                           zx_koid_t affected_process);
-  bool HandleProcessExit(trace_ticks_t event_time,
-                         zx_koid_t thread,
+  bool HandleProcessExit(trace_ticks_t event_time, zx_koid_t thread,
                          zx_koid_t affected_process);
-  bool HandleChannelCreate(trace_ticks_t event_time,
-                           zx_koid_t thread,
-                           zx_koid_t channel0,
-                           zx_koid_t channel1,
+  bool HandleChannelCreate(trace_ticks_t event_time, zx_koid_t thread,
+                           zx_koid_t channel0, zx_koid_t channel1,
                            uint32_t flags);
-  bool HandleChannelWrite(trace_ticks_t event_time,
-                          zx_koid_t thread,
-                          zx_koid_t channel,
-                          uint32_t num_bytes,
+  bool HandleChannelWrite(trace_ticks_t event_time, zx_koid_t thread,
+                          zx_koid_t channel, uint32_t num_bytes,
                           uint32_t num_handles);
-  bool HandleChannelRead(trace_ticks_t event_time,
-                         zx_koid_t thread,
-                         zx_koid_t channel,
-                         uint32_t num_bytes,
+  bool HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread,
+                         zx_koid_t channel, uint32_t num_bytes,
                          uint32_t num_handles);
-  bool HandlePortWait(trace_ticks_t event_time,
-                      zx_koid_t thread,
+  bool HandlePortWait(trace_ticks_t event_time, zx_koid_t thread,
                       zx_koid_t port);
-  bool HandlePortWaitDone(trace_ticks_t event_time,
-                          zx_koid_t thread,
-                          zx_koid_t port,
-                          uint32_t status);
-  bool HandlePortCreate(trace_ticks_t event_time,
-                        zx_koid_t thread,
+  bool HandlePortWaitDone(trace_ticks_t event_time, zx_koid_t thread,
+                          zx_koid_t port, uint32_t status);
+  bool HandlePortCreate(trace_ticks_t event_time, zx_koid_t thread,
                         zx_koid_t port);
-  bool HandlePortQueue(trace_ticks_t event_time,
-                       zx_koid_t thread,
-                       zx_koid_t port,
-                       uint32_t num_bytes);
-  bool HandleWaitOne(trace_ticks_t event_time,
-                     zx_koid_t thread,
-                     zx_koid_t object,
-                     uint32_t signals,
-                     zx_time_t timeout);
-  bool HandleWaitOneDone(trace_ticks_t event_time,
-                         zx_koid_t thread,
-                         zx_koid_t object,
-                         uint32_t status,
-                         uint32_t pending);
+  bool HandlePortQueue(trace_ticks_t event_time, zx_koid_t thread,
+                       zx_koid_t port, uint32_t num_bytes);
+  bool HandleWaitOne(trace_ticks_t event_time, zx_koid_t thread,
+                     zx_koid_t object, uint32_t signals, zx_time_t timeout);
+  bool HandleWaitOneDone(trace_ticks_t event_time, zx_koid_t thread,
+                         zx_koid_t object, uint32_t status, uint32_t pending);
   bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t probe);
-  bool HandleProbe(trace_ticks_t event_time,
-                   zx_koid_t thread,
-                   uint32_t probe,
-                   uint32_t arg0,
-                   uint32_t arg1);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t probe,
+                   uint32_t arg0, uint32_t arg1);
   bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);
-  bool HandleVcpuExit(trace_ticks_t event_time,
-                      zx_koid_t thread,
+  bool HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread,
                       uint32_t meta);
-  bool HandleVcpuBlock(trace_ticks_t event_time,
-                       zx_koid_t thread,
+  bool HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread,
                        uint32_t meta);
-  bool HandleVcpuUnblock(trace_ticks_t event_time,
-                         zx_koid_t thread,
+  bool HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread,
                          uint32_t meta);
 
   struct CpuInfo {
@@ -168,8 +131,7 @@ class Importer {
                                              KernelThread kernel_thread);
 
   const trace_string_ref_t& GetNameRef(
-      std::unordered_map<uint32_t, trace_string_ref_t>& table,
-      const char* kind,
+      std::unordered_map<uint32_t, trace_string_ref_t>& table, const char* kind,
       uint32_t id);
   const trace_string_ref_t& GetVcpuMetaNameRef(uint32_t meta);
   const trace_thread_ref_t& GetThreadRef(zx_koid_t thread);
