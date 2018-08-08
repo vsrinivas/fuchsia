@@ -6,9 +6,9 @@
 
 #include <ddk/debug.h>
 
-#define logf(level, args...) \
-  do {                                     \
-      zxlogf(level, "btintel: " args);     \
+#define logf(level, args...)         \
+  do {                               \
+    zxlogf(level, "btintel: " args); \
   } while (false)
 
 #define errorf(args...) logf(ERROR, args)

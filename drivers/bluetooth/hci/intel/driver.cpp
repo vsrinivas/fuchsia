@@ -54,8 +54,7 @@ extern "C" zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
     return result;
   }
   // Bind succeeded and devmgr is now responsible for releasing |btdev|
-  auto f = std::async(std::launch::async, [btdev, secure]() {
-    btdev->LoadFirmware(secure);
-  });
+  auto f = std::async(std::launch::async,
+                      [btdev, secure]() { btdev->LoadFirmware(secure); });
   return ZX_OK;
 }

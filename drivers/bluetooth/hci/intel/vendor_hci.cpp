@@ -89,8 +89,9 @@ bool VendorHci::SendSecureSend(uint8_t type,
       if (le16toh(event_params.command_opcode) != kSecureSend) {
         errorf("VendorHci: Received command complete for something else!\n");
       } else if (event_params.return_parameters[0] != 0x00) {
-        errorf("VendorHci: Received 0x%x instead of zero in command complete!\n",
-              event_params.return_parameters[0]);
+        errorf(
+            "VendorHci: Received 0x%x instead of zero in command complete!\n",
+            event_params.return_parameters[0]);
         return false;
       }
     } else if (event->event_code() == btlib::hci::kVendorDebugEventCode) {
@@ -99,7 +100,8 @@ bool VendorHci::SendSecureSend(uint8_t type,
       infof("VendorHci: SecureSend result 0x%x, opcode: 0x%x, status: 0x%x\n",
             params.result, params.opcode, params.status);
       if (params.result) {
-        errorf("VendorHci: Result of %d indicates some error!\n", params.result);
+        errorf("VendorHci: Result of %d indicates some error!\n",
+               params.result);
         return false;
       }
     }
@@ -200,7 +202,8 @@ std::unique_ptr<btlib::hci::EventPacket> VendorHci::ReadEventPacket() const {
 
   // Allocate a buffer for the event. We don't know the size
   // beforehand we allocate the largest possible buffer.
-  auto packet = btlib::hci::EventPacket::New(btlib::hci::kMaxCommandPacketPayloadSize);
+  auto packet =
+      btlib::hci::EventPacket::New(btlib::hci::kMaxCommandPacketPayloadSize);
   if (!packet) {
     errorf("VendorHci: Failed to allocate event packet!\n");
     return nullptr;
@@ -213,13 +216,13 @@ std::unique_ptr<btlib::hci::EventPacket> VendorHci::ReadEventPacket() const {
                      &read_size, nullptr, 0, nullptr);
   if (read_status < 0) {
     errorf("VendorHci: Failed to read event bytes: %s\n",
-          zx_status_get_string(read_status));
+           zx_status_get_string(read_status));
     return nullptr;
   }
 
   if (read_size < sizeof(btlib::hci::EventHeader)) {
     errorf("VendorHci: Malformed event packet expected >%zu bytes, got %d\n",
-          sizeof(btlib::hci::EventHeader), read_size);
+           sizeof(btlib::hci::EventHeader), read_size);
     return nullptr;
   }
 

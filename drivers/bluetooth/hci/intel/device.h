@@ -38,15 +38,10 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device> {
   void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t DdkIoctl(uint32_t op,
-                       const void* in_buf,
-                       size_t in_len,
-                       void* out_buf,
-                       size_t out_len,
-                       size_t* actual);
+  zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                       void* out_buf, size_t out_len, size_t* actual);
 
  private:
-
   // Removes the device and leaves an error on the kernel log
   // prepended with |note|.
   // Returns |status|.
@@ -54,7 +49,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   // Makes the device visible and leaves |note| on the kernel log.
   // Returns ZX_OK.
-  zx_status_t Appear(const char *note);
+  zx_status_t Appear(const char* note);
 
   // Maps the firmware refrenced by |name| into memory.
   // Returns the vmo that the firmware is loaded into or ZX_HANDLE_INVALID if it
@@ -62,8 +57,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Closing this handle will invalidate |fw_addr|, which
   // receives a pointer to the memory.
   // |fw_size| receives the size of the firmware if valid.
-  zx_handle_t MapFirmware(const char* name,
-                          uintptr_t* fw_addr,
+  zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr,
                           size_t* fw_size);
 
   bt_hci_protocol_t hci_;

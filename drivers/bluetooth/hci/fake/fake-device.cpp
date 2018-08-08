@@ -138,7 +138,8 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t* out_channel) {
   zx::channel in, out;
   auto status = zx::channel::create(0, &out, &in);
   if (status != ZX_OK) {
-    printf("bthci-fake: could not create channel (type %i): %d\n", chan_type, status);
+    printf("bthci-fake: could not create channel (type %i): %d\n", chan_type,
+           status);
     return status;
   }
   *out_channel = out.release();

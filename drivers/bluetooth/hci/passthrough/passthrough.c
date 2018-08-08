@@ -21,8 +21,7 @@ typedef struct {
   bt_hci_protocol_t hci;
 } passthrough_t;
 
-static zx_status_t passthrough_hci_get_protocol(void* ctx,
-                                                uint32_t proto_id,
+static zx_status_t passthrough_hci_get_protocol(void* ctx, uint32_t proto_id,
                                                 void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -38,12 +37,9 @@ static zx_status_t passthrough_hci_get_protocol(void* ctx,
   return ZX_OK;
 }
 
-static zx_status_t passthrough_hci_ioctl(void* ctx,
-                                         uint32_t op,
-                                         const void* in_buf,
-                                         size_t in_len,
-                                         void* out_buf,
-                                         size_t out_len,
+static zx_status_t passthrough_hci_ioctl(void* ctx, uint32_t op,
+                                         const void* in_buf, size_t in_len,
+                                         void* out_buf, size_t out_len,
                                          size_t* out_actual) {
   passthrough_t* passthrough = ctx;
   if (out_len < sizeof(zx_handle_t)) {
@@ -75,9 +71,7 @@ static void passthrough_hci_unbind(void* ctx) {
   device_remove(passthrough->dev);
 }
 
-static void passthrough_hci_release(void* ctx) {
-  free(ctx);
-}
+static void passthrough_hci_release(void* ctx) { free(ctx); }
 
 static zx_protocol_device_t passthrough_device_proto = {
     .version = DEVICE_OPS_VERSION,

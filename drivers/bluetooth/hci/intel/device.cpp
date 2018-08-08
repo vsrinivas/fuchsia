@@ -18,9 +18,7 @@ namespace btintel {
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
     : DeviceType(device), hci_(*hci), firmware_loaded_(false) {}
 
-zx_status_t Device::Bind() {
-  return DdkAdd("btintel", DEVICE_ADD_INVISIBLE);
-}
+zx_status_t Device::Bind() { return DdkAdd("btintel", DEVICE_ADD_INVISIBLE); }
 
 zx_status_t Device::LoadFirmware(bool secure) {
   zx_status_t status;
@@ -51,7 +49,8 @@ zx_status_t Device::LoadFirmware(bool secure) {
 
     // We only know how to load if we're in bootloader.
     if (version.fw_variant != kBootloaderFirmwareVariant) {
-      auto note = fbl::StringPrintf("Unknown firmware variant (0x%x)", version.fw_variant);
+      auto note = fbl::StringPrintf("Unknown firmware variant (0x%x)",
+                                    version.fw_variant);
       return Remove(ZX_ERR_NOT_SUPPORTED, note.c_str());
     }
 
@@ -87,7 +86,7 @@ zx_status_t Device::LoadFirmware(bool secure) {
   status =
       bt_hci_open_acl_data_channel(&hci_, acl_channel.reset_and_get_address());
   if (status != ZX_OK) {
-    return Remove(status, "couldn't open ACL channel");;
+    return Remove(status, "couldn't open ACL channel");
   }
 
   FirmwareLoader loader(&cmd_channel, &acl_channel);
@@ -106,7 +105,7 @@ zx_status_t Device::LoadFirmware(bool secure) {
   zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
 
   if (result == FirmwareLoader::LoadStatus::kError) {
-    return Remove(ZX_ERR_BAD_STATE, "firmware loading failed");;
+    return Remove(ZX_ERR_BAD_STATE, "firmware loading failed");
   }
 
   cmd_hci.SendReset();
@@ -119,10 +118,10 @@ zx_status_t Device::LoadFirmware(bool secure) {
   return Appear(note.c_str());
 }
 
-zx_status_t Device::Remove(zx_status_t status, const char *note) {
-    DdkRemove();
-    errorf("%s: %s", note, zx_status_get_string(status));
-    return status;
+zx_status_t Device::Remove(zx_status_t status, const char* note) {
+  DdkRemove();
+  errorf("%s: %s", note, zx_status_get_string(status));
+  return status;
 }
 
 zx_status_t Device::Appear(const char* note) {
@@ -132,8 +131,7 @@ zx_status_t Device::Appear(const char* note) {
   return ZX_OK;
 }
 
-zx_handle_t Device::MapFirmware(const char* name,
-                                uintptr_t* fw_addr,
+zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr,
                                 size_t* fw_size) {
   zx_handle_t vmo = ZX_HANDLE_INVALID;
   size_t size;
@@ -151,13 +149,9 @@ zx_handle_t Device::MapFirmware(const char* name,
   return vmo;
 }
 
-void Device::DdkUnbind() {
-  device_remove(zxdev());
-}
+void Device::DdkUnbind() { device_remove(zxdev()); }
 
-void Device::DdkRelease() {
-  delete this;
-}
+void Device::DdkRelease() { delete this; }
 
 zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
@@ -173,13 +167,8 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   return ZX_OK;
 }
 
-zx_status_t Device::DdkIoctl(uint32_t op,
-                             const void* in_buf,
-                             size_t in_len,
-                             void* out_buf,
-                             size_t out_len,
-                             size_t* actual) {
-
+zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                             void* out_buf, size_t out_len, size_t* actual) {
   ZX_DEBUG_ASSERT(firmware_loaded_);
   if (out_len < sizeof(zx_handle_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;

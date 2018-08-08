@@ -68,7 +68,8 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
       offset++;
       BufferView event_view = file.view(offset);
       PacketView<btlib::hci::EventHeader> event(&event_view);
-      size_t event_size = sizeof(btlib::hci::EventHeader) + event.header().parameter_total_size;
+      size_t event_size =
+          sizeof(btlib::hci::EventHeader) + event.header().parameter_total_size;
       events.emplace_back(file.view(offset, event_size));
       offset += event_size;
     }
