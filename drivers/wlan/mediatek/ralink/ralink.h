@@ -858,6 +858,11 @@ class TxStatFifo : public Register<0x1718> {
     WLAN_BIT_FIELD(txq_rate, 16, 16);
 };
 
+class TxStatFifoExt : public Register<0x1798> {
+   public:
+    WLAN_BIT_FIELD(txq_rty_cnt, 0, 8);
+};
+
 // EEPROM word offsets
 constexpr uint16_t EEPROM_CHIP_ID = 0x0000;
 constexpr uint16_t EEPROM_VERSION = 0x0001;

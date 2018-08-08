@@ -47,6 +47,9 @@ class WlanmacIfcProxy {
         ifc_->complete_tx(cookie_, pkt, status);
     }
     void Indication(uint32_t ind) { ifc_->indication(cookie_, ind); }
+    void ReportTxStatus(const wlan_tx_status_t* tx_status) {
+        ifc_->report_tx_status(cookie_, tx_status);
+    }
 
    private:
     wlanmac_ifc_t* ifc_;
@@ -220,7 +223,10 @@ class Device {
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
-    zx_status_t FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt,
+    wlan_tx_status ReadTxStatsFifoEntry(int packet_id) __TA_REQUIRES(lock_);
+    int WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt);
+
+    zx_status_t FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt, int packet_id,
                                 size_t aggr_payload_len);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
@@ -295,6 +301,19 @@ class Device {
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
     uint16_t iface_id_ __TA_GUARDED(lock_) = 0;
     uint16_t iface_role_ __TA_GUARDED(lock_) = 0;
+
+    // TX statistics reporting
+    struct TxStatsFifoEntry {
+        // Destination mac address, or addr1 in packet header.
+        uint8_t peer_addr[6] = {};
+        // Used by Minstrel as an index into its rate table.
+        uint16_t rate_idx = 0;
+        // True iff this FIFO entry is in use.
+        bool in_use = false;
+    };
+    static constexpr int kTxStatsFifoSize = 16;
+    TxStatsFifoEntry tx_stats_fifo_[kTxStatsFifoSize] __TA_GUARDED(lock_);
+    int tx_stats_fifo_counter_ __TA_GUARDED(lock_) = 0;
 
     // Thread which periodically reads interrupt registers.
     // Required because the device doesn't support USB interrupt endpoints.

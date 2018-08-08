@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <iterator>
 
 #define RALINK_DUMP_EEPROM 0
 #define RALINK_DUMP_RX 0
@@ -59,8 +60,16 @@ constexpr char kFirmwareFile[] = "rt2870.bin";
 
 constexpr int kMaxBusyReads = 20;
 
-// The polling interval for asynchronous transmission reports.
-constexpr zx::duration kAsyncTxInterruptPollInterval = zx::msec(100);
+// The polling interval and slack for asynchronous transmission reports, when the transmit hardware
+// is believed to be idle.
+constexpr zx::duration kAsyncTxInterruptIdlePollInterval = zx::msec(100);
+constexpr zx::duration kAsyncTxInterruptIdlePollSlack = zx::msec(10);
+
+// The polling interval and slack for asynchronous transmission reports, when the transmit hardware
+// is believed to be busy. This interval must be small enough to ensure that packet transmission
+// does not overflow the 16-entry hardware TX stats FIFO.
+constexpr zx::duration kAsyncTxInterruptBusyPollInterval = zx::msec(1);
+constexpr zx::duration kAsyncTxInterruptBusyPollSlack = zx::usec(100);
 
 // The duration of lead time before a beacon frame used to send the pre-beacon notification.
 constexpr zx::duration kPreTbttLeadTime = zx::msec(6);
@@ -80,6 +89,9 @@ constexpr uint64_t kTbttInterruptKey = 3;
 
 // TODO(hahnr): Use bcast_mac from MacAddr once it was moved to common/.
 const uint8_t kBcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+// TX packet ID used to signal an invalid or untracked (e.g. beacon frame) packet.
+constexpr int kInvalidTxPacketId = 0;
 
 // The <cstdlib> overloads confuse the compiler for <cstdint> types.
 template <typename T> constexpr T abs(T t) {
@@ -3766,7 +3778,8 @@ zx_status_t Device::StartInterruptPolling() {
     }
 
     interrupt_thrd_ = std::thread(&Device::InterruptWorker, this);
-    async_tx_interrupt_timer_.set(zx::deadline_after(kAsyncTxInterruptPollInterval), zx::msec(1));
+    async_tx_interrupt_timer_.set(zx::deadline_after(kAsyncTxInterruptIdlePollInterval),
+                                  kAsyncTxInterruptIdlePollSlack);
     return ZX_OK;
 }
 
@@ -3784,8 +3797,44 @@ void Device::StopInterruptPolling() {
 }
 
 zx_status_t Device::OnTxReportInterruptTimer() {
-    // TODO(sheu): read TX_STAT_FIFO and roll up TX reports.
-    async_tx_interrupt_timer_.set(zx::deadline_after(kAsyncTxInterruptPollInterval), zx::usec(1));
+    TxStatFifo stat_fifo;
+    TxStatFifoExt stat_fifo_ext;
+    int tracked_tx_packet_count = 0;
+    while (true) {
+        // TX_STAT_FIFO_EXT must be read before TX_STAT_FIFO.
+        auto status = ReadRegister(&stat_fifo_ext);
+        CHECK_READ(TX_STAT_FIFO_EXT, status);
+        status = ReadRegister(&stat_fifo);
+        CHECK_READ(TX_STAT_FIFO, status);
+        if (!stat_fifo.txq_vld()) { break; }
+
+        const int packet_id = stat_fifo.txq_pid();
+        if (packet_id == kInvalidTxPacketId) { continue; }
+
+        std::lock_guard<std::mutex> guard(lock_);
+        if (wlanmac_proxy_ != nullptr) {
+            wlan_tx_status reported_tx_status = ReadTxStatsFifoEntry(packet_id);
+            reported_tx_status.retries = stat_fifo_ext.txq_rty_cnt();
+            reported_tx_status.success = (stat_fifo.txq_ok() != 0);
+
+            wlanmac_proxy_->ReportTxStatus(&reported_tx_status);
+        }
+        tracked_tx_packet_count++;
+    }
+
+    zx::duration poll_interval;
+    zx::duration poll_slack;
+    if (tracked_tx_packet_count < kTxStatsFifoSize / 4) {
+        // Assume that the hardware is (relatively) idle, so we can afford to poll with a large
+        // interval to catch any remaining long-running TX.
+        poll_interval = kAsyncTxInterruptIdlePollInterval;
+        poll_slack = kAsyncTxInterruptIdlePollSlack;
+    } else {
+        // Assume that the hardware is busy. We may see more TX completion soon.
+        poll_interval = kAsyncTxInterruptBusyPollInterval;
+        poll_slack = kAsyncTxInterruptBusyPollSlack;
+    }
+    async_tx_interrupt_timer_.set(zx::deadline_after(poll_interval), poll_slack);
     return ZX_OK;
 }
 
@@ -3996,7 +4045,7 @@ zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* b
     }
     auto buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[req_len]);
     auto aggr = reinterpret_cast<BulkoutAggregation*>(buf.get());
-    auto status = FillAggregation(aggr, bcn_pkt, aggr_payload_len);
+    auto status = FillAggregation(aggr, bcn_pkt, kInvalidTxPacketId, aggr_payload_len);
     if (status != ZX_OK) {
         errorf("could not fill usb request packet: %d\n", status);
         return status;
@@ -4065,7 +4114,15 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
         return status;
     }
 
-    status = FillAggregation(aggr, wlan_pkt, aggr_payload_len);
+    // Record the packet to be transmitted in the packet TX stats FIFO.
+    const int packet_id = WriteTxStatsFifoEntry(*wlan_pkt);
+    if (packet_id != kInvalidTxPacketId) {
+        // The TX hardware will become busy.  Begin firing the timer immediately.
+        async_tx_interrupt_timer_.set(zx::deadline_after(zx::msec(0)),
+                                      kAsyncTxInterruptBusyPollSlack);
+    }
+
+    status = FillAggregation(aggr, wlan_pkt, packet_id, aggr_payload_len);
     if (status != ZX_OK) {
         errorf("could not fill usb request packet: %d\n", status);
         return status;
@@ -4085,8 +4142,48 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     return ZX_OK;
 }
 
+wlan_tx_status Device::ReadTxStatsFifoEntry(int packet_id) {
+    // The entry in tx_stats_fifo_ is indexed by packet ID.
+    ZX_DEBUG_ASSERT(kInvalidTxPacketId < packet_id && packet_id < kTxStatsFifoSize);
+    TxStatsFifoEntry& tx_stats_entry = tx_stats_fifo_[packet_id];
+
+    wlan_tx_status reported_tx_status = {};
+    std::copy(std::begin(tx_stats_entry.peer_addr), std::end(tx_stats_entry.peer_addr),
+              std::begin(reported_tx_status.peer_addr));
+    reported_tx_status.rate_idx = tx_stats_entry.rate_idx;
+
+    tx_stats_entry.in_use = false;
+    return reported_tx_status;
+}
+
+int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
+    if ((wlan_pkt.info.tx_flags & WLAN_TX_INFO_VALID_RATE_IDX) == 0) {
+        return kInvalidTxPacketId;
+    }
+
+    std::lock_guard<std::mutex> guard(lock_);
+    // 0 is reserved as invalid packet ID (e.g. for beacon frames); the hardware appears to ignore
+    // the TX stats registers when packet ID 0 is used. Hence, tx_stats_fifo_counter_ iterates on
+    // the interval [0, kTxStatsFifoSize - 1) so we generate TX packet IDs on the interval
+    // [1, kTxStatsFifoSize).
+    const int packet_id = tx_stats_fifo_counter_ + 1;
+    TxStatsFifoEntry& tx_stats = tx_stats_fifo_[packet_id];
+    if (!tx_stats_fifo_[packet_id].in_use) {
+        tx_stats_fifo_counter_ = (tx_stats_fifo_counter_ + 1) % (kTxStatsFifoSize - 1);
+        auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_pkt.packet_head.data);
+        std::copy(std::begin(frame_hdr->addr1.byte), std::end(frame_hdr->addr1.byte),
+                  tx_stats.peer_addr);
+        tx_stats.rate_idx = wlan_pkt.info.rate_idx;
+        tx_stats.in_use = true;
+        return packet_id;
+    } else {
+        errorf("tx_stats_fifo_ overrun\n");
+        return kInvalidTxPacketId;
+    }
+}
+
 zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt,
-                                    size_t aggr_payload_len) {
+                                    int packet_id, size_t aggr_payload_len) {
     // FillAggregation() fills up Aggregation Header, Payload, and its Tail marker.
     // Header is in the form of TxInfo. Its length field is to carry the length
     // of the Aggregation Payload.
@@ -4156,7 +4253,7 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
 
     size_t mpdu_len = GetMpduLen(*wlan_pkt);
     txwi1.set_mpdu_total_byte_count(mpdu_len);
-    txwi1.set_tx_packet_id(0);
+    txwi1.set_tx_packet_id(packet_id);
 
     Txwi2& txwi2 = aggr->txwi2;
     txwi2.set_iv(0);
