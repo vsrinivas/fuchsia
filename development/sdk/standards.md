@@ -48,9 +48,7 @@ following pattern: `$LAYER/public/lib/$NAME/fidl`. The target name should be
 
 ### Style
 
-FIDL definitions should follow the Fuchsia FIDL style guide.
-
-TODO(TO-741): Write and publish a FIDL style guide.
+FIDL definitions in the SDK should follow the [FIDL API readability rubric].
 
 ## Client Libraries
 
@@ -122,3 +120,5 @@ return errors to their clients, who can decide whether to log the error.
 C and C++ client libraries should use `ZX_DEBUG_ASSERT` and `ZX_ASSERT`, defined
 in `<zircon/assert.h>`, to assert invariants. Client libraries may also use the
 `_MSG` variants to provide a message when the assertion fails.
+
+[FIDL API readability rubric]: ../api/fidl.md
