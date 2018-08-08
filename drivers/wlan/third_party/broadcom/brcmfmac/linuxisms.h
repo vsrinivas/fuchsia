@@ -158,13 +158,6 @@ LINUX_FUNCVI(nla_put) // Add netlink attribute to netbuf
 LINUX_FUNCVI(nla_put_u16) // Add u16 attribute to netbuf
 LINUX_FUNCII(MBM_TO_DBM)
 LINUX_FUNCX(prandom_u32)
-LINUX_FUNCVU(get_unaligned_le16)
-LINUX_FUNCUU(put_unaligned_le32)
-static inline uint32_t get_unaligned_le32(void* addr) {
-    uint32_t value;
-    memcpy(&value, addr, sizeof(uint32_t));
-    return value;
-}
 
 LINUX_FUNCVI(netdev_mc_count) // In core.c - Count of multicast addresses in netdev.
 LINUX_FUNCX(rtnl_lock) // In core.c and p2p.c

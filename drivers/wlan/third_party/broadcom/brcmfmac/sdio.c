@@ -1253,8 +1253,8 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     //trace_brcmf_sdpcm_hdr(SDPCM_RX, header);
 
     /* hw header */
-    len = get_unaligned_le16(header);
-    checksum = get_unaligned_le16(header + sizeof(uint16_t));
+    len = *(uint16_t*)&header;
+    checksum = *(uint16_t*)&header + sizeof(uint16_t);
     /* All zero means no more to read */
     if (!(len | checksum)) {
         bus->rxpending = false;
@@ -1416,7 +1416,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 
         for (totlen = num = 0; dlen; num++) {
             /* Get (and move past) next length */
-            sublen = get_unaligned_le16(dptr);
+            sublen = *(uint16_t*)&(dptr);
             dlen -= sizeof(uint16_t);
             dptr += sizeof(uint16_t);
             if ((sublen < SDPCM_HDRLEN) || ((num == 0) && (sublen < (2 * SDPCM_HDRLEN)))) {
@@ -1540,7 +1540,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 
         brcmf_netbuf_list_for_every_safe(&bus->glom, pfirst, pnext) {
             dptr = (uint8_t*)(pfirst->data);
-            sublen = get_unaligned_le16(dptr);
+            sublen = *(uint16_t*)&dptr;
             doff = brcmf_sdio_getdatoffset(&dptr[SDPCM_HWHDR_LEN]);
 
             brcmf_dbg_hex_dump(BRCMF_BYTES_ON() && BRCMF_DATA_ON(), dptr, pfirst->len,
@@ -3116,7 +3116,7 @@ static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus,
 
     brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
 
-    rstvec = get_unaligned_le32(fw->data);
+    rstvec = *(uint32_t*)&fw->data;
     brcmf_dbg(SDIO, "firmware rstvec: %x\n", rstvec);
 
     bcmerror = brcmf_sdio_download_code_file(bus, fw);

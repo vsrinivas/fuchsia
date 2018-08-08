@@ -4109,9 +4109,9 @@ static uint32_t brcmf_vndr_ie(uint8_t* iebuf, int32_t pktflag, uint8_t* ie_ptr, 
     strncpy((char*)iebuf, (char*)add_del_cmd, VNDR_IE_CMD_LEN - 1);
     iebuf[VNDR_IE_CMD_LEN - 1] = '\0';
 
-    put_unaligned_le32(1, &iebuf[VNDR_IE_COUNT_OFFSET]);
+    *(uint32_t*)&iebuf[VNDR_IE_COUNT_OFFSET] = 1;
 
-    put_unaligned_le32(pktflag, &iebuf[VNDR_IE_PKTFLAG_OFFSET]);
+    *(uint32_t*)&iebuf[VNDR_IE_PKTFLAG_OFFSET] = pktflag;
 
     memcpy(&iebuf[VNDR_IE_VSIE_OFFSET], ie_ptr, ie_len);
 

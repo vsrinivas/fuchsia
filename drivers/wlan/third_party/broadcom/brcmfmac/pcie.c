@@ -1307,7 +1307,7 @@ static zx_status_t brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info* devin
     brcmf_pcie_copy_mem_todev(devinfo, devinfo->ci->rambase, (void*)fw->data, fw->size);
     brcmf_dbg(TEMP, "Survived copy_mem_todev");
 
-    resetintr = get_unaligned_le32(fw->data);
+    resetintr = *(uint32_t*)&fw->data;
 
     /* reset last 4 bytes of RAM address. to be used for shared
      * area. This identifies when FW is running
