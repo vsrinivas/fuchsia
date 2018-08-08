@@ -62,6 +62,10 @@ private:
     // The image which has most recently been sent to the display controller impl
     fbl::RefPtr<Image> displayed_image_;
 
+    // Counters used for keeping track of when the layer's images need to be dropped.
+    uint64_t pending_image_config_gen_ = 0;
+    uint64_t current_image_config_gen_ = 0;
+
     int32_t pending_cursor_x_;
     int32_t pending_cursor_y_;
     int32_t current_cursor_x_;

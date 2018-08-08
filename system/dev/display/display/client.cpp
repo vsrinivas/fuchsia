@@ -443,6 +443,7 @@ void Client::HandleSetLayerPrimaryConfig(
 
     primary_layer->transform_mode = FRAME_TRANSFORM_IDENTITY;
 
+    layer->pending_image_config_gen_++;
     layer->pending_image_ = nullptr;
     layer->config_change_ = true;
     pending_config_valid_ = false;
@@ -529,6 +530,7 @@ void Client::HandleSetLayerCursorConfig(
     cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
     populate_image(req->image_config, &cursor_layer->image);
 
+    layer->pending_image_config_gen_++;
     layer->pending_image_ = nullptr;
     layer->config_change_ = true;
     pending_config_valid_ = false;
@@ -620,6 +622,7 @@ void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigReques
     if (req->discard) {
         // Go through layers and release any pending resources they claimed
         for (auto& layer : layers_) {
+            layer.pending_image_config_gen_ = layer.current_image_config_gen_;
             if (layer.pending_image_) {
                 layer.pending_image_->DiscardAcquire();
                 layer.pending_image_ = nullptr;
@@ -684,11 +687,32 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
             display_config.display_config_change_ = false;
         }
 
-        // Put the pending image in the wait queue (the case where it's already ready
-        // will be handled later). This needs to be done before migrating layers, as
+        // Update any image layers. This needs to be done before migrating layers, as
         // that needs to know if there are any waiting images.
         for (auto layer_node : display_config.pending_layers_) {
             Layer* layer = layer_node.layer;
+            // If the layer's image configuration changed, get rid of any current images
+            if (layer->pending_image_config_gen_ != layer->current_image_config_gen_) {
+                layer->current_image_config_gen_ = layer->pending_image_config_gen_;
+
+                if (layer->pending_image_ == nullptr) {
+                    zxlogf(ERROR, "Tried to apply configuration with missing image\n");
+                    TearDown();
+                    return;
+                }
+
+                while (!list_is_empty(&layer->waiting_images_)) {
+                    do_early_retire(&layer->waiting_images_);
+                }
+                if (layer->displayed_image_ != nullptr) {
+                    {
+                        fbl::AutoLock lock(controller_->mtx());
+                        layer->displayed_image_->StartRetire();
+                    }
+                    layer->displayed_image_ = nullptr;
+                }
+            }
+
             if (layer->pending_image_) {
                 layer_node.layer->pending_image_->PrepareFences(
                         GetFence(layer->pending_wait_event_id_),
@@ -756,7 +780,6 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                             fbl::clamp(layer->current_cursor_y_,
                                        -static_cast<int32_t>(new_image_config->height) + 1,
                                        static_cast<int32_t>(mode->v_addressable) - 1);
-                    new_image_config = &layer->current_layer_.cfg.cursor.image;
                 } else if (layer->current_layer_.type == LAYER_COLOR) {
                     memcpy(layer->current_color_bytes_, layer->pending_color_bytes_,
                            sizeof(layer->current_color_bytes_));
@@ -766,27 +789,8 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                     ZX_ASSERT(false);
                 }
 
-                if (new_image_config) {
-                    // If the layer's image configuration changed, drop any waiting images
-                    if (!list_is_empty(&layer->waiting_images_)
-                            && !list_peek_head_type(&layer->waiting_images_, image_node_t, link)
-                                    ->self->HasSameConfig(*new_image_config)) {
-                        do_early_retire(&layer->waiting_images_);
-                    }
-
-                    // Either retire the displayed image if the configuration changed or
-                    // put it back into the new layer_t configuration
-                    if (layer->displayed_image_ != nullptr) {
-                        if (!layer->displayed_image_->HasSameConfig(*new_image_config)) {
-                            {
-                                fbl::AutoLock lock(controller_->mtx());
-                                layer->displayed_image_->StartRetire();
-                            }
-                            layer->displayed_image_ = nullptr;
-                        } else {
-                            new_image_config->handle = layer->displayed_image_->info().handle;
-                        }
-                    }
+                if (new_image_config && layer->displayed_image_) {
+                    new_image_config->handle = layer->displayed_image_->info().handle;
                 }
             }
         }
@@ -1005,6 +1009,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
 void Client::ApplyConfig() {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
 
+    bool config_missing_image = false;
     layer_t* layers[layers_.size()];
     int layer_idx = 0;
     for (auto& display_config : configs_) {
@@ -1074,21 +1079,18 @@ void Client::ApplyConfig() {
                 }
             }
 
-            // If the layer has no image, skip it
-            layer->is_skipped_ =
-                    layer->displayed_image_ == nullptr && layer->current_layer_.type != LAYER_COLOR;
-            if (!layer->is_skipped_) {
-                display_config.current_.layer_count++;
-                layers[layer_idx++] = &layer->current_layer_;
-
-                if (layer->displayed_image_) {
-                    display_config.vsync_layer_count_++;
+            display_config.current_.layer_count++;
+            layers[layer_idx++] = &layer->current_layer_;
+            if (layer->current_layer_.type != LAYER_COLOR) {
+                display_config.vsync_layer_count_++;
+                if (layer->displayed_image_ == nullptr) {
+                    config_missing_image = true;
                 }
             }
         }
     }
 
-    if (is_owner_) {
+    if (!config_missing_image && is_owner_) {
         DisplayConfig* dc_configs[configs_.size()];
         int dc_idx = 0;
         for (auto& c : configs_) {

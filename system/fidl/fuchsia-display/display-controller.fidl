@@ -248,10 +248,8 @@ interface Controller {
   // config (no src_frame cropping, the identity transform, positioned in the
   // top-left corner of the composed output, and no scaling).
   //
-  // If the image configuration changes due to applying this operation, the
-  // image currently being displayed and any pending images will be dropped
-  // before the next frame, regardless of whether or not the layer's new image
-  // is ready to be displayed.
+  // See the documentation on SetLayerImage for details on the synchronization
+  // behaviors of this method.
   //
   // It is illegal to pass an invalid layer id.
   11: SetLayerPrimaryConfig(uint64 layer_id, ImageConfig image_config);
@@ -287,6 +285,9 @@ interface Controller {
   // Configures the layer as a cursor layer with the given config. The
   // default position is (0, 0).
   //
+  // See the documentation on SetLayerImage for details on the synchronization
+  // behaviors of this method.
+  //
   // It is illegal to call this on an invalid layer.
   14: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
 
@@ -314,12 +315,20 @@ interface Controller {
   // If signal_event_id is valid, then the driver will signal the event with
   // ZX_EVENT_SIGNALED when the image is no longer being presented.
   //
-  // The driver will queue the images that are not yet ready. When an image is
-  // ready, any older images which are not yet ready will immediately be dropped
-  // and their signal events will be signaled as soon as their wait events are
-  // fired. The driver also does not attempt to synchronize with vsync. If
-  // multiple images become ready within one vsync period, then only the last
-  // image will actually be displayed.
+  // Each image layer acts as a seperate queue of images. Whenever a new
+  // image becomes ready, it will immediately be presented. When this happens,
+  // any older images which haven't become ready will be dropped, and their
+  // signal events will be fired as soon as their wait events are signaled.
+  // The driver does not attempt to synchronzie with vsync. If multiple images
+  // become ready within one vsync period, then only the last image will
+  // actually be displayed.
+  //
+  // The driver will wait until every image layer has an image that is ready
+  // before applying a configuration. The driver will retain images from older
+  // configurations and use them to immedately apply new configurations, without
+  // waiting for the new images to be ready. Setting a layer's ImageConfig with
+  // SetLayerPrimaryConfig or SetLayerCursorConfig resets that layer's images.
+  // This occurs even if the new ImageConfig matches the old ImageConfig.
   //
   // An image cannot be used for multiple layers simultaneously, nor can an
   // image be given back to the display controller while it is still in use.
@@ -329,7 +338,9 @@ interface Controller {
   //
   // It is illegal to call this with an invalid layer or image id, to
   // call it on a color layer, or to call it with an image and layer whose
-  // ImageConfigs do not match.
+  // ImageConfigs do not match. It is illegal to apply a configuration
+  // with an image layer that has no image (note that is is not illegal to
+  // validate such a configuration).
   17: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 signal_event_id);
 
   // Attempts to validate the current configuration.
