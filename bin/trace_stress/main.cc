@@ -27,16 +27,15 @@ static void PrintHelp(FILE* f) {
   fprintf(f, "Options:\n");
   fprintf(f, "  --help             Duh ...\n");
   fprintf(f, "  --count=COUNT      Specify number of records per iteration\n");
-  fprintf(f, "                     The default is %d.\n",
-          kDefaultCount);
+  fprintf(f, "                     The default is %d.\n", kDefaultCount);
   fprintf(f, "  --delay=SECONDS    Delay SECONDS before starting\n");
   fprintf(f, "                     This is useful until TO-650 is fixed.\n");
-  fprintf(f, "                     The default is %d.\n",
-          kDefaultDelaySeconds);
+  fprintf(f, "                     The default is %d.\n", kDefaultDelaySeconds);
   fprintf(f, "  --duration=SECONDS Specify time to run, in seconds\n");
   fprintf(f, "                     The default is %d.\n",
           kDefaultDurationSeconds);
-  fprintf(f, "  --quiet[=LEVEL]    Set quietness level (opposite of verbose)\n");
+  fprintf(f,
+          "  --quiet[=LEVEL]    Set quietness level (opposite of verbose)\n");
   fprintf(f, "  --verbose[=LEVEL]  Set debug verbosity level\n");
 }
 
@@ -53,21 +52,21 @@ static void RunStressTestIteration(int count) {
     // Add some variety.
     const char* event_name = nullptr;
     switch (i % 3) {
-    case 0:
-      event_name = kWithZeroArgs;
-      TRACE_DURATION_BEGIN(kSomethingCategory, event_name);
-      break;
-    case 1:
-      event_name = kWithOneArg;
-      TRACE_DURATION_BEGIN(kSomethingCategory, event_name, "k1", 1);
-      break;
-    case 2:
-      event_name = kWithTwoArgs;
-      TRACE_DURATION_BEGIN(kSomethingCategory, event_name,
-                           "k1", 1, "k2", 2.0);
-      break;
-    default:
-      __UNREACHABLE;
+      case 0:
+        event_name = kWithZeroArgs;
+        TRACE_DURATION_BEGIN(kSomethingCategory, event_name);
+        break;
+      case 1:
+        event_name = kWithOneArg;
+        TRACE_DURATION_BEGIN(kSomethingCategory, event_name, "k1", 1);
+        break;
+      case 2:
+        event_name = kWithTwoArgs;
+        TRACE_DURATION_BEGIN(kSomethingCategory, event_name, "k1", 1, "k2",
+                             2.0);
+        break;
+      default:
+        __UNREACHABLE;
     }
     zx::nanosleep(zx::deadline_after(zx::usec(1)));
     TRACE_DURATION_END(kSomethingCategory, event_name);
@@ -91,24 +90,21 @@ int main(int argc, char** argv) {
   std::string arg;
 
   if (cl.GetOptionValue("count", &arg)) {
-    if (!fxl::StringToNumberWithError<int>(arg, &count) ||
-        count < 0) {
+    if (!fxl::StringToNumberWithError<int>(arg, &count) || count < 0) {
       FXL_LOG(ERROR) << "Invalid count: " << arg;
       return EXIT_FAILURE;
     }
   }
 
   if (cl.GetOptionValue("delay", &arg)) {
-    if (!fxl::StringToNumberWithError<int>(arg, &delay) ||
-        delay < 0) {
+    if (!fxl::StringToNumberWithError<int>(arg, &delay) || delay < 0) {
       FXL_LOG(ERROR) << "Invalid delay: " << arg;
       return EXIT_FAILURE;
     }
   }
 
   if (cl.GetOptionValue("duration", &arg)) {
-    if (!fxl::StringToNumberWithError<int>(arg, &duration) ||
-        duration < 0) {
+    if (!fxl::StringToNumberWithError<int>(arg, &duration) || duration < 0) {
       FXL_LOG(ERROR) << "Invalid duration: " << arg;
       return EXIT_FAILURE;
     }
@@ -134,21 +130,21 @@ int main(int argc, char** argv) {
 
   int iteration = 0;
   async::TaskClosure task([&loop, &task, &iteration, count, quit_time] {
-      TRACE_DURATION("stress:example", "Doing Work!", "iteration", ++iteration);
+    TRACE_DURATION("stress:example", "Doing Work!", "iteration", ++iteration);
 
-      RunStressTestIteration(count);
+    RunStressTestIteration(count);
 
-      zx::nanosleep(zx::deadline_after(zx::msec(500)));
+    zx::nanosleep(zx::deadline_after(zx::msec(500)));
 
-      // Stop if quitting.
-      zx::time now = async::Now(loop.dispatcher());
-      if (now > quit_time) {
-        loop.Quit();
-        return;
-      }
+    // Stop if quitting.
+    zx::time now = async::Now(loop.dispatcher());
+    if (now > quit_time) {
+      loop.Quit();
+      return;
+    }
 
-      // Schedule more work in a little bit.
-      task.PostForTime(loop.dispatcher(), now + zx::msec(200));
+    // Schedule more work in a little bit.
+    task.PostForTime(loop.dispatcher(), now + zx::msec(200));
   });
   task.PostForTime(loop.dispatcher(), start_time);
 
