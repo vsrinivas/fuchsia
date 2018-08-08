@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <benchmark/benchmark.h>
+#include <limits.h>
+
 #include <fbl/algorithm.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <perftest/perftest.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -18,38 +20,32 @@ namespace {
 
 constexpr size_t kSize = MB(1);
 
-class Mmu : public benchmark::Fixture {
- private:
-  void SetUp(benchmark::State& state) override {
-    vmar_size_ = GB(1);
+struct Helper {
+  Helper() {
     ZX_ASSERT(zx::vmar::root_self()->allocate(
-            0, vmar_size_,
-            ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC, &vmar_,
-            &vmar_base_) == ZX_OK);
+                  0, GB(1),
+                  ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC, &vmar,
+                  &vmar_base) == ZX_OK);
 
-    ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo_) == ZX_OK);
+    ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo) == ZX_OK);
   }
 
-  void TearDown(benchmark::State& state) override {
-    if (vmar_) {
-        vmar_.destroy();
-    }
+  ~Helper() {
+    vmar.destroy();
   }
 
- protected:
-  // Cyclically maps the first chunk_size bytes of |vmo_| into the |length| bytes of vmar_,
+  // Cyclically maps the first chunk_size bytes of |vmo| into the |length| bytes of vmar,
   // starting from offset 0.   Mapping is done |chunk_size| bytes at a time.  |chunk_size|
   // and |length| must be multiples of PAGE_SIZE.
-  // As a precondition, |vmar_| should be empty.
+  // As a precondition, |vmar| should be empty.
   zx_status_t MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu);
 
-  zx::vmar vmar_;
-  zx::vmo vmo_;
-  uintptr_t vmar_base_;
-  size_t vmar_size_;
+  zx::vmar vmar;
+  zx::vmo vmo;
+  uintptr_t vmar_base;
 };
 
-zx_status_t Mmu::MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu) {
+zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu) {
   zx_status_t status;
   uint32_t flags = ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ;
   if (force_into_mmu) {
@@ -59,7 +55,7 @@ zx_status_t Mmu::MapInChunks(size_t chunk_size, size_t length, bool force_into_m
   for (size_t offset = 0; offset < length; offset += chunk_size) {
     uintptr_t addr;
     size_t len = fbl::min(chunk_size, length - offset);
-    status = vmar_.map(offset, vmo_, 0, len, flags, &addr);
+    status = vmar.map(offset, vmo, 0, len, flags, &addr);
     if (status != ZX_OK) {
       return status;
     }
@@ -69,41 +65,58 @@ zx_status_t Mmu::MapInChunks(size_t chunk_size, size_t length, bool force_into_m
 
 // This attempts to measure the amount of time it takes to add and remove mappings through
 // the kernel VM layer and the arch MMU layer.
-BENCHMARK_F(Mmu, MapUnmap)(benchmark::State& state) {
-  while (state.KeepRunning()) {
+bool MmuMapUnmapTest(perftest::RepeatState* state) {
+  state->DeclareStep("map");
+  state->DeclareStep("unmap");
+
+  Helper helper;
+  while (state->KeepRunning()) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    ZX_ASSERT(MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ true) ==
-              ZX_OK);
+    ZX_ASSERT(helper.MapInChunks(511 * KB(4), kSize,
+                                 /* force_into_mmu */ true) == ZX_OK);
 
-    ZX_ASSERT(vmar_.unmap(vmar_base_, kSize) == ZX_OK);
+    state->NextStep();
+    ZX_ASSERT(helper.vmar.unmap(helper.vmar_base, kSize) == ZX_OK);
   }
-  // Report number of pages
-  state.SetItemsProcessed((kSize / KB(4)) * state.iterations());
+  return true;
 }
 
 // This attempts to measure the amount of time it takes to add mappings in
 // the kernel VM layer, page fault the mappings into the arch MMU layer, and
 // then remove the mappings from both.
-BENCHMARK_F(Mmu, MapUnmapWithFaults)(benchmark::State& state) {
-  while (state.KeepRunning()) {
+bool MmuMapUnmapWithFaultsTest(perftest::RepeatState* state) {
+  state->DeclareStep("map");
+  state->DeclareStep("fault_in");
+  state->DeclareStep("unmap");
+
+  constexpr size_t kSize = MB(128);
+  Helper helper;
+  while (state->KeepRunning()) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    ZX_ASSERT(MapInChunks(511 * KB(4), kSize, /* force_into_mmu */ false) ==
-              ZX_OK);
+    ZX_ASSERT(helper.MapInChunks(511 * KB(4), kSize,
+                                 /* force_into_mmu */ false) == ZX_OK);
 
+    state->NextStep();
     // Read fault everything in
-    auto p = reinterpret_cast<volatile uint8_t*>(vmar_base_);
+    auto p = reinterpret_cast<volatile uint8_t*>(helper.vmar_base);
     for (size_t offset = 0; offset < kSize; offset += PAGE_SIZE) {
       p[offset];
     }
 
-    ZX_ASSERT(vmar_.unmap(vmar_base_, kSize) == ZX_OK);
+    state->NextStep();
+    ZX_ASSERT(helper.vmar.unmap(helper.vmar_base, kSize) == ZX_OK);
   }
-  // Report number of pages
-  state.SetItemsProcessed((kSize / KB(4)) * state.iterations());
+  return true;
 }
+
+void RegisterTests() {
+  perftest::RegisterTest("Mmu/MapUnmap", MmuMapUnmapTest);
+  perftest::RegisterTest("Mmu/MapUnmapWithFaults", MmuMapUnmapWithFaultsTest);
+}
+PERFTEST_CTOR(RegisterTests);
 
 }  // namespace
