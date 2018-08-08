@@ -241,8 +241,7 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   if (sent_notification)
     return;  // ERASEME
 
-  if ((events & POLLERR) || (events & POLLHUP) ||
-      (events & POLLNVAL)
+  if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL)
 #if defined(POLLRDHUP)  // Mac doesn't have this.
       || (events & POLLRDHUP)
 #endif

@@ -150,7 +150,7 @@ struct RegisterCategory {
     kGeneral,
     kFloatingPoint,
     kVector,
-    kMisc,            // Grabbing bag for other vectors
+    kMisc,  // Grabbing bag for other vectors
   };
   Type type = Type::kMisc;
   std::vector<Register> registers;

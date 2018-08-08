@@ -482,8 +482,7 @@ std::vector<uint8_t> CreateData(size_t length) {
   return data;
 }
 
-debug_ipc::Register CreateRegister(RegisterID id,
-                                   size_t length) {
+debug_ipc::Register CreateRegister(RegisterID id, size_t length) {
   debug_ipc::Register reg;
   reg.id = id;
   reg.data = CreateData(length);
@@ -534,7 +533,7 @@ TEST(Protocol, RegistersReply) {
   ASSERT_EQ(second.categories.size(), 2u);
 
   // Check cat1
-  auto& out_cat1= second.categories[0];
+  auto& out_cat1 = second.categories[0];
   EXPECT_EQ(out_cat1.type, cat1.type);
   ASSERT_EQ(out_cat1.registers.size(), 4u);
   EXPECT_EQ(out_cat1.registers[0].id, cat1.registers[0].id);
