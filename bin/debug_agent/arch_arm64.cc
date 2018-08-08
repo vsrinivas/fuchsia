@@ -56,8 +56,7 @@ namespace {
 
 using debug_ipc::RegisterID;
 
-inline debug_ipc::Register CreateRegister(RegisterID id,
-                                          uint32_t length,
+inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
                                           const void* val_ptr) {
   debug_ipc::Register reg;
   reg.id = id;

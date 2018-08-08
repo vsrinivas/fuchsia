@@ -47,8 +47,7 @@ namespace {
 
 using debug_ipc::RegisterID;
 
-inline debug_ipc::Register CreateRegister(RegisterID id,
-                                          uint32_t length,
+inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
                                           const void* val_ptr) {
   debug_ipc::Register reg;
   reg.id = id;
@@ -57,13 +56,12 @@ inline debug_ipc::Register CreateRegister(RegisterID id,
   return reg;
 }
 
-inline zx_status_t ReadGeneralRegs(
-    const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
+inline zx_status_t ReadGeneralRegs(const zx::thread& thread,
+                                   std::vector<debug_ipc::Register>* out) {
   // We get the general state registers.
   zx_thread_state_general_regs gen_regs;
-  zx_status_t status =
-      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs,
-                        sizeof(gen_regs));
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
+                                         &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
     return status;
 
@@ -75,8 +73,8 @@ inline zx_status_t ReadGeneralRegs(
   out->push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &gen_regs.rdi));
   out->push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &gen_regs.rbp));
   out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &gen_regs.rsp));
-  out->push_back(CreateRegister(RegisterID::kX64_r8,  8u, &gen_regs.r8));
-  out->push_back(CreateRegister(RegisterID::kX64_r9,  8u, &gen_regs.r9));
+  out->push_back(CreateRegister(RegisterID::kX64_r8, 8u, &gen_regs.r8));
+  out->push_back(CreateRegister(RegisterID::kX64_r9, 8u, &gen_regs.r9));
   out->push_back(CreateRegister(RegisterID::kX64_r10, 8u, &gen_regs.r10));
   out->push_back(CreateRegister(RegisterID::kX64_r11, 8u, &gen_regs.r11));
   out->push_back(CreateRegister(RegisterID::kX64_r12, 8u, &gen_regs.r12));

@@ -25,7 +25,7 @@ void DebugBreak() {
 
 // This function is helpful to test handling of duplicate functions on the
 // stack for e.g. "finish".
-__attribute__ ((noinline)) void RecursiveCall(int times) {
+__attribute__((noinline)) void RecursiveCall(int times) {
   if (times > 0)
     RecursiveCall(times - 1);
   zx_debug_write("hello\n", 6);  // Prevent tail recursion optimizations.
