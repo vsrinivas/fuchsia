@@ -23,12 +23,15 @@ class ViewManagerImpl : public ::fuchsia::ui::viewsv1::ViewManager {
                      scenic_request) override;
   void CreateView(
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label) override;
   void CreateViewTree(
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree_request,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener> view_tree_listener,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree>
+          view_tree_request,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener>
+          view_tree_listener,
       fidl::StringPtr label) override;
 
   ViewRegistry* registry_;

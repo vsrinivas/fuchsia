@@ -139,9 +139,8 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   ::fuchsia::ui::viewsv1::ViewTreePtr tree;
   ::fuchsia::ui::viewsv1::ViewTreeListenerPtr tree_listener;
   mozart::test::MockViewTreeListener mock_tree_view_listener;
-  fidl::Binding<::fuchsia::ui::viewsv1::ViewTreeListener>
-      tree_listener_binding(&mock_tree_view_listener,
-                            tree_listener.NewRequest());
+  fidl::Binding<::fuchsia::ui::viewsv1::ViewTreeListener> tree_listener_binding(
+      &mock_tree_view_listener, tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
                                 "test_view_tree");
 

@@ -32,8 +32,10 @@ class ViewTreeState : public ViewContainerState {
     INVALIDATION_VIEWS_INVALIDATED = 1u << 0,
   };
 
-  ViewTreeState(ViewRegistry* registry, ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-                fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree_request,
+  ViewTreeState(ViewRegistry* registry,
+                ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
+                fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree>
+                    view_tree_request,
                 ::fuchsia::ui::viewsv1::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
   ~ViewTreeState() override;
@@ -43,11 +45,14 @@ class ViewTreeState : public ViewContainerState {
   }
 
   // Gets the token used to refer to this view tree globally.
-  ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
+  ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token() const {
+    return view_tree_token_;
+  }
 
   // Gets the view tree listener interface, never null.
   // Caller does not obtain ownership of the view tree listener.
-  const ::fuchsia::ui::viewsv1::ViewTreeListenerPtr& view_tree_listener() const {
+  const ::fuchsia::ui::viewsv1::ViewTreeListenerPtr& view_tree_listener()
+      const {
     return view_tree_listener_;
   }
 

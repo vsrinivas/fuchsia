@@ -24,32 +24,37 @@ void ViewTreeImpl::GetServiceProvider(
 }
 
 void ViewTreeImpl::GetContainer(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer> view_container_request) {
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer>
+        view_container_request) {
   container_bindings_.AddBinding(this, std::move(view_container_request));
 }
 
 void ViewTreeImpl::SetListener(
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewContainerListener> listener) {
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewContainerListener>
+        listener) {
   state_->set_view_container_listener(listener.Bind());
 }
 
 void ViewTreeImpl::AddChild(
     uint32_t child_key,
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> child_view_owner,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
+        child_view_owner,
     zx::eventpair host_import_token) {
   registry_->AddChild(state_, child_key, std::move(child_view_owner),
                       std::move(host_import_token));
 }
 
-void ViewTreeImpl::RemoveChild(uint32_t child_key,
-                               fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                                   transferred_view_owner_request) {
+void ViewTreeImpl::RemoveChild(
+    uint32_t child_key,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
                          std::move(transferred_view_owner_request));
 }
 
 void ViewTreeImpl::SetChildProperties(
-    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) {
+    uint32_t child_key,
+    ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key,
                                 std::move(child_view_properties));
 }

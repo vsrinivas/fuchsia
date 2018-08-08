@@ -161,7 +161,8 @@ void InputDispatcherImpl::ProcessNextEvent() {
               if (weak)
                 weak->OnHitTestResult(point, std::move(view_hits));
             };
-        inspector_->HitTest(view_tree_token_, ray.first, ray.second, std::move(callback));
+        inspector_->HitTest(view_tree_token_, ray.first, ray.second,
+                            std::move(callback));
         return;
       }
     } else if (event->is_keyboard()) {

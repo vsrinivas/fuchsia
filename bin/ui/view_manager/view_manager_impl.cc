@@ -23,7 +23,8 @@ void ViewManagerImpl::GetScenic(
 
 void ViewManagerImpl::CreateView(
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
     fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   registry_->CreateView(std::move(view_request), std::move(view_owner_request),
@@ -33,7 +34,8 @@ void ViewManagerImpl::CreateView(
 
 void ViewManagerImpl::CreateViewTree(
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree_request,
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener> view_tree_listener,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener>
+        view_tree_listener,
     fidl::StringPtr label) {
   registry_->CreateViewTree(std::move(view_tree_request),
                             view_tree_listener.Bind(), label);

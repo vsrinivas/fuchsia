@@ -26,25 +26,29 @@ class ViewImpl : public ::fuchsia::ui::viewsv1::View,
 
  private:
   // |View|:
-  void GetToken(::fuchsia::ui::viewsv1::View::GetTokenCallback callback) override;
+  void GetToken(
+      ::fuchsia::ui::viewsv1::View::GetTokenCallback callback) override;
   void GetServiceProvider(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                               service_provider_request) override;
   void OfferServiceProvider(
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
       fidl::VectorPtr<fidl::StringPtr> service_names) override;
-  void GetContainer(fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer>
-                        view_container_request) override;
+  void GetContainer(
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer>
+          view_container_request) override;
 
   // |ViewContainer|:
   void SetListener(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewContainerListener> listener) override;
-  void AddChild(
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewContainerListener>
+          listener) override;
+  void AddChild(uint32_t child_key,
+                fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
+                    child_view_owner,
+                zx::eventpair host_import_token) override;
+  void RemoveChild(
       uint32_t child_key,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> child_view_owner,
-      zx::eventpair host_import_token) override;
-  void RemoveChild(uint32_t child_key,
-                   fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                       transferred_view_owner_request) override;
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          transferred_view_owner_request) override;
   void SetChildProperties(
       uint32_t child_key,
       ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) override;

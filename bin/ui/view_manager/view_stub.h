@@ -86,7 +86,9 @@ class ViewStub {
 
   // Gets the properties which the container set on this view, or null
   // if none set or the view has become unavailable.
-  const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& properties() const { return properties_; }
+  const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& properties() const {
+    return properties_;
+  }
 
   // Sets the properties set by the container.
   // May be called when the view is pending or attached but not after it
@@ -134,7 +136,8 @@ class ViewStub {
   void SetTreeRecursively(ViewTreeState* tree);
   static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);
 
-  void OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken view_token, bool success);
+  void OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken view_token,
+                      bool success);
 
   // This is true when |ViewStub| has been transferred before |OnViewResolved|
   // has been called, and the child view's ownership is supposed to be

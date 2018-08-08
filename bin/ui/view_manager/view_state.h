@@ -45,7 +45,8 @@ class ViewState : public ViewContainerState {
     INVALIDATION_STALLED = 1u << 4,
   };
 
-  ViewState(ViewRegistry* registry, ::fuchsia::ui::viewsv1token::ViewToken view_token,
+  ViewState(ViewRegistry* registry,
+            ::fuchsia::ui::viewsv1token::ViewToken view_token,
             fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
             ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
             scenic::Session* session, const std::string& label);
@@ -55,7 +56,9 @@ class ViewState : public ViewContainerState {
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
-  const ::fuchsia::ui::viewsv1token::ViewToken& view_token() const { return view_token_; }
+  const ::fuchsia::ui::viewsv1token::ViewToken& view_token() const {
+    return view_token_;
+  }
 
   // Gets the view listener interface, never null.
   // Caller does not obtain ownership of the view listener.
@@ -88,8 +91,8 @@ class ViewState : public ViewContainerState {
 
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request);
+  void BindOwner(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                     view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();

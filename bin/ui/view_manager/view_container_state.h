@@ -29,11 +29,13 @@ class ViewContainerState {
   ViewContainerState();
 
   // Gets or sets the view container listener.
-  ::fuchsia::ui::viewsv1::ViewContainerListener* view_container_listener() const {
+  ::fuchsia::ui::viewsv1::ViewContainerListener* view_container_listener()
+      const {
     return view_container_listener_.get();
   }
   void set_view_container_listener(
-      ::fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener) {
+      ::fuchsia::ui::viewsv1::ViewContainerListenerPtr
+          view_container_listener) {
     view_container_listener_ = std::move(view_container_listener);
   }
 

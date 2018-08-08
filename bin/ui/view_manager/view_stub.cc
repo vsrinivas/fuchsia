@@ -33,9 +33,10 @@ class PendingViewOwnerTransferState {
       transferred_view_owner_request_;
 };
 
-ViewStub::ViewStub(ViewRegistry* registry,
-                   fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> owner,
-                   zx::eventpair host_import_token)
+ViewStub::ViewStub(
+    ViewRegistry* registry,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> owner,
+    zx::eventpair host_import_token)
     : registry_(registry),
       owner_(owner.Bind()),
       host_import_token_(std::move(host_import_token)),
@@ -44,8 +45,9 @@ ViewStub::ViewStub(ViewRegistry* registry,
   FXL_DCHECK(owner_);
   FXL_DCHECK(host_import_token_);
 
-  owner_.set_error_handler(
-      [this] { OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken(), false); });
+  owner_.set_error_handler([this] {
+    OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken(), false);
+  });
 
   owner_->GetToken([this](::fuchsia::ui::viewsv1token::ViewToken view_token) {
     OnViewResolved(std::move(view_token), true);
@@ -74,7 +76,8 @@ void ViewStub::AttachView(ViewState* state) {
   SetTreeForChildrenOfView(state_, tree_);
 }
 
-void ViewStub::SetProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties) {
+void ViewStub::SetProperties(
+    ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties) {
   FXL_DCHECK(!is_unavailable());
 
   properties_ = std::move(properties);
