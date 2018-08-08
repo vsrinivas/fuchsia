@@ -39,7 +39,7 @@ impl Default for LogListenerOptions {
             filter: LogFilterOptions {
                 filter_by_pid: false,
                 pid: 0,
-                min_severity: LogLevelFilter::None,
+                min_severity: LogLevelFilter::Info,
                 verbosity: 0,
                 filter_by_tid: false,
                 tid: 0,
@@ -72,13 +72,15 @@ impl Default for LocalOptions {
 impl LocalOptions {
     fn format_time(&self, timestamp: u64) -> String {
         match self.clock {
-            Clock::Monotonic =>
-            format!(
+            Clock::Monotonic => format!(
                 "{:05}.{:06}",
                 timestamp / 1000000000,
                 (timestamp / 1000) % 1000000
             ),
-            Clock::UTC => self._monotonic_to_utc(timestamp).format(&self.time_format).to_string(),
+            Clock::UTC => self
+                ._monotonic_to_utc(timestamp)
+                .format(&self.time_format)
+                .to_string(),
             Clock::Local => chrono::Local
                 .from_utc_datetime(&self._monotonic_to_utc(timestamp))
                 .format(&self.time_format)
@@ -92,8 +94,8 @@ impl LocalOptions {
         // Note that when printing old messages from memory buffer then
         // this may offset them from UTC time as set when logged in
         // case of UTC time adjustments since.
-        let monotonic_zero_as_utc = zx::Time::get(zx::ClockId::UTC).nanos()
-            - zx::Time::get(zx::ClockId::Monotonic).nanos();
+        let monotonic_zero_as_utc =
+            zx::Time::get(zx::ClockId::UTC).nanos() - zx::Time::get(zx::ClockId::Monotonic).nanos();
         let shifted_timestamp = monotonic_zero_as_utc + timestamp;
         let seconds = (shifted_timestamp / 1000000000) as i64;
         let nanos = (shifted_timestamp % 1000000000) as u32;
@@ -128,9 +130,13 @@ fn help(name: &str) -> String {
 
         --severity <INFO|WARN|ERROR|FATAL>:
             Minimum severity to filter on.
+            Defaults to INFO.
 
         --verbosity <integer>:
             Verbosity to filter on. It should be positive integer greater than 0.
+            If this is passed, it overrides default severity.
+            Errors out if both this and --severity are passed.
+            Defaults to 0 which means don't filter on verbosity.
 
         --file <string>:
             File to write logs to. If omitted, logs are written to stdout.
@@ -159,6 +165,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
     let mut options = LogListenerOptions::default();
 
     let mut i = 0;
+    let mut severity_passed = false;
     while i < args.len() {
         let argument = &args[i];
         if args[i + 1].starts_with("-") {
@@ -191,20 +198,34 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 }
                 options.local.ignore_tags.insert(String::from(tag.as_ref()));
             }
-            "--severity" => match args[i + 1].as_ref() {
-                "INFO" => options.filter.min_severity = LogLevelFilter::Info,
-                "WARN" => options.filter.min_severity = LogLevelFilter::Warn,
-                "ERROR" => options.filter.min_severity = LogLevelFilter::Error,
-                "FATAL" => options.filter.min_severity = LogLevelFilter::Fatal,
-                a => return Err(format!("Invalid severity: {}", a)),
-            },
+            "--severity" => {
+                if options.filter.verbosity > 0 {
+                    return Err(
+                        "Invalid arguments: Cannot pass both severity and verbosity".to_string()
+                    );
+                }
+                severity_passed = true;
+                match args[i + 1].as_ref() {
+                    "INFO" => options.filter.min_severity = LogLevelFilter::Info,
+                    "WARN" => options.filter.min_severity = LogLevelFilter::Warn,
+                    "ERROR" => options.filter.min_severity = LogLevelFilter::Error,
+                    "FATAL" => options.filter.min_severity = LogLevelFilter::Fatal,
+                    a => return Err(format!("Invalid severity: {}", a)),
+                }
+            }
             "--verbosity" => if let Ok(v) = args[i + 1].parse::<u8>() {
+                if severity_passed {
+                    return Err(
+                        "Invalid arguments: Cannot pass both severity and verbosity".to_string()
+                    );
+                }
                 if v == 0 {
                     return Err(format!(
                         "Invalid verbosity: '{}', should be positive integer greater than 0.",
                         args[i + 1]
                     ));
                 }
+                options.filter.min_severity = LogLevelFilter::None;
                 options.filter.verbosity = v;
             } else {
                 return Err(format!(
@@ -661,7 +682,27 @@ mod tests {
             let args = vec!["--verbosity".to_string(), "2".to_string()];
             let mut expected = LogListenerOptions::default();
             expected.filter.verbosity = 2;
+            expected.filter.min_severity = LogLevelFilter::None;
             parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn severity_verbosity_together() {
+            let args = vec![
+                "--verbosity".to_string(),
+                "2".to_string(),
+                "--severity".to_string(),
+                "DEBUG".to_string(),
+            ];
+            parse_flag_test_helper(&args, None);
+
+            let args = vec![
+                "--severity".to_string(),
+                "DEBUG".to_string(),
+                "--verbosity".to_string(),
+                "2".to_string(),
+            ];
+            parse_flag_test_helper(&args, None);
         }
 
         #[test]
