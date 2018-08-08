@@ -12,19 +12,18 @@
 #include "lib/fxl/command_line.h"
 
 static void PrintUsage() {
-  fprintf(
-      stderr,
-      "Usage: chrealm <realm> [-- cmd arg1 ... argn]\n"
-      "Starts a process with the services of the given realm, as a path "
-      "under /hub.\n"
-      "The process has the same namespace as the calling process, but "
-      "with /svc replaced with the /svc of <realm>.\n"
-      "The process will run [cmd arg1 ... argn] if specified, otherwise "
-      "it defaults to /boot/bin/sh.\n"
-      "Examples:\n"
-      "chrealm /hub/r/myrealm/<koid> (assume services of myrealm)\n"
-      "chrealm /hub/r/myrealm/<koid> -- /system/bin/ls /svc "
-      "(list services of myrealm from inside myrealm)\n");
+  fprintf(stderr,
+          "Usage: chrealm <realm> [-- cmd arg1 ... argn]\n"
+          "Starts a process with the services of the given realm, as a path "
+          "under /hub.\n"
+          "The process has the same namespace as the calling process, but "
+          "with /svc replaced with the /svc of <realm>.\n"
+          "The process will run [cmd arg1 ... argn] if specified, otherwise "
+          "it defaults to /boot/bin/sh.\n"
+          "Examples:\n"
+          "chrealm /hub/r/myrealm/<koid> (assume services of myrealm)\n"
+          "chrealm /hub/r/myrealm/<koid> -- /system/bin/ls /svc "
+          "(list services of myrealm from inside myrealm)\n");
 }
 
 int main(int argc, const char** argv) {
@@ -46,8 +45,8 @@ int main(int argc, const char** argv) {
   }
 
   int64_t code;
-  zx_status_t
-      status = chrealm::RunBinaryInRealm(positional_args[0], child_argv, &code);
+  zx_status_t status =
+      chrealm::RunBinaryInRealm(positional_args[0], child_argv, &code);
   if (status != ZX_OK) {
     fprintf(stderr, "chrealm failed: %s\n", zx_status_get_string(status));
     return 1;

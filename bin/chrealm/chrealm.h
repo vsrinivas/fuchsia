@@ -11,8 +11,8 @@
 
 namespace chrealm {
 
-zx_status_t RunBinaryInRealm(const std::string& realm_path,
-                             const char** argv, int64_t* return_code);
+zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
+                             int64_t* return_code);
 
 }  // namespace chrealm
 
