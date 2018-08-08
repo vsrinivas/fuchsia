@@ -45,7 +45,8 @@ void InputReader::SetOwnershipEvent(zx::event event) {
                          fuchsia::ui::scenic::displayNotOwnedSignal;
   display_ownership_waiter_.set_object(display_ownership_event_);
   display_ownership_waiter_.set_trigger(signals);
-  zx_status_t status = display_ownership_waiter_.Begin(async_get_default_dispatcher());
+  zx_status_t status =
+      display_ownership_waiter_.Begin(async_get_default_dispatcher());
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -73,8 +74,8 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
                    new DeviceInfo{std::move(interpreter), std::move(wait)});
 }
 
-void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                      zx_status_t status,
+void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher,
+                                      async::WaitBase* wait, zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
@@ -110,7 +111,8 @@ void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::Wai
   }
 }
 
-void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher,
+                                       async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

@@ -6,13 +6,13 @@
 
 #include <fcntl.h>
 #include <hid/acer12.h>
+#include <hid/ambient-light.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
 #include <hid/ft3x27.h>
 #include <hid/hid.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
-#include <hid/ambient-light.h>
 #include <hid/usages.h>
 
 #include <sys/types.h>
@@ -225,7 +225,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv2;
-   } else if (protocol == HidDecoder::Protocol::ParadiseV3Touch) {
+  } else if (protocol == HidDecoder::Protocol::ParadiseV3Touch) {
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -557,7 +557,7 @@ bool InputInterpreter::Read(bool discard) {
         }
       }
       break;
-     case TouchDeviceType::PARADISEv3:
+    case TouchDeviceType::PARADISEv3:
       if (report[0] == PARADISE_RPT_ID_TOUCH) {
         if (ParseParadiseTouchscreenReport<paradise_touch_t>(report.data(),
                                                              rc)) {
@@ -922,7 +922,6 @@ bool InputInterpreter::ParseAmbientLightSensorReport() {
               << "): " << *sensor_report_;
   return true;
 }
-
 
 bool InputInterpreter::ParseEyoyoTouchscreenReport(uint8_t* r, size_t len) {
   if (len != sizeof(eyoyo_touch_t)) {

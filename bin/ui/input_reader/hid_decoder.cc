@@ -44,7 +44,7 @@ int8_t signed_bit_cast(uint8_t src) {
 // Both |begin| and |count| are in bits units. This function does not
 // check for the vector being long enough.
 static uint8_t extract_uint8(const std::vector<uint8_t>& v, uint32_t begin,
-                            uint32_t count) {
+                             uint32_t count) {
   uint8_t val = v[begin / 8u] >> (begin % 8u);
   return (count < 8) ? (val & ~(1u << count)) : val;
 }
@@ -54,14 +54,14 @@ static uint8_t extract_uint8(const std::vector<uint8_t>& v, uint32_t begin,
 // being long enough.
 static uint16_t extract_uint16(const std::vector<uint8_t>& v, uint32_t begin) {
   return static_cast<uint16_t>(extract_uint8(v, begin, 8)) |
-      static_cast<uint16_t>(extract_uint8(v, begin + 8, 8)) << 8;
+         static_cast<uint16_t>(extract_uint8(v, begin + 8, 8)) << 8;
 }
 
 // Extracts up to 8 bits sign extended to int32_t from a byte vector |v|.
 // Both |begin| and |count| are in bits units. This function does not
 // check for the vector being long enough.
 static int32_t extract_int8_ext(const std::vector<uint8_t>& v, uint32_t begin,
-                               uint32_t count) {
+                                uint32_t count) {
   uint8_t val = extract_uint8(v, begin, count);
   return signed_bit_cast(val);
 }
@@ -419,7 +419,8 @@ bool HidDecoder::Read(HidAmbientLightSimple* data) {
     ++cur;
   }
   if (cur->count != 16u) {
-    FXL_LOG(ERROR) << "Unexpected count in report from ambient light:" << cur->count;
+    FXL_LOG(ERROR) << "Unexpected count in report from ambient light:"
+                   << cur->count;
     return false;
   }
   data->illuminance = extract_uint16(report, cur->begin);
