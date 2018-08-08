@@ -61,8 +61,8 @@ std::string Substitute(StringView format, StringView arg0, StringView arg1,
 std::string Substitute(StringView format, StringView arg0, StringView arg1,
                        StringView arg2, StringView arg3, StringView arg4,
                        StringView arg5, StringView arg6, StringView arg7) {
-  std::array<StringView, 8> arr = {arg0, arg1, arg2, arg3, arg4, arg5, arg6,
-                                   arg7};
+  std::array<StringView, 8> arr = {arg0, arg1, arg2, arg3,
+                                   arg4, arg5, arg6, arg7};
   return SubstituteWithArray(format, arr.data(), arr.size());
 }
 
@@ -70,8 +70,8 @@ std::string Substitute(StringView format, StringView arg0, StringView arg1,
                        StringView arg2, StringView arg3, StringView arg4,
                        StringView arg5, StringView arg6, StringView arg7,
                        StringView arg8) {
-  std::array<StringView, 9> arr = {arg0, arg1, arg2, arg3, arg4, arg5, arg6,
-                                   arg7, arg8};
+  std::array<StringView, 9> arr = {arg0, arg1, arg2, arg3, arg4,
+                                   arg5, arg6, arg7, arg8};
   return SubstituteWithArray(format, arr.data(), arr.size());
 }
 
@@ -79,23 +79,18 @@ std::string Substitute(StringView format, StringView arg0, StringView arg1,
                        StringView arg2, StringView arg3, StringView arg4,
                        StringView arg5, StringView arg6, StringView arg7,
                        StringView arg8, StringView arg9) {
-  std::array<StringView, 10> arr = {arg0, arg1, arg2, arg3, arg4, arg5, arg6,
-                                    arg7, arg8, arg9};
+  std::array<StringView, 10> arr = {arg0, arg1, arg2, arg3, arg4,
+                                    arg5, arg6, arg7, arg8, arg9};
   return SubstituteWithArray(format, arr.data(), arr.size());
 }
 
-enum class CharType {
-  kPositionalId,
-  kMissingId,
-  kRegularChar,
-  kDollar
-};
+enum class CharType { kPositionalId, kMissingId, kRegularChar, kDollar };
 
 // Returns the type of character, and positional id if type is kPositionalId.
 inline static std::pair<CharType, size_t> GetCharInfo(StringView str,
                                                       size_t pos) {
-  if (str[pos] == '$' && pos < str.size() - 1 &&
-      str[pos + 1] >= '0' && str[pos + 1] <= '9') {
+  if (str[pos] == '$' && pos < str.size() - 1 && str[pos + 1] >= '0' &&
+      str[pos + 1] <= '9') {
     return {CharType::kPositionalId, str[pos + 1] - '0'};
   }
   if (pos == str.size() - 1 && str[pos] == '$') {
@@ -110,8 +105,7 @@ inline static std::pair<CharType, size_t> GetCharInfo(StringView str,
 std::string SubstituteWithArray(StringView format, StringView* args,
                                 size_t nargs) {
   static constexpr size_t kMaxArgs = 10;
-  FXL_CHECK(nargs <= kMaxArgs)
-      << "More than " << kMaxArgs << "args: " << nargs;
+  FXL_CHECK(nargs <= kMaxArgs) << "More than " << kMaxArgs << "args: " << nargs;
 
   int out_size = 0;
   size_t pos = 0;

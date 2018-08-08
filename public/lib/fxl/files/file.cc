@@ -135,7 +135,7 @@ bool IsFile(const std::string& path) { return IsFileAt(AT_FDCWD, path); }
 
 bool IsFileAt(int dirfd, const std::string& path) {
   struct stat stat_buffer;
-  if (fstatat(dirfd, path.c_str(), &stat_buffer, /* flags = */ 0 ) != 0)
+  if (fstatat(dirfd, path.c_str(), &stat_buffer, /* flags = */ 0) != 0)
     return false;
   return S_ISREG(stat_buffer.st_mode);
 }
