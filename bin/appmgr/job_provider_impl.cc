@@ -8,8 +8,7 @@
 
 namespace component {
 
-JobProviderImpl::JobProviderImpl(Realm* realm)
-    : realm_(realm) {}
+JobProviderImpl::JobProviderImpl(Realm* realm) : realm_(realm) {}
 
 void JobProviderImpl::GetJob(GetJobCallback callback) {
   callback(realm_->DuplicateJob());

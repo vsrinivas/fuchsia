@@ -19,8 +19,7 @@ namespace {
 
 class SchemeMapTest : public ::testing::Test {
  protected:
-  void ExpectFailedParse(const std::string& json,
-                         std::string expected_error) {
+  void ExpectFailedParse(const std::string& json, std::string expected_error) {
     SchemeMap scheme_map;
     std::string dir;
     ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
@@ -105,14 +104,14 @@ TEST_F(SchemeMapTest, ParseWithErrors) {
         }
       })JSON",
       "$0: Schemes for 'web_runner' are not a list."),
-  ExpectFailedParse(
-      R"JSON({
+      ExpectFailedParse(
+          R"JSON({
         "launchers": {
           "package": [ "file" ],
           "web_runner": [ "http", 42 ]
         }
       })JSON",
-      "$0: Scheme for 'web_runner' is not a string.");
+          "$0: Scheme for 'web_runner' is not a string.");
 }
 
 TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
@@ -131,9 +130,8 @@ TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
   EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
   EXPECT_TRUE(scheme_map.HasError());
   // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
-  const std::string expected_error =
-      fxl::Concatenate({json_file2,
-                        ": Scheme 'http' is assigned to two launchers."});
+  const std::string expected_error = fxl::Concatenate(
+      {json_file2, ": Scheme 'http' is assigned to two launchers."});
   EXPECT_EQ(scheme_map.error_str(), expected_error);
 }
 

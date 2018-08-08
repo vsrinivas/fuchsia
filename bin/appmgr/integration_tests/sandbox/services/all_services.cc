@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <zircon/errors.h>
 #include "gtest/gtest.h"
 

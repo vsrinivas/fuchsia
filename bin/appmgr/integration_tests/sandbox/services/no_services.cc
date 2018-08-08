@@ -4,8 +4,8 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
-#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <zircon/errors.h>
 #include "gtest/gtest.h"
 

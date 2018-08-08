@@ -105,8 +105,7 @@ zx::channel Namespace::OpenServicesAsDirectory() {
   return Util::OpenAsDirectory(&vfs_, services_);
 }
 
-void Namespace::SetServicesWhitelist(
-    const std::vector<std::string>& services) {
+void Namespace::SetServicesWhitelist(const std::vector<std::string>& services) {
   services_->SetServicesWhitelist(services);
 }
 

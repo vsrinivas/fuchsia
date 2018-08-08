@@ -15,12 +15,11 @@
 
 namespace component {
 
-const char SchemeMap::kConfigDirPath[] =
-    "/system/data/appmgr/scheme_map/";
+const char SchemeMap::kConfigDirPath[] = "/system/data/appmgr/scheme_map/";
 
 bool SchemeMap::ParseFromDirectory(const std::string& path) {
   internal_map_.clear();
-  auto cb = [this] (rapidjson::Document document) {
+  auto cb = [this](rapidjson::Document document) {
     ParseDocument(std::move(document));
   };
   json_parser_.ParseFromDirectory(path, cb);

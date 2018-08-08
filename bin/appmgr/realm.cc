@@ -472,8 +472,7 @@ void Realm::CreateComponentWithProcess(
 }
 
 void Realm::CreateComponentWithRunnerForScheme(
-    std::string runner_url,
-    fuchsia::sys::LaunchInfo launch_info,
+    std::string runner_url, fuchsia::sys::LaunchInfo launch_info,
     ComponentRequestWrapper component_request,
     ComponentObjectCreatedCallback callback) {
   // Use "web_runner" if it is installed, otherwise fall back to using
@@ -503,8 +502,8 @@ void Realm::CreateComponentWithRunnerForScheme(
     return;
   }
 
-  fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
-      default_namespace_, this, nullptr);
+  fxl::RefPtr<Namespace> ns =
+      fxl::MakeRefCounted<Namespace>(default_namespace_, this, nullptr);
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   TerminationCallback termination_callback;

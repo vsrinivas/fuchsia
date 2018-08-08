@@ -95,8 +95,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateComponentWithRunnerForScheme(
-      std::string runner_url,
-      fuchsia::sys::LaunchInfo launch_info,
+      std::string runner_url, fuchsia::sys::LaunchInfo launch_info,
       ComponentRequestWrapper component_request,
       ComponentObjectCreatedCallback callback);
 

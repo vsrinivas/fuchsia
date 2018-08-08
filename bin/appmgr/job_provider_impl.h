@@ -17,8 +17,7 @@ class Realm;
 
 // An implementation of |JobProvider|, which implements a method to return
 // a realm's job handle.
-class JobProviderImpl : public fuchsia::sys::JobProvider,
-                        public fs::Vnode {
+class JobProviderImpl : public fuchsia::sys::JobProvider, public fs::Vnode {
  public:
   // Constructs a job provider which will return the job of the given realm.
   explicit JobProviderImpl(Realm* realm);

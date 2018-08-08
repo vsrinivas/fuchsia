@@ -18,7 +18,7 @@ class NamespaceTest : public component::testing::TestWithEnvironment {
   NamespaceTest();
 
   // Connects to a service provided by the environment.
-  template<typename Interface>
+  template <typename Interface>
   void ConnectToService(fidl::InterfaceRequest<Interface> request,
                         const std::string& service_name = Interface::Name_) {
     service_provider_->ConnectToService(service_name, request.TakeChannel());

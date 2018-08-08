@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <zircon/syscalls.h>
 #include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
@@ -22,9 +22,7 @@ using fuchsia::testing::appmgr::TestService2;
 
 class TestServiceImpl : public TestService {
  public:
-  void GetMessage(GetMessageCallback callback) override {
-    callback("hello");
-  }
+  void GetMessage(GetMessageCallback callback) override { callback("hello"); }
 
   fidl::InterfaceRequestHandler<TestService> GetHandler() {
     return bindings_.GetHandler(this);
@@ -36,9 +34,7 @@ class TestServiceImpl : public TestService {
 
 class TestService2Impl : public TestService2 {
  public:
-  void GetMessage(GetMessageCallback callback) override {
-    callback("hello2");
-  }
+  void GetMessage(GetMessageCallback callback) override { callback("hello2"); }
 
   fidl::InterfaceRequestHandler<TestService2> GetHandler() {
     return bindings_.GetHandler(this);
@@ -61,24 +57,24 @@ int main(int argc, const char** argv) {
 
   TestServiceImpl test_service;
   TestService2Impl test_service2;
-  auto enclosing_env = component::testing::EnclosingEnvironment::Create(
-      kRealm, parent_env);
+  auto enclosing_env =
+      component::testing::EnclosingEnvironment::Create(kRealm, parent_env);
   enclosing_env->AddService(test_service.GetHandler());
   enclosing_env->AddService(test_service2.GetHandler());
 
   const std::string program_url = argv[1];
   auto controller = enclosing_env->CreateComponentFromUrl(program_url);
 
-  controller.events().OnTerminated = [&program_url](
-      int64_t return_code,
-      fuchsia::sys::TerminationReason termination_reason) {
-    if (termination_reason != fuchsia::sys::TerminationReason::EXITED) {
-      fprintf(stderr, "%s: %s\n", program_url.c_str(),
-              component::HumanReadableTerminationReason(termination_reason)
-                  .c_str());
-    }
-    zx_process_exit(return_code);
-  };
+  controller.events().OnTerminated =
+      [&program_url](int64_t return_code,
+                     fuchsia::sys::TerminationReason termination_reason) {
+        if (termination_reason != fuchsia::sys::TerminationReason::EXITED) {
+          fprintf(stderr, "%s: %s\n", program_url.c_str(),
+                  component::HumanReadableTerminationReason(termination_reason)
+                      .c_str());
+        }
+        zx_process_exit(return_code);
+      };
 
   loop.Run();
   return 0;

@@ -40,8 +40,6 @@ void EnvironmentControllerImpl::Detach() {
   binding_.set_error_handler(nullptr);
 }
 
-void EnvironmentControllerImpl::OnCreated() {
-  binding_.events().OnCreated();
-}
+void EnvironmentControllerImpl::OnCreated() { binding_.events().OnCreated(); }
 
 }  // namespace component

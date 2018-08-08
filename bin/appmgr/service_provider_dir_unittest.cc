@@ -8,8 +8,8 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include "lib/gtest/real_loop_fixture.h"
 #include "garnet/bin/appmgr/util.h"
+#include "lib/gtest/real_loop_fixture.h"
 
 namespace component {
 namespace {
