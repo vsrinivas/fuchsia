@@ -17,7 +17,6 @@ type NIC struct {
 	Routes     []tcpip.Route
 	DNSServers []tcpip.Address
 	Ipv6addrs  []tcpip.Address
-	Mac        [6]byte
 }
 
 func IsAny(a tcpip.Address) bool {

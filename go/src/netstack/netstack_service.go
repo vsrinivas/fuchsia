@@ -60,6 +60,11 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 			flags |= nsfidl.NetInterfaceFlagDhcp
 		}
 
+		var mac []uint8
+		if eth := ifs.eth; eth != nil {
+			mac = eth.MAC[:]
+		}
+
 		outif := nsfidl.NetInterface{
 			Id:        uint32(nicid),
 			Flags:     flags,
@@ -68,7 +73,7 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 			Addr:      fidlconv.ToNetAddress(ifs.nic.Addr),
 			Netmask:   fidlconv.ToNetAddress(tcpip.Address(ifs.nic.Netmask)),
 			Broadaddr: fidlconv.ToNetAddress(tcpip.Address(broadaddr)),
-			Hwaddr:    []uint8(ifs.nic.Mac[:]),
+			Hwaddr:    mac,
 			Ipv6addrs: toSubnets(ifs.nic.Ipv6addrs),
 		}
 
@@ -356,7 +361,7 @@ func OnInterfacesChanged() {
 	if netstackService != nil {
 		interfaces := getInterfaces()
 		connectivity.InferAndNotify(interfaces)
-		for key, _ := range netstackService.Bindings {
+		for key := range netstackService.Bindings {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				p.OnInterfacesChanged(interfaces)
 			}

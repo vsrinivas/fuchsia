@@ -464,7 +464,6 @@ func (ns *netstack) addEth(path string) error {
 
 	ns.mu.Lock()
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
-	copy(ifs.nic.Mac[:], ep.LinkAddr)
 
 	nicid := ns.countNIC + 1
 	firstNIC := nicid == 2

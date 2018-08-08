@@ -36,9 +36,6 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		broadaddr[i] |= ^ifs.nic.Netmask[i]
 	}
 
-	mac := &netfidl.MacAddress{Addr: [6]uint8{}}
-	copy(mac.Addr[:], ifs.nic.Mac[:])
-
 	// TODO(tkilbourn): distinguish between enabled and link up
 	var status uint32 = 0
 	if ifs.state == eth.StateStarted {
@@ -65,14 +62,17 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		})
 	}
 
-	path := ""
-	if ifs.eth != nil {
-		path = ifs.eth.Path
+	var mac netfidl.MacAddress
+	var path string
+	if eth := ifs.eth; eth != nil {
+		mac.Addr = eth.MAC
+		path = eth.Path
 	}
+
 	return &stack.InterfaceInfo{
 		Id:        uint64(nicid),
 		Path:      path,
-		Mac:       mac,
+		Mac:       &mac,
 		Mtu:       uint32(ifs.statsEP.MTU()),
 		Status:    status,
 		Features:  features,
