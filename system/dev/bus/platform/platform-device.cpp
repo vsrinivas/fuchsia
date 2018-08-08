@@ -17,7 +17,6 @@
 #include <zircon/syscalls/resource.h>
 
 #include "platform-bus.h"
-#include "proxy-protocol.h"
 
 namespace platform_bus {
 
@@ -416,7 +415,8 @@ zx_status_t PlatformDevice::RpcScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx
     return bus_->scpi()->SetDvfsIdx(power_domain, idx);
 }
 
-zx_status_t PlatformDevice::RpcI2cTransact(pdev_req_t* req, uint8_t* data, zx_handle_t channel) {
+zx_status_t PlatformDevice::RpcI2cTransact(uint32_t txid, rpc_i2c_req_t* req, uint8_t* data,
+                                           zx_handle_t channel) {
     if (bus_->i2c_impl() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -426,7 +426,7 @@ zx_status_t PlatformDevice::RpcI2cTransact(pdev_req_t* req, uint8_t* data, zx_ha
     }
     pbus_i2c_channel_t* pdev_channel = &i2c_channels_[index];
 
-    return bus_->I2cTransact(req, pdev_channel, data, channel);
+    return bus_->I2cTransact(txid, req, pdev_channel, data, channel);
 }
 
 zx_status_t PlatformDevice::RpcI2cGetMaxTransferSize(uint32_t index, size_t* out_size) {
@@ -469,115 +469,225 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         return ZX_OK;
     }
 
-    struct {
-        pdev_req_t req;
-        uint8_t data[PDEV_I2C_MAX_TRANSFER_SIZE];
-    } req_data;
-    pdev_req_t* req = &req_data.req;
-    pdev_resp_t resp;
-    uint32_t len = sizeof(req_data);
+    uint8_t req_buf[PROXY_MAX_TRANSFER_SIZE];
+    uint8_t resp_buf[PROXY_MAX_TRANSFER_SIZE];
+    auto* req_header = reinterpret_cast<rpc_req_header_t*>(&req_buf);
+    auto* resp_header = reinterpret_cast<rpc_rsp_header_t*>(&resp_buf);
+    uint32_t actual;
     zx_handle_t in_handle;
     uint32_t in_handle_count = 1;
 
-    zx_status_t status = zx_channel_read(channel, 0, &req_data, &in_handle, len, in_handle_count,
-                                        &len, &in_handle_count);
+    auto status = zx_channel_read(channel, 0, &req_buf, &in_handle, sizeof(req_buf),
+                                  in_handle_count, &actual, &in_handle_count);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
         return status;
     }
 
-    resp.txid = req->txid;
+    resp_header->txid = req_header->txid;
     zx_handle_t handle = ZX_HANDLE_INVALID;
     uint32_t handle_count = 0;
+    uint32_t resp_len;
 
-    switch (req->op) {
-    case PDEV_GET_MMIO:
-        resp.status = RpcGetMmio(req->index, &resp.mmio.paddr, &resp.mmio.length, &handle,
-                                 &handle_count);
-        break;
-    case PDEV_GET_INTERRUPT:
-        resp.status = RpcGetInterrupt(req->index, &resp.irq.irq, &resp.irq.mode, &handle,
-                                     &handle_count);
-        break;
-    case PDEV_GET_BTI:
-        resp.status = RpcGetBti(req->index, &handle, &handle_count);
-        break;
-    case PDEV_GET_DEVICE_INFO:
-        resp.status = GetDeviceInfo(&resp.device_info);
-        break;
-    case PDEV_GET_BOARD_INFO:
-        resp.status = bus_->GetBoardInfo(&resp.board_info);
-        break;
-    case PDEV_UMS_SET_MODE:
-        resp.status = RpcUmsSetMode(req->usb_mode);
-        break;
-    case PDEV_GPIO_CONFIG:
-        resp.status = RpcGpioConfig(req->index, req->gpio_flags);
-        break;
-    case PDEV_GPIO_SET_ALT_FUNCTION:
-        resp.status = RpcGpioSetAltFunction(req->index, req->gpio_alt_function);
-        break;
-    case PDEV_GPIO_READ:
-        resp.status = RpcGpioRead(req->index, &resp.gpio_value);
-        break;
-    case PDEV_GPIO_WRITE:
-        resp.status = RpcGpioWrite(req->index, req->gpio_value);
-        break;
-    case PDEV_GPIO_GET_INTERRUPT:
-        resp.status = RpcGpioGetInterrupt(req->index, req->flags, &handle, &handle_count);
-        break;
-    case PDEV_GPIO_RELEASE_INTERRUPT:
-        resp.status = RpcGpioReleaseInterrupt(req->index);
-        break;
-    case PDEV_GPIO_SET_POLARITY:
-        resp.status = RpcGpioSetPolarity(req->index, req->flags);
-        break;
-    case PDEV_SCPI_GET_SENSOR:
-        resp.status = RpcScpiGetSensor(req->scpi.name, &resp.scpi.sensor_id);
-        break;
-    case PDEV_SCPI_GET_SENSOR_VALUE:
-        resp.status = RpcScpiGetSensorValue(req->scpi.sensor_id, &resp.scpi.sensor_value);
-        break;
-    case PDEV_SCPI_GET_DVFS_INFO:
-        resp.status = RpcScpiGetDvfsInfo(req->scpi.power_domain, &resp.scpi.opps);
-        break;
-    case PDEV_SCPI_GET_DVFS_IDX:
-        resp.status = RpcScpiGetDvfsIdx(req->scpi.power_domain, &resp.scpi.dvfs_idx);
-        break;
-    case PDEV_SCPI_SET_DVFS_IDX:
-        resp.status = RpcScpiSetDvfsIdx(req->scpi.power_domain, static_cast<uint16_t>(req->index));
-        break;
-    case PDEV_I2C_GET_MAX_TRANSFER:
-        resp.status = RpcI2cGetMaxTransferSize(req->index, &resp.i2c_max_transfer);
-        break;
-    case PDEV_I2C_TRANSACT:
-        resp.status = RpcI2cTransact(req, req_data.data, channel);
-        if (resp.status == ZX_OK) {
-            // If platform_i2c_transact succeeds, we return immmediately instead of calling
-            // zx_channel_write below. Instead we will respond in platform_i2c_complete().
-            return ZX_OK;
+    switch (req_header->protocol) {
+    case ZX_PROTOCOL_PLATFORM_DEV: {
+        auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        auto resp = reinterpret_cast<rpc_pdev_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
+
+        switch (req_header->op) {
+        case PDEV_GET_MMIO:
+            status = RpcGetMmio(req->index, &resp->paddr, &resp->length, &handle, &handle_count);
+            break;
+        case PDEV_GET_INTERRUPT:
+            status = RpcGetInterrupt(req->index, &resp->irq, &resp->mode, &handle, &handle_count);
+            break;
+        case PDEV_GET_BTI:
+            status = RpcGetBti(req->index, &handle, &handle_count);
+            break;
+        case PDEV_GET_DEVICE_INFO:
+            status = GetDeviceInfo(&resp->device_info);
+            break;
+        case PDEV_GET_BOARD_INFO:
+            status = bus_->GetBoardInfo(&resp->board_info);
+            break;
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
         }
         break;
-    case PDEV_CLK_ENABLE:
-        resp.status = RpcClkEnable(req->index);
+    }
+    case ZX_PROTOCOL_USB_MODE_SWITCH: {
+        auto req = reinterpret_cast<rpc_ums_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        resp_len = sizeof(*resp_header);
+
+        switch (req_header->op) {
+            case UMS_SET_MODE:
+            status = RpcUmsSetMode(req->usb_mode);
+            break;
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
         break;
-    case PDEV_CLK_DISABLE:
-        resp.status = RpcDisable(req->index);
+    }
+    case ZX_PROTOCOL_GPIO: {
+        auto req = reinterpret_cast<rpc_gpio_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        auto resp = reinterpret_cast<rpc_gpio_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
+
+        switch (req_header->op) {
+        case GPIO_CONFIG:
+            status = RpcGpioConfig(req->index, req->flags);
+            break;
+        case GPIO_SET_ALT_FUNCTION:
+            status = RpcGpioSetAltFunction(req->index, req->alt_function);
+            break;
+        case GPIO_READ:
+            status = RpcGpioRead(req->index, &resp->value);
+            break;
+        case GPIO_WRITE:
+            status = RpcGpioWrite(req->index, req->value);
+            break;
+        case GPIO_GET_INTERRUPT:
+            status = RpcGpioGetInterrupt(req->index, req->flags, &handle, &handle_count);
+            break;
+        case GPIO_RELEASE_INTERRUPT:
+            status = RpcGpioReleaseInterrupt(req->index);
+            break;
+        case GPIO_SET_POLARITY:
+            status = RpcGpioSetPolarity(req->index, req->polarity);
+            break;
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
         break;
-    case PDEV_CANVAS_CONFIG:
-        resp.status = RpcCanvasConfig(in_handle, req->canvas.offset, &req->canvas.info,
-                                      &resp.canvas_idx);
+    }
+    case ZX_PROTOCOL_SCPI: {
+        auto req = reinterpret_cast<rpc_scpi_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        auto resp = reinterpret_cast<rpc_scpi_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
+
+        switch (req_header->op) {
+        case SCPI_GET_SENSOR:
+            status = RpcScpiGetSensor(req->name, &resp->sensor_id);
+            break;
+        case SCPI_GET_SENSOR_VALUE:
+            status = RpcScpiGetSensorValue(req->sensor_id, &resp->sensor_value);
+            break;
+        case SCPI_GET_DVFS_INFO:
+            status = RpcScpiGetDvfsInfo(req->power_domain, &resp->opps);
+            break;
+        case SCPI_GET_DVFS_IDX:
+            status = RpcScpiGetDvfsIdx(req->power_domain, &resp->dvfs_idx);
+            break;
+        case SCPI_SET_DVFS_IDX:
+            status = RpcScpiSetDvfsIdx(req->power_domain, req->idx);
+            break;
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
         break;
-    case PDEV_CANVAS_FREE:
-        resp.status = RpcCanvasFree(req->canvas_idx);
+    }
+    case ZX_PROTOCOL_I2C: {
+        auto req = reinterpret_cast<rpc_i2c_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        auto resp = reinterpret_cast<rpc_i2c_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
+
+        switch (req_header->op) {
+        case I2C_GET_MAX_TRANSFER:
+            status = RpcI2cGetMaxTransferSize(req->index, &resp->max_transfer);
+            break;
+        case I2C_TRANSACT: {
+            auto buf = reinterpret_cast<uint8_t*>(&req[1]);
+            status = RpcI2cTransact(req_header->txid, req, buf, channel);
+            if (status == ZX_OK) {
+                // If platform_i2c_transact succeeds, we return immmediately instead of calling
+                // zx_channel_write below. Instead we will respond in platform_i2c_complete().
+                return ZX_OK;
+            }
+            break;
+        }
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
         break;
+    }
+    case ZX_PROTOCOL_CLK: {
+        auto req = reinterpret_cast<rpc_clk_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        resp_len = sizeof(*resp_header);
+
+        switch (req_header->op) {
+        case CLK_ENABLE:
+            status = RpcClkEnable(req->index);
+            break;
+        case CLK_DISABLE:
+            status = RpcDisable(req->index);
+            break;
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
+        break;
+    }
+    case ZX_PROTOCOL_CANVAS: {
+        auto req = reinterpret_cast<rpc_canvas_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        auto resp = reinterpret_cast<rpc_canvas_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
+
+        switch (req_header->op) {
+        case CANVAS_CONFIG:
+            status = RpcCanvasConfig(in_handle, req->offset, &req->info,
+                                          &resp->idx);
+            break;
+        case CANVAS_FREE:
+            status = RpcCanvasFree(req->idx);
+            break;
+        default:
+            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
+        break;
+    }
     default:
-        zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req->op);
+        zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
         return ZX_ERR_INTERNAL;
     }
 
     // set op to match request so zx_channel_write will return our response
-    status = zx_channel_write(channel, 0, &resp, sizeof(resp),
+    resp_header->status = status;
+    status = zx_channel_write(channel, 0, resp_header, resp_len,
                               (handle_count == 1 ? &handle : nullptr), handle_count);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);

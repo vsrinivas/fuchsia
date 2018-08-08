@@ -28,8 +28,7 @@
 
 #include "platform-device.h"
 #include "platform-i2c.h"
-
-typedef struct pdev_req pdev_req_t;
+#include "proxy-protocol.h"
 
 namespace platform_bus {
 
@@ -63,7 +62,7 @@ public:
     zx_handle_t GetResource() const { return get_root_resource(); }
 
     // Used by PlatformDevice to queue I2C transactions on an I2C bus.
-    zx_status_t I2cTransact(pdev_req_t* req, pbus_i2c_channel_t* channel,
+    zx_status_t I2cTransact(uint32_t txid, rpc_i2c_req_t* req, pbus_i2c_channel_t* channel,
                             const void* write_buf, zx_handle_t channel_handle);
 
     // Helper for PlatformDevice.

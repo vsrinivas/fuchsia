@@ -12,6 +12,8 @@
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 
+namespace platform_bus {
+
 PlatformI2cBus::PlatformI2cBus(i2c_impl_protocol_t* i2c, uint32_t bus_id)
     : i2c_(i2c), bus_id_(bus_id) {
 
@@ -25,6 +27,9 @@ zx_status_t PlatformI2cBus::Start() {
     if (status != ZX_OK) {
         return status;
     }
+    if (max_transfer_ > I2C_MAX_TRANSFER_SIZE) {
+        max_transfer_ = I2C_MAX_TRANSFER_SIZE;
+    }
 
     char name[32];
     snprintf(name, sizeof(name), "PlatformI2cBus[%u]", bus_id_);
@@ -37,18 +42,17 @@ zx_status_t PlatformI2cBus::Start() {
 void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* data,
                                  size_t data_length) {
     struct {
-        pdev_resp_t resp;
-        uint8_t data[PDEV_I2C_MAX_TRANSFER_SIZE] = {};
+        rpc_i2c_rsp_t i2c;
+        uint8_t data[I2C_MAX_TRANSFER_SIZE] = {};
     } resp = {
-        .resp = {
-            .txid = txn->txid,
-            .status = status,
-            .i2c_txn = {
-                .write_length = 0,
-                .read_length = 0,
-                .complete_cb = txn->complete_cb,
-                .cookie = txn->cookie,
+        .i2c = {
+            .header = {
+                .txid = txn->txid,
+                .status = status,
             },
+            .max_transfer = 0,
+            .complete_cb = txn->complete_cb,
+            .cookie = txn->cookie,
         },
     };
 
@@ -56,8 +60,8 @@ void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* da
         memcpy(resp.data, data, data_length);
     }
 
-    status = zx_channel_write(txn->channel_handle, 0, &resp,
-                              static_cast<uint32_t>(sizeof(resp.resp) + data_length), nullptr, 0);
+    auto length = static_cast<uint32_t>(sizeof(resp.i2c) + data_length);
+    status = zx_channel_write(txn->channel_handle, 0, &resp, length, nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_i2c_read_complete: zx_channel_write failed %d\n", status);
     }
@@ -94,10 +98,10 @@ int PlatformI2cBus::I2cThread() {
     return 0;
 }
 
- zx_status_t PlatformI2cBus::Transact(pdev_req_t* req, uint16_t address, const void* write_buf,
-                                      zx_handle_t channel_handle) {
-    const size_t write_length = req->i2c_txn.write_length;
-    const size_t read_length = req->i2c_txn.read_length;
+ zx_status_t PlatformI2cBus::Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address,
+                                      const void* write_buf, zx_handle_t channel_handle) {
+    const size_t write_length = req->write_length;
+    const size_t read_length = req->read_length;
     if (write_length > max_transfer_ || read_length > max_transfer_) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -117,9 +121,9 @@ int PlatformI2cBus::I2cThread() {
     txn->write_length = write_length;
     txn->read_length = read_length;
     memcpy(txn->write_buffer, write_buf, write_length);
-    txn->complete_cb = req->i2c_txn.complete_cb;
-    txn->cookie = req->i2c_txn.cookie;
-    txn->txid = req->txid;
+    txn->txid = txid;
+    txn->complete_cb = req->complete_cb;
+    txn->cookie = req->cookie;
     txn->channel_handle = channel_handle;
 
     list_add_tail(&queued_txns_, &txn->node);
@@ -127,3 +131,5 @@ int PlatformI2cBus::I2cThread() {
 
     return ZX_OK;
 }
+
+} // namespace platform_bus

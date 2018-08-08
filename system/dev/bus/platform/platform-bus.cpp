@@ -22,7 +22,6 @@
 #include <zircon/syscalls/iommu.h>
 
 #include "platform-device.h"
-#include "proxy-protocol.h"
 
 namespace platform_bus {
 
@@ -397,13 +396,13 @@ zx_status_t PlatformBus::I2cInit(i2c_impl_protocol_t* i2c) {
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::I2cTransact(pdev_req_t* req, pbus_i2c_channel_t* channel,
+zx_status_t PlatformBus::I2cTransact(uint32_t txid, rpc_i2c_req_t* req, pbus_i2c_channel_t* channel,
                                      const void* write_buf, zx_handle_t channel_handle) {
     if (channel->bus_id >= i2c_buses_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
     auto i2c_bus = i2c_buses_[channel->bus_id].get();
-    return i2c_bus->Transact(req, channel->address, write_buf, channel_handle);
+    return i2c_bus->Transact(txid, req, channel->address, write_buf, channel_handle);
 }
 
 void PlatformBus::DdkRelease() {

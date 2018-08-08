@@ -13,6 +13,8 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
+#include "proxy-protocol.h"
+
 // An overview of PlatformDevice and PlatformProxy.
 //
 // Both this class and PlatformProxy implement the platform device protocol.
@@ -29,8 +31,6 @@
 // Any resource handles passed back to the proxy are then used to create/map mmio
 // and irq objects within the proxy process. This ensures if the proxy driver dies
 // we will release their address space resources back to the kernel if necessary.
-
-typedef struct pdev_req pdev_req_t;
 
 namespace platform_bus {
 
@@ -79,7 +79,7 @@ private:
                             const pbus_dev_t* pdev);
     zx_status_t Init(const pbus_dev_t* pdev);
 
-    // Handlers for RPCs from PlatformProxy. 
+    // Handlers for RPCs from PlatformProxy.
     zx_status_t RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t *out_length,
                            zx_handle_t* out_handle, uint32_t* out_handle_count);
     zx_status_t RpcGetInterrupt(uint32_t index, uint32_t* out_irq, uint32_t* out_mode,
@@ -102,7 +102,8 @@ private:
     zx_status_t RpcScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps);
     zx_status_t RpcScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx);
     zx_status_t RpcScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx);
-    zx_status_t RpcI2cTransact(pdev_req_t* req, uint8_t* data, zx_handle_t channel);
+    zx_status_t RpcI2cTransact(uint32_t txid, rpc_i2c_req_t* req, uint8_t* data,
+                               zx_handle_t channel);
     zx_status_t RpcI2cGetMaxTransferSize(uint32_t index, size_t* out_size);
     zx_status_t RpcClkEnable(uint32_t index);
     zx_status_t RpcDisable(uint32_t index);
