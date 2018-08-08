@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/examples/ui/hello_stereo/app.h"
 #include "lib/fxl/command_line.h"
@@ -16,13 +16,12 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   hello_stereo::App app(&loop);
-  async::PostDelayedTask(
-      loop.dispatcher(),
-      [&loop] {
-        FXL_LOG(INFO) << "Quitting.";
-        loop.Quit();
-      },
-      zx::sec(50));
+  async::PostDelayedTask(loop.dispatcher(),
+                         [&loop] {
+                           FXL_LOG(INFO) << "Quitting.";
+                           loop.Quit();
+                         },
+                         zx::sec(50));
   loop.Run();
   return 0;
 }
