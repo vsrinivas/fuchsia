@@ -79,6 +79,9 @@ sdk("garnet") {
   #
   # These libraries are common dependencies in the Fuchsia source tree, but they
   # are not stable enough to expose in the SDK.
+  #
+  # See <https://fuchsia.googlesource.com/docs/+/master/development/sdk/standards.md#dependencies>
+  # for more information.
   assert_no_deps = [
     "//garnet/public/lib/fsl:fsl_sdk",
     "//garnet/public/lib/fxl:fxl_sdk",
