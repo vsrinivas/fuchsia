@@ -503,7 +503,7 @@ zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
     if (state_ == State::DEAD)
         return ZX_ERR_NOT_FOUND;
     if (exception_port_)
-        return ZX_ERR_BAD_STATE;
+        return ZX_ERR_ALREADY_BOUND;
     exception_port_ = eport;
 
     return ZX_OK;

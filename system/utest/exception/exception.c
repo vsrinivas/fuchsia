@@ -486,7 +486,8 @@ static bool test_set_close_set(zx_handle_t object, bool debugger) {
     // Try binding another exception port to the same object, which should fail.
     zx_handle_t eport2 = tu_io_port_create();
     status = zx_task_bind_exception_port(object, eport, 0, options);
-    ASSERT_NE(status, ZX_OK, "setting exception port errantly succeeded");
+    ASSERT_EQ(status, ZX_ERR_ALREADY_BOUND,
+              "wrong result from setting already bound exception port");
 
     // Close the ports.
     tu_handle_close(eport2);

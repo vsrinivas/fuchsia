@@ -470,7 +470,7 @@ zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
 
     AutoLock lock(get_lock());
     if (exception_port_)
-        return ZX_ERR_BAD_STATE;
+        return ZX_ERR_ALREADY_BOUND;
     exception_port_ = fbl::move(eport);
 
     return ZX_OK;

@@ -62,6 +62,8 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
+**ZX_ERR_ALREADY_BOUND** *object* already has its exception port bound.
+
 **ZX_ERR_BAD_HANDLE** *object* is not a valid handle,
 or *eport* is not a valid handle. Note that when unbinding from an exception
 port *eport* is **ZX_HANDLE_INVALID**.

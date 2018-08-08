@@ -635,11 +635,11 @@ zx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport
         return ZX_ERR_NOT_FOUND;
     if (debugger) {
         if (debugger_exception_port_)
-            return ZX_ERR_BAD_STATE;
+            return ZX_ERR_ALREADY_BOUND;
         debugger_exception_port_ = eport;
     } else {
         if (exception_port_)
-            return ZX_ERR_BAD_STATE;
+            return ZX_ERR_ALREADY_BOUND;
         exception_port_ = eport;
     }
 
