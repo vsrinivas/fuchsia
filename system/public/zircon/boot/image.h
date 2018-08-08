@@ -360,13 +360,15 @@ typedef struct {
 } zbi_nvram_t;
 #endif
 
+#define ZBI_BOARD_NAME_LEN 32
+
 // Platform ID Information.
 #define ZBI_TYPE_PLATFORM_ID            (0x44494C50) // PLID
 #ifndef __ASSEMBLER__
 typedef struct {
     uint32_t vid;
     uint32_t pid;
-    char board_name[32];
+    char board_name[ZBI_BOARD_NAME_LEN];
 } zbi_platform_id_t;
 #endif
 

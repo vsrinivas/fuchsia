@@ -39,6 +39,7 @@
 //    zx_status_t DeviceAdd(const pbus_dev_t* dev, uint32_t flags);
 //    zx_status_t DeviceEnable(uint32_t vid, uint32_t pid, uint32_t did, bool enable);
 //    const char* GetBoardName();
+//    zx_status_t SetBoardInfo(const pbus_board_info_t* info);
 //     ...
 // };
 
@@ -54,6 +55,7 @@ public:
         pbus_proto_ops_.device_add = DeviceAdd;
         pbus_proto_ops_.device_enable = DeviceEnable;
         pbus_proto_ops_.get_board_name = GetBoardName;
+        pbus_proto_ops_.set_board_info = SetBoardInfo;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -86,6 +88,10 @@ private:
         return static_cast<D*>(ctx)->GetBoardName();
     }
 
+    static zx_status_t SetBoardInfo(void* ctx, const pbus_board_info_t* info) {
+        return static_cast<D*>(ctx)->SetBoardInfo(info);
+    }
+
 };
 
 class PlatformBusProtocolProxy {
@@ -111,6 +117,10 @@ public:
 
     const char* GetBoardName() {
         return ops_->get_board_name(ctx_);
+    }
+
+    zx_status_t SetBoardInfo(const pbus_board_info_t* info) {
+        return ops_->set_board_info(ctx_, info);
     }
 
 private:

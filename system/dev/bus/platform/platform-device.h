@@ -67,6 +67,7 @@ public:
     zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
     zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
+    zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
 
     // Adds or removes the underlying devmgr device.
     // Called in response to the pbus_device_enable() method in the platform bus protocol.

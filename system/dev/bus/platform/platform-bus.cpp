@@ -17,6 +17,7 @@
 #include <ddk/protocol/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
@@ -184,7 +185,17 @@ zx_status_t PlatformBus::DeviceEnable(uint32_t vid, uint32_t pid, uint32_t did, 
 }
 
 const char* PlatformBus::GetBoardName() {
-    return platform_id_.board_name;
+    return board_info_.board_name;
+}
+
+zx_status_t PlatformBus::SetBoardInfo(const pbus_board_info_t* info) {
+    board_info_.board_revision = info->board_revision;
+    return ZX_OK;
+}
+
+zx_status_t PlatformBus::GetBoardInfo(pdev_board_info_t* out_info) {
+    memcpy(out_info, &board_info_, sizeof(board_info_));
+    return ZX_OK;
 }
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* protocol) {
@@ -320,11 +331,17 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
             break;
         }
         if (header.type == ZBI_TYPE_PLATFORM_ID) {
-            status = zbi.read(&platform_id_, off + sizeof(zbi_header_t), sizeof(platform_id_));
+            zbi_platform_id_t platform_id;
+            status = zbi.read(&platform_id, off + sizeof(zbi_header_t), sizeof(platform_id));
             if (status != ZX_OK) {
                 zxlogf(ERROR, "zbi.read() failed: %d\n", status);
                 return status;
             }
+            board_info_.vid = platform_id.vid;
+            board_info_.pid = platform_id.pid;
+            memcpy(board_info_.board_name, platform_id.board_name, sizeof(board_info_.board_name));
+            // This is optionally set later by the board driver.
+            board_info_.board_revision = 0;
             got_platform_id = true;
         } else if (ZBI_TYPE_DRV_METADATA(header.type)) {
             status = zbi.read(metadata + metadata_offset, off, itemlen);
@@ -449,8 +466,8 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
 
     // Then we attach the platform-bus device below it.
     zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, platform_id_.vid},
-        {BIND_PLATFORM_DEV_PID, 0, platform_id_.pid},
+        {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
+        {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
     };
 
     return DdkAdd("platform", 0, props, countof(props));

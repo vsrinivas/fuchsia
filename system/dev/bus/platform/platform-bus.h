@@ -24,7 +24,6 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
-#include <zircon/boot/image.h>
 #include <zircon/types.h>
 
 #include "platform-device.h"
@@ -53,6 +52,7 @@ public:
     zx_status_t DeviceAdd(const pbus_dev_t* dev, uint32_t flags);
     zx_status_t DeviceEnable(uint32_t vid, uint32_t pid, uint32_t did, bool enable);
     const char* GetBoardName();
+    zx_status_t SetBoardInfo(const pbus_board_info_t* info);
 
     // IOMMU protocol implementation.
     zx_status_t GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle);
@@ -65,6 +65,9 @@ public:
     // Used by PlatformDevice to queue I2C transactions on an I2C bus.
     zx_status_t I2cTransact(pdev_req_t* req, pbus_i2c_channel_t* channel,
                             const void* write_buf, zx_handle_t channel_handle);
+
+    // Helper for PlatformDevice.
+    zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
 
     // Protocol accessors for PlatformDevice.
     inline ddk::CanvasProtocolProxy* canvas() const { return canvas_.get(); }
@@ -88,7 +91,7 @@ private:
 
     zx_status_t I2cInit(i2c_impl_protocol_t* i2c);
 
-    zbi_platform_id_t platform_id_;
+    pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
     fbl::unique_ptr<ddk::CanvasProtocolProxy> canvas_;

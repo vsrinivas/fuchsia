@@ -39,6 +39,7 @@
 //        zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
 //        zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
 //        zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
+//        zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
 //     ...
 // };
 
@@ -53,6 +54,7 @@ public:
         pdev_proto_ops_.map_interrupt = MapInterrupt;
         pdev_proto_ops_.get_bti = GetBti;
         pdev_proto_ops_.get_device_info = GetDeviceInfo;
+        pdev_proto_ops_.get_board_info = GetBoardInfo;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -82,6 +84,10 @@ private:
     static zx_status_t GetDeviceInfo(void* ctx, pdev_device_info_t* out_info) {
         return static_cast<D*>(ctx)->GetDeviceInfo(out_info);
     }
+
+    static zx_status_t GetBoardInfo(void* ctx, pdev_board_info_t* out_info) {
+        return static_cast<D*>(ctx)->GetBoardInfo(out_info);
+    }
 };
 
 class PlatformDevProtocolProxy {
@@ -105,6 +111,10 @@ public:
 
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info) {
         return ops_->get_device_info(ctx_, out_info);
+    }
+
+    zx_status_t GetBoardInfo(pdev_board_info_t* out_info) {
+        return ops_->get_board_info(ctx_, out_info);
     }
 
 private:

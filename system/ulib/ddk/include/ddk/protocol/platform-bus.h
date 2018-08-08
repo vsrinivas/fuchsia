@@ -71,6 +71,12 @@ typedef struct {
     uint32_t metadata_count;
 } pbus_dev_t;
 
+// Subset of pdev_board_info_t to be set by the board driver.
+typedef struct {
+    // Board specific revision number.
+    uint32_t board_revision;
+} pbus_board_info_t;
+
 // flags for pbus_device_add()
 enum {
     // Add the device but to not publish it to the devmgr until enabled with pbus_device_enable().
@@ -85,6 +91,7 @@ typedef struct {
     zx_status_t (*device_add)(void* ctx, const pbus_dev_t* dev, uint32_t flags);
     zx_status_t (*device_enable)(void* ctx, uint32_t vid, uint32_t pid, uint32_t did, bool enable);
     const char* (*get_board_name)(void* ctx);
+    zx_status_t (*set_board_info)(void* ctx, const pbus_board_info_t* info);
 } platform_bus_protocol_ops_t;
 
 typedef struct {
@@ -117,6 +124,11 @@ static inline zx_status_t pbus_device_enable(const platform_bus_protocol_t* pbus
 
 static inline const char* pbus_get_board_name(const platform_bus_protocol_t* pbus) {
     return pbus->ops->get_board_name(pbus->ctx);
+}
+
+static inline zx_status_t pbus_set_board_info(const platform_bus_protocol_t* pbus,
+                                              const pbus_board_info_t* info) {
+    return pbus->ops->set_board_info(pbus->ctx, info);
 }
 
 __END_CDECLS;

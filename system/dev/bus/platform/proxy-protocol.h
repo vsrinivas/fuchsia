@@ -19,6 +19,7 @@ enum {
     PDEV_GET_INTERRUPT,
     PDEV_GET_BTI,
     PDEV_GET_DEVICE_INFO,
+    PDEV_GET_BOARD_INFO,
 
     // ZX_PROTOCOL_USB_MODE_SWITCH
     PDEV_UMS_SET_MODE,
@@ -108,7 +109,8 @@ typedef struct {
             uint32_t irq;
             uint32_t mode;
         } irq;
-        pdev_device_info_t info;
+        pdev_device_info_t device_info;
+        pdev_board_info_t board_info;
         struct {
             uint32_t sensor_value;
             uint16_t dvfs_idx;

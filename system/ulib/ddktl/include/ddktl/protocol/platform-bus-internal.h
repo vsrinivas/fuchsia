@@ -19,6 +19,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_device_enable, DeviceEnable,
         zx_status_t (C::*)(uint32_t vid, uint32_t pid, uint32_t did, bool enable));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_get_board_name, GetBoardName,
         const char* (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_set_board_info, SetBoardInfo,
+        const char* (C::*)(const pbus_board_info_t*));
 
 template <typename D>
 constexpr void CheckPlatformBusProtocolSubclass() {
@@ -37,6 +39,9 @@ constexpr void CheckPlatformBusProtocolSubclass() {
     static_assert(internal::has_pbus_get_board_name<D>::value,
                   "PlatformBusProtocol subclasses must implement "
                   "GetBoardName()");
+    static_assert(internal::has_pbus_get_board_name<D>::value,
+                  "PlatformBusProtocol subclasses must implement "
+                  "SetBoardInfo(const pbus_board_info_t* info)");
  }
 
 }  // namespace internal

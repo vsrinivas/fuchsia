@@ -146,7 +146,12 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    // get default BTI from the dummy IOMMU implementation in the platform bus
+    // Set dummy board revision to facilitate testing of platform device get_board_info support.
+    pbus_board_info_t info;
+    info.board_revision = 1234;
+    pbus_set_board_info(&bus->pbus, &info);
+
+    // Get default BTI from the dummy IOMMU implementation in the platform bus.
     status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &bus->iommu);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_bus_bind: could not get ZX_PROTOCOL_IOMMU\n");

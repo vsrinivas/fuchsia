@@ -213,6 +213,10 @@ zx_status_t PlatformDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
     return ZX_OK;
 }
 
+zx_status_t PlatformDevice::GetBoardInfo(pdev_board_info_t* out_info) {
+    return bus_->GetBoardInfo(out_info);
+}
+
 // Create a resource and pass it back to the proxy along with necessary metadata
 // to create/map the VMO in the driver process.
 zx_status_t PlatformDevice::RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t *out_length,
@@ -499,7 +503,10 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         resp.status = RpcGetBti(req->index, &handle, &handle_count);
         break;
     case PDEV_GET_DEVICE_INFO:
-        resp.status = GetDeviceInfo(&resp.info);
+        resp.status = GetDeviceInfo(&resp.device_info);
+        break;
+    case PDEV_GET_BOARD_INFO:
+        resp.status = bus_->GetBoardInfo(&resp.board_info);
         break;
     case PDEV_UMS_SET_MODE:
         resp.status = RpcUmsSetMode(req->usb_mode);

@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/serial.h>
-#include <zircon/compiler.h>
+#include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -17,7 +17,6 @@
 __BEGIN_CDECLS;
 
 typedef struct {
-    uint32_t flags;
     uint32_t vid;
     uint32_t pid;
     uint32_t did;
@@ -34,11 +33,23 @@ typedef struct {
 } pdev_device_info_t;
 
 typedef struct {
+    // Vendor ID for the board.
+    uint32_t vid;
+    // Product ID for the board.
+    uint32_t pid;
+    // Board name from the boot image platform ID record.
+    char board_name[ZBI_BOARD_NAME_LEN];
+    // Board specific revision number.
+    uint32_t board_revision;
+} pdev_board_info_t;
+
+typedef struct {
     zx_status_t (*map_mmio)(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
                             size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
     zx_status_t (*map_interrupt)(void* ctx, uint32_t index, uint32_t flags, zx_handle_t* out_handle);
     zx_status_t (*get_bti)(void* ctx, uint32_t index, zx_handle_t* out_handle);
     zx_status_t (*get_device_info)(void* ctx, pdev_device_info_t* out_info);
+    zx_status_t (*get_board_info)(void* ctx, pdev_board_info_t* out_info);
 } platform_device_protocol_ops_t;
 
 typedef struct {
@@ -84,6 +95,11 @@ static inline zx_status_t pdev_get_bti(const platform_device_protocol_t* pdev, u
 static inline zx_status_t pdev_get_device_info(const platform_device_protocol_t* pdev,
                                                pdev_device_info_t* out_info) {
     return pdev->ops->get_device_info(pdev->ctx, out_info);
+}
+
+static inline zx_status_t pdev_get_board_info(const platform_device_protocol_t* pdev,
+                                               pdev_board_info_t* out_info) {
+    return pdev->ops->get_board_info(pdev->ctx, out_info);
 }
 
 // MMIO mapping helpers

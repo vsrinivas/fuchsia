@@ -499,6 +499,16 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    // Test for platform device get_board_info support.
+    pdev_board_info_t board_info;
+    pdev_get_board_info(&display->pdev, &board_info);
+    printf("BOARD INFO: %d %d %s %d\n", board_info.vid, board_info.pid, board_info.board_name,
+           board_info.board_revision);
+    assert(board_info.vid == PDEV_VID_KHADAS);
+    assert(board_info.pid == PDEV_PID_VIM2);
+    assert(!strcmp(board_info.board_name, "vim2"));
+    assert(board_info.board_revision == 1234);
+
     status = pdev_get_bti(&display->pdev, 0, &display->bti);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get BTI handle\n");

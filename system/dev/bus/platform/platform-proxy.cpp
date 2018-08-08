@@ -430,7 +430,20 @@ zx_status_t PlatformProxy::GetDeviceInfo(pdev_device_info_t* out_info) {
     if (status != ZX_OK) {
         return status;
     }
-    memcpy(out_info, &resp.info, sizeof(*out_info));
+    memcpy(out_info, &resp.device_info, sizeof(*out_info));
+    return ZX_OK;
+}
+
+zx_status_t PlatformProxy::GetBoardInfo(pdev_board_info_t* out_info) {
+    pdev_req_t req = {};
+    req.op = PDEV_GET_BOARD_INFO;
+    pdev_resp_t resp;
+
+    auto status = Rpc(&req, &resp);
+    if (status != ZX_OK) {
+        return status;
+    }
+    memcpy(out_info, &resp.board_info, sizeof(*out_info));
     return ZX_OK;
 }
 
