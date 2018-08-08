@@ -11,7 +11,8 @@
 namespace backoff {
 
 ExponentialBackoff::ExponentialBackoff(fit::function<uint64_t()> seed_generator)
-    : ExponentialBackoff(zx::msec(100), 2u, zx::sec(60 * 60), std::move(seed_generator)) {}
+    : ExponentialBackoff(zx::msec(100), 2u, zx::sec(60 * 60),
+                         std::move(seed_generator)) {}
 
 ExponentialBackoff::ExponentialBackoff(zx::duration initial_delay,
                                        uint32_t retry_factor,
