@@ -38,7 +38,10 @@ public:
 
     uint32_t register_max() { return 1u << specs1_.log2_register_max().get(); }
     uint32_t thread_count() { return 1u << specs1_.log2_thread_count().get(); }
-    uint32_t vertex_output_buffer_size() { return 1u << specs1_.log2_vertex_output_buffer_size().get(); }
+    uint32_t vertex_output_buffer_size()
+    {
+        return 1u << specs1_.log2_vertex_output_buffer_size().get();
+    }
     uint32_t vertex_cache_size() { return specs1_.vertex_cache_size().get(); }
     uint32_t shader_core_count() { return specs1_.shader_core_count().get(); }
     uint32_t pixel_pipes() { return specs1_.pixel_pipes().get(); }

@@ -44,7 +44,7 @@ public:
         static constexpr uint32_t kAddressSpaceIndex = 1;
 
         device_.msd_vsl_device->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex,
-                                                                      address_space_.get());
+                                                                        address_space_.get());
 
         if (!LoadAddressSpace(device_.msd_vsl_device.get(), kAddressSpaceIndex))
             return DRETF(false, "failed to load address space");
