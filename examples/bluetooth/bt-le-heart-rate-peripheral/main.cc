@@ -29,7 +29,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  async::PostTask(message_loop.dispatcher(), [&app] { app.StartAdvertising(); });
+  async::PostTask(message_loop.dispatcher(),
+                  [&app] { app.StartAdvertising(); });
   message_loop.Run();
 
   return EXIT_SUCCESS;
