@@ -25,8 +25,7 @@ Canvas::Canvas(::fuchsia::ui::sketchy::CanvasPtr canvas, async::Loop* loop)
 
 ResourceId Canvas::AllocateResourceId() { return next_resource_id_++; }
 
-void Canvas::Present(uint64_t time,
-                     scenic::Session::PresentCallback callback) {
+void Canvas::Present(uint64_t time, scenic::Session::PresentCallback callback) {
   if (!commands_->empty()) {
     FXL_DCHECK(static_cast<bool>(commands_));
     canvas_->Enqueue(std::move(commands_));

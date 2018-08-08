@@ -10,7 +10,8 @@ CubicBezier2::CubicBezier2(glm::vec2 pt0, glm::vec2 pt1, glm::vec2 pt2,
                            glm::vec2 pt3)
     : pt0_(pt0), pt1_(pt1), pt2_(pt2), pt3_(pt3) {}
 
-::fuchsia::ui::sketchy::CubicBezier2 CubicBezier2::NewSketchyCubicBezier2() const {
+::fuchsia::ui::sketchy::CubicBezier2 CubicBezier2::NewSketchyCubicBezier2()
+    const {
   ::fuchsia::ui::sketchy::CubicBezier2 sketchy_cubic_bezier2;
   sketchy_cubic_bezier2.pt0.x = pt0_.x;
   sketchy_cubic_bezier2.pt0.y = pt0_.y;

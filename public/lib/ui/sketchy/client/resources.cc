@@ -21,8 +21,8 @@ void Resource::EnqueueCmd(::fuchsia::ui::sketchy::Command command) const {
   canvas_->commands_.push_back(std::move(command));
 }
 
-void Resource::EnqueueCreateResourceCmd(ResourceId resource_id,
-                                            ::fuchsia::ui::sketchy::ResourceArgs args) const {
+void Resource::EnqueueCreateResourceCmd(
+    ResourceId resource_id, ::fuchsia::ui::sketchy::ResourceArgs args) const {
   ::fuchsia::ui::sketchy::CreateResourceCmd create_resource;
   create_resource.id = resource_id;
   create_resource.args = std::move(args);
@@ -138,7 +138,7 @@ ImportNode::ImportNode(Canvas* canvas, scenic::EntityNode& export_node)
   zx::eventpair token;
   export_node.ExportAsRequest(&token);
   EnqueueImportResourceCmd(id(), std::move(token),
-                               fuchsia::ui::gfx::ImportSpec::NODE);
+                           fuchsia::ui::gfx::ImportSpec::NODE);
 }
 
 void ImportNode::AddChild(const Resource& child) const {
