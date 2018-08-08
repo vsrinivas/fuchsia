@@ -46,7 +46,7 @@ enum Status2 : int32 {
     INVALID_ARGUMENTS = 1;
 
     // An attempt was made to log an Event whose seralized size exceeds
-    // kMaxBytesPerEvent.
+    // MAX_BYTES_PER_EVENT.
     EVENT_TOO_BIG = 2;
 
     // Cobalt's local buffer is temporarily full and cannot handle any more
@@ -57,16 +57,20 @@ enum Status2 : int32 {
     INTERNAL_ERROR = -1;
 };
 
-// TODO(prathyushk): Get rid of this struct and move to fuchsia.mem.Buffer
-// This is a temporary workaround for ZX-2406.
-// Since fuchsia.mem cannot be added as a dependency to this library, we create
-// a copy here.
-struct Buffer2 {
-    // The vmo.
-    handle<vmo> vmo;
-    // The size of the data in the vmo. This size must be smaller than the
-    // physical size of the vmo.
-    uint64 size;
+// The release stage of a client's project is used to decide which
+// metrics are allowed to be collected.
+enum ReleaseStage : int32 {
+    // Only metrics targetting GA releases will be sent to the server.
+    GA = 0;
+
+    // Metrics targetting DOGFOOD and GA will be sent to the server.
+    DOGFOOD = 10;
+
+    // Metrics targetting FISHFOOD, DOGFOOD and GA will be sent to the server.
+    FISHFOOD = 20;
+
+    // All metrics will be sent to the server.
+    DEBUG = 99;
 };
 
 // A ProjectProfile is used to describe the client's Cobalt project
@@ -74,55 +78,55 @@ struct ProjectProfile2 {
     // The |config| Buffer contains the bytes of a serialized Cobalt config
     // proto message. This specifies registered Metric and Report definitions
     // for a single project.
-    Buffer2 config;
+    Buffer config;
+
+    // The release stage of the client's project.
+    ReleaseStage release_stage;
 };
 
 [Discoverable]
 // LoggerFactory creates Loggers.
 interface LoggerFactory {
     // Creates a Logger for the given ProjectProfile.
+    //
     // |profile| A ProjectProfile describing the Cobalt project that the
     // returned Logger is for.
     //
     // |status| Returns OK on success or INVALID_ARGUMENTS if the project
     //  profile does not contain a valid Cobalt config with only a single
     //  project_id.
-    2: CreateLogger(ProjectProfile2 profile,
+    1: CreateLogger(ProjectProfile2 profile,
                     request<Logger> logger)
+        -> (Status2 status);
+
+    // Creates a LoggerExt for the given ProjectProfile.
+    //
+    // |profile| A ProjectProfile describing the Cobalt project that the
+    // returned Logger is for.
+    //
+    // |status| Returns OK on success or INVALID_ARGUMENTS if the project
+    //  profile does not contain a valid Cobalt config with only a single
+    //  project_id.
+    2: CreateLoggerExt(ProjectProfile2 profile,
+                       request<LoggerExt> logger)
+        -> (Status2 status);
+
+    // Creates a LoggerSimple for the given ProjectProfile.
+    //
+    // |profile| A ProjectProfile describing the Cobalt project that the
+    // returned Logger is for.
+    //
+    // |status| Returns OK on success or INVALID_ARGUMENTS if the project
+    //  profile does not contain a valid Cobalt config with only a single
+    //  project_id.
+    3: CreateLoggerSimple(ProjectProfile2 profile,
+                          request<LoggerSimple> logger)
         -> (Status2 status);
 };
 
 /////////////////////////////////////////////////////////////////////
 // Logger Interface
 /////////////////////////////////////////////////////////////////////
-
-// A value that may be a string, int, double or index.
-union Value2 {
-  string string_value;
-  int64  int_value;
-  float64 double_value;
-  uint32 index_value;
-};
-
-// A value for a custom Event. This is used by the method LogCustomEvent().
-struct CustomEventValue {
-  // The name of the Metric dimension this value is for.
-  string dimension_name;
-
-  // The value for that dimension.
-  Value2 value;
-};
-
-
-// One bucket of histogram. This is used by the method LogIntHistogram().
-struct HistogramBucket {
-  // The index of the bucket. The meaning of the bucket is specified in the
-  // Metric definition.
-  uint32 index;
-
-  // The number of values in that bucket.
-  uint64 count;
-};
 
 // Logger is used to log Events to the Cobalt system. The Cobalt FIDL
 // service stores the Events locally for some period of time, processes the
@@ -133,7 +137,10 @@ struct HistogramBucket {
 //
 // An instance of Logger is associated with a single Cobalt project.
 //
-// Next method ordinal: 12
+// This interface conforms to the Simple layout so that Simple bindings
+// may be generated for it. For some additional methods, see also interfaces
+// LoggerExt and LoggerSimple below.
+[Layout="Simple"]
 interface Logger {
     // Logs the fact that an event has occurred.
     //
@@ -143,7 +150,7 @@ interface Logger {
     //
     // |event_type_index| The index of the event type that occurred. The indexed
     //     set of all event types is specified in the metric definition.
-    1: LogEvent(string metric_name, uint32 event_type_index)
+    1: LogEvent(string:64 metric_name, uint32 event_type_index)
         -> (Status2 status);
 
     // Logs that an event has occurred a given number of times.
@@ -169,10 +176,10 @@ interface Logger {
     //      always set this value to 1 and always set
     //     |period_duration_micros| to 0 in order to achieve a semantics
     //     similar to the LogEventOccurred() method, but with a |component|.
-    2: LogEventCount(string metric_name, uint32 event_type_index,
-                     string component, int64 period_duration_micros,
+    2: LogEventCount(string:64 metric_name, uint32 event_type_index,
+                     string:64 component, int64 period_duration_micros,
                      uint32 count)
-        -> (Status status);
+        -> (Status2 status);
 
     // Logs that an event lasted a given amount of time.
     //
@@ -190,8 +197,8 @@ interface Logger {
     //
     // |elapsed_micros| The elapsed time of the event, specified as a number
     //     of microseconds.
-    3: LogElapsedTime(string metric_name, uint32 event_type_index,
-                      string component, int64 elapsed_micros)
+    3: LogElapsedTime(string:64 metric_name, uint32 event_type_index,
+                      string:64 component, int64 elapsed_micros)
         -> (Status2 status);
 
     // Logs a measured average frame rate.
@@ -210,8 +217,8 @@ interface Logger {
     //     notion of component.
     //
     // |fps| The average-frame rate in frames-per-second.
-    4: LogFrameRate(string metric_name, uint32 event_type_index,
-                    string component, float32 fps)
+    4: LogFrameRate(string:64 metric_name, uint32 event_type_index,
+                    string:64 component, float32 fps)
         -> (Status2 status);
 
     // Logs a measured memory usage.
@@ -230,40 +237,10 @@ interface Logger {
     //     component.
     //
     // |bytes| The memory used, in bytes.
-    5: LogMemoryUsage(string metric_name, uint32 event_type_index,
-                      string component, int64 bytes)
+    5: LogMemoryUsage(string:64 metric_name, uint32 event_type_index,
+                      string:64 component, int64 bytes)
         -> (Status2 status);
 
-
-    // Logs a histogram over a set of integer buckets. The meaning of the
-    // Metric and the buckets is specified in the Metric definition.
-    //
-    // This method is intended to be used in situations where the client
-    // wishes to aggregate a large number of integer-valued measurements
-    // *in-process*, prior to submitting the data to Cobalt.
-    // One reason a client may wish to do this is that the measurements occur
-    // with very high frequency and it is not practical to make a FIDL call
-    // for each individual measurement.
-    //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
-    // from the ProjectProfile used to obtain this Logger, and it must be of
-    // type INT_HISTOGRAM.
-    //
-    // |event_type_index| The index of the event type associated with the
-    // integer-valued measurement. The indexed set of all event types is
-    // specified in the metric definition.
-    //
-    // |component| Optionally, a component associated with integer-valued
-    //     measurements may also be logged. Any notion of component that makes
-    //     sense may be used or use the empty string if there is no natural
-    //     notion of component.
-    //
-    // |histogram| The histogram to log. Each HistogramBucket gives the count
-    //     for one bucket of the histogram. The definitions of the buckets is
-    //     given in the Metric definition.
-    6: LogIntHistogram(string metric_name, uint32 event_type_index,
-                       string component, vector<HistogramBucket> histogram)
-        -> (Status2 status);
 
     // Logs the fact that a given string was used, in a specific context.
     // The semantics of the context and the string is specified in the
@@ -282,22 +259,8 @@ interface Logger {
     // type STRING_USED.
     //
     // |s| The string to log. This should be a human-readable string of
-    //      size no more than 1k bytes.
-    7: LogString(string metric_name, string s) -> (Status2 status);
-
-    // Logs a custom Event. The semantics of the Metric are specified in the
-    // Metric defintion.
-    //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
-    // from the ProjectProfile used to obtain this Logger, and it must be of
-    // type CUSTOM.
-    //
-    // |event_values| The values for the custom Event. There is one value for
-    // each dimension of the Metric. The number and types of the values must
-    // be consistent with the dimensions declared in the Metric definition.
-    8: LogCustomEvent(string metric_name,
-                      vector<CustomEventValue> event_values)
-        -> (Status2 status);
+    //      size no more than 256 bytes.
+    6: LogString(string:64 metric_name, string:256 s) -> (Status2 status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This starts
@@ -361,8 +324,9 @@ interface Logger {
     //        will be forgotten.
     //     Any error returned by LogElapsedTime() may also be returned by this
     //     method.
-    9: StartTimer(string metric_name, uint32 event_type_index, string component,
-                  string timer_id, uint64 timestamp, uint32 timeout_s)
+    7: StartTimer(string:64 metric_name, uint32 event_type_index,
+                  string:64 component, string:64 timer_id,
+                  uint64 timestamp, uint32 timeout_s)
         -> (Status2 status);
 
     // This method is part of Cobalt's helper service for measuring the time
@@ -417,6 +381,155 @@ interface Logger {
     //        will be forgotten.
     //     Any error returned by LogElapsedTime() may also be returned by this
     //     method.
-    10: EndTimer(string timer_id, uint64 timestamp, uint32 timeout_s)
+    8: EndTimer(string:64 timer_id, uint64 timestamp, uint32 timeout_s)
         -> (Status2 status);
+
+    // Method ordinals >= 100 are reserved for sub-interfaces.
+};
+
+/////////////////////////////////////////////////////////////////////
+// LoggerExt Interface
+/////////////////////////////////////////////////////////////////////
+
+// A value for a custom Event. This is used by the method LogCustomEvent().
+struct CustomEventValue {
+  // The name of the Metric dimension this value is for.
+  string dimension_name;
+
+  // The value for that dimension.
+  Value value;
+};
+
+
+// One bucket of histogram. This is used by the method LogIntHistogram().
+struct HistogramBucket {
+  // The index of the bucket. The meaning of the bucket is specified in the
+  // Metric definition.
+  uint32 index;
+
+  // The number of values in that bucket.
+  uint64 count;
+};
+
+// LoggerExt is an extension of the Logger interface that adds some additional
+// methods that do not naturally conform to the Simple layout. We opt for
+// a natural easy-to-understand interface at the cost of not being "Simple".
+// See the interface LoggerSimple below for versions of these methods that do
+// conform to the Simple layout.
+interface LoggerExt {
+    // Logs a histogram over a set of integer buckets. The meaning of the
+    // Metric and the buckets is specified in the Metric definition.
+    //
+    // This method is intended to be used in situations where the client
+    // wishes to aggregate a large number of integer-valued measurements
+    // *in-process*, prior to submitting the data to Cobalt.
+    // One reason a client may wish to do this is that the measurements occur
+    // with very high frequency and it is not practical to make a FIDL call
+    // for each individual measurement.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type INT_HISTOGRAM.
+    //
+    // |event_type_index| The index of the event type associated with the
+    // integer-valued measurement. The indexed set of all event types is
+    // specified in the metric definition.
+    //
+    // |component| Optionally, a component associated with integer-valued
+    //     measurements may also be logged. Any notion of component that makes
+    //     sense may be used or use the empty string if there is no natural
+    //     notion of component.
+    //
+    // |histogram| The histogram to log. Each HistogramBucket gives the count
+    //     for one bucket of the histogram. The definitions of the buckets is
+    //     given in the Metric definition.
+    100: LogIntHistogram(string:64 metric_name, uint32 event_type_index,
+                         string:64 component, vector<HistogramBucket> histogram)
+        -> (Status2 status);
+
+    // Logs a custom Event. The semantics of the Metric are specified in the
+    // Metric defintion.
+    //
+    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // from the ProjectProfile used to obtain this Logger, and it must be of
+    // type CUSTOM.
+    //
+    // |event_values| The values for the custom Event. There is one value for
+    // each dimension of the Metric. The number and types of the values must
+    // be consistent with the dimensions declared in the Metric definition.
+    101: LogCustomEvent(string:64 metric_name,
+                        vector<CustomEventValue> event_values)
+        -> (Status2 status);
+};
+
+/////////////////////////////////////////////////////////////////////
+// LoggerSimple Interface
+/////////////////////////////////////////////////////////////////////
+
+// The parameters to an invocation of Logger::LogEvent()
+struct LogEventParams {
+    string:64 metric_name;
+    uint32 event_type_index;
+};
+
+// The parameters to an invocation of Logger::LogEventCount()
+struct LogEventCountParams {
+    string:64 metric_name;
+    uint32 event_type_index;
+    string:64 component;
+    int64 period_duration_micros;
+    uint32 count;
+};
+
+// The parameters to an invocation of one of the Log*() methods.
+union LogParams {
+    LogEventParams log_event;
+    LogEventCountParams log_event_count_params;
+};
+
+// The parameters to many invocations of various Log*() methods. A serialized
+// BulkLogParams is passed in the |buffer| in the method BulkLog().
+struct BulkLogParams {
+    vector<LogParams> params;
+};
+
+// LoggerSimple is an extension of the Logger interface that adds some
+// additional methods intended to be used by lower-levels of the Fuchsia system.
+//
+// This interface conforms to the Simple layout so that Simple bindings
+// may be generated for it.
+//
+// There are two categories of methods contained in this interface:
+// (i) Versions of the methods in the LoggerExt interface that are expressed
+//     in a way that allow them to adhere to the Simple layout.
+//
+// (ii) The method BulkLog() that allows for many invocations of different
+//      Logger methods to be made via a single FIDL call.
+[Layout="Simple"]
+interface LoggerSimple {
+    // Logs a histogram over a set of integer buckets. The meaning of the
+    // Metric and the buckets is specified in the Metric definition.
+    //
+    // See the method LogIntHistogram() in the LoggerExt interface for more
+    // information. This method is similar except that it adheres to the
+    // requirements of Simple layout. Instead of a vector of HistogramBucekts
+    // this version takes two parallel vectors of bucket indices and the
+    // corresponding bucket counts.
+    100: LogIntHistogram(string:64 metric_name, uint32 event_type_index,
+                         string:64 component,
+                         vector<uint32>:100 bucket_indices,
+                         vector<uint64>:100 bucket_counts)
+          -> (Status2 status);
+
+    // Logs a custom Event. The semantics of the Metric are specified in the
+    // Metric definition.
+    //
+    // See the method LogCustomEvent() in the LoggerExt interface for more
+    // information. This method is similar except that it adheres to the
+    // requirements of Simple layout.  Instead of a vector of CustomEventValue
+    // this version takes a json string.
+    101: LogCustomEvent(string:64 metric_name,
+                        string:1024 json_string)
+        -> (Status2 status);
+
 };
