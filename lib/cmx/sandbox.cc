@@ -46,13 +46,9 @@ constexpr char kBoot[] = "boot";
 
 bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
                             json::JSONParser* json_parser) {
-  const std::map<std::string, std::vector<std::string>*> name_to_vec =
-      {{kDev, &dev_},
-       {kSystem, &system_},
-       {kServices, &services_},
-       {kPkgfs, &pkgfs_},
-       {kFeatures, &features_},
-       {kBoot, &boot_}};
+  const std::map<std::string, std::vector<std::string>*> name_to_vec = {
+      {kDev, &dev_},     {kSystem, &system_},     {kServices, &services_},
+      {kPkgfs, &pkgfs_}, {kFeatures, &features_}, {kBoot, &boot_}};
 
   for (const auto& entry : name_to_vec) {
     entry.second->clear();
@@ -80,9 +76,9 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
   auto services_member = sandbox_value.FindMember(kServices);
   has_services_ = (services_member != sandbox_value.MemberEnd());
   if (has_services_ && HasFeature(kDeprecatedAllServices)) {
-    json_parser->ReportError(fxl::StringPrintf(
-        "Sandbox may not include both 'services' and "
-        "'deprecated-all-services'."));
+    json_parser->ReportError(
+        fxl::StringPrintf("Sandbox may not include both 'services' and "
+                          "'deprecated-all-services'."));
   }
 
   if (!json_parser->HasError()) {
