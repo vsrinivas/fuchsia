@@ -152,12 +152,12 @@ ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate,
   // been initialized, and weak_factory_ must be initialized last (at least if
   // we don't want to invite trouble).
   auto& fs = template_->filesystem_;
-  filesystem_watcher_ = fs->RegisterWatcher([weak = weak_factory_.GetWeakPtr()](
-      HackFilePath changed_path) {
-    if (weak) {
-      weak->template_->ScheduleVariantCompilation(weak);
-    }
-  });
+  filesystem_watcher_ = fs->RegisterWatcher(
+      [weak = weak_factory_.GetWeakPtr()](HackFilePath changed_path) {
+        if (weak) {
+          weak->template_->ScheduleVariantCompilation(weak);
+        }
+      });
 }
 
 ShaderModuleTemplate::Variant::~Variant() {
