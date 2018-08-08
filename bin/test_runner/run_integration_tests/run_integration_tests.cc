@@ -24,9 +24,9 @@ namespace {
 class TestRunObserverImpl : public test_runner::TestRunObserver {
  public:
   TestRunObserverImpl(async::Loop* loop, const std::string& test_id)
-    : loop_(loop), test_id_(test_id) {
-      FXL_CHECK(loop);
-    }
+      : loop_(loop), test_id_(test_id) {
+    FXL_CHECK(loop);
+  }
 
   void SendMessage(const std::string& test_id, const std::string& operation,
                    const std::string& msg) override {
