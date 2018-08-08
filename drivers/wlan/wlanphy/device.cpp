@@ -17,13 +17,10 @@ namespace wlanphy {
 namespace wlan_device = ::fuchsia::wlan::device;
 
 Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
-    : parent_(device),
-      wlanphy_impl_(wlanphy_impl_proto),
-      dispatcher_(wlanphy_async_t()) {
+    : parent_(device), wlanphy_impl_(wlanphy_impl_proto), dispatcher_(wlanphy_async_t()) {
     debugfn();
     // Assert minimum required functionality from the wlanphy_impl driver
-    ZX_ASSERT(wlanphy_impl_.ops != nullptr &&
-              wlanphy_impl_.ops->query != nullptr &&
+    ZX_ASSERT(wlanphy_impl_.ops != nullptr && wlanphy_impl_.ops->query != nullptr &&
               wlanphy_impl_.ops->create_iface != nullptr &&
               wlanphy_impl_.ops->destroy_iface != nullptr);
 }
@@ -35,7 +32,7 @@ Device::~Device() {
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlanphy_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .unbind  = [](void* ctx) { DEV(ctx)->Unbind(); },
+    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
     .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                 size_t out_len, size_t* out_actual) -> zx_status_t {
@@ -97,9 +94,8 @@ void Device::Unbind() {
     dispatcher_.InitiateShutdown([this] { device_remove(zxdev_); });
 }
 
-static void ConvertPhySupportedPhyInfo(
-                ::fidl::VectorPtr<wlan_device::SupportedPhy>* SupportedPhys,
-                uint16_t supported_phys_mask) {
+static void ConvertPhySupportedPhyInfo(::fidl::VectorPtr<wlan_device::SupportedPhy>* SupportedPhys,
+                                       uint16_t supported_phys_mask) {
     SupportedPhys->resize(0);
     if (supported_phys_mask & WLAN_PHY_DSSS) {
         SupportedPhys->push_back(wlan_device::SupportedPhy::DSSS);
@@ -119,8 +115,7 @@ static void ConvertPhySupportedPhyInfo(
 }
 
 static void ConvertPhyDriverFeaturesInfo(
-                ::fidl::VectorPtr<wlan_device::DriverFeature>* DriverFeatures,
-                uint32_t driver_features_mask) {
+    ::fidl::VectorPtr<wlan_device::DriverFeature>* DriverFeatures, uint32_t driver_features_mask) {
     DriverFeatures->resize(0);
     if (driver_features_mask & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
         DriverFeatures->push_back(wlan_device::DriverFeature::SCAN_OFFLOAD);
@@ -130,21 +125,17 @@ static void ConvertPhyDriverFeaturesInfo(
     }
 }
 
-static void ConvertPhyRolesInfo(
-                ::fidl::VectorPtr<wlan_device::MacRole>* MacRoles,
-                uint16_t mac_roles_mask) {
+static void ConvertPhyRolesInfo(::fidl::VectorPtr<wlan_device::MacRole>* MacRoles,
+                                uint16_t mac_roles_mask) {
     MacRoles->resize(0);
     if (mac_roles_mask & WLAN_MAC_ROLE_CLIENT) {
         MacRoles->push_back(wlan_device::MacRole::CLIENT);
     }
-    if (mac_roles_mask & WLAN_MAC_ROLE_AP) {
-        MacRoles->push_back(wlan_device::MacRole::AP);
-    }
+    if (mac_roles_mask & WLAN_MAC_ROLE_AP) { MacRoles->push_back(wlan_device::MacRole::AP); }
 }
 
-static void ConvertPhyCaps(
-                ::fidl::VectorPtr<wlan_device::Capability>* Capabilities,
-                uint32_t phy_caps_mask) {
+static void ConvertPhyCaps(::fidl::VectorPtr<wlan_device::Capability>* Capabilities,
+                           uint32_t phy_caps_mask) {
     Capabilities->resize(0);
     if (phy_caps_mask & WLAN_CAP_SHORT_PREAMBLE) {
         Capabilities->push_back(wlan_device::Capability::SHORT_PREAMBLE);
@@ -160,9 +151,8 @@ static void ConvertPhyCaps(
     }
 }
 
-static void ConvertPhyHTCapabilities(
-                wlan_device::HtCapabilities* HTCaps,
-                const wlan_ht_caps_t* phy_ht_caps) {
+static void ConvertPhyHTCapabilities(wlan_device::HtCapabilities* HTCaps,
+                                     const wlan_ht_caps_t* phy_ht_caps) {
     HTCaps->ht_capability_info = phy_ht_caps->ht_capability_info;
     HTCaps->ampdu_params = phy_ht_caps->ampdu_params;
     size_t phy_mcs_set_size = countof(phy_ht_caps->supported_mcs_set);
@@ -175,9 +165,8 @@ static void ConvertPhyHTCapabilities(
     HTCaps->asel_capabilities = phy_ht_caps->asel_capabilities;
 }
 
-static void ConvertPhyVHTCapabilities(
-                wlan_device::BandInfo* Band,
-                const wlan_vht_caps* phy_vht_caps) {
+static void ConvertPhyVHTCapabilities(wlan_device::BandInfo* Band,
+                                      const wlan_vht_caps* phy_vht_caps) {
     Band->vht_caps->vht_capability_info = phy_vht_caps->vht_capability_info;
     Band->vht_caps->supported_vht_mcs_and_nss_set = phy_vht_caps->supported_vht_mcs_and_nss_set;
 }
@@ -197,10 +186,8 @@ static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
     }
 }
 
-static void ConvertPhyBandInfo(
-                ::fidl::VectorPtr<wlan_device::BandInfo>* BandInfo,
-                uint8_t num_bands,
-                const wlan_band_info_t* phy_bands) {
+static void ConvertPhyBandInfo(::fidl::VectorPtr<wlan_device::BandInfo>* BandInfo,
+                               uint8_t num_bands, const wlan_band_info_t* phy_bands) {
     BandInfo->resize(0);
     for (uint8_t band_num = 0; band_num < num_bands; band_num++) {
         wlan_device::BandInfo Band;

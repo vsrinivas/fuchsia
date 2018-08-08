@@ -20,8 +20,8 @@ class Device : public ::fuchsia::wlan::device::Phy {
     zx_status_t Bind();
 
     // zx_protocol_device_t
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                      size_t out_len, size_t* out_actual);
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                      size_t* out_actual);
     void Release();
     void Unbind();
 
