@@ -42,11 +42,10 @@ class ViewProviderService : public ::fuchsia::ui::viewsv1::ViewProvider {
   ~ViewProviderService();
 
   // |ViewProvider|
-  void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services)
-      override;
+  void CreateView(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                      view_owner_request,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
+                      view_services) override;
 
  private:
   component::StartupContext* startup_context_;

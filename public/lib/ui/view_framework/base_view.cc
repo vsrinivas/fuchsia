@@ -14,7 +14,8 @@
 namespace mozart {
 namespace {
 
-fuchsia::ui::scenic::ScenicPtr GetScenic(::fuchsia::ui::viewsv1::ViewManager* view_manager) {
+fuchsia::ui::scenic::ScenicPtr GetScenic(
+    ::fuchsia::ui::viewsv1::ViewManager* view_manager) {
   fuchsia::ui::scenic::ScenicPtr scenic;
   view_manager->GetScenic(scenic.NewRequest());
   return scenic;
@@ -24,7 +25,8 @@ fuchsia::ui::scenic::ScenicPtr GetScenic(::fuchsia::ui::viewsv1::ViewManager* vi
 
 BaseView::BaseView(
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
     const std::string& label)
     : view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
@@ -157,7 +159,8 @@ void BaseView::AdjustMetricsAndPhysicalSize() {
   InvalidateScene();
 }
 
-void BaseView::OnPropertiesChanged(::fuchsia::ui::viewsv1::ViewProperties old_properties) {}
+void BaseView::OnPropertiesChanged(
+    ::fuchsia::ui::viewsv1::ViewProperties old_properties) {}
 
 void BaseView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {}
@@ -169,16 +172,18 @@ bool BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   return false;
 }
 
-void BaseView::OnChildAttached(uint32_t child_key,
-                               ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {}
+void BaseView::OnChildAttached(
+    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {}
 
 void BaseView::OnChildUnavailable(uint32_t child_key) {}
 
-void BaseView::OnPropertiesChanged(::fuchsia::ui::viewsv1::ViewProperties properties,
-                                   OnPropertiesChangedCallback callback) {
+void BaseView::OnPropertiesChanged(
+    ::fuchsia::ui::viewsv1::ViewProperties properties,
+    OnPropertiesChangedCallback callback) {
   TRACE_DURATION("view", "OnPropertiesChanged");
 
-  ::fuchsia::ui::viewsv1::ViewProperties old_properties = std::move(properties_);
+  ::fuchsia::ui::viewsv1::ViewProperties old_properties =
+      std::move(properties_);
   properties_ = std::move(properties);
 
   if (logical_size_ != properties_.view_layout->size) {
