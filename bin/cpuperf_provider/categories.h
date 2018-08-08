@@ -61,7 +61,7 @@ struct TimebaseSpec {
 // A data collection run is called a "trace".
 // This records the user-specified configuration of the trace.
 class TraceConfig final {
-public:
+ public:
   TraceConfig() {}
 
   bool is_enabled() const { return is_enabled_; }
@@ -88,7 +88,7 @@ public:
   // Return a string representation of the config for error reporting.
   std::string ToString() const;
 
-private:
+ private:
   bool ProcessCategories();
   bool ProcessTimebase();
 
@@ -101,7 +101,7 @@ private:
   cpuperf_event_id_t timebase_event_ = CPUPERF_EVENT_ID_NONE;
 
   // Set of selected fixed + programmable categories.
-  std::unordered_set<const CategorySpec*> selected_categories_;  
+  std::unordered_set<const CategorySpec*> selected_categories_;
 };
 
 }  // namespace cpuperf_provider

@@ -16,7 +16,8 @@ namespace cpuperf_provider {
 enum EventId {
 #define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_FIXED, id),
-#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
+#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, \
+                       description)                                    \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_ARCH, id),
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
 
@@ -30,79 +31,77 @@ enum EventId {
 };
 
 #define DEF_FIXED_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol ## _events[] = { events };
+  static const cpuperf_event_id_t symbol##_events[] = {events};
 #define DEF_ARCH_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol ## _events[] = { events };
+  static const cpuperf_event_id_t symbol##_events[] = {events};
 #include "intel-pm-categories.inc"
 
 #define DEF_SKL_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol ## _events[] = { events };
+  static const cpuperf_event_id_t symbol##_events[] = {events};
 #include "skylake-pm-categories.inc"
 
 #define DEF_MISC_SKL_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol ## _events[] = { events };
+  static const cpuperf_event_id_t symbol##_events[] = {events};
 #include "skylake-misc-categories.inc"
 
 static const CategorySpec kCategories[] = {
-  // Options
-  { "cpu:os",   CategoryGroup::kOption,
-    static_cast<CategoryValue>(TraceOption::kOs), 0, nullptr },
-  { "cpu:user", CategoryGroup::kOption,
-    static_cast<CategoryValue>(TraceOption::kUser), 0, nullptr },
-  { "cpu:pc",   CategoryGroup::kOption,
-    static_cast<CategoryValue>(TraceOption::kPc), 0, nullptr },
+    // Options
+    {"cpu:os", CategoryGroup::kOption,
+     static_cast<CategoryValue>(TraceOption::kOs), 0, nullptr},
+    {"cpu:user", CategoryGroup::kOption,
+     static_cast<CategoryValue>(TraceOption::kUser), 0, nullptr},
+    {"cpu:pc", CategoryGroup::kOption,
+     static_cast<CategoryValue>(TraceOption::kPc), 0, nullptr},
 
-  // Sampling rates.
-  // Only one of the following is allowed.
+// Sampling rates.
+// Only one of the following is allowed.
 #define DEF_SAMPLE(name, value) \
-    { "cpu:" name, CategoryGroup::kSample, value, 0, nullptr }
-  DEF_SAMPLE("tally", 0),
-  DEF_SAMPLE("sample:100", 100),
-  DEF_SAMPLE("sample:500", 500),
-  DEF_SAMPLE("sample:1000", 1000),
-  DEF_SAMPLE("sample:5000", 5000),
-  DEF_SAMPLE("sample:10000", 10000),
-  DEF_SAMPLE("sample:50000", 50000),
-  DEF_SAMPLE("sample:100000", 100000),
-  DEF_SAMPLE("sample:500000", 500000),
-  DEF_SAMPLE("sample:1000000", 1000000),
+  { "cpu:" name, CategoryGroup::kSample, value, 0, nullptr }
+    DEF_SAMPLE("tally", 0),
+    DEF_SAMPLE("sample:100", 100),
+    DEF_SAMPLE("sample:500", 500),
+    DEF_SAMPLE("sample:1000", 1000),
+    DEF_SAMPLE("sample:5000", 5000),
+    DEF_SAMPLE("sample:10000", 10000),
+    DEF_SAMPLE("sample:50000", 50000),
+    DEF_SAMPLE("sample:100000", 100000),
+    DEF_SAMPLE("sample:500000", 500000),
+    DEF_SAMPLE("sample:1000000", 1000000),
 #undef DEF_SAMPLE
 
-  // TODO(dje): Reorganize fixed,arch,skl(model),misc vs
-  // fixed/programmable+arch/model.
+// TODO(dje): Reorganize fixed,arch,skl(model),misc vs
+// fixed/programmable+arch/model.
 
-  // Fixed events.
-#define DEF_FIXED_CATEGORY(symbol, name, events...) \
-  { "cpu:" name, CategoryGroup::kFixedArch, 0, \
-    countof(symbol ## _events), &symbol ## _events[0] },
+// Fixed events.
+#define DEF_FIXED_CATEGORY(symbol, name, events...)                     \
+  {"cpu:" name, CategoryGroup::kFixedArch, 0, countof(symbol##_events), \
+   &symbol##_events[0]},
 #include "intel-pm-categories.inc"
 
-  // Architecturally specified programmable events.
-#define DEF_ARCH_CATEGORY(symbol, name, events...) \
-  { "cpu:" name, CategoryGroup::kProgrammableArch, 0, \
-    countof(symbol ## _events), &symbol ## _events[0] },
+// Architecturally specified programmable events.
+#define DEF_ARCH_CATEGORY(symbol, name, events...)                             \
+  {"cpu:" name, CategoryGroup::kProgrammableArch, 0, countof(symbol##_events), \
+   &symbol##_events[0]},
 #include "intel-pm-categories.inc"
 
-  // Model-specific misc events
-#define DEF_MISC_SKL_CATEGORY(symbol, name, events...) \
-  { "cpu:" name, CategoryGroup::kFixedModel, 0, \
-    countof(symbol ## _events), &symbol ## _events[0] },
+// Model-specific misc events
+#define DEF_MISC_SKL_CATEGORY(symbol, name, events...)                   \
+  {"cpu:" name, CategoryGroup::kFixedModel, 0, countof(symbol##_events), \
+   &symbol##_events[0]},
 #include "skylake-misc-categories.inc"
 
-  // Model-specific programmable events.
-#define DEF_SKL_CATEGORY(symbol, name, events...) \
-  { "cpu:" name, CategoryGroup::kProgrammableModel, 0, \
-    countof(symbol ## _events), &symbol ## _events[0] },
+// Model-specific programmable events.
+#define DEF_SKL_CATEGORY(symbol, name, events...)     \
+  {"cpu:" name, CategoryGroup::kProgrammableModel, 0, \
+   countof(symbol##_events), &symbol##_events[0]},
 #include "skylake-pm-categories.inc"
 };
 
 static const TimebaseSpec kTimebaseCategories[] = {
-#define DEF_TIMEBASE_CATEGORY(symbol, name, event) \
-  { "cpu:" name, event },
+#define DEF_TIMEBASE_CATEGORY(symbol, name, event) {"cpu:" name, event},
 #include "intel-timebase-categories.inc"
 };
 
-
 void TraceConfig::Reset() {
   is_enabled_ = false;
   trace_os_ = false;
@@ -155,7 +154,8 @@ bool TraceConfig::ProcessCategories() {
           break;
         case CategoryGroup::kSample:
           if (have_sample_rate) {
-            FXL_LOG(ERROR) << "Only one sampling mode at a time is currenty supported";
+            FXL_LOG(ERROR)
+                << "Only one sampling mode at a time is currenty supported";
             return false;
           }
           have_sample_rate = true;
@@ -170,7 +170,8 @@ bool TraceConfig::ProcessCategories() {
         case CategoryGroup::kProgrammableModel:
           if (have_programmable_category) {
             // TODO(dje): Temporary limitation.
-            FXL_LOG(ERROR) << "Only one programmable category at a time is currenty supported";
+            FXL_LOG(ERROR) << "Only one programmable category at a time is "
+                              "currenty supported";
             return false;
           }
           have_programmable_category = true;
@@ -322,8 +323,8 @@ std::string TraceConfig::ToString() const {
   if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
     const cpuperf::EventDetails* details;
     FXL_CHECK(cpuperf::EventIdToEventDetails(timebase_event_, &details));
-    result += fxl::StringPrintf("Timebase 0x%x(%s)",
-                                timebase_event_, details->name);
+    result +=
+        fxl::StringPrintf("Timebase 0x%x(%s)", timebase_event_, details->name);
   }
 
   if (sample_rate_ > 0) {

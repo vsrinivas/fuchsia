@@ -66,7 +66,8 @@ App::App(const fxl::CommandLine& command_line)
     buffer_size_in_mb_ = static_cast<uint32_t>(buffer_size);
   }
 
-  trace_observer_.Start(async_get_default_dispatcher(), [this] { UpdateState(); });
+  trace_observer_.Start(async_get_default_dispatcher(),
+                        [this] { UpdateState(); });
 }
 
 App::~App() {}

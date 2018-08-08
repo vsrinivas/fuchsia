@@ -23,20 +23,20 @@
 namespace cpuperf_provider {
 
 class Importer {
-public:
+ public:
   Importer(trace_context* context, const TraceConfig* trace_config,
            trace_ticks_t start_time, trace_ticks_t stop_time);
   ~Importer();
 
   bool Import(cpuperf::Reader& reader);
 
-private:
+ private:
   static constexpr size_t kMaxNumCpus = 32;
   static_assert(kMaxNumCpus <= TRACE_ENCODED_THREAD_REF_MAX_INDEX,
                 "bad value for kMaxNumCpus");
 
   class EventTracker final {
-  public:
+   public:
     EventTracker(trace_ticks_t start_time) : start_time_(start_time) {}
 
     bool HaveValue(unsigned cpu, cpuperf_event_id_t id) const {
@@ -45,8 +45,7 @@ private:
       return iter != data_.end();
     }
 
-    void UpdateTime(unsigned cpu, cpuperf_event_id_t id,
-                    trace_ticks_t time) {
+    void UpdateTime(unsigned cpu, cpuperf_event_id_t id, trace_ticks_t time) {
       Key key = GenKey(cpu, id);
       data_[key].time = time;
     }
@@ -86,7 +85,7 @@ private:
       return iter->second.count_or_value;
     }
 
-  private:
+   private:
     using Key = uint32_t;
     struct Data {
       trace_ticks_t time = 0;
@@ -118,8 +117,7 @@ private:
                           const cpuperf_config_t& config,
                           const cpuperf::Reader::SampleRecord& record,
                           trace_ticks_t previous_time,
-                          trace_ticks_t current_time,
-                          uint64_t ticks_per_second,
+                          trace_ticks_t current_time, uint64_t ticks_per_second,
                           uint64_t event_value);
 
   void EmitSampleRecord(trace_cpu_number_t cpu,
@@ -131,11 +129,8 @@ private:
   void EmitTallyCounts(const cpuperf_config_t& config,
                        const EventTracker* event_data);
 
-  void EmitTallyRecord(trace_cpu_number_t cpu,
-                       cpuperf_event_id_t event_id,
-                       trace_ticks_t time,
-                       bool is_value,
-                       uint64_t value);
+  void EmitTallyRecord(trace_cpu_number_t cpu, cpuperf_event_id_t event_id,
+                       trace_ticks_t time, bool is_value, uint64_t value);
 
   trace_string_ref_t GetCpuNameRef(trace_cpu_number_t cpu);
 

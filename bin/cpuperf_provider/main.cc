@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-provider/provider.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <trace-provider/provider.h>
 
 #ifdef __x86_64__
 #include "garnet/bin/cpuperf_provider/app.h"
 #endif
 
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
 #ifdef __x86_64__

@@ -4,11 +4,11 @@
 
 #include "garnet/bin/cpuperf_provider/importer.h"
 
-#include <atomic>
 #include <inttypes.h>
+#include <atomic>
 
-#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/cpuperf/reader.h"
@@ -46,11 +46,11 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
     trace_context_write_thread_record(context, index, kCpuProcess, cpu);
     if (cpu == 0) {
       cpu_name_refs_[0] =
-        trace_context_make_registered_string_literal(context, "system");
+          trace_context_make_registered_string_literal(context, "system");
     } else {
-      const char *name = fxl::StringPrintf("cpu%u", cpu - 1).c_str();
-      cpu_name_refs_[cpu] =
-        trace_context_make_registered_string_copy(context, name, strlen(name));
+      const char* name = fxl::StringPrintf("cpu%u", cpu - 1).c_str();
+      cpu_name_refs_[cpu] = trace_context_make_registered_string_copy(
+          context, name, strlen(name));
     }
     // TODO(dje): In time emit "cpuN" for thread names, but it won't do any
     // good at the moment as we use "Count" records which ignore the thread.
@@ -86,10 +86,9 @@ bool Importer::Import(cpuperf::Reader& reader) {
   return true;
 }
 
-uint64_t Importer::ImportRecords(
-    cpuperf::Reader& reader,
-    const cpuperf_properties_t& props,
-    const cpuperf_config_t& config) {
+uint64_t Importer::ImportRecords(cpuperf::Reader& reader,
+                                 const cpuperf_properties_t& props,
+                                 const cpuperf_config_t& config) {
   EventTracker event_data(start_time_);
   uint32_t record_count = 0;
   // Only print these warnings once, and then again at the end with
@@ -115,8 +114,8 @@ uint64_t Importer::ImportRecords(
     // test runs, but otherwise is too painful. The verbosity level is chosen
     // to recognize that.
     FXL_VLOG(10) << fxl::StringPrintf(
-      "Import: cpu=%u, event=0x%x, time=%" PRIu64,
-      cpu, event_id, current_time);
+        "Import: cpu=%u, event=0x%x, time=%" PRIu64, cpu, event_id,
+        current_time);
 
     if (record.type() == CPUPERF_RECORD_TIME) {
       current_time = reader.time();
@@ -139,8 +138,8 @@ uint64_t Importer::ImportRecords(
       ++printed_old_time_warning_count;
     } else if (current_time == prev_time) {
       if (printed_zero_period_warning_count == 0) {
-        FXL_LOG(WARNING) << "cpu " << cpu
-                         << ": empty interval at time " << current_time
+        FXL_LOG(WARNING) << "cpu " << cpu << ": empty interval at time "
+                         << current_time
                          << " (further such warnings are omitted)";
       }
       ++printed_zero_period_warning_count;
@@ -216,14 +215,13 @@ uint64_t Importer::ImportRecords(
   return record_count;
 }
 
-void Importer::ImportSampleRecord(
-    trace_cpu_number_t cpu,
-    const cpuperf_config_t& config,
-    const cpuperf::Reader::SampleRecord& record,
-    trace_ticks_t previous_time,
-    trace_ticks_t current_time,
-    uint64_t ticks_per_second,
-    uint64_t event_value) {
+void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
+                                  const cpuperf_config_t& config,
+                                  const cpuperf::Reader::SampleRecord& record,
+                                  trace_ticks_t previous_time,
+                                  trace_ticks_t current_time,
+                                  uint64_t ticks_per_second,
+                                  uint64_t event_value) {
   cpuperf_event_id_t event_id = record.event();
   const cpuperf::EventDetails* details;
   // Note: Errors here are generally rare, so at present we don't get clever
@@ -241,12 +239,11 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
                                 const cpuperf::Reader::SampleRecord& record,
                                 trace_ticks_t start_time,
                                 trace_ticks_t end_time,
-                                uint64_t ticks_per_second,
-                                uint64_t value) {
+                                uint64_t ticks_per_second, uint64_t value) {
   FXL_DCHECK(start_time < end_time);
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, details->id)};
-  trace_string_ref_t name_ref{trace_context_make_registered_string_literal(
-      context_, details->name)};
+  trace_string_ref_t name_ref{
+      trace_context_make_registered_string_literal(context_, details->name)};
 #if 0
   // Count records are "process wide" so we need some way to distinguish
   // each cpu. Thus while it might be nice to use this for "id" we don't.
@@ -290,13 +287,15 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
       // We somehow need to mark the value as not being a count. This is
       // important for some consumers to guide how to print the value.
       // Do this by using a different name for the value.
-      args[0] = {trace_make_arg(value_name_ref_,
-                                trace_make_uint64_arg_value(value))};
+      args[0] = {
+          trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))};
       n_args = 1;
       break;
     case CPUPERF_RECORD_PC:
-      args[1] = {trace_make_arg(aspace_name_ref_, trace_make_uint64_arg_value(record.pc->aspace))};
-      args[2] = {trace_make_arg(pc_name_ref_, trace_make_uint64_arg_value(record.pc->pc))};
+      args[1] = {trace_make_arg(
+          aspace_name_ref_, trace_make_uint64_arg_value(record.pc->aspace))};
+      args[2] = {trace_make_arg(pc_name_ref_,
+                                trace_make_uint64_arg_value(record.pc->pc))};
       n_args = 3;
       break;
     default:
@@ -320,10 +319,9 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   // interval, which for a count makes sense: this is the value of the count
   // from this point on until the next count record. We're abusing this record
   // type to display a rate.
-  trace_context_write_counter_event_record(
-      context_, start_time,
-      &thread_ref, &cpuperf_category_ref_, &name_ref,
-      id, &args[0], n_args);
+  trace_context_write_counter_event_record(context_, start_time, &thread_ref,
+                                           &cpuperf_category_ref_, &name_ref,
+                                           id, &args[0], n_args);
 #endif
 }
 
@@ -344,9 +342,8 @@ void Importer::EmitTallyCounts(const cpuperf_config_t& config,
   unsigned num_cpus = zx_system_get_num_cpus();
 
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
-    for (unsigned ctr = 0;
-         ctr < countof(config.events) &&
-           config.events[ctr] != CPUPERF_EVENT_ID_NONE;
+    for (unsigned ctr = 0; ctr < countof(config.events) &&
+                           config.events[ctr] != CPUPERF_EVENT_ID_NONE;
          ++ctr) {
       cpuperf_event_id_t event_id = config.events[ctr];
       if (event_data->HaveValue(cpu, event_id)) {
@@ -363,22 +360,20 @@ void Importer::EmitTallyCounts(const cpuperf_config_t& config,
 }
 
 void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
-                               cpuperf_event_id_t event_id,
-                               trace_ticks_t time,
-                               bool is_value,
-                               uint64_t value) {
+                               cpuperf_event_id_t event_id, trace_ticks_t time,
+                               bool is_value, uint64_t value) {
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, event_id)};
   trace_arg_t args[1] = {
-    {trace_make_arg(is_value ? value_name_ref_ : count_name_ref_,
-                    trace_make_uint64_arg_value(value))},
+      {trace_make_arg(is_value ? value_name_ref_ : count_name_ref_,
+                      trace_make_uint64_arg_value(value))},
   };
   const cpuperf::EventDetails* details;
   if (cpuperf::EventIdToEventDetails(event_id, &details)) {
-    trace_string_ref_t name_ref{trace_context_make_registered_string_literal(
-        context_, details->name)};
-    trace_context_write_counter_event_record(
-        context_, time, &thread_ref, &cpuperf_category_ref_, &name_ref,
-        event_id, &args[0], countof(args));
+    trace_string_ref_t name_ref{
+        trace_context_make_registered_string_literal(context_, details->name)};
+    trace_context_write_counter_event_record(context_, time, &thread_ref,
+                                             &cpuperf_category_ref_, &name_ref,
+                                             event_id, &args[0], countof(args));
   } else {
     FXL_LOG(WARNING) << "Invalid event id: " << event_id;
   }
