@@ -86,7 +86,8 @@ static void PrintMessage(int argc, char** argv, int longest) {
         PrintPaddedBreak(longest - len);
         str += len;
         processed += len;
-        if (processed >= word_len - 1) break;
+        if (processed >= word_len - 1)
+          break;
         printf("| ");
       }
 
