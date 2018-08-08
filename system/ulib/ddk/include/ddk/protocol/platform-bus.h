@@ -49,7 +49,8 @@ typedef struct {
     size_t      len;    // metadata length in bytes (set to zero for bootloader metadata)
 } pbus_metadata_t;
 
-typedef struct {
+typedef struct pbus_dev pbus_dev_t;
+struct pbus_dev {
     const char* name;
     uint32_t vid;   // BIND_PLATFORM_DEV_VID
     uint32_t pid;   // BIND_PLATFORM_DEV_PID
@@ -69,7 +70,12 @@ typedef struct {
     uint32_t bti_count;
     const pbus_metadata_t* metadata;
     uint32_t metadata_count;
-} pbus_dev_t;
+    // List of this device's child devices.
+    // This is only used in cases where children of a platform device also need to access
+    // platform bus resources.
+    const pbus_dev_t* children;
+    uint32_t child_count;
+};
 
 // Subset of pdev_board_info_t to be set by the board driver.
 typedef struct {
@@ -102,14 +108,15 @@ static inline zx_status_t pbus_set_protocol(const platform_bus_protocol_t* pbus,
     return pbus->ops->set_protocol(pbus->ctx, proto_id, protocol);
 }
 
-// waits for the specified protocol to be made available by another driver
-// calling pbus_set_protocol()
-static inline zx_status_t pbus_wait_protocol(const platform_bus_protocol_t* pbus, uint32_t proto_id) {
+// Waits for the specified protocol to be made available by another driver
+// calling pbus_set_protocol().
+static inline zx_status_t pbus_wait_protocol(const platform_bus_protocol_t* pbus,
+                                             uint32_t proto_id) {
     return pbus->ops->wait_protocol(pbus->ctx, proto_id);
 }
 
-static inline zx_status_t pbus_device_add(const platform_bus_protocol_t* pbus, const pbus_dev_t* dev,
-                                          uint32_t flags) {
+static inline zx_status_t pbus_device_add(const platform_bus_protocol_t* pbus,
+                                          const pbus_dev_t* dev, uint32_t flags) {
     return pbus->ops->device_add(pbus->ctx, dev, flags);
 }
 

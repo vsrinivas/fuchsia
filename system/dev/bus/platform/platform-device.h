@@ -13,16 +13,12 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
+#include "device-resources.h"
 #include "proxy-protocol.h"
 
 // An overview of PlatformDevice and PlatformProxy.
 //
 // Both this class and PlatformProxy implement the platform device protocol.
-// At this time, this protocol provides the following methods:
-//     map_mmio
-//     map_interrupt
-//     get_bti
-//     get_device_info
 // The implementation in this file implements the platform device protocol for drivers that
 // exist within the platform bus process. The implementation of the protocol
 // in PlatformProxy is for drivers that live in their own devhost and perform
@@ -59,16 +55,21 @@ public:
     void DdkRelease();
     zx_status_t DdkRxrpc(zx_handle_t channel);
 
-    // Platform device protocol implementation.
+    // Platform device protocol implementation for devices running in the platform bus devhost.
     zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, size_t* out_size,
                         zx_paddr_t* out_paddr, zx_handle_t* out_handle);
     zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
     zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
+    zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
 
-    // Adds the underlying devmgr device.
-    zx_status_t DeviceAdd();
+    // Common GetDeviceInfo implementation, used for both devices in the proxying case
+    // and those running in the platform bus devhost.
+    zx_status_t GetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info);
+
+    // Starts the underlying devmgr device.
+    zx_status_t Start();
 
 private:
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
@@ -77,33 +78,39 @@ private:
     zx_status_t Init(const pbus_dev_t* pdev);
 
     // Handlers for RPCs from PlatformProxy.
-    zx_status_t RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t *out_length,
-                           zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetInterrupt(uint32_t index, uint32_t* out_irq, uint32_t* out_mode,
-                                zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetBti(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcUmsSetMode(usb_mode_t mode);
-    zx_status_t RpcGpioConfig(uint32_t index, uint32_t flags);
-    zx_status_t RpcGpioSetAltFunction(uint32_t index, uint64_t function);
-    zx_status_t RpcGpioRead(uint32_t index, uint8_t* out_value);
-    zx_status_t RpcGpioWrite(uint32_t index, uint8_t value);
-    zx_status_t RpcGpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle,
-                                    uint32_t* out_handle_count);
-    zx_status_t RpcGpioReleaseInterrupt(uint32_t index);
-    zx_status_t RpcGpioSetPolarity(uint32_t index, uint32_t flags);
-    zx_status_t RpcCanvasConfig(zx_handle_t vmo, size_t offset, canvas_info_t* info,
-                                uint8_t* canvas_idx);
-    zx_status_t RpcCanvasFree(uint8_t canvas_idx);
-    zx_status_t RpcScpiGetSensor(char* name, uint32_t *sensor_id);
-    zx_status_t RpcScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_value);
-    zx_status_t RpcScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps);
-    zx_status_t RpcScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx);
-    zx_status_t RpcScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx);
-    zx_status_t RpcI2cTransact(uint32_t txid, rpc_i2c_req_t* req, uint8_t* data,
-                               zx_handle_t channel);
-    zx_status_t RpcI2cGetMaxTransferSize(uint32_t index, size_t* out_size);
-    zx_status_t RpcClkEnable(uint32_t index);
-    zx_status_t RpcDisable(uint32_t index);
+    zx_status_t RpcGetMmio(const DeviceResources* dr, uint32_t index, zx_paddr_t* out_paddr,
+                           size_t *out_length, zx_handle_t* out_handle, uint32_t* out_handle_count);
+    zx_status_t RpcGetInterrupt(const DeviceResources* dr, uint32_t index, uint32_t* out_irq,
+                                uint32_t* out_mode, zx_handle_t* out_handle,
+                                uint32_t* out_handle_count);
+    zx_status_t RpcGetBti(const DeviceResources* dr, uint32_t index, zx_handle_t* out_handle,
+                          uint32_t* out_handle_count);
+    zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
+    zx_status_t RpcUmsSetMode(const DeviceResources* dr, usb_mode_t mode);
+    zx_status_t RpcGpioConfig(const DeviceResources* dr, uint32_t index, uint32_t flags);
+    zx_status_t RpcGpioSetAltFunction(const DeviceResources* dr, uint32_t index, uint64_t function);
+    zx_status_t RpcGpioRead(const DeviceResources* dr, uint32_t index, uint8_t* out_value);
+    zx_status_t RpcGpioWrite(const DeviceResources* dr, uint32_t index, uint8_t value);
+    zx_status_t RpcGpioGetInterrupt(const DeviceResources* dr, uint32_t index, uint32_t flags,
+                                    zx_handle_t* out_handle, uint32_t* out_handle_count);
+    zx_status_t RpcGpioReleaseInterrupt(const DeviceResources* dr, uint32_t index);
+    zx_status_t RpcGpioSetPolarity(const DeviceResources* dr, uint32_t index, uint32_t flags);
+    zx_status_t RpcCanvasConfig(const DeviceResources* dr, zx_handle_t vmo, size_t offset,
+                                canvas_info_t* info, uint8_t* canvas_idx);
+    zx_status_t RpcCanvasFree(const DeviceResources* dr, uint8_t canvas_idx);
+    zx_status_t RpcScpiGetSensor(const DeviceResources* dr, char* name, uint32_t *sensor_id);
+    zx_status_t RpcScpiGetSensorValue(const DeviceResources* dr, uint32_t sensor_id,
+                                      uint32_t* sensor_value);
+    zx_status_t RpcScpiGetDvfsInfo(const DeviceResources* dr, uint8_t power_domain,
+                                   scpi_opp_t* opps);
+    zx_status_t RpcScpiGetDvfsIdx(const DeviceResources* dr, uint8_t power_domain, uint16_t* idx);
+    zx_status_t RpcScpiSetDvfsIdx(const DeviceResources* dr, uint8_t power_domain, uint16_t idx);
+    zx_status_t RpcI2cTransact(const DeviceResources* dr, uint32_t txid, rpc_i2c_req_t* req,
+                               uint8_t* data, zx_handle_t channel);
+    zx_status_t RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,
+                                         size_t* out_size);
+    zx_status_t RpcClkEnable(const DeviceResources* dr, uint32_t index);
+    zx_status_t RpcClkDisable(const DeviceResources* dr, uint32_t index);
 
     zx_status_t AddMetaData(const pbus_metadata_t& pbm);
 
@@ -115,13 +122,12 @@ private:
     const uint32_t did_;
     const serial_port_info_t serial_port_info_;
 
-    fbl::Vector<pbus_mmio_t> mmios_;
-    fbl::Vector<pbus_irq_t> irqs_;
-    fbl::Vector<pbus_gpio_t> gpios_;
-    fbl::Vector<pbus_i2c_channel_t> i2c_channels_;
-    fbl::Vector<pbus_clk_t> clks_;
-    fbl::Vector<pbus_bti_t> btis_;
-    fbl::Vector<pbus_metadata_t> metadata_;
+    // Tree of platform bus resources for this device and its children.
+    DeviceResources resource_tree_;
+
+    // Flattened list of DeviceResources, indexed by device ID.
+    // device_index_[0] returns the DeviceResources for this top level device.
+    fbl::Vector<const DeviceResources*> device_index_;
 };
 
 } // namespace platform_bus

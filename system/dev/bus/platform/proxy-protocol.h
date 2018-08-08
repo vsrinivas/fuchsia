@@ -12,12 +12,17 @@
 
 namespace platform_bus {
 
-// maximum transfer size we can proxy.
+// Maximum transfer size we can proxy.
 static constexpr size_t PROXY_MAX_TRANSFER_SIZE = 4096;
+
+// Device ID for a top level platform device (that is, an immediate child of the platform bus).
+static constexpr uint32_t ROOT_DEVICE_ID = 0;
+
 
 // Header for RPC requests.
 typedef struct {
     zx_txid_t txid;
+    uint32_t device_id;
     uint32_t protocol;
     uint32_t op;
 } rpc_req_header_t;
@@ -35,6 +40,7 @@ enum {
     PDEV_GET_BTI,
     PDEV_GET_DEVICE_INFO,
     PDEV_GET_BOARD_INFO,
+    PDEV_DEVICE_ADD,
 };
 
 typedef struct {
@@ -51,6 +57,7 @@ typedef struct {
     uint32_t mode;
     pdev_device_info_t device_info;
     pdev_board_info_t board_info;
+    uint32_t device_id;
 } rpc_pdev_rsp_t;
 
 // Maximum I2C transfer is I2C_MAX_TRANSFER_SIZE minus size of largest header.

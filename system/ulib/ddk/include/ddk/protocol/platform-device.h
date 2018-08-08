@@ -50,6 +50,8 @@ typedef struct {
     zx_status_t (*get_bti)(void* ctx, uint32_t index, zx_handle_t* out_handle);
     zx_status_t (*get_device_info)(void* ctx, pdev_device_info_t* out_info);
     zx_status_t (*get_board_info)(void* ctx, pdev_board_info_t* out_info);
+    zx_status_t (*device_add)(void* ctx, uint32_t index, device_add_args_t* args,
+                              zx_device_t** out);
 } platform_device_protocol_ops_t;
 
 typedef struct {
@@ -102,8 +104,15 @@ static inline zx_status_t pdev_get_board_info(const platform_device_protocol_t* 
     return pdev->ops->get_board_info(pdev->ctx, out_info);
 }
 
-// MMIO mapping helpers
+// Used to add a child device with access to the platform device protocol.
+// *index* is the index of the child in the device's pbus_dev.children list.
+// The remaining arguments are the same as the DDK device_add() API.
+static inline zx_status_t pdev_device_add(const platform_device_protocol_t* pdev, uint32_t index,
+                                          device_add_args_t* args, zx_device_t** out) {
+    return pdev->ops->device_add(pdev->ctx, index, args, out);
+}
 
+// MMIO mapping helper.
 static inline zx_status_t pdev_map_mmio_buffer(const platform_device_protocol_t* pdev,
                                                uint32_t index, uint32_t cache_policy,
                                                io_buffer_t* buffer) {

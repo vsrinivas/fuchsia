@@ -27,9 +27,10 @@
 // drivers that exist in a proxy devhost and communicate with the platform bus
 // over an RPC channel.
 //
-// More information can be found at the top of platform-device.c.
+// More information can be found at the top of platform-device.cpp.
 
 namespace platform_bus {
+
 zx_status_t ProxyDevice::UmsSetMode(usb_mode_t mode) {
     rpc_ums_req_t req = {};
     req.header.protocol = ZX_PROTOCOL_USB_MODE_SWITCH;
@@ -37,7 +38,7 @@ zx_status_t ProxyDevice::UmsSetMode(usb_mode_t mode) {
     req.usb_mode = mode;
     rpc_rsp_header_t resp;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::GpioConfig(uint32_t index, uint32_t flags) {
@@ -48,7 +49,7 @@ zx_status_t ProxyDevice::GpioConfig(uint32_t index, uint32_t flags) {
     req.index = index;
     req.flags = flags;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::GpioSetAltFunction(uint32_t index, uint64_t function) {
@@ -59,7 +60,7 @@ zx_status_t ProxyDevice::GpioSetAltFunction(uint32_t index, uint64_t function) {
     req.index = index;
     req.alt_function = function;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::GpioGetInterrupt(uint32_t index, uint32_t flags,
@@ -71,8 +72,8 @@ zx_status_t ProxyDevice::GpioGetInterrupt(uint32_t index, uint32_t flags,
     req.index = index;
     req.flags = flags;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0, out_handle,
-                       1, nullptr);
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp), nullptr,
+                       0, out_handle, 1, nullptr);
 }
 
 zx_status_t ProxyDevice::GpioSetPolarity(uint32_t index, uint32_t polarity) {
@@ -83,7 +84,7 @@ zx_status_t ProxyDevice::GpioSetPolarity(uint32_t index, uint32_t polarity) {
     req.index = index;
     req.polarity = polarity;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::GpioReleaseInterrupt(uint32_t index) {
@@ -93,7 +94,7 @@ zx_status_t ProxyDevice::GpioReleaseInterrupt(uint32_t index) {
     req.header.op = GPIO_RELEASE_INTERRUPT;
     req.index = index;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::GpioRead(uint32_t index, uint8_t* out_value) {
@@ -103,7 +104,7 @@ zx_status_t ProxyDevice::GpioRead(uint32_t index, uint8_t* out_value) {
     req.header.op = GPIO_READ;
     req.index = index;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 
     if (status != ZX_OK) {
         return status;
@@ -120,7 +121,7 @@ zx_status_t ProxyDevice::GpioWrite(uint32_t index, uint8_t value) {
     req.index = index;
     req.value = value;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::ScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_value) {
@@ -130,7 +131,7 @@ zx_status_t ProxyDevice::ScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor
     req.header.op = SCPI_GET_SENSOR_VALUE;
     req.sensor_id = sensor_id;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status == ZX_OK) {
         *sensor_value = resp.sensor_value;
     }
@@ -149,7 +150,7 @@ zx_status_t ProxyDevice::ScpiGetSensor(const char* name, uint32_t* sensor_id) {
     }
     memcpy(&req.name, name, len + 1);
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status == ZX_OK) {
         *sensor_id = resp.sensor_id;
     }
@@ -163,7 +164,7 @@ zx_status_t ProxyDevice::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps)
     req.header.op = SCPI_GET_DVFS_INFO;
     req.power_domain = power_domain;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status == ZX_OK) {
         memcpy(opps, &resp.opps, sizeof(scpi_opp_t));
     }
@@ -177,7 +178,7 @@ zx_status_t ProxyDevice::ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
     req.header.op = SCPI_GET_DVFS_IDX;
     req.power_domain = power_domain;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status == ZX_OK) {
         *idx = resp.dvfs_idx;
     }
@@ -192,7 +193,7 @@ zx_status_t ProxyDevice::ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
     req.power_domain = power_domain;
     req.idx = idx;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::CanvasConfig(zx_handle_t vmo, size_t offset, canvas_info_t* info,
@@ -205,8 +206,8 @@ zx_status_t ProxyDevice::CanvasConfig(zx_handle_t vmo, size_t offset, canvas_inf
     memcpy((void*)&req.info, info, sizeof(canvas_info_t));
     req.offset = offset;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &vmo, 1,
-                              nullptr, 0, nullptr);
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp),
+                              &vmo, 1, nullptr, 0, nullptr);
     if (status == ZX_OK) {
         *canvas_idx = resp.idx;
     }
@@ -220,7 +221,7 @@ zx_status_t ProxyDevice::CanvasFree(uint8_t canvas_idx) {
     req.header.op = CANVAS_FREE;
     req.idx = canvas_idx;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::I2cGetMaxTransferSize(uint32_t index, size_t* out_size) {
@@ -230,7 +231,7 @@ zx_status_t ProxyDevice::I2cGetMaxTransferSize(uint32_t index, size_t* out_size)
     req.header.op = I2C_GET_MAX_TRANSFER;
     req.index = index;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status == ZX_OK) {
         *out_size = resp.max_transfer;
     }
@@ -250,21 +251,14 @@ zx_status_t ProxyDevice::I2cTransact(uint32_t index, const void* write_buf, size
     struct {
         rpc_i2c_req_t i2c;
         uint8_t data[I2C_MAX_TRANSFER_SIZE];
-    } req = {
-        .i2c = {
-            .header = {
-                .txid = 0,
-                .protocol = ZX_PROTOCOL_I2C,
-                .op = I2C_TRANSACT,
-            },
-            .index = index,
-            .write_length = write_length,
-            .read_length = read_length,
-            .complete_cb = complete_cb,
-            .cookie = cookie,
-        },
-        .data = {},
-    };
+    } req = {};
+    req.i2c.header.protocol = ZX_PROTOCOL_I2C;
+    req.i2c.header.op = I2C_TRANSACT;
+    req.i2c.index = index;
+    req.i2c.write_length = write_length;
+    req.i2c.read_length = read_length;
+    req.i2c.complete_cb = complete_cb;
+    req.i2c.cookie = cookie;
     struct {
         rpc_i2c_rsp_t i2c;
         uint8_t data[I2C_MAX_TRANSFER_SIZE];
@@ -274,7 +268,7 @@ zx_status_t ProxyDevice::I2cTransact(uint32_t index, const void* write_buf, size
         memcpy(req.data, write_buf, write_length);
     }
     uint32_t actual;
-    auto status = proxy_->Rpc(&req.i2c.header,
+    auto status = proxy_->Rpc(device_id_, &req.i2c.header,
                               static_cast<uint32_t>(sizeof(req.i2c) + write_length),
                               &resp.i2c.header, sizeof(resp), nullptr, 0, nullptr, 0, &actual);
     if (status != ZX_OK) {
@@ -304,7 +298,7 @@ zx_status_t ProxyDevice::ClkEnable(uint32_t index) {
     req.header.op = CLK_ENABLE;
     req.index = index;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::ClkDisable(uint32_t index) {
@@ -314,7 +308,7 @@ zx_status_t ProxyDevice::ClkDisable(uint32_t index) {
     req.header.op = CLK_DISABLE;
     req.index = index;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
 zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
@@ -399,8 +393,8 @@ zx_status_t ProxyDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
     req.header.op = PDEV_GET_BTI;
     req.index = index;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0, out_handle,
-                       1, nullptr);
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp), nullptr,
+                      0, out_handle, 1, nullptr);
 }
 
 zx_status_t ProxyDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
@@ -409,7 +403,7 @@ zx_status_t ProxyDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
     req.header.protocol = ZX_PROTOCOL_PLATFORM_DEV;
     req.header.op = PDEV_GET_DEVICE_INFO;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status != ZX_OK) {
         return status;
     }
@@ -423,7 +417,7 @@ zx_status_t ProxyDevice::GetBoardInfo(pdev_board_info_t* out_info) {
     req.header.protocol = ZX_PROTOCOL_PLATFORM_DEV;
     req.header.op = PDEV_GET_BOARD_INFO;
 
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status != ZX_OK) {
         return status;
     }
@@ -431,14 +425,32 @@ zx_status_t ProxyDevice::GetBoardInfo(pdev_board_info_t* out_info) {
     return ZX_OK;
 }
 
-zx_status_t ProxyDevice::Create(zx_device_t* parent, fbl::RefPtr<PlatformProxy> proxy) {
+zx_status_t ProxyDevice::DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out) {
+    rpc_pdev_req_t req = {};
+    rpc_pdev_rsp_t resp = {};
+    req.header.protocol = ZX_PROTOCOL_PLATFORM_DEV;
+    req.header.op = PDEV_DEVICE_ADD;
+    req.index = index;
+
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // TODO(voydanoff) We need to provide a way for metadata passed from the platform bus
+    // to be attached to this new device.
+    return Create(zxdev(), resp.device_id, proxy_, args);
+}
+
+zx_status_t ProxyDevice::Create(zx_device_t* parent, uint32_t device_id,
+                                fbl::RefPtr<PlatformProxy> proxy, device_add_args_t* args) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<platform_bus::ProxyDevice> dev(new (&ac)
-                                                platform_bus::ProxyDevice(parent, proxy));
+                                            platform_bus::ProxyDevice(parent, device_id, proxy));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    auto status = dev->Init();
+    auto status = dev->Init(args);
     if (status != ZX_OK) {
         return status;
     }
@@ -448,7 +460,7 @@ zx_status_t ProxyDevice::Create(zx_device_t* parent, fbl::RefPtr<PlatformProxy> 
     return ZX_OK;
 }
 
-zx_status_t ProxyDevice::Init() {
+zx_status_t ProxyDevice::Init(device_add_args_t* args) {
     pdev_device_info_t info;
     auto status = GetDeviceInfo(&info);
     if (status != ZX_OK) {
@@ -467,8 +479,8 @@ zx_status_t ProxyDevice::Init() {
             req.header.protocol = ZX_PROTOCOL_PLATFORM_DEV;
             req.header.op = PDEV_GET_MMIO;
             req.index = i;
-            status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), NULL, 0,
-                                 &rsrc_handle, 1, NULL);
+            status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp),
+                                 NULL, 0, &rsrc_handle, 1, NULL);
             if (status != ZX_OK) {
                 return status;
             }
@@ -496,8 +508,8 @@ zx_status_t ProxyDevice::Init() {
             req.header.protocol = ZX_PROTOCOL_PLATFORM_DEV;
             req.header.op = PDEV_GET_INTERRUPT;
             req.index = i;
-            status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), NULL, 0,
-                                 &rsrc_handle, 1, NULL);
+            status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp),
+                                 NULL, 0, &rsrc_handle, 1, NULL);
             if (status != ZX_OK) {
                 return status;
             }
@@ -516,49 +528,155 @@ zx_status_t ProxyDevice::Init() {
         }
     }
 
-    return DdkAdd(name_);
+    if (args) {
+        ctx_ = args->ctx;
+        device_ops_ = args->ops;
+        proto_id_ = args->proto_id;
+        proto_ops_ = args->proto_ops;
+
+        return DdkAdd(args->name, args->flags, args->props, args->prop_count);
+    } else {
+        return DdkAdd(name_);
+    }
 }
 
 zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     auto* proto = static_cast<ddk::AnyProtocol*>(out);
-    proto->ctx = this;
 
+    // Try driver's get_protocol() first, if it is implemented.
+    if (device_ops_ && device_ops_->get_protocol) {
+        if (device_ops_->get_protocol(ctx_, proto_id, out) == ZX_OK) {
+            return ZX_OK;
+        }
+    }
+
+    // Next try driver's primary protocol.
+    if (proto_ops_ && proto_id_ == proto_id) {
+        proto->ops = proto_ops_;
+        proto->ctx = ctx_;
+        return ZX_OK;
+    }
+
+    // Finally, protocols provided by platform bus.
     switch (proto_id) {
     case ZX_PROTOCOL_PLATFORM_DEV: {
         proto->ops = &pdev_proto_ops_;
-        return ZX_OK;
+        break;
     }
     case ZX_PROTOCOL_USB_MODE_SWITCH: {
         proto->ops = &usb_mode_switch_proto_ops_;
-        return ZX_OK;
+        break;
     }
     case ZX_PROTOCOL_GPIO: {
         proto->ops = &gpio_proto_ops_;
-        return ZX_OK;
+        break;
     }
     case ZX_PROTOCOL_I2C: {
         proto->ops = &i2c_proto_ops_;
-        return ZX_OK;
+        break;
     }
     case ZX_PROTOCOL_CLK: {
         proto->ops = &clk_proto_ops_;
-        return ZX_OK;
+        break;
     }
     case ZX_PROTOCOL_SCPI: {
         proto->ops = &scpi_proto_ops_;
-        return ZX_OK;
+        break;
     }
     case ZX_PROTOCOL_CANVAS: {
         proto->ops = &canvas_proto_ops_;
-        return ZX_OK;
+        break;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    proto->ctx = this;
+    return ZX_OK;
+}
+
+zx_status_t ProxyDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+    if (device_ops_ && device_ops_->open) {
+        return device_ops_->open(ctx_, dev_out, flags);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkOpenAt(zx_device_t** dev_out,  const char* path, uint32_t flags) {
+    if (device_ops_ && device_ops_->open_at) {
+        return device_ops_->open_at(ctx_, dev_out, path, flags);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkClose(uint32_t flags) {
+    if (device_ops_ && device_ops_->close) {
+        return device_ops_->close(ctx_, flags);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+void ProxyDevice::DdkUnbind() {
+    if (device_ops_ && device_ops_->unbind) {
+        device_ops_->unbind(ctx_);
+    }
 }
 
 void ProxyDevice::DdkRelease() {
+    if (device_ops_ && device_ops_->release) {
+        device_ops_->release(ctx_);
+    }
     delete this;
+}
+
+zx_status_t ProxyDevice::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
+    if (device_ops_ && device_ops_->read) {
+        return device_ops_->read(ctx_, buf, count, off, actual);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
+    if (device_ops_ && device_ops_->write) {
+        return device_ops_->write(ctx_, buf, count, off, actual);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_off_t ProxyDevice::DdkGetSize() {
+    if (device_ops_ && device_ops_->get_size) {
+        return device_ops_->get_size(ctx_);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                                  size_t out_len, size_t* actual) {
+    if (device_ops_ && device_ops_->ioctl) {
+        return device_ops_->ioctl(ctx_, op, in_buf, in_len, out_buf, out_len, actual);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkSuspend(uint32_t flags) {
+    if (device_ops_ && device_ops_->suspend) {
+        return device_ops_->suspend(ctx_, flags);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkResume(uint32_t flags) {
+    if (device_ops_ && device_ops_->resume) {
+        return device_ops_->resume(ctx_, flags);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ProxyDevice::DdkRxrpc(zx_handle_t channel) {
+    if (device_ops_ && device_ops_->rxrpc) {
+        return device_ops_->rxrpc(ctx_, channel);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 } // namespace platform_bus

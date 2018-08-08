@@ -19,6 +19,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_get_device_info, GetDeviceInfo,
         zx_status_t (C::*)(pdev_device_info_t*));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_get_board_info, GetBoardInfo,
         zx_status_t (C::*)(pdev_board_info_t*));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_device_add, DeviceAdd,
+        zx_status_t (C::*)(uint32_t, device_add_args_t*,  zx_device_t**));
 
 template <typename D>
 constexpr void CheckPlatformDevProtocolSubclass() {
@@ -38,6 +40,9 @@ constexpr void CheckPlatformDevProtocolSubclass() {
     static_assert(internal::has_pdev_get_board_info<D>::value,
                   "PlatformDevProtocol subclasses must implement "
                   "GetBoardInfo(pdev_board_info_t* out_info)");
+    static_assert(internal::has_pdev_device_add<D>::value,
+                  "PlatformDevProtocol subclasses must implement "
+                  "DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out)");
  }
 
 }  // namespace internal

@@ -70,6 +70,15 @@ static const int a15irqmap[] = {
 #define PCIE_ECAM_SIZE      (0x01000000)
 #define GICV2M_FRAME_PHYS   (PERIPHERAL_BASE_PHYS + 0x08020000)
 
+// Unused MMIO ranges for test drivers
+#define TEST_MMIO_1         (PERIPHERAL_BASE_PHYS + 0)
+#define TEST_MMIO_1_SIZE    0x1000
+#define TEST_MMIO_2         (PERIPHERAL_BASE_PHYS + 0x1000)
+#define TEST_MMIO_2_SIZE    0x2000
+#define TEST_MMIO_3         (PERIPHERAL_BASE_PHYS + 0x3000)
+#define TEST_MMIO_3_SIZE    0x3000
+#define TEST_MMIO_4         (PERIPHERAL_BASE_PHYS + 0x6000)
+#define TEST_MMIO_4_SIZE    0x4000
 
 /* interrupts */
 #define ARM_GENERIC_TIMER_VIRTUAL_INT 27

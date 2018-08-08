@@ -31,6 +31,11 @@ __BEGIN_CDECLS;
 #define PDEV_VID_QEMU               1
 #define PDEV_PID_QEMU               1
 
+#define PDEV_DID_QEMU_TEST_PARENT   1
+#define PDEV_DID_QEMU_TEST_CHILD_1  2
+#define PDEV_DID_QEMU_TEST_CHILD_2  3
+#define PDEV_DID_QEMU_TEST_CHILD_3  4
+
 // 96Boards
 #define PDEV_VID_96BOARDS           2
 #define PDEV_PID_HIKEY960           1

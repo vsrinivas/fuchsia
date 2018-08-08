@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_NAME := platform-bus
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/device-resources.cpp \
     $(LOCAL_DIR)/platform-bus.cpp \
     $(LOCAL_DIR)/platform-bus-bind.c \
     $(LOCAL_DIR)/platform-device.cpp \

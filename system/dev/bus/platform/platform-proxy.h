@@ -19,14 +19,15 @@ class PlatformProxy : public fbl::RefCounted<PlatformProxy> {
 public:
     static zx_status_t Create(zx_device_t* parent, zx_handle_t rpc_channel);
 
-    zx_status_t Rpc(rpc_req_header_t* req, uint32_t req_length, rpc_rsp_header_t* resp,
-                    uint32_t resp_length,  zx_handle_t* in_handles, uint32_t in_handle_count,
+    zx_status_t Rpc(uint32_t device_id, rpc_req_header_t* req, uint32_t req_length,
+                    rpc_rsp_header_t* resp, uint32_t resp_length,
+                    zx_handle_t* in_handles, uint32_t in_handle_count,
                     zx_handle_t* out_handles, uint32_t out_handle_count,
                     uint32_t* out_actual);
 
-    inline zx_status_t Rpc(rpc_req_header_t* req, uint32_t req_length, rpc_rsp_header_t* resp,
-                           uint32_t resp_length) {
-        return Rpc(req, req_length, resp, resp_length, nullptr, 0, nullptr, 0, nullptr);
+    inline zx_status_t Rpc(uint32_t device_id, rpc_req_header_t* req, uint32_t req_length,
+                           rpc_rsp_header_t* resp, uint32_t resp_length) {
+        return Rpc(device_id, req, req_length, resp, resp_length, nullptr, 0, nullptr, 0, nullptr);
     }
 
 private:

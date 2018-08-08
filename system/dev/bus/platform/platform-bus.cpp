@@ -163,7 +163,7 @@ zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev, uint32_t flags) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    return devices_[index]->DeviceAdd();
+    return devices_[index]->Start();
 }
 
 const char* PlatformBus::GetBoardName() {
@@ -379,8 +379,9 @@ zx_status_t PlatformBus::I2cInit(i2c_impl_protocol_t* i2c) {
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::I2cTransact(uint32_t txid, rpc_i2c_req_t* req, pbus_i2c_channel_t* channel,
-                                     const void* write_buf, zx_handle_t channel_handle) {
+zx_status_t PlatformBus::I2cTransact(uint32_t txid, rpc_i2c_req_t* req,
+                                     const pbus_i2c_channel_t* channel, const void* write_buf,
+                                     zx_handle_t channel_handle) {
     if (channel->bus_id >= i2c_buses_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
     }

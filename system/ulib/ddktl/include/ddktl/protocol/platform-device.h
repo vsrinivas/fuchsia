@@ -40,6 +40,7 @@
 //        zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
 //        zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
 //        zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
+//        zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
 //     ...
 // };
 
@@ -55,6 +56,7 @@ public:
         pdev_proto_ops_.get_bti = GetBti;
         pdev_proto_ops_.get_device_info = GetDeviceInfo;
         pdev_proto_ops_.get_board_info = GetBoardInfo;
+        pdev_proto_ops_.device_add = DeviceAdd;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -88,6 +90,11 @@ private:
     static zx_status_t GetBoardInfo(void* ctx, pdev_board_info_t* out_info) {
         return static_cast<D*>(ctx)->GetBoardInfo(out_info);
     }
+
+    static zx_status_t DeviceAdd(void* ctx, uint32_t index, device_add_args_t* args,
+                                 zx_device_t** out) {
+        return static_cast<D*>(ctx)->DeviceAdd(index, args, out);
+    }
 };
 
 class PlatformDevProtocolProxy {
@@ -115,6 +122,10 @@ public:
 
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info) {
         return ops_->get_board_info(ctx_, out_info);
+    }
+
+    zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out) {
+        return ops_->device_add(ctx_, index, args, out);
     }
 
 private:
