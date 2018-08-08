@@ -27,8 +27,8 @@ AudioCoreImpl::AudioCoreImpl() : device_manager_(this) {
   // responsible for receiving audio payloads sent by applications, so it has
   // real time requirements (just like the mixing threads do).  In a perfect
   // world, however, we would want to have this task run on a thread which is
-  // different from the thread which is processing *all* audio service jobs (even
-  // non-realtime ones).  This, however, will take more significant
+  // different from the thread which is processing *all* audio service jobs
+  // (even non-realtime ones).  This, however, will take more significant
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
   async::PostTask(dispatcher_, []() {

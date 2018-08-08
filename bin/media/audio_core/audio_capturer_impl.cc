@@ -1162,8 +1162,8 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // having it armed right now as we are in the process of stopping.
   mix_timer_->Cancel();
 
-  // Transition to the AsyncStoppingCallbackPending state, and signal the service
-  // thread so it can complete the stop operation.
+  // Transition to the AsyncStoppingCallbackPending state, and signal the
+  // service thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
   owner_->ScheduleMainThreadTask(
       [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
