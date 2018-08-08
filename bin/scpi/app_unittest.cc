@@ -15,9 +15,7 @@ class AppTest : public component::testing::TestWithContext {
  protected:
   AppTest() : app_(std::make_unique<App>(TakeContext())) { app_->Start(); }
 
-  void TearDown() override {
-    TestWithContext::TearDown();
-  }
+  void TearDown() override { TestWithContext::TearDown(); }
 
   SystemControllerPtr GetSystemController() {
     SystemControllerPtr system_controller;

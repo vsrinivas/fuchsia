@@ -49,15 +49,16 @@ size_t App::ReadCpuCount(const zx::handle& root_resource) {
 
 bool App::ReadCpuStats() {
   size_t actual, available;
-  zx_status_t err = root_resource_handle_.get_info(ZX_INFO_CPU_STATS, &cpu_stats_[0],
-                                                   num_cores_ * sizeof(zx_info_cpu_stats), &actual,
-                                                   &available);
+  zx_status_t err = root_resource_handle_.get_info(
+      ZX_INFO_CPU_STATS, &cpu_stats_[0], num_cores_ * sizeof(zx_info_cpu_stats),
+      &actual, &available);
   return (err == ZX_OK);
 }
 
 bool App::ReadMemStats() {
-  zx_status_t err = root_resource_handle_.get_info(ZX_INFO_KMEM_STATS, &mem_stats_,
-                                                   sizeof(zx_info_kmem_stats_t), NULL, NULL);
+  zx_status_t err =
+      root_resource_handle_.get_info(ZX_INFO_KMEM_STATS, &mem_stats_,
+                                     sizeof(zx_info_kmem_stats_t), NULL, NULL);
   return (err == ZX_OK);
 }
 
@@ -170,14 +171,14 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
 
   zx_time_t idle_time, busy_time;
   double busypercent_sum = 0;
-  for (size_t i = 0; i<num_cores_; i++) {
+  for (size_t i = 0; i < num_cores_; i++) {
     idle_time = cpu_stats_[i].idle_time - last_cpu_stats_[i].idle_time;
-    busy_time = delay - (idle_time > delay? delay : idle_time);
-    double busypercent = (busy_time * 100)/(double)delay;
+    busy_time = delay - (idle_time > delay ? delay : idle_time);
+    double busypercent = (busy_time * 100) / (double)delay;
     busypercent_sum += busypercent;
   }
 
-  info.cpu_utilization = busypercent_sum/num_cores_;
+  info.cpu_utilization = busypercent_sum / num_cores_;
 
   if (!ReadMemStats()) {
     fprintf(stderr, "ERROR: Failed to get mem_stats_ \n");
@@ -185,8 +186,8 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
     return;
   }
 
-  info.memory_utilization = ((mem_stats_.total_bytes - mem_stats_.free_bytes) * 100 /
-                              mem_stats_.total_bytes);
+  info.memory_utilization = ((mem_stats_.total_bytes - mem_stats_.free_bytes) *
+                             100 / mem_stats_.total_bytes);
 
   callback(fuchsia::scpi::Status::OK, std::move(info));
 }
