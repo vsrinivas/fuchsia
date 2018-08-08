@@ -254,9 +254,7 @@ public:
 
 };
 
-bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, bool* timeout_result) {
-    *timeout_result = false;
-
+zx_status_t DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply) {
     registers::DdiRegs ddi_regs(ddi());
     uint32_t data_reg = ddi_regs.DdiAuxData().addr();
 
@@ -273,8 +271,8 @@ bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, b
     status.set_done(1);
     status.set_timeout(1);
     status.set_rcv_error(1);
-    // The documentation says to not use setting 0 (400us), so use 1 (600us).
-    status.set_timeout_timer_value(1);
+    // The documentation says to not use setting 0 (400us), so use 3 (1600us).
+    status.set_timeout_timer_value(3);
     // TODO(ZX-1416): Support interrupts
     status.set_interrupt_on_done(1);
     // Send busy starts the transaction
@@ -287,12 +285,11 @@ bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, b
         auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space());
         if (!status.send_busy()) {
             if (status.timeout()) {
-                *timeout_result = true;
-                return false;
+                return ZX_ERR_TIMED_OUT;
             }
             if (status.rcv_error()) {
-                LOG_TRACE("DP aux: rcv error\n");
-                return false;
+                LOG_SPEW("DP aux: rcv error\n");
+                return ZX_ERR_IO;
             }
             if (!status.done()) {
                 continue;
@@ -301,7 +298,7 @@ bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, b
             reply->size = status.message_size();
             if (!reply->size || reply->size > DpAuxMessage::kMaxTotalSize) {
                 LOG_TRACE("DP aux: Invalid reply size %d\n", reply->size);
-                return false;
+                return ZX_ERR_IO;
             }
             // Read the reply message from the hardware.
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
@@ -309,15 +306,15 @@ bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, b
                 *reinterpret_cast<uint32_t*>(reply->data + offset) =
                         be32toh(mmio_space()->Read<uint32_t>(data_reg + offset));
             }
-            return true;
+            return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
     }
     LOG_TRACE("DP aux: No reply after %d tries\n", kNumTries);
-    return false;
+    return ZX_ERR_TIMED_OUT;
 }
 
-bool DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply) {
+zx_status_t DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply) {
     // If the DisplayPort sink device isn't ready to handle an Aux message,
     // it can return an AUX_DEFER reply, which means we should retry the
     // request. The spec added a requirement for >=7 defer retries in v1.3,
@@ -329,25 +326,25 @@ bool DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage*
     // Per table 2-43 in v1.1a, we need to retry >3 times, since some
     // DisplayPort sink devices time out on the first DP aux request
     // but succeed on later requests.
-    const int kMaxTimeouts = 3;
+    const int kMaxTimeouts = 5;
 
     unsigned defers_seen = 0;
     unsigned timeouts_seen = 0;
 
     for (;;) {
-        bool timeout_result;
-        if (!SendDpAuxMsg(request, reply, &timeout_result)) {
-            if (timeout_result) {
+        zx_status_t res = SendDpAuxMsg(request, reply);
+        if (res != ZX_OK) {
+            if (res == ZX_ERR_TIMED_OUT) {
                 if (++timeouts_seen == kMaxTimeouts) {
-                    LOG_TRACE("DP aux: Got too many timeouts (%d)\n", kMaxTimeouts);
-                    return false;
+                    LOG_SPEW("DP aux: Got too many timeouts (%d)\n", kMaxTimeouts);
+                    return ZX_ERR_TIMED_OUT;
                 }
                 // Retry on timeout.
                 continue;
             }
             // We do not retry if sending the raw message failed for
             // an unexpected reason.
-            return false;
+            return ZX_ERR_IO;
         }
 
         uint8_t header_byte = reply->data[0];
@@ -364,105 +361,120 @@ bool DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage*
         switch (status) {
             case DP_REPLY_AUX_ACK:
                 // The AUX_ACK implies that we got an I2C ACK too.
-                return true;
+                return ZX_OK;
             case DP_REPLY_AUX_DEFER:
                 if (++defers_seen == kMaxDefers) {
                     LOG_TRACE("DP aux: Received too many AUX DEFERs (%d)\n", kMaxDefers);
-                    return false;
+                    return ZX_ERR_TIMED_OUT;
                 }
                 // Go around the loop again to retry.
                 continue;
             case DP_REPLY_AUX_NACK:
                 LOG_TRACE("DP aux: Reply was not an ack (got AUX_NACK)\n");
-                return false;
+                return ZX_ERR_IO_REFUSED;
             case DP_REPLY_I2C_NACK:
                 LOG_TRACE("DP aux: Reply was not an ack (got I2C_NACK)\n");
-                return false;
+                return ZX_ERR_IO_REFUSED;
             case DP_REPLY_I2C_DEFER:
                 // TODO(ZX-1416): Implement handling of I2C_DEFER.
                 LOG_TRACE("DP aux: Received I2C_DEFER (not implemented)\n");
-                return false;
+                return ZX_ERR_NEXT;
             default:
                 // We got a reply that is not defined by the DisplayPort spec.
                 LOG_TRACE("DP aux: Unrecognized reply (header byte: 0x%x)\n", header_byte);
-                return false;
+                return ZX_ERR_IO;
         }
     }
 }
 
-bool DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size) {
+zx_status_t DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size) {
     while (size > 0) {
         uint32_t chunk_size = static_cast<uint32_t>(MIN(size, DpAuxMessage::kMaxBodySize));
         size_t bytes_read = 0;
-        if (!DpAuxReadChunk(dp_cmd, addr, buf, chunk_size, &bytes_read)) {
-            return false;
+        zx_status_t status = DpAuxReadChunk(dp_cmd, addr, buf, chunk_size, &bytes_read);
+        if (status != ZX_OK) {
+            return status;
         }
         if (bytes_read == 0) {
             // We failed to make progress on the last call.  To avoid the
             // risk of getting an infinite loop from that happening
             // continually, we return.
-            return false;
+            return ZX_ERR_IO;
         }
         buf += bytes_read;
         size -= bytes_read;
     }
-    return true;
+    return ZX_OK;
 }
 
-bool DpDisplay::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
-                               size_t * size_out) {
+zx_status_t DpDisplay::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf,
+                                      uint32_t size_in, size_t * size_out) {
     DpAuxMessage msg;
     DpAuxMessage reply;
-    if (!msg.SetDpAuxHeader(addr, dp_cmd, size_in) || !SendDpAuxMsgWithRetry(msg, &reply)) {
-        return false;
+    if (!msg.SetDpAuxHeader(addr, dp_cmd, size_in)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    zx_status_t status = SendDpAuxMsgWithRetry(msg, &reply);
+    if (status != ZX_OK) {
+        return status;
     }
     size_t bytes_read = reply.size - 1;
     if (bytes_read > size_in) {
         LOG_WARN("DP aux read: Reply was larger than requested\n");
-        return false;
+        return ZX_ERR_IO;
     }
     memcpy(buf, &reply.data[1], bytes_read);
     *size_out = bytes_read;
-    return true;
+    return ZX_OK;
 }
 
-bool DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size) {
+zx_status_t DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size) {
     // Implement this if it's ever needed
     ZX_ASSERT_MSG(size <= 16, "message too large");
 
     DpAuxMessage msg;
     DpAuxMessage reply;
     if (!msg.SetDpAuxHeader(addr, dp_cmd, static_cast<uint32_t>(size))) {
-        return false;
+        return ZX_ERR_INVALID_ARGS;
     }
     memcpy(&msg.data[4], buf, size);
     msg.size = static_cast<uint32_t>(size + 4);
-    if (!SendDpAuxMsgWithRetry(msg, &reply)) {
-        return false;
+    zx_status_t status = SendDpAuxMsgWithRetry(msg, &reply);
+    if (status != ZX_OK) {
+        return status;
     }
     // TODO(ZX-1416): Handle the case where the hardware did a short write,
     // for which we could send the remaining bytes.
     if (reply.size != 1) {
         LOG_WARN("DP aux write: Unexpected reply size\n");
-        return false;
+        return ZX_ERR_IO;
     }
-    return true;
+    return ZX_OK;
 }
 
 bool DpDisplay::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
-    // Ignore failures setting the segment if segment == 0, since it could be the case
-    // that the display doesn't support segments.
-    return (DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcSegmentI2cAddress, &segment, 1) || segment == 0)
-            && DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcDataI2cAddress, &offset, 1)
-            && DpAuxRead(DP_REQUEST_I2C_READ, kDdcDataI2cAddress, buf, len);
+    unsigned tries = 0;
+    static constexpr uint32_t kDdcReadAttempts = 3;
+    while (tries++ < kDdcReadAttempts) {
+        // Ignore failures setting the segment if segment == 0, since it could be the case
+        // that the display doesn't support segments.
+        if ((DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcSegmentI2cAddress, &segment, 1) == ZX_OK
+                    || segment == 0)
+            && DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcDataI2cAddress, &offset, 1) == ZX_OK
+            && DpAuxRead(DP_REQUEST_I2C_READ, kDdcDataI2cAddress, buf, len) == ZX_OK) {
+            return true;
+        }
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+    }
+    return false;
 }
 
 bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {
-    return DpAuxRead(DP_REQUEST_NATIVE_READ, addr, buf, size);
+    return DpAuxRead(DP_REQUEST_NATIVE_READ, addr, buf, size) == ZX_OK;
 }
 
 bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
-    return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size);
+    return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size) == ZX_OK;
 }
 
 // Link training functions

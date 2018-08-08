@@ -22,12 +22,12 @@ private:
 
     bool CheckDisplayLimits(const display_config_t* config) final;
 
-    bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
-    bool DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
-                        size_t* size_out);
-    bool DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size);
-    bool SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, bool* timeout_result);
-    bool SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply);
+    zx_status_t DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
+    zx_status_t DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
+                               size_t* size_out);
+    zx_status_t DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size);
+    zx_status_t SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply);
+    zx_status_t SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply);
 
     bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
