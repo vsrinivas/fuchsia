@@ -32,7 +32,8 @@ void ListCategories::Start(const fxl::CommandLine& command_line) {
   }
 
   trace_controller()->GetKnownCategories(
-      [this](fidl::VectorPtr<fuchsia::tracing::KnownCategory> known_categories) {
+      [this](
+          fidl::VectorPtr<fuchsia::tracing::KnownCategory> known_categories) {
         out() << "Known categories" << std::endl;
         for (const auto& it : *known_categories) {
           out() << "  " << it.name.get() << ": " << it.description.get()

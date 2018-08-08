@@ -28,15 +28,11 @@ Tracer::Tracer(fuchsia::tracing::TraceController* controller)
   wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 }
 
-Tracer::~Tracer() {
-  CloseSocket();
-}
+Tracer::~Tracer() { CloseSocket(); }
 
 void Tracer::Start(fuchsia::tracing::TraceOptions options,
-                   RecordConsumer record_consumer,
-                   ErrorHandler error_handler,
-                   fit::closure start_callback,
-                   fit::closure done_callback) {
+                   RecordConsumer record_consumer, ErrorHandler error_handler,
+                   fit::closure start_callback, fit::closure done_callback) {
   FXL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;
@@ -73,8 +69,7 @@ void Tracer::Stop() {
 }
 
 void Tracer::OnHandleReady(async_dispatcher_t* dispatcher,
-                           async::WaitBase* wait,
-                           zx_status_t status,
+                           async::WaitBase* wait, zx_status_t status,
                            const zx_packet_signal_t* signal) {
   FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 

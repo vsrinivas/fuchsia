@@ -19,12 +19,13 @@ int main(int argc, const char** argv) {
 
   tracing::App app(context.get());
   int32_t return_code = 0;
-  async::PostTask(loop.dispatcher(), [&app, &command_line, &return_code, &loop] {
-    app.Run(command_line, [&return_code, &loop](int32_t code) {
-      return_code = code;
-      loop.Quit();
-    });
-  });
+  async::PostTask(loop.dispatcher(),
+                  [&app, &command_line, &return_code, &loop] {
+                    app.Run(command_line, [&return_code, &loop](int32_t code) {
+                      return_code = code;
+                      loop.Quit();
+                    });
+                  });
   loop.Run();
   return return_code;
 }

@@ -37,7 +37,7 @@ class Record : public CommandWithTraceController {
     bool launchpad = false;
     uint32_t buffer_size_megabytes_hint = 4;
     fuchsia::tracing::BufferingMode buffering_mode =
-      fuchsia::tracing::BufferingMode::ONESHOT;
+        fuchsia::tracing::BufferingMode::ONESHOT;
     std::string output_file_name = "/data/trace.json";
     std::string benchmark_results_file;
     std::string test_suite;

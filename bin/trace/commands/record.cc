@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/spawn.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fdio/spawn.h>
 #include <zx/time.h>
 
 #include <fstream>
@@ -44,9 +44,9 @@ const struct {
   const char* name;
   fuchsia::tracing::BufferingMode mode;
 } kBufferingModes[] = {
-  { "oneshot", fuchsia::tracing::BufferingMode::ONESHOT },
-  { "circular", fuchsia::tracing::BufferingMode::CIRCULAR },
-  { "streaming", fuchsia::tracing::BufferingMode::STREAMING },
+    {"oneshot", fuchsia::tracing::BufferingMode::ONESHOT},
+    {"circular", fuchsia::tracing::BufferingMode::CIRCULAR},
+    {"streaming", fuchsia::tracing::BufferingMode::STREAMING},
 };
 
 zx_handle_t Launch(const std::vector<std::string>& args) {
@@ -96,10 +96,18 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
-  const std::unordered_set<std::string> known_options = {
-      kSpecFile, kCategories, kAppendArgs, kOutputFile, kDuration,
-      kDetach,   kDecouple,   kLaunchpad,  kBufferSize, kBufferingMode,
-      kBenchmarkResultsFile,  kTestSuite};
+  const std::unordered_set<std::string> known_options = {kSpecFile,
+                                                         kCategories,
+                                                         kAppendArgs,
+                                                         kOutputFile,
+                                                         kDuration,
+                                                         kDetach,
+                                                         kDecouple,
+                                                         kLaunchpad,
+                                                         kBufferSize,
+                                                         kBufferingMode,
+                                                         kBenchmarkResultsFile,
+                                                         kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -203,9 +211,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
       }
     }
     if (!found) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option "
-                     << kBufferingMode << ": "
-                     << command_line.options()[index].value;
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferingMode
+                     << ": " << command_line.options()[index].value;
       return false;
     }
   }

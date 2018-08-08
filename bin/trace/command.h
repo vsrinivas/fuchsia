@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>
 
-#include <lib/fit/function.h>
 #include <fuchsia/tracing/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"

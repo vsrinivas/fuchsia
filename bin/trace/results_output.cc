@@ -37,8 +37,7 @@ double StdDev(const std::vector<double>& samples, double average) {
   return std::sqrt(sum_of_squared_deltas / samples.size());
 }
 
-void OutputSamples(std::ostream& out,
-                   const std::vector<double>& values,
+void OutputSamples(std::ostream& out, const std::vector<double>& values,
                    const std::string& unit) {
   FXL_DCHECK(!values.empty());
   if (values.size() == 1) {
