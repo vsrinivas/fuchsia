@@ -17,6 +17,7 @@
 TOKEN(NotAToken)
 TOKEN(EndOfFile)
 TOKEN(Comment)
+TOKEN(DocComment)
 
 // Identifiers and constants
 TOKEN(Identifier)

@@ -57,11 +57,6 @@ void LiteralConstant::Accept(TreeVisitor& visitor) {
 
 void Attribute::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
-    visitor.OnIdentifier(name);
-    // Values are optional.
-    if (value != nullptr) {
-        visitor.OnStringLiteral(*value);
-    }
 }
 
 void AttributeList::Accept(TreeVisitor& visitor) {

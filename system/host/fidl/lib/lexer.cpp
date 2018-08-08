@@ -148,10 +148,22 @@ Token Lexer::LexStringLiteral() {
     }
 }
 
-Token Lexer::LexComment() {
+Token Lexer::LexCommentOrDocComment() {
     // Consume the second /.
     assert(Peek() == '/');
     Consume();
+
+    // Check if it's a Doc Comment
+    auto comment_type = Token::Kind::kComment;
+    if (Peek() == '/') {
+        comment_type = Token::Kind::kDocComment;
+        Consume();
+        // Anything with more than 3 slashes is a likely a section
+        // break comment
+        if (Peek() == '/') {
+          comment_type = Token::Kind::kComment;
+        }
+    }
 
     // Lexing a C++-style // comment. Go to the end of the line or
     // file.
@@ -159,7 +171,7 @@ Token Lexer::LexComment() {
         switch (Peek()) {
         case 0:
         case '\n':
-            return Finish(Token::Kind::kComment);
+          return Finish(comment_type);
         default:
             Consume();
             continue;
@@ -287,7 +299,7 @@ Token Lexer::Lex() {
         // Maybe the start of a comment.
         switch (Peek()) {
         case '/':
-            return LexComment();
+            return LexCommentOrDocComment();
         default:
             return Finish(Token::Kind::kNotAToken);
         }

@@ -107,6 +107,7 @@ private:
     std::unique_ptr<raw::Constant> ParseConstant();
 
     std::unique_ptr<raw::Attribute> ParseAttribute();
+    std::unique_ptr<raw::Attribute> ParseDocComment();
     std::unique_ptr<raw::AttributeList> ParseAttributeList();
     std::unique_ptr<raw::AttributeList> MaybeParseAttributeList();
 

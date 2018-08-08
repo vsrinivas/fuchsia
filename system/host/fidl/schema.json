@@ -124,6 +124,9 @@
                 "name": {
                     "$ref": "#/definitions/identifier"
                 },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "value": {
                     "$ref": "#/definitions/constant"
                 }
@@ -280,6 +283,9 @@
                 "offset": {
                     "$ref": "#/definitions/size"
                 },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "maybe_default_value": {
                     "$ref": "#/definitions/constant"
                 }
@@ -341,6 +347,9 @@
                 },
                 "offset": {
                     "$ref": "#/definitions/size"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
                 }
             }
         },

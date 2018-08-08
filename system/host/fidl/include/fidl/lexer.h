@@ -49,7 +49,7 @@ private:
     Token LexIdentifier();
     Token LexEscapedIdentifier();
     Token LexStringLiteral();
-    Token LexComment();
+    Token LexCommentOrDocComment();
 
     const SourceFile& source_file_;
     const IdentifierTable* identifier_table_;

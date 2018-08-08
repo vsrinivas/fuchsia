@@ -363,10 +363,11 @@ struct Const : public Decl {
 
 struct Enum : public Decl {
     struct Member {
-        Member(SourceLocation name, std::unique_ptr<Constant> value)
-            : name(name), value(std::move(value)) {}
+        Member(SourceLocation name, std::unique_ptr<Constant> value, std::unique_ptr<raw::AttributeList> attributes)
+            : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
         SourceLocation name;
         std::unique_ptr<Constant> value;
+        std::unique_ptr<raw::AttributeList> attributes;
     };
 
     Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type,
@@ -432,12 +433,15 @@ struct Interface : public Decl {
 struct Struct : public Decl {
     struct Member {
         Member(std::unique_ptr<Type> type, SourceLocation name,
-               std::unique_ptr<Constant> maybe_default_value)
+               std::unique_ptr<Constant> maybe_default_value,
+               std::unique_ptr<raw::AttributeList> attributes)
             : type(std::move(type)), name(std::move(name)),
-              maybe_default_value(std::move(maybe_default_value)) {}
+              maybe_default_value(std::move(maybe_default_value)),
+              attributes(std::move(attributes)) {}
         std::unique_ptr<Type> type;
         SourceLocation name;
         std::unique_ptr<Constant> maybe_default_value;
+        std::unique_ptr<raw::AttributeList> attributes;
         FieldShape fieldshape;
     };
 
@@ -452,10 +456,11 @@ struct Struct : public Decl {
 
 struct Union : public Decl {
     struct Member {
-        Member(std::unique_ptr<Type> type, SourceLocation name)
-            : type(std::move(type)), name(std::move(name)) {}
+        Member(std::unique_ptr<Type> type, SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
+            : type(std::move(type)), name(std::move(name)), attributes(std::move(attributes)) {}
         std::unique_ptr<Type> type;
         SourceLocation name;
+        std::unique_ptr<raw::AttributeList> attributes;
         FieldShape fieldshape;
     };
 

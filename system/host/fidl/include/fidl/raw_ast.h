@@ -184,13 +184,13 @@ public:
 
 class Attribute : public SourceElement {
 public:
-    Attribute(Token start, Token end, std::unique_ptr<Identifier> name, std::unique_ptr<StringLiteral> value)
+    Attribute(Token start, Token end, std::string name, std::string value)
         : SourceElement(start, end), name(std::move(name)), value(std::move(value)) {}
 
     void Accept(TreeVisitor& visitor);
 
-    std::unique_ptr<Identifier> name;
-    std::unique_ptr<StringLiteral> value;
+    const std::string name;
+    const std::string value;
 };
 
 class AttributeList : public SourceElement {
@@ -200,7 +200,7 @@ public:
 
     bool HasAttribute(fidl::StringView name) const {
         for (const auto& attribute : attribute_list) {
-            if (attribute->name->location().data() == name)
+            if (StringView(attribute->name) == name)
                 return true;
         }
         return false;
@@ -341,13 +341,14 @@ public:
 
 class EnumMember : public SourceElement {
 public:
-    EnumMember(Token end, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value)
-        : SourceElement(identifier->start_, end), identifier(std::move(identifier)), value(std::move(value)) {}
+    EnumMember(Token end, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value, std::unique_ptr<AttributeList> attributes)
+        : SourceElement(identifier->start_, end), identifier(std::move(identifier)), value(std::move(value)), attributes(std::move(attributes)) {}
 
     void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<Constant> value;
+    std::unique_ptr<AttributeList> attributes;
 };
 
 class EnumDeclaration : public SourceElement {
@@ -428,15 +429,17 @@ public:
 class StructMember : public SourceElement {
 public:
     StructMember(Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
-                 std::unique_ptr<Constant> maybe_default_value)
+                 std::unique_ptr<Constant> maybe_default_value,
+                 std::unique_ptr<AttributeList> attributes)
         : SourceElement(type->start_, end), type(std::move(type)), identifier(std::move(identifier)),
-          maybe_default_value(std::move(maybe_default_value)) {}
+          maybe_default_value(std::move(maybe_default_value)), attributes(std::move(attributes)) {}
 
     void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<Constant> maybe_default_value;
+    std::unique_ptr<AttributeList> attributes;
 };
 
 class StructDeclaration : public SourceElement {
@@ -457,13 +460,15 @@ public:
 
 class UnionMember : public SourceElement {
 public:
-    UnionMember(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
-        : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)) {}
+    UnionMember(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
+                std::unique_ptr<AttributeList> attributes)
+        : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)), attributes(std::move(attributes)) {}
 
     void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<AttributeList> attributes;
 };
 
 class UnionDeclaration : public SourceElement {

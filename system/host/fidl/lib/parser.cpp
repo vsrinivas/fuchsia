@@ -28,6 +28,10 @@ namespace fidl {
     case Token::Kind::kHandle:     \
     case Token::Kind::kRequest
 
+#define TOKEN_ATTR_CASES           \
+    case Token::Kind::kDocComment: \
+    case Token::Kind::kLeftSquare
+
 #define TOKEN_LITERAL_CASES            \
     case Token::Kind::kTrue:           \
     case Token::Kind::kFalse:          \
@@ -226,7 +230,18 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
         if (!Ok())
             return Fail();
     }
-    return std::make_unique<raw::Attribute>(name->start_, MarkLastUseful(), std::move(name), std::move(value));
+
+    std::string str_name("");
+    std::string str_value("");
+    if (name)
+        str_name = std::string(name->location().data().data(), name->location().data().size());
+    if (value) {
+        auto data = value->location().data();
+        if (data.size() >= 2 && data[0] == '"' && data[data.size() - 1] == '"') {
+            str_value = std::string(value->location().data().data() + 1, value->location().data().size() - 2);
+        }
+    }
+    return std::make_unique<raw::Attribute>(name->start_, MarkLastUseful(), str_name, str_value);
 }
 
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList() {
@@ -247,9 +262,37 @@ std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList() {
     return std::make_unique<raw::AttributeList>(start, MarkLastUseful(), std::move(attribute_list));
 }
 
+std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
+    std::string str_value("");
+    Token doc_line;
+    while (Peek() == Token::Kind::kDocComment) {
+        doc_line = ConsumeToken(Token::Kind::kDocComment);
+        str_value += std::string(doc_line.location().data().data() + 3, doc_line.location().data().size() - 2);
+        assert(Ok());
+    }
+    return std::make_unique<raw::Attribute>(doc_line, MarkLastUseful(), "doc", str_value);
+}
+
 std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
-    if (Peek() == Token::Kind::kLeftSquare)
-        return ParseAttributeList();
+    std::unique_ptr<raw::Attribute> doc_comment;
+    Token start;
+    // Doc comments must appear above attributes
+    if (Peek() == Token::Kind::kDocComment) {
+        doc_comment = ParseDocComment();
+    }
+    if (Peek() == Token::Kind::kLeftSquare) {
+        auto list = ParseAttributeList();
+        if (list && doc_comment) {
+            list->attribute_list.emplace_back(std::move(doc_comment));
+        }
+        return list;
+    }
+    // no generic attributes, start the attribute list
+    if (doc_comment) {
+        std::vector<std::unique_ptr<raw::Attribute>> attribute_list;
+        attribute_list.emplace_back(std::move(doc_comment));
+        return std::make_unique<raw::AttributeList>(MarkLastUseful(), MarkLastUseful(), std::move(attribute_list));
+    }
     return nullptr;
 }
 
@@ -561,6 +604,9 @@ Parser::ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
 }
 
 std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
+    auto attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
     auto identifier = ParseIdentifier();
     if (!Ok())
         return Fail();
@@ -573,7 +619,7 @@ std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::EnumMember>(MarkLastUseful(), std::move(identifier), std::move(member_value));
+    return std::make_unique<raw::EnumMember>(MarkLastUseful(), std::move(identifier), std::move(member_value), std::move(attributes));
 }
 
 std::unique_ptr<raw::EnumDeclaration>
@@ -605,6 +651,8 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
             ConsumeToken(Token::Kind::kRightCurly, true);
             return Done;
 
+        TOKEN_ATTR_CASES:
+            // intentional fallthrough for attribute parsing
         TOKEN_TYPE_CASES:
             members.emplace_back(ParseEnumMember());
             return More;
@@ -802,6 +850,9 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
 }
 
 std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
+    auto attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
     auto type = ParseType();
     if (!Ok())
         return Fail();
@@ -820,7 +871,7 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
 
     return std::make_unique<raw::StructMember>(MarkLastUseful(),
                                                std::move(type), std::move(identifier),
-                                               std::move(maybe_default_value));
+                                               std::move(maybe_default_value), std::move(attributes));
 }
 
 std::unique_ptr<raw::StructDeclaration>
@@ -838,15 +889,13 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
         return Fail();
 
     auto parse_member = [&members, this]() {
-        std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
-        if (!Ok())
-            return More;
-
         switch (Peek()) {
         default:
             ConsumeToken(Token::Kind::kRightCurly, true);
             return Done;
 
+        TOKEN_ATTR_CASES:
+            // intentional fallthrough for attribute parsing
         TOKEN_TYPE_CASES:
             members.emplace_back(ParseStructMember());
             return More;
@@ -872,6 +921,9 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
 }
 
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
+    auto attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
     auto type = ParseType();
     if (!Ok())
         return Fail();
@@ -879,7 +931,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::UnionMember>(type->start_, MarkLastUseful(), std::move(type), std::move(identifier));
+    return std::make_unique<raw::UnionMember>(type->start_, MarkLastUseful(), std::move(type), std::move(identifier), std::move(attributes));
 }
 
 std::unique_ptr<raw::UnionDeclaration>
@@ -897,15 +949,13 @@ Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
         return Fail();
 
     auto parse_member = [&members, this]() {
-        std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
-        if (!Ok())
-            return More;
-
         switch (Peek()) {
         default:
             ConsumeToken(Token::Kind::kRightCurly, true);
             return Done;
 
+        TOKEN_ATTR_CASES:
+            // intentional fallthrough for attribute parsing
         TOKEN_TYPE_CASES:
             members.emplace_back(ParseUnionMember());
             return More;

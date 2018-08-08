@@ -24,6 +24,7 @@ void EmitBoolean(std::ostream* file, bool value) {
 
 void EmitString(std::ostream* file, StringView value) {
     *file << "\"";
+
     for (size_t i = 0; i < value.size(); ++i) {
         const char c = value[i];
         switch (c) {
@@ -33,7 +34,10 @@ void EmitString(std::ostream* file, StringView value) {
         case '\\':
             *file << "\\\\";
             break;
-        // TODO(TO-824): Escape more characters.
+        case '\n':
+            *file << "\\n";
+            break;
+        // TODO(FIDL-28): Escape more characters.
         default:
             *file << c;
             break;
@@ -308,8 +312,8 @@ void JSONGenerator::Generate(const flat::Type& value) {
 void JSONGenerator::Generate(const raw::Attribute& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
-        if (value.value)
-            GenerateObjectMember("value", value.value->location());
+        if (value.value != "")
+            GenerateObjectMember("value", value.value);
         else
             GenerateObjectMember("value", StringView());
     });
@@ -355,6 +359,8 @@ void JSONGenerator::Generate(const flat::Enum::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
         GenerateObjectMember("value", value.value);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
     });
 }
 
@@ -418,6 +424,8 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::kFirst);
         GenerateObjectMember("name", value.name);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         if (value.maybe_default_value)
             GenerateObjectMember("maybe_default_value", value.maybe_default_value);
         GenerateObjectMember("size", value.fieldshape.Size());
@@ -443,6 +451,8 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::kFirst);
         GenerateObjectMember("name", value.name);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("size", value.fieldshape.Size());
         GenerateObjectMember("alignment", value.fieldshape.Alignment());
         GenerateObjectMember("offset", value.fieldshape.Offset());

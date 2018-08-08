@@ -228,11 +228,10 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
     if (!attributes)
         return fidl::StringView();
     for (const auto& attribute : attributes->attribute_list) {
-        if (attribute->name->location().data() == name) {
-            if (attribute->value) {
-                auto value = attribute->value->location().data();
-                if (value.size() >= 2 && value[0] == '"' && value[value.size() - 1] == '"')
-                    return fidl::StringView(value.data() + 1, value.size() - 2);
+        if (StringView(attribute->name) == name) {
+            if (attribute->value != "") {
+                auto value = attribute->value;
+                return fidl::StringView(value.data(), value.size());
             }
             // Don't search for another attribute with the same name.
             break;
@@ -544,7 +543,8 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         std::unique_ptr<Constant> value;
         if (!ConsumeConstant(std::move(member->value), location, &value))
             return false;
-        members.emplace_back(location, std::move(value));
+        auto attributes = std::move(member->attributes);
+        members.emplace_back(location, std::move(value), std::move(attributes));
     }
     auto type = types::PrimitiveSubtype::kUint32;
     if (enum_declaration->maybe_subtype)
@@ -640,8 +640,9 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                                  &maybe_default_value))
                 return false;
         }
+        auto attributes = std::move(member->attributes);
         members.emplace_back(std::move(type), member->identifier->location(),
-                             std::move(maybe_default_value));
+                             std::move(maybe_default_value), std::move(attributes));
     }
 
     struct_declarations_.push_back(
@@ -656,7 +657,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         std::unique_ptr<Type> type;
         if (!ConsumeType(std::move(member->type), location, &type))
             return false;
-        members.emplace_back(std::move(type), location);
+        auto attributes = std::move(member->attributes);
+        members.emplace_back(std::move(type), location, std::move(attributes));
     }
 
     auto attributes = std::move(union_declaration->attributes);
