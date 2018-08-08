@@ -240,8 +240,9 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d", context->IdForTarget(
-                            settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d",
+          context->IdForTarget(
+              settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();

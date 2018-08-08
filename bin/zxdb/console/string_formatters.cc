@@ -4,14 +4,13 @@
 
 #include <float.h>
 
-#include "garnet/bin/zxdb/console/string_formatters.h"
 #include "garnet/bin/zxdb/client/register.h"
+#include "garnet/bin/zxdb/console/string_formatters.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
-Err GetFPString(const Register& reg, std::string* out,
-                           int precision) {
+Err GetFPString(const Register& reg, std::string* out, int precision) {
   switch (reg.size()) {
     case 4:
       precision = precision != 0 ? precision : FLT_DIG;

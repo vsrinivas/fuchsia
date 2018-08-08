@@ -50,9 +50,10 @@ class ThreadSink : public RemoteAPI {
       const debug_ipc::BacktraceRequest& request,
       std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) override {
     // Returns the canned response.
-    debug_ipc::MessageLoop::Current()->PostTask([
-      cb, response = frames_response_
-    ]() { cb(Err(), std::move(response)); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [cb, response = frames_response_]() {
+          cb(Err(), std::move(response));
+        });
   }
 
   void Resume(

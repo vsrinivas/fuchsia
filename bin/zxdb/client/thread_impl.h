@@ -37,7 +37,8 @@ class ThreadImpl : public Thread {
   bool HasAllFrames() const override;
   void SyncFrames(std::function<void()> callback) override;
 
-  void GetRegisters(std::function<void(const Err&, const RegisterSet&)>) override;
+  void GetRegisters(
+      std::function<void(const Err&, const RegisterSet&)>) override;
 
   // NOTE: If the registers are not up to date, the set can be null.
   const RegisterSet* registers() const { return registers_.get(); }

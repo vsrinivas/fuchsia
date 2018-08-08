@@ -19,7 +19,6 @@ bool ModifiedType::IsTypeModifierTag(int tag) {
          tag == kTagVolatileType || tag == kTagImportedDeclaration;
 }
 
-
 std::string ModifiedType::ComputeFullName() const {
   static const char kUnknown[] = "<unknown>";
   const Type* modified_type = modified().Get()->AsType();

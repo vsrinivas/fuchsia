@@ -102,7 +102,8 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveTarget(cmd.target());
 
   OutputBuffer out;
-  FormatFrame(cmd.frame(), &out, true, context->GetActiveFrameIdForThread(cmd.thread()));
+  FormatFrame(cmd.frame(), &out, true,
+              context->GetActiveFrameIdForThread(cmd.thread()));
   console->Output(out);
   return true;
 }
@@ -420,7 +421,8 @@ void ListBreakpoints(ConsoleContext* context) {
 // Returns true if breakpoint was specified (and therefore nothing else
 // should be called. If breakpoint is specified but there was an error, *err
 // will be set.
-bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd,
+                          Err* err) {
   if (!cmd.HasNoun(Noun::kBreakpoint))
     return false;
 

@@ -22,21 +22,25 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
 
 // Generates help for a command describing the parsing of locations. The
 // parameter is a string containing the name of the command.
-#define LOCATION_ARG_HELP(cmd) \
-    "  <symbol>\n" \
-    "    " cmd " main\n" \
-    "    " cmd " Foo::Bar\n" \
-    "\n" \
-    "  <file>:<line>\n" \
-    "    " cmd " foo.cc:123\n" \
-    "\n" \
-    "    ▷ To disambiguate different files with the same name, include\n" \
-    "      directory names preceeding the name (from the right).\n" \
-    "\n" \
-    "  <line number> (within the frame's file)\n" \
-    "    " cmd " 123\n" \
-    "\n" \
-    "  *<address>\n" \
-    "    " cmd " *0x7d12362f0\n"
+#define LOCATION_ARG_HELP(cmd)                                            \
+  "  <symbol>\n"                                                          \
+  "    " cmd                                                              \
+  " main\n"                                                               \
+  "    " cmd                                                              \
+  " Foo::Bar\n"                                                           \
+  "\n"                                                                    \
+  "  <file>:<line>\n"                                                     \
+  "    " cmd                                                              \
+  " foo.cc:123\n"                                                         \
+  "\n"                                                                    \
+  "    ▷ To disambiguate different files with the same name, include\n" \
+  "      directory names preceeding the name (from the right).\n"         \
+  "\n"                                                                    \
+  "  <line number> (within the frame's file)\n"                           \
+  "    " cmd                                                              \
+  " 123\n"                                                                \
+  "\n"                                                                    \
+  "  *<address>\n"                                                        \
+  "    " cmd " *0x7d12362f0\n"
 
 }  // namespace zxdb

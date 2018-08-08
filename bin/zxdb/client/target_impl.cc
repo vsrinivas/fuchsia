@@ -117,11 +117,11 @@ void TargetImpl::Kill(Callback callback) {
 void TargetImpl::Attach(uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, weak_ptr = GetWeakPtr()]() {
-          callback(std::move(weak_ptr), Err(
-              "Can't attach, program is already running or starting."));
-        });
+    debug_ipc::MessageLoop::Current()->PostTask([callback,
+                                                 weak_ptr = GetWeakPtr()]() {
+      callback(std::move(weak_ptr),
+               Err("Can't attach, program is already running or starting."));
+    });
     return;
   }
 

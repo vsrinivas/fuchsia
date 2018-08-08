@@ -68,19 +68,19 @@ bool MockDataProvider::GetRegister(int dwarf_register_number,
 void MockDataProvider::GetRegisterAsync(
     int dwarf_register_number,
     std::function<void(bool success, uint64_t value)> callback) {
-  debug_ipc::MessageLoop::Current()->PostTask([
-    callback, weak_provider = weak_factory_.GetWeakPtr(), dwarf_register_number
-  ]() {
-    if (!weak_provider) {
-      ADD_FAILURE();  // Destroyed before callback ready.
-      return;
-    }
+  debug_ipc::MessageLoop::Current()->PostTask(
+      [callback, weak_provider = weak_factory_.GetWeakPtr(),
+       dwarf_register_number]() {
+        if (!weak_provider) {
+          ADD_FAILURE();  // Destroyed before callback ready.
+          return;
+        }
 
-    const auto& found = weak_provider->regs_.find(dwarf_register_number);
-    if (found == weak_provider->regs_.end())
-      callback(false, 0);
-    callback(true, found->second.value);
-  });
+        const auto& found = weak_provider->regs_.find(dwarf_register_number);
+        if (found == weak_provider->regs_.end())
+          callback(false, 0);
+        callback(true, found->second.value);
+      });
 }
 
 void MockDataProvider::GetMemoryAsync(
@@ -117,24 +117,25 @@ void DwarfExprEvalTest::DoEvalTest(
     DwarfExprEval::Completion expected_completion, uint64_t expected_result,
     const char* expected_message) {
   bool callback_issued = false;
-  EXPECT_EQ(expected_completion,
-            eval_.Eval(&provider_, data, [&callback_issued, expected_success,
-                                          expected_completion, expected_result,
-                                          expected_message](DwarfExprEval* eval,
-                                                            const Err& err) {
-              EXPECT_TRUE(eval->is_complete());
-              EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
-              if (err.ok())
-                EXPECT_EQ(expected_result, eval->GetResult());
-              else if (expected_message)
-                EXPECT_EQ(expected_message, err.msg());
-              callback_issued = true;
+  EXPECT_EQ(
+      expected_completion,
+      eval_.Eval(&provider_, data,
+                 [&callback_issued, expected_success, expected_completion,
+                  expected_result,
+                  expected_message](DwarfExprEval* eval, const Err& err) {
+                   EXPECT_TRUE(eval->is_complete());
+                   EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
+                   if (err.ok())
+                     EXPECT_EQ(expected_result, eval->GetResult());
+                   else if (expected_message)
+                     EXPECT_EQ(expected_message, err.msg());
+                   callback_issued = true;
 
-              // When we're doing an async completion, need to exit the message
-              // loop to continue with the test.
-              if (expected_completion == DwarfExprEval::Completion::kAsync)
-                debug_ipc::MessageLoop::Current()->QuitNow();
-            }));
+                   // When we're doing an async completion, need to exit the
+                   // message loop to continue with the test.
+                   if (expected_completion == DwarfExprEval::Completion::kAsync)
+                     debug_ipc::MessageLoop::Current()->QuitNow();
+                 }));
 
   if (expected_completion == DwarfExprEval::Completion::kAsync) {
     // In the async case the message loop needs to be run to get the result.

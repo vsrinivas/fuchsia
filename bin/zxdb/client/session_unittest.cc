@@ -4,11 +4,11 @@
 
 #include <set>
 
-#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_controller.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/remote_api_test.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"

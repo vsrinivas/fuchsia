@@ -33,11 +33,10 @@ EXPORT int DoStructCall(const Struct& arg1, int arg2) {
   }
 }
 
-}  // my_ns
+}  // namespace my_ns
 
 // TODO(brettw) test:
 //   stuff in an anonymous namespace
 //   typedef
 //   using
 //   local types defined in functions
-

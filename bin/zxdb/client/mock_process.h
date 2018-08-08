@@ -41,4 +41,4 @@ class MockProcess : public Process {
   FXL_DISALLOW_COPY_AND_ASSIGN(MockProcess);
 };
 
-}  // namespace
+}  // namespace zxdb

@@ -18,9 +18,7 @@ class SymbolContext {
   // Creates a symbol context has no offset. Using it will return addresses
   // relative to the module. This can be useful for testing and for resolving
   // which symbols might be available even when no program is running.
-  static SymbolContext ForRelativeAddresses() {
-    return SymbolContext();
-  }
+  static SymbolContext ForRelativeAddresses() { return SymbolContext(); }
 
   explicit SymbolContext(uint64_t load_address) : load_address_(load_address) {}
 

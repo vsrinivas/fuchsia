@@ -41,7 +41,8 @@ class SystemImpl final : public System {
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
   Breakpoint* CreateNewBreakpoint() override;
-  Breakpoint* CreateNewInternalBreakpoint(BreakpointController* controller) override;
+  Breakpoint* CreateNewInternalBreakpoint(
+      BreakpointController* controller) override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
   void Pause() override;
   void Continue() override;

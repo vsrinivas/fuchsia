@@ -9,8 +9,6 @@ namespace zxdb {
 Frame::Frame(Session* session) : ClientObject(session), weak_factory_(this) {}
 Frame::~Frame() = default;
 
-fxl::WeakPtr<Frame> Frame::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<Frame> Frame::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 }  // namespace zxdb

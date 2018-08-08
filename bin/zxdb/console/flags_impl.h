@@ -26,4 +26,4 @@ Err ProcessRun(const std::string& path, std::vector<Action>*);
 Err ProcessScriptFile(const std::string& path, std::vector<Action>*,
                       const std::string& mock_contents = std::string());
 
-}   // namespace zxdb
+}  // namespace zxdb

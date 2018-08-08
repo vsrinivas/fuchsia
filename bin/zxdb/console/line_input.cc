@@ -277,7 +277,7 @@ void LineInputBase::HandleTab() {
 }
 
 void LineInputBase::HandleFormFeed() {
-  Write("\033c");   // Form feed.
+  Write("\033c");  // Form feed.
   RepaintLine();
 }
 

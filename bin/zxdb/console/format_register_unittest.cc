@@ -22,8 +22,7 @@ std::vector<uint8_t> CreateData(size_t length) {
   return data;
 }
 
-debug_ipc::Register CreateRegister(RegisterID id,
-                                   size_t length) {
+debug_ipc::Register CreateRegister(RegisterID id, size_t length) {
   debug_ipc::Register reg;
   reg.id = id;
   reg.data = CreateData(length);
@@ -74,7 +73,7 @@ void GetCategories(RegisterSet* registers) {
   *registers = std::move(regs);
 }
 
-}   // namespace
+}  // namespace
 
 TEST(FormatRegisters, GeneralRegisters) {
   RegisterSet registers;
@@ -84,34 +83,36 @@ TEST(FormatRegisters, GeneralRegisters) {
 
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  EXPECT_EQ("General Purpose Registers\n"
-            "Name Size               Value\n"
-            "lr      1                  01\n"
-            "pc      2                0102\n"
-            "sp      4            01020304\n"
-            "cpsr    8   01020304 05060708\n"
-            "\n",
-            out.AsString());
+  EXPECT_EQ(
+      "General Purpose Registers\n"
+      "Name Size               Value\n"
+      "lr      1                  01\n"
+      "pc      2                0102\n"
+      "sp      4            01020304\n"
+      "cpsr    8   01020304 05060708\n"
+      "\n",
+      out.AsString());
 }
 
 TEST(FormatRegisters, VectorRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
   OutputBuffer out;
-  Err err = FormatRegisters(registers, "", &out,
-                            {RegisterCategory::Type::kVector});
+  Err err =
+      FormatRegisters(registers, "", &out, {RegisterCategory::Type::kVector});
 
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  EXPECT_EQ("Vector Registers\n"
-            "Name Size                                 Value\n"
-            "x0      1                                    01\n"
-            "x1      2                                  0102\n"
-            "x2      4                              01020304\n"
-            "x3      8                     01020304 05060708\n"
-            "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
-            "\n",
-            out.AsString());
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "Name Size                                 Value\n"
+      "x0      1                                    01\n"
+      "x1      2                                  0102\n"
+      "x2      4                              01020304\n"
+      "x3      8                     01020304 05060708\n"
+      "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
+      "\n",
+      out.AsString());
 }
 
 TEST(FormatRegisters, AllRegisters) {
@@ -126,28 +127,33 @@ TEST(FormatRegisters, AllRegisters) {
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   // TODO(donosoc): Detect the maximum length and make the the tables coincide.
-  EXPECT_EQ("General Purpose Registers\n"
-            "Name Size               Value\n"
-            "lr      1                  01\n"
-            "pc      2                0102\n"
-            "sp      4            01020304\n"
-            "cpsr    8   01020304 05060708\n"
-            "\n"
-            "Floating Point Registers\n"
-            "Name Size                                 Value                       FP\n"
-            "x20     4                              01020304             2.387939e-38\n"
-            "x21     4                              01020304             2.387939e-38\n"
-            "x24    16   00000000 00000000 00000000 00000000 0.000000000000000000e+00\n"
-            "\n"
-            "Vector Registers\n"
-            "Name Size                                 Value\n"
-            "x0      1                                    01\n"
-            "x1      2                                  0102\n"
-            "x2      4                              01020304\n"
-            "x3      8                     01020304 05060708\n"
-            "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
-            "\n",
-            out.AsString());
+  EXPECT_EQ(
+      "General Purpose Registers\n"
+      "Name Size               Value\n"
+      "lr      1                  01\n"
+      "pc      2                0102\n"
+      "sp      4            01020304\n"
+      "cpsr    8   01020304 05060708\n"
+      "\n"
+      "Floating Point Registers\n"
+      "Name Size                                 Value                       "
+      "FP\n"
+      "x20     4                              01020304             "
+      "2.387939e-38\n"
+      "x21     4                              01020304             "
+      "2.387939e-38\n"
+      "x24    16   00000000 00000000 00000000 00000000 "
+      "0.000000000000000000e+00\n"
+      "\n"
+      "Vector Registers\n"
+      "Name Size                                 Value\n"
+      "x0      1                                    01\n"
+      "x1      2                                  0102\n"
+      "x2      4                              01020304\n"
+      "x3      8                     01020304 05060708\n"
+      "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
+      "\n",
+      out.AsString());
 }
 
 TEST(FormatRegisters, OneRegister) {
@@ -159,11 +165,12 @@ TEST(FormatRegisters, OneRegister) {
 
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  EXPECT_EQ("Vector Registers\n"
-            "Name Size               Value\n"
-            "x3      8   01020304 05060708\n"
-            "\n",
-            out.AsString());
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "Name Size               Value\n"
+      "x3      8   01020304 05060708\n"
+      "\n",
+      out.AsString());
 }
 
 TEST(FormatRegister, RegexSearch) {
@@ -177,12 +184,13 @@ TEST(FormatRegister, RegexSearch) {
 
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  EXPECT_EQ("Vector Registers\n"
-            "Name Size                                 Value\n"
-            "x3      8                     01020304 05060708\n"
-            "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
-            "\n",
-            out.AsString());
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "Name Size                                 Value\n"
+      "x3      8                     01020304 05060708\n"
+      "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
+      "\n",
+      out.AsString());
 }
 
 TEST(FormatRegisters, CannotFindRegister) {
@@ -194,4 +202,4 @@ TEST(FormatRegisters, CannotFindRegister) {
   ASSERT_TRUE(err.has_error());
 }
 
-}   // namespace zxdb
+}  // namespace zxdb

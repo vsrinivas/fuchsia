@@ -4,9 +4,9 @@
 
 #include <stdio.h>
 
+#include <zx/socket.h>
 #include <memory>
 #include <thread>
-#include <zx/socket.h>
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
@@ -19,8 +19,7 @@ namespace {
 
 // Background thread function that runs the in-process debug agent. The loop
 // must outlive this thread.
-void AgentThread(debug_ipc::MessageLoopZircon* loop,
-                 zx::socket socket) {
+void AgentThread(debug_ipc::MessageLoopZircon* loop, zx::socket socket) {
   // Bind the message loop to this thread.
   loop->Init();
 
@@ -37,7 +36,7 @@ void AgentThread(debug_ipc::MessageLoopZircon* loop,
     debug_agent::DebugAgent agent(&router_buffer.stream());
     debug_agent::RemoteAPIAdapter adapter(&agent, &router_buffer.stream());
     router_buffer.set_data_available_callback(
-      [&adapter](){ adapter.OnStreamReadable(); });
+        [&adapter]() { adapter.OnStreamReadable(); });
 
     loop->Run();
   }
@@ -79,7 +78,7 @@ int main(int argc, char* argv[]) {
     // Route data from buffer -> session.
     zxdb::Session session(&buffer.stream());
     buffer.set_data_available_callback(
-        [&session](){ session.OnStreamReadable(); });
+        [&session]() { session.OnStreamReadable(); });
 
     zxdb::Console console(&session);
     console.Init();

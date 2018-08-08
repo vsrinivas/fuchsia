@@ -457,8 +457,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
 
   VariableLocation location;
   decoder.AddCustom(llvm::dwarf::DW_AT_location,
-                    [ unit = die.getDwarfUnit(),
-                      &location ](const llvm::DWARFFormValue& value) {
+                    [unit = die.getDwarfUnit(),
+                     &location](const llvm::DWARFFormValue& value) {
                       location = DecodeVariableLocation(unit, value);
                     });
 

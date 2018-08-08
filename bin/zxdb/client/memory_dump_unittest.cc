@@ -101,4 +101,4 @@ TEST(MemoryDump, Limits) {
   EXPECT_EQ(max % 0x100, byte);
 }
 
-}  // namespace zxd
+}  // namespace zxdb

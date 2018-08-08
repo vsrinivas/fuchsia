@@ -17,7 +17,7 @@
 namespace debug_ipc {
 class BufferedFD;
 class StreamBuffer;
-}
+}  // namespace debug_ipc
 
 namespace zxdb {
 

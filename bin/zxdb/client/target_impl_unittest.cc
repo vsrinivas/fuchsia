@@ -49,9 +49,8 @@ class TargetSink : public RemoteAPI {
   void Attach(
       const debug_ipc::AttachRequest& request,
       std::function<void(const Err&, debug_ipc::AttachReply)> cb) override {
-    MessageLoop::Current()->PostTask([this, cb]() {
-      cb(attach_err_, attach_reply_);
-    });
+    MessageLoop::Current()->PostTask(
+        [this, cb]() { cb(attach_err_, attach_reply_); });
   }
 
   void Detach(
@@ -155,11 +154,11 @@ TEST_F(TargetImplTest, LaunchKill) {
 
   // Try to launch another one in the pending state.
   Err second_launch_err;
-  target->Launch([&second_launch_err](fxl::WeakPtr<Target> target,
-                                      const Err& err) {
-    second_launch_err = err;
-    MessageLoop::Current()->QuitNow();
-  });
+  target->Launch(
+      [&second_launch_err](fxl::WeakPtr<Target> target, const Err& err) {
+        second_launch_err = err;
+        MessageLoop::Current()->QuitNow();
+      });
 
   // We should have two tasks posted the first pending attach and the second
   // pending launch (that we expect to fail). They will both quit so the loop
@@ -229,11 +228,11 @@ TEST_F(TargetImplTest, AttachDetach) {
 
   // Try to launch another one in the pending state.
   Err second_launch_err;
-  target->Launch([&second_launch_err](fxl::WeakPtr<Target> target,
-                                      const Err& err) {
-    second_launch_err = err;
-    MessageLoop::Current()->QuitNow();
-  });
+  target->Launch(
+      [&second_launch_err](fxl::WeakPtr<Target> target, const Err& err) {
+        second_launch_err = err;
+        MessageLoop::Current()->QuitNow();
+      });
 
   // We should have two tasks posted the first pending attach and the second
   // pending launch (that we expect to fail). They will both quit so the loop

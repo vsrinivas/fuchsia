@@ -282,8 +282,7 @@ ModuleSymbolIndex::ModuleSymbolIndex() = default;
 ModuleSymbolIndex::~ModuleSymbolIndex() = default;
 
 void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
-  std::unique_ptr<llvm::DWARFContext> context =
-      llvm::DWARFContext::create(
+  std::unique_ptr<llvm::DWARFContext> context = llvm::DWARFContext::create(
       *object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
   llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units;
@@ -399,7 +398,8 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
 }
 
 void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
-    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit, unsigned unit_index) {
+    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
+    unsigned unit_index) {
   const llvm::DWARFDebugLine::LineTable* line_table =
       context->getLineTableForUnit(unit);
   const char* compilation_dir = unit->getCompilationDir();

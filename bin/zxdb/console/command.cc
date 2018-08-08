@@ -197,8 +197,7 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd,
   auto& verb_record = found->second;
   if (verb_record.exec_cb) {
     return verb_record.exec_cb(context, cmd, callback);
-  }
-  else {
+  } else {
     Err original_err = verb_record.exec(context, cmd);
     if (callback) {
       // We need to call the callback to let the caller know they ran a command
@@ -210,7 +209,6 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd,
                     "callbacks. Going to interactive mode.");
       // Commands without callbacks never quit by callback.
       callback(callback_err);
-
     }
     return original_err;
   }

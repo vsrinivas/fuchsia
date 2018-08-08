@@ -28,7 +28,9 @@ class LoadedModuleSymbols {
 
   // Returns the underlying ModuleSymbols object.
   SystemSymbols::ModuleRef* module_ref() { return module_.get(); }
-  const ModuleSymbols* module_symbols() const { return module_->module_symbols(); }
+  const ModuleSymbols* module_symbols() const {
+    return module_->module_symbols();
+  }
 
   // Base address for the module.
   uint64_t load_address() const { return load_address_; }

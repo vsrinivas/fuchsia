@@ -7,8 +7,7 @@
 namespace zxdb {
 
 LoadedModuleSymbols::LoadedModuleSymbols(
-    fxl::RefPtr<SystemSymbols::ModuleRef> module,
-    uint64_t load_address)
+    fxl::RefPtr<SystemSymbols::ModuleRef> module, uint64_t load_address)
     : module_(std::move(module)),
       load_address_(load_address),
       symbol_context_(load_address) {}

@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/console.h"
-#include "garnet/bin/zxdb/common/err.h"
-#include "garnet/bin/zxdb/client/session.h"
 
 namespace zxdb {
 
@@ -23,10 +23,10 @@ struct FlagRecord;  // Defined below
 // Higher priority means that it trumps other kind of processing results when
 // evaluating multiple flags
 enum class FlagProcessResult : uint32_t {
-  kContinue,    // Go to interactive mode
-  kActions,     // The flags want to run actions.
-                // Schedule them through ActionFlow.
-  kQuit,        // Quit the application without running interactive mode.
+  kContinue,  // Go to interactive mode
+  kActions,   // The flags want to run actions.
+              // Schedule them through ActionFlow.
+  kQuit,      // Quit the application without running interactive mode.
   // Error trumps everything.
   kError = std::numeric_limits<uint32_t>::max()
 };

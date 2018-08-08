@@ -24,10 +24,9 @@ llvm::DWARFUnit* GetUnitWithNameEndingIn(
 
 // Returns the first DIE in the unit with the matching tag and DW_AT_Name
 // attribute. If not found,t he returned DIE will be !isValid().
-llvm::DWARFDie GetFirstDieOfTagAndName(
-    llvm::DWARFContext* context,
-    llvm::DWARFUnit* unit,
-    llvm::dwarf::Tag tag,
-    const std::string& name);
+llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context,
+                                       llvm::DWARFUnit* unit,
+                                       llvm::dwarf::Tag tag,
+                                       const std::string& name);
 
 }  // namespace zxdb

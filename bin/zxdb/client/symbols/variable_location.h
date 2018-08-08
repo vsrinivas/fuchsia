@@ -27,7 +27,7 @@ class VariableLocation {
  public:
   struct Entry {
     uint64_t begin = 0;  // First address.
-    uint64_t end = 0;  // First address past end.
+    uint64_t end = 0;    // First address past end.
 
     std::vector<uint8_t> expression;
   };

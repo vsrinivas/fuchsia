@@ -35,9 +35,7 @@ class MyClass {
   //   DW_TAG_formal_parameter
   //     DW_AT_artificial = true ("this" is the implicit parameter).
   //     DW_AT_type = <reference to "MyClass*" type>
-  NOINLINE int MyMemberOne() {
-    return 42;
-  }
+  NOINLINE int MyMemberOne() { return 42; }
 };
 
 // The DW_TAG_namespace will end here even though the namespace encloses the
@@ -50,14 +48,10 @@ class MyClass {
 //   DW_AT_low_pc = ...  (these indicate there's actually code)
 //   DW_AT_high_pc = ...
 //   DW_AT_specification = <ref to the DIE for the definition>
-NOINLINE int MyClass::Inner::MyMemberTwo() {
-  return 61;
-}
+NOINLINE int MyClass::Inner::MyMemberTwo() { return 61; }
 
 // A function inside the namespace. This function has no separate definition.
-EXPORT int NamespaceFunction() {
-  return 78;
-}
+EXPORT int NamespaceFunction() { return 78; }
 
 }  // namespace my_ns
 
@@ -75,7 +69,7 @@ int MyFunction() {  // Must be on line # ModulSymbols::kMyFunctionLine.
   //   DW_AT_type = <reference to MyClass DIE above>
   my_ns::MyClass my_class;
   return my_class.MyMemberOne() + my_ns::NamespaceFunction() +
-      my_ns::MyClass::Inner::MyMemberTwo();
+         my_ns::MyClass::Inner::MyMemberTwo();
 }
 
 // The inplementation of the MyClass::MyMemberOne will be inserted somewhere in

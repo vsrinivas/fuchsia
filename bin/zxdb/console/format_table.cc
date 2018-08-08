@@ -12,10 +12,9 @@ namespace zxdb {
 
 namespace {
 
-template<typename CellType>
+template <typename CellType>
 bool SpansRemainingCols(const std::vector<ColSpec>& spec,
-                        const std::vector<CellType>& row,
-                        size_t column) {
+                        const std::vector<CellType>& row, size_t column) {
   // The last item in a row will span all remaining columns if there are more
   // in the column spec.
   return column == row.size() - 1 && column < spec.size() - 1;

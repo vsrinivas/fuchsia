@@ -66,14 +66,13 @@ class RunUntilHelper : public ProcessObserver,
                        public TargetObserver,
                        public BreakpointController {
  public:
-  RunUntilHelper(Process* process, InputLocation location,
-                 Callback cb);
+  RunUntilHelper(Process* process, InputLocation location, Callback cb);
 
   // Non-zero frame SPs will check the current frame's SP and only trigger the
   // breakpoint when it matches. A zero SP will ignore the stack and always
   // trigger at the location.
-  RunUntilHelper(Thread* thread, InputLocation location,
-                 uint64_t frame_sp, Callback cb);
+  RunUntilHelper(Thread* thread, InputLocation location, uint64_t frame_sp,
+                 Callback cb);
 
   virtual ~RunUntilHelper();
 
@@ -116,7 +115,7 @@ class RunUntilHelper : public ProcessObserver,
   // Set when an asynchronous deletion is scheduled. We should not schedule
   // another if this is set.
   bool pending_delete_ = false;
-  uint32_t id_;   // Set up by RunUntilHolder.
+  uint32_t id_;  // Set up by RunUntilHolder.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RunUntilHelper);
 };
@@ -263,9 +262,8 @@ void RunUntilHelper::ScheduleDelete() {
   // happens before posted task is run), ensure we only delete once.
   if (!pending_delete_) {
     pending_delete_ = true;
-    debug_ipc::MessageLoop::Current()->PostTask([this]() {
-        RunUntilHolder::Get().DeleteRunUntilHelper(this->id());
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [this]() { RunUntilHolder::Get().DeleteRunUntilHelper(this->id()); });
   }
 }
 

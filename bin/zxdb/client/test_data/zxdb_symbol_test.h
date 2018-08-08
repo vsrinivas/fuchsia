@@ -6,4 +6,4 @@
 
 // Mark the symbols as exported to prevent the linker from stripping them.
 #define EXPORT __attribute__((visibility("default")))
-#define NOINLINE __attribute__ ((noinline))
+#define NOINLINE __attribute__((noinline))

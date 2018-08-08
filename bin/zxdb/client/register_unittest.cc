@@ -181,4 +181,4 @@ TEST(RegisterSet, DWARFMappings) {
     ASSERT_FALSE(set.GetRegisterFromDWARF(i));
 }
 
-}   // namespace zxdb
+}  // namespace zxdb

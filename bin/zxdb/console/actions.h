@@ -23,8 +23,8 @@ class Session;
 class Action {
  public:
   // The functor to be called for each action
-  using ActionFunction = std::function<void(const Action&, const Session&,
-                                            Console*)>;
+  using ActionFunction =
+      std::function<void(const Action&, const Session&, Console*)>;
 
   Action();
   explicit Action(std::string name, ActionFunction action);
@@ -44,12 +44,10 @@ class Action {
   ActionFunction action_;
 };
 
-
 // Owner of generated actions processed by command line. It will keep the
 // actions sorted by priority,
 class ActionFlow {
  public:
-
   // The callback that will be called on complete or error of a particular
   // action.
   using Callback = std::function<void(Err)>;
@@ -72,13 +70,13 @@ class ActionFlow {
   // generated flag actions will run this function as their callback. This
   // function obtains a reference to the ActionFlow singleton and is able
   // to determine which action to run next. If no action is left or the current
-  // once failed, the console will be initiated and interactive mode will be run.
-  // Interactive mode will also run if any action called a command that does not
-  // receive a callback (eg. DoStep).
-  // The calling action also provides information about whether the console
-  // should continue processing the actions. This is different than a failure:
-  // eg. help will stop processing anything else, but it has not failed.
-  // This is indicated by ErrType::kCanceled
+  // once failed, the console will be initiated and interactive mode will be
+  // run. Interactive mode will also run if any action called a command that
+  // does not receive a callback (eg. DoStep). The calling action also provides
+  // information about whether the console should continue processing the
+  // actions. This is different than a failure: eg. help will stop processing
+  // anything else, but it has not failed. This is indicated by
+  // ErrType::kCanceled
   static void PostActionCallback(Err);
 
   // Useful for tests, that require a clean slate everytime
@@ -86,9 +84,7 @@ class ActionFlow {
 
   const std::vector<Action>& flow() const { return flow_; }
   const Action& current_action() const { return flow_[current_action_index_]; }
-  const std::vector<Err>& callbacks() const {
-    return callbacks_;
-  }
+  const std::vector<Err>& callbacks() const { return callbacks_; }
 
  private:
   std::vector<Action> flow_;
@@ -104,4 +100,4 @@ class ActionFlow {
   FXL_DISALLOW_COPY_AND_ASSIGN(ActionFlow);
 };
 
-}   // namespace zxdb
+}  // namespace zxdb

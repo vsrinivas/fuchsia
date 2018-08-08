@@ -59,7 +59,7 @@ const Register* RegisterSet::GetRegisterFromDWARF(uint32_t dwarf_reg_id) const {
 }
 
 bool RegisterSet::GetRegisterValueFromDWARF(uint32_t dwarf_reg_id,
-                                           uint64_t* out) const {
+                                            uint64_t* out) const {
   const Register* reg = GetRegisterFromDWARF(dwarf_reg_id);
   if (!reg)
     return false;
@@ -89,10 +89,9 @@ inline UintType ReadRegisterData(const Register& reg) {
   return *reinterpret_cast<const UintType*>(reg.begin());
 }
 
-}   // namespace
+}  // namespace
 
-Register::Register(debug_ipc::Register reg)
-    : reg_(std::move(reg)) {}
+Register::Register(debug_ipc::Register reg) : reg_(std::move(reg)) {}
 
 uint64_t Register::GetValue() const {
   switch (size()) {
@@ -111,4 +110,4 @@ uint64_t Register::GetValue() const {
   }
 }
 
-}   // namespace zxdb
+}  // namespace zxdb

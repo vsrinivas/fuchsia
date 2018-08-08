@@ -59,7 +59,8 @@ int main(int argc, char* argv[]) {
       help.Append(
           zxdb::Syntax::kComment,
           "Please \"connect <ip>:<port>\" matching what you passed to\n   "
-          "\"debug_agent --port=<port>\" on the target system. Or try \"help\".");
+          "\"debug_agent --port=<port>\" on the target system. Or try "
+          "\"help\".");
       console.Output(std::move(help));
     }
 

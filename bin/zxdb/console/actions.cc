@@ -17,7 +17,7 @@ void PrintCommandFeedback(size_t index, const char* name) {
   printf("---------------------------------------------------------------\n");
 }
 
-}   // namespace
+}  // namespace
 
 // Action ----------------------------------------------------------------------
 
@@ -108,4 +108,4 @@ void ActionFlow::Clear() {
   callbacks_.clear();
 }
 
-}   // namespace zxdb
+}  // namespace zxdb

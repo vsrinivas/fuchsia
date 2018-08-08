@@ -39,4 +39,4 @@ class Type : public Symbol {
   uint32_t byte_size_;
 };
 
-}  // namespace
+}  // namespace zxdb

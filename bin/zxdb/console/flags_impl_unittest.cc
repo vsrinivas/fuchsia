@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/flags.h"
 #include "garnet/bin/zxdb/console/flags_impl.h"
+#include "garnet/bin/zxdb/console/flags.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "gtest/gtest.h"
@@ -47,9 +47,7 @@ class FlagsImplTest : public testing::Test {
     // Reinstall the flags from the system in case other tests change them
     OverrideFlags(InitializeFlags());
   }
-  ~FlagsImplTest() {
-    loop.Cleanup();
-  }
+  ~FlagsImplTest() { loop.Cleanup(); }
 
   debug_ipc::PlatformMessageLoop loop;
   std::unique_ptr<Session> session;
@@ -60,10 +58,9 @@ TEST_F(FlagsImplTest, ScriptFile) {
   // SETUP
   std::vector<Action> actions;
   // We expect 3 calls
-  console->errors_to_run = { Err(), Err(), Err() };
+  console->errors_to_run = {Err(), Err(), Err()};
   // Setup the mock contents
-  std::vector<std::string> mock_commands = {"help",
-                                            "connect 192.168.0.1 2345",
+  std::vector<std::string> mock_commands = {"help", "connect 192.168.0.1 2345",
                                             "run /path/to/binary"};
   std::stringstream ss;
   ss << mock_commands[0] << "\n"
@@ -81,7 +78,7 @@ TEST_F(FlagsImplTest, ScriptFile) {
 
   Err callback_err("FAIL");
   auto callback = [&](Err err) {
-    callback_err  = err;
+    callback_err = err;
     STOP_MESSAGE_LOOP();
   };
   // The callback mechanism depends on a global ActionFlow
@@ -107,10 +104,9 @@ TEST_F(FlagsImplTest, ScriptFileWithFailure) {
   // SETUP
   std::vector<Action> actions;
   // We expect an error
-  console->errors_to_run = { Err(), Err("ERROR"), Err() };
+  console->errors_to_run = {Err(), Err("ERROR"), Err()};
   // Setup the mock contents
-  std::vector<std::string> mock_commands = {"help",
-                                            "connect 192.168.0.1 2345",
+  std::vector<std::string> mock_commands = {"help", "connect 192.168.0.1 2345",
                                             "run /path/to/binary"};
   std::stringstream ss;
   ss << mock_commands[0] << "\n"
@@ -152,4 +148,4 @@ TEST_F(FlagsImplTest, ScriptFileWithFailure) {
   EXPECT_TRUE(flow.callbacks()[1].has_error());
 }
 
-}   // namespace zxdb
+}  // namespace zxdb

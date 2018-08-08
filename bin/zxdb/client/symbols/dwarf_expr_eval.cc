@@ -81,8 +81,8 @@ void DwarfExprEval::ContinueEval() {
     if (instruction_count == kMaxInstructionsAtOnce) {
       // Enough instructions have run at once. Schedule a callback to continue
       // execution in the message loop.
-      debug_ipc::MessageLoop::Current()
-          ->PostTask([weak_eval = weak_factory_.GetWeakPtr()]() {
+      debug_ipc::MessageLoop::Current()->PostTask(
+          [weak_eval = weak_factory_.GetWeakPtr()]() {
             if (weak_eval)
               weak_eval->ContinueEval();
           });
@@ -273,22 +273,23 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
   }
 
   // Must request async.
-  data_provider_->GetRegisterAsync(dwarf_register_number, [
-    weak_eval = weak_factory_.GetWeakPtr(), dwarf_register_number, offset
-  ](bool success, uint64_t value) {
-    if (!weak_eval)
-      return;
-    if (!success) {
-      weak_eval->ReportError(fxl::StringPrintf(
-          "DWARF register %d is required but is not available.",
-          dwarf_register_number));
-      return;
-    }
-    weak_eval->Push(static_cast<uint64_t>(value + offset));
+  data_provider_->GetRegisterAsync(
+      dwarf_register_number,
+      [weak_eval = weak_factory_.GetWeakPtr(), dwarf_register_number, offset](
+          bool success, uint64_t value) {
+        if (!weak_eval)
+          return;
+        if (!success) {
+          weak_eval->ReportError(fxl::StringPrintf(
+              "DWARF register %d is required but is not available.",
+              dwarf_register_number));
+          return;
+        }
+        weak_eval->Push(static_cast<uint64_t>(value + offset));
 
-    // Picks up processing at the next instruction.
-    weak_eval->ContinueEval();
-  });
+        // Picks up processing at the next instruction.
+        weak_eval->ContinueEval();
+      });
 
   return Completion::kAsync;
 }

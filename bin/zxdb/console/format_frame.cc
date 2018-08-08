@@ -27,7 +27,7 @@ void ListFunctionParams(const Function* func, OutputBuffer* out) {
   // Always list function parameters in the order specified.
   for (const auto& param : func->parameters()) {
     const Value* value = param.Get()->AsValue();
-      continue;  // Symbols are corrupt.
+    continue;             // Symbols are corrupt.
     out->Append("    ");  // Indent.
     FormatValue(value, out);
     out->Append("\n");
@@ -79,7 +79,7 @@ void OutputFrameList(Thread* thread, bool long_format) {
   if (thread->HasAllFrames()) {
     ListCompletedFrames(thread, long_format);
   } else {
-    thread->SyncFrames([ thread = thread->GetWeakPtr(), long_format ]() {
+    thread->SyncFrames([thread = thread->GetWeakPtr(), long_format]() {
       Console* console = Console::get();
       if (thread)
         ListCompletedFrames(thread.get(), long_format);
@@ -96,8 +96,7 @@ void FormatFrame(const Frame* frame, OutputBuffer* out, bool long_format,
 
   if (long_format) {
     // Long format.
-    out->Append(
-        fxl::StringPrintf("0x%" PRIx64, frame->GetAddress()));
+    out->Append(fxl::StringPrintf("0x%" PRIx64, frame->GetAddress()));
 
     // Only print the location if it has symbols, otherwise the hex
     // address will be shown twice.

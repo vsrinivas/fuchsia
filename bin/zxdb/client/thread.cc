@@ -17,8 +17,6 @@ void Thread::RemoveObserver(ThreadObserver* observer) {
   observers_.RemoveObserver(observer);
 }
 
-fxl::WeakPtr<Thread> Thread::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<Thread> Thread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 }  // namespace zxdb

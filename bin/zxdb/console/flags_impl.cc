@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/console/flags_impl.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/flags.h"
-#include "garnet/bin/zxdb/console/flags_impl.h"
 #include "garnet/public/lib/fxl/files/file.h"
 #include "garnet/public/lib/fxl/files/path.h"
 #include "garnet/public/lib/fxl/strings/split_string.h"
@@ -35,7 +35,7 @@ using Option = fxl::CommandLine::Option;
 //
 // NOTE: All values must be defined for the macro to work, even if the flag
 // doesn't use them all.
-#define INSTALL_FLAG(flag_name) \
+#define INSTALL_FLAG(flag_name)                                         \
   flags.push_back({k##flag_name##Name, k##flag_name##LongForm,          \
                    k##flag_name##ShortForm, k##flag_name##LongHelp,     \
                    k##flag_name##ShortHelp, k##flag_name##ArgumentName, \
@@ -74,8 +74,8 @@ Err PrintHelp(const std::string& cmd_name) {
       std::string desc = GetFlagLongDescription(*cmd_flag);
       printf("%s\n", desc.c_str());
     } else {
-      return Err(fxl::StringPrintf("Unrecognized flag \"%s\"",
-                                   cmd_name.c_str()));
+      return Err(
+          fxl::StringPrintf("Unrecognized flag \"%s\"", cmd_name.c_str()));
     }
   } else {
     // We're asking for generic help, so we print all the flags' short help.
@@ -104,10 +104,10 @@ const char* kConnectDefaultValue = nullptr;
 
 Err ProcessConnect(const std::string& host, std::vector<Action>* actions) {
   std::string cmd = fxl::StringPrintf("connect %s", host.c_str());
-  actions->push_back(Action("Connect",
-    [cmd = cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
-    }));
+  actions->push_back(Action(
+      "Connect", [cmd = cmd](const Action&, const Session&, Console* console) {
+        console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      }));
   return Err();
 }
 
@@ -125,16 +125,17 @@ const char* kRunDefaultValue = nullptr;
 
 Err ProcessRun(const std::string& path, std::vector<Action>* actions) {
   std::string cmd = fxl::StringPrintf("run %s", path.c_str());
-  actions->push_back(Action("Run",
-    [cmd = cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
-    }));
+  actions->push_back(Action(
+      "Run", [cmd = cmd](const Action&, const Session&, Console* console) {
+        console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      }));
   return Err();
 }
 
 // script-file -----------------------------------------------------------------
 
-const char* kScriptFileName = "Script File"; const char* kScriptFileLongForm = "script-file";
+const char* kScriptFileName = "Script File";
+const char* kScriptFileLongForm = "script-file";
 const char* kScriptFileShortForm = "S";
 const char* kScriptFileLongHelp =
     R"(Reads a script file from a file.
@@ -187,4 +188,4 @@ std::vector<FlagRecord> InitializeFlags() {
   return flags;
 }
 
-}   // namespace zxdb
+}  // namespace zxdb

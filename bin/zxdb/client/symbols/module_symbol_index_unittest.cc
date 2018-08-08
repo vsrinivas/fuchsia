@@ -128,4 +128,4 @@ TEST(ModuleSymbolIndex, BenchmarkIndexing) {
 }
 #endif  // End indexing benchmark.
 
-}  // namespace
+}  // namespace zxdb

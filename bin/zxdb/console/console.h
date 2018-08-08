@@ -47,9 +47,8 @@ class Console : public debug_ipc::FDWatcher {
   // We pass the result out for callers to use and react accordingly, which
   // can indicate whether they want the console to continue processing
   // commands.
-  virtual Result ProcessInputLine(
-      const std::string& line,
-      CommandCallback callback = nullptr);
+  virtual Result ProcessInputLine(const std::string& line,
+                                  CommandCallback callback = nullptr);
 
  protected:
   Result DispatchInputLine(const std::string& line,

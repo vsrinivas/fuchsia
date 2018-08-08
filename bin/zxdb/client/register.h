@@ -16,7 +16,7 @@
 
 namespace zxdb {
 
-class Register;     // Defined below
+class Register;  // Defined below
 
 // All the information of the registers for a particular thread.
 class RegisterSet {
@@ -35,7 +35,7 @@ class RegisterSet {
   RegisterSet& operator=(RegisterSet&&);
 
   debug_ipc::Arch arch() const { return arch_; }
-  void set_arch(debug_ipc::Arch arch) { arch_ = arch; }   // Mainly for tests.
+  void set_arch(debug_ipc::Arch arch) { arch_ = arch; }  // Mainly for tests.
 
   virtual const CategoryMap& category_map() const { return category_map_; }
 
@@ -72,7 +72,7 @@ class Register {
 
   debug_ipc::RegisterID id() const { return reg_.id; }
 
-  size_t size() const { return reg_.data.size(); }   // In bytes.
+  size_t size() const { return reg_.data.size(); }  // In bytes.
 
   const std::vector<uint8_t>& data() const { return reg_.data; }
 
@@ -86,4 +86,4 @@ class Register {
   debug_ipc::Register reg_;
 };
 
-}   // namespace zxdb
+}  // namespace zxdb

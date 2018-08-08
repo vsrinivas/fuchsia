@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/frame.h"
@@ -12,18 +11,18 @@
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/symbols/value.h"
+#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_frame.h"
+#include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -48,8 +47,7 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 
 // backtrace -------------------------------------------------------------------
 
-const char kBacktraceShortHelp[] =
-    "backtrace / bt: Print a backtrace.";
+const char kBacktraceShortHelp[] = "backtrace / bt: Print a backtrace.";
 const char kBacktraceHelp[] =
     R"(backtrace / bt
 
@@ -648,16 +646,15 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kBacktrace] =
       VerbRecord(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp,
-      kBacktraceHelp, CommandGroup::kQuery);
+                 kBacktraceHelp, CommandGroup::kQuery);
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
                  kContinueHelp, CommandGroup::kStep, SourceAffinity::kSource);
   (*verbs)[Verb::kFinish] =
       VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
                  CommandGroup::kStep);
-  (*verbs)[Verb::kLocals] =
-      VerbRecord(&DoLocals, {"locals"}, kLocalsShortHelp, kLocalsHelp,
-                 CommandGroup::kQuery);
+  (*verbs)[Verb::kLocals] = VerbRecord(&DoLocals, {"locals"}, kLocalsShortHelp,
+                                       kLocalsHelp, CommandGroup::kQuery);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
                  CommandGroup::kProcess);

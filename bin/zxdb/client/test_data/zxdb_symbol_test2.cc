@@ -12,6 +12,4 @@ class ClassInTest2 {
 // units (i.e. source .cc files) so the test can validate unit-relative
 // addressing (otherwise all unit-relative addresses are also valid global
 // addresses).
-int ClassInTest2::FunctionInTest2() {
-  return 99;
-}
+int ClassInTest2::FunctionInTest2() { return 99; }

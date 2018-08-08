@@ -20,7 +20,7 @@ struct MemoryBlock;
 struct Module;
 struct ThreadRecord;
 struct AddressRegion;
-}
+}  // namespace debug_ipc
 
 namespace zxdb {
 

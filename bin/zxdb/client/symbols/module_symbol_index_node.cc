@@ -89,4 +89,4 @@ void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
   }
 }
 
-}  // namespace
+}  // namespace zxdb

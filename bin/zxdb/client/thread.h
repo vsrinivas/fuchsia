@@ -14,8 +14,8 @@
 #include "garnet/bin/zxdb/client/thread_observer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/observer_list.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "garnet/public/lib/fxl/observer_list.h"
 
 namespace zxdb {
 

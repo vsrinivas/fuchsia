@@ -8,7 +8,6 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
@@ -16,6 +15,7 @@
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/symbol_utils.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -75,9 +75,10 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
       if (opts.thread->HasAllFrames()) {
         OnFrames(opts.thread->GetWeakPtr());
       } else {
-        opts.thread->SyncFrames([
-          this_ref, weak_thread = opts.thread->GetWeakPtr()
-        ]() { this_ref->OnFrames(weak_thread); });
+        opts.thread->SyncFrames(
+            [this_ref, weak_thread = opts.thread->GetWeakPtr()]() {
+              this_ref->OnFrames(weak_thread);
+            });
       }
     }
   } else {

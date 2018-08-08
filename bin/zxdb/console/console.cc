@@ -7,10 +7,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -72,7 +72,7 @@ void Console::Clear() {
   // We write directly instead of using Output because WriteToStdout expects
   // to append '\n' to outputs and won't flush it explicitly otherwise.
   line_input_.Hide();
-  const char ff[] = "\033c";   // Form feed.
+  const char ff[] = "\033c";  // Form feed.
   write(STDOUT_FILENO, ff, sizeof(ff));
   line_input_.Show();
 }

@@ -21,7 +21,7 @@ FlagProcessResult UpdateResult(FlagProcessResult prev, FlagProcessResult cur) {
   return std::max(prev, cur);
 }
 
-}   // namespace
+}  // namespace
 
 // Flag Processing -------------------------------------------------------------
 

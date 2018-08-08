@@ -61,8 +61,8 @@ TEST(ModuleSymbols, Basic) {
   SymbolContext symbol_context(0x18000);
 
   // MyFunction() should have one implementation.
-  std::vector<uint64_t> addrs =
-      module.AddressesForFunction(symbol_context, TestSymbolModule::kMyFunctionName);
+  std::vector<uint64_t> addrs = module.AddressesForFunction(
+      symbol_context, TestSymbolModule::kMyFunctionName);
   ASSERT_EQ(1u, addrs.size());
 
   // On one occasion Clang generated a symbol file that listed many functions
@@ -98,17 +98,18 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   // Get address of line 28 which is a normal line with code on both sides.
   int const kLineToQuery = 28;
   std::vector<uint64_t> addrs;
-  addrs = module.AddressesForLine(symbol_context, FileLine(file_name, kLineToQuery));
+  addrs = module.AddressesForLine(symbol_context,
+                                  FileLine(file_name, kLineToQuery));
   ASSERT_LE(1u, addrs.size());
-  Location location =
-      module.LocationForAddress(symbol_context, addrs[0]);
+  Location location = module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(kLineToQuery, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 
   // Lookup the line info. Normally we expect one line table entry for this but
   // don't want to assume that since the compiler could emit multiple entries
   // for it.
-  LineDetails line_details = module.LineDetailsForAddress(symbol_context, addrs[0]);
+  LineDetails line_details =
+      module.LineDetailsForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(file_name, line_details.file_line().file());
   EXPECT_EQ(kLineToQuery, line_details.file_line().line());
   ASSERT_FALSE(line_details.entries().empty());
@@ -125,7 +126,8 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   EXPECT_EQ(begin_range, prev_details.entries().back().range.end());
 
   // The end of the range (which is non-inclusive) should be the next line.
-  LineDetails next_details = module.LineDetailsForAddress(symbol_context, end_range);
+  LineDetails next_details =
+      module.LineDetailsForAddress(symbol_context, end_range);
   EXPECT_EQ(kLineToQuery + 1, next_details.file_line().line());
   EXPECT_EQ(file_name, next_details.file_line().file());
   ASSERT_FALSE(next_details.entries().empty());
@@ -150,8 +152,7 @@ TEST(ModuleSymbols, AddressesForLine) {
   std::vector<uint64_t> addrs;
   addrs = module.AddressesForLine(symbol_context, FileLine(file_name, 27));
   ASSERT_LE(1u, addrs.size());
-  Location location =
-      module.LocationForAddress(symbol_context, addrs[0]);
+  Location location = module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 

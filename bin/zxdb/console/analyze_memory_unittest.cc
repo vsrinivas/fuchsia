@@ -51,9 +51,7 @@ class MyMockRegisterSet : public RegisterSet {
     cat_map_[cat_type].push_back(Register(std::move(ipc_reg)));
   }
 
-  const CategoryMap& category_map() const override {
-    return cat_map_;
-  }
+  const CategoryMap& category_map() const override { return cat_map_; }
 
  private:
   CategoryMap cat_map_;
@@ -125,10 +123,10 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   constexpr uint64_t kAway = 0xFF00000000000;
 
   MyMockRegisterSet registers;
-  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rax, 8u,
-                        kBegin);
-  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rcx, 8u,
-                        kAway);
+  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rax,
+                        8u, kBegin);
+  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rcx,
+                        8u, kAway);
   analysis->SetRegisters(registers);
 
   analysis->Schedule(opts);
@@ -136,11 +134,12 @@ TEST_F(AnalyzeMemoryTest, Basic) {
 
   // The pointer to "inner" aspace entry should be annotated. The "outer"
   // aspace entry is too large and so will be omitted.
-  EXPECT_EQ("Address               Data \n"
-            " 0x1000 0x0000000000001000 ◁ rax. ▷ inside map \"inner\"\n"
-            " 0x1008 0x0000000010000000 ◁ frame 1 SP\n"
-            " 0x1010 0x0000000000000000 \n",
-            output.AsString());
+  EXPECT_EQ(
+      "Address               Data \n"
+      " 0x1000 0x0000000000001000 ◁ rax. ▷ inside map \"inner\"\n"
+      " 0x1008 0x0000000010000000 ◁ frame 1 SP\n"
+      " 0x1010 0x0000000000000000 \n",
+      output.AsString());
 }
 
 }  // namespace zxdb

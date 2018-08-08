@@ -66,8 +66,7 @@ class ModuleSymbolIndex {
 
  private:
   void IndexCompileUnit(llvm::DWARFContext* context,
-                        llvm::DWARFCompileUnit* unit,
-                        unsigned unit_index);
+                        llvm::DWARFCompileUnit* unit, unsigned unit_index);
 
   void IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
                                    llvm::DWARFCompileUnit* unit,

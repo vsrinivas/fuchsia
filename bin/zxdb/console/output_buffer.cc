@@ -32,13 +32,15 @@ const char kVariableEscapeCode[] = "\x1b[36m";  // "[36m' = Cyan.
 using SyntaxColorMap = std::map<Syntax, std::pair<const char*, size_t>>;
 static const SyntaxColorMap& GetSyntaxColorMap() {
   static SyntaxColorMap syntax_color_map = {
-   {Syntax::kHeading, {kBoldEscapeCode, sizeof(kBoldEscapeCode) - 1}},
-   {Syntax::kComment, {kCommentEscapeCode, sizeof(kCommentEscapeCode) - 1}},
-   {Syntax::kError, {kErrorEscapeCode, sizeof(kErrorEscapeCode) - 1}},
-   {Syntax::kWarning, {kWarningEscapeCode, sizeof(kWarningEscapeCode) - 1}},
-   {Syntax::kSpecial, {kSpecialEscapeCode, sizeof(kSpecialEscapeCode) - 1}},
-   {Syntax::kReversed, {kReversedEscapeCode, sizeof(kReversedEscapeCode) - 1}},
-   {Syntax::kVariable, {kVariableEscapeCode, sizeof(kVariableEscapeCode) - 1}},
+      {Syntax::kHeading, {kBoldEscapeCode, sizeof(kBoldEscapeCode) - 1}},
+      {Syntax::kComment, {kCommentEscapeCode, sizeof(kCommentEscapeCode) - 1}},
+      {Syntax::kError, {kErrorEscapeCode, sizeof(kErrorEscapeCode) - 1}},
+      {Syntax::kWarning, {kWarningEscapeCode, sizeof(kWarningEscapeCode) - 1}},
+      {Syntax::kSpecial, {kSpecialEscapeCode, sizeof(kSpecialEscapeCode) - 1}},
+      {Syntax::kReversed,
+       {kReversedEscapeCode, sizeof(kReversedEscapeCode) - 1}},
+      {Syntax::kVariable,
+       {kVariableEscapeCode, sizeof(kVariableEscapeCode) - 1}},
   };
 
   return syntax_color_map;
@@ -81,8 +83,7 @@ static const BackgroundColorMap& GetBackgroundColorMap() {
        {kBackgroundGreen, sizeof(kBackgroundGreen) - 1}},
       {TextBackgroundColor::kMagenta,
        {kBackgroundMagenta, sizeof(kBackgroundMagenta) - 1}},
-      {TextBackgroundColor::kRed,
-       {kBackgroundRed, sizeof(kBackgroundRed) - 1}},
+      {TextBackgroundColor::kRed, {kBackgroundRed, sizeof(kBackgroundRed) - 1}},
       {TextBackgroundColor::kWhite,
        {kBackgroundWhite, sizeof(kBackgroundWhite) - 1}},
       {TextBackgroundColor::kYellow,
@@ -144,8 +145,7 @@ static const ForegroundColorMap& GetForegroundColorMap() {
        {kForegroundGreen, sizeof(kForegroundGreen) - 1}},
       {TextForegroundColor::kMagenta,
        {kForegroundMagenta, sizeof(kForegroundMagenta) - 1}},
-      {TextForegroundColor::kRed,
-       {kForegroundRed, sizeof(kForegroundRed) - 1}},
+      {TextForegroundColor::kRed, {kForegroundRed, sizeof(kForegroundRed) - 1}},
       {TextForegroundColor::kWhite,
        {kForegroundWhite, sizeof(kForegroundWhite) - 1}},
       {TextForegroundColor::kYellow,

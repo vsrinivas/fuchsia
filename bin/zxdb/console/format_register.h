@@ -32,4 +32,4 @@ std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
 
-}   // namespace zxdb
+}  // namespace zxdb

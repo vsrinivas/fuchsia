@@ -99,10 +99,9 @@ void ThreadImpl::Finish(const Frame* frame,
   // thread stops in between the time this was issued and the time the callback
   // runs, lower frames will be cleared even if they're still valid. Therefore,
   // the only way we can re-match the stack frame is by IP/SP.
-  auto on_have_frames = [
-    weak_thread = weak_factory_.GetWeakPtr(), cb = std::move(cb),
-    ip = frame->GetAddress(), sp = frame->GetStackPointer()
-  ]() {
+  auto on_have_frames = [weak_thread = weak_factory_.GetWeakPtr(),
+                         cb = std::move(cb), ip = frame->GetAddress(),
+                         sp = frame->GetStackPointer()]() {
     if (weak_thread) {
       weak_thread->FinishWithFrames(ip, sp, std::move(cb));
     } else {
@@ -132,7 +131,7 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
   request.thread_koid = koid_;
 
   session()->remote_api()->Backtrace(
-      request, [ callback, thread = weak_factory_.GetWeakPtr() ](
+      request, [callback, thread = weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::BacktraceReply reply) {
         if (!thread)
           return;

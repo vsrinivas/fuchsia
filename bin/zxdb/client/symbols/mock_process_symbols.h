@@ -24,4 +24,4 @@ class MockProcessSymbols : public ProcessSymbols {
   std::vector<uint64_t> AddressesForLine(const FileLine& line) const override;
 };
 
-}  // namespace
+}  // namespace zxdb

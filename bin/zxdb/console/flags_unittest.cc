@@ -14,9 +14,9 @@ using Option = fxl::CommandLine::Option;
 #define CALLED_FUNC(func_name, called_bool)                     \
   FlagRecord::ProcessFunction func_name =                       \
       [called = &called_bool](const Option&, const FlagRecord&, \
-                              std::vector<Action>* actions) {           \
+                              std::vector<Action>* actions) {   \
         *called = true;                                         \
-        actions->push_back({}); \
+        actions->push_back({});                                 \
         return Err();                                           \
       }
 
@@ -25,9 +25,9 @@ const char* kNoArgumentLongForm = "k-no-argument-long-form";
 const char* kNoArgumentLongHelp = "k-no-argument-long-help";
 const char* kNoArgumentShortHelp = "k-no-argument-short-help";
 
-FlagRecord kNoArgument = FlagRecord(
-    kNoArgumentName, kNoArgumentLongForm, nullptr, kNoArgumentLongHelp,
-    kNoArgumentShortHelp, nullptr, nullptr);
+FlagRecord kNoArgument =
+    FlagRecord(kNoArgumentName, kNoArgumentLongForm, nullptr,
+               kNoArgumentLongHelp, kNoArgumentShortHelp, nullptr, nullptr);
 
 const char* kArgumentName = "k-argument-name";
 const char* kArgumentLongForm = "k-argument-long-form";
@@ -35,9 +35,9 @@ const char* kArgumentLongHelp = "k-argument-long-help";
 const char* kArgumentShortHelp = "k-argument-short-help";
 const char* kArgumentArgumentName = "k-argument-argument-name";
 
-FlagRecord kArgument = FlagRecord(
-    kArgumentName, kArgumentLongForm, nullptr, kArgumentLongHelp,
-    kArgumentShortHelp, kArgumentArgumentName, nullptr);
+FlagRecord kArgument =
+    FlagRecord(kArgumentName, kArgumentLongForm, nullptr, kArgumentLongHelp,
+               kArgumentShortHelp, kArgumentArgumentName, nullptr);
 
 const char* kDefaultArgumentName = "k-default-argument-name";
 const char* kDefaultArgumentLongForm = "k-default-argument-long-form";
