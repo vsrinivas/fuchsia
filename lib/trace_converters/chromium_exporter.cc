@@ -44,7 +44,8 @@ bool IsEventTypeSupported(trace::EventType type) {
 const trace::ArgumentValue* GetArgumentValue(
     const fbl::Vector<trace::Argument>& arguments, const char* name) {
   for (const auto& arg : arguments) {
-    if (arg.name() == name) return &arg.value();
+    if (arg.name() == name)
+      return &arg.value();
   }
   return nullptr;
 }
@@ -159,7 +160,8 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
 }
 
 void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
-  if (!IsEventTypeSupported(event.type())) return;
+  if (!IsEventTypeSupported(event.type()))
+    return;
 
   writer_.StartObject();
 
