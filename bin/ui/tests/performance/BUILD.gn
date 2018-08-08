@@ -57,6 +57,9 @@ package("scenic_benchmarks") {
 
 go_library("process_scenic_trace_lib") {
   name = "process_scenic_trace"
+  deps = [
+    "//garnet/go/src/benchmarking",
+  ]
 }
 
 go_binary("process_scenic_trace") {
