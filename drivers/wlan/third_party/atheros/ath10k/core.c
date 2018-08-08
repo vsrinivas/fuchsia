@@ -21,6 +21,8 @@
 #include <string.h>
 
 #include <ddk/driver.h>
+#include <wlan/protocol/mac.h>
+#include <wlan/protocol/phy-impl.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -32,6 +34,7 @@
 #include "htt.h"
 #include "mac.h"
 #include "macros.h"
+#include "pci.h"
 #include "testmode.h"
 #include "wmi.h"
 #include "wmi-ops.h"
@@ -2329,6 +2332,160 @@ err_power_down:
     return ret;
 }
 
+// When the parent (PHY) is removed, this is called to remove MAC itself from the device list.
+static void ath10k_core_mac_unbind(void* ctx) {
+    // TODO(NET-1285): for support multiple.
+    struct ath10k* ar = ctx;
+    zx_status_t status;
+
+    status = device_remove(ar->zxdev_mac);
+    if (status != ZX_OK) {
+        ath10k_err("Unbind MAC failed. Cannot remove device from list: %u\n", status);
+    }
+}
+
+static void ath10k_core_mac_release(void* ctx) {
+    struct ath10k* ar = ctx;
+
+    ZX_DEBUG_ASSERT(ar->num_mac_ifaces);
+    ar->num_mac_ifaces--;
+
+    // The MAC interface has been released, advance the ID so that next creating interface we can
+    // assign a different number.
+    // TODO(NET-1285): for support multiple.
+    ar->iface_id++;
+}
+
+static zx_protocol_device_t device_mac_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .unbind = ath10k_core_mac_unbind,
+    .release = ath10k_core_mac_release,
+};
+
+static void ath10k_core_phy_unbind(void* ctx) {
+    struct ath10k* ar = ctx;
+    zx_status_t status;
+
+    status = device_remove(ar->zxdev);
+    if (status != ZX_OK) {
+        ath10k_err("Unbind PHY failed. remove device from list: %u\n", status);
+    }
+}
+
+static void ath10k_core_phy_release(void* ctx) {
+    // We don't support to delete PHY interface yet, so this is a no-op for now.
+}
+
+static zx_protocol_device_t device_phy_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .unbind = ath10k_core_phy_unbind,
+    .release = ath10k_core_phy_release,
+};
+
+static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_info_t* phy_info) {
+    struct ath10k* ar = ctx;
+
+    // Reset the output values.
+    memset(phy_info, 0, sizeof(*phy_info));
+    wlan_info_t* ifc_info = &phy_info->wlan_info;
+    ath10k_pci_fill_wlan_info(ar, ifc_info);
+
+    return ZX_OK;
+}
+
+static zx_status_t ath10k_core_create_iface(void* ctx, uint16_t mac_role, uint16_t* id) {
+    struct ath10k* ar = ctx;
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&ar->iface_lock);
+
+    // Currently we only support one interface. TODO(NET-1285): for support multiple.
+    if (ar->num_mac_ifaces) {
+        ath10k_err("MAC interface had been created. num_mac_ifaces=%d\n", ar->num_mac_ifaces);
+        status = ZX_ERR_ALREADY_BOUND;
+        goto ret;
+    }
+
+    // Note that the mac_role variable must be set before the MAC device is added. So that we don't
+    // have race-condition while ath10k_pci_fill_wlan_info() fetches the value via
+    // ath10k_core_phy_query().
+    //
+    // Currently we only support one interface, so that it is okay to save MAC role in *ar*.
+    // We have to review this when we want to support mulitple interfaces.
+    // TODO(NET-1285): for support multiple.
+    ar->mac_role = mac_role;
+
+    // Add MAC interface
+    device_add_args_t mac_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ath10k-wlanmac",
+        .ctx = ar,
+        .ops = &device_mac_ops,
+        .proto_id = ZX_PROTOCOL_WLANMAC,
+        .proto_ops = &wlanmac_ops,
+    };
+
+    // Add this MAC device into the tree. The parent device is the PHY device.
+    status = device_add(ar->zxdev, &mac_args, &ar->zxdev_mac);
+    if (status == ZX_OK) {
+        *id = ar->iface_id;
+        ar->num_mac_ifaces++;
+    }
+
+ret:
+    mtx_unlock(&ar->iface_lock);
+    return status;
+}
+
+static zx_status_t ath10k_core_destroy_iface(void* ctx, uint16_t id) {
+    struct ath10k* ar = ctx;
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&ar->iface_lock);
+
+    if (!ar->num_mac_ifaces) {
+        ath10k_err("No interface created yet. num_mac_ifaces=%u\n", ar->num_mac_ifaces);
+        status = ZX_ERR_INVALID_ARGS;
+        goto ret;
+    }
+
+    if (id != ar->iface_id) {
+        ath10k_err("unknown iface id in destroy request: %u (expected: %u)\n",
+            id, ar->num_mac_ifaces);
+        status = ZX_ERR_INVALID_ARGS;
+        goto ret;
+    }
+
+    status = device_remove(ar->zxdev_mac);
+    if (status != ZX_OK) {
+        ath10k_err("Destroy interface failed. Cannot remove device from list: %u\n", status);
+    }
+
+ret:
+    mtx_unlock(&ar->iface_lock);
+    return status;
+}
+
+static wlanphy_impl_protocol_ops_t wlanphy_ops = {
+    .query = ath10k_core_phy_query,
+    .create_iface = ath10k_core_create_iface,
+    .destroy_iface = ath10k_core_destroy_iface,
+};
+
+
+static zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar) {
+    // Add PHY interface
+    device_add_args_t phy_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ath10k-wlanphy",
+        .ctx = ar,
+        .ops = &device_phy_ops,
+        .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+        .proto_ops = &wlanphy_ops,
+    };
+    return device_add(ar->zxdev_parent, &phy_args, &ar->zxdev);
+}
+
 static zx_status_t ath10k_core_register_work(void* thrd_data) {
     struct ath10k* ar = thrd_data;
     zx_status_t status;
@@ -2371,9 +2528,12 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
 
     BITARR_SET(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED);
 
-    // Now that we have completed initialization, we are ready to handle calls
-    // from wlanmac.
-    device_make_visible(ar->zxdev);
+    // After core is registered, add PHY interface.
+    status = ath10k_core_add_phy_interface(ar);
+    if (status != ZX_OK) {
+        ath10k_err("failed to add PHY interface. status=%d\n", status);
+        goto err;
+    }
 
     return ZX_OK;
 
@@ -2516,6 +2676,7 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
     mtx_init(&ar->data_lock, mtx_plain);
     mtx_init(&ar->txqs_lock, mtx_plain);
     mtx_init(&ar->assoc_lock, mtx_plain);
+    mtx_init(&ar->iface_lock, mtx_plain);
 
     list_initialize(&ar->txqs);
     list_initialize(&ar->peers);

@@ -126,9 +126,11 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     // mac_role is a bitfield, but only a single value is supported for an interface
     switch (wlanmac_info_.ifc_info.mac_role) {
     case WLAN_MAC_ROLE_CLIENT:
+        infof("Initialize a client MLME.\n");
         mlme.reset(new ClientMlme(this));
         break;
     case WLAN_MAC_ROLE_AP:
+        infof("Initialize an AP MLME.\n");
         mlme.reset(new ApMlme(this));
         break;
     default:

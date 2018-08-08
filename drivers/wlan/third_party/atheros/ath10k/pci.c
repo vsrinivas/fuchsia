@@ -2766,11 +2766,6 @@ static const struct ath10k_bus_ops ath10k_pci_bus_ops = {
     .get_num_banks = ath10k_pci_get_num_banks,
 };
 
-static zx_protocol_device_t device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .release = ath10k_pci_release,
-};
-
 static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, void* cookie) {
     uint8_t** wlan_channel_ptr = cookie;
     *(*wlan_channel_ptr)++ = dev_channel->hw_value;
@@ -2794,22 +2789,13 @@ static void ath10k_band_query_info(const struct ath10k_band* dev_band, void* coo
     ath10k_foreach_channel(dev_band, ath10k_chan_query_info, &next_ch);
 }
 
-static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
-    // TODO: ALL of the values below are hard-coded and faked for now.
-    struct ath10k* ar = ctx;
-
-    ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
-
-    memset(info, 0, sizeof(*info));
-
-    wlan_info_t* ifc_info = &info->ifc_info;
-
+void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info) {
     // eth_info
     ZX_DEBUG_ASSERT(ETH_ALEN == ETH_MAC_SIZE);
     memcpy(ifc_info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
 
     // mac_role
-    ifc_info->mac_role = WLAN_MAC_ROLE_CLIENT;
+    ifc_info->mac_role = ar->mac_role;
 
     // supported_phys
     ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM;
@@ -2825,6 +2811,18 @@ static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t*
 
     // bands
     ath10k_foreach_band(ath10k_band_query_info, ifc_info);
+}
+
+static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+    // TODO: ALL of the values below are hard-coded and faked for now.
+    struct ath10k* ar = ctx;
+
+    ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
+
+    memset(info, 0, sizeof(*info));
+
+    wlan_info_t* ifc_info = &info->ifc_info;
+    ath10k_pci_fill_wlan_info(ar, ifc_info);
 
     return ZX_OK;
 }
@@ -2887,6 +2885,16 @@ static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
     return ath10k_mac_set_bss(ar, config);
 }
 
+static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options, bool enabled) {
+  ath10k_err("Enabling beaconing is not supported yet.\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t ath10k_pci_configure_beacon(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+  ath10k_err("Configuring beacon is not supported yet.\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, wlan_key_config_t* key_config) {
     struct ath10k* ar = ctx;
     ath10k_info(
@@ -2925,13 +2933,15 @@ static zx_status_t ath10k_pci_start_hw_scan(void* ctx, const wlan_hw_scan_config
     return ath10k_mac_hw_scan(ar, scan_config);
 }
 
-static wlanmac_protocol_ops_t wlanmac_ops = {
+wlanmac_protocol_ops_t wlanmac_ops = {
     .query = ath10k_pci_query,
     .start = ath10k_pci_start,
     .stop = ath10k_pci_stop,
     .queue_tx = ath10k_pci_queue_tx,
     .set_channel = ath10k_pci_set_channel,
     .configure_bss = ath10k_pci_configure_bss,
+    .enable_beaconing = ath10k_pci_enable_beaconing,
+    .configure_beacon = ath10k_pci_configure_beacon,
     .set_key = ath10k_pci_set_key,
     .configure_assoc = ath10k_pci_configure_assoc,
     .start_hw_scan = ath10k_pci_start_hw_scan,
@@ -3119,29 +3129,16 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     thrd_detach(ar->monitor_thread);
 #endif
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ath10k",
-        .ctx = ar,
-        .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_WLANMAC,
-        .proto_ops = &wlanmac_ops,
-        .flags = DEVICE_ADD_INVISIBLE,
-    };
-
-    ret = device_add(dev, &args, &ar->zxdev);
-    if (ret != ZX_OK) { goto err_free_irq; }
+    // Save the parent device. Will be used in after core is registered.
+    ar->zxdev_parent = dev;
 
     ret = ath10k_core_register(ar, chip_id);
     if (ret != ZX_OK) {
         ath10k_err("failed to register driver core: %s\n", zx_status_get_string(ret));
-        goto err_free_device;
+        goto err_free_irq;
     }
 
     return ZX_OK;
-
-err_free_device:
-    device_remove(dev);
 
 err_free_irq:
     ath10k_pci_free_irq(ar);

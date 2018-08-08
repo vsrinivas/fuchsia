@@ -713,7 +713,9 @@ struct ath10k_vif {
 };
 
 struct ath10k {
-    zx_device_t* zxdev;
+    zx_device_t* zxdev_parent;  // The parent device we will add into.
+    zx_device_t* zxdev;         // Or 'zxdev_phy', which binds to the hardware device.
+    zx_device_t* zxdev_mac;
     uint8_t mac_addr[ETH_ALEN];
 
     enum ath10k_hw_rev hw_rev;
@@ -749,6 +751,12 @@ struct ath10k {
        wlanmac_ifc_t* ifc;
        void* cookie;
     } wlanmac;
+
+    // Now we only support one interface. Need to review the below variables when supporting
+    // multiple interfaces. TODO(NET-1285)
+    uint16_t mac_role;        // Either WLAN_MAC_ROLE_CLIENT or WLAN_MAC_ROLE_AP.
+    uint16_t num_mac_ifaces;  // Number of MAC interfaces created.
+    uint16_t iface_id;        // The ID being in use.
 
     sync_completion_t target_suspend;
 
@@ -857,6 +865,9 @@ struct ath10k {
     mtx_t data_lock;
     /* protects: ar->txqs, artxq->list */
     mtx_t txqs_lock;
+
+    /* protects: interfaces creation/deletion */
+    mtx_t iface_lock;
 
     list_node_t txqs;
     list_node_t arvifs;
