@@ -64,7 +64,8 @@ bool PrintIPAddresses(bool print_ipv4, bool print_ipv6, bool verbose) {
   }
 
   for (uint32_t i = 0; i < get_if_info.n_info; ++i) {
-    const ssize_t size = ioctl_netc_get_if_info_at(fd, &i, &get_if_info.info[i]);
+    const ssize_t size =
+        ioctl_netc_get_if_info_at(fd, &i, &get_if_info.info[i]);
     if (size < 0) {
       perror("ioctl_netc_get_if_info_at failed");
       close(fd);
