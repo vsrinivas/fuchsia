@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 
 #include <zircon/types.h>
 
@@ -20,5 +20,4 @@ static zx_driver_ops_t wlantapctl_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(wlantapctl, wlantapctl_driver_ops, "fuchsia", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-ZIRCON_DRIVER_END(wlantapctl)
+BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT), ZIRCON_DRIVER_END(wlantapctl)

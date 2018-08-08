@@ -11,9 +11,9 @@
 namespace wlan {
 
 class WlantapMac {
-  public:
+   public:
     class Listener {
-      public:
+       public:
         virtual void WlantapMacStart(uint16_t id) = 0;
         virtual void WlantapMacStop(uint16_t id) = 0;
         virtual void WlantapMacQueueTx(uint16_t id, wlan_tx_packet_t* pkt) = 0;
@@ -33,9 +33,7 @@ class WlantapMac {
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
                              const ::fuchsia::wlan::device::CreateIfaceRequest& request,
-                             const ::fuchsia::wlan::tap::WlantapPhyConfig* phy_config,
-                             uint16_t id,
-                             WlantapMac::Listener* listener,
-                             WlantapMac** ret);
+                             const ::fuchsia::wlan::tap::WlantapPhyConfig* phy_config, uint16_t id,
+                             WlantapMac::Listener* listener, WlantapMac** ret);
 
-} // namespace wlan
+}  // namespace wlan
