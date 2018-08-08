@@ -32,12 +32,15 @@ struct AssocContext {
     // TODO(porce): Move association-related variables of class Station to here
     zx::time ts_start;  // timestamp of the beginning of the association
 
+    common::MacAddr bssid;
+    CapabilityInfo cap;
+    uint16_t aid;
+
     // Negotiated configurations
     // This is an outcome of intersection of capabilities and configurations.
     std::vector<uint8_t> supported_rates;
     std::vector<uint8_t> ext_supported_rates;
 
-    CapabilityInfo cap;
     bool has_ht;
     HtCapabilities ht_cap;
     bool has_vht;
