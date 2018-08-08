@@ -5,9 +5,9 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <lib/async-loop/cpp/loop.h>
 #include "garnet/lib/overnet/packet_nub.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
