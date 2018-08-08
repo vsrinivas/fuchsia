@@ -57,8 +57,8 @@ bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  std::cerr << "Starting mDNS on interface " << name_ << ", IPv4 "
-            << address_ << "\n";
+  std::cerr << "Starting mDNS on interface " << name_ << ", IPv4 " << address_
+            << "\n";
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -178,8 +178,8 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
     // Wait a bit before trying again to avoid spamming the log.
-    async::PostDelayedTask(async_get_default_dispatcher(), [this]() { WaitForInbound(); },
-                           zx::sec(10));
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [this]() { WaitForInbound(); }, zx::sec(10));
     return;
   }
 

@@ -30,8 +30,8 @@ MdnsServiceImpl::~MdnsServiceImpl() {}
 void MdnsServiceImpl::Start() {
   // TODO(NET-79): Remove this check when NET-79 is fixed.
   if (!NetworkIsReady()) {
-    async::PostDelayedTask(async_get_default_dispatcher(), [this]() { Start(); },
-                           zx::sec(5));
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [this]() { Start(); }, zx::sec(5));
     return;
   }
 
