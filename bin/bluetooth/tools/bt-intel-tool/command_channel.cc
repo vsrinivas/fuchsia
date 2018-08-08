@@ -112,7 +112,8 @@ void CommandChannel::SendCommandSync(
   bool received = false;
   auto previous_cb = std::move(event_callback_);
 
-  auto cb = [this, &received, callback = std::move(callback)](const auto& event_packet) {
+  auto cb = [this, &received,
+             callback = std::move(callback)](const auto& event_packet) {
     if (callback) {
       callback(event_packet);
     }
@@ -138,7 +139,9 @@ void CommandChannel::SendCommandSync(
 
     status = timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
     if (status != ZX_ERR_TIMED_OUT) {
-      if (status == ZX_OK) status = ZX_ERR_TIMED_OUT;
+      if (status == ZX_OK) {
+        status = ZX_ERR_TIMED_OUT;
+      }
       break;
     }
   }
@@ -152,7 +155,8 @@ void CommandChannel::SendCommandSync(
 }
 
 void CommandChannel::HandleChannelReady(const zx::channel& channel,
-                                        async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                        async_dispatcher_t* dispatcher,
+                                        async::WaitBase* wait,
                                         zx_status_t status,
                                         const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -223,13 +227,15 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
   }
 }
 
-void CommandChannel::OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+void CommandChannel::OnCmdChannelReady(async_dispatcher_t* dispatcher,
+                                       async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   HandleChannelReady(cmd_channel_, dispatcher, wait, status, signal);
 }
 
-void CommandChannel::OnAclChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+void CommandChannel::OnAclChannelReady(async_dispatcher_t* dispatcher,
+                                       async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   // A Command packet response from a Secure Send command.

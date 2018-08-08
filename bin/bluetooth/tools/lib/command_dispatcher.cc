@@ -59,7 +59,9 @@ std::vector<std::string> CommandDispatcher::GetCommandsThatMatch(
   std::vector<std::string> result;
   for (auto& iter : handler_map_) {
     auto& cmd_name = iter.first;
-    if (prefix.length() > cmd_name.length()) continue;
+    if (prefix.length() > cmd_name.length()) {
+      continue;
+    }
     if (cmd_name.compare(0, prefix.length(), prefix) == 0) {
       result.push_back(cmd_name);
     }

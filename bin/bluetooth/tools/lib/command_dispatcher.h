@@ -48,8 +48,7 @@ class CommandDispatcher final {
   // |description| is the string that describes the command (to be displayed by
   // DescribedAllCommands()).
   void RegisterHandler(const std::string& command_name,
-                       const std::string& description,
-                       CommandHandler handler);
+                       const std::string& description, CommandHandler handler);
 
   // Returns a list of currently registered command names that start with
   // |prefix|.
@@ -58,8 +57,7 @@ class CommandDispatcher final {
 
  private:
   struct CommandHandlerData {
-    CommandHandlerData(const std::string& description,
-                       CommandHandler handler);
+    CommandHandlerData(const std::string& description, CommandHandler handler);
     CommandHandlerData() = default;
 
     std::string description;

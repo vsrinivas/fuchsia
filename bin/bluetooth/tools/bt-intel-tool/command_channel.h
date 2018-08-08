@@ -7,8 +7,8 @@
 
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/zx/channel.h>
 #include <lib/fit/function.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
@@ -46,9 +46,9 @@ class CommandChannel {
 
  private:
   // Common read handler implemntation
-  void HandleChannelReady(const zx::channel& channel, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
+  void HandleChannelReady(const zx::channel& channel,
+                          async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                          zx_status_t status, const zx_packet_signal_t* signal);
 
   // Read ready handler for |cmd_channel_|
   void OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
