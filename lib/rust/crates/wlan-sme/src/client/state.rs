@@ -433,6 +433,13 @@ fn clone_vht_mcs_nss(m: &fidl_mlme::VhtMcsNss) -> fidl_mlme::VhtMcsNss {
     }
 }
 
+fn clone_basic_vht_mcs_nss(m: &fidl_mlme::BasicVhtMcsNss) -> fidl_mlme::BasicVhtMcsNss {
+    fidl_mlme::BasicVhtMcsNss {
+        max_mcs: m.max_mcs.clone(),
+        ..*m
+    }
+}
+
 fn clone_vht_capabilities_info(i: &fidl_mlme::VhtCapabilitiesInfo) -> fidl_mlme::VhtCapabilitiesInfo {
     fidl_mlme::VhtCapabilitiesInfo {
         ..*i
@@ -448,7 +455,7 @@ fn clone_vht_capabilities(c: &fidl_mlme::VhtCapabilities) -> fidl_mlme::VhtCapab
 
 fn clone_vht_operation(o: &fidl_mlme::VhtOperation) -> fidl_mlme::VhtOperation {
     fidl_mlme::VhtOperation {
-        vht_mcs_nss: clone_vht_mcs_nss(&o.vht_mcs_nss),
+        basic_mcs: clone_basic_vht_mcs_nss(&o.basic_mcs),
         ..*o
     }
 }

@@ -705,7 +705,7 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
     WLAN_BIT_FIELD(ht_protect, 8, 2);
     WLAN_BIT_FIELD(nongreenfield_present, 10, 1);  // Nongreenfield HT STAs present.
 
-    WLAN_BIT_FIELD(reserved2, 11, 1);    // Note 802.11n D1.10 implementaions use these.
+    WLAN_BIT_FIELD(reserved2, 11, 1);    // Note 802.11n D1.10 implementations use these.
     WLAN_BIT_FIELD(obss_non_ht, 12, 1);  // OBSS Non-HT STAs present.
     // IEEE 802.11-2016 Figure 9-339 has an incosistency so this is Fuchsia interpretation:
     // The channel number for the second segment in a 80+80 Mhz channel
@@ -899,11 +899,43 @@ struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabil
 
 } __PACKED;
 
+// IEEE Std 802.11-2016, Figure 9-562
+struct BasicVhtMcsNss : public common::BitField<uint16_t> {
+   public:
+    constexpr explicit BasicVhtMcsNss(uint16_t basic_mcs) : common::BitField<uint16_t>(basic_mcs) {}
+    constexpr BasicVhtMcsNss() = default;
+
+    WLAN_BIT_FIELD(ss1, 0, 2);
+    WLAN_BIT_FIELD(ss2, 2, 2);
+    WLAN_BIT_FIELD(ss3, 4, 2);
+    WLAN_BIT_FIELD(ss4, 6, 2);
+    WLAN_BIT_FIELD(ss5, 8, 2);
+    WLAN_BIT_FIELD(ss6, 10, 2);
+    WLAN_BIT_FIELD(ss7, 12, 2);
+    WLAN_BIT_FIELD(ss8, 14, 2);
+
+    enum VhtMcsEncoding {
+        VHT_MCS_0_TO_7 = 0,
+        VHT_MCS_0_TO_8 = 1,
+        VHT_MCS_0_TO_9 = 2,
+        VHT_MCS_NONE = 3,
+    };
+
+    uint8_t get_max_mcs_ss(uint8_t ss_num) const {
+        ZX_DEBUG_ASSERT(1 <= ss_num && ss_num <= 8);
+        constexpr uint8_t kMcsBitOffset = 0;  // ss1
+        constexpr uint8_t kBitWidth = 2;
+        uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
+        uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
+        return (val() & mask) >> offset;
+    }
+};
+
 // IEEE Std 802.11-2016, 9.4.2.159
 struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
     static bool Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw,
                        uint8_t center_freq_seg0, uint8_t center_freq_seg1,
-                       const VhtMcsNss& vht_mcs_nss);
+                       const BasicVhtMcsNss& basic_mcs);
     static constexpr size_t kMinLen = 5;
     static constexpr size_t kMaxLen = 5;
 
@@ -913,7 +945,7 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
     uint8_t center_freq_seg0;
     uint8_t center_freq_seg1;
 
-    VhtMcsNss vht_mcs_nss;
+    BasicVhtMcsNss basic_mcs;
 
     enum VhtChannelBandwidth {
         VHT_CBW_20_40 = 0,

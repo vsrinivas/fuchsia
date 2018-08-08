@@ -441,6 +441,15 @@ wlan_mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn) {
     return fidl;
 }
 
+wlan_mlme::BasicVhtMcsNss BasicVhtMcsNssToFidl(const BasicVhtMcsNss& vmn) {
+    wlan_mlme::BasicVhtMcsNss fidl;
+
+    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
+        fidl.max_mcs[ss_num - 1] = static_cast<wlan_mlme::VhtMcs>(vmn.get_max_mcs_ss(ss_num));
+    }
+    return fidl;
+}
+
 wlan_mlme::VhtCapabilitiesInfo VhtCapabilitiesInfoToFidl(const VhtCapabilitiesInfo& vci) {
     wlan_mlme::VhtCapabilitiesInfo fidl;
 
@@ -483,7 +492,7 @@ std::unique_ptr<wlan_mlme::VhtOperation> VhtOperationToFidl(const VhtOperation& 
     fidl->vht_cbw = static_cast<wlan_mlme::VhtCbw>(ie.vht_cbw);
     fidl->center_freq_seg0 = ie.center_freq_seg0;
     fidl->center_freq_seg1 = ie.center_freq_seg1;
-    fidl->vht_mcs_nss = VhtMcsNssToFidl(ie.vht_mcs_nss);
+    fidl->basic_mcs = BasicVhtMcsNssToFidl(ie.basic_mcs);
 
     return fidl;
 }

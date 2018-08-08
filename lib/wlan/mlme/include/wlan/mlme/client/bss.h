@@ -97,6 +97,7 @@ std::unique_ptr<::fuchsia::wlan::mlme::HtCapabilities> HtCapabilitiesToFidl(
 std::unique_ptr<::fuchsia::wlan::mlme::HtOperation> HtOperationToFidl(const HtOperation& ie);
 ::fuchsia::wlan::mlme::BSSTypes GetBssType(const CapabilityInfo& cap);
 ::fuchsia::wlan::mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn);
+::fuchsia::wlan::mlme::BasicVhtMcsNss BasicVhtMcsNssToFidl(const BasicVhtMcsNss& vmn);
 ::fuchsia::wlan::mlme::VhtCapabilitiesInfo VhtCapabilitiesInfoToFidl(
     const VhtCapabilitiesInfo& vci);
 std::unique_ptr<::fuchsia::wlan::mlme::VhtCapabilities> VhtCapabilitiesToFidl(

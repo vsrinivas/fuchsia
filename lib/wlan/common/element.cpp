@@ -272,7 +272,7 @@ bool VhtCapabilities::Create(void* buf, size_t len, size_t* actual,
 
 bool VhtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw,
                           uint8_t center_freq_seg0, uint8_t center_freq_seg1,
-                          const VhtMcsNss& vht_mcs_nss) {
+                          const BasicVhtMcsNss& basic_mcs) {
     constexpr size_t elem_size = sizeof(VhtOperation);
     if (elem_size > len) { return false; }
 
@@ -283,7 +283,7 @@ bool VhtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw
     elem->vht_cbw = vht_cbw;
     elem->center_freq_seg0 = center_freq_seg0;
     elem->center_freq_seg1 = center_freq_seg1;
-    elem->vht_mcs_nss = VhtMcsNss(vht_mcs_nss.val());
+    elem->basic_mcs = BasicVhtMcsNss(basic_mcs.val());
 
     *actual = elem_size;
     return true;

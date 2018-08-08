@@ -451,13 +451,13 @@ TEST_F(Elements, VhtCapabilities) {
 }
 
 TEST_F(Elements, VhtOperation) {
-    VhtMcsNss vht_mcs_nss(0xaaaaaaaaaaaaaaaa);
+    BasicVhtMcsNss basic_mcs(0xaaaa);
     uint8_t vht_cbw = VhtOperation::VHT_CBW_80_160_80P80;
     uint8_t center_freq_seg0 = 155;
     uint8_t center_freq_seg1 = 42;
 
     EXPECT_TRUE(VhtOperation::Create(buf_, sizeof(buf_), &actual_, vht_cbw, center_freq_seg0,
-                                     center_freq_seg1, vht_mcs_nss));
+                                     center_freq_seg1, basic_mcs));
     EXPECT_EQ(sizeof(VhtOperation), actual_);
 
     auto element = FromBytes<VhtOperation>(buf_, sizeof(buf_));
@@ -467,11 +467,9 @@ TEST_F(Elements, VhtOperation) {
     EXPECT_EQ(element->center_freq_seg0, center_freq_seg0);
     EXPECT_EQ(element->center_freq_seg1, center_freq_seg1);
 
-    EXPECT_EQ(element->vht_mcs_nss.rx_max_mcs_ss1(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->vht_mcs_nss.rx_max_mcs_ss2(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->vht_mcs_nss.tx_max_mcs_ss4(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->vht_mcs_nss.max_nsts(), 5);
-    EXPECT_EQ(element->vht_mcs_nss.ext_nss_bw(), 1);
+    EXPECT_EQ(element->basic_mcs.ss1(), VhtMcsNss::VHT_MCS_0_TO_9);
+    EXPECT_EQ(element->basic_mcs.ss2(), VhtMcsNss::VHT_MCS_0_TO_9);
+    EXPECT_EQ(element->basic_mcs.ss8(), VhtMcsNss::VHT_MCS_0_TO_9);
 }
 
 }  // namespace
