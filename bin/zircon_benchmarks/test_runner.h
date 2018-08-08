@@ -17,23 +17,19 @@ int BenchmarksMain(int argc, char** argv, bool run_gbenchmark);
 // iteration of the test.
 template <class TestClass, typename... Args>
 void RegisterTest(const char* test_name, Args... args) {
-  benchmark::RegisterBenchmark(
-      test_name,
-      [=](benchmark::State& state) {
-        TestClass test(args...);
-        while (state.KeepRunning())
-          test.Run();
-      });
+  benchmark::RegisterBenchmark(test_name, [=](benchmark::State& state) {
+    TestClass test(args...);
+    while (state.KeepRunning())
+      test.Run();
+  });
 
-  perftest::RegisterTest(
-      test_name,
-      [=](perftest::RepeatState* state) {
-        TestClass test(args...);
-        while (state->KeepRunning()) {
-          test.Run();
-        }
-        return true;
-      });
+  perftest::RegisterTest(test_name, [=](perftest::RepeatState* state) {
+    TestClass test(args...);
+    while (state->KeepRunning()) {
+      test.Run();
+    }
+    return true;
+  });
 }
 
 typedef void TestFunc();
@@ -50,9 +46,7 @@ template <TestFunc test_func>
 void RegisterTestFunc(const char* test_name) {
   class TestClass {
    public:
-    void Run() {
-      test_func();
-    }
+    void Run() { test_func(); }
   };
   RegisterTest<TestClass>(test_name);
 }

@@ -33,9 +33,7 @@ class FstatTest {
     FXL_CHECK(fd_ >= 0);
   }
 
-  ~FstatTest() {
-    FXL_CHECK(close(fd_) == 0);
-  }
+  ~FstatTest() { FXL_CHECK(close(fd_) == 0); }
 
   void Run() {
     struct stat st;
@@ -46,8 +44,7 @@ class FstatTest {
   int fd_;
 };
 
-__attribute__((constructor))
-void RegisterTests() {
+__attribute__((constructor)) void RegisterTests() {
   fbenchmark::RegisterTestFunc<StatTest>("Filesystem_Stat");
   fbenchmark::RegisterTestFunc<OpenTest>("Filesystem_Open");
   fbenchmark::RegisterTest<FstatTest>("Filesystem_Fstat");

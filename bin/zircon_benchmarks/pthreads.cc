@@ -10,9 +10,7 @@
 namespace {
 
 // A no-op helper entry-point for pthreads in this fixture.
-void* ExitImmediately(void* arg) {
-  return nullptr;
-}
+void* ExitImmediately(void* arg) { return nullptr; }
 
 // Benchmark for creating and joining on a pthread with a body that does
 // nothing.
@@ -22,9 +20,9 @@ void PThreadCreateAndJoinTest() {
   FXL_CHECK(pthread_join(thread, nullptr) == 0);
 }
 
-__attribute__((constructor))
-void RegisterTests() {
-  fbenchmark::RegisterTestFunc<PThreadCreateAndJoinTest>("PThreadCreateAndJoinTest");
+__attribute__((constructor)) void RegisterTests() {
+  fbenchmark::RegisterTestFunc<PThreadCreateAndJoinTest>(
+      "PThreadCreateAndJoinTest");
 }
 
 }  // namespace

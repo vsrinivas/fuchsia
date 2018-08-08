@@ -30,22 +30,22 @@ struct Helper {
     ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo) == ZX_OK);
   }
 
-  ~Helper() {
-    vmar.destroy();
-  }
+  ~Helper() { vmar.destroy(); }
 
-  // Cyclically maps the first chunk_size bytes of |vmo| into the |length| bytes of vmar,
-  // starting from offset 0.   Mapping is done |chunk_size| bytes at a time.  |chunk_size|
-  // and |length| must be multiples of PAGE_SIZE.
-  // As a precondition, |vmar| should be empty.
-  zx_status_t MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu);
+  // Cyclically maps the first chunk_size bytes of |vmo| into the |length| bytes
+  // of vmar, starting from offset 0.   Mapping is done |chunk_size| bytes at a
+  // time.  |chunk_size| and |length| must be multiples of PAGE_SIZE. As a
+  // precondition, |vmar| should be empty.
+  zx_status_t MapInChunks(size_t chunk_size, size_t length,
+                          bool force_into_mmu);
 
   zx::vmar vmar;
   zx::vmo vmo;
   uintptr_t vmar_base;
 };
 
-zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu) {
+zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length,
+                                bool force_into_mmu) {
   zx_status_t status;
   uint32_t flags = ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ;
   if (force_into_mmu) {
@@ -63,8 +63,8 @@ zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length, bool force_int
   return ZX_OK;
 }
 
-// This attempts to measure the amount of time it takes to add and remove mappings through
-// the kernel VM layer and the arch MMU layer.
+// This attempts to measure the amount of time it takes to add and remove
+// mappings through the kernel VM layer and the arch MMU layer.
 bool MmuMapUnmapTest(perftest::RepeatState* state) {
   state->DeclareStep("map");
   state->DeclareStep("unmap");

@@ -123,7 +123,8 @@ class ThreadOrProcess {
     if (multiproc == MultiProcess) {
       const char* executable_path =
           "/pkgfs/packages/zircon_benchmarks/0/bin/app";
-      const char* args[] = {executable_path, "--subprocess", func_name, nullptr};
+      const char* args[] = {executable_path, "--subprocess", func_name,
+                            nullptr};
       fdio_spawn_action_t actions[handle_count + 1];
       for (uint32_t i = 0; i < handle_count; ++i) {
         actions[i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;

@@ -34,4 +34,4 @@ void RegisterTests() {
 }
 PERFTEST_CTOR(RegisterTests);
 
-}
+}  // namespace

@@ -13,8 +13,7 @@ namespace {
 // the function call.
 void NullTest() {}
 
-__attribute__((constructor))
-void RegisterTests() {
+__attribute__((constructor)) void RegisterTests() {
   fbenchmark::RegisterTestFunc<NullTest>("Null");
 }
 

@@ -25,14 +25,14 @@ bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
 
   while (state->KeepRunning()) {
     size_t bytes_written;
-    ZX_ASSERT(socket1.write(0, buffer.data(), buffer.size(), &bytes_written)
-              == ZX_OK);
+    ZX_ASSERT(socket1.write(0, buffer.data(), buffer.size(), &bytes_written) ==
+              ZX_OK);
     ZX_ASSERT(bytes_written == buffer.size());
     state->NextStep();
 
     size_t bytes_read;
-    ZX_ASSERT(socket2.read(0, buffer.data(), buffer.size(), &bytes_read)
-              == ZX_OK);
+    ZX_ASSERT(socket2.read(0, buffer.data(), buffer.size(), &bytes_read) ==
+              ZX_OK);
     ZX_ASSERT(bytes_read == buffer.size());
   }
   return true;
@@ -40,10 +40,10 @@ bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
 
 void RegisterTests() {
   static const unsigned kMessageSizesInBytes[] = {
-    64,
-    1 * 1024,
-    32 * 1024,
-    64 * 1024,
+      64,
+      1 * 1024,
+      32 * 1024,
+      64 * 1024,
   };
   for (auto message_size : kMessageSizesInBytes) {
     auto name = fbl::StringPrintf("Socket/WriteRead/%ubytes", message_size);
