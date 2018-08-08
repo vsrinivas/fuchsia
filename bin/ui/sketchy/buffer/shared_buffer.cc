@@ -28,7 +28,7 @@ std::unique_ptr<scenic::Buffer> NewScenicBufferFromEscherBuffer(
   zx::vmo vmo = escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
 
   scenic::Memory memory(session, std::move(vmo),
-                            fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+                        fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   return std::make_unique<scenic::Buffer>(memory, 0, buffer->size());
 }
 

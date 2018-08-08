@@ -54,8 +54,8 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   }
   is_scenic_present_requested_ = true;
 
-  auto session_callback = [ this, callbacks = std::move(callbacks_) ](
-      fuchsia::images::PresentationInfo info) {
+  auto session_callback = [this, callbacks = std::move(callbacks_)](
+                              fuchsia::images::PresentationInfo info) {
     FXL_DCHECK(is_scenic_present_requested_);
     is_scenic_present_requested_ = false;
     for (auto& callback : callbacks) {

@@ -49,9 +49,9 @@ zx::event Frame::DuplicateReleaseFence() {
   return dup;
 }
 
-void Frame::RequestScenicPresent(
-    scenic::Session* session, uint64_t presentation_time,
-    scenic::Session::PresentCallback callback) {
+void Frame::RequestScenicPresent(scenic::Session* session,
+                                 uint64_t presentation_time,
+                                 scenic::Session::PresentCallback callback) {
   if (profiler_) {
     profiler_->AddTimestamp(command_, vk::PipelineStageFlagBits::eBottomOfPipe,
                             "End");

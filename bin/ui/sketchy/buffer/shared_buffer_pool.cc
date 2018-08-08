@@ -48,14 +48,14 @@ void SharedBufferPool::ReturnBuffer(SharedBufferPtr buffer,
   auto pair = fence_listeners_.insert(
       std::make_unique<escher::FenceListener>(std::move(release_fence)));
   auto fence_listener = pair.first;
-  (*fence_listener)->WaitReadyAsync([
-    weak = weak_factory_.GetWeakPtr(), fence_listener, buffer
-  ] {
-    if (weak) {
-      weak->fence_listeners_.erase(fence_listener);
-      weak->RecycleBuffer(buffer);
-    }
-  });
+  (*fence_listener)
+      ->WaitReadyAsync(
+          [weak = weak_factory_.GetWeakPtr(), fence_listener, buffer] {
+            if (weak) {
+              weak->fence_listeners_.erase(fence_listener);
+              weak->RecycleBuffer(buffer);
+            }
+          });
 }
 
 void SharedBufferPool::RecycleBuffer(SharedBufferPtr buffer) {

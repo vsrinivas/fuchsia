@@ -40,9 +40,7 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
   void Reset();
 
   const escher::BufferPtr& escher_buffer() const { return escher_buffer_; }
-  const scenic::Buffer& scenic_buffer() const {
-    return *scenic_buffer_.get();
-  }
+  const scenic::Buffer& scenic_buffer() const { return *scenic_buffer_.get(); }
   vk::DeviceSize capacity() const { return escher_buffer_->size(); }
   vk::DeviceSize size() const { return size_; }
 
