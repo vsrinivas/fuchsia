@@ -92,25 +92,12 @@ union Value {
     vector<BucketDistributionEntry> int_bucket_distribution;
 };
 
-// TODO(prathyushk): Get rid of this struct and move to fuchsia.mem.Buffer
-// This is a temporary workaround for ZX-2406.
-// Since fuchsia.mem cannot be added as a dependency to this library, we create
-// a copy here.
-struct Buffer {
-    // The vmo.
-    handle<vmo> vmo;
-
-    // The size of the data in the vmo. This size must be smaller than the
-    // physical size of the vmo.
-    uint64 size;
-};
-
 // A ProjectProfile is used to describe the client's Cobalt project.
 struct ProjectProfile {
     // The |config| Buffer contains the bytes of a serialized Cobalt config
     // proto message. This specifies registered metric and encoding definitions
     // for a single project.
-    Buffer config;
+    fuchsia.mem.Buffer config;
 };
 
 [Discoverable]

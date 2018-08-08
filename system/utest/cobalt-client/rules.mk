@@ -31,6 +31,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-cobalt \
+    system/fidl/fuchsia-mem \
 
 MODULE_PACKAGE := src
 

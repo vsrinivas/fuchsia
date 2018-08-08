@@ -78,7 +78,7 @@ struct ProjectProfile2 {
     // The |config| Buffer contains the bytes of a serialized Cobalt config
     // proto message. This specifies registered Metric and Report definitions
     // for a single project.
-    Buffer config;
+    fuchsia.mem.Buffer config;
 
     // The release stage of the client's project.
     ReleaseStage release_stage;

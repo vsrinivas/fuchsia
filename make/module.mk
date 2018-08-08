@@ -80,7 +80,7 @@ endif
 
 # all library deps go on the deps list
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
-                $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS)
+                $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS) $(MODULE_FIDL_DEPS)
 
 # Catch the depends on nonexistant module error case
 # here where we can tell you what module has the bad deps.
