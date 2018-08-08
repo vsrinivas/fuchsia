@@ -478,4 +478,25 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 #undef SET_BITFIELD_MIN
 #undef SET_BITFIELD_MAX
 
+// Compare two legacy rates that follows IEEE 802.11-2016 9.4.2.3
+static constexpr inline bool CompareLegacyRates(uint8_t lhs, uint8_t rhs) {
+    // Legacy rate uses bit 7 to indicate "basic rate", the other 7 represent rate in 0.5Mbps
+    constexpr uint8_t kLegacyRateBitmask = 0b01111111;
+    return (lhs & kLegacyRateBitmask) < (rhs & kLegacyRateBitmask);
+}
+
+std::vector<uint8_t> IntersectRatesAp(const std::vector<uint8_t>& ap_rates,
+                                      const std::vector<uint8_t>& client_rates) {
+    std::vector<uint8_t> first(ap_rates);
+    std::vector<uint8_t> second(client_rates);
+
+    std::sort(first.begin(), first.end(), CompareLegacyRates);
+    std::sort(second.begin(), second.end(), CompareLegacyRates);
+
+    std::vector<uint8_t> result;
+    // C++11 Standard 25.4.5.3 - set_intersection ALWAYS takes elements from the first vector.
+    std::set_intersection(first.cbegin(), first.cend(), second.cbegin(), second.cend(),
+                          std::back_inserter(result), CompareLegacyRates);
+    return result;
+}
 }  // namespace wlan

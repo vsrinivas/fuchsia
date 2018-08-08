@@ -957,7 +957,20 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
     };
 
 } __PACKED;
+
 SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs);
 HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& rhs);
 VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilities& rhs);
+
+// IEEE 802.11-2016 9.4.2.3.
+// The MSB in a rate indicates "basic rate" and is ignored during comparison.
+static constexpr inline uint8_t MarkRateBasic(uint8_t rate) {
+    constexpr uint8_t kBasicRateBit = 0b10000000;
+    return rate | kBasicRateBit;
+}
+
+// Find common legacy rates between AP and client.
+// The outcoming "Basic rates" follows those specified in AP
+std::vector<uint8_t> IntersectRatesAp(const std::vector<uint8_t>& ap_rates,
+                                      const std::vector<uint8_t>& client_rates);
 }  // namespace wlan

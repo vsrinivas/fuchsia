@@ -472,5 +472,34 @@ TEST_F(Elements, VhtOperation) {
     EXPECT_EQ(element->basic_mcs.ss8(), VhtMcsNss::VHT_MCS_0_TO_9);
 }
 
+struct RateVector {
+    std::vector<uint8_t> ap;
+    std::vector<uint8_t> client;
+    std::vector<uint8_t> want;
+};
+
+TEST(Intersector, IntersectRates) {
+    // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
+    // A basic rate's MSB = 1: MarkRateBasic(12) = 12 + 128 = 140
+    std::vector<RateVector> list = {
+        {{}, {}, {}},
+        {{12}, {12}, {12}},
+        {{MarkRateBasic(12)}, {12}, {MarkRateBasic(12)}},
+        {{12}, {MarkRateBasic(12)}, {12}},
+        {{MarkRateBasic(12)}, {}, {}},
+        {{}, {MarkRateBasic(12)}, {}},
+        {{12}, {}, {}},
+        {{}, {12}, {}},
+        {{MarkRateBasic(12), 24}, {MarkRateBasic(24), 12}, {MarkRateBasic(12), 24}},
+        {{24, MarkRateBasic(12)}, {12, MarkRateBasic(24)}, {MarkRateBasic(12), 24}},
+        {{72, MarkRateBasic(108), MarkRateBasic(96)}, {96}, {MarkRateBasic(96)}},
+        {{72, MarkRateBasic(108), MarkRateBasic(96)}, {MarkRateBasic(72)}, {72}},
+    };
+
+    for (auto vec : list) {
+        auto got = IntersectRatesAp(vec.ap, vec.client);
+        EXPECT_EQ(vec.want, got);
+    }
+}
 }  // namespace
 }  // namespace wlan
