@@ -11,6 +11,7 @@
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/impl/vk/pipeline_cache.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
+#include "lib/escher/renderer/buffer_cache.h"
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/hasher.h"
@@ -98,6 +99,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
   // been initialized.
   image_cache_ =
       std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
+  buffer_cache_ = std::make_unique<BufferCache>(GetWeakPtr());
   gpu_uploader_ =
       NewGpuUploader(GetWeakPtr(), command_buffer_pool(),
                      transfer_command_buffer_pool(), gpu_allocator());

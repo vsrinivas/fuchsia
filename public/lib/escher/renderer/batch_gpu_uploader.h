@@ -10,9 +10,8 @@
 #include "lib/escher/base/reffable.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/forward_declarations.h"
+#include "lib/escher/renderer/buffer_cache.h"
 #include "lib/escher/renderer/frame.h"
-#include "lib/escher/resources/resource_manager.h"
-#include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/command_buffer.h"
 
@@ -25,7 +24,7 @@ using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
 // to the GPU. Offers the ability to batch uploads into consolidated submissions
 // to the GPU driver.
 // TODO(SCN-844) Migrate users of impl::GpuUploader to this class.
-class BatchGpuUploader : public ResourceRecycler, public Reffable {
+class BatchGpuUploader : public Reffable {
  public:
   static BatchGpuUploaderPtr New(EscherWeakPtr weak_escher,
                                  int64_t frame_trace_number = 0);
@@ -82,13 +81,11 @@ class BatchGpuUploader : public ResourceRecycler, public Reffable {
   void Submit(const escher::SemaphorePtr& upload_done_semaphore,
               const std::function<void()>& callback = [] {});
 
-  // |ResourceRecycler|
-  void RecycleResource(std::unique_ptr<Resource> resource) override;
-
  private:
-  BatchGpuUploader(EscherWeakPtr weak_escher, FramePtr frame);
+  BatchGpuUploader(BufferCacheWeakPtr buffer_cache, FramePtr frame);
 
   int32_t writer_count_ = 0;
+  BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);

@@ -9,7 +9,9 @@
 namespace escher {
 
 GpuAllocator::GpuAllocator(const VulkanContext& context)
-    : physical_device_(context.physical_device), device_(context.device) {}
+    : physical_device_(context.physical_device),
+      device_(context.device),
+      weak_factory_(this) {}
 
 GpuAllocator::~GpuAllocator() {
   FXL_CHECK(total_slab_bytes_ == 0);

@@ -120,6 +120,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
   shaderc::Compiler* shaderc_compiler() { return shaderc_compiler_.get(); }
   impl::ImageCache* image_cache() { return image_cache_.get(); }
+  BufferCache* buffer_cache() { return buffer_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
   impl::PipelineLayoutCache* pipeline_layout_cache() {
     return pipeline_layout_cache_.get();
@@ -175,6 +176,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   // before they can be constructed.
 
   std::unique_ptr<impl::ImageCache> image_cache_;
+  std::unique_ptr<BufferCache> buffer_cache_;
   std::unique_ptr<impl::GpuUploader> gpu_uploader_;
   std::unique_ptr<ResourceRecycler> resource_recycler_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;

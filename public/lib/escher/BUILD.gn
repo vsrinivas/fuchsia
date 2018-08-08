@@ -274,6 +274,8 @@ source_set("escher") {
     "profiling/timestamp_profiler.h",
     "renderer/batch_gpu_uploader.cc",
     "renderer/batch_gpu_uploader.h",
+    "renderer/buffer_cache.cc",
+    "renderer/buffer_cache.h",
     "renderer/frame.cc",
     "renderer/frame.h",
     "renderer/moment_shadow_map.cc",

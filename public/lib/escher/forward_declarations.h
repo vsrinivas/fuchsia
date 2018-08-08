@@ -12,6 +12,7 @@ namespace escher {
 
 class BlockAllocator;
 class Buffer;
+class BufferCache;
 class Camera;
 struct ClipPlanes;
 class CommandBuffer;

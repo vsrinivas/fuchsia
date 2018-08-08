@@ -4,7 +4,6 @@
 
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 
-#include "lib/escher/util/bit_ops.h"
 #include "lib/escher/util/trace_macros.h"
 
 namespace escher {
@@ -15,8 +14,8 @@ BatchGpuUploaderPtr BatchGpuUploader::New(EscherWeakPtr weak_escher,
   FramePtr frame = weak_escher->NewFrame("Gpu Uploader", frame_trace_number,
                                          /* enable_gpu_logging */ false,
                                          CommandBuffer::Type::kTransfer);
-  return fxl::AdoptRef(
-      new BatchGpuUploader(std::move(weak_escher), std::move(frame)));
+  return fxl::AdoptRef(new BatchGpuUploader(
+      weak_escher->buffer_cache()->GetWeakPtr(), std::move(frame)));
 }
 
 BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer,
@@ -75,8 +74,9 @@ CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
   return std::move(command_buffer_);
 }
 
-BatchGpuUploader::BatchGpuUploader(EscherWeakPtr weak_escher, FramePtr frame)
-    : ResourceRecycler(std::move(weak_escher)), frame_(frame) {
+BatchGpuUploader::BatchGpuUploader(BufferCacheWeakPtr weak_buffer_cache,
+                                   FramePtr frame)
+    : buffer_cache_(std::move(weak_buffer_cache)), frame_(frame) {
   FXL_DCHECK(frame_);
 }
 
@@ -91,17 +91,8 @@ std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(
   // Writer.
   FXL_DCHECK(writer_count_ == 0);
 
-  BufferPtr buffer;
   vk::DeviceSize vk_size = size;
-  if (auto allocator = frame_->gpu_allocator()) {
-    // TODO(SCN-851) Get the Buffer from a host memory buffer pool, rather than
-    // allocate a new buffer for each requested Writer.
-    auto memory_properties = vk::MemoryPropertyFlagBits::eHostVisible |
-                             vk::MemoryPropertyFlagBits::eHostCoherent;
-    buffer =
-        Buffer::New(this, allocator, vk_size,
-                    vk::BufferUsageFlagBits::eTransferSrc, memory_properties);
-  }
+  BufferPtr buffer = buffer_cache_->NewHostBuffer(vk_size);
   FXL_DCHECK(buffer) << "Error allocating buffer";
 
   CommandBufferPtr command_buffer = frame_->TakeCommandBuffer();
@@ -140,12 +131,6 @@ void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
   frame_->EndFrame(upload_done_semaphore, callback);
   frame_ = nullptr;
-}
-
-void BatchGpuUploader::RecycleResource(std::unique_ptr<Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<Buffer>());
-  // TODO(SCN-851) Recycle buffer into a pool, rather than releasing it
-  // immediately.
 }
 
 }  // namespace escher
