@@ -43,11 +43,10 @@ class ScenicScanout : public machina::GpuScanout,
   void InvalidateRegion(const machina::GpuRect& rect) override;
 
   // |ViewProvider|
-  void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services)
-      override;
+  void CreateView(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                      view_owner_request,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
+                      view_services) override;
 
  private:
   machina::InputDispatcher* input_dispatcher_;

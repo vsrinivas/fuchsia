@@ -168,7 +168,8 @@ static zx_status_t create_zbi(const GuestConfig& cfg,
   }
 
   // Update the kernel ZBI container header.
-  kernel_hdr->hdr_file = ZBI_CONTAINER_HEADER(static_cast<uint32_t>(kernel_len));
+  kernel_hdr->hdr_file =
+      ZBI_CONTAINER_HEADER(static_cast<uint32_t>(kernel_len));
 
   // Command line.
   zbi_result_t res;
