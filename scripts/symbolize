@@ -147,12 +147,6 @@ def find_dso_full_path(dso, exe_name, name_to_buildid, build_dirs):
 def tool_path(arch, tool, user_provided_path):
     if user_provided_path is not None:
         return user_provided_path
-    if sys.platform.startswith("linux"):
-        platform = "Linux"
-    elif sys.platform.startswith("darwin"):
-        platform = "Darwin"
-    else:
-        raise Exception("Unsupported platform!")
     return ("%s/gcc/bin/%s-elf-%s" %
             (PREBUILTS_BASE_DIR, arch, tool))
 
