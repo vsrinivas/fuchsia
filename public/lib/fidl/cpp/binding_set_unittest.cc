@@ -11,7 +11,9 @@
 namespace fidl {
 namespace {
 
-TEST(BindingSet, Trivial) { BindingSet<fidl::test::frobinator::Frobinator> binding_set; }
+TEST(BindingSet, Trivial) {
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
+}
 
 TEST(BindingSet, Control) {
   constexpr size_t kCount = 10;

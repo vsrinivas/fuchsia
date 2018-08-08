@@ -110,7 +110,8 @@ class InterfacePtr {
   //   database->OpenTable(table.NewRequest());
   //
   // The client can call methods on |table| immediately.
-  InterfaceRequest<Interface> NewRequest(async_dispatcher_t* dispatcher = nullptr) {
+  InterfaceRequest<Interface> NewRequest(
+      async_dispatcher_t* dispatcher = nullptr) {
     zx::channel h1;
     zx::channel h2;
     if (zx::channel::create(0, &h1, &h2) != ZX_OK ||
@@ -136,7 +137,8 @@ class InterfacePtr {
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(zx::channel channel, async_dispatcher_t* dispatcher = nullptr) {
+  zx_status_t Bind(zx::channel channel,
+                   async_dispatcher_t* dispatcher = nullptr) {
     return impl_->controller.reader().Bind(std::move(channel), dispatcher);
   }
 

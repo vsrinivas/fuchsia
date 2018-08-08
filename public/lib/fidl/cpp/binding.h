@@ -82,7 +82,8 @@ class Binding {
   // Uses the given async_t (e.g., a message loop) in order to read messages
   // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
   // If |dispatcher| is null, the current thread must have a default async_t.
-  Binding(ImplPtr impl, zx::channel channel, async_dispatcher_t* dispatcher = nullptr)
+  Binding(ImplPtr impl, zx::channel channel,
+          async_dispatcher_t* dispatcher = nullptr)
       : Binding(std::forward<ImplPtr>(impl)) {
     Bind(std::move(channel), dispatcher);
   }
@@ -116,7 +117,8 @@ class Binding {
   // Uses the given async_t (e.g., a message loop) in order to read messages
   // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
   // If |dispatcher| is null, the current thread must have a default async_t.
-  InterfaceHandle<Interface> NewBinding(async_dispatcher_t* dispatcher = nullptr) {
+  InterfaceHandle<Interface> NewBinding(
+      async_dispatcher_t* dispatcher = nullptr) {
     InterfaceHandle<Interface> client;
     Bind(client.NewRequest().TakeChannel(), dispatcher);
     return client;
@@ -133,7 +135,8 @@ class Binding {
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(zx::channel channel, async_dispatcher_t* dispatcher = nullptr) {
+  zx_status_t Bind(zx::channel channel,
+                   async_dispatcher_t* dispatcher = nullptr) {
     return controller_.reader().Bind(std::move(channel), dispatcher);
   }
 

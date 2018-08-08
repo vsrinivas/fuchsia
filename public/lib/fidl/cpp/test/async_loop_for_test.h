@@ -18,8 +18,8 @@ class AsyncLoopForTestImpl;
 
 class AsyncLoopForTest {
  public:
-  // The AsyncLoopForTest constructor should also call async_set_default_dispatcher() with
-  // the chosen dispatcher implementation.
+  // The AsyncLoopForTest constructor should also call
+  // async_set_default_dispatcher() with the chosen dispatcher implementation.
   AsyncLoopForTest();
   ~AsyncLoopForTest();
 

@@ -84,7 +84,8 @@ MessageReader::~MessageReader() {
     async_cancel_wait(dispatcher_, &wait_);
 }
 
-zx_status_t MessageReader::Bind(zx::channel channel, async_dispatcher_t* dispatcher) {
+zx_status_t MessageReader::Bind(zx::channel channel,
+                                async_dispatcher_t* dispatcher) {
   if (is_bound())
     Unbind();
   if (!channel)
@@ -96,7 +97,8 @@ zx_status_t MessageReader::Bind(zx::channel channel, async_dispatcher_t* dispatc
     dispatcher_ = async_get_default_dispatcher();
   }
   ZX_ASSERT_MSG(dispatcher_ != nullptr,
-                "either |dispatcher| must be non-null, or |async_get_default_dispatcher| must "
+                "either |dispatcher| must be non-null, or "
+                "|async_get_default_dispatcher| must "
                 "be configured to return a non-null vaule");
   wait_.object = channel_.get();
   zx_status_t status = async_begin_wait(dispatcher_, &wait_);
@@ -154,15 +156,17 @@ zx_status_t MessageReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   return ZX_ERR_PEER_CLOSED;
 }
 
-void MessageReader::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                                zx_status_t status,
+void MessageReader::CallHandler(async_dispatcher_t* dispatcher,
+                                async_wait_t* wait, zx_status_t status,
                                 const zx_packet_signal_t* signal) {
   static_assert(offsetof(MessageReader, wait_) == 0,
                 "The wait must be the first member for this cast to be valid.");
-  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(dispatcher, status, signal);
+  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(dispatcher, status,
+                                                        signal);
 }
 
-void MessageReader::OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
+void MessageReader::OnHandleReady(async_dispatcher_t* dispatcher,
+                                  zx_status_t status,
                                   const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     NotifyError();

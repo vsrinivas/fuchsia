@@ -62,8 +62,8 @@ class ThreadSafeBindingSet {
   void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request,
                   async_dispatcher_t* dispatcher) {
     std::lock_guard<std::mutex> guard(lock_);
-    bindings_.push_back(std::make_unique<Binding>(std::forward<ImplPtr>(impl),
-                                                  std::move(request), dispatcher));
+    bindings_.push_back(std::make_unique<Binding>(
+        std::forward<ImplPtr>(impl), std::move(request), dispatcher));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
@@ -87,7 +87,8 @@ class ThreadSafeBindingSet {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  InterfaceHandle<Interface> AddBinding(ImplPtr impl, async_dispatcher_t* dispatcher) {
+  InterfaceHandle<Interface> AddBinding(ImplPtr impl,
+                                        async_dispatcher_t* dispatcher) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
     if (!request)

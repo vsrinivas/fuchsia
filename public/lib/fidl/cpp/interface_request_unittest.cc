@@ -27,7 +27,8 @@ TEST(InterfaceRequest, Control) {
   EXPECT_TRUE(request.is_valid());
   EXPECT_EQ(saved1, request.channel().get());
 
-  InterfaceRequest<fidl::test::frobinator::Frobinator> request2 = std::move(request);
+  InterfaceRequest<fidl::test::frobinator::Frobinator> request2 =
+      std::move(request);
   EXPECT_FALSE(request.is_valid());
   EXPECT_TRUE(request2.is_valid());
   EXPECT_EQ(saved1, request2.channel().get());
