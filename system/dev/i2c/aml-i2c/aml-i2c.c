@@ -254,34 +254,25 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
                                   &device->regs_iobuff);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_i2c_dev_init: pdev_map_mmio_buffer failed %d\n", status);
-        goto init_fail;
+        return status;
     }
 
     device->virt_regs = (aml_i2c_regs_t*)io_buffer_virt(&device->regs_iobuff);
 
     status = pdev_map_interrupt(&i2c->pdev, index, &device->irq);
     if (status != ZX_OK) {
-        goto init_fail;
+        return status;
     }
 
     status = zx_event_create(0, &device->event);
     if (status != ZX_OK) {
-        goto init_fail;
+        return status;
     }
 
     thrd_t irqthrd;
     thrd_create_with_name(&irqthrd, aml_i2c_irq_thread, device, "i2c_irq_thread");
 
     return ZX_OK;
-
-init_fail:
-    if (device) {
-        io_buffer_release(&device->regs_iobuff);
-        zx_handle_close(device->event);
-        zx_handle_close(device->irq);
-        free(device);
-     }
-    return status;
 }
 
 static uint32_t aml_i2c_get_bus_count(void* ctx) {
