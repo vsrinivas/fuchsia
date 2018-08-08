@@ -37,18 +37,17 @@ class MediaPlayer {
 
   // Plays audio response coming from a query response.
   void PlayAudioResponse(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_response);
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_response);
 
  private:
   fuchsia::media::AudioPtr audio_;
 
-  // Suggestion Engine maintains ownership of an |AudioRendererPtr| during
+  // Suggestion Engine maintains ownership of an |AudioOutPtr| during
   // playback to enforce policy and have visibility into playback status (via
   // whether or not the channel is closed). Only one agent is allowed to play
   // responses at a time.
-  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
-  std::unique_ptr<fidl::Binding<fuchsia::media::AudioRenderer2>>
-      audio_renderer_binding_;
+  fuchsia::media::AudioOutPtr audio_out_;
+  std::unique_ptr<fidl::Binding<fuchsia::media::AudioOut>> audio_out_binding_;
 
   std::shared_ptr<SuggestionDebugImpl> debug_;
   SpeechStatusCallback speech_status_callback_;

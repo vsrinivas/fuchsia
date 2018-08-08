@@ -31,21 +31,21 @@ void MediaPlayer::SetSpeechStatusCallback(SpeechStatusCallback callback) {
 }
 
 void MediaPlayer::PlayAudioResponse(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_response) {
+    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_response) {
   if (!audio_) {
     FXL_LOG(ERROR) << "Not playing query audio response because our audio "
                       "service connection died earlier.";
     return;
   }
 
-  audio_->CreateRendererV2(audio_renderer_.NewRequest());
-  audio_renderer_binding_ =
-      std::make_unique<fidl::Binding<fuchsia::media::AudioRenderer2>>(
-          audio_renderer_.get());
-  audio_renderer_binding_->set_error_handler([this] {
+  audio_->CreateAudioOut(audio_out_.NewRequest());
+  audio_out_binding_ =
+      std::make_unique<fidl::Binding<fuchsia::media::AudioOut>>(
+          audio_out_.get());
+  audio_out_binding_->set_error_handler([this] {
     speech_status_callback_(fuchsia::modular::SpeechStatus::IDLE);
   });
-  audio_renderer_binding_->Bind(std::move(audio_response));
+  audio_out_binding_->Bind(std::move(audio_response));
 
   speech_status_callback_(fuchsia::modular::SpeechStatus::RESPONDING);
 }

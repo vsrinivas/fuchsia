@@ -7,11 +7,11 @@ library fuchsia.modular;
 struct QueryResponse {
   vector<Proposal> proposals;
   string? natural_language_response;
-  // An optional request for an audio renderer to play the voice/audio response
-  // to the query as answered by this agent. The agent must close this renderer
+  // An optional request for an AudioOut to play the voice/audio response
+  // to the query as answered by this agent. The agent must close this AudioOut
   // once the response has ended, unless Suggestion Engine closes it earlier
   // due to policy.
-  request<fuchsia.media.AudioRenderer2>? audio_response;
+  request<fuchsia.media.AudioOut>? audio_response;
 };
 
 // An interface enabling Agents and Modules to contribute Proposals reactively
