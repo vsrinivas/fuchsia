@@ -18,6 +18,8 @@
 #include "vpu.h"
 #include "dwc-hdmi.h"
 
+__BEGIN_CDECLS
+
 #define DISPLAY_MASK(start, count) (((1 << (count)) - 1) << (start))
 #define DISPLAY_SET_MASK(mask, start, count, value) \
                         ((mask & ~DISPLAY_MASK(start, count)) | \
@@ -306,12 +308,16 @@ struct hdmi_param {
  #define VIC_VESA_800x600p_60Hz                 304
  #define VIC_VESA_1024x768p_60Hz                305
 
-void hdmitx_writereg(vim2_display_t* display, uint32_t addr, uint32_t data);
-uint32_t hdmitx_readreg(vim2_display_t* display, uint32_t addr);
-zx_status_t init_hdmi_hardware(vim2_display_t* display);
-void dump_regs(vim2_display_t* display);
-zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param* p);
-void hdmi_test(vim2_display_t* display, uint32_t width);
-zx_status_t configure_pll(vim2_display_t* display, const struct hdmi_param* p,
+struct vim2_display;  // fwd decl
+
+void hdmitx_writereg(const struct vim2_display* display, uint32_t addr, uint32_t data);
+uint32_t hdmitx_readreg(const struct vim2_display* display, uint32_t addr);
+zx_status_t init_hdmi_hardware(struct vim2_display* display);
+void dump_regs(struct vim2_display* display);
+zx_status_t init_hdmi_interface(struct vim2_display* display, const struct hdmi_param* p);
+void hdmi_test(struct vim2_display* display, uint32_t width);
+zx_status_t configure_pll(struct vim2_display* display, const struct hdmi_param* p,
     const struct pll_param* pll);
-void hdmi_shutdown(vim2_display_t* display);
+void hdmi_shutdown(struct vim2_display* display);
+
+__END_CDECLS

@@ -434,6 +434,7 @@
 #define HDMITX_DWC_AUD_SPDIF1                           (DWC_OFFSET_MASK + 0x3301)
 #define HDMITX_DWC_AUD_SPDIFINT                         (DWC_OFFSET_MASK + 0x3302)
 #define HDMITX_DWC_AUD_SPDIFINT1                        (DWC_OFFSET_MASK + 0x3303)
+#define HDMITX_DWC_AUD_SPDIF2                           (DWC_OFFSET_MASK + 0x3304)
 #define HDMITX_DWC_MC_CLKDIS                            (DWC_OFFSET_MASK + 0x4001)
 #define HDMITX_DWC_MC_SWRSTZREQ                         (DWC_OFFSET_MASK + 0x4002)
 #define HDMITX_DWC_MC_OPCTRL                            (DWC_OFFSET_MASK + 0x4003)

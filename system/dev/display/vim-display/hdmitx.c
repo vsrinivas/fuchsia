@@ -26,7 +26,7 @@
 // #define LOG_HDMITX
 
 
-void hdmitx_writereg(vim2_display_t* display, uint32_t addr, uint32_t data) {
+void hdmitx_writereg(const vim2_display_t* display, uint32_t addr, uint32_t data) {
     // determine if we are writing to HDMI TOP (AMLOGIC Wrapper) or HDMI IP
     uint32_t offset = (addr & DWC_OFFSET_MASK) >> 24;
     addr = addr & 0xffff;
@@ -39,7 +39,7 @@ void hdmitx_writereg(vim2_display_t* display, uint32_t addr, uint32_t data) {
 #endif
 }
 
-uint32_t hdmitx_readreg(vim2_display_t* display, uint32_t addr) {
+uint32_t hdmitx_readreg(const vim2_display_t* display, uint32_t addr) {
     // determine if we are writing to HDMI TOP (AMLOGIC Wrapper) or HDMI IP
     uint32_t offset = (addr & DWC_OFFSET_MASK) >> 24;
     addr = addr & 0xffff;

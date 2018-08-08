@@ -28,7 +28,7 @@
 #define VFIFO2VD_TO_HDMI_LATENCY 2
 #define EDID_BUF_SIZE       256
 
-typedef struct {
+typedef struct vim2_display {
     zx_device_t*                        zxdev;
     platform_device_protocol_t          pdev;
     zx_device_t*                        parent;
