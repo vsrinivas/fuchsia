@@ -23,9 +23,7 @@
 
 namespace time_zone {
 
-bool RoughTimeServer::IsValid() const {
-  return valid_;
-}
+bool RoughTimeServer::IsValid() const { return valid_; }
 
 Status RoughTimeServer::GetTimeFromServer(
     roughtime::rough_time_t* timestamp) const {

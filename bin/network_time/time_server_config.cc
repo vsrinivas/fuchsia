@@ -38,8 +38,7 @@ const char* config_schema = MULTILINE({
             "type" : "array"
           },
           "name" : {"type" : "string"},
-          "publicKey" :
-              {"maxLength" : 64, "minLength" : 64, "type" : "string"}
+          "publicKey" : {"maxLength" : 64, "minLength" : 64, "type" : "string"}
         },
         "required" : [ "publicKey", "addresses", "name" ],
         "type" : "object"
