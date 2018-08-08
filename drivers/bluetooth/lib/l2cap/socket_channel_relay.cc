@@ -93,7 +93,31 @@ bool SocketChannelRelay::Activate() {
   return true;
 }
 
-void SocketChannelRelay::Deactivate() { FXL_NOTIMPLEMENTED(); }
+void SocketChannelRelay::Deactivate() {
+  FXL_DCHECK(state_ != RelayState::kDeactivated);
+
+  state_ = RelayState::kDeactivating;
+  if (!socket_write_queue_.empty()) {
+    FXL_VLOG(1) << "l2cap: Dropping " << socket_write_queue_.size()
+                << " SDUs from channel " << channel_->id()
+                << " due to channel closure";
+    socket_write_queue_.clear();
+  }
+  channel_->Deactivate();
+
+  // We assume that UnbindAndCancelWait() will not trigger a re-entrant call
+  // into Deactivate(). And the RelayIsDestroyedWhenDispatcherIsShutDown test
+  // verifies that to be the case. (If we had re-entrant calls, a FXL_DCHECK()
+  // in the lambda bound by BindWait() would cause an abort.)
+  UnbindAndCancelWait(&sock_read_waiter_);
+  UnbindAndCancelWait(&sock_write_waiter_);
+  UnbindAndCancelWait(&sock_close_waiter_);
+  socket_.reset();
+
+  // Any further callbacks are bugs. Update state_, to help us detect
+  // those bugs.
+  state_ = RelayState::kDeactivated;
+}
 
 void SocketChannelRelay::DeactivateAndRequestDestruction() {
   Deactivate();
@@ -318,6 +342,16 @@ bool SocketChannelRelay::BeginWait(const char* wait_name, async::Wait* wait) {
   }
 
   return true;
+}
+
+void SocketChannelRelay::UnbindAndCancelWait(async::Wait* wait) {
+  FXL_DCHECK(state_ != RelayState::kActivating);
+  FXL_DCHECK(state_ != RelayState::kDeactivated);
+  zx_status_t cancel_res;
+  wait->set_handler(nullptr);
+  cancel_res = wait->Cancel();
+  FXL_DCHECK(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND)
+      << "Cancel failed: " << zx_status_get_string(cancel_res);
 }
 
 }  // namespace internal

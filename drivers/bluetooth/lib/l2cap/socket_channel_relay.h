@@ -74,14 +74,14 @@ class SocketChannelRelay final {
   };
 
   // Deactivates and unbinds all callbacks from the zx::socket and the
+  // l2cap::Channel. Drops any data still queued for transmission to the
+  // zx::socket. Ensures that the zx::socket is closed, and the l2cap::Channel
+  // is deactivated. It is an error to call this when |state_ == kDeactivated|.
   // l2cap::Channel.
   //
-  // * It is an error to call this when |state_ == kDeactivated|.
-  // * Closing |socket_| is left to the dtor.
-  //
   // Note that Deactivate() _may_ be called from the dtor. As such, this method
-  // avoids doing any "real work", and constrains itself to just tearing things
-  // down.
+  // avoids doing any "real work" (such as calling ServiceSocketWriteQueue()),
+  // and constrains itself to just tearing things down.
   void Deactivate();
 
   // Deactivates |this|, and invokes deactivation_cb_.
@@ -118,9 +118,12 @@ class SocketChannelRelay final {
   // operation will ... be terminated". (See zx_object_wait_async().)
   bool BeginWait(const char* wait_name, async::Wait* wait);
 
+  // Clears |wait|'s handler, and cancels |wait|.
+  void UnbindAndCancelWait(async::Wait* wait);
+
   RelayState state_;  // Initial state is kActivating.
 
-  const zx::socket socket_;
+  zx::socket socket_;
   const fbl::RefPtr<Channel> channel_;
   async_dispatcher_t* const dispatcher_;
   DeactivationCallback deactivation_cb_;

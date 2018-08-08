@@ -240,6 +240,35 @@ TEST_F(SocketChannelRelayLifetimeTest, OversizedDatagramDeactivatesRelay) {
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 
+TEST_F(SocketChannelRelayLifetimeTest,
+       SocketClosureAfterChannelClosureDoesNotHangOrCrash) {
+  ASSERT_TRUE(relay()->Activate());
+  channel()->Close();
+  ASSERT_TRUE(was_deactivation_callback_invoked());
+
+  CloseRemoteSocket();
+  RunLoopUntilIdle();
+}
+
+TEST_F(SocketChannelRelayLifetimeTest,
+       ChannelClosureAfterSocketClosureDoesNotHangOrCrash) {
+  ASSERT_TRUE(relay()->Activate());
+  CloseRemoteSocket();
+  RunLoopUntilIdle();
+
+  channel()->Close();
+  ASSERT_TRUE(was_deactivation_callback_invoked());
+}
+
+TEST_F(SocketChannelRelayLifetimeTest, DeactivationClosesSocket) {
+  ASSERT_TRUE(relay()->Activate());
+  channel()->Close();  // Triggers relay deactivation.
+
+  const char data = kGoodChar;
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
+            remote_socket()->write(0, &data, sizeof(data), nullptr));
+}
+
 class SocketChannelRelayDataPathTest : public SocketChannelRelayTest {
  public:
   SocketChannelRelayDataPathTest()
@@ -495,6 +524,26 @@ TEST_F(
   RunLoopUntilIdle();
 }
 
+TEST_F(SocketChannelRelayChannelRxTest,
+       NoDataFromChannelIsWrittenToSocketAfterDeactivation) {
+  ASSERT_TRUE(relay()->Activate());
+
+  size_t n_junk_bytes = StuffSocket();
+  ASSERT_TRUE(n_junk_bytes);
+
+  channel()->Receive(common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o'));
+  RunLoopUntilIdle();
+
+  channel()->Close();  // Triggers relay deactivation.
+  ASSERT_TRUE(DiscardFromSocket(n_junk_bytes));
+  RunLoopUntilIdle();
+
+  size_t n_bytes_avail = std::numeric_limits<size_t>::max();
+  const auto read_res = remote_socket()->read(0, nullptr, 0, &n_bytes_avail);
+  EXPECT_EQ(read_res, ZX_OK);
+  EXPECT_EQ(n_bytes_avail, 0U);
+}
+
 using SocketChannelRelaySocketRxTest = SocketChannelRelayDataPathTest;
 
 TEST_F(SocketChannelRelaySocketRxTest, SduFromSocketIsCopiedToChannel) {
@@ -588,6 +637,48 @@ TEST_F(SocketChannelRelaySocketRxTest, OversizedSduIsDropped) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(sent_to_channel().empty());
+}
+
+TEST_F(SocketChannelRelaySocketRxTest, ValidSduAfterOversizedSduIsIgnored) {
+  const auto kSentMsg = common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
+  ASSERT_TRUE(relay()->Activate());
+
+  {
+    common::DynamicByteBuffer dropped_msg(channel()->tx_mtu() + 1);
+    size_t n_bytes_written = 0;
+    zx_status_t write_res = ZX_ERR_INTERNAL;
+    dropped_msg.Fill(kGoodChar);
+    write_res = remote_socket()->write(0, dropped_msg.data(),
+                                       dropped_msg.size(), &n_bytes_written);
+    ASSERT_EQ(ZX_OK, write_res);
+    ASSERT_EQ(dropped_msg.size(), n_bytes_written);
+  }
+
+  {
+    size_t n_bytes_written = 0;
+    zx_status_t write_res = ZX_ERR_INTERNAL;
+    write_res = remote_socket()->write(0, kSentMsg.data(), kSentMsg.size(),
+                                       &n_bytes_written);
+    ASSERT_EQ(ZX_OK, write_res);
+    ASSERT_EQ(kSentMsg.size(), n_bytes_written);
+  }
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(sent_to_channel().empty());
+}
+
+TEST_F(SocketChannelRelaySocketRxTest,
+       NewSocketDataAfterChannelClosureIsNotSentToChannel) {
+  ASSERT_TRUE(relay()->Activate());
+  channel()->Close();
+
+  const char data = kGoodChar;
+  const auto write_res =
+      remote_socket()->write(0, &data, sizeof(data), nullptr);
+  ASSERT_TRUE(write_res == ZX_OK || write_res == ZX_ERR_PEER_CLOSED)
+      << ": " << zx_status_get_string(write_res);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(sent_to_channel().empty());
 }
 
 }  // namespace
