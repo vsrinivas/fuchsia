@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/compiler.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/compiler.h>
 #define _ALL_SOURCE
 #include <threads.h>
 #include <unistd.h>
@@ -23,10 +23,10 @@ static void ThreadCreate(thrd_t* t, thrd_start_t entry, void* arg,
     // tu_fatal takes zx_status_t values.
     // The translation doesn't have to be perfect.
     switch (ret) {
-    case thrd_nomem:
-      Fatal("thread create failed, OOM");
-    default:
-      Fatal("thread create failed");
+      case thrd_nomem:
+        Fatal("thread create failed, OOM");
+      default:
+        Fatal("thread create failed");
     }
     __UNREACHABLE;
   }

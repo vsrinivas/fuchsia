@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <zircon/syscalls.h>
 
 static void print_time(void) {
   struct timeval tv;

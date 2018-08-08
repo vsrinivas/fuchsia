@@ -5,13 +5,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void AssignToPtr(int val, int* ptr) {
-  *ptr = val;
-}
+void AssignToPtr(int val, int* ptr) { *ptr = val; }
 
-void Crash(int value) {
-  AssignToPtr(value, NULL);
-}
+void Crash(int value) { AssignToPtr(value, NULL); }
 
 int main(void) {
   printf("crash_test: Sleeping for 5 seconds\n");
