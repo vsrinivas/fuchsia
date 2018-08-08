@@ -1,6 +1,5 @@
 # How to write benchmarks
 
-* Owner: kjharland@
 * Updated: 2018 July 27
 
 [TOC]

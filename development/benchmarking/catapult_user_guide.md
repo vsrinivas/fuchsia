@@ -1,6 +1,5 @@
 # Catapult User Guide (Version 1)
 
-* Owner: kjharland@
 * Updated: 2018 July 27
 
 [TOC]
