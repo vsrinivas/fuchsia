@@ -10,6 +10,7 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "garnet/bin/cobalt/app/cobalt_encoder_impl.h"
+#include "garnet/bin/cobalt/app/logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/cobalt/config/client_config.h"
@@ -20,7 +21,8 @@
 namespace cobalt {
 namespace encoder {
 
-class CobaltEncoderFactoryImpl : public fuchsia::cobalt::EncoderFactory {
+class CobaltEncoderFactoryImpl : public fuchsia::cobalt::LoggerFactory,
+                                 public fuchsia::cobalt::EncoderFactory {
  public:
   CobaltEncoderFactoryImpl(std::shared_ptr<config::ClientConfig> client_config,
                            ClientSecret client_secret,
@@ -31,6 +33,20 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::EncoderFactory {
                            TimerManager* timer_manager);
 
  private:
+  void CreateLogger(fuchsia::cobalt::ProjectProfile2 profile,
+                    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+                    CreateLoggerCallback callback);
+
+  void CreateLoggerExt(
+      fuchsia::cobalt::ProjectProfile2 profile,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerExt> request,
+      CreateLoggerExtCallback callback);
+
+  void CreateLoggerSimple(
+      fuchsia::cobalt::ProjectProfile2 profile,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+      CreateLoggerSimpleCallback callback);
+
   void GetEncoder(int32_t project_id,
                   fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request);
 
@@ -41,6 +57,15 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::EncoderFactory {
 
   std::shared_ptr<config::ClientConfig> client_config_;
   ClientSecret client_secret_;
+  fidl::BindingSet<fuchsia::cobalt::Logger,
+                   std::unique_ptr<fuchsia::cobalt::Logger>>
+      logger_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::LoggerExt,
+                   std::unique_ptr<fuchsia::cobalt::LoggerExt>>
+      logger_ext_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::LoggerSimple,
+                   std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
+      logger_simple_bindings_;
   fidl::BindingSet<fuchsia::cobalt::Encoder,
                    std::unique_ptr<fuchsia::cobalt::Encoder>>
       cobalt_encoder_bindings_;

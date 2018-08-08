@@ -15,6 +15,8 @@ source_set("lib") {
     "cobalt_encoder_factory_impl.h",
     "cobalt_encoder_impl.cc",
     "cobalt_encoder_impl.h",
+    "logger_impl.cc",
+    "logger_impl.h",
     "product_hack.h",
     "timer_manager.cc",
     "timer_manager.h",

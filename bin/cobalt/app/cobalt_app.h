@@ -64,8 +64,9 @@ class CobaltApp {
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
 
-  std::unique_ptr<fuchsia::cobalt::EncoderFactory> factory_impl_;
-  fidl::BindingSet<fuchsia::cobalt::EncoderFactory> factory_bindings_;
+  std::unique_ptr<encoder::CobaltEncoderFactoryImpl> factory_impl_;
+  fidl::BindingSet<fuchsia::cobalt::EncoderFactory> encoder_factory_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };

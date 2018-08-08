@@ -118,7 +118,10 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       &timer_manager_));
 
   context_->outgoing().AddPublicService(
-      factory_bindings_.GetHandler(factory_impl_.get()));
+      encoder_factory_bindings_.GetHandler(factory_impl_.get()));
+
+  context_->outgoing().AddPublicService(
+      logger_factory_bindings_.GetHandler(factory_impl_.get()));
 
   context_->outgoing().AddPublicService(
       controller_bindings_.GetHandler(controller_impl_.get()));

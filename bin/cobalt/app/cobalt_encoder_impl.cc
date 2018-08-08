@@ -25,6 +25,7 @@ CobaltEncoderImpl::CobaltEncoderImpl(
       shipping_dispatcher_(shipping_dispatcher),
       timer_manager_(timer_manager) {}
 
+// Duplicated in logger_impl.cc
 template <class CB>
 void CobaltEncoderImpl::AddEncodedObservation(
     cobalt::encoder::Encoder::Result* result, CB callback) {
