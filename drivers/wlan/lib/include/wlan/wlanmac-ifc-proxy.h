@@ -9,18 +9,14 @@
 namespace wlan {
 
 class WlanmacIfcProxy {
-  public:
+   public:
     WlanmacIfcProxy() : ifc_(nullptr), cookie_(nullptr) {}
 
     WlanmacIfcProxy(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
 
-    operator bool() const {
-      return ifc_;
-    }
+    operator bool() const { return ifc_; }
 
-    void Status(uint32_t status) {
-        ifc_->status(cookie_, status);
-    }
+    void Status(uint32_t status) { ifc_->status(cookie_, status); }
 
     void Recv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
         ifc_->recv(cookie_, flags, data, length, info);
@@ -30,9 +26,9 @@ class WlanmacIfcProxy {
         ifc_->complete_tx(cookie_, packet, status);
     }
 
-  private:
+   private:
     wlanmac_ifc_t* ifc_;
     void* cookie_;
 };
 
-} // namespace wlan
+}  // namespace wlan

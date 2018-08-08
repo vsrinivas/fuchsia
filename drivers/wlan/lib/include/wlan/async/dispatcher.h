@@ -17,8 +17,7 @@
 namespace wlan {
 namespace async {
 
-template <typename I>
-class Dispatcher {
+template <typename I> class Dispatcher {
    public:
     Dispatcher(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
@@ -26,9 +25,7 @@ class Dispatcher {
     // Fails if shutdown has been initiated.
     zx_status_t AddBinding(zx::channel chan, I* intf) {
         std::lock_guard<std::mutex> shutdown_guard(lock_);
-        if (shutdown_initiated_) {
-            return ZX_ERR_PEER_CLOSED;
-        }
+        if (shutdown_initiated_) { return ZX_ERR_PEER_CLOSED; }
         fidl::InterfaceRequest<I> request(std::move(chan));
         bindings_.AddBinding(intf, std::move(request), dispatcher_);
         return ZX_OK;
@@ -43,9 +40,7 @@ class Dispatcher {
     void InitiateShutdown(fit::closure ready_callback) {
         {
             std::lock_guard<std::mutex> guard(lock_);
-            if (shutdown_initiated_) {
-                return;
-            }
+            if (shutdown_initiated_) { return; }
             shutdown_initiated_ = true;
         }
 
@@ -65,7 +60,7 @@ class Dispatcher {
     fidl::ThreadSafeBindingSet<I> bindings_;
     async_dispatcher_t* dispatcher_;
     std::mutex lock_;
-    bool shutdown_initiated_ __TA_GUARDED(lock_) { false };
+    bool shutdown_initiated_ __TA_GUARDED(lock_){false};
 };
 
 }  // namespace async
