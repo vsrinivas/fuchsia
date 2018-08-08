@@ -26,7 +26,6 @@ const uint8_t kBipGmac128 = 11;
 const uint8_t kBipGmac256 = 12;
 const uint8_t kBipCmac256 = 13;
 
-
 // IEEE Std 802.11-2016, 12.7.2, Table 12-4
 
 const uint8_t kWep40KeyLenBytes = 5;

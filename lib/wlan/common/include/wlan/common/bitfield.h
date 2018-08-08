@@ -49,8 +49,7 @@ template <typename ValueType> class BitField {
 };
 
 // Specialize the mask function for full 64-bit fields, since (1 << 64) - 1 is an error.
-template <> template <>
-constexpr uint64_t BitField<uint64_t>::mask<0, 64>() {
+template <> template <> constexpr uint64_t BitField<uint64_t>::mask<0, 64>() {
     return ~0ull;
 }
 

@@ -7,8 +7,8 @@
 #include <limits>
 #include <type_traits>
 
-#include "energy.h"
 #include <zircon/assert.h>
+#include "energy.h"
 
 namespace wlan {
 namespace common {
@@ -44,10 +44,9 @@ template <typename ValueType, typename SumType, uint32_t N> class MovingAverage 
 
 template <size_t N> class MovingAverageDbm {
     static_assert(N <= 256, "Adding more than 256 samples can cause overflow");
-  public:
-    FemtoWatt avg() const {
-        return FemtoWatt(n == 0 ? 0 : sum.val / n);
-    }
+
+   public:
+    FemtoWatt avg() const { return FemtoWatt(n == 0 ? 0 : sum.val / n); }
 
     void add(dBm sample) {
         if (n < N) {
@@ -67,7 +66,7 @@ template <size_t N> class MovingAverageDbm {
         sum = FemtoWatt(0);
     }
 
-  private:
+   private:
     FemtoWatt sum{};
     dBm samples[N];
     uint16_t i = 0;

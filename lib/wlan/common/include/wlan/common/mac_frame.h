@@ -363,7 +363,7 @@ const uint16_t kHtCtrlLen = 4;
 const uint16_t kQosCtrlLen = 2;
 const uint16_t kFcsLen = 4;
 
-struct EmptyHdr{
+struct EmptyHdr {
     constexpr size_t len() const { return 0; }
 } __PACKED;
 
@@ -657,7 +657,6 @@ struct NullDataHdr : public EmptyHdr {
 // In that sense, this implementation slightly, but knowingly diverges from IEEEs
 // definition.
 struct CtrlFrameHdr {
-
     static constexpr FrameType Type() { return FrameType::kControl; }
 
     FrameControl fc;

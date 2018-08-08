@@ -138,9 +138,7 @@ Rcpi to_Rcpi(dBmh u, bool measured) {
 }
 
 dBm to_dBm(FemtoWatt fw) {
-    if (fw.val == 0) {
-        return dBm(std::numeric_limits<int8_t>::min());
-    }
+    if (fw.val == 0) { return dBm(std::numeric_limits<int8_t>::min()); }
     // This shouldn't be called too often, so we use log10() to make it simple.
     double dbm = 10.0 * (log10(static_cast<double>(fw.val)) - 12.0);
     // Casting to int8_t is safe since the resulting value will always be between

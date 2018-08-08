@@ -31,7 +31,7 @@ struct MacAddr {
     explicit MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
     explicit MacAddr(std::initializer_list<uint8_t> addr) { Set(addr); }
     explicit MacAddr(uint64_t val) {
-        for (size_t i = 0; i < kMacAddrLen; i++){
+        for (size_t i = 0; i < kMacAddrLen; i++) {
             byte[kMacAddrLen - 1 - i] = val & 0xff;
             val >>= 8;
         }
@@ -79,13 +79,11 @@ struct MacAddr {
     bool IsStdGroupAddr() const {
         // IEEE 802.1D MAC bridge Standard MAC Group Addresses
         // IEEE range: 01:80:c2:00:00:00 - 01:80:c2:ff:ff:ff
-        if (byte[0] == 0x01 && byte[1] == 0x80 && byte[2] == 0xc2) {
-            return true;
-        }
+        if (byte[0] == 0x01 && byte[1] == 0x80 && byte[2] == 0xc2) { return true; }
 
         // ISO 9542 MAC Group Addresses
-        if (byte[0] == 0x09 && byte[1] == 0x00 && byte[2] == 0x2b && byte[3] == 0x00
-            && byte[4] == 0x00 && (byte[5] == 0x04 || byte[5] == 0x05)) {
+        if (byte[0] == 0x09 && byte[1] == 0x00 && byte[2] == 0x2b && byte[3] == 0x00 &&
+            byte[4] == 0x00 && (byte[5] == 0x04 || byte[5] == 0x05)) {
             return true;
         }
 
@@ -95,9 +93,7 @@ struct MacAddr {
     }
 
     // IEEE 802.11-2016, 9.2.4.3.3
-    bool IsGroupAddr() const {
-        return IsMcast() || IsBcast();
-    }
+    bool IsGroupAddr() const { return IsMcast() || IsBcast(); }
 
     // Overloaded initializers.
     void Set(const MacAddr& addr) { std::memcpy(byte, addr.byte, kMacAddrLen); }

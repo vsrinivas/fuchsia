@@ -413,7 +413,7 @@ HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& r
     return htc;
 }
 
-VhtCapabilities IntersectVhtCap(const VhtCapabilities &lhs, const VhtCapabilities& rhs) {
+VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilities& rhs) {
     auto vhtc = VhtCapabilities{};
 
     auto& vht_cap_info = vhtc.vht_cap_info;
