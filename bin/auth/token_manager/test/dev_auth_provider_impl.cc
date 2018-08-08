@@ -29,8 +29,7 @@ DevAuthProviderImpl::~DevAuthProviderImpl() {}
 
 void DevAuthProviderImpl::GetPersistentCredential(
     fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-    fidl::StringPtr user_profile_id,
-    GetPersistentCredentialCallback callback) {
+    fidl::StringPtr user_profile_id, GetPersistentCredentialCallback callback) {
   fuchsia::auth::UserProfileInfoPtr ui = fuchsia::auth::UserProfileInfo::New();
   ui->id = GenerateRandomString() + "@example.com";
   ui->display_name = "test_user_display_name";
@@ -42,8 +41,7 @@ void DevAuthProviderImpl::GetPersistentCredential(
 }
 
 void DevAuthProviderImpl::GetAppAccessToken(
-    fidl::StringPtr credential,
-    fidl::StringPtr app_client_id,
+    fidl::StringPtr credential, fidl::StringPtr app_client_id,
     const fidl::VectorPtr<fidl::StringPtr> app_scopes,
     GetAppAccessTokenCallback callback) {
   AuthTokenPtr access_token = fuchsia::auth::AuthToken::New();
@@ -67,8 +65,7 @@ void DevAuthProviderImpl::GetAppIdToken(fidl::StringPtr credential,
 }
 
 void DevAuthProviderImpl::GetAppFirebaseToken(
-    fidl::StringPtr id_token,
-    fidl::StringPtr firebase_api_key,
+    fidl::StringPtr id_token, fidl::StringPtr firebase_api_key,
     GetAppFirebaseTokenCallback callback) {
   FirebaseTokenPtr fb_token = fuchsia::auth::FirebaseToken::New();
   fb_token->id_token =

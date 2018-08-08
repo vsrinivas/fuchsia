@@ -43,8 +43,7 @@ CredentialIdentifier MakeCredentialIdentifier(uint32_t index,
 
 // Returns a new CredentialValue by generating a new refresh token based on the
 // given |index| and |idp| values.
-CredentialValue MakeCredentialValue(uint32_t index,
-                                    const std::string& idp,
+CredentialValue MakeCredentialValue(uint32_t index, const std::string& idp,
                                     bool update_rt = false) {
   std::string rt;
   if (update_rt) {
@@ -58,12 +57,12 @@ CredentialValue MakeCredentialValue(uint32_t index,
 void AddRows(AuthDbFileImpl* db, uint32_t num) {
   // Add rows
   for (uint32_t i = 1; i <= num; i++) {
-    EXPECT_EQ(Status::kOK, db->AddCredential(MakeCredentialValue(i, kGoogleIdp)));
+    EXPECT_EQ(Status::kOK,
+              db->AddCredential(MakeCredentialValue(i, kGoogleIdp)));
   }
 }
 
-void VerifyRow(AuthDbFileImpl* db,
-               uint32_t index,
+void VerifyRow(AuthDbFileImpl* db, uint32_t index,
                const std::string& idp = kGoogleIdp) {
   std::string refresh_token;
   auto cred_value = MakeCredentialValue(index, kGoogleIdp);
@@ -130,18 +129,17 @@ TEST_F(AuthStoreTest, AddUpdateAndDeleteSingleProvider) {
 
   // Delete credential when the store is empty.
   EXPECT_EQ(Status::kCredentialNotFound,
-            db->DeleteCredential(
-                CredentialIdentifier("cred_1", kGoogleIdp)));
+            db->DeleteCredential(CredentialIdentifier("cred_1", kGoogleIdp)));
 
   // Add credential failure testcases
   EXPECT_EQ(Status::kInvalidArguments,
-            db->AddCredential(CredentialValue(
-                CredentialIdentifier("", kGoogleIdp),
-                "refresh_token")));  // empty idp credential id
+            db->AddCredential(
+                CredentialValue(CredentialIdentifier("", kGoogleIdp),
+                                "refresh_token")));  // empty idp credential id
   EXPECT_EQ(Status::kInvalidArguments,
-            db->AddCredential(CredentialValue(
-                CredentialIdentifier("idp_id_1", kTestIdp),
-                "")));  // empty refresh token
+            db->AddCredential(
+                CredentialValue(CredentialIdentifier("idp_id_1", kTestIdp),
+                                "")));  // empty refresh token
 
   // Add multiple
   AddRows(db, 3);
@@ -157,8 +155,7 @@ TEST_F(AuthStoreTest, AddUpdateAndDeleteSingleProvider) {
   EXPECT_EQ(Status::kOK, db->GetRefreshToken(updateCid, &old_refresh_token));
 
   EXPECT_FALSE(old_refresh_token.empty());
-  auto newCredVal =
-      MakeCredentialValue(updateIndex, kGoogleIdp, true);
+  auto newCredVal = MakeCredentialValue(updateIndex, kGoogleIdp, true);
   EXPECT_EQ(Status::kOK, db->AddCredential(newCredVal));
   std::vector<CredentialValue> vals;
   EXPECT_EQ(Status::kOK, db->GetAllCredentials(&vals));
@@ -181,18 +178,16 @@ TEST_F(AuthStoreTest, AddUpdateAndDeleteSingleProvider) {
 
   // Delete credential failure testcases
   // empty IDP cred id
-  EXPECT_EQ(
-      Status::kInvalidArguments,
-      db->DeleteCredential(CredentialIdentifier("", kGoogleIdp)));
+  EXPECT_EQ(Status::kInvalidArguments,
+            db->DeleteCredential(CredentialIdentifier("", kGoogleIdp)));
   // invalid IDP cred id
   EXPECT_EQ(Status::kCredentialNotFound,
-            db->DeleteCredential(CredentialIdentifier(
-                "invalid_idp_user", kGoogleIdp)));
+            db->DeleteCredential(
+                CredentialIdentifier("invalid_idp_user", kGoogleIdp)));
   // invalid IDP
-  EXPECT_EQ(
-      Status::kCredentialNotFound,
-      db->DeleteCredential(CredentialIdentifier(
-          IdpUserIdString(5, kTestIdp), kTestIdp)));
+  EXPECT_EQ(Status::kCredentialNotFound,
+            db->DeleteCredential(
+                CredentialIdentifier(IdpUserIdString(5, kTestIdp), kTestIdp)));
 }
 
 TEST_F(AuthStoreTest, AddUpdateAndDeleteMultipleProviders) {
@@ -201,16 +196,14 @@ TEST_F(AuthStoreTest, AddUpdateAndDeleteMultipleProviders) {
 
   // add multiple creds for each user
   for (uint32_t i = 1; i <= 5; i++) {
-    EXPECT_EQ(Status::kOK, db->AddCredential(MakeCredentialValue(
-                               i, kGoogleIdp)));
-    EXPECT_EQ(Status::kOK, db->AddCredential(
-                               MakeCredentialValue(i, kTestIdp)));
+    EXPECT_EQ(Status::kOK,
+              db->AddCredential(MakeCredentialValue(i, kGoogleIdp)));
+    EXPECT_EQ(Status::kOK, db->AddCredential(MakeCredentialValue(i, kTestIdp)));
   }
 
   // Update TEST idp credential
   int updateIndex = 3;
-  auto updateCid =
-      MakeCredentialIdentifier(updateIndex, kTestIdp);
+  auto updateCid = MakeCredentialIdentifier(updateIndex, kTestIdp);
   std::string old_refresh_token;
   std::string new_refresh_token;
 

@@ -47,9 +47,7 @@ Status TokenCache::AddFirebaseToken(const CacheKey& key,
   return Status::kOK;
 }
 
-bool TokenCache::HasKey(const CacheKey& key) {
-  return cache_map_.HasKey(key);
-}
+bool TokenCache::HasKey(const CacheKey& key) { return cache_map_.HasKey(key); }
 
 }  // namespace cache
 }  // namespace auth

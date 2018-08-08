@@ -49,8 +49,7 @@ class DevAuthProviderImpl : public fuchsia::auth::AuthProvider,
                          GetAppAccessTokenCallback callback) override;
 
   // |AuthProvider|
-  void GetAppIdToken(fidl::StringPtr credential,
-                     fidl::StringPtr audience,
+  void GetAppIdToken(fidl::StringPtr credential, fidl::StringPtr audience,
                      GetAppIdTokenCallback callback) override;
 
   // |AuthProvider|

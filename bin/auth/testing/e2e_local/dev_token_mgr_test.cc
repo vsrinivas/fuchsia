@@ -328,7 +328,8 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
 // recent long lived credentials.
 
 INSTANTIATE_TEST_CASE_P(Cpp, DevTokenManagerAppTest,
-                        ::testing::Values("token_manager", "token_manager_rust"));
+                        ::testing::Values("token_manager",
+                                          "token_manager_rust"));
 }  // namespace
 }  // namespace e2e_dev
 

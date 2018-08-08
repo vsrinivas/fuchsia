@@ -22,18 +22,15 @@ namespace {
 // Generates a flatbuffer |IdpCredential| instance for the given |idp| using the
 // flatbuffer |builder|.
 flatbuffers::Offset<::auth::IdpCredential> MakeIdpCredential(
-    const std::string& idp_cred_id,
-    const std::string& idp,
-    const std::string& refresh_token,
-    flatbuffers::FlatBufferBuilder* builder) {
+    const std::string& idp_cred_id, const std::string& idp,
+    const std::string& refresh_token, flatbuffers::FlatBufferBuilder* builder) {
   FXL_DCHECK(builder);
   FXL_DCHECK(!idp.empty());
   FXL_DCHECK(!idp_cred_id.empty());
 
-  return ::auth::CreateIdpCredential(*builder,
-                                     builder->CreateString(idp_cred_id),
-                                     builder->CreateString(idp),
-                                     builder->CreateString(refresh_token));
+  return ::auth::CreateIdpCredential(
+      *builder, builder->CreateString(idp_cred_id), builder->CreateString(idp),
+      builder->CreateString(refresh_token));
 }
 
 }  // end namespace
@@ -131,8 +128,7 @@ Status AuthDbFileImpl::GetAllCredentials(
 }
 
 Status AuthDbFileImpl::GetRefreshToken(
-    const CredentialIdentifier& credential_id,
-    std::string* refresh_token_out) {
+    const CredentialIdentifier& credential_id, std::string* refresh_token_out) {
   FXL_CHECK(refresh_token_out);
 
   auto status = Validate(credential_id);
