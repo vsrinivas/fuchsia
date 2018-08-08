@@ -442,11 +442,9 @@ func (ns *netstack) addEth(path string) error {
 	}
 	ifs.eth = client
 	ep := eth.NewLinkEndpoint(client)
-	if err := ep.Init(); err != nil {
-		log.Fatalf("%s: endpoint init failed: %v", path, err)
-	}
 	linkID := stack.RegisterLinkEndpoint(ep)
-	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.LinkAddr))
+	linkAddr := ep.LinkAddress()
+	lladdr := ipv6.LinkLocalAddr(linkAddr)
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
@@ -493,7 +491,7 @@ func (ns *netstack) addEth(path string) error {
 	}
 	log.Printf("NIC %s: link-local IPv6: %v", ifs.nic.Name, lladdr)
 
-	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
+	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, linkAddr, ifs.dhcpAcquired)
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())

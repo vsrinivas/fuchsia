@@ -21,8 +21,7 @@ const headerLength = 14
 const debug2 = false
 
 type linkEndpoint struct {
-	c        *Client
-	LinkAddr tcpip.LinkAddress
+	c *Client
 
 	vv    buffer.VectorisedView
 	views [1]buffer.View
@@ -30,7 +29,7 @@ type linkEndpoint struct {
 
 func (ep *linkEndpoint) MTU() uint32                    { return uint32(ep.c.MTU) }
 func (ep *linkEndpoint) MaxHeaderLength() uint16        { return headerLength }
-func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return ep.LinkAddr }
+func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return tcpip.LinkAddress(ep.c.MAC[:]) }
 
 // TODO(stijlist): modified from WritePacket below. These two implementations are the same except for where header and payload
 // are read.
@@ -56,7 +55,7 @@ func (ep *linkEndpoint) WriteBuffer(r *stack.Route, payload *buffer.VectorisedVi
 	if r.LocalLinkAddress != "" {
 		copy(ethHdr[6:], r.LocalLinkAddress)
 	} else {
-		copy(ethHdr[6:], ep.LinkAddr)
+		copy(ethHdr[6:], ep.c.MAC[:])
 	}
 	ethHdr[12] = uint8(protocol >> 8)
 	ethHdr[13] = uint8(protocol)
@@ -145,15 +144,6 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 	return nil
 }
 
-func (ep *linkEndpoint) Init() error {
-	ep.LinkAddr = tcpip.LinkAddress(ep.c.MAC[:])
-	log.Printf("linkaddr: %v", ep.LinkAddr)
-	return nil
-}
-
 func NewLinkEndpoint(c *Client) *linkEndpoint {
-	ep := &linkEndpoint{
-		c: c,
-	}
-	return ep
+	return &linkEndpoint{c: c}
 }
