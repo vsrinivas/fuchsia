@@ -10,7 +10,6 @@
 __BEGIN_CDECLS
 
 typedef struct wlanphy_impl_protocol_ops {
-
     // Get information about the capabilities of the physical device
     zx_status_t (*query)(void* ctx, wlanphy_info_t* info);
 
@@ -18,9 +17,7 @@ typedef struct wlanphy_impl_protocol_ops {
     // Some common error codes are:
     // ZX_ERR_NO_RESOURCES: maximum number of interfaces have already been created
     // ZX_ERR_NOT_SUPPORTED: device does not support the specified role
-    zx_status_t (*create_iface)(void* ctx,
-                                uint16_t role,
-                                uint16_t* iface_id);
+    zx_status_t (*create_iface)(void* ctx, uint16_t role, uint16_t* iface_id);
 
     // Destroy the interface with the matching id.
     zx_status_t (*destroy_iface)(void* ctx, uint16_t id);
