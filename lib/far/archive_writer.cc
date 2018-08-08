@@ -32,7 +32,8 @@ ArchiveWriter::~ArchiveWriter() = default;
 
 bool ArchiveWriter::Add(ArchiveEntry entry) {
   size_t size = entry.dst_path.size();
-  if (size > std::numeric_limits<uint16_t>::max()) return false;
+  if (size > std::numeric_limits<uint16_t>::max())
+    return false;
   if (size > std::numeric_limits<uint32_t>::max() - total_path_length_)
     return false;
   // TODO(abarth): Add more entry.dst_path validation.
@@ -48,7 +49,8 @@ bool ArchiveWriter::Write(int fd) {
     dirty_ = false;
   }
 
-  if (HasDuplicateEntries()) return false;
+  if (HasDuplicateEntries())
+    return false;
 
   if (lseek(fd, 0, SEEK_SET) < 0) {
     fprintf(stderr, "error: Failed to seek to beginning of archive.\n");
@@ -66,7 +68,8 @@ bool ArchiveWriter::Write(int fd) {
     return false;
   }
 
-  if (entries_.empty()) return true;  // No files to store in the archive.
+  if (entries_.empty())
+    return true;  // No files to store in the archive.
 
   IndexEntry dir_entry;
   dir_entry.type = kDirType;

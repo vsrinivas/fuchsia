@@ -26,7 +26,8 @@ bool ReadManifest(fxl::StringView path, ArchiveWriter* writer) {
 
   for (const auto& line : lines) {
     size_t offset = line.find('=');
-    if (offset == std::string::npos) continue;
+    if (offset == std::string::npos)
+      continue;
     writer->Add(ArchiveEntry(line.substr(offset + 1).ToString(),
                              line.substr(0, offset).ToString()));
   }

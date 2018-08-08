@@ -25,12 +25,14 @@ class ArchiveReader {
 
   template <typename Callback>
   void ListPaths(Callback callback) const {
-    for (const auto& entry : directory_table_) callback(GetPathView(entry));
+    for (const auto& entry : directory_table_)
+      callback(GetPathView(entry));
   }
 
   template <typename Callback>
   void ListDirectory(Callback callback) const {
-    for (const auto& entry : directory_table_) callback(entry);
+    for (const auto& entry : directory_table_)
+      callback(entry);
   }
 
   bool Extract(fxl::StringView output_dir) const;
