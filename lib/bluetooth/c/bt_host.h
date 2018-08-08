@@ -15,8 +15,7 @@ __BEGIN_CDECLS
   IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HOST, 0)
 
 // ssize_t ioctl_bt_host_open_channel(int fd, zx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_bt_host_open_channel,
-                  IOCTL_BT_HOST_OPEN_CHANNEL,
+IOCTL_WRAPPER_OUT(ioctl_bt_host_open_channel, IOCTL_BT_HOST_OPEN_CHANNEL,
                   zx_handle_t);
 
 __END_CDECLS
