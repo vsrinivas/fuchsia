@@ -59,7 +59,12 @@ zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
     // MLME. DEVICE_QUERY.request is used to obtain device capabilities.
 
     auto service_msg = (packet->peer() == Packet::Peer::kService);
-    if (mlme_ == nullptr && !service_msg) { return ZX_OK; }
+    if (mlme_ == nullptr && !service_msg) {
+        WLAN_STATS_INC(any_packet.drop);
+        return ZX_OK;
+    }
+
+    WLAN_STATS_INC(any_packet.out);
 
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
