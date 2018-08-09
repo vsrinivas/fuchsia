@@ -392,7 +392,7 @@ zx_status_t zxrio_encode_response(zx_status_t status, zxrio_msg_t* msg, uint32_t
         if (response->s != ZX_OK) {
             response->data.count = 0;
         }
-        *sz += static_cast<uint32_t>(response->data.count);
+        *sz += static_cast<uint32_t>(FIDL_ALIGN(response->data.count));
         break;
     }
     case ZXFIDL_WRITE_AT: {
