@@ -344,9 +344,12 @@ static zx_status_t setup_display_interface(astro_display_t* display) {
     // Detect board ID first
     populate_board_rev(display);
 
-    if ((display->board_rev == BOARD_REV_UNKNOWN) ||
-        (display->board_rev < MIN_BOARD_REV_SUPPORTED)) {
-        DISP_INFO("Unsupported Board REV. Will skip display driver initialization\n");
+    //FIXME: We don't have a reliable source of board rev. What we do know is
+    // EVT units have board rev of 2 or 3. So for now, only support these two revs
+    if ((display->board_rev != BOARD_REV_EVT_1) &&
+        (display->board_rev != BOARD_REV_EVT_2)) {
+        DISP_INFO("Unsupported Board REV (%d). Will skip display driver initialization\n",
+            display->board_rev);
         display->skip_disp_init = true;
     }
 

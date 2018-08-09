@@ -106,8 +106,8 @@ enum {
 // already done all display initializations
 #define BOARD_REV_P1            0
 #define BOARD_REV_P2            1
-#define BOARD_REV_EVT           2
-#define MIN_BOARD_REV_SUPPORTED BOARD_REV_EVT
+#define BOARD_REV_EVT_1         2
+#define BOARD_REV_EVT_2         3
 #define BOARD_REV_UNKNOWN       0xff
 
 // This structure is populated based on hardware/lcd type. Its values come from vendor.
