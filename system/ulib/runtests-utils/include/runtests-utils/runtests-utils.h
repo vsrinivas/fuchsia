@@ -89,8 +89,8 @@ fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
 //
 // Returns 0 on success, else an error code compatible with errno.
 int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
-                     const fbl::StringPiece output_file_basename,
-                     const fbl::StringPiece syslog_path,
+                     fbl::StringPiece output_file_basename,
+                     fbl::StringPiece syslog_path,
                      FILE* summary_json);
 
 // Resolves a set of globs.

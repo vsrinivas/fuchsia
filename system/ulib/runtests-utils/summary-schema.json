@@ -14,10 +14,9 @@
             "properties": {
                 "syslog_file": { "type": "string" }
             },
-            "required": [ "syslog_file" ]
         }
     },
-    "required": [ "tests", "outputs"],
+    "required": ["tests"],
 
     "definitions": {
         "test": {

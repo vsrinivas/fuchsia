@@ -22,7 +22,7 @@ typedef zx_handle_t fuchsia_logger_LogListener;
 
 namespace runtests {
 
-// Error while launching Listener.
+// Error while launching LogExporter.
 enum ExporterLaunchError {
     OPEN_FILE,
     CREATE_CHANNEL,
@@ -56,12 +56,12 @@ public:
     LogExporter(zx::channel channel, FILE* output_file);
     ~LogExporter();
 
-    // Starts Log Listener on a seperate thread.
+    // Starts LogListener service on a seperate thread.
     //
     // Returns result of loop_.StartThread().
     zx_status_t StartThread();
 
-    // Starts Log Listener until message loop is idle.
+    // Runs LogListener service until message loop is idle.
     //
     // Returns result of loop_.RunUntilIdle().
     zx_status_t RunUntilIdle();
@@ -131,7 +131,7 @@ private:
 // |error| error to set in case of failure.
 //
 // Returns nullptr if it is not possible to launch Log Exporter.
-fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+fbl::unique_ptr<LogExporter> LaunchLogExporter(fbl::StringPiece syslog_path,
                                                ExporterLaunchError* error);
 
 } // namespace runtests

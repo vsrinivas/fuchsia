@@ -129,57 +129,61 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     int watchdog_timeout_seconds = -1;
     const char* test_list_path = nullptr;
 
-    // TODO(IN-478): Convert this logic to use getopt_long().
-    int i = 1;
-    while (i < argc) {
-        if (strcmp(argv[i], "-q") == 0) {
+    int c;
+    // getopt uses global state, reset it.
+    optind = 1;
+    // Starting with + means don't modify |argv|.
+    static const char* kOptString = "+qvsmlpSMLPaht:o:f:w:";
+    while ((c = getopt(argc, const_cast<char* const*>(argv), kOptString)) != -1) {
+        switch (c) {
+        case 'q':
             verbosity = 0;
-        } else if (strcmp(argv[i], "-v") == 0) {
+            break;
+        case 'v':
             fprintf(stderr, "verbose output. enjoy.\n");
             verbosity = 1;
-        } else if (strcmp(argv[i], "-s") == 0) {
+            break;
+        case 's':
             test_types &= ~TEST_SMALL;
-        } else if (strcmp(argv[i], "-m") == 0) {
+            break;
+        case 'm':
             test_types &= ~TEST_MEDIUM;
-        } else if (strcmp(argv[i], "-l") == 0) {
+            break;
+        case 'l':
             test_types &= ~TEST_LARGE;
-        } else if (strcmp(argv[i], "-p") == 0) {
+            break;
+        case 'p':
             test_types &= ~TEST_PERFORMANCE;
-        } else if (strcmp(argv[i], "-S") == 0) {
+            break;
+        case 'S':
             test_types |= TEST_SMALL;
-        } else if (strcmp(argv[i], "-M") == 0) {
+            break;
+        case 'M':
             test_types |= TEST_MEDIUM;
-        } else if (strcmp(argv[i], "-L") == 0) {
+            break;
+        case 'L':
             test_types |= TEST_LARGE;
-        } else if (strcmp(argv[i], "-P") == 0) {
+            break;
+        case 'P':
             test_types |= TEST_PERFORMANCE;
-        } else if (strcmp(argv[i], "-a") == 0) {
+            break;
+        case 'a':
             test_types |= TEST_ALL;
-        } else if (strcmp(argv[i], "-h") == 0) {
+            break;
+        case 'h':
             return Usage(argv[0], default_test_dirs);
-        } else if (strcmp(argv[i], "-t") == 0) {
-            if (i + 1 >= argc) {
-                return Usage(argv[0], default_test_dirs);
-            }
-            ParseTestNames(argv[i + 1], &basename_whitelist);
-            i++;
-        } else if (strcmp(argv[i], "-o") == 0) {
-            if (i + 1 >= argc) {
-                return Usage(argv[0], default_test_dirs);
-            }
-            output_dir = argv[i + 1];
-            i++;
-        } else if (strcmp(argv[i], "-f") == 0) {
-            if (i + 1 >= argc) {
-                return Usage(argv[0], default_test_dirs);
-            }
-            test_list_path = argv[i + 1];
-            i++;
-        } else if (strcmp(argv[i], "-w") == 0) {
-            if (i + 1 >= argc) {
-                return Usage(argv[0], default_test_dirs);
-            }
-            const char* timeout_str = argv[++i];
+        case 't':
+            ParseTestNames(optarg, &basename_whitelist);
+            break;
+        case 'o':
+            output_dir = optarg;
+            break;
+        case 'f':
+            test_list_path = optarg;
+            break;
+        case 'w':
+        {
+            const char* timeout_str = optarg;
             char* end;
             long timeout = strtol(timeout_str, &end, 0);
             if (*timeout_str == '\0' || *end != '\0' || timeout < 0 || timeout > INT_MAX) {
@@ -187,17 +191,17 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
                 return EXIT_FAILURE;
             }
             watchdog_timeout_seconds = static_cast<int>(timeout);
-        } else if (argv[i][0] != '-') {
-            // Treat the rest of the argv array as a list of directory globs.
-            while (i < argc) {
-                test_dir_globs.push_back(argv[i++]);
-            }
             break;
-        } else {
+        }
+        default:
             return Usage(argv[0], default_test_dirs);
         }
-        i++;
     }
+    // Treat the rest of the argv array as a list of directory globs.
+    for (int i = optind; i < argc; ++i) {
+        test_dir_globs.push_back(argv[i]);
+    }
+
     if (test_list_path && !test_dir_globs.is_empty()) {
         fprintf(stderr, "Can't set both -f and directory globs.\n");
         return Usage(argv[0], default_test_dirs);
