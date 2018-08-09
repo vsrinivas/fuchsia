@@ -11,7 +11,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
@@ -324,7 +324,7 @@ static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, uint16_t address
     return ZX_OK;
 }
 
-static i2c_impl_ops_t i2c_ops = {
+static i2c_impl_protocol_ops_t i2c_ops = {
     .get_bus_count = aml_i2c_get_bus_count,
     .get_max_transfer_size = aml_i2c_get_max_transfer_size,
     .set_bitrate = aml_i2c_set_bitrate,

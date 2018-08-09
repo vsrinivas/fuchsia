@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-impl.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 
@@ -54,7 +54,7 @@ public:
     }
 
 protected:
-    i2c_impl_ops_t i2c_impl_proto_ops_ = {};
+    i2c_impl_protocol_ops_t i2c_impl_proto_ops_ = {};
 
 private:
     static uint32_t I2cImplGetBusCount(void* ctx) {
@@ -100,7 +100,7 @@ public:
     }
 
 private:
-    i2c_impl_ops_t* ops_;
+    i2c_impl_protocol_ops_t* ops_;
     void* ctx_;
 };
 
