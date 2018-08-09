@@ -162,7 +162,7 @@ void magma_signal_semaphore(magma_semaphore_t semaphore) {}
 void magma_reset_semaphore(magma_semaphore_t semaphore) {}
 
 magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphore, uint32_t count,
-                                     uint64_t timeout, bool wait_all)
+                                     uint64_t timeout, magma_bool_t wait_all)
 {
     return MAGMA_STATUS_OK;
 }

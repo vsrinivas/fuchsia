@@ -44,6 +44,9 @@ extern "C" {
 
 typedef int32_t magma_status_t;
 
+// Normal bool doesn't have to be a particular size.
+typedef uint8_t magma_bool_t;
+
 typedef uint32_t magma_cache_operation_t;
 
 typedef uint32_t magma_cache_policy_t;

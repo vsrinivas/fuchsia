@@ -355,7 +355,7 @@ void magma_reset_semaphore(magma_semaphore_t semaphore)
 }
 
 magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32_t count,
-                                     uint64_t timeout_ms, bool wait_all)
+                                     uint64_t timeout_ms, magma_bool_t wait_all)
 {
     if (count == 1) {
         if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphores[0])->WaitNoReset(timeout_ms))
