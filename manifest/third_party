@@ -44,11 +44,6 @@
              remote="https://fuchsia.googlesource.com/third_party/asio"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="b7b0aeca406bb60e981c20e6a9af1d0aae31fc48"/>
-    <project name="third_party/benchmark"
-             path="third_party/benchmark"
-             remote="https://fuchsia.googlesource.com/third_party/benchmark"
-             gerrithost="https://fuchsia-review.googlesource.com"
-             revision="21f1eb3fe269ea43eba862bf6b699cde46587ade"/>
     <project name="third_party/cares"
              path="third_party/cares"
              remote="https://fuchsia.googlesource.com/third_party/c-ares"
