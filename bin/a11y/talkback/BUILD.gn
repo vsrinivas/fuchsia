@@ -23,6 +23,7 @@ source_set("lib") {
     "app.h",
     "gesture_detector.cc",
     "gesture_detector.h",
+    "gesture_listener.h",
     "talkback_impl.cc",
     "talkback_impl.h",
   ]

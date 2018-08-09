@@ -7,9 +7,9 @@
 namespace talkback {
 
 GestureDetector::GestureDetector(component::StartupContext* startup_context,
-                                 TalkbackImpl* talkback)
+                                 GestureListener* listener)
     : startup_context_(startup_context),
-      talkback_(talkback),
+      listener_(listener),
       tap_dispatcher_(async_get_default_dispatcher()) {
   touch_dispatcher_.set_error_handler([this]() {
     FXL_LOG(ERROR) << "Cannot connect to a11y touch dispatcher";
@@ -60,8 +60,7 @@ void GestureDetector::AfterTapDelay() {
     token_.Clone(&clone_token);
     fuchsia::ui::input::PointerEvent clone_event;
     finger1_pointer_event_.Clone(&clone_event);
-    talkback_->SetAccessibilityFocus(std::move(clone_token),
-                                     std::move(clone_event));
+    listener_->Tap(std::move(clone_token), std::move(clone_event));
     state_ = State::kIdle;
   }
 }
@@ -105,8 +104,7 @@ void GestureDetector::FromFirstTouchDown(
       token_.Clone(&clone_token_);
       // TODO(SCN-883): Look into performance costs of setting a11y focus every
       // move input event.
-      talkback_->SetAccessibilityFocus(std::move(clone_token_),
-                                       std::move(event));
+      listener_->Move(std::move(clone_token_), std::move(event));
     }
     finger1_pointer_event_ = event;
   } else if (event.phase == fuchsia::ui::input::PointerEventPhase::UP) {
@@ -144,7 +142,9 @@ void GestureDetector::FromSecondTouchDown(
   // drags, and long presses?
   if (event.phase == fuchsia::ui::input::PointerEventPhase::UP) {
     FXL_VLOG(2) << "SecondTouchDown to Idle";
-    talkback_->TapAccessibilityFocusedNode();
+    fuchsia::ui::viewsv1::ViewTreeToken clone_token_;
+    token_.Clone(&clone_token_);
+    listener_->DoubleTap(std::move(clone_token_), std::move(event));
     state_ = State::kIdle;
   }
 }

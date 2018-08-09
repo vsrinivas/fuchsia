@@ -17,6 +17,21 @@ TalkbackImpl::TalkbackImpl(component::StartupContext* startup_context) {
   startup_context->ConnectToEnvironmentService(tts_.NewRequest());
 }
 
+void TalkbackImpl::Tap(fuchsia::ui::viewsv1::ViewTreeToken token,
+                       fuchsia::ui::input::PointerEvent event) {
+  SetAccessibilityFocus(std::move(token), std::move(event));
+}
+
+void TalkbackImpl::Move(fuchsia::ui::viewsv1::ViewTreeToken token,
+                        fuchsia::ui::input::PointerEvent event) {
+  SetAccessibilityFocus(std::move(token), std::move(event));
+}
+
+void TalkbackImpl::DoubleTap(fuchsia::ui::viewsv1::ViewTreeToken token,
+                             fuchsia::ui::input::PointerEvent event) {
+  TapAccessibilityFocusedNode();
+}
+
 void TalkbackImpl::SetAccessibilityFocus(
     fuchsia::ui::viewsv1::ViewTreeToken token,
     fuchsia::ui::input::PointerEvent event) {

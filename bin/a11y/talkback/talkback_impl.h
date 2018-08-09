@@ -10,6 +10,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
+#include "garnet/bin/a11y/talkback/gesture_listener.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -25,10 +26,19 @@ namespace talkback {
 // Only the functionality that needs to be mediated by the accessibility
 // manager is performed here. Talkback also allows for using two fingers
 // to simulate one finger, but that is handled only in the gesture recognizer.
-class TalkbackImpl {
+class TalkbackImpl : public GestureListener {
  public:
   explicit TalkbackImpl(component::StartupContext* startup_context);
   ~TalkbackImpl() = default;
+
+ private:
+  // |GestureListener|
+  void Tap(fuchsia::ui::viewsv1::ViewTreeToken token,
+           fuchsia::ui::input::PointerEvent event) override;
+  void Move(fuchsia::ui::viewsv1::ViewTreeToken token,
+            fuchsia::ui::input::PointerEvent event) override;
+  void DoubleTap(fuchsia::ui::viewsv1::ViewTreeToken token,
+                 fuchsia::ui::input::PointerEvent event) override;
 
   // Should be called on a single tap gesture or when a finger is moving on the
   // screen for touch exploration. Queries the a11y manager semantics tree to
@@ -43,7 +53,6 @@ class TalkbackImpl {
   // before calling this function.
   void TapAccessibilityFocusedNode();
 
- private:
   // Listener function for node change events sent by the a11y manager.
   // We specifically check if the node has gained accessibility focus,
   // we read aloud the node label using the connected TTS service.

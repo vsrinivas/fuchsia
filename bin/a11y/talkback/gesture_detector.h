@@ -11,7 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/a11y/talkback/talkback_impl.h"
+#include "garnet/bin/a11y/talkback/gesture_listener.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -40,7 +40,7 @@ constexpr uint64_t kMoveCallDelay = zx::msec(17).to_nsecs();
 class GestureDetector {
  public:
   explicit GestureDetector(component::StartupContext* startup_context,
-                           TalkbackImpl* talkback);
+                           GestureListener* listener);
   ~GestureDetector() = default;
 
  private:
@@ -145,7 +145,7 @@ class GestureDetector {
 
   component::StartupContext* startup_context_;
 
-  TalkbackImpl* talkback_;
+  GestureListener* listener_;
   fuchsia::accessibility::TouchDispatcherPtr touch_dispatcher_;
 
   // The ViewTreeToken for the currently displayed presentation is needed

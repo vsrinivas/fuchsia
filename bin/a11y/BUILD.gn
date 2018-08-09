@@ -4,6 +4,20 @@
 
 import("//build/package.gni")
 
+package("a11y_tests") {
+  testonly = true
+
+  deps = [
+    "tests",
+  ]
+
+  tests = [
+    {
+      name = "talkback_apptests"
+    },
+  ]
+}
+
 package("a11y_manager") {
   deps = [
     "a11y_manager",
