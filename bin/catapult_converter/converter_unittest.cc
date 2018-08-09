@@ -675,6 +675,111 @@ TEST(CatapultConverter, ConvertNewSchemaWithSplits) {
   AssertJsonEqual(output, expected_output);
 }
 
+TEST(CatapultConverter, ConvertThroughputUnits) {
+  // The example value here is 99 * 1024 * 1024 (99 mebibytes/second).
+  const char* input_str = R"JSON(
+[
+    {
+        "label": "ExampleThroughput",
+        "test_suite": "my_test_suite",
+        "values": [103809024],
+        "unit": "bytes/second"
+    }
+]
+)JSON";
+
+  const char* expected_output_str = R"JSON(
+[
+    {
+        "guid": "dummy_guid_0",
+        "type": "GenericSet",
+        "values": [
+            4321
+        ]
+    },
+    {
+        "guid": "dummy_guid_1",
+        "type": "GenericSet",
+        "values": [
+            "example_bots"
+        ]
+    },
+    {
+        "guid": "dummy_guid_2",
+        "type": "GenericSet",
+        "values": [
+            "example_masters"
+        ]
+    },
+    {
+        "guid": "dummy_guid_3",
+        "type": "GenericSet",
+        "values": [
+            [
+                "Build Log",
+                "https://ci.example.com/build/100"
+            ]
+        ]
+    },
+    {
+        "guid": "dummy_guid_4",
+        "type": "GenericSet",
+        "values": [
+            "my_test_suite"
+        ]
+    },
+    {
+        "name": "ExampleThroughput",
+        "unit": "unitless_biggerIsBetter",
+        "description": "",
+        "diagnostics": {
+            "chromiumCommitPositions": "dummy_guid_0",
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
+        },
+        "running": [
+            1,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_5",
+        "maxNumSampleValues": 1,
+        "numNans": 0
+    }
+]
+)JSON";
+
+  rapidjson::Document input;
+  CheckParseResult(input.Parse(input_str));
+
+  rapidjson::Document expected_output;
+  CheckParseResult(expected_output.Parse(expected_output_str));
+
+  rapidjson::Document output;
+  ConverterArgs args;
+  args.timestamp = 4321;
+  args.masters = "example_masters";
+  args.bots = "example_bots";
+  args.log_url = "https://ci.example.com/build/100";
+  args.use_test_guids = true;
+  Convert(&input, &output, &args);
+
+  AssertApproxEqual(&output, &output[5]["running"][1], 99);
+  AssertApproxEqual(&output, &output[5]["running"][2], 4.595119);
+  AssertApproxEqual(&output, &output[5]["running"][3], 99);
+  AssertApproxEqual(&output, &output[5]["running"][4], 99);
+  AssertApproxEqual(&output, &output[5]["running"][5], 99);
+  AssertApproxEqual(&output, &output[5]["running"][6], 0);
+
+  AssertJsonEqual(output, expected_output);
+}
+
 class TempFile {
  public:
   TempFile(const char* contents) {

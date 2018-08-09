@@ -103,6 +103,37 @@ void ComputeStatistics(const std::vector<double>& vals,
   output->PushBack(variance, *alloc);
 }
 
+// Takes the unit string as it appears in the input JSON file.  Returns the
+// unit string that should be used in the Catapult Histogram JSON file.
+// Converts the data as necessary.
+std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
+  std::string catapult_unit;
+  if (strcmp(input_unit, "nanoseconds") == 0 || strcmp(input_unit, "ns") == 0) {
+    // Convert from nanoseconds to milliseconds.
+    for (auto& val : *vals) {
+      val /= 1e6;
+    }
+    return "ms_smallerIsBetter";
+  } else if (strcmp(input_unit, "milliseconds") == 0 ||
+             strcmp(input_unit, "ms") == 0) {
+    return "ms_smallerIsBetter";
+  } else if (strcmp(input_unit, "bytes/second") == 0) {
+    // Convert from bytes/second to mebibytes/second.
+    for (auto& val : *vals) {
+      val /= 1024 * 1024;
+    }
+
+    // The Catapult dashboard does not yet support a "bytes per unit time"
+    // unit (of any multiple), and it rejects unknown units, so we report
+    // this as "unitless" here for now.  TODO(mseaborn): Add support for
+    // data rate units to Catapult.
+    return "unitless_biggerIsBetter";
+  } else {
+    fprintf(stderr, "Units not recognized: %s\n", input_unit);
+    exit(1);
+  }
+}
+
 // Adds a Histogram to the given |output| Document.
 void AddHistogram(rapidjson::Document* output,
                   rapidjson::Document::AllocatorType* alloc,
@@ -111,25 +142,14 @@ void AddHistogram(rapidjson::Document* output,
                   std::vector<double>&& vals,
                   rapidjson::Value diagnostic_map,
                   rapidjson::Value guid) {
-  // Check units and convert if necessary.
-  if (strcmp(input_unit, "nanoseconds") == 0 || strcmp(input_unit, "ns") == 0) {
-    // Convert from nanoseconds to milliseconds.
-    for (auto& val : vals) {
-      val /= 1e6;
-    }
-  } else if (!(strcmp(input_unit, "milliseconds") == 0 ||
-               strcmp(input_unit, "ms") == 0)) {
-    fprintf(stderr, "Units not recognized: %s\n", input_unit);
-    exit(1);
-  }
-
+  std::string catapult_unit = ConvertUnits(input_unit, &vals);
   rapidjson::Value stats;
   ComputeStatistics(vals, &stats, alloc);
 
   rapidjson::Value histogram;
   histogram.SetObject();
   histogram.AddMember("name", test_name, *alloc);
-  histogram.AddMember("unit", "ms_smallerIsBetter", *alloc);
+  histogram.AddMember("unit", catapult_unit, *alloc);
   histogram.AddMember("description", "", *alloc);
   histogram.AddMember("diagnostics", diagnostic_map, *alloc);
   histogram.AddMember("running", stats, *alloc);
