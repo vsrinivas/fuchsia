@@ -32,17 +32,17 @@ std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
 
   // TODO(johngro): Relax this if we get to the point where other audio objects
   // may also be packet sources.
-  if (source->type() != AudioObject::Type::Renderer) {
-    FXL_LOG(ERROR)
-        << "Cannot create packet source link, packet sources must be renderers";
+  if (source->type() != AudioObject::Type::AudioOut) {
+    FXL_LOG(ERROR) << "Cannot create packet source link, packet sources must "
+                      "be audio outs";
     return nullptr;
   }
 
-  auto& renderer = *(static_cast<AudioOutImpl*>(source.get()));
+  auto& audio_out = *(static_cast<AudioOutImpl*>(source.get()));
 
-  FXL_DCHECK(renderer.format_info_valid());
+  FXL_DCHECK(audio_out.format_info_valid());
   return std::shared_ptr<AudioLinkPacketSource>(new AudioLinkPacketSource(
-      std::move(source), std::move(dest), renderer.format_info()));
+      std::move(source), std::move(dest), audio_out.format_info()));
 }
 
 void AudioLinkPacketSource::PushToPendingQueue(

@@ -28,17 +28,17 @@ constexpr float kInitialCaptureGain = 0.0;
 AtomicGenerationId AudioInImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioInImpl> AudioInImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
     AudioCoreImpl* owner, bool loopback) {
   return fbl::AdoptRef(
-      new AudioInImpl(std::move(audio_capturer_request), owner, loopback));
+      new AudioInImpl(std::move(audio_in_request), owner, loopback));
 }
 
 AudioInImpl::AudioInImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
     AudioCoreImpl* owner, bool loopback)
-    : AudioObject(Type::Capturer),
-      binding_(this, std::move(audio_capturer_request)),
+    : AudioObject(Type::AudioIn),
+      binding_(this, std::move(audio_in_request)),
       owner_(owner),
       state_(State::WaitingForVmo),
       loopback_(loopback),
@@ -100,9 +100,9 @@ void AudioInImpl::Shutdown() {
 
   payload_buf_vmo_.reset();
 
-  // Make sure we have left the set of active capturers.
+  // Make sure we have left the set of active audio ins.
   if (InContainer()) {
-    owner_->GetDeviceManager().RemoveCapturer(this);
+    owner_->GetDeviceManager().RemoveAudioIn(this);
   }
 
   state_.store(State::Shutdown);
@@ -306,7 +306,7 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Things went well.  While we may fail to create links to audio sources from
   // this point forward, we have successfully configured the mode for this
-  // capturer, so we are now in the OperatingSync state.
+  // audio in, so we are now in the OperatingSync state.
   state_.store(State::OperatingSync);
 
   // Let our source links know about the format that we prefer.
@@ -326,11 +326,11 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
           break;
         }
 
-        case AudioObject::Type::Renderer:
+        case AudioObject::Type::AudioOut:
           // TODO(johngro): Support capturing from packet sources
           break;
 
-        case AudioObject::Type::Capturer:
+        case AudioObject::Type::AudioIn:
           FXL_DCHECK(false);
           break;
       }
@@ -842,7 +842,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
   size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_->channels;
   ::memset(mix_buf_.get(), 0u, job_bytes);
 
-  // If our current capturer gain is muted, we have nothing to do after filling
+  // If our current audio in gain is muted, we have nothing to do after filling
   // with silence.
   float capture_gain = db_gain_.load();
   if (capture_gain <= fuchsia::media::MUTED_GAIN) {
@@ -860,13 +860,13 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
     FXL_DCHECK(device != nullptr);
 
     // Right now, the only way for a device to not have a driver would be if it
-    // was the throttle output.  Linking a capturer to the throttle output would
+    // was the throttle output.  Linking a audio in to the throttle output would
     // be a mistake.  For now if we detect this happening, log a warning, signal
     // an error and shut down.  Once MTWN-52 is resolved, we can come back here
     // and get rid of this.
     const auto& driver = device->driver();
     if (driver == nullptr) {
-      FXL_LOG(ERROR) << "Capturer appears to be linked to throttle output!  "
+      FXL_LOG(ERROR) << "AudioIn appears to be linked to throttle output!  "
                         "Shutting down";
       return false;
     }
@@ -1373,7 +1373,7 @@ zx_status_t AudioInImpl::ChooseMixer(const std::shared_ptr<AudioLink>& link) {
   FXL_DCHECK(bk->mixer == nullptr);
   bk->mixer = Mixer::Select(*source_format, *format_);
   if (bk->mixer == nullptr) {
-    FXL_LOG(INFO) << "Failed to find mixer for capturer.";
+    FXL_LOG(INFO) << "Failed to find mixer for audio in.";
     FXL_LOG(INFO) << "Source cfg: rate " << source_format->frames_per_second
                   << " ch " << source_format->channels << " sample fmt "
                   << fidl::ToUnderlying(source_format->sample_format);

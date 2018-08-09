@@ -28,7 +28,7 @@ class AudioOutImpl
       public fuchsia::media::GainControl {
  public:
   static fbl::RefPtr<AudioOutImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request,
       AudioCoreImpl* owner);
 
   void Shutdown();
@@ -47,7 +47,7 @@ class AudioOutImpl
 
   // Note: format_info() is subject to change and must only be accessed from the
   // main message loop thread.  Outputs which are running on mixer threads
-  // should never access format_info() directly from a renderer.  Instead, they
+  // should never access format_info() directly from an AudioOut.  Instead, they
   // should use the format_info which was assigned to the AudioLink at the time
   // the link was created.
   const fbl::RefPtr<AudioOutFormatInfo>& format_info() const {
@@ -126,7 +126,7 @@ class AudioOutImpl
   friend class GainControlBinding;
 
   AudioOutImpl(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request,
       AudioCoreImpl* owner);
 
   ~AudioOutImpl() override;
@@ -136,7 +136,7 @@ class AudioOutImpl
   void ComputePtsToFracFrames(int64_t first_pts);
 
   AudioCoreImpl* owner_ = nullptr;
-  fidl::Binding<fuchsia::media::AudioOut> audio_renderer_binding_;
+  fidl::Binding<fuchsia::media::AudioOut> audio_out_binding_;
   fidl::BindingSet<fuchsia::media::GainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;

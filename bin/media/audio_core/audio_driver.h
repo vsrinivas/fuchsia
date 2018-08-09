@@ -261,7 +261,7 @@ class AudioDriver {
   zx_time_t configuration_timeout_ = ZX_TIME_INFINITE;
 
   // A stashed copy of the currently configured format which may be queried by
-  // destintions (either outputs or capturers) when determining what mixer to
+  // destinations (either outputs or audio ins) when determining what mixer to
   // use.
   mutable std::mutex configured_format_lock_;
   fuchsia::media::AudioStreamTypePtr configured_format_
@@ -269,7 +269,7 @@ class AudioDriver {
 
   // Ring buffer state.  Note, the details of the ring buffer state are
   // protected by a lock and changes are tracked with a generation counter.
-  // This is importatnt as it allows capturer clients to take a snapshot of the
+  // This is important as it allows AudioIn clients to take a snapshot of the
   // ring buffer state during mixing/resampling operations.
   mutable std::mutex ring_buffer_state_lock_;
   fbl::RefPtr<DriverRingBuffer> ring_buffer_

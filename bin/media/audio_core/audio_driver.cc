@@ -753,7 +753,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
     return resp.result;
   }
 
-  // TODO(johngro) : See MTWN-61.  Update capturers and outputs to take external
+  // TODO(johngro) : See MTWN-61.  Update audio ins and outputs to take external
   // delay into account when sampling.
   external_delay_nsec_ = resp.external_delay_nsec;
 

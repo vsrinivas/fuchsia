@@ -15,22 +15,21 @@ namespace media {
 namespace audio {
 
 fbl::RefPtr<AudioOutImpl> AudioOutImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request,
     AudioCoreImpl* owner) {
-  return fbl::AdoptRef(
-      new AudioOutImpl(std::move(audio_renderer_request), owner));
+  return fbl::AdoptRef(new AudioOutImpl(std::move(audio_out_request), owner));
 }
 
 AudioOutImpl::AudioOutImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request,
     AudioCoreImpl* owner)
-    : AudioObject(Type::Renderer),
+    : AudioObject(Type::AudioOut),
       owner_(owner),
-      audio_renderer_binding_(this, std::move(audio_renderer_request)),
+      audio_out_binding_(this, std::move(audio_out_request)),
       pts_ticks_per_second_(1000000000, 1),
       ref_clock_to_frac_frames_(0, 0, {0, 1}) {
-  audio_renderer_binding_.set_error_handler([this]() {
-    audio_renderer_binding_.Unbind();
+  audio_out_binding_.set_error_handler([this]() {
+    audio_out_binding_.Unbind();
     Shutdown();
   });
 }
@@ -38,7 +37,7 @@ AudioOutImpl::AudioOutImpl(
 AudioOutImpl::~AudioOutImpl() {
   // assert that we have been cleanly shutdown already.
   FXL_DCHECK(is_shutdown_);
-  FXL_DCHECK(!audio_renderer_binding_.is_bound());
+  FXL_DCHECK(!audio_out_binding_.is_bound());
   FXL_DCHECK(gain_control_bindings_.size() == 0);
 }
 
@@ -46,7 +45,7 @@ void AudioOutImpl::Shutdown() {
   // If we have already been shutdown, then we are just waiting for the service
   // to destroy us.  Run some FXL_DCHECK sanity checks and get out.
   if (is_shutdown_) {
-    FXL_DCHECK(!audio_renderer_binding_.is_bound());
+    FXL_DCHECK(!audio_out_binding_.is_bound());
     return;
   }
 
@@ -55,8 +54,8 @@ void AudioOutImpl::Shutdown() {
   PreventNewLinks();
   Unlink();
 
-  if (audio_renderer_binding_.is_bound()) {
-    audio_renderer_binding_.Unbind();
+  if (audio_out_binding_.is_bound()) {
+    audio_out_binding_.Unbind();
   }
 
   gain_control_bindings_.CloseAll();
@@ -110,7 +109,7 @@ bool AudioOutImpl::IsOperating() {
   }
 
   fbl::AutoLock links_lock(&links_lock_);
-  // Renderers should never be linked to sources.
+  // AudioOuts should never be linked to sources.
   FXL_DCHECK(source_links_.empty());
 
   for (const auto& link : dest_links_) {
@@ -175,7 +174,7 @@ void AudioOutImpl::ComputePtsToFracFrames(int64_t first_pts) {
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// AudioRenderer Interface
+// AudioOut Interface
 //
 void AudioOutImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
@@ -230,7 +229,7 @@ void AudioOutImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
 
   // Create a new format info object so we can create links to outputs.
   // TODO(johngro): Look into eliminating most of the format_info class when we
-  // finish removing the old audio renderer interface.
+  // finish removing the old audio out interface.
   fuchsia::media::AudioStreamType cfg;
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
@@ -242,17 +241,17 @@ void AudioOutImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
   // interfaces are serialized by nature of the fidl framework, and none of the
   // output manager's threads should ever need to manipulate the set.  Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
-  // the renderer fails to promote its weak reference during an operation
+  // the audio out fails to promote its weak reference during an operation
   // involving its outputs.
   //
   // TODO(johngro): someday, we will need to deal with recalculating properties
-  // which depend on a renderer's current set of outputs (for example, the
+  // which depend on a audio out's current set of outputs (for example, the
   // minimum latency).  This will probably be done using a dirty flag in the
-  // renderer implementations, and scheduling a job to recalculate the
-  // properties for the dirty renderers and notify the users as appropriate.
+  // audio out implementations, and scheduling a job to recalculate the
+  // properties for the dirty audio outs and notify the users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
-  owner_->GetDeviceManager().SelectOutputsForRenderer(this);
+  owner_->GetDeviceManager().SelectOutputsForAudioOut(this);
 
   // Things went well, cancel the cleanup hook.  If our config had been
   // validated previously, it will have to be revalidated as we move into the
@@ -649,8 +648,7 @@ void AudioOutImpl::SetGain(float gain) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   if (db_gain_ != gain) {
     if (gain > fuchsia::media::MAX_GAIN) {
-      FXL_LOG(ERROR) << "Gain value too large (" << gain
-                     << ") for audio renderer.";
+      FXL_LOG(ERROR) << "Gain value too large (" << gain << ") for audio out.";
       return;
     }
 
@@ -662,7 +660,7 @@ void AudioOutImpl::SetGain(float gain) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->gain().SetRendererGain(effective_gain);
+      packet_link->gain().SetAudioOutGain(effective_gain);
     }
   }
 
@@ -681,7 +679,7 @@ void AudioOutImpl::SetMute(bool mute) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->gain().SetRendererGain(effective_gain);
+      packet_link->gain().SetAudioOutGain(effective_gain);
     }
   }
 
@@ -706,7 +704,7 @@ void AudioOutImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
 
 void AudioOutImpl::ReportNewMinClockLeadTime() {
   if (min_clock_lead_time_events_enabled_) {
-    auto& evt = audio_renderer_binding_.events();
+    auto& evt = audio_out_binding_.events();
     evt.OnMinLeadTimeChanged(min_clock_lead_nsec_);
   }
 }

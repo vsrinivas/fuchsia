@@ -132,7 +132,7 @@ test("tests") {
 
   sources = [
     "test/audio_core_tests.cc",
-    "test/audio_renderer_tests.cc",
+    "test/audio_out_tests.cc",
   ]
 
   deps = [

@@ -21,8 +21,8 @@ namespace audio {
 // (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
 // web-search "audio float int convert"). Our float32-based internal pipeline
 // can accomodate float and int Sources without data loss (where Source is a
-// client-submitted stream from AudioRenderer, or an input device), but for non-
-// float Destinations (output device, or AudioCapturer stream to a client) we
+// client-submitted stream from AudioOut, or an input device), but for non-
+// float Destinations (output device, or AudioIn stream to a client) we
 // must clamp +1.0 values in DstConverter::Convert. When translating from float
 // to int16 for example, we can translate -1.0 perfectly to -32768 (negative
 // 0x8000), while +1.0 cannot become +32768 (positive 0x8000, exceeding int16's

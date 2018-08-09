@@ -50,7 +50,7 @@ class AudioDevice : public AudioObject,
   // connectors (such as a 3.5mm audio jack).  Drivers can report this
   // plugged/unplugged state as well as the time of the last state change.
   // Currently this information is used in the Audio Service to implement simple
-  // routing policies for AudioRenderers and AudioCapturers.
+  // routing policies for AudioOuts and AudioIns.
   //
   // plugged   : true when an audio output stream is either hardwired, or
   //             believes that it has something connected to its plug.
@@ -82,7 +82,7 @@ class AudioDevice : public AudioObject,
   //
   // TODO(johngro) : Remove this once we have policy in place.  Users should be
   // talking to the policy manager to know what inputs and outputs exist, and
-  // what formats they support, and to influence what their capturers can be
+  // what formats they support, and to influence what their audio ins can be
   // bound to or not.  "Preference" of an audio device is not a concept which
   // belongs in the mixer.
   virtual fuchsia::media::AudioStreamTypePtr GetSourceFormatPreference() {
@@ -166,7 +166,7 @@ class AudioDevice : public AudioObject,
   // Kick off the process of shooting ourselves in the head.  Note, after this
   // method has been called, no new callbacks may be scheduled.  As soon as the
   // main message loop finds out about our shutdown request, it will complete
-  // the process of shutting us down, unlinking us from our renderers and
+  // the process of shutting us down, unlinking us from our audio outs and
   // calling the Cleanup method.
   void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
@@ -261,7 +261,7 @@ class AudioDevice : public AudioObject,
   // Called from the AudioDeviceManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,
   // synchronizes with any processing tasks which were executing at the time,
-  // then finishes the shutdown process by unlinking from all renderers and
+  // then finishes the shutdown process by unlinking from all audio outs and
   // cleaning up all resources.
   void Shutdown();
 

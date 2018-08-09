@@ -85,8 +85,8 @@ TEST(DynamicRange, Epsilon) {
 TEST(DynamicRange, 30Down) {
   Gain gain;
 
-  // Set renderer gain to +24dB (note: this combines with -54 to make -30dB).
-  gain.SetRendererGain(24.0f);
+  // Set AudioOut gain to +24dB (note: this combines with -54 to make -30dB).
+  gain.SetAudioOutGain(24.0f);
   // Retrieve the total gainscale multiplier, if system gain is -54dB.
   const Gain::AScale scale = gain.GetGainScale(-54.0f);
 
@@ -104,8 +104,8 @@ TEST(DynamicRange, 30Down) {
 TEST(DynamicRange, 60Down) {
   Gain gain;
 
-  // Set renderer gain to -60dB.
-  gain.SetRendererGain(-60.0f);
+  // Set AudioOut gain to -60dB.
+  gain.SetAudioOutGain(-60.0f);
   // Retrieve the combined gain scale multiplier, if system gain is 0dB.
   const Gain::AScale scale = gain.GetGainScale(0.0f);
 
@@ -123,8 +123,8 @@ TEST(DynamicRange, 60Down) {
 TEST(DynamicRange, 90Down) {
   Gain gain;
 
-  // Set renderer gain to -44dB (note: this combines with -46 to make -90dB).
-  gain.SetRendererGain(-44.0f);
+  // Set AudioOut gain to -44dB (note: this combines with -46 to make -90dB).
+  gain.SetAudioOutGain(-44.0f);
   // Retrieve the combined gain scale multiplier, if system gain is -46dB.
   const Gain::AScale scale = gain.GetGainScale(-46.0f);
 
@@ -236,7 +236,7 @@ TEST(DynamicRange, StereoToMono) {
 
 // Test mix level and noise floor, when accumulating sources.
 //
-// Mix 2 full-scale streams with gain exactly 50% (renderer 100%, master 50%),
+// Mix 2 full-scale streams with gain exactly 50% (audio out 100%, master 50%),
 // then measure level and sinad. On systems with robust gain processing, a
 // post-SUM master gain stage reduces noise along with level, for the same noise
 // floor as a single FS signal with 100% gain (98,49 dB for 16,8 respectively).
@@ -252,7 +252,7 @@ TEST(DynamicRange, StereoToMono) {
 // gain into account. Once our architecture contains a post-SUM master gain,
 // after applying a 0.5 master gain scaling we would expect this 91-92 dB
 // SINAD to be reduced to perhaps 98 dB. Today master gain is combined with
-// renderer gain, so it is pre-Sum.
+// audio out gain, so it is pre-Sum.
 template <typename T>
 void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   MixerPtr mixer;

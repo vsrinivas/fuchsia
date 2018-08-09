@@ -34,7 +34,7 @@ class AudioInImpl : public AudioObject,
                     public fbl::DoublyLinkedListable<fbl::RefPtr<AudioInImpl>> {
  public:
   static fbl::RefPtr<AudioInImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
       AudioCoreImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
@@ -49,9 +49,10 @@ class AudioInImpl : public AudioObject,
 
  private:
   // Notes about the AudioInImpl state machine.
+  // TODO(mpuryear): Update this comment block.
   //
   // :: WaitingForVmo ::
-  // Audio capturers start in this mode.  They should have a default capture
+  // Audio ins start in this mode.  They should have a default capture
   // mode set, and will accept a mode change up until the point where they have
   // a shared payload VMO assigned to them.  At this point they transition into
   // the OperatingSync state.  Only the main service thread may transition out
@@ -59,7 +60,7 @@ class AudioInImpl : public AudioObject,
   //
   // :: OperatingSync ::
   // After a mode has been assigned and a shared payload VMO has provided, the
-  // capturer is now operating in synchronous mode.  Clients may provided
+  // audio in is now operating in synchronous mode.  Clients may provided
   // buffers to be filled using the CaptureAt method and may cancel these
   // buffers using the Flush method.  They may also transition to asynchronous
   // mode by calling StartAsyncCapture, but only when there are no pending
@@ -67,8 +68,8 @@ class AudioInImpl : public AudioObject,
   // this state.
   //
   // :: OperatingAsync ::
-  // Capturers enter OperatingAsync after a successful call to
-  // StartAsyncCapturer.  Threads from the mix_domain allocate and fill pending
+  // Audio ins enter OperatingAsync after a successful call to
+  // StartAsyncCapture.  Threads from the mix_domain allocate and fill pending
   // payload buffers, then signal the main service thread in order to send them
   // back to the client over the AudioCapturerClient interface provided when
   // starting.  CaptureAt and Flush are illegal operations while in this state.
@@ -77,20 +78,20 @@ class AudioInImpl : public AudioObject,
   // of this state.
   //
   // :: AsyncStopping ::
-  // Capturers enter AsyncStopping after a successful call to
-  // StopAsyncCapturer.  A thread from the mix_domain will handle the details
+  // Audio ins enter AsyncStopping after a successful call to
+  // StopAsyncCapture.  A thread from the mix_domain will handle the details
   // of stopping, including transferring all partially filled pending buffers to
   // the finished queue.  Aside from setting the gain, all operations are
-  // illegal while the capturer is in the process of stopping.  Once the mix
+  // illegal while the audio in is in the process of stopping.  Once the mix
   // domain thread has finished cleaning up, it will transition to the
   // AsyncStoppingCallbackPending state and signal the main service thread in
   // order to complete the process.  Only a mix domain thread may transition out
   // of this state.
   //
   // :: AsyncStoppingCallbackPending ::
-  // Capturers enter AsyncStoppingCallbackPending after a mix domain thread has
+  // Audio ins enter AsyncStoppingCallbackPending after a mix domain thread has
   // finished the process of shutting down the capture process and is ready to
-  // signal to the client that the capturer is now in synchronous capture mode
+  // signal to the client that the audio in is now in synchronous capture mode
   // again.  The main service thread will send all partially and completely
   // filled buffers to the user, ensuring that there is at least one buffer sent
   // indicating end-of-stream, even if that buffer needs to be of zero length.
@@ -133,8 +134,9 @@ class AudioInImpl : public AudioObject,
 
   friend PcbAllocator;
 
-  // TODO(mpuryear): per MTWN-129, combine this with RendererBookkeeping, and
+  // TODO(mpuryear): per MTWN-129, combine this with AudioOutBookkeeping, and
   // integrate it into the Mixer class itself.
+  // TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
   struct CaptureLinkBookkeeping : public AudioLink::Bookkeeping {
     std::unique_ptr<Mixer> mixer;
     TimelineFunction dest_frames_to_frac_source_frames;
@@ -148,11 +150,10 @@ class AudioInImpl : public AudioObject,
     uint32_t source_trans_gen_id = kInvalidGenerationId;
   };
 
-  AudioInImpl(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
-      AudioCoreImpl* owner, bool loopback);
+  AudioInImpl(fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
+              AudioCoreImpl* owner, bool loopback);
 
-  // AudioCapturer FIDL implementation
+  // AudioIn FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
   void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;

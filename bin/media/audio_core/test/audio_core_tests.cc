@@ -111,16 +111,16 @@ class AudioCoreTest : public gtest::RealLoopFixture {
   }
 
   void TearDown() override {
-    audio_capturer_.Unbind();
-    audio_renderer_.Unbind();
+    audio_in_.Unbind();
+    audio_out_.Unbind();
     audio_.Unbind();
 
     EXPECT_FALSE(error_occurred_);
   }
 
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::AudioOutPtr audio_renderer_;
-  fuchsia::media::AudioInPtr audio_capturer_;
+  fuchsia::media::AudioOutPtr audio_out_;
+  fuchsia::media::AudioInPtr audio_in_;
 
   float prev_system_gain_db_;
   bool prev_system_mute_;
@@ -135,40 +135,40 @@ constexpr float AudioCoreTest::kUnityGain;
 constexpr zx::duration AudioCoreTest::kDurationTimeoutExpected;
 constexpr zx::duration AudioCoreTest::kDurationResponseExpected;
 
-// Test creation and interface independence of AudioRenderer.
-TEST_F(AudioCoreTest, CreateRenderer) {
-  // Validate Audio can create AudioRenderer interface.
-  audio_->CreateAudioOut(audio_renderer_.NewRequest());
-  EXPECT_TRUE(audio_renderer_);
+// Test creation and interface independence of AudioOut.
+TEST_F(AudioCoreTest, CreateAudioOut) {
+  // Validate Audio can create AudioOut interface.
+  audio_->CreateAudioOut(audio_out_.NewRequest());
+  EXPECT_TRUE(audio_out_);
 
-  // Validate that Audio persists without AudioRenderer.
-  audio_renderer_.Unbind();
-  EXPECT_FALSE(audio_renderer_);
+  // Validate that Audio persists without AudioOut.
+  audio_out_.Unbind();
+  EXPECT_FALSE(audio_out_);
   EXPECT_TRUE(audio_);
 
-  // Validate AudioRenderer persists after Audio is unbound.
-  audio_->CreateAudioOut(audio_renderer_.NewRequest());
+  // Validate AudioOut persists after Audio is unbound.
+  audio_->CreateAudioOut(audio_out_.NewRequest());
   audio_.Unbind();
   EXPECT_FALSE(audio_);
-  EXPECT_TRUE(audio_renderer_);
+  EXPECT_TRUE(audio_out_);
 }
 
-// Test creation and interface independence of AudioCapturer.
+// Test creation and interface independence of AudioIn.
 TEST_F(AudioCoreTest, CreateAudioIn) {
-  // Validate Audio can create AudioCapturer interface.
-  audio_->CreateAudioIn(audio_capturer_.NewRequest(), false);
-  EXPECT_TRUE(audio_capturer_);
+  // Validate Audio can create AudioIn interface.
+  audio_->CreateAudioIn(audio_in_.NewRequest(), false);
+  EXPECT_TRUE(audio_in_);
 
-  // Validate that Audio persists without AudioCapturer.
-  audio_capturer_.Unbind();
-  EXPECT_FALSE(audio_capturer_);
+  // Validate that Audio persists without AudioIn.
+  audio_in_.Unbind();
+  EXPECT_FALSE(audio_in_);
   EXPECT_TRUE(audio_);
 
-  // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateAudioIn(audio_capturer_.NewRequest(), true);
+  // Validate AudioIn persists after Audio is unbound.
+  audio_->CreateAudioIn(audio_in_.NewRequest(), true);
   audio_.Unbind();
   EXPECT_FALSE(audio_);
-  EXPECT_TRUE(audio_capturer_);
+  EXPECT_TRUE(audio_in_);
 }
 
 // Test setting the systemwide Mute.
@@ -350,40 +350,40 @@ class AudioCoreSyncTest : public gtest::RealLoopFixture {
   }
 
   fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioOutSyncPtr audio_renderer_;
-  fuchsia::media::AudioInSyncPtr audio_capturer_;
+  fuchsia::media::AudioOutSyncPtr audio_out_;
+  fuchsia::media::AudioInSyncPtr audio_in_;
 };
 
-// Test creation and interface independence of AudioRenderer.
-TEST_F(AudioCoreSyncTest, CreateRenderer) {
-  // Validate Audio can create AudioRenderer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
-  EXPECT_TRUE(audio_renderer_);
+// Test creation and interface independence of AudioOut.
+TEST_F(AudioCoreSyncTest, CreateAudioOut) {
+  // Validate Audio can create AudioOut interface.
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_out_.NewRequest()));
+  EXPECT_TRUE(audio_out_);
 
-  // Validate that Audio persists without AudioRenderer.
-  audio_renderer_ = nullptr;
+  // Validate that Audio persists without AudioOut.
+  audio_out_ = nullptr;
   ASSERT_TRUE(audio_);
 
-  // Validate AudioRenderer persists after Audio is unbound.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
+  // Validate AudioOut persists after Audio is unbound.
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_out_.NewRequest()));
   audio_ = nullptr;
-  EXPECT_TRUE(audio_renderer_);
+  EXPECT_TRUE(audio_out_);
 }
 
-// Test creation and interface independence of AudioCapturer.
+// Test creation and interface independence of AudioIn.
 TEST_F(AudioCoreSyncTest, CreateAudioIn) {
-  // Validate Audio can create AudioCapturer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioIn(audio_capturer_.NewRequest(), true));
-  EXPECT_TRUE(audio_capturer_);
+  // Validate Audio can create AudioIn interface.
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioIn(audio_in_.NewRequest(), true));
+  EXPECT_TRUE(audio_in_);
 
-  // Validate that Audio persists without AudioCapturer.
-  audio_capturer_ = nullptr;
+  // Validate that Audio persists without AudioIn.
+  audio_in_ = nullptr;
   ASSERT_TRUE(audio_);
 
-  // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateAudioIn(audio_capturer_.NewRequest(), false);
+  // Validate AudioIn persists after Audio is unbound.
+  audio_->CreateAudioIn(audio_in_.NewRequest(), false);
   audio_ = nullptr;
-  EXPECT_TRUE(audio_capturer_);
+  EXPECT_TRUE(audio_in_);
 }
 
 // Test the setting of audio output routing policy.

@@ -64,7 +64,7 @@ class AudioLinkPacketSource : public AudioLink {
   // queue are forced to wait if the front of the queue is involved in a mixing
   // operation.  This, in turn, guarantees that audio packets are always
   // returned to the user in the order which they were queued in without forcing
-  // AudioRenderers to wait to queue new data if a mix operation is in progress.
+  // AudioOuts to wait to queue new data if a mix operation is in progress.
   fbl::RefPtr<AudioPacketRef> LockPendingQueueFront(bool* was_flushed);
   void UnlockPendingQueueFront(bool release_packet);
 

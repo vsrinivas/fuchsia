@@ -66,16 +66,16 @@ void AudioDeviceManager::Shutdown() {
   plug_detector_.Stop();
   commit_settings_task_.Cancel();
 
-  // Step #2: Shutdown all of the active capturers in the system.
-  while (!capturers_.is_empty()) {
-    auto capturer = capturers_.pop_front();
-    capturer->Shutdown();
+  // Step #2: Shutdown all of the active audio ins in the system.
+  while (!audio_ins_.is_empty()) {
+    auto audio_in = audio_ins_.pop_front();
+    audio_in->Shutdown();
   }
 
-  // Step #3: Shutdown all of the active renderers in the system.
-  while (!renderers_.is_empty()) {
-    auto renderer = renderers_.pop_front();
-    renderer->Shutdown();
+  // Step #3: Shutdown all of the active audio outs in the system.
+  while (!audio_outs_.is_empty()) {
+    auto audio_out = audio_outs_.pop_front();
+    audio_out->Shutdown();
   }
 
   // Step #4: Shut down each device which is currently waiting to become
@@ -341,17 +341,17 @@ void AudioDeviceManager::GetDefaultOutputDevice(
   cbk(default_output_token_);
 }
 
-void AudioDeviceManager::SelectOutputsForRenderer(AudioOutImpl* renderer) {
-  FXL_DCHECK(renderer);
-  FXL_DCHECK(renderer->format_info_valid());
+void AudioDeviceManager::SelectOutputsForAudioOut(AudioOutImpl* audio_out) {
+  FXL_DCHECK(audio_out);
+  FXL_DCHECK(audio_out->format_info_valid());
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
 
-  // Regardless of policy, all renderers should always be linked to the
+  // Regardless of policy, all audio outs should always be linked to the
   // special throttle output.
-  LinkOutputToRenderer(throttle_output_.get(), renderer);
+  LinkOutputToAudioOut(throttle_output_.get(), audio_out);
 
   switch (routing_policy_) {
     case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS: {
@@ -359,7 +359,7 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioOutImpl* renderer) {
         FXL_DCHECK(obj.is_input() || obj.is_output());
         auto device = static_cast<AudioDevice*>(&obj);
         if (device->is_output() && device->plugged()) {
-          LinkOutputToRenderer(static_cast<AudioOutput*>(device), renderer);
+          LinkOutputToAudioOut(static_cast<AudioOutput*>(device), audio_out);
         }
       }
     } break;
@@ -367,44 +367,44 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioOutImpl* renderer) {
     case fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT: {
       fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
       if (last_plugged != nullptr) {
-        LinkOutputToRenderer(last_plugged.get(), renderer);
+        LinkOutputToAudioOut(last_plugged.get(), audio_out);
       }
 
     } break;
   }
 
   // Figure out the initial minimum clock lead time requirement.
-  renderer->RecomputeMinClockLeadTime();
+  audio_out->RecomputeMinClockLeadTime();
 }
 
-void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
-                                              AudioOutImpl* renderer) {
+void AudioDeviceManager::LinkOutputToAudioOut(AudioOutput* output,
+                                              AudioOutImpl* audio_out) {
   FXL_DCHECK(output);
-  FXL_DCHECK(renderer);
+  FXL_DCHECK(audio_out);
 
-  // Do not create any links if the renderer's output format has not been set.
-  // Links will be created during SelectOutputsForRenderer when the renderer
+  // Do not create any links if the AudioOut's output format has not been set.
+  // Links will be created during SelectOutputsForAudioOut when the audio out
   // finally has its format set via AudioOutImpl::SetStreamType
-  if (!renderer->format_info_valid())
+  if (!audio_out->format_info_valid())
     return;
 
   std::shared_ptr<AudioLink> link = AudioObject::LinkObjects(
-      fbl::WrapRefPtr(renderer), fbl::WrapRefPtr(output));
+      fbl::WrapRefPtr(audio_out), fbl::WrapRefPtr(output));
   // TODO(johngro): get rid of the throttle output.  See MTWN-52
   if ((link != nullptr) && (output == throttle_output_.get())) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    renderer->SetThrottleOutput(
+    audio_out->SetThrottleOutput(
         std::static_pointer_cast<AudioLinkPacketSource>(std::move(link)));
   }
 }
 
-void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioInImpl> capturer) {
-  FXL_DCHECK(capturer != nullptr);
-  FXL_DCHECK(!capturer->InContainer());
-  capturers_.push_back(capturer);
+void AudioDeviceManager::AddAudioIn(fbl::RefPtr<AudioInImpl> audio_in) {
+  FXL_DCHECK(audio_in != nullptr);
+  FXL_DCHECK(!audio_in->InContainer());
+  audio_ins_.push_back(audio_in);
 
   fbl::RefPtr<AudioDevice> source;
-  if (capturer->loopback()) {
+  if (audio_in->loopback()) {
     source = FindLastPluggedOutput(true);
   } else {
     source = FindLastPluggedInput(true);
@@ -415,19 +415,19 @@ void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioInImpl> capturer) {
     auto initial_format = source->driver()->GetSourceFormat();
 
     if (initial_format) {
-      capturer->SetInitialFormat(std::move(*initial_format));
+      audio_in->SetInitialFormat(std::move(*initial_format));
     }
 
     if (source->plugged()) {
-      AudioObject::LinkObjects(source, capturer);
+      AudioObject::LinkObjects(source, audio_in);
     }
   }
 }
 
-void AudioDeviceManager::RemoveCapturer(AudioInImpl* capturer) {
-  FXL_DCHECK(capturer != nullptr);
-  FXL_DCHECK(capturer->InContainer());
-  capturers_.erase(*capturer);
+void AudioDeviceManager::RemoveAudioIn(AudioInImpl* audio_in) {
+  FXL_DCHECK(audio_in != nullptr);
+  FXL_DCHECK(audio_in->InContainer());
+  audio_ins_.erase(*audio_in);
 }
 
 void AudioDeviceManager::ScheduleMainThreadTask(fit::closure task) {
@@ -502,7 +502,7 @@ void AudioDeviceManager::SetRoutingPolicy(
     }
 
     // If device is most-recently plugged, it is unaffected by this change in
-    // policy (either way, it will continue to be attached to all renderers).
+    // policy (either way, it will continue to be attached to all audio outs).
     FXL_DCHECK(output != throttle_output_.get());
     if (output == last_plugged_output.get()) {
       continue;
@@ -512,24 +512,24 @@ void AudioDeviceManager::SetRoutingPolicy(
     // output. For each remaining output (based on the new policy), we ...
     if (routing_policy ==
         fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
-      // ...disconnect it (i.e. link renderers to Last-Plugged only), or...
+      // ...disconnect it (i.e. link audio outs to Last-Plugged only), or...
       dev_obj.UnlinkSources();
     } else {
-      // ...attach it (i.e. link renderers to All Outputs).
-      for (auto& obj : renderers_) {
-        FXL_DCHECK(obj.is_renderer());
-        auto renderer = static_cast<AudioOutImpl*>(&obj);
-        LinkOutputToRenderer(output, renderer);
+      // ...attach it (i.e. link audio outs to All Outputs).
+      for (auto& obj : audio_outs_) {
+        FXL_DCHECK(obj.is_audio_out());
+        auto audio_out = static_cast<AudioOutImpl*>(&obj);
+        LinkOutputToAudioOut(output, audio_out);
       }
     }
   }
 
   // After changing routing, determine new minimum clock lead time
   // requirements.
-  for (auto& obj : renderers_) {
-    FXL_DCHECK(obj.is_renderer());
-    auto renderer = static_cast<AudioOutImpl*>(&obj);
-    renderer->RecomputeMinClockLeadTime();
+  for (auto& obj : audio_outs_) {
+    FXL_DCHECK(obj.is_audio_out());
+    auto audio_out = static_cast<AudioOutImpl*>(&obj);
+    audio_out->RecomputeMinClockLeadTime();
   }
 }
 
@@ -558,9 +558,9 @@ void AudioDeviceManager::OnDeviceUnplugged(
   if (was_last_plugged) {
     if (device->is_output()) {
       // This was an output.  If we are applying 'last plugged output' policy,
-      // go over our list of renderers and link them to the most recently
-      // plugged output (if any).  Then go over our list of capturers and do
-      // the same for each of the loopback capturers.  Note: the current hack
+      // go over our list of AudioOuts and link them to the most recently
+      // plugged output (if any).  Then go over our list of audio ins and do
+      // the same for each of the loopback audio ins.  Note: the current hack
       // routing policy for inputs is always 'last plugged'
       FXL_DCHECK(static_cast<AudioOutput*>(device.get()) !=
                  throttle_output_.get());
@@ -569,31 +569,31 @@ void AudioDeviceManager::OnDeviceUnplugged(
       if (replacement) {
         if (routing_policy_ ==
             fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
-          for (auto& renderer : renderers_) {
-            LinkOutputToRenderer(replacement.get(), &renderer);
+          for (auto& audio_out : audio_outs_) {
+            LinkOutputToAudioOut(replacement.get(), &audio_out);
           }
         }
 
-        LinkToCapturers(replacement);
+        LinkToAudioIns(replacement);
       }
     } else {
       // This was an input.  Find the new most recently plugged in input (if
-      // any), then go over our list of capturers and link all of the
-      // non-loopback capturers to the new input.
+      // any), then go over our list of audio ins and link all of the
+      // non-loopback audio ins to the new input.
       FXL_DCHECK(device->is_input());
 
       fbl::RefPtr<AudioInput> replacement = FindLastPluggedInput();
       if (replacement) {
-        LinkToCapturers(replacement);
+        LinkToAudioIns(replacement);
       }
     }
   }
 
-  // If the device which was removed was an output, recompute our renderers'
+  // If the device which was removed was an output, recompute our AudioOuts'
   // minimum lead time requirements.
   if (device->is_output()) {
-    for (auto& renderer : renderers_) {
-      renderer.RecomputeMinClockLeadTime();
+    for (auto& audio_out : audio_outs_) {
+      audio_out.RecomputeMinClockLeadTime();
     }
   }
 }
@@ -603,14 +603,14 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
   FXL_DCHECK(device);
 
   if (device->is_output()) {
-    // This new device is an output.  Go over our list of renderers and "do
+    // This new device is an output.  Go over our list of AudioOuts and "do
     // the right thing" based on our current routing policy.  If we are using
-    // last plugged policy, replace all of the renderers current output with
+    // last plugged policy, replace all of the AudioOuts' current output with
     // this new one (assuming that this new one is actually the most recently
     // plugged). If we are using the "all plugged" policy, then just add this
-    // new output to all of the renderers.
+    // new output to all of the AudioOuts.
     //
-    // Then, apply last plugged policy to all of the capturers which are in
+    // Then, apply last plugged policy to all of the audio ins which are in
     // loopback mode.
     fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
     auto output = static_cast<AudioOutput*>(device.get());
@@ -630,8 +630,8 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
       }
     }
     if (is_lp || !lp_policy) {
-      for (auto& renderer : renderers_) {
-        LinkOutputToRenderer(output, &renderer);
+      for (auto& audio_out : audio_outs_) {
+        LinkOutputToAudioOut(output, &audio_out);
 
         // If we are adding a new link (regardless of whether we may or may
         // not have removed old links based on the specific active policy)
@@ -648,13 +648,13 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
         // optimized/specialized logic for computing this value would start to
         // become a real pain as we start to get more complicated in our
         // approach to policy based routing.
-        renderer.RecomputeMinClockLeadTime();
+        audio_out.RecomputeMinClockLeadTime();
       }
     }
 
-    // 'loopback' capturers should listen to this output now
+    // 'loopback' audio ins should listen to this output now
     if (is_lp) {
-      LinkToCapturers(device);
+      LinkToAudioIns(device);
     }
   } else {
     FXL_DCHECK(device->is_input());
@@ -662,26 +662,26 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
     fbl::RefPtr<AudioInput> last_plugged = FindLastPluggedInput();
     auto input = static_cast<AudioInput*>(device.get());
 
-    // non-'loopback' capturers should listen to this input now
+    // non-'loopback' audio ins should listen to this input now
     if (input == last_plugged.get()) {
-      LinkToCapturers(device);
+      LinkToAudioIns(device);
     }
   }
 }
 
 // New device arrived and is the most-recently-plugged.
-// *If device is an output, all 'loopback' capturers should
+// *If device is an output, all 'loopback' audio ins should
 // listen to this output going forward (default output).
-// *If device is an input, then all NON-'loopback' capturers
+// *If device is an input, then all NON-'loopback' audio ins
 // should listen to this input going forward (default input).
-void AudioDeviceManager::LinkToCapturers(
+void AudioDeviceManager::LinkToAudioIns(
     const fbl::RefPtr<AudioDevice>& device) {
   bool link_to_loopbacks = device->is_output();
 
-  for (auto& capturer : capturers_) {
-    if (capturer.loopback() == link_to_loopbacks) {
-      capturer.UnlinkSources();
-      AudioObject::LinkObjects(device, fbl::WrapRefPtr(&capturer));
+  for (auto& audio_in : audio_ins_) {
+    if (audio_in.loopback() == link_to_loopbacks) {
+      audio_in.UnlinkSources();
+      AudioObject::LinkObjects(device, fbl::WrapRefPtr(&audio_in));
     }
   }
 }

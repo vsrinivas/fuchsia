@@ -284,9 +284,9 @@ TEST(Recap, SINAD) {
 // Display our baseline noise floor measurements, in decibels below full-scale
 //
 // 'Source' noise floor is the demonstrated best-case background noise when
-// accepting audio (from an AudioRenderer or audio Input device, for example).
+// accepting audio (from an AudioOut or audio Input device, for example).
 // 'Output' noise floor is the demonstrated best-case background noise when
-// emitting audio (to an audio Output device or AudioCapturer, for example).
+// emitting audio (to an audio Output device or AudioIn, for example).
 TEST(Recap, NoiseFloor) {
   printf("\n Best-case noise-floor");
   printf("\n   (in dB, with prior results)");

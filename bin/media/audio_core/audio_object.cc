@@ -18,17 +18,17 @@ namespace audio {
 std::shared_ptr<AudioLink> AudioObject::LinkObjects(
     const fbl::RefPtr<AudioObject>& source,
     const fbl::RefPtr<AudioObject>& dest) {
-  // Assert that this is a valid source (capturers may not be sources)
+  // Assert that this is a valid source (audio ins may not be sources)
   FXL_DCHECK(source != nullptr);
-  FXL_DCHECK((source->type() == AudioObject::Type::Renderer) ||
+  FXL_DCHECK((source->type() == AudioObject::Type::AudioOut) ||
              (source->type() == AudioObject::Type::Output) ||
              (source->type() == AudioObject::Type::Input));
 
-  // Assert that this is a valid destination (inputs and renderers may not be
+  // Assert that this is a valid destination (inputs and audio outs may not be
   // destinations)
   FXL_DCHECK(dest != nullptr);
   FXL_DCHECK((dest->type() == AudioObject::Type::Output) ||
-             (dest->type() == AudioObject::Type::Capturer));
+             (dest->type() == AudioObject::Type::AudioIn));
 
   // Assert that we are not trying to connect an output to an output.
   FXL_DCHECK((source->type() != AudioObject::Type::Output) ||
@@ -36,7 +36,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
 
   // Create a link of the appropriate type based on our source.
   std::shared_ptr<AudioLink> link;
-  if (source->type() == AudioObject::Type::Renderer) {
+  if (source->type() == AudioObject::Type::AudioOut) {
     link = AudioLinkPacketSource::Create(
         fbl::RefPtr<AudioOutImpl>::Downcast(source), dest);
   } else {

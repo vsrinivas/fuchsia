@@ -31,7 +31,7 @@ class StandardOutputBase : public AudioOutput {
  protected:
   struct MixJob {
     // State for the job set up once by the output implementation and then used
-    // by all renderers.
+    // by all audio outs.
     void* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
@@ -42,34 +42,35 @@ class StandardOutputBase : public AudioOutput {
     float sw_output_db_gain;
     bool sw_output_muted;
 
-    // State for the job which is set up for each renderer during SetupMix
+    // State for the job which is set up for each audio out during SetupMix
     uint32_t frames_produced;
   };
 
   // TODO(mpuryear): per MTWN-129, combine this with CaptureLinkBookkeeping, and
   // integrate it into the Mixer class itself.
-  struct RendererBookkeeping : public AudioLink::Bookkeeping {
-    RendererBookkeeping();
-    ~RendererBookkeeping() override;
+  // TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
+  struct AudioOutBookkeeping : public AudioLink::Bookkeeping {
+    AudioOutBookkeeping();
+    ~AudioOutBookkeeping() override;
 
     // The output values of these functions are in fractional frames.
-    TimelineFunction local_time_to_renderer_subframes;
-    TimelineFunction output_frames_to_renderer_subframes;
+    TimelineFunction local_time_to_audio_out_subframes;
+    TimelineFunction output_frames_to_audio_out_subframes;
 
-    TimelineFunction local_time_to_renderer_frames;
-    TimelineFunction output_frames_to_renderer_frames;
+    TimelineFunction local_time_to_audio_out_frames;
+    TimelineFunction output_frames_to_audio_out_frames;
 
-    uint32_t local_time_to_renderer_subframes_gen = kInvalidGenerationId;
-    uint32_t out_frames_to_renderer_subframes_gen = kInvalidGenerationId;
+    uint32_t local_time_to_audio_out_subframes_gen = kInvalidGenerationId;
+    uint32_t out_frames_to_audio_out_subframes_gen = kInvalidGenerationId;
     uint32_t step_size;
     uint32_t modulo;
     uint32_t denominator() const {
-      return output_frames_to_renderer_subframes.rate().reference_delta();
+      return output_frames_to_audio_out_subframes.rate().reference_delta();
     }
     Gain::AScale amplitude_scale;
     MixerPtr mixer;
 
-    void UpdateRendererTrans(const fbl::RefPtr<AudioOutImpl>& renderer,
+    void UpdateAudioOutTrans(const fbl::RefPtr<AudioOutImpl>& audio_out,
                              const AudioOutFormatInfo& format_info);
     void UpdateOutputTrans(const MixJob& job);
   };
@@ -95,7 +96,7 @@ class StandardOutputBase : public AudioOutput {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
   virtual bool FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
-  virtual RendererBookkeeping* AllocBookkeeping();
+  virtual AudioOutBookkeeping* AllocBookkeeping();
   void SetupMixBuffer(uint32_t max_mix_frames)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
@@ -111,19 +112,19 @@ class StandardOutputBase : public AudioOutput {
   void ForeachLink(TaskType task_type)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupMix(const fbl::RefPtr<AudioOutImpl>& renderer,
-                RendererBookkeeping* info)
+  bool SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                AudioOutBookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
-                  RendererBookkeeping* info,
+  bool ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                  AudioOutBookkeeping* info,
                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
-                 RendererBookkeeping* info)
+  bool SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                 AudioOutBookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
-                   RendererBookkeeping* info,
+  bool ProcessTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                   AudioOutBookkeeping* info,
                    const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 

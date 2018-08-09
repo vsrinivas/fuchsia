@@ -25,13 +25,13 @@ class Gain {
   // constructor
   Gain() : db_target_rend_gain_(0.0f) {}
 
-  // Audio gains for renderers/capturers and output devices are expressed as
+  // Audio gains for AudioOuts/AudioIns and output devices are expressed as
   // floating-point values, in decibels. For each signal path, two gain values
   // are combined and then stored in the API-to-device link (usually
-  // renderer-to-output), as a 32-bit floating-point amplitude multiplier.
+  // AudioOut-to-output), as a 32-bit floating-point amplitude multiplier.
   //
-  // Examples: Renderer gain + Output gain = combined gain for a playback path.
-  // Input device gain + Capturer gain = combined gain for an audio input path.
+  // Examples: AudioOut gain + Output gain = combined gain for a playback path.
+  // Input device gain + audio in gain = combined gain for an audio input path.
   static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN;
   static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN;
 
@@ -41,7 +41,7 @@ class Gain {
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   //
-  // Set the renderer's contribution to a link's overall software gain
+  // Set the AudioOut's contribution to a link's overall software gain
   // control. With a 4.28 fixed point internal amplitude scalar, we allow values
   // in the range of [-inf, 24.0]. Callers of this method must guarantee
   // single-threaded semantics for each Gain instance. This is guaranteed today
@@ -49,12 +49,12 @@ class Gain {
   // their execution domain (giving us the single-threaded guarantee).
   // This value is stored in an atomic float, so that the Mixer can consume it
   // at any time without our needing to use a lock for synchronization.
-  void SetRendererGain(float db_gain) { db_target_rend_gain_.store(db_gain); }
+  void SetAudioOutGain(float db_gain) { db_target_rend_gain_.store(db_gain); }
 
   // Retrieve the combined amplitude scalar for this Gain, when provided a gain
   // value for the "destination" side of this link (output device, or audio
-  // capturer API). This will only ever be called by the mixer or the single
-  // capturer for this audio path. For performance reasons, values are cached
+  // audio in API). This will only ever be called by the mixer or the single
+  // audio in for this audio path. For performance reasons, values are cached
   // and the scalar recomputed only when needed.
   AScale GetGainScale(float output_db_gain);
 

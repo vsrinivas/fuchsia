@@ -89,16 +89,16 @@ void AudioCoreImpl::Shutdown() {
 }
 
 void AudioCoreImpl::CreateAudioOut(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer) {
-  device_manager_.AddRenderer(
-      AudioOutImpl::Create(std::move(audio_renderer), this));
+    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request) {
+  device_manager_.AddAudioOut(
+      AudioOutImpl::Create(std::move(audio_out_request), this));
 }
 
 void AudioCoreImpl::CreateAudioIn(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
     bool loopback) {
-  device_manager_.AddCapturer(
-      AudioInImpl::Create(std::move(audio_capturer_request), this, loopback));
+  device_manager_.AddAudioIn(
+      AudioInImpl::Create(std::move(audio_in_request), this, loopback));
 }
 
 // TODO(dalesat): Remove.

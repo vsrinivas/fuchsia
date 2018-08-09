@@ -38,42 +38,42 @@ TEST(Gain, GainScaleToDb) {
             -6.020600f);  // 1/2x scale-down by calculation: -6.02059991328..dB.
 }
 
-// Do renderer and output gains correctly combine to produce unity scaling?
+// Do AudioOut and output gains correctly combine to produce unity scaling?
 TEST(Gain, Unity) {
   Gain gain;
   Gain::AScale amplitude_scale;
 
-  gain.SetRendererGain(0.0f);
+  gain.SetAudioOutGain(0.0f);
   amplitude_scale = gain.GetGainScale(0.0f);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // These positive/negative values should sum to 0.0: UNITY
-  gain.SetRendererGain(Gain::kMaxGainDb / 2);
+  gain.SetAudioOutGain(Gain::kMaxGainDb / 2);
   amplitude_scale = gain.GetGainScale(-Gain::kMaxGainDb / 2);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // These positive/negative values should sum to 0.0: UNITY
-  gain.SetRendererGain(Gain::kMaxGainDb);
+  gain.SetAudioOutGain(Gain::kMaxGainDb);
   amplitude_scale = gain.GetGainScale(-Gain::kMaxGainDb);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 }
 
-// Gain caches any previously set Renderer gain, using it if needed.
+// Gain caches any previously set AudioOut gain, using it if needed.
 // This verifies the default and caching behavior of the Gain object
 TEST(Gain, Caching) {
   Gain gain, expect_gain;
   Gain::AScale amplitude_scale, expect_amplitude_scale;
 
   // Set expect_amplitude_scale to a value that represents -6.0 dB.
-  expect_gain.SetRendererGain(6.0f);
+  expect_gain.SetAudioOutGain(6.0f);
   expect_amplitude_scale = expect_gain.GetGainScale(-12.0f);
 
   // If Render gain defaults to 0.0, this represents -6.0 dB too.
   amplitude_scale = gain.GetGainScale(-6.0f);
   EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
 
-  // Now set a different Renderer gain that will be cached (+3.0)
-  gain.SetRendererGain(3.0f);
+  // Now set a different AudioOut gain that will be cached (+3.0)
+  gain.SetAudioOutGain(3.0f);
   amplitude_scale = gain.GetGainScale(-3.0f);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
@@ -86,57 +86,57 @@ TEST(Gain, Caching) {
   EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
 }
 
-// System independently limits RendererGain to kMaxGainDb (24 dB) and OutputGain
+// System independently limits AudioOutGain to kMaxGainDb (24 dB) and OutputGain
 // to 0, intending for their sum to fit into a fixed-point (4.28) container.
 // MTWN-70 relates to Gain's statefulness. Does it need this complexity?
 TEST(Gain, MaxClamp) {
   Gain gain, expect_gain;
   Gain::AScale amplitude_scale;
 
-  // RendererGain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
-  gain.SetRendererGain(Gain::kMaxGainDb * 2);
+  // AudioOutGain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
+  gain.SetAudioOutGain(Gain::kMaxGainDb * 2);
   amplitude_scale = gain.GetGainScale(0.0f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
   constexpr float kScale24DbDown = 0.0630957344f;
-  // System limits RendererGain to kMaxGainDb, even when the sum is less than 0.
+  // System limits AudioOutGain to kMaxGainDb, even when the sum is less than 0.
   // RenderGain +36dB (clamped to +24dB) plus OutputGain -48dB becomes -24dB.
-  gain.SetRendererGain(Gain::kMaxGainDb * 1.5f);
+  gain.SetAudioOutGain(Gain::kMaxGainDb * 1.5f);
   amplitude_scale = gain.GetGainScale(-2 * Gain::kMaxGainDb);
   EXPECT_EQ(kScale24DbDown, amplitude_scale);
 
   // This combination (24.05 dB) would even fit into 4.24, but clamps to 24.0dB.
-  gain.SetRendererGain(Gain::kMaxGainDb);
+  gain.SetAudioOutGain(Gain::kMaxGainDb);
   amplitude_scale = gain.GetGainScale(0.05f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
-  // System limits OutputGain to 0, independent of renderer gain.
+  // System limits OutputGain to 0, independent of AudioOut gain.
   // RendGain = -kMaxGainDb, OutGain = 1.0 (limited to 0). Expect -kMaxGainDb.
-  gain.SetRendererGain(-Gain::kMaxGainDb);
+  gain.SetAudioOutGain(-Gain::kMaxGainDb);
   amplitude_scale = gain.GetGainScale(1.0);
   EXPECT_EQ(kScale24DbDown, amplitude_scale);
 }
 
-// System independently limits RendererGain and OutputGain to kMinGainDb
+// System independently limits AudioOutGain and OutputGain to kMinGainDb
 // (-160dB). Is scale set to zero, if either (or the combo) is at or below
 // kMinGainDb?
 TEST(Gain, MinMute) {
   Gain gain;
   Gain::AScale amplitude_scale;
 
-  // if OutputGain <= kMinGainDb, scale must be 0, regardless of RendererGain
-  gain.SetRendererGain(-2 * Gain::kMinGainDb);
+  // if OutputGain <= kMinGainDb, scale must be 0, regardless of AudioOutGain
+  gain.SetAudioOutGain(-2 * Gain::kMinGainDb);
   amplitude_scale = gain.GetGainScale(Gain::kMinGainDb);
   EXPECT_EQ(0, amplitude_scale);
 
-  // if RendererGain <= kMinGainDb, scale must be 0, regardless of OutputGain
-  gain.SetRendererGain(Gain::kMinGainDb);
+  // if AudioOutGain <= kMinGainDb, scale must be 0, regardless of OutputGain
+  gain.SetAudioOutGain(Gain::kMinGainDb);
   amplitude_scale = gain.GetGainScale(Gain::kMaxGainDb * 1.2);
   EXPECT_EQ(0, amplitude_scale);
 
-  // if sum of RendererGain and OutputGain <= kMinGainDb, scale should be 0
+  // if sum of AudioOutGain and OutputGain <= kMinGainDb, scale should be 0
   // Output gain is just slightly above MinGain, and Render takes us below it
-  gain.SetRendererGain(-2.0f);
+  gain.SetAudioOutGain(-2.0f);
   amplitude_scale = gain.GetGainScale(Gain::kMinGainDb + 1.0f);
   EXPECT_EQ(0, amplitude_scale);
 }
@@ -160,7 +160,7 @@ TEST(Gain, Scaling_Linearity) {
   Gain gain;
 
   // Validate that +20.00 dB leads to exactly 10x in value (within limits)
-  gain.SetRendererGain(20.0f);
+  gain.SetAudioOutGain(20.0f);
   Gain::AScale stream_scale = gain.GetGainScale(0.0f);
 
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
@@ -176,7 +176,7 @@ TEST(Gain, Scaling_Linearity) {
   //
   // How precisely linear are our gain stages, mathematically?
   // Validate that -12.0411998 dB leads to exactly 0.25x in value
-  gain.SetRendererGain(-12.0411998f);
+  gain.SetAudioOutGain(-12.0411998f);
   stream_scale = gain.GetGainScale(0.0f);
 
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1,

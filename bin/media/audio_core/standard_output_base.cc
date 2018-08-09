@@ -23,8 +23,8 @@ namespace audio {
 static constexpr fxl::TimeDelta kMaxTrimPeriod =
     fxl::TimeDelta::FromMilliseconds(10);
 
-StandardOutputBase::RendererBookkeeping::RendererBookkeeping() {}
-StandardOutputBase::RendererBookkeeping::~RendererBookkeeping() {}
+StandardOutputBase::AudioOutBookkeeping::AudioOutBookkeeping() {}
+StandardOutputBase::AudioOutBookkeeping::~AudioOutBookkeeping() {}
 
 StandardOutputBase::StandardOutputBase(AudioDeviceManager* manager)
     : AudioOutput(manager) {
@@ -105,8 +105,8 @@ void StandardOutputBase::Process() {
                                output_formatter_->channels();
         ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
-        // Mix each renderer into the intermediate buffer, then clip/format into
-        // the final buffer.
+        // Mix each audio outs into the intermediate buffer, then clip/format
+        // into the final buffer.
         ForeachLink(TaskType::Mix);
         output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
                                          cur_mix_job_.buf_frames);
@@ -126,7 +126,7 @@ void StandardOutputBase::Process() {
     return;
   }
 
-  // If we mixed nothing this time, make sure that we trim all of our renderer
+  // If we mixed nothing this time, make sure that we trim all of our audio out
   // queues.  No matter what is going on with the output hardware, we are not
   // allowed to hold onto the queued data past its presentation time.
   if (!mixed) {
@@ -149,7 +149,7 @@ void StandardOutputBase::Process() {
 }
 
 zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
-  RendererBookkeeping* bk = AllocBookkeeping();
+  AudioOutBookkeeping* bk = AllocBookkeeping();
   std::unique_ptr<AudioLink::Bookkeeping> ref(bk);
 
   // We should never fail to allocate our bookkeeping.  The only way this can
@@ -187,9 +187,9 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
   return ZX_OK;
 }
 
-StandardOutputBase::RendererBookkeeping*
+StandardOutputBase::AudioOutBookkeeping*
 StandardOutputBase::AllocBookkeeping() {
-  return new RendererBookkeeping();
+  return new AudioOutBookkeeping();
 }
 
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
@@ -236,26 +236,26 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     }
 
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::Renderer);
+    FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioOut);
     auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-    auto renderer = fbl::RefPtr<AudioOutImpl>::Downcast(link->GetSource());
+    auto audio_out = fbl::RefPtr<AudioOutImpl>::Downcast(link->GetSource());
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
-    RendererBookkeeping* info =
-        static_cast<RendererBookkeeping*>(packet_link->bookkeeping().get());
+    AudioOutBookkeeping* info =
+        static_cast<AudioOutBookkeeping*>(packet_link->bookkeeping().get());
     FXL_DCHECK(info);
 
-    // Make sure that the mapping between the renderer's frame time domain and
+    // Make sure that the mapping between the audio out's frame time domain and
     // local time is up to date.
-    info->UpdateRendererTrans(renderer, packet_link->format_info());
+    info->UpdateAudioOutTrans(audio_out, packet_link->format_info());
 
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
 
-    bool release_renderer_packet;
+    bool release_audio_out_packet;
     while (true) {
-      release_renderer_packet = false;
+      release_audio_out_packet = false;
       // Try to grab the front of the packet queue.  If it has been flushed
       // since the last time we grabbed it, be sure to reset our mixer's
       // internal filter state.
@@ -270,11 +270,11 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
         break;
       }
 
-      // If we have not set up for this renderer yet, do so.  If the setup fails
-      // for any reason, stop processing packets for this renderer.
+      // If we have not set up for this audio out yet, do so.  If the setup
+      // fails for any reason, stop processing packets for this audio out.
       if (!setup_done) {
-        setup_done = (task_type == TaskType::Mix) ? SetupMix(renderer, info)
-                                                  : SetupTrim(renderer, info);
+        setup_done = (task_type == TaskType::Mix) ? SetupMix(audio_out, info)
+                                                  : SetupTrim(audio_out, info);
         if (!setup_done) {
           break;
         }
@@ -287,44 +287,44 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
             packet_link->gain().GetGainScale(cur_mix_job_.sw_output_db_gain);
       }
 
-      // Now process the packet which is at the front of the renderer's queue.
+      // Now process the packet which is at the front of the audio out's queue.
       // If the packet has been entirely consumed, pop it off the front and
       // proceed to the next one.  Otherwise, we are finished.
-      release_renderer_packet = (task_type == TaskType::Mix)
-                                    ? ProcessMix(renderer, info, pkt_ref)
-                                    : ProcessTrim(renderer, info, pkt_ref);
+      release_audio_out_packet = (task_type == TaskType::Mix)
+                                     ? ProcessMix(audio_out, info, pkt_ref)
+                                     : ProcessTrim(audio_out, info, pkt_ref);
 
       // If we are mixing, and we have produced enough output frames, then we
       // are done with this mix, regardless of what we should now do with the
-      // renderer packet.
+      // audio out packet.
       if ((task_type == TaskType::Mix) &&
           (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames)) {
         break;
       }
-      // If we still need more output, but could not complete this renderer
+      // If we still need more output, but could not complete this audio out
       // packet (we're paused, or packet is in the future), then we are done.
-      if (!release_renderer_packet) {
+      if (!release_audio_out_packet) {
         break;
       }
-      // We did consume this entire renderer packet, and we should keep mixing.
+      // We did consume this entire audio out packet, and we should keep mixing.
       pkt_ref.reset();
-      packet_link->UnlockPendingQueueFront(release_renderer_packet);
+      packet_link->UnlockPendingQueueFront(release_audio_out_packet);
     }
 
-    // Unlock queue (completing packet if needed) and proceed to next renderer.
+    // Unlock queue (completing packet if needed) and proceed to next audio out.
     pkt_ref.reset();
-    packet_link->UnlockPendingQueueFront(release_renderer_packet);
+    packet_link->UnlockPendingQueueFront(release_audio_out_packet);
 
     // Note: there is no point in doing this for the trim task, but it doesn't
     // hurt anything, and its easier then introducing another function to the
-    // ForeachLink arguments to run after each renderer is processed just for
+    // ForeachLink arguments to run after each audio out is processed just for
     // the purpose of setting this flag.
     cur_mix_job_.accumulate = true;
   }
 }
 
-bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& renderer,
-                                  RendererBookkeeping* info) {
+bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                                  AudioOutBookkeeping* info) {
   // If we need to recompose our transformation from output frame space to input
   // fractional frames, do so now.
   FXL_DCHECK(info);
@@ -334,8 +334,8 @@ bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& renderer,
   return true;
 }
 
-bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
-                                    RendererBookkeeping* info,
+bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                                    AudioOutBookkeeping* info,
                                     const fbl::RefPtr<AudioPacketRef>& packet) {
   // Sanity check our parameters.
   FXL_DCHECK(info);
@@ -349,16 +349,16 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
   FXL_DCHECK(info->mixer);
   Mixer& mixer = *(info->mixer);
 
-  // If this renderer is currently paused, our subject_delta (not just our
+  // If this audio out is currently paused, our subject_delta (not just our
   // step_size) will be zero.  This packet may be relevant at some point in the
   // future, but right now it contributes nothing.  Tell the ForeachLink loop
   // that we are done and to hold onto this packet for now.
-  if (!info->output_frames_to_renderer_subframes.subject_delta()) {
+  if (!info->output_frames_to_audio_out_subframes.subject_delta()) {
     return false;
   }
 
   // Have we produced all that we are supposed to?  If so, hold the current
-  // packet and move on to the next renderer.
+  // packet and move on to the next audio out.
   if (cur_mix_job_.frames_produced >= cur_mix_job_.buf_frames) {
     return false;
   }
@@ -368,13 +368,13 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
                (cur_mix_job_.frames_produced * output_formatter_->channels());
 
   // Figure out where the first and last sampling points of this job are,
-  // expressed in fractional renderer frames.
-  int64_t first_sample_ftf = info->output_frames_to_renderer_subframes(
+  // expressed in fractional audio out frames.
+  int64_t first_sample_ftf = info->output_frames_to_audio_out_subframes(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
   // Without the "-1", this would be the first output frame of the NEXT job.
   int64_t final_sample_ftf =
       first_sample_ftf +
-      info->output_frames_to_renderer_subframes.rate().Scale(frames_left - 1);
+      info->output_frames_to_audio_out_subframes.rate().Scale(frames_left - 1);
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (packet->end_pts() == packet->start_pts()) {
@@ -413,7 +413,7 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
   // starting to produce data.
   if (packet->start_pts() > first_sample_pos_window_edge) {
     const TimelineRate& dst_to_src =
-        info->output_frames_to_renderer_subframes.rate();
+        info->output_frames_to_audio_out_subframes.rate();
     output_offset_64 = dst_to_src.Inverse().Scale(packet->start_pts() -
                                                   first_sample_pos_window_edge +
                                                   Mixer::FRAC_ONE - 1);
@@ -477,8 +477,8 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& renderer,
   return consumed_source;
 }
 
-bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
-                                   RendererBookkeeping* info) {
+bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
+                                   AudioOutBookkeeping* info) {
   // Compute the cutoff time we will use to decide wether or not to trim
   // packets.  ForeachLink has already updated our transformation, no need
   // for us to do so here.
@@ -493,13 +493,13 @@ bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& renderer,
   // which should be impossible unless the user has defined a playback rate
   // where the ratio between media time ticks and local time ticks is
   // greater than one.
-  trim_threshold_ = info->local_time_to_renderer_subframes(local_now_ticks);
+  trim_threshold_ = info->local_time_to_audio_out_subframes(local_now_ticks);
 
   return true;
 }
 
 bool StandardOutputBase::ProcessTrim(
-    const fbl::RefPtr<AudioOutImpl>& renderer, RendererBookkeeping* info,
+    const fbl::RefPtr<AudioOutImpl>& audio_out, AudioOutBookkeeping* info,
     const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   FXL_DCHECK(pkt_ref);
 
@@ -511,34 +511,34 @@ bool StandardOutputBase::ProcessTrim(
   return true;
 }
 
-void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
-    const fbl::RefPtr<AudioOutImpl>& renderer,
+void StandardOutputBase::AudioOutBookkeeping::UpdateAudioOutTrans(
+    const fbl::RefPtr<AudioOutImpl>& audio_out,
     const AudioOutFormatInfo& format_info) {
-  FXL_DCHECK(renderer != nullptr);
+  FXL_DCHECK(audio_out != nullptr);
   TimelineFunction timeline_function;
-  uint32_t gen = local_time_to_renderer_subframes_gen;
+  uint32_t gen = local_time_to_audio_out_subframes_gen;
 
-  renderer->SnapshotCurrentTimelineFunction(
-      Timeline::local_now(), &local_time_to_renderer_subframes, &gen);
+  audio_out->SnapshotCurrentTimelineFunction(
+      Timeline::local_now(), &local_time_to_audio_out_subframes, &gen);
 
   // If the local time -> media time transformation has not changed since the
   // last time we examined it, just get out now.
-  if (local_time_to_renderer_subframes_gen == gen) {
+  if (local_time_to_audio_out_subframes_gen == gen) {
     return;
   }
 
-  // The transformation has changed, re-compute the local time -> renderer frame
-  // transformation.
-  local_time_to_renderer_frames =
-      local_time_to_renderer_subframes *
+  // The transformation has changed, re-compute the local time -> audio out
+  // frame transformation.
+  local_time_to_audio_out_frames =
+      local_time_to_audio_out_subframes *
       TimelineFunction(TimelineRate(1u, 1u << kPtsFractionalBits));
 
-  // Update the generation, and invalidate the output to renderer generation.
-  local_time_to_renderer_subframes_gen = gen;
-  out_frames_to_renderer_subframes_gen = kInvalidGenerationId;
+  // Update the generation, and invalidate the output to audio out generation.
+  local_time_to_audio_out_subframes_gen = gen;
+  out_frames_to_audio_out_subframes_gen = kInvalidGenerationId;
 }
 
-void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
+void StandardOutputBase::AudioOutBookkeeping::UpdateOutputTrans(
     const MixJob& job) {
   // We should not be here unless we have a valid mix job.  From our point of
   // view, this means that we have a job which supplies a valid transformation
@@ -548,26 +548,26 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
 
   // If our generations match, we don't need to re-compute anything.  Just use
   // what we have already.
-  if (out_frames_to_renderer_subframes_gen == job.local_to_output_gen) {
+  if (out_frames_to_audio_out_subframes_gen == job.local_to_output_gen) {
     return;
   }
 
-  // Assert that we have a good mapping from local time to fractional renderer
+  // Assert that we have a good mapping from local time to fractional audio out
   // frames.
   //
   // TODO(johngro): Don't assume that 0 means invalid.  Make it a proper
   // constant defined somewhere.
-  FXL_DCHECK(local_time_to_renderer_subframes_gen);
+  FXL_DCHECK(local_time_to_audio_out_subframes_gen);
 
-  output_frames_to_renderer_frames =
-      local_time_to_renderer_frames * job.local_to_output->Inverse();
+  output_frames_to_audio_out_frames =
+      local_time_to_audio_out_frames * job.local_to_output->Inverse();
 
   // Compose the job supplied transformation from local to output with the
-  // renderer supplied mapping from local to fraction input frames to produce a
+  // audio out supplied mapping from local to fraction input frames to produce a
   // transformation which maps from output frames to fractional input frames.
-  TimelineFunction& dst = output_frames_to_renderer_subframes;
+  TimelineFunction& dst = output_frames_to_audio_out_subframes;
 
-  dst = local_time_to_renderer_subframes * job.local_to_output->Inverse();
+  dst = local_time_to_audio_out_subframes * job.local_to_output->Inverse();
 
   // Finally, compute the step size in fractional frames.  IOW, every time
   // we move forward one output frame, how many fractional frames of input
@@ -588,7 +588,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
   }
 
   // Done, update our generation.
-  out_frames_to_renderer_subframes_gen = job.local_to_output_gen;
+  out_frames_to_audio_out_subframes_gen = job.local_to_output_gen;
 }
 
 }  // namespace audio

@@ -28,7 +28,7 @@
     // policies.  For example, if the audio routing policy is set to "last
     // plugged", and this device is the last plugged device, it will still not
     // be declared the "default" device, and it will not have
-    // renderers/capturers automatically attached to it.
+    // audio outs/ins automatically attached to it.
     "disallow_auto_routing": { "type": "boolean" }
   },
   "required": [ "gain",

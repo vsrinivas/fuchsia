@@ -81,11 +81,11 @@ class Mixer {
   // the destination buffer.
   //
   // @param frac_src_frames
-  // The total number of fractional renderer frames contained by the source
+  // The total number of fractional AudioOut frames contained by the source
   // buffer.
   //
   // @param frac_src_offset
-  // A pointer to the offset (expressed in fractional renderer frames) at which
+  // A pointer to the offset (expressed in fractional AudioOut frames) at which
   // the first frame to be mixed with the destination buffer should be sampled.
   // When Mix has finished, frac_src_offset will be updated to indicate the
   // offset of the sampling position of the next frame to be mixed with the
@@ -162,7 +162,7 @@ class Mixer {
   // Filter widths
   //
   // The positive and negative widths of the filter for this mixer, expressed in
-  // fractional input renderer units.  These widths convey which input frames
+  // fractional input AudioOut units.  These widths convey which input frames
   // will be referenced by the filter, when producing output for a specific
   // instant in time. Positive filter width refers to how far forward
   // (positively) the filter looks, from the PTS in question; negative filter
