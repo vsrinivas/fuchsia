@@ -502,7 +502,8 @@ struct brcmf_sdio {
 
     brcmf_timer_info_t timer;
     sync_completion_t watchdog_wait;
-    struct task_struct* watchdog_tsk;
+    atomic_bool watchdog_should_stop;
+    pthread_t watchdog_tsk;
     bool wd_active;
 
     struct workqueue_struct* brcmf_wq;
@@ -2269,12 +2270,16 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
     uint32_t local_hostintmask;
     uint8_t saveclk;
     zx_status_t err;
+    int thread_result;
 
     brcmf_dbg(TRACE, "Enter\n");
 
     if (bus->watchdog_tsk) {
-        send_sig(SIGTERM, bus->watchdog_tsk, 1);
-        kthread_stop(bus->watchdog_tsk);
+        atomic_store(&bus->watchdog_should_stop, true);
+        sync_completion_signal(&bus->watchdog_wait);
+        brcmf_dbg(TEMP, "Closing and joining SDIO watchdog task");
+        thread_result = pthread_join(bus->watchdog_tsk, NULL);
+        brcmf_dbg(TEMP, "Result of thread join: %d", thread_result);
         bus->watchdog_tsk = NULL;
     }
 
@@ -3714,31 +3719,25 @@ fail:
     return false;
 }
 
-static zx_status_t brcmf_sdio_watchdog_thread(void* data) {
+static void* brcmf_sdio_watchdog_thread(void* data) {
     struct brcmf_sdio* bus = (struct brcmf_sdio*)data;
-    int wait;
 
-    allow_signal(SIGTERM);
     /* Run until signal received */
     brcmf_sdiod_freezer_count(bus->sdiodev);
     while (1) {
-        if (kthread_should_stop()) {
+        if (atomic_load(&bus->watchdog_should_stop)) {
             break;
         }
         brcmf_sdiod_freezer_uncount(bus->sdiodev);
-        wait = sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
+        sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
         brcmf_sdiod_freezer_count(bus->sdiodev);
         brcmf_sdiod_try_freeze(bus->sdiodev);
-        if (!wait) {
-            brcmf_sdio_bus_watchdog(bus);
-            /* Count the tick for reference */
-            bus->sdcnt.tickcnt++;
-            sync_completion_reset(&bus->watchdog_wait);
-        } else {
-            break;
-        }
+        brcmf_sdio_bus_watchdog(bus);
+        /* Count the tick for reference */
+        bus->sdcnt.tickcnt++;
+        sync_completion_reset(&bus->watchdog_wait);
     }
-    return ZX_OK;
+    return NULL;
 }
 
 static void brcmf_sdio_watchdog(void* data) {
@@ -3892,6 +3891,7 @@ fail:
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     zx_status_t ret;
+    int thread_result;
     struct brcmf_sdio* bus;
     struct workqueue_struct* wq;
 
@@ -3940,15 +3940,12 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);
     /* Initialize watchdog thread */
     bus->watchdog_wait = SYNC_COMPLETION_INIT;
-    // TODO(cphoenix): Hack to make it compile - will be fixed when we support SDIO.
-    brcmf_err("* * Need to do ret = kthread_run(brcmf_sdio_watchdog_thread, ...");
-    (void)brcmf_sdio_watchdog_thread;
-//    ret = kthread_run(brcmf_sdio_watchdog_thread, bus, "brcmf_wdog/%s",
-//                      device_get_name(sdiodev->dev.zxdev), &bus->watchdog_tsk);
-//    if (ret != ZX_OK) {
-//        pr_warn("brcmf_watchdog thread failed to start\n");
-//        bus->watchdog_tsk = NULL;
-//    }
+    atomic_store(&bus->watchdog_should_stop, false);
+    thread_result = pthread_create(&bus->watchdog_tsk, NULL, brcmf_sdio_watchdog_thread, bus);
+    if (thread_result != 0) {
+        brcmf_err("brcmf_watchdog thread failed to start: error %d", thread_result);
+        bus->watchdog_tsk = NULL;
+    }
     /* Initialize DPC thread */
     atomic_store(&bus->dpc_triggered, false);
     bus->dpc_running = false;
@@ -4080,16 +4077,8 @@ void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
     }
 
     if (active) {
-        if (!bus->wd_active) {
-            /* Create timer again when watchdog period is
-               dynamically changed or in the first instance
-             */
-            brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
-            bus->wd_active = true;
-        } else {
-            /* Re arm the timer, at last watchdog period */
-            brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
-        }
+        brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
+        bus->wd_active = true;
     }
 }
 

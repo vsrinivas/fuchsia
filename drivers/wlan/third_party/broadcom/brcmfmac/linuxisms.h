@@ -169,9 +169,6 @@ LINUX_FUNCVI(device_set_wakeup_enable) // USB only
 LINUX_FUNCVI(usb_deregister) // USB only
 LINUX_FUNCVI(driver_for_each_device) // In usb.c only
 
-LINUX_FUNCII(send_sig) // SDIO only
-LINUX_FUNCVI(kthread_stop) // SDIO only
-LINUX_FUNCVI(pr_warn) // SDIO only
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
 #define SDIO_DEVICE(a,b) (a)
 LINUX_FUNCVI(pm_runtime_allow) // SDIO only
@@ -185,9 +182,6 @@ LINUX_FUNCVI(of_find_property)
 LINUX_FUNCVI(irq_of_parse_and_map) // OF only
 LINUX_FUNCII(irqd_get_trigger_type) // OF only
 LINUX_FUNCII(irq_get_irq_data) // OF only
-LINUX_FUNCII(allow_signal) // SDIO only
-LINUX_FUNCX(kthread_should_stop) // SDIO only
-LINUX_FUNCVS(kthread_run) // SDIO only
 
 LINUX_FUNCVI(device_release_driver)
 #define module_param_string(a, b, c, d)
@@ -272,7 +266,6 @@ enum {
     IEEE80211_P2P_ATTR_GROUP_ID = 0,
     IEEE80211_STYPE_PROBE_REQ = 0,
     IEEE80211_P2P_ATTR_LISTEN_CHANNEL = (57),
-    SIGTERM = (55),
     IFNAMSIZ = (16),
     WLAN_PMKID_LEN = (16),
     WLAN_MAX_KEY_LEN = (128),

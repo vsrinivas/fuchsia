@@ -881,7 +881,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_sdio_dev* sdiodev, uint32
     sdiodev = bus_if->bus_priv.sdio;
 
     brcmf_sdiod_freezer_on(sdiodev);
-    brcmf_sdio_wd_timer(sdiodev->bus, 0);
+    brcmf_sdio_wd_timer(sdiodev->bus, false);
 
     sdio_flags = MMC_PM_KEEP_POWER;
     if (sdiodev->wowl_enabled) {
