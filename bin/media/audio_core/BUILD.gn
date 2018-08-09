@@ -25,6 +25,8 @@ source_set("audio_mixer_lib") {
     "constants.h",
     "gain.cc",
     "gain.h",
+    "mixer/fx_loader.cc",
+    "mixer/fx_loader.h",
     "mixer/linear_sampler.cc",
     "mixer/linear_sampler.h",
     "mixer/mixer.cc",
@@ -36,6 +38,7 @@ source_set("audio_mixer_lib") {
     "mixer/output_producer.h",
     "mixer/point_sampler.cc",
     "mixer/point_sampler.h",
+    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
   ]
 
   public_deps = [

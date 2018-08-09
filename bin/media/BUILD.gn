@@ -82,21 +82,22 @@ package("tests") {
 
   libraries = [
     {
+      # This is audio_dfx:lib, a test library hosted in audio_dfx_tests process
       name = "libaudio_dfx.so"
     },
   ]
 
   tests = [
     {
+      name = "audio_core_tests"
+    },
+
+    {
       name = "audio_dfx_tests"
     },
 
     {
       name = "audio_mixer_tests"
-    },
-
-    {
-      name = "audio_core_tests"
     },
 
     {
