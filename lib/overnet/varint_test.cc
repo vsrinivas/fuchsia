@@ -59,7 +59,8 @@ TEST(Varint, RoundTrip) {
   for (;;) {
     RoundTrip(i);
     uint64_t j = i + i / 10000 + 1;
-    if (j <= i) break;
+    if (j <= i)
+      break;
     i = j;
   }
 }

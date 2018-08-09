@@ -173,19 +173,22 @@ void BBR::OnAck(const Ack& ack) {
 void BBR::RequestTransmit(OutgoingPacket packet,
                           StatusOrCallback<SentPacket> transmit) {
   ValidateState();
-  if (queued_packet_) return;
+  if (queued_packet_)
+    return;
   assert(packet.sequence > last_sent_packet_);
   last_sent_packet_ = packet.sequence;
   queued_packet_.Reset(packet, std::move(transmit));
   queued_packet_paused_ = packets_in_flight_ >= cwnd_;
-  if (queued_packet_paused_) return;
+  if (queued_packet_paused_)
+    return;
   ScheduleQueuedPacket();
   ValidateState();
 }
 
 void BBR::ScheduleQueuedPacket() {
   ValidateState();
-  if (queued_packet_->timeout) return;
+  if (queued_packet_->timeout)
+    return;
 
   const auto now = timer_->Now();
   TimeStamp send_time = last_send_time_ + PacingRate().SendTimeForBytes(
@@ -274,7 +277,8 @@ void BBR::UpdateBtlBw(const Ack& ack, const RateSample& rs) {
 }
 
 void BBR::UpdateRound(const Ack& ack) {
-  if (ack.acked_packets.empty()) return;
+  if (ack.acked_packets.empty())
+    return;
   const auto& last_packet_acked = ack.acked_packets.back();
   if (last_packet_acked.delivered_bytes_at_send >=
       next_round_delivered_bytes_) {

@@ -20,7 +20,8 @@ void Linearizer::ValidateInternals() const {
     assert(ready_.empty());
   }
   // The first thing in the pending queue should be after our read bytes.
-  if (!pending_push_.empty()) assert(pending_push_.begin()->first >= offset_);
+  if (!pending_push_.empty())
+    assert(pending_push_.begin()->first >= offset_);
   // There should be no overlap between chunks in the pending map.
   uint64_t seen_to = offset_;
   for (const auto& el : pending_push_) {
@@ -41,7 +42,8 @@ void Linearizer::Close(const Status& status) {
 }
 
 void Linearizer::Close(const Status& status, Callback<void> quiesced) {
-  if (closed_) return;
+  if (closed_)
+    return;
   closed_ = true;
   if (!pending_push_.empty() && status.is_ok()) {
     closed_error_ = Status(StatusCode::CANCELLED, "Gaps existed at close time");
@@ -244,7 +246,8 @@ void Linearizer::IntegratePush(Chunk chunk, StatusCallback done) {
               }
             }
             if (--refs == 0) {
-              if (!cb.empty()) cb(Status::Ok());
+              if (!cb.empty())
+                cb(Status::Ok());
               delete this;
             }
           }

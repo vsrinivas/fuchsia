@@ -45,7 +45,8 @@ class Fuzzer {
   }
 
   bool Completed(uint64_t seq, uint8_t status) {
-    if (begun_seqs_.count(seq) == 0) return false;  // invalid byte sequence
+    if (begun_seqs_.count(seq) == 0)
+      return false;  // invalid byte sequence
     begun_seqs_.erase(seq);
     receive_mode_.Completed(seq, Status(static_cast<StatusCode>(status)));
     return true;

@@ -159,7 +159,8 @@ class PacketNub {
 
   static constexpr bool AllZeros(const uint8_t* begin, const uint8_t* end) {
     for (const uint8_t* p = begin; p != end; ++p) {
-      if (*p != 0) return false;
+      if (*p != 0)
+        return false;
     }
     return true;
   }
@@ -198,7 +199,8 @@ class PacketNub {
         ticks = 0;
       } else {
         ticks++;
-        if (ticks >= 5) return Nothing;
+        if (ticks >= 5)
+          return Nothing;
       }
       return ticks;
     }
@@ -252,7 +254,8 @@ class PacketNub {
     link.next_timeout.Reset(
         timer_, BackoffForTicks(kAnnounceResendMillis, ticks),
         StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
-          if (status.is_error()) return;
+          if (status.is_error())
+            return;
           StartSimpleState(address, node, state, packet_size, packet_writer);
         }));
   }

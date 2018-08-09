@@ -38,7 +38,8 @@ class AckFrame {
            std::initializer_list<uint64_t> nack_seqs)
       : ack_to_seq_(ack_to_seq), ack_delay_us_(ack_delay_us) {
     assert(ack_to_seq_ > 0);
-    for (auto n : nack_seqs) AddNack(n);
+    for (auto n : nack_seqs)
+      AddNack(n);
   }
 
   AckFrame(const AckFrame&) = delete;

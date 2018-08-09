@@ -120,8 +120,10 @@ class Slice final {
 
   template <class IT>
   static Slice Join(IT begin, IT end, size_t desired_prefix = 0) {
-    if (begin == end) return Slice();
-    if (std::next(begin) == end) return *begin;
+    if (begin == end)
+      return Slice();
+    if (std::next(begin) == end)
+      return *begin;
 
     size_t total_length = 0;
     for (auto it = begin; it != end; ++it) {
@@ -310,7 +312,8 @@ class Slice final {
   static uint8_t* BHAddPrefix(const Data* data, size_t length,
                               Data* new_slice_data) {
     auto* hdr = static_cast<BlockHeader*>(data->general.control);
-    if (hdr->refs != 1) return nullptr;
+    if (hdr->refs != 1)
+      return nullptr;
     assert(data->general.begin - hdr->bytes >= 0);
     if (static_cast<size_t>(data->general.begin - hdr->bytes) >= length) {
       *new_slice_data =
@@ -402,7 +405,8 @@ struct Chunk final {
 
   void TrimEnd(size_t trim_bytes) {
     slice.TrimEnd(trim_bytes);
-    if (trim_bytes != 0) end_of_message = false;
+    if (trim_bytes != 0)
+      end_of_message = false;
   }
 
   Chunk TakeUntilSliceOffset(size_t slice_offset) {
@@ -413,7 +417,8 @@ struct Chunk final {
 };
 
 inline bool operator==(const Slice& a, const Slice& b) {
-  if (a.length() != b.length()) return false;
+  if (a.length() != b.length())
+    return false;
   return 0 == memcmp(a.begin(), b.begin(), a.length());
 }
 

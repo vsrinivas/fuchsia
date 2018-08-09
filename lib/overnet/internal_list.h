@@ -38,7 +38,8 @@ class InternalList {
   InternalList(const InternalList&) = delete;
   InternalList& operator=(const InternalList&) = delete;
   ~InternalList() {
-    while (head_) Remove(head_);
+    while (head_)
+      Remove(head_);
   }
 
   T* Front() { return head_; }
@@ -109,7 +110,8 @@ class InternalList {
 
   T* PopFront() {
     T* p = Front();
-    if (p) Remove(p);
+    if (p)
+      Remove(p);
     return p;
   }
 

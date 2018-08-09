@@ -43,17 +43,21 @@ StatusOr<NodeId> NodeId::FromString(const std::string& s) {
     return Status(StatusCode::INVALID_ARGUMENT, tmp.str());
   };
   auto expect_eos = [&]() {
-    if (ch == end) return Status::Ok();
+    if (ch == end)
+      return Status::Ok();
     return Status(StatusCode::INVALID_ARGUMENT, "Expected end of string");
   };
   auto expect = [&](char c) {
-    if (ch == end) return short_string();
-    if (*ch != c) return expected(c, *ch);
+    if (ch == end)
+      return short_string();
+    if (*ch != c)
+      return expected(c, *ch);
     ++ch;
     return Status::Ok();
   };
   auto hex_digit = [&](int offset) {
-    if (ch == end) return short_string();
+    if (ch == end)
+      return short_string();
     if (*ch >= '0' && *ch <= '9') {
       node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - '0'))
                     << offset;

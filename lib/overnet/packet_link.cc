@@ -21,7 +21,8 @@ PacketLink::PacketLink(Router* router, NodeId peer, uint32_t mss)
 void PacketLink::Forward(Message message) {
   bool send_immediately = !sending_ && outgoing_.empty();
   outgoing_.emplace(std::move(message));
-  if (send_immediately) BuildAndSendPacket();
+  if (send_immediately)
+    BuildAndSendPacket();
 }
 
 LinkMetrics PacketLink::GetLinkMetrics() {
@@ -100,7 +101,8 @@ void PacketLink::Process(TimeStamp received, Slice packet) {
   ++p;
 
   // Packets without sequence numbers are used to end the three way handshake.
-  if (p == end) return;
+  if (p == end)
+    return;
 
   auto seq_status = SeqNum::Parse(&p, end);
   if (seq_status.is_error()) {
@@ -146,7 +148,8 @@ Status PacketLink::ProcessBody(TimeStamp received, Slice packet) {
     packet.TrimBegin(p - begin);
     auto msg_status = RoutableMessage::Parse(
         packet.TakeUntilOffset(serialized_length), router_->node_id(), peer_);
-    if (msg_status.is_error()) return msg_status.AsStatus();
+    if (msg_status.is_error())
+      return msg_status.AsStatus();
     router_->Forward(Message{std::move(*msg_status.get()), received,
                              StatusCallback::Ignored()});
   }

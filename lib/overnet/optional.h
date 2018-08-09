@@ -23,7 +23,8 @@ class Optional {
   Optional(const T& value) : set_(true) { storage_.Init(value); }
   Optional(T&& value) : set_(true) { storage_.Init(std::move(value)); }
   Optional(const Optional& other) : set_(other.set_) {
-    if (set_) storage_.Init(*other.storage_.get());
+    if (set_)
+      storage_.Init(*other.storage_.get());
   }
   Optional(Optional&& other) : set_(other.set_) {
     if (set_) {
@@ -31,7 +32,8 @@ class Optional {
     }
   }
   ~Optional() {
-    if (set_) storage_.Destroy();
+    if (set_)
+      storage_.Destroy();
   }
   void Reset() {
     if (set_) {
@@ -48,7 +50,8 @@ class Optional {
     storage_.Init(std::forward<Arg>(args)...);
   }
   void Swap(Optional* other) {
-    if (!set_ && !other->set_) return;
+    if (!set_ && !other->set_)
+      return;
     if (set_ && other->set_) {
       using std::swap;
       swap(*storage_.get(), *other->storage_.get());
@@ -98,21 +101,24 @@ class Optional {
 
   template <typename F>
   auto Map(F f) -> Optional<decltype(f(*get()))> const {
-    if (!set_) return Nothing;
+    if (!set_)
+      return Nothing;
     return f(*storage_.get());
   }
 
   template <typename F>
   auto Then(F f) const -> decltype(f(*get())) {
     using Returns = decltype(f(*get()));
-    if (!set_) return Returns();
+    if (!set_)
+      return Returns();
     return f(*storage_.get());
   }
 
   template <typename F>
   auto Then(F f) -> decltype(f(*get())) {
     using Returns = decltype(f(*get()));
-    if (!set_) return Returns();
+    if (!set_)
+      return Returns();
     return f(*storage_.get());
   }
 
@@ -136,7 +142,8 @@ bool operator!=(const Optional<T>& a, const Optional<U>& b) {
 
 template <class T>
 std::ostream& operator<<(std::ostream& out, const Optional<T>& val) {
-  if (!val) return out << "(nil)";
+  if (!val)
+    return out << "(nil)";
   return out << *val.get();
 }
 

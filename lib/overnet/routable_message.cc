@@ -28,24 +28,30 @@ Slice RoutableMessage::Write(NodeId writer, NodeId target) const {
       (dst_count << kDestCountFlagsShift) | (is_control() ? kControlFlag : 0);
   const auto flags_length = varint::WireSizeFor(flags);
   header_length += flags_length;
-  if (!is_local) header_length += src_.wire_length();
+  if (!is_local)
+    header_length += src_.wire_length();
   for (const auto& dst : dsts_) {
-    if (!is_local) header_length += dst.dst_.wire_length();
+    if (!is_local)
+      header_length += dst.dst_.wire_length();
     auto dst_stream_id_len = dst.stream_id().wire_length();
     stream_id_len.push_back(dst_stream_id_len);
     header_length += dst_stream_id_len;
-    if (!is_control()) header_length += dst.seq()->wire_length();
+    if (!is_control())
+      header_length += dst.seq()->wire_length();
   }
 
   // Serialize the message.
   return payload_.WithPrefix(header_length, [&](uint8_t* data) {
     uint8_t* p = data;
     p = varint::Write(flags, flags_length, p);
-    if (!is_local) p = src_.Write(p);
+    if (!is_local)
+      p = src_.Write(p);
     for (size_t i = 0; i < dsts_.size(); i++) {
-      if (!is_local) p = dsts_[i].dst().Write(p);
+      if (!is_local)
+        p = dsts_[i].dst().Write(p);
       p = dsts_[i].stream_id().Write(stream_id_len[i], p);
-      if (!is_control()) p = dsts_[i].seq()->Write(p);
+      if (!is_control())
+        p = dsts_[i].seq()->Write(p);
     }
     assert(p == data + header_length);
   });
@@ -63,7 +69,8 @@ StatusOr<RoutableMessage> RoutableMessage::Parse(Slice data, NodeId reader,
   uint64_t dst_count = flags >> kDestCountFlagsShift;
   const bool is_control = (flags & kControlFlag) != 0;
   const bool is_local = dst_count == 0;
-  if (is_local) dst_count++;
+  if (is_local)
+    dst_count++;
   if (dst_count > kMaxDestCount) {
     return StatusOr<RoutableMessage>(
         StatusCode::INVALID_ARGUMENT,
@@ -115,7 +122,8 @@ std::ostream& operator<<(std::ostream& out, const RoutableMessage& h) {
   out << "RoutableMessage{src:" << h.src() << " dsts:{";
   int i = 0;
   for (const auto& dst : h.destinations()) {
-    if (i) out << " ";
+    if (i)
+      out << " ";
     out << "[" << (i++) << "] dst:" << dst.dst()
         << " stream_id:" << dst.stream_id() << " seq:" << dst.seq();
   }

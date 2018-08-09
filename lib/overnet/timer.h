@@ -71,11 +71,15 @@ inline constexpr bool operator!=(TimeDelta a, TimeDelta b) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, TimeDelta a) {
-  if (a == TimeDelta::PositiveInf()) return out << "+inf";
-  if (a == TimeDelta::NegativeInf()) return out << "-inf";
+  if (a == TimeDelta::PositiveInf())
+    return out << "+inf";
+  if (a == TimeDelta::NegativeInf())
+    return out << "-inf";
   auto us = a.as_us();
-  if (us > -1000 && us < 1000) return out << us << "us";
-  if (us > -1000000 && us < 1000000) return out << (us / 1000.0) << "ms";
+  if (us > -1000 && us < 1000)
+    return out << us << "us";
+  if (us > -1000000 && us < 1000000)
+    return out << (us / 1000.0) << "ms";
   return out << (us / 1000000.0) << "s";
 }
 
@@ -88,8 +92,10 @@ inline constexpr TimeDelta operator+(TimeDelta a, TimeDelta b) {
       b == TimeDelta::Zero()) {
     return a;
   }
-  if (b == TimeDelta::PositiveInf()) return b;
-  if (b == TimeDelta::NegativeInf()) return b;
+  if (b == TimeDelta::PositiveInf())
+    return b;
+  if (b == TimeDelta::NegativeInf())
+    return b;
   if (b.as_us() > 0) {
     if (a.as_us() > 0 &&
         b.as_us() > TimeDelta::PositiveInf().as_us() - a.as_us()) {
@@ -105,8 +111,10 @@ inline constexpr TimeDelta operator+(TimeDelta a, TimeDelta b) {
 }
 
 inline constexpr TimeDelta operator-(TimeDelta x) {
-  if (x == TimeDelta::NegativeInf()) return TimeDelta::PositiveInf();
-  if (x == TimeDelta::PositiveInf()) return TimeDelta::NegativeInf();
+  if (x == TimeDelta::NegativeInf())
+    return TimeDelta::PositiveInf();
+  if (x == TimeDelta::PositiveInf())
+    return TimeDelta::NegativeInf();
   return TimeDelta::FromMicroseconds(-x.as_us());
 }
 
@@ -203,7 +211,8 @@ class Timeout {
   }
 
   ~Timeout() {
-    if (!cb_.empty()) Cancel();
+    if (!cb_.empty())
+      Cancel();
     assert(cb_.empty());
   }
 
@@ -225,7 +234,8 @@ T* Timer::TimeoutStorage(Timeout* timeout) {
 }
 
 inline void Timer::FireTimeout(Timeout* timeout, Status status) {
-  if (timeout->cb_.empty()) return;
+  if (timeout->cb_.empty())
+    return;
   timeout->cb_(status);
 }
 

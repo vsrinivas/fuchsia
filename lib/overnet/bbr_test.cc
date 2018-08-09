@@ -38,7 +38,8 @@ class Meter {
 
   Bandwidth Evaluate(TimeStamp now) {
     Flush(now);
-    if (samples_.empty()) return Bandwidth::Zero();
+    if (samples_.empty())
+      return Bandwidth::Zero();
     return Bandwidth::BytesPerTime(
         sum_, std::max(window_, now - samples_.front().when));
   }
@@ -69,7 +70,8 @@ class BandwidthGate {
   void SetBandwidth(Bandwidth bandwidth) { bandwidth_ = bandwidth; }
 
   void Push(uint64_t packet_size, StatusCallback ready) {
-    if (pushing_) return;
+    if (pushing_)
+      return;
     pushing_ = true;
     timer_->At(timer_->Now() + bandwidth_.SendTimeForBytes(packet_size),
                [this, ready = std::move(ready)]() mutable {
@@ -111,7 +113,8 @@ class Simulator {
     auto next_packet = timer_.Now() + bandwidth.SendTimeForBytes(packet_size);
     SendPacket(packet_size, [=]() {
       auto now = timer_.Now();
-      if (now > end) return;
+      if (now > end)
+        return;
       timer_.At(next_packet,
                 [=]() { AddContinuousTraffic(packet_size, bandwidth, end); });
     });

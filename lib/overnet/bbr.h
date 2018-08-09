@@ -113,8 +113,10 @@ class BBR {
     constexpr bool IsOne() const { return numerator == denominator; }
 
     friend std::ostream& operator<<(std::ostream& out, Gain g) {
-      if (g.denominator == 1) return out << g.numerator;
-      if (g.IsOne()) return out << "1";
+      if (g.denominator == 1)
+        return out << g.numerator;
+      if (g.IsOne())
+        return out << "1";
       return out << g.numerator << "/" << g.denominator;
     }
   };

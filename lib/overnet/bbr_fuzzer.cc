@@ -15,13 +15,15 @@ class InputStream {
       : cur_(data), end_(data + size) {}
 
   uint8_t NextByte() {
-    if (cur_ == end_) return 0;
+    if (cur_ == end_)
+      return 0;
     return *cur_++;
   }
 
   uint64_t Next64() {
     uint64_t out;
-    if (!varint::Read(&cur_, end_, &out)) out = 0;
+    if (!varint::Read(&cur_, end_, &out))
+      out = 0;
     return out;
   }
 

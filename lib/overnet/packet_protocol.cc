@@ -41,7 +41,8 @@ void PacketProtocol::SendSlice(QueuedPacket&& packet) {
 
 Status PacketProtocol::HandleAck(const AckFrame& ack) {
   // Validate ack, and ignore if it's old.
-  if (ack.ack_to_seq() < send_tip_) return Status::Ok();
+  if (ack.ack_to_seq() < send_tip_)
+    return Status::Ok();
   if (ack.ack_to_seq() >= send_tip_ + outstanding_.size()) {
     return Status(StatusCode::INVALID_ARGUMENT,
                   "Ack packet past sending sequence");
@@ -60,7 +61,8 @@ Status PacketProtocol::HandleAck(const AckFrame& ack) {
   assert(bbr_ack_.nacked_packets.empty());
   // Fail any nacked packets.
   for (auto nack_seq : ack.nack_seqs()) {
-    if (nack_seq < send_tip_) continue;
+    if (nack_seq < send_tip_)
+      continue;
     if (nack_seq >= send_tip_ + outstanding_.size()) {
       return Status(StatusCode::INVALID_ARGUMENT, "Nack past sending sequence");
     }
@@ -161,7 +163,8 @@ StatusOr<Optional<Slice>> PacketProtocol::Process(TimeStamp received,
 }
 
 Optional<AckFrame> PacketProtocol::GenerateAck() {
-  if (max_seen_ <= recv_tip_) return Nothing;
+  if (max_seen_ <= recv_tip_)
+    return Nothing;
   const auto now = timer_->Now();
   assert(max_seen_time_ <= now);
   AckFrame ack(max_seen_, (now - max_seen_time_).as_us());
@@ -191,7 +194,8 @@ void PacketProtocol::MaybeScheduleAck() {
     ack_scheduler_.Reset(timer_, timer_->Now() + ack_delay,
                          [this](const Status& status) {
                            ack_scheduler_.Reset();
-                           if (status.is_error()) return;
+                           if (status.is_error())
+                             return;
                            MaybeSendAck();
                          });
   }
@@ -201,7 +205,8 @@ void PacketProtocol::MaybeSendAck() {
   Send([this](uint64_t, uint64_t) {
     return SendData{Slice(), StatusCallback::Ignored(),
                     [this](const Status& status) {
-                      if (status.is_error()) MaybeScheduleAck();
+                      if (status.is_error())
+                        MaybeScheduleAck();
                     }};
   });
 }

@@ -39,13 +39,15 @@ class BBRFuzzer {
     std::sort(nacks.begin(), nacks.end());
     for (auto seq : acks) {
       auto it = sent_packets_.find(seq);
-      if (it == sent_packets_.end()) continue;
+      if (it == sent_packets_.end())
+        continue;
       ack_packets.push_back(it->second);
       sent_packets_.erase(it);
     }
     for (auto seq : nacks) {
       auto it = sent_packets_.find(seq);
-      if (it == sent_packets_.end()) continue;
+      if (it == sent_packets_.end())
+        continue;
       nack_packets.push_back(it->second);
       sent_packets_.erase(it);
     }
@@ -58,7 +60,8 @@ class BBRFuzzer {
   uint64_t next_seq_ = 1;
 
   static uint64_t CapTimeDelta(uint64_t t) {
-    if (t > kMaxTimeDelta) return kMaxTimeDelta;
+    if (t > kMaxTimeDelta)
+      return kMaxTimeDelta;
     return t;
   }
 

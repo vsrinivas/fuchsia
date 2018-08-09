@@ -31,7 +31,8 @@ RouterEndpoint::RouterEndpoint(Timer* timer, NodeId node_id,
 
 void RouterEndpoint::RegisterPeer(NodeId peer) {
   assert(peer != router_.node_id());
-  if (connection_streams_.count(peer) != 0) return;
+  if (connection_streams_.count(peer) != 0)
+    return;
   connection_streams_.emplace(std::piecewise_construct,
                               std::forward_as_tuple(peer),
                               std::forward_as_tuple(this, peer));
@@ -118,7 +119,8 @@ void RouterEndpoint::RecvIntro(StatusOrCallback<ReceivedIntroduction> ready) {
 }
 
 void RouterEndpoint::MaybeContinueIncomingForks() {
-  if (recv_intro_ready_.empty() || incoming_forks_.Empty()) return;
+  if (recv_intro_ready_.empty() || incoming_forks_.Empty())
+    return;
   auto* incoming_fork = incoming_forks_.Front();
   incoming_forks_.Remove(incoming_fork);
   assert(incoming_fork->fork_read_state_ ==

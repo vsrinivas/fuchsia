@@ -16,12 +16,14 @@ class InputStream {
 
   uint64_t Next64() {
     uint64_t out;
-    if (!varint::Read(&cur_, end_, &out)) out = 0;
+    if (!varint::Read(&cur_, end_, &out))
+      out = 0;
     return out;
   }
 
   uint8_t NextByte() {
-    if (cur_ == end_) return 0;
+    if (cur_ == end_)
+      return 0;
     return *cur_++;
   }
 
@@ -41,12 +43,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         // input exhausted, or unknown op-code
         return 0;
       case 1:
-        if (!fuzzer.Begin(input.Next64())) return 0;
+        if (!fuzzer.Begin(input.Next64()))
+          return 0;
         break;
       case 2: {
         uint64_t seq = input.Next64();
         uint8_t status = input.NextByte();
-        if (!fuzzer.Completed(seq, status)) return 0;
+        if (!fuzzer.Completed(seq, status))
+          return 0;
       } break;
     }
   }

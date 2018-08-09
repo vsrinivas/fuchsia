@@ -33,12 +33,15 @@ class LinearizerFuzzer {
           SetClosed(StatusCode::INVALID_ARGUMENT);
         }
       } else if (end_of_message) {
-        if (offset_ > last_byte) SetClosed(StatusCode::INVALID_ARGUMENT);
+        if (offset_ > last_byte)
+          SetClosed(StatusCode::INVALID_ARGUMENT);
         for (unsigned i = last_byte; i < sizeof(bytes_) / sizeof(*bytes_);
              i++) {
-          if (bytes_[i].present) SetClosed(StatusCode::INVALID_ARGUMENT);
+          if (bytes_[i].present)
+            SetClosed(StatusCode::INVALID_ARGUMENT);
         }
-        if (offset_ == last_byte) SetClosed(StatusCode::OK);
+        if (offset_ == last_byte)
+          SetClosed(StatusCode::OK);
         length_ = last_byte;
       }
       for (unsigned i = 0; i < length; i++) {
@@ -69,7 +72,8 @@ class LinearizerFuzzer {
   }
 
   void Pull() {
-    if (waiting_for_pull_) return;
+    if (waiting_for_pull_)
+      return;
     waiting_for_pull_ = true;
     linearizer_.Pull(StatusOrCallback<Optional<Slice>>(
         [this](const StatusOr<Optional<Slice>>& status) {

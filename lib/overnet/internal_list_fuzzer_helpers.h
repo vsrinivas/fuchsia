@@ -20,43 +20,50 @@ class Fuzzer {
       default:
         return false;
       case 1:
-        if (n->in1) return false;
+        if (n->in1)
+          return false;
         n->in1 = true;
         list1_.PushBack(n);
         mirror1_.push_back(n);
         break;
       case 2:
-        if (n->in2) return false;
+        if (n->in2)
+          return false;
         n->in2 = true;
         list2_.PushBack(n);
         mirror2_.push_back(n);
         break;
       case 3:
-        if (n->in3) return false;
+        if (n->in3)
+          return false;
         n->in3 = true;
         list3_.PushBack(n);
         mirror3_.push_back(n);
         break;
       case 4:
-        if (n->in4) return false;
+        if (n->in4)
+          return false;
         n->in4 = true;
         list4_.PushBack(n);
         mirror4_.push_back(n);
         break;
       case 5:
-        if (n->in5) return false;
+        if (n->in5)
+          return false;
         n->in5 = true;
         list5_.PushBack(n);
         mirror5_.push_back(n);
         break;
       case 6:
-        if (n->in6) return false;
+        if (n->in6)
+          return false;
         n->in6 = true;
         list6_.PushBack(n);
         mirror6_.push_back(n);
         break;
       case 7:
-        if (n->in7) return false;
+        if (n->in7)
+          return false;
         n->in7 = true;
         list7_.PushBack(n);
         mirror7_.push_back(n);
@@ -71,43 +78,50 @@ class Fuzzer {
       default:
         return false;
       case 1:
-        if (n->in1) return false;
+        if (n->in1)
+          return false;
         n->in1 = true;
         list1_.PushFront(n);
         mirror1_.push_front(n);
         break;
       case 2:
-        if (n->in2) return false;
+        if (n->in2)
+          return false;
         n->in2 = true;
         list2_.PushFront(n);
         mirror2_.push_front(n);
         break;
       case 3:
-        if (n->in3) return false;
+        if (n->in3)
+          return false;
         n->in3 = true;
         list3_.PushFront(n);
         mirror3_.push_front(n);
         break;
       case 4:
-        if (n->in4) return false;
+        if (n->in4)
+          return false;
         n->in4 = true;
         list4_.PushFront(n);
         mirror4_.push_front(n);
         break;
       case 5:
-        if (n->in5) return false;
+        if (n->in5)
+          return false;
         n->in5 = true;
         list5_.PushFront(n);
         mirror5_.push_front(n);
         break;
       case 6:
-        if (n->in6) return false;
+        if (n->in6)
+          return false;
         n->in6 = true;
         list6_.PushFront(n);
         mirror6_.push_front(n);
         break;
       case 7:
-        if (n->in7) return false;
+        if (n->in7)
+          return false;
         n->in7 = true;
         list7_.PushFront(n);
         mirror7_.push_front(n);
@@ -122,43 +136,50 @@ class Fuzzer {
       default:
         return false;
       case 1:
-        if (!n->in1) return false;
+        if (!n->in1)
+          return false;
         n->in1 = false;
         list1_.Remove(n);
         mirror1_.remove(n);
         break;
       case 2:
-        if (!n->in2) return false;
+        if (!n->in2)
+          return false;
         n->in2 = false;
         list2_.Remove(n);
         mirror2_.remove(n);
         break;
       case 3:
-        if (!n->in3) return false;
+        if (!n->in3)
+          return false;
         n->in3 = false;
         list3_.Remove(n);
         mirror3_.remove(n);
         break;
       case 4:
-        if (!n->in4) return false;
+        if (!n->in4)
+          return false;
         n->in4 = false;
         list4_.Remove(n);
         mirror4_.remove(n);
         break;
       case 5:
-        if (!n->in5) return false;
+        if (!n->in5)
+          return false;
         n->in5 = false;
         list5_.Remove(n);
         mirror5_.remove(n);
         break;
       case 6:
-        if (!n->in6) return false;
+        if (!n->in6)
+          return false;
         n->in6 = false;
         list6_.Remove(n);
         mirror6_.remove(n);
         break;
       case 7:
-        if (!n->in7) return false;
+        if (!n->in7)
+          return false;
         n->in7 = false;
         list7_.Remove(n);
         mirror7_.remove(n);

@@ -12,7 +12,8 @@ std::ostream& operator<<(std::ostream& out, const Slice& slice) {
   bool first = true;
   std::ostringstream temp;
   for (auto b : slice) {
-    if (!first) temp << ' ';
+    if (!first)
+      temp << ' ';
     temp << std::hex << std::setfill('0') << std::setw(2)
          << static_cast<unsigned>(b);
     first = false;

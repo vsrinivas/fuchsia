@@ -15,7 +15,8 @@ class InputStream {
       : cur_(data), end_(data + size) {}
 
   uint8_t NextByte() {
-    if (cur_ == end_) return 0;
+    if (cur_ == end_)
+      return 0;
     return *cur_++;
   }
 
@@ -46,13 +47,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       default:
         return 0;
       case 1:
-        if (!fuzzer.PushBack(node, list)) return 0;
+        if (!fuzzer.PushBack(node, list))
+          return 0;
         break;
       case 2:
-        if (!fuzzer.PushFront(node, list)) return 0;
+        if (!fuzzer.PushFront(node, list))
+          return 0;
         break;
       case 3:
-        if (!fuzzer.Remove(node, list)) return 0;
+        if (!fuzzer.Remove(node, list))
+          return 0;
         break;
     }
   }

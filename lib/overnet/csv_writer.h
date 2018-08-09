@@ -59,7 +59,8 @@ class CsvWriter {
       bool first = true;
       for (const auto& field : row) {
         // TODO(ctiller): Handle escaping.
-        if (!first) out << ",";
+        if (!first)
+          out << ",";
         first = false;
         out << field;
       }

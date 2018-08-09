@@ -163,8 +163,10 @@ class Status final {
   ~Status() {
     static_assert(sizeof(Status) == sizeof(void*),
                   "sizeof(Status) should be one pointer");
-    if (is_code_only()) return;
-    if (rep_->refs.fetch_add(-1, std::memory_order_acq_rel) == 1) delete rep_;
+    if (is_code_only())
+      return;
+    if (rep_->refs.fetch_add(-1, std::memory_order_acq_rel) == 1)
+      delete rep_;
   }
 
   Status(Status&& other) : code_(other.code_) { other.code_ = 0; }
@@ -189,7 +191,8 @@ class Status final {
   static const Status& Cancelled() { return Static<>::Cancelled; }
 
   const Status& OrCancelled() const {
-    if (is_ok()) return Cancelled();
+    if (is_ok())
+      return Cancelled();
     return *this;
   }
 
@@ -207,7 +210,8 @@ class Status final {
 
   template <class F>
   auto Then(F fn) -> decltype(fn()) {
-    if (is_error()) return *this;
+    if (is_error())
+      return *this;
     return fn();
   }
 
@@ -254,7 +258,8 @@ class StatusOr final {
   StatusOr(StatusCode code, const std::string& description)
       : code_(code),
         storage_(new status_impl::StatusPayload{{1}, description}) {
-    if (code_ == StatusCode::OK) abort();
+    if (code_ == StatusCode::OK)
+      abort();
   }
   // Raise an untyped (but non-ok) Status object to a StatusOr
   StatusOr(const Status& status) : StatusOr(status.code(), status.reason()) {}
@@ -279,7 +284,8 @@ class StatusOr final {
     }
   }
   StatusOr& operator=(const StatusOr& other) {
-    if (&other == this) return *this;
+    if (&other == this)
+      return *this;
     this->~StatusOr();
     new (this) StatusOr(other);
     return *this;
@@ -289,7 +295,8 @@ class StatusOr final {
       unwrap()->~T();
     } else {
       auto* p = unwrap_err();
-      if (p->refs.fetch_add(-1, std::memory_order_acq_rel) == 1) delete p;
+      if (p->refs.fetch_add(-1, std::memory_order_acq_rel) == 1)
+        delete p;
     }
   }
 
@@ -303,12 +310,14 @@ class StatusOr final {
   // Return (a pointer-to) an object on successful completion, or nullptr on
   // failure
   const T* get() const {
-    if (is_ok()) return unwrap();
+    if (is_ok())
+      return unwrap();
     return nullptr;
   }
 
   T* get() {
-    if (is_ok()) return unwrap();
+    if (is_ok())
+      return unwrap();
     return nullptr;
   }
 
@@ -321,13 +330,15 @@ class StatusOr final {
 
   // Lower to an untyped status object
   Status AsStatus() const {
-    if (reason().empty()) return Status(code());
+    if (reason().empty())
+      return Status(code());
     return Status(code(), reason());
   }
 
   template <class F>
   auto Then(F fn) const -> decltype(fn(*get())) {
-    if (is_error()) return AsStatus();
+    if (is_error())
+      return AsStatus();
     return fn(*get());
   }
 

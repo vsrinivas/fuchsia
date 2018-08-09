@@ -17,7 +17,8 @@ void ReliableOrdered::Begin(uint64_t seq, BeginCallback ready) {
     ready(closed_->OrCancelled());
     return;
   }
-  if (seq < cur_) return;
+  if (seq < cur_)
+    return;
   if (cur_ == seq) {
     if (!cur_in_progress_) {
       cur_in_progress_ = true;
@@ -48,7 +49,8 @@ void ReliableOrdered::Completed(uint64_t seq, const Status& status) {
 }
 
 void ReliableOrdered::Close(const Status& status) {
-  if (closed_.has_value()) return;
+  if (closed_.has_value())
+    return;
   closed_ = status;
   std::unordered_map<uint64_t, BeginCallback> later;
   later_.swap(later);
@@ -65,14 +67,18 @@ void ReliableUnordered::Begin(uint64_t seq, BeginCallback ready) {
     ready(closed_->OrCancelled());
     return;
   }
-  if (seq < tip_) return;
-  if (seq >= tip_ + kLookaheadWindow) return;
+  if (seq < tip_)
+    return;
+  if (seq >= tip_ + kLookaheadWindow)
+    return;
   auto idx = seq - tip_;
-  if (in_progress_.test(idx)) return;
+  if (in_progress_.test(idx))
+    return;
   in_progress_.set(idx);
   ready(Status::Ok());
   for (uint64_t i = 0; i < idx; i++) {
-    if (!in_progress_.test(i)) return;
+    if (!in_progress_.test(i))
+      return;
   }
 }
 
@@ -95,7 +101,8 @@ void ReliableUnordered::Completed(uint64_t seq, const Status& status) {
 }
 
 void ReliableUnordered::Close(const Status& status) {
-  if (closed_.has_value()) return;
+  if (closed_.has_value())
+    return;
   closed_ = status;
 }
 
@@ -107,13 +114,15 @@ void UnreliableOrdered::Begin(uint64_t seq, BeginCallback ready) {
     ready(closed_->OrCancelled());
     return;
   }
-  if (seq < cur_) return;
+  if (seq < cur_)
+    return;
   if (seq > cur_ && cur_in_progress_) {
     later_[seq] = std::move(ready);
     return;
   }
   assert(seq >= cur_);
-  if (cur_in_progress_) return;
+  if (cur_in_progress_)
+    return;
   cur_in_progress_ = true;
   cur_ = seq;
   ready(Status::Ok());
@@ -133,12 +142,14 @@ void UnreliableOrdered::Completed(uint64_t seq, const Status& status) {
     cur_in_progress_ = true;
     later_cb(Status::Ok());
   } else {
-    if (status.is_ok() && cur_ != kMaxSeq) cur_++;
+    if (status.is_ok() && cur_ != kMaxSeq)
+      cur_++;
   }
 }
 
 void UnreliableOrdered::Close(const Status& status) {
-  if (closed_.has_value()) return;
+  if (closed_.has_value())
+    return;
   closed_ = status;
   std::map<uint64_t, BeginCallback> later;
   later_.swap(later);
@@ -155,7 +166,8 @@ void UnreliableUnordered::Begin(uint64_t seq, BeginCallback ready) {
     ready(closed_->OrCancelled());
     return;
   }
-  if (seq < tip_) return;
+  if (seq < tip_)
+    return;
   if (seq >= kLookaheadWindow && seq - kLookaheadWindow >= tip_) {
     uint64_t new_tip = seq - kLookaheadWindow + 1;
     assert(tip_ < new_tip);
@@ -174,7 +186,8 @@ void UnreliableUnordered::Begin(uint64_t seq, BeginCallback ready) {
 }
 
 void UnreliableUnordered::Completed(uint64_t seq, const Status& status) {
-  if (seq < tip_) return;
+  if (seq < tip_)
+    return;
   if (status.is_ok()) {
     if (seq == tip_) {
       if (tip_ != kMaxSeq) {
@@ -188,7 +201,8 @@ void UnreliableUnordered::Completed(uint64_t seq, const Status& status) {
 }
 
 void UnreliableUnordered::Close(const Status& status) {
-  if (closed_.has_value()) return;
+  if (closed_.has_value())
+    return;
   closed_ = status;
 }
 
@@ -200,13 +214,15 @@ void TailReliable::Begin(uint64_t seq, BeginCallback ready) {
     ready(closed_->OrCancelled());
     return;
   }
-  if (seq < cur_) return;
+  if (seq < cur_)
+    return;
   if (seq > cur_ && cur_in_progress_) {
     later_[seq] = std::move(ready);
     return;
   }
   assert(seq >= cur_);
-  if (cur_in_progress_) return;
+  if (cur_in_progress_)
+    return;
   cur_in_progress_ = true;
   cur_ = seq;
   ready(Status::Ok());
@@ -226,12 +242,14 @@ void TailReliable::Completed(uint64_t seq, const Status& status) {
     cur_in_progress_ = true;
     later_cb(Status::Ok());
   } else {
-    if (status.is_ok() && cur_ != kMaxSeq) cur_++;
+    if (status.is_ok() && cur_ != kMaxSeq)
+      cur_++;
   }
 }
 
 void TailReliable::Close(const Status& status) {
-  if (closed_.has_value()) return;
+  if (closed_.has_value())
+    return;
   closed_ = status;
   std::map<uint64_t, BeginCallback> later;
   later_.swap(later);

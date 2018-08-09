@@ -9,22 +9,32 @@ namespace overnet {
 namespace varint {
 
 uint8_t WireSizeFor(uint64_t x) {
-  if (x < (1ull << 7)) return 1;
-  if (x < (1ull << 14)) return 2;
-  if (x < (1ull << 21)) return 3;
-  if (x < (1ull << 28)) return 4;
-  if (x < (1ull << 35)) return 5;
-  if (x < (1ull << 42)) return 6;
-  if (x < (1ull << 49)) return 7;
-  if (x < (1ull << 56)) return 8;
-  if (x < (1ull << 63)) return 9;
+  if (x < (1ull << 7))
+    return 1;
+  if (x < (1ull << 14))
+    return 2;
+  if (x < (1ull << 21))
+    return 3;
+  if (x < (1ull << 28))
+    return 4;
+  if (x < (1ull << 35))
+    return 5;
+  if (x < (1ull << 42))
+    return 6;
+  if (x < (1ull << 49))
+    return 7;
+  if (x < (1ull << 56))
+    return 8;
+  if (x < (1ull << 63))
+    return 9;
   return 10;
 }
 
 uint64_t MaximumLengthWithPrefix(uint64_t x) {
   assert(x > 0);
   uint64_t r = x - WireSizeFor(x);
-  while (r + 1 + WireSizeFor(r + 1) < x) r++;
+  while (r + 1 + WireSizeFor(r + 1) < x)
+    r++;
   return r;
 }
 
@@ -71,43 +81,53 @@ bool ReadFromArray(const uint8_t** bytes, uint64_t* value) {
 
   b = *(ptr++);
   part0 = b;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part0 -= 0x80;
   b = *(ptr++);
   part0 += b << 7;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part0 -= 0x80 << 7;
   b = *(ptr++);
   part0 += b << 14;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part0 -= 0x80 << 14;
   b = *(ptr++);
   part0 += b << 21;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part0 -= 0x80 << 21;
   b = *(ptr++);
   part1 = b;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part1 -= 0x80;
   b = *(ptr++);
   part1 += b << 7;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part1 -= 0x80 << 7;
   b = *(ptr++);
   part1 += b << 14;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part1 -= 0x80 << 14;
   b = *(ptr++);
   part1 += b << 21;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part1 -= 0x80 << 21;
   b = *(ptr++);
   part2 = b;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   part2 -= 0x80;
   b = *(ptr++);
   part2 += b << 7;
-  if (!(b & 0x80)) goto done;
+  if (!(b & 0x80))
+    goto done;
   // "part2 -= 0x80 << 7" is irrelevant because (0x80 << 7) << 56 is 0.
 
   // We have overrun the maximum size of a varint (10 bytes).  Assume

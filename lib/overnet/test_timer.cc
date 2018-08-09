@@ -15,12 +15,14 @@ TestTimer::~TestTimer() {
 }
 
 TimeStamp TestTimer::Now() {
-  if (shutting_down_) return TimeStamp::AfterEpoch(TimeDelta::PositiveInf());
+  if (shutting_down_)
+    return TimeStamp::AfterEpoch(TimeDelta::PositiveInf());
   return TimeStamp::AfterEpoch(TimeDelta::FromMicroseconds(now_));
 }
 
 bool TestTimer::Step(uint64_t microseconds) {
-  if (shutting_down_) return false;
+  if (shutting_down_)
+    return false;
   auto new_now = now_ + microseconds;
   if (now_ > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
     return false;
@@ -41,7 +43,8 @@ bool TestTimer::Step(uint64_t microseconds) {
 }
 
 bool TestTimer::StepUntilNextEvent() {
-  if (pending_timeouts_.empty()) return false;
+  if (pending_timeouts_.empty())
+    return false;
   Step(pending_timeouts_.begin()->first - now_);
   return true;
 }

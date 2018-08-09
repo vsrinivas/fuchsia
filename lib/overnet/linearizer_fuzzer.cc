@@ -14,7 +14,8 @@ class InputStream {
       : cur_(data), end_(data + size) {}
 
   uint8_t NextByte() {
-    if (cur_ == end_) return 0;
+    if (cur_ == end_)
+      return 0;
     return *cur_++;
   }
 

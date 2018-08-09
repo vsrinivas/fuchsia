@@ -273,105 +273,151 @@ TEST(ReceiveModeFuzzed, _feac8b7a55c39b0d70f86f40d340888a25ea69b8) {
 TEST(ReceiveModeFuzzed, _75079e04acd10ecdf49c97c714f344c811e870dd) {
   receive_mode::Fuzzer m(3);
   m.Step();
-  if (!m.Begin(3ull)) return;
+  if (!m.Begin(3ull))
+    return;
   m.Step();
-  if (!m.Begin(33ull)) return;
+  if (!m.Begin(33ull))
+    return;
   m.Step();
-  if (!m.Begin(255ull)) return;
+  if (!m.Begin(255ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(89ull)) return;
+  if (!m.Begin(89ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(2ull)) return;
+  if (!m.Begin(2ull))
+    return;
   m.Step();
-  if (!m.Completed(1ull, 0)) return;
+  if (!m.Completed(1ull, 0))
+    return;
   m.Step();
-  if (!m.Begin(112ull)) return;
+  if (!m.Begin(112ull))
+    return;
   m.Step();
-  if (!m.Begin(0ull)) return;
+  if (!m.Begin(0ull))
+    return;
   m.Step();
-  if (!m.Begin(3ull)) return;
+  if (!m.Begin(3ull))
+    return;
   m.Step();
-  if (!m.Begin(3ull)) return;
+  if (!m.Begin(3ull))
+    return;
   m.Step();
-  if (!m.Begin(33ull)) return;  // Crash occurred here, rest of test clipped.
+  if (!m.Begin(33ull))
+    return;  // Crash occurred here, rest of test clipped.
 }
 
 TEST(ReceiveModeFuzzed, _6b1d71bc2330430a1719c9774a7408bbd3aa7f29) {
   receive_mode::Fuzzer m(2);
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Completed(1ull, 1)) return;
+  if (!m.Completed(1ull, 1))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(2ull)) return;
+  if (!m.Begin(2ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(3ull)) return;
+  if (!m.Begin(3ull))
+    return;
   m.Step();
-  if (!m.Begin(3ull)) return;
+  if (!m.Begin(3ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(112ull)) return;
+  if (!m.Begin(112ull))
+    return;
   m.Step();
-  if (!m.Begin(0ull)) return;
+  if (!m.Begin(0ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Completed(1ull, 0)) return;
+  if (!m.Completed(1ull, 0))
+    return;
   m.Step();
-  if (!m.Begin(30331092862ull)) return;
+  if (!m.Begin(30331092862ull))
+    return;
   m.Step();
-  if (!m.Begin(68ull)) return;
+  if (!m.Begin(68ull))
+    return;
   m.Step();
-  if (!m.Begin(10737418235ull)) return;
+  if (!m.Begin(10737418235ull))
+    return;
   m.Step();
-  if (!m.Begin(112ull)) return;
+  if (!m.Begin(112ull))
+    return;
   m.Step();
-  if (!m.Begin(0ull)) return;
+  if (!m.Begin(0ull))
+    return;
   m.Step();
-  if (!m.Begin(34357641211ull)) return;
+  if (!m.Begin(34357641211ull))
+    return;
   m.Step();
-  if (!m.Begin(268435451ull)) return;
+  if (!m.Begin(268435451ull))
+    return;
   m.Step();
-  if (!m.Begin(10737418235ull)) return;
+  if (!m.Begin(10737418235ull))
+    return;
   m.Step();
-  if (!m.Begin(112ull)) return;  // Crash occurred here, rest of test clipped.
+  if (!m.Begin(112ull))
+    return;  // Crash occurred here, rest of test clipped.
 }
 
 TEST(ReceiveModeFuzzed, _d7c39af715153bc0ca5dcfd96c38a0774f73967b) {
   receive_mode::Fuzzer m(3);
   m.Step();
-  if (!m.Begin(0ull)) return;
+  if (!m.Begin(0ull))
+    return;
   m.Step();
-  if (!m.Begin(18446744073709551615ull)) return;
+  if (!m.Begin(18446744073709551615ull))
+    return;
   m.Step();
 }
 
@@ -379,80 +425,115 @@ TEST(ReceiveModeFuzzed, _d7c39af715153bc0ca5dcfd96c38a0774f73967b) {
 TEST(ReceiveModeFuzzed, _b26f6446c4a821539edb0e106c30f50bff6ad176) {
   receive_mode::Fuzzer m(3);
   m.Step();
-  if (!m.Begin(64ull)) return;
+  if (!m.Begin(64ull))
+    return;
   m.Step();
-  if (!m.Begin(40ull)) return;
+  if (!m.Begin(40ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(41ull)) return;
+  if (!m.Begin(41ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(0ull)) return;
+  if (!m.Begin(0ull))
+    return;
   m.Step();
-  if (!m.Begin(496667600076670ull)) return;
+  if (!m.Begin(496667600076670ull))
+    return;
   m.Step();
-  if (!m.Begin(68ull)) return;
+  if (!m.Begin(68ull))
+    return;
   m.Step();
-  if (!m.Begin(8796084633595ull)) return;
+  if (!m.Begin(8796084633595ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(9ull)) return;
+  if (!m.Begin(9ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(139044205818265471ull)) return;
+  if (!m.Begin(139044205818265471ull))
+    return;
   m.Step();
-  if (!m.Begin(18446744073709551615ull)) return;
+  if (!m.Begin(18446744073709551615ull))
+    return;
   m.Step();
-  if (!m.Begin(229ull)) return;
+  if (!m.Begin(229ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(16383ull)) return;
+  if (!m.Begin(16383ull))
+    return;
   m.Step();
-  if (!m.Begin(4088538316667ull)) return;
+  if (!m.Begin(4088538316667ull))
+    return;
   m.Step();
-  if (!m.Begin(246ull)) return;
+  if (!m.Begin(246ull))
+    return;
   m.Step();
-  if (!m.Begin(18446744073709551615ull)) return;
+  if (!m.Begin(18446744073709551615ull))
+    return;
   m.Step();
-  if (!m.Begin(229ull)) return;
+  if (!m.Begin(229ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(1ull)) return;
+  if (!m.Begin(1ull))
+    return;
   m.Step();
-  if (!m.Begin(16383ull)) return;
+  if (!m.Begin(16383ull))
+    return;
   m.Step();
-  if (!m.Begin(562949408145275ull)) return;
+  if (!m.Begin(562949408145275ull))
+    return;
   m.Step();
-  if (!m.Begin(10737418235ull)) return;
+  if (!m.Begin(10737418235ull))
+    return;
   m.Step();
-  if (!m.Begin(112ull)) return;
+  if (!m.Begin(112ull))
+    return;
   m.Step();
-  if (!m.Begin(0ull)) return;
+  if (!m.Begin(0ull))
+    return;
   m.Step();
 }
 
 TEST(ReceiveModeFuzzed, _c5e4ebd8acd50abb27258f73956647303d781a45) {
   receive_mode::Fuzzer m(1);
   m.Step();
-  if (!m.Begin(18446744073709551615ull)) return;
+  if (!m.Begin(18446744073709551615ull))
+    return;
   m.Step();
-  if (!m.Completed(18446744073709551615ull, 0)) return;
+  if (!m.Completed(18446744073709551615ull, 0))
+    return;
   m.Step();
 }
 

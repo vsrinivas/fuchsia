@@ -48,10 +48,12 @@ SeqNum::SeqNum(uint64_t seq, uint64_t outstanding_messages) {
 StatusOr<SeqNum> SeqNum::Parse(const uint8_t** bytes, const uint8_t* end) {
   SeqNum r;
   ssize_t rem;
-  if (*bytes == end) goto fail;
+  if (*bytes == end)
+    goto fail;
   r.rep_[0] = *(*bytes)++;
   rem = r.wire_length() - 1;
-  if (end - *bytes < rem) goto fail;
+  if (end - *bytes < rem)
+    goto fail;
   memcpy(r.rep_ + 1, *bytes, rem);
   *bytes += rem;
   return r;

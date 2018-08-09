@@ -135,8 +135,10 @@ void DatagramStream::HandleMessage(Optional<SeqNum> seq, TimeStamp received,
 }
 
 void DatagramStream::MaybeContinueReceive() {
-  if (unclaimed_messages_.Empty()) return;
-  if (unclaimed_receives_.Empty()) return;
+  if (unclaimed_messages_.Empty())
+    return;
+  if (unclaimed_receives_.Empty())
+    return;
 
   auto incoming_message = unclaimed_messages_.PopFront();
   auto receive_op = unclaimed_receives_.PopFront();
@@ -257,8 +259,10 @@ PacketProtocol::SendData DatagramStream::SendOp::ConstructSendData(
 
 void DatagramStream::SendOp::CompleteReliable(const Status& status,
                                               Chunk chunk) {
-  if (closed_) return;
-  if (status.is_ok()) return;
+  if (closed_)
+    return;
+  if (status.is_ok())
+    return;
   // Send failed, still open: retry.
   SendChunk(std::move(chunk), StatusCallback::Ignored());
 }

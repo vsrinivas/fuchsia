@@ -16,7 +16,8 @@ inline uint8_t* WriteLE64(uint64_t x, uint8_t* bytes) {
 
 inline bool ParseLE64(const uint8_t** bytes, const uint8_t* end,
                       uint64_t* out) {
-  if (end - *bytes < 8) return false;
+  if (end - *bytes < 8)
+    return false;
   memcpy(out, *bytes, 8);
   *bytes += 8;
   return true;

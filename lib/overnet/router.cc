@@ -65,7 +65,8 @@ void Router::Forward(Message message) {
         }
         void Step() {
           if (--n_ == 0) {
-            if (!cb_.empty()) cb_(Status::Ok());
+            if (!cb_.empty())
+              cb_(Status::Ok());
             delete this;
           }
         }
@@ -116,7 +117,8 @@ void Router::UpdateRoutingTable(std::vector<NodeMetrics> node_metrics,
 }
 
 void Router::MaybeStartPollingLinkChanges() {
-  if (poll_link_changes_timeout_) return;
+  if (poll_link_changes_timeout_)
+    return;
   poll_link_changes_timeout_.Reset(
       timer_, timer_->Now() + kPollLinkChangeTimeout,
       [this](const Status& status) {
@@ -140,13 +142,15 @@ void Router::MaybeStartPollingLinkChanges() {
                 }
                 MaybeStartFlushingOldEntries();
               });
-          if (keep_polling) MaybeStartPollingLinkChanges();
+          if (keep_polling)
+            MaybeStartPollingLinkChanges();
         }
       });
 }
 
 void Router::MaybeStartFlushingOldEntries() {
-  if (flush_old_nodes_timeout_) return;
+  if (flush_old_nodes_timeout_)
+    return;
   flush_old_nodes_timeout_.Reset(timer_,
                                  timer_->Now() + routing_table_.EntryExpiry(),
                                  [this](const Status& status) {

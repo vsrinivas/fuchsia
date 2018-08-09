@@ -42,15 +42,19 @@ RoutingTable::~RoutingTable() {
 void RoutingTable::Update(std::vector<NodeMetrics> node_metrics,
                           std::vector<LinkMetrics> link_metrics,
                           bool flush_old_nodes) {
-  if (node_metrics.empty() && link_metrics.empty() && !flush_old_nodes) return;
+  if (node_metrics.empty() && link_metrics.empty() && !flush_old_nodes)
+    return;
   std::unique_lock<std::mutex> lock(mu_);
   last_update_ = timer_->Now();
   const bool was_empty = change_log_.Empty() && !flush_requested_;
-  if (flush_old_nodes) flush_requested_ = true;
+  if (flush_old_nodes)
+    flush_requested_ = true;
   MoveInto(&node_metrics, &change_log_.node_metrics);
   MoveInto(&link_metrics, &change_log_.link_metrics);
-  if (!was_empty) return;
-  if (processing_changes_) return;
+  if (!was_empty)
+    return;
+  if (processing_changes_)
+    return;
   auto process_changes = [this, changes = std::move(change_log_),
                           flush = flush_requested_,
                           now = last_update_]() mutable {
@@ -151,7 +155,8 @@ void RoutingTable::ApplyChanges(TimeStamp now, const Metrics& changes,
   // Remove anything old if we've been asked to.
   if (flush) {
     for (auto it = node_metrics_.begin(); it != node_metrics_.end();) {
-      if (it->first == root_node_) continue;
+      if (it->first == root_node_)
+        continue;
       if (it->second.last_updated >= now + EntryExpiry()) {
         RemoveOutgoingLinks(it->second);
         it = node_metrics_.erase(it);
@@ -181,7 +186,8 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
   InternalList<Node, &Node::path_finding_node> todo;
 
   auto enqueue = [&todo](Node* node) {
-    if (node->queued) return;
+    if (node->queued)
+      return;
     node->queued = true;
     todo.PushBack(node);
   };
@@ -192,7 +198,8 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     Node* src = todo.PopFront();
     src->queued = false;
     for (auto link : src->outgoing_links) {
-      if (link->metrics.version() == METRIC_VERSION_TOMBSTONE) continue;
+      if (link->metrics.version() == METRIC_VERSION_TOMBSTONE)
+        continue;
       TimeDelta rtt =
           src->best_rtt + src->metrics.forwarding_time() + link->metrics.rtt();
       Node* dst = link->to_node;

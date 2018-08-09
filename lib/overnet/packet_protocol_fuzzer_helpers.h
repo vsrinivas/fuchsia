@@ -20,7 +20,8 @@ class PacketProtocolFuzzer {
       pp->Send([this, data](uint64_t desire_prefix, uint64_t max_len) {
         return PacketProtocol::SendData{
             data, StatusCallback::Ignored(), [this](const Status& status) {
-              if (done_) return;
+              if (done_)
+                return;
               if (!status.is_ok() && status.code() != StatusCode::CANCELLED) {
                 std::cerr << "Expected each send to be ok or cancelled, got: "
                           << status << "\n";
@@ -37,7 +38,8 @@ class PacketProtocolFuzzer {
         sender(sender_idx).Then([send_idx, status](Sender* sender) {
           return sender->CompleteSend(send_idx, status);
         });
-    if (!send) return false;
+    if (!send)
+      return false;
     send->done(Status(static_cast<StatusCode>(status)));
     auto process_status =
         status == 0 ? (*packet_protocol(3 - sender_idx))
@@ -71,7 +73,8 @@ class PacketProtocolFuzzer {
 
     Optional<PendingSend> CompleteSend(uint64_t send_idx, uint8_t status) {
       auto it = pending_sends_.find(send_idx);
-      if (it == pending_sends_.end()) return Nothing;
+      if (it == pending_sends_.end())
+        return Nothing;
       auto ps = std::move(it->second);
       pending_sends_.erase(it);
       return std::move(ps);
