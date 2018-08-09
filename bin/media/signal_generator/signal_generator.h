@@ -7,7 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/component/cpp/startup_context.h"
@@ -86,7 +86,7 @@ class MediaApp {
   fuchsia::media::AudioOutPtr audio_out_;
   fuchsia::media::GainControlPtr gain_control_;
 
-  vmo_utils::VmoMapper payload_buffer_;
+  fzl::VmoMapper payload_buffer_;
 
   uint32_t num_channels_;
   uint32_t frame_rate_;

@@ -16,6 +16,6 @@ executable("fx") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/vmo-utils",
+    "//zircon/public/lib/fzl",
   ]
 }

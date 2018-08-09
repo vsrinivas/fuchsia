@@ -20,7 +20,7 @@ executable("bin") {
     "//garnet/public/lib/fsl",
     "//third_party/flite",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/vmo-utils",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
   ]
 }

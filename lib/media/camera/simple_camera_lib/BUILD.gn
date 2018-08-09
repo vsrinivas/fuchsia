@@ -34,8 +34,8 @@ source_set("simple_camera_lib") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider",
-    "//zircon/public/lib/vmo-utils",
   ]
 
   include_dirs = [

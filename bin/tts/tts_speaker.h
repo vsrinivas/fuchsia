@@ -12,7 +12,7 @@
 #include <fuchsia/tts/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <zircon/types.h>
 
 #include "lib/component/cpp/startup_context.h"
@@ -71,7 +71,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   async_dispatcher_t* master_dispatcher_;
 
   fuchsia::media::AudioOutPtr audio_renderer_;
-  vmo_utils::VmoMapper shared_buf_;
+  fzl::VmoMapper shared_buf_;
 
   std::mutex ring_buffer_lock_;
   uint64_t wr_ptr_ FXL_GUARDED_BY(ring_buffer_lock_) = 0;

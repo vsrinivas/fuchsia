@@ -117,7 +117,7 @@ executable("audio_core") {
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/vmo-utils",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
   ]
 

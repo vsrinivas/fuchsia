@@ -7,7 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 
 #include "lib/component/cpp/startup_context.h"
 
@@ -36,7 +36,7 @@ class MediaApp {
 
   fuchsia::media::AudioOutPtr audio_renderer_;
 
-  vmo_utils::VmoMapper payload_buffer_;
+  fzl::VmoMapper payload_buffer_;
   size_t payload_size_;
   size_t total_mapping_size_;
   size_t num_packets_sent_ = 0u;

@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <zircon/status.h>
 #include <zx/event.h>
 #include <zx/vmo.h>
@@ -19,7 +19,7 @@ namespace simple_camera {
 // Encapsulates a part of a VMO.
 // A Buffer represents one frame, mapping it into memory to allow the process to
 // write into it. Buffer also keeps track of the locked state of the memory.
-class Buffer : public vmo_utils::VmoMapper {
+class Buffer : public fzl::VmoMapper {
  protected:
   enum class BufferState { kInvalid = 0, kAvailable, kReadLocked };
 
@@ -58,8 +58,7 @@ class Buffer : public vmo_utils::VmoMapper {
  protected:
   // For use during creation only:
   zx_status_t DuplicateAndMapVmo(uint64_t buffer_size,
-                                 const zx::vmo& main_buffer,
-                                 uint64_t offset);
+                                 const zx::vmo& main_buffer, uint64_t offset);
 
   Buffer() = default;
 

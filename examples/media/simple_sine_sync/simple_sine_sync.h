@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 
 namespace examples {
 
@@ -43,7 +43,7 @@ class MediaApp {
 
   fuchsia::media::AudioOutSyncPtr audio_renderer_;
 
-  vmo_utils::VmoMapper payload_buffer_;
+  fzl::VmoMapper payload_buffer_;
   size_t sample_size_;
   size_t payload_size_;
   size_t total_mapping_size_;

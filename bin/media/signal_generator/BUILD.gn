@@ -34,7 +34,7 @@ executable("bin") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/vmo-utils",
   ]
 }

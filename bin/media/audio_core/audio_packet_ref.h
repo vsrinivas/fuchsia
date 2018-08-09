@@ -10,7 +10,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <stdint.h>
 
 #include "lib/fxl/logging.h"
@@ -29,7 +29,7 @@ class AudioPacketRef
       public fbl::Recyclable<AudioPacketRef>,
       public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPacketRef>> {
  public:
-  AudioPacketRef(fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
+  AudioPacketRef(fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref,
                  fuchsia::media::AudioOut::SendPacketCallback callback,
                  fuchsia::media::StreamPacket packet, AudioCoreImpl* server,
                  uint32_t frac_frame_len, int64_t start_pts);
@@ -80,7 +80,7 @@ class AudioPacketRef
   // service dispatcher thread.
   bool NeedsCleanup() { return callback_ != nullptr; }
 
-  fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref_;
+  fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref_;
   fuchsia::media::AudioOut::SendPacketCallback callback_;
   fuchsia::media::StreamPacket packet_;
 

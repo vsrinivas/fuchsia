@@ -284,7 +284,7 @@ void AudioOutImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   // Map this into a sub-vmar instead of defaulting to the root
   // once teisenbe@ provides guidance on the best-practice for doing this.
   zx_status_t res;
-  payload_buffer_ = fbl::AdoptRef(new vmo_utils::RefCountedVmoMapper());
+  payload_buffer_ = fbl::AdoptRef(new fzl::RefCountedVmoMapper());
   res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_FLAG_PERM_READ);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";

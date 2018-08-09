@@ -43,6 +43,6 @@ source_set("decoders") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
-    "//zircon/public/lib/vmo-utils",
+    "//zircon/public/lib/fzl",
   ]
 }

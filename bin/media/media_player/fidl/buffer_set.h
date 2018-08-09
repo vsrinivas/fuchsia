@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 
 #include "garnet/bin/media/media_player/decode/decoder.h"
 
@@ -80,7 +80,7 @@ class BufferSet {
 
  private:
   fuchsia::mediacodec::CodecPortBufferSettings settings_;
-  vmo_utils::VmoMapper vmo_mapper_;
+  fzl::VmoMapper vmo_mapper_;
   zx::vmo vmo_;
 
   // |owners_by_index_| indicates who owns each buffer. 0 indicates the buffer
