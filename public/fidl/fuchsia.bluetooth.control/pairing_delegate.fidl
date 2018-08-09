@@ -14,45 +14,68 @@ enum InputCapabilityType {
   KEYBOARD = 2;
 };
 
-// Different types required by the Security Manager for pairing methods.
-// Bluetooth SIG has different requirements for different device capabilities.
-enum PairRequestType {
-  PASSKEY_DISPLAY = 0;
-  PASSKEY_ENTRY = 1;
-  CONSENT = 2;
-};
-
 enum OutputCapabilityType {
   NONE = 0;
   DISPLAY = 1;
 };
 
-interface PairingDelegate {
-  // Called if the pairing procedure is interrupted (e.g. due to cancellation by the peer
-  // or disconnection). Any active pairing dialog should be dismissed.
-  1: OnPairingCanceled(RemoteDevice device);
+// Different types required by the Security Manager for pairing methods.
+// Bluetooth SIG has different requirements for different device capabilities.
+enum PairingMethod {
+  // The user is asked to accept or reject pairing.
+  CONSENT = 0;
 
+  // The user is shown a 6-digit numerical passkey which they must enter on the
+  // peer device.
+  PASSKEY_DISPLAY = 1;
+
+  // The user is shown a 6-digit numerical passkey which will also shown on the
+  // peer device. The user must compare the passkeys and accept the pairing if
+  // the passkeys match.
+  PASSKEY_COMPARISON = 2;
+
+  // The user is asked to enter a 6-digit passkey.
+  PASSKEY_ENTRY = 3;
+};
+
+enum PairingKeypressType {
+  // The user has entered a single digit.
+  DIGIT_ENTERED = 0;
+
+  // The user has erased a single digit.
+  DIGIT_ERASED = 1;
+
+  // The user has cleared the entire passkey.
+  PASSKEY_CLEARED = 2;
+
+  // The user has finished entering the passkey.
+  PASSKEY_ENTERED = 3;
+};
+
+interface PairingDelegate {
   // Called for most pairing requests. The delegate must respond with “true” or “false” to
   // either accept or reject the pairing request. If the the pairing method requires a passkey
   // this is returned as well.
   //
-  // Any response from this method will be ignored if the OnPairingCanceled event is sent.
-  2: OnPairingRequest(RemoteDevice device, PairRequestType type, string? displayed_passkey) -> (bool accept, string? entered_passkey);
+  // Any response from this method will be ignored if the OnPairingComplete
+  // event has already been sent for |device|.
+  1: OnPairingRequest(RemoteDevice device, PairingMethod method, string? displayed_passkey)
+      -> (bool accept, string? entered_passkey);
 
-  // Called when the “Passkey Display” method was selected, OutputCapabilityType.NUMERIC was
-  // specified, and the peer has the “KeyboardOnly” I/O capability.
+  // Called if the pairing procedure for the device with the given ID is completed.
+  // This can be due to successful completion or an error (e.g. due to cancellation
+  // by the peer, a timeout, or disconnection) which is indicated by |status|.
+  2: OnPairingComplete(string device_id, fuchsia.bluetooth.Status status);
+
+  // Called to notify keypresses from the peer device during pairing using
+  // PairingMethod.PASSKEY_DISPLAY.
   //
   // This event is used to provide key press events to the delegate for a responsive user
   // experience as the user types the passkey on the peer device. This event will be called
   // once for each key-press.
-  //
-  // |passkey| is the passkey that the user needs to enter on the peer and must be displayed
-  // to the user. |input| is the combination of keypresses that the user has entered so far.
-  // It is up to the delegate implementation to update its user interface on each new
-  // keypress.
-  //
-  // Once passkey entry has completed, a final confirmation request will be sent via the
-  // OnPairingRequest method. If the pairing procedure is interrupted, the OnPairingCanceled
-  // method will be called.
-  3: OnRemotePasskeyEntry(RemoteDevice device, string passkey, string input);
+  3: OnRemoteKeypress(string device_id, PairingKeypressType keypress);
+
+  // The delegate can send this event to notify the peer of local keypresses
+  // during pairing using PairingMethod.PASSKEY_ENTRY.
+  4: -> OnLocalKeypress(string device_id, PairingKeypressType keypress);
 };
