@@ -197,6 +197,7 @@ pub unsafe fn EVP_PKEY_get1_EC_KEY(pkey: *mut EVP_PKEY) -> Result<NonNull<EC_KEY
 
 // If code is 1, returns Ok, otherwise returns Err. f should be the name of the
 // function that returned this value.
+#[must_use]
 pub fn one_or_err(f: &str, code: c_int) -> Result<(), BoringError> {
     if code == 1 {
         Ok(())

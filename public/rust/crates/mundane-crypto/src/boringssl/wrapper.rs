@@ -48,13 +48,23 @@ macro_rules! impl_traits {
 /// A C object from the BoringSSL API which can be allocated and constructed.
 pub unsafe trait CNew: Sealed {
     /// Returns a new, constructed, heap-allocated object, or NULL on failure.
-    unsafe fn new() -> *mut Self;
+    ///
+    /// This should not be called directly; instead, use `new`.
+    #[deprecated = "do not call new_raw directly; instead, call new"]
+    unsafe fn new_raw() -> *mut Self;
+
+    /// Returns a new, constructed, heap-allocated object, or `None` on failure.
+    #[must_use]
+    unsafe fn new() -> Option<NonNull<Self>> {
+        #[allow(deprecated)]
+        NonNull::new(Self::new_raw())
+    }
 }
 
 macro_rules! c_new {
     ($name:ident, $new:ident) => {
         unsafe impl ::boringssl::wrapper::CNew for ::boringssl_sys::$name {
-            unsafe fn new() -> *mut Self {
+            unsafe fn new_raw() -> *mut Self {
                 ::boringssl_sys::$new()
             }
         }
@@ -176,19 +186,26 @@ impl<C: CFree> CHeapWrapper<C> {
     ///
     /// The caller must also ensure that no pointers to the object will ever be
     /// used by other threads so long as this `CHeapWrapper` exists.
+    #[must_use]
     pub unsafe fn new_from(obj: NonNull<C>) -> CHeapWrapper<C> {
         CHeapWrapper { obj }
     }
 
+    #[must_use]
     pub fn as_mut(&mut self) -> *mut C {
         self.obj.as_ptr()
     }
 
+    #[must_use]
     pub fn as_const(&self) -> *const C {
         self.obj.as_ptr()
     }
 
     /// Consumes this `CHeapWrapper` and return the underlying pointer.
+    ///
+    /// The object will not be freed. Instead, the caller takes logical
+    /// ownership of the object.
+    #[must_use]
     pub fn into_mut(self) -> *mut C {
         // NOTE: This method safe for the same reason that mem::forget is safe:
         // it's equivalent to sending it to a thread that goes to sleep forever
@@ -206,7 +223,7 @@ impl<C: CNew + CFree> Default for CHeapWrapper<C> {
         // later to call CFree::free on that object (e.g., see the safety
         // comment on CStackWrapper::new).
         unsafe {
-            let obj = NonNull::new(C::new()).expect("could not allocate object");
+            let obj = C::new().expect("could not allocate object");
             CHeapWrapper { obj }
         }
     }
@@ -255,6 +272,7 @@ impl<'a, C> CRef<'a, C> {
     ///
     /// The caller must also ensure that no other pointers to the object will
     /// ever be sent to other threads so long as this `CRef` exists.
+    #[must_use]
     pub unsafe fn new(obj: NonNull<C>) -> CRef<'a, C> {
         CRef {
             obj,
@@ -262,6 +280,7 @@ impl<'a, C> CRef<'a, C> {
         }
     }
 
+    #[must_use]
     pub fn as_const(&self) -> *const C {
         self.obj.as_ptr()
     }
@@ -287,6 +306,7 @@ impl<C: CDestruct> CStackWrapper<C> {
     ///
     /// `obj` must be constructed, and it must be safe for `C::destruct` to be
     /// called on `obj` when this `CStackWrapper` is dropped.
+    #[must_use]
     pub unsafe fn new(obj: C) -> CStackWrapper<C> {
         CStackWrapper {
             obj,
@@ -294,10 +314,12 @@ impl<C: CDestruct> CStackWrapper<C> {
         }
     }
 
+    #[must_use]
     pub fn as_mut(&mut self) -> *mut C {
         &mut self.obj
     }
 
+    #[must_use]
     pub fn as_const(&self) -> *const C {
         &self.obj
     }

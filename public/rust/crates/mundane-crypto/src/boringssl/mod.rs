@@ -106,6 +106,7 @@ impl CStackWrapper<CBB> {
 
 impl CStackWrapper<CBS> {
     /// The `CBS_len` function.
+    #[must_use]
     pub fn cbs_len(&self) -> usize {
         unsafe { CBS_len(self.as_const()) }
     }
@@ -326,6 +327,7 @@ impl BoringError {
     /// named function failed; both the `Debug` and `Display` implementations
     /// will return `error calling f`, where `f` is the value of the `f`
     /// argument.
+    #[must_use]
     fn consume_stack(f: &str) -> BoringError {
         let stack_trace = {
             let trace = get_error_stack_trace();
@@ -341,6 +343,7 @@ impl BoringError {
     /// The number of frames in the stack trace.
     ///
     /// Guaranteed to be at least 1.
+    #[must_use]
     pub fn stack_depth(&self) -> usize {
         self.stack_trace.len()
     }

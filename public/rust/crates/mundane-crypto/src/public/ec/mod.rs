@@ -290,6 +290,7 @@ pub mod ecdsa {
     const MAX_SIGNATURE_LEN: usize = 141;
 
     /// A DER-encoded ECDSA signature.
+    #[must_use]
     pub struct EcdsaSignature {
         bytes: [u8; MAX_SIGNATURE_LEN],
         // Invariant: len is in [0; MAX_SIGNATURE_LEN). If len is 0, it
