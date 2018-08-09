@@ -21,6 +21,7 @@ int main(int argc, const char** argv) {
     escher::VulkanInstance::Params instance_params(
         {{},
          {VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+          VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
           VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
           VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
          false});
