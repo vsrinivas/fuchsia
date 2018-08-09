@@ -25,12 +25,6 @@ enum AnnoyanceType {
   // Meant to show system errors or other extremely urgent alerts. It would
   // block the rest of the interface and force the user to interact with it.
   BLOCKING = 3;
-
-  // The suggestion is immediately accepted.
-  // TODO(miguelfrde): suggestion engine should be deciding whether to
-  // immediately execute (auto-accept) a proposal or not without the need of
-  // an external signal.
-  SHOW_IMMEDIATELY = 4;
 };
 
 // Information for the main image of the Suggestion.
