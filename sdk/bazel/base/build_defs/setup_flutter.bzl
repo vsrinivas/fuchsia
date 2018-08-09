@@ -18,7 +18,7 @@ FLUTTER_DEPENDENCIES = {
     "collection": "1.14.6",
     "meta": "1.1.5",
     "typed_data": "1.1.5",
-    "vector_math": "2.0.6",
+    "vector_math": "2.0.8",
 }
 
 def _install_flutter_dependencies():
