@@ -19,7 +19,7 @@ declare_args() {
   rust_lto = "unset"
 
   # Sets the fuchsia toolchain target triple suffix (after arch)
-  rust_toolchain_triple_suffix = "unknown-fuchsia"
+  rust_toolchain_triple_suffix = "fuchsia"
 }
 
 _sysroot = sysroot
