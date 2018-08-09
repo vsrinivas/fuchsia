@@ -36,6 +36,10 @@ func InferAndNotify(ifs []netstack.NetInterface) {
 	mu.Unlock()
 }
 
+func CurrentlyReachable() bool {
+	return reachable
+}
+
 func hasDHCPAddress(nic netstack.NetInterface) bool {
 	return nic.Flags&netstack.NetInterfaceFlagDhcp != 0 && nic.Flags&netstack.NetInterfaceFlagUp != 0 && !netiface.IsAny(fidlconv.NetAddressToTCPIPAddress(nic.Addr))
 }

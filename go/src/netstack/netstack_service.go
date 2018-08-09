@@ -350,7 +350,11 @@ func AddNetstackService(ctx *context.Context) error {
 	})
 
 	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
-		_, err := connectivity.Service.Add(struct{}{}, c, nil)
+		k, err := connectivity.Service.Add(struct{}{}, c, nil)
+		// Let clients know the status of the network when they get added.
+		if p, ok := connectivity.Service.EventProxyFor(k); ok {
+			p.OnNetworkReachable(connectivity.CurrentlyReachable())
+		}
 		return err
 	})
 
