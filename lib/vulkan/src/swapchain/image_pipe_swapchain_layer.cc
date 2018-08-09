@@ -666,10 +666,15 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(
     *pCount = present_mode_count;
     return VK_SUCCESS;
   }
-  assert(*pCount >= present_mode_count);
-  memcpy(pPresentModes, present_modes, present_mode_count);
-  *pCount = present_mode_count;
-  return VK_SUCCESS;
+  VkResult result = VK_SUCCESS;
+  if (*pCount < present_mode_count) {
+    result = VK_INCOMPLETE;
+  } else {
+    *pCount = present_mode_count;
+  }
+
+  memcpy(pPresentModes, present_modes, *pCount * sizeof(VkPresentModeKHR));
+  return result;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
