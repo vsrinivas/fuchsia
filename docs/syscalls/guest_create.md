@@ -26,16 +26,20 @@ In order to begin execution within the guest, a VMO should be mapped into
 *vmar_handle* using **vmar_map**(), and a VCPU must be created using
 **vcpu_create**(), and then run using **vcpu_resume**().
 
-Additionally, a VMO should be mapped into *vmar_handle*
+Additionally, a VMO should be mapped into *vmar_handle* to provide a guest with
+physical memory.
 
-The following rights will be set on the handle *out* by default:
+The following rights will be set on the handle *guest_handle* by default:
 
-**ZX_RIGHT_DUPLICATE** — *out* may be duplicated.
+**ZX_RIGHT_TRANSFER** — *guest_handle* may be transferred over a channel.
 
-**ZX_RIGHT_TRANSFER** — *out* may be transferred over a channel.
+**ZX_RIGHT_DUPLICATE** — *guest_handle* may be duplicated.
 
 **ZX_RIGHT_WRITE** - A trap to be may be set using **guest_set_trap**(), or a
 VCPU to be created using **vcpu_create**().
+
+See [vmar_create](vmar_create.md) for the set of rights applied to
+*vmar_handle*.
 
 ## RIGHTS
 
@@ -50,7 +54,8 @@ returned.
 
 **ZX_ERR_ACCESS_DENIED** *resource* is not of *ZX_RSRC_KIND_HYPERVISOR*.
 
-**ZX_ERR_INVALID_ARGS** *out* is an invalid pointer, or *options* is nonzero.
+**ZX_ERR_INVALID_ARGS** *guest_handle* or *vmar_handle* is an invalid pointer,
+or *options* is nonzero.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
