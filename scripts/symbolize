@@ -273,30 +273,7 @@ def parse_args():
     parser.set_defaults(echo=True)
     return parser.parse_args()
 
-
-def main():
-    args = parse_args()
-    global debug_mode
-    debug_mode = args.debug
-    global addr2line_tool_path
-    addr2line_tool_path = args.addr2line
-    global gdb_tool_path
-    gdb_tool_path = args.gdb
-
-    # Parsing vars
-    arch = "x86_64"
-    build_dirs = choose_build_dirs(args, arch)
-    bias = 0
-    name_to_buildid = {}
-    bias_to_name = {}
-    processed_lines = []
-    prev_sp = None
-    prev_frame_num = None
-    frame_sizes = []
-    total_stack_size = 0
-    # If True and we see a dso line, start over collecting the list.
-    done_dso_list = True
-
+class Symbolizer:
     # Regex for parsing
     # Full prefix can be:
     #   - nothing
@@ -319,221 +296,257 @@ def main():
     zircon_bt_re = re.compile(full_prefix +
         "bt#(\d+): (\dx[0-9a-fA-F]+)$")
     zircon_nm_codestart = re.compile('^([a-f0-9]+) t __code_start$', re.M)
-    zircon_elf_path = ''
-    zircon_code_start = None
-    zircon_bt = False
-    zircon_pc = ''
 
     # ASAN backtraces
     asan_bt_re = re.compile(full_prefix + "\{\{\{bt:(\d+):(0x[0-9a-f]+)\}\}\}")
     asan_bt_end_re = re.compile(full_prefix + "$")
-    asan_bt = False
 
-    while True:
-        line = args.file.readline()
-        end_of_file = (line == '')
-        line = line.rstrip()
-        if args.echo and not args.file.isatty():
-            writeline(line)
-        bt_end = bt_end_re.match(line)
-        asan_bt_end = asan_bt and asan_bt_end_re.match(line)
-        if bt_end or asan_bt_end or end_of_file:
-            if len(processed_lines) != 0:
-                writeline("\nstart of symbolized stack:")
-                writelines(processed_lines)
-                writeline("end of symbolized stack\n")
+    def __init__(self, args):
+        self.args = args
+        self.arch = "x86_64"
+        self.build_dirs = choose_build_dirs(self.args, self.arch)
+        self.bias = 0
+        self.name_to_buildid = {}
+        self.bias_to_name = {}
+        self.processed_lines = []
+        self.prev_sp = None
+        self.prev_frame_num = None
+        self.frame_sizes = []
+        self.total_stack_size = 0
+        # If True and we see a dso line, start over collecting the list.
+        self.done_dso_list = True
 
-                if total_stack_size > args.stack_size - 8*1024:
-                    if total_stack_size >= args.stack_size:
-                        message = "Overflowed stack"
-                    else:
-                        message = "Potentially overflowed stack"
-                    writeline("WARNING: %s (total usage: %d, stack size: %d)" %
-                        (message, total_stack_size, args.stack_size))
-                    for frame, size in frame_sizes:
-                        writeline("#%s: %d bytes" % (frame, size))
-                # Since we don't have the last stack frame, leave some leeway
-                # when warning about stackoverflow
-                processed_lines = []
-                frames_sizes = []
-                total_stack_size = 0
-                prev_sp = None
-                zircon_bt = False
-                asan_bt = False
-            if end_of_file:
-                break
-            else:
+        self.zircon_elf_path = ''
+        self.zircon_code_start = None
+        self.zircon_bt = False
+        self.zircon_pc = ''
+
+        self.asan_bt = False
+
+    def run(self):
+        while True:
+            line = self.args.file.readline()
+            end_of_file = (line == '')
+            line = line.rstrip()
+            if self.args.echo and not self.args.file.isatty():
+                writeline(line)
+
+            bt_end = Symbolizer.bt_end_re.match(line)
+            self.asan_bt_end = self.asan_bt and Symbolizer.asan_bt_end_re.match(line)
+            if bt_end or self.asan_bt_end or end_of_file:
+                if len(self.processed_lines) != 0:
+                    writeline("\nstart of symbolized stack:")
+                    writelines(self.processed_lines)
+                    writeline("end of symbolized stack\n")
+
+                    if self.total_stack_size > self.args.stack_size - 8*1024:
+                        if self.total_stack_size >= self.args.stack_size:
+                            message = "Overflowed stack"
+                        else:
+                            message = "Potentially overflowed stack"
+                        writeline("WARNING: %s (total usage: %d, stack size: %d)" %
+                            (message, self.total_stack_size, self.args.stack_size))
+                        for frame, size in self.frame_sizes:
+                            writeline("#%s: %d bytes" % (frame, size))
+                    # Since we don't have the last stack frame, leave some leeway
+                    # when warning about stackoverflow
+                    self.processed_lines = []
+                    self.frames_sizes = []
+                    self.total_stack_size = 0
+                    self.prev_sp = None
+                    self.zircon_bt = False
+                    self.asan_bt = False
+                if end_of_file:
+                    break
+                else:
+                    continue
+
+            m = Symbolizer.arch_re.match(line)
+            if m:
+                # If the architecture has changed, choose our new build dirs and
+                # clear our DSO cache.  We may be symbolizing the output of
+                # logserver, and it may be reasonable for the target architecture to
+                # be changing as the user boots and tests on different
+                # architectures.
+                new_arch = m.group(2)
+                if (self.arch != new_arch):
+                    self.arch = new_arch
+                    global name_to_full_path
+                    name_to_full_path = {}
+                    self.build_dirs = choose_build_dirs(self.args, self.arch)
                 continue
 
-        m = arch_re.match(line)
-        if m:
-            # If the architecture has changed, choose our new build dirs and
-            # clear our DSO cache.  We may be symbolizing the output of
-            # logserver, and it may be reasonable for the target architecture to
-            # be changing as the user boots and tests on different
-            # architectures.
-            new_arch = m.group(2)
-            if (arch != new_arch):
-                arch = new_arch
-                name_to_full_path = {}
-                build_dirs = choose_build_dirs(args, arch)
-            continue
-        m = build_id_re.match(line)
-        if m:
-            if done_dso_list:
-                name_to_buildid = {}
-                bias_to_name = {}
-                done_dso_list = False
-            buildid = m.group(2)
-            bias = int(m.group(3), 16)
-            name = m.group(4)
-            name_to_buildid[name] = buildid
-            bias_to_name[bias] = name
-
-            if zircon_code_start and zircon_code_start != bias:
-                if zircon_code_start < bias:
-                    diff = bias - zircon_code_start
-                    c = '+'
-                else:
-                    diff = zircon_code_start - bias
-                    c = '-'
-                writeline('kaslr offset is %c0x%x' % (c, diff))
-            continue
-        # We didn't see a dso line, so we're done with this list.
-        # The next time we see one means we're starting a new list.
-        done_dso_list = True
-        m = btre.match(line)
-        if m and not zircon_bt:
-            frame_num = m.group(2)
-            m = bt_with_offset_re.match(line)
+            m = Symbolizer.build_id_re.match(line)
             if m:
-                sp = int(m.group(3), 16)
-                if prev_sp is not None:
-                    frame_size = sp - prev_sp
-                    total_stack_size += frame_size
-                    frame_sizes.append((prev_frame_num, frame_size))
-                prev_sp = sp
-                prev_frame_num = frame_num
+                if self.done_dso_list:
+                    self.name_to_buildid = {}
+                    self.bias_to_name = {}
+                    self.done_dso_list = False
+                buildid = m.group(2)
+                self.bias = int(m.group(3), 16)
+                name = m.group(4)
+                self.name_to_buildid[name] = buildid
+                self.bias_to_name[self.bias] = name
 
-                dso = m.group(4)
-                off = m.group(5)
+                if self.zircon_code_start and self.zircon_code_start != self.bias:
+                    if self.zircon_code_start < self.bias:
+                        diff = self.bias - self.zircon_code_start
+                        c = '+'
+                    else:
+                        diff = self.zircon_code_start - self.bias
+                        c = '-'
+                    writeline('kaslr offset is %c0x%x' % (c, diff))
+                continue
+            # We didn't see a dso line, so we're done with this list.
+            # The next time we see one means we're starting a new list.
+            self.done_dso_list = True
+
+            m = Symbolizer.btre.match(line)
+            if m and not self.zircon_bt:
+                frame_num = m.group(2)
+                m = Symbolizer.bt_with_offset_re.match(line)
+                if m:
+                    sp = int(m.group(3), 16)
+                    if self.prev_sp is not None:
+                        frame_size = sp - self.prev_sp
+                        self.total_stack_size += frame_size
+                        self.frame_sizes.append((self.prev_frame_num, frame_size))
+                    self.prev_sp = sp
+                    self.prev_frame_num = frame_num
+
+                    dso = m.group(4)
+                    off = m.group(5)
+
+                    # Adapt offset for KASLR move
+                    off = kaslr_offset(off, self.zircon_code_start, self.bias)
+
+                    dso_full_path = find_dso_full_path(
+                        dso, self.args.app, self.name_to_buildid, self.build_dirs)
+                    if dso_full_path:
+                        call_loc = get_call_location(self.arch, dso_full_path, off)
+                        if call_loc:
+                            self.processed_lines.append(
+                                "#%s: %s" % (frame_num, call_loc))
+                        if self.args.disassemble:
+                            pc = int(off, 16)
+                            disassembly = run_gdb(
+                                self.arch, "--nx", "--batch", "-ex",
+                                "disassemble %#x" % pc, dso_full_path)
+                            if disassembly:
+                                for line in disassembly.splitlines():
+                                    m = Symbolizer.disasm_re.match(line)
+                                    if m:
+                                        addr, rest = m.groups()
+                                        addr = int(addr, 16)
+                                        if addr == pc:
+                                            prefix = "=> "
+                                        else:
+                                            prefix = "   "
+                                        line = "%s%#.16x%s" % (prefix, self.bias + addr, rest)
+                                        self.processed_lines.append(line)
+                        continue
+                    else:
+                        # can't find dso_full_path
+                        self.processed_lines.append("#%s: unknown, can't find full path for %s" %
+                            (frame_num, dso))
+                else:
+                    # bt_with_offset_re failed
+                    self.processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line" %
+                        (frame_num,))
+
+            # Zircon Specific Handling
+            if Symbolizer.zircon_crash_re.search(line):
+                self.zircon_elf_path = find_file_in_build_dir("zircon.elf", self.build_dirs)
+                if not self.zircon_elf_path:
+                    sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need "
+                                      "to build zircon or specify the build directory with -b?\n")
+                    continue
+                self.zircon_bt = True
+                nm_result = run_tool(self.arch, "nm", self.zircon_elf_path)
+                m = Symbolizer.zircon_nm_codestart.search(nm_result)
+                if not m:
+                    sys.stderr.write("Failed to find __code_start from nm")
+                    continue
+                self.zircon_code_start = int(m.group(1), 16)
+                continue
+
+            m = Symbolizer.zircon_pc_re.search(line)
+            if m:
+                self.zircon_pc = kaslr_offset(m.group(1), self.zircon_code_start, self.bias)
+                continue
+
+            m = Symbolizer.zircon_bt_re.match(line)
+            if m and self.zircon_bt:
+                frame_num = m.group(2)
+                addr = m.group(3)
+                # If we saw the instruction pointer for the fault/panic then use it once
+                if self.zircon_pc:
+                    prefix = "   pc: %s => " % self.zircon_pc
+                    a2l_out = run_addr2line(self.arch, self.zircon_elf_path, self.zircon_pc)
+                    self.processed_lines.append(prefix +
+                            a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
+                    self.zircon_pc = None
 
                 # Adapt offset for KASLR move
-                off = kaslr_offset(off, zircon_code_start, bias)
+                addr = kaslr_offset(addr, self.zircon_code_start, self.bias)
 
-                dso_full_path = find_dso_full_path(
-                    dso, args.app, name_to_buildid, build_dirs)
-                if dso_full_path:
-                    call_loc = get_call_location(arch, dso_full_path, off)
-                    if call_loc:
-                        processed_lines.append(
-                            "#%s: %s" % (frame_num, call_loc))
-                    if args.disassemble:
-                        pc = int(off, 16)
-                        disassembly = run_gdb(
-                            arch, "--nx", "--batch", "-ex",
-                            "disassemble %#x" % pc, dso_full_path)
-                        if disassembly:
-                            for line in disassembly.splitlines():
-                                m = disasm_re.match(line)
-                                if m:
-                                    addr, rest = m.groups()
-                                    addr = int(addr, 16)
-                                    if addr == pc:
-                                        prefix = "=> "
-                                    else:
-                                        prefix = "   "
-                                    line = "%s%#.16x%s" % (prefix, bias + addr, rest)
-                                    processed_lines.append(line)
+                prefix = "bt#%s: %s => " % (frame_num, addr)
+                call_loc = get_call_location(self.arch, self.zircon_elf_path, addr)
+                # In the case of inlined methods, it is more readable if the
+                # inlined lines are aligned to be to the right of "=>".
+                self.processed_lines.append(prefix +
+                        call_loc.replace("(inlined", (" " * len(prefix)) + "(inlined"))
+                continue
+
+            # ASAN Specific Handling
+            m = Symbolizer.asan_bt_re.match(line)
+            if m and not self.zircon_bt:
+                self.asan_bt = True
+                frame_num = m.group(2)
+                addr = int(m.group(3), 16)
+                offset = None
+                dso = None
+                for bias, candidate_dso in self.bias_to_name.items():
+                    if addr >= bias:
+                        candidate_offset = addr - bias
+                        if offset is None or candidate_offset < offset:
+                            offset = candidate_offset
+                            dso = candidate_dso
+                if offset is None:
+                    self.processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x" %
+                        (frame_num, addr))
                     continue
-                else:
-                    # can't find dso_full_path
-                    processed_lines.append("#%s: unknown, can't find full path for %s" %
+                dso_full_path = find_dso_full_path(dso, self.args.app, self.name_to_buildid, self.build_dirs)
+                if not dso_full_path:
+                    self.processed_lines.append("#%s: unknown, can't find full path for %s" %
                         (frame_num, dso))
-            else:
-                # bt_with_offset_re failed
-                processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line" %
-                    (frame_num,))
+                    continue
 
-        # Zircon Specific Handling
-        if zircon_crash_re.search(line):
-            zircon_elf_path = find_file_in_build_dir("zircon.elf", build_dirs)
-            if not zircon_elf_path:
-                sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need "
-                                  "to build zircon or specify the build directory with -b?\n")
-                continue
-            zircon_bt = True
-            nm_result = run_tool(arch, "nm", zircon_elf_path)
-            m = zircon_nm_codestart.search(nm_result)
-            if not m:
-                sys.stderr.write("Failed to find __code_start from nm\n")
-                continue
-            zircon_code_start = int(m.group(1), 16)
-            continue
+                # Adapt offset for KASLR move
+                offset = kaslr_offset(offset, self.zircon_code_start, self.bias)
 
-        m = zircon_pc_re.search(line)
-        if m:
-            zircon_pc = kaslr_offset(m.group(1), zircon_code_start, bias)
-            continue
+                prefix = "bt#%s: 0x%x => " % (frame_num, addr)
+                call_loc = run_addr2line(self.arch, dso_full_path, "0x%x" % offset)
+                if call_loc:
+                  # In the case of inlined methods, it is more readable if the
+                  # inlined lines are aligned to be to the right of "=>".
+                  self.processed_lines.append(
+                      prefix + call_loc.replace("(inlined",
+                                                (" " * len(prefix)) + "(inlined"))
 
-        m = zircon_bt_re.match(line)
-        if m and zircon_bt:
-            frame_num = m.group(2)
-            addr = m.group(3)
-            # If we saw the instruction pointer for the fault/panic then use it once
-            if zircon_pc:
-                prefix = "   pc: %s => " % zircon_pc
-                a2l_out = run_addr2line(arch, zircon_elf_path, zircon_pc)
-                processed_lines.append(prefix +
-                        a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
-                zircon_pc = None
 
-            # Adapt offset for KASLR move
-            addr = kaslr_offset(addr, zircon_code_start, bias)
+def main():
+    args = parse_args()
+    global debug_mode
+    debug_mode = args.debug
+    global addr2line_tool_path
+    addr2line_tool_path = args.addr2line
+    global gdb_tool_path
+    gdb_tool_path = args.gdb
 
-            prefix = "bt#%s: %s => " % (frame_num, addr)
-            call_loc = get_call_location(arch, zircon_elf_path, addr)
-            # In the case of inlined methods, it is more readable if the
-            # inlined lines are aligned to be to the right of "=>".
-            processed_lines.append(prefix +
-                    call_loc.replace("(inlined", (" " * len(prefix)) + "(inlined"))
-            continue
+    symbolizer = Symbolizer(args)
+    symbolizer.run()
 
-        # ASAN Specific Handling
-        m = asan_bt_re.match(line)
-        if m and not zircon_bt:
-            asan_bt = True
-            frame_num = m.group(2)
-            addr = int(m.group(3), 16)
-            offset = None
-            dso = None
-            for bias, candidate_dso in bias_to_name.items():
-                if addr >= bias:
-                    candidate_offset = addr - bias
-                    if offset is None or candidate_offset < offset:
-                        offset = candidate_offset
-                        dso = candidate_dso
-            if offset is None:
-                processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x" %
-                    (frame_num, addr))
-                continue
-            dso_full_path = find_dso_full_path(dso, args.app, name_to_buildid, build_dirs)
-            if not dso_full_path:
-                processed_lines.append("#%s: unknown, can't find full path for %s" %
-                    (frame_num, dso))
-                continue
-
-            # Adapt offset for KASLR move
-            offset = kaslr_offset(offset, zircon_code_start, bias)
-
-            prefix = "bt#%s: 0x%x => " % (frame_num, addr)
-            call_loc = run_addr2line(arch, dso_full_path, "0x%x" % offset)
-            if call_loc:
-              # In the case of inlined methods, it is more readable if the
-              # inlined lines are aligned to be to the right of "=>".
-              processed_lines.append(
-                  prefix + call_loc.replace("(inlined",
-                                            (" " * len(prefix)) + "(inlined"))
 
 if __name__ == '__main__':
     sys.exit(main())
