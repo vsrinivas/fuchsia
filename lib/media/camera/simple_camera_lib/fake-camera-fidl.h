@@ -51,7 +51,7 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
 
  private:
   // Get the available format types for this device
-  void GetFormats(GetFormatsCallback callback) override;
+  void GetFormats(uint32_t index, GetFormatsCallback callback) override;
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.

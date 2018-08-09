@@ -104,7 +104,7 @@ void FakeControlImpl::ProduceFrame() {
   PostNextCaptureTask();
 }
 
-void FakeControlImpl::GetFormats(GetFormatsCallback callback) {
+void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats;
 
   fuchsia::camera::driver::VideoFormat format = {
@@ -118,7 +118,7 @@ void FakeControlImpl::GetFormats(GetFormatsCallback callback) {
   };
 
   formats.push_back(format);
-  callback(fbl::move(formats), ZX_OK);
+  callback(fbl::move(formats), 1, ZX_OK);
 }
 
 void FakeControlImpl::SetFormat(

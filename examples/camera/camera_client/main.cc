@@ -20,14 +20,25 @@ zx_status_t run_camera() {
     return status;
   }
 
+  std::vector<VideoFormat> formats;
   zx_status_t driver_status;
-  fidl::VectorPtr<VideoFormat> formats_ptr;
-  status = client.camera()->GetFormats(&formats_ptr, &driver_status);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status << ")";
-    return status;
-  }
-  const std::vector<VideoFormat> formats = formats_ptr.get();
+  uint32_t total_format_count;
+  uint32_t format_index = 0;
+  do {
+    fidl::VectorPtr<VideoFormat> formats_ptr;
+    status = client.camera()->GetFormats(format_index, &formats_ptr,
+                                         &total_format_count, &driver_status);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status << ")";
+      return status;
+    }
+
+    const std::vector<VideoFormat>& call_formats = formats_ptr.get();
+    for (auto&& f : call_formats) {
+      formats.push_back(f);
+    }
+    format_index += call_formats.size();
+  } while (formats.size() < total_format_count);
 
   printf("Available formats: %d\n", (int)formats.size());
   for (int i = 0; i < (int)formats.size(); i++) {

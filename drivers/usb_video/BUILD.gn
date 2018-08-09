@@ -32,7 +32,6 @@ driver_module("usb_video_driver") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",

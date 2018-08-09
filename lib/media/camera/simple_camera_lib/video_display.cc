@@ -310,28 +310,36 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
   // Figure out a format
   {
-    fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats_ptr;
-    status = camera_client_->control_->GetFormats(&formats_ptr, &driver_status);
-    if (status != ZX_OK || driver_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status
-                     << " : " << driver_status << ")";
-      goto error;
-    }
-
-    {
-      const std::vector<fuchsia::camera::driver::VideoFormat>& formats =
-          formats_ptr.get();
-
-      FXL_LOG(INFO) << "Available formats: " << formats.size();
-      for (int i = 0; i < (int)formats.size(); i++) {
-        FXL_LOG(INFO) << "format[" << i << "] - width: " << formats[i].width
-                      << ", height: " << formats[i].height
-                      << ", stride: " << formats[i].stride
-                      << ", bits_per_pixel: " << formats[i].bits_per_pixel;
+    std::vector<fuchsia::camera::driver::VideoFormat> formats;
+    zx_status_t driver_status;
+    uint32_t total_format_count;
+    uint32_t format_index = 0;
+    do {
+      fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats_ptr;
+      status = camera_client_->control_->GetFormats(
+          format_index, &formats_ptr, &total_format_count, &driver_status);
+      if (status != ZX_OK || driver_status != ZX_OK) {
+        FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status
+                       << " : " << driver_status << ")";
+        goto error;
       }
+      const std::vector<fuchsia::camera::driver::VideoFormat>& call_formats =
+          formats_ptr.get();
+      for (auto&& f : call_formats) {
+        formats.push_back(f);
+      }
+      format_index += call_formats.size();
+    } while (formats.size() < total_format_count);
 
-      format_ = formats[0];
+    FXL_LOG(INFO) << "Available formats: " << formats.size();
+    for (int i = 0; i < (int)formats.size(); i++) {
+      FXL_LOG(INFO) << "format[" << i << "] - width: " << formats[i].width
+                    << ", height: " << formats[i].height
+                    << ", stride: " << formats[i].stride
+                    << ", bits_per_pixel: " << formats[i].bits_per_pixel;
     }
+
+    format_ = formats[0];
   }
 
   // Allocate VMO buffer storage

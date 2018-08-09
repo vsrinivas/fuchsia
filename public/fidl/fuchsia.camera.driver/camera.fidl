@@ -24,8 +24,8 @@ enum PixelFormat {
   MJPEG = 6;
 };
 
-// A structure used along with the STREAM_CMD_GET_FORMATS command
-// in order to describe the formats supported by a video stream.
+// A structure used along with the GetFormats command
+// to describe the formats supported by a video stream.
 struct VideoFormat {
   CaptureType capture_type;
   // The width, in pixels, of the decoded video.
@@ -41,6 +41,8 @@ struct VideoFormat {
   uint32 frames_per_sec_numerator;
   uint32 frames_per_sec_denominator;
 };
+
+const uint32 MAX_FORMATS_PER_RESPONSE = 16;
 
 // Status to be set when a frame is signalled available.
 enum FrameStatus {
@@ -78,8 +80,9 @@ struct FrameAvailableEvent {
 [Discoverable]
 interface Control {
   // Get the available format types for this device
-  // TODO(CAM-XXX): use pagination pattern
-  1: GetFormats() -> (vector<VideoFormat> formats, zx.status status);
+  // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple GetFormats
+  //       need to be issued until total_format_count are received
+  1: GetFormats(uint32 index) -> (vector<VideoFormat> formats, uint32 total_format_count, zx.status status);
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.

@@ -22,7 +22,6 @@ source_set("simple_camera_lib") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.camera.driver:fuchsia.camera.driver",
     "//garnet/public/fidl/fuchsia.ui.scenic",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
