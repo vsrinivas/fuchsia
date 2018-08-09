@@ -240,7 +240,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   bool called;
   Status status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromVmo(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -330,7 +330,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   bool called;
   Status reference_status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromVmo(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &reference_status,
                         &reference));
@@ -420,7 +420,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   bool called;
   Status status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromVmo(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -733,7 +733,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
   ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
 }
 
-TEST_F(PageImplTest, CreateReferenceFromVmo) {
+TEST_F(PageImplTest, CreateReferenceFromBuffer) {
   ASSERT_EQ(0u, fake_storage_->GetObjects().size());
 
   std::string value("a small value");
@@ -743,7 +743,7 @@ TEST_F(PageImplTest, CreateReferenceFromVmo) {
   bool called;
   Status status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromVmo(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -1447,7 +1447,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   bool called;
   Status status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromVmo(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();

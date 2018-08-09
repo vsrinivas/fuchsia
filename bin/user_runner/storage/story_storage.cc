@@ -247,7 +247,7 @@ class WriteLinkDataCall : public Operation<StoryStorage::Status> {
 
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(*value_, &vmo));
-    page_client_->page()->CreateReferenceFromVmo(
+    page_client_->page()->CreateReferenceFromBuffer(
         std::move(vmo).ToTransport(),
         [this, flow, weak_ptr = GetWeakPtr()](
             fuchsia::ledger::Status status,

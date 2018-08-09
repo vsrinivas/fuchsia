@@ -77,8 +77,8 @@ void PageImpl::CreateReferenceFromSocket(
                              std::move(timed_callback));
 }
 
-void PageImpl::CreateReferenceFromVmo(fuchsia::mem::Buffer data,
-                                      CreateReferenceFromVmoCallback callback) {
+void PageImpl::CreateReferenceFromBuffer(
+    fuchsia::mem::Buffer data, CreateReferenceFromBufferCallback callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "page_create_reference_from_vmo");
   fsl::SizedVmo vmo;

@@ -129,7 +129,7 @@ There are two ways to write a value into a page:
    FIDL message.
  - in two steps: first streaming the data to be written to a "reference", and
    then setting the value using the reference. (through a combination of
-   `CreateReferenceFromSocket()`, `CreateReferenceFromVmo()` and
+   `CreateReferenceFromSocket()`, `CreateReferenceFromBuffer()` and
    `PutReference()`. Note that the created reference is temporary and not
    persisted through app restarts - it must be set through `PutReference()`, or
    discarded.

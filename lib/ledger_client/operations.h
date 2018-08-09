@@ -283,7 +283,7 @@ class WriteDataCall : public PageOperation<> {
 
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(json, &vmo));
-    page()->CreateReferenceFromVmo(
+    page()->CreateReferenceFromBuffer(
         std::move(vmo).ToTransport(),
         [this, weak_ptr = GetWeakPtr(), flow](
             fuchsia::ledger::Status status,

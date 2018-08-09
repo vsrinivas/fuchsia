@@ -639,7 +639,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   Status status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromVmo(
+  page->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(waiter->GetCallback(), &status, &reference));
   waiter->RunUntilCalled();

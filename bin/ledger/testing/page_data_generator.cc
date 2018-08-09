@@ -60,11 +60,11 @@ void PageDataGenerator::PutEntry(PagePtr* page, fidl::VectorPtr<uint8_t> key,
     callback(Status::IO_ERROR);
     return;
   }
-  (*page)->CreateReferenceFromVmo(
+  (*page)->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [page, key = std::move(key), priority, callback = std::move(callback)](
           Status status, ReferencePtr reference) mutable {
-        if (LogOnError(status, "Page::CreateReferenceFromVmo")) {
+        if (LogOnError(status, "Page::CreateReferenceFromBuffer")) {
           callback(status);
           return;
         }

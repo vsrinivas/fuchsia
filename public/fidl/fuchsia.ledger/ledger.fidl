@@ -112,7 +112,7 @@ interface Page {
   // |Put()| and |PutWithPriority()| can be used for small values that
   // fit inside a FIDL message. If the value is bigger, a reference must be
   // first created using |CreateReferenceFromSocket()| or
-  // |CreateReferenceFromVmo()| and then |PutReference()| can be used.
+  // |CreateReferenceFromBuffer()| and then |PutReference()| can be used.
   // |PutWithPriority()| and |PutReference()| have an additional |priority|
   // parameter managing the synchronization policy for this value. |Put()| uses
   // a default priority of |Priority.EAGER|. For the list of available
@@ -143,8 +143,8 @@ interface Page {
       -> (Status @status, Reference? reference);
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
-  // will be the content of the vmo.
-  9: CreateReferenceFromVmo(fuchsia.mem.Buffer buffer)
+  // will be the content of the buffer.
+  9: CreateReferenceFromBuffer(fuchsia.mem.Buffer buffer)
       -> (Status @status, Reference? reference);
 
   // Transactions.
@@ -435,12 +435,12 @@ interface MergeResultProvider {
   // have been modified between the common ancestor (see
   // |ConflictResolver.Resolve()|) and the left and right branches.
   //
-  // Values of |LAZY| keys may not be present on the device. In that case,
-  // |value| VMOs inside the Value objects will have a NULL |value| field. If
-  // needed, |left| and |right|, provided by the |ConflictResolver.Resolve()|
-  // method can be used by clients to Fetch these values. If a key is not
-  // present at all in one of the branches, its corresponding Value object will
-  // be NULL.
+  // Values of |LAZY| keys may not be present on the device. In that case, the
+  // corresponding Value objects within DiffEntry will have a NULL |value|
+  // field. If needed, |left| and |right|, provided by the
+  // |ConflictResolver.Resolve()| method can be used by clients to Fetch these
+  // values. If a key is not present at all in one of the branches, its
+  // corresponding Value object will be NULL.
   //
   // The first call to get the |DiffEntry|s should be done using a NULL
   // token. If the result does not fit in a single fidl message, |status| will
