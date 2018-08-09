@@ -6,6 +6,7 @@
 
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -36,6 +37,7 @@ class FactoryImplTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(FactoryImplTest, GetCloudProvider) {
+  bool callback_called = false;
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   cloud_provider::Status status = cloud_provider::Status::INTERNAL_ERROR;
@@ -45,14 +47,16 @@ TEST_F(FactoryImplTest, GetCloudProvider) {
   config.api_key = "some api key";
   factory_->GetCloudProvider(
       std::move(config), token_provider_binding_.NewBinding(),
-      cloud_provider.NewRequest(), callback::Capture([] {}, &status));
+      cloud_provider.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
 
-  bool called = false;
-  factory_impl_.ShutDown([&called] { called = true; });
+  callback_called = false;
+  factory_impl_.ShutDown(callback::SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
-  EXPECT_TRUE(called);
+  EXPECT_TRUE(callback_called);
 }
 
 }  // namespace cloud_provider_firestore
