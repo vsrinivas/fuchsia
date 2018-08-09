@@ -21,6 +21,9 @@ VK_TEST(BatchGpuUploader, CreateDestroyUploader) {
     // BatchGpuUploader must be submitted before it is destroyed.
     uploader->Submit(SemaphorePtr());
   }
+
+  escher->vk_device().waitIdle();
+  EXPECT_TRUE(escher->Cleanup());
 }
 
 VK_TEST(BatchGpuUploader, AcquireSubmitWriter) {
@@ -32,6 +35,8 @@ VK_TEST(BatchGpuUploader, AcquireSubmitWriter) {
 
   // BatchGpuUploader must be submitted before it is destroyed.
   uploader->Submit(SemaphorePtr());
+  escher->vk_device().waitIdle();
+  EXPECT_TRUE(escher->Cleanup());
 }
 
 VK_TEST(BatchGpuUploader, AcquireSubmitMultipleWriters) {
