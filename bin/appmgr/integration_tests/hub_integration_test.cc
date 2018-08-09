@@ -7,8 +7,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/appmgr/service_provider_dir_impl.h"
-#include "garnet/bin/appmgr/util.h"
 #include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"

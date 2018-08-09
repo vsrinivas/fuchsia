@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/run_test_component_test"
+        "binary": "test/appmgr_realm_integration_tests"
     },
     "sandbox": {
         "features": [ "shell", "deprecated-all-services" ]

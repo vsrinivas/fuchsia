@@ -5,9 +5,11 @@
 #include <sys/stat.h>
 
 #include "gtest/gtest.h"
+#include "lib/fxl/files/file.h"
 
-TEST(Run, Test) {
-  struct stat s;
-  EXPECT_NE(stat("/system", &s), 0)
-      << "system should not be present when this is executed as component";
+TEST(Run, TestHermeticEnv) {
+  std::string hub_name;
+  files::ReadFileToString("/hub/name", &hub_name);
+  // if this was not executed as component, /hub/name would be sys
+  EXPECT_EQ(hub_name, "env_for_test");
 }

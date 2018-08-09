@@ -13,6 +13,7 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }

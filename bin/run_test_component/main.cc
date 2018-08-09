@@ -9,10 +9,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/test_util.h"
 
 using fuchsia::sys::TerminationReason;
 
+constexpr char kEnv[] = "env_for_test";
 // TODO(anmittal): Make it easier for developer to run tests.
 //
 // This should also support running tests using
@@ -27,20 +29,21 @@ int main(int argc, const char** argv) {
   launch_info.url = argv[1];
   std::string program_name = argv[1];
 
-  // Connect to the Launcher service through our static environment.
-  fuchsia::sys::LauncherSyncPtr launcher;
-  component::ConnectToEnvironmentService(launcher.NewRequest());
-
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  launch_info.out = component::testing::CloneFileDescriptor(STDOUT_FILENO);
-  launch_info.err = component::testing::CloneFileDescriptor(STDERR_FILENO);
   for (int i = 2; i < argc; i++) {
     launch_info.arguments.push_back(argv[i]);
   }
 
+  fuchsia::sys::EnvironmentPtr parent_env;
+  component::ConnectToEnvironmentService(parent_env.NewRequest());
+
+  auto enclosing_env =
+      component::testing::EnclosingEnvironment::Create(kEnv, parent_env);
+
   fuchsia::sys::ComponentControllerPtr controller;
-  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+  enclosing_env->CreateComponent(std::move(launch_info),
+                                 controller.NewRequest());
 
   controller.events().OnTerminated = [&program_name](
                                          int64_t return_code,

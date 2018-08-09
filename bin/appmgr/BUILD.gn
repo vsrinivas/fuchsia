@@ -155,16 +155,3 @@ package("appmgr_unittests") {
     },
   ]
 }
-
-package("appmgr_integrationtests") {
-  testonly = true
-
-  deps = [
-    "integration_tests:tests",
-  ]
-  tests = [
-    {
-      name = "appmgr_integration_tests"
-    },
-  ]
-}

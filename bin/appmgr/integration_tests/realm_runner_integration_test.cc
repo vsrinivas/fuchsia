@@ -241,9 +241,8 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {
-  auto glob_str =
-      fxl::StringPrintf("/hub/r/sys/*/r/%s/*/c/appmgr_mock_runner/*/c/%s/*",
-                        kRealm, kComponentForRunner);
+  auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner/*/c/%s/*",
+                                    kRealm, kComponentForRunner);
   glob_t globbuf;
   // launch two components and make sure both show up in /hub.
   auto component1 =

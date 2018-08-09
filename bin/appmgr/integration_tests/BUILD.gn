@@ -4,14 +4,14 @@
 
 import("//build/package.gni")
 import("//build/fidl/fidl.gni")
+import("//garnet/bin/run_test_component/test_package.gni")
 
-executable("tests") {
+executable("realm_tests") {
   testonly = true
 
-  output_name = "appmgr_integration_tests"
+  output_name = "appmgr_realm_integration_tests"
 
   sources = [
-    "hub_integration_test.cc",
     "mock_runner_registry.cc",
     "mock_runner_registry.h",
     "realm_integration_test.cc",
@@ -31,5 +31,47 @@ executable("tests") {
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("appmgr_realm_integration_tests") {
+  deps = [
+    ":realm_tests",
+  ]
+
+  tests = [
+    {
+      name = "appmgr_realm_integration_tests"
+    },
+  ]
+}
+
+executable("hub_tests") {
+  testonly = true
+
+  output_name = "appmgr_hub_integration_tests"
+
+  sources = [
+    "hub_integration_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+package("appmgr_hub_integration_tests") {
+  testonly = true
+
+  deps = [
+    ":hub_tests",
+  ]
+  tests = [
+    {
+      name = "appmgr_hub_integration_tests"
+    },
   ]
 }
