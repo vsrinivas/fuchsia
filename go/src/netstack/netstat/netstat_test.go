@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -12,98 +14,103 @@ import (
 	"testing"
 )
 
-func TestICMPOutputPresence(t *testing.T) {
-	out := output(t, "/system/bin/netstat", "-s")
-	metrics := []string{"ICMP messages received", "input ICMP message failed.", "ICMP messages sent", "ICMP messages failed", "ICMP input histogram", "ICMP output histogram"}
-
-	for _, m := range metrics {
-		if !strings.Contains(out, m) {
-			t.Errorf("ICMP metric \"%s\" not present", m)
-		}
-	}
-}
-
-func TestICMPSentCount(t *testing.T) {
-	reqs := parseSentCount(t, output(t, "/system/bin/netstat", "-s"))
-
-	ping := exec.Command("/boot/bin/ping", "-c", "1", "localhost")
-	err := ping.Run()
-	switch err.(type) {
-	case *exec.Error:
-		t.Fatalf("Failed to run ping: %v", err)
-	case *exec.ExitError:
-		// fallthrough, ping doesn't have to successfully resolve the host for sent count to increase
-	}
-
-	reqsAfter := parseSentCount(t, output(t, "/system/bin/netstat", "-s"))
-
-	if !(reqsAfter > reqs) {
-		t.Errorf("echo request count did not increase after running ping: before %d, after %d", reqs, reqsAfter)
-	}
-}
-
-func TestIPOutputPresence(t *testing.T) {
-	out := output(t, "/system/bin/netstat", "-s")
-	metrics := []string{
-		"total packets received",
-		"with invalid addresses",
-		"incoming packets discarded",
-		"incoming packets delivered",
-		"requests sent out",
-		"outgoing packets with errors",
-	}
-
-	for _, m := range metrics {
-		if !strings.Contains(out, m) {
-			t.Errorf("IP metric %q not present", m)
-		}
-	}
-}
-
-func TestUDPOutputPresence(t *testing.T) {
-	out := output(t, "/system/bin/netstat", "-s")
-	metrics := []string{
-		"packets received",
-		"packet receive errors",
-		"packets to unknown ports received",
-		"receive buffer errors",
-		"malformed packets received",
-		"packets sent",
-	}
-
-	for _, m := range metrics {
-		if !strings.Contains(out, m) {
-			t.Errorf("ICMP metric %q not present", m)
-		}
-	}
-}
-
-func output(t *testing.T, command string, args ...string) string {
-	cmd := exec.Command(command, args...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Errorf("Couldn't execute %s: %v\n", command, err)
-		if out != nil {
-			t.Errorf("Combined output:\n%s", out)
-		}
-		t.Fail()
-	}
-
-	return string(out)
-}
-
 var sentCountMatcher *regexp.Regexp = regexp.MustCompile("([0-9]+) ICMP messages sent")
 
-func parseSentCount(t *testing.T, nsOut string) int64 {
-	matches := sentCountMatcher.FindStringSubmatch(nsOut)
-	if len(matches) == 0 {
-		t.Fatalf("Did not match %+v in %s", sentCountMatcher, nsOut)
+func parseSentCount(outStr string) (int, error) {
+	matches := sentCountMatcher.FindStringSubmatch(outStr)
+	if expected, got := 2, len(matches); got != expected {
+		return 0, fmt.Errorf("expected %d matches of %+v in\n%s\n, got %d", expected, sentCountMatcher, outStr, got)
 	}
 
-	count, err := strconv.ParseInt(matches[1], 10, 64)
+	return strconv.Atoi(matches[1])
+}
+
+func TestOutput(t *testing.T) {
+	out, err := exec.Command("/system/bin/netstat", "-s").CombinedOutput()
 	if err != nil {
-		t.Errorf("Could not parse echo request count from string: %s", matches[0])
+		t.Fatal(err)
+	}
+	outStr := string(out)
+
+	t.Run("ICMP", func(t *testing.T) {
+		for _, metric := range []string{
+			"ICMP messages received",
+			"input ICMP message failed.",
+			"ICMP messages sent",
+			"ICMP messages failed",
+			"ICMP input histogram",
+			"ICMP output histogram",
+		} {
+			if !strings.Contains(outStr, metric) {
+				t.Errorf("ICMP metric %q not present", metric)
+			}
+		}
+	})
+
+	t.Run("IP", func(t *testing.T) {
+		for _, metric := range []string{
+			"total packets received",
+			"with invalid addresses",
+			"incoming packets discarded",
+			"incoming packets delivered",
+			"requests sent out",
+			"outgoing packets with errors",
+		} {
+			if !strings.Contains(outStr, metric) {
+				t.Errorf("IP metric %q not present", metric)
+			}
+		}
+	})
+
+	t.Run("UDP", func(t *testing.T) {
+		for _, metric := range []string{
+			"packets received",
+			"packet receive errors",
+			"packets to unknown ports received",
+			"receive buffer errors",
+			"malformed packets received",
+			"packets sent",
+		} {
+			if !strings.Contains(outStr, metric) {
+				t.Errorf("IP metric %q not present", metric)
+			}
+		}
+	})
+
+	if t.Failed() {
+		t.Logf("out: \n%s", outStr)
+		t.FailNow()
 	}
 
-	return count
+	t.Run("ICMPSentCount", func(t *testing.T) {
+		reqsBefore, err := parseSentCount(outStr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		ping := exec.CommandContext(ctx, "/boot/bin/ping", "-c", "1", "localhost")
+		switch err := ping.Run(); err.(type) {
+		case *exec.Error:
+			t.Fatalf("failed to run ping: %v", err)
+		case *exec.ExitError:
+			// fallthrough, ping doesn't have to successfully resolve the host for sent count to increase
+		}
+
+		out, err := exec.Command("/system/bin/netstat", "-s").CombinedOutput()
+		if err != nil {
+			t.Fatal(err)
+		}
+		outStr := string(out)
+		reqsAfter, err := parseSentCount(outStr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !(reqsAfter > reqsBefore) {
+			t.Errorf("echo request count did not increase after running ping: before %d, after %d", reqsBefore, reqsAfter)
+		}
+	})
 }
