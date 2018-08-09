@@ -5,8 +5,11 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/lib/debug_ipc/records.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
+
+class MockSymbolDataProvider;
 
 // Provides a MockFrame implementation that just returns constant values for
 // everything. Tests can override this to implement the subset of functionality
@@ -25,12 +28,14 @@ class MockFrame : public Frame {
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
   uint64_t GetStackPointer() const override;
+  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() override;
 
  private:
   Thread* thread_;
 
   debug_ipc::StackFrame stack_frame_;
   Location location_;
+  fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockFrame);
 };

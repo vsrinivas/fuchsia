@@ -14,6 +14,7 @@ static_library("symbols") {
     "base_type.h",
     "code_block.h",
     "data_member.h",
+    "dwarf_expr_eval.h",
     "file_line.h",
     "function.h",
     "lazy_symbol.h",
@@ -46,7 +47,6 @@ static_library("symbols") {
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
     "dwarf_expr_eval.cc",
-    "dwarf_expr_eval.h",
     "dwarf_symbol_factory.cc",
     "dwarf_symbol_factory.h",
     "file_line.cc",
@@ -102,6 +102,10 @@ static_library("test_support") {
     "mock_module_symbols.h",
     "mock_process_symbols.cc",
     "mock_process_symbols.h",
+    "mock_symbol_data_provider.cc",
+    "mock_symbol_data_provider.h",
+    "variable_test_support.cc",
+    "variable_test_support.h",
   ]
 
   deps = [

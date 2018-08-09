@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -34,6 +35,10 @@ class Frame : public ClientObject {
 
   // Returns the stack pointer at this location.
   virtual uint64_t GetStackPointer() const = 0;
+
+  // Returns the SymbolDataProvider that can be used to evaluate symbolic
+  // expressions in the context of this frame.
+  virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() = 0;
 
  private:
   fxl::WeakPtrFactory<Frame> weak_factory_;

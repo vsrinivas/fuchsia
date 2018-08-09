@@ -32,11 +32,11 @@ uint64_t DwarfExprEval::GetResult() const {
   return stack_.back();
 }
 
-DwarfExprEval::Completion DwarfExprEval::Eval(SymbolDataProvider* data_provider,
-                                              Expression expr,
-                                              CompletionCallback cb) {
+DwarfExprEval::Completion DwarfExprEval::Eval(
+    fxl::RefPtr<SymbolDataProvider> data_provider, Expression expr,
+    CompletionCallback cb) {
   is_complete_ = false;
-  data_provider_ = data_provider;
+  data_provider_ = std::move(data_provider);
   expr_ = std::move(expr);
   expr_index_ = 0;
   completion_callback_ = std::move(cb);
@@ -64,6 +64,7 @@ void DwarfExprEval::ContinueEval() {
   do {
     // Check for successfully reaching the end of the stream.
     if (!is_complete_ && expr_index_ == expr_.size()) {
+      data_provider_ = fxl::RefPtr<SymbolDataProvider>();
       is_complete_ = true;
       Err err;
       if (stack_.empty()) {
@@ -337,6 +338,7 @@ bool DwarfExprEval::ReadLEBUnsigned(uint64_t* output) {
 }
 
 void DwarfExprEval::ReportError(const std::string& msg) {
+  data_provider_ = fxl::RefPtr<SymbolDataProvider>();
   is_complete_ = true;
   completion_callback_(this, Err(msg));
 

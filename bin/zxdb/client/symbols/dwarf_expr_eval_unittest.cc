@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_expr_eval.h"
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -13,89 +13,13 @@ namespace zxdb {
 
 namespace {
 
-class MockDataProvider : public SymbolDataProvider {
- public:
-  MockDataProvider();
-
-  // Adds the given canned result for the given register. Set synchronous if
-  // the register contents should be synchronously available, false if it
-  // should require a callback to retrieve.
-  void AddRegisterValue(int register_num, bool synchronous, uint64_t value);
-
-  // SymbolDataProvider implementation.
-  bool GetRegister(int dwarf_register_number, uint64_t* output) override;
-  void GetRegisterAsync(
-      int dwarf_register_number,
-      std::function<void(bool success, uint64_t value)> callback) override;
-  void GetMemoryAsync(
-      uint64_t address, uint32_t size,
-      std::function<void(const uint8_t* data)> callback) override;
-
- private:
-  struct RegData {
-    RegData() = default;
-    RegData(bool sync, uint64_t v) : synchronous(sync), value(v) {}
-
-    bool synchronous = false;
-    uint64_t value = 0;
-  };
-
-  std::map<int, RegData> regs_;
-
-  fxl::WeakPtrFactory<MockDataProvider> weak_factory_;
-};
-
-MockDataProvider::MockDataProvider() : weak_factory_(this) {}
-
-void MockDataProvider::AddRegisterValue(int register_num, bool synchronous,
-                                        uint64_t value) {
-  regs_[register_num] = RegData(synchronous, value);
-}
-
-bool MockDataProvider::GetRegister(int dwarf_register_number,
-                                   uint64_t* output) {
-  const auto& found = regs_.find(dwarf_register_number);
-  if (found == regs_.end())
-    return false;
-
-  if (!found->second.synchronous)
-    return false;  // Force synchronous query.
-
-  *output = found->second.value;
-  return true;
-}
-
-void MockDataProvider::GetRegisterAsync(
-    int dwarf_register_number,
-    std::function<void(bool success, uint64_t value)> callback) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      [callback, weak_provider = weak_factory_.GetWeakPtr(),
-       dwarf_register_number]() {
-        if (!weak_provider) {
-          ADD_FAILURE();  // Destroyed before callback ready.
-          return;
-        }
-
-        const auto& found = weak_provider->regs_.find(dwarf_register_number);
-        if (found == weak_provider->regs_.end())
-          callback(false, 0);
-        callback(true, found->second.value);
-      });
-}
-
-void MockDataProvider::GetMemoryAsync(
-    uint64_t address, uint32_t size,
-    std::function<void(const uint8_t* data)> callback) {
-  // FIXME(brettw) implement this.
-}
-
 class DwarfExprEvalTest : public testing::Test {
  public:
-  DwarfExprEvalTest() { loop_.Init(); }
+  DwarfExprEvalTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) { loop_.Init(); }
   ~DwarfExprEvalTest() { loop_.Cleanup(); }
 
   DwarfExprEval& eval() { return eval_; }
-  MockDataProvider& provider() { return provider_; }
+  fxl::RefPtr<MockSymbolDataProvider> provider() { return provider_; }
   debug_ipc::MessageLoop& loop() { return loop_; }
 
   // If expected_message is non-null, this error message will be expected on
@@ -109,7 +33,7 @@ class DwarfExprEvalTest : public testing::Test {
  private:
   DwarfExprEval eval_;
   debug_ipc::PlatformMessageLoop loop_;
-  MockDataProvider provider_;
+  fxl::RefPtr<MockSymbolDataProvider> provider_;
 };
 
 void DwarfExprEvalTest::DoEvalTest(
@@ -117,25 +41,24 @@ void DwarfExprEvalTest::DoEvalTest(
     DwarfExprEval::Completion expected_completion, uint64_t expected_result,
     const char* expected_message) {
   bool callback_issued = false;
-  EXPECT_EQ(
-      expected_completion,
-      eval_.Eval(&provider_, data,
-                 [&callback_issued, expected_success, expected_completion,
-                  expected_result,
-                  expected_message](DwarfExprEval* eval, const Err& err) {
-                   EXPECT_TRUE(eval->is_complete());
-                   EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
-                   if (err.ok())
-                     EXPECT_EQ(expected_result, eval->GetResult());
-                   else if (expected_message)
-                     EXPECT_EQ(expected_message, err.msg());
-                   callback_issued = true;
+  EXPECT_EQ(expected_completion,
+            eval_.Eval(provider(), data, [&callback_issued, expected_success,
+                                          expected_completion, expected_result,
+                                          expected_message](DwarfExprEval* eval,
+                                                            const Err& err) {
+              EXPECT_TRUE(eval->is_complete());
+              EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
+              if (err.ok())
+                EXPECT_EQ(expected_result, eval->GetResult());
+              else if (expected_message)
+                EXPECT_EQ(expected_message, err.msg());
+              callback_issued = true;
 
-                   // When we're doing an async completion, need to exit the
-                   // message loop to continue with the test.
-                   if (expected_completion == DwarfExprEval::Completion::kAsync)
-                     debug_ipc::MessageLoop::Current()->QuitNow();
-                 }));
+              // When we're doing an async completion, need to exit the message
+              // loop to continue with the test.
+              if (expected_completion == DwarfExprEval::Completion::kAsync)
+                debug_ipc::MessageLoop::Current()->QuitNow();
+            }));
 
   if (expected_completion == DwarfExprEval::Completion::kAsync) {
     // In the async case the message loop needs to be run to get the result.
@@ -187,7 +110,7 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
   std::unique_ptr<DwarfExprEval> eval = std::make_unique<DwarfExprEval>();
 
   bool callback_issued = false;
-  eval->Eval(&provider(), loop_data,
+  eval->Eval(provider(), loop_data,
              [&callback_issued](DwarfExprEval* eval, const Err& err) {
                callback_issued = true;
              });
@@ -215,7 +138,7 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
 // Tests synchronously reading a single register.
 TEST_F(DwarfExprEvalTest, SyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider().AddRegisterValue(0, true, kValue);
+  provider()->AddRegisterValue(0, true, kValue);
 
   DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kSync,
              kValue);
@@ -227,7 +150,7 @@ TEST_F(DwarfExprEvalTest, SyncRegister) {
 // Also tests DW_OP_nop.
 TEST_F(DwarfExprEvalTest, SyncRegisterAsNumber) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider().AddRegisterValue(1, true, kValue);
+  provider()->AddRegisterValue(1, true, kValue);
 
   // Use "regx" which will read the register number as a ULEB following it.
   // The byte is the ULEB-encoded version of 1 (high bit set to indicate it's
@@ -243,7 +166,7 @@ TEST_F(DwarfExprEvalTest, SyncRegisterAsNumber) {
 // Tests asynchronously reading a single register.
 TEST_F(DwarfExprEvalTest, AsyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider().AddRegisterValue(0, false, kValue);
+  provider()->AddRegisterValue(0, false, kValue);
 
   DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kAsync,
              kValue);
@@ -260,7 +183,7 @@ TEST_F(DwarfExprEvalTest, SyncInvalidOp) {
 // Tests synchronously hitting an invalid opcode (async error handling).
 TEST_F(DwarfExprEvalTest, AsyncInvalidOp) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider().AddRegisterValue(0, false, kValue);
+  provider()->AddRegisterValue(0, false, kValue);
 
   // Make a program that consists of getting an async register and then
   // executing an invalid opcode.
@@ -305,8 +228,8 @@ TEST_F(DwarfExprEvalTest, ConstReadOffEnd) {
 }
 
 TEST_F(DwarfExprEvalTest, Breg) {
-  provider().AddRegisterValue(0, true, 100);
-  provider().AddRegisterValue(9, false, 200);
+  provider()->AddRegisterValue(0, true, 100);
+  provider()->AddRegisterValue(9, false, 200);
 
   // reg0 (=100) + 129 = 229 (synchronous).
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
@@ -320,8 +243,8 @@ TEST_F(DwarfExprEvalTest, Breg) {
 }
 
 TEST_F(DwarfExprEvalTest, Bregx) {
-  provider().AddRegisterValue(0, true, 100);
-  provider().AddRegisterValue(9, false, 200);
+  provider()->AddRegisterValue(0, true, 100);
+  provider()->AddRegisterValue(9, false, 200);
 
   // reg0 (=100) + 129 = 229 (synchronous).
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).

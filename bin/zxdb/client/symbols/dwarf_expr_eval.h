@@ -12,6 +12,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace llvm {
@@ -72,14 +73,15 @@ class DwarfExprEval {
   // being evaluated.
   uint64_t GetResult() const;
 
-  // The SymbolDataProvider implementation must outlive this class.
+  // This will take a reference to the SymbolDataProvider until the computation
+  // is complete.
   //
   // The return value will indicate if the request completed synchronously. In
-  // synchronous completion the CALLBACK WILL HAVE BEEN CALLED REENTRANTLY.
-  // This does not indicate success as it could suceed or fail both
-  // synchronously and asynchronously.
-  Completion Eval(SymbolDataProvider* data_provider, Expression expr,
-                  CompletionCallback cb);
+  // synchronous completion the callback will have been called reentrantly from
+  // within the stack of this function. This does not indicate success as it
+  // could suceed or fail both synchronously and asynchronously.
+  Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
+                  Expression expr, CompletionCallback cb);
 
  private:
   // Evaluates the next phases of the expression until an asynchronous operation
@@ -152,7 +154,7 @@ class DwarfExprEval {
   // as appropriate. This is the backend for jumps and branches.
   void Skip(int64_t amount);
 
-  SymbolDataProvider* data_provider_ = nullptr;  // Non-owning.
+  fxl::RefPtr<SymbolDataProvider> data_provider_;
 
   // The expression. See also expr_index_.
   Expression expr_;

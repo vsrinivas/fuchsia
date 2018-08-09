@@ -47,6 +47,8 @@ static_library("client") {
     "frame.cc",
     "frame_impl.cc",
     "frame_impl.h",
+    "frame_symbol_data_provider.cc",
+    "frame_symbol_data_provider.h",
     "memory_dump.cc",
     "process.cc",
     "process_impl.cc",

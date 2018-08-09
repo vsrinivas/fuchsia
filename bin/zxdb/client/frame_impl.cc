@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/frame_impl.h"
 
+#include "garnet/bin/zxdb/client/frame_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
@@ -17,7 +18,10 @@ FrameImpl::FrameImpl(ThreadImpl* thread,
       stack_frame_(stack_frame),
       location_(std::move(location)) {}
 
-FrameImpl::~FrameImpl() = default;
+FrameImpl::~FrameImpl() {
+  if (symbol_data_provider_)
+    symbol_data_provider_->DisownFrame();
+}
 
 Thread* FrameImpl::GetThread() const { return thread_; }
 
@@ -36,6 +40,12 @@ void FrameImpl::EnsureSymbolized() {
     return;
   location_ =
       thread_->process()->GetSymbols()->LocationForAddress(location_.address());
+}
+
+fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() {
+  if (!symbol_data_provider_)
+    symbol_data_provider_ = fxl::MakeRefCounted<FrameSymbolDataProvider>(this);
+  return symbol_data_provider_;
 }
 
 }  // namespace zxdb

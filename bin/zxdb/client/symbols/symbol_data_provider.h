@@ -6,6 +6,8 @@
 
 #include <functional>
 
+#include "lib/fxl/memory/ref_counted.h"
+
 namespace zxdb {
 
 // This interface is how the debugger backend provides memory and register data
@@ -16,7 +18,11 @@ namespace zxdb {
 // register getter function and a fallback asynchronous one. They are separated
 // to avoid overhead of closure creation in the synchronous case, and to
 // avoid having a callback that's never issued.
-class SymbolDataProvider {
+//
+// This object is reference counted since evaluating a DWARF expression is
+// asynchronous.
+class SymbolDataProvider
+    : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
   // Request for synchronous register data. If the register data can be provided
   // synchronously, the data will be put into the output parameter and this
@@ -48,6 +54,10 @@ class SymbolDataProvider {
   virtual void GetMemoryAsync(
       uint64_t address, uint32_t size,
       std::function<void(const uint8_t* data)> callback) = 0;
+
+ protected:
+  FRIEND_REF_COUNTED_THREAD_SAFE(SymbolDataProvider);
+  virtual ~SymbolDataProvider() = default;
 };
 
 }  // namespace zxdb

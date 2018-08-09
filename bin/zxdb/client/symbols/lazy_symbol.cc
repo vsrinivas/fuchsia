@@ -24,8 +24,6 @@ LazySymbol& LazySymbol::operator=(const LazySymbol& other) = default;
 LazySymbol& LazySymbol::operator=(LazySymbol&& other) = default;
 
 const Symbol* LazySymbol::Get() const {
-  FXL_DCHECK(is_valid());
-
   if (!symbol_.get()) {
     if (is_valid())
       symbol_ = factory_->CreateSymbol(factory_data_ptr_, factory_data_offset_);

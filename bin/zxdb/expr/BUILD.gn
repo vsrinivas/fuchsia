@@ -14,6 +14,8 @@ static_library("expr") {
     "expr_tokenizer.h",
     "expr_value.cc",
     "expr_value.h",
+    "symbol_variable_resolver.cc",
+    "symbol_variable_resolver.h",
   ]
 
   public_deps = [
@@ -30,10 +32,13 @@ source_set("tests") {
     "expr_node_unittest.cc",
     "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",
+    "symbol_variable_resolver_unittest.cc",
   ]
 
   deps = [
     ":expr",
+    "//garnet/bin/zxdb/client/symbols:test_support",
+    "//third_party/llvm/lib/BinaryFormat",
     "//third_party/googletest:gtest",
   ]
 }
