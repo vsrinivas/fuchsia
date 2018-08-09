@@ -84,6 +84,10 @@ impl Status {
     pub fn into_io_error(self) -> io::Error {
         self.into()
     }
+
+    pub fn from_result(res: Result<(), Self>) -> Self {
+        res.into()
+    }
 }
 
 impl From<io::ErrorKind> for Status {
@@ -181,6 +185,15 @@ impl From<Status> for io::Error {
 impl From<NulError> for Status {
     fn from(_error: NulError) -> Status {
         Status::INVALID_ARGS
+    }
+}
+
+impl From<Result<(), Status>> for Status {
+    fn from(res: Result<(), Status>) -> Status {
+        match res {
+            Ok(()) => Self::OK,
+            Err(status) => status,
+        }
     }
 }
 
