@@ -53,7 +53,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Print("socket dispatcher started")
+	log.Print("socket server started")
 
 	if err := AddNetstackService(ctx); err != nil {
 		log.Fatal(err)
