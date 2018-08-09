@@ -5,36 +5,8 @@
 import("//build/package.gni")
 import("//build/fidl/fidl.gni")
 
-# This executable runs the benchmarks via the gbenchmark library.  It is
-# not suitable for running via runtests because, by default (when run with
-# no arguments), it is too slow.
 executable("bin") {
   output_name = "zircon_benchmarks"
-  testonly = true
-  sources = [
-    "main_gbenchmark.cc",
-  ]
-  deps = [
-    ":lib",
-  ]
-}
-
-# This executable runs the benchmarks quickly.  It is included in
-# /system/test/ and so gets run on the bots via runtests.  Its role is
-# to ensure that the benchmarks are kept working.  It bypasses use of
-# the gbenchmark library.
-executable("test") {
-  output_name = "zircon_benchmarks_test"
-  testonly = true
-  sources = [
-    "main_test.cc",
-  ]
-  deps = [
-    ":lib",
-  ]
-}
-
-source_set("lib") {
   testonly = true
   sources = [
     "channels.cc",
@@ -64,7 +36,6 @@ source_set("lib") {
     "//zircon/public/lib/zx",
   ]
   public_deps = [
-    "//third_party/benchmark",
     "//zircon/public/lib/perftest",
   ]
   libs = [ "zircon" ]
@@ -83,14 +54,11 @@ package("zircon_benchmarks") {
 
   deps = [
     ":bin",
-    ":test",
   ]
-
-  binary = "zircon_benchmarks"
 
   tests = [
     {
-      name = "zircon_benchmarks_test"
+      name = "zircon_benchmarks"
     },
   ]
 }

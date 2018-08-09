@@ -4,12 +4,9 @@
 
 #pragma once
 
-#include <benchmark/benchmark.h>
 #include <perftest/perftest.h>
 
 namespace fbenchmark {
-
-int BenchmarksMain(int argc, char** argv, bool run_gbenchmark);
 
 // Register a benchmark that is specified by a class.
 //
@@ -17,12 +14,6 @@ int BenchmarksMain(int argc, char** argv, bool run_gbenchmark);
 // iteration of the test.
 template <class TestClass, typename... Args>
 void RegisterTest(const char* test_name, Args... args) {
-  benchmark::RegisterBenchmark(test_name, [=](benchmark::State& state) {
-    TestClass test(args...);
-    while (state.KeepRunning())
-      test.Run();
-  });
-
   perftest::RegisterTest(test_name, [=](perftest::RepeatState* state) {
     TestClass test(args...);
     while (state->KeepRunning()) {

@@ -27,7 +27,8 @@ runbench_exec "${OUT_DIR}/zircon.perf_test.json" \
 # Performance tests implemented in the Garnet repo (the name
 # "zircon_benchmarks" is now misleading).
 runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
-    /pkgfs/packages/zircon_benchmarks/0/bin/app -p --out="${OUT_DIR}/zircon_benchmarks.json"
+    /pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks \
+    -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
 if `run vulkan_is_supported`; then
   # Scenic performance tests.
