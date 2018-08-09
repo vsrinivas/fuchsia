@@ -78,7 +78,7 @@ template("pm_build_package") {
       "-m",
       rebase_path(pkg_manifest_file, root_build_dir),
       "build",
-      "-depfile"
+      "-depfile",
     ]
   }
 }
@@ -448,12 +448,8 @@ template("package") {
       # Dummy target to deposit an empty ids.txt file for
       # //build/images:ids.txt to collect.
       action("${pkg_target_name}.manifest") {
-        visibility = [
-          ":${pkg_target_name}",
-          "//build/images:blob.manifest",
-          "//build/images:ids.txt",
-        ]
         script = "/bin/cp"
+
         # Add sources and deps so that the package gets rebuilt whenever they
         # change.
         sources = manifest_sources
@@ -489,14 +485,6 @@ template("package") {
       # For a real package, generate the package manifest with all its
       # dynamically linked libraries resolved.
       generate_manifest("${pkg_target_name}.manifest") {
-        visibility = [
-          ":${pkg_target_name}",
-          ":${pkg_target_name}.meta",
-          ":${pkg_target_name}.blob.rsp",
-          ":${pkg_target_name}.pkgsvr_index.rsp",
-          ":${pkg_target_name}.amber_index.rsp",
-          "//build/images:*",
-        ]
         sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
         args = manifest_args +
                [ "--entry=meta/package=" +
@@ -507,12 +495,6 @@ template("package") {
 
       # Next generate a signed, sealed package file.
       pm_build_package("${pkg_target_name}.meta") {
-        visibility = [
-          ":${pkg_target_name}.blob.rsp",
-          ":${pkg_target_name}.pkgsvr_index.rsp",
-          ":${pkg_target_name}.amber_index.rsp",
-          "//build/images:*",
-        ]
         manifest = ":${pkg_target_name}.manifest"
       }
 
@@ -535,7 +517,6 @@ template("package") {
     }
 
     generate_response_file("${pkg_target_name}.blob.rsp") {
-      visibility = [ "//build/images:blob.manifest" ]
       if (pkg.deprecated_system_image) {
         # A system_image package has no blobs of its own.
         response_file_contents = []
