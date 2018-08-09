@@ -9,9 +9,8 @@ use client::internal::{MlmeSink, UserSink};
 use client::rsn::Rsna;
 use MlmeRequest;
 use super::DeviceInfo;
-use wlan_rsn::rsne::Rsne;
 use wlan_rsn::key::exchange::Key;
-use wlan_rsn::rsna::{SecAssocUpdate, SecAssocStatus};
+use wlan_rsn::rsna::{NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 use eapol;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -256,9 +255,9 @@ fn deauth_code_to_connect_result(reason_code: fidl_mlme::ReasonCode) -> ConnectR
 fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::EapolIndication)
     -> RsnaStatus
 {
-    let mic_len = get_mic_size(&rsna.s_rsne);
+    let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
-    let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_len).to_full_result() {
+    let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_size).to_full_result() {
         Ok(key_frame) => Some(eapol::Frame::Key(key_frame)),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
@@ -280,7 +279,7 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
                     // ESS Security Association derived a new key.
                     // Configure key in MLME.
                     SecAssocUpdate::Key(key) => {
-                        send_keys(mlme_sink, bssid, &rsna.s_rsne, key)
+                        send_keys(mlme_sink, bssid, &rsna.negotiated_rsne, key)
                     },
                     // Received a status update.
                     // TODO(hahnr): Rework this part.
@@ -304,13 +303,6 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
     RsnaStatus::Unchanged
 }
 
-fn get_mic_size(s_rsne: &Rsne) -> u16
-{
-    // The client should never authenticate with a BSS which uses an AKM with an unknown MIC size.
-    s_rsne.akm_suites.iter().next().expect("expected RSNE to carry exactly one AKM suite")
-        .mic_bytes().expect("expected AKM to have a known MIC size")
-}
-
 fn send_eapol_frame(mlme_sink: &MlmeSink, bssid: [u8; 6], sta_addr: [u8; 6], frame: eapol::KeyFrame)
 {
     let mut buf = Vec::with_capacity(frame.len());
@@ -324,12 +316,10 @@ fn send_eapol_frame(mlme_sink: &MlmeSink, bssid: [u8; 6], sta_addr: [u8; 6], fra
     ));
 }
 
-fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &Rsne, key: Key)
+fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &NegotiatedRsne, key: Key)
 {
     match key {
         Key::Ptk(ptk) => {
-            let pairwise = s_rsne.pairwise_cipher_suites.iter().next()
-                .expect("expected RSNE to carry exactly one pairwise cipher suite");
             mlme_sink.send(MlmeRequest::SetKeys(
                 fidl_mlme::SetKeysRequest {
                     keylist: vec![fidl_mlme::SetKeyDescriptor{
@@ -337,16 +327,14 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &Rsne, key: Key)
                         key: ptk.tk().to_vec(),
                         key_id: 0,
                         address: bssid,
-                        cipher_suite_oui: eapol::to_array(&pairwise.oui[..]),
-                        cipher_suite_type: pairwise.suite_type,
+                        cipher_suite_oui: eapol::to_array(&s_rsne.pairwise.oui[..]),
+                        cipher_suite_type: s_rsne.pairwise.suite_type,
                         rsc: [0u8; 8],
                     }]
                 }
             ));
         },
         Key::Gtk(gtk) => {
-            let group_data = s_rsne.group_data_cipher_suite.as_ref()
-                .expect("expected RSNE to carry a group data cipher suite");
             mlme_sink.send(MlmeRequest::SetKeys(
                 fidl_mlme::SetKeysRequest {
                     keylist: vec![fidl_mlme::SetKeyDescriptor{
@@ -354,8 +342,8 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &Rsne, key: Key)
                         key: gtk.tk().to_vec(),
                         key_id: gtk.key_id() as u16,
                         address: [0xFFu8; 6],
-                        cipher_suite_oui: eapol::to_array(&group_data.oui[..]),
-                        cipher_suite_type: group_data.suite_type,
+                        cipher_suite_oui: eapol::to_array(&s_rsne.group_data.oui[..]),
+                        cipher_suite_type: s_rsne.group_data.suite_type,
                         rsc: [0u8; 8],
                     }]
                 }
@@ -380,8 +368,9 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &Mlm
     where T: Tokens
 {
     let s_rsne_data = cmd.rsna.as_ref().map(|rsna| {
-        let mut buf = Vec::with_capacity(rsna.s_rsne.len());
-        rsna.s_rsne.as_bytes(&mut buf);
+        let s_rsne = rsna.negotiated_rsne.to_full_rsne();
+        let mut buf = Vec::with_capacity(s_rsne.len());
+        s_rsne.as_bytes(&mut buf);
         buf
     });
 

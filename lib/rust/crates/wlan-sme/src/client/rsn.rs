@@ -8,18 +8,8 @@ use wlan_rsn::rsna::{esssa::EssSa, NegotiatedRsne, Role};
 
 #[derive(Debug)]
 pub struct Rsna {
-    pub s_rsne: Rsne,
+    pub negotiated_rsne: NegotiatedRsne,
     pub esssa: EssSa,
-}
-
-impl Rsna {
-    pub fn new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
-        assert_eq!(s_rsne.pairwise_cipher_suites.len(), 1);
-        assert_eq!(s_rsne.akm_suites.len(), 1);
-        assert!(s_rsne.group_data_cipher_suite.is_some());
-
-        Rsna {s_rsne, esssa}
-    }
 }
 
 /// Supported Ciphers and AKMs:
@@ -57,7 +47,8 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
     let esssa = make_ess_sa(bss.ssid.as_bytes(), &password[..], device_info.addr,
                             s_rsne.clone(), bss.bssid, a_rsne)
         .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
-    Ok(Some(Rsna::new(s_rsne, esssa)))
+    let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+    Ok(Some(Rsna{negotiated_rsne, esssa }))
 }
 
 fn make_ess_sa(ssid: &[u8], passphrase: &[u8], sta_addr: [u8; 6], sta_rsne: Rsne, bssid: [u8; 6],
