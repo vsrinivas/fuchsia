@@ -149,7 +149,7 @@ TEST(NoiseFloor, Source_Float) {
 // populate the accumulator with full-range vals that translate to [-1.0, +1.0].
 template <typename T>
 double MeasureOutputNoiseFloor(double* sinad_db) {
-  OutputFormatterPtr output_formatter;
+  OutputProducerPtr output_producer;
   double amplitude, expected_amplitude;
 
   // Calculate expected magnitude of signal strength, compared to max value.
@@ -159,23 +159,23 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   // For float, 7FFF equates to less than 1.0, so adjust by (32768/32767).
 
   if (std::is_same<T, uint8_t>::value) {
-    output_formatter =
-        SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
+    output_producer =
+        SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
     expected_amplitude = kFullScaleInt8InputAmplitude;
     amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
-    output_formatter =
-        SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
+    output_producer =
+        SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
     expected_amplitude = kFullScaleInt16InputAmplitude;
     amplitude = kFullScaleInt16AccumAmplitude;
   } else if (std::is_same<T, int32_t>::value) {
-    output_formatter = SelectOutputFormatter(
+    output_producer = SelectOutputProducer(
         fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
     expected_amplitude = kFullScaleInt24In32InputAmplitude;
     amplitude = kFullScaleInt24In32AccumAmplitude;
   } else if (std::is_same<T, float>::value) {
-    output_formatter =
-        SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1);
+    output_producer =
+        SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
     expected_amplitude = kFullScaleFloatInputAmplitude;
     amplitude = kFullScaleFloatAccumAmplitude;
   } else {
@@ -188,7 +188,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
                   amplitude);
 
   std::vector<T> dest(kFreqTestBufSize);
-  output_formatter->ProduceOutput(accum.data(), dest.data(), kFreqTestBufSize);
+  output_producer->ProduceOutput(accum.data(), dest.data(), kFreqTestBufSize);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;

@@ -14,7 +14,7 @@
 #include "garnet/bin/media/audio_core/constants.h"
 #include "garnet/bin/media/audio_core/gain.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
-#include "garnet/bin/media/audio_core/mixer/output_formatter.h"
+#include "garnet/bin/media/audio_core/mixer/output_producer.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -101,7 +101,7 @@ class StandardOutputBase : public AudioOutput {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Details about the final output format
-  OutputFormatterPtr output_formatter_;
+  OutputProducerPtr output_producer_;
 
   // Timer used to schedule periodic mixing.
   fbl::RefPtr<::dispatcher::Timer> mix_timer_;

@@ -98,7 +98,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   // include...
   //
   // ++ Never use HW gain, even if it supports it.
-  // ++ Always use HW gain when present, regarless of its limitations.
+  // ++ Always use HW gain when present, regardless of its limitations.
   // ++ Use HW gain when present, but only if it reaches a minimum bar of
   //    functionality.
   // ++ Implement a hybrid of HW/SW gain.  IOW - Get as close as possible to our
@@ -107,7 +107,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   //    not be able to synchronize the HW and SW changes in gain well enough to
   //    avoid strange situations where the jumps in one direction (because of
   //    the SW component), and then in the other (as the HW gain command takes
-  //    affect).
+  //    effect).
   //
   if (device_settings_ != nullptr) {
     AudioDeviceSettings::GainState cur_gain_state;
@@ -154,7 +154,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
             << kUnderflowCooldown / 1000000.0 << " mSec.";
 
         underflow_start_time_ = now;
-        output_formatter_->FillWithSilence(rb.virt(), rb.frames());
+        output_producer_->FillWithSilence(rb.virt(), rb.frames());
         zx_cache_flush(rb.virt(), rb.size(), ZX_CACHE_FLUSH_DATA);
 
         wav_writer_.Close();
@@ -336,16 +336,16 @@ void DriverOutput::OnDriverInfoFetched() {
   driver_->SetEndFenceToStartFenceFrames(
       static_cast<uint32_t>(retention_frames));
 
-  // Select our output formatter
+  // Select our output producer
   fuchsia::media::AudioStreamTypePtr config(
       fuchsia::media::AudioStreamType::New());
   config->frames_per_second = pref_fps;
   config->channels = pref_chan;
   config->sample_format = pref_fmt;
 
-  output_formatter_ = OutputFormatter::Select(config);
-  if (!output_formatter_) {
-    FXL_LOG(ERROR) << "Output: OutputFormatter cannot support this request: "
+  output_producer_ = OutputProducer::Select(config);
+  if (!output_producer_) {
+    FXL_LOG(ERROR) << "Output: OutputProducer cannot support this request: "
                    << pref_fps << " Hz, " << pref_chan
                    << "-channel, sample format 0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt);
@@ -397,9 +397,9 @@ void DriverOutput::OnDriverConfigComplete() {
   // Fill our brand new ring buffer with silence
   FXL_CHECK(driver_ring_buffer() != nullptr);
   const auto& rb = *driver_ring_buffer();
-  FXL_DCHECK(output_formatter_ != nullptr);
+  FXL_DCHECK(output_producer_ != nullptr);
   FXL_DCHECK(rb.virt() != nullptr);
-  output_formatter_->FillWithSilence(rb.virt(), rb.frames());
+  output_producer_->FillWithSilence(rb.virt(), rb.frames());
 
   // Set up the intermediate buffer at the StandardOutputBase level
   //

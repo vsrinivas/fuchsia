@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/audio_core/mixer/output_formatter.h"
+#include "garnet/bin/media/audio_core/mixer/output_producer.h"
 
 #include <limits>
 #include <type_traits>
@@ -22,9 +22,9 @@ namespace audio {
 // web-search "audio float int convert"). Our float32-based internal pipeline
 // can accomodate float and int Sources without data loss (where Source is a
 // client-submitted stream from AudioOut, or an input device), but for non-
-// float Destinations (output device, or AudioIn stream to a client) we
-// must clamp +1.0 values in DstConverter::Convert. When translating from float
-// to int16 for example, we can translate -1.0 perfectly to -32768 (negative
+// float Destinations (output device, or AudioIn stream to a client) we must
+// clamp +1.0 values in DestConverter::Convert. When translating from float to
+// int16 for example, we can translate -1.0 perfectly to -32768 (negative
 // 0x8000), while +1.0 cannot become +32768 (positive 0x8000, exceeding int16's
 // max) so it is clamped to 32767 (0x7FFF).
 //
@@ -33,10 +33,10 @@ namespace audio {
 
 // Template to produce destination samples from normalized samples.
 template <typename DType, typename Enable = void>
-class DstConverter;
+class DestConverter;
 
 template <typename DType>
-class DstConverter<
+class DestConverter<
     DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
@@ -48,7 +48,7 @@ class DstConverter<
 };
 
 template <typename DType>
-class DstConverter<
+class DestConverter<
     DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
@@ -59,7 +59,7 @@ class DstConverter<
 };
 
 template <typename DType>
-class DstConverter<
+class DestConverter<
     DType, typename std::enable_if<std::is_same<DType, int32_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
@@ -69,7 +69,7 @@ class DstConverter<
 };
 
 template <typename DType>
-class DstConverter<
+class DestConverter<
     DType, typename std::enable_if<std::is_same<DType, float>::value>::type> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
@@ -104,16 +104,16 @@ class SilenceMaker<
 };
 
 // A templated class which implements the ProduceOutput and FillWithSilence
-// methods of OutputFormatter
+// methods of OutputProducer
 template <typename DType>
-class OutputFormatterImpl : public OutputFormatter {
+class OutputProducerImpl : public OutputProducer {
  public:
-  explicit OutputFormatterImpl(const fuchsia::media::AudioStreamTypePtr& format)
-      : OutputFormatter(format, sizeof(DType)) {}
+  explicit OutputProducerImpl(const fuchsia::media::AudioStreamTypePtr& format)
+      : OutputProducer(format, sizeof(DType)) {}
 
   void ProduceOutput(const float* source, void* dest_void,
                      uint32_t frames) const override {
-    using DC = DstConverter<DType>;
+    using DC = DestConverter<DType>;
     DType* dest = static_cast<DType*>(dest_void);
 
     // Previously we clamped here; because of rounding, this is different for
@@ -128,9 +128,9 @@ class OutputFormatterImpl : public OutputFormatter {
   }
 };
 
-// Constructor/destructor for the common OutputFormatter base class.
-OutputFormatter::OutputFormatter(
-    const fuchsia::media::AudioStreamTypePtr& format, uint32_t bytes_per_sample)
+// Constructor/destructor for the common OutputProducer base class.
+OutputProducer::OutputProducer(const fuchsia::media::AudioStreamTypePtr& format,
+                               uint32_t bytes_per_sample)
     : channels_(format->channels),
       bytes_per_sample_(bytes_per_sample),
       bytes_per_frame_(bytes_per_sample * format->channels) {
@@ -138,20 +138,20 @@ OutputFormatter::OutputFormatter(
 }
 
 // Selection routine which will instantiate a particular templatized version of
-// the output formatter.
-OutputFormatterPtr OutputFormatter::Select(
+// the output producer.
+OutputProducerPtr OutputProducer::Select(
     const fuchsia::media::AudioStreamTypePtr& format) {
   FXL_DCHECK(format);
 
   switch (format->sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return OutputFormatterPtr(new OutputFormatterImpl<uint8_t>(format));
+      return OutputProducerPtr(new OutputProducerImpl<uint8_t>(format));
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
+      return OutputProducerPtr(new OutputProducerImpl<int16_t>(format));
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return OutputFormatterPtr(new OutputFormatterImpl<int32_t>(format));
+      return OutputProducerPtr(new OutputProducerImpl<int32_t>(format));
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return OutputFormatterPtr(new OutputFormatterImpl<float>(format));
+      return OutputProducerPtr(new OutputProducerImpl<float>(format));
     default:
       FXL_LOG(ERROR) << "Unsupported output format "
                      << (uint32_t)format->sample_format;

@@ -301,7 +301,7 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
   EXPECT_EQ(5.0, magn_other);
 }
 
-// Test float-based MeasureAudioFreq (only needed to validate OutputFormatter).
+// Test float-based MeasureAudioFreq (only needed to validate OutputProducer).
 // reals[] consists of cosines with freq 0,1,2; magnitude 3,4,6; phase 0,pi,pi.
 TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
   float reals[] = {-7.0f, 9.0f, 1.0f, 9.0f};

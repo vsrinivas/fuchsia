@@ -39,12 +39,12 @@ MixerPtr SelectMixer(fuchsia::media::AudioSampleFormat src_format,
   return mixer;
 }
 
-// Just as Mixers convert audio into our accumulation format, OutputFormatter
+// Just as Mixers convert audio into our accumulation format, OutputProducer
 // objects exist to convert frames of audio from accumulation format into
 // destination format. They perform no SRC, gain scaling or rechannelization, so
 // frames_per_second is unimportant and num_channels is only needed so that they
 // can calculate the size of a (multi-channel) audio frame.
-OutputFormatterPtr SelectOutputFormatter(
+OutputProducerPtr SelectOutputProducer(
     fuchsia::media::AudioSampleFormat dst_format, uint32_t num_channels) {
   fuchsia::media::AudioStreamTypePtr dst_details =
       fuchsia::media::AudioStreamType::New();
@@ -52,9 +52,9 @@ OutputFormatterPtr SelectOutputFormatter(
   dst_details->channels = num_channels;
   dst_details->frames_per_second = 48000;
 
-  OutputFormatterPtr output_formatter = OutputFormatter::Select(dst_details);
+  OutputProducerPtr output_producer = OutputProducer::Select(dst_details);
 
-  return output_formatter;
+  return output_producer;
 }
 
 // This shared function normalizes data arrays into our float32 pipeline.

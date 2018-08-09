@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_FORMATTER_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_FORMATTER_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_PRODUCER_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_PRODUCER_H_
 
 #include <memory>
 
@@ -12,15 +12,15 @@
 namespace media {
 namespace audio {
 
-class OutputFormatter;
-using OutputFormatterPtr = std::unique_ptr<OutputFormatter>;
+class OutputProducer;
+using OutputProducerPtr = std::unique_ptr<OutputProducer>;
 
-class OutputFormatter {
+class OutputProducer {
  public:
-  static OutputFormatterPtr Select(
+  static OutputProducerPtr Select(
       const fuchsia::media::AudioStreamTypePtr& output_format);
 
-  virtual ~OutputFormatter() = default;
+  virtual ~OutputProducer() = default;
 
   /**
    * Take frames of audio from the source intermediate buffer and convert them
@@ -57,8 +57,8 @@ class OutputFormatter {
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  protected:
-  OutputFormatter(const fuchsia::media::AudioStreamTypePtr& output_format,
-                  uint32_t bytes_per_sample);
+  OutputProducer(const fuchsia::media::AudioStreamTypePtr& output_format,
+                 uint32_t bytes_per_sample);
 
   fuchsia::media::AudioStreamTypePtr format_;
   uint32_t channels_ = 0;
@@ -69,4 +69,4 @@ class OutputFormatter {
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_FORMATTER_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_PRODUCER_H_

@@ -5,12 +5,10 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_UTILS_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_UTILS_H_
 
-#include <cmath>
-#include <limits>
 #include <type_traits>
 
-#include <fbl/algorithm.h>
-#include <zircon/compiler.h>
+// #include <fbl/algorithm.h>
+// #include <zircon/compiler.h>
 
 #include "garnet/bin/media/audio_core/constants.h"
 #include "garnet/bin/media/audio_core/gain.h"
@@ -24,6 +22,9 @@ namespace mixer {
 // order to produce efficient inner mixing loops for all of the different
 // variations of source/destination sample type/channel counts.
 
+//
+// ScalerType
+//
 // Enum used to differentiate between different scaling optimization types.
 enum class ScalerType {
   MUTED,     // Massive attenuation. Just skip data.
@@ -31,6 +32,9 @@ enum class ScalerType {
   EQ_UNITY,  // Unity gain. Scaling is not needed.
 };
 
+//
+// SampleNormalizer
+//
 // Template to read and normalize samples into float32 [ -1.0 , 1.0 ] format.
 template <typename SType, typename Enable = void>
 class SampleNormalizer;
@@ -67,6 +71,9 @@ class SampleNormalizer<
   static inline float Read(const SType* src) { return *src; }
 };
 
+//
+// SampleScaler
+//
 // Template used to scale normalized sample vals by supplied amplitude scalers.
 template <ScalerType ScaleType, typename Enable = void>
 class SampleScaler;
@@ -94,6 +101,9 @@ class SampleScaler<ScaleType, typename std::enable_if<(
   static inline float Scale(float val, Gain::AScale) { return val; }
 };
 
+//
+// SrcReader
+//
 // Template to read normalized source samples, and combine channels if required.
 template <typename SType, size_t SChCount, size_t DChCount,
           typename Enable = void>
@@ -124,6 +134,9 @@ class SrcReader<
   }
 };
 
+//
+// DstMixer
+//
 // Template to mix normalized destination samples with normalized source samples
 // based on scaling and accumulation policy.
 template <ScalerType ScaleType, bool DoAccumulate, typename Enable = void>

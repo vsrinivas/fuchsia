@@ -17,7 +17,7 @@
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
-#include "garnet/bin/media/audio_core/mixer/output_formatter.h"
+#include "garnet/bin/media/audio_core/mixer/output_producer.h"
 #include "garnet/bin/media/audio_core/utils.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -173,7 +173,7 @@ class AudioInImpl : public AudioObject,
   void SetGain(float gain_db) final;
   void SetMute(bool muted) final;
 
-  // Methods used by the capture/mixer thread(s).  Must be called from the
+  // Methods used by the capture/mixer thread(s). Must be called from the
   // mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool MixToIntermediate(uint32_t mix_frames)
@@ -236,8 +236,8 @@ class AudioInImpl : public AudioObject,
   PcbList pending_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
   PcbList finished_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
 
-  // Intermediate mixing buffer and output formatter
-  std::unique_ptr<OutputFormatter> output_formatter_;
+  // Intermediate mixing buffer and output producer
+  std::unique_ptr<OutputProducer> output_producer_;
   std::unique_ptr<float[]> mix_buf_;
 
   // Vector used to hold references to our source links while we are mixing

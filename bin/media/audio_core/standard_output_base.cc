@@ -88,11 +88,11 @@ void StandardOutputBase::Process() {
         break;
       }
 
-      // If we have a mix job, then we must have an output formatter, and an
+      // If we have a mix job, then we must have an output producer, and an
       // intermediate buffer allocated, and it must be large enough for the mix
       // job we were given.
       FXL_DCHECK(mix_buf_);
-      FXL_DCHECK(output_formatter_);
+      FXL_DCHECK(output_producer_);
       FXL_DCHECK(cur_mix_job_.buf_frames <= mix_buf_frames_);
 
       // If we are not muted, actually do the mix.  Otherwise, just fill the
@@ -102,18 +102,18 @@ void StandardOutputBase::Process() {
       if (!cur_mix_job_.sw_output_muted) {
         // Fill the intermediate buffer with silence.
         size_t bytes_to_zero = sizeof(mix_buf_[0]) * cur_mix_job_.buf_frames *
-                               output_formatter_->channels();
+                               output_producer_->channels();
         ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
         // Mix each audio outs into the intermediate buffer, then clip/format
         // into the final buffer.
         ForeachLink(TaskType::Mix);
-        output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
-                                         cur_mix_job_.buf_frames);
+        output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
+                                        cur_mix_job_.buf_frames);
         mixed = true;
       } else {
-        output_formatter_->FillWithSilence(cur_mix_job_.buf,
-                                           cur_mix_job_.buf_frames);
+        output_producer_->FillWithSilence(cur_mix_job_.buf,
+                                          cur_mix_job_.buf_frames);
       }
 
     } while (FinishMixJob(cur_mix_job_));
@@ -167,9 +167,9 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
   // If we have an output, pick a mixer based on the input and output formats.
   // Otherwise, we only need a NoOp mixer (for the time being).
   auto& packet_link = *(static_cast<AudioLinkPacketSource*>(link.get()));
-  if (output_formatter_) {
+  if (output_producer_) {
     bk->mixer = Mixer::Select(packet_link.format_info().format(),
-                              *(output_formatter_->format()));
+                              *(output_producer_->format()));
   } else {
     bk->mixer = MixerPtr(new audio::mixer::NoOp());
   }
@@ -193,13 +193,13 @@ StandardOutputBase::AllocBookkeeping() {
 }
 
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
-  FXL_DCHECK(output_formatter_->channels() > 0u);
+  FXL_DCHECK(output_producer_->channels() > 0u);
   FXL_DCHECK(max_mix_frames > 0u);
   FXL_DCHECK(max_mix_frames <= std::numeric_limits<uint32_t>::max() /
-                                   output_formatter_->channels());
+                                   output_producer_->channels());
 
   mix_buf_frames_ = max_mix_frames;
-  mix_buf_.reset(new float[mix_buf_frames_ * output_formatter_->channels()]);
+  mix_buf_.reset(new float[mix_buf_frames_ * output_producer_->channels()]);
 }
 
 void StandardOutputBase::ForeachLink(TaskType task_type) {
@@ -365,7 +365,7 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
 
   uint32_t frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
   float* buf = mix_buf_.get() +
-               (cur_mix_job_.frames_produced * output_formatter_->channels());
+               (cur_mix_job_.frames_produced * output_producer_->channels());
 
   // Figure out where the first and last sampling points of this job are,
   // expressed in fractional audio out frames.

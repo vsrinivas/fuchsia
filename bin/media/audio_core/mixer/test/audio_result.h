@@ -38,7 +38,7 @@ namespace test {
 // precision. This does not pose a risk of 'flaky test' since the math should
 // be the same every time. With no real dependencies outside FBL, we expect
 // any change that affects these results to be directly within the core
-// objects (Mixer, Gain, OutputFormatter), and the corresponding adjustments
+// objects (Mixer, Gain, OutputProducer), and the corresponding adjustments
 // to these thresholds should be included with that CL.
 //
 // Measurements and thresholds grouped into stages (where our pipeline is

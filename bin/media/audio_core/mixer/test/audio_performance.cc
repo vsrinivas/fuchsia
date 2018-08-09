@@ -18,7 +18,7 @@ void AudioPerformance::Profile() {
   printf("\n\n Performance Profiling");
 
   AudioPerformance::ProfileMixers();
-  AudioPerformance::ProfileOutputFormatters();
+  AudioPerformance::ProfileOutputProducers();
 }
 
 void AudioPerformance::ProfileMixers() {
@@ -213,7 +213,7 @@ void AudioPerformance::DisplayOutputConfigLegend() {
       "\t    n: Number of output channels (one-digit number)\n\n");
 }
 
-void AudioPerformance::ProfileOutputFormatters() {
+void AudioPerformance::ProfileOutputProducers() {
   zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   DisplayOutputConfigLegend();
@@ -228,7 +228,7 @@ void AudioPerformance::ProfileOutputFormatters() {
   DisplayOutputColumnHeader();
   DisplayOutputConfigLegend();
 
-  printf("   Total time to profile OutputFormatters: %lu ms\n   --------\n\n",
+  printf("   Total time to profile OutputProducers: %lu ms\n   --------\n\n",
          (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time) / 1000000);
 }
 
@@ -265,8 +265,8 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
     return;
   }
 
-  audio::OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(sample_format, num_chans);
+  audio::OutputProducerPtr output_producer =
+      SelectOutputProducer(sample_format, num_chans);
 
   uint32_t num_samples = kFreqTestBufSize * num_chans;
 
@@ -301,7 +301,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
       zx_duration_t elapsed;
       zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
-      output_formatter->FillWithSilence(dest.get(), kFreqTestBufSize);
+      output_producer->FillWithSilence(dest.get(), kFreqTestBufSize);
       elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
 
       if (i > 0) {
@@ -319,8 +319,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
       zx_duration_t elapsed;
       zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
-      output_formatter->ProduceOutput(accum.get(), dest.get(),
-                                      kFreqTestBufSize);
+      output_producer->ProduceOutput(accum.get(), dest.get(), kFreqTestBufSize);
       elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
 
       if (i > 0) {

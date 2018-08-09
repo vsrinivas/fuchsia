@@ -1,7 +1,7 @@
 # Audio Mixer tests
 
 These tests validate the core of Fuchsia's system audio mixing (our Mixer,
-OutputFormatter and Gain objects) at a unit level, using tests in these areas:
+OutputProducer and Gain objects) at a unit level, using tests in these areas:
 
 1) **DataFormats**
 2) **Pass-Thru**
@@ -133,10 +133,10 @@ less tight).
 ## Performance Profiling
 
 The audio_mixer_tests test binary also contains the ability to profile the
-performance of the Mixer and OutputFormatter areas. Use the __--profile__ flag
+performance of the Mixer and OutputProducer areas. Use the __--profile__ flag
 to trigger these micro-benchmark tests, which use *zx_clock_get* to measure the
 time required for the target to execute a Mix() or ProduceOutput() call (for
-Mixer or OutputFormatter objects, respectively) to generate 64k frames. The
+Mixer or OutputProducer objects, respectively) to generate 64k frames. The
 aggregated results that are displayed for each permutation of parameters
 represent the time consumed *per-call*, although to determine a Mean that is
 relatively reliable we run these micro-benchmarks many tens or even hundreds of

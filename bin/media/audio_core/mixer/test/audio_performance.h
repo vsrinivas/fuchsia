@@ -23,7 +23,7 @@ class AudioPerformance {
   // After first run ("cold"), timings measured are tightly clustered (+/-1-2%);
   // we can get a high-confidence profile assessment with fewer runs.
   //
-  // These values were chosen to keep Mixer and OutputFormatter profile times
+  // These values were chosen to keep Mixer and OutputProducer profile times
   // under 180 seconds each, on both a standard VIM2 and a standard NUC.
   static constexpr uint32_t kNumMixerProfilerRuns = 190;
   static constexpr uint32_t kNumOutputProfilerRuns = 2100;
@@ -67,7 +67,7 @@ class AudioPerformance {
                            Mixer::Resampler sampler_type, uint32_t source_rate,
                            Gain::AScale gain_scale, bool accumulate);
 
-  static void ProfileOutputFormatters();
+  static void ProfileOutputProducers();
 
   static void DisplayOutputColumnHeader();
   static void DisplayOutputConfigLegend();

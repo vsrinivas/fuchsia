@@ -32,8 +32,8 @@ source_set("audio_mixer_lib") {
     "mixer/mixer_utils.h",
     "mixer/no_op.cc",
     "mixer/no_op.h",
-    "mixer/output_formatter.cc",
-    "mixer/output_formatter.h",
+    "mixer/output_producer.cc",
+    "mixer/output_producer.h",
     "mixer/point_sampler.cc",
     "mixer/point_sampler.h",
   ]

@@ -84,29 +84,29 @@ TEST(DataFormats, LinearSampler_Float) {
                                  48000, 2, 44100));
 }
 
-// Create OutputFormatter objects for outgoing buffers of type uint8
-TEST(DataFormats, OutputFormatter_8) {
-  EXPECT_NE(nullptr, SelectOutputFormatter(
+// Create OutputProducer objects for outgoing buffers of type uint8
+TEST(DataFormats, OutputProducer_8) {
+  EXPECT_NE(nullptr, SelectOutputProducer(
                          fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2));
 }
 
-// Create OutputFormatter objects for outgoing buffers of type int16
-TEST(DataFormats, OutputFormatter_16) {
-  EXPECT_NE(nullptr, SelectOutputFormatter(
+// Create OutputProducer objects for outgoing buffers of type int16
+TEST(DataFormats, OutputProducer_16) {
+  EXPECT_NE(nullptr, SelectOutputProducer(
                          fuchsia::media::AudioSampleFormat::SIGNED_16, 4));
 }
 
-// Create OutputFormatter objects for outgoing buffers of type int24-in-32
-TEST(DataFormats, OutputFormatter_24) {
+// Create OutputProducer objects for outgoing buffers of type int24-in-32
+TEST(DataFormats, OutputProducer_24) {
   EXPECT_NE(nullptr,
-            SelectOutputFormatter(
+            SelectOutputProducer(
                 fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 3));
 }
 
-// Create OutputFormatter objects for outgoing buffers of type float
-TEST(DataFormats, OutputFormatter_Float) {
+// Create OutputProducer objects for outgoing buffers of type float
+TEST(DataFormats, OutputProducer_Float) {
   EXPECT_NE(nullptr,
-            SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1));
+            SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1));
 }
 
 //
@@ -322,11 +322,11 @@ TEST(PassThru, Output_8) {
   uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78, 89, 42};
   uint8_t expect[] = {0x0, 0x0, 0x3F, 0x80, 0x80, 0xC1, 0xFF, 0xFF, 42};
 
-  OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
+  OutputProducerPtr output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
 
-  output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
-                                  fbl::count_of(accum));
+  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
+                                 fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
 }
 
@@ -342,11 +342,11 @@ TEST(PassThru, Output_16) {
   int16_t expect[] = {-0x8000, -0x8000, -0x4080, -1, 0,
                       0x4080,  0x7FFF,  0x7FFF,  -42};
 
-  OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
+  OutputProducerPtr output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
 
-  output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
-                                  fbl::count_of(accum) / 2);
+  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
+                                 fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
 }
 
@@ -363,11 +363,11 @@ TEST(PassThru, Output_24) {
       kMinInt24In32, kMinInt24In32, -0x40800000,   -0x00000100, 0,
       0x40800000,    kMaxInt24In32, kMaxInt24In32, -42};
 
-  OutputFormatterPtr output_formatter = SelectOutputFormatter(
+  OutputProducerPtr output_producer = SelectOutputProducer(
       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4);
 
-  output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
-                                  fbl::count_of(accum) / 4);
+  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
+                                 fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
 }
 
@@ -385,11 +385,11 @@ TEST(PassThru, Output_Float) {
                     0.0f,  0.50390625f, 0.99999988f,  1.0f,
                     4.2f};
 
-  audio::OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1);
+  audio::OutputProducerPtr output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
 
-  output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
-                                  fbl::count_of(accum));
+  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
+                                 fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
 }
 
@@ -398,12 +398,12 @@ TEST(PassThru, Output_8_Silence) {
   uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78};
   // should be overwritten, except for the last value: we only fill(6)
 
-  OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
-  ASSERT_NE(nullptr, output_formatter);
+  OutputProducerPtr output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
+  ASSERT_NE(nullptr, output_producer);
 
-  output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
-                                    (fbl::count_of(dest) - 1) / 2);
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest),
+                                   (fbl::count_of(dest) - 1) / 2);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<uint8_t>(0x80),
                                  fbl::count_of(dest) - 1));
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 78);  // this val survives
@@ -414,12 +414,12 @@ TEST(PassThru, Output_16_Silence) {
   int16_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
   // should be overwritten, except for the last value: we only fill(6)
 
-  OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
-  ASSERT_NE(output_formatter, nullptr);
+  OutputProducerPtr output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
+  ASSERT_NE(output_producer, nullptr);
 
-  output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
-                                    (fbl::count_of(dest) - 1) / 3);
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest),
+                                   (fbl::count_of(dest) - 1) / 3);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<int16_t>(0),
                                  fbl::count_of(dest) - 1));
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
@@ -430,12 +430,12 @@ TEST(PassThru, Output_24_Silence) {
   int32_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
   // should be overwritten, except for the last value: we only fill(6)
 
-  OutputFormatterPtr output_formatter = SelectOutputFormatter(
+  OutputProducerPtr output_producer = SelectOutputProducer(
       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
-  ASSERT_NE(output_formatter, nullptr);
+  ASSERT_NE(output_producer, nullptr);
 
-  output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
-                                    fbl::count_of(dest) - 1);
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest),
+                                   fbl::count_of(dest) - 1);
   EXPECT_TRUE(CompareBufferToVal(dest, 0, fbl::count_of(dest) - 1));
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
 }
@@ -445,12 +445,12 @@ TEST(PassThru, Output_Float_Silence) {
   float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f};
   // should be overwritten, except for the last value: we only fill(6)
 
-  audio::OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 2);
-  ASSERT_NE(output_formatter, nullptr);
+  audio::OutputProducerPtr output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 2);
+  ASSERT_NE(output_producer, nullptr);
 
-  output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
-                                    (fbl::count_of(dest) - 1) / 2);
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest),
+                                   (fbl::count_of(dest) - 1) / 2);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<float>(0.0f),
                                  fbl::count_of(dest) - 1));
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7.8f);  // this val survives

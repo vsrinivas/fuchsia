@@ -297,10 +297,10 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     return;
   }
 
-  // Next, select out output formatter.
-  output_formatter_ = OutputFormatter::Select(format_);
-  if (output_formatter_ == nullptr) {
-    FXL_LOG(ERROR) << "Failed to select output formatter";
+  // Next, select our output producer.
+  output_producer_ = OutputProducer::Select(format_);
+  if (output_producer_ == nullptr) {
+    FXL_LOG(ERROR) << "Failed to select output producer";
     return;
   }
 
@@ -724,8 +724,8 @@ zx_status_t AudioInImpl::Process() {
       return ZX_ERR_INTERNAL;
     }
 
-    FXL_DCHECK(output_formatter_ != nullptr);
-    output_formatter_->ProduceOutput(mix_buf_.get(), mix_target, mix_frames);
+    FXL_DCHECK(output_producer_ != nullptr);
+    output_producer_->ProduceOutput(mix_buf_.get(), mix_target, mix_frames);
 
     // Update the pending buffer in progress, and if it is finished, send it
     // back to the user.  If the buffer has been flushed (there is either no
@@ -939,6 +939,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       regions[0].srb_pos = start_frames_mod;
       regions[0].len = end_frames_mod - start_frames_mod;
       regions[0].sfrac_pts = start_fence_frames << kPtsFractionalBits;
+
       regions[1].len = 0;
     } else {
       // Two regions
