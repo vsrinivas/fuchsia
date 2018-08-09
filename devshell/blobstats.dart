@@ -170,7 +170,7 @@ class BlobStats {
     await Future.wait(tasks);
   }
 
-  void computePackages() async {
+  Future computePackages() async {
     while (!pendingPackages.isEmpty) {
       File far = pendingPackages.removeLast();
 
@@ -249,7 +249,7 @@ class BlobStats {
     }
   }
 
-  void packagesToChromiumBinarySizeTree() async {
+  Future packagesToChromiumBinarySizeTree() async {
     var rootTree = {};
     rootTree["n"] = "packages";
     rootTree["children"] = new List();
@@ -279,7 +279,7 @@ class BlobStats {
 
     var sink = new File(pathJoin(buildDir.path, "data.js")).openWrite();
     sink.write("var tree_data=");
-    sink.write(JSON.encode(rootTree));
+    sink.write(json.encode(rootTree));
     await sink.close();
 
     await new Directory(pathJoin(buildDir.path, "d3")).create(recursive: true);
