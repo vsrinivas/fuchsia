@@ -1,0 +1,22 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+// The IntentHandler interface is exposed by modules which wish to handle
+// intents on the behalf of other modules or agents.
+//
+// The modular framework expects any module which declares support for intent
+// handling in its module manifest to expose IntentHandler in its outgoing
+// services.
+//
+// Any time the framework receives an intent which is to be handled by a specific
+// module its |IntentHandler| will be called with the intent it is meant to handle.
+[Discoverable]
+interface IntentHandler {
+  // Handles the provided intent. Any links referenced in the intent parameters
+  // will be in the namespace of the handling component, and can be retrieved via
+  // |ModuleContext.GetLink|.
+  1: HandleIntent(Intent intent);
+};
