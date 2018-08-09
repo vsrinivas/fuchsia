@@ -16,35 +16,35 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/scpi.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/scpi.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <zircon/device/thermal.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-static void aml_set_fan_level(aml_thermal_t *dev, uint32_t level) {
-    switch(level) {
-        case 0:
-            gpio_write(&dev->gpio, FAN_CTL0, 0);
-            gpio_write(&dev->gpio, FAN_CTL1, 0);
-            break;
-        case 1:
-            gpio_write(&dev->gpio, FAN_CTL0, 1);
-            gpio_write(&dev->gpio, FAN_CTL1, 0);
-            break;
-        case 2:
-            gpio_write(&dev->gpio, FAN_CTL0, 0);
-            gpio_write(&dev->gpio, FAN_CTL1, 1);
-            break;
-        case 3:
-            gpio_write(&dev->gpio, FAN_CTL0, 1);
-            gpio_write(&dev->gpio, FAN_CTL1, 1);
-            break;
-        default:
-            break;
+static void aml_set_fan_level(aml_thermal_t* dev, uint32_t level) {
+    switch (level) {
+    case 0:
+        gpio_write(&dev->gpio, FAN_CTL0, 0);
+        gpio_write(&dev->gpio, FAN_CTL1, 0);
+        break;
+    case 1:
+        gpio_write(&dev->gpio, FAN_CTL0, 1);
+        gpio_write(&dev->gpio, FAN_CTL1, 0);
+        break;
+    case 2:
+        gpio_write(&dev->gpio, FAN_CTL0, 0);
+        gpio_write(&dev->gpio, FAN_CTL1, 1);
+        break;
+    case 3:
+        gpio_write(&dev->gpio, FAN_CTL0, 1);
+        gpio_write(&dev->gpio, FAN_CTL1, 1);
+        break;
+    default:
+        break;
     }
     dev->current_fan_level = level;
 }
@@ -68,7 +68,7 @@ static int aml_thermal_notify_thread(void* ctx) {
         return status;
     }
 
-    while(true) {
+    while (true) {
         status = scpi_get_sensor_value(&dev->scpi,
                                        dev->device->temp_sensor_id,
                                        &temperature);
@@ -83,20 +83,20 @@ static int aml_thermal_notify_thread(void* ctx) {
         uint32_t idx = dev->current_trip_idx;
         bool signal = true;
 
-        if ((idx != dev->device->trip_point_count-1) &&
-            (temperature >= dev->device->trip_point_info[idx+1].up_temp)) {
+        if ((idx != dev->device->trip_point_count - 1) &&
+            (temperature >= dev->device->trip_point_info[idx + 1].up_temp)) {
             // Triggered next trip point
             dev->current_trip_idx = idx + 1;
         } else if (idx != 0 && temperature < dev->device->trip_point_info[idx].down_temp) {
             // Triggered prev trip point
             dev->current_trip_idx = idx - 1;
-            if (idx == dev->device->trip_point_count-1) {
+            if (idx == dev->device->trip_point_count - 1) {
                 // A prev trip point triggered, so the temperature
                 // is falling down below the critical temperature
                 // make a note of that
                 critical_temp_measure_taken = false;
             }
-        } else if ((idx == dev->device->trip_point_count-1) &&
+        } else if ((idx == dev->device->trip_point_count - 1) &&
                    (temperature >= dev->device->critical_temp) &&
                    critical_temp_measure_taken != true) {
             // The device temperature is crossing the critical
@@ -133,7 +133,7 @@ static int aml_thermal_notify_thread(void* ctx) {
 }
 
 static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
-                                     dvfs_info_t* info) {
+                                            dvfs_info_t* info) {
     bool set_new_opp = false;
 
     if (info->power_domain == BIG_CLUSTER_POWER_DOMAIN) {
@@ -157,10 +157,10 @@ static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
 
 static void aml_thermal_get_device_info(aml_thermal_t* dev,
                                         thermal_device_info_t* info) {
-    info->active_cooling        = dev->device->active_cooling;
-    info->passive_cooling       = dev->device->passive_cooling;
-    info->gpu_throttling        = dev->device->gpu_throttling;
-    info->num_trip_points       = dev->device->trip_point_count;
+    info->active_cooling = dev->device->active_cooling;
+    info->passive_cooling = dev->device->passive_cooling;
+    info->gpu_throttling = dev->device->gpu_throttling;
+    info->num_trip_points = dev->device->trip_point_count;
     memcpy(&info->trip_point_info, &dev->device->trip_point_info,
            sizeof(dev->device->trip_point_info));
 }
@@ -171,7 +171,7 @@ static zx_status_t aml_thermal_get_state_change_port(aml_thermal_t* dev,
 }
 
 static void aml_thermal_release(void* ctx) {
-    aml_thermal_t *thermal = ctx;
+    aml_thermal_t* thermal = ctx;
     zx_handle_close(thermal->port);
     int res;
     thrd_join(thermal->notify_thread, &res);
@@ -186,107 +186,107 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
     aml_thermal_t* dev = ctx;
     zx_status_t status = ZX_OK;
 
-    switch(op) {
-        case IOCTL_THERMAL_GET_DEVICE_INFO: {
-            if (out_len != sizeof(thermal_device_info_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-
-            thermal_device_info_t info;
-            aml_thermal_get_device_info(dev, &info);
-            memcpy(out_buf, &info, sizeof(thermal_device_info_t));
-            *out_actual = sizeof(thermal_device_info_t);
-            return ZX_OK;
+    switch (op) {
+    case IOCTL_THERMAL_GET_DEVICE_INFO: {
+        if (out_len != sizeof(thermal_device_info_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        case IOCTL_THERMAL_GET_STATE_CHANGE_PORT: {
-            if (out_len != sizeof(zx_handle_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
+        thermal_device_info_t info;
+        aml_thermal_get_device_info(dev, &info);
+        memcpy(out_buf, &info, sizeof(thermal_device_info_t));
+        *out_actual = sizeof(thermal_device_info_t);
+        return ZX_OK;
+    }
 
-            status = aml_thermal_get_state_change_port(dev, out_buf);
-            if (status != ZX_OK) {
-                return status;
-            }
-            *out_actual = sizeof(zx_handle_t);
-            return ZX_OK;
+    case IOCTL_THERMAL_GET_STATE_CHANGE_PORT: {
+        if (out_len != sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        case IOCTL_THERMAL_SET_FAN_LEVEL: {
-            if (in_len != sizeof(uint32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint32_t *fan_level = (uint32_t*)in_buf;
-            aml_set_fan_level(dev, *fan_level);
-            return ZX_OK;
+        status = aml_thermal_get_state_change_port(dev, out_buf);
+        if (status != ZX_OK) {
+            return status;
         }
+        *out_actual = sizeof(zx_handle_t);
+        return ZX_OK;
+    }
 
-        case IOCTL_THERMAL_GET_FAN_LEVEL: {
-            if (out_len != sizeof(uint32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint32_t *fan_level = (uint32_t*)out_buf;
-            *fan_level = dev->current_fan_level;
-            *out_actual = sizeof(uint32_t);
-            return ZX_OK;
+    case IOCTL_THERMAL_SET_FAN_LEVEL: {
+        if (in_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
+        uint32_t* fan_level = (uint32_t*)in_buf;
+        aml_set_fan_level(dev, *fan_level);
+        return ZX_OK;
+    }
 
-        case IOCTL_THERMAL_SET_DVFS_OPP: {
-            if (in_len != sizeof(dvfs_info_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            dvfs_info_t *dvfs_info = (dvfs_info_t*)in_buf;
-            return aml_thermal_set_dvfs_opp(dev, dvfs_info);
+    case IOCTL_THERMAL_GET_FAN_LEVEL: {
+        if (out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
+        uint32_t* fan_level = (uint32_t*)out_buf;
+        *fan_level = dev->current_fan_level;
+        *out_actual = sizeof(uint32_t);
+        return ZX_OK;
+    }
 
-        case IOCTL_THERMAL_GET_TEMPERATURE: {
-            if (out_len != sizeof(uint32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint32_t *temperature = (uint32_t*)out_buf;
-            *temperature = dev->current_temperature;
-            *out_actual = sizeof(uint32_t);
-            return ZX_OK;
+    case IOCTL_THERMAL_SET_DVFS_OPP: {
+        if (in_len != sizeof(dvfs_info_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
+        dvfs_info_t* dvfs_info = (dvfs_info_t*)in_buf;
+        return aml_thermal_set_dvfs_opp(dev, dvfs_info);
+    }
 
-        case IOCTL_THERMAL_GET_DVFS_INFO: {
-            if (in_len != sizeof(uint32_t) || out_len != sizeof(scpi_opp_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint32_t *power_domain = (uint32_t*)in_buf;
-            if (*power_domain >= MAX_DVFS_DOMAINS) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            memcpy(out_buf, &dev->device->opps[*power_domain],
-                   sizeof(scpi_opp_t));
-            *out_actual = sizeof(scpi_opp_t);
-            return ZX_OK;
+    case IOCTL_THERMAL_GET_TEMPERATURE: {
+        if (out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
+        uint32_t* temperature = (uint32_t*)out_buf;
+        *temperature = dev->current_temperature;
+        *out_actual = sizeof(uint32_t);
+        return ZX_OK;
+    }
 
-        case IOCTL_THERMAL_GET_DVFS_OPP: {
-            if (in_len != sizeof(uint32_t) || out_len != sizeof(uint32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint32_t *power_domain = (uint32_t*)in_buf;
-            uint32_t *opp_idx = (uint32_t*)out_buf;
-            if (power_domain == BIG_CLUSTER_POWER_DOMAIN) {
-                *opp_idx = dev->current_big_cluster_opp_idx;
-            } else {
-                *opp_idx = dev->current_little_cluster_opp_idx;
-            }
-            *out_actual = sizeof(uint32_t);
-            return ZX_OK;
+    case IOCTL_THERMAL_GET_DVFS_INFO: {
+        if (in_len != sizeof(uint32_t) || out_len != sizeof(scpi_opp_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
+        uint32_t* power_domain = (uint32_t*)in_buf;
+        if (*power_domain >= MAX_DVFS_DOMAINS) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(out_buf, &dev->device->opps[*power_domain],
+               sizeof(scpi_opp_t));
+        *out_actual = sizeof(scpi_opp_t);
+        return ZX_OK;
+    }
 
-        default:
-            return ZX_ERR_NOT_SUPPORTED;
+    case IOCTL_THERMAL_GET_DVFS_OPP: {
+        if (in_len != sizeof(uint32_t) || out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        uint32_t* power_domain = (uint32_t*)in_buf;
+        uint32_t* opp_idx = (uint32_t*)out_buf;
+        if (power_domain == BIG_CLUSTER_POWER_DOMAIN) {
+            *opp_idx = dev->current_big_cluster_opp_idx;
+        } else {
+            *opp_idx = dev->current_little_cluster_opp_idx;
+        }
+        *out_actual = sizeof(uint32_t);
+        return ZX_OK;
+    }
+
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 static zx_protocol_device_t aml_thermal_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = aml_thermal_release,
-    .ioctl   = aml_thermal_ioctl,
+    .ioctl = aml_thermal_ioctl,
 };
 
 static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
@@ -298,7 +298,7 @@ static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
     }
 
     // Configure the GPIOs
-    for (uint32_t i=0; i<info.gpio_count; i++) {
+    for (uint32_t i = 0; i < info.gpio_count; i++) {
         status = gpio_config(&thermal->gpio, i, GPIO_DIR_OUT);
         if (status != ZX_OK) {
             THERMAL_ERROR("gpio_config failed\n");
@@ -342,13 +342,13 @@ static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
 static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
-    aml_thermal_t *thermal = calloc(1, sizeof(aml_thermal_t));
+    aml_thermal_t* thermal = calloc(1, sizeof(aml_thermal_t));
     if (!thermal) {
         return ZX_ERR_NO_MEMORY;
     }
 
     status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &thermal->pdev);
-    if (status !=  ZX_OK) {
+    if (status != ZX_OK) {
         THERMAL_ERROR("Could not get parent protocol\n");
         goto fail;
     }
@@ -366,7 +366,7 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Populate board specific information
-    aml_thermal_config_t *dev_config = calloc(1, sizeof(aml_thermal_config_t));
+    aml_thermal_config_t* dev_config = calloc(1, sizeof(aml_thermal_config_t));
     if (!dev_config) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -409,8 +409,8 @@ fail:
 }
 
 static zx_driver_ops_t aml_thermal_driver_ops = {
-    .version    = DRIVER_OPS_VERSION,
-    .bind       = aml_thermal_bind,
+    .version = DRIVER_OPS_VERSION,
+    .bind = aml_thermal_bind,
 };
 
 ZIRCON_DRIVER_BEGIN(aml_thermal, aml_thermal_driver_ops, "zircon", "0.1", 4)

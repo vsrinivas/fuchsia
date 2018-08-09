@@ -40,18 +40,18 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
 
 zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                                  void* out_buf, size_t out_len, size_t* out_actual) {
-    switch(op) {
-        case IOCTL_THERMAL_GET_TEMPERATURE: {
-            if (out_len != sizeof(uint32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            auto temperature = static_cast<uint32_t*>(out_buf);
-            *temperature = tsensor_->ReadTemperature();
-            *out_actual = sizeof(uint32_t);
-            return ZX_OK;
+    switch (op) {
+    case IOCTL_THERMAL_GET_TEMPERATURE: {
+        if (out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
-        default:
-            return ZX_ERR_NOT_SUPPORTED;
+        auto temperature = static_cast<uint32_t*>(out_buf);
+        *temperature = tsensor_->ReadTemperature();
+        *out_actual = sizeof(uint32_t);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -64,7 +64,7 @@ void AmlThermal::DdkRelease() {
     delete this;
 }
 
-}  // namespace thermal
+} // namespace thermal
 
 extern "C" zx_status_t aml_thermal(void* ctx, zx_device_t* device) {
     return thermal::AmlThermal::Create(device);

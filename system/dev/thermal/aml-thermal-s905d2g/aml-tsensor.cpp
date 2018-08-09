@@ -13,6 +13,7 @@
 
 namespace thermal {
 
+// clang-format off
 // MMIO indexes.
 static constexpr uint32_t kPllMmio      = 0;
 static constexpr uint32_t kAoMmio       = 1;
@@ -24,6 +25,7 @@ static constexpr int32_t kCalB_         = 424;
 static constexpr int32_t kCalC_         = 3159;
 static constexpr int32_t kCalD_         = 9411;
 static constexpr uint32_t kRebootTemp   = 130000;
+// clang-format on
 
 zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,
@@ -63,20 +65,19 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     }
 
     pll_regs_ = fbl::make_unique<hwreg::RegisterIo>(reinterpret_cast<volatile void*>(
-                                                    io_buffer_virt(&pll_mmio_)));
+        io_buffer_virt(&pll_mmio_)));
 
     ao_regs_ = fbl::make_unique<hwreg::RegisterIo>(reinterpret_cast<volatile void*>(
-                                                    io_buffer_virt(&ao_mmio_)));
+        io_buffer_virt(&ao_mmio_)));
 
     hiu_regs_ = fbl::make_unique<hwreg::RegisterIo>(reinterpret_cast<volatile void*>(
-                                                    io_buffer_virt(&hiu_mmio_)));
+        io_buffer_virt(&hiu_mmio_)));
     return ZX_OK;
 }
 
 // Tsensor treats temperature as a mapped temperature code.
 // The temperature is converted differently depending on the calibration type.
-uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend)
-{
+uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend) {
     int64_t sensor_code;
     uint32_t reg_code;
     uint32_t uefuse = trim_info_ & 0xffff;
@@ -88,10 +89,10 @@ uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend)
     // Yout =  (u_readl / (5.05 - 4.05u_readl)) *(1 << 16)
     if (uefuse & 0x8000) {
         sensor_code = ((1 << 16) * (temp * 10 + kCalC_) / kCalD_ +
-                      (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
+                       (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
     } else {
         sensor_code = ((1 << 16) * (temp * 10 + kCalC_) / kCalD_ -
-                      (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
+                       (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
     }
 
     sensor_code = (sensor_code * 100 / (kCalB_ - kCalA_ * sensor_code / (1 << 16)));
@@ -103,11 +104,9 @@ uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend)
     return reg_code;
 }
 
-
 // Calculate a temperature value from a temperature code.
 // The unit of the temperature is degree Celsius.
-uint32_t AmlTSensor::CodeToTemp(uint32_t temp_code)
-{
+uint32_t AmlTSensor::CodeToTemp(uint32_t temp_code) {
     uint32_t sensor_temp = temp_code;
     uint32_t uefuse = trim_info_ & 0xffff;
 
@@ -115,10 +114,9 @@ uint32_t AmlTSensor::CodeToTemp(uint32_t temp_code)
     // T = 727.8*(u_real+u_efuse/(1<<16)) - 274.7
     // u_readl = (5.05*YOUT)/((1<<16)+ 4.05*YOUT)
     sensor_temp = ((sensor_temp * kCalB_) / 100 * (1 << 16) /
-                  (1 * (1 << 16) + kCalA_ * sensor_temp / 100));
+                   (1 * (1 << 16) + kCalA_ * sensor_temp / 100));
     if (uefuse & 0x8000) {
-        sensor_temp = (1000 * ((sensor_temp - (uefuse & (0x7fff))) *
-                      kCalD_ / (1 << 16) - kCalC_) / 10);
+        sensor_temp = (1000 * ((sensor_temp - (uefuse & (0x7fff))) * kCalD_ / (1 << 16) - kCalC_) / 10);
     } else {
         sensor_temp = 1000 * ((sensor_temp + uefuse) * kCalD_ / (1 << 16) - kCalC_) / 10;
     }
@@ -144,12 +142,12 @@ uint32_t AmlTSensor::ReadTemperature() {
     if (count == 0) {
         return 0;
     } else {
-        return CodeToTemp(value_all/count)/MCELSIUS;
+        return CodeToTemp(value_all / count) / MCELSIUS;
     }
 }
 
 void AmlTSensor::SetRebootTemperature(uint32_t temp) {
-    uint32_t reboot_val = TempToCode(kRebootTemp/MCELSIUS, true);
+    uint32_t reboot_val = TempToCode(kRebootTemp / MCELSIUS, true);
     uint32_t reboot_config = pll_regs_->Read<uint32_t>(AML_TS_CFG_REG2);
 
     reboot_config |= reboot_val << 4;
@@ -172,7 +170,7 @@ zx_status_t AmlTSensor::InitSensor(zx_device_t* parent) {
     // Not setting IRQ's here.
     uint32_t sensor_ctl = pll_regs_->Read<uint32_t>(AML_TS_CFG_REG1);
     sensor_ctl |= (AML_TS_FILTER_EN | AML_TS_VCM_EN | AML_TS_VBG_EN | AML_TS_CH_SEL |
-                  AML_TS_IPTAT_EN | AML_TS_DEM_EN);
+                   AML_TS_IPTAT_EN | AML_TS_DEM_EN);
     pll_regs_->Write(AML_TS_CFG_REG1, sensor_ctl);
     return ZX_OK;
 }
@@ -184,5 +182,4 @@ void AmlTSensor::ShutDown() {
     io_buffer_release(&hiu_mmio_);
 }
 
-}  // namespace thermal
-
+} // namespace thermal
