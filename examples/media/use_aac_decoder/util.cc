@@ -5,36 +5,10 @@
 #include "util.h"
 
 #include <stdarg.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
-
-namespace {
-
-template <typename T>
-void UpdateSha256(SHA256_CTX* ctx, T field) {
-  T field_le;
-  switch (sizeof(field)) {
-    case 4:
-      field_le = htole32(field);
-      break;
-    case 2:
-      field_le = htole16(field);
-      break;
-    case 1:
-      field_le = field;
-      break;
-    default:
-      Exit("UpdateSha256 unexpected field size");
-  }
-  if (!SHA256_Update(ctx, &field_le, sizeof(field_le))) {
-    assert(false);
-  }
-}
-
-}  // namespace
 
 void Exit(const char* format, ...) {
   // Let's not have a buffer on the stack, not because it couldn't be done

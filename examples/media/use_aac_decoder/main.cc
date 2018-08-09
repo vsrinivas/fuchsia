@@ -46,7 +46,8 @@ int main(int argc, char* argv[]) {
   if (command_line.HasOption("aac_adts")) {
     use_aac_decoder(std::move(codec_factory), input_file, output_file, md);
   } else if (command_line.HasOption("h264")) {
-    use_h264_decoder(std::move(codec_factory), input_file, output_file, md);
+    use_h264_decoder(std::move(codec_factory), input_file, output_file, md,
+                     nullptr);
   } else {
     usage(command_line.argv0().c_str());
     return -1;

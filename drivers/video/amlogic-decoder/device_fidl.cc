@@ -12,13 +12,7 @@
 #include <threads.h>
 
 DeviceFidl::DeviceFidl(DeviceCtx* device) : device_(device) {
-  // TODO(dustingreen): remove this once we're opening the driver and sending it
-  // an IOCTL etc.
-  //
-  // Limited manual self-test for now:
-  device_->driver()->PostToSharedFidl([] {
-    printf("amlogic_video_decoder: hello from shared_fidl_thread()\n");
-  });
+  // Nothing else to do here.
 }
 
 DeviceFidl::~DeviceFidl() {
@@ -79,11 +73,9 @@ void DeviceFidl::BindCodecImpl(std::unique_ptr<CodecImpl> codec) {
   // insert success
   FXL_DCHECK(insert_result.second);
   (*insert_result.first).second->BindAsync([this, raw_codec_ptr] {
-    printf("BindCodecImpl()'s error handler start\n");
     FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
     auto iter = codecs_.find(raw_codec_ptr);
     FXL_DCHECK(iter != codecs_.end());
     codecs_.erase(iter);
-    printf("BindCodecImpl()'s error handler end\n");
   });
 }

@@ -63,11 +63,9 @@ CodecAdapterH264::CodecAdapterH264(std::mutex& lock,
 
 CodecAdapterH264::~CodecAdapterH264() {
   // TODO(dustingreen): Remove the printfs or switch them to VLOG.
-  printf("~CodecAdapterH264() stopping input_processing_loop_...\n");
   input_processing_loop_.Quit();
   input_processing_loop_.JoinThreads();
   input_processing_loop_.Shutdown();
-  printf("~CodecAdapterH264() done stopping input_processing_loop_.\n");
 
   // nothing else to do here, at least not until we aren't calling PowerOff() in
   // CoreCodecStopStream().
@@ -103,6 +101,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     video_->pts_manager_ = std::make_unique<PtsManager>();
+    parsed_video_size_ = 0;
     video_->core_ = std::make_unique<Vdec1>(video_);
     video_->core()->PowerOn();
     status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
@@ -124,13 +123,19 @@ void CodecAdapterH264::CoreCodecStartStream() {
 
     video_->video_decoder_->SetFrameReadyNotifier(
         [this](std::shared_ptr<VideoFrame> frame) {
-          printf("Got frame - width: %d height: %d\n", frame->width,
-                 frame->height);
-          FXL_LOG(INFO) << "Got frame - width: " << frame->width
-                        << " height: " << frame->height;
-
           // The Codec interface requires that emitted frames are cache clean
-          // at least for now.
+          // at least for now.  We invalidate without skipping over stride-width
+          // per line, at least partly because stride - width is small (possibly
+          // always 0) for this decoder.  But we do invalidate the UV section
+          // separately in case uv_plane_offset happens to leave significant
+          // space after the Y section (regardless of whether there's actually
+          // ever much padding there).
+          //
+          // TODO(dustingreen): Probably there's not ever any significant
+          // padding between Y and UV for this decoder, so probably can make one
+          // invalidate call here instead of two with no downsides.
+          //
+          // TODO(dustingreen): Skip this when the buffer isn't map-able.
           io_buffer_cache_flush_invalidate(&frame->buffer, 0,
                                            frame->stride * frame->height);
           io_buffer_cache_flush_invalidate(&frame->buffer,
@@ -143,6 +148,12 @@ void CodecAdapterH264::CoreCodecStartStream() {
           packet->SetStartOffset(0);
           uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
           packet->SetValidLengthBytes(total_size_bytes);
+
+          if (frame->has_pts) {
+            packet->SetTimstampIsh(frame->pts);
+          } else {
+            packet->ClearTimestampIsh();
+          }
 
           events_->onCoreCodecOutputPacket(packet, false, false);
         });
@@ -165,20 +176,16 @@ void CodecAdapterH264::CoreCodecStartStream() {
 void CodecAdapterH264::CoreCodecQueueInputFormatDetails(
     const fuchsia::mediacodec::CodecFormatDetails&
         per_stream_override_format_details) {
-  printf("CodecAdapterH264::CoreCodecQueueInputFormatDetails() start\n");
   // TODO(dustingreen): Consider letting the client specify profile/level info
   // in the CodecFormatDetails at least optionally, and possibly sizing input
   // buffer constraints and/or other buffers based on that.
 
   QueueInputItem(
       CodecInputItem::FormatDetails(per_stream_override_format_details));
-  printf("CodecAdapterH264::CoreCodecQueueInputFormatDetails() end\n");
 }
 
 void CodecAdapterH264::CoreCodecQueueInputPacket(const CodecPacket* packet) {
-  printf("CodecAdapterH264::CoreCodecQueueInputPacket() start\n");
   QueueInputItem(CodecInputItem::Packet(packet));
-  printf("CodecAdapterH264::CoreCodecQueueInputPacket() end\n");
 }
 
 void CodecAdapterH264::CoreCodecQueueInputEndOfStream() {
@@ -243,10 +250,8 @@ void CodecAdapterH264::CoreCodecStopStream() {
   }  // ~lock
 
   if (video_->core_) {
-    printf("video_->core_->PowerOff()...\n");
     video_->core_->PowerOff();
     video_->core_.reset();
-    printf("video_->core_.reset() done\n");
   }
 
   // The lifetime of this buffer is different than the others in video_, so we
@@ -506,8 +511,6 @@ void CodecAdapterH264::QueueInputItem(CodecInputItem input_item) {
     }
     input_queue_.emplace_back(std::move(input_item));
   }  // ~lock
-  printf("CodecAdapterH264::QueueInputItem() is_trigger_needed: %d\n",
-         is_trigger_needed);
   if (is_trigger_needed) {
     PostToInputProcessingThread(
         fit::bind_member(this, &CodecAdapterH264::ProcessInput));
@@ -532,15 +535,12 @@ void CodecAdapterH264::ProcessInput() {
     is_process_input_queued_ = false;
   }  // ~lock
   while (true) {
-    printf("ProcessInput() top of loop\n");
     CodecInputItem item = DequeueInputItem();
     if (!item.is_valid()) {
-      printf("ProcessInput(): !item.is_valid() - input_queue_ was empty.\n");
       return;
     }
 
     if (item.is_format_details()) {
-      printf("ProcessInput() item.is_format_details()\n");
       // TODO(dustingreen): Be more strict about what the input format actually
       // is, and less strict about it matching the initial format.
       FXL_CHECK(item.format_details() == initial_input_format_details_);
@@ -548,7 +548,6 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     if (item.is_end_of_stream()) {
-      printf("ProcessInput() item.is_end_of_stream()\n");
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
 
@@ -577,11 +576,16 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     FXL_DCHECK(item.is_packet());
-    printf("ProcessInput() item.is_packet()\n");
 
     uint8_t* data =
         item.packet()->buffer().buffer_base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
+
+    if (item.packet()->has_timestamp_ish()) {
+      video_->pts_manager_->InsertPts(parsed_video_size_,
+                                      item.packet()->timestamp_ish());
+    }
+    parsed_video_size_ += len;
 
     // This call is the main reason the current thread exists, as this call can
     // wait synchronously until there are empty output frames available to
@@ -593,9 +597,7 @@ void CodecAdapterH264::ProcessInput() {
     // TODO(dustingreen): The current wait duration within ParseVideo() assumes
     // that free output frames will become free on an ongoing basis, which isn't
     // really what'll happen when video output is paused.
-    printf("before video_->ParseVideo()... - len: %u\n", len);
     video_->ParseVideo(data, len);
-    printf("after video_->ParseVideo()\n");
 
     events_->onCoreCodecInputPacketDone(item.packet());
     // At this point CodecInputItem is holding a packet pointer which may get

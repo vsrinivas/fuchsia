@@ -5,17 +5,17 @@
 #ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_UTIL_H_
 #define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_UTIL_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fxl/logging.h>
+
+#include <openssl/sha.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <functional>
 #include <memory>
-
-#include <lib/async/cpp/task.h>
-#include <lib/async/dispatcher.h>
-
-#include <openssl/sha.h>
-
-#include <fuchsia/mediacodec/cpp/fidl.h>
 
 #define VLOG_ENABLED 0
 
@@ -40,6 +40,30 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 // TODO(dustingreen): Determine if async::PostTask() intends to strictly
 // guarantee order.
 void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
+
+template <typename T>
+void UpdateSha256(SHA256_CTX* ctx, T field) {
+  T field_le;
+  switch (sizeof(field)) {
+    case 8:
+      field_le = htole64(field);
+      break;
+    case 4:
+      field_le = htole32(field);
+      break;
+    case 2:
+      field_le = htole16(field);
+      break;
+    case 1:
+      field_le = field;
+      break;
+    default:
+      Exit("UpdateSha256 unexpected field size");
+  }
+  if (!SHA256_Update(ctx, &field_le, sizeof(field_le))) {
+    FXL_CHECK(false) << "SHA256_Update() failed in UpdateSha256()";
+  }
+}
 
 void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                                    const fuchsia::mediacodec::PcmFormat& pcm);

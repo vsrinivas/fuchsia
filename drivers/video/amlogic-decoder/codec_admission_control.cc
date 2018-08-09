@@ -37,7 +37,6 @@ std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal() {
     return nullptr;
   }
   codec_count_++;
-  printf("after codec_count_++\n");
   FXL_DCHECK(codec_count_ == 1);
   // private constructor so have to explicitly new, since friending
   // std::make_unique<> would allow any class to create one.
@@ -53,7 +52,6 @@ void CodecAdmissionControl::RemoveCodec() {
   std::lock_guard<std::mutex> lock(lock_);
   // Else bug in caller.
   FXL_DCHECK(codec_count_ == 1);
-  printf("before codec_count_--\n");
   codec_count_--;
 }
 

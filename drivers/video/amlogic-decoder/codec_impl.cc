@@ -803,6 +803,11 @@ void CodecImpl::QueueInputPacket_StreamControl(
       all_packets_[kInputPort][packet.header.packet_index].get();
   core_codec_packet->SetStartOffset(packet.start_offset);
   core_codec_packet->SetValidLengthBytes(packet.valid_length_bytes);
+  if (packet.has_timestamp_ish) {
+    core_codec_packet->SetTimstampIsh(packet.timestamp_ish);
+  } else {
+    core_codec_packet->ClearTimestampIsh();
+  }
 
   // We don't need to be under lock for this, because the fact that we're on the
   // StreamControl domain is enough to guarantee that any other control of the
@@ -2080,7 +2085,6 @@ void CodecImpl::onCoreCodecFailStream() {
 
 void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
     bool output_re_config_required) {
-  printf("onCoreCodecMidStreamOutputConfigChange() this: %p\n", this);
   // For now, the core codec thread is the only thread this gets called from.
   FXL_DCHECK(IsPotentiallyCoreCodecThread());
   // For a OMX_EventPortSettingsChanged that doesn't demand output buffer
@@ -2170,12 +2174,15 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
     FXL_DCHECK(packet->has_start_offset());
     FXL_DCHECK(packet->has_valid_length_bytes());
     // packet->has_timestamp_ish() is optional even if
-    // promise_separate_access_units_on_input is true.
-    uint64_t timestamp_ish =
+    // promise_separate_access_units_on_input is true.  When
+    // !has_timestamp_ish(), timestamp_ish() returns kTimsestampIshNotSet which
+    // is what we want, so no need to redundantly check has_timestamp_ish()
+    // here.  We do want to enforce that the client gets no set timestamp_ish
+    // values if the client didn't promise_separate_access_units_on_input.
+    bool has_timestamp_ish =
         decoder_params_->promise_separate_access_units_on_input &&
-                packet->has_timestamp_ish()
-            ? packet->timestamp_ish()
-            : 0;
+        packet->has_timestamp_ish();
+    uint64_t timestamp_ish = has_timestamp_ish ? packet->timestamp_ish() : 0;
     PostToSharedFidl(
         [this,
          p =
@@ -2186,6 +2193,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
                  .stream_lifetime_ordinal = stream_lifetime_ordinal_,
                  .start_offset = packet->start_offset(),
                  .valid_length_bytes = packet->valid_length_bytes(),
+                 .has_timestamp_ish = has_timestamp_ish,
                  .timestamp_ish = timestamp_ish,
                  // TODO(dustingreen): These two "true" values should be fine
                  // for decoders, but need to revisit here for encoders.

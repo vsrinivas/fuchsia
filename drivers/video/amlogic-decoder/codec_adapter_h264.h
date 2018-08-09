@@ -97,6 +97,15 @@ class CodecAdapterH264 : public CodecAdapter {
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
 
+  // Output frames get a PTS based on looking up the output frame's input stream
+  // offset via the PtsManager.  For that to work we have to feed the input PTSs
+  // into the PtsManager by their input stream offset.  This member tracks the
+  // cumulative input stream offset. This is implicitly the same count of bytes
+  // so far that the amlogic firmware will accumulate and stamp on output
+  // frames.  This counts all bytes delivered to the amlogic firmware, including
+  // start code bytes.
+  uint64_t parsed_video_size_ = 0;
+
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapterH264);
 };
 

@@ -51,14 +51,24 @@ bool CodecPacket::has_valid_length_bytes() const {
 uint32_t CodecPacket::valid_length_bytes() const { return valid_length_bytes_; }
 
 void CodecPacket::SetTimstampIsh(uint64_t timestamp_ish) {
+  has_timestamp_ish_ = true;
   timestamp_ish_ = timestamp_ish;
 }
 
-bool CodecPacket::has_timestamp_ish() const {
-  return timestamp_ish_ != kTimestampIshNotSet;
+// 0 is a valid value - it's !has_timestamp_ish_ that actually matters here.
+// However, set timstamp_ish_ to 0 anyway just to make it a little more obvious
+// that !has_timestamp_ish_.
+void CodecPacket::ClearTimestampIsh() {
+  has_timestamp_ish_ = false;
+  timestamp_ish_ = 0;
 }
 
-uint64_t CodecPacket::timestamp_ish() const { return timestamp_ish_; }
+bool CodecPacket::has_timestamp_ish() const { return has_timestamp_ish_; }
+
+uint64_t CodecPacket::timestamp_ish() const {
+  FXL_DCHECK(has_timestamp_ish_);
+  return timestamp_ish_;
+}
 
 void CodecPacket::SetFree(bool is_free) {
   // We shouldn't need to be calling this method unless we're changing the
@@ -86,5 +96,3 @@ void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 void CodecPacket::ClearValidLengthBytes() {
   valid_length_bytes_ = kValidLengthBytesNotSet;
 }
-
-void CodecPacket::ClearTimestampIsh() { timestamp_ish_ = kTimestampIshNotSet; }

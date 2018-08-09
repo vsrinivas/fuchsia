@@ -29,9 +29,14 @@
 //     non-nullptr, output uncompressed data to the specified file.  When used
 //     as an example, this will tend to be set.  When used as a test, this will
 //     not be set.
+// md_out - out sha256 of the ordered output frame pixels and ordered output
+//     format details.
+// timestamps_out - out ordered <has_timestamp_ish, timestamp_ish> seen at the
+//     output of the decoder.
 void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       const std::string& input_file,
                       const std::string& output_file,
-                      uint8_t out_md[SHA256_DIGEST_LENGTH]);
+                      uint8_t md_out[SHA256_DIGEST_LENGTH],
+                      std::vector<std::pair<bool, uint64_t>>* timestamps_out);
 
 #endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_H264_DECODER_H_

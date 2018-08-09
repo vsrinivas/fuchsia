@@ -5,6 +5,7 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PACKET_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PACKET_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fxl/macros.h>
 
 #include <stdint.h>
@@ -41,6 +42,9 @@ class CodecPacket {
   uint32_t valid_length_bytes() const;
 
   void SetTimstampIsh(uint64_t timestamp_ish);
+  // Sets timestamp_ish() to kTimestampIshNotSet, which also causes
+  // has_timestamp_ish() to return false.
+  void ClearTimestampIsh();
   bool has_timestamp_ish() const;
   uint64_t timestamp_ish() const;
 
@@ -66,8 +70,6 @@ class CodecPacket {
       std::numeric_limits<uint32_t>::max();
   static constexpr uint32_t kValidLengthBytesNotSet =
       std::numeric_limits<uint32_t>::max();
-  static constexpr uint64_t kTimestampIshNotSet =
-      std::numeric_limits<uint64_t>::max();
 
   // The buffer ptr is not owned.  The buffer lifetime is slightly longer than
   // the Packet lifetime.
@@ -76,7 +78,6 @@ class CodecPacket {
 
   void ClearStartOffset();
   void ClearValidLengthBytes();
-  void ClearTimestampIsh();
 
   uint64_t buffer_lifetime_ordinal_ = 0;
   uint32_t packet_index_ = 0;
@@ -86,7 +87,11 @@ class CodecPacket {
 
   uint32_t start_offset_ = kStartOffsetNotSet;
   uint32_t valid_length_bytes_ = kValidLengthBytesNotSet;
-  uint64_t timestamp_ish_ = kTimestampIshNotSet;
+
+  // Allow all timestamp_ish values to be valid by carying valid bool
+  // separately.
+  bool has_timestamp_ish_ = false;
+  uint64_t timestamp_ish_ = 0;
 
   // is_free_
   //

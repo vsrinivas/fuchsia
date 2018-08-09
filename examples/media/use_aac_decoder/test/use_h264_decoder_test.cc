@@ -17,6 +17,8 @@
 #include <lib/component/cpp/startup_context.h>
 #include "lib/fxl/logging.h"
 
+#include <set>
+
 namespace {
 
 constexpr char kInputFilePath[] =
@@ -43,7 +45,50 @@ int main(int argc, char* argv[]) {
   printf("Decoding test file and computing sha256...\n");
 
   uint8_t md[SHA256_DIGEST_LENGTH];
-  use_h264_decoder(std::move(codec_factory), kInputFilePath, "", md);
+  std::vector<std::pair<bool, uint64_t>> timestamps;
+  use_h264_decoder(std::move(codec_factory), kInputFilePath, "", md,
+                   &timestamps);
+
+  std::set<uint64_t> expected_timestamps;
+  for (uint64_t i = 0; i < 27; i++) {
+    // bear.h264 input frame ordinal 25 is never output
+    if (i != 25) {
+      expected_timestamps.insert(i);
+    }
+  }
+  for (size_t i = 0; i < timestamps.size(); i++) {
+    if (!timestamps[i].first) {
+      printf("A frame had !has_timstamp_ish - frame_index: %lu\n", i);
+      exit(-1);
+    }
+    int64_t output_frame_index = i;
+    int64_t timestamp_ish = timestamps[i].second;
+    if (timestamp_ish < output_frame_index - 1 &&
+        timestamp_ish > output_frame_index + 1) {
+      printf(
+          "A frame had output timestamp_ish out of order beyond expected "
+          "degree of re-ordering - output frame ordinal: %lu timestamp_ish: "
+          "%lu\n",
+          i, timestamps[i].second);
+      exit(-1);
+    }
+    if (expected_timestamps.find(timestamps[i].second) ==
+        expected_timestamps.end()) {
+      printf(
+          "A frame had timestamp_ish not in the expected set (or duplicated) - "
+          "output frame ordinal: %lu timestamp_ish: 0x%lx\n",
+          i, timestamps[i].second);
+      exit(-1);
+    }
+    expected_timestamps.erase(timestamps[i].second);
+  }
+  if (!expected_timestamps.empty()) {
+    printf("not all expected_timestamps seen\n");
+    for (uint64_t timestamp : expected_timestamps) {
+      printf("missing timestamp: %lx\n", timestamp);
+    }
+    exit(-1);
+  }
 
   char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
   char* actual_sha256_ptr = actual_sha256;

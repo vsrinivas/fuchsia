@@ -642,9 +642,10 @@ void CodecClient::OnOutputPacket(fuchsia::mediacodec::CodecPacket output_packet,
   // This is safe outside the lock, because last_output_config_ is only updated
   // by OnOutputConfig(), which can't happen simultaneously with
   // OnOutputPacket().
+  uint64_t stream_lifetime_ordinal = local_packet->stream_lifetime_ordinal;
   std::unique_ptr<CodecOutput> output = std::make_unique<CodecOutput>(
-      local_packet->stream_lifetime_ordinal, last_output_config_,
-      std::move(local_packet), false);
+      stream_lifetime_ordinal, last_output_config_, std::move(local_packet),
+      false);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (output_config_action_pending_) {

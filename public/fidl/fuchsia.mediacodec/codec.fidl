@@ -740,10 +740,7 @@ struct CodecPacket {
   // packet.
   //
   // See codec.md for more on timestamp_ish.
-  //
-  // TODO(dustingreen): The name here is maybe not ideal.  Here are some
-  // alternate names under consideration:  per_access_unit_lookup_key,
-  // just_a_number.  Decide and maybe rename.
+  bool has_timestamp_ish;
   uint64 timestamp_ish;
 
   // start_access_unit

@@ -547,6 +547,9 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
     if (pic_info.eos())
       hit_eos = true;
 
+    // TODO(dustingreen): We'll need to bit-extend (nearest wins to allow for
+    // re-ordering) this value to uint64_t, so that PTSs for frames after 4GiB
+    // still work.
     uint32_t stream_byte_offset = pic_info.stream_offset();
     stream_byte_offset |=
         ((AvScratch::Get(0xa + i / 2).ReadFrom(owner_->dosbus()).reg_value() >>
