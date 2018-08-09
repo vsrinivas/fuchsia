@@ -2,6 +2,26 @@
   "$schema": "http://json-schema.org/schema#",
   "title": "Schema for `action_template` metadata file",
   "definitions": {
+    "actionArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/action"
+      },
+      "additionalItems": false,
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/parameterArray"
+        }
+      }
+    },
     "parameterArray": {
       "type": "array",
       "items": {
@@ -52,6 +72,9 @@
     },
     "action": {
       "type": "string"
+    },
+    "actions": {
+      "$ref": "#/definitions/actionArray"
     },
     "parameters": {
       "$ref": "#/definitions/parameterArray"
