@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/serial.h>
+#include <ddk/protocol/serial-impl.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <zircon/listnode.h>

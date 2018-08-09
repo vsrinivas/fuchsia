@@ -10,7 +10,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/serial.h>
+#include <ddk/protocol/serial-impl.h>
 
 // BTI IDs for our devices
 enum {

@@ -6,9 +6,9 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/serial.h>
+#include <ddk/protocol/serial-impl.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/serial.h>
+#include <ddktl/protocol/serial-impl.h>
 
 #include <fbl/function.h>
 #include <fbl/mutex.h>
@@ -22,7 +22,7 @@ class AmlUart;
 using DeviceType = ddk::Device<AmlUart, ddk::Unbindable>;
 
 class AmlUart : public DeviceType,
-                public ddk::SerialProtocol<AmlUart> {
+                public ddk::SerialImplProtocol<AmlUart> {
 public:
     // Spawns device node.
     static zx_status_t Create(zx_device_t* parent);

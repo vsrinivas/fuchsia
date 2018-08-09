@@ -4,35 +4,35 @@
 
 #pragma once
 
-#include <ddk/protocol/serial.h>
+#include <ddk/protocol/serial-impl.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 
-#include "serial-internal.h"
+#include "serial-impl-internal.h"
 
-// DDK serial protocol support.
+// DDK serial-impl protocol support.
 //
 // :: Proxies ::
 //
-// ddk::SerialProtocolProxy is a simple wrappers around serial_protocol_t. It does
+// ddk::SerialImplProtocolProxy is a simple wrappers around serial_protocol_t. It does
 // not own the pointers passed to it.
 //
 // :: Mixins ::
 //
-// ddk::SerialProtocol is a mixin class that simplifies writing DDK drivers that
+// ddk::SerialImplProtocol is a mixin class that simplifies writing DDK drivers that
 // implement the serial protocol.
 //
 // :: Examples ::
 //
 // // A driver that implements a ZX_PROTOCOL_NAND device.
-// class SerialDevice;
-// using SerialDeviceType = ddk::Device<SerialDevice, /* ddk mixins */>;
+// class SerialImplDevice;
+// using SerialImplDeviceType = ddk::Device<SerialImplDevice, /* ddk mixins */>;
 //
-// class SerialDevice : public SerialDeviceType,
-//                      public ddk::SerialProtocol<SerialDevice> {
+// class SerialImplDevice : public SerialDeviceType,
+//                          public ddk::SerialImplProtocol<SerialImplDevice> {
 //   public:
-//     SerialDevice(zx_device_t* parent)
-//       : SerialDeviceType("my-serial-device", parent) {}
+//     SerialImplDevice(zx_device_t* parent)
+//       : SerialImplDeviceType("my-serial-device", parent) {}
 //
 //     void Query(serial_info_t* info_out, size_t* serial_op_size_out);
 //     void Queue(serial_op_t* operation);
@@ -44,10 +44,10 @@
 namespace ddk {
 
 template <typename D>
-class SerialProtocol : public internal::base_protocol {
+class SerialImplProtocol : public internal::base_protocol {
 public:
-    SerialProtocol() {
-        internal::CheckSerialProtocolSubclass<D>();
+    SerialImplProtocol() {
+        internal::CheckSerialImplProtocolSubclass<D>();
         serial_proto_ops_.get_info = GetInfo;
         serial_proto_ops_.config = Config;
         serial_proto_ops_.enable = Enable;
@@ -90,9 +90,9 @@ private:
     }
 };
 
-class SerialProtocolProxy {
+class SerialImplProtocolProxy {
 public:
-    SerialProtocolProxy(serial_impl_protocol_t* proto)
+    SerialImplProtocolProxy(serial_impl_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
     zx_status_t GetInfo(serial_port_info_t* info) {
