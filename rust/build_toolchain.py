@@ -22,7 +22,7 @@ ninja = true
 targets = "X86;AArch64"
 
 [build]
-target = ["{target}-unknown-fuchsia"]
+target = ["{target}-fuchsia"]
 docs = false
 extended = true
 openssl-static = true
@@ -34,7 +34,7 @@ sysconfdir = "etc"
 [rust]
 optimize = true
 
-[target.{target}-unknown-fuchsia]
+[target.{target}-fuchsia]
 cc = "{cc}"
 cxx = "{cxx}"
 ar = "{ar}"
@@ -44,11 +44,11 @@ linker = "{cc}"
 '''
 
 CARGO_CONFIG = '''
-[target.{target}-unknown-fuchsia]
+[target.{target}-fuchsia]
 linker = "{linker}"
 ar = "{ar}"
 rustflags = [
-    "-C", "link-arg=--target={target}-unknown-fuchsia",
+    "-C", "link-arg=--target={target}-fuchsia",
     "-C", "link-arg=--sysroot={sysroot}",
     "-C", "link-arg=-L{shared_libs_root}",
 ]
@@ -126,8 +126,8 @@ def main():
             shared_libs_root=shared_libs_root,
         ))
 
-    cflags_key = 'CFLAGS_%s-unknown-fuchsia' % target
-    cflags_val = '--target=%s-unknown-fuchsia --sysroot=%s' % (target, sysroot)
+    cflags_key = 'CFLAGS_%s-fuchsia' % target
+    cflags_val = '--target=%s-fuchsia --sysroot=%s' % (target, sysroot)
 
     env = {
         'CARGO_HOME': cargo_dir,
