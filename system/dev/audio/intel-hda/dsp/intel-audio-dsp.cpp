@@ -498,7 +498,7 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     // into the root VMAR so we don't need to allocate more space in DriverVmars::registers().
     constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     zx::vmo stripped_vmo;
-    vmo_utils::VmoMapper stripped_fw;
+    fzl::VmoMapper stripped_fw;
     st = stripped_fw.CreateAndMap(fw_size, CPU_MAP_FLAGS, nullptr, &stripped_vmo);
     if (st != ZX_OK) {
         LOG(ERROR, "Error creating DSP firmware VMO (err %d)\n", st);

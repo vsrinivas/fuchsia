@@ -192,8 +192,3 @@ BEGIN_TEST_CASE(libfzl_tests)
 RUN_TEST(TimeTest)
 RUN_TEST(FifoTest)
 END_TEST_CASE(libfzl_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

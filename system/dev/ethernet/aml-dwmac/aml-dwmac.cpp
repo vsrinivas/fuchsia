@@ -10,9 +10,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>
-#include <lib/vmo-utils/vmar_manager.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
+#include <lib/fzl/vmar-manager.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <zircon/compiler.h>
 
@@ -258,7 +258,7 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
 
 zx_status_t AmlDWMacDevice::InitBuffers() {
 
-    fbl::RefPtr<vmo_utils::VmarManager> vmar_mgr;
+    fbl::RefPtr<fzl::VmarManager> vmar_mgr;
 
     constexpr size_t kDescSize = ROUNDUP(2 * kNumDesc * sizeof(dw_dmadescr_t), PAGE_SIZE);
 

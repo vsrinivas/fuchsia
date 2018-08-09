@@ -10,7 +10,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <zircon/thread_annotations.h>
 
 #include <audio-proto/audio-proto.h>
@@ -130,7 +130,7 @@ private:
     const fbl::RefPtr<RefCountedBti> pci_bti_;
 
     // Storage allocated for this stream context's buffer descriptor list.
-    vmo_utils::VmoMapper bdl_cpu_mem_;
+    fzl::VmoMapper bdl_cpu_mem_;
     PinnedVmo      bdl_hda_mem_;
 
     // The channel used by the application to talk to us once our format has

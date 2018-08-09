@@ -33,9 +33,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/dispatcher-pool \
     system/ulib/fbl \
+    system/ulib/fzl \
     system/ulib/pretty \
     system/ulib/sync \
-    system/ulib/vmo-utils \
     system/ulib/zx \
     system/ulib/zxcpp \
 

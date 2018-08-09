@@ -8,7 +8,7 @@
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/vmo.h>
@@ -31,7 +31,7 @@ private:
     PinnedBuffer() = default;
     //Note - not using zx:bti since this bti may be used for multiple
 
-    vmo_utils::VmoMapper vmo_mapper_;
+    fzl::VmoMapper vmo_mapper_;
     zx::vmo vmo_;
     zx::pmt pmt_;
 

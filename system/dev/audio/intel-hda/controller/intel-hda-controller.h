@@ -14,7 +14,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <fbl/unique_ptr.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <threads.h>
 #include <lib/zx/interrupt.h>
 
@@ -155,7 +155,7 @@ private:
 
     // PCI Registers and IRQ
     zx::interrupt       irq_;
-    vmo_utils::VmoMapper      mapped_regs_;
+    fzl::VmoMapper      mapped_regs_;
 
     // A handle to the Bus Transaction Initiator for this PCI device.  Used to
     // grant access to specific regions of physical mememory to the controller
@@ -163,7 +163,7 @@ private:
     fbl::RefPtr<RefCountedBti> pci_bti_;
 
     // Physical memory allocated for the command buffer (CORB/RIRB)
-    vmo_utils::VmoMapper cmd_buf_cpu_mem_ TA_GUARDED(corb_lock_);
+    fzl::VmoMapper cmd_buf_cpu_mem_ TA_GUARDED(corb_lock_);
     PinnedVmo      cmd_buf_hda_mem_ TA_GUARDED(corb_lock_);
 
     // Stream state

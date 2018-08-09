@@ -5,14 +5,14 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 #include <limits.h>
-#include <zircon/types.h>
+#include <lib/fzl/vmar-manager.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <lib/vmo-utils/vmar_manager.h>
+#include <zircon/types.h>
 
 #include <dispatcher-pool/dispatcher-channel.h>
 
@@ -41,11 +41,11 @@ class DriverVmars {
   public:
     static zx_status_t Initialize();
     static void Shutdown();
-    static const fbl::RefPtr<vmo_utils::VmarManager>& registers() {
+    static const fbl::RefPtr<fzl::VmarManager>& registers() {
         return registers_;
     }
   private:
-    static fbl::RefPtr<vmo_utils::VmarManager> registers_;
+    static fbl::RefPtr<fzl::VmarManager> registers_;
 };
 
 struct StreamFormat {

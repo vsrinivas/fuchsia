@@ -21,10 +21,10 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
-    system/ulib/zxcpp \
     system/ulib/fbl \
-    system/ulib/vmo-utils \
+    system/ulib/fzl \
     system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/pretty \
 
 MODULE_LIBS := \

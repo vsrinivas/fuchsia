@@ -6,14 +6,14 @@
 
 fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,
                                                uint32_t cache_policy) {
-    fbl::RefPtr<vmo_utils::VmarManager> vmar_mgr;
+    fbl::RefPtr<fzl::VmarManager> vmar_mgr;
 
     if (!bti.is_valid() || (size & (PAGE_SIZE - 1))) {
         return nullptr;
     }
 
     //create vmar large enough for rx,tx buffers, and rx,tx dma descriptors
-    vmar_mgr = vmo_utils::VmarManager::Create(size, nullptr);
+    vmar_mgr = fzl::VmarManager::Create(size, nullptr);
     if (!vmar_mgr) {
         zxlogf(ERROR, "pinned-buffer: Creation of vmar manager failed\n");
         return nullptr;

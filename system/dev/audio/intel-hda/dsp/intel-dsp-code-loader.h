@@ -6,7 +6,7 @@
 
 #include <zircon/types.h>
 #include <lib/zx/vmo.h>
-#include <lib/vmo-utils/vmo_mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/pinned-vmo.h>
@@ -41,7 +41,7 @@ private:
     // Buffer descriptor list
     // TODO(yky) Look into factoring BDL functionality out to a utility class,
     // because it is shared between the code loader and stream DMA.
-    vmo_utils::VmoMapper bdl_cpu_mem_;
+    fzl::VmoMapper bdl_cpu_mem_;
     PinnedVmo bdl_dsp_mem_;
 
     // Registers
