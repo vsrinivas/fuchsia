@@ -3,21 +3,23 @@
 // found in the LICENSE file.
 
 #include "wlantap-phy.h"
-#include "wlantap-mac.h"
 
 #include <ddk/debug.h>
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/c/fidl.h>
 #include <wlan/async/dispatcher.h>
-#include <wlan/protocol/ioctl.h>
-#include <wlan/protocol/phy.h>
+#include <wlan/protocol/mac.h>
+#include <wlan/protocol/phy-impl.h>
+#include <zircon/status.h>
 #include <array>
+
+#include "utils.h"
+#include "wlantap-mac.h"
 
 namespace wlan {
 
 namespace wlantap = ::fuchsia::wlan::tap;
-namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
 
@@ -182,11 +184,11 @@ template <typename T, size_t MAX_COUNT> class DevicePool {
 
 constexpr size_t kMaxMacDevices = 4;
 
-struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener {
+struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     WlantapPhy(zx_device_t* device, zx::channel user_channel,
                std::unique_ptr<wlantap::WlantapPhyConfig> phy_config, async_dispatcher_t* loop)
         : phy_config_(std::move(phy_config)),
-          phy_dispatcher_(loop),
+          loop_(loop),
           user_channel_binding_(this, std::move(user_channel), loop),
           event_sender_(user_channel_binding_.channel()) {
         user_channel_binding_.set_error_handler([this] {
@@ -212,12 +214,9 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
     }
 
     void Unbind() {
-        // This is somewhat hacky. We rely on the fact that the dispatcher's
-        // and user_channel_binding events run on the same thread.
-        // So when the dispatcher's shutdown callback is executed, we know
-        // that there can't be any more calls via user_channel_binding either.
         user_channel_binding_.Unbind();
-        phy_dispatcher_.InitiateShutdown([this] {
+        // Flush any remaining tasks in the event loop before destroying the interfaces
+        ::async::PostTask(loop_,[this] {
             {
                 std::lock_guard<std::mutex> guard(wlanmac_lock_);
                 wlanmac_devices_.ReleaseAll();
@@ -226,85 +225,52 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
         });
     }
 
-    static zx_status_t DdkIoctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                void* out_buf, size_t out_len, size_t* out_actual) {
-        auto& self = *static_cast<WlantapPhy*>(ctx);
-        switch (op) {
-        case IOCTL_WLANPHY_CONNECT:
-            zxlogf(INFO, "wlantap phy ioctl: connect\n");
-            return self.IoctlConnect(in_buf, in_len);
-        default:
-            zxlogf(ERROR, "wlantap phy ioctl: unknown (%u)\n", op);
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    }
+    // wlanphy-impl DDK interface
 
-    zx_status_t IoctlConnect(const void* in_buf, size_t in_len) {
-        if (in_buf == nullptr || in_len < sizeof(zx_handle_t)) {
-            zxlogf(ERROR, "wlantap phy: IoctlConnect: input buffer too short\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-        phy_dispatcher_.AddBinding(zx::channel(*static_cast<const zx_handle_t*>(in_buf)), this);
-        zxlogf(ERROR, "wlantap phy: IoctlConnect: added the channel to the binding set\n");
-        return ZX_OK;
-    }
-
-    // wlan_device::Phy impl
-
-    virtual void Query(QueryCallback callback) override {
-        zxlogf(INFO, "wlantap phy: received a 'Query' FIDL request\n");
-        wlan_device::QueryResponse response;
-        response.status = phy_config_->phy_info.Clone(&response.info);
-        callback(std::move(response));
-        zxlogf(INFO, "wlantap phy: responded to 'Query' with status %d\n", response.status);
+    zx_status_t Query(wlanphy_info_t* info) {
+        zxlogf(INFO, "wlantap phy: received a 'Query' DDK request\n");
+        zx_status_t status = ConvertPhyInfo(&info->wlan_info, phy_config_->phy_info);
+        zxlogf(INFO, "wlantap phy: responded to 'Query' with status %s\n",
+               zx_status_get_string(status));
+        return status;
     }
 
     template <typename V, typename T> static bool contains(const V& v, const T& t) {
         return std::find(v.cbegin(), v.cend(), t) != v.cend();
     }
 
-    virtual void CreateIface(wlan_device::CreateIfaceRequest req,
-                             CreateIfaceCallback callback) override {
-        zxlogf(INFO, "wlantap phy: received a 'CreateIface' FIDL request\n");
-        wlan_device::CreateIfaceResponse response;
-        if (!contains(*phy_config_->phy_info.mac_roles, req.role)) {
-            response.status = ZX_ERR_NOT_SUPPORTED;
-            callback(std::move(response));
+    zx_status_t CreateIface(uint16_t role, uint16_t* id) {
+        zxlogf(INFO, "wlantap phy: received a 'CreateIface' DDK request\n");
+        wlan_device::MacRole dev_role = ConvertMacRole(role);
+        if (!contains(*phy_config_->phy_info.mac_roles, dev_role)) {
             zxlogf(ERROR, "wlantap phy: CreateIface: role not supported\n");
-            return;
+            return ZX_ERR_NOT_SUPPORTED;
         }
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         zx_status_t status = wlanmac_devices_.TryCreateNew(
-            [&](uint16_t id, WlantapMac** out_dev) {
-                return CreateWlantapMac(device_, req, phy_config_.get(), id, this, out_dev);
-            },
-            &response.iface_id);
+            [&] (uint16_t id, WlantapMac** out_dev) {
+                return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this, out_dev);
+            }, id);
         if (status != ZX_OK) {
-            response.status = ZX_ERR_NO_RESOURCES;
-            callback(std::move(response));
             zxlogf(ERROR,
                    "wlantap phy: CreateIface: maximum number of interfaces already reached\n");
-            return;
+            return ZX_ERR_NO_RESOURCES;
         }
-        callback(std::move(response));
         zxlogf(INFO, "wlantap phy: CreateIface: success\n");
+        return ZX_OK;
     }
 
-    virtual void DestroyIface(wlan_device::DestroyIfaceRequest req,
-                              DestroyIfaceCallback callback) override {
-        zxlogf(INFO, "wlantap phy: received a 'DestroyIface' FIDL request\n");
-        wlan_device::DestroyIfaceResponse response;
+    zx_status_t DestroyIface(uint16_t id) {
+        zxlogf(INFO, "wlantap phy: received a 'DestroyIface' DDK request\n");
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
-        WlantapMac* wlanmac = wlanmac_devices_.Release(req.id);
+        WlantapMac* wlanmac = wlanmac_devices_.Release(id);
         if (wlanmac == nullptr) {
             zxlogf(ERROR, "wlantap phy: DestroyIface: invalid iface id\n");
-            response.status = ZX_ERR_INVALID_ARGS;
-        } else {
-            wlanmac->RemoveDevice();
-            response.status = ZX_OK;
+            return ZX_ERR_INVALID_ARGS;
         }
-        callback(std::move(response));
+        wlanmac->RemoveDevice();
         zxlogf(ERROR, "wlantap phy: DestroyIface: done\n");
+        return ZX_OK;
     }
 
     // wlantap::WlantapPhy impl
@@ -367,7 +333,7 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
 
     zx_device_t* device_;
     const std::unique_ptr<const wlantap::WlantapPhyConfig> phy_config_;
-    wlan::async::Dispatcher<wlan_device::Phy> phy_dispatcher_;
+    async_dispatcher_t* loop_;
     fidl::Binding<wlantap::WlantapPhy> user_channel_binding_;
     std::mutex wlanmac_lock_;
     DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_ __TA_GUARDED(wlanmac_lock_);
@@ -377,6 +343,20 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
 
 }  // namespace
 
+#define DEV(c) static_cast<WlantapPhy*>(c)
+static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
+    .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
+        return DEV(ctx)->Query(info);
+    },
+    .create_iface = [](void* ctx, uint16_t mac_role, uint16_t* id) -> zx_status_t {
+        return DEV(ctx)->CreateIface(mac_role, id);
+    },
+    .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
+        return DEV(ctx)->DestroyIface(id);
+    }
+};
+#undef DEV
+
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
                       std::unique_ptr<wlantap::WlantapPhyConfig> config, async_dispatcher_t* loop) {
     zxlogf(INFO, "wlantap: creating phy\n");
@@ -384,15 +364,13 @@ zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
         std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel), std::move(config), loop);
     static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
                                               .unbind = &WlantapPhy::DdkUnbind,
-                                              .release = &WlantapPhy::DdkRelease,
-                                              .ioctl = &WlantapPhy::DdkIoctl};
-    static wlanphy_protocol_ops_t proto_ops = {};
+                                              .release = &WlantapPhy::DdkRelease};
     device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
                               .name = phy->phy_config_->name->c_str(),
                               .ctx = phy.get(),
                               .ops = &device_ops,
-                              .proto_id = ZX_PROTOCOL_WLANPHY,
-                              .proto_ops = &proto_ops};
+                              .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+                              .proto_ops = &wlanphy_impl_ops};
     zx_status_t status = device_add(wlantapctl, &args, &phy->device_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "wlantap: %s: could not add device: %d\n", __func__, status);

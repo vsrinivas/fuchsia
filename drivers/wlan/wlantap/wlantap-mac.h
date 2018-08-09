@@ -32,7 +32,7 @@ class WlantapMac {
 };
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
-                             const ::fuchsia::wlan::device::CreateIfaceRequest& request,
+                             const ::fuchsia::wlan::device::MacRole role,
                              const ::fuchsia::wlan::tap::WlantapPhyConfig* phy_config, uint16_t id,
                              WlantapMac::Listener* listener, WlantapMac** ret);
 

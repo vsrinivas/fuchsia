@@ -10,6 +10,8 @@ driver_module("wlantap_driver") {
 
   sources = [
     "binding.c",
+    "utils.cpp",
+    "utils.h",
     "wlantap-ctl.cpp",
     "wlantap-mac.cpp",
     "wlantap-mac.h",

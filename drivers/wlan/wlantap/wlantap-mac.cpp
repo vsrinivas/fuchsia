@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include "wlantap-mac.h"
+
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
-#include <lib/fxl/arraysize.h>
 #include <wlan/common/channel.h>
 #include <wlan/wlanmac-ifc-proxy.h>
+
+#include "utils.h"
 
 namespace wlan {
 
@@ -16,106 +18,6 @@ namespace wlantap = ::fuchsia::wlan::tap;
 namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
-
-uint16_t ConvertSupportedPhys(const ::fidl::VectorPtr<wlan_device::SupportedPhy>& phys) {
-    uint16_t ret = 0;
-    for (auto sp : *phys) {
-        switch (sp) {
-        case wlan_device::SupportedPhy::DSSS:
-            ret |= WLAN_PHY_DSSS;
-            break;
-        case wlan_device::SupportedPhy::CCK:
-            ret |= WLAN_PHY_CCK;
-            break;
-        case wlan_device::SupportedPhy::OFDM:
-            ret |= WLAN_PHY_OFDM;
-            break;
-        case wlan_device::SupportedPhy::HT:
-            ret |= WLAN_PHY_HT;
-            break;
-        case wlan_device::SupportedPhy::VHT:
-            ret |= WLAN_PHY_VHT;
-            break;
-        }
-    }
-    return ret;
-}
-
-uint32_t ConvertDriverFeatures(const ::fidl::VectorPtr<wlan_device::DriverFeature>& dfs) {
-    uint32_t ret = 0;
-    for (auto df : *dfs) {
-        switch (df) {
-        case wlan_device::DriverFeature::SCAN_OFFLOAD:
-            ret |= WLAN_DRIVER_FEATURE_SCAN_OFFLOAD;
-            break;
-        case wlan_device::DriverFeature::RATE_SELECTION:
-            ret |= WLAN_DRIVER_FEATURE_RATE_SELECTION;
-            break;
-        case wlan_device::DriverFeature::SYNTH:
-            ret |= WLAN_DRIVER_FEATURE_SYNTH;
-            break;
-        }
-    }
-    return ret;
-}
-
-uint16_t ConvertMacRole(wlan_device::MacRole role) {
-    switch (role) {
-    case wlan_device::MacRole::AP:
-        return WLAN_MAC_ROLE_AP;
-    case wlan_device::MacRole::CLIENT:
-        return WLAN_MAC_ROLE_CLIENT;
-    }
-}
-
-uint32_t ConvertCaps(const ::fidl::VectorPtr<wlan_device::Capability>& caps) {
-    uint32_t ret = 0;
-    for (auto cap : *caps) {
-        switch (cap) {
-        case wlan_device::Capability::SHORT_PREAMBLE:
-            ret |= WLAN_CAP_SHORT_PREAMBLE;
-            break;
-        case wlan_device::Capability::SPECTRUM_MGMT:
-            ret |= WLAN_CAP_SPECTRUM_MGMT;
-            break;
-        case wlan_device::Capability::SHORT_SLOT_TIME:
-            ret |= WLAN_CAP_SHORT_SLOT_TIME;
-            break;
-        case wlan_device::Capability::RADIO_MGMT:
-            ret |= WLAN_CAP_RADIO_MGMT;
-            break;
-        }
-    }
-    return ret;
-}
-
-void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
-    memset(out, 0, sizeof(*out));
-    strlcpy(out->desc, in.description->c_str(), sizeof(out->desc));
-
-    out->ht_caps.ht_capability_info = in.ht_caps.ht_capability_info;
-    out->ht_caps.ampdu_params = in.ht_caps.ampdu_params;
-    memcpy(out->ht_caps.supported_mcs_set, in.ht_caps.supported_mcs_set.data(),
-           sizeof(out->ht_caps.supported_mcs_set));
-    out->ht_caps.ht_ext_capabilities = in.ht_caps.ht_ext_capabilities;
-    out->ht_caps.tx_beamforming_capabilities = in.ht_caps.tx_beamforming_capabilities;
-    out->ht_caps.asel_capabilities = in.ht_caps.asel_capabilities;
-
-    out->vht_supported = (in.vht_caps != nullptr);
-    if (in.vht_caps) {
-        out->vht_caps.vht_capability_info = in.vht_caps->vht_capability_info;
-        out->vht_caps.supported_vht_mcs_and_nss_set = in.vht_caps->supported_vht_mcs_and_nss_set;
-    }
-
-    std::copy_n(in.basic_rates->data(),
-                std::min(in.basic_rates->size(), arraysize(out->basic_rates)), out->basic_rates);
-
-    out->supported_channels.base_freq = in.supported_channels.base_freq;
-    std::copy_n(in.supported_channels.channels->data(),
-                std::min(in.supported_channels.channels->size(),
-                         arraysize(out->supported_channels.channels)),
-                out->supported_channels.channels);
-}
 
 struct WlantapMacImpl : WlantapMac {
     WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_device::MacRole role,
@@ -135,19 +37,8 @@ struct WlantapMacImpl : WlantapMac {
         auto& self = *static_cast<WlantapMacImpl*>(ctx);
         wlan_info_t* ifc_info = &info->ifc_info;
 
-        std::copy_n(self.phy_config_->phy_info.hw_mac_address.begin(), ETH_MAC_SIZE,
-                    ifc_info->mac_addr);
-
-        ifc_info->supported_phys = ConvertSupportedPhys(self.phy_config_->phy_info.supported_phys);
-        ifc_info->driver_features =
-            ConvertDriverFeatures(self.phy_config_->phy_info.driver_features);
+        ConvertPhyInfo(ifc_info, self.phy_config_->phy_info);
         ifc_info->mac_role = ConvertMacRole(self.role_);
-        ifc_info->caps = ConvertCaps(self.phy_config_->phy_info.caps);
-        ifc_info->num_bands =
-            std::min(self.phy_config_->phy_info.bands->size(), static_cast<size_t>(WLAN_MAX_BANDS));
-        for (size_t i = 0; i < ifc_info->num_bands; ++i) {
-            ConvertBandInfo((*self.phy_config_->phy_info.bands)[i], &ifc_info->bands[i]);
-        }
         return ZX_OK;
     }
 
@@ -260,13 +151,13 @@ struct WlantapMacImpl : WlantapMac {
 }  // namespace
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
-                             const wlan_device::CreateIfaceRequest& request,
+                             const wlan_device::MacRole role,
                              const wlantap::WlantapPhyConfig* phy_config, uint16_t id,
                              WlantapMac::Listener* listener, WlantapMac** ret) {
     char name[ZX_MAX_NAME_LEN + 1];
     snprintf(name, sizeof(name), "%s-mac%u", device_get_name(parent_phy), id);
     std::unique_ptr<WlantapMacImpl> wlanmac(
-        new WlantapMacImpl(parent_phy, id, request.role, phy_config, listener));
+        new WlantapMacImpl(parent_phy, id, role, phy_config, listener));
     static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
                                               .unbind = &WlantapMacImpl::DdkUnbind,
                                               .release = &WlantapMacImpl::DdkRelease};
