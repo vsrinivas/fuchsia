@@ -22,46 +22,50 @@ ObservationValue MakeHistogramObservation(const fbl::String& name, uint32_t enco
 }
 } // namespace
 
-BaseHistogram::BaseHistogram(const fbl::String& name, const fbl::Vector<ObservationValue>& metadata,
-                             size_t buckets, uint64_t metric_id, uint32_t encoding_id)
-    : name_(name), metric_id_(metric_id), encoding_id_(encoding_id), flushing_(false) {
-
-    observations_.reserve(metadata.size() + 1);
-    for (const auto& obs : metadata) {
-        observations_.push_back(obs);
-    }
-
-    buckets_.reserve(buckets);
-    buffer_.reserve(buckets);
-    for (size_t bucket = 0; bucket < buckets; ++bucket) {
+BaseHistogram::BaseHistogram(uint32_t num_buckets) {
+    buckets_.reserve(num_buckets);
+    for (uint32_t i = 0; i < num_buckets; ++i) {
         buckets_.push_back(BaseCounter());
-        buffer_.push_back({/*bucket_index=*/0, /*count=*/0});
     }
-
-    observations_.push_back(MakeHistogramObservation(name_, encoding_id_, buckets, buffer_.get()));
 }
 
-BaseHistogram::BaseHistogram(BaseHistogram&& other)
-    : buckets_(fbl::move(other.buckets_)), observations_(fbl::move(other.observations_)),
-      buffer_(fbl::move(other.buffer_)), name_(other.name_), metric_id_(other.metric_id_),
-      encoding_id_(other.encoding_id_), flushing_(other.flushing_.load()) {}
+BaseHistogram::BaseHistogram(BaseHistogram&& other) = default;
 
-bool BaseHistogram::Flush(const BaseHistogram::FlushFn& flush_handler) {
-    // Set flushing_ to true. If it was already flushing, then do nothing.
-    if (flushing_.exchange(true, fbl::memory_order::memory_order_relaxed)) {
+RemoteHistogram::RemoteHistogram(uint32_t num_buckets, const fbl::String& name, uint64_t metric_id,
+                                 uint32_t encoding_id,
+                                 const fbl::Vector<ObservationValue>& metadata)
+    : BaseHistogram(num_buckets), buffer_(metadata), name_(name), metric_id_(metric_id),
+      encoding_id_(encoding_id) {
+    bucket_buffer_.reserve(num_buckets);
+    for (uint32_t i = 0; i < num_buckets; ++i) {
+        bucket_buffer_.push_back({.index = i, .count = 0});
+    }
+    auto* metric = buffer_.GetMutableMetric();
+    metric->encoding_id = encoding_id_;
+    metric->name.data = const_cast<char*>(name_.data());
+    // Include null termination.
+    metric->name.size = name_.size() + 1;
+    metric->value = BucketDistributionValue(num_buckets, bucket_buffer_.get());
+}
+
+RemoteHistogram::RemoteHistogram(RemoteHistogram&& other)
+    : BaseHistogram(fbl::move(other)), buffer_(fbl::move(other.buffer_)),
+      bucket_buffer_(fbl::move(other.bucket_buffer_)), name_(fbl::move(other.name_)),
+      metric_id_(other.metric_id_), encoding_id_(other.encoding_id_) {}
+
+bool RemoteHistogram::Flush(const RemoteHistogram::FlushFn& flush_handler) {
+    if (!buffer_.TryBeginFlush()) {
         return false;
     }
 
-    for (size_t bucket_index = 0; bucket_index < buckets_.size(); ++bucket_index) {
-        buffer_[bucket_index].index = static_cast<uint32_t>(bucket_index);
-        buffer_[bucket_index].count = buckets_[bucket_index].Exchange(0);
+    // Sets every bucket back to 0, not all buckets will be at the same instant, but
+    // eventual consistency in the backend is good enough.
+    for (uint32_t bucket_index = 0; bucket_index < bucket_buffer_.size(); ++bucket_index) {
+        bucket_buffer_[bucket_index].count = buckets_[bucket_index].Exchange();
     }
-    fidl::VectorView<ObservationValue> values;
-    values.set_data(observations_.get());
-    values.set_count(observations_.size());
 
-    flush_handler(metric_id_, values,
-                  [this]() { flushing_.store(false, fbl::memory_order::memory_order_relaxed); });
+    flush_handler(metric_id_, buffer_.GetView(),
+                  fbl::BindMember(&buffer_, &ObservationBuffer::CompleteFlush));
     return true;
 }
 

@@ -20,31 +20,25 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-// Number of threads to use for multithreading sanity check.
-constexpr uint32_t kThreads = 20;
+// Number of threads for running multi threaded tests.
+constexpr uint64_t kThreads = 20;
 
-// Scalar used in UpdateHistogramFn to calculate the number of operations
-// per bucket.
-constexpr uint64_t kUpdateScalar = 100;
+// Number of buckets used for histogram(CUT).
+constexpr uint32_t kBuckets = 40;
 
-constexpr uint64_t kMetricId = 5;
+// Name of the histogram being created.
+constexpr char kHistogramName[] = "Histogram";
 
-constexpr uint32_t kEncodingId = 1;
+// Default name for metadata parts.
+constexpr char kMetadataName[] = "Metadata";
 
-constexpr uint32_t kBuckets = 20;
+// Default id for the histogram.
+constexpr uint64_t kMetricId = 1;
 
-constexpr char kName[] = "SomeName";
+// Default encoding id for the histogram.
+constexpr uint32_t kEncodingId = 2;
 
-bool Contains(const fbl::Vector<uint64_t>& container, uint64_t val) {
-    for (auto el : container) {
-        if (el == val) {
-            return true;
-        }
-    }
-    return false;
-}
-
-ObservationValue MakeObservationValue(const char* name, Value value) {
+ObservationValue MakeObservation(const char* name, Value value) {
     ObservationValue obs;
     obs.name.size = strlen(name) + 1;
     obs.name.data = const_cast<char*>(name);
@@ -53,344 +47,336 @@ ObservationValue MakeObservationValue(const char* name, Value value) {
     return obs;
 }
 
+// Returns an immutable vector of metadata.
 const fbl::Vector<ObservationValue>& GetMetadata() {
-    static const char part_name[] = "part";
-
-    static const fbl::Vector<ObservationValue> metadata = {
-        MakeObservationValue(part_name, IntValue(24)),
-        MakeObservationValue(part_name, DoubleValue(0.125)),
-    };
-
+    static fbl::Vector<ObservationValue> metadata = {MakeObservation(kMetadataName, IntValue(2)),
+                                                     MakeObservation(kMetadataName, IntValue(3))};
     return metadata;
 }
 
-BaseHistogram MakeHistogram() {
-    BaseHistogram histogram(kName, GetMetadata(), kBuckets, kMetricId, kEncodingId);
-    return histogram;
+RemoteHistogram MakeRemoteHistogram() {
+    return RemoteHistogram(kBuckets, kHistogramName, kMetricId, kEncodingId, GetMetadata());
 }
 
-struct CheckContentsFlushFn {
-    void operator()(uint64_t metric_id, const fidl::VectorView<ObservationValue>& observations,
-                    BaseHistogram::FlushCompleteFn complete_fn) const {
-        const fbl::Vector<ObservationValue>& metadata = GetMetadata();
-        auto complete_flush = fbl::MakeAutoCall(fbl::move(complete_fn));
+// Returns true if two observation values are equal.
+bool ObservationValuesEq(ObservationValue actual, ObservationValue expected) {
+    BEGIN_HELPER;
+    EXPECT_EQ(actual.encoding_id, expected.encoding_id);
+    EXPECT_EQ(actual.name.size, expected.name.size);
+    EXPECT_STR_EQ(actual.name.data, expected.name.data);
+    EXPECT_EQ(actual.value.tag, expected.value.tag);
+    EXPECT_EQ(actual.value.int_value, expected.value.int_value);
+    END_HELPER;
+}
 
-        size_t expected_size = metadata.size() + 1;
-        if (observations.count() < expected_size) {
-            *error = fbl::StringPrintf("observations.count()(%lu) != expected_size(%lu)\n",
-                                       observations.count(), expected_size);
-            return;
-        }
-
-        fbl::Vector<size_t> visited_obs;
-        for (size_t curr_meta = 0; curr_meta < metadata.size(); ++curr_meta) {
-            const auto& meta_obs = metadata[curr_meta];
-            bool found_match = false;
-            for (size_t current_obs = 0; current_obs < metadata.size(); ++current_obs) {
-                if (Contains(visited_obs, current_obs)) {
-                    continue;
-                }
-                const ObservationValue& value = observations[current_obs];
-                if (value.encoding_id != encoding_id) {
-                    *error = fbl::StringPrintf(
-                        "observations[%lu].encoding_id(%u) != expected_encoding_id(%u)\n",
-                        current_obs, meta_obs.encoding_id, encoding_id);
-                    return;
-                }
-                if (memcmp(meta_obs.name.data, value.name.data, value.name.size) == 0 &&
-                    memcmp(&meta_obs.value, &value.value, sizeof(Value)) == 0) {
-                    found_match = true;
-                    visited_obs.push_back(current_obs);
-                    break;
-                }
+bool HistObservationValuesEq(ObservationValue actual, ObservationValue expected) {
+    BEGIN_HELPER;
+    EXPECT_EQ(actual.encoding_id, expected.encoding_id);
+    EXPECT_EQ(actual.name.size, expected.name.size);
+    EXPECT_STR_EQ(actual.name.data, expected.name.data);
+    EXPECT_EQ(actual.value.tag, fuchsia_cobalt_ValueTagint_bucket_distribution);
+    EXPECT_EQ(actual.value.tag, expected.value.tag);
+    EXPECT_EQ(actual.value.int_bucket_distribution.count,
+              expected.value.int_bucket_distribution.count);
+    for (size_t i = 0; i < actual.value.int_bucket_distribution.count; ++i) {
+        BucketDistributionEntry& actual_bucket =
+            static_cast<BucketDistributionEntry*>(actual.value.int_bucket_distribution.data)[i];
+        bool found = false;
+        for (size_t j = 0; j < expected.value.int_bucket_distribution.count; ++j) {
+            BucketDistributionEntry& expected_bucket = static_cast<BucketDistributionEntry*>(
+                expected.value.int_bucket_distribution.data)[j];
+            if (actual_bucket.index != expected_bucket.index) {
+                continue;
             }
-            if (!found_match) {
-                *error = fbl::StringPrintf("metadata[%lu] is not in observations.\n", curr_meta);
-                return;
-            }
+            EXPECT_EQ(actual_bucket.count, expected_bucket.count);
+            found = true;
+            break;
         }
+        ASSERT_TRUE(found);
+    }
+    END_HELPER;
+}
 
-        size_t histogram_index = metadata.size();
-        const ObservationValue& hist_obs = observations[histogram_index];
-        if (hist_obs.encoding_id != encoding_id) {
-            *error =
-                fbl::StringPrintf("observations[%lu].encoding_id(%u) != expected_encoding_id(%u)\n",
-                                  histogram_index, hist_obs.encoding_id, encoding_id);
-            return;
-        }
+// Verify the count of the appropiate bucket is updated on increment.
+bool TestIncrement() {
+    BEGIN_TEST;
+    BaseHistogram histogram(kBuckets);
 
-        if (memcmp(histogram_name.c_str(), hist_obs.name.data, hist_obs.name.size) != 0) {
-            *error = fbl::StringPrintf("observations[%lu].name(%*s) != histogram_name(%s)\n",
-                                       histogram_index, static_cast<int>(hist_obs.name.size),
-                                       hist_obs.name.data, histogram_name.c_str());
-            return;
+    // Increase the count of each bucket bucket_index times.
+    for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
+        ASSERT_EQ(histogram.GetCount(bucket_index), 0);
+        for (uint32_t times = 0; times < bucket_index; ++times) {
+            histogram.IncrementCount(bucket_index);
         }
-
-        // Check bucket values.
-        if (hist_obs.value.tag != fuchsia_cobalt_ValueTagint_bucket_distribution) {
-            *error = fbl::StringPrintf(
-                "observations[%lu].value not IntBucketDistribution. tag(%u) != %u\n",
-                histogram_index, hist_obs.value.tag,
-                fuchsia_cobalt_ValueTagint_bucket_distribution);
-            return;
-        }
-
-        if (hist_obs.value.int_bucket_distribution.count != bucket_values.size()) {
-            *error =
-                fbl::StringPrintf("observations[%lu].value.int_bucket_distribution.count(%lu) "
-                                  "!= bucket_values.size()(%lu)",
-                                  histogram_index, hist_obs.value.int_bucket_distribution.count,
-                                  bucket_values.size());
-            return;
-        }
-
-        BucketDistributionEntry* buckets =
-            static_cast<BucketDistributionEntry*>(hist_obs.value.int_bucket_distribution.data);
-        for (size_t bucket_index = 0; bucket_index < bucket_values.size(); ++bucket_index) {
-            bool index_found = false;
-            for (size_t bucket = 0; bucket < bucket_values.size(); ++bucket) {
-                if (buckets[bucket].index == bucket_index) {
-                    index_found = true;
-                    if (buckets[bucket].count != bucket_values[bucket_index]) {
-                        *error = fbl::StringPrintf(
-                            "bucket_value[%lu](%lu) != buckets[%lu].count(%lu), but index match!\n",
-                            bucket_index, bucket_values[bucket], bucket, buckets[bucket].count);
-                        return;
-                    }
-                    break;
-                }
-            }
-            if (!index_found) {
-                *error = fbl::StringPrintf(
-                    "bucket at index %lu is missing from the observed buckets.\n", bucket_index);
-                return;
-            }
-        }
+        ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
     }
 
-    fbl::Vector<uint64_t> bucket_values;
-    fbl::String histogram_name;
-
-    fbl::String* error;
-    uint32_t encoding_id;
-};
-
-// Add an observation and verify the bucket is updated.
-bool AddObservationTest() {
-    BEGIN_TEST;
-    BaseHistogram histogram = MakeHistogram();
-    ASSERT_EQ(histogram.GetCount(/*bucket=*/10), 0);
-    histogram.IncrementCount(/*bucket=*/10);
-    ASSERT_EQ(histogram.GetCount(10), 1);
-    END_TEST;
-}
-
-// Verifies the order and the data in the elements when flushed, everything in the histogram
-// should be flushed. This is true only for single threaded environment, since operation reordering,
-// might send stale version of the bucket, but everything will eventually be flushed, so eventually
-// all data will handled in multi-threaded environment.
-bool FlushTest() {
-    BEGIN_TEST;
-    fbl::String error;
-    CheckContentsFlushFn handler;
-    handler.histogram_name = kName;
-    handler.encoding_id = kEncodingId;
-    handler.error = &error;
-    BaseHistogram histogram = MakeHistogram();
-    // bucket[i] = i
-    for (uint64_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
-        for (uint64_t op = 0; op < bucket_index; ++op) {
-            histogram.IncrementCount(/*bucket=*/bucket_index);
-        }
-        handler.bucket_values.push_back(bucket_index);
+    // Verify that the operations are isolated, each bucket should have bucket_index counts.
+    for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
+        ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
     }
-    ASSERT_TRUE(histogram.Flush(fbl::move(handler)));
-    ASSERT_TRUE(error.empty(), error.c_str());
     END_TEST;
 }
 
-bool FlushWhileFlushingTest() {
+// Verify the count of the appropiate bucket is updated on increment with a specified value. This
+// verifies the behaviour for weighted histograms, where the weight is limited to an integer.
+bool TestIncrementByVal() {
     BEGIN_TEST;
-    BaseHistogram::FlushCompleteFn complete_cb;
-    BaseHistogram histogram = MakeHistogram();
+    BaseHistogram histogram(kBuckets);
 
-    ASSERT_TRUE(histogram.Flush([&complete_cb](uint64_t metric_id,
-                                               const fidl::VectorView<ObservationValue>& obs,
-                                               BaseHistogram::FlushCompleteFn complete_fn) {
-        complete_cb = fbl::move(complete_fn);
-    }));
-    ASSERT_FALSE(histogram.Flush(BaseHistogram::FlushFn()));
-    complete_cb();
-    ASSERT_TRUE(histogram.Flush([](uint64_t, const fidl::VectorView<ObservationValue>&,
-                                   BaseHistogram::FlushCompleteFn) {}));
-    ASSERT_FALSE(histogram.Flush(BaseHistogram::FlushFn()));
+    // Increase the count of each bucket bucket_index times.
+    for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
+        ASSERT_EQ(histogram.GetCount(bucket_index), 0);
+        histogram.IncrementCount(bucket_index, bucket_index);
+        ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
+    }
+
+    // Verify that the operations are isolated, each bucket should have bucket_index counts.
+    for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
+        ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
+    }
     END_TEST;
 }
 
-struct UpdateHistogramFnArgs {
+struct IncrementArgs {
+    // Target histogram.
     BaseHistogram* histogram;
-    sync_completion_t* completion;
-};
 
-int UpdateHistogramFn(void* void_args) {
-    UpdateHistogramFnArgs* args = static_cast<UpdateHistogramFnArgs*>(void_args);
-
-    // Wait for call.
-    zx_status_t res = sync_completion_wait(args->completion, zx::sec(20).get());
-    if (res != ZX_OK) {
-        return thrd_error;
-    }
-
-    for (uint64_t bucket = 0; bucket < kBuckets; ++bucket) {
-        for (uint64_t i = 0; i < kUpdateScalar * bucket; ++i) {
-            args->histogram->IncrementCount(bucket);
-        }
-    }
-
-    return thrd_success;
-}
-
-// Verify that incrementing each bucket |kUpdateScalar|*|bucket_index| times per thread in
-// |kThreads| threads, have a consistent view of the data, which allows the histogram to be
-// thread-safe through this operations.
-bool MultiThreadCountOpsConsistencyTest() {
-    BEGIN_TEST;
-    BaseHistogram histogram = MakeHistogram();
-    fbl::Vector<thrd_t> thread_ids;
-    sync_completion_t wait_for_start;
-
-    UpdateHistogramFnArgs args;
-    args.histogram = &histogram;
-    args.completion = &wait_for_start;
-
-    // Initialize all threads then signal start, and join all fo them.
-    thread_ids.reserve(kThreads);
-    for (uint32_t i = 0; i < kThreads; ++i) {
-        thread_ids.push_back(0);
-    }
-
-    for (auto& thread_id : thread_ids) {
-        ASSERT_EQ(thrd_create(&thread_id, UpdateHistogramFn, &args), thrd_success);
-    }
-    sync_completion_signal(&wait_for_start);
-
-    for (auto& thread_id : thread_ids) {
-        int res = thrd_success;
-        ASSERT_EQ(thrd_join(thread_id, &res), thrd_success);
-        ASSERT_EQ(res, thrd_success);
-    }
-
-    // Verify the result is coherent.
-    // bucket[i] = i * kUpdateScalar * kThreads
-    for (uint64_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
-        ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index * kUpdateScalar * kThreads);
-    }
-    END_TEST;
-}
-
-struct WaitBeforeCompleteFlushHandler {
-    void operator()(uint64_t metric_id, const fidl::VectorView<ObservationValue>& observations,
-                    BaseHistogram::FlushCompleteFn complete_fn) {
-        ZX_ASSERT(thread_ids != nullptr);
-        ZX_ASSERT(flushing_thread != nullptr);
-
-        for (auto thread_id : *thread_ids) {
-            if (thread_id != thrd_current()) {
-                int res;
-                thrd_join(thread_id, &res);
-            }
-        }
-
-        *flushing_thread = thrd_current();
-        counter->Increment();
-        complete_fn();
-        sync_completion_signal(completion);
-    }
-
-    // List of all threads that were spawned to flush.
-    fbl::Vector<thrd_t>* thread_ids;
-
-    // Notify main thread that all threads finished while this thread was flushing.
-    sync_completion_t* completion;
-
-    // Counter for the number of times Flush was actually called.
-    BaseCounter* counter;
-
-    // Main thread will join this thread.
-    thrd_t* flushing_thread;
-};
-
-struct FlushHistogramFnArgs {
-    BaseHistogram* histogram;
-    // FlushHandler
-    WaitBeforeCompleteFlushHandler flush_handler;
-
-    // Notify to start the threads together.
+    // Used for signaling the worker thread to start incrementing.
     sync_completion_t* start;
+
+    // Number of times to call Increment.
+    size_t operations = 0;
 };
 
-// This verifies that while a thread is flushing, all other threads fail to flush the contents
-// of the histogram thus any action that needs to be taken over the observation buffer is safe,
-// as long as.
-int FlushHistogramFn(void* void_args) {
-    FlushHistogramFnArgs* args = static_cast<FlushHistogramFnArgs*>(void_args);
-    sync_completion_wait(args->start, zx::sec(20).get());
-    args->histogram->Flush(fbl::move(args->flush_handler));
+// Increment each bucket by 2* operations * bucket_index.
+int IncrementFn(void* args) {
+    IncrementArgs* increment_args = static_cast<IncrementArgs*>(args);
+    sync_completion_wait(increment_args->start, zx::sec(20).get());
+
+    for (uint32_t bucket = 0; bucket < kBuckets; ++bucket) {
+        for (size_t i = 0; i < increment_args->operations; ++i) {
+            increment_args->histogram->IncrementCount(bucket, bucket);
+        }
+        increment_args->histogram->IncrementCount(bucket, bucket * increment_args->operations);
+    }
+
     return thrd_success;
 }
 
-bool MultiThreadFlushOpsConsistencyTest() {
+// Verifies that calling increment from multiple threads, yields consistent results.
+// Multiple threads will call Increment a known number of times, then the total count
+// per bucket should be sum of the times each thread called Increment one each bucket.
+bool TestIncrementMultiThread() {
     BEGIN_TEST;
-    BaseHistogram histogram = MakeHistogram();
-    FlushHistogramFnArgs args[kThreads];
+    sync_completion_t start;
+    BaseHistogram histogram(kBuckets);
     fbl::Vector<thrd_t> thread_ids;
-    sync_completion_t wait_for_start, wait_for_completion;
-    thrd_t flushing_thread;
-    BaseCounter flushes;
+    IncrementArgs args[kThreads];
 
-    // Initialize all threads then signal start, and join all fo them.
     thread_ids.reserve(kThreads);
-    for (uint32_t i = 0; i < kThreads; ++i) {
-        thread_ids.push_back(0);
+    for (uint64_t i = 0; i < kThreads; ++i) {
+        thread_ids.push_back({});
     }
 
-    for (uint64_t thread = 0; thread < kThreads; ++thread) {
-        auto& thread_id = thread_ids[thread];
-        auto handler = WaitBeforeCompleteFlushHandler();
-        handler.thread_ids = &thread_ids;
-        handler.completion = &wait_for_completion;
-        handler.counter = &flushes;
-        handler.flushing_thread = &flushing_thread;
-        args[thread].flush_handler = fbl::move(handler);
-        args[thread].histogram = &histogram;
-        args[thread].start = &wait_for_start;
-        ASSERT_EQ(thrd_create(&thread_id, FlushHistogramFn, &args), thrd_success);
+    for (uint64_t i = 0; i < kThreads; ++i) {
+        auto& thread_id = thread_ids[i];
+        args[i].histogram = &histogram;
+        args[i].operations = i;
+        args[i].start = &start;
+        ASSERT_EQ(thrd_create(&thread_id, IncrementFn, &args[i]), thrd_success);
     }
-    sync_completion_signal(&wait_for_start);
-    sync_completion_wait(&wait_for_completion, zx::sec(20).get());
 
-    // Wait for the flushing thread to finish.
-    thrd_join(flushing_thread, nullptr);
+    // Notify threads to start incrementing the count.
+    sync_completion_signal(&start);
 
-    // Verify the number of times it was flushed, must be one.
-    ASSERT_EQ(flushes.Load(), 1);
+    // Wait for all threads to finish.
+    for (const auto& thread_id : thread_ids) {
+        thrd_join(thread_id, nullptr);
+    }
 
-    // Verify that if we flush again it succeeds.
-    ASSERT_TRUE(histogram.Flush([](uint64_t, const fidl::VectorView<ObservationValue>&,
-                                   BaseHistogram::FlushCompleteFn) {}));
+    // Each thread increses each bucket by 2 * bucket_index, so the expected amount for each bucket
+    // is: 2 * bucket_index * Sum(i=0, kThreads -1) i = 2 * bucket_index * kThreads* (kThreads - 1)
+    // / 2;
+    constexpr size_t amount = (kThreads - 1) * (kThreads);
+    for (uint32_t i = 0; i < kBuckets; ++i) {
+        // We take the sum of the accumulated and what is left, because the last increment may have
+        // been scheduled after the last flush.
+        EXPECT_EQ(histogram.GetCount(i), i * amount);
+    }
+    END_TEST;
+}
 
-    ASSERT_FALSE(histogram.Flush([](uint64_t, const fidl::VectorView<ObservationValue>&,
-                                    BaseHistogram::FlushCompleteFn) {}));
+// Verifies that when flushing an histogram, all the flushed data matches that of the
+// count in the histogram.
+bool TestFlush() {
+    BEGIN_TEST;
+    RemoteHistogram histogram = MakeRemoteHistogram();
+    fidl::VectorView<ObservationValue> flushed_values;
+    uint64_t flushed_metric_id;
+    RemoteHistogram::FlushCompleteFn complete_fn;
+
+    // Increase the count of each bucket bucket_index times.
+    for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
+        ASSERT_EQ(histogram.GetCount(bucket_index), 0);
+        histogram.IncrementCount(bucket_index, bucket_index);
+        ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
+    }
+
+    ASSERT_TRUE(histogram.Flush([&flushed_values, &flushed_metric_id,
+                                 &complete_fn](uint64_t metric_id,
+                                               const fidl::VectorView<ObservationValue>& values,
+                                               RemoteHistogram::FlushCompleteFn comp_fn) {
+        flushed_values.set_data(const_cast<ObservationValue*>(values.data()));
+        flushed_values.set_count(values.count());
+        flushed_metric_id = metric_id;
+        complete_fn = fbl::move(comp_fn);
+    }));
+
+    // Check that flushed data is actually what we expect:
+    // The metadata is the same, and each bucket contains bucket_index count.
+    ASSERT_EQ(flushed_metric_id, kMetricId);
+    // Histogram should contain all metadata plus an extra value.
+    ASSERT_EQ(flushed_values.count(), GetMetadata().size() + 1);
+    for (uint64_t metadata_index = 0; metadata_index < GetMetadata().size(); ++metadata_index) {
+        EXPECT_TRUE(
+            ObservationValuesEq(flushed_values[metadata_index], GetMetadata()[metadata_index]));
+    }
+
+    fbl::Vector<BucketDistributionEntry> entries;
+    entries.reserve(kBuckets);
+    for (size_t i = 0; i < kBuckets; ++i) {
+        entries.push_back({.index = static_cast<uint32_t>(i), .count = i});
+    }
+    ObservationValue expected_histogram = {
+        .name = {.size = fbl::constexpr_strlen(kHistogramName) + 1,
+                 .data = const_cast<char*>(kHistogramName)},
+        .value = BucketDistributionValue(entries.size(), entries.get()),
+        .encoding_id = kEncodingId};
+
+    // Verify there is a bucket metric.
+    EXPECT_TRUE(
+        HistObservationValuesEq(flushed_values[flushed_values.count() - 1], expected_histogram));
+
+    // Until complete_fn is called this should be false.
+    ASSERT_FALSE(histogram.Flush(RemoteHistogram::FlushFn()));
+
+    complete_fn();
+
+    // Verify all buckets are 0.
+    for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
+        ASSERT_EQ(histogram.GetCount(bucket_index), 0);
+    }
+
+    // Check that after calling complete_fn we can call flush again.
+    ASSERT_TRUE(
+        histogram.Flush([](uint64_t metric_id, const fidl::VectorView<ObservationValue>& values,
+                           RemoteHistogram::FlushCompleteFn comp_fn) {}));
+
+    END_TEST;
+}
+
+struct FlushArgs {
+    // Pointer to the histogram which is flushing incremental snapshot to a 'remote' histogram.
+    RemoteHistogram* histogram;
+
+    // Pointer to the 'Remote' histogram that is accumulating the data of each flush.
+    BaseHistogram* accumulated_histogram;
+
+    // Used to enforce the threads start together. The main thread will signal after
+    // all threads have been started.
+    sync_completion_t* start;
+
+    // Number of times to perform the given operation.
+    size_t operations = 0;
+
+    // Whether the thread will flush, if flase it will be incrementing the buckets.
+    bool flush = false;
+};
+
+int FlushFn(void* args) {
+    FlushArgs* flush_args = static_cast<FlushArgs*>(args);
+
+    sync_completion_wait(flush_args->start, zx::sec(20).get());
+
+    for (size_t i = 0; i < flush_args->operations; ++i) {
+        if (flush_args->flush) {
+            flush_args->histogram->Flush(
+                [&flush_args](uint64_t metric_id, const fidl::VectorView<ObservationValue>& values,
+                              RemoteHistogram::FlushCompleteFn complete_fn) {
+                    uint64_t count = values[values.count() - 1].value.int_bucket_distribution.count;
+                    BucketDistributionEntry* entries = static_cast<BucketDistributionEntry*>(
+                        values[values.count() - 1].value.int_bucket_distribution.data);
+                    for (uint32_t i = 0; i < count; ++i) {
+                        flush_args->accumulated_histogram->IncrementCount(entries[i].index,
+                                                                          entries[i].count);
+                    }
+                });
+        } else {
+            for (uint32_t j = 0; j < kBuckets; ++j) {
+                flush_args->histogram->IncrementCount(j, j);
+            }
+        }
+    }
+    return thrd_success;
+}
+
+// Verify that under concurrent environment the final results are consistent. This test
+// will have |kThreads|/2 threads increment bucket counts, and |kThreads|/2 Flush them
+// a certain amount of times, and collect into a BaseHistogram the final results. At the end,
+// each bucket of the BaseHistogram should be the expected value.
+bool TestFlushMultithread() {
+    BEGIN_TEST;
+    sync_completion_t start;
+    BaseHistogram accumulated(kBuckets);
+    RemoteHistogram histogram = MakeRemoteHistogram();
+    fbl::Vector<thrd_t> thread_ids;
+    FlushArgs args[kThreads];
+
+    thread_ids.reserve(kThreads);
+    for (uint64_t i = 0; i < kThreads; ++i) {
+        thread_ids.push_back({});
+    }
+
+    for (uint64_t i = 0; i < kThreads; ++i) {
+        auto& thread_id = thread_ids[i];
+        args[i].histogram = &histogram;
+        args[i].accumulated_histogram = &accumulated;
+        args[i].operations = i;
+        args[i].flush = i % 2;
+        args[i].start = &start;
+        ASSERT_EQ(thrd_create(&thread_id, FlushFn, &args[i]), thrd_success);
+    }
+
+    // Notify threads to start incrementing the count.
+    sync_completion_signal(&start);
+
+    // Wait for all threads to finish.
+    for (const auto& thread_id : thread_ids) {
+        thrd_join(thread_id, nullptr);
+    }
+
+    // Each thread at an even position, increases the the count of a bucket by bucket_index.
+    constexpr size_t ceil_threads = ((kThreads - 1) / 2 * ((kThreads - 1) / 2 + 1));
+    for (uint32_t i = 0; i < kBuckets; ++i) {
+        // We take the sum of the accumulated and what is left, because the last increment may have
+        // been scheduled after the last flush.
+        EXPECT_EQ(accumulated.GetCount(i) + histogram.GetCount(i), i * ceil_threads);
+    }
     END_TEST;
 }
 
 BEGIN_TEST_CASE(BaseHistogramTest)
-RUN_TEST(AddObservationTest)
-RUN_TEST(FlushTest)
-RUN_TEST(FlushWhileFlushingTest)
-RUN_TEST(MultiThreadCountOpsConsistencyTest)
-RUN_TEST(MultiThreadFlushOpsConsistencyTest)
+RUN_TEST(TestIncrement)
+RUN_TEST(TestIncrementByVal)
+RUN_TEST(TestIncrementMultiThread)
 END_TEST_CASE(BaseHistogramTest)
+
+BEGIN_TEST_CASE(RemoteHistogramTest)
+RUN_TEST(TestFlush)
+RUN_TEST(TestFlushMultithread)
+END_TEST_CASE(RemoteHistogramTest)
+
 } // namespace
 } // namespace internal
 } // namespace cobalt_client

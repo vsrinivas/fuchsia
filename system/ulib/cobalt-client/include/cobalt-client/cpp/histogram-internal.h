@@ -16,16 +16,52 @@
 
 namespace cobalt_client {
 namespace internal {
+// Note: Everything on this namespace is internal, no external users should rely
+// on the behaviour of any of these classes.
 
-// Base class for histogram, that provide a view to the data and mechanism for
-// flushing such data.
+// Base class for histogram, that provides a thin layer over a collection of buckets
+// that represent a histogram. Once constructed, unless moved, the class is thread-safe.
+// All allocations happen when constructed.
 //
-// This class is thread-safe.
+// This class is moveable but not copyable or assignable.
+// This class is thread-compatible.
 class BaseHistogram {
 public:
     // Type used for histogram samples.
     using Count = BaseCounter::Type;
 
+    BaseHistogram() = delete;
+    explicit BaseHistogram(uint32_t num_buckets);
+    BaseHistogram(const BaseHistogram&) = delete;
+    BaseHistogram(BaseHistogram&&);
+    BaseHistogram& operator=(const BaseHistogram&) = delete;
+    BaseHistogram& operator=(BaseHistogram&&) = delete;
+    ~BaseHistogram() = default;
+
+    // Increases the count of the |bucket| bucket by 1.
+    void IncrementCount(uint32_t bucket, Count val = 1) {
+        ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(), "IncrementCount bucket out of range.");
+        buckets_[bucket].Increment(val);
+    }
+
+    // Returns the count of the |bucket| bucket.
+    Count GetCount(uint32_t bucket) const {
+        ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(), "GetCount bucket out of range.");
+        return buckets_[bucket].Load();
+    }
+
+protected:
+    // Counter for the abs frequency of every histogram bucket.
+    fbl::Vector<BaseCounter> buckets_;
+};
+
+// This class provides a histogram which represents a full fledged cobalt metric. The histogram
+// owner will call |Flush| which is meant to incrementally persist data to cobalt.
+//
+// This class is moveable but not copyable or assignable.
+// This class is thread-compatible.
+class RemoteHistogram : public BaseHistogram {
+public:
     // Callback to notify that Flush has been completed, and that the observation buffer is
     // writeable again(this is buffer where the histogram is flushed).
     using FlushCompleteFn = fbl::Function<void()>;
@@ -34,14 +70,14 @@ public:
     using FlushFn = fbl::Function<void(
         uint64_t metric_id, const fidl::VectorView<ObservationValue>&, FlushCompleteFn complete)>;
 
-    BaseHistogram() = delete;
-    BaseHistogram(const fbl::String& name, const fbl::Vector<ObservationValue>& metadata,
-                  size_t buckets, uint64_t metric_id, uint32_t encoding_id);
-    BaseHistogram(const BaseHistogram&) = delete;
-    BaseHistogram(BaseHistogram&&);
-    BaseHistogram& operator=(const BaseHistogram&) = delete;
-    BaseHistogram& operator=(BaseHistogram&&) = delete;
-    ~BaseHistogram() = default;
+    RemoteHistogram() = delete;
+    RemoteHistogram(uint32_t num_buckets, const fbl::String& name, uint64_t metric_id,
+                    uint32_t encoding_id, const fbl::Vector<ObservationValue>& metadata);
+    RemoteHistogram(const RemoteHistogram&) = delete;
+    RemoteHistogram(RemoteHistogram&&);
+    RemoteHistogram& operator=(const RemoteHistogram&) = delete;
+    RemoteHistogram& operator=(RemoteHistogram&&) = delete;
+    ~RemoteHistogram() = default;
 
     // Returns true if the contents of histogram were flushed into an ObservationPart collection,
     // which is sent to the flush_handler. Returns false if the call was ignored.
@@ -50,32 +86,23 @@ public:
     // | Metadata | Histogram|
     bool Flush(const FlushFn& flush_handler);
 
-    // Increases the count of the |bucket| bucket by 1.
-    void IncrementCount(uint64_t bucket) {
-        ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(), "Add observation out of range.");
-        buckets_[bucket].Increment();
-    }
+private:
+    // Keeps a buffer for the metadata and the metric.
+    ObservationBuffer buffer_;
 
-    // Returns the count of the |bucket| bucket.
-    Count GetCount(uint64_t bucket) const {
-        ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(), "Add observation out of range.");
-        return buckets_[bucket].Load();
-    }
-
-protected:
-    fbl::Vector<BaseCounter> buckets_;
-    fbl::Vector<ObservationValue> observations_;
     // Buffer for out of line allocation for the data being sent
     // through fidl. This buffer is rewritten on every flush, and contains
     // an entry for each bucket.
-    fbl::Vector<BucketDistributionEntry> buffer_;
-    fbl::String name_;
-    uint64_t metric_id_;
-    uint32_t encoding_id_;
+    fbl::Vector<BucketDistributionEntry> bucket_buffer_;
 
-    // Enforces that no two flushes can be called concurrently.
-    // Only the call the changes the value from false to true, will actually flush.
-    fbl::atomic<bool> flushing_;
+    // ObservationPart name for the histogram.
+    fbl::String name_;
+
+    // Id for the cobalt metric backed by this histogram.
+    uint64_t metric_id_;
+
+    // Id for the encoding used for the histograms data.
+    uint32_t encoding_id_;
 };
 
 } // namespace internal
