@@ -8,7 +8,8 @@ load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
 dart_app(
     name = "dart",
     package_name = "tests.dart_app",
-    main = "hello_world.dart",
+    main = "lib/main.dart",
+    srcs = glob(["lib/*.dart"]),
 )
 
 fuchsia_package(
@@ -21,7 +22,8 @@ fuchsia_package(
 dart_app(
     name = "dart_with_unused_dependencies",
     package_name = "tests.dart_app",
-    main = "hello_world.dart",
+    main = "lib/main.dart",
+    srcs = glob(["lib/*.dart"]),
     deps = [
         "@vendor_meta//:meta",
     ],

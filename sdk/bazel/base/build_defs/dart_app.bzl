@@ -31,6 +31,7 @@ def _dart_app_impl(context):
         kernel_compiler = context.files._kernel_compiler[0],
         sdk_root = context.files._platform_lib[0],
         main = context.files.main[0],
+        srcs = context.files.srcs,
         kernel_snapshot_file = kernel_snapshot_file,
         manifest_file = manifest_file,
         main_dilp_file = context.outputs.main_dilp,
@@ -54,6 +55,10 @@ dart_app = rule(
             mandatory = True,
             allow_files = True,
             single_file = True,
+        ),
+        "srcs": attr.label_list(
+            doc = "Additional source files",
+            allow_files = True,
         ),
         "package_name": attr.string(
             doc = "The Dart package name",

@@ -14,8 +14,8 @@ load(
 )
 
 def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
-                          sdk_root, main, kernel_snapshot_file, manifest_file,
-                          main_dilp_file, dilp_list_file):
+                          sdk_root, main, srcs, kernel_snapshot_file,
+                          manifest_file, main_dilp_file, dilp_list_file):
     """Creates an action that generates the Dart kernel and its dependencies.
 
     Args:
@@ -25,6 +25,7 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
         kernel_compiler: The kernel compiler snapshot `File`.
         sdk_root: The Dart SDK root `File` (Dart or Flutter's platform libs).
         main: The main `File`.
+        srcs: Additional list of source `File`.
         kernel_snapshot_file: The kernel snapshot `File` output.
         manifest_file: The Fuchsia manifest `File` output.
         main_dilp_file: The compiled main dilp `File` output.
@@ -37,7 +38,8 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
     dart_ctx = make_dart_context(
         ctx = context,
         package = package_name,
-        deps = context.attr.deps)
+        deps = context.attr.deps,
+    )
 
     # 1. Create the .packages file.
     package_spec_path = context.label.package + "/" + context.label.name + ".packages"
@@ -107,7 +109,7 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
             kernel_snapshot_file.path,
             main.path,
         ],
-        inputs = build_dir_files.values() + [
+        inputs = build_dir_files.values() + srcs + [
             kernel_compiler,
             sdk_root,
             package_spec,
