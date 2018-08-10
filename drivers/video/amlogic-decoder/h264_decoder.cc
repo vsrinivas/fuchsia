@@ -474,10 +474,6 @@ zx_status_t H264Decoder::InitializeStream() {
   }
   uint32_t mb_height = stream_info.total_mbs() / mb_width;
 
-  mb_width = fbl::round_up(mb_width, 4u);
-  mb_height = fbl::round_up(mb_height, 4u);
-  uint32_t mb_total = mb_width * mb_height;
-
   constexpr uint32_t kActualDPBSize = 24;
   uint32_t max_dpb_size = GetMaxDpbSize(level_idc, mb_width, mb_height);
   if (max_dpb_size == 0) {
@@ -490,7 +486,11 @@ zx_status_t H264Decoder::InitializeStream() {
   max_dpb_size = std::max(max_reference_size, max_dpb_size);
   max_reference_size++;
 
-  uint32_t mv_buffer_size = mb_total * mb_mv_byte * max_reference_size;
+  // Rounding to 4 macroblocks is for matching the linux driver, in case the
+  // hardware happens to round up as well.
+  uint32_t mv_buffer_size = fbl::round_up(mb_height, 4u) *
+                            fbl::round_up(mb_width, 4u) * mb_mv_byte *
+                            max_reference_size;
 
   zx_status_t status =
       io_buffer_init(&reference_mv_buffer_, owner_->bti(), mv_buffer_size,
@@ -517,9 +517,13 @@ zx_status_t H264Decoder::InitializeStream() {
   uint32_t display_width = mb_width * 16 - crop_info.right();
   uint32_t display_height = mb_height * 16 - crop_info.bottom();
 
+  // Canvas width must be a multiple of 32 bytes.
+  uint32_t frame_width = fbl::round_up(mb_width * 16, 32u);
+  uint32_t frame_height = mb_height * 16;
+
   // TODO(dustingreen): Should the first parameter be max_dpb_size instead of
   // kActualDPBSize?:
-  status = InitializeFrames(kActualDPBSize, mb_width * 16, mb_height * 16,
+  status = InitializeFrames(kActualDPBSize, frame_width, frame_height,
                             display_width, display_height);
   if (status != ZX_OK) {
     DECODE_ERROR("InitializeFrames() failed\n");
