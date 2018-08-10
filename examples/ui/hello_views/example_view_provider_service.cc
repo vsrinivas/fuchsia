@@ -11,6 +11,7 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "lib/fxl/logging.h"
 
 namespace hello_views {
 

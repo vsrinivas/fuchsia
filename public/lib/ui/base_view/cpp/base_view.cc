@@ -4,6 +4,7 @@
 
 #include "lib/ui/base_view/cpp/base_view.h"
 
+#include "lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
 #include "lib/ui/scenic/cpp/commands.h"
 

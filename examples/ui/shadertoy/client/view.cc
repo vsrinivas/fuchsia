@@ -19,6 +19,7 @@
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "lib/fxl/logging.h"
 
 namespace shadertoy_client {
 

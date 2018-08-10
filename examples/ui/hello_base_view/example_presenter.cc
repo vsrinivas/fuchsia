@@ -4,6 +4,8 @@
 
 #include "garnet/examples/ui/hello_base_view/example_presenter.h"
 
+#include "lib/fxl/logging.h"
+
 namespace hello_base_view {
 
 ExamplePresenter::ExamplePresenter(fuchsia::ui::scenic::Scenic* scenic)

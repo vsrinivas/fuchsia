@@ -4,6 +4,8 @@
 
 #include "garnet/examples/ui/hello_base_view/view.h"
 
+#include "lib/fxl/logging.h"
+
 namespace hello_base_view {
 
 ShadertoyEmbedderView::ShadertoyEmbedderView(
