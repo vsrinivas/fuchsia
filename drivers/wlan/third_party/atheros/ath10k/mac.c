@@ -4173,7 +4173,6 @@ void __ath10k_scan_finish(struct ath10k* ar) {
     /* fall through */
     case ATH10K_SCAN_STARTING:
         ar->scan.state = ATH10K_SCAN_IDLE;
-        memset(&ar->scan_channel, 0, sizeof(wlan_channel_t));
         ar->scan.roc_freq = 0;
 #if 0  // NEEDS PORTING
         ath10k_offchan_tx_purge(ar);

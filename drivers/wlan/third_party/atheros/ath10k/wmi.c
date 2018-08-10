@@ -1964,7 +1964,6 @@ static void ath10k_wmi_event_scan_bss_chan(struct ath10k* ar) {
         break;
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
-        memset(&ar->scan_channel, 0, sizeof(wlan_channel_t));
         break;
     }
 }
@@ -1981,14 +1980,9 @@ static void ath10k_wmi_event_scan_foreign_chan(struct ath10k* ar, uint32_t freq)
         break;
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
-        ath10k_err("TODO: received foreign chan event\n");
-#if 0 // NEEDS PORTING
-        ar->scan_channel = ieee80211_get_channel(ar->hw->wiphy, freq);
-
-        if (ar->scan.is_roc && ar->scan.roc_freq == freq) {
+        if (ar->scan.is_roc && ar->scan.roc_freq == (int) freq) {
             sync_completion_signal(&ar->scan.on_channel);
         }
-#endif // NEEDS PORTING
         break;
     }
 }

@@ -813,9 +813,6 @@ struct ath10k {
     /* should never be NULL; needed for regular htt rx */
     wlan_channel_t rx_channel;
 
-    /* valid during scan; needed for mgmt rx during scan */
-    wlan_channel_t scan_channel;
-
 #if 0 // NEEDS PORTING
     /* current operating channel definition */
     struct cfg80211_chan_def chandef;
