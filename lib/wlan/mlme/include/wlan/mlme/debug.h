@@ -44,10 +44,10 @@ std::string Describe(const TxBfCapability& txbf);
 std::string Describe(const AselCapability& asel);
 std::string Describe(const HtCapabilities& ht_cap);
 
-std::string DescribeHtCaps(const wlan_ht_caps& ht_caps);
-std::string DescribeSupportedChannels(const wlan_chan_list& wl);
-std::string DescribeWlanBandInfo(const wlan_band_info& bi);
-std::string DescribeWlanMacInfo(const wlanmac_info& wi);
+std::string Describe(const wlan_ht_caps& ht_caps);
+std::string Describe(const wlan_chan_list& wl);
+std::string Describe(const wlan_band_info& bi);
+std::string Describe(const wlanmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);
 std::string Describe(const AssocContext& assoc_ctx);
 

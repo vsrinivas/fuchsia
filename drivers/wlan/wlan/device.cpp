@@ -684,7 +684,7 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
                 if (!common::IsValidChan5Ghz(chan)) {
                     errorf("wlanmac band info for %u MHz has invalid channel %u\n",
                            supported_channels.base_freq, c);
-                    errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
+                    errorf("wlanmac info: %s\n", debug::Describe(wlanmac_info).c_str());
                     return ZX_ERR_NOT_SUPPORTED;
                 }
             }
@@ -698,14 +698,14 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
                 if (!common::IsValidChan2Ghz(chan)) {
                     errorf("wlanmac band info for %u MHz has invalid cahnnel %u\n",
                            supported_channels.base_freq, c);
-                    errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
+                    errorf("wlanmac info: %s\n", debug::Describe(wlanmac_info).c_str());
                     return ZX_ERR_NOT_SUPPORTED;
                 }
             }
             break;
         default:
             errorf("wlanmac band info for %u MHz not supported\n", supported_channels.base_freq);
-            errorf("wlanmac info: %s\n", debug::DescribeWlanMacInfo(wlanmac_info).c_str());
+            errorf("wlanmac info: %s\n", debug::Describe(wlanmac_info).c_str());
             return ZX_ERR_NOT_SUPPORTED;
         }
     }

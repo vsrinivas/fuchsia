@@ -444,7 +444,7 @@ std::string Describe(const HtCapabilities& ht_cap) {
     return std::string(buf);
 }
 
-std::string DescribeHtCaps(const wlan_ht_caps& ht_caps) {
+std::string Describe(const wlan_ht_caps& ht_caps) {
     char buf[1024];
     size_t offset = 0;
     BUFFER("ht_cap_info:%04x", ht_caps.ht_capability_info);
@@ -456,7 +456,7 @@ std::string DescribeHtCaps(const wlan_ht_caps& ht_caps) {
     return std::string(buf);
 }
 
-std::string DescribeSupportedChannels(const wlan_chan_list& wl) {
+std::string Describe(const wlan_chan_list& wl) {
     char buf[512];
     size_t offset = 0;
     BUFFER("base_freq:%u", wl.base_freq);
@@ -464,19 +464,19 @@ std::string DescribeSupportedChannels(const wlan_chan_list& wl) {
     return std::string(buf);
 }
 
-std::string DescribeWlanBandInfo(const wlan_band_info& bi) {
+std::string Describe(const wlan_band_info& bi) {
     char buf[1024];
     size_t offset = 0;
     BUFFER("desc:%s", bi.desc);
-    BUFFER("ht_caps:[%s]", DescribeHtCaps(bi.ht_caps).c_str());
+    BUFFER("ht_caps:[%s]", Describe(bi.ht_caps).c_str());
     BUFFER("vht_supported:%u", bi.vht_supported);
     BUFFER("vht_caps:[to implement]");
     BUFFER("basic_rates:[%s]", DescribeArray(bi.basic_rates, 12).c_str());
-    BUFFER("supported_channels:[%s]", DescribeSupportedChannels(bi.supported_channels).c_str());
+    BUFFER("supported_channels:[%s]", Describe(bi.supported_channels).c_str());
     return std::string(buf);
 }
 
-std::string DescribeWlanMacInfo(const wlanmac_info& wi) {
+std::string Describe(const wlanmac_info& wi) {
     char buf[2048];
     size_t offset = 0;
 
@@ -488,7 +488,7 @@ std::string DescribeWlanMacInfo(const wlanmac_info& wi) {
     BUFFER("cap:%08x", ii.caps);
     BUFFER("#bands:%u", ii.num_bands);
     for (uint8_t i = 0; i < ii.num_bands; i++) {
-        BUFFER("[band %u] %s", i, DescribeWlanBandInfo(ii.bands[i]).c_str());
+        BUFFER("[band %u] %s", i, Describe(ii.bands[i]).c_str());
     }
     return std::string(buf);
 }
