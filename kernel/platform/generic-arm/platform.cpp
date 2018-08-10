@@ -636,18 +636,6 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
     if (status != ZX_OK) {
         printf("Resources: Failed to initialize IRQ allocator: %d\n", status);
     }
-
-    // The reference to the exclusive memory reservation is held here statically to
-    // make the lifecycle of it simple.
-    zx_rights_t rights;
-    static fbl::RefPtr<ResourceDispatcher> memory_dispatcher;
-    zx_status_t st = ResourceDispatcher::Create(&memory_dispatcher, &rights, ZX_RSRC_KIND_MMIO,
-                                                mem_arena.base, mem_arena.size,
-                                                ZX_RSRC_FLAG_EXCLUSIVE, "platform_memory");
-    if (st != ZX_OK) {
-        printf("ResourceDispatcher: failed to reserve memory allocation: %d!\n", st);
-        return;
-    }
 }
 
 LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP);
