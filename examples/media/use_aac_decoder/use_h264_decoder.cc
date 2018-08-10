@@ -364,6 +364,7 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
     if (!SHA256_Final(md_out, &sha256_ctx)) {
       assert(false);
     }
+    printf("output thread done\n");
     // output thread done
     // ~raw_video_writer
   });

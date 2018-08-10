@@ -211,6 +211,8 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
     __WARN_UNUSED_RESULT bool input_end_of_stream();
     void SetOutputEndOfStream();
     __WARN_UNUSED_RESULT bool output_end_of_stream();
+    void SetFailureSeen();
+    __WARN_UNUSED_RESULT bool failure_seen();
 
    private:
     const uint64_t stream_lifetime_ordinal_ = 0;
@@ -226,6 +228,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
     bool oob_config_pending_ = true;
     bool input_end_of_stream_ = false;
     bool output_end_of_stream_ = false;
+    bool failure_seen_ = false;
   };
 
   // While we list this first in the member variables to hint that this gets
@@ -555,8 +558,6 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
 
   void GenerateAndSendNewOutputConfig(std::unique_lock<std::mutex>& lock,
                                       bool buffer_constraints_action_required);
-
-  void onStreamFailed_StreamControl(uint64_t stream_lifetime_ordinal);
 
   void MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal);
 

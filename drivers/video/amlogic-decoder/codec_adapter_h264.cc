@@ -42,6 +42,45 @@
 
 namespace {
 
+// avconv -f lavfi -i color=c=black:s=42x52 -c:v libx264 -profile:v baseline
+// -vframes 1 new_stream.h264
+//
+// (The "baseline" part of the above isn't really needed, but neither is a
+// higher profile really needed for this purpose.)
+//
+// bless new_stream.h264, and manually delete the big SEI NAL that has lots of
+// text in it (the exact encoder settings don't really matter for this purpose),
+// including its start code, up to just before the next start code, save.
+//
+// xxd -i new_stream.h264
+//
+// We push this through the decoder as our "EndOfStream" marker, and detect it
+// at the output (for now) by its unusual 42x52 resolution during
+// InitializeStream() _and_ the fact that we've queued this marker.  To force
+// this frame to be handled by the decoder we queue kFlushThroughBytes of 0
+// after this data.
+//
+// TODO(dustingreen): We don't currently detect the EndOfStream via its stream
+// offset in PtsManager (for h264), but that would be marginally more robust
+// than detecting the special resolution.  However, to detect via stream offset,
+// we'd either need to avoid switching resolutions, or switch resolutions using
+// the same output buffer set (including preserving the free/busy status of each
+// buffer across the boundary), and delay notifying the client until we're sure
+// a format change is real, not just the one immediately before a frame whose
+// stream offset is >= the EndOfStream offset.
+unsigned char new_stream_h264[] = {
+    0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0xc0, 0x0a, 0xd9, 0x0c, 0x9e, 0x49,
+    0xf0, 0x11, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x03, 0x00, 0x32,
+    0x0f, 0x12, 0x26, 0x48, 0x00, 0x00, 0x00, 0x01, 0x68, 0xcb, 0x83, 0xcb,
+    0x20, 0x00, 0x00, 0x01, 0x65, 0x88, 0x84, 0x0a, 0xf2, 0x62, 0x80, 0x00,
+    0xa7, 0xbc, 0x9c, 0x9d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x78};
+unsigned int new_stream_h264_len = 59;
+
+constexpr uint32_t kFlushThroughBytes = 1024;
+
+constexpr uint32_t kEndOfStreamWidth = 42;
+constexpr uint32_t kEndOfStreamHeight = 52;
+
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
                                              uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
@@ -102,6 +141,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     std::lock_guard<std::mutex> lock(lock_);
     video_->pts_manager_ = std::make_unique<PtsManager>();
     parsed_video_size_ = 0;
+    is_input_end_of_stream_queued_ = false;
     video_->core_ = std::make_unique<Vdec1>(video_);
     video_->core()->PowerOn();
     status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
@@ -193,6 +233,11 @@ void CodecAdapterH264::CoreCodecQueueInputEndOfStream() {
   // the way up to the marker, depending on whether the client closes the stream
   // or switches to a different stream first - in those cases it's fine for the
   // marker to never show up as output EndOfStream.
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    is_input_end_of_stream_queued_ = true;
+  }  // ~lock
 
   QueueInputItem(CodecInputItem::EndOfStream());
 }
@@ -292,7 +337,12 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   FXL_DCHECK(!packet->is_new());
 
   std::shared_ptr<VideoFrame> frame = packet->video_frame().lock();
-  FXL_DCHECK(frame);
+  if (!frame) {
+    // EndOfStream seen at the output, or a new InitializeFrames(), can cause
+    // !frame, which is fine.  In that case, any new stream will request
+    // allocation of new frames.
+    return;
+  }
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
@@ -548,30 +598,13 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     if (item.is_end_of_stream()) {
-      {  // scope lock
-        std::lock_guard<std::mutex> lock(lock_);
-
-        // BEGIN TEMPORARY HACK
-        //
-        // TODO(dustingreen): Tell HW to finish decoding all previously-queued
-        // input, and detect when HW is done doing so async.  At the moment this
-        // is a timing-based hack that definitely should not be here, but the
-        // hack might allow the HW to finish outputting previosly
-        // hw-parser-fetched frames, maybe, sometimes.
-        zx_status_t result = async::PostDelayedTask(
-            input_processing_loop_.dispatcher(),
-            [this] {
-              // Other than the duration until this runs, nothing stops there
-              // being further output from this stream after this, which is just
-              // one of the major issues with this temporary hack.
-              bool error_detected_before = false;
-              events_->onCoreCodecOutputEndOfStream(error_detected_before);
-            },
-            zx::sec(4));
-        FXL_CHECK(result == ZX_OK);
-        //
-        // END TEMPORARY HACK
-      }  // ~lock
+      video_->pts_manager_->SetEndOfStreamOffset(parsed_video_size_);
+      video_->ParseVideo(reinterpret_cast<void*>(&new_stream_h264[0]),
+                         new_stream_h264_len);
+      auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
+      memset(bytes.get(), 0, kFlushThroughBytes);
+      video_->ParseVideo(reinterpret_cast<void*>(bytes.get()),
+                         kFlushThroughBytes);
       continue;
     }
 
@@ -613,6 +646,24 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
     uint32_t stride, uint32_t display_width, uint32_t display_height,
     std::vector<CodecFrame>* frames_out) {
   FXL_DCHECK(frames_out->empty());
+
+  // First handle the special case of EndOfStream marker showing up at the
+  // output.
+  if (display_width == kEndOfStreamWidth &&
+      display_height == kEndOfStreamHeight) {
+    bool is_output_end_of_stream = false;
+    {  // scope lock
+      std::lock_guard<std::mutex> lock(lock_);
+      if (is_input_end_of_stream_queued_) {
+        is_output_end_of_stream = true;
+      }
+    }  // ~lock
+    if (is_output_end_of_stream) {
+      events_->onCoreCodecOutputEndOfStream(false);
+      return ZX_ERR_STOP;
+    }
+  }
+
   // This is called on a core codec thread, ordered with respect to emitted
   // output frames.  This method needs to block until either:
   //   * Format details have been delivered to the Codec client and the Codec

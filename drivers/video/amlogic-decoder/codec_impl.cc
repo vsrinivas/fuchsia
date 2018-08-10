@@ -1776,63 +1776,6 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
       });
 }
 
-void CodecImpl::onStreamFailed_StreamControl(uint64_t stream_lifetime_ordinal) {
-  // When we come in here, we've just landed on the StreamControl domain, but
-  // nothing has stopped the client from moving on to a new stream before we got
-  // here.  The core codec should refuse to process any more stream data of the
-  // failed stream, so it's reasonable to just ignore any stale stream failures,
-  // since the stream failure would only result in the client moving on to a new
-  // stream anyway, so if that's already happened we can ignore the old stream
-  // failure.
-  //
-  // We prefer to check the state of things on the StreamControl domain since
-  // this domain is in charge of stream transitions, so it's the easiest to
-  // reason about why checking here is safe.  It would probably also be possible
-  // to check robustly on the Output ordering domain (fidl_thread()) and
-  // avoid creating any invalid message orderings, but checking here is more
-  // obviously ok.
-  FXL_DCHECK(thrd_current() == stream_control_thread_);
-  {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
-    if (IsStoppingLocked()) {
-      // This CodecImpl is already stopping due to a previous FailLocked(),
-      // which will result in the Codec channel getting closed soon.  So don't
-      // send OnStreamFailed().
-      return;
-    }
-    FXL_DCHECK(stream_lifetime_ordinal <= stream_lifetime_ordinal_);
-    if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
-      // ignore - old stream is already gone - core codec is already moved on
-      // from the old stream, and the client has already moved on also.  No
-      // point in telling the client about the failure of an old stream that the
-      // client has moved on from already.
-      return;
-    }
-    FXL_DCHECK(stream_lifetime_ordinal == stream_lifetime_ordinal_);
-    // We're failing the current stream.  We should still queue to the output
-    // ordering domain to ensure ordering vs. any previously-sent output on this
-    // stream that was sent directly from codec processing thread.
-    //
-    // This failure is async, in the sense that the client may still be sending
-    // input data, and the core codec is expected to just hold onto those
-    // packets until the client has moved on from this stream.
-    printf("onStreamFailed_StreamControl() - stream_lifetime_ordinal: %lu\n",
-           stream_lifetime_ordinal);
-    if (!is_on_stream_failed_enabled_) {
-      FailLocked(
-          "onStreamFailed_StreamControl() with a client that didn't send "
-          "EnableOnStreamFailed(), so closing the Codec channel instead.");
-      return;
-    }
-    // There's not actually any need to track that the stream failed anywhere
-    // in the CodecImpl.  The client needs to move on from the failed
-    // stream to a new stream, or close the Codec channel.
-    PostToSharedFidl([this, stream_lifetime_ordinal] {
-      binding_.events().OnStreamFailed(stream_lifetime_ordinal);
-    });
-  }  // ~lock
-}
-
 void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
   FXL_DCHECK(thrd_current() == stream_control_thread_);
   {  // scope lock
@@ -2068,19 +2011,59 @@ void CodecImpl::onCoreCodecFailCodec(const char* format, ...) {
 }
 
 void CodecImpl::onCoreCodecFailStream() {
-  // To recover, we need to get over to StreamControl domain, and we do
-  // care whether the stream is the same stream as when this error was
-  // delivered.  For this snap of the stream_lifetime_ordinal to be
-  // meaningful we rely on the core codec only calling this method when there's
-  // an active stream.
-  uint64_t stream_lifetime_ordinal;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-    stream_lifetime_ordinal = stream_lifetime_ordinal_;
+    if (IsStoppingLocked()) {
+      // This CodecImpl is already stopping due to a previous FailLocked(),
+      // which will result in the Codec channel getting closed soon.  So don't
+      // send OnStreamFailed().
+      return;
+    }
+
+    // We rely on the CodecAdapter to only call this method when there's a
+    // current stream.
+    FXL_DCHECK(stream_ &&
+               stream_->stream_lifetime_ordinal() == stream_lifetime_ordinal_);
+
+    if (stream_->output_end_of_stream()) {
+      // Tolerate a CodecAdapter failing the stream after output EndOfStream
+      // seen, and avoid notifying the cient of a stream failure that's too late
+      // to matter.
+      return;
+    }
+
+    if (stream_->failure_seen()) {
+      // We already know.  We don't auto-close the stream because the client is
+      // in control of stream lifetime, so it's plausible that a CodecAdapter
+      // could notify of stream failure more than once.  We can ignore the
+      // redundant stream failure to avoid sending OnStreamFailed() again.
+      return;
+    }
+    stream_->SetFailureSeen();
+
+    // We're failing the current stream.  We should still queue to the output
+    // ordering domain to ensure ordering vs. any previously-sent output on this
+    // stream that was sent directly from codec processing thread.
+    //
+    // This failure is async, in the sense that the client may still be sending
+    // input data, and the core codec is expected to just hold onto those
+    // packets until the client has moved on from this stream.
+    printf("onStreamFailed() - stream_lifetime_ordinal_: %lu\n",
+           stream_lifetime_ordinal_);
+    if (!is_on_stream_failed_enabled_) {
+      FailLocked(
+          "onStreamFailed() with a client that didn't send "
+          "EnableOnStreamFailed(), so closing the Codec channel instead.");
+      return;
+    }
+    // There's not actually any need to track that the stream failed anywhere
+    // in the CodecImpl.  The client needs to move on from the failed
+    // stream to a new stream, or close the Codec channel.
+    PostToSharedFidl(
+        [this, stream_lifetime_ordinal = stream_lifetime_ordinal_] {
+          binding_.events().OnStreamFailed(stream_lifetime_ordinal);
+        });
   }  // ~lock
-  PostToStreamControl([this, stream_lifetime_ordinal] {
-    onStreamFailed_StreamControl(stream_lifetime_ordinal);
-  });
 }
 
 void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
@@ -2210,6 +2193,8 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
 void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    stream_->SetOutputEndOfStream();
+    output_end_of_stream_seen_.notify_all();
     VLOGF("sending OnOutputEndOfStream()\n");
     PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
                       error_detected_before] {
@@ -2282,6 +2267,13 @@ void CodecImpl::Stream::SetOutputEndOfStream() {
 }
 
 bool CodecImpl::Stream::output_end_of_stream() { return output_end_of_stream_; }
+
+void CodecImpl::Stream::SetFailureSeen() {
+  FXL_DCHECK(!failure_seen_);
+  failure_seen_ = true;
+}
+
+bool CodecImpl::Stream::failure_seen() { return failure_seen_; }
 
 //
 // CoreCodec wrappers, for the asserts.  These asserts, and the way we ensure

@@ -669,8 +669,18 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   // frame was decoded is ignored.
   uint32_t stream_offset =
       HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
-  frame->frame->has_pts =
-      owner_->pts_manager()->LookupPts(stream_offset, &frame->frame->pts);
+
+  PtsManager::LookupResult result =
+      owner_->pts_manager()->Lookup(stream_offset);
+  frame->frame->has_pts = result.has_pts();
+  frame->frame->pts = result.pts();
+  if (result.is_end_of_stream()) {
+    // TODO(dustingreen): Handle this once we're able to detect this way.  For
+    // now, ignore but print an obvious message.
+    printf("##### UNHANDLED END OF STREAM DETECTED #####\n");
+    return;
+  }
+
   if (notifier_) {
     frame->refcount++;
     notifier_(frame->frame);
@@ -710,8 +720,18 @@ void Vp9Decoder::PrepareNewFrame() {
   // have show_frame set, so only that frame will be output with that PTS.
   uint32_t stream_offset =
       HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
-  current_frame_data_.has_pts =
-      owner_->pts_manager()->LookupPts(stream_offset, &current_frame_data_.pts);
+
+  PtsManager::LookupResult result =
+      owner_->pts_manager()->Lookup(stream_offset);
+  current_frame_data_.has_pts = result.has_pts();
+  current_frame_data_.pts = result.pts();
+  if (result.is_end_of_stream()) {
+    // TODO(dustingreen): Handle this once we're able to detect this way.  For
+    // now, ignore but print an obvious message.
+    printf("##### UNHANDLED END OF STREAM DETECTED #####\n");
+    return;
+  }
+
   current_frame_data_.keyframe = params.frame_type == 0;
   current_frame_data_.intra_only = params.intra_only;
   current_frame_data_.refresh_frame_flags = params.refresh_frame_flags;

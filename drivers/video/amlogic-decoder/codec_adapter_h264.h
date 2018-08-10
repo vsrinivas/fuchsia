@@ -105,6 +105,7 @@ class CodecAdapterH264 : public CodecAdapter {
   // frames.  This counts all bytes delivered to the amlogic firmware, including
   // start code bytes.
   uint64_t parsed_video_size_ = 0;
+  bool is_input_end_of_stream_queued_ = false;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapterH264);
 };

@@ -338,8 +338,10 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
         std::move(duplicated_bti), frame_count, width, height, width,
         display_width, display_height, &frames);
     if (initialize_result != ZX_OK) {
-      DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
-                   initialize_result);
+      if (initialize_result != ZX_ERR_STOP) {
+        DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
+                     initialize_result);
+      }
       return initialize_result;
     }
   } else {
@@ -521,12 +523,17 @@ zx_status_t H264Decoder::InitializeStream() {
   uint32_t frame_width = fbl::round_up(mb_width * 16, 32u);
   uint32_t frame_height = mb_height * 16;
 
-  // TODO(dustingreen): Should the first parameter be max_dpb_size instead of
-  // kActualDPBSize?:
+  // TODO(dustingreen): Plumb min and max frame counts, with max at least
+  // kActualDPBSize (24 or higher if possible), and min sufficient to allow
+  // decode to proceed without tending to leave the decoder idle for long if the
+  // client immediately releases each frame (just barely enough to decode as
+  // long as the client never camps on even one frame).
   status = InitializeFrames(kActualDPBSize, frame_width, frame_height,
                             display_width, display_height);
   if (status != ZX_OK) {
-    DECODE_ERROR("InitializeFrames() failed\n");
+    if (status != ZX_ERR_STOP) {
+      DECODE_ERROR("InitializeFrames() failed\n");
+    }
     return status;
   }
 
@@ -541,6 +548,7 @@ zx_status_t H264Decoder::InitializeStream() {
 void H264Decoder::ReceivedFrames(uint32_t frame_count) {
   uint32_t error_count =
       AvScratchD::Get().ReadFrom(owner_->dosbus()).reg_value();
+  // This hit_eos is _not_ the same as the is_end_of_stream in PtsOut below.
   bool hit_eos = false;
   for (uint32_t i = 0; i < frame_count && !hit_eos; i++) {
     auto pic_info = PicInfo::Get(i).ReadFrom(owner_->dosbus());
@@ -561,9 +569,16 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
          0xffff)
         << 16;
 
-    video_frames_[buffer_index].frame->has_pts =
-        owner_->pts_manager()->LookupPts(
-            stream_byte_offset, &video_frames_[buffer_index].frame->pts);
+    PtsManager::LookupResult pts_result =
+        owner_->pts_manager()->Lookup(stream_byte_offset);
+    video_frames_[buffer_index].frame->has_pts = pts_result.has_pts();
+    video_frames_[buffer_index].frame->pts = pts_result.pts();
+    if (pts_result.is_end_of_stream()) {
+      // TODO(dustingreen): Handle this once we're able to detect this way.  For
+      // now, ignore but print an obvious message.
+      printf("##### UNHANDLED END OF STREAM DETECTED #####\n");
+      break;
+    }
 
     if (notifier_)
       notifier_(video_frames_[buffer_index].frame);
@@ -611,7 +626,10 @@ void H264Decoder::HandleInterrupt() {
   uint32_t cpu_command = scratch0.reg_value() & 0xff;
   switch (cpu_command) {
     case kCommandInitializeStream: {
-      // For now, this can block for a while until buffers are allocated.
+      // For now, this can block for a while until buffers are allocated, or
+      // until it fails. One of the ways it can fail is if the Codec client
+      // closes the current stream at the Codec interface level (not exactly the
+      // same thing as "stream" here).
       zx_status_t status = InitializeStream();
       if (status != ZX_OK) {
         OnFatalError();

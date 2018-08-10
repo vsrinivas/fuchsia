@@ -26,7 +26,7 @@ constexpr char kInputFilePath[] =
     "bear.h264";
 
 constexpr char kGoldenSha256[SHA256_DIGEST_LENGTH * 2 + 1] =
-    "6411bebc4951f6c55a576dab87720c294eac8bc9eec91f35cf0ad37a96af08af";
+    "212aad741a1f2f560753f2b2731afe483e975ec5891dcd20cf93fe1c57b1091a";
 
 }  // namespace
 
@@ -50,11 +50,8 @@ int main(int argc, char* argv[]) {
                    &timestamps);
 
   std::set<uint64_t> expected_timestamps;
-  for (uint64_t i = 0; i < 27; i++) {
-    // bear.h264 input frame ordinal 25 is never output
-    if (i != 25) {
-      expected_timestamps.insert(i);
-    }
+  for (uint64_t i = 0; i < 30; i++) {
+    expected_timestamps.insert(i);
   }
   for (size_t i = 0; i < timestamps.size(); i++) {
     if (!timestamps[i].first) {
