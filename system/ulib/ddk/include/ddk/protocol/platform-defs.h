@@ -41,6 +41,7 @@ __BEGIN_CDECLS;
 #define PDEV_PID_HIKEY960           1
 
 #define PDEV_DID_HIKEY960_I2C_TEST  1
+#define PDEV_DID_HI3660_CLK         2
 
 // Google
 #define PDEV_VID_GOOGLE             3
