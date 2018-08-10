@@ -4,8 +4,23 @@
 
 [TOC]
 
-This document describes the JSON schema that Fuchsia benchmark results must follow in
-order to be uploaded to the performance dashboard.
+This document describes the JSON schema that Fuchsia benchmark results must
+follow in order to be uploaded to the performance dashboard.
+
+## Helper Libraries
+
+Rather than write code to produce this JSON yourself, you can use one of the
+existing Fuchsia libraries for your language:
+
+* [C/C++]
+* [Go]
+
+NOTE: If your benchmark is in a different language, please provide a reuseable
+library or file a bug against IN to request one.
+
+[C/C++]: https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest
+[Go]: https://fuchsia.googlesource.com/garnet/+/master/go/src/benchmarking
+[Dart]: #
 
 ## JSON Description
 
@@ -27,7 +42,7 @@ order to be uploaded to the performance dashboard.
 ## Supported Units:
 
 In order to convert benchmark results to the format required by the performance
-dashboard, `unit` must be one of the following strings, which desribe the units
+dashboard, `unit` must be one of the following strings, which describe the units
 of the result's `values`.
 
 * `nanoseconds`  or `ns`
@@ -61,19 +76,7 @@ split_first is useful when the first value in the test results is usually skewed
 due to external influence on the test (e.g. empty caches).  When true, benchmark
 results will appear as two separate series in the performance dashboard:
 
-1. `$label/samples_0_to_0` which tracks the first element in Values, and
-1. `$label/samples_1_to_N` which tracks the remaining values.
-
-## Implementation
-
-Rather than write code to produce this JSON yourself, you can use one of the
-existing Fuchsia libraries for your language:
-
-* [C/C++]
-* [Go]
-* [Dart] Dart libraries are WIP
+1. `$label/samples_0_to_0` which tracks the first element in `values`, and
+1. `$label/samples_1_to_N` which tracks the remaining `values`.
 
 
-[C/C++]: https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest
-[Go]: https://fuchsia.googlesource.com/garnet/+/master/go/src/benchmarking
-[Dart]: #
