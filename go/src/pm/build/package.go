@@ -14,8 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
-	"strings"
 	"sync"
 
 	"golang.org/x/crypto/ed25519"
@@ -82,13 +80,19 @@ func Update(cfg *Config) error {
 
 	// manifestLines is a channel containing unpacked manifest paths
 	var manifestLines = make(chan struct{ src, dest string }, len(pkgContents))
-	for dest, src := range pkgContents {
-		manifestLines <- struct{ src, dest string }{src, dest}
-	}
-	close(manifestLines)
+	go func() {
+		for dest, src := range pkgContents {
+			manifestLines <- struct{ src, dest string }{src, dest}
+		}
+		close(manifestLines)
+	}()
 
-	// contentCollector receives "contents" lines to added to contentsPath
-	var contentCollector = make(chan string, len(pkgContents))
+	// contentCollector receives entries to include in contents
+	type contentEntry struct {
+		path string
+		root MerkleRoot
+	}
+	var contentCollector = make(chan contentEntry, len(pkgContents))
 	var errors = make(chan error)
 
 	// w is a group that is done when contentCollector is fully populated
@@ -113,37 +117,41 @@ func Update(cfg *Config) error {
 					return
 				}
 
-				contentCollector <- fmt.Sprintf("%s=%x", in.dest, t.Root())
+				var root MerkleRoot
+				copy(root[:], t.Root())
+				contentCollector <- contentEntry{in.dest, root}
 			}
 		}()
 	}
 
-	// done proxies the waitgroup completion so it is selectable
-	var done = make(chan struct{})
+	// close the collector channel when all workers are done
 	go func() {
 		w.Wait()
-		done <- struct{}{}
+		close(contentCollector)
+	}()
+
+	// collect all results and close done to signal the waiting select
+	var done = make(chan struct{})
+	contents := MetaContents{}
+	go func() {
+		for entry := range contentCollector {
+			contents[entry.path] = entry.root
+		}
+		close(done)
 	}()
 
 	select {
 	case <-done:
-		// if we're done, close contentCollector so we can iterate it's buffer
-		close(contentCollector)
+		// contents is populated
 	case err := <-errors:
 		// exit on the first error
 		return err
 	}
 
-	var contentLines = []string{}
-	for line := range contentCollector {
-		contentLines = append(contentLines, line+"\n")
-	}
-	sort.Strings(contentLines)
-
 	manifest.Paths["meta/contents"] = contentsPath
 
 	return ioutil.WriteFile(contentsPath,
-		[]byte(strings.Join(contentLines, "")), os.ModePerm)
+		[]byte(contents.String()), os.ModePerm)
 }
 
 // Sign creates a pubkey and signature file in the meta directory of the given

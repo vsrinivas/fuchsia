@@ -7,6 +7,7 @@ package build
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -28,6 +29,8 @@ func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 
 	var depfile = fs.Bool("depfile", true, "Produce a depfile")
+	var sizesfile = fs.Bool("sizesfile", false, "Produce blobs.sizes file")
+	var blobsfile = fs.Bool("blobsfile", false, "Produce blobs.json file")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
@@ -62,6 +65,34 @@ func Run(cfg *build.Config, args []string) error {
 		}
 		if err := ioutil.WriteFile(cfg.MetaFAR()+".d", content, 0644); err != nil {
 			return err
+		}
+	}
+
+	if *sizesfile || *blobsfile {
+		if cfg.ManifestPath == "" {
+			return fmt.Errorf("the -sizesfile and -blobsfile option requires the use of the -m manifest option")
+		}
+
+		blobs, err := buildPackageBlobInfo(cfg)
+		if err != nil {
+			return err
+		}
+
+		if *sizesfile {
+			content := buildSizesFile(blobs)
+			if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.sizes"), content, 0644); err != nil {
+				return err
+			}
+		}
+
+		if *blobsfile {
+			content, err := buildContentsManifest(blobs)
+			if err != nil {
+				return err
+			}
+			if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.json"), content, 0644); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -106,4 +137,89 @@ func buildDepfile(cfg *build.Config) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+type PackageBlobInfo struct {
+	// The path of the blob relative to the output directory.
+	SourcePath string `json:"source_path"`
+
+	// The path within the package.
+	Path string `json:"path"`
+
+	// Merkle root for the blob.
+	Merkle build.MerkleRoot `json:"merkle"`
+
+	// Size of blob, in bytes.
+	Size int64 `json:"size"`
+}
+
+func buildPackageBlobInfo(cfg *build.Config) ([]PackageBlobInfo, error) {
+	manifest, err := cfg.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []PackageBlobInfo
+
+	// Include a meta FAR entry first. If blobs.sizes becomes the new root
+	// blob for a package, targets need to know which unnamed blob is the
+	// meta FAR.
+	{
+		merkleBytes, err := ioutil.ReadFile(cfg.MetaFARMerkle())
+		if err != nil {
+			return nil, err
+		}
+		merkle, err := build.DecodeMerkleRoot(merkleBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		info, err := os.Stat(cfg.MetaFAR())
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, PackageBlobInfo{
+			SourcePath: cfg.MetaFAR(),
+			Path:       "meta/",
+			Merkle:     merkle,
+			Size:       info.Size(),
+		})
+	}
+
+	contentsPath := filepath.Join(cfg.OutputDir, "meta", "contents")
+	contents, err := build.LoadMetaContents(contentsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for path, merkle := range contents {
+		info, err := os.Stat(manifest.Paths[path])
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, PackageBlobInfo{
+			SourcePath: manifest.Paths[path],
+			Path:       path,
+			Merkle:     merkle,
+			Size:       info.Size(),
+		})
+	}
+
+	return result, nil
+}
+
+func buildSizesFile(blobs []PackageBlobInfo) []byte {
+	var buf bytes.Buffer
+
+	for _, member := range blobs {
+		fmt.Fprintf(&buf, "%s=%d\n", member.Merkle, member.Size)
+	}
+
+	return buf.Bytes()
+}
+
+func buildContentsManifest(blobs []PackageBlobInfo) ([]byte, error) {
+	return json.Marshal(blobs)
 }
