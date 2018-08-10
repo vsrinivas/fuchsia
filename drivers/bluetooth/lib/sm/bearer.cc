@@ -664,6 +664,11 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
       case kIdentityAddressInformation:
         OnIdentityAddressInformation(reader);
         break;
+      case kSecurityRequest:
+        // TODO(NET-1292): Handle this properly. We special case it so that it
+        // gets ignored instead of falling through to the error case.
+        FXL_LOG(WARNING) << "sm: \"Security Request\" not handled";
+        break;
       default:
         FXL_VLOG(2) << fxl::StringPrintf("sm: Unsupported command: 0x%02x",
                                          reader.code());
