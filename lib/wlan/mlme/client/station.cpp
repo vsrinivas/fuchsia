@@ -158,6 +158,9 @@ zx_status_t Station::HandleAnyDataFrame(DataFrame<>&& frame) {
     WLAN_STATS_INC(data_frame.in);
     if (ShouldDropDataFrame(data_frame)) { return ZX_ERR_NOT_SUPPORTED; }
 
+    auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
+    WLAN_RSSI_HIST_INC(assoc_data_rssi, rssi_dbm);
+
     if (auto amsdu_frame = data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength()) {
         HandleAmsduFrame(amsdu_frame.IntoOwned(frame.Take()));
     } else if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
@@ -496,7 +499,10 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
 
-    avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
+    auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
+    avg_rssi_dbm_.add(dBm(rssi_dbm));
+
+    WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
@@ -1609,6 +1615,10 @@ zx_status_t Station::NotifyAssocContext() {
 
 wlan_stats::ClientMlmeStats Station::stats() const {
     return stats_.ToFidl();
+}
+
+void Station::ResetStats() {
+    stats_.Reset();
 }
 
 const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {

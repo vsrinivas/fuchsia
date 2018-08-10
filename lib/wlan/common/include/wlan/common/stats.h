@@ -6,6 +6,7 @@
 
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 
+#include <wlan/common/logging.h>
 #include <atomic>
 #include <string>
 

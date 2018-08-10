@@ -271,6 +271,7 @@ void Dispatcher::HwScanComplete(uint8_t result_code) {
 
 void Dispatcher::ResetStats() {
     stats_.Reset();
+    if (mlme_) { mlme_->ResetMlmeStats(); }
 }
 
 wlan_mlme::StatsQueryResponse Dispatcher::GetStatsToFidl() const {

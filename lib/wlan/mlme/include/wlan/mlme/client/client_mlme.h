@@ -35,6 +35,7 @@ class ClientMlme : public Mlme {
     zx_status_t HandleTimeout(const ObjectId id) override;
     void HwScanComplete(uint8_t code) override final;
     ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
+    void ResetMlmeStats() override final;
 
     bool IsStaValid() const;
 

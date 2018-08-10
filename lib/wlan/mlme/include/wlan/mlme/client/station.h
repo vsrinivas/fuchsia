@@ -123,6 +123,7 @@ class Station {
 
     const Timer& timer() const { return *timer_; }
     ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
+    void ResetStats();
 
    private:
     zx_status_t HandleEthFrame(EthFrame&&);

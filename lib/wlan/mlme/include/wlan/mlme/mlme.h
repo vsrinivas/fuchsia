@@ -54,6 +54,7 @@ class Mlme {
     virtual void HwIndication(uint32_t ind){};
     virtual void HwScanComplete(uint8_t result_code){};
     virtual ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const { return {}; };
+    virtual void ResetMlmeStats(){};
 };
 
 }  // namespace wlan

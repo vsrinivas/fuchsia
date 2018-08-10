@@ -21,6 +21,8 @@ constexpr uint32_t kCobaltProjectId = 106;
 // LINT.IfChange
 enum CobaltMetricId : uint32_t {
     kDispatcherPacketCounter = 5,
+    kClientAssocDataRssi = 6,
+    kClientBeaconRssi = 7,
 };
 
 enum CobaltEncodingId : uint32_t {
@@ -42,6 +44,9 @@ class Telemetry {
     ::fuchsia::cobalt::EncoderSyncPtr ConnectToEnvironmentService();
     void ReportDispatcherStats(const ::fuchsia::wlan::stats::DispatcherStats& stats);
     void ReportDispatcherPackets(const uint8_t packet_type_index, const uint64_t packet_count);
+    void ReportClientMlmeStats(const ::fuchsia::wlan::stats::ClientMlmeStats& stats);
+    void ReportRssiStats(const uint32_t rssi_metric_id,
+                         const ::fuchsia::wlan::stats::RssiStats& stats);
 
     Dispatcher* dispatcher_;
     ::fuchsia::cobalt::EncoderSyncPtr encoder_;

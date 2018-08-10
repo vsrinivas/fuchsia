@@ -151,4 +151,8 @@ wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {
     return mlme_stats;
 }
 
+void ClientMlme::ResetMlmeStats() {
+    if (sta_) { sta_->ResetStats(); }
+}
+
 }  // namespace wlan

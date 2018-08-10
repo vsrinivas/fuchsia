@@ -46,8 +46,12 @@ void Telemetry::CobaltReporter(std::chrono::minutes report_period) {
 
     while (is_active_) {
         wlan_mlme::StatsQueryResponse stats_response = dispatcher_->GetStatsToFidl();
-        ReportDispatcherStats(stats_response.stats.dispatcher_stats);
         dispatcher_->ResetStats();
+
+        ReportDispatcherStats(stats_response.stats.dispatcher_stats);
+        if (stats_response.stats.mlme_stats) {
+            ReportClientMlmeStats(stats_response.stats.mlme_stats->client_mlme_stats());
+        }
 
         // TODO(alexandrew): Fix the report timing, since the FIDL construction
         // takes time.
@@ -90,9 +94,49 @@ void Telemetry::ReportDispatcherPackets(const uint8_t packet_type_index,
     encoder_->AddMultipartObservation(CobaltMetricId::kDispatcherPacketCounter, std::move(values),
                                       &status);
 
-    // TODO(alexandrew): Throttle this error when Cobalt is down.
     if (status != cobalt::Status::OK) {
-        errorf("telemetry: could not add dispatcher packet observation\n");
+        errorf("telemetry: could not add dispatcher packet observation %d\n", status);
+    }
+}
+
+void Telemetry::ReportClientMlmeStats(const wlan_stats::ClientMlmeStats& stats) {
+    ReportRssiStats(kClientAssocDataRssi, stats.assoc_data_rssi);
+    ReportRssiStats(kClientBeaconRssi, stats.beacon_rssi);
+}
+
+void Telemetry::ReportRssiStats(const uint32_t rssi_metric_id, const wlan_stats::RssiStats& stats) {
+    fidl::VectorPtr<cobalt::BucketDistributionEntry> distribution;
+
+    // In the internal stats histogram, hist[x] represents the number of frames
+    // with RSSI -x. For the Cobalt representation, buckets from -128 to 0 are
+    // used. When data is sent to Cobalt, the concept of index is utilized.
+    //
+    // Shortly, for Cobalt:
+    // Bucket -128 -> index   0
+    // Bucket -127 -> index   1
+    // ...
+    // Bucket    0 -> index 128
+    //
+    // The for loop below converts the stats internal representation to the
+    // Cobalt representation and prepares the histogram that will be sent.
+    const std::vector<uint16_t>& hist = stats.hist;
+    for (uint8_t bin = 0; bin < wlan_stats::RSSI_BINS; ++bin) {
+        if (hist[bin]) {
+            cobalt::BucketDistributionEntry entry;
+            entry.index = wlan_stats::RSSI_BINS - bin - 1;
+            entry.count = hist[bin];
+            distribution.push_back(std::move(entry));
+        }
+    }
+
+    if (distribution->empty()) { return; }
+
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    encoder_->AddIntBucketDistribution(rssi_metric_id, CobaltEncodingId::kRawEncoding,
+                                       std::move(distribution), &status);
+
+    if (status != cobalt::Status::OK) {
+        errorf("telemetry: could not add client RSSI observation: %d\n", status);
     }
 }
 
