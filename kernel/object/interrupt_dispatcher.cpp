@@ -81,7 +81,12 @@ zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
         return ZX_ERR_BAD_STATE;
     */
 
+    // Using AutoReschedDisable is necessary for correctness to prevent
+    // context-switching to the woken thread while holding spinlock_.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
     Guard<SpinLock, IrqSave> guard{&spinlock_};
+
     // only record timestamp if this is the first signal since we started waiting
     if (!timestamp_) {
         timestamp_ = timestamp;
