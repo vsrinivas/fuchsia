@@ -25,6 +25,7 @@ class IntelHDAStreamBase;
 class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> {
 public:
     virtual void Shutdown();
+    virtual zx_status_t Suspend(uint32_t flags);
 
     // Properties
     zx_device_t* codec_device() const { return codec_device_; }

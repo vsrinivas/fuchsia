@@ -59,6 +59,8 @@ public:
     zx_status_t DriverBind(zx_device_t* hda_dev) __WARN_UNUSED_RESULT;
     void        DeviceShutdown();
 
+    zx_status_t Suspend(uint32_t flags) override final;
+
 private:
     friend class fbl::RefPtr<IntelAudioDsp>;
 

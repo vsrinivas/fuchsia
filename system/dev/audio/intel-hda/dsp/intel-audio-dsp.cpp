@@ -297,6 +297,16 @@ void IntelAudioDsp::DeviceShutdown() {
     state_ = State::SHUT_DOWN;
 }
 
+zx_status_t IntelAudioDsp::Suspend(uint32_t flags) {
+    switch (flags & DEVICE_SUSPEND_REASON_MASK) {
+    case DEVICE_SUSPEND_FLAG_POWEROFF:
+        DeviceShutdown();
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 int IntelAudioDsp::InitThread() {
     zx_status_t st = ZX_OK;
     auto cleanup = fbl::MakeAutoCall([this]() {

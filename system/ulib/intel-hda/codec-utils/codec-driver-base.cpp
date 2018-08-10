@@ -44,7 +44,9 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = {
     .write        = nullptr,
     .get_size     = nullptr,
     .ioctl        = nullptr,
-    .suspend      = nullptr,
+    .suspend      = [](void* ctx, uint32_t flags) -> zx_status_t {
+                        return DEV(ctx)->Suspend(flags);
+                    },
     .resume       = nullptr,
     .rxrpc        = nullptr,
     .message      = nullptr,
@@ -170,6 +172,10 @@ void IntelHDACodecDriverBase::Shutdown() {
     UnlinkFromController();
 
     DEBUG_LOG("Shutdown complete\n");
+}
+
+zx_status_t IntelHDACodecDriverBase::Suspend(uint32_t flags) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 void IntelHDACodecDriverBase::DeviceRelease() {
