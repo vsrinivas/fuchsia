@@ -505,6 +505,12 @@ std::unique_ptr<media_player::Bytes> TypeConverter<
 fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
     fuchsia::mediacodec::CodecFormatDetailsPtr,
     media_player::StreamType>::Convert(const media_player::StreamType& input) {
+  // Temp workaround.  The convert implemented currently below is converting
+  // generic AAC to audio/aac-adts.  The codec for audio/aac-adts doesn't handle
+  // non-ADTS AAC (yet, or even later when "audio/aac-adts" is specified). So
+  // for the moment, this return disables this convert.
+  return nullptr;
+
   if (input.medium() != media_player::StreamType::Medium::kAudio ||
       input.encoding() != media_player::StreamType::kAudioEncodingAac) {
     return nullptr;
