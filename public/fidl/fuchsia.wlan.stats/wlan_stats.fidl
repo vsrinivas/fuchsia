@@ -15,7 +15,6 @@ struct PacketCounter {
   Counter drop;
 };
 
-
 // LINT.IfChange
 struct DispatcherStats {
   PacketCounter any_packet;
@@ -24,10 +23,22 @@ struct DispatcherStats {
   PacketCounter data_frame;
 };
 
+const uint8 RSSI_BINS = 129;
+
+// RssiStats count the occurrence of the RSSIs.
+// RSSI value r's occurrence is counted in the bin[-r],
+// where r is defined in [-128, 0] in dBm.
+struct RssiStats {
+  // TODO(alexandrew): Change this to array.
+  vector<uint16>:RSSI_BINS hist;
+};
+
 struct ClientMlmeStats {
   PacketCounter svc_msg;
   PacketCounter data_frame;
   PacketCounter mgmt_frame;
+  RssiStats assoc_data_rssi;
+  RssiStats beacon_rssi;
 };
 
 struct ApMlmeStats {

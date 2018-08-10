@@ -26,6 +26,8 @@ constexpr bool kStatsDebugEnabled = false;
 
 #define WLAN_STATS_INC(v) WLAN_STATS_ADD(1UL, v)
 
+#define WLAN_RSSI_HIST_INC(s, r) stats_.stats.s.Inc(r, 1UL)
+
 namespace common {
 
 struct Counter {
@@ -74,19 +76,54 @@ struct DispatcherStats {
     }
 };
 
+struct RssiStats {
+    RssiStats() { std::fill(std::begin(hist), std::end(hist), 0); }
+    ::fuchsia::wlan::stats::RssiStats ToFidl() const {
+        std::lock_guard<std::mutex> guard(lock);
+        ::fuchsia::wlan::stats::RssiStats rssi_stats{};
+        rssi_stats.hist.reset(
+            std::vector<uint16_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS));
+        return rssi_stats;
+    };
+    void Reset() {
+        std::lock_guard<std::mutex> guard(lock);
+        std::fill(std::begin(hist), std::end(hist), 0);
+    }
+    uint64_t Inc(const int8_t r, const uint64_t delta) {
+        if (r > 0 || -r >= ::fuchsia::wlan::stats::RSSI_BINS) { return 0; }
+        std::lock_guard<std::mutex> guard(lock);
+        return hist[-r] += delta;
+    }
+    uint16_t Get(const int8_t r) {
+        if (r > 0 || -r >= ::fuchsia::wlan::stats::RSSI_BINS) { return 0; }
+        std::lock_guard<std::mutex> guard(lock);
+        return hist[-r];
+    }
+
+   private:
+    uint16_t hist[::fuchsia::wlan::stats::RSSI_BINS] __TA_GUARDED(lock);
+    mutable std::mutex lock;
+};
+
 struct ClientMlmeStats {
     PacketCounter svc_msg;
     PacketCounter data_frame;
     PacketCounter mgmt_frame;
+    RssiStats assoc_data_rssi;
+    RssiStats beacon_rssi;
     ::fuchsia::wlan::stats::ClientMlmeStats ToFidl() const {
         return ::fuchsia::wlan::stats::ClientMlmeStats{.svc_msg = svc_msg.ToFidl(),
                                                        .data_frame = data_frame.ToFidl(),
-                                                       .mgmt_frame = mgmt_frame.ToFidl()};
+                                                       .mgmt_frame = mgmt_frame.ToFidl(),
+                                                       .assoc_data_rssi = assoc_data_rssi.ToFidl(),
+                                                       .beacon_rssi = beacon_rssi.ToFidl()};
     };
     void Reset() {
         svc_msg.Reset();
         data_frame.Reset();
         mgmt_frame.Reset();
+        assoc_data_rssi.Reset();
+        beacon_rssi.Reset();
     }
 };
 // LINT.ThenChange(//garnet/public/lib/wlan/fidl/wlan_stats.fidl)
