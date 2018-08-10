@@ -145,6 +145,12 @@ package("ledger_benchmarks") {
       dest = "get_same_page.tspec"
     },
 
+
+    {
+      path = rebase_path("get_page/get_page_id.tspec")
+      dest = "get_page_id.tspec"
+    },
+
     {
       path = rebase_path("convergence/convergence.tspec")
       dest = "convergence.tspec"

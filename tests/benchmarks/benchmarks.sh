@@ -35,6 +35,12 @@ runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     --test-suite=fuchsia.ledger.get_same_page \
     --benchmark-results-file="${OUT_DIR}/ledger.get_same_page.json"
 
+runbench_exec "${OUT_DIR}/ledger.get_page_id.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_page_id.tspec \
+    --test-suite=fuchsia.ledger.get_page_id \
+    --benchmark-results-file="${OUT_DIR}/ledger.get_page_id.json"
+
 runbench_exec "${OUT_DIR}/ledger.put.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec \

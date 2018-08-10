@@ -1,0 +1,16 @@
+{
+  "test_suite_name": "fuchsia.ledger.local",
+  "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_get_page",
+  "args": ["--requests-count=50"],
+  "categories": ["benchmark", "ledger"],
+  "duration": 120,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "get page id",
+      "event_category": "benchmark",
+      "expected_sample_count": 50,
+      "split_samples_at": [1]
+    }
+  ]
+}

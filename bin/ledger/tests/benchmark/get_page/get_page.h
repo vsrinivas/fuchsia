@@ -44,6 +44,8 @@ class GetPageBenchmark {
   LedgerPtr ledger_;
   PageIdPtr page_id_;
   std::vector<PagePtr> pages_;
+  bool get_page_called_ = false;
+  bool get_page_id_called_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
