@@ -275,89 +275,95 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Annotated is an interface meant to describe nodes which are annotated (or
+// decorated) by attributes.
+type Annotated interface {
+	LookupAttribute(name Identifier) (Attribute, bool)
+	GetAttribute(name Identifier) Attribute
+}
+
 type Attribute struct {
 	Name  Identifier `json:"name"`
 	Value string     `json:"value"`
 }
 
+// Attributes represents a list of attributes. It conveniently implements the
+// `Annotated` interface, such that it can be embedded into other ndoe structs
+// which are annotated.
+type Attributes struct {
+	Attributes []Attribute `json:"maybe_attributes,omitempty"`
+}
+
+// Assert that Attributes implements the Annotated interface.
+var _ Annotated = Attributes{}
+
+func (el Attributes) LookupAttribute(name Identifier) (Attribute, bool) {
+	for _, a := range el.Attributes {
+		if a.Name == name {
+			return a, true
+		}
+	}
+	return Attribute{}, false
+}
+
+func (el Attributes) GetAttribute(name Identifier) Attribute {
+	attr, _ := el.LookupAttribute(name)
+	return attr
+}
+
 // Union represents the declaration of a FIDL union.
 type Union struct {
-	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Attributes
 	Name       EncodedCompoundIdentifier `json:"name"`
 	Members    []UnionMember             `json:"members"`
 	Size       int                       `json:"size"`
 	Alignment  int                       `json:"alignment"`
 }
 
-func (d *Union) GetAttribute(name Identifier) string {
-	for _, a := range d.Attributes {
-		if a.Name == name {
-			return a.Value
-		}
-	}
-	return ""
-}
-
 // UnionMember represents the declaration of a field in a FIDL union.
 type UnionMember struct {
-	Type   Type       `json:"type"`
-	Name   Identifier `json:"name"`
-	Offset int        `json:"offset"`
+	Attributes
+	Type       Type        `json:"type"`
+	Name       Identifier  `json:"name"`
+	Offset     int         `json:"offset"`
 }
 
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
-	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Attributes
 	Name       EncodedCompoundIdentifier `json:"name"`
 	Members    []StructMember            `json:"members"`
 	Size       int                       `json:"size"`
 	Alignment  int                       `json:"alignment"`
 }
 
-func (d *Struct) GetAttribute(name Identifier) string {
-	for _, a := range d.Attributes {
-		if a.Name == name {
-			return a.Value
-		}
-	}
-	return ""
-}
-
 // StructMember represents the declaration of a field in a FIDL struct.
 type StructMember struct {
-	Type              Type       `json:"type"`
-	Name              Identifier `json:"name"`
-	Offset            int        `json:"offset"`
-	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
+	Attributes
+	Type              Type        `json:"type"`
+	Name              Identifier  `json:"name"`
+	Offset            int         `json:"offset"`
+	MaybeDefaultValue *Constant   `json:"maybe_default_value,omitempty"`
 }
 
 // Interface represents the declaration of a FIDL interface.
 type Interface struct {
-	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Attributes
 	Name       EncodedCompoundIdentifier `json:"name"`
 	Methods    []Method                  `json:"methods"`
 }
 
-func (d *Interface) HasAttribute(name Identifier) bool {
-	for _, a := range d.Attributes {
-		if a.Name == name {
-			return true
-		}
+func GetDocString(node Annotated) []string {
+	value, ok := node.LookupAttribute("doc")
+	if !ok {
+		return nil
 	}
-	return false
-}
-
-func (d *Interface) GetAttribute(name Identifier) string {
-	for _, a := range d.Attributes {
-		if a.Name == name {
-			return a.Value
-		}
-	}
-	return ""
+	return strings.Split(value.Value[1:len(value.Value)-1], "\n")
 }
 
 func (d *Interface) GetServiceName() string {
-	if d.HasAttribute("Discoverable") {
+	_, found := d.LookupAttribute("Discoverable")
+	if found {
 		ci := ParseCompoundIdentifier(d.Name)
 		var parts []string
 		for _, i := range ci.Library {
@@ -371,6 +377,7 @@ func (d *Interface) GetServiceName() string {
 
 // Method represents the declaration of a FIDL method.
 type Method struct {
+	Attributes
 	Ordinal      Ordinal     `json:"ordinal"`
 	Name         Identifier  `json:"name"`
 	HasRequest   bool        `json:"has_request"`
@@ -390,42 +397,25 @@ type Parameter struct {
 
 // Enum represents a FIDL delcaration of an enum.
 type Enum struct {
-	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Attributes
 	Type       PrimitiveSubtype          `json:"type"`
 	Name       EncodedCompoundIdentifier `json:"name"`
 	Members    []EnumMember              `json:"members"`
 }
 
-func (d *Enum) GetAttribute(name Identifier) string {
-	for _, a := range d.Attributes {
-		if a.Name == name {
-			return a.Value
-		}
-	}
-	return ""
-}
-
 // EnumMember represents a single variant in a FIDL enum.
 type EnumMember struct {
-	Name  Identifier `json:"name"`
-	Value Constant   `json:"value"`
+	Attributes
+	Name       Identifier  `json:"name"`
+	Value      Constant    `json:"value"`
 }
 
 // Const represents a FIDL declaration of a named constant.
 type Const struct {
-	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Attributes
 	Type       Type                      `json:"type"`
 	Name       EncodedCompoundIdentifier `json:"name"`
 	Value      Constant                  `json:"value"`
-}
-
-func (d *Const) GetAttribute(name Identifier) string {
-	for _, a := range d.Attributes {
-		if a.Name == name {
-			return a.Value
-		}
-	}
-	return ""
 }
 
 type DeclType string

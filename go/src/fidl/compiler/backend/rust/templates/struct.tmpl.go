@@ -9,8 +9,18 @@ const Struct = `
 {{- if not .LargeArrays }}
 #[derive(Debug, PartialEq)]
 {{- end }}
+{{- range $index, $line := .DocStrings }}
+  {{if ne "" $line }}
+  /// {{ $line }}
+  {{ end }}
+{{- end }}
 pub struct {{ .Name }} {
   {{- range .Members }}
+  {{- range $index, $line := .DocStrings }}
+  {{if ne "" $line }}
+  /// {{ $line }}
+  {{ end }}
+  {{- end }}
   pub {{ .Name }}: {{ .Type }},
   {{- end }}
 }

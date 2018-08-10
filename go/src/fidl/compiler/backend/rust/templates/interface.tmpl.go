@@ -81,11 +81,14 @@ impl Deref for {{ $interface.Name }}Proxy {
 	}
 }
 
+/// Proxy object for communicating with interface {{ $interface.Name }}
 impl {{ $interface.Name }}Proxy {
+        /// Create a new Proxy for {{ $interface.Name }}
 	pub fn new(channel: async::Channel) -> Self {
 		Self { client: fidl::client2::Client::new(channel) }
 	}
 
+        /// Get a Stream of events from the remote end of the {{ $interface.Name }} interface
 	pub fn take_event_stream(&self) -> {{ $interface.Name }}EventStream {
 		{{ $interface.Name }}EventStream {
 			event_receiver: self.client.take_event_receiver(),
@@ -94,6 +97,11 @@ impl {{ $interface.Name }}Proxy {
 
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
+        {{- range $index, $line := $method.DocStrings }}
+          {{if ne "" $line }}
+          ///{{ $line }}
+          {{ end }}
+        {{- end }}
 	pub fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
@@ -401,6 +409,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 	}}
 }
 
+/// A Stream of incoming requests for {{ $interface.Name }}
 pub struct {{ $interface.Name }}RequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	msg_buf: zx::MessageBuf,
@@ -409,6 +418,7 @@ pub struct {{ $interface.Name }}RequestStream {
 impl ::std::marker::Unpin for {{ $interface.Name }}RequestStream {}
 
 impl fidl::endpoints2::RequestStream for {{ $interface.Name }}RequestStream {
+        /// Consume a channel to make a {{ $interface.Name }}RequestStream
 	fn from_channel(channel: async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
@@ -416,7 +426,10 @@ impl fidl::endpoints2::RequestStream for {{ $interface.Name }}RequestStream {
 		}
 	}
 
+        /// ControlHandle for the remote connection
 	type ControlHandle = {{ $interface.Name }}ControlHandle;
+
+        /// Get a ControlHandle for {{ $interface.Name }}
 	fn control_handle(&self) -> Self::ControlHandle {
 		{{ $interface.Name }}ControlHandle { inner: self.inner.clone() }
 	}
@@ -494,9 +507,19 @@ impl Stream for {{ $interface.Name }}RequestStream {
 	}
 }
 
+{{- range $index, $line := $interface.DocStrings }}
+{{if ne "" $line }}
+/// {{ $line }}
+{{ end }}
+{{- end }}
 pub enum {{ $interface.Name }}Request {
 	{{- range $method := $interface.Methods }}
-	{{- if $method.HasRequest }}
+        {{- if $method.HasRequest }}
+        {{- range $index, $line := $method.DocStrings }}
+          {{if ne "" $line }}
+          /// {{ $line }}
+          {{ end }}
+        {{- end }}
 	{{ $method.CamelName }} {
 		{{ range $index, $param := $method.Request }}
 		{{ $param.Name }}: {{ $param.Type }},
