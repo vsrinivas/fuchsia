@@ -75,6 +75,19 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
+void ClientMlme::HwIndication(uint32_t ind) {
+    switch (ind) {
+    case WLAN_INDICATION_HW_SCAN_COMPLETE:
+        scanner_->HandleHwScanComplete();
+        break;
+    case WLAN_INDICATION_HW_SCAN_ABORTED:
+        scanner_->HandleHwScanAborted();
+        break;
+    default:
+        break;
+    }
+}
+
 zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     // Let the Scanner handle all MLME-SCAN.requests.
     if (auto scan_req = msg.As<wlan_mlme::ScanRequest>()) {
@@ -123,6 +136,12 @@ void ClientMlme::OnChannelHandlerImpl::PreSwitchOffChannel() {
 
 void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Packet> packet) {
     debugfn();
+    if (auto mgmt_frame = MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
+        if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
+            mlme_->scanner_->HandleBeacon(bcn_frame);
+        }
+    }
+
     if (mlme_->IsStaValid()) { mlme_->sta_->HandleAnyFrame(fbl::move(packet)); }
 }
 

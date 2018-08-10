@@ -33,6 +33,7 @@ class ClientMlme : public Mlme {
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
     zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) override;
     zx_status_t HandleTimeout(const ObjectId id) override;
+    void HwIndication(uint32_t ind) override;
     ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
 
     bool IsStaValid() const;

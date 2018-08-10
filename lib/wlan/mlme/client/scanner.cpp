@@ -17,8 +17,10 @@
 #include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>
+#include <lib/fxl/arraysize.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
+#include <zircon/status.h>
 
 #include <cinttypes>
 #include <utility>
@@ -88,7 +90,6 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
         SendScanEnd(device_, req.body()->txn_id, wlan_mlme::ScanResultCodes::NOT_SUPPORTED);
         return ZX_ERR_UNAVAILABLE;
     }
-    ZX_DEBUG_ASSERT(channel_index_ == 0);
 
     if (req.body()->channel_list->size() == 0 ||
         req.body()->max_channel_time < req.body()->min_channel_time) {
@@ -110,8 +111,36 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
         return status;
     }
 
-    chan_sched_->RequestOffChannelTime(CreateOffChannelRequest());
+    if (device_->GetWlanInfo().ifc_info.driver_features & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
+        debugscan("starting a hardware scan\n");
+        return StartHwScan();
+    } else {
+        debugscan("starting a software scan\n");
+        ZX_DEBUG_ASSERT(channel_index_ == 0);
+        chan_sched_->RequestOffChannelTime(CreateOffChannelRequest());
+        return ZX_OK;
+    }
+}
 
+zx_status_t Scanner::StartHwScan() {
+    wlan_hw_scan_config_t config = {};
+    const auto& chans = req_->channel_list;
+    if (chans->size() > arraysize(config.channels)) {
+        errorf("too many channels to scan: %zu\n", chans->size());
+        SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INVALID_ARGS);
+        Reset();
+        return ZX_ERR_INVALID_ARGS;
+    }
+    config.num_channels = chans->size();
+    std::copy(chans->begin(), chans->end(), config.channels);
+
+    zx_status_t status = device_->StartHwScan(&config);
+    if (status != ZX_OK) {
+        errorf("StartHwScan returned an error: %s\n", zx_status_get_string(status));
+        SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+        Reset();
+        return status;
+    }
     return ZX_OK;
 }
 
@@ -238,6 +267,29 @@ OffChannelRequest Scanner::CreateOffChannelRequest() {
        .duration = WLAN_TU(req_->max_channel_time),
        .handler = &off_channel_handler_
    };
+}
+
+void Scanner::HandleHwScanAborted() {
+    errorf("scanner: hardware scan was aborted. Throwing out %zu BSS descriptions\n",
+            current_bss_.size());
+    SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+    Reset();
+}
+
+void Scanner::HandleHwScanComplete() {
+    // TODO(gbonik): remove legacy support once wlanstack2 lands
+    if (req_->txn_id != 0) {
+        zx_status_t status = SendResults(device_, req_->txn_id, current_bss_);
+        if (status != ZX_OK) {
+            errorf("scanner: failed to send results: %d\n", status);
+            SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+        } else {
+            SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
+        }
+    } else {
+        SendLegacyScanConf(device_, current_bss_);
+    }
+    Reset();
 }
 
 }  // namespace wlan

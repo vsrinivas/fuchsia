@@ -37,6 +37,7 @@ LOG_CATEGORY(kLogBss, 24);
 LOG_CATEGORY(kLogPs, 25);
 LOG_CATEGORY(kLogClt, 26);
 LOG_CATEGORY(kLogBuffer, 27);
+LOG_CATEGORY(kLogScan, 28);
 
 #undef LOG_CATEGORY
 
@@ -68,6 +69,7 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 #define debugclt(args...)  wlogf(wlan::kLogClt, "[V:clt ] ", args)
 #define debugfhandler(args...)  wlogf(wlan::kLogFrameHandlerTrace, "[V:fhdl] ", args)
 #define debugbuf(args...)  wlogf(wlan::kLogBuffer, "[V:buf ]", args)
+#define debugscan(args...)  wlogf(wlan::kLogScan, "[V:scan]", args)
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"

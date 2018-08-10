@@ -37,6 +37,9 @@ class Scanner {
     wlan_channel_t ScanChannel() const;
 
     zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
+    void HandleBeacon(const MgmtFrameView<Beacon>& frame);
+    void HandleHwScanAborted();
+    void HandleHwScanComplete();
 
    private:
     struct OffChannelHandlerImpl : OffChannelHandler {
@@ -49,8 +52,9 @@ class Scanner {
         virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) override;
     };
 
+    zx_status_t StartHwScan();
+
     bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
-    void HandleBeacon(const MgmtFrameView<Beacon>& frame);
     void ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
     OffChannelRequest CreateOffChannelRequest();
 

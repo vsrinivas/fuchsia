@@ -57,6 +57,7 @@ class DeviceInterface {
     virtual zx_status_t EnableBeaconing(bool enabled) = 0;
     virtual zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) = 0;
     virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;
+    virtual zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) = 0;
 
     virtual fbl::RefPtr<DeviceState> GetState() = 0;
     virtual const wlanmac_info_t& GetWlanInfo() const = 0;

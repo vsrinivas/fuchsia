@@ -67,6 +67,7 @@ class Device : public DeviceInterface {
     zx_status_t EnableBeaconing(bool enabled) override final;
     zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> beacon) override final;
     zx_status_t SetKey(wlan_key_config_t* key_config) override final;
+    zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
     const wlanmac_info_t& GetWlanInfo() const override final;
 

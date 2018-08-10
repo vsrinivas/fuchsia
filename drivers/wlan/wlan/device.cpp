@@ -481,6 +481,10 @@ zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
     return wlanmac_proxy_.SetKey(0u, key_config);
 }
 
+zx_status_t Device::StartHwScan(const wlan_hw_scan_config_t* scan_config) {
+    return wlanmac_proxy_.StartHwScan(scan_config);
+}
+
 fbl::RefPtr<DeviceState> Device::GetState() {
     return state_;
 }

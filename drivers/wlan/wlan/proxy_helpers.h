@@ -56,6 +56,10 @@ class WlanmacProxy {
         return proto_.ops->configure_assoc(proto_.ctx, options, assoc_ctx);
     }
 
+    zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) {
+        return proto_.ops->start_hw_scan(proto_.ctx, scan_config);
+    }
+
    private:
     wlanmac_protocol_t proto_;
 };

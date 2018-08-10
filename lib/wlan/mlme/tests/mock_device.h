@@ -92,6 +92,10 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
+    zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) override {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
     const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
