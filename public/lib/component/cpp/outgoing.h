@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_OUTGOING_H_
-#define LIB_APP_CPP_OUTGOING_H_
+#ifndef LIB_COMPONENT_CPP_OUTGOING_H_
+#define LIB_COMPONENT_CPP_OUTGOING_H_
 
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "lib/svc/cpp/service_namespace.h"
+#include "object_dir.h"
 
 namespace component {
 
@@ -41,6 +42,7 @@ class Outgoing {
   // - public: services published for clients
   // - debug: debugging information exported by the application
   // - ctrl: services published for appmgr
+  // - objects: objects exposed by the application for inspection
   const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
 
   // Gets an export sub-directory called "public" for publishing services for
@@ -54,6 +56,10 @@ class Outgoing {
   // Gets an export sub-directory called "ctrl" for publishing services for
   // appmgr.
   const fbl::RefPtr<fs::PseudoDir>& ctrl_dir() const { return ctrl_dir_; }
+
+  // Gets the |ObjectDir|, which supports exposing structured information for
+  // inspection.
+  ObjectDir* object_dir() const { return object_dir_.get(); }
 
   // Start serving the root directory on the given channel.
   zx_status_t Serve(zx::channel dir_request);
@@ -97,10 +103,11 @@ class Outgoing {
   fbl::RefPtr<fs::PseudoDir> public_dir_;
   fbl::RefPtr<fs::PseudoDir> debug_dir_;
   fbl::RefPtr<fs::PseudoDir> ctrl_dir_;
+  std::unique_ptr<ObjectDir> object_dir_;
 
   mutable ServiceNamespace deprecated_outgoing_services_;
 };
 
 }  // namespace component
 
-#endif  // LIB_APP_CPP_OUTGOING_H_
+#endif  // LIB_COMPONENT_CPP_OUTGOING_H_

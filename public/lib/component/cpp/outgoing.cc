@@ -21,6 +21,9 @@ Outgoing::Outgoing()
   root_dir_->AddEntry("public", public_dir_);
   root_dir_->AddEntry("debug", debug_dir_);
   root_dir_->AddEntry("ctrl", ctrl_dir_);
+  auto objects = fbl::MakeRefCounted<Object>("objects");
+  object_dir_ = std::make_unique<ObjectDir>(objects);
+  root_dir_->AddEntry("objects", objects);
 }
 
 Outgoing::~Outgoing() = default;

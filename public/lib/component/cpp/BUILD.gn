@@ -7,6 +7,12 @@ source_set("cpp") {
     "connect.h",
     "environment_services.cc",
     "environment_services.h",
+    "expose.cc",
+    "expose.h",
+    "exposed_object.cc",
+    "exposed_object.h",
+    "object_dir.cc",
+    "object_dir.h",
     "outgoing.cc",
     "outgoing.h",
     "service_provider_impl.cc",
@@ -23,6 +29,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.inspect",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
