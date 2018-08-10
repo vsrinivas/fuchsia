@@ -67,15 +67,22 @@ char Lexer::Consume() {
     return current;
 }
 
-StringView Lexer::Reset() {
+StringView Lexer::Reset(Token::Kind kind) {
     auto data = StringView(token_start_, token_size_);
+    if (kind != Token::Kind::kComment) {
+        previous_end_ = token_start_ + token_size_;
+    }
     token_start_ = current_;
     token_size_ = 0u;
     return data;
 }
 
 Token Lexer::Finish(Token::Kind kind) {
-    return Token(SourceLocation(Reset(), source_file_), kind);
+    StringView previous(previous_end_, token_start_ - previous_end_);
+    StringView current(token_start_, token_size_);
+    SourceLocation previous_location(previous, source_file_);
+    return Token(previous_location,
+                 SourceLocation(Reset(kind), source_file_), kind);
 }
 
 Token Lexer::LexEndOfStream() {
@@ -91,16 +98,22 @@ Token Lexer::LexNumericLiteral() {
 Token Lexer::LexIdentifier() {
     while (IsIdentifierBody(Peek()))
         Consume();
-    return identifier_table_->MakeIdentifier(Reset(), source_file_, /* escaped */ false);
+    StringView previous(previous_end_, token_start_ - previous_end_);
+    SourceLocation previous_end(previous, source_file_);
+    return identifier_table_->MakeIdentifier(
+        previous_end, Reset(Token::Kind::kNotAToken), source_file_, /* escaped */ false);
 }
 
 Token Lexer::LexEscapedIdentifier() {
     // Reset() to drop the initial @ from the identifier.
-    Reset();
+    Reset(Token::Kind::kComment);
 
     while (IsIdentifierBody(Peek()))
         Consume();
-    return identifier_table_->MakeIdentifier(Reset(), source_file_, /* escaped */ true);
+    StringView previous(previous_end_, token_start_ - previous_end_);
+    SourceLocation previous_end(previous, source_file_);
+    return identifier_table_->MakeIdentifier(
+        previous_end, Reset(Token::Kind::kNotAToken), source_file_, /* escaped */ true);
 }
 
 Token Lexer::LexStringLiteral() {

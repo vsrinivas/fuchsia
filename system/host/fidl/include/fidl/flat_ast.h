@@ -568,7 +568,7 @@ public:
         if (!literal) {
             return false;
         }
-        auto data = literal->location.data();
+        auto data = literal->location().data();
         std::string string_data(data.data(), data.data() + data.size());
         if (std::is_unsigned<IntType>::value) {
             errno = 0;

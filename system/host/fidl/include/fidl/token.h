@@ -20,18 +20,20 @@ namespace fidl {
 class Token {
 public:
     enum Kind : uint8_t {
-#define TOKEN(Name) k ## Name,
+#define TOKEN(Name) k##Name,
 #include "fidl/token_definitions.inc"
     };
 
-    Token(SourceLocation location, Kind kind) : location_(location), kind_(kind) {}
+    Token(SourceLocation previous_end, SourceLocation location, Kind kind)
+        : previous_end_(previous_end), location_(location), kind_(kind) {}
 
-    Token() : Token(SourceLocation(), Token::Kind::kNotAToken) {}
+    Token()
+        : Token(SourceLocation(), SourceLocation(), Token::Kind::kNotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {
-#define TOKEN(Name)                                                                                \
-    case fidl::Token::Kind::k ## Name:                                                             \
+#define TOKEN(Name)                  \
+    case fidl::Token::Kind::k##Name: \
         return #Name;
 #include "fidl/token_definitions.inc"
         }
@@ -39,9 +41,15 @@ public:
 
     StringView data() const { return location_.data(); }
     SourceLocation location() const { return location_; }
+    void set_previous_end(SourceLocation location) { previous_end_ = location; }
+    SourceLocation previous_end() const { return previous_end_; }
     Kind kind() const { return kind_; }
 
 private:
+    // The end of the previous token.  Everything between this and location_ is
+    // somehow uninteresting to the parser (whitespace, comments, discarded
+    // braces, etc).
+    SourceLocation previous_end_;
     SourceLocation location_;
     Kind kind_;
 };

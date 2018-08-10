@@ -203,7 +203,7 @@ void JSONGenerator::Generate(types::PrimitiveSubtype value) {
 }
 
 void JSONGenerator::Generate(const raw::Identifier& value) {
-    EmitString(&json_file_, value.location.data());
+    EmitString(&json_file_, value.location().data());
 }
 
 void JSONGenerator::Generate(const raw::Literal& value) {
@@ -215,12 +215,12 @@ void JSONGenerator::Generate(const raw::Literal& value) {
             auto type = static_cast<const raw::StringLiteral*>(&value);
             EmitObjectSeparator(&json_file_, indent_level_);
             EmitObjectKey(&json_file_, indent_level_, "value");
-            EmitLiteral(&json_file_, type->location.data());
+            EmitLiteral(&json_file_, type->location().data());
             break;
         }
         case raw::Literal::Kind::kNumeric: {
             auto type = static_cast<const raw::NumericLiteral*>(&value);
-            GenerateObjectMember("value", type->location.data());
+            GenerateObjectMember("value", type->location().data());
             break;
         }
         case raw::Literal::Kind::kTrue: {
@@ -309,7 +309,7 @@ void JSONGenerator::Generate(const raw::Attribute& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.value)
-            GenerateObjectMember("value", value.value->location);
+            GenerateObjectMember("value", value.value->location());
         else
             GenerateObjectMember("value", StringView());
     });

@@ -20,7 +20,8 @@ class IdentifierTable {
 public:
     IdentifierTable();
 
-    Token MakeIdentifier(StringView source_data, const SourceFile& source_file,
+    Token MakeIdentifier(SourceLocation previous_end,
+                         StringView source_data, const SourceFile& source_file,
                          bool escaped_identifier) const;
 
 private:

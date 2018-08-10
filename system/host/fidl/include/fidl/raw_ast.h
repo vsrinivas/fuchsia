@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "source_location.h"
+#include "token.h"
 #include "types.h"
 
 // ASTs fresh out of the oven. This is a tree-shaped bunch of nodes
@@ -27,21 +28,53 @@
 namespace fidl {
 namespace raw {
 
-struct Identifier {
-    explicit Identifier(SourceLocation location)
-        : location(location) {}
+// In order to be able to associate AST nodes with their original source, each
+// node is a SourceElement, which contains information about the original
+// source.  The AST has a start token, whose previous_end field points to the
+// end of the previous AST node, and an end token, which points to the end of
+// this syntactic element.
+//
+// Note: The file may have a tail of whitespace / comment text not explicitly
+// associated with any node.  In order to reconstruct that text, raw::File
+// contains an end token; the previous_end field of that token points to the end
+// of the last interesting token.
+struct SourceElement {
+    SourceElement(Token start, Token end)
+        : start_(start), end_(end) {}
 
-    SourceLocation location;
+    SourceLocation location() const { return start_.location(); }
+
+    // The start_ token is the first token associated with the AST node, and
+    // contains everything in the gap between the end of the previous "interesting"
+    // token and the end of the first token in this AST node.  "Interesting" means
+    // "not discarded by previous compiler passes", and includes whitespace,
+    // comments, and things like braces / parentheses that aren't at the end of a
+    // node.
+    Token start_;
+
+    // The end_ token is the end of the source for the node; often a
+    // right curly brace or semicolon.  Note that these values might not be unique.
+    // For example, the token that starts an identifier list is also the token for
+    // the first identifier in the list.
+    Token end_;
 };
 
-struct CompoundIdentifier {
-    CompoundIdentifier(std::vector<std::unique_ptr<Identifier>> components)
-        : components(std::move(components)) {}
+struct Identifier : SourceElement {
+    explicit Identifier(Token token)
+        : SourceElement(token, token) {}
+
+    explicit Identifier(Token start_token, Token identifier_token)
+        : SourceElement(Token(start_token.previous_end(), identifier_token.location(), identifier_token.kind()), identifier_token) {}
+};
+
+struct CompoundIdentifier : SourceElement {
+    CompoundIdentifier(Token start, Token end, std::vector<std::unique_ptr<Identifier>> components)
+        : SourceElement(start, end), components(std::move(components)) {}
 
     std::vector<std::unique_ptr<Identifier>> components;
 };
 
-struct Literal {
+struct Literal : SourceElement {
     virtual ~Literal() {}
 
     enum struct Kind {
@@ -51,37 +84,33 @@ struct Literal {
         kFalse,
     };
 
-    explicit Literal(Kind kind)
-        : kind(kind) {}
+    explicit Literal(Token token, Kind kind)
+        : SourceElement(token, token), kind(kind) {}
 
     const Kind kind;
 };
 
 struct StringLiteral : public Literal {
-    explicit StringLiteral(SourceLocation location)
-        : Literal(Kind::kString), location(location) {}
-
-    SourceLocation location;
+    explicit StringLiteral(Token start)
+        : Literal(start, Kind::kString) {}
 };
 
 struct NumericLiteral : public Literal {
-    NumericLiteral(SourceLocation location)
-        : Literal(Kind::kNumeric), location(location) {}
-
-    SourceLocation location;
+    explicit NumericLiteral(Token token)
+        : Literal(token, Kind::kNumeric) {}
 };
 
 struct TrueLiteral : public Literal {
-    TrueLiteral()
-        : Literal(Kind::kTrue) {}
+    explicit TrueLiteral(Token token)
+        : Literal(token, Kind::kTrue) {}
 };
 
 struct FalseLiteral : public Literal {
-    FalseLiteral()
-        : Literal(Kind::kFalse) {}
+    explicit FalseLiteral(Token token)
+        : Literal(token, Kind::kFalse) {}
 };
 
-struct Constant {
+struct Constant : SourceElement {
     virtual ~Constant() {}
 
     enum struct Kind {
@@ -89,50 +118,50 @@ struct Constant {
         kLiteral,
     };
 
-    explicit Constant(Kind kind)
-        : kind(kind) {}
+    explicit Constant(Token token, Kind kind)
+        : SourceElement(token, token), kind(kind) {}
 
     const Kind kind;
 };
 
 struct IdentifierConstant : Constant {
     explicit IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
-        : Constant(Kind::kIdentifier), identifier(std::move(identifier)) {}
+        : Constant(identifier->start_, Kind::kIdentifier), identifier(std::move(identifier)) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
 };
 
 struct LiteralConstant : Constant {
     explicit LiteralConstant(std::unique_ptr<Literal> literal)
-        : Constant(Kind::kLiteral), literal(std::move(literal)) {}
+        : Constant(literal->start_, Kind::kLiteral), literal(std::move(literal)) {}
 
     std::unique_ptr<Literal> literal;
 };
 
-struct Attribute {
-    Attribute(std::unique_ptr<Identifier> name, std::unique_ptr<StringLiteral> value)
-        : name(std::move(name)), value(std::move(value)) {}
+struct Attribute : SourceElement {
+    Attribute(Token start, Token end, std::unique_ptr<Identifier> name, std::unique_ptr<StringLiteral> value)
+        : SourceElement(start, end), name(std::move(name)), value(std::move(value)) {}
 
     std::unique_ptr<Identifier> name;
     std::unique_ptr<StringLiteral> value;
 };
 
-struct AttributeList {
-    AttributeList(std::vector<std::unique_ptr<Attribute>> attribute_list)
-        : attribute_list(std::move(attribute_list)) {}
+struct AttributeList : SourceElement {
+    AttributeList(Token start, Token end, std::vector<std::unique_ptr<Attribute>> attribute_list)
+        : SourceElement(start, end), attribute_list(std::move(attribute_list)) {}
 
     std::vector<std::unique_ptr<Attribute>> attribute_list;
 
     bool HasAttribute(fidl::StringView name) const {
         for (const auto& attribute : attribute_list) {
-            if (attribute->name->location.data() == name)
+            if (attribute->name->location().data() == name)
                 return true;
         }
         return false;
     }
 };
 
-struct Type {
+struct Type : SourceElement {
     virtual ~Type() {}
 
     enum struct Kind {
@@ -145,15 +174,15 @@ struct Type {
         kIdentifier,
     };
 
-    explicit Type(Kind kind)
-        : kind(kind) {}
+    explicit Type(Token start, Token end, Kind kind)
+        : SourceElement(start, end), kind(kind) {}
 
     const Kind kind;
 };
 
 struct ArrayType : public Type {
-    ArrayType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> element_count)
-        : Type(Kind::kArray), element_type(std::move(element_type)),
+    ArrayType(Token start, Token end, std::unique_ptr<Type> element_type, std::unique_ptr<Constant> element_count)
+        : Type(start, end, Kind::kArray), element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 
     std::unique_ptr<Type> element_type;
@@ -161,9 +190,9 @@ struct ArrayType : public Type {
 };
 
 struct VectorType : public Type {
-    VectorType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
+    VectorType(Token start, Token end, std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
                types::Nullability nullability)
-        : Type(Kind::kVector), element_type(std::move(element_type)),
+        : Type(start, end, Kind::kVector), element_type(std::move(element_type)),
           maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
@@ -172,8 +201,8 @@ struct VectorType : public Type {
 };
 
 struct StringType : public Type {
-    StringType(std::unique_ptr<Constant> maybe_element_count, types::Nullability nullability)
-        : Type(Kind::kString), maybe_element_count(std::move(maybe_element_count)),
+    StringType(Token start, Token end, std::unique_ptr<Constant> maybe_element_count, types::Nullability nullability)
+        : Type(start, end, Kind::kString), maybe_element_count(std::move(maybe_element_count)),
           nullability(nullability) {}
 
     std::unique_ptr<Constant> maybe_element_count;
@@ -181,50 +210,50 @@ struct StringType : public Type {
 };
 
 struct HandleType : public Type {
-    HandleType(types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::kHandle), subtype(subtype), nullability(nullability) {}
+    HandleType(Token start, Token end, types::HandleSubtype subtype, types::Nullability nullability)
+        : Type(start, end, Kind::kHandle), subtype(subtype), nullability(nullability) {}
 
     types::HandleSubtype subtype;
     types::Nullability nullability;
 };
 
 struct RequestHandleType : public Type {
-    RequestHandleType(std::unique_ptr<CompoundIdentifier> identifier,
+    RequestHandleType(Token start, Token end, std::unique_ptr<CompoundIdentifier> identifier,
                       types::Nullability nullability)
-        : Type(Kind::kRequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
+        : Type(start, end, Kind::kRequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;
 };
 
 struct PrimitiveType : public Type {
-    explicit PrimitiveType(types::PrimitiveSubtype subtype)
-        : Type(Kind::kPrimitive), subtype(subtype) {}
+    PrimitiveType(Token start, Token end, types::PrimitiveSubtype subtype)
+        : Type(start, end, Kind::kPrimitive), subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
 };
 
 struct IdentifierType : public Type {
-    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
-        : Type(Kind::kIdentifier), identifier(std::move(identifier)), nullability(nullability) {}
+    IdentifierType(Token start, Token end, std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
+        : Type(start, end, Kind::kIdentifier), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;
 };
 
-struct Using {
-    Using(std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias, std::unique_ptr<PrimitiveType> maybe_primitive)
-        : using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)), maybe_primitive(std::move(maybe_primitive)) {}
+struct Using : SourceElement {
+    Using(Token start, Token end, std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias, std::unique_ptr<PrimitiveType> maybe_primitive)
+        : SourceElement(start, end), using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)), maybe_primitive(std::move(maybe_primitive)) {}
 
     std::unique_ptr<CompoundIdentifier> using_path;
     std::unique_ptr<Identifier> maybe_alias;
     std::unique_ptr<PrimitiveType> maybe_primitive;
 };
 
-struct ConstDeclaration {
-    ConstDeclaration(std::unique_ptr<AttributeList> attributes, std::unique_ptr<Type> type,
+struct ConstDeclaration : SourceElement {
+    ConstDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes, std::unique_ptr<Type> type,
                      std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> constant)
-        : attributes(std::move(attributes)), type(std::move(type)),
+        : SourceElement(start, end), attributes(std::move(attributes)), type(std::move(type)),
           identifier(std::move(identifier)), constant(std::move(constant)) {}
 
     std::unique_ptr<AttributeList> attributes;
@@ -233,20 +262,20 @@ struct ConstDeclaration {
     std::unique_ptr<Constant> constant;
 };
 
-struct EnumMember {
-    EnumMember(std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value)
-        : identifier(std::move(identifier)), value(std::move(value)) {}
+struct EnumMember : SourceElement {
+    EnumMember(Token end, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value)
+        : SourceElement(identifier->start_, end), identifier(std::move(identifier)), value(std::move(value)) {}
 
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<Constant> value;
 };
 
-struct EnumDeclaration {
-    EnumDeclaration(std::unique_ptr<AttributeList> attributes,
+struct EnumDeclaration : SourceElement {
+    EnumDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<PrimitiveType> maybe_subtype,
                     std::vector<std::unique_ptr<EnumMember>> members)
-        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+        : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           maybe_subtype(std::move(maybe_subtype)), members(std::move(members)) {}
 
     std::unique_ptr<AttributeList> attributes;
@@ -255,28 +284,28 @@ struct EnumDeclaration {
     std::vector<std::unique_ptr<EnumMember>> members;
 };
 
-struct Parameter {
-    Parameter(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
-        : type(std::move(type)), identifier(std::move(identifier)) {}
+struct Parameter : SourceElement {
+    Parameter(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
+        : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)) {}
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
 };
 
-struct ParameterList {
-    ParameterList(std::vector<std::unique_ptr<Parameter>> parameter_list)
-        : parameter_list(std::move(parameter_list)) {}
+struct ParameterList : SourceElement {
+    ParameterList(Token start, Token end, std::vector<std::unique_ptr<Parameter>> parameter_list)
+        : SourceElement(start, end), parameter_list(std::move(parameter_list)) {}
 
     std::vector<std::unique_ptr<Parameter>> parameter_list;
 };
 
-struct InterfaceMethod {
-    InterfaceMethod(std::unique_ptr<AttributeList> attributes,
+struct InterfaceMethod : SourceElement {
+    InterfaceMethod(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<NumericLiteral> ordinal,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
                     std::unique_ptr<ParameterList> maybe_response)
-        : attributes(std::move(attributes)),
+        : SourceElement(start, end), attributes(std::move(attributes)),
           ordinal(std::move(ordinal)), identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {}
 
@@ -287,12 +316,12 @@ struct InterfaceMethod {
     std::unique_ptr<ParameterList> maybe_response;
 };
 
-struct InterfaceDeclaration {
-    InterfaceDeclaration(std::unique_ptr<AttributeList> attributes,
+struct InterfaceDeclaration : SourceElement {
+    InterfaceDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                          std::unique_ptr<Identifier> identifier,
                          std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces,
                          std::vector<std::unique_ptr<InterfaceMethod>> methods)
-        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+        : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
 
     std::unique_ptr<AttributeList> attributes;
@@ -301,10 +330,10 @@ struct InterfaceDeclaration {
     std::vector<std::unique_ptr<InterfaceMethod>> methods;
 };
 
-struct StructMember {
-    StructMember(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
+struct StructMember : SourceElement {
+    StructMember(Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
                  std::unique_ptr<Constant> maybe_default_value)
-        : type(std::move(type)), identifier(std::move(identifier)),
+        : SourceElement(type->start_, end), type(std::move(type)), identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)) {}
 
     std::unique_ptr<Type> type;
@@ -312,11 +341,12 @@ struct StructMember {
     std::unique_ptr<Constant> maybe_default_value;
 };
 
-struct StructDeclaration {
-    StructDeclaration(std::unique_ptr<AttributeList> attributes,
+struct StructDeclaration : SourceElement {
+    // Note: A nullptr passed to attributes means an empty attribute list.
+    StructDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                       std::unique_ptr<Identifier> identifier,
                       std::vector<std::unique_ptr<StructMember>> members)
-        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+        : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           members(std::move(members)) {}
 
     std::unique_ptr<AttributeList> attributes;
@@ -324,19 +354,19 @@ struct StructDeclaration {
     std::vector<std::unique_ptr<StructMember>> members;
 };
 
-struct UnionMember {
-    UnionMember(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
-        : type(std::move(type)), identifier(std::move(identifier)) {}
+struct UnionMember : SourceElement {
+    UnionMember(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
+        : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)) {}
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
 };
 
-struct UnionDeclaration {
-    UnionDeclaration(std::unique_ptr<AttributeList> attributes,
+struct UnionDeclaration : SourceElement {
+    UnionDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                      std::unique_ptr<Identifier> identifier,
                      std::vector<std::unique_ptr<UnionMember>> members)
-        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+        : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           members(std::move(members)) {}
 
     std::unique_ptr<AttributeList> attributes;
@@ -344,8 +374,9 @@ struct UnionDeclaration {
     std::vector<std::unique_ptr<UnionMember>> members;
 };
 
-struct File {
-    File(std::unique_ptr<AttributeList> attributes,
+struct File : SourceElement {
+    File(Token start, Token end,
+         std::unique_ptr<AttributeList> attributes,
          std::unique_ptr<CompoundIdentifier> library_name,
          std::vector<std::unique_ptr<Using>> using_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
@@ -353,14 +384,16 @@ struct File {
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
          std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
-        : attributes(std::move(attributes)),
+        : SourceElement(start, end),
+          attributes(std::move(attributes)),
           library_name(std::move(library_name)),
           using_list(std::move(using_list)),
           const_declaration_list(std::move(const_declaration_list)),
           enum_declaration_list(std::move(enum_declaration_list)),
           interface_declaration_list(std::move(interface_declaration_list)),
           struct_declaration_list(std::move(struct_declaration_list)),
-          union_declaration_list(std::move(union_declaration_list)) {}
+          union_declaration_list(std::move(union_declaration_list)),
+          end_(end) {}
 
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<CompoundIdentifier> library_name;
@@ -370,6 +403,7 @@ struct File {
     std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list;
     std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
+    Token end_;
 };
 
 } // namespace raw

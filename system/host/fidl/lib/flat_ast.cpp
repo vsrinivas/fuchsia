@@ -228,9 +228,9 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
     if (!attributes)
         return fidl::StringView();
     for (const auto& attribute : attributes->attribute_list) {
-        if (attribute->name->location.data() == name) {
+        if (attribute->name->location().data() == name) {
             if (attribute->value) {
-                auto value = attribute->value->location.data();
+                auto value = attribute->value->location().data();
                 if (value.size() >= 2 && value[0] == '"' && value[value.size() - 1] == '"')
                     return fidl::StringView(value.data() + 1, value.size() - 2);
             }
@@ -328,7 +328,7 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
     const auto& components = compound_identifier->components;
     assert(components.size() >= 1);
 
-    SourceLocation decl_name = components.back()->location;
+    SourceLocation decl_name = components.back()->location();
 
     if (components.size() == 1) {
         *name_out = Name(this, decl_name);
@@ -339,14 +339,14 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
     for (auto iter = components.begin();
          iter != components.end() - 1;
          ++iter) {
-        library_name.push_back((*iter)->location.data());
+        library_name.push_back((*iter)->location().data());
     }
 
     auto iter = dependencies_->find(library_name);
     if (iter == dependencies_->end()) {
         std::string message("Could not find library named ");
         message += NameLibrary(library_name);
-        const auto& location = components[0]->location;
+        const auto& location = components[0]->location();
         return Fail(location, message);
     }
 
@@ -508,7 +508,7 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     if (!using_directive->maybe_primitive)
         return true;
 
-    auto location = using_directive->using_path->components[0]->location;
+    auto location = using_directive->using_path->components[0]->location();
     auto name = Name(this, location);
     auto using_dir = std::make_unique<Using>(std::move(name), MakePrimitiveType(using_directive->maybe_primitive.get()));
     type_aliases_.emplace(&using_dir->name, using_dir.get());
@@ -518,7 +518,7 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
     auto attributes = std::move(const_declaration->attributes);
-    auto location = const_declaration->identifier->location;
+    auto location = const_declaration->identifier->location();
     auto name = Name(this, location);
     std::unique_ptr<Type> type;
     if (!ConsumeType(std::move(const_declaration->type), location, &type))
@@ -538,7 +538,7 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
     std::vector<Enum::Member> members;
     for (auto& member : enum_declaration->members) {
-        auto location = member->identifier->location;
+        auto location = member->identifier->location();
         std::unique_ptr<Constant> value;
         if (!ConsumeConstant(std::move(member->value), location, &value))
             return false;
@@ -549,7 +549,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         type = enum_declaration->maybe_subtype->subtype;
 
     auto attributes = std::move(enum_declaration->attributes);
-    auto name = Name(this, enum_declaration->identifier->location);
+    auto name = Name(this, enum_declaration->identifier->location());
 
     enum_declarations_.push_back(
         std::make_unique<Enum>(std::move(attributes), std::move(name), type, std::move(members)));
@@ -559,12 +559,12 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
     auto attributes = std::move(interface_declaration->attributes);
-    auto name = Name(this, interface_declaration->identifier->location);
+    auto name = Name(this, interface_declaration->identifier->location());
 
     std::vector<Name> superinterfaces;
     for (auto& superinterface : interface_declaration->superinterfaces) {
         Name superinterface_name;
-        auto location = superinterface->components[0]->location;
+        auto location = superinterface->components[0]->location();
         if (!CompileCompoundIdentifier(superinterface.get(), location, &superinterface_name)) {
             return false;
         }
@@ -577,18 +577,18 @@ bool Library::ConsumeInterfaceDeclaration(
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
         if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
-            return Fail(ordinal_literal->location, "Unable to parse ordinal");
+            return Fail(ordinal_literal->location(), "Unable to parse ordinal");
         if (value == 0u)
-            return Fail(ordinal_literal->location, "Fidl ordinals cannot be 0");
+            return Fail(ordinal_literal->location(), "Fidl ordinals cannot be 0");
         Ordinal ordinal(std::move(ordinal_literal), value);
 
-        SourceLocation method_name = method->identifier->location;
+        SourceLocation method_name = method->identifier->location();
 
         std::unique_ptr<Interface::Method::Message> maybe_request;
         if (method->maybe_request != nullptr) {
             maybe_request.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_request->parameter_list) {
-                SourceLocation parameter_name = parameter->identifier->location;
+                SourceLocation parameter_name = parameter->identifier->location();
                 std::unique_ptr<Type> type;
                 if (!ConsumeType(std::move(parameter->type), parameter_name, &type))
                     return false;
@@ -600,7 +600,7 @@ bool Library::ConsumeInterfaceDeclaration(
         if (method->maybe_response != nullptr) {
             maybe_response.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_response->parameter_list) {
-                SourceLocation parameter_name = parameter->identifier->location;
+                SourceLocation parameter_name = parameter->identifier->location();
                 std::unique_ptr<Type> type;
                 if (!ConsumeType(std::move(parameter->type), parameter_name, &type))
                     return false;
@@ -624,12 +624,12 @@ bool Library::ConsumeInterfaceDeclaration(
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
     auto attributes = std::move(struct_declaration->attributes);
-    auto name = Name(this, struct_declaration->identifier->location);
+    auto name = Name(this, struct_declaration->identifier->location());
 
     std::vector<Struct::Member> members;
     for (auto& member : struct_declaration->members) {
         std::unique_ptr<Type> type;
-        auto location = member->identifier->location;
+        auto location = member->identifier->location();
         if (!ConsumeType(std::move(member->type), location, &type))
             return false;
         std::unique_ptr<Constant> maybe_default_value;
@@ -638,7 +638,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                                  &maybe_default_value))
                 return false;
         }
-        members.emplace_back(std::move(type), member->identifier->location,
+        members.emplace_back(std::move(type), member->identifier->location(),
                              std::move(maybe_default_value));
     }
 
@@ -650,7 +650,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
     std::vector<Union::Member> members;
     for (auto& member : union_declaration->members) {
-        auto location = member->identifier->location;
+        auto location = member->identifier->location();
         std::unique_ptr<Type> type;
         if (!ConsumeType(std::move(member->type), location, &type))
             return false;
@@ -658,7 +658,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     }
 
     auto attributes = std::move(union_declaration->attributes);
-    auto name = Name(this, union_declaration->identifier->location);
+    auto name = Name(this, union_declaration->identifier->location());
 
     union_declarations_.push_back(
         std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
@@ -679,11 +679,11 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     // All fidl files in a library should agree on the library name.
     std::vector<StringView> new_name;
     for (const auto& part : file->library_name->components) {
-        new_name.push_back(part->location.data());
+        new_name.push_back(part->location().data());
     }
     if (!library_name_.empty()) {
         if (new_name != library_name_) {
-            return Fail(file->library_name->components[0]->location,
+            return Fail(file->library_name->components[0]->location(),
                         "Two files in the library disagree about the name of the library");
         }
     } else {
