@@ -411,6 +411,64 @@ static int console_starter(void* arg) {
     return 0;
 }
 
+static int pwrbtn_monitor_starter(void* arg) {
+    const char* name = "pwrbtn-monitor";
+    const char* argv[] = {"/boot/bin/pwrbtn-monitor"};
+    int argc = 1;
+
+    zx_handle_t job_copy = ZX_HANDLE_INVALID;
+    zx_handle_duplicate(svcs_job_handle, ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+                        &job_copy);
+
+    launchpad_t* lp;
+    launchpad_create(job_copy, name, &lp);
+
+    zx_status_t status = devmgr_launch_load(NULL, lp, argv[0]);
+    if (status != ZX_OK) {
+        launchpad_abort(lp, status, "cannot load file");
+    }
+    launchpad_set_args(lp, argc, argv);
+
+    // create a namespace containing /dev/class/input and /dev/misc
+    const char* nametable[2] = { };
+    size_t count = 0;
+    zx_handle_t fs_handle = fs_clone("dev/class/input");
+    if (fs_handle != ZX_HANDLE_INVALID) {
+        nametable[count] = "/input";
+        launchpad_add_handle(lp, fs_handle, PA_HND(PA_NS_DIR, count++));
+    } else {
+        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/input");
+    }
+
+    // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
+    // single files
+    fs_handle = fs_clone("dev/misc");
+    if (fs_handle != ZX_HANDLE_INVALID) {
+        nametable[count] = "/misc";
+        launchpad_add_handle(lp, fs_handle, PA_HND(PA_NS_DIR, count++));
+    } else {
+        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/misc");
+    }
+    launchpad_set_nametable(lp, count, nametable);
+
+    zx_handle_t debuglog;
+    if ((status = zx_debuglog_create(ZX_HANDLE_INVALID, 0, &debuglog) < 0)) {
+        launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
+    } else {
+        launchpad_add_handle(lp, debuglog, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
+    }
+
+    const char* errmsg;
+    if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
+               argv[0], name, errmsg, status);
+    } else {
+        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+    }
+    zx_handle_close(job_copy);
+    return 0;
+}
+
 static void start_console_shell(void) {
     // start a shell on the kernel console if it isn't already running a shell
     if (!getenv_bool("kernel.shell", false)) {
@@ -555,9 +613,14 @@ int main(int argc, char** argv) {
         devmgr_disable_appmgr_services();
     }
 
+    thrd_t t;
+    if ((thrd_create_with_name(&t, pwrbtn_monitor_starter, NULL,
+                               "pwrbtn-monitor-starter")) == thrd_success) {
+        thrd_detach(t);
+    }
+
     start_console_shell();
 
-    thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
         thrd_detach(t);
     }
@@ -758,6 +821,7 @@ zx_handle_t fs_clone(const char* path) {
     if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
         return ZX_HANDLE_INVALID;
     }
+    bool close_fs = false;
     zx_handle_t fs = fs_root;
     int flags = FS_DIR_FLAGS;
     if (!strcmp(path, "hub")) {
@@ -766,8 +830,16 @@ zx_handle_t fs_clone(const char* path) {
         flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
         fs = svchost_outgoing;
         path = "public";
+    } else if (!strncmp(path, "dev/", 4)) {
+        fs = devfs_root_clone();
+        close_fs = true;
+        path += 4;
     }
-    if (fdio_open_at(fs, path, flags, h1) != ZX_OK) {
+    zx_status_t status = fdio_open_at(fs, path, flags, h1);
+    if (close_fs) {
+        zx_handle_close(fs);
+    }
+    if (status != ZX_OK) {
         zx_handle_close(h0);
         return ZX_HANDLE_INVALID;
     }
