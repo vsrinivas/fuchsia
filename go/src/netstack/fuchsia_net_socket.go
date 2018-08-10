@@ -20,7 +20,7 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 	if err != nil {
 		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
 	}
-	return zx.Socket(s), 0, nil
+	return s, 0, nil
 }
 
 func netStringToString(ns *net.String) (string, net.AddrInfoStatus) {
