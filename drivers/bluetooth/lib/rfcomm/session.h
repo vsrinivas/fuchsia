@@ -65,7 +65,7 @@ class Session {
   // a valid UA or DM frame.
   using CommandResponseCallback = fit::function<void(std::unique_ptr<Frame>)>;
   void SendCommand(FrameType frame_type, DLCI dlci,
-                   CommandResponseCallback command_response_cb);
+                   CommandResponseCallback command_response_cb = nullptr);
 
   // Send a UA or DM response.
   void SendResponse(FrameType frame_type, DLCI dlci);
@@ -75,8 +75,23 @@ class Session {
   // frame is actually sent.
   bool SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb = nullptr);
 
+  // Send a multiplexer command along the multiplexer control channel.
+  //
+  // All multiplexer commands come in command/response pairs (RFCOMM 5.4.6.2).
+  // This function takes an optional callback which will be called when the
+  // response is received, and will be passed a |nullptr| if a DM response was
+  // sent in response to the multiplexer command (meaning the command was
+  // declined). A DM response can only occur for specific commands, e.g.
+  // parameter negotiation (RFCOMM 5.5.3).
+  using MuxResponseCallback = fit::function<void(std::unique_ptr<MuxCommand>)>;
+  void SendMuxCommand(std::unique_ptr<MuxCommand> mux_command,
+                      MuxResponseCallback callback = nullptr);
+
   // Handle an incoming SABM request.
   void HandleSABM(DLCI dlci);
+
+  // Handle incoming multiplexer command.
+  void HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command);
 
   // Begin the multiplexer start-up routine described in RFCOMM 5.2.1. This
   // function implements the "initiator" side of the multiplexer startup
@@ -89,6 +104,28 @@ class Session {
   inline bool multiplexer_started() { return IsMultiplexerStarted(role_); }
 
   void Closedown();
+
+  // Begin this session's initial parameter negotiation. Our RFCOMM
+  // implementation will initiate parameter negotiation at most once, before the
+  // first DLC is opened. This initial parameter negotiation is required by the
+  // spec. Any other PN which we participate in will be initiated by the remote.
+  //
+  // TODO(gusss): what happens when we set parameters and then receive a DISC/DM
+  // for that channel? Do we need to undo, somehow? For something like credits,
+  // we can probably just unset that entry in the credits map.
+  //
+  // TODO(gusss): does the spec say what happens (in terms of initial parameter
+  // negotiation) if we do initial parameter negotiation, it finishes, and the
+  // remote sends a DISC? Do we have to re-do initial parameter negotiation?
+  void RunInitialParameterNegotiation(DLCI dlci);
+
+  // Get the ideal parameters for this session. This is used in both PN commands
+  // and PN responses to determine what our parameter set would be in the ideal
+  // case. The final parameters may be different after negotiation.
+  ParameterNegotiationParams GetIdealParameters(DLCI dlci) const;
+
+  // Set initial parameter negotiation as complete and run any pending tasks.
+  void InitialParameterNegotiationComplete();
 
   l2cap::ScopedChannel l2cap_channel_;
 
@@ -128,6 +165,53 @@ class Session {
   using CommandResponseCallbacks =
       std::pair<CommandResponseCallback, std::unique_ptr<TimeoutCallback>>;
   std::unordered_map<DLCI, CommandResponseCallbacks> outstanding_frames_;
+
+  // Outstanding multiplexer commands awaiting responses. We identify
+  // outstanding commands as a tuple of the command type and the DLCI referenced
+  // in the command, or kNoDLCI. Some multiplexer commands do not identify a
+  // DLCI (e.g. the Test command); these commands use kNoDLCI as their DLCI.
+  //
+  // The TimeoutCallback is called when the timeout elapses before a response is
+  // received.
+  using OutstandingMuxCommand = std::pair<MuxCommandType, DLCI>;
+  using MuxResponseCallbacks =
+      std::pair<MuxResponseCallback, std::unique_ptr<TimeoutCallback>>;
+  struct outstanding_mux_commands_hash {
+    inline size_t operator()(OutstandingMuxCommand key) const {
+      return ((uint8_t)std::get<0>(key) << 8) | std::get<1>(key);
+    }
+  };
+  std::unordered_map<OutstandingMuxCommand, MuxResponseCallbacks,
+                     outstanding_mux_commands_hash>
+      outstanding_mux_commands_;
+
+  enum class ParameterNegotiationState {
+    kNotNegotiated,
+    kNegotiating,
+    kNegotiated
+  };
+
+  // Tracks whether the initial parameter negotiation has completed. RFCOMM
+  // requires that parameter negotiation run at least once, before any DLCs are
+  // opened. The first request to open a DLC to the remote peer will trigger
+  // initial parameter negotiation, which will delay all other channel opening
+  // requests until it completes.
+  ParameterNegotiationState initial_param_negotiation_state_;
+
+  // Tasks which are to be run once parameter negotiation completes.
+  std::queue<fit::closure> tasks_pending_parameter_negotiation_;
+
+  // Channels undergoing parameter negotiation. Multiple channels can be
+  // negotiated simultaneously. Note that the only parameter negotiation that
+  // our RFCOMM implementation will initiate is the required first PN; any other
+  // PNs which occur will be triggered by the remote.
+  std::unordered_map<DLCI, ParameterNegotiationState> channels_negotiating_;
+
+  // The RX and TX MTU for this Session. This is determined during initial
+  // parameter negotiation, and is based on the MTU of the underlying L2CAP
+  // link. Our RFCOMM implementation refuses to change the maximum frame size
+  // once it is set the first time.
+  uint16_t maximum_frame_size_;
 
   fxl::WeakPtrFactory<Session> weak_ptr_factory_;
 

@@ -62,8 +62,11 @@ class Frame {
 
   // Parse a frame out of a ByteBuffer. If parsing fails, returns nullptr.
   // Copies the payload from |buffer|. Does not take ownership of |buffer|.
-  // |credit_based_flow| and |role| are RFCOMM session parameters necessary for
-  // fully parsing the frame.
+  // |credit_based_flow| indicates whether credit-based flow is turned on for
+  // this session. |role| is the RFCOMM role of the session on which the frame
+  // was formed. Thus, if the frame was formed by the remote peer and sent to
+  // the local session, Parse() should be called with the opposite role of the
+  // local session.
   //
   // The Frame returned by Parse should first have its type inspected. If it is
   // not a UIH frame, it can be used as-is. No casting needs to be done to get

@@ -39,7 +39,7 @@ TEST_F(RFCOMM_ChannelManagerTest, RegisterL2CAPChannel) {
 
 // Test that command timeouts during multiplexer startup result in the session
 // being closed down.
-TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Timeout) {
+TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Timeout) {
   ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
   auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
   EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
@@ -78,7 +78,7 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Timeout) {
 }
 
 // Test successful multiplexer startup (resulting role: responder).
-TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Responder) {
+TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Responder) {
   ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
   auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
   EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
@@ -109,7 +109,7 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Responder) {
 }
 
 // Test successful multiplexer startup (resulting role: initiator)
-TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Initiator) {
+TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Initiator) {
   ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
   auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
   EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
@@ -135,6 +135,7 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Initiator) {
     // Expect a SABM frame from the session
     EXPECT_TRUE(received_buffer);
     auto frame = Frame::Parse(true, Role::kUnassigned, received_buffer->view());
+    received_buffer = nullptr;
     EXPECT_EQ(FrameType::kSetAsynchronousBalancedMode,
               static_cast<FrameType>(frame->control()));
     EXPECT_EQ(kMuxControlDLCI, frame->dlci());
@@ -148,13 +149,43 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Initiator) {
     l2cap_channel->Receive(buffer->view());
     RunLoopUntilIdle();
   }
+  {
+    // Expect a PN command from the session
+    EXPECT_TRUE(received_buffer);
+    auto frame = Frame::Parse(true, Role::kInitiator, received_buffer->view());
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    DLCI dlci = ServerChannelToDLCI(kMinServerChannel, Role::kInitiator);
+    auto mux_command =
+        static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
+    EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
+              mux_command->command_type());
+
+    auto params =
+        static_cast<DLCParameterNegotiationCommand*>(mux_command.get())
+            ->params();
+    EXPECT_EQ(dlci, params.dlci);
+    params.credit_based_flow_handshake =
+        CreditBasedFlowHandshake::kSupportedResponse;
+
+    // Receive PN response
+    frame = std::make_unique<MuxCommandFrame>(
+        Role::kResponder, true,
+        std::make_unique<DLCParameterNegotiationCommand>(
+            CommandResponse::kResponse, params));
+    auto buffer = common::NewSlabBuffer(frame->written_size());
+    frame->Write(buffer->mutable_view());
+    l2cap_channel->Receive(buffer->view());
+    RunLoopUntilIdle();
+  }
 
   EXPECT_TRUE(channel_received);
   EXPECT_FALSE(channel);
 }
 
 // Test multiplexer startup conflict procedure (resulting role: initiator).
-TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Conflict_BecomeInitiator) {
+TEST_F(RFCOMM_ChannelManagerTest,
+       MuxStartupAndParamNegotiation_Conflict_BecomeInitiator) {
   ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
   auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
   EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
@@ -222,21 +253,53 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Conflict_BecomeInitiator) {
     l2cap_channel->Receive(buffer->view());
     RunLoopUntilIdle();
   }
+  {
+    // Expect a PN command from the session
+    EXPECT_TRUE(received_buffer);
+    auto frame = Frame::Parse(true, Role::kInitiator, received_buffer->view());
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    DLCI dlci = ServerChannelToDLCI(kMinServerChannel, Role::kInitiator);
+    auto mux_command =
+        static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
+    EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
+              mux_command->command_type());
+
+    auto params =
+        static_cast<DLCParameterNegotiationCommand*>(mux_command.get())
+            ->params();
+    EXPECT_EQ(dlci, params.dlci);
+    params.credit_based_flow_handshake =
+        CreditBasedFlowHandshake::kSupportedResponse;
+
+    // Receive PN response
+    frame = std::make_unique<MuxCommandFrame>(
+        Role::kResponder, true,
+        std::make_unique<DLCParameterNegotiationCommand>(
+            CommandResponse::kResponse, params));
+    auto buffer = common::NewSlabBuffer(frame->written_size());
+    frame->Write(buffer->mutable_view());
+    l2cap_channel->Receive(buffer->view());
+    RunLoopUntilIdle();
+  }
 
   EXPECT_TRUE(channel_received);
   EXPECT_FALSE(channel);
 }
 
 // Test multiplexer startup conflict procedure (resulting role: responder).
-TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Conflict_BecomeResponder) {
+TEST_F(RFCOMM_ChannelManagerTest,
+       MuxStartupAndParamNegotiation_Conflict_BecomeResponder) {
   ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
   auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
   EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
 
   // Get frames sent from our rfcomm::Session along this l2cap::Channel
-  std::unique_ptr<const common::ByteBuffer> received_buffer;
+  std::queue<std::unique_ptr<const common::ByteBuffer>> received_buffers;
   l2cap_channel->SetSendCallback(
-      [&received_buffer](auto buffer) { received_buffer = std::move(buffer); },
+      [&received_buffers](auto buffer) {
+        received_buffers.push(std::move(buffer));
+      },
       dispatcher());
 
   bool channel_received = false;
@@ -252,9 +315,10 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Conflict_BecomeResponder) {
 
   {
     // Expect a SABM frame from the session
-    EXPECT_TRUE(received_buffer);
-    auto frame = Frame::Parse(true, Role::kUnassigned, received_buffer->view());
-    received_buffer = nullptr;
+    EXPECT_EQ(1ul, received_buffers.size());
+    auto frame =
+        Frame::Parse(true, Role::kUnassigned, received_buffers.front()->view());
+    received_buffers.pop();
     EXPECT_EQ(FrameType::kSetAsynchronousBalancedMode,
               static_cast<FrameType>(frame->control()));
     EXPECT_EQ(kMuxControlDLCI, frame->dlci());
@@ -270,9 +334,10 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Conflict_BecomeResponder) {
   }
   {
     // Expect a DM frame from the session
-    EXPECT_TRUE(received_buffer);
-    auto frame = Frame::Parse(true, Role::kUnassigned, received_buffer->view());
-    received_buffer = nullptr;
+    EXPECT_EQ(1ul, received_buffers.size());
+    auto frame =
+        Frame::Parse(true, Role::kUnassigned, received_buffers.front()->view());
+    received_buffers.pop();
     EXPECT_EQ(FrameType::kDisconnectedMode,
               static_cast<FrameType>(frame->control()));
     EXPECT_EQ(kMuxControlDLCI, frame->dlci());
@@ -287,16 +352,164 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartup_Conflict_BecomeResponder) {
     RunLoopUntilIdle();
   }
   {
-    // Expect a UA frame from the session
-    EXPECT_TRUE(received_buffer);
-    auto frame = Frame::Parse(true, Role::kUnassigned, received_buffer->view());
+    EXPECT_EQ(2ul, received_buffers.size());
+    auto frame =
+        Frame::Parse(true, Role::kUnassigned, received_buffers.front()->view());
+    received_buffers.pop();
     EXPECT_EQ(FrameType::kUnnumberedAcknowledgement,
               static_cast<FrameType>(frame->control()));
     EXPECT_EQ(kMuxControlDLCI, frame->dlci());
   }
+  {
+    // Expect a PN command from the session
+    EXPECT_EQ(1ul, received_buffers.size());
+    auto frame =
+        Frame::Parse(true, Role::kResponder, received_buffers.front()->view());
+    received_buffers.pop();
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    DLCI dlci = ServerChannelToDLCI(kMinServerChannel, Role::kResponder);
+    auto mux_command =
+        static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
+    EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
+              mux_command->command_type());
+
+    auto params =
+        static_cast<DLCParameterNegotiationCommand*>(mux_command.get())
+            ->params();
+    EXPECT_EQ(dlci, params.dlci);
+    params.credit_based_flow_handshake =
+        CreditBasedFlowHandshake::kSupportedResponse;
+
+    // Receive PN response
+    frame = std::make_unique<MuxCommandFrame>(
+        Role::kInitiator, true,
+        std::make_unique<DLCParameterNegotiationCommand>(
+            CommandResponse::kResponse, params));
+    auto buffer = common::NewSlabBuffer(frame->written_size());
+    frame->Write(buffer->mutable_view());
+    l2cap_channel->Receive(buffer->view());
+    RunLoopUntilIdle();
+  }
 
   EXPECT_TRUE(channel_received);
   EXPECT_FALSE(channel);
+}
+
+// Tests whether sessions handle invalid max frame sizes correctly.
+TEST_F(RFCOMM_ChannelManagerTest,
+       MuxStartupAndParamNegotiation_BadPN_InvalidMaxFrameSize) {
+  ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
+  auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
+  EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
+
+  // Get frames sent from our rfcomm::Session along this l2cap::Channel
+  std::unique_ptr<const common::ByteBuffer> received_buffer;
+  l2cap_channel->SetSendCallback(
+      [&received_buffer](auto buffer) { received_buffer = std::move(buffer); },
+      dispatcher());
+
+  channel_manager_->OpenRemoteChannel(l2cap_channel->link_handle(),
+                                      kMinServerChannel, {}, dispatcher());
+  RunLoopUntilIdle();
+
+  {
+    // Expect a SABM frame from the session
+    EXPECT_TRUE(received_buffer);
+    auto frame = Frame::Parse(true, Role::kUnassigned, received_buffer->view());
+    received_buffer = nullptr;
+    EXPECT_EQ(FrameType::kSetAsynchronousBalancedMode,
+              static_cast<FrameType>(frame->control()));
+    EXPECT_EQ(kMuxControlDLCI, frame->dlci());
+  }
+  {
+    // Receive a UA on the session
+    auto frame = std::make_unique<UnnumberedAcknowledgementResponse>(
+        Role::kUnassigned, kMuxControlDLCI);
+    auto buffer = common::NewSlabBuffer(frame->written_size());
+    frame->Write(buffer->mutable_view());
+    l2cap_channel->Receive(buffer->view());
+    RunLoopUntilIdle();
+  }
+
+  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, Role::kInitiator);
+
+  {
+    // Expect a PN command from the session
+    EXPECT_TRUE(received_buffer);
+    auto frame = Frame::Parse(true, Role::kInitiator, received_buffer->view());
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    auto mux_command =
+        static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
+    EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
+              mux_command->command_type());
+
+    // Create invalid parameters.
+    auto params =
+        static_cast<DLCParameterNegotiationCommand*>(mux_command.get())
+            ->params();
+    EXPECT_EQ(dlci, params.dlci);
+    params.credit_based_flow_handshake =
+        CreditBasedFlowHandshake::kSupportedResponse;
+    // Request a larger max frame size than what was proposed.
+    params.maximum_frame_size += 1;
+
+    // Receive PN response
+    frame = std::make_unique<MuxCommandFrame>(
+        Role::kResponder, true,
+        std::make_unique<DLCParameterNegotiationCommand>(
+            CommandResponse::kResponse, params));
+    auto buffer = common::NewSlabBuffer(frame->written_size());
+    frame->Write(buffer->mutable_view());
+    l2cap_channel->Receive(buffer->view());
+    RunLoopUntilIdle();
+  }
+  {
+    // Expect a DISC
+    EXPECT_TRUE(received_buffer);
+    auto frame = Frame::Parse(true, Role::kInitiator, received_buffer->view());
+    received_buffer = nullptr;
+    EXPECT_EQ(FrameType::kDisconnect, static_cast<FrameType>(frame->control()));
+    EXPECT_EQ(CommandResponse::kCommand, frame->command_response());
+    EXPECT_EQ(dlci, frame->dlci());
+  }
+}
+
+// A DM response to a mux SABM shouldn't crash (but shouldn't do anything else).
+TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_DM) {
+  ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
+  auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
+  EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
+
+  // Get frames sent from our rfcomm::Session along this l2cap::Channel
+  std::unique_ptr<const common::ByteBuffer> received_buffer;
+  l2cap_channel->SetSendCallback(
+      [&received_buffer](auto buffer) { received_buffer = std::move(buffer); },
+      dispatcher());
+
+  channel_manager_->OpenRemoteChannel(l2cap_channel->link_handle(),
+                                      kMinServerChannel, {}, dispatcher());
+  RunLoopUntilIdle();
+
+  {
+    // Expect a SABM frame from the session
+    EXPECT_TRUE(received_buffer);
+    auto frame = Frame::Parse(true, Role::kUnassigned, received_buffer->view());
+    received_buffer = nullptr;
+    EXPECT_EQ(FrameType::kSetAsynchronousBalancedMode,
+              static_cast<FrameType>(frame->control()));
+    EXPECT_EQ(kMuxControlDLCI, frame->dlci());
+  }
+  {
+    // Receive a DM on the session
+    auto frame = std::make_unique<DisconnectedModeResponse>(Role::kUnassigned,
+                                                            kMuxControlDLCI);
+    auto buffer = common::NewSlabBuffer(frame->written_size());
+    frame->Write(buffer->mutable_view());
+    l2cap_channel->Receive(buffer->view());
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace
