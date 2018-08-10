@@ -368,7 +368,7 @@ void PcieDevice::FreeMsiBlock() {
 
     /* Mask the IRQ at the platform interrupt controller level if we can, and
      * unregister any registered handler. */
-    const pcie_msi_block_t* b = &irq_.msi->irq_block_;
+    const msi_block_t* b = &irq_.msi->irq_block_;
     for (uint i = 0; i < b->num_irq; i++) {
         if (bus_drv_.platform().supports_msi_masking()) {
             bus_drv_.platform().MaskUnmaskMsi(b, i, true);

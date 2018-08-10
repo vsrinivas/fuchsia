@@ -93,6 +93,31 @@ static void default_shutdown(void) {
 static void default_shutdown_cpu(void) {
 }
 
+static bool default_msi_is_supported(void) {
+    return false;
+}
+
+static bool default_msi_supports_masking(void) {
+    return false;
+}
+
+static zx_status_t default_msi_alloc_block(uint requested_irqs, bool can_target_64bit,
+                            bool is_msix, msi_block_t* out_block) {
+    return ZX_ERR_NOT_CONFIGURED;
+}
+
+static void default_msi_free_block(msi_block_t* block) {
+}
+
+static void default_msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void* ctx) {
+}
+
+static void default_msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) {
+}
+
+// by default, most interrupt operations for pdev/arm are implemented in the gic specific source
+// files and accessed via configuring this pointer table at runtime. By default most of these
+// are merely empty stubs.
 static const struct pdev_interrupt_ops default_ops = {
     .mask = default_mask,
     .unmask = default_unmask,
@@ -107,6 +132,12 @@ static const struct pdev_interrupt_ops default_ops = {
     .handle_fiq = default_handle_fiq,
     .shutdown = default_shutdown,
     .shutdown_cpu = default_shutdown_cpu,
+    .msi_is_supported = default_msi_is_supported,
+    .msi_supports_masking = default_msi_supports_masking,
+    .msi_mask_unmask = default_msi_mask_unmask,
+    .msi_alloc_block = default_msi_alloc_block,
+    .msi_free_block = default_msi_free_block,
+    .msi_register_handler = default_msi_register_handler,
 };
 
 static const struct pdev_interrupt_ops* intr_ops = &default_ops;
@@ -176,6 +207,31 @@ void shutdown_interrupts(void) {
 
 void shutdown_interrupts_curr_cpu(void) {
     intr_ops->shutdown_cpu();
+}
+
+bool msi_is_supported(void) {
+    return intr_ops->msi_is_supported();
+}
+
+bool msi_supports_masking(void) {
+    return intr_ops->msi_supports_masking();
+}
+
+void msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) {
+    intr_ops->msi_mask_unmask(block, msi_id, mask);
+}
+
+zx_status_t msi_alloc_block(uint requested_irqs, bool can_target_64bit,
+                            bool is_msix, msi_block_t* out_block) {
+    return intr_ops->msi_alloc_block(requested_irqs, can_target_64bit, is_msix, out_block);
+}
+
+void msi_free_block(msi_block_t* block) {
+    intr_ops->msi_free_block(block);
+}
+
+void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void* ctx) {
+    intr_ops->msi_register_handler(block, msi_id, handler, ctx);
 }
 
 LK_INIT_HOOK_FLAGS(interrupt_init_percpu_early, interrupt_init_percpu_early, LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_FLAG_SECONDARY_CPUS);

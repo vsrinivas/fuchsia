@@ -29,25 +29,25 @@ public:
     zx_status_t AllocMsiBlock(uint requested_irqs,
                               bool can_target_64bit,
                               bool is_msix,
-                              pcie_msi_block_t* out_block) override {
-        return arm_gicv2m_alloc_msi_block(requested_irqs, can_target_64bit, is_msix, out_block);
+                              msi_block_t* out_block) override {
+        return arm_gicv2m_msi_alloc_block(requested_irqs, can_target_64bit, is_msix, out_block);
     }
 
-    void FreeMsiBlock(pcie_msi_block_t* block) override {
-        arm_gicv2m_free_msi_block(block);
+    void FreeMsiBlock(msi_block_t* block) override {
+        arm_gicv2m_msi_free_block(block);
     }
 
-    void RegisterMsiHandler(const pcie_msi_block_t* block,
+    void RegisterMsiHandler(const msi_block_t* block,
                             uint msi_id,
                             int_handler handler,
                             void* ctx) override {
-        arm_gicv2m_register_msi_handler(block, msi_id, handler, ctx);
+        arm_gicv2m_msi_register_handler(block, msi_id, handler, ctx);
     }
 
-    void MaskUnmaskMsi(const pcie_msi_block_t* block,
+    void MaskUnmaskMsi(const msi_block_t* block,
                        uint msi_id,
                        bool mask) override {
-        arm_gicv2m_mask_unmask_msi(block, msi_id, mask);
+        arm_gicv2m_msi_mask_unmask(block, msi_id, mask);
     }
 };
 

@@ -30,12 +30,7 @@
 
 #include "platform_p.h"
 
-#ifdef WITH_DEV_PCIE
-#include <dev/pcie_platform.h>
-#define MAX_IRQ_BLOCK_SIZE PCIE_MAX_MSI_IRQS
-#else
-#define MAX_IRQ_BLOCK_SIZE (1u)
-#endif
+#define MAX_IRQ_BLOCK_SIZE MAX_MSI_IRQS
 
 #include <trace.h>
 
@@ -277,19 +272,28 @@ void shutdown_interrupts_curr_cpu(void) {
     // TODO(maniscalco): Walk interrupt redirection entries and make sure nothing targets this CPU.
 }
 
-#ifdef WITH_DEV_PCIE
-zx_status_t x86_alloc_msi_block(uint requested_irqs,
+// Intel 64 socs support the IOAPIC and Local APIC which support MSI by default.
+// See 10.1, 10.4, and 10.11 of Intel® 64 and IA-32 Architectures Software Developer’s
+// Manual 3A
+bool msi_is_supported(void) {
+    return true;
+}
+
+zx_status_t msi_alloc_block(uint requested_irqs,
                                 bool can_target_64bit,
                                 bool is_msix,
-                                pcie_msi_block_t* out_block) {
-    if (!out_block)
+                                msi_block_t* out_block) {
+    if (!out_block) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
-    if (out_block->allocated)
+    if (out_block->allocated) {
         return ZX_ERR_BAD_STATE;
+    }
 
-    if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
+    if (!requested_irqs || (requested_irqs > MAX_MSI_IRQS)) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     zx_status_t res;
     uint alloc_start;
@@ -302,7 +306,7 @@ zx_status_t x86_alloc_msi_block(uint requested_irqs,
         // Developer's Manual Volume 3A.
         //
         // TODO(johngro) : don't just bind this block to the Local APIC of the
-        // processor which is active when calling alloc_msi_block.  Instead,
+        // processor which is active when calling msi_alloc_block.  Instead,
         // there should either be a system policy (like, always send to any
         // processor, or just processor 0, or something), or the decision of
         // which CPUs to bind to should be left to the caller.
@@ -334,17 +338,14 @@ zx_status_t x86_alloc_msi_block(uint requested_irqs,
     return res;
 }
 
-void x86_free_msi_block(pcie_msi_block_t* block) {
+void msi_free_block(msi_block_t* block) {
     DEBUG_ASSERT(block);
     DEBUG_ASSERT(block->allocated);
     p2ra_free_range(&x86_irq_vector_allocator, block->base_irq_id, block->num_irq);
     memset(block, 0, sizeof(*block));
 }
 
-void x86_register_msi_handler(const pcie_msi_block_t* block,
-                              uint msi_id,
-                              int_handler handler,
-                              void* ctx) {
+void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void* ctx) {
     DEBUG_ASSERT(block && block->allocated);
     DEBUG_ASSERT(msi_id < block->num_irq);
 
@@ -356,4 +357,3 @@ void x86_register_msi_handler(const pcie_msi_block_t* block,
     int_handler_table[x86_vector].handler = handler;
     int_handler_table[x86_vector].arg = handler ? ctx : NULL;
 }
-#endif // WITH_DEV_PCIE

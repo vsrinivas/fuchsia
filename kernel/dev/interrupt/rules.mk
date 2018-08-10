@@ -9,6 +9,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/empty.c
+    $(LOCAL_DIR)/msi.c
 
 include make/module.mk

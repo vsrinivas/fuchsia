@@ -5,12 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
-/* If we are building with PCIe support, go ahead and implement management of
- * MSI IRQ blocks here, instead of requiring each platform to do so on their
- * own. */
-#if WITH_DEV_PCIE
-
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <dev/pcie_platform.h>
@@ -25,16 +19,17 @@
 p2ra_state_t g_32bit_targets;
 p2ra_state_t g_64bit_targets;
 
+static bool g_msi_initialized = false;
 zx_status_t arm_gicv2m_msi_init(void) {
     zx_status_t ret;
 
-    ret = p2ra_init(&g_32bit_targets, PCIE_MAX_MSI_IRQS);
+    ret = p2ra_init(&g_32bit_targets, MAX_MSI_IRQS);
     if (ret != ZX_OK) {
         TRACEF("Failed to initialize 32 bit allocation pool!\n");
         return ret;
     }
 
-    ret = p2ra_init(&g_64bit_targets, PCIE_MAX_MSI_IRQS);
+    ret = p2ra_init(&g_64bit_targets, MAX_MSI_IRQS);
     if (ret != ZX_OK) {
         TRACEF("Failed to initialize 64 bit allocation pool!\n");
         p2ra_free(&g_32bit_targets);
@@ -71,20 +66,21 @@ finished:
         p2ra_free(&g_64bit_targets);
     }
 
+    g_msi_initialized = true;
     return ret;
 }
 
-zx_status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
-                                       bool can_target_64bit,
-                                       bool is_msix,
-                                       pcie_msi_block_t* out_block) {
+zx_status_t arm_gicv2m_msi_alloc_block(uint requested_irqs,
+                                      bool can_target_64bit,
+                                      bool is_msix,
+                                      msi_block_t* out_block) {
     if (!out_block)
         return ZX_ERR_INVALID_ARGS;
 
     if (out_block->allocated)
         return ZX_ERR_BAD_STATE;
 
-    if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
+    if (!requested_irqs || (requested_irqs > MAX_MSI_IRQS))
         return ZX_ERR_INVALID_ARGS;
 
     zx_status_t ret = ZX_ERR_INTERNAL;
@@ -140,7 +136,15 @@ zx_status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
     return ZX_OK;
 }
 
-void arm_gicv2m_free_msi_block(pcie_msi_block_t* block) {
+bool arm_gicv2m_msi_is_supported(void) {
+    return g_msi_initialized;
+}
+
+bool arm_gicv2m_msi_supports_masking(void) {
+    return g_msi_initialized;
+}
+
+void arm_gicv2m_msi_free_block(msi_block_t* block) {
     DEBUG_ASSERT(block);
     DEBUG_ASSERT(block->allocated);
 
@@ -150,23 +154,19 @@ void arm_gicv2m_free_msi_block(pcie_msi_block_t* block) {
     memset(block, 0, sizeof(*block));
 }
 
-void arm_gicv2m_register_msi_handler(const pcie_msi_block_t* block,
-                                     uint                    msi_id,
-                                     int_handler             handler,
-                                     void*                   ctx) {
+void arm_gicv2m_msi_register_handler(const msi_block_t* block,
+                                    uint msi_id,
+                                    int_handler handler,
+                                    void* ctx) {
     DEBUG_ASSERT(block && block->allocated);
     DEBUG_ASSERT(msi_id < block->num_irq);
     zx_status_t status = register_int_handler(block->base_irq_id + msi_id, handler, ctx);
     DEBUG_ASSERT(status == ZX_OK);
 }
 
-void arm_gicv2m_mask_unmask_msi(const pcie_msi_block_t* block,
-                                uint                    msi_id,
-                                bool                    mask) {
+void arm_gicv2m_msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) {
     DEBUG_ASSERT(block && block->allocated);
     DEBUG_ASSERT(msi_id < block->num_irq);
     if (mask)   mask_interrupt(block->base_irq_id + msi_id);
     else      unmask_interrupt(block->base_irq_id + msi_id);
 }
-
-#endif  // WITH_DEV_PCIE

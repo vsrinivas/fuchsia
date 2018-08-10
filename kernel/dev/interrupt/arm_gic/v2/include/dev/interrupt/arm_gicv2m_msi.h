@@ -7,51 +7,29 @@
 
 #pragma once
 
-#if WITH_DEV_PCIE
-#include <dev/pcie_platform.h>
+#include <dev/interrupt.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-/**
- * Initialize the GICv2m management of MSI blocks.
- *
- * @return A status code indicating the success or failure of the initialization.
- */
 zx_status_t arm_gicv2m_msi_init(void);
 
-/**
- * Implementation of the PCIe bus driver hooks.
- *
- * @see platform_alloc_msi_block_t in dev/pcie/pcie_irqs.h
- */
-zx_status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
-                                       bool can_target_64bit,
-                                       bool is_msix,
-                                       pcie_msi_block_t* out_block);
-
-/**
- * @see platform_free_msi_block_t in dev/pcie/pcie_irqs.h
- */
-void arm_gicv2m_free_msi_block(pcie_msi_block_t* block);
-
-/**
- * @see platform_register_msi_handler_t in dev/pcie/pcie_irqs.h
- */
-void arm_gicv2m_register_msi_handler(const pcie_msi_block_t* block,
+// Since ARM determines which GIC is used at runtime, this header sets up the gicv2m instances
+// of the MSI functions so they can be passed into the pbus interrupt function table, which
+// fulfills the interface specified in dev/interrupt.h.
+bool arm_gicv2m_msi_is_supported(void);
+bool arm_gicv2m_msi_supports_masking(void);
+void arm_gicv2m_msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask);
+zx_status_t arm_gicv2m_msi_alloc_block(uint requested_irqs,
+                            bool can_target_64bit,
+                            bool is_msix,
+                            msi_block_t* out_block);
+void arm_gicv2m_msi_free_block(msi_block_t* block);
+void arm_gicv2m_msi_register_handler(const msi_block_t* block,
                                      uint msi_id,
                                      int_handler handler,
-                                     void* ctx);
-
-/**
- * @see platform_mask_unmask_msi_t in dev/pcie/pcie_irqs.h
- */
-void arm_gicv2m_mask_unmask_msi(const pcie_msi_block_t* block,
-                                uint msi_id,
-                                bool mask);
+                                     void *ctx);
 
 __END_CDECLS
-#endif // WITH_DEV_PCIE
-

@@ -14,6 +14,8 @@
 
 __BEGIN_CDECLS
 
+#define MAX_MSI_IRQS 32u
+
 enum interrupt_trigger_mode {
     IRQ_TRIGGER_MODE_EDGE = 0,
     IRQ_TRIGGER_MODE_LEVEL = 1,
@@ -57,10 +59,66 @@ bool is_valid_interrupt(unsigned int vector, uint32_t flags);
 
 unsigned int remap_interrupt(unsigned int vector);
 
-/* sends an inter-processor interrupt */
+// sends an inter-processor interrupt
 zx_status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi);
 
-/* performs per-cpu initialization for the interrupt controller */
+// performs per-cpu initialization for the interrupt controller
 void interrupt_init_percpu(void);
 
+// A structure which holds the state of a block of IRQs allocated by the
+// platform to be used for delivering MSI or MSI-X interrupts.
+typedef struct msi_block {
+    void*    platform_ctx; // Allocation context owned by the platform
+    uint64_t tgt_addr;     // The target write transaction physical address
+    bool     allocated;    // Whether or not this block has been allocated
+    uint     base_irq_id;  // The first IRQ id in the allocated block
+    uint     num_irq;      // The number of irqs in the allocated block
+
+    // The data which the device should write when triggering an IRQ.  Note,
+    // only the lower 16 bits are used when the block has been allocated for MSI
+    // instead of MSI-X
+    uint32_t tgt_data;
+} msi_block_t;
+
+// Methods used to determine if a platform supports MSI or not, and if so,
+// whether or not the platform can mask individual MSI vectors at the
+// platform level.
+//
+// If the platform supports MSI, it must supply valid implementations of
+// msi_alloc_block, msi_free_block, and msi_register_handler.
+//
+// If the platform supports MSI masking, it must supply a valid
+// implementation of MaskUnmaskMsi.
+bool msi_is_supported(void);
+bool msi_supports_masking(void);
+void msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask);
+
+// Method used for platform allocation of blocks of MSI and MSI-X compatible
+// IRQ targets.
+//
+// @param requested_irqs The total number of irqs being requested.
+// @param can_target_64bit True if the target address of the MSI block can
+//        be located past the 4GB boundary.  False if the target address must be
+//        in low memory.
+// @param is_msix True if this request is for an MSI-X compatible block.  False
+//        for plain old MSI.
+// @param out_block A pointer to the allocation bookkeeping to be filled out
+//        upon successful allocation of the requested block of IRQs.
+//
+// @return A status code indicating the success or failure of the operation.
+zx_status_t msi_alloc_block(uint requested_irqs,
+                            bool can_target_64bit,
+                            bool is_msix,
+                            msi_block_t* out_block);
+
+// Method used to free a block of MSI IRQs previously allocated by msi_alloc_block().
+// This does not unregister IRQ handlers.
+//
+// @param block A pointer to the block to be returned
+void msi_free_block(msi_block_t* block);
+
+// Register a handler function for a given msi_id within an msi_block_t. Passing a
+// NULL handler will effectively unregister a handler for a given msi_id within the
+// block.
+void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void *ctx);
 __END_CDECLS

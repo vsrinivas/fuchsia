@@ -15,6 +15,7 @@
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <dev/interrupt/arm_gicv2m.h>
+#include <dev/interrupt/arm_gicv2m_msi.h>
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/stats.h>
@@ -381,6 +382,12 @@ static const struct pdev_interrupt_ops gic_ops = {
     .handle_fiq = gic_handle_fiq,
     .shutdown = gic_shutdown,
     .shutdown_cpu = gic_shutdown_cpu,
+    .msi_is_supported = arm_gicv2m_msi_is_supported,
+    .msi_supports_masking = arm_gicv2m_msi_supports_masking,
+    .msi_mask_unmask = arm_gicv2m_msi_mask_unmask,
+    .msi_alloc_block = arm_gicv2m_msi_alloc_block,
+    .msi_free_block = arm_gicv2m_msi_free_block,
+    .msi_register_handler = arm_gicv2m_msi_register_handler,
 };
 
 static void arm_gic_v2_init(const void* driver_data, uint32_t length) {

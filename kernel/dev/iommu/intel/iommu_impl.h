@@ -7,8 +7,8 @@
 #pragma once
 
 #include <bits.h>
+#include <dev/interrupt.h>
 #include <dev/iommu.h>
-#include <dev/pcie_bus_driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
@@ -131,7 +131,7 @@ private:
     hwreg::RegisterIo mmio_ TA_GUARDED(lock_);
 
     // Interrupt allocation
-    pcie_msi_block_t irq_block_ TA_GUARDED(lock_);
+    msi_block_t irq_block_ TA_GUARDED(lock_);
 
     // In-memory root table
     IommuPage root_table_page_ TA_GUARDED(lock_);

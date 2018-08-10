@@ -14,29 +14,6 @@
 #include <zircon/errors.h>
 #include <sys/types.h>
 
-__BEGIN_CDECLS
-
-/**
- * A structure which holds the state of a block of IRQs allocated by the
- * platform to be used for delivering MSI or MSI-X interrupts.
- */
-typedef struct pcie_msi_block {
-    void*    platform_ctx; /** Allocation context owned by the platform */
-    uint64_t tgt_addr;     /** The target write transaction physical address */
-    bool     allocated;    /** Whether or not this block has been allocated */
-    uint     base_irq_id;  /** The first IRQ id in the allocated block */
-    uint     num_irq;      /** The number of irqs in the allocated block */
-
-    /**
-     * The data which the device should write when triggering an IRQ.  Note,
-     * only the lower 16 bits are used when the block has been allocated for MSI
-     * instead of MSI-X
-     */
-    uint32_t tgt_data;
-} pcie_msi_block_t;
-
-__END_CDECLS
-
 #ifdef __cplusplus
 
 #include <fbl/ref_counted.h>
@@ -90,7 +67,7 @@ public:
     virtual zx_status_t AllocMsiBlock(uint requested_irqs,
                                       bool can_target_64bit,
                                       bool is_msix,
-                                      pcie_msi_block_t* out_block) {
+                                      msi_block_t* out_block) {
         // Bus driver code should not be calling this if the platform does not
         // indicate support for MSI.
         DEBUG_ASSERT(false);
@@ -104,7 +81,7 @@ public:
      *
      * @param block A pointer to the block to be returned.
      */
-    virtual void FreeMsiBlock(pcie_msi_block_t* block) {
+    virtual void FreeMsiBlock(msi_block_t* block) {
         // Bus driver code should not be calling this if the platform does not
         // indicate support for MSI.
         DEBUG_ASSERT(false);
@@ -114,13 +91,13 @@ public:
      * Method used for registration of MSI handlers with the platform.
      *
      * @param block A pointer to a block of MSIs allocated using a platform supplied
-     *        platform_alloc_msi_block_t callback.
+     *        platform_msi_alloc_block_t callback.
      * @param msi_id The ID (indexed from 0) with the block of MSIs to register a
      *        handler for.
      * @param handler A pointer to the handler to register, or NULL to unregister.
      * @param ctx A context pointer to be supplied when the handler is invoked.
      */
-    virtual void RegisterMsiHandler(const pcie_msi_block_t* block,
+    virtual void RegisterMsiHandler(const msi_block_t* block,
                                     uint                    msi_id,
                                     int_handler             handler,
                                     void*                   ctx) {
@@ -133,12 +110,12 @@ public:
      * Method used for masking/unmaskingof MSI handlers at the platform level.
      *
      * @param block A pointer to a block of MSIs allocated using a platform supplied
-     *        platform_alloc_msi_block_t callback.
+     *        platform_msi_alloc_block_t callback.
      * @param msi_id The ID (indexed from 0) with the block of MSIs to mask or
      *        unmask.
      * @param mask If true, mask the handler.  Otherwise, unmask it.
      */
-    virtual void MaskUnmaskMsi(const pcie_msi_block_t* block,
+    virtual void MaskUnmaskMsi(const msi_block_t* block,
                                uint                    msi_id,
                                bool                    mask) {
         // Bus driver code should not be calling this if the platform does not

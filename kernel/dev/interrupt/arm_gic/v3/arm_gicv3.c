@@ -443,6 +443,36 @@ static void gic_shutdown_cpu(void) {
     gic_write_igrpen(0);
 }
 
+static bool gic_msi_is_supported(void) {
+    return false;
+}
+
+static bool gic_msi_supports_masking(void) {
+    return false;
+}
+
+static void gic_msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) {
+    PANIC_UNIMPLEMENTED;
+}
+
+static zx_status_t gic_msi_alloc_block(uint requested_irqs,
+                                bool can_target_64bit,
+                                bool is_msix,
+                                msi_block_t* out_block) {
+    PANIC_UNIMPLEMENTED;
+}
+
+static void gic_msi_free_block(msi_block_t* block) {
+    PANIC_UNIMPLEMENTED;
+}
+
+static void gic_msi_register_handler(const msi_block_t* block,
+                                     uint msi_id,
+                                     int_handler handler,
+                                     void* ctx) {
+    PANIC_UNIMPLEMENTED;
+}
+
 static const struct pdev_interrupt_ops gic_ops = {
     .mask = gic_mask_interrupt,
     .unmask = gic_unmask_interrupt,
@@ -459,6 +489,12 @@ static const struct pdev_interrupt_ops gic_ops = {
     .handle_fiq = gic_handle_fiq,
     .shutdown = gic_shutdown,
     .shutdown_cpu = gic_shutdown_cpu,
+    .msi_is_supported = gic_msi_is_supported,
+    .msi_supports_masking = gic_msi_supports_masking,
+    .msi_mask_unmask = gic_msi_mask_unmask,
+    .msi_alloc_block = gic_msi_alloc_block,
+    .msi_free_block = gic_msi_free_block,
+    .msi_register_handler = gic_msi_register_handler,
 };
 
 static void arm_gic_v3_init(const void* driver_data, uint32_t length) {

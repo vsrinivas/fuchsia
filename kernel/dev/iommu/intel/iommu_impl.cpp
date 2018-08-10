@@ -6,6 +6,7 @@
 
 #include "iommu_impl.h"
 
+#include <dev/interrupt.h>
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -86,8 +87,7 @@ IommuImpl::~IommuImpl() {
     ASSERT(status == ZX_OK);
 
     DisableFaultsLocked();
-    auto& pcie_platform = PcieBusDriver::GetDriver()->platform();
-    pcie_platform.FreeMsiBlock(&irq_block_);
+    msi_free_block(&irq_block_);
 
     VmAspace::kernel_aspace()->FreeRegion(mmio_.base());
 }
@@ -671,12 +671,11 @@ void IommuImpl::FaultHandler(void* ctx) {
 zx_status_t IommuImpl::ConfigureFaultEventInterruptLocked() {
     DEBUG_ASSERT(lock_.IsHeld());
 
-    auto& pcie_platform = PcieBusDriver::GetDriver()->platform();
-    if (!pcie_platform.supports_msi()) {
+    if (!msi_is_supported()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    zx_status_t status = pcie_platform.AllocMsiBlock(1, false/* can_target_64bit */,
-                                                     false /* msi x */, &irq_block_);
+    zx_status_t status = msi_alloc_block(1, false/* can_target_64bit */,
+                                            false /* msi x */, &irq_block_);
     if (status != ZX_OK) {
         return status;
     }
@@ -702,7 +701,7 @@ zx_status_t IommuImpl::ConfigureFaultEventInterruptLocked() {
     auto fault_status_ctl = reg::FaultStatus::Get().ReadFrom(&mmio_);
     fault_status_ctl.WriteTo(&mmio_);
 
-    pcie_platform.RegisterMsiHandler(&irq_block_, 0, FaultHandler, this);
+    msi_register_handler(&irq_block_, 0, FaultHandler, this);
 
     // Unmask interrupts
     auto fault_event_ctl = reg::FaultEventControl::Get().ReadFrom(&mmio_);

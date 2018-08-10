@@ -8,6 +8,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
 #include <assert.h>
+#include <dev/interrupt.h>
 #include <efi/boot-services.h>
 #include <err.h>
 #include <fbl/algorithm.h>

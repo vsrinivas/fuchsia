@@ -234,7 +234,7 @@ public:
     PciReg16 data_reg() const { return data_; }
     PciReg32 mask_bits_reg() const { return mask_bits_; }
     PciReg32 pending_bits_reg() const { return pending_bits_; }
-    pcie_msi_block_t irq_block() const { return irq_block_; }
+    msi_block_t irq_block() const { return irq_block_; }
 
 private:
     // TODO(cja): Dragons here. irq_block_ is setup by PcieDevice rather than the init for
@@ -244,7 +244,7 @@ private:
     bool has_pvm_;
     bool is_64_bit_;
     unsigned int max_irqs_ = 0;
-    pcie_msi_block_t irq_block_;
+    msi_block_t irq_block_;
 
     // Cached registers
     PciReg16 ctrl_;
