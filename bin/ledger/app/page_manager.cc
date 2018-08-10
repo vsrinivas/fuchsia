@@ -62,25 +62,26 @@ PageManager::PageManager(Environment* environment,
 }
 
 PageManager::~PageManager() {
-  for (const auto& request : page_requests_) {
-    request.second(Status::INTERNAL_ERROR);
+  for (const auto& delaying_facade : delaying_facades_) {
+    delaying_facade.second(Status::INTERNAL_ERROR);
   }
-  page_requests_.clear();
+  delaying_facades_.clear();
 }
 
-void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
-                           fit::function<void(Status)> on_done) {
-  auto traced_on_done =
-      TRACE_CALLBACK(std::move(on_done), "ledger", "page_manager_bind_page");
-  if (sync_backlog_downloaded_) {
-    pages_
-        .emplace(environment_->coroutine_service(), this, page_storage_.get(),
-                 merge_resolver_.get(), std::move(page_request), &watchers_)
-        .Init(std::move(traced_on_done));
+void PageManager::AddPageDelayingFacade(
+    std::unique_ptr<PageDelayingFacade> delaying_facade,
+    fit::function<void(Status)> on_done) {
+  auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger",
+                                       "page_manager_add_page_delaying_facade");
+  if (!sync_backlog_downloaded_) {
+    delaying_facades_.emplace_back(std::move(delaying_facade),
+                                   std::move(traced_on_done));
     return;
   }
-  page_requests_.emplace_back(std::move(page_request),
-                              std::move(traced_on_done));
+  pages_
+      .emplace(environment_->coroutine_service(), this, page_storage_.get(),
+               merge_resolver_.get(), &watchers_, std::move(delaying_facade))
+      .Init(std::move(traced_on_done));
 }
 
 void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
@@ -131,7 +132,7 @@ void PageManager::IsSynced(fit::function<void(Status, bool)> callback) {
 }
 
 bool PageManager::IsEmpty() {
-  return pages_.empty() && snapshots_.empty() && page_requests_.empty() &&
+  return pages_.empty() && snapshots_.empty() && delaying_facades_.empty() &&
          merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle()) &&
          page_debug_bindings_.size() == 0;
 }
@@ -148,10 +149,11 @@ void PageManager::OnSyncBacklogDownloaded() {
                   << "Clients will receive a change notification.";
   }
   sync_backlog_downloaded_ = true;
-  for (auto& page_request : page_requests_) {
-    BindPage(std::move(page_request.first), std::move(page_request.second));
+  for (auto& delaying_facade : delaying_facades_) {
+    AddPageDelayingFacade(std::move(delaying_facade.first),
+                          std::move(delaying_facade.second));
   }
-  page_requests_.clear();
+  delaying_facades_.clear();
 }
 
 void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {

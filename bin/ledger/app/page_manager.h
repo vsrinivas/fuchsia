@@ -17,6 +17,7 @@
 #include <lib/fxl/time/time_delta.h>
 
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
+#include "peridot/bin/ledger/app/page_delaying_facade.h"
 #include "peridot/bin/ledger/app/page_delegate.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
@@ -57,10 +58,11 @@ class PageManager : public ledger_internal::PageDebug {
               zx::duration sync_timeout = zx::sec(5));
   ~PageManager() override;
 
-  // Creates a new PageImpl managed by this PageManager, and binds it to the
-  // request.
-  void BindPage(fidl::InterfaceRequest<Page> page_request,
-                fit::function<void(Status)> on_done);
+  // Creates a new PageDelegate managed by this PageManager, and binds it to the
+  // given PageDelayingFacade.
+  void AddPageDelayingFacade(
+      std::unique_ptr<PageDelayingFacade> delaying_facade,
+      fit::function<void(Status)> on_done);
 
   // Binds |page_debug| request and fires |callback| with Status::OK.
   void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
@@ -115,9 +117,9 @@ class PageManager : public ledger_internal::PageDebug {
   fit::closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
-  std::vector<
-      std::pair<fidl::InterfaceRequest<Page>, fit::function<void(Status)>>>
-      page_requests_;
+  std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
+                        fit::function<void(Status)>>>
+      delaying_facades_;
 
   SyncWatcherSet watchers_;
 

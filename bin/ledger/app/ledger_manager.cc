@@ -104,11 +104,14 @@ class LedgerManager::PageManagerContainer {
       callback(status_);
       return;
     }
+    auto delaying_facade =
+        std::make_unique<PageDelayingFacade>(page_id_, std::move(page_request));
     if (page_manager_) {
-      page_manager_->BindPage(std::move(page_request), std::move(callback));
+      page_manager_->AddPageDelayingFacade(std::move(delaying_facade),
+                                           std::move(callback));
       return;
     }
-    requests_.emplace_back(std::move(page_request), std::move(callback));
+    requests_.emplace_back(std::move(delaying_facade), std::move(callback));
   }
 
   // Keeps track of |page_debug| and |callback|. Binds |page_debug| and fires
@@ -159,8 +162,8 @@ class LedgerManager::PageManagerContainer {
 
     for (auto& request : requests_) {
       if (page_manager_) {
-        page_manager_->BindPage(std::move(request.first),
-                                std::move(request.second));
+        page_manager_->AddPageDelayingFacade(std::move(request.first),
+                                             std::move(request.second));
       } else {
         request.second(status_);
       }
@@ -229,8 +232,8 @@ class LedgerManager::PageManagerContainer {
   std::unique_ptr<PageManager> page_manager_;
   PageUsageListener* page_usage_listener_;
   Status status_ = Status::OK;
-  std::vector<
-      std::pair<fidl::InterfaceRequest<Page>, fit::function<void(Status)>>>
+  std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
+                        fit::function<void(Status)>>>
       requests_;
   std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::PageDebug>,
                         fit::function<void(Status)>>>

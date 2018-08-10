@@ -73,6 +73,8 @@ source_set("lib") {
     "page_eviction_manager.h",
     "page_eviction_manager_impl.cc",
     "page_eviction_manager_impl.h",
+    "page_delaying_facade.cc",
+    "page_delaying_facade.h",
     "page_impl.cc",
     "page_impl.h",
     "page_manager.cc",

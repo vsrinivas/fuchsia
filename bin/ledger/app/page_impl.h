@@ -10,12 +10,12 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace ledger {
-class PageDelegate;
+class PageDelayingFacade;
 
 // An implementation of the |Page| FIDL interface.
 class PageImpl : public Page {
  public:
-  explicit PageImpl(PageDelegate* delegate);
+  explicit PageImpl(PageDelayingFacade* delaying_facade);
   ~PageImpl() override;
 
  private:
@@ -61,7 +61,7 @@ class PageImpl : public Page {
   void WaitForConflictResolution(
       WaitForConflictResolutionCallback callback) override;
 
-  PageDelegate* delegate_;
+  PageDelayingFacade* delaying_facade_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };

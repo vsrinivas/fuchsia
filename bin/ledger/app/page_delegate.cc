@@ -17,6 +17,7 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/page_delaying_facade.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
@@ -24,20 +25,19 @@
 
 namespace ledger {
 
-PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
-                           PageManager* manager, storage::PageStorage* storage,
-                           MergeResolver* merge_resolver,
-                           fidl::InterfaceRequest<Page> request,
-                           SyncWatcherSet* watchers)
+PageDelegate::PageDelegate(
+    coroutine::CoroutineService* coroutine_service, PageManager* manager,
+    storage::PageStorage* storage, MergeResolver* merge_resolver,
+    SyncWatcherSet* watchers,
+    std::unique_ptr<PageDelayingFacade> page_delaying_facade)
     : manager_(manager),
       storage_(storage),
       merge_resolver_(merge_resolver),
-      request_(std::move(request)),
-      interface_(this),
       branch_tracker_(coroutine_service, manager, storage),
       watcher_set_(watchers),
+      page_delaying_facade_(std::move(page_delaying_facade)),
       weak_factory_(this) {
-  interface_.set_on_empty([this] {
+  page_delaying_facade_->set_on_empty([this] {
     operation_serializer_.Serialize<Status>(
         [](Status status) {},
         [this](fit::function<void(Status)> callback) {
@@ -57,15 +57,9 @@ void PageDelegate::Init(fit::function<void(Status)> on_done) {
       on_done(status);
       return;
     }
-    interface_.Bind(std::move(request_));
+    page_delaying_facade_->SetPageDelegate(this);
     on_done(Status::OK);
   });
-}
-
-void PageDelegate::GetId(Page::GetIdCallback callback) {
-  ledger::PageId page_id;
-  convert::ToArray(storage_->GetId(), &page_id.id);
-  callback(page_id);
 }
 
 void PageDelegate::GetSnapshot(
@@ -434,7 +428,7 @@ void PageDelegate::CommitJournal(
 }
 
 void PageDelegate::CheckEmpty() {
-  if (on_empty_callback_ && !interface_.is_bound() &&
+  if (on_empty_callback_ && page_delaying_facade_->IsEmpty() &&
       branch_tracker_.IsEmpty() && operation_serializer_.empty()) {
     on_empty_callback_();
   }

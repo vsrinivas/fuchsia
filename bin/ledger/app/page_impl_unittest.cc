@@ -75,8 +75,10 @@ class PageImplTest : public TestWithEnvironment {
         PageManager::PageStorageState::NEEDS_SYNC);
     bool called;
     Status status;
-    manager_->BindPage(
-        page_ptr_.NewRequest(),
+    auto delaying_facade =
+        std::make_unique<PageDelayingFacade>(page_id1_, page_ptr_.NewRequest());
+    manager_->AddPageDelayingFacade(
+        std::move(delaying_facade),
         callback::Capture(callback::SetWhenCalled(&called), &status));
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1555,8 +1557,10 @@ TEST_F(PageImplTest, ParallelPut) {
   bool called;
   Status status;
   PagePtr page_ptr2;
-  manager_->BindPage(
-      page_ptr2.NewRequest(),
+  auto delaying_facade =
+      std::make_unique<PageDelayingFacade>(page_id1_, page_ptr2.NewRequest());
+  manager_->AddPageDelayingFacade(
+      std::move(delaying_facade),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
