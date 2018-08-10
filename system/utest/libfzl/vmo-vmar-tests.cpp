@@ -5,6 +5,7 @@
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <unittest/unittest.h>
+#include <zircon/limits.h>
 #include <zircon/rights.h>
 
 #include "vmo-probe.h"
@@ -284,6 +285,79 @@ bool vmo_map_sub_sub_vmar_test() {
     END_TEST;
 }
 
+bool vmo_mapper_move_test() {
+    BEGIN_TEST;
+
+    constexpr uint32_t ACCESS_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    void* addr;
+    size_t size;
+    {
+        // Create two mappers, and make sure neither has mapped anything.
+        VmoMapper mapper1, mapper2;
+
+        ASSERT_NULL(mapper1.start());
+        ASSERT_EQ(mapper1.size(), 0);
+        ASSERT_NULL(mapper2.start());
+        ASSERT_EQ(mapper2.size(), 0);
+
+        // Create and map a page in mapper 1, make sure we can probe it.
+        zx_status_t res;
+        res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS);
+        addr = mapper1.start();
+        size = mapper1.size();
+
+        ASSERT_EQ(res, ZX_OK);
+        ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+
+        // Move the mapping from mapper1 into mapper2 using assignment.  Make sure
+        // the region is still mapped and has not moved in our address space.
+        mapper2 = fbl::move(mapper1);
+
+        ASSERT_NULL(mapper1.start());
+        ASSERT_EQ(mapper1.size(), 0);
+        ASSERT_EQ(mapper2.start(), addr);
+        ASSERT_EQ(mapper2.size(), size);
+        ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+
+        // Now do the same thing, but this time move using construction.
+        VmoMapper mapper3(fbl::move(mapper2));
+
+        ASSERT_NULL(mapper2.start());
+        ASSERT_EQ(mapper2.size(), 0);
+        ASSERT_EQ(mapper3.start(), addr);
+        ASSERT_EQ(mapper3.size(), size);
+        ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+
+        // Map a new region into mapper1, make sure it is OK.
+        res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS);
+        void* second_addr = mapper1.start();
+        size_t second_size = mapper1.size();
+
+        ASSERT_EQ(res, ZX_OK);
+        ASSERT_TRUE(vmo_probe::probe_verify_region(second_addr, second_size, ACCESS_FLAGS));
+
+        // Now, move mapper3 on top of mapper1 via assignment and make sure that
+        // mapper1's old region is properly unmapped while mapper3's contents remain
+        // mapped and are properly moved.
+        mapper1 = fbl::move(mapper3);
+
+        ASSERT_NULL(mapper3.start());
+        ASSERT_EQ(mapper3.size(), 0);
+        ASSERT_EQ(mapper1.start(), addr);
+        ASSERT_EQ(mapper1.size(), size);
+        ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+        ASSERT_TRUE(vmo_probe::probe_verify_region(second_addr, second_size, 0));
+    }
+
+    // Finally, now that we have left the scope, the original mapping that we
+    // have been moving around should be gone by now.
+    ASSERT_NONNULL(addr);
+    ASSERT_EQ(size, ZX_PAGE_SIZE);
+    ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, 0));
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(vmo_mapper_vmar_manager_tests)
@@ -293,4 +367,5 @@ RUN_NAMED_TEST("vmo_create_and_map_sub_sub_vmar", vmo_create_and_map_sub_sub_vma
 RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
 RUN_NAMED_TEST("vmo_map_sub_vmar", vmo_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_map_sub_sub_vmar", vmo_map_sub_sub_vmar_test)
+RUN_NAMED_TEST("vmo_mapper_move_test", vmo_mapper_move_test)
 END_TEST_CASE(vmo_mapper_vmar_manager_tests)

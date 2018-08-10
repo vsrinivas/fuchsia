@@ -16,6 +16,25 @@ class VmoMapper {
 public:
     VmoMapper() = default;
     ~VmoMapper() { Unmap(); }
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VmoMapper);
+
+    // Move support
+    VmoMapper(VmoMapper&& other) {
+        *this = fbl::move(other);
+    }
+
+    VmoMapper& operator=(VmoMapper&& other) {
+        Unmap();
+        vmar_manager_ = fbl::move(other.vmar_manager_);
+
+        start_ = other.start_;
+        other.start_ = nullptr;
+
+        size_ = other.size_;
+        other.size_ = 0;
+
+        return *this;
+    }
 
     // Create a new VMO and map it into our address space using the provided map
     // flags and optional target VMAR.  If requested, return the created VMO
@@ -61,9 +80,6 @@ public:
 
     void* start() const { return start_; }
     uint64_t size() const { return size_; }
-
-    // suppress default constructors
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmoMapper);
 
 private:
     zx_status_t CheckReadyToMap(const fbl::RefPtr<VmarManager>& vmar_manager);
