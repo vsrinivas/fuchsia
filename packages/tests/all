@@ -11,6 +11,7 @@
         "garnet/packages/tests/chrealm",
         "garnet/packages/tests/cmx",
         "garnet/packages/tests/cobalt_client",
+        "garnet/packages/tests/pkg_url",
         "garnet/packages/tests/components_binary_test",
         "garnet/packages/tests/crashpad",
         "garnet/packages/tests/debug_agent",

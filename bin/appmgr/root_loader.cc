@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/appmgr/root_loader.h"
-#include "garnet/bin/appmgr/fuchsia_pkg_url.h"
 
 #include <fcntl.h>
 
@@ -11,6 +10,7 @@
 
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/lib/cmx/cmx.h"
+#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"

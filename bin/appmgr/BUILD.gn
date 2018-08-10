@@ -12,8 +12,6 @@ source_set("lib") {
     "dynamic_library_loader.h",
     "environment_controller_impl.cc",
     "environment_controller_impl.h",
-    "fuchsia_pkg_url.cc",
-    "fuchsia_pkg_url.h",
     "hub/component_hub.cc",
     "hub/component_hub.h",
     "hub/hub.cc",
@@ -47,6 +45,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/cmx",
     "//garnet/lib/json",
+    "//garnet/lib/pkg_url",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/component/cpp",
@@ -105,7 +104,6 @@ executable("tests") {
   sources = [
     "appmgr_unittest.cc",
     "component_controller_unittest.cc",
-    "fuchsia_pkg_url_unittest.cc",
     "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
     "scheme_map_unittest.cc",

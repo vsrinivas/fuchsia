@@ -18,7 +18,6 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
-#include "garnet/bin/appmgr/fuchsia_pkg_url.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/scheme_map.h"
@@ -29,6 +28,7 @@
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/cmx/sandbox.h"
 #include "garnet/lib/json/json_parser.h"
+#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/io/fd.h"

@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//garnet/bin/run_test_component/test_package.gni")
+
+source_set("pkg_url") {
+  sources = [
+    "fuchsia_pkg_url.cc",
+    "fuchsia_pkg_url.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "pkg_url_unittests"
+
+  sources = [
+    "fuchsia_pkg_url_unittest.cc",
+  ]
+
+  deps = [
+    ":pkg_url",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("pkg_url_unittests") {
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "pkg_url_unittests"
+    },
+  ]
+}

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_FUCHSIA_PKG_URL_H_
-#define GARNET_BIN_APPMGR_FUCHSIA_PKG_URL_H_
+#ifndef GARNET_LIB_PKG_URL_FUCHSIA_PKG_URL_H_
+#define GARNET_LIB_PKG_URL_FUCHSIA_PKG_URL_H_
 
 #include <string>
 
@@ -28,4 +28,4 @@ class FuchsiaPkgUrl {
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_FUCHSIA_PKG_URL_H_
+#endif  // GARNET_LIB_PKG_URL_FUCHSIA_PKG_URL_H_

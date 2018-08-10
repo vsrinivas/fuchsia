@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/fuchsia_pkg_url.h"
+#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 
 #include "gtest/gtest.h"
 

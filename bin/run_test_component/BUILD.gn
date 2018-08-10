@@ -3,6 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//garnet/bin/run_test_component/test_package.gni")
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "run_test_component.cc",
+    "run_test_component.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/pkg_url",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+  ]
+}
 
 executable("bin") {
   testonly = true
@@ -13,6 +29,7 @@ executable("bin") {
   ]
 
   deps = [
+    ":lib",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
@@ -31,6 +48,32 @@ package("run_test_component") {
   binaries = [
     {
       name = "run_test_component"
+    },
+  ]
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "run_test_component_unittests"
+
+  sources = [
+    "run_test_component_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("run_test_component_unittests") {
+  deps = [
+    ":test_bin",
+  ]
+
+  tests = [
+    {
+      name = "run_test_component_unittests"
     },
   ]
 }
