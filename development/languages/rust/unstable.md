@@ -93,6 +93,49 @@ This list includes all of the unstable features currently used in Fuchsia.
       There are no major breaking changes expected before stabilization, and shipping the 2018
       edition is a primary goal for this year, so the risk of never stabilizing is extremely low.
     * Owner: cramertj@
+* `async_await` and `await_macro`
+    * Summary: These two features enable the syntactic transformation from code that looks like
+      `move async { await!(x); await!(y), await!(z); }` into an anonymous
+      `enum State { First(X, Y, Z), Second(Y, Z), Third(Z), Done }` that implements the `Future`
+      trait. This also makes it possible to await non-’static futures by internally creating a
+      self-referential generator, allowing for significantly more performant, idiomatic, readable,
+      and writable code than the current futures combinators.
+    * Use in Fuchsia: These features will be used in fuchsia-async and in applications which make
+      use of the async/await feature in order to achieve more performant, ergonomic, and idiomatic
+      async code.
+    * Remaining before stabilization: Apart from being dependent on all the other features, there
+      are no major additional stability risks (read: no major unresolved design decisions)
+      introduced by these features. There are changes planned to the implementation, but they’re
+      mostly polish, performance optimizations, and a few scattered bugfixes.
+    * Owner: cramertj@
+* `pin`
+    * Summary: This feature includes the `PinMut` type and the `Unpin` trait. `PinMut` is a mutable
+      reference to an object that does not allow moving the underlying object unless it implements
+      the `Unpin` trait. This is used to create sound self-referential types.
+    * Use in Fuchsia: Needed for `async_await`
+    * Remaining before stabilization: This feature has gone through a number of design iterations
+      and is the most likely to receive backwards-incompatible changes -- there are a number of
+      design ideas floating around about the potential to make it safe to project from
+      `PinMut<MyType>` to `PinMut<FieldOfMyType>`, but these have so far been fruitless
+      (mostly depending on features that aren’t even RFC’d, let alone implemented). It’s likely
+      that PinMut will stabilize without these extensions, but cramertj@ will be in charge of
+      managing any transition necessary. This feature has also been proposed for stabilization.
+    * Owner: cramertj@
+* `arbitrary_self_types`
+    * Summary: This simple feature enables the use of `self: PinMut<Self>` which is necessary to
+      write implementations of the `Future` trait.
+    * Use in Fuchsia: Needed for `async_await`
+    * Remaining before stabilization: This is a particularly simple feature and likely won’t
+      see any breaking changes (especially to our minimal usage).
+    * Owner: cramertj@
+* `futures_api`
+    * Summary: This feature enables the `std::task` and `std::future` modules which provide the
+      `Future` interface for the standard library.
+    * Use in Fuchsia: Needed for `async_await`
+    * Remaining before stabilization: As in async/await, cramertj@ wrote the implementation of
+      this feature, and while its surface area is large, there aren’t significant planned
+      changes to it. cramertj@ will manage any necessary transition.
+    * Owner: cramertj@
 
 [the edition guide]: https://rust-lang-nursery.github.io/edition-guide/editions/index.html
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
