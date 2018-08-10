@@ -16,10 +16,11 @@
 #include <zircon/device/sysinfo.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "garnet/bin/guest/integration_test/test_serial.h"
+#include "garnet/bin/guest/integration_tests/test_serial.h"
 
 static constexpr char kGuestMgrUrl[] = "guestmgr";
 static constexpr char kZirconGuestUrl[] = "zircon_guest";
+static constexpr char kLinuxGuestUrl[] = "linux_guest";
 static constexpr char kRealm[] = "realmguestintegrationtest";
 
 class GuestTest : public component::testing::TestWithEnvironment {
@@ -34,16 +35,13 @@ class GuestTest : public component::testing::TestWithEnvironment {
               enclosing_environment_->AddServiceWithLaunchInfo(
                   std::move(launch_info), fuchsia::guest::GuestManager::Name_));
 
+    fuchsia::guest::GuestLaunchInfo guest_launch_info = GuestLaunchInfo();
+
     enclosing_environment_->ConnectToService(guest_mgr_.NewRequest());
     ASSERT_TRUE(guest_mgr_);
-    guest_mgr_->CreateEnvironment(kZirconGuestUrl, guest_env_.NewRequest());
+    guest_mgr_->CreateEnvironment(guest_launch_info.url, guest_env_.NewRequest());
     ASSERT_TRUE(guest_env_);
 
-    fuchsia::guest::GuestLaunchInfo guest_launch_info;
-    guest_launch_info.url = GuestUrl();
-    guest_launch_info.vmm_args.push_back("--display=none");
-    guest_launch_info.vmm_args.push_back("--cpus=1");
-    guest_launch_info.vmm_args.push_back("--network=false");
     guest_env_->LaunchGuest(std::move(guest_launch_info),
                             guest_controller_.NewRequest(),
                             [](fuchsia::guest::GuestInfo) {});
@@ -61,22 +59,49 @@ class GuestTest : public component::testing::TestWithEnvironment {
     return serial_.ExecuteBlocking(message, result);
   }
 
-  virtual std::string GuestUrl() = 0;
+  virtual fuchsia::guest::GuestLaunchInfo GuestLaunchInfo() = 0;
 
   std::unique_ptr<component::testing::EnclosingEnvironment>
       enclosing_environment_;
   fuchsia::guest::GuestManagerPtr guest_mgr_;
-  fuchsia::guest::GuestEnvironmentPtr guest_env_;
+  fuchsia::guest::GuestEnvironmentPtr guest_env_  ;
   fuchsia::guest::GuestControllerPtr guest_controller_;
   TestSerial serial_;
 };
 
 class ZirconGuestTest : public GuestTest {
  protected:
-  std::string GuestUrl() { return kZirconGuestUrl; }
+  fuchsia::guest::GuestLaunchInfo GuestLaunchInfo() {
+    fuchsia::guest::GuestLaunchInfo launch_info;
+    launch_info.url = kZirconGuestUrl;
+    launch_info.vmm_args.push_back("--display=none");
+    launch_info.vmm_args.push_back("--cpus=1");
+    launch_info.vmm_args.push_back("--network=false");
+    return launch_info;
+  }
 };
 
 TEST_F(ZirconGuestTest, LaunchGuest) {
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+  QuitLoop();
+}
+
+class LinuxGuestTest : public GuestTest {
+ protected:
+  fuchsia::guest::GuestLaunchInfo GuestLaunchInfo() {
+    fuchsia::guest::GuestLaunchInfo launch_info;
+    launch_info.url = kLinuxGuestUrl;
+    launch_info.vmm_args.push_back("--display=none");
+    launch_info.vmm_args.push_back("--cpus=1");
+    launch_info.vmm_args.push_back("--network=false");
+    launch_info.vmm_args.push_back("--cmdline-append=loglevel=0 console=hvc0");
+    return launch_info;
+  }
+};
+
+TEST_F(LinuxGuestTest, LaunchGuest) {
   std::string result;
   EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_INTEGRATION_TEST_TEST_SERIAL_H_
-#define GARNET_BIN_GUEST_INTEGRATION_TEST_TEST_SERIAL_H_
+#ifndef GARNET_BIN_GUEST_INTEGRATION_TESTS_TEST_SERIAL_H_
+#define GARNET_BIN_GUEST_INTEGRATION_TESTS_TEST_SERIAL_H_
 
 #include <string>
 
@@ -11,7 +11,7 @@
 
 class TestSerial {
  public:
-  void Start(zx::socket socket) { socket_ = std::move(socket); }
+  zx_status_t Start(zx::socket socket);
 
   zx_status_t ExecuteBlocking(const std::string& command,
                               std::string* result = nullptr);
@@ -22,8 +22,10 @@ class TestSerial {
   zx_status_t WaitForMarker(const std::string& marker,
                             std::string* result = nullptr);
 
+  zx_status_t WaitForAny();
+
   zx::socket socket_;
   std::string buffer_;
 };
 
-#endif  // GARNET_BIN_GUEST_INTEGRATION_TEST_TEST_SERIAL_H_
+#endif  // GARNET_BIN_GUEST_INTEGRATION_TESTS_TEST_SERIAL_H_

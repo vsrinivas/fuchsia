@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/integration_test/test_serial.h"
+#include "garnet/bin/guest/integration_tests/test_serial.h"
 
 #include <iostream>
 #include <sstream>
@@ -20,6 +20,19 @@ static std::string command_hash(const std::string& command) {
   hash_ss << hash;
 
   return hash_ss.str();
+}
+
+zx_status_t TestSerial::Start(zx::socket socket) {
+  socket_ = std::move(socket);
+
+  // Wait for something to be sent over serial. Both Zircon and Linux will send
+  // at least a command prompt. For Linux, this is necessary since any commands
+  // we send will be ignored until the guest is ready.
+  zx_status_t status = WaitForAny();
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to start serial";
+  }
+  return status;
 }
 
 // Sends a command and waits for the response. We capture output by echoing a
@@ -135,7 +148,39 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
       std::cout.write(buf, actual);
       std::cout.flush();
     }
-    output.append(buf, actual);
+    // Strip carriage returns to normalise both guests on newlines only.
+    for (size_t i = 0; i != actual; ++i) {
+      if (buf[i] == '\r') {
+        continue;
+      }
+      output.push_back(buf[i]);
+    }
   } while (status == ZX_ERR_SHOULD_WAIT || status == ZX_OK);
+  return status;
+}
+
+// Waits for something to be written to the socket and drains it.
+zx_status_t TestSerial::WaitForAny() {
+  zx_status_t status;
+  zx_signals_t pending = 0;
+  size_t actual = 0;
+  while (actual == 0) {
+    status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                              zx::deadline_after(kTestTimeout), &pending);
+    if (status != ZX_OK) {
+      return status;
+    } else if (pending & ZX_SOCKET_PEER_CLOSED) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    char buf[kSerialBufferSize];
+    status = zx_socket_read(socket_.get(), 0, buf, sizeof(buf), &actual);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (kGuestOutput) {
+      std::cout.write(buf, actual);
+      std::cout.flush();
+    }
+  }
   return status;
 }
