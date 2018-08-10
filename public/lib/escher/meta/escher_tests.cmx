@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/escher_unittests"
     },
     "sandbox": {
         "features": [ "deprecated-all-services", "vulkan" ]

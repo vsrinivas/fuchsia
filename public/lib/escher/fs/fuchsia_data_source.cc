@@ -56,24 +56,27 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
       }
       dir = fbl::RefPtr<fs::PseudoDir>::Downcast(std::move(subdir));
     }
-    success &=
-        ZX_OK ==
-        dir->AddEntry(
-            segs[segs.size() - 1],
-            fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(
-                /* read_handler= */
-                [this, path](fbl::String* output) {
-                  *output = ReadFile(path);
-                  return ZX_OK;
-                },
-                /* write_handler= */
-                [this, path](fbl::StringPiece input) {
-                  // TODO(ES-98): The file is successfully updated, but the
-                  // terminal would complain "truncate: Invalid argument".
-                  FXL_LOG(INFO) << "Updated file: " << path;
-                  WriteFile(path, HackFileContents(input.data(), input.size()));
-                  return ZX_OK;
-                }));
+    zx_status_t status = dir->AddEntry(
+        segs[segs.size() - 1],
+        fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(
+            /* read_handler= */
+            [this, path](fbl::String* output) {
+              *output = ReadFile(path);
+              return ZX_OK;
+            },
+            /* write_handler= */
+            [this, path](fbl::StringPiece input) {
+              // TODO(ES-98): The file is successfully updated, but the
+              // terminal would complain "truncate: Invalid argument".
+              FXL_LOG(INFO) << "Updated file: " << path;
+              WriteFile(path, HackFileContents(input.data(), input.size()));
+              return ZX_OK;
+            }));
+
+    if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
+      FXL_LOG(WARNING) << "Failed to AddEntry(): " << status;
+      success = false;
+    }
   }
   return success;
 }
