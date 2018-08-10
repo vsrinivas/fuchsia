@@ -19,7 +19,7 @@
 
 // Note on locking: The below functions need to read and write the register state and make sure that
 // nothing happens with respect to scheduling that thread while this is happening. As a result they
-// use AutoThreadLock. In most cases this will not be necessary but there are relatively few
+// use ThreadLock. In most cases this will not be necessary but there are relatively few
 // guarantees so we lock the scheduler. Since these functions are used mostly for debugging, this
 // shouldn't be too significant a performance penalty.
 
