@@ -35,8 +35,16 @@ std::string DescribeSuppressed(const Packet& p);
 
 std::string DescribeArray(const uint8_t arr[], size_t size);
 std::string DescribeVector(const std::vector<uint8_t> vec);
-std::string DescribeHtCaps(const wlan_ht_caps& ht_caps);
 
+std::string Describe(const HtCapabilityInfo& hci);
+std::string Describe(const AmpduParams& ampdu);
+std::string Describe(const SupportedMcsSet& mcs_set);
+std::string Describe(const HtExtCapabilities& hec);
+std::string Describe(const TxBfCapability& txbf);
+std::string Describe(const AselCapability& asel);
+std::string Describe(const HtCapabilities& ht_cap);
+
+std::string DescribeHtCaps(const wlan_ht_caps& ht_caps);
 std::string DescribeSupportedChannels(const wlan_chan_list& wl);
 std::string DescribeWlanBandInfo(const wlan_band_info& bi);
 std::string DescribeWlanMacInfo(const wlanmac_info& wi);

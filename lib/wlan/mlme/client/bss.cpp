@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <wlan/mlme/client/bss.h>
+#include <wlan/mlme/debug.h>
 
 #include <wlan/common/channel.h>
 
@@ -236,6 +237,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             bss_desc_.ht_cap = HtCapabilitiesToFidl(*ie);
 
             debugbcn("%s HtCapabilities parsed\n", dbgmsghdr);
+            debugbcn("%s\n", debug::Describe(*ie).c_str());
             break;
         }
         case element_id::kHtOperation: {
