@@ -37,8 +37,10 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
       "fuchsia::modular::StoryInfo::last_focus_time increased after focus"};
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info,
-                fuchsia::modular::StoryState story_state) override {
+  void OnChange(
+      fuchsia::modular::StoryInfo story_info,
+      fuchsia::modular::StoryState story_state,
+      fuchsia::modular::StoryVisibilityState story_visibility_state) override {
     FXL_CHECK(story_info.last_focus_time >= last_focus_time_);
     if (story_info.last_focus_time <= last_focus_time_) {
       return;

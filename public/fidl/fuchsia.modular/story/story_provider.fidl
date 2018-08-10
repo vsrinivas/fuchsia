@@ -100,6 +100,10 @@ interface StoryProviderWatcher {
   //    StoryState on another device of a story known on this device is not made
   //    known on this device.
   //
+  //  * Every time the StoryVisibilityState of the story changes on this device.
+  //    The StoryVisibilityState on another device of a story known on this
+  //    device is not made known on this device.
+  //
   //    I.e. if the story is started or stopped on *another* device, it does
   //    *not* cause an OnChange() call on *this* device. Cf. OnDelete() below.
   //
@@ -108,7 +112,11 @@ interface StoryProviderWatcher {
   // |story_state| is STOPPED if the story was just created or just became known
   // on this device and was not yet started on the current device. It's RUNNING
   // when the story is started on the current device.
-  1: OnChange(StoryInfo story_info, StoryState story_state);
+  //
+  // |story_visibility_state| is DEFAULT until a mod on the current device
+  // requests for the visibility state to be changed.
+  1: OnChange(StoryInfo story_info, StoryState story_state,
+              StoryVisibilityState story_visibility_state);
 
   // Called in two different situations:
   //

@@ -29,7 +29,8 @@ void StoryProviderWatcherBase::OnDelete(::fidl::StringPtr /*story_id*/) {}
 
 void StoryProviderWatcherBase::OnChange(
     fuchsia::modular::StoryInfo /*story_info*/,
-    fuchsia::modular::StoryState /*story_state*/) {
+    fuchsia::modular::StoryState /*story_state*/,
+    fuchsia::modular::StoryVisibilityState /*story_visibility_state*/) {
   continue_();
 }
 

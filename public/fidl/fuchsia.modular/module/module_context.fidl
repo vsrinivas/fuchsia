@@ -86,6 +86,11 @@ interface ModuleContext {
   // When a module calls |Done()| the framework will stop the module. If there are
   // no more running modules in the story the story will be stopped.
   12: Done();
+
+  // Requests the visibility state for the current story within the user shell.
+  // The framework will decide whether to honor this request, then forward it to the
+  // user shell.
+  13: RequestStoryVisibilityState(StoryVisibilityState visibility_state);
 };
 
 // Communicates the status of an Intent to a Module.

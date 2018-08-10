@@ -78,6 +78,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // Called by StoryProviderImpl.
   fuchsia::modular::StoryState GetStoryState() const;
+
+  // Called by StoryProviderImpl.
+  fuchsia::modular::StoryVisibilityState GetStoryVisibilityState() const;
+
   void Sync(const std::function<void()>& done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
@@ -155,6 +159,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // |ModuleContext.Done|.
   void HandleModuleDone(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
+  // Called by ModuleContextImpl.
+  void HandleStoryVisibilityStateRequest(
+      const fuchsia::modular::StoryVisibilityState visibility_state);
+
  private:
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
@@ -207,6 +215,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // This is the canonical source for state. The value in the ledger is just a
   // write-behind copy of this value.
   fuchsia::modular::StoryState state_{fuchsia::modular::StoryState::STOPPED};
+
+  // This is the canonical source for a story's visibility state within user
+  // shell. This state is per device and only persisted in memory.
+  fuchsia::modular::StoryVisibilityState visibility_state_{
+      fuchsia::modular::StoryVisibilityState::DEFAULT};
 
   StoryProviderImpl* const story_provider_impl_;
 

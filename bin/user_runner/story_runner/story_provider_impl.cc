@@ -453,7 +453,8 @@ void StoryProviderImpl::Watch(
   for (const auto& item : story_controller_impls_) {
     const auto& container = item.second;
     watcher_ptr->OnChange(CloneStruct(*container.current_info),
-                          container.impl->GetStoryState());
+                          container.impl->GetStoryState(),
+                          container.impl->GetStoryVisibilityState());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -598,14 +599,15 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 }
 
 void StoryProviderImpl::NotifyStoryStateChange(
-    fidl::StringPtr story_id, const fuchsia::modular::StoryState story_state) {
+    fidl::StringPtr story_id, const fuchsia::modular::StoryState story_state,
+    const fuchsia::modular::StoryVisibilityState story_visibility_state) {
   auto on_run =
       Future<>::Create("StoryProviderImpl.NotifyStoryStateChange.on_run");
   auto done = on_run
                   ->AsyncMap([this, story_id] {
                     return session_storage_->GetStoryDataById(story_id);
                   })
-                  ->Then([this, story_id, story_state](
+                  ->Then([this, story_id, story_state, story_visibility_state](
                              fuchsia::modular::internal::StoryDataPtr data) {
                     auto it = story_controller_impls_.find(story_id);
                     if (it == story_controller_impls_.end()) {
@@ -614,7 +616,8 @@ void StoryProviderImpl::NotifyStoryStateChange(
                       // from here.
                       return;
                     }
-                    NotifyStoryWatchers(data.get(), story_state);
+                    NotifyStoryWatchers(data.get(), story_state,
+                                        story_visibility_state);
                   });
   std::function<void()> callback = [] {};
   operation_queue_.Add(WrapFutureAsOperation(
@@ -698,13 +701,16 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   // If we have a StoryControllerImpl for this story id, update our cached
   // fuchsia::modular::StoryInfo.
   fuchsia::modular::StoryState state = fuchsia::modular::StoryState::STOPPED;
+  fuchsia::modular::StoryVisibilityState visibility_state =
+      fuchsia::modular::StoryVisibilityState::DEFAULT;
   auto i = story_controller_impls_.find(story_data.story_info.id);
   if (i != story_controller_impls_.end()) {
     state = i->second.impl->GetStoryState();
+    visibility_state = i->second.impl->GetStoryVisibilityState();
     i->second.current_info = CloneOptional(story_data.story_info);
   }
 
-  NotifyStoryWatchers(&story_data, state);
+  NotifyStoryWatchers(&story_data, state, visibility_state);
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
@@ -753,12 +759,14 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 
 void StoryProviderImpl::NotifyStoryWatchers(
     const fuchsia::modular::internal::StoryData* const story_data,
-    const fuchsia::modular::StoryState story_state) {
+    const fuchsia::modular::StoryState story_state,
+    const fuchsia::modular::StoryVisibilityState story_visibility_state) {
   if (story_data->story_options.kind_of_proto_story) {
     return;
   }
   for (const auto& i : watchers_.ptrs()) {
-    (*i)->OnChange(CloneStruct(story_data->story_info), story_state);
+    (*i)->OnChange(CloneStruct(story_data->story_info), story_state,
+                   story_visibility_state);
   }
 }
 

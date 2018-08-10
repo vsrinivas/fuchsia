@@ -123,4 +123,9 @@ void ModuleContextImpl::Done() {
   story_controller_impl_->HandleModuleDone(module_data_->module_path);
 }
 
+void ModuleContextImpl::RequestStoryVisibilityState(
+    fuchsia::modular::StoryVisibilityState visibility_state) {
+  story_controller_impl_->HandleStoryVisibilityStateRequest(visibility_state);
+}
+
 }  // namespace modular

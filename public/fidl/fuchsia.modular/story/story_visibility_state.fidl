@@ -1,0 +1,17 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+// Visibility state of a Story within the user shell.
+// This state describes how a story should be displayed within the user shell.
+//
+// All state transitions are possible.
+//
+enum StoryVisibilityState {
+  // Default state for a story.
+  DEFAULT = 1;
+  // Full-screen user experience.
+  IMMERSIVE = 2;
+};

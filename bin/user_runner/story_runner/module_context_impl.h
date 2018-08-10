@@ -95,6 +95,10 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   // |fuchsia::modular::ModuleContext|
   void Done() override;
 
+  // |fuchsia::modular::ModuleContext|
+  void RequestStoryVisibilityState(
+      fuchsia::modular::StoryVisibilityState visibility_state) override;
+
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
   const fuchsia::modular::ModuleData* const module_data_;

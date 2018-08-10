@@ -39,8 +39,10 @@ class StoryProviderWatcherBase : fuchsia::modular::StoryProviderWatcher {
   void OnDelete(::fidl::StringPtr story_id) override;
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info,
-                fuchsia::modular::StoryState story_state) override;
+  void OnChange(
+      fuchsia::modular::StoryInfo story_info,
+      fuchsia::modular::StoryState story_state,
+      fuchsia::modular::StoryVisibilityState story_visibility_state) override;
 
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherBase);

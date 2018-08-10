@@ -145,10 +145,13 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(const fuchsia::modular::StoryInfo story_info,
-                const fuchsia::modular::StoryState story_state) override {
+                const fuchsia::modular::StoryState story_state,
+                const fuchsia::modular::StoryVisibilityState
+                    story_visibility_state) override {
     FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnChange() "
                   << " id " << story_info.id << " state "
-                  << fidl::ToUnderlying(story_state) << " url "
+                  << fidl::ToUnderlying(story_state) << " visibility state "
+                  << fidl::ToUnderlying(story_visibility_state) << " url "
                   << story_info.url;
 
     if (deleted_stories_.find(story_info.id) != deleted_stories_.end()) {

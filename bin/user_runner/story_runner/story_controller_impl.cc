@@ -1173,6 +1173,11 @@ fuchsia::modular::StoryState StoryControllerImpl::GetStoryState() const {
   return state_;
 }
 
+fuchsia::modular::StoryVisibilityState
+StoryControllerImpl::GetStoryVisibilityState() const {
+  return visibility_state_;
+}
+
 void StoryControllerImpl::Sync(const std::function<void()>& done) {
   operation_queue_.Add(new SyncCall(done));
 }
@@ -1538,7 +1543,8 @@ void StoryControllerImpl::SetState(
     (*i)->OnStateChange(state_);
   }
 
-  story_provider_impl_->NotifyStoryStateChange(story_id_, state_);
+  story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
+                                               visibility_state_);
 }
 
 bool StoryControllerImpl::IsExternalModule(
@@ -1598,6 +1604,19 @@ void StoryControllerImpl::HandleModuleDone(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   operation_queue_.Add(
       new StopModuleAndStoryIfEmptyCall(this, module_path, [] {}));
+}
+
+void StoryControllerImpl::HandleStoryVisibilityStateRequest(
+    const fuchsia::modular::StoryVisibilityState visibility_state) {
+  if (visibility_state == visibility_state_) {
+    // no-op.
+    return;
+  }
+
+  visibility_state_ = visibility_state;
+
+  story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
+                                               visibility_state_);
 }
 
 }  // namespace modular

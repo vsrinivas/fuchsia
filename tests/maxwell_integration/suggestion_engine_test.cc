@@ -1228,8 +1228,9 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   fuchsia::modular::StoryInfo story_info;
   story_info.url = "foo://bazzle_dazzle";
   story_info.id = "";
-  story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       fuchsia::modular::StoryState::STOPPED);
+  story_provider()->NotifyStoryChanged(
+      std::move(story_info), fuchsia::modular::StoryState::STOPPED,
+      fuchsia::modular::StoryVisibilityState::DEFAULT);
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;

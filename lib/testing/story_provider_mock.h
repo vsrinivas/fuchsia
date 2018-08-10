@@ -19,12 +19,15 @@ namespace modular {
 class StoryProviderMock : public fuchsia::modular::StoryProvider {
  public:
   // Allows notification of watchers.
-  void NotifyStoryChanged(fuchsia::modular::StoryInfo story_info,
-                          fuchsia::modular::StoryState story_state) {
+  void NotifyStoryChanged(
+      fuchsia::modular::StoryInfo story_info,
+      fuchsia::modular::StoryState story_state,
+      fuchsia::modular::StoryVisibilityState story_visibility_state) {
     for (const auto& watcher : watchers_.ptrs()) {
       fuchsia::modular::StoryInfo story_info_clone;
       fidl::Clone(story_info, &story_info_clone);
-      (*watcher)->OnChange(std::move(story_info_clone), story_state);
+      (*watcher)->OnChange(std::move(story_info_clone), story_state,
+                           story_visibility_state);
     }
   }
 
