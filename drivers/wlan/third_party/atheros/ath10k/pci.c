@@ -2919,6 +2919,12 @@ static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
     return ZX_OK;
 }
 
+static zx_status_t ath10k_pci_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
+    struct ath10k* ar = ctx;
+    ath10k_info("starting a hardware scan\n");
+    return ath10k_mac_hw_scan(ar, scan_config);
+}
+
 static wlanmac_protocol_ops_t wlanmac_ops = {
     .query = ath10k_pci_query,
     .start = ath10k_pci_start,
@@ -2928,6 +2934,7 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .configure_bss = ath10k_pci_configure_bss,
     .set_key = ath10k_pci_set_key,
     .configure_assoc = ath10k_pci_configure_assoc,
+    .start_hw_scan = ath10k_pci_start_hw_scan,
 };
 
 static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {

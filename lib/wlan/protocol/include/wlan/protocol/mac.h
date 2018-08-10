@@ -153,7 +153,16 @@ typedef struct wlan_tx_packet {
 enum {
     WLAN_INDICATION_PRE_TBTT = 1,
     WLAN_INDICATION_BCN_TX_COMPLETE = 2,
+    WLAN_INDICATION_HW_SCAN_COMPLETE = 3,
+    WLAN_INDICATION_HW_SCAN_ABORTED = 4,
 };
+
+typedef struct wlan_hw_scan_config {
+    // Number of channels in the |channels| array. Must be at least 1
+    uint8_t num_channels;
+    // Channel numbers to scan
+    uint8_t channels[WLAN_CHANNELS_MAX_LEN];
+} wlan_hw_scan_config_t;
 
 typedef struct wlanmac_ifc {
     // Report the status of the wlanmac device.
@@ -221,6 +230,17 @@ typedef struct wlanmac_protocol_ops {
 
     // Notifies MAC and PHY parameters negotiated through a successful association
     zx_status_t (*configure_assoc)(void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx);
+
+    // Initiate a hardware scan
+    //
+    // Once the scan starts, scan results will be delivered as beacon and probe response frames
+    // via the regular rx path.
+    //
+    // Unless an error is returned immediately, the driver will eventually
+    // call wlanmac_ifc->indication() with one of the two values:
+    //      WLAN_INDICATION_HW_SCAN_COMPLETE: scan finished successfully
+    //      WLAN_INDICATION_HW_SCAN_ABORTED: scan was stopped because of an error
+    zx_status_t (*start_hw_scan)(void* ctx, const wlan_hw_scan_config_t* scan_config);
 } wlanmac_protocol_ops_t;
 
 typedef struct wlanmac_protocol {

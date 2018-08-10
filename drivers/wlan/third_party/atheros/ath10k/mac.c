@@ -4162,18 +4162,16 @@ void __ath10k_scan_finish(struct ath10k* ar) {
         break;
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
-#if 0 // NEEDS PORTING
         if (!ar->scan.is_roc) {
-            struct cfg80211_scan_info info = {
-                .aborted = (ar->scan.state ==
-                            ATH10K_SCAN_ABORTING),
-            };
-
-            ieee80211_scan_completed(ar->hw, &info);
+            ar->wlanmac.ifc->indication(ar->wlanmac.cookie,
+                (ar->scan.state == ATH10K_SCAN_ABORTING)
+                    ? WLAN_INDICATION_HW_SCAN_ABORTED
+                    : WLAN_INDICATION_HW_SCAN_COMPLETE);
         } else if (ar->scan.roc_notify) {
+#if 0 // NEEDS PORTING
             ieee80211_remain_on_channel_expired(ar->hw);
-        }
 #endif // NEEDS PORTING
+        }
     /* fall through */
     case ATH10K_SCAN_STARTING:
         ar->scan.state = ATH10K_SCAN_IDLE;
@@ -4193,31 +4191,28 @@ void ath10k_scan_finish(struct ath10k* ar) {
     mtx_unlock(&ar->data_lock);
 }
 
-#if 0 // NEEDS PORTING
-static int ath10k_scan_stop(struct ath10k* ar) {
+static zx_status_t ath10k_scan_stop(struct ath10k* ar) {
     struct wmi_stop_scan_arg arg = {
         .req_id = 1, /* FIXME */
         .req_type = WMI_SCAN_STOP_ONE,
         .u.scan_id = ATH10K_SCAN_ID,
     };
-    int ret;
+    zx_status_t ret = ZX_OK;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    ret = ath10k_wmi_stop_scan(ar, &arg);
-    if (ret) {
-        ath10k_warn("failed to stop wmi scan: %d\n", ret);
+    int wmi_res = ath10k_wmi_stop_scan(ar, &arg);
+    if (wmi_res) {
+        ath10k_warn("failed to stop wmi scan: %d\n", wmi_res);
+        ret = ZX_ERR_INTERNAL;
         goto out;
     }
 
     zx_status_t status = sync_completion_wait(&ar->scan.completed, ZX_SEC(3));
-    if (status == ZX_ERR_TIMED_OUT) {
-        ath10k_warn("failed to receive scan abortion completion: timed out\n");
-        ret = -ETIMEDOUT;
-    } else if (status == ZX_OK) {
-        ret = 0;
-    } else {
-        ZX_DEBUG_ASSERT(0);
+    if (status != ZX_OK) {
+        ath10k_warn("failed to receive scan abortion completion: %s\n", zx_status_get_string(status));
+        ret = ZX_ERR_TIMED_OUT;
+        goto out;
     }
 
 out:
@@ -4237,6 +4232,7 @@ out:
     return ret;
 }
 
+#if 0 // NEEDS PORTING
 static void ath10k_scan_abort(struct ath10k* ar) {
     int ret;
 
@@ -4280,16 +4276,18 @@ void ath10k_scan_timeout_work(struct work_struct* work) {
     ath10k_scan_abort(ar);
     mtx_unlock(&ar->conf_mutex);
 }
+#endif // NEEDS PORTING
 
-static int ath10k_start_scan(struct ath10k* ar,
-                             const struct wmi_start_scan_arg* arg) {
-    int ret;
+static zx_status_t ath10k_start_scan(struct ath10k* ar,
+                                     const struct wmi_start_scan_arg* arg) {
+    zx_status_t ret;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     ret = ath10k_wmi_start_scan(ar, arg);
     if (ret) {
-        return ret;
+        ath10k_err("ath10k_wmi_start_scan returned error code %d\n", ret);
+        return ZX_ERR_INTERNAL;
     }
 
     if (sync_completion_wait(&ar->scan.started, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
@@ -4297,8 +4295,7 @@ static int ath10k_start_scan(struct ath10k* ar,
         if (ret) {
             ath10k_warn("failed to stop scan: %d\n", ret);
         }
-
-        return -ETIMEDOUT;
+        return ZX_ERR_TIMED_OUT;
     }
 
     /* If we failed to start the scan, return error code at
@@ -4308,13 +4305,12 @@ static int ath10k_start_scan(struct ath10k* ar,
     mtx_lock(&ar->data_lock);
     if (ar->scan.state == ATH10K_SCAN_IDLE) {
         mtx_unlock(&ar->data_lock);
-        return -EINVAL;
+        return ZX_ERR_INTERNAL;
     }
     mtx_unlock(&ar->data_lock);
 
-    return 0;
+    return ZX_OK;
 }
-#endif // NEEDS PORTING
 
 /**********************/
 /* mac80211 callbacks */
@@ -5827,19 +5823,50 @@ static void ath10k_mac_op_set_coverage_class(struct ieee80211_hw* hw, int16_t va
     ar->hw_params.hw_ops->set_coverage_class(ar, value);
 }
 
-static int ath10k_hw_scan(struct ieee80211_hw* hw,
-                          struct ieee80211_vif* vif,
-                          struct ieee80211_scan_request* hw_req) {
-    struct ath10k* ar = hw->priv;
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    struct cfg80211_scan_request* req = &hw_req->req;
+#endif // NEEDS PORTING
+
+static zx_status_t ath10k_mac_convert_scan_config(const wlan_hw_scan_config_t* scan_config,
+                                                  struct wmi_start_scan_arg* arg) {
+    if (scan_config->num_channels == 0) {
+        ath10k_err("number of channels to scan must be non-zero\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (scan_config->num_channels > countof(arg->channels)) {
+        ath10k_err("too many channels to scan: %u\n", scan_config->num_channels);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    memset(arg, 0, sizeof(*arg));
+    ath10k_wmi_start_scan_init(arg);
+    arg->scan_ctrl_flags |= WMI_SCAN_FLAG_PASSIVE;
+    arg->n_channels = scan_config->num_channels;
+
+    for (size_t i = 0; i < scan_config->num_channels; ++i) {
+        const struct ath10k_channel* ath_chan;
+        if (ath10k_lookup_chan(scan_config->channels[i], &ath_chan) != ZX_OK) {
+            ath10k_err("invalid channel number %u\n", scan_config->channels[i]);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        arg->channels[i] = ath_chan->center_freq;
+    }
+    return ZX_OK;
+}
+
+zx_status_t ath10k_mac_hw_scan(struct ath10k* ar,
+                               const wlan_hw_scan_config_t* scan_config) {
     struct wmi_start_scan_arg arg;
-    int ret = 0;
-    int i;
+    zx_status_t ret = ath10k_mac_convert_scan_config(scan_config, &arg);
+    if (ret != ZX_OK) {
+        return ret;
+    }
 
+    struct ath10k_vif* arvif = &ar->arvif;
     mtx_lock(&ar->conf_mutex);
-
     mtx_lock(&ar->data_lock);
+
+    arg.scan_id = ATH10K_SCAN_ID;
+    arg.vdev_id = arvif->vdev_id;
+
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
         sync_completion_reset(&ar->scan.started);
@@ -5847,64 +5874,41 @@ static int ath10k_hw_scan(struct ieee80211_hw* hw,
         ar->scan.state = ATH10K_SCAN_STARTING;
         ar->scan.is_roc = false;
         ar->scan.vdev_id = arvif->vdev_id;
-        ret = 0;
+        ret = ZX_OK;
         break;
     case ATH10K_SCAN_STARTING:
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
-        ret = -EBUSY;
+        ret = ZX_ERR_BAD_STATE;
         break;
     }
     mtx_unlock(&ar->data_lock);
 
-    if (ret) {
+    if (ret != ZX_OK) {
         goto exit;
     }
 
-    memset(&arg, 0, sizeof(arg));
-    ath10k_wmi_start_scan_init(ar, &arg);
-    arg.vdev_id = arvif->vdev_id;
-    arg.scan_id = ATH10K_SCAN_ID;
-
-    if (req->ie_len) {
-        arg.ie_len = req->ie_len;
-        memcpy(arg.ie, req->ie, arg.ie_len);
-    }
-
-    if (req->n_ssids) {
-        arg.n_ssids = req->n_ssids;
-        for (i = 0; i < arg.n_ssids; i++) {
-            arg.ssids[i].len  = req->ssids[i].ssid_len;
-            arg.ssids[i].ssid = req->ssids[i].ssid;
-        }
-    } else {
-        arg.scan_ctrl_flags |= WMI_SCAN_FLAG_PASSIVE;
-    }
-
-    if (req->n_channels) {
-        arg.n_channels = req->n_channels;
-        for (i = 0; i < arg.n_channels; i++) {
-            arg.channels[i] = req->channels[i]->center_freq;
-        }
-    }
-
     ret = ath10k_start_scan(ar, &arg);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_warn("failed to start hw scan: %d\n", ret);
         mtx_lock(&ar->data_lock);
         ar->scan.state = ATH10K_SCAN_IDLE;
         mtx_unlock(&ar->data_lock);
     }
 
+#if 0 // NEEDS PORTING
     /* Add a 200ms margin to account for event/command processing */
     ieee80211_queue_delayed_work(ar->hw, &ar->scan.timeout,
                                  msecs_to_jiffies(arg.max_scan_time +
                                          200));
+#endif // NEEDS PORTING
 
 exit:
     mtx_unlock(&ar->conf_mutex);
     return ret;
 }
+
+#if 0 // NEEDS PORTING
 
 static void ath10k_cancel_hw_scan(struct ieee80211_hw* hw,
                                   struct ieee80211_vif* vif) {

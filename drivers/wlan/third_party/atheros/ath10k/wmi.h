@@ -6621,7 +6621,7 @@ int ath10k_wmi_connect(struct ath10k* ar);
 
 zx_status_t ath10k_wmi_cmd_send(struct ath10k* ar, struct ath10k_msg_buf* buf, uint32_t cmd_id);
 int ath10k_wmi_cmd_send_nowait(struct ath10k* ar, struct ath10k_msg_buf* skb, uint32_t cmd_id);
-void ath10k_wmi_start_scan_init(struct ath10k* ar, struct wmi_start_scan_arg* arg);
+void ath10k_wmi_start_scan_init(struct wmi_start_scan_arg* arg);
 
 #if 0 // NEEDS PORTING
 void ath10k_wmi_pull_pdev_stats_base(const struct wmi_pdev_stats_base* src,

@@ -2290,6 +2290,7 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
     rx_info.snr_dbh = arg.snr;
 
     memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
+    rx_info.chan.primary = arg.channel;
 
     rx_status = arg.status;
 
@@ -6243,8 +6244,7 @@ ath10k_wmi_10x_op_gen_start_scan(struct ath10k* ar,
 }
 #endif // NEEDS PORTING
 
-void ath10k_wmi_start_scan_init(struct ath10k* ar,
-                                struct wmi_start_scan_arg* arg) {
+void ath10k_wmi_start_scan_init(struct wmi_start_scan_arg* arg) {
     /* setup commonly used values */
     arg->scan_req_id = 1;
     arg->scan_priority = WMI_SCAN_PRIORITY_LOW;

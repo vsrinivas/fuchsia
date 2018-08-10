@@ -90,8 +90,7 @@ typedef struct wlan_assoc_ctx {
 } wlan_assoc_ctx_t;
 
 enum {
-    // Device or driver implements scanning. TODO(tkilbourn): define the interface between drivers
-    // for passing scan request and response.
+    // Device or driver implements scanning
     WLAN_DRIVER_FEATURE_SCAN_OFFLOAD = (1 << 0),
     // Device or driver implements rate selection. The data_rate and mcs fields of wlan_tx_info_t
     // should not be populated, unless the MLME wishes to force a given rate for a packet.
