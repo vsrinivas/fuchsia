@@ -74,7 +74,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   get_page_id_called_ = false;
   ledger_->GetPage(
       reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
-      [&, request_number](Status status) {
+      [this, request_number](Status status) {
         if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
           return;
         }
@@ -90,7 +90,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   TRACE_ASYNC_BEGIN("benchmark", "get page id",
                     requests_count_ - request_number);
   // Request the page id before the GetPage callback is called.
-  page->GetId([&, request_number](PageId found_page_id) {
+  page->GetId([this, request_number](PageId found_page_id) {
     TRACE_ASYNC_END("benchmark", "get page id",
                     requests_count_ - request_number);
     get_page_id_called_ = true;
