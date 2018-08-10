@@ -15,7 +15,7 @@ MODULE_TYPE := driver
 MODULE_NAME := bus-acpi
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-MODULE_CFLAGS += -Wno-null-pointer-arithmetic
+MODULE_COMPILEFLAGS += -Wno-null-pointer-arithmetic
 endif
 MODULE_CFLAGS += -fno-strict-aliasing
 
@@ -28,6 +28,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/dev-cros-ec/dev.cpp \
     $(LOCAL_DIR)/dev-cros-ec/motion.cpp \
     $(LOCAL_DIR)/dev-ec.c \
+    $(LOCAL_DIR)/dev-pwrbtn.cpp \
     $(LOCAL_DIR)/dev-pwrsrc.c \
     $(LOCAL_DIR)/dev-tbmc.cpp \
     $(LOCAL_DIR)/dev-thermal.c \
@@ -38,7 +39,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci.c \
     $(LOCAL_DIR)/pciroot.cpp \
     $(LOCAL_DIR)/power.c \
-    $(LOCAL_DIR)/powerbtn.c \
     $(LOCAL_DIR)/resources.c \
     $(LOCAL_DIR)/util.c \
 

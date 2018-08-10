@@ -32,7 +32,6 @@
 #include "nhlt.h"
 #include "pci.h"
 #include "pciroot.h"
-#include "powerbtn.h"
 #include "power.h"
 #include "resources.h"
 
@@ -537,6 +536,11 @@ out:
 }
 
 static zx_status_t publish_acpi_devices(zx_device_t* parent) {
+    zx_status_t status = pwrbtn_init(parent);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d\n", status);
+    }
+
     // Walk the ACPI namespace for devices and publish them
     // Only publish a single PCI device
     publish_acpi_device_ctx_t ctx = {
@@ -565,19 +569,13 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     // We don't need ZBI VMO handle.
     zx_handle_close(zbi_vmo);
 
-    zx_status_t st;
-    if (ZX_OK != (st = init())) {
-        zxlogf(ERROR, "acpi: failed to initialize ACPI %d \n",st);
+    zx_status_t status = init();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi: failed to initialize ACPI %d \n", status);
         return ZX_ERR_INTERNAL;
     }
 
     zxlogf(TRACE, "acpi: initialized\n");
-
-    zx_status_t status = install_powerbtn_handlers();
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: error %d in install_powerbtn_handlers\n", status);
-        return status;
-    }
 
     // Report current resources to kernel PCI driver
     status = pci_report_current_resources(get_root_resource());
