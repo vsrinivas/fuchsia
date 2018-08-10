@@ -20,6 +20,7 @@
 #include <fuchsia/wlan/mlme/c/fidl.h>
 
 #include <inttypes.h>
+#include <algorithm>
 #include <cstring>
 #include <utility>
 
@@ -1512,24 +1513,41 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
     assoc_ctx_ = AssocContext{};
     assoc_ctx_.ts_start = zx::time();
+    assoc_ctx_.bssid = common::MacAddr(bss_->bssid.data());
+    assoc_ctx_.aid = frame.body()->aid & kAidMask;
 
-    AssocContext from_ap{};
-
-    from_ap.bssid = common::MacAddr(bss_->bssid.data());
-    from_ap.aid = frame.body()->aid & kAidMask;
-    from_ap.cap = frame.body()->cap;
+    AssocContext ap{};
+    ap.cap = frame.body()->cap;
 
     auto ie_chains = frame.body()->elements;
     size_t ie_chains_len = frame.body_len() - frame.body()->len();
-    auto status = ParseAssocRespIe(ie_chains, ie_chains_len, &from_ap);
+    auto status = ParseAssocRespIe(ie_chains, ie_chains_len, &ap);
     if (status != ZX_OK) {
         debugf("failed to parse AssocResp. status %d\n", status);
         return status;
     }
+    debugjoin("rxed AssocResp:[%s]\n", debug::Describe(ap).c_str());
 
-    debugjoin("rxed AssocResp:[%s]\n", debug::Describe(from_ap).c_str());
+    auto ifc_info = device_->GetWlanInfo().ifc_info;
+    auto client = ToAssocContext(ifc_info, join_chan_);
+    debugjoin("from WlanInfo: [%s]\n", debug::Describe(client).c_str());
 
-    // TODO(NET-1261): Intersect capabilities and configurations
+    assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
+    SetAssocCtxSuppRates(ap, client, &assoc_ctx_.supported_rates, &assoc_ctx_.ext_supported_rates);
+
+    assoc_ctx_.has_ht_cap = ap.has_ht_cap && client.has_ht_cap;
+    if (assoc_ctx_.has_ht_cap) {
+        assoc_ctx_.ht_cap = IntersectHtCap(ap.ht_cap, client.ht_cap);
+        assoc_ctx_.has_ht_op = ap.has_ht_op;
+        if (assoc_ctx_.has_ht_op) { assoc_ctx_.ht_op = ap.ht_op; }
+    }
+    assoc_ctx_.has_vht_cap = ap.has_vht_cap && client.has_vht_cap;
+    if (assoc_ctx_.has_vht_cap) {
+        assoc_ctx_.vht_cap = IntersectVhtCap(ap.vht_cap, client.vht_cap);
+        assoc_ctx_.has_vht_cap = ap.has_vht_op;
+        if (assoc_ctx_.has_vht_op) { assoc_ctx_.vht_op = ap.vht_op; }
+    }
+    debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
 
     return ZX_OK;
 }
@@ -1617,6 +1635,57 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
     }
 
     return ZX_OK;
+}
+
+AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan) {
+    AssocContext assoc_ctx{};
+
+    assoc_ctx.cap = *reinterpret_cast<const CapabilityInfo*>(&ifc_info.caps);
+
+    auto band_info = FindBand(ifc_info, common::Is5Ghz(join_chan));
+
+    for (uint8_t rate : band_info->basic_rates) {
+        if (rate == 0) { break; }  // basic_rates has fixed-length and is "null-terminated".
+        // Not using ext_supported_rates because this assoc_ctx is temporary
+        assoc_ctx.supported_rates.push_back(rate);
+    }
+
+    if (ifc_info.supported_phys & WLAN_PHY_HT) {
+        assoc_ctx.has_ht_cap = true;
+        static_assert(sizeof(HtCapabilities) == sizeof(wlan_ht_caps_t) + sizeof(ElementHeader),
+                      "HtCap size mimatch between IE and DDK");
+        auto elem = reinterpret_cast<uint8_t*>(&assoc_ctx.ht_cap);
+        memcpy(elem + sizeof(ElementHeader), &band_info->ht_caps, sizeof(wlan_ht_caps_t));
+    }
+
+    if (band_info->vht_supported) {
+        assoc_ctx.has_vht_cap = true;
+        static_assert(sizeof(VhtCapabilities) == sizeof(wlan_vht_caps_t) + sizeof(ElementHeader),
+                      "VhtCap size mimatch between IE and DDK");
+        auto elem = reinterpret_cast<uint8_t*>(&assoc_ctx.vht_cap);
+        memcpy(elem + sizeof(ElementHeader), &band_info->vht_caps, sizeof(wlan_vht_caps_t));
+    }
+
+    return assoc_ctx;
+}
+
+void SetAssocCtxSuppRates(const AssocContext& ap, const AssocContext& client,
+                          std::vector<uint8_t>* supp_rates, std::vector<uint8_t>* ext_rates) {
+    auto cbegin1 = ap.supported_rates.cbegin();
+    auto cend1 = ap.supported_rates.cend();
+    auto cbegin2 = ap.ext_supported_rates.cbegin();
+    auto cend2 = ap.ext_supported_rates.cend();
+    std::vector<uint8_t> ap_rates;
+    std::set_union(cbegin1, cend1, cbegin2, cend2, std::back_inserter(ap_rates));
+
+    *supp_rates = IntersectRatesAp(ap_rates, client.supported_rates);
+
+    // SupportedRates Element can hold at most 8 rates. The rest go to ExtSupportedRates
+    if (supp_rates->size() > SupportedRatesElement::kMaxLen) {
+        std::move(supp_rates->cbegin() + SupportedRatesElement::kMaxLen, supp_rates->cend(),
+                  std::back_inserter(*ext_rates));
+        supp_rates->resize(SupportedRatesElement::kMaxLen);
+    }
 }
 
 }  // namespace wlan
