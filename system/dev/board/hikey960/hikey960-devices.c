@@ -167,6 +167,25 @@ static const pbus_dev_t mali_dev = {
     .bti_count = countof(mali_btis),
 };
 
+static const pbus_mmio_t clk_mmios[] = {
+    {
+        .base = MMIO_PERI_CRG_BASE,
+        .length = MMIO_PERI_CRG_LENGTH,
+    },
+    {
+        .base = MMIO_SCTRL_BASE,
+        .length = MMIO_SCTRL_LENGTH,
+    },
+};
+
+static const pbus_dev_t hi3660_clk_dev = {
+    .name = "hi3660-clk",
+    .vid = PDEV_VID_96BOARDS,
+    .did = PDEV_DID_HI3660_CLK,
+    .mmios = clk_mmios,
+    .mmio_count = countof(clk_mmios),
+};
+
 #if GPIO_TEST
 static const pbus_gpio_t gpio_test_gpios[] = {
     {
@@ -214,6 +233,11 @@ static const pbus_dev_t i2c_test_dev = {
 
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     zx_status_t status;
+
+    if ((status = pbus_device_add(&hikey->pbus, &hi3660_clk_dev, PDEV_ADD_PBUS_DEVHOST)) != ZX_OK) {
+        zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d\n", status);
+        return status;
+    }
 
     if ((status = pbus_device_add(&hikey->pbus, &dwc3_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add dwc3_dev: %d\n", status);
