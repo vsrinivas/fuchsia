@@ -62,6 +62,10 @@ if (zircon_boot_groups == "all") {
 #     will be written out (with `FILE` relative to `root_build_dir`), to be
 #     consumed by //scripts and various tools to find the relevant images.
 #
+#   json (optional)
+#     [scope] Content for images.json; `path` is added automatically.
+#     Other fields should match TODO(mcgrathr): some JSON schema.
+#
 #   sdk (optional)
 #     [string] Put this image into the SDK under this name.
 #
@@ -309,6 +313,10 @@ images += [
     public = [
       "IMAGE_QEMU_KERNEL_RAW",
     ]
+    json = {
+      name = "qemu-kernel"
+      type = "kernel"
+    }
     deps = []
     if (current_cpu == "arm64") {
       sources = [
@@ -431,6 +439,10 @@ images += [
     ]
     sdk = "bootdata-blob.bin"
     updater = "zbi"
+    json = {
+      name = "zircon-a"
+      type = "zbi"
+    }
     public = [
       "IMAGE_ZIRCONA_ZBI",
 
@@ -515,6 +527,10 @@ images += [
     deps = [
       ":fvm.blk",
     ]
+    json = {
+      name = "storage-full"
+      type = "blk"
+    }
     sdk = "fvm.blk"
     public = [
       "IMAGE_FVM_RAW",
@@ -540,6 +556,10 @@ images += [
     deps = [
       ":fvm.sparse.blk",
     ]
+    jons = {
+      name = "storage-sparse"
+      type = "blk"
+    }
     installer = "fvm.sparse.blk"
     sdk = "fvm.sparse.blk"
     public = [
@@ -581,10 +601,17 @@ generate_fvm("fvm.data.sparse.blk") {
   deps = [
     ":data.blk",
   ]
-  args = fvm_sparse_args + [ "--zxcrypt", "--data" ]
+  args = fvm_sparse_args + [
+           "--zxcrypt",
+           "--data",
+         ]
 }
 images += [
   {
+    json = {
+      name = "data-template"
+      type = "blk"
+    }
     deps = [
       ":fvm.data.sparse.blk",
     ]
@@ -612,6 +639,10 @@ zbi("netboot") {
 }
 images += [
   {
+    json = {
+      name = "netboot"
+      type = "zbi"
+    }
     public = [
       "IMAGE_NETBOOT_ZBI",
 
@@ -690,6 +721,10 @@ if (target_cpu != "arm64") {
       deps = [
         ":esp",
       ]
+      json = {
+        name = "efi"
+        type = "blk"
+      }
       installer = "local.esp.blk"
       sdk = "local.esp.blk"
       updater = "efi"
@@ -821,24 +856,36 @@ group("legacy-images") {
 }
 
 # See definition of images (above) for purpose.
+images_json = []
 image_paths = []
 foreach(image, images) {
+  image_sources = []
+  if (defined(image.sources)) {
+    image_sources += image.sources
+  } else {
+    foreach(label, image.deps) {
+      image_sources += get_target_outputs(label)
+    }
+  }
+  assert(image_sources == [ image_sources[0] ])
+  image_file = rebase_path(image_sources[0], root_build_dir)
+
+  if (defined(image.json)) {
+    images_json += [
+      {
+        forward_variables_from(image.json, "*")
+        path = image_file
+      },
+    ]
+  }
+
   if (defined(image.public)) {
     foreach(name, image.public) {
-      image_sources = []
-      if (defined(image.sources)) {
-        image_sources += image.sources
-      } else {
-        foreach(label, image.deps) {
-          image_sources += get_target_outputs(label)
-        }
-      }
-      assert(image_sources == [ image_sources[0] ])
-      image_paths +=
-          [ "${name}=" + rebase_path(image_sources[0], root_build_dir) ]
+      image_paths += [ "${name}=${image_file}" ]
     }
   }
 }
+write_file("$root_build_dir/images.json", images_json, "json")
 write_file("$root_build_dir/image_paths.sh", image_paths)
 
 ###
