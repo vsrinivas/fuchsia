@@ -12,6 +12,7 @@
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
 namespace modular {
