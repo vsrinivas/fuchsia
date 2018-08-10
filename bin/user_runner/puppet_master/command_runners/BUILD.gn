@@ -192,6 +192,10 @@ source_set("focus_mod_command_runner") {
     "focus_mod_command_runner.h",
   ]
 
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+
   deps = [
     ":command_runner",
   ]
