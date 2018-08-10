@@ -6,17 +6,62 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"app/context"
 	"syscall/zx"
+	"syscall/zx/mxerror"
 
 	"fidl/fuchsia/net"
+
+	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
+	"github.com/google/netstack/tcpip/transport/tcp"
+	"github.com/google/netstack/tcpip/transport/udp"
 )
 
 type socketProviderImpl struct{}
 
+func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
+	switch typ {
+	case net.SocketTypeStream:
+		switch protocol {
+		case net.SocketProtocolIp, net.SocketProtocolTcp:
+			return tcp.ProtocolNumber, nil
+		default:
+			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_STREAM protocol: %d", protocol)
+		}
+	case net.SocketTypeDgram:
+		switch protocol {
+		case net.SocketProtocolIp, net.SocketProtocolUdp:
+			return udp.ProtocolNumber, nil
+		case net.SocketProtocolIcmp:
+			return ipv4.PingProtocolNumber, nil
+		default:
+			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
+		}
+	}
+	return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported protocol: %d/%d", typ, protocol)
+}
+
 func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p net.SocketProtocol) (zx.Socket, int32, error) {
-	s, err := ns.socketServer.opSocket(int(d), int(t), int(p))
+	var netProto tcpip.NetworkProtocolNumber
+	switch d {
+	case net.SocketDomainInet:
+		netProto = ipv4.ProtocolNumber
+	case net.SocketDomainInet6:
+		netProto = ipv6.ProtocolNumber
+	default:
+		return zx.Socket(zx.HandleInvalid), int32(zx.ErrNotSupported), nil
+	}
+
+	transProto, err := sockProto(t, p)
+	if err != nil {
+		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
+	}
+
+	s, err := ns.socketServer.opSocket(netProto, transProto)
 	if err != nil {
 		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
 	}
@@ -31,7 +76,7 @@ func netStringToString(ns *net.String) (string, net.AddrInfoStatus) {
 	return string(v[:ns.Len]), net.AddrInfoStatusOk
 }
 
-func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, h *net.AddrInfoHints) (net.AddrInfoStatus, int32, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, error) {
+func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *net.AddrInfoHints) (net.AddrInfoStatus, int32, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, error) {
 	var node *string
 	if n != nil {
 		str, status := netStringToString(n)
@@ -49,24 +94,77 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, h *net.A
 		service = &str
 	}
 
-	status, addrInfo := ns.socketServer.GetAddrInfo(node, service, h)
+	if hints == nil {
+		hints = &net.AddrInfoHints{}
+	}
+	if hints.SockType == 0 {
+		hints.SockType = SOCK_STREAM
+	}
+	if hints.Protocol == 0 {
+		if hints.SockType == SOCK_STREAM {
+			hints.Protocol = IPPROTO_TCP
+		} else if hints.SockType == SOCK_DGRAM {
+			hints.Protocol = IPPROTO_UDP
+		}
+	}
+
+	transProto, err := sockProto(net.SocketType(hints.SockType), net.SocketProtocol(hints.Protocol))
+	if err != nil {
+		if debug {
+			log.Printf("getaddrinfo: sockProto: %v", err)
+		}
+		return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
+	}
+
+	status, addrs, port := ns.socketServer.GetAddrInfo(node, service, transProto)
 	if status != 0 {
 		return status, 0, nil, nil, nil, nil, nil
 	}
+	if len(addrs) == 0 || len(addrs[0]) == 0 {
+		return net.AddrInfoStatusNoName, 0, nil, nil, nil, nil, nil
+	}
 
-	nai := len(addrInfo)
-	if nai > 4 {
-		nai = 4
-	}
-	ai := make([]*net.AddrInfo, 4)
-	for i := 0; i < 4; i++ {
-		if i < nai {
-			ai[i] = addrInfo[i]
-		} else {
-			ai[i] = nil
+	// Reply up to 4 addresses.
+	num := int32(0)
+	results := make([]*net.AddrInfo, 4)
+	values := make([]net.AddrInfo, 4)
+	for i := 0; i < len(addrs) && i < 4; i++ {
+		ai := &values[i]
+		*ai = net.AddrInfo{
+			Flags:    0,
+			SockType: hints.SockType,
+			Protocol: hints.Protocol,
+			Port:     port,
 		}
+
+		switch len(addrs[i]) {
+		case 4:
+			if hints.Family != AF_UNSPEC && hints.Family != AF_INET {
+				continue
+			}
+			ai.Family = AF_INET
+			ai.Addr.Len = 4
+			copy(ai.Addr.Val[:4], addrs[i])
+		case 16:
+			if hints.Family != AF_UNSPEC && hints.Family != AF_INET6 {
+				continue
+			}
+			ai.Family = AF_INET6
+			ai.Addr.Len = 16
+			copy(ai.Addr.Val[:16], addrs[i])
+		default:
+			if debug {
+				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addrs[i]))
+			}
+			// TODO: failing to resolve is a valid reply. fill out retval
+			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
+		}
+
+		results[num] = ai
+		num++
 	}
-	return 0, int32(nai), ai[0], ai[1], ai[2], ai[3], nil
+
+	return 0, num, results[0], results[1], results[2], results[3], nil
 }
 
 var socketProvider *net.LegacySocketProviderService

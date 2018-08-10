@@ -599,36 +599,21 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(domain, typ, protocol int) (zx.Socket, error) {
-	var n tcpip.NetworkProtocolNumber
-	switch domain {
-	case AF_INET:
-		n = ipv4.ProtocolNumber
-	case AF_INET6:
-		n = ipv6.ProtocolNumber
-	default:
-		return zx.Socket(zx.HandleInvalid), mxerror.Errorf(zx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
-	}
-
-	transProto, err := sockProto(typ, protocol)
-	if err != nil {
-		return zx.Socket(zx.HandleInvalid), err
-	}
-
+func (s *socketServer) opSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber) (zx.Socket, error) {
 	wq := new(waiter.Queue)
-	ep, e := s.stack.NewEndpoint(transProto, n, wq)
+	ep, e := s.stack.NewEndpoint(transProto, netProto, wq)
 	if e != nil {
 		if debug {
 			log.Printf("socket: new endpoint: %v", e)
 		}
-		return zx.Socket(zx.HandleInvalid), mxerror.Errorf(zx.ErrInternal, "socket: new endpoint: %v", err)
+		return zx.Socket(zx.HandleInvalid), mxerror.Errorf(zx.ErrInternal, "socket: new endpoint: %v", e)
 	}
-	if n == ipv6.ProtocolNumber {
+	if netProto == ipv6.ProtocolNumber {
 		if err := ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	_, peerS, err := s.newIostate(n, transProto, wq, ep, false)
+	_, peerS, err := s.newIostate(netProto, transProto, wq, ep, false)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -637,28 +622,6 @@ func (s *socketServer) opSocket(domain, typ, protocol int) (zx.Socket, error) {
 	}
 
 	return peerS, nil
-}
-
-func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
-	switch typ {
-	case SOCK_STREAM:
-		switch protocol {
-		case IPPROTO_IP, IPPROTO_TCP:
-			return tcp.ProtocolNumber, nil
-		default:
-			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_STREAM protocol: %d", protocol)
-		}
-	case SOCK_DGRAM:
-		switch protocol {
-		case IPPROTO_IP, IPPROTO_UDP:
-			return udp.ProtocolNumber, nil
-		case IPPROTO_ICMP:
-			return ipv4.PingProtocolNumber, nil
-		default:
-			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
-		}
-	}
-	return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported protocol: %d/%d", typ, protocol)
 }
 
 func errStatus(err error) zx.Status {
@@ -1199,69 +1162,27 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	return zx.ErrOk
 }
 
-func addrInfoStatusToEAI(status net.AddrInfoStatus) int32 {
-	switch status {
-	case net.AddrInfoStatusBadFlags:
-		return EAI_BADFLAGS
-	case net.AddrInfoStatusNoName:
-		return EAI_NONAME
-	case net.AddrInfoStatusAgain:
-		return EAI_AGAIN
-	case net.AddrInfoStatusFail:
-		return EAI_FAIL
-	case net.AddrInfoStatusNoData:
-		return EAI_NONAME
-	case net.AddrInfoStatusBufferOverflow:
-		return EAI_OVERFLOW
-	case net.AddrInfoStatusSystemError:
-		return EAI_SYSTEM
-	}
-	return 0
-}
-
-func (s *socketServer) GetAddrInfo(node *string, service *string, hints *net.AddrInfoHints) (net.AddrInfoStatus, []*net.AddrInfo) {
+func (s *socketServer) GetAddrInfo(node *string, service *string, transProto tcpip.TransportProtocolNumber) (status net.AddrInfoStatus, addrs []tcpip.Address, port uint16) {
 	s.mu.Lock()
 	dnsClient := s.dnsClient
 	s.mu.Unlock()
 
 	if dnsClient == nil {
 		log.Println("getaddrinfo called, but no DNS client available.")
-		return net.AddrInfoStatusFail, nil
+		return net.AddrInfoStatusFail, nil, 0
 	}
 
-	if hints == nil {
-		hints = &net.AddrInfoHints{}
-	}
-	if hints.SockType == 0 {
-		hints.SockType = SOCK_STREAM
-	}
-	if hints.Protocol == 0 {
-		if hints.SockType == SOCK_STREAM {
-			hints.Protocol = IPPROTO_TCP
-		} else if hints.SockType == SOCK_DGRAM {
-			hints.Protocol = IPPROTO_UDP
-		}
-	}
-
-	t, err := sockProto(int(hints.SockType), int(hints.Protocol))
-	if err != nil {
-		if debug {
-			log.Printf("getaddrinfo: sockProto: %v", err)
-		}
-		return net.AddrInfoStatusSystemError, nil
-	}
-	var port uint16
+	var err error
 	if service != nil && *service != "" {
-		port, err = serviceLookup(*service, t)
+		port, err = serviceLookup(*service, transProto)
 		if err != nil {
 			if debug {
 				log.Printf("getaddrinfo: serviceLookup: %v", err)
 			}
-			return net.AddrInfoStatusSystemError, nil
+			return net.AddrInfoStatusSystemError, nil, 0
 		}
 	}
 
-	var addrs []tcpip.Address
 	if node == nil {
 		addrs = append(addrs, "\x00\x00\x00\x00")
 	} else {
@@ -1278,49 +1199,7 @@ func (s *socketServer) GetAddrInfo(node *string, service *string, hints *net.Add
 		}
 	}
 
-	if len(addrs) == 0 || len(addrs[0]) == 0 {
-		return net.AddrInfoStatusNoName, nil
-	}
-
-	n := 0
-	addrInfo := make([]*net.AddrInfo, n, len(addrs))
-	for i := 0; i < len(addrs); i++ {
-		ai := &net.AddrInfo{
-			Flags:    0,
-			SockType: hints.SockType,
-			Protocol: hints.Protocol,
-			Port:     port,
-		}
-
-		switch len(addrs[i]) {
-		case 4:
-			if hints.Family != AF_UNSPEC && hints.Family != AF_INET {
-				continue
-			}
-			ai.Family = AF_INET
-			ai.Addr.Len = 4
-			copy(ai.Addr.Val[:4], addrs[i])
-		case 16:
-			if hints.Family != AF_UNSPEC && hints.Family != AF_INET6 {
-				continue
-			}
-			ai.Family = AF_INET6
-			ai.Addr.Len = 16
-			copy(ai.Addr.Val[:16], addrs[i])
-		default:
-			if debug {
-				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addrs[i]))
-			}
-			// TODO: failing to resolve is a valid reply. fill out retval
-			return net.AddrInfoStatusSystemError, nil
-		}
-
-		n++
-		addrInfo = addrInfo[:n]
-		addrInfo[n-1] = ai
-	}
-
-	return net.AddrInfoStatusOk, addrInfo
+	return net.AddrInfoStatusOk, addrs, port
 }
 
 func (s *socketServer) opFcntl(ios *iostate, msg *zxsocket.Msg) zx.Status {
