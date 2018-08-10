@@ -13,10 +13,11 @@
 namespace thermal {
 
 zx_status_t AmlThermal::Create(zx_device_t* device) {
-    auto tsensor = fbl::make_unique<thermal::AmlTSensor>();
-    // Create a PWM period = 1250, hwpwm - 1 to signify using PWM_D from PWM_C/D
-    // Source: Amlogic SDK
-    auto pwm = fbl::make_unique<thermal::AmlPwm>(1250, 1);
+    fbl::AllocChecker ac;
+    auto tsensor = fbl::make_unique_checked<thermal::AmlTSensor>(&ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     // Initialize Temperature Sensor.
     zx_status_t status = tsensor->InitSensor(device);
@@ -25,15 +26,26 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
         return status;
     }
 
-    // Initialize the PWM.
-    status = pwm->Init(device);
+    // Create the voltage regulator.
+    auto voltage_regulator = fbl::make_unique_checked<thermal::AmlVoltageRegulator>(&ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // Initialize Temperature Sensor.
+    status = voltage_regulator->Init(device);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-thermal: Could not inititalize PWM: %d\n", status);
+        zxlogf(ERROR, "aml-thermal: Could not inititalize Voltage Regulator: %d\n", status);
         return status;
     }
 
-    auto thermal_device = fbl::make_unique<thermal::AmlThermal>(device, fbl::move(tsensor),
-                                                                fbl::move(pwm));
+    auto thermal_device = fbl::make_unique_checked<thermal::
+                                                       AmlThermal>(&ac, device,
+                                                                   fbl::move(tsensor),
+                                                                   fbl::move(voltage_regulator));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     status = thermal_device->DdkAdd("thermal");
     if (status != ZX_OK) {

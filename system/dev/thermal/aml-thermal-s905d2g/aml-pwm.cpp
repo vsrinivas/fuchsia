@@ -14,11 +14,15 @@
 
 namespace thermal {
 
+namespace {
+
 // MMIO index.
-static constexpr uint32_t kPwmMmio = 3;
+constexpr uint32_t kPwmMmio = 3;
 
 // Input clock frequency
-static constexpr uint32_t kXtalFreq = 24000000;
+constexpr uint32_t kXtalFreq = 24000000;
+
+} // namespace
 
 zx_status_t AmlPwm::Init(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,

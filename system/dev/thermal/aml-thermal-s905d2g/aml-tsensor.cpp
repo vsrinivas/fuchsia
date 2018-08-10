@@ -13,19 +13,21 @@
 
 namespace thermal {
 
-// clang-format off
+namespace {
+
 // MMIO indexes.
-static constexpr uint32_t kPllMmio      = 0;
-static constexpr uint32_t kAoMmio       = 1;
-static constexpr uint32_t kHiuMmio      = 2;
+constexpr uint32_t kPllMmio = 0;
+constexpr uint32_t kAoMmio = 1;
+constexpr uint32_t kHiuMmio = 2;
 
 // Thermal calibration magic numbers from uboot.
-static constexpr int32_t kCalA_         = 324;
-static constexpr int32_t kCalB_         = 424;
-static constexpr int32_t kCalC_         = 3159;
-static constexpr int32_t kCalD_         = 9411;
-static constexpr uint32_t kRebootTemp   = 130000;
-// clang-format on
+constexpr int32_t kCalA_ = 324;
+constexpr int32_t kCalB_ = 424;
+constexpr int32_t kCalC_ = 3159;
+constexpr int32_t kCalD_ = 9411;
+constexpr uint32_t kRebootTemp = 130000;
+
+} // namespace
 
 zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,

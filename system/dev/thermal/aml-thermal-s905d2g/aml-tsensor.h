@@ -13,9 +13,13 @@
 
 namespace thermal {
 
+// This class represents a temperature sensor
+// which is on the S905D2 core.
 class AmlTSensor {
 
 public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
+    AmlTSensor(){};
     uint32_t ReadTemperature();
     zx_status_t InitSensor(zx_device_t* parent);
     ~AmlTSensor();

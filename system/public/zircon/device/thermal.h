@@ -6,10 +6,19 @@
 
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/scpi.h>
+
+// Unique numbers to represent correct metadata.
+// 0x564f4c00 is the string representation of VOL.
+#define VOLTAGE_DUTY_CYCLE_METADATA          (0x564f4c00 | DEVICE_METADATA_PRIVATE)
+
+// 0x54485200 is the string representation of THR.
+#define THERMAL_CONFIG_METADATA              (0x54485200 | DEVICE_METADATA_PRIVATE)
 
 #define MAX_TRIP_POINTS                      16
 #define MAX_DVFS_DOMAINS                     2
+#define MAX_VOLTAGE_TABLE                    31
 // temperature units are in 10th of a degree kelvin
 typedef struct {
     // state is a bitmask
@@ -79,6 +88,16 @@ typedef struct {
     uint16_t op_idx;
     uint32_t power_domain;
 } dvfs_info_t;
+
+typedef struct {
+    uint32_t microvolt;
+    uint32_t duty_cycle;
+} voltage_table_t;
+
+typedef struct {
+    scpi_opp_entry_t opps[MAX_TRIP_POINTS];
+    voltage_table_t voltage_table[MAX_VOLTAGE_TABLE];
+} opp_info_t;
 
 // Get thermal info
 #define IOCTL_THERMAL_GET_INFO \

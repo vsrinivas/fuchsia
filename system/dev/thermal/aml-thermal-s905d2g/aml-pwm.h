@@ -13,8 +13,14 @@
 
 namespace thermal {
 
+// This class represents a generic PWM
+// which provides interface to set the
+// period and configure to appropriate
+// duty cycle.
 class AmlPwm {
+
 public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlPwm);
     AmlPwm(uint32_t period, uint32_t hwpwm)
         : period_(period), hwpwm_(hwpwm){};
     zx_status_t Init(zx_device_t* parent);

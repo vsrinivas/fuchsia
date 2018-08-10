@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-thermal.cpp \
     $(LOCAL_DIR)/aml-tsensor.cpp \
     $(LOCAL_DIR)/aml-pwm.cpp \
+    $(LOCAL_DIR)/aml-voltage.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
@@ -22,7 +23,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/hwreg \
-
 
 MODULE_LIBS := \
     system/ulib/c \
