@@ -20,6 +20,7 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -46,25 +47,27 @@ class CrashpadAnalyzer {
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"crash"});
+
   const char filepath[] = "/boot/log/last-panic.txt";
   fxl::UniqueFD fd(open(filepath, O_RDONLY));
   if (!fd.is_valid()) {
-    FXL_LOG(INFO) << "no kernel crash log found";
+    FX_LOGS(INFO) << "no kernel crash log found";
     return 0;
   }
 
   fsl::SizedVmo crashlog_vmo;
   if (!fsl::VmoFromFd(std::move(fd), &crashlog_vmo)) {
-    FXL_LOG(ERROR) << "error loading kernel crash log into VMO";
+    FX_LOGS(ERROR) << "error loading kernel crash log into VMO";
     return 1;
   }
 
   std::string crashlog_str;
   if (!fsl::StringFromVmo(crashlog_vmo, &crashlog_str)) {
-    FXL_LOG(ERROR) << "error converting kernel crash log VMO to string";
+    FX_LOGS(ERROR) << "error converting kernel crash log VMO to string";
     return 1;
   }
-  FXL_LOG(INFO) << "dumping log from previous kernel panic:\n" << crashlog_str;
+  FX_LOGS(INFO) << "dumping log from previous kernel panic:\n" << crashlog_str;
 
 #if USE_CRASHPAD
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

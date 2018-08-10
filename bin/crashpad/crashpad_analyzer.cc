@@ -11,6 +11,7 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/trim.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
@@ -75,14 +76,14 @@ std::string GetSystemLogToFile() {
   char filename[] = "/data/crashes/log.XXXXXX";
   base::ScopedFD fd(mkstemp(filename));
   if (fd.get() < 0) {
-    FXL_LOG(ERROR) << "could not create temp file";
+    FX_LOGS(ERROR) << "could not create temp file";
     return std::string();
   }
 
   zx::log log;
   zx_status_t status = zx::log::create(ZX_LOG_FLAG_READABLE, &log);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::log::create failed " << status;
+    FX_LOGS(ERROR) << "zx::log::create failed " << status;
     return std::string();
   }
 
@@ -106,7 +107,7 @@ std::string GetVersion() {
   const char kFilepath[] = "/system/data/build/last-update";
   std::string build_timestamp;
   if (!files::ReadFileToString(kFilepath, &build_timestamp)) {
-    FXL_LOG(ERROR) << "Failed to read build timestamp from '" << kFilepath
+    FX_LOGS(ERROR) << "Failed to read build timestamp from '" << kFilepath
                    << "'.";
     return "unknown";
   }
@@ -211,7 +212,7 @@ int Process(fuchsia::mem::Buffer crashlog) {
   std::unique_ptr<void, decltype(&free)> buffer(malloc(crashlog.size), &free);
   zx_status_t status = crashlog.vmo.read(buffer.get(), 0u, crashlog.size);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "error writing VMO crashlog to buffer: "
+    FX_LOGS(ERROR) << "error writing VMO crashlog to buffer: "
                    << zx_status_get_string(status);
     return EXIT_FAILURE;
   }
@@ -264,7 +265,7 @@ int Process(fuchsia::mem::Buffer crashlog) {
     return EXIT_FAILURE;
   }
   database->RecordUploadComplete(std::move(upload_report), server_report_id);
-  FXL_LOG(INFO) << "Successfully uploaded crash report at "
+  FX_LOGS(INFO) << "Successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;
 
@@ -285,12 +286,14 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
                ProcessCallback callback) override {
     callback();
     if (::Process(fbl::move(crashlog)) == EXIT_FAILURE) {
-      FXL_LOG(ERROR) << "Failed to process VMO crashlog. Won't retry.";
+      FX_LOGS(ERROR) << "Failed to process VMO crashlog. Won't retry.";
     }
   }
 };
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"crash"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> app_context(
       component::StartupContext::CreateFromStartupInfo());

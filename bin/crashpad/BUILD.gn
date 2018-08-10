@@ -9,6 +9,7 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/syslog/cpp",
     "//third_party/crashpad/client",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/minidump",
