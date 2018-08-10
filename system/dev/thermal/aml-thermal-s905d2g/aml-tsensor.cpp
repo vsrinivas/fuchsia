@@ -175,7 +175,7 @@ zx_status_t AmlTSensor::InitSensor(zx_device_t* parent) {
     return ZX_OK;
 }
 
-void AmlTSensor::ShutDown() {
+AmlTSensor::~AmlTSensor() {
     tsensor_irq_.destroy();
     io_buffer_release(&pll_mmio_);
     io_buffer_release(&ao_mmio_);

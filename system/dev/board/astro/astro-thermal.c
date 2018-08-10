@@ -4,8 +4,10 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
+#include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
@@ -22,8 +24,11 @@ static const pbus_mmio_t thermal_mmios[] = {
     {
         .base = S905D2_HIU_BASE,
         .length = S905D2_HIU_LENGTH,
-    }
-};
+    },
+    {
+        .base = S905D2_AO_PWM_CD_BASE,
+        .length = S905D2_AO_PWM_LENGTH,
+    }};
 
 static const pbus_irq_t thermal_irqs[] = {
     {
@@ -44,8 +49,21 @@ static pbus_dev_t thermal_dev = {
 };
 
 zx_status_t aml_thermal_init(aml_bus_t* bus) {
+    // Configure the GPIO to be Output & set it to alternate
+    // function 3 which puts in PWM_D mode
+    zx_status_t status = gpio_config(&bus->gpio, S905D2_PWM_D, GPIO_DIR_OUT);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_thermal_init: gpio_config failed: %d\n", status);
+        return status;
+    }
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &thermal_dev, 0);
+    status = gpio_set_alt_function(&bus->gpio, S905D2_PWM_D, S905D2_PWM_D_FN);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_thermal_init: gpio_set_alt_function failed: %d\n", status);
+        return status;
+    }
+
+    status = pbus_device_add(&bus->pbus, &thermal_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_thermal_init: pbus_device_add failed: %d\n", status);
         return status;

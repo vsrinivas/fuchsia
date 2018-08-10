@@ -132,6 +132,10 @@
 #define S905D2_PWM_F2                 0x6406
 #define S905D2_PWM_BLINK_EF           0x6407
 
+#define S905D2_AO_PWM_AB_BASE         0xFF807000
+#define S905D2_AO_PWM_CD_BASE         0xFF802000
+#define S905D2_AO_PWM_LENGTH          0x1000
+
 // Datasheet has incorrect number, but linux device tree seems correct.
 #define S905D2_VIU1_VSYNC_IRQ           35
 #define S905D2_DEMUX_IRQ                55
@@ -184,3 +188,7 @@
 #define S905D2_UART_CTS_A_FN          1
 #define S905D2_UART_RTS_A             S905D2_GPIOX(15)
 #define S905D2_UART_RTS_A_FN          1
+
+// Alternate function for PWM
+#define S905D2_PWM_D                  S905D2_GPIOE(1)
+#define S905D2_PWM_D_FN               3

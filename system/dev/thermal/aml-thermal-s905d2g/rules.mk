@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-thermal.c \
     $(LOCAL_DIR)/aml-thermal.cpp \
     $(LOCAL_DIR)/aml-tsensor.cpp \
+    $(LOCAL_DIR)/aml-pwm.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

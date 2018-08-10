@@ -13,25 +13,33 @@
 namespace thermal {
 
 zx_status_t AmlThermal::Create(zx_device_t* device) {
-    auto thermal_device = fbl::make_unique<AmlThermal>(device);
-    thermal_device->tsensor_ = fbl::make_unique<thermal::AmlTSensor>();
-
-    auto cleanup = fbl::MakeAutoCall([&]() { thermal_device->tsensor_->ShutDown(); });
+    auto tsensor = fbl::make_unique<thermal::AmlTSensor>();
+    // Create a PWM period = 1250, hwpwm - 1 to signify using PWM_D from PWM_C/D
+    // Source: Amlogic SDK
+    auto pwm = fbl::make_unique<thermal::AmlPwm>(1250, 1);
 
     // Initialize Temperature Sensor.
-    zx_status_t status = thermal_device->tsensor_->InitSensor(thermal_device->parent_);
+    zx_status_t status = tsensor->InitSensor(device);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-thermal: Could not inititalize Temperature Sensor: %d\n", status);
         return status;
     }
+
+    // Initialize the PWM.
+    status = pwm->Init(device);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-thermal: Could not inititalize PWM: %d\n", status);
+        return status;
+    }
+
+    auto thermal_device = fbl::make_unique<thermal::AmlThermal>(device, fbl::move(tsensor),
+                                                                fbl::move(pwm));
 
     status = thermal_device->DdkAdd("thermal");
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-thermal: Could not create thermal device: %d\n", status);
         return status;
     }
-
-    cleanup.cancel();
 
     // devmgr is now in charge of the memory for dev.
     __UNUSED auto ptr = thermal_device.release();
@@ -56,7 +64,6 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 }
 
 void AmlThermal::DdkUnbind() {
-    tsensor_->ShutDown();
     DdkRemove();
 }
 
