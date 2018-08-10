@@ -8,7 +8,7 @@ $VerifiedPlatform mac-amd64
 $ParanoidMode CheckPresence
 
 # GN
-gn/gn/${platform} git_revision:091712940324bb8cfb48340e00785118ee88141a
+gn/gn/${platform} git_revision:f9dbfd121d75ea8131a1302ec1dbbcf0aa30d9f1
 
 # vpython
 infra/tools/luci/vpython/${platform} git_revision:b6cdec8586c9f8d3d728b1bc0bd4331330ba66fc
