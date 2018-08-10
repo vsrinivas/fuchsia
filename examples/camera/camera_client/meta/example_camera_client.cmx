@@ -4,6 +4,6 @@
     },
     "sandbox": {
         "dev": [ "class/camera" ],
-        "features": [ "persistent-storage" ]
+        "features": [ "deprecated-all-services", "persistent-storage" ]
     }
 }

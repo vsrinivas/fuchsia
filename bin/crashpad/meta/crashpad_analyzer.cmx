@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "persistent-storage", "root-ssl-certificates" ],
+        "features": [ "deprecated-all-services", "persistent-storage", "root-ssl-certificates" ],
         "system": [ "data/build" ]
     }
 }

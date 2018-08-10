@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "shell", "persistent-storage" ]
+        "features": [ "deprecated-all-services", "shell", "persistent-storage" ]
     }
 }

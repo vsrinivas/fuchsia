@@ -6,6 +6,6 @@
         "dev": [
             "class/display-controller"
         ],
-        "features": [ "vulkan" ]
+        "features": [ "deprecated-all-services", "vulkan" ]
     }
 }

@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "vulkan", "system-temp" ],
+        "features": [ "deprecated-all-services", "vulkan", "system-temp" ],
         "dev": [ "class/display-controller" ]
     }
 }

@@ -3,6 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [ "deprecated-all-services" ],
         "dev": [ "class/bt-host" ]
     }
 }

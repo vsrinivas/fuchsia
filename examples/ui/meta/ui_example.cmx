@@ -3,5 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [ "deprecated-all-services" ],
     }
 }

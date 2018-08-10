@@ -3,6 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [ "deprecated-all-services" ],
         "system": [ "data/vendor/fonts" ]
     }
 }

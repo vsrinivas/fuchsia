@@ -1,6 +1,9 @@
 {
-  "program": {
-    "binary": "bin/app"
-  },
-  "runner": "appmgr_mock_runner"
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "appmgr_mock_runner",
+    "sandbox": {
+        "features": [ "deprecated-all-services" ]
+    }
 }

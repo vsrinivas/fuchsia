@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "shell" ],
+        "features": [ "deprecated-all-services", "shell" ],
         "pkgfs": [ "packages" ]
     }
 }

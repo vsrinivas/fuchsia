@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-      "features": [ "system-temp" ]
+      "features": [ "deprecated-all-services", "system-temp" ]
     }
 }

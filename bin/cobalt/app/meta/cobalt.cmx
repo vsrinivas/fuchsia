@@ -4,6 +4,6 @@
     },
     "sandbox": {
         "pkgfs": [ "packages" ],
-        "features": [ "root-ssl-certificates" ]
+        "features": [ "deprecated-all-services", "root-ssl-certificates" ]
     }
 }

@@ -1,5 +1,8 @@
 {
     "program": {
         "binary": "test/hello_world_test"
+    },
+    "sandbox": {
+        "features": [ "deprecated-all-services" ]
     }
 }

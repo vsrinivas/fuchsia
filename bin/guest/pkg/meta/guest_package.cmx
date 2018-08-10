@@ -2,5 +2,8 @@
     "program": {
         "binary": "bin/app"
     },
-    "runner": "guest_runner"
+    "runner": "guest_runner",
+    "sandbox": {
+        "features": [ "deprecated-all-services" ]
+    }
 }

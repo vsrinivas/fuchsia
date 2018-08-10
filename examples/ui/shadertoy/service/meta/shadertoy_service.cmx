@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "vulkan" ]
+        "features": [ "deprecated-all-services", "vulkan" ]
     }
 }
 
