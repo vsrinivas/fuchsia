@@ -63,9 +63,15 @@ class Server final {
   ServiceHandle GetNextHandle();
 
   // Performs a Service Search, returning any service record that contains
-  // any UUID from the |search_pattern|
+  // all UUID from the |search_pattern|
   ServiceSearchResponse SearchServices(
-      const std::unordered_set<common::UUID>& pattern);
+      const std::unordered_set<common::UUID>& pattern) const;
+
+  // Gets Service Attributes in the |attribute_ranges| from the service record
+  // with |handle|.
+  ServiceAttributeResponse GetServiceAttributes(
+      ServiceHandle handle,
+      const std::list<ServiceAttributeRequest::AttributeRange>& ranges) const;
 
   // l2cap::channel callbacks
   void OnChannelClosed(const std::string& peer_id);

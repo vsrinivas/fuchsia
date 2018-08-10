@@ -68,7 +68,8 @@ void Request::SetContinuationState(const ByteBuffer& buf) {
   if (cont_state_[0] == 0) {
     return;
   }
-  size_t copied = buf.Copy(&cont_state_, sizeof(uint8_t), buf.size());
+  auto v = cont_state_.mutable_view(sizeof(uint8_t));
+  size_t copied = buf.Copy(&v);
   ZX_DEBUG_ASSERT(copied == buf.size());
 }
 
@@ -180,8 +181,8 @@ common::ByteBufferPtr ServiceSearchRequest::GetPDU(TransactionId tid) const {
   auto write_view = buf->mutable_view(written);
   written += search_pattern.Write(&write_view);
   // Write MaxServiceRecordCount
-  uint16_t le = htobe16(max_service_record_count_);
-  buf->Write(reinterpret_cast<uint8_t*>(&le), sizeof(uint16_t), written);
+  uint16_t be = htobe16(max_service_record_count_);
+  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t), written);
   written += sizeof(uint16_t);
   // Write Continuation State
   write_view = buf->mutable_view(written);
@@ -300,6 +301,371 @@ common::MutableByteBufferPtr ServiceSearchResponse::GetPDU(
   uint8_t info_length = 0;
   buf->Write(&info_length, sizeof(uint8_t), written);
   written += sizeof(uint8_t);
+  ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
+  return buf;
+}
+
+constexpr size_t kMinMaximumAttributeByteCount = 0x0007;
+
+ServiceAttributeRequest::ServiceAttributeRequest()
+    : service_record_handle_(0), max_attribute_byte_count_(0xFFFF) {}
+
+ServiceAttributeRequest::ServiceAttributeRequest(
+    const common::ByteBuffer& params) {
+  if (params.size() < sizeof(uint32_t) + sizeof(uint16_t)) {
+    bt_log(SPEW, "sdp", "packet too small for ServiceAttributeRequest");
+    max_attribute_byte_count_ = 0;
+    return;
+  }
+
+  service_record_handle_ = betoh32(params.As<uint32_t>());
+  size_t read_size = sizeof(uint32_t);
+  max_attribute_byte_count_ = betoh16(params.view(read_size).As<uint16_t>());
+  if (max_attribute_byte_count_ < kMinMaximumAttributeByteCount) {
+    bt_log(SPEW, "sdp", "max attribute byte count too small (%d < %d)",
+           max_attribute_byte_count_, kMinMaximumAttributeByteCount);
+    return;
+  }
+  read_size += sizeof(uint16_t);
+
+  // A sequence where every element is either:
+  // - 16-bit unsigned integer representing a specific Attribute ID
+  // - 32-bit unsigned integer which the high order 16-bits represent a
+  //   beginning attribute ID and the low order 16-bits represent a
+  //   ending attribute ID of a range.
+  DataElement attribute_list_elem;
+  size_t elem_size =
+      DataElement::Read(&attribute_list_elem, params.view(read_size));
+  if ((elem_size == 0) ||
+      (attribute_list_elem.type() != DataElement::Type::kSequence)) {
+    bt_log(SPEW, "sdp", "failed to parse attribute ranges, or not a sequence");
+    max_attribute_byte_count_ = 0;
+    return;
+  }
+  read_size += elem_size;
+  uint16_t last_attr = 0x0000;
+  const DataElement* it = attribute_list_elem.At(0);
+  for (size_t i = 0; it != nullptr; it = attribute_list_elem.At(++i)) {
+    if (it->type() != DataElement::Type::kUnsignedInt) {
+      bt_log(SPEW, "sdp", "attribute range sequence invalid element type");
+      attribute_ranges_.clear();
+      return;
+    }
+    if (it->size() == DataElement::Size::kTwoBytes) {
+      uint16_t single_attr_id = *(it->Get<uint16_t>());
+      if (single_attr_id < last_attr) {
+        attribute_ranges_.clear();
+        return;
+      }
+      attribute_ranges_.emplace_back(single_attr_id, single_attr_id);
+      last_attr = single_attr_id;
+    } else if (it->size() == DataElement::Size::kFourBytes) {
+      uint32_t attr_range = *(it->Get<uint32_t>());
+      uint16_t start_id = attr_range >> 16;
+      uint16_t end_id = attr_range & 0xFFFF;
+      if ((start_id < last_attr) || (end_id < start_id)) {
+        attribute_ranges_.clear();
+        return;
+      }
+      attribute_ranges_.emplace_back(start_id, end_id);
+      last_attr = end_id;
+    } else {
+      attribute_ranges_.clear();
+      return;
+    }
+  }
+  if (!ParseContinuationState(params.view(read_size))) {
+    attribute_ranges_.clear();
+    return;
+  }
+  ZX_DEBUG_ASSERT(valid());
+}
+
+bool ServiceAttributeRequest::valid() const {
+  return (max_attribute_byte_count_ >= kMinMaximumAttributeByteCount) &&
+         (attribute_ranges_.size() > 0);
+}
+
+common::ByteBufferPtr ServiceAttributeRequest::GetPDU(TransactionId tid) const {
+  if (!valid()) {
+    return nullptr;
+  }
+
+  size_t size = sizeof(ServiceHandle) + sizeof(uint16_t) + sizeof(uint8_t) +
+                cont_info_size();
+
+  std::vector<DataElement> attribute_list(attribute_ranges_.size());
+  size_t idx = 0;
+  for (const auto& it : attribute_ranges_) {
+    if (it.start == it.end) {
+      attribute_list.at(idx).Set<uint16_t>(it.start);
+    } else {
+      uint32_t attr_range = (static_cast<uint32_t>(it.start) << 16);
+      attr_range |= it.end;
+      attribute_list.at(idx).Set<uint32_t>(attr_range);
+    }
+    idx++;
+  }
+
+  DataElement attribute_list_elem(std::move(attribute_list));
+  size += attribute_list_elem.WriteSize();
+
+  auto buf = GetNewPDU(kServiceAttributeRequest, tid, size);
+  if (!buf) {
+    return nullptr;
+  }
+
+  uint32_t be32 = htobe32(service_record_handle_);
+  buf->Write(reinterpret_cast<uint8_t*>(&be32), sizeof(uint32_t));
+  size_t written = sizeof(uint32_t);
+
+  uint16_t be = htobe16(max_attribute_byte_count_);
+  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t));
+  written += sizeof(uint16_t);
+
+  auto mut_view = buf->mutable_view(written);
+  written += attribute_list_elem.Write(&mut_view);
+
+  mut_view = buf->mutable_view(written);
+  written += WriteContinuationState(&mut_view);
+  ZX_DEBUG_ASSERT(written == size);
+  return buf;
+}
+
+void ServiceAttributeRequest::AddAttribute(AttributeId id) {
+  auto it = attribute_ranges_.begin();
+  for (; it != attribute_ranges_.end(); ++it) {
+    if (it->start <= id && it->end >= id) {
+      // Already included.  Done.
+      return;
+    } else if (it->start == id + 1) {
+      // Extend this range to include this.
+      it->start = id;
+      break;
+    } else if (it->end == id - 1) {
+      it->end = id;
+      break;
+    } else if (it->end > id) {
+      // This is where a new range should go.
+      attribute_ranges_.emplace(it, id, id);
+      break;
+    }
+  }
+  if (it == attribute_ranges_.end()) {
+    // It must be on the end.
+    attribute_ranges_.emplace_back(id, id);
+  }
+  // Merge any adjacent ranges with no gaps
+  for (it = attribute_ranges_.begin(); it != attribute_ranges_.end();) {
+    auto next = it;
+    next++;
+    if (next == attribute_ranges_.end()) {
+      return;
+    }
+    if (it->end >= (next->start - 1)) {
+      next->start = it->start;
+      it = attribute_ranges_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void ServiceAttributeRequest::AddAttributeRange(AttributeId start,
+                                                AttributeId end) {
+  auto it = attribute_ranges_.begin();
+  // Put the range in the list (possibly overlapping other ranges), with the
+  // start in order.
+  for (; it != attribute_ranges_.end(); ++it) {
+    if (start < it->start) {
+      // This is where it should go.
+      attribute_ranges_.emplace(it, start, end);
+    }
+  }
+  if (it == attribute_ranges_.end()) {
+    // It must be on the end.
+    attribute_ranges_.emplace_back(start, end);
+  }
+  // Merge any overlapping or adjacent ranges with no gaps.
+  for (it = attribute_ranges_.begin(); it != attribute_ranges_.end();) {
+    auto next = it;
+    next++;
+    if (next == attribute_ranges_.end()) {
+      return;
+    }
+    if (it->end >= (next->start - 1)) {
+      next->start = it->start;
+      if (next->end < it->end) {
+        next->end = it->end;
+      }
+      it = attribute_ranges_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+ServiceAttributeResponse::ServiceAttributeResponse() {}
+
+const common::BufferView ServiceAttributeResponse::ContinuationState() const {
+  if (!continuation_state_) {
+    return common::BufferView();
+  }
+  return continuation_state_->view();
+}
+
+bool ServiceAttributeResponse::complete() const { return !continuation_state_; }
+
+Status ServiceAttributeResponse::Parse(const common::ByteBuffer& buf) {
+  if (complete() && attributes_.size() != 0) {
+    // This response was previously complete and non-empty
+    FXL_VLOG(5) << "sdp: Can't parse into a complete response";
+    // partial_response is already empty
+    return Status(common::HostError::kNotReady);
+  }
+
+  if (buf.size() < sizeof(uint16_t)) {
+    FXL_VLOG(5) << "sdp: Packet too small to parse";
+    return Status(common::HostError::kPacketMalformed);
+  }
+
+  uint16_t attribute_list_byte_count = betoh16(buf.As<uint16_t>());
+  size_t read_size = sizeof(uint16_t);
+  if (buf.view(read_size).size() <
+      attribute_list_byte_count + sizeof(uint8_t)) {
+    FXL_VLOG(5) << "sdp: Not enough bytes in rest of packet";
+    return Status(common::HostError::kPacketMalformed);
+  }
+  // Check to see if there's continuation.
+  common::BufferView cont_state_view;
+  if (!ValidContinuationState(buf.view(read_size + attribute_list_byte_count),
+                              &cont_state_view)) {
+    FXL_VLOG(5) << "sdp: Continutation state is not valid";
+    return Status(common::HostError::kPacketMalformed);
+  }
+
+  if (cont_state_view.size() == 0) {
+    continuation_state_ = nullptr;
+  } else {
+    continuation_state_ = common::NewSlabBuffer(cont_state_view.size());
+    continuation_state_->Write(cont_state_view);
+  }
+
+  auto attribute_list_bytes = buf.view(read_size, attribute_list_byte_count);
+  if (partial_response_ || ContinuationState().size()) {
+    // Append to the incomplete buffer.
+    size_t new_partial_size = attribute_list_byte_count;
+    if (partial_response_) {
+      new_partial_size += partial_response_->size();
+    }
+    auto new_partial = common::NewSlabBuffer(new_partial_size);
+    if (partial_response_) {
+      new_partial->Write(partial_response_->view());
+      new_partial->Write(attribute_list_bytes, partial_response_->size());
+    } else {
+      new_partial->Write(attribute_list_bytes);
+    }
+    partial_response_ = std::move(new_partial);
+    if (continuation_state_) {
+      // This is incomplete, we can't parse it yet.
+      FXL_VLOG(5) << "sdp: Continutation state, returning in progress";
+      return Status(common::HostError::kInProgress);
+    }
+    attribute_list_bytes = partial_response_->view();
+  }
+
+  DataElement attribute_list;
+  size_t elem_size = DataElement::Read(&attribute_list, attribute_list_bytes);
+  if ((elem_size == 0) ||
+      (attribute_list.type() != DataElement::Type::kSequence)) {
+    FXL_VLOG(5) << "sdp: Couldn't parse attribute list or it wasn't a sequence";
+    return Status(common::HostError::kPacketMalformed);
+  }
+
+  // Data Element sequence containing alternating attribute id and attribute
+  // value pairs.  Only the requested attributes that are present are included.
+  // They are sorted in ascenting attribute ID order.
+  AttributeId last_id = 0;
+  size_t idx = 0;
+  for (auto* it = attribute_list.At(0); it != nullptr;
+       it = attribute_list.At(idx)) {
+    auto* val = attribute_list.At(idx + 1);
+    if ((it->type() != DataElement::Type::kUnsignedInt) || (val == nullptr)) {
+      attributes_.clear();
+      return Status(common::HostError::kPacketMalformed);
+    }
+    AttributeId id = *(it->Get<uint16_t>());
+    if (id < last_id) {
+      attributes_.clear();
+      return Status(common::HostError::kPacketMalformed);
+    }
+    attributes_.emplace(id, val->Clone());
+    last_id = id;
+    idx += 2;
+  }
+  return Status();
+}
+
+// Continuation state: index of # of bytes into the attribute list element
+common::MutableByteBufferPtr ServiceAttributeResponse::GetPDU(
+    uint16_t max, TransactionId tid,
+    const common::ByteBuffer& cont_state) const {
+  if (!complete()) {
+    return nullptr;
+  }
+  // If there's continuation state, it's the # of bytes previously written
+  // of the attribute list.
+  uint32_t bytes_skipped = 0;
+  if (cont_state.size() == sizeof(uint32_t)) {
+    bytes_skipped = betoh32(cont_state.As<uint32_t>());
+  } else if (cont_state.size() != 0) {
+    // We don't generate continuation states of any other length.
+    return nullptr;
+  }
+
+  // Returned in pairs of (attribute id, attribute value)
+  std::vector<DataElement> list;
+  list.reserve(2 * attributes_.size());
+  for (const auto& it : attributes_) {
+    list.emplace_back(static_cast<uint16_t>(it.first));
+    list.emplace_back(it.second.Clone());
+  }
+  DataElement list_elem(std::move(list));
+  uint16_t attribute_list_byte_count = list_elem.WriteSize() - bytes_skipped;
+  uint8_t info_length = 0;
+  if (attribute_list_byte_count > max) {
+    attribute_list_byte_count = max;
+    info_length = sizeof(uint32_t);
+  }
+
+  size_t size = sizeof(uint16_t) + attribute_list_byte_count + sizeof(uint8_t) +
+                info_length;
+  auto buf = GetNewPDU(kServiceAttributeResponse, tid, size);
+  if (!buf) {
+    return nullptr;
+  }
+  size_t written = sizeof(Header);
+  uint16_t be = htobe16(attribute_list_byte_count);
+  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t), written);
+  written += sizeof(uint16_t);
+
+  auto attribute_list_bytes = common::NewSlabBuffer(list_elem.WriteSize());
+  list_elem.Write(attribute_list_bytes.get());
+  buf->Write(
+      attribute_list_bytes->view(bytes_skipped, attribute_list_byte_count),
+      written);
+  written += attribute_list_byte_count;
+
+  // Continuation state
+  buf->Write(&info_length, sizeof(uint8_t), written);
+  written += sizeof(uint8_t);
+  if (info_length > 0) {
+    bytes_skipped += attribute_list_byte_count;
+    uint32_t be = htobe32(bytes_skipped);
+    BufferView cont_view(reinterpret_cast<uint8_t*>(&be), sizeof(uint32_t));
+    buf->Write(cont_view, written);
+    written += cont_view.size();
+  }
   ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
   return buf;
 }

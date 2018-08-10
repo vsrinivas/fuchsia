@@ -190,6 +190,107 @@ class ServiceSearchResponse : public Response {
   common::ByteBufferPtr continuation_state_;
 };
 
+class ServiceAttributeRequest : public Request {
+ public:
+  // Create an empty search request.
+  ServiceAttributeRequest();
+  // Parse the parameters in |params| to initialize this request.
+  // valid() will be false if |params| don't represent valid a valid request.
+  explicit ServiceAttributeRequest(const common::ByteBuffer& params);
+
+  // Request overrides
+  bool valid() const override;
+  common::ByteBufferPtr GetPDU(TransactionId tid) const override;
+
+  void set_service_record_handle(ServiceHandle handle) {
+    service_record_handle_ = handle;
+  }
+  ServiceHandle service_record_handle() const { return service_record_handle_; }
+
+  void set_max_attribute_byte_count(uint16_t count) {
+    max_attribute_byte_count_ = count;
+  }
+  uint16_t max_attribute_byte_count() const {
+    return max_attribute_byte_count_;
+  }
+
+  // Adds a single attribute to the requested IDs. Used to ensure a specific
+  // attribute is requested.
+  // Automatically merges attribute ranges that are contiguous to save bytes in
+  // the request.
+  void AddAttribute(AttributeId id);
+
+  // Adds a range of attributes to the requested IDs.
+  // Like AddAttribute(), attribute ranges that are contiguous are merged to
+  // save bytes in the resulting request.
+  void AddAttributeRange(AttributeId start, AttributeId end);
+
+  struct AttributeRange {
+    AttributeRange(AttributeId start, AttributeId end)
+        : start(start), end(end) {
+      ZX_DEBUG_ASSERT(start <= end);
+    }
+
+    AttributeId start;
+    AttributeId end;
+  };
+
+  const std::list<AttributeRange>& attribute_ranges() {
+    return attribute_ranges_;
+  }
+
+ private:
+  // The service record handle for which attributes should be retrieved.
+  // Should be obtained by using a ServiceSearch transaction.
+  ServiceHandle service_record_handle_;
+
+  // Maximum number of bytes of attribute data to be retuened in the response.
+  // If the attributes don't fit, the server decides how to segment them.
+  // Clients should use continuation state to request more data.
+  uint16_t max_attribute_byte_count_;
+
+  // The attribute(s) to retrieve.
+  // This is a list of ranges, inclusive of the ends.
+  // They are non-overlapping and sorted by the start id of each range.
+  std::list<AttributeRange> attribute_ranges_;
+};
+
+class ServiceAttributeResponse : public Response {
+ public:
+  ServiceAttributeResponse();
+
+  // Response overrides
+  const common::BufferView ContinuationState() const override;
+  bool complete() const override;
+  Status Parse(const common::ByteBuffer& buf) override;
+  common::MutableByteBufferPtr GetPDU(
+      uint16_t max, TransactionId tid,
+      const common::ByteBuffer& cont_state) const override;
+
+  void set_attribute(AttributeId id, DataElement value) {
+    attributes_.emplace(id, std::move(value));
+  }
+  const std::map<AttributeId, DataElement>& attributes() const {
+    return attributes_;
+  }
+
+ private:
+  // The list of attributes that matched the search and their values.
+  // This is sorted (it is in ascending order in the response).
+  std::map<AttributeId, DataElement> attributes_;
+
+  // Attribute List(s) can be truncated due to:
+  //  - Response too long for MTU
+  //  - MaxAttributeListByteCount is set too low
+  //  - Because the server wants to
+  //
+  // This contains the partial attribute list response if there is continuation
+  // state.
+  common::MutableByteBufferPtr partial_response_;
+
+  common::MutableByteBufferPtr continuation_state_;
+};
+
 }  // namespace sdp
 }  // namespace btlib
 

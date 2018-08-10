@@ -15,6 +15,19 @@
 namespace btlib {
 namespace common {
 
+template <class InputIt>
+void PrintByteContainer(InputIt begin, InputIt end) {
+  for (InputIt iter = begin; iter != end; ++iter) {
+    std::cout << fxl::StringPrintf("%#.2x ", *iter);
+  }
+}
+
+// Prints the contents of a container as a string.
+template <class Container>
+void PrintByteContainer(const Container& c) {
+  PrintByteContainer(c.begin(), c.end());
+}
+
 // Function-template for comparing contents of two iterable byte containers for
 // equality. If the contents are not equal, this logs a GTEST-style error
 // message to stdout. Meant to be used from unit tests.
@@ -24,13 +37,9 @@ bool ContainersEqual(InputIt1 expected_begin, InputIt1 expected_end,
   if (std::equal(expected_begin, expected_end, actual_begin, actual_end))
     return true;
   std::cout << "Expected: { ";
-  for (InputIt1 iter = expected_begin; iter != expected_end; ++iter) {
-    std::cout << fxl::StringPrintf("0x%02x ", *iter);
-  }
+  PrintByteContainer(expected_begin, expected_end);
   std::cout << "}\n   Found: { ";
-  for (InputIt2 iter = actual_begin; iter != actual_end; ++iter) {
-    std::cout << fxl::StringPrintf("0x%02x ", *iter);
-  }
+  PrintByteContainer(actual_begin, actual_end);
   std::cout << "}" << std::endl;
   return false;
 }

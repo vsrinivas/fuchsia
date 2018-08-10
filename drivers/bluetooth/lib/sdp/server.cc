@@ -40,6 +40,12 @@ void PopulateServiceDiscoveryService(ServiceRecord* sdp) {
   sdp->SetAttribute(kSDP_ServiceDatabaseState, DataElement(kInitialDbState));
 }
 
+void SendErrorResponse(const fbl::RefPtr<l2cap::Channel>& chan,
+                       TransactionId tid, ErrorCode code) {
+  ErrorResponse response(code);
+  chan->Send(response.GetPDU(0 /* ignored */, tid, common::BufferView()));
+}
+
 }  // namespace
 
 Server::Server()
@@ -177,7 +183,7 @@ ServiceHandle Server::GetNextHandle() {
 }
 
 ServiceSearchResponse Server::SearchServices(
-    const std::unordered_set<common::UUID>& pattern) {
+    const std::unordered_set<common::UUID>& pattern) const {
   ServiceSearchResponse resp;
   std::vector<ServiceHandle> matched;
   for (const auto& it : records_) {
@@ -187,6 +193,22 @@ ServiceSearchResponse Server::SearchServices(
   }
   bt_log(SPEW, "sdp", "ServiceSearch matched %d records", matched.size());
   resp.set_service_record_handle_list(matched);
+  return resp;
+}
+
+ServiceAttributeResponse Server::GetServiceAttributes(
+    ServiceHandle handle,
+    const std::list<ServiceAttributeRequest::AttributeRange>& ranges) const {
+  ServiceAttributeResponse resp;
+  const auto& record = records_.at(handle);
+  for (const auto& range : ranges) {
+    auto attrs = record.GetAttributesInRange(range.start, range.end);
+    for (const auto& attr : attrs) {
+      resp.set_attribute(attr, record.GetAttribute(attr).Clone());
+    }
+  }
+  bt_log(SPEW, "sdp", "ServiceAttribute %d attributes",
+         resp.attributes().size());
   return resp;
 }
 
@@ -216,6 +238,8 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
     uint16_t param_length = betoh16(packet.header().param_length);
 
     if (param_length != (pdu.size() - sizeof(Header))) {
+      bt_log(SPEW, "sdp", "request isn't the correct size (%d != %d)",
+             param_length, pdu.size() - sizeof(Header));
       ErrorResponse response(ErrorCode::kInvalidSize);
       chan->Send(response.GetPDU(0 /* ignored */, tid, common::BufferView()));
       return;
@@ -228,9 +252,7 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
         ServiceSearchRequest request(packet.payload_data());
         if (!request.valid()) {
           bt_log(TRACE, "sdp", "ServiceSearchRequest not valid");
-          ErrorResponse response(ErrorCode::kInvalidRequestSyntax);
-          chan->Send(
-              response.GetPDU(0 /* ignored */, tid, common::BufferView()));
+          SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
           return;
         }
         auto resp = SearchServices(request.service_search_pattern());
@@ -238,14 +260,34 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
                                common::BufferView()));
         return;
       }
+      case kServiceAttributeRequest: {
+        ServiceAttributeRequest request(packet.payload_data());
+        if (!request.valid()) {
+          bt_log(SPEW, "sdp", "ServiceAttributeRequest not valid");
+          SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+          return;
+        }
+        auto handle = request.service_record_handle();
+        if (records_.find(handle) == records_.end()) {
+          bt_log(SPEW, "sdp", "ServiceAttributeRequest can't find handle %#.8x",
+                 handle);
+          SendErrorResponse(chan, tid, ErrorCode::kInvalidRecordHandle);
+          return;
+        }
+        auto resp = GetServiceAttributes(handle, request.attribute_ranges());
+
+        chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
+                               request.ContinuationState()));
+        return;
+      }
       case kErrorResponse: {
-        ErrorResponse response(ErrorCode::kInvalidRequestSyntax);
-        chan->Send(response.GetPDU(0 /* ignored */, tid, common::BufferView()));
+        bt_log(SPEW, "sdp", "ErrorResponse isn't allowed as a request");
+        SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
         return;
       }
       default: {
-        ErrorResponse response(ErrorCode::kInvalidRequestSyntax);
-        chan->Send(response.GetPDU(0 /* ignored */, tid, common::BufferView()));
+        bt_log(SPEW, "sdp", "unhandled request, returning InvalidRequest");
+        SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
         return;
       }
     }
