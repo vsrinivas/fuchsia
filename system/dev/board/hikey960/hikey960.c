@@ -71,8 +71,9 @@ static zx_protocol_device_t hikey960_device_protocol = {
 static int hikey960_start_thread(void* arg) {
     hikey960_t* hikey = arg;
 
-    hikey->usb_mode_switch.ops = &usb_mode_switch_ops;
-    hikey->usb_mode_switch.ctx = hikey;
+    usb_mode_switch_protocol_t usb_mode_switch;
+    usb_mode_switch.ops = &usb_mode_switch_ops;
+    usb_mode_switch.ctx = hikey;
 
     zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &hikey->gpio);
     if (status != ZX_OK) {
@@ -83,7 +84,7 @@ static int hikey960_start_thread(void* arg) {
         goto fail;
     }
 
-    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &hikey->usb_mode_switch);
+    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &usb_mode_switch);
     if (status != ZX_OK) {
         goto fail;
     }

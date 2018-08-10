@@ -90,5 +90,5 @@ zx_status_t aml_i2c_init(aml_bus_t* bus) {
         return status;
     }
 
-    return device_get_protocol(bus->parent, ZX_PROTOCOL_I2C_IMPL, &bus->i2c);
+    return ZX_OK;
 }

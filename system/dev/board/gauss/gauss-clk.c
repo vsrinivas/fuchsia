@@ -44,11 +44,5 @@ zx_status_t gauss_clk_init(gauss_bus_t* bus) {
         return st;
     }
 
-    st = device_get_protocol(bus->parent, ZX_PROTOCOL_CLK, &bus->clk);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "gauss_clk_init: device_get_protocol failed, st = %d\n", st);
-        return st;
-    }
-
     return ZX_OK;
 }

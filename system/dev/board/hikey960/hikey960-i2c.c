@@ -65,5 +65,5 @@ zx_status_t hikey960_i2c_init(hikey960_t* bus) {
         return status;
     }
 
-    return device_get_protocol(bus->parent, ZX_PROTOCOL_I2C_IMPL, &bus->i2c);
+    return ZX_OK;
 }

@@ -5,12 +5,9 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/serial-impl.h>
 
 // BTI IDs for our devices
 enum {
@@ -21,11 +18,9 @@ enum {
 };
 
 typedef struct {
+    zx_device_t* parent;
     platform_bus_protocol_t pbus;
     gpio_protocol_t gpio;
-    i2c_protocol_t i2c;
-    serial_impl_protocol_t serial;
-    zx_device_t* parent;
     iommu_protocol_t iommu;
 } aml_bus_t;
 

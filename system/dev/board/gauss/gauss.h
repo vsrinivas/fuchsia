@@ -5,9 +5,7 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <soc/aml-a113/a113-clocks.h>
@@ -31,11 +29,9 @@ enum {
 };
 
 typedef struct {
-    platform_bus_protocol_t pbus;
     zx_device_t* parent;
+    platform_bus_protocol_t pbus;
     gpio_protocol_t gpio;
-    i2c_protocol_t i2c;
-    clk_protocol_t clk;
     iommu_protocol_t iommu;
     zx_handle_t bti_handle;
     io_buffer_t usb_phy;

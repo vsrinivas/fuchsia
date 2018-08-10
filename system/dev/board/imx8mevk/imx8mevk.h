@@ -7,10 +7,8 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/serial.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
 // BTI IDs for our devices
