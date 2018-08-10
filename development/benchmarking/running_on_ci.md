@@ -36,7 +36,7 @@ We have shell scripts that run all of a layer's benchmarks at every commit to th
 * Peridot: [//peridot/tests/benchmarks](https://fuchsia.googlesource.com/peridot/+/master/tests/benchmarks)
 * Topaz: [//topaz/tests/benchmarks](https://fuchsia.googlesource.com/topaz/+/master/tests/benchmarks)
 
-These shell scripts are writting using a helper library called [Runbenchmarks].  Add a
+These shell scripts are written using a helper library called [Runbenchmarks].  Add a
 command to the appropriate script to execute your test.  See the existing commands for
 examples.
 
