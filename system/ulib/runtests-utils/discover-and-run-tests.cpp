@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(IN-527): Rename this file to discover-and-run-tests.cpp to match the function name.
-
 #include <runtests-utils/runtests-utils.h>
 
 #include <errno.h>

@@ -17,7 +17,7 @@ MODULE_GROUP := test
 MODULE_SRCS += \
     $(LOCAL_DIR)/fuchsia-run-test.cpp \
     $(LOCAL_DIR)/log-exporter.cpp \
-    $(LOCAL_DIR)/run-all-tests.cpp \
+    $(LOCAL_DIR)/discover-and-run-tests.cpp \
     $(LOCAL_DIR)/runtests-utils.cpp \
 
 MODULE_FIDL_LIBS := \
@@ -52,7 +52,7 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/posix-run-test.cpp \
-    $(LOCAL_DIR)/run-all-tests.cpp \
+    $(LOCAL_DIR)/discover-and-run-tests.cpp \
     $(LOCAL_DIR)/runtests-utils.cpp \
 
 MODULE_COMPILEFLAGS := \

@@ -147,7 +147,7 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 //
 // |RunTest|: function to run each test.
 // |argc|: length of |argv|.
-// |argv|: see //system/ulib/runtests-utils/run-all-tests.cpp,
+// |argv|: see //system/ulib/runtests-utils/discover-and-run-tests.cpp,
 //    specifically the 'Usage()' function, for documentation.
 // |default_test_dirs|: directories in which to look for tests if no test
 //    directory globs are specified.
