@@ -27,6 +27,8 @@ source_set("audio_mixer_lib") {
     "gain.h",
     "mixer/fx_loader.cc",
     "mixer/fx_loader.h",
+    "mixer/fx_processor.cc",
+    "mixer/fx_processor.h",
     "mixer/linear_sampler.cc",
     "mixer/linear_sampler.h",
     "mixer/mixer.cc",

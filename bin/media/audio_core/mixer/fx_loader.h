@@ -52,7 +52,7 @@ class FxLoader {
                                 float value);
   zx_status_t FxReset(fx_token_t fx_token);
 
-  zx_status_t FxProcessInplace(fx_token_t fx_token, uint32_t num_frames,
+  zx_status_t FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames,
                                float* audio_buff_in_out);
   zx_status_t FxProcess(fx_token_t fx_token, uint32_t num_frames,
                         const float* audio_buff_in, float* audio_buff_out);

@@ -271,7 +271,7 @@ zx_status_t FxLoader::FxReset(fx_token_t fx_token) {
   return ZX_OK;
 }
 
-zx_status_t FxLoader::FxProcessInplace(fx_token_t fx_token, uint32_t num_frames,
+zx_status_t FxLoader::FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames,
                                        float* audio_buff_in_out) {
   if (!exports_loaded_) {
     return ZX_ERR_NOT_FOUND;

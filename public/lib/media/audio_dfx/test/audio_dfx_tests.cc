@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "garnet/bin/media/audio_core/mixer/fx_loader.h"
+#include "garnet/bin/media/audio_core/mixer/fx_processor.h"
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_delay.h"
@@ -57,6 +58,20 @@ class FxDelayTest : public FxLoaderTest {
 };
 class FxRechannelTest : public FxLoaderTest {};
 class FxSwapTest : public FxLoaderTest {};
+
+class FxProcessorTest : public FxLoaderTest {
+ protected:
+  audio::FxProcessor* fx_processor_;
+
+  void SetUp() override {
+    FxLoaderTest::SetUp();
+    fx_processor_ = new ::media::audio::FxProcessor(&fx_loader_, 48000);
+  }
+  void TearDown() override {
+    delete fx_processor_;
+    FxLoaderTest::TearDown();
+  }
+};
 
 // When validating controls, we make certain assumptions about the test effects.
 static_assert(DfxDelay::kNumControls > 0, "DfxDelay must have controls");
@@ -475,19 +490,19 @@ TEST_F(FxDelayTest, ProcessInPlace) {
                 static_cast<float>(delay_samples / kTestChans)),
             ZX_OK);
 
-  EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, 4, delay_buff_in_out),
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, 4, delay_buff_in_out),
             ZX_OK);
-  EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, 4,
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, 4,
                                         delay_buff_in_out + (4 * kTestChans)),
             ZX_OK);
-  EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, 4,
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, 4,
                                         delay_buff_in_out + (8 * kTestChans)),
             ZX_OK);
 
   for (uint32_t sample = 0; sample < num_samples; ++sample) {
     EXPECT_EQ(delay_buff_in_out[sample], expect[sample]) << sample;
   }
-  EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, 0, delay_buff_in_out),
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, 0, delay_buff_in_out),
             ZX_OK);
   EXPECT_EQ(fx_loader_.DeleteFx(dfx_token), ZX_OK);
 }
@@ -502,7 +517,7 @@ TEST_F(FxRechannelTest, ProcessInPlace) {
                                              DfxRechannel::kNumChannelsIn,
                                              DfxRechannel::kNumChannelsOut);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
-  EXPECT_NE(fx_loader_.FxProcessInplace(dfx_token, kNumFrames, buff_in_out),
+  EXPECT_NE(fx_loader_.FxProcessInPlace(dfx_token, kNumFrames, buff_in_out),
             ZX_OK);
   EXPECT_EQ(fx_loader_.DeleteFx(dfx_token), ZX_OK);
 }
@@ -518,21 +533,21 @@ TEST_F(FxSwapTest, ProcessInPlace) {
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
 
   EXPECT_EQ(
-      fx_loader_.FxProcessInplace(dfx_token, kNumFrames, swap_buff_in_out),
+      fx_loader_.FxProcessInPlace(dfx_token, kNumFrames, swap_buff_in_out),
       ZX_OK);
   for (uint32_t sample_num = 0; sample_num < kNumFrames * kTestChans;
        ++sample_num) {
     EXPECT_EQ(swap_buff_in_out[sample_num], (sample_num % 2 ? 1.0f : -1.0f));
   }
 
-  EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, 0, swap_buff_in_out), ZX_OK);
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, 0, swap_buff_in_out), ZX_OK);
 
   // Calls with invalid token or null buff_ptr should fail.
-  EXPECT_NE(fx_loader_.FxProcessInplace(FUCHSIA_AUDIO_DFX_INVALID_TOKEN,
+  EXPECT_NE(fx_loader_.FxProcessInPlace(FUCHSIA_AUDIO_DFX_INVALID_TOKEN,
                                         kNumFrames, swap_buff_in_out),
             ZX_OK);
-  EXPECT_NE(fx_loader_.FxProcessInplace(dfx_token, kNumFrames, nullptr), ZX_OK);
-  EXPECT_NE(fx_loader_.FxProcessInplace(dfx_token, 0, nullptr), ZX_OK);
+  EXPECT_NE(fx_loader_.FxProcessInPlace(dfx_token, kNumFrames, nullptr), ZX_OK);
+  EXPECT_NE(fx_loader_.FxProcessInPlace(dfx_token, 0, nullptr), ZX_OK);
 
   EXPECT_EQ(fx_loader_.DeleteFx(dfx_token), ZX_OK);
 }
@@ -639,20 +654,20 @@ TEST_F(FxDelayTest, ProcessInPlace_Chain) {
       fx_loader_.FxSetControlValue(delay2_token, control_num, kTestDelay2),
       ZX_OK);
 
-  EXPECT_EQ(fx_loader_.FxProcessInplace(delay1_token, kNumFrames, buff_in_out),
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(delay1_token, kNumFrames, buff_in_out),
             ZX_OK);
-  EXPECT_EQ(fx_loader_.FxProcessInplace(swap_token, kNumFrames, buff_in_out),
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(swap_token, kNumFrames, buff_in_out),
             ZX_OK);
-  EXPECT_EQ(fx_loader_.FxProcessInplace(delay2_token, kNumFrames, buff_in_out),
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(delay2_token, kNumFrames, buff_in_out),
             ZX_OK);
   for (uint32_t sample_num = 0; sample_num < kNumFrames * kTestChans;
        ++sample_num) {
     EXPECT_EQ(buff_in_out[sample_num], expected[sample_num]) << sample_num;
   }
 
-  EXPECT_EQ(fx_loader_.FxProcessInplace(delay2_token, 0, buff_in_out), ZX_OK);
-  EXPECT_EQ(fx_loader_.FxProcessInplace(swap_token, 0, buff_in_out), ZX_OK);
-  EXPECT_EQ(fx_loader_.FxProcessInplace(delay1_token, 0, buff_in_out), ZX_OK);
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(delay2_token, 0, buff_in_out), ZX_OK);
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(swap_token, 0, buff_in_out), ZX_OK);
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(delay1_token, 0, buff_in_out), ZX_OK);
 
   EXPECT_EQ(fx_loader_.DeleteFx(delay2_token), ZX_OK);
   EXPECT_EQ(fx_loader_.DeleteFx(swap_token), ZX_OK);
@@ -675,7 +690,7 @@ TEST_F(FxDelayTest, Flush) {
   ASSERT_EQ(fx_loader_.FxGetControlValue(dfx_token, 0, &new_value), ZX_OK);
   ASSERT_EQ(new_value, kTestDelay1);
 
-  ASSERT_EQ(fx_loader_.FxProcessInplace(dfx_token, kNumFrames, buff_in_out),
+  ASSERT_EQ(fx_loader_.FxProcessInPlace(dfx_token, kNumFrames, buff_in_out),
             ZX_OK);
   ASSERT_EQ(buff_in_out[0], 0.0f);
 
@@ -686,7 +701,7 @@ TEST_F(FxDelayTest, Flush) {
   EXPECT_EQ(new_value, kTestDelay1);
 
   // Validate that cached samples are flushed.
-  EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, kNumFrames, buff_in_out),
+  EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, kNumFrames, buff_in_out),
             ZX_OK);
   EXPECT_EQ(buff_in_out[0], 0.0f);
 
@@ -695,6 +710,8 @@ TEST_F(FxDelayTest, Flush) {
   EXPECT_EQ(fx_loader_.DeleteFx(dfx_token), ZX_OK);
 }
 
+//
+// We use this subfunction to test the outer limits allowed by ProcessInPlace.
 void FxDelayTest::TestDelayBounds(uint32_t frame_rate, uint32_t channels,
                                   uint32_t delay_frames) {
   uint32_t delay_samples = delay_frames * channels;
@@ -718,7 +735,7 @@ void FxDelayTest::TestDelayBounds(uint32_t frame_rate, uint32_t channels,
       delay_buff_in_out[i] = static_cast<float>(i + pass * num_samples + 1);
       expect[i] = fmax(delay_buff_in_out[i] - delay_samples, 0.0f);
     }
-    EXPECT_EQ(fx_loader_.FxProcessInplace(dfx_token, num_frames,
+    EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, num_frames,
                                           delay_buff_in_out.get()),
               ZX_OK);
     for (uint32_t sample = 0; sample < num_samples; ++sample) {
@@ -734,6 +751,170 @@ TEST_F(FxDelayTest, ProcessInPlace_Bounds) {
   TestDelayBounds(192000, 2, DfxDelay::kMaxDelayFrames);
   TestDelayBounds(2000, FUCHSIA_AUDIO_DFX_CHANNELS_MAX,
                   DfxDelay::kMaxDelayFrames);
+}
+
+//
+// The following tests validates the FxProcessor class itself.
+//
+// Verify the creation, uniqueness, quantity and deletion of effect instances.
+TEST_F(FxProcessorTest, CreateDelete) {
+  fx_token_t token3 = fx_processor_->CreateFx(0, 1, 1, 0);
+  fx_token_t token1 = fx_processor_->CreateFx(0, 1, 1, 0);
+  fx_token_t token2 = fx_processor_->CreateFx(0, 1, 1, 1);
+  fx_token_t token4 = fx_processor_->CreateFx(0, 1, 1, 3);
+
+  ASSERT_TRUE(token1 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token2 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token3 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token4 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  EXPECT_TRUE(token1 != token2 && token1 != token3 && token1 != token4 &&
+              token2 != token3 && token2 != token4 && token3 != token4);
+
+  EXPECT_EQ(fx_processor_->GetNumFx(), 4);
+
+  fx_token_t token5 = fx_processor_->CreateFx(0, 1, 1, 5);
+  EXPECT_EQ(token5, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Remove one of the four instances.
+  EXPECT_EQ(fx_processor_->DeleteFx(token3), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 3);
+
+  // Remove a second instance.
+  EXPECT_EQ(fx_processor_->DeleteFx(token4), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 2);
+
+  // This token has already been removed.
+  EXPECT_NE(fx_processor_->DeleteFx(token3), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 2);
+
+  // Remove a third instance -- only one should remain.
+  EXPECT_EQ(fx_processor_->DeleteFx(token1), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 1);
+
+  // Invalid token cannot be removed/deleted.
+  EXPECT_NE(fx_processor_->DeleteFx(FUCHSIA_AUDIO_DFX_INVALID_TOKEN), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 1);
+
+  // Remove fourth and last instance.
+  EXPECT_EQ(fx_processor_->DeleteFx(token2), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 0);
+
+  // This token has already been removed -- also empty chain.
+  EXPECT_NE(fx_processor_->DeleteFx(token4), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 0);
+
+  // Inserting an instance into a chain that has been populated, then emptied.
+  EXPECT_NE(fx_processor_->CreateFx(0, 1, 1, 0),
+            FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  EXPECT_EQ(fx_processor_->GetNumFx(), 1);
+
+  // Leave an active instance, to exercise the destructor cleanup.
+}
+
+// Verify the chain's positioning -- during insertion, reorder, deletion.
+TEST_F(FxProcessorTest, Reorder) {
+  fx_token_t token2 = fx_processor_->CreateFx(0, 1, 1, 0);
+  fx_token_t token1 = fx_processor_->CreateFx(0, 1, 1, 0);
+  fx_token_t token4 = fx_processor_->CreateFx(0, 1, 1, 2);
+  fx_token_t token3 = fx_processor_->CreateFx(0, 1, 1, 2);
+  // Chain is [2], then [1,2], then [1,2,4], then [1,2,3,4].
+
+  ASSERT_TRUE(token1 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token2 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token3 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token4 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Chain is [1,2,3,4].
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token1);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), token2);
+  EXPECT_EQ(fx_processor_->GetFxAt(2), token3);
+  EXPECT_EQ(fx_processor_->GetFxAt(3), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(4), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Moving token4 to position 2: [1,2,3,4] becomes [1,2,4,3].
+  EXPECT_EQ(fx_processor_->ReorderFx(token4, 2), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token1);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), token2);
+  EXPECT_EQ(fx_processor_->GetFxAt(2), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(3), token3);
+  EXPECT_EQ(fx_processor_->GetFxAt(4), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Moving token1 to position 2: [1,2,4,3] becomes [2,4,1,3].
+  EXPECT_EQ(fx_processor_->ReorderFx(token1, 2), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token2);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(2), token1);
+  EXPECT_EQ(fx_processor_->GetFxAt(3), token3);
+  EXPECT_EQ(fx_processor_->GetFxAt(4), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Position 4 is outside the chain. No change: chain is still [2,4,1,3].
+  EXPECT_NE(fx_processor_->ReorderFx(token2, 4), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token2);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(2), token1);
+  EXPECT_EQ(fx_processor_->GetFxAt(3), token3);
+  EXPECT_EQ(fx_processor_->GetFxAt(4), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Removing token1: [2,4,1,3] becomes [2,4,3].
+  EXPECT_EQ(fx_processor_->DeleteFx(token1), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token2);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(2), token3);
+  EXPECT_EQ(fx_processor_->GetFxAt(3), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Removing token2 (from front): [2,4,3] becomes [4,3].
+  EXPECT_EQ(fx_processor_->DeleteFx(token2), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), token3);
+  EXPECT_EQ(fx_processor_->GetFxAt(2), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Removing token3 (from end): [4,3] becomes [4].
+  EXPECT_EQ(fx_processor_->DeleteFx(token3), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), token4);
+  EXPECT_EQ(fx_processor_->GetFxAt(1), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  // Removing token4: [4] becomes [].
+  EXPECT_EQ(fx_processor_->DeleteFx(token4), ZX_OK);
+  EXPECT_EQ(fx_processor_->GetFxAt(0), FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+}
+
+// Verify (at a VERY Basic level) the methods that handle data flow.
+TEST_F(FxProcessorTest, ProcessInPlaceFlush) {
+  float buff[4] = {0, 0, 0, 0};
+
+  // Before instances added, ProcessInPlace and Flush should succeed.
+  EXPECT_EQ(fx_processor_->ProcessInPlace(4, buff), ZX_OK);
+  EXPECT_EQ(fx_processor_->Flush(), ZX_OK);
+
+  // Chaining four instances together, ProcessInPlace and flush should succeed.
+  fx_token_t token1 = fx_processor_->CreateFx(0, 1, 1, 0);
+  fx_token_t token2 = fx_processor_->CreateFx(0, 1, 1, 1);
+  fx_token_t token3 = fx_processor_->CreateFx(0, 1, 1, 2);
+  fx_token_t token4 = fx_processor_->CreateFx(0, 1, 1, 3);
+
+  ASSERT_TRUE(token1 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token2 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token3 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN &&
+              token4 != FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  EXPECT_EQ(fx_processor_->ProcessInPlace(4, buff), ZX_OK);
+  EXPECT_EQ(fx_processor_->Flush(), ZX_OK);
+  EXPECT_EQ(fx_processor_->ProcessInPlace(4, buff), ZX_OK);
+
+  // Zero num_frames is valid and should succeed.
+  EXPECT_EQ(fx_processor_->ProcessInPlace(0, buff), ZX_OK);
+
+  // If no buffer provided, ProcessInPlace should fail (even if 0 num_frames).
+  EXPECT_NE(fx_processor_->ProcessInPlace(0, nullptr), ZX_OK);
+
+  // With all instances removed, ProcessInPlace and Flush should still succeed.
+  EXPECT_EQ(fx_processor_->DeleteFx(token1), ZX_OK);
+  EXPECT_EQ(fx_processor_->DeleteFx(token2), ZX_OK);
+  EXPECT_EQ(fx_processor_->DeleteFx(token3), ZX_OK);
+  EXPECT_EQ(fx_processor_->DeleteFx(token4), ZX_OK);
+  EXPECT_EQ(fx_processor_->ProcessInPlace(4, buff), ZX_OK);
+  EXPECT_EQ(fx_processor_->Flush(), ZX_OK);
 }
 
 }  // namespace audio_dfx_test

@@ -184,6 +184,8 @@ void AudioDeviceManager::ActivateDevice(
   devices_.insert(devices_pending_init_.erase(*device));
   device->SetActivated();
 
+  // TODO(mpuryear): Create this device instance's FxProcessor here?
+
   // Now that we have our gain settings (restored from disk, cloned from
   // others, or default), reapply them via the device itself.  We do this in
   // order to allow the device the chance to apply its own internal limits,
@@ -200,6 +202,8 @@ void AudioDeviceManager::ActivateDevice(
   ::fuchsia::media::AudioGainInfo gain_info;
   settings->GetGainInfo(&gain_info);
   device->SetGainInfo(gain_info, kAllSetFlags);
+
+  // TODO(mpuryear): Configure the FxProcessor based on settings, here?
 
   // Notify interested users of this new device. Check whether this will become
   // the new default device, so we can set 'is_default' in the notification
@@ -240,8 +244,12 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
     OnDeviceUnplugged(device, device->plug_time());
   }
 
+  // TODO(mpuryear): Persist any final remaining device-effect settings?
+
   device->Shutdown();
   FinalizeDeviceSettings(*device);
+
+  // TODO(mpuryear): Delete this device instance's FxProcessor here?
 
   if (device->InContainer()) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;
@@ -262,7 +270,7 @@ void AudioDeviceManager::HandlePlugStateChange(
     const fbl::RefPtr<AudioDevice>& device, bool plugged, zx_time_t plug_time) {
   FXL_DCHECK(device != nullptr);
 
-  // Update bookkeeping for the device's plug state. If no change, we're done.
+  // Update our bookkeeping for device's plug state. If no change, we're done.
   if (!device->UpdatePlugState(plugged, plug_time)) {
     return;
   }
