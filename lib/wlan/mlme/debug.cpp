@@ -445,15 +445,14 @@ std::string Describe(const HtCapabilities& ht_cap) {
 }
 
 std::string Describe(const wlan_ht_caps& ht_caps) {
-    char buf[1024];
-    size_t offset = 0;
-    BUFFER("ht_cap_info:%04x", ht_caps.ht_capability_info);
-    BUFFER("ampdu_params:%02x", ht_caps.ampdu_params);
-    BUFFER("supported_mcs_set:[%s]", DescribeArray(ht_caps.supported_mcs_set, 16).c_str());
-    BUFFER("ht_ext_cap:%04x", ht_caps.ht_ext_capabilities);
-    BUFFER("txbf:%08x", ht_caps.tx_beamforming_capabilities);
-    BUFFER("asel:%02x", ht_caps.asel_capabilities);
-    return std::string(buf);
+    HtCapabilities ht_cap{};
+    static_assert(sizeof(ht_caps) + sizeof(ElementHeader) == sizeof(ht_cap),
+                  "DDK struct and IEEE IE struct size mismatch");
+    auto elem = reinterpret_cast<uint8_t*>(&ht_cap);
+
+    // wlan_ht_caps is a packed struct.
+    memcpy(elem + sizeof(ElementHeader), &ht_caps, sizeof(ht_caps));
+    return Describe(ht_cap);
 }
 
 std::string Describe(const wlan_chan_list& wl) {
