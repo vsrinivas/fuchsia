@@ -3345,6 +3345,8 @@ static int ath10k_station_disassoc(struct ath10k* ar,
     return ret;
 }
 
+#endif
+
 /**************/
 /* Regulatory */
 /**************/
@@ -3410,7 +3412,9 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
              * HT/VHT modes? Would that even make any
              * difference?
              */
-            ch->mode = ath10k_supported_bands[band].mode;
+            ch->mode = (ath10k_supported_bands[band].base_freq == 5000)
+                    ? MODE_11A
+                    : MODE_11G;
 
             if (COND_WARN_ONCE(ch->mode == MODE_UNKNOWN)) {
                 continue;
@@ -3431,6 +3435,8 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
 
     return ret;
 }
+
+#if 0
 
 static enum wmi_dfs_region
 ath10k_mac_get_dfs_region(enum nl80211_dfs_regions dfs_region) {
@@ -3458,12 +3464,10 @@ static void ath10k_regd_update(struct ath10k* ar) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-#if 0
-    ret = ath10k_update_channel_list(ar);
-    if (ret != ZX_OK) {
-        ath10k_warn("failed to update channel list: %s\n", zx_status_get_string(ret));
+    zx_status_t st = ath10k_update_channel_list(ar);
+    if (st != ZX_OK) {
+        ath10k_err("failed to update channel list: %s\n", zx_status_get_string(st));
     }
-#endif
 
 #if 0 // NEEDS PORTING
     regpair = ar->ath_common.regulatory.regpair;
