@@ -33,11 +33,13 @@ class PoseBufferLatchingShader;
 namespace scenic {
 namespace gfx {
 
+class Compositor;
 class FrameTimings;
 class Layer;
 class LayerStack;
 class Scene;
 class Swapchain;
+using CompositorPtr = fxl::RefPtr<Compositor>;
 using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 using LayerStackPtr = fxl::RefPtr<LayerStack>;
 
@@ -46,6 +48,10 @@ using LayerStackPtr = fxl::RefPtr<LayerStack>;
 class Compositor : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
+
+  // TODO(SCN-452): there is currently no way to create/attach a display, so
+  // this compositor will never render anything.
+  static CompositorPtr New(Session* session, scenic::ResourceId id);
 
   ~Compositor() override;
 
@@ -75,6 +81,9 @@ class Compositor : public Resource {
 
   std::pair<uint32_t, uint32_t> GetBottomLayerSize() const;
   int GetNumDrawableLayers() const;
+
+  // | Resource |
+  void Accept(class ResourceVisitor* visitor) override;
 
  protected:
   // Returns the list of drawable layers from the layer stack.

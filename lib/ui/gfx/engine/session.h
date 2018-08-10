@@ -220,6 +220,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                               ::fuchsia::ui::gfx::OpacityNodeArgs args);
   bool ApplyCreateShapeNode(scenic::ResourceId id,
                             ::fuchsia::ui::gfx::ShapeNodeArgs args);
+  bool ApplyCreateCompositor(scenic::ResourceId id,
+                             ::fuchsia::ui::gfx::CompositorArgs args);
   bool ApplyCreateDisplayCompositor(
       scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
   bool ApplyCreateImagePipeCompositor(
@@ -264,6 +266,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateShapeNode(scenic::ResourceId id,
                               ::fuchsia::ui::gfx::ShapeNodeArgs args);
 
+  ResourcePtr CreateCompositor(scenic::ResourceId id,
+                               ::fuchsia::ui::gfx::CompositorArgs args);
   ResourcePtr CreateDisplayCompositor(
       scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
   ResourcePtr CreateImagePipeCompositor(

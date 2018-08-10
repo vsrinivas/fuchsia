@@ -235,6 +235,17 @@ void DumpVisitor::Visit(Material* r) {
   EndItem();
 }
 
+void DumpVisitor::Visit(Compositor* r) {
+  BeginItem("Compositor", r);
+  if (r->layer_stack()) {
+    BeginSection("stack");
+    r->layer_stack()->Accept(this);
+    EndSection();
+  }
+  VisitResource(r);
+  EndItem();
+}
+
 void DumpVisitor::Visit(DisplayCompositor* r) {
   BeginItem("DisplayCompositor", r);
   if (r->layer_stack()) {

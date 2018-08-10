@@ -1014,6 +1014,12 @@ bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
+bool Session::ApplyCreateCompositor(scenic::ResourceId id,
+                                    ::fuchsia::ui::gfx::CompositorArgs args) {
+  auto compositor = CreateCompositor(id, std::move(args));
+  return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
+}
+
 bool Session::ApplyCreateDisplayCompositor(
     scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args) {
   auto compositor = CreateDisplayCompositor(id, std::move(args));
@@ -1167,6 +1173,11 @@ ResourcePtr Session::CreateOpacityNode(
 ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
                                      ::fuchsia::ui::gfx::ShapeNodeArgs args) {
   return fxl::MakeRefCounted<ShapeNode>(this, id);
+}
+
+ResourcePtr Session::CreateCompositor(scenic::ResourceId id,
+                                      ::fuchsia::ui::gfx::CompositorArgs args) {
+  return Compositor::New(this, id);
 }
 
 ResourcePtr Session::CreateDisplayCompositor(

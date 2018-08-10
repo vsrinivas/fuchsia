@@ -76,6 +76,7 @@ class Renderer : public Resource {
     void Visit(RoundedRectangleShape* r) override;
     void Visit(MeshShape* r) override;
     void Visit(Material* r) override;
+    void Visit(Compositor* r) override;
     void Visit(DisplayCompositor* r) override;
     void Visit(LayerStack* r) override;
     void Visit(Layer* r) override;

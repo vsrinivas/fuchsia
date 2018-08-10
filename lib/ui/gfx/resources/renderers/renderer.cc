@@ -181,6 +181,8 @@ void Renderer::Visitor::VisitNode(Node* r) {
 
 void Renderer::Visitor::Visit(Scene* r) { VisitNode(r); }
 
+void Renderer::Visitor::Visit(Compositor* r) { FXL_DCHECK(false); }
+
 void Renderer::Visitor::Visit(DisplayCompositor* r) { FXL_DCHECK(false); }
 
 void Renderer::Visitor::Visit(LayerStack* r) { FXL_DCHECK(false); }

@@ -34,6 +34,11 @@ namespace gfx {
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
                                                 "Compositor"};
 
+CompositorPtr Compositor::New(Session* session, scenic::ResourceId id) {
+  return fxl::AdoptRef(
+      new Compositor(session, id, Compositor::kTypeInfo, nullptr));
+}
+
 Compositor::Compositor(Session* session, scenic::ResourceId id,
                        const ResourceTypeInfo& type_info,
                        std::unique_ptr<Swapchain> swapchain)
@@ -42,8 +47,6 @@ Compositor::Compositor(Session* session, scenic::ResourceId id,
       swapchain_(std::move(swapchain)),
       pose_buffer_latching_shader_(
           std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {
-  FXL_DCHECK(swapchain_.get());
-
   session->engine()->AddCompositor(this);
 }
 
@@ -264,6 +267,9 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
                            escher::PaperRenderer* escher_renderer,
                            escher::ShadowMapRenderer* shadow_renderer) {
   TRACE_DURATION("gfx", "Compositor::DrawFrame");
+
+  if (!swapchain_)
+    return false;
 
   std::vector<Layer*> drawable_layers = GetDrawableLayers();
   if (drawable_layers.empty())
