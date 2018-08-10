@@ -41,10 +41,14 @@ struct AssocContext {
     std::vector<uint8_t> supported_rates;
     std::vector<uint8_t> ext_supported_rates;
 
-    bool has_ht;
+    bool has_ht_cap;
     HtCapabilities ht_cap;
-    bool has_vht;
+    bool has_ht_op;
+    HtOperation ht_op;
+    bool has_vht_cap;
     VhtCapabilities vht_cap;
+    bool has_vht_op;
+    VhtOperation vht_op;
 };
 
 class Station {

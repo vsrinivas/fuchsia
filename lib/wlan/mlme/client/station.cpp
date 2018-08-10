@@ -1585,15 +1585,29 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
         case element_id::kHtCapabilities: {
             auto ie = reader.read<HtCapabilities>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->has_ht = true;
+            assoc_ctx->has_ht_cap = true;
             assoc_ctx->ht_cap = *ie;
+            break;
+        }
+        case element_id::kHtOperation: {
+            auto ie = reader.read<HtOperation>();
+            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
+            assoc_ctx->has_ht_op = true;
+            assoc_ctx->ht_op = *ie;
             break;
         }
         case element_id::kVhtCapabilities: {
             auto ie = reader.read<VhtCapabilities>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->has_vht = true;
+            assoc_ctx->has_vht_cap = true;
             assoc_ctx->vht_cap = *ie;
+            break;
+        }
+        case element_id::kVhtOperation: {
+            auto ie = reader.read<VhtOperation>();
+            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
+            assoc_ctx->has_vht_op = true;
+            assoc_ctx->vht_op = *ie;
             break;
         }
         default:
