@@ -9,6 +9,7 @@ HOSTAPPS := \
     $(LOCAL_DIR)/blobfs/rules.mk \
     $(LOCAL_DIR)/bootserver/rules.mk \
     $(LOCAL_DIR)/fidl/compiler/rules.mk \
+    $(LOCAL_DIR)/fidl/formatter/rules.mk \
     $(LOCAL_DIR)/fvm/rules.mk \
     $(LOCAL_DIR)/h2md/rules.mk \
     $(LOCAL_DIR)/kernel-buildsig/rules.mk \

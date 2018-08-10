@@ -50,8 +50,8 @@ private:
     const char* last_source_location_;
 };
 
-// Test that an interface with a Simple layout constraint violation in
-// a superinterface's method fails to compile.
+// Test that the AST visitor works: ensure that if you visit a file, you can
+// reconstruct its original contents.
 bool read_and_write_direct_test() {
     BEGIN_TEST;
 

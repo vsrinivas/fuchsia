@@ -38,6 +38,8 @@ EXAMPLE_FILES := \
     $(EXAMPLE_DIR)/tables.fidl \
     $(EXAMPLE_DIR)/test.fidl \
     $(EXAMPLE_DIR)/types.fidl \
+    $(LOCAL_DIR)/testdata/goodformat.fidl \
+    $(LOCAL_DIR)/testdata/badformat.fidl \
 
 BUILDGEN_DIR=$(BUILDDIR)/system/utest/fidl-compiler
 
@@ -60,6 +62,7 @@ std::map<std::string, std::string> Examples::map_ = {\n" >> $@ && \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/formatter_unittests.cpp \
     $(LOCAL_DIR)/max_bytes_tests.cpp \
     $(LOCAL_DIR)/max_handle_tests.cpp \
     $(LOCAL_DIR)/superinterface_tests.cpp \
