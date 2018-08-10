@@ -3,6 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [ "deprecated-all-services" ],
         "pkgfs": [ "packages" ],
         "system": [ "data/initial_module_packages" ]
     }

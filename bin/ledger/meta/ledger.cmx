@@ -4,6 +4,6 @@
     },
 
     "sandbox": {
-        "features": [ ]
+        "features": [ "deprecated-all-services" ]
     }
 }

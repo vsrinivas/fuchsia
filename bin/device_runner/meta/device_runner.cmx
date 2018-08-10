@@ -3,7 +3,7 @@
     "binary": "bin/app"
   },
   "sandbox": {
-    "features": [ "persistent-storage" ],
+    "features": [ "deprecated-all-services", "persistent-storage" ],
     "system": [ "data/sysui" ]
   }
 }
