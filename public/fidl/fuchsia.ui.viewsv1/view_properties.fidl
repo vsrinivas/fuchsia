@@ -12,6 +12,11 @@ using fuchsia.math;
 // are set to null are inherited from the container's own ancestors.
 struct ViewProperties {
   ViewLayout? view_layout;
+  CustomFocusBehavior? custom_focus_behavior;
+};
+
+struct CustomFocusBehavior {
+  bool allow_focus;
 };
 
 // Provides layout constraints for a view.

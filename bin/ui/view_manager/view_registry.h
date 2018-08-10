@@ -234,6 +234,9 @@ class ViewRegistry : public ViewInspector,
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
+  // Returns whether view is allowed to capture focus
+  virtual bool IsViewFocusable(::fuchsia::ui::viewsv1token::ViewToken view_token);
+
   // A11Y VIEW INSPECTOR
 
   // Performs a view hit-test on the view tree corresponding to

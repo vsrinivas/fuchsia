@@ -74,31 +74,52 @@ TEST_F(TilesTest, Trivial) {}
 
 TEST_F(TilesTest, AddFromURL) {
   uint32_t key = 0;
-  tiles()->AddTileFromURL("test_tile", {}, [&key](uint32_t cb_key) {
-    EXPECT_NE(0u, cb_key) << "Key should be nonzero";
-    key = cb_key;
-  });
+  tiles()->AddTileFromURL("test_tile", /* allow_focus */ true, {},
+                          [&key](uint32_t cb_key) {
+                            EXPECT_NE(0u, cb_key) << "Key should be nonzero";
+                            key = cb_key;
+                          });
 
   ASSERT_NE(0u, key) << "Key should be nonzero";
 
   tiles()->ListTiles([key](::fidl::VectorPtr<uint32_t> keys,
                            ::fidl::VectorPtr<::fidl::StringPtr> urls,
-                           ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes) {
+                           ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes,
+                           ::fidl::VectorPtr<bool> focusabilities) {
     ASSERT_EQ(1u, keys->size());
     EXPECT_EQ(1u, urls->size());
     EXPECT_EQ(1u, sizes->size());
+    EXPECT_EQ(1u, focusabilities->size());
     EXPECT_EQ(key, keys->at(0));
     EXPECT_EQ("test_tile", urls->at(0));
+    EXPECT_EQ(true, focusabilities->at(0));
   });
 
   tiles()->RemoveTile(key);
 
   tiles()->ListTiles([](::fidl::VectorPtr<uint32_t> keys,
                         ::fidl::VectorPtr<::fidl::StringPtr> urls,
-                        ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes) {
+                        ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes,
+                        ::fidl::VectorPtr<bool> focusabilities) {
     EXPECT_EQ(0u, keys->size());
     EXPECT_EQ(0u, urls->size());
     EXPECT_EQ(0u, sizes->size());
+    EXPECT_EQ(0u, focusabilities->size());
+  });
+
+  tiles()->AddTileFromURL("test_nofocus_tile", /* allow_focus */ false, {},
+                          [&key](uint32_t _cb_key) {
+                            // noop
+                          });
+  tiles()->ListTiles([key](::fidl::VectorPtr<uint32_t> keys,
+                           ::fidl::VectorPtr<::fidl::StringPtr> urls,
+                           ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes,
+                           ::fidl::VectorPtr<bool> focusabilities) {
+    EXPECT_EQ(1u, keys->size());
+    EXPECT_EQ(1u, urls->size());
+    EXPECT_EQ(1u, sizes->size());
+    EXPECT_EQ(1u, focusabilities->size());
+    EXPECT_EQ(false, focusabilities->at(0));
   });
 }
 

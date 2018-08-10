@@ -8,6 +8,7 @@
 #include <queue>
 #include <set>
 #include <utility>
+#include <unordered_map>
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -65,8 +66,13 @@ class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<fuchsia::ui::input::InputEvent> pending_events_;
 
-  std::vector<ViewHit> event_path_;
-  uint64_t event_path_propagation_id_ = 0;
+  std::vector<ViewHit> event_path_focused_;
+  uint64_t event_path_propagation_id_focused_ = 0;
+
+  std::unordered_map<uint64_t, std::vector<ViewHit>>
+      event_path_per_pointer_;
+  std::unordered_map<uint64_t, uint64_t>
+      event_path_propagation_id_per_pointer_;
 
   // Occasionally a touch gesture gets lost because the hit test returns empty.
   // For those cases, we remember the pointer is "uncaptured" (identified by

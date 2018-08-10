@@ -771,6 +771,10 @@ void ViewRegistry::ActivateFocusChain(
     ActivateFocusChainCallback callback) {
   FXL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
 
+  if (!IsViewFocusable(view_token)) {
+    return;
+  }
+
   ViewState* view = FindView(view_token.value);
   if (!view) {
     callback(nullptr);
@@ -1018,6 +1022,24 @@ void ViewRegistry::PerformHitTest(
            ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
             callback(std::move(hits));
           }));
+}
+
+// Not focusable if this view or any ancestor is unfocusable.
+bool ViewRegistry::IsViewFocusable(::fuchsia::ui::viewsv1token::ViewToken view_token) {
+  ViewState* view = FindView(view_token.value);
+  if (!view) {
+    return false;
+  }
+  while (view && view->view_stub()) {
+    if (view->view_stub()->properties() &&
+        view->view_stub()->properties()->custom_focus_behavior &&
+        !view->view_stub()->properties()->custom_focus_behavior->allow_focus) {
+      return false;
+    }
+    view = view->view_stub()->parent();
+  }
+  // reached top of tree
+  return true;
 }
 
 }  // namespace view_manager

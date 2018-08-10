@@ -25,7 +25,7 @@ source_set("input") {
     "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
-    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fit"
   ]
 
   public_configs = [ ":common_include_dirs" ]

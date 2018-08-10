@@ -18,8 +18,13 @@
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
 
+using Phase = ::fuchsia::ui::input::PointerEventPhase;
+
 namespace view_manager {
 namespace {
+uint64_t PointerKey(fuchsia::ui::input::PointerEvent pointer) {
+  return ((uint64_t) pointer.device_id) << 32 | ((uint64_t) pointer.pointer_id);
+}
 
 // Returns a pair of points representing a ray's origin and direction, in that
 // order. The ray is constructed to point directly into the scene at the
@@ -129,16 +134,14 @@ void InputDispatcherImpl::ProcessNextEvent() {
       // masquerade as DOWN), or we may never find a new receiver. For the
       // latter case, don't deliver the final UP event; just schedule the next.
       {
-        auto iter = uncaptured_pointers.find(
-            std::make_pair(pointer.device_id, pointer.pointer_id));
+        auto iter = uncaptured_pointers.find(std::make_pair(pointer.device_id, pointer.pointer_id));
         if (iter != uncaptured_pointers.end()) {
           uncaptured_pointers.erase(iter);
           switch (pointer.phase) {
-            case fuchsia::ui::input::PointerEventPhase::MOVE:
-              pending_events_.front().pointer().phase =
-                  fuchsia::ui::input::PointerEventPhase::DOWN;
+            case Phase::MOVE:
+              pending_events_.front().pointer().phase = Phase::DOWN;
               break;
-            case fuchsia::ui::input::PointerEventPhase::UP:
+            case Phase::UP:
               PopAndScheduleNextEvent();
               return;
             default:
@@ -147,7 +150,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
         }
       }
 
-      if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
+      if (pointer.phase == Phase::DOWN) {
         fuchsia::math::PointF point;
         point.x = pointer.x;
         point.y = pointer.y;
@@ -188,15 +191,34 @@ void InputDispatcherImpl::ProcessNextEvent() {
 void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
                                        size_t index,
                                        fuchsia::ui::input::InputEvent event) {
+  std::vector<ViewHit>* event_path;
+  uint64_t current_propagation_id;
+
+  // Pointer events use pointer-specific path and propagation id.
+  // Keyboard/focus events use the focus path and propagation id.
+  // These are typically the same if the view is focusable, but
+  // they are allowed to differ for a non-focusable view, or if
+  // a finger remains pressed on a view that is then defocused
+  // with a different press.
+  if (event.is_pointer()) {
+    auto pointer_key = PointerKey(event.pointer());
+    event_path = &event_path_per_pointer_[pointer_key];
+    current_propagation_id =
+        event_path_propagation_id_per_pointer_[pointer_key];
+  } else {
+    event_path = &event_path_focused_;
+    current_propagation_id = event_path_propagation_id_focused_;
+  }
+
   // TODO(MZ-164) when the chain is changed, we might need to cancel events
   // that have not progagated fully through the chain.
-  if (index >= event_path_.size() ||
-      event_path_propagation_id_ != event_path_propagation_id)
+  if (index >= (*event_path).size() ||
+      current_propagation_id != event_path_propagation_id)
     return;
 
   // TODO(MZ-33) once input arena is in place, we won't need the "handled"
   // boolean on the callback anymore.
-  const ViewHit& view_hit = event_path_[index];
+  const ViewHit& view_hit = (*event_path)[index];
   const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
   fuchsia::math::PointF point;
   point.x = pointer.x;
@@ -206,21 +228,34 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
   TransformPointerEvent(ray.first, ray.second, view_hit.inverse_transform,
                         view_hit.distance, &event);
   FXL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " to "
-              << event_path_[index].view_token << ": " << event;
+              << (*event_path)[index].view_token << ": " << event;
   fuchsia::ui::input::InputEvent cloned_event;
   fidl::Clone(event, &cloned_event);
   owner_->DeliverEvent(
-      event_path_[index].view_token, std::move(cloned_event),
+      (*event_path)[index].view_token, std::move(cloned_event),
       fxl::MakeCopyable([this, event_path_propagation_id, index,
                          event = std::move(event)](bool handled) mutable {
         if (!handled) {
           DeliverEvent(event_path_propagation_id, index + 1, std::move(event));
         }
+        if (handled && event.is_pointer() &&
+            (event.pointer().phase == Phase::CANCEL ||
+             event.pointer().phase == Phase::REMOVE)) {
+          auto pointer_key = PointerKey(event.pointer());
+          event_path_per_pointer_.erase(pointer_key);
+          event_path_propagation_id_per_pointer_.erase(pointer_key);
+        }
       }));
 }
 
 void InputDispatcherImpl::DeliverEvent(fuchsia::ui::input::InputEvent event) {
-  DeliverEvent(event_path_propagation_id_, 0u, std::move(event));
+  if (event.is_pointer()) {
+    auto pointer_key = PointerKey(event.pointer());
+    DeliverEvent(event_path_propagation_id_per_pointer_[pointer_key], 0u,
+                 std::move(event));
+  } else {
+    DeliverEvent(event_path_propagation_id_focused_, 0u, std::move(event));
+  }
 }
 
 void InputDispatcherImpl::DeliverKeyEvent(
@@ -300,9 +335,10 @@ void InputDispatcherImpl::OnHitTestResult(const fuchsia::math::PointF& point,
   }
 
   // FIXME(jpoichet) This should be done somewhere else.
+  // this callback only gets called if view is focusable
   inspector_->ActivateFocusChain(
       view_hits.front().view_token,
-      [this](std::unique_ptr<FocusChain> new_chain) {
+      [this, view_hits](std::unique_ptr<FocusChain> new_chain) {
         if (!active_focus_chain_ || active_focus_chain_->chain.front().value !=
                                         new_chain->chain.front().value) {
           if (active_focus_chain_) {
@@ -329,19 +365,26 @@ void InputDispatcherImpl::OnHitTestResult(const fuchsia::math::PointF& point,
             owner_->DeliverEvent(new_chain->chain.front(), std::move(event),
                                  nullptr);
           }
-
           active_focus_chain_ = std::move(new_chain);
         }
+
+        event_path_focused_ = view_hits;
+        event_path_propagation_id_focused_++;
+
+        FXL_VLOG(1) << "OnViewHitResolved: view_token_="
+                    << event_path_focused_.front().view_token << ", view_transform_="
+                    << event_path_focused_.front().inverse_transform
+                    << ", event_path_propagation_id_focused_="
+                    << event_path_propagation_id_focused_;
       });
 
-  // TODO(jpoichet) Implement Input Arena
-  event_path_propagation_id_++;
-  event_path_ = std::move(view_hits);
-
-  FXL_VLOG(1) << "OnViewHitResolved: view_token_="
-              << event_path_.front().view_token
-              << ", view_transform_=" << event_path_.front().inverse_transform
-              << ", event_path_propagation_id_=" << event_path_propagation_id_;
+  const auto& event = pending_events_.front();
+  if (event.is_pointer()) {
+    const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
+    auto pointer_key = PointerKey(pointer);
+    event_path_per_pointer_[pointer_key] = std::move(view_hits);
+    event_path_propagation_id_per_pointer_[pointer_key] += 1;
+  }
 
   DeliverEvent(std::move(pending_events_.front()));
   PopAndScheduleNextEvent();

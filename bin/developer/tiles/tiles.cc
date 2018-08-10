@@ -73,12 +73,12 @@ Tiles::~Tiles() = default;
 
 void Tiles::AddTilesByURL(std::vector<std::string> urls) {
   for (const auto& url : urls) {
-    AddTileFromURL(fidl::StringPtr(url), {}, {});
+    AddTileFromURL(fidl::StringPtr(url), true, {}, {});
   }
 }
 
 // |Tiles|:
-void Tiles::AddTileFromURL(fidl::StringPtr url,
+void Tiles::AddTileFromURL(fidl::StringPtr url, bool allow_focus,
                            fidl::VectorPtr<fidl::StringPtr> args,
                            AddTileFromURLCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
@@ -101,7 +101,7 @@ void Tiles::AddTileFromURL(fidl::StringPtr url,
   uint32_t child_key = next_child_view_key_++;
 
   AddChildView(child_key, std::move(child_view_owner), url,
-               std::move(controller));
+               std::move(controller), allow_focus);
 
   if (callback)
     callback(child_key);
@@ -130,10 +130,12 @@ void Tiles::ListTiles(ListTilesCallback callback) {
   std::vector<uint32_t> child_keys;
   std::vector<fidl::StringPtr> child_urls;
   std::vector<fuchsia::math::SizeF> child_sizes;
+  std::vector<bool> focusabilities;
 
   for (const auto& it : views_) {
     child_keys.push_back(it.first);
     child_urls.push_back(it.second->url);
+    focusabilities.push_back(it.second->allow_focus);
     // We may not know every tile's size if we haven't laid everything out yet.
     if (it.second->view_properties.view_layout != nullptr) {
       child_sizes.push_back(it.second->view_properties.view_layout->size);
@@ -143,7 +145,8 @@ void Tiles::ListTiles(ListTilesCallback callback) {
   }
   callback(fidl::VectorPtr<uint32_t>(std::move(child_keys)),
            fidl::VectorPtr<fidl::StringPtr>(std::move(child_urls)),
-           fidl::VectorPtr<fuchsia::math::SizeF>(std::move(child_sizes)));
+           fidl::VectorPtr<fuchsia::math::SizeF>(std::move(child_sizes)),
+           fidl::VectorPtr<bool>(std::move(focusabilities)));
 }
 
 void Tiles::OnPropertiesChanged(ViewProperties properties,
@@ -182,9 +185,10 @@ void Tiles::OnChildUnavailable(uint32_t child_key,
 void Tiles::AddChildView(uint32_t child_key,
                          fidl::InterfaceHandle<ViewOwner> child_view_owner,
                          const std::string& url,
-                         fuchsia::sys::ComponentControllerPtr controller) {
-  auto view_data = std::make_unique<ViewData>(url, child_key,
-                                              std::move(controller), &session_);
+                         fuchsia::sys::ComponentControllerPtr controller,
+                         bool allow_focus) {
+  auto view_data = std::make_unique<ViewData>(
+      url, child_key, std::move(controller), &session_, allow_focus);
 
   zx::eventpair host_import_token;
   view_data->host_node.ExportAsRequest(&host_import_token);
@@ -246,6 +250,9 @@ void Tiles::Layout() {
       view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
       view_properties.view_layout->size.width = tile_bounds.width;
       view_properties.view_layout->size.height = tile_bounds.height;
+      view_properties.custom_focus_behavior =
+          ::fuchsia::ui::viewsv1::CustomFocusBehavior::New();
+      view_properties.custom_focus_behavior->allow_focus = tile->allow_focus;
 
       if (tile->view_properties != view_properties) {
         ViewProperties view_properties_clone;
@@ -275,9 +282,10 @@ void Tiles::PresentScene() {
 
 Tiles::ViewData::ViewData(const std::string& url, uint32_t key,
                           fuchsia::sys::ComponentControllerPtr controller,
-                          scenic::Session* session)
+                          scenic::Session* session, bool allow_focus)
     : url(url),
       key(key),
+      allow_focus(allow_focus),
       controller(std::move(controller)),
       host_node(session) {}
 

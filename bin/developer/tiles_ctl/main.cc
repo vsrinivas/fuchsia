@@ -33,7 +33,7 @@ void Usage() {
   printf(
       "Usage: tiles_ctl <command>\n"
       "  Supported commands:\n"
-      "    add <url> [<args>...]\n"
+      "    add [--disable-focus] <url> [<args>...]\n"
       "    remove <key>\n"
       "    list\n");
 }
@@ -100,7 +100,7 @@ ControllerPtr FindTiles() {
   return tiles;
 }
 
-bool Add(std::string url, std::vector<std::string> args) {
+bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
   auto tiles = FindTiles();
   if (!tiles)
     return false;
@@ -109,7 +109,8 @@ bool Add(std::string url, std::vector<std::string> args) {
   for (const auto& it : args) {
     arguments.push_back(it);
   }
-  if (tiles->AddTileFromURL(url, std::move(arguments), &key) != ZX_OK)
+  if (tiles->AddTileFromURL(url, allow_focus, std::move(arguments), &key) !=
+      ZX_OK)
     return false;
   printf("Tile added with key %u\n", key);
   return true;
@@ -130,14 +131,16 @@ bool List() {
   fidl::VectorPtr<uint32_t> keys;
   fidl::VectorPtr<::fidl::StringPtr> urls;
   fidl::VectorPtr<::fuchsia::math::SizeF> sizes;
+  fidl::VectorPtr<bool> focusabilities;
 
-  if (tiles->ListTiles(&keys, &urls, &sizes) != ZX_OK)
+  if (tiles->ListTiles(&keys, &urls, &sizes, &focusabilities) != ZX_OK)
     return false;
 
   printf("Found %lu tiles:\n", keys->size());
   for (size_t i = 0u; i < keys->size(); ++i) {
-    printf("Tile key %u url %s size %.1fx%.1f\n", keys->at(i),
-           (*urls->at(i)).c_str(), sizes->at(i).width, sizes->at(i).height);
+    printf("Tile key %u url %s size %.1fx%.1f%s\n", keys->at(i),
+           (*urls->at(i)).c_str(), sizes->at(i).width, sizes->at(i).height,
+           focusabilities->at(i) ? " (unfocusable)" : "");
   }
   return true;
 }
@@ -159,10 +162,17 @@ int main(int argc, const char** argv) {
       Usage();
       return 1;
     }
-    auto url = positional_args[1];
+
+    bool allow_focus = positional_args[1] != "--disable-focus";
+    if (!allow_focus && positional_args.size() < 3) {
+      Usage();
+      return 1;
+    }
+    int adjust = allow_focus ? 0 : 1;
+    auto url = positional_args[1 + adjust];
     std::vector<std::string> component_args{
-        std::next(positional_args.begin(), 2), positional_args.end()};
-    if (!Add(url, component_args)) {
+        std::next(positional_args.begin(), 2 + adjust), positional_args.end()};
+    if (!Add(url, allow_focus, component_args)) {
       return 1;
     }
   } else if (cmd == "remove") {

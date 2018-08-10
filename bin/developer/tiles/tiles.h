@@ -34,11 +34,12 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
   struct ViewData {
     explicit ViewData(const std::string& url, uint32_t key,
                       fuchsia::sys::ComponentControllerPtr controller,
-                      scenic::Session* session);
+                      scenic::Session* session, bool allow_focus);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
+    bool allow_focus;
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
 
@@ -58,7 +59,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
                           OnChildUnavailableCallback callback) final;
 
   // |fuchsia::developer::tiles::Controller|:
-  void AddTileFromURL(fidl::StringPtr url,
+  void AddTileFromURL(fidl::StringPtr url, bool allow_focus,
                       fidl::VectorPtr<fidl::StringPtr> args,
                       AddTileFromURLCallback callback) final;
   void AddTileFromViewProvider(
@@ -73,7 +74,8 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
   void AddChildView(
       uint32_t child_key,
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      const std::string& url, fuchsia::sys::ComponentControllerPtr);
+      const std::string& url, fuchsia::sys::ComponentControllerPtr,
+      bool allow_focus);
 
   void InvalidateScene();
   void Layout();
