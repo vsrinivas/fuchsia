@@ -78,7 +78,7 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
     #    in the dependency graph: not creating that file would yield a Bazel error.
     content = "#!/bin/bash\n"
     content += dart_exec.path
-    content += " $@\n"
+    content += " $@ || exit $?\n"
     for dilp in mappings.values():
         content += "if ! [[ -f %s ]]; then\n" % dilp.path
         content += "  echo 'Warning: %s is not needed, generating empty file.' >&2\n" % dilp.path
