@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(futures_api, pin, arbitrary_self_types)]
 
 extern crate failure;
 extern crate fdio;
@@ -27,7 +28,6 @@ extern crate futures;
 extern crate parking_lot;
 
 use app::server::ServicesServer;
-use futures::future::ok as fok;
 
 use bt::util;
 use failure::{Error, ResultExt};
@@ -35,7 +35,7 @@ use fidl::endpoints2::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_bluetooth_control::ControlMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
 use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
-use futures::FutureExt;
+use futures::{future, TryFutureExt};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -65,10 +65,11 @@ fn main() -> Result<(), Error> {
     let server = ServicesServer::new()
         .add_service((ControlMarker::NAME, move |chan: async::Channel| {
             trace!("Spawning Control Service");
-            async::spawn(control_service::make_control_service(
-                control_hd.clone(),
-                chan,
-            ))
+            async::spawn(
+                control_service::make_control_service(control_hd.clone(), chan)
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to spawn {:?}", e)
+                }))
         }))
         .add_service((CentralMarker::NAME, move |chan: async::Channel| {
             trace!("Connecting Control Service to Adapter");
@@ -77,8 +78,10 @@ fn main() -> Result<(), Error> {
                 if let Some(adapter) = adapter {
                     let _ = adapter.read().get_host().request_low_energy_central(remote);
                 }
-                fok(())
-            }).recover(|e| eprintln!("Failed to connect: {}", e)))
+                future::ready(Ok(()))
+            }).unwrap_or_else(|e| {
+                eprintln!("Failed to spawn {:?}", e)
+            }))
         }))
         .add_service((PeripheralMarker::NAME, move |chan: async::Channel| {
             trace!("Connecting Peripheral Service to Adapter");
@@ -87,8 +90,10 @@ fn main() -> Result<(), Error> {
                 if let Some(adapter) = adapter {
                     let _ = adapter.read().get_host().request_low_energy_peripheral(remote);
                 }
-                fok(())
-            }).recover(|e| eprintln!("Failed to connect: {}", e)))
+                future::ready(Ok(()))
+            }).unwrap_or_else(|e| {
+                eprintln!("Failed to spawn {:?}", e)
+            }))
         }))
         .add_service((Server_Marker::NAME, move |chan: async::Channel| {
             trace!("Connecting Gatt Service to Adapter");
@@ -97,15 +102,13 @@ fn main() -> Result<(), Error> {
                 if let Some(adapter) = adapter {
                     let _ = adapter.read().get_host().request_gatt_server_(remote);
                 }
-                fok(())
-            }).recover(|e| eprintln!("Failed to connect: {}", e)))
+                future::ready(Ok(()))
+            }).unwrap_or_else(|e| {
+                eprintln!("Failed to spawn {:?}", e)
+            }))
         }))
         .start()
         .map_err(|e| e.context("error starting bt-gap service"))?;
 
-    executor
-        .run_singlethreaded(server.join(host_watcher))
-        .context("failed to execute bt-gap server future")
-        .map(|_| ())
-        .map_err(|e| e.into())
+    executor.run_singlethreaded(server.try_join(host_watcher)).map(|_| ())
 }

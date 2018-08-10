@@ -5,6 +5,7 @@
 //! An implementation of a client for a fidl interface.
 
 use {async, Error, zircon as zx};
+use async::temp::{TempFutureExt, Either};
 use encoding2::{
     Encodable,
     Decodable,
@@ -14,13 +15,14 @@ use encoding2::{
     TransactionHeader,
     TransactionMessage
 };
-use futures::future::{self, Either, FutureResult, AndThen};
+use futures::future::{self, Ready, AndThen};
 use futures::prelude::*;
 use futures::task::Waker;
 use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::VecDeque;
-use std::mem;
+use std::marker::Unpin;
+use std::mem::{self, PinMut};
 use std::ops::Deref;
 use std::sync::Arc;
 use self::zx::MessageBuf;
@@ -37,6 +39,10 @@ fn decode_transaction_body<D: Decodable>(mut buf: zx::MessageBuf) -> Result<D, E
     Ok(output)
 }
 
+fn decode_transaction_body_fut<D: Decodable>(buf: zx::MessageBuf) -> Ready<Result<D, Error>> {
+    future::ready(decode_transaction_body(buf))
+}
+
 /// A FIDL client which can be used to send buffers and receive responses via a channel.
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -45,14 +51,14 @@ pub struct Client {
 
 
 /// A future representing the raw response to a FIDL query.
-pub type RawQueryResponseFut = Either<FutureResult<MessageBuf, Error>, MessageResponse>;
+pub type RawQueryResponseFut = Either<Ready<Result<MessageBuf, Error>>, MessageResponse>;
 
 /// A future representing the decoded response to a FIDL query.
 pub type QueryResponseFut<D> =
     AndThen<
         RawQueryResponseFut,
-        Result<D, Error>,
-        fn(MessageBuf) -> Result<D, Error>>;
+        Ready<Result<D, Error>>,
+        fn(MessageBuf) -> Ready<Result<D, Error>>>;
 
 /// A FIDL transaction id. Will not be zero for a message that includes a response.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -147,7 +153,7 @@ impl Client {
             Ok((buf, handles))
         });
 
-        res_fut.and_then(decode_transaction_body::<D>)
+        res_fut.and_then(decode_transaction_body_fut::<D>)
     }
 
     /// Send a raw message without expecting a response.
@@ -163,10 +169,10 @@ impl Client {
         let id = self.inner.register_msg_interest();
         let (out_buf, handles) = match msg_from_id(Txid::from_interest_id(id)) {
             Ok(x) => x,
-            Err(e) => return future::err(e).left_future(),
+            Err(e) => return future::ready(Err(e)).left_future(),
         };
         if let Err(e) = self.inner.channel.write(out_buf, handles) {
-            return future::err(Error::ClientWrite(e)).left_future();
+            return future::ready(Err(Error::ClientWrite(e))).left_future();
         }
 
         MessageResponse {
@@ -185,20 +191,22 @@ pub struct MessageResponse {
     client: Option<Arc<ClientInner>>,
 }
 
+impl Unpin for MessageResponse {}
+
 impl Future for MessageResponse {
-    type Item = MessageBuf;
-    type Error = Error;
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    type Output = Result<MessageBuf, Error>;
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+        let this = &mut *self;
         let res;
         {
-            let client = self.client.as_ref().ok_or(Error::PollAfterCompletion)?;
+            let client = this.client.as_ref().ok_or(Error::PollAfterCompletion)?;
 
-            res = client.poll_recv_msg_response(self.id, cx);
+            res = client.poll_recv_msg_response(this.id, cx);
         }
 
         // Drop the client reference if the response has been received
-        if let Ok(Async::Ready(_)) = res {
-            let client = self.client.take()
+        if let Poll::Ready(Ok(_)) = res {
+            let client = this.client.take()
                 .expect("MessageResponse polled after completion");
             client.wake_any();
         }
@@ -257,19 +265,17 @@ pub struct EventReceiver {
     inner: Arc<ClientInner>,
 }
 
-impl Stream for EventReceiver {
-    type Item = MessageBuf;
-    type Error = Error;
+impl Unpin for EventReceiver {}
 
-    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
-        match self.inner.poll_recv_event(cx) {
-            Ok(Async::Ready(x)) => Ok(Async::Ready(Some(x))),
-            Ok(Async::Pending) => Ok(Async::Pending),
-            Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => {
-                Ok(Async::Ready(None))
-            }
-            Err(e) => Err(e),
-        }
+impl Stream for EventReceiver {
+    type Item = Result<MessageBuf, Error>;
+
+    fn poll_next(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
+        Poll::Ready(match ready!(self.inner.poll_recv_event(cx)) {
+            Ok(x) => Some(Ok(x)),
+            Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => None,
+            Err(e) => Some(Err(e)),
+        })
     }
 }
 
@@ -339,19 +345,19 @@ impl ClientInner {
     fn poll_recv_event(
         &self,
         cx: &mut task::Context,
-    ) -> Poll<MessageBuf, Error> {
+    ) -> Poll<Result<MessageBuf, Error>> {
         let is_closed = self.recv_all(cx)?;
 
         let mut lock = self.event_channel.lock();
 
         if let Some(msg_buf) = lock.queue.pop_front() {
-            Ok(Async::Ready(msg_buf))
+            Poll::Ready(Ok(msg_buf))
         } else {
             lock.listener = EventListener::Some(cx.waker().clone());
             if is_closed {
-                Err(Error::ClientRead(zx::Status::PEER_CLOSED))
+                Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
             } else {
-                Ok(Async::Pending)
+                Poll::Pending
             }
         }
     }
@@ -360,7 +366,7 @@ impl ClientInner {
         &self,
         txid: Txid,
         cx: &mut task::Context,
-    ) -> Poll<MessageBuf, Error> {
+    ) -> Poll<Result<MessageBuf, Error>> {
         let is_closed = self.recv_all(cx)?;
 
         let mut message_interests = self.message_interests.lock();
@@ -372,7 +378,7 @@ impl ClientInner {
             // If, by happy accident, we just raced to getting the result,
             // then yay! Return success.
             let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
-            Ok(Async::Ready(buf))
+            Poll::Ready(Ok(buf))
         } else {
             // Set the current waker to be notified when a response arrives.
             *message_interests.get_mut(interest_id.as_raw_id())
@@ -380,9 +386,9 @@ impl ClientInner {
                     MessageInterest::Waiting(cx.waker().clone());
 
             if is_closed {
-                Err(Error::ClientRead(zx::Status::PEER_CLOSED))
+                Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
             } else {
-                Ok(Async::Pending)
+                Poll::Pending
             }
         }
     }
@@ -399,14 +405,11 @@ impl ClientInner {
 
         loop {
             let mut buf = MessageBuf::new();
-            // TODO(cramertj) use a custom waker in this `cx` so that futures which are dropped while
-            // registered as the current reader to wake don't cause the client to block until someone
-            // else happens to wake up.
             match self.channel.recv_from(&mut buf, cx) {
-                Ok(Async::Ready(())) => {}
-                Ok(Async::Pending) => return Ok(false),
-                Err(zx::Status::PEER_CLOSED) => return Ok(true),
-                Err(e) => return Err(Error::ClientRead(e)),
+                Poll::Ready(Ok(())) => {}
+                Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
+                Poll::Ready(Err(e)) => return Err(Error::ClientRead(e)),
+                Poll::Pending => return Ok(false),
             }
 
             let (header, _) = decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
@@ -504,20 +507,21 @@ mod tests {
 
         let server = async::Channel::from_channel(server_end).unwrap();
         let mut buffer = MessageBuf::new();
-        let receiver = server.recv_msg(&mut buffer).map(|(_chan, buf)| {
+        let receiver = server.recv_msg(&mut buffer).map_ok(|(_chan, buf)| {
             assert_eq!(EXPECTED, buf.bytes());
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receiver.on_timeout(
             300.millis().after_now(),
-            || panic!("did not receive message in time!")).unwrap();
+            || panic!("did not receive message in time!"));
 
         let sender = async::Timer::new(100.millis().after_now()).map(|()|{
             client.send(&mut 55u8, 42).unwrap();
+            Ok(())
         });
 
-        let done = receiver.join(sender);
+        let done = receiver.try_join(sender);
         executor.run_singlethreaded(done).unwrap();
     }
 
@@ -539,7 +543,7 @@ mod tests {
 
         let server = async::Channel::from_channel(server_end).unwrap();
         let mut buffer = MessageBuf::new();
-        let receiver = server.recv_msg(&mut buffer).map(|(chan, buf)| {
+        let receiver = server.recv_msg(&mut buffer).map_ok(|(chan, buf)| {
             assert_eq!(EXPECTED, buf.bytes());
             let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
                         // since FIDL txids start with `1`.
@@ -562,10 +566,10 @@ mod tests {
         let receiver = receiver.on_timeout(
             300.millis().after_now(),
             || panic!("did not receiver message in time!"
-        )).unwrap();
+        ));
 
         let sender = client.send_query::<u8, u8>(&mut 55, 42)
-            .map(|x|assert_eq!(x, 55))
+            .map_ok(|x|assert_eq!(x, 55))
             .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::Other,
@@ -576,9 +580,9 @@ mod tests {
         let sender = sender.on_timeout(
             300.millis().after_now(),
             || panic!("did not receive response in time!")
-        ).unwrap();
+        ).map(Ok);
 
-        let done = receiver.join(sender.err_into());
+        let done = receiver.try_join(sender);
         executor.run_singlethreaded(done).unwrap();
     }
 
@@ -626,26 +630,22 @@ mod tests {
         drop(server);
 
         let recv = client.take_event_receiver()
-            .next()
-            .and_then(|(x, stream)| {
+            .into_future()
+            .then(|(x, stream)| {
                 let x = x.expect("should contain one element");
+                let x = x.expect("fidl error");
                 let x: i32 = decode_transaction_body(x).expect("failed to decode event");
                 assert_eq!(x, 55);
-                stream.next()
+                stream.into_future()
             })
-            .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"))
-            .map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::Other,
-                    &*format!("fidl error: {:?}", e))
-            });
+            .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let recv = recv.on_timeout(
             300.millis().after_now(),
             || panic!("did not receive event in time!")
-        ).unwrap();
+        );
 
-        executor.run_singlethreaded(recv).unwrap();
+        executor.run_singlethreaded(recv);
     }
 }

@@ -5,9 +5,11 @@
 use bytes::{Buf, BufMut};
 use futures::io::{AsyncRead, AsyncWrite, Initializer};
 use futures::task;
-use futures::{Async, Future, Poll, Stream};
+use futures::{Poll, Future, Stream};
 use libc;
 use std::io::{self, Read, Write};
+use std::marker::Unpin;
+use std::mem::PinMut;
 use std::net::{self, SocketAddr};
 use std::ops::Deref;
 
@@ -22,6 +24,8 @@ use net::{set_nonblock, EventedFd};
 /// This object can be converted into a stream of incoming connections for
 /// various forms of processing.
 pub struct TcpListener(EventedFd<net::TcpListener>);
+
+impl Unpin for TcpListener {}
 
 impl Deref for TcpListener {
     type Target = EventedFd<net::TcpListener>;
@@ -60,19 +64,20 @@ impl TcpListener {
 
     pub fn async_accept(
         &mut self, cx: &mut task::Context,
-    ) -> Poll<(TcpStream, SocketAddr), io::Error> {
+    ) -> Poll<io::Result<(TcpStream, SocketAddr)>> {
         try_ready!(EventedFd::poll_readable(&self.0, cx));
 
         match self.0.as_ref().accept() {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
                     self.0.need_read(cx);
-                    return Ok(Async::Pending);
+                    Poll::Pending
+                } else {
+                    Poll::Ready(Err(e))
                 }
-                return Err(e);
             }
             Ok((sock, addr)) => {
-                return TcpStream::from_stream(sock).map(|sock| Async::Ready((sock, addr)));
+                Poll::Ready(Ok((TcpStream::from_stream(sock)?, addr)))
             }
         }
     }
@@ -87,10 +92,11 @@ impl TcpListener {
 pub struct Acceptor(Option<TcpListener>);
 
 impl Future for Acceptor {
-    type Item = (TcpListener, TcpStream, SocketAddr);
-    type Error = io::Error;
+    type Output = io::Result<(TcpListener, TcpStream, SocketAddr)>;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+        -> Poll<Self::Output>
+    {
         let (stream, addr);
         {
             let listener = self.0
@@ -101,19 +107,20 @@ impl Future for Acceptor {
             addr = a;
         }
         let listener = self.0.take().unwrap();
-        Ok(Async::Ready((listener, stream, addr)))
+        Poll::Ready(Ok((listener, stream, addr)))
     }
 }
 
 pub struct AcceptStream(TcpListener);
 
 impl Stream for AcceptStream {
-    type Item = (TcpStream, SocketAddr);
-    type Error = io::Error;
+    type Item = io::Result<(TcpStream, SocketAddr)>;
 
-    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
-        let (stream, addr) = try_ready!(self.0.async_accept(cx));
-        Ok(Async::Ready(Some((stream, addr))))
+    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context)
+        -> Poll<Option<Self::Item>>
+    {
+        let (stream, addr) = ready!(self.0.async_accept(cx)?);
+        Poll::Ready(Some(Ok((stream, addr))))
     }
 }
 
@@ -164,57 +171,61 @@ impl TcpStream {
 
     pub fn async_connect(
         &mut self, addr: &SocketAddr, cx: &mut task::Context,
-    ) -> Poll<(), io::Error> {
+    ) -> Poll<io::Result<()>> {
         match self.state {
             ConnectState::New => match self.stream.as_ref().connect(addr) {
                 Err(e) => {
                     if e.raw_os_error() == Some(libc::EINPROGRESS) {
                         self.state = ConnectState::Connecting;
                         self.stream.need_write(cx);
-                        Ok(Async::Pending)
+                        Poll::Pending
                     } else {
-                        Err(e)
+                        Poll::Ready(Err(e))
                     }
                 }
                 Ok(()) => {
                     self.state = ConnectState::Connected;
-                    Ok(Async::Ready(()))
+                    Poll::Ready(Ok(()))
                 }
             },
-            ConnectState::Connecting => self.stream.poll_writable(cx).map_err(Into::into),
-            ConnectState::Connected => Err(io::Error::from_raw_os_error(libc::EISCONN)),
+            ConnectState::Connecting =>
+                self.stream.poll_writable(cx).map(|x| x.map_err(Into::into)),
+            ConnectState::Connected =>
+                Poll::Ready(Err(io::Error::from_raw_os_error(libc::EISCONN))),
         }
     }
 
     pub fn read_buf<B: BufMut>(
         &self, buf: &mut B, cx: &mut task::Context,
-    ) -> Poll<usize, io::Error> {
+    ) -> Poll<io::Result<usize>> {
         match (&self.stream).as_ref().read(unsafe { buf.bytes_mut() }) {
             Ok(n) => {
                 unsafe {
                     buf.advance_mut(n);
                 }
-                Ok(Async::Ready(n))
+                Poll::Ready(Ok(n))
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 self.stream.need_read(cx);
-                Ok(Async::Pending)
+                Poll::Pending
             }
-            Err(e) => Err(e),
+            Err(e) => Poll::Ready(Err(e)),
         }
     }
 
-    pub fn write_buf<B: Buf>(&self, buf: &mut B, cx: &mut task::Context) -> Poll<usize, io::Error> {
+    pub fn write_buf<B: Buf>(&self, buf: &mut B, cx: &mut task::Context)
+        -> Poll<io::Result<usize>>
+    {
         match (&self.stream).as_ref().write(buf.bytes()) {
             Ok(n) => {
                 buf.advance(n);
-                Ok(Async::Ready(n))
+                Poll::Ready(Ok(n))
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 self.stream.need_write(cx);
-                Ok(Async::Pending)
+                Poll::Pending
             }
-            Err(e) => Err(e),
+            Err(e) => Poll::Ready(Err(e)),
         }
     }
 
@@ -238,24 +249,24 @@ impl AsyncRead for TcpStream {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8]) -> Poll<usize, io::Error> {
-        self.stream.poll_read(cx, buf).map_err(|e| e.into())
+    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8]) -> Poll<io::Result<usize>> {
+        self.stream.poll_read(cx, buf)
     }
 
     // TODO: override poll_vectored_read and call readv on the underlying stream
 }
 
 impl AsyncWrite for TcpStream {
-    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8]) -> Poll<usize, io::Error> {
-        self.stream.poll_write(cx, buf).map_err(|e| e.into())
+    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8]) -> Poll<io::Result<usize>> {
+        self.stream.poll_write(cx, buf)
     }
 
-    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_close(&mut self, _: &mut task::Context) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
     }
 
     // TODO: override poll_vectored_write and call writev on the underlying stream
@@ -267,17 +278,17 @@ pub struct Connector {
 }
 
 impl Future for Connector {
-    type Item = TcpStream;
-    type Error = io::Error;
+    type Output = io::Result<TcpStream>;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+        let this = &mut *self;
         {
-            let stream = self.stream
+            let stream = this.stream
                 .as_mut()
                 .expect("polled a Connector after completion");
-            try_ready!(stream.async_connect(&self.addr, cx));
+            try_ready!(stream.async_connect(&this.addr, cx));
         }
-        let stream = self.stream.take().unwrap();
-        Ok(Async::Ready(stream))
+        let stream = this.stream.take().unwrap();
+        Poll::Ready(Ok(stream))
     }
 }

@@ -16,7 +16,7 @@ extern crate futures;
 use app::client::connect_to_service;
 use failure::{Error, ResultExt};
 use fidl::encoding2::OutOfLine;
-use futures::future::ok as fok;
+use futures::future::ready;
 
 // Include the generated FIDL bindings for the `Logger` service.
 extern crate fidl_fuchsia_logger;
@@ -40,21 +40,21 @@ where
 {
     LogListenerImpl {
         state: processor,
-        on_open: |_, _| fok(()),
+        on_open: |_, _| ready(()),
         done: |processor, _| {
             processor.done();
             // TODO(anmittal): close this server.
-            fok(())
+            ready(())
         },
         log: |processor, message, _| {
             processor.log(message);
-            fok(())
+            ready(())
         },
         log_many: |processor, messages, _| {
             for msg in messages {
                 processor.log(msg);
             }
-            fok(())
+            ready(())
         },
     }
 }

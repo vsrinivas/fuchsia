@@ -12,11 +12,12 @@ pub use self::udp::UdpSocket;
 
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use futures::task::{self, AtomicWaker};
-use futures::{Async, Poll};
+use futures::Poll;
 use libc;
 use zx::{self, AsHandleRef};
 
 use std::io::{Read, Write};
+use std::marker::Unpin;
 use std::mem;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -93,6 +94,8 @@ where
 {
 }
 
+impl<T> Unpin for EventedFd<T> {}
+
 impl<T> Drop for EventedFd<T> {
     fn drop(&mut self) {
         unsafe {
@@ -151,26 +154,26 @@ where
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_readable(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    pub fn poll_readable(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         let receiver = self.signal_receiver.receiver();
         if (receiver.signals.load(Ordering::SeqCst) & (READABLE | ERROR | HUP)) != 0 {
-            Ok(Async::Ready(()))
+            Poll::Ready(Ok(()))
         } else {
             self.need_read(cx);
-            Ok(Async::Pending)
+            Poll::Pending
         }
     }
 
     /// Tests to see if this resource is ready to be written to.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_writable(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    pub fn poll_writable(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         let receiver = self.signal_receiver.receiver();
         if (receiver.signals.load(Ordering::SeqCst) & (WRITABLE | ERROR | HUP)) != 0 {
-            Ok(Async::Ready(()))
+            Poll::Ready(Ok(()))
         } else {
             self.need_write(cx);
-            Ok(Async::Pending)
+            Poll::Pending
         }
     }
 
@@ -258,40 +261,44 @@ impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8]) -> Poll<usize, io::Error> {
+    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8])
+        -> Poll<Result<usize, io::Error>>
+    {
         try_ready!(EventedFd::poll_readable(self, cx));
         let res = self.as_mut().read(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
                 self.need_read(cx);
-                return Ok(Async::Pending);
+                return Poll::Pending;
             }
         }
-        res.map(Async::Ready).map_err(Into::into)
+        Poll::Ready(res.map_err(Into::into))
     }
 
     // TODO: override poll_vectored_read and call readv on the underlying handle
 }
 
 impl<T: AsRawFd + Write> AsyncWrite for EventedFd<T> {
-    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8]) -> Poll<usize, io::Error> {
+    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8])
+        -> Poll<Result<usize, io::Error>>
+    {
         try_ready!(EventedFd::poll_writable(self, cx));
         let res = self.as_mut().write(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
                 self.need_read(cx);
-                return Ok(Async::Pending);
+                return Poll::Pending;
             }
         }
-        res.map(Async::Ready).map_err(Into::into)
+        Poll::Ready(res.map_err(Into::into))
     }
 
-    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<Result<(), io::Error>> {
+        Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_close(&mut self, _: &mut task::Context) -> Poll<Result<(), io::Error>> {
+        Poll::Ready(Ok(()))
     }
 
     // TODO: override poll_vectored_write and call writev on the underlying handle
@@ -308,16 +315,18 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8]) -> Poll<usize, io::Error> {
+    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8])
+        -> Poll<Result<usize, io::Error>>
+    {
         try_ready!(EventedFd::poll_readable(self, cx));
         let res = self.as_ref().read(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
                 self.need_read(cx);
-                return Ok(Async::Pending);
+                return Poll::Pending;
             }
         }
-        res.map(Async::Ready).map_err(Into::into)
+        Poll::Ready(res.map_err(Into::into))
     }
 }
 
@@ -326,24 +335,26 @@ where
     T: AsRawFd,
     for<'b> &'b T: Write,
 {
-    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8]) -> Poll<usize, io::Error> {
+    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8])
+        -> Poll<Result<usize, io::Error>>
+    {
         try_ready!(EventedFd::poll_writable(self, cx));
         let res = self.as_ref().write(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
                 self.need_read(cx);
-                return Ok(Async::Pending);
+                return Poll::Pending;
             }
         }
-        res.map(Async::Ready).map_err(Into::into)
+        Poll::Ready(res.map_err(Into::into))
     }
 
-    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<Result<(), io::Error>> {
+        Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_close(&mut self, _: &mut task::Context) -> Poll<Result<(), io::Error>> {
+        Poll::Ready(Ok(()))
     }
 }
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::{Async, Future, Never};
-use futures::executor::Executor;
-use futures::task::{self, LocalMap, Waker};
+use futures::{Poll, FutureExt};
+use futures::future::FutureObj;
+use futures::task;
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{AcqRel, Relaxed};
@@ -18,7 +18,7 @@ pub struct AtomicFuture {
     // a transition from ACTIVE or NOTIFIED to INACTIVE or DONE.
     // INVARIANT: this value must be `Some(...)` so long as
     // `state` != `DONE`.
-    future: UnsafeCell<Option<(Box<Future<Item = (), Error = Never> + Send>, task::LocalMap)>>,
+    future: UnsafeCell<Option<FutureObj<'static, ()>>>,
 }
 
 /// `AtomicFuture` is safe to access from multiple threads at once.
@@ -53,7 +53,7 @@ const DONE: usize = 3;
 /// The result of a call to `try_poll`.
 /// This indicates the result of attempting to `poll` the future.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum AttemptPoll {
+pub enum AttemptPollResult {
     /// The future was being polled by another thread, but it was notified
     /// to poll at least once more before yielding.
     Busy,
@@ -69,12 +69,11 @@ pub enum AttemptPoll {
 impl AtomicFuture {
     /// Create a new `AtomicFuture`.
     pub fn new(
-        future: Box<Future<Item = (), Error = Never> + Send>,
-        local_map: LocalMap,
+        future: FutureObj<'static, ()>,
     ) -> Self {
         AtomicFuture {
             state: AtomicUsize::new(INACTIVE),
-            future: UnsafeCell::new(Some((future, local_map))),
+            future: UnsafeCell::new(Some(future)),
         }
     }
 
@@ -82,7 +81,7 @@ impl AtomicFuture {
     ///
     /// `try_poll` ensures that the future is polled at least once more
     /// unless it has already finished.
-    pub fn try_poll(&self, waker: &Waker, executor: &mut Executor) -> AttemptPoll
+    pub fn try_poll(&self, cx: &mut task::Context) -> AttemptPollResult
     {
         // AcqRel is used instead of SeqCst in the following code.
         //
@@ -112,42 +111,35 @@ impl AtomicFuture {
                             // This `UnsafeCell` access is valid because `self.future.get()`
                             // is only called here, inside the critical section where
                             // we performed the transition from INACTIVE to ACTIVE.
-                            let opt: &mut Option<(Box<_>, LocalMap)> =
+                            let opt: &mut Option<FutureObj<'static, ()>> =
                                 unsafe { &mut *self.future.get() };
 
                             // We know that the future is still there and hasn't completed
                             // because `state` != `DONE`
-                            let (future, map) =
-                                opt.as_mut().expect("Missing future in AtomicFuture");
-
-                            let cx = &mut task::Context::new(
-                                map,
-                                waker,
-                                executor);
-
-                            future.poll(cx)
+                            let future = opt.as_mut().expect("Missing future in AtomicFuture");
+                            future.poll_unpin(cx)
                         };
 
                         match poll_res {
-                            Ok(Async::Ready(())) | Err(_) => {
+                            Poll::Ready(()) => {
                                 // Take the future so that its innards can be dropped
-                                let future_opt: &mut Option<(Box<_>, LocalMap)> =
+                                let future_opt: &mut Option<FutureObj<'static, ()>> =
                                     unsafe { &mut *self.future.get() };
                                 future_opt.take();
 
                                 // No one else will read `future` unless they see
                                 // `INACTIVE`, which will never happen again.
                                 self.state.store(DONE, Relaxed);
-                                return AttemptPoll::IFinished;
+                                return AttemptPollResult::IFinished;
                             }
-                            Ok(Async::Pending) => {
+                            Poll::Pending => {
                                 // Continue on
                             }
                         }
 
                         match self.state.compare_and_swap(ACTIVE, INACTIVE, AcqRel) {
                             ACTIVE => {
-                                return AttemptPoll::Pending;
+                                return AttemptPollResult::Pending;
                             }
                             NOTIFIED => {
                                 // We were notified to poll again while we were busy.
@@ -198,11 +190,11 @@ impl AtomicFuture {
                             //
                             // This means `state` was definitely NOTIFIED at some point
                             // after the initial EVENT.
-                            return AttemptPoll::Busy
+                            return AttemptPollResult::Busy
                         }
                         DONE => {
                             // The worker completed this future already
-                            return AttemptPoll::SomeoneElseFinished
+                            return AttemptPollResult::SomeoneElseFinished
                         }
                         _ => {
                             panic!("Unexpected AtomicFuture state");
@@ -211,11 +203,11 @@ impl AtomicFuture {
                 }
                 NOTIFIED => {
                     // The worker is already going to poll at least one more time.
-                    return AttemptPoll::Busy
+                    return AttemptPollResult::Busy
                 }
                 DONE => {
                     // Someone else completed this future already
-                    return AttemptPoll::SomeoneElseFinished
+                    return AttemptPollResult::SomeoneElseFinished
                 }
                 _ => {
                     panic!("Unexpected AtomicFuture state");

@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-use futures::{Async, Poll, task};
+use futures::{Poll, task};
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use zx::{self, AsHandleRef};
 
@@ -43,7 +43,7 @@ impl Socket {
     /// get a notification when the socket does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is readable again.
-    fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    fn poll_read(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         self.0.poll_read(cx)
     }
 
@@ -53,35 +53,35 @@ impl Socket {
     /// get a notification when the socket does become writable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is writable again.
-    fn poll_write(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    fn poll_write(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         self.0.poll_write(cx)
     }
 
     // Private helper for reading without `&mut` self.
     // This is used in the impls of `Read` for `Socket` and `&Socket`.
-    fn read_nomut(&self, buf: &mut [u8], cx: &mut task::Context) -> Poll<usize, zx::Status> {
+    fn read_nomut(&self, buf: &mut [u8], cx: &mut task::Context) -> Poll<Result<usize, zx::Status>> {
         try_ready!(self.poll_read(cx));
         let res = self.0.get_ref().read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.0.need_read(cx)?;
-            return Ok(Async::Pending);
+            return Poll::Pending;
         }
         if res == Err(zx::Status::PEER_CLOSED) {
-            return Ok(Async::Ready(0));
+            return Poll::Ready(Ok(0));
         }
-        res.map(Async::Ready)
+        Poll::Ready(res)
     }
 
     // Private helper for writing without `&mut` self.
     // This is used in the impls of `Write` for `Socket` and `&Socket`.
-    fn write_nomut(&self, buf: &[u8], cx: &mut task::Context) -> Poll<usize, zx::Status> {
+    fn write_nomut(&self, buf: &[u8], cx: &mut task::Context) -> Poll<Result<usize, zx::Status>> {
         try_ready!(self.poll_write(cx));
         let res = self.0.get_ref().write(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.0.need_write(cx)?;
-            Ok(Async::Pending)
+            Poll::Pending
         } else {
-            res.map(Async::Ready)
+            Poll::Ready(res)
         }
     }
 }
@@ -99,22 +99,30 @@ impl AsyncRead for Socket {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8]) -> Poll<usize, io::Error> {
+    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8])
+        -> Poll<io::Result<usize>>
+    {
         self.read_nomut(buf, cx).map_err(Into::into)
     }
 }
 
 impl AsyncWrite for Socket {
-    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8]) -> Poll<usize, io::Error> {
+    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8])
+        -> Poll<io::Result<usize>>
+    {
         self.write_nomut(buf, cx).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_flush(&mut self, _: &mut task::Context)
+        -> Poll<io::Result<()>>
+    {
+        Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_close(&mut self, _: &mut task::Context)
+        -> Poll<io::Result<()>>
+    {
+        Poll::Ready(Ok(()))
     }
 }
 
@@ -125,30 +133,34 @@ impl<'a> AsyncRead for &'a Socket {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8]) -> Poll<usize, io::Error> {
+    fn poll_read(&mut self, cx: &mut task::Context, buf: &mut [u8])
+        -> Poll<io::Result<usize>>
+    {
         self.read_nomut(buf, cx).map_err(Into::into)
     }
 }
 
 impl<'a> AsyncWrite for &'a Socket {
-    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8]) -> Poll<usize, io::Error> {
+    fn poll_write(&mut self, cx: &mut task::Context, buf: &[u8])
+        -> Poll<io::Result<usize>>
+    {
         self.write_nomut(buf, cx).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_flush(&mut self, _: &mut task::Context) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &mut task::Context) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
+    fn poll_close(&mut self, _: &mut task::Context) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Executor, Timer, TimeoutExt};
-    use futures::prelude::*;
+    use {Executor, Timer, TimeoutExt, temp::{TempAsyncWriteExt, TempAsyncReadExt}};
+    use futures::future::{FutureExt, TryFutureExt};
     use zx::prelude::*;
 
     #[test]
@@ -162,21 +174,21 @@ mod tests {
             Socket::from_socket(rx).unwrap(),
         );
 
-        let receive_future = rx.read_to_end(vec![]).map(|(_rx, buf)| {
-            assert_eq!(buf, bytes);
+        let receive_future = rx.read_to_end(vec![]).map_ok(|(_socket, buf)| {
+            assert_eq!(&*buf, bytes);
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receive_future.on_timeout(
                             300.millis().after_now(),
-                            || panic!("timeout")).unwrap();
+                            || panic!("timeout"));
 
         // Sends a message after the timeout has passed
         let sender = Timer::new(100.millis().after_now())
-                        .and_then(|()| tx.write_all(bytes))
-                        .map(|_tx| ());
+                        .then(|()| tx.write_all(bytes))
+                        .map_ok(|_tx| ());
 
-        let done = receiver.join(sender);
+        let done = receiver.try_join(sender);
         exec.run_singlethreaded(done).unwrap();
     }
 }

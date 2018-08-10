@@ -7,11 +7,12 @@
 //! This module contains the `Timer` type which is a future that will resolve
 //! at a particular point in the future.
 
-use std::marker::PhantomData;
+use std::marker::Unpin;
+use std::mem::PinMut;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use futures::{Future, Stream, Poll, Async, Never};
+use futures::{Future, FutureExt, Stream, Poll};
 use futures::task::{self, AtomicWaker};
 
 use executor::EHandle;
@@ -23,14 +24,14 @@ pub trait TimeoutExt: Future + Sized {
     /// Wraps the future in a timeout, calling `on_timeout` to produce a result
     /// when the timeout occurs.
     fn on_timeout<OT>(self, time: zx::Time, on_timeout: OT)
-        -> Result<OnTimeout<Self, OT>, zx::Status>
-        where OT: FnOnce() -> Result<Self::Item, Self::Error>
+        -> OnTimeout<Self, OT>
+        where OT: FnOnce() -> Self::Output,
     {
-        Ok(OnTimeout {
+        OnTimeout {
             timer: Timer::new(time),
             future: self,
             on_timeout: Some(on_timeout),
-        })
+        }
     }
 }
 
@@ -39,44 +40,59 @@ impl<F: Future + Sized> TimeoutExt for F {}
 /// A wrapper for a future which will complete with a provided closure when a timeout occurs.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
-pub struct OnTimeout<F: Future, OT> {
-    timer: Timer<Never>,
+pub struct OnTimeout<F, OT> {
+    timer: Timer,
     future: F,
     on_timeout: Option<OT>,
 }
 
+impl<F, OT> OnTimeout<F, OT> {
+    // Safety: this is safe because `OnTimeout` is only `Unpin` if
+    // the future is `Unpin`, and aside from `future`, all other fields are
+    // treated as movable.
+    unsafe_unpinned!(timer: Timer);
+    unsafe_pinned!(future: F);
+    unsafe_unpinned!(on_timeout: Option<OT>);
+}
+
+impl<F: Unpin, OT> Unpin for OnTimeout<F, OT> {}
+
 impl<F: Future, OT> Future for OnTimeout<F, OT>
-    where OT: FnOnce() -> Result<F::Item, F::Error>
+    where OT: FnOnce() -> F::Output,
 {
-    type Item = F::Item;
-    type Error = F::Error;
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
-        if let Async::Ready(item) = self.future.poll(cx)? {
-            return Ok(Async::Ready(item));
+    type Output = F::Output;
+
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+        -> Poll<Self::Output>
+    {
+        if let Poll::Ready(item) = self.reborrow().future().poll(cx) {
+            return Poll::Ready(item);
         }
-        if let Async::Ready(()) = self.timer.poll(cx).map_err(|never| match never {})? {
-            let ot = self.on_timeout.take().expect("polled withtimeout after completion");
-            let item = (ot)()?;
-            return Ok(Async::Ready(item));
+        if let Poll::Ready(()) = self.reborrow().timer().poll_unpin(cx) {
+            let ot = OnTimeout::on_timeout(&mut self).take()
+                .expect("polled withtimeout after completion");
+            let item = (ot)();
+            return Poll::Ready(item);
         }
-        Ok(Async::Pending)
+        Poll::Pending
     }
 }
 
 /// An asynchronous timer.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
-pub struct Timer<E> {
+pub struct Timer {
     waker_and_bool: Arc<(AtomicWaker, AtomicBool)>,
-    error_marker: PhantomData<E>,
 }
 
-impl<E> Timer<E> {
+impl Unpin for Timer {}
+
+impl Timer {
     /// Create a new timer scheduled to fire at `time`.
     pub fn new(time: zx::Time) -> Self {
         let waker_and_bool = Arc::new((AtomicWaker::new(), AtomicBool::new(false)));
         EHandle::local().register_timer(time, &waker_and_bool);
-        Timer { waker_and_bool, error_marker: PhantomData }
+        Timer { waker_and_bool }
     }
 
     /// Reset the `Timer` to a fire at a new time.
@@ -96,15 +112,14 @@ impl<E> Timer<E> {
     }
 }
 
-impl<E> Future for Timer<E> {
-    type Item = ();
-    type Error = E;
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<(), E> {
+impl Future for Timer {
+    type Output = ();
+    fn poll(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
         if self.did_fire() {
-            Ok(Async::Ready(()))
+            Poll::Ready(())
         } else {
             self.register_task(cx);
-            Ok(Async::Pending)
+            Poll::Pending
         }
     }
 }
@@ -113,14 +128,13 @@ impl<E> Future for Timer<E> {
 /// This is a stream of events resolving at a rate of once-per interval.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-pub struct Interval<E> {
-    timer: Timer<Never>,
+pub struct Interval {
+    timer: Timer,
     next: zx::Time,
     duration: zx::Duration,
-    error_marker: PhantomData<E>,
 }
 
-impl<E> Interval<E> {
+impl Interval {
     /// Create a new `Interval` which yields every `duration`.
     pub fn new(duration: zx::Duration) -> Self {
         let next = duration.after_now();
@@ -128,27 +142,29 @@ impl<E> Interval<E> {
             timer: Timer::new(next),
             next,
             duration,
-            error_marker: PhantomData,
         }
     }
 }
 
-impl<E> Stream for Interval<E> {
+impl Unpin for Interval {}
+
+impl Stream for Interval {
     type Item = ();
-    type Error = E;
-    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<()>, Self::Error> {
-        match self.timer.poll(cx) {
-            Ok(Async::Ready(())) => {
-                self.timer.register_task(cx);
-                self.next += self.duration;
-                self.timer.reset(self.next);
-                Ok(Async::Ready(Some(())))
+    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context)
+        -> Poll<Option<Self::Item>>
+    {
+        let this = &mut *self;
+        match this.timer.poll_unpin(cx) {
+            Poll::Ready(()) => {
+                this.timer.register_task(cx);
+                this.next += this.duration;
+                this.timer.reset(this.next);
+                Poll::Ready(Some(()))
             }
-            Ok(Async::Pending) => {
-                self.timer.register_task(cx);
-                Ok(Async::Pending)
+            Poll::Pending => {
+                this.timer.register_task(cx);
+                Poll::Pending
             }
-            Err(never) => match never {},
         }
     }
 }
@@ -156,30 +172,29 @@ impl<E> Stream for Interval<E> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use {Executor, Timer};
+    use {Executor, Timer, temp::{Either, TempFutureExt}};
     use futures::prelude::*;
-    use futures::future::Either;
     use zx::prelude::*;
 
     #[test]
     fn shorter_fires_first() {
         let mut exec = Executor::new().unwrap();
-        let shorter = Timer::<Never>::new(100.millis().after_now());
-        let longer = Timer::<Never>::new(1.second().after_now());
-        match exec.run_singlethreaded(shorter.select(longer)).unwrap() {
-            Either::Left(_) => {},
-            Either::Right(_) => panic!("wrong timer fired"),
+        let shorter = Timer::new(100.millis().after_now());
+        let longer = Timer::new(1.second().after_now());
+        match exec.run_singlethreaded(shorter.select(longer)) {
+            Either::Left(()) => {},
+            Either::Right(()) => panic!("wrong timer fired"),
         }
     }
 
     #[test]
     fn shorter_fires_first_multithreaded() {
         let mut exec = Executor::new().unwrap();
-        let shorter = Timer::<Never>::new(100.millis().after_now());
-        let longer = Timer::<Never>::new(1.second().after_now());
-        match exec.run(shorter.select(longer), 4).unwrap() {
-            Either::Left(_) => {},
-            Either::Right(_) => panic!("wrong timer fired"),
+        let shorter = Timer::new(100.millis().after_now());
+        let longer = Timer::new(1.second().after_now());
+        match exec.run(shorter.select(longer), 4) {
+            Either::Left(()) => {},
+            Either::Right(()) => panic!("wrong timer fired"),
         }
     }
 
@@ -187,10 +202,10 @@ mod test {
     fn fires_after_timeout() {
         let mut exec = Executor::new().unwrap();
         let deadline = 5.seconds().after_now();
-        let mut future = Timer::<Never>::new(deadline);
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        let mut future = Timer::new(deadline);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(Some(deadline), exec.wake_next_timer());
-        assert_eq!(Ok(Async::Ready(())), exec.run_until_stalled(&mut future));
+        assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut future));
     }
 
     #[test]
@@ -201,31 +216,30 @@ mod test {
         let counter = Arc::new(::std::sync::atomic::AtomicUsize::new(0));
         let mut future = {
             let counter = counter.clone();
-            Interval::<Never>::new(5.seconds())
-                .for_each(move |()| {
+            Interval::new(5.seconds())
+                .map(move |()| {
                     counter.fetch_add(1, Ordering::SeqCst);
-                    Ok(())
                 })
-                .map(|_stream| ())
+                .collect::<()>()
         };
 
-        // Poll for the first time before the timer runs
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        // PollResult for the first time before the timer runs
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(0, counter.load(Ordering::SeqCst));
 
         // Pretend to wait until the next timer
         let first_deadline = exec.wake_next_timer().expect("Expected a pending timeout (1)");
         assert!(first_deadline >= start + 5.seconds());
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(1, counter.load(Ordering::SeqCst));
 
-        // Polling again before the timer runs shouldn't produce another item from the stream
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        // PollResulting again before the timer runs shouldn't produce another item from the stream
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(1, counter.load(Ordering::SeqCst));
 
         // "Wait" until the next timeout and poll again: expect another item from the stream
         let second_deadline = exec.wake_next_timer().expect("Expected a pending timeout (2)");
-        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(2, counter.load(Ordering::SeqCst));
 
         assert_eq!(second_deadline, first_deadline + 5.seconds());

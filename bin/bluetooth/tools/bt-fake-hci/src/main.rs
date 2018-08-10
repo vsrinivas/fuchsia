@@ -2,22 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use]
+#![deny(warnings)]
+
 extern crate failure;
 extern crate rand;
-
-#[macro_use]
 extern crate fdio;
 extern crate fuchsia_bluetooth as bluetooth;
 extern crate fuchsia_zircon as zircon;
 
 use failure::Error;
-use rand::Rng;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 
 use bluetooth::hci;
-use zircon::Channel;
 
 fn usage(appname: &str) -> (){
     eprintln!("usage: {} [add|rm]", appname);
@@ -56,7 +53,7 @@ fn main() {
                 usage(appname);
                 return;
             }
-            rm_device(args[2].as_str());
+            let _ = rm_device(args[2].as_str());
         }
         _ => {
             usage(appname);

@@ -19,7 +19,7 @@ use fidl_fuchsia_auth::{AppConfig, AuthProviderConfig, AuthProviderProxy, AuthPr
                         TokenManagerGetAccessTokenResponder,
                         TokenManagerGetFirebaseTokenResponder, TokenManagerGetIdTokenResponder,
                         TokenManagerMarker, TokenManagerRequest, UserProfileInfo};
-use futures::future;
+use futures::future::{self, ready as fready, FutureObj};
 use futures::prelude::*;
 use futures::FutureExt;
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ const CACHE_SIZE: usize = 128;
 const DB_DIR: &str = "/data/auth";
 const DB_POSTFIX: &str = "_token_store.json";
 
-type TokenManagerFuture<T> = Box<Future<Item = T, Error = TokenManagerError> + Send>;
+type TokenManagerFuture<T> = FutureObj<'static, Result<T, TokenManagerError>>;
 
 /// An object capable of creating authentication tokens for a user across a
 /// range of services as represented by AuthProviderConfigs. Uses the supplied
@@ -71,9 +71,8 @@ impl TokenManager {
             Ok(request_stream) => async::spawn(
                 request_stream
                     .err_into::<failure::Error>()
-                    .for_each(move |req| manager.handle_request(req))
-                    .map(|_| ())
-                    .recover(|err| error!("Fatal error, closing TokenManager: {:?}", err)),
+                    .try_for_each(move |req| manager.handle_request(req))
+                    .unwrap_or_else(|err| error!("Fatal error, closing TokenManager: {:?}", err)),
             ),
             Err(err) => {
                 error!("Error creating TokenManager request stream {:?}", err);
@@ -119,53 +118,53 @@ impl TokenManager {
     /// specific functions for each method.
     fn handle_request(
         &mut self, req: TokenManagerRequest,
-    ) -> Box<Future<Item = (), Error = failure::Error> + Send> {
+    ) -> FutureObj<'static, Result<(), failure::Error>> {
         match req {
             TokenManagerRequest::Authorize {
                 app_config,
                 user_profile_id,
                 app_scopes,
                 responder,
-            } => Box::new(
+            } => FutureObj::new(Box::new(
                 self.authorize(app_config, user_profile_id, app_scopes)
-                    .then(move |result| responder.send_result(result)),
-            ),
+                    .then(move |result| fready(responder.send_result(result))),
+            )),
             TokenManagerRequest::GetAccessToken {
                 app_config,
                 user_profile_id,
                 app_scopes,
                 responder,
-            } => Box::new(
+            } => FutureObj::new(Box::new(
                 self.get_access_token(app_config, user_profile_id, app_scopes)
-                    .then(move |result| responder.send_result(result)),
-            ),
+                    .then(move |result| fready(responder.send_result(result))),
+            )),
             TokenManagerRequest::GetIdToken {
                 app_config,
                 user_profile_id,
                 audience,
                 responder,
-            } => Box::new(
+            } => FutureObj::new(Box::new(
                 self.get_id_token(app_config, user_profile_id, audience)
-                    .then(move |result| responder.send_result(result)),
-            ),
+                    .then(move |result| fready(responder.send_result(result))),
+            )),
             TokenManagerRequest::GetFirebaseToken {
                 app_config,
                 user_profile_id,
                 audience,
                 firebase_api_key,
                 responder,
-            } => Box::new(
+            } => FutureObj::new(Box::new(
                 self.get_firebase_token(app_config, user_profile_id, audience, firebase_api_key)
-                    .then(move |result| responder.send_result(result)),
-            ),
+                    .then(move |result| fready(responder.send_result(result))),
+            )),
             TokenManagerRequest::DeleteAllTokens {
                 app_config,
                 user_profile_id,
                 responder,
-            } => Box::new(
+            } => FutureObj::new(Box::new(
                 self.delete_all_tokens(app_config, user_profile_id)
-                    .then(move |result| responder.send_result(result)),
-            ),
+                    .then(move |result| fready(responder.send_result(result))),
+            )),
         }
     }
 
@@ -182,7 +181,7 @@ impl TokenManager {
                 .map_err(|err| TokenManagerError::new(Status::InvalidAuthContext).with_cause(err))
         );
 
-        Box::new(
+        FutureObj::new(Box::new(
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
                     proxy
@@ -200,14 +199,21 @@ impl TokenManager {
                                 auth_provider_type,
                                 user_profile_info.id.clone(),
                                 credential,
-                            ).map_err(|_| Status::AuthProviderServerError)?;
-                            store.lock().unwrap().add_credential(db_value)?;
-                            Ok(*user_profile_info)
+                            ).map_err(|_| Status::AuthProviderServerError);
+                            let db_value = match db_value {
+                                Ok(db) => db,
+                                Err(e) => return future::ready(Err(e.into())),
+                            };
+                            match store.lock().unwrap().add_credential(db_value) {
+                                Ok(_) => {}
+                                Err(e) => return future::ready(Err(e.into())),
+                            }
+                            future::ready(Ok(*user_profile_info))
                         }
-                        _ => Err(TokenManagerError::from(status)),
+                        _ => future::ready(Err(TokenManagerError::from(status))),
                     }
                 }),
-        )
+        ))
     }
 
     /// Sends a downscoped OAuth access token for a given `AppConfig`, user,
@@ -224,7 +230,7 @@ impl TokenManager {
             .unwrap()
             .get_access_token(&cache_key, &app_scopes)
         {
-            return Box::new(future::ok(cached_token));
+            return FutureObj::new(Box::new(future::ready(Ok(cached_token))));
         }
 
         // If no cached entry was found use an auth provider to mint a new one from the
@@ -233,7 +239,7 @@ impl TokenManager {
         let cache = self.token_cache.clone();
         let app_scopes_1 = Arc::new(app_scopes);
         let app_scopes_2 = app_scopes_1.clone();
-        Box::new(
+        FutureObj::new(Box::new(
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
                     let scopes_copy = app_scopes_1.iter().map(|x| &**x).collect::<Vec<_>>();
@@ -255,11 +261,11 @@ impl TokenManager {
                             &app_scopes_2,
                             native_token.clone(),
                         );
-                        Ok(native_token)
+                        future::ready(Ok(native_token))
                     }
-                    None => Err(TokenManagerError::from(status)),
+                    None => future::ready(Err(TokenManagerError::from(status))),
                 }),
-        )
+        ))
     }
 
     /// Returns a JWT Identity token for a given `AppConfig`, user, and
@@ -277,14 +283,14 @@ impl TokenManager {
             .unwrap()
             .get_id_token(&cache_key, &audience_str)
         {
-            return Box::new(future::ok(cached_token));
+            return FutureObj::new(Box::new(future::ready(Ok(cached_token))));
         }
 
         // If no cached entry was found use an auth provider to mint a new one from the
         // refresh token, then place it in the cache.
         let refresh_token = future_try!(self.get_refresh_token(&db_key));
         let cache = self.token_cache.clone();
-        Box::new(
+        FutureObj::new(Box::new(
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
                     proxy
@@ -301,11 +307,11 @@ impl TokenManager {
                             audience_str,
                             native_token.clone(),
                         );
-                        Ok(native_token)
+                        fready(Ok(native_token))
                     }
-                    None => Err(TokenManagerError::from(status)),
+                    None => fready(Err(TokenManagerError::from(status))),
                 }),
-        )
+        ))
     }
 
     /// Returns a Firebase a given `AppConfig`, user, audience, and Firebase
@@ -322,7 +328,7 @@ impl TokenManager {
             .unwrap()
             .get_firebase_token(&cache_key, &api_key)
         {
-            return Box::new(future::ok(cached_token));
+            return FutureObj::new(Box::new(future::ready(Ok(cached_token))));
         }
 
         // If no cached entry was found use ourselves to fetch or mint an ID token then
@@ -332,9 +338,9 @@ impl TokenManager {
         let id_token_future =
             Box::new(self.get_id_token(app_config, user_profile_id, Some(audience)));
         let proxy_future = Box::new(self.get_auth_provider_proxy(&auth_provider_type));
-        Box::new(
+        FutureObj::new(Box::new(
             id_token_future
-                .join(proxy_future)
+                .try_join(proxy_future)
                 .and_then(move |(id_token, proxy)| {
                     proxy
                         .get_app_firebase_token(&*id_token, &api_key)
@@ -350,11 +356,11 @@ impl TokenManager {
                             api_key_clone,
                             native_token.clone(),
                         );
-                        Ok(native_token)
+                        fready(Ok(native_token))
                     }
-                    None => Err(TokenManagerError::from(status)),
+                    None => fready(Err(TokenManagerError::from(status))),
                 }),
-        )
+        ))
     }
 
     /// Deletes any existing tokens for a user in both the database and cache.
@@ -367,7 +373,7 @@ impl TokenManager {
         // can't.
         let refresh_token = match (**self.token_store.lock().unwrap()).get_refresh_token(&db_key) {
             Ok(rt) => rt.to_string(),
-            Err(AuthDbError::CredentialNotFound) => return Box::new(Ok(()).into_future()),
+            Err(AuthDbError::CredentialNotFound) => return FutureObj::new(Box::new(fready(Ok(())))),
             Err(err) => return TokenManagerError::from(err).to_boxed_future(),
         };
 
@@ -375,7 +381,7 @@ impl TokenManager {
         let store = self.token_store.clone();
 
         // Request that the auth provider revoke the credential server-side.
-        Box::new(
+        FutureObj::new(Box::new(
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
                     proxy
@@ -392,24 +398,24 @@ impl TokenManager {
                     // token in the future, but it does let us clean up broken tokens from our
                     // database.
                     if status == AuthProviderStatus::NetworkError {
-                        return Err(TokenManagerError::from(status));
+                        return fready(Err(TokenManagerError::from(status)));
                     }
 
                     match cache.lock().unwrap().delete(&cache_key) {
                         Ok(()) => (),
                         Err(AuthCacheError::KeyNotFound) => (),
-                        Err(err) => return Err(TokenManagerError::from(err)),
+                        Err(err) => return fready(Err(TokenManagerError::from(err))),
                     }
 
                     match store.lock().unwrap().delete_credential(&db_key) {
                         Ok(()) => (),
                         Err(AuthDbError::CredentialNotFound) => (),
-                        Err(err) => return Err(TokenManagerError::from(err)),
+                        Err(err) => return fready(Err(TokenManagerError::from(err))),
                     }
 
-                    Ok(())
+                    fready(Ok(()))
                 }),
-        )
+        ))
     }
 
     /// Returns index keys for referencing a token in both the database and
@@ -441,9 +447,9 @@ impl TokenManager {
                     .to_boxed_future();
             }
         };
-        Box::new(auth_provider.get_proxy().map_err(|err| {
+        FutureObj::new(Box::new(auth_provider.get_proxy().map_err(|err| {
             TokenManagerError::new(Status::AuthProviderServiceUnavailable).with_cause(err)
-        }))
+        })))
     }
 
     /// Returns the current refresh token for a user from the data store.

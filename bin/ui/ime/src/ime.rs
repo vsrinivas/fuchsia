@@ -35,12 +35,11 @@ impl<I: 'static + uii::InputMethodEditorClientProxyInterface> IME<I> {
 
     pub fn bind(mut self, edit_stream: uii::InputMethodEditorRequestStream) {
         let stream_complete = edit_stream
-            .for_each(move |edit_request| {
+            .try_for_each(move |edit_request| {
                 self.handle(edit_request);
-                future::ok(())
+                future::ready(Ok(()))
             })
-            .map(|_| ())
-            .recover(|e| eprintln!("error running ime server: {:?}", e));
+            .unwrap_or_else(|e| eprintln!("error running ime server: {:?}", e));
         async::spawn(stream_complete);
     }
 

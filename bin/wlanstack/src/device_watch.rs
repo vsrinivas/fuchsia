@@ -32,17 +32,17 @@ pub struct NewIfaceDevice {
 }
 
 pub fn watch_phy_devices()
-    -> Result<impl Stream<Item = NewPhyDevice, Error = io::Error>, io::Error>
+    -> io::Result<impl Stream<Item = io::Result<NewPhyDevice>>>
 {
     Ok(watch_new_devices(PHY_PATH)?
-        .filter_map(|path| Ok(handle_open_error(&path, new_phy(&path)))))
+        .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_phy(&path))))))
 }
 
 pub fn watch_iface_devices()
-    -> Result<impl Stream<Item = NewIfaceDevice, Error = io::Error>, io::Error>
+    -> io::Result<impl Stream<Item = io::Result<NewIfaceDevice>>>
 {
     Ok(watch_new_devices(IFACE_PATH)?
-        .filter_map(|path| {
+        .try_filter_map(|path| {
             // Temporarily delay opening the iface since only one service may open a channel to a
             // device at a time. If the legacy wlantack is running, it should take priority. For
             // development of wlanstack2, kill the wlanstack process first to let wlanstack2 take
@@ -50,7 +50,7 @@ pub fn watch_iface_devices()
             debug!("sleeping 100ms...");
             let open_delay = time::Duration::from_millis(100);
             thread::sleep(open_delay);
-            Ok(handle_open_error(&path, new_iface(&path)))
+            future::ready(Ok(handle_open_error(&path, new_iface(&path))))
         }))
 }
 
@@ -66,15 +66,15 @@ fn handle_open_error<T>(path: &PathBuf, r: Result<T, failure::Error>) -> Option<
 }
 
 fn watch_new_devices<P: AsRef<Path>>(path: P)
-    -> Result<impl Stream<Item = PathBuf, Error = io::Error>, io::Error>
+    -> io::Result<impl Stream<Item = io::Result<PathBuf>>>
 {
     let dir = File::open(&path)?;
     let watcher = Watcher::new(&dir)?;
-    Ok(watcher.filter_map(move |msg| {
-        Ok(match msg.event {
+    Ok(watcher.try_filter_map(move |msg| {
+        future::ready(Ok(match msg.event {
             WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(path.as_ref().join(msg.filename)),
             _ => None
-        })
+        }))
     }))
 }
 
@@ -113,16 +113,15 @@ mod tests {
     #[test]
     fn watch_phys() {
         let mut exec = async::Executor::new().expect("Failed to create an executor");
-        let new_phy_stream = watch_phy_devices().expect("watch_phy_devices() failed");
+        let mut new_phy_stream = watch_phy_devices().expect("watch_phy_devices() failed");
         let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
         let _tap_phy = wlantap.create_phy(create_wlantap_config(*b"wtchph"));
-        let (new_phy, _new_phy_stream) = exec.run_singlethreaded(
+        let new_phy = exec.run_singlethreaded(
             new_phy_stream.next().on_timeout(2.seconds().after_now(),
-                || panic!("Didn't get a new phy in time")).unwrap()
+                || panic!("Didn't get a new phy in time"))
             )
-            .map_err(|(e, _s)| e)
+            .expect("new_phy_stream ended without yielding a phy")
             .expect("new_phy_stream returned an error");
-        let new_phy = new_phy.expect("new_phy_stream ended without yielding a phy");
         let query_resp = exec.run_singlethreaded(new_phy.proxy.query()).expect("phy query failed");
         assert_eq!(*b"wtchph", query_resp.info.hw_mac_address);
     }

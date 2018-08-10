@@ -11,7 +11,6 @@ extern crate fidl;
 extern crate fidl_fuchsia_wlan_tap as wlantap;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
-extern crate futures;
 
 use byteorder::{NativeEndian, WriteBytesExt};
 use failure::Error;

@@ -87,20 +87,21 @@ impl App {
         }
         player.play()?;
 
-        let event_listener = player.take_event_stream().filter(move |event| {
+        let mut event_listener = player.take_event_stream().filter(move |event| {
             match event {
-                MediaPlayerEvent::StatusChanged { status } => {
+                Ok(MediaPlayerEvent::StatusChanged { status }) => {
                     self.display_status(&status);
 
-                    Ok(status.end_of_stream)
+                    futures::future::ready(status.end_of_stream)
                 }
+                _ => futures::future::ready(false)
             }
-        })
-        .next();
+        });
 
-        executor.run_singlethreaded(event_listener)
-            .map_err(|(e, _rest_of_stream)| e.into())
+        executor.run_singlethreaded(event_listener.next())
+            .unwrap()
             .map(|_| ())
+            .map_err(Into::into)
     }
 
     fn display_status(&mut self, status: &MediaPlayerStatus) {

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
 extern crate byteorder;
@@ -20,11 +21,7 @@ extern crate futures;
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{ClientEnd, RequestStream, ServiceMarker};
-use futures::future::ok as fok;
-use futures::prelude::Never;
-use futures::Future;
-use futures::FutureExt;
-use futures::StreamExt;
+use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::collections::{vec_deque, VecDeque};
@@ -186,13 +183,13 @@ fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMess
 fn log_manager_helper(
     state: &LogManager, log_listener: ClientEnd<LogListenerMarker>,
     options: Option<Box<LogFilterOptions>>, dump_logs: bool,
-) -> impl Future<Item = (), Error = Never> {
+) {
     let ll = match log_listener.into_proxy() {
         Ok(ll) => ll,
         Err(e) => {
             eprintln!("Logger: Error getting listener proxy: {:?}", e);
             // TODO: close channel
-            return fok(());
+            return;
         }
     };
 
@@ -208,12 +205,12 @@ fn log_manager_helper(
         lw.tags = options.tags.drain(..).collect();
         if lw.tags.len() > fidl_fuchsia_logger::MAX_TAGS as usize {
             // TODO: close channel
-            return fok(());
+            return;
         }
         for tag in &lw.tags {
             if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN_BYTES as usize {
                 // TODO: close channel
-                return fok(());
+                return;
             }
         }
         if options.filter_by_pid {
@@ -236,7 +233,7 @@ fn log_manager_helper(
             if lw.filter(msg) {
                 if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                     if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
-                        return fok(());
+                        return;
                     }
                     v.clear();
                     log_length = 0;
@@ -247,7 +244,7 @@ fn log_manager_helper(
         }
         if v.len() > 0 {
             if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
-                return fok(());
+                return;
             }
         }
     }
@@ -257,14 +254,13 @@ fn log_manager_helper(
     } else {
         let _ = lw.listener.done();
     }
-    fok(())
 }
 
 fn spawn_log_manager(state: LogManager, chan: async::Channel) {
     let state = Arc::new(state);
     async::spawn(
         LogRequestStream::from_channel(chan)
-            .for_each(move |req| {
+            .map_ok(move |req| {
                 let state = state.clone();
                 match req {
                     LogRequest::Listen {
@@ -277,9 +273,10 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
                         options,
                         ..
                     } => log_manager_helper(&state, log_listener, options, true),
-                }.map_err(|e| e.never_into())
-            }).map(|_| ())
-            .recover(|e| eprintln!("Log manager failed: {:?}", e)),
+                }
+            })
+            .try_collect::<()>()
+            .unwrap_or_else(|e| eprintln!("Log manager failed: {:?}", e)),
     )
 }
 
@@ -293,35 +290,31 @@ fn spawn_log_sink(state: LogManager, chan: async::Channel) {
     let state = Arc::new(state);
     async::spawn(
         LogSinkRequestStream::from_channel(chan)
-            .for_each(move |req| {
+            .map_ok(move |req| {
                 let state = state.clone();
-                match req {
-                    LogSinkRequest::Connect { socket, .. } => {
-                        let ls = match logger::LoggerStream::new(socket) {
-                            Err(e) => {
-                                eprintln!("Logger: Failed to create tokio socket: {:?}", e);
-                                // TODO: close channel
-                                return fok(());
-                            }
-                            Ok(ls) => ls,
-                        };
-
-                        let shared_members = state.shared_members.clone();
-                        let f = ls
-                            .for_each(move |(log_msg, size)| {
-                                process_log(shared_members.clone(), log_msg, size);
-                                Ok(())
-                            }).map(|_s| ());
-
-                        async::spawn(f.recover(|e| {
-                            eprintln!("Logger: Stream failed {:?}", e);
-                        }));
-
-                        fok(())
+                let LogSinkRequest::Connect { socket, .. } = req;
+                let ls = match logger::LoggerStream::new(socket) {
+                    Err(e) => {
+                        eprintln!("Logger: Failed to create tokio socket: {:?}", e);
+                        // TODO: close channel
+                        return;
                     }
-                }
-            }).map(|_| ())
-            .recover(|e| eprintln!("Log sink failed: {:?}", e)),
+                    Ok(ls) => ls,
+                };
+
+                let shared_members = state.shared_members.clone();
+                let f = ls
+                    .map_ok(move |(log_msg, size)| {
+                        process_log(shared_members.clone(), log_msg, size);
+                    })
+                    .try_collect::<()>();
+
+                async::spawn(f.unwrap_or_else(|e| {
+                    eprintln!("Logger: Stream failed {:?}", e);
+                }));
+            })
+            .try_collect::<()>()
+            .unwrap_or_else(|e| eprintln!("Log sink failed: {:?}", e)),
     )
 }
 
@@ -474,14 +467,13 @@ mod tests {
         let state = Arc::new(Mutex::new(ll));
         async::spawn(
             LogListenerRequestStream::from_channel(chan)
-                .for_each(move |req| {
+                .map_ok(move |req| {
                     let state = state.clone();
                     let mut state = state.lock();
                     match req {
                         LogListenerRequest::Log { log, .. } => {
                             println!("DEBUG: {}: log called", state.test_name);
                             state.log(log);
-                            fok(())
                         }
                         LogListenerRequest::LogMany { log, .. } => {
                             println!(
@@ -492,16 +484,15 @@ mod tests {
                             for msg in log {
                                 state.log(msg);
                             }
-                            fok(())
                         }
                         LogListenerRequest::Done { .. } => {
                             println!("DEBUG: {}: done called", state.test_name);
                             state.closed.store(true, Ordering::Relaxed);
-                            fok(())
                         }
                     }
-                }).map(|_| ())
-                .recover(|e| panic!("test fail {:?}", e)),
+                })
+                .try_collect::<()>()
+                .unwrap_or_else(|e| panic!("test fail {:?}", e)),
         )
     }
 
@@ -610,8 +601,8 @@ mod tests {
             if done.load(Ordering::Relaxed) || (test_dump_logs && closed.load(Ordering::Relaxed)) {
                 break;
             }
-            let timeout = async::Timer::<()>::new(100.millis().after_now());
-            executor.run(timeout, 2).unwrap();
+            let timeout = async::Timer::new(100.millis().after_now());
+            executor.run(timeout, 2);
         }
 
         if test_dump_logs {
@@ -665,9 +656,9 @@ mod tests {
             if done.load(Ordering::Relaxed) {
                 break;
             }
-            let timeout = async::Timer::<()>::new(100.millis().after_now());
+            let timeout = async::Timer::new(100.millis().after_now());
             println!("DEBUG: {}: wait on executor", test_name);
-            executor.run(timeout, 2).unwrap();
+            executor.run(timeout, 2);
             println!("DEBUG: {}: executor returned", test_name);
         }
         assert!(

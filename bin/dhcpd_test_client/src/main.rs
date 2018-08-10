@@ -37,10 +37,9 @@ fn main() -> Result<(), Error> {
     }).and_then(|sock| {
         let buf = vec![0u8; 1024];
         sock.recv_from(buf)
-    }).and_then(|(_sock, buf, _rcvd, _addr)| {
+    }).map_ok(|(_sock, buf, _rcvd, _addr)| {
         let ack = Message::from_buffer(&buf).unwrap();
         println!("fake_client: msg rcvd {:?}", ack); 
-        Ok(())
     });
 
     println!("fake_client: sending messages...");

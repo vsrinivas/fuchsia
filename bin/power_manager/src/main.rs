@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api)]
 #![deny(warnings)]
 
 extern crate fidl;
@@ -26,9 +27,7 @@ mod power;
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{RequestStream, ServiceMarker};
-use futures::future::ok as fok;
 use futures::prelude::*;
-use futures::StreamExt;
 use parking_lot::Mutex;
 use std::fs::File;
 use std::io;
@@ -191,13 +190,12 @@ fn process_watch_event(
         let bsh = bsh.clone();
         let timer = async::Interval::new(zx::Duration::from_seconds(SLEEP_TIME));
         let f = timer
-            .for_each(move |_| {
+            .map(move |_| {
                 let mut bsh = bsh.lock();
                 if let Err(e) = bsh.update_status(&file) {
                     fx_log_err!("{}", e);
                 }
-                Ok(())
-            }).map(|_| ());
+            }).collect::<()>();
 
         async::spawn(f);
     } else {
@@ -208,20 +206,19 @@ fn process_watch_event(
 
 fn watch_power_device(
     bsh: Arc<Mutex<BatteryStatusHelper>>,
-) -> impl Future<Item = (), Error = Error> {
-    File::open(POWER_DEVICE)
-        .into_future()
+) -> impl Future<Output = Result<(), Error>> {
+    future::ready(File::open(POWER_DEVICE))
         .map_err(|e| format_err!("cannot find power device: {:?}", e))
         .and_then(|file| {
-            vfs_watcher::Watcher::new(&file)
-                .map_err(|e| format_err!("error watching power device: {:?}", e))
+            future::ready(vfs_watcher::Watcher::new(&file)
+                .map_err(|e| format_err!("error watching power device: {:?}", e)))
         }).and_then(|watcher| {
             let mut adapter_device_found = false;
             let mut battery_device_found = false;
             watcher
-                .for_each(move |msg| {
+                .map_ok(move |msg| {
                     if battery_device_found && adapter_device_found {
-                        return Ok(());
+                        return;
                     }
                     let mut filepath = PathBuf::from(POWER_DEVICE);
                     filepath.push(msg.filename);
@@ -252,8 +249,8 @@ fn watch_power_device(
                             );
                         }
                     }
-                    Ok(())
-                }).map(|_s| ())
+                })
+                .try_collect::<()>()
                 .err_into()
         })
 }
@@ -262,7 +259,7 @@ fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
     let state = Arc::new(pm);
     async::spawn(
         PowerManagerRequestStream::from_channel(chan)
-            .for_each(move |req| {
+            .map_ok(move |req| {
                 let state = state.clone();
                 match req {
                     PowerManagerRequest::GetBatteryStatus { responder, .. } => {
@@ -271,7 +268,6 @@ fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
                         if let Err(e) = responder.send(&mut bsh.battery_status) {
                             fx_log_err!("sending battery status: {:?}", e);
                         }
-                        fok(())
                     }
                     PowerManagerRequest::Watch { watcher, .. } => {
                         fx_log_info!("watch called");
@@ -284,11 +280,11 @@ fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
                                 bsh.add_watcher(w);
                             }
                         }
-                        fok(())
                     }
-                }.into_future()
-            }).map(|_| ())
-            .recover(|e| fx_log_err!("{:?}", e)),
+                }
+            })
+            .try_collect::<()>()
+            .unwrap_or_else(|e| fx_log_err!("{:?}", e))
     )
 }
 
@@ -307,7 +303,7 @@ fn main_pm() -> Result<(), Error> {
     let bsh2 = bsh.clone();
     let f = watch_power_device(bsh2);
 
-    async::spawn(f.recover(|e| {
+    async::spawn(f.unwrap_or_else(|e| {
         fx_log_err!("watch_power_device failed {:?}", e);
     }));
 

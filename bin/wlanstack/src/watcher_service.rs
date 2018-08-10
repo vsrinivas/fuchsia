@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use Never;
 use failure;
 use fidl;
 use fidl::endpoints2::{RequestStream, ServerEnd};
@@ -19,7 +20,7 @@ pub fn serve_watchers<P, I>(phys: Arc<WatchableMap<u16, P>>,
                             ifaces: Arc<WatchableMap<u16, I>>,
                             phy_events: UnboundedReceiver<MapEvent<u16, P>>,
                             iface_events: UnboundedReceiver<MapEvent<u16, I>>)
-    -> (WatcherService<P, I>, impl Future<Item = Never, Error = failure::Error>)
+    -> (WatcherService<P, I>, impl Future<Output = Result<Never, failure::Error>>)
 {
     let inner = Arc::new(Mutex::new(Inner {
         watchers: HashMap::new(),
@@ -28,21 +29,18 @@ pub fn serve_watchers<P, I>(phys: Arc<WatchableMap<u16, P>>,
         ifaces
     }));
     let phy_fut = notify_phy_watchers(phy_events, inner.clone())
-        .map_err(|e| e.never_into())
-        .and_then(|_| Err(format_err!("phy notifier future exited unexpectedly")));
+        .map(|_| Err(format_err!("phy notifier future exited unexpectedly")));
     let iface_fut = notify_iface_watchers(iface_events, inner.clone())
-        .map_err(|e| e.never_into())
-        .and_then(|_| Err(format_err!("iface notifier future exited unexpectedly")));
+        .map(|_| Err(format_err!("iface notifier future exited unexpectedly")));
     let (reaper_sender, reaper_receiver) = mpsc::unbounded();
     let reaper_fut = reap_watchers(inner.clone(), reaper_receiver)
-        .map_err(|e| e.never_into())
-        .and_then(|_| Err(format_err!("watcher reaper future exited unexpectedly")));
+        .map(|_| Err(format_err!("watcher reaper future exited unexpectedly")));
     let s = WatcherService {
         inner,
         reaper_queue: reaper_sender
     };
-    let fut = reaper_fut.join3(phy_fut, iface_fut)
-        .map(|x: (Never, Never, Never)| x.0);
+    let fut = reaper_fut.try_join3(phy_fut, iface_fut)
+        .map_ok(|x: (Never, Never, Never)| x.0);
     (s, fut)
 }
 
@@ -143,30 +141,30 @@ fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::E
 
 fn notify_phy_watchers<P, I>(events: UnboundedReceiver<MapEvent<u16, P>>,
                              inner: Arc<Mutex<Inner<P, I>>>)
-    -> impl Future<Item = (), Error = Never>
+    -> impl Future<Output = ()>
 {
-    events.for_each(move |e| Ok(match e {
+    events.for_each(move |e| future::ready(match e {
         MapEvent::KeyInserted(id) => inner.lock().notify_watchers(|w| w.sent_phy_snapshot,
                                                                   |h| h.send_on_phy_added(id)),
         MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(|w| w.sent_phy_snapshot,
                                                                  |h| h.send_on_phy_removed(id)),
         MapEvent::Snapshot(s) => inner.lock().send_snapshot(|w| &mut w.sent_phy_snapshot,
                                                             |h, id| h.send_on_phy_added(id), s)
-    })).map(|_| ())
+    }))
 }
 
 fn notify_iface_watchers<P, I>(events: UnboundedReceiver<MapEvent<u16, I>>,
                                inner: Arc<Mutex<Inner<P, I>>>)
-    -> impl Future<Item = (), Error = Never>
+    -> impl Future<Output = ()>
 {
-    events.for_each(move |e| Ok(match e {
+    events.for_each(move |e| future::ready(match e {
         MapEvent::KeyInserted(id) => inner.lock().notify_watchers(|w| w.sent_iface_snapshot,
                                                                   |h| h.send_on_iface_added(id)),
         MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(|w| w.sent_iface_snapshot,
                                                                  |h| h.send_on_iface_removed(id)),
         MapEvent::Snapshot(s) => inner.lock().send_snapshot(|w| &mut w.sent_iface_snapshot,
                                                             |h, id| h.send_on_iface_added(id), s)
-    })).map(|_| ())
+    }))
 }
 
 struct ReaperTask {
@@ -179,20 +177,19 @@ struct ReaperTask {
 /// in the scenario where devices are not being added or removed, but new clients come and go,
 /// the watcher list could grow without bound.
 fn reap_watchers<P, I>(inner: Arc<Mutex<Inner<P, I>>>, watchers: UnboundedReceiver<ReaperTask>)
-    -> impl Future<Item = (), Error = Never>
+    -> impl Future<Output = ()>
 {
-    watchers.for_each_concurrent(move |w| {
+    const REAP_CONCURRENT_LIMIT: usize = 10000;
+    watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
         let inner = inner.clone();
         let watcher_id = w.watcher_id;
         // Wait for the other side to close the channel (or an error to occur)
         // and remove the watcher from the maps
-        w.watcher_channel
-            .for_each(|_| Ok(()))
-            .then(move |_| {
+        w.watcher_channel.map_ok(|_| ()).try_collect::<()>()
+            .map(move |_| {
                 inner.lock().watchers.remove(&watcher_id);
-                Ok(())
             })
-    }).map(|_| ())
+    })
 }
 
 #[cfg(test)]
@@ -216,14 +213,16 @@ mod tests {
         assert_eq!(1, helper.service.inner.lock().watchers.len());
 
         // Run the reaper and make sure the watcher is still there
-        exec.run_until_stalled(&mut future)
-            .expect("future returned an error (1)");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("future returned an error (1): {:?}", e);
+        }
         assert_eq!(1, helper.service.inner.lock().watchers.len());
 
         // Drop the client end of the channel and run the reaper again
         mem::drop(client_end);
-        exec.run_until_stalled(&mut future)
-            .expect("future returned an error (2)");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("future returned an error (1): {:?}", e);
+        }
         assert_eq!(0, helper.service.inner.lock().watchers.len());
     }
 
@@ -240,7 +239,9 @@ mod tests {
         helper.phys.remove(&20);
 
         // Run the server future to propagate the events to FIDL clients
-        exec.run_until_stalled(&mut future).expect("server future returned an error");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("server future returned an error: {:?}", e);
+        }
 
         let events = fetch_events(exec, client_end.take_event_stream());
         assert_eq!(3, events.len());
@@ -271,7 +272,9 @@ mod tests {
         helper.ifaces.remove(&50);
 
         // Run the server future to propagate the events to FIDL clients
-        exec.run_until_stalled(&mut future).expect("server future returned an error");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("server future returned an error: {:?}", e);
+        }
 
         let events = fetch_events(exec, client_end.take_event_stream());
         assert_eq!(2, events.len());
@@ -299,7 +302,9 @@ mod tests {
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
-        exec.run_until_stalled(&mut future).expect("server future returned an error");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("server future returned an error: {:?}", e);
+        }
 
         // The watcher should only see phy #30 being "added"
         let events = fetch_events(exec, client_end.take_event_stream());
@@ -324,7 +329,9 @@ mod tests {
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
-        exec.run_until_stalled(&mut future).expect("server future returned an error");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("server future returned an error: {:?}", e);
+        }
 
         // The watcher should only see iface #30 being "added"
         let events = fetch_events(exec, client_end.take_event_stream());
@@ -353,7 +360,9 @@ mod tests {
         helper.service.add_watcher(server_end_two).expect("add_watcher failed (2)");
 
         // Deliver events
-        exec.run_until_stalled(&mut future).expect("server future returned an error");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("server future returned an error: {:?}", e);
+        }
 
         // Each should only receive a single snapshot, despite two snapshots being
         // requested
@@ -378,16 +387,18 @@ mod tests {
 
         helper.service.add_watcher(ServerEnd::new(reduced_chan))
             .expect("add_watcher failed");
-        exec.run_until_stalled(&mut future)
-            .expect("future returned an error (1)");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("future returned an error (1): {:?}", e);
+        }
         assert_eq!(1, helper.service.inner.lock().watchers.len());
 
         // Not add a phy to trigger an event
         helper.phys.insert(20, 2000);
 
         // The watcher should be now removed since sending the event fails
-        exec.run_until_stalled(&mut future)
-            .expect("future returned an error (1)");
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
+            panic!("future returned an error (1): {:?}", e);
+        }
         assert_eq!(0, helper.service.inner.lock().watchers.len());
 
         // Make sure the client endpoint is only dropped at the end, so that the watcher
@@ -401,7 +412,7 @@ mod tests {
         service: WatcherService<i32, i32>,
     }
 
-    fn setup() -> (Helper, impl Future<Item = Never, Error = failure::Error>) {
+    fn setup() -> (Helper, impl Future<Output = Result<Never, failure::Error>>) {
         let (phys, phy_events) = WatchableMap::new();
         let (ifaces, iface_events) = WatchableMap::new();
         let phys = Arc::new(phys);
@@ -416,11 +427,11 @@ mod tests {
         let events = Arc::new(Mutex::new(Some(Vec::new())));
         let events_two = events.clone();
         let mut event_fut = stream
-            .for_each(move |e| Ok(events_two.lock().as_mut().unwrap().push(e)));
-        exec.run_until_stalled(&mut event_fut)
-            .expect("event stream future returned an error");
+            .try_for_each(move |e| future::ready(Ok(events_two.lock().as_mut().unwrap().push(e))));
+        if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut event_fut) {
+            panic!("event stream future returned an error: {:?}", e);
+        }
         let events = events.lock().take().unwrap();
         events
     }
-
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api)]
 #![deny(warnings)]
 
 extern crate failure;
@@ -17,12 +18,12 @@ extern crate futures;
 extern crate getopts;
 extern crate parking_lot;
 
+use async::temp::Either::{Left, Right};
 use bt::error::Error as BTError;
 use failure::{Error, Fail, ResultExt};
 use fidl::encoding2::OutOfLine;
 use fidl_ble::{CentralMarker, CentralProxy, ScanFilter};
 use futures::future;
-use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use getopts::Options;
 
@@ -32,7 +33,7 @@ use common::central::{listen_central_events, CentralState};
 
 fn do_scan(
     args: &[String], central: &CentralProxy,
-) -> (bool, bool, impl Future<Item = (), Error = Error>) {
+) -> (bool, bool, impl Future<Output = Result<(), Error>>) {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "");
@@ -52,7 +53,7 @@ fn do_scan(
     let matches = match opts.parse(args) {
         Ok(m) => m,
         Err(fail) => {
-            return (false, false, Left(future::err(fail.into())));
+            return (false, false, Left(future::ready(Err(fail.into()))));
         }
     };
 
@@ -62,7 +63,7 @@ fn do_scan(
         return (
             false,
             false,
-            Left(future::err(BTError::new("invalid input").into())),
+            Left(future::ready(Err(BTError::new("invalid input").into()))),
         );
     }
 
@@ -79,7 +80,7 @@ fn do_scan(
                 return (
                     false,
                     false,
-                    Left(future::err(BTError::new("invalid input").into())),
+                    Left(future::ready(Err(BTError::new("invalid input").into()))),
                 );
             }
         }]),
@@ -104,24 +105,26 @@ fn do_scan(
         central
             .start_scan(filter.as_mut().map(OutOfLine))
             .map_err(|e| e.context("failed to initiate scan").into())
-            .and_then(|status| match status.error {
+            .and_then(|status| future::ready(match status.error {
                 None => Ok(()),
                 Some(e) => Err(BTError::from(*e).into()),
-            }),
+            })),
     );
 
     (scan_once, connect, fut)
 }
 
-fn do_connect(args: &[String], central: &CentralProxy) -> impl Future<Item = (), Error = Error> {
+fn do_connect(args: &[String], central: &CentralProxy)
+    -> impl Future<Output = Result<(), Error>>
+{
     if args.len() != 1 {
         println!("connect: peer-id is required");
-        return Left(future::err(BTError::new("invalid input").into()));
+        return Left(future::ready(Err(BTError::new("invalid input").into())));
     }
 
     let (_, server_end) = match fidl::endpoints2::create_endpoints() {
         Err(e) => {
-            return Left(future::err(e.into()));
+            return Left(future::ready(Err(e.into())));
         }
         Ok(x) => x,
     };
@@ -130,10 +133,10 @@ fn do_connect(args: &[String], central: &CentralProxy) -> impl Future<Item = (),
         central
             .connect_peripheral(&mut args[0].clone(), server_end)
             .map_err(|e| e.context("failed to connect to peripheral").into())
-            .and_then(|status| match status.error {
+            .and_then(|status| future::ready(match status.error {
                 None => Ok(()),
                 Some(e) => Err(BTError::from(*e).into()),
-            }),
+            })),
     )
 }
 
@@ -180,7 +183,7 @@ fn main() -> Result<(), Error> {
         }
     };
 
-    let event_fut = listen_central_events(state).map_err(|_| unreachable!("Listening to events should never fail"));
-    let fut = command_fut.and_then(|_| event_fut);
+    let event_fut = listen_central_events(state);
+    let fut = command_fut.and_then(|_| event_fut.map(Ok));
     executor.run_singlethreaded(fut).map_err(Into::into)
 }

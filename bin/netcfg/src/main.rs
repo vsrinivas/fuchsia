@@ -16,11 +16,12 @@ extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
 
+use async::temp::TempFutureExt;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
 use netstack::{NetstackMarker, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
 use std::fs;
-use futures::{future, FutureExt, StreamExt};
+use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 
 mod device_id;
 
@@ -55,14 +56,14 @@ fn main() -> Result<(), Error> {
 
     let device_name = match default_config.device_name {
         Some(name) => {
-            device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map(|_| ()).left_future()
+            device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map_ok(|_| ()).left_future()
         },
         None => {
-            netstack.take_event_stream().filter_map(|NetstackEvent::OnInterfacesChanged { interfaces: is }| {
-                future::ok(derive_device_name(is))
-            }).take(1).for_each(|name| {
-                device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map(|_| ())
-            }).map(|_| ()).right_future()
+            netstack.take_event_stream().try_filter_map(|NetstackEvent::OnInterfacesChanged { interfaces: is }| {
+                future::ready(Ok(derive_device_name(is)))
+            }).take(1).try_for_each(|name| {
+                device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map_ok(|_| ())
+            }).map_ok(|_| ()).right_future()
         },
     }.map_err(Into::into);
 

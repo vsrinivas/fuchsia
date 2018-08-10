@@ -4,6 +4,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
@@ -131,6 +132,8 @@ pub mod client {
 /// Tools for providing Fuchsia services.
 pub mod server {
     use super::*;
+    use std::marker::Unpin;
+    use std::mem::PinMut;
     use futures::{Future, Poll};
 
     use self::errors::*;
@@ -215,6 +218,8 @@ pub mod server {
         factories: Vec<Box<ServiceFactory>>,
     }
 
+    impl Unpin for FdioServer {}
+
     impl FdioServer {
         fn dispatch(&mut self, chan: &async::Channel, buf: zx::MessageBuf) -> zx::MessageBuf {
             // TODO(raggi): provide an alternative to the into() here so that we
@@ -293,18 +298,17 @@ pub mod server {
     }
 
     impl Future for FdioServer {
-        type Item = ();
-        type Error = Error;
+        type Output = Result<(), Error>;
 
-        fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+        fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
             loop {
-                match self.readers.poll_next(cx) {
-                    Ok(Async::Ready(Some((chan, buf)))) => {
+                match self.readers.poll_next_unpin(cx) {
+                    Poll::Ready(Some(Ok((chan, buf)))) => {
                         let buf = self.dispatch(&chan, buf);
                         self.readers.push(chan.recv_msg(buf));
                     },
-                    Ok(Async::Ready(None)) | Ok(Async::Pending) => return Ok(Async::Pending),
-                    Err(_) => {
+                    Poll::Ready(None) | Poll::Pending => return Poll::Pending,
+                    Poll::Ready(Some(Err(_))) => {
                         // errors are ignored, as we assume that the channel should still be read from.
                     },
                 }

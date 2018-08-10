@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use std::io;
-use std::mem;
+use std::marker::Unpin;
+use std::mem::PinMut;
 use std::fmt;
 use std::borrow::BorrowMut;
 
-use futures::{Async, IntoFuture, Future, Poll, task};
+use futures::{Poll, Future, FutureExt, task};
 use zx::{self, AsHandleRef, MessageBuf};
 
 use RWHandle;
@@ -50,23 +51,23 @@ impl Channel {
     /// get a notification when the socket does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is readable again.
-    fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    fn poll_read(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         self.0.poll_read(cx)
     }
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
     pub fn recv_from(&self, buf: &mut MessageBuf, cx: &mut task::Context)
-        -> Poll<(), zx::Status>
+        -> Poll<Result<(), zx::Status>>
     {
         try_ready!(self.poll_read(cx));
 
         let res = self.0.get_ref().read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.0.need_read(cx)?;
-            return Ok(Async::Pending);
+            return Poll::Pending;
         }
-        res.map(Async::Ready)
+        Poll::Ready(res)
     }
 
     /// Creates a future that receive a message to be written to the buffer
@@ -93,7 +94,7 @@ impl Channel {
     /// channel and buffer back.
     pub fn chain_server<F,U>(self, callback: F) -> ChainServer<F,U>
         where F: FnMut((Channel, MessageBuf)) -> U,
-              U: IntoFuture<Item = (Channel, MessageBuf), Error = zx::Status>,
+              U: Future<Output = Result<(Channel, MessageBuf), zx::Status>>,
     {
         let buf = MessageBuf::new();
         let recv = self.recv_msg(buf);
@@ -132,59 +133,68 @@ impl fmt::Debug for Channel {
 #[must_use = "futures do nothing unless polled"]
 pub struct RecvMsg<T>(Option<(Channel, T)>);
 
+impl<T> Unpin for RecvMsg<T> {}
+
 impl<T> Future for RecvMsg<T>
     where T: BorrowMut<MessageBuf>,
 {
-    type Item = (Channel, T);
-    type Error = zx::Status;
+    type Output = Result<(Channel, T), zx::Status>;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+        let this = &mut *self;
         {
-            let (chan, buf) = self.0.as_mut().expect("polled a RecvMsg after completion");
+            let (chan, buf) = this.0.as_mut().expect("polled a RecvMsg after completion");
             try_ready!(chan.recv_from(buf.borrow_mut(), cx));
         }
-        let (chan, buf) = self.0.take().unwrap();
-        Ok(Async::Ready((chan, buf)))
+        let (chan, buf) = this.0.take().unwrap();
+        Poll::Ready(Ok((chan, buf)))
     }
 }
 
 /// Allows repeatedly listening for messages while re-using the message buffer
 /// and receiving the channel and buffer for use in the callback.
 #[must_use = "futures do nothing unless polled"]
-pub struct ChainServer<F,U: IntoFuture> {
+pub struct ChainServer<F, Fut> {
     callback: F,
-    state: ServerState<U>,
+    state: ServerState<Fut>,
 }
 
-enum ServerState<U: IntoFuture> {
+enum ServerState<Fut> {
     Waiting(RecvMsg<MessageBuf>),
-    Processing(U::Future),
+    Processing(Fut),
 }
 
-impl<F,U> Future for ChainServer<F,U>
-    where F: FnMut((Channel, MessageBuf)) -> U,
-          U: IntoFuture<Item = (Channel, MessageBuf), Error = zx::Status>,
-{
-    type Item = ();
-    type Error = U::Error;
+impl<F, Fut: Unpin> Unpin for ChainServer<F, Fut> {}
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+impl<F, Fut> Future for ChainServer<F, Fut>
+    where F: FnMut((Channel, MessageBuf)) -> Fut,
+          Fut: Future<Output = Result<(Channel, MessageBuf), zx::Status>>,
+{
+    type Output = Result<(), zx::Status>;
+
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
         // loop because we might get a new future we have to poll immediately.
-        // we only return on error or Async::Pending
+        // we only return on error or Poll::Pending
         loop {
-            let new_state = match &mut self.state {
-                ServerState::Waiting(recv) => {
-                    let chanbuf = try_ready!(recv.poll(cx));
-                    let fut = (self.callback)(chanbuf).into_future();
-                    ServerState::Processing(fut)
-                },
-                ServerState::Processing(fut) => {
-                    let (chan, buf) = try_ready!(fut.poll(cx));
-                    let recv = chan.recv_msg(buf);
-                    ServerState::Waiting(recv)
-                }
-            };
-            let _ = mem::replace(&mut self.state, new_state);
+            unsafe {
+                // Safety: the only component here considered "pinned" is the
+                // `Fut` inside of `Processing`, which will never be moved after being
+                // polled.
+                let this = PinMut::get_mut_unchecked(self.reborrow());
+                let new_state = match &mut this.state {
+                    ServerState::Waiting(recv) => {
+                        let chanbuf = try_ready!(recv.poll_unpin(cx));
+                        let fut = (this.callback)(chanbuf);
+                        ServerState::Processing(fut)
+                    },
+                    ServerState::Processing(fut) => {
+                        let (chan, buf) = try_ready!(PinMut::new_unchecked(fut).poll(cx));
+                        let recv = chan.recv_msg(buf);
+                        ServerState::Waiting(recv)
+                    }
+                };
+                this.state = new_state;
+            }
         }
     }
 }
@@ -197,18 +207,20 @@ pub struct RepeatServer<F> {
     buf: MessageBuf,
 }
 
+impl<F> Unpin for RepeatServer<F> {}
+
 impl<F> Future for RepeatServer<F>
     where F: FnMut(&Channel, &mut MessageBuf)
 {
-    type Item = ();
-    type Error = io::Error;
+    type Output = Result<(), io::Error>;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+        let this = &mut *self;
         loop {
-            try_ready!(self.chan.recv_from(&mut self.buf, cx));
+            try_ready!(this.chan.recv_from(&mut this.buf, cx));
 
-            (self.callback)(&self.chan, &mut self.buf);
-            self.buf.clear();
+            (this.callback)(&this.chan, &mut this.buf);
+            this.buf.clear();
         }
     }
 }
@@ -220,7 +232,6 @@ mod tests {
     use zx::{self, MessageBuf};
     use futures::prelude::*;
     use futures::channel::oneshot;
-    use futures::executor::Executor as FutureExecutor;
     use futures::future;
     use super::*;
 
@@ -233,7 +244,7 @@ mod tests {
         let f_rx = Channel::from_channel(rx).unwrap();
 
         let mut buffer = MessageBuf::new();
-        let receiver = f_rx.recv_msg(&mut buffer).map(|(_chan, buf)| {
+        let receiver = f_rx.recv_msg(&mut buffer).map_ok(|(_chan, buf)| {
             println!("{:?}", buf.bytes());
             assert_eq!(bytes, buf.bytes());
         });
@@ -241,14 +252,15 @@ mod tests {
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receiver.on_timeout(
                         1000.millis().after_now(),
-                        || panic!("timeout")).unwrap();
+                        || panic!("timeout"));
 
         let sender = Timer::new(100.millis().after_now()).map(|()| {
             let mut handles = Vec::new();
             tx.write(bytes, &mut handles).unwrap();
+            Ok(())
         });
 
-        let done = receiver.join(sender);
+        let done = receiver.try_join(sender);
         exec.run_singlethreaded(done).unwrap();
     }
 
@@ -266,20 +278,21 @@ mod tests {
             assert_eq!(count, buf.bytes()[0]);
             count += 1;
             Timer::new(100.millis().after_now())
-                .map(move |()| (chan, buf))
+                .map(move |()| Ok((chan, buf)))
         });
 
         // add a timeout to receiver to stop the server eventually
-        let receiver = receiver.on_timeout(400.millis().after_now(), || Ok(())).unwrap();
+        let receiver = receiver.on_timeout(400.millis().after_now(), || Ok(()));
 
         let sender = Timer::new(100.millis().after_now()).map(|()|{
             let mut handles = Vec::new();
             tx.write(&[0], &mut handles).unwrap();
             tx.write(&[1], &mut handles).unwrap();
             tx.write(&[2], &mut handles).unwrap();
+            Ok(())
         });
 
-        let done = receiver.join(sender);
+        let done = receiver.try_join(sender);
         exec.run_singlethreaded(done).unwrap();
     }
 
@@ -298,15 +311,15 @@ mod tests {
 
         let receiver = f_rx.chain_server(move |(chan, buf)| {
             maybe_completer.take().unwrap().send(buf.bytes().to_owned()).unwrap();
-            future::ok((chan, buf))
+            future::ready(Ok((chan, buf)))
         });
-        ehandle.spawn(Box::new(receiver.recover(|e| println!("{:?}", e)))).unwrap();
+        ehandle.spawn(Box::new(receiver.unwrap_or_else(|e| println!("{:?}", e)))).unwrap();
 
         let mut got_result = false;
-        exec.run_singlethreaded(completion.map(|b| {
+        exec.run_singlethreaded(completion.map_ok(|b| {
             assert_eq!(b"txidhelloworld".to_vec(), b);
             got_result = true;
-        } ).map_err(|e| {
+        }).map_err(|e| {
             assert!(false, format!("unexpected error {:?}", e))
         })).unwrap();
 
@@ -329,16 +342,17 @@ mod tests {
         });
 
         // add a timeout to receiver to stop the server eventually
-        let receiver = receiver.on_timeout(500.millis().after_now(), || Ok(())).unwrap();
+        let receiver = receiver.on_timeout(500.millis().after_now(), || Ok(()));
 
         let sender = Timer::new(100.millis().after_now()).map(|()|{
             let mut handles = Vec::new();
             tx.write(&[0], &mut handles).unwrap();
             tx.write(&[1], &mut handles).unwrap();
             tx.write(&[2], &mut handles).unwrap();
+            Ok(())
         });
 
-        let done = receiver.join(sender);
+        let done = receiver.try_join(sender);
         exec.run_singlethreaded(done).unwrap();
     }
 }

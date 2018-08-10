@@ -27,8 +27,8 @@ use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManag
                               ViewManagerProxy, ViewMarker, ViewProviderMarker,
                               ViewProviderRequestStream};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
-use futures::future::ok as fok;
-use futures::{FutureExt, StreamExt};
+use futures::future::ready as fready;
+use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use gfx::ColorRgba;
 use scenic::{ImportNode, Material, Rectangle, Session, SessionPtr, ShapeNode};
 use std::f32::consts::PI;
@@ -92,10 +92,9 @@ impl SpinningSquareView {
         let timer = Interval::new(Duration::from_millis(10));
         let view_controller = view_controller.clone();
         let f = timer
-            .for_each(move |_| {
+            .map(move |_| {
                 view_controller.lock().unwrap().update();
-                Ok(())
-            }).map(|_| ());
+            }).collect::<()>();
         async::spawn(f);
     }
 
@@ -109,7 +108,7 @@ impl SpinningSquareView {
             session_listener_request
                 .into_stream()
                 .unwrap()
-                .for_each(move |request| {
+                .map_ok(move |request| {
                     match request {
                         SessionListenerRequest::OnEvent { events, .. } => view_controller
                             .lock()
@@ -117,9 +116,9 @@ impl SpinningSquareView {
                             .handle_session_events(events),
                         _ => (),
                     }
-                    fok(())
-                }).map(|_| ())
-                .recover(|e| eprintln!("view listener error: {:?}", e)),
+                })
+                .try_collect::<()>()
+                .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
         );
     }
 
@@ -132,7 +131,7 @@ impl SpinningSquareView {
             view_listener_request
                 .into_stream()
                 .unwrap()
-                .for_each(
+                .try_for_each(
                     move |ViewListenerRequest::OnPropertiesChanged {
                               properties,
                               responder,
@@ -141,10 +140,10 @@ impl SpinningSquareView {
                             .lock()
                             .unwrap()
                             .handle_properies_changed(&properties);
-                        responder.send()
+                        fready(responder.send())
                     },
-                ).map(|_| ())
-                .recover(|e| eprintln!("view listener error: {:?}", e)),
+                )
+                .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
         );
     }
 
@@ -209,8 +208,8 @@ impl SpinningSquareView {
             self.session
                 .lock()
                 .present(0)
-                .map(|_| ())
-                .recover(|e| eprintln!("present error: {:?}", e)),
+                .map_ok(|_| ())
+                .unwrap_or_else(|e| eprintln!("present error: {:?}", e)),
         );
     }
 
@@ -252,12 +251,12 @@ impl App {
         let app = app.clone();
         async::spawn(
             ViewProviderRequestStream::from_channel(chan)
-                .for_each(move |req| {
+                .try_for_each(move |req| {
                     let CreateView { view_owner, .. } = req;
                     App::app_create_view(app.clone(), view_owner).unwrap();
-                    futures::future::ok(())
-                }).map(|_| ())
-                .recover(|e| eprintln!("error running view_provider server: {:?}", e)),
+                    futures::future::ready(Ok(()))
+                })
+                .unwrap_or_else(|e| eprintln!("error running view_provider server: {:?}", e)),
         )
     }
 

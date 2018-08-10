@@ -11,7 +11,6 @@ use fidl::endpoints2::RequestStream;
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderStatus,
                         AuthProviderFactoryRequestStream};
-use futures::future::FutureResult;
 use futures::prelude::*;
 
 /// The AuthProviderFactory struct is holding implementation of
@@ -24,16 +23,15 @@ impl AuthProviderFactory {
     pub fn spawn(chan: async::Channel) {
         async::spawn(
             AuthProviderFactoryRequestStream::from_channel(chan)
-                .for_each(Self::handle_request)
-                .map(|_| ())
-                .recover(|e| warn!("Error running AuthProviderFactory {:?}", e)),
+                .try_for_each(|r| future::ready(Self::handle_request(r)))
+                .unwrap_or_else(|e| warn!("Error running AuthProviderFactory {:?}", e)),
         )
     }
 
     /// Handle `AuthProviderFactoryRequest`.
     /// Spawn a new `AuthProvider` on every `GetAuthProvider` request
     /// to the `AuthProviderFactory` interface.
-    fn handle_request(req: AuthProviderFactoryRequest) -> FutureResult<(), Error> {
+    fn handle_request(req: AuthProviderFactoryRequest) -> Result<(), Error> {
         // Using let binding here as GetAuthProvider is currently the only method.
         let AuthProviderFactoryRequest::GetAuthProvider {
             auth_provider: server_end,
@@ -41,6 +39,6 @@ impl AuthProviderFactory {
         } = req;
         info!("Creating auth provider");
         AuthProvider::spawn(server_end);
-        responder.send(AuthProviderStatus::Ok).into_future()
+        responder.send(AuthProviderStatus::Ok)
     }
 }

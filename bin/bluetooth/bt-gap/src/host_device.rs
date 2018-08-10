@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use fidl;
+use futures::TryStreamExt;
 use fidl_fuchsia_bluetooth::Status;
 use fidl_fuchsia_bluetooth_control::AdapterInfo;
-use fidl_fuchsia_bluetooth_host::{HostEvent, HostEventStream, HostProxy};
-use futures::{FutureExt, StreamExt};
+use fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy};
 use futures::Future;
-use futures::future::ok as fok;
+use futures::future;
 use host_dispatcher::HostDispatcher;
 use parking_lot::RwLock;
 use std::path::PathBuf;
@@ -39,11 +39,11 @@ impl HostDevice {
         &self.info
     }
 
-    pub fn set_name(&self, mut name: String) -> impl Future<Item = Status, Error = fidl::Error> {
+    pub fn set_name(&self, mut name: String) -> impl Future<Output = Result<Status, fidl::Error>> {
         self.host.set_local_name(&mut name)
     }
 
-    pub fn start_discovery(&mut self) -> impl Future<Item = Status, Error = fidl::Error> {
+    pub fn start_discovery(&mut self) -> impl Future<Output = Result<Status, fidl::Error>> {
         self.host.start_discovery()
     }
 
@@ -51,24 +51,23 @@ impl HostDevice {
         self.host.close()
     }
 
-    pub fn stop_discovery(&self) -> impl Future<Item = Status, Error = fidl::Error> {
+    pub fn stop_discovery(&self) -> impl Future<Output = Result<Status, fidl::Error>> {
         self.host.stop_discovery()
     }
 
     pub fn set_discoverable(
         &mut self, discoverable: bool
-    ) -> impl Future<Item = Status, Error = fidl::Error> {
+    ) -> impl Future<Output = Result<Status, fidl::Error>> {
         self.host.set_discoverable(discoverable)
     }
 }
 
 pub fn run(
     hd: Arc<RwLock<HostDispatcher>>, host: Arc<RwLock<HostDevice>>
-) -> impl Future<Item = HostEventStream, Error = fidl::Error> {
+) -> impl Future<Output = Result<(), fidl::Error>> {
     make_clones!(host => host_stream, host);
     let stream = host_stream.read().host.take_event_stream();
-    stream
-        .for_each(move |evt| {
+    stream.try_for_each(move |evt| {
             match evt {
                 HostEvent::OnAdapterStateChanged { ref state } => {
                     host.write().info.state = Some(Box::new(clone_host_state(&state)));
@@ -93,7 +92,6 @@ pub fn run(
                     unimplemented!("not yet");
                 }
             };
-            fok(())
+            future::ready(Ok(()))
         })
-        .err_into()
 }

@@ -1,6 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#![feature(arbitrary_self_types, futures_api, pin)]
 #![deny(warnings)]
 
 extern crate failure;
@@ -44,6 +46,8 @@ use server::sl4f_executor::run_fidl_loop;
 // Config, flexible for any ip/port combination
 const SERVER_IP: &str = "0.0.0.0";
 const SERVER_PORT: &str = "80";
+
+pub enum Never {}
 
 // HTTP Server using Rouille
 fn main() -> Result<(), Error> {

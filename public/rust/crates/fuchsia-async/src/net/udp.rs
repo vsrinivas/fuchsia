@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use futures::task;
-use futures::{Async, Future, Poll};
+use futures::{Poll, Future};
 use std::io;
+use std::marker::Unpin;
+use std::mem::PinMut;
 use std::net::{self, SocketAddr};
 use std::ops::Deref;
 
@@ -40,18 +42,18 @@ impl UdpSocket {
 
     pub fn async_recv_from(
         &self, buf: &mut [u8], cx: &mut task::Context,
-    ) -> Poll<(usize, SocketAddr), io::Error> {
+    ) -> Poll<io::Result<(usize, SocketAddr)>> {
         try_ready!(EventedFd::poll_readable(&self.0, cx));
         match self.0.as_ref().recv_from(buf) {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
                     self.0.need_read(cx);
-                    Ok(Async::Pending)
+                    Poll::Pending
                 } else {
-                    Err(e)
+                    Poll::Ready(Err(e))
                 }
             }
-            Ok((size, addr)) => Ok(Async::Ready((size, addr))),
+            Ok((size, addr)) => Poll::Ready(Ok((size, addr))),
         }
     }
 
@@ -61,70 +63,77 @@ impl UdpSocket {
 
     pub fn async_send_to(
         &self, buf: &[u8], addr: SocketAddr, cx: &mut task::Context,
-    ) -> Poll<(), io::Error> {
+    ) -> Poll<io::Result<()>> {
         try_ready!(EventedFd::poll_writable(&self.0, cx));
         match self.0.as_ref().send_to(buf, addr) {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
                     self.0.need_write(cx);
-                    Ok(Async::Pending)
+                    Poll::Pending
                 } else {
-                    Err(e)
+                    Poll::Ready(Err(e))
                 }
             }
-            Ok(_) => Ok(Async::Ready(())),
+            Ok(_) => Poll::Ready(Ok(())),
         }
     }
 }
 
-pub struct RecvFrom<B: AsMut<[u8]>>(Option<B>, Option<UdpSocket>);
+pub struct RecvFrom<B>(Option<B>, Option<UdpSocket>);
+
+impl<B> Unpin for RecvFrom<B> {}
 
 impl<B> Future for RecvFrom<B>
 where
     B: AsMut<[u8]>,
 {
-    type Item = (UdpSocket, B, usize, SocketAddr);
-    type Error = io::Error;
+    type Output = io::Result<(UdpSocket, B, usize, SocketAddr)>;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+        -> Poll<Self::Output>
+    {
+        let this = &mut *self;
         let addr;
         let received;
         {
-            let socket = self.1.as_mut().expect("polled a RecvFrom after completion");
-            let buf = self.0.as_mut().expect("polled a RecvFrom after completion");
+            let socket = this.1.as_mut().expect("polled a RecvFrom after completion");
+            let buf = this.0.as_mut().expect("polled a RecvFrom after completion");
             let (r, a) = try_ready!(socket.async_recv_from(buf.as_mut(), cx));
             addr = a;
             received = r;
         }
-        let socket = self.1.take().unwrap();
-        let buffer = self.0.take().unwrap();
-        Ok(Async::Ready((socket, buffer, received, addr)))
+        let socket = this.1.take().unwrap();
+        let buffer = this.0.take().unwrap();
+        Poll::Ready(Ok((socket, buffer, received, addr)))
     }
 }
 
-pub struct SendTo<B: AsRef<[u8]>>(Option<(B, SocketAddr, UdpSocket)>);
+pub struct SendTo<B>(Option<(B, SocketAddr, UdpSocket)>);
+
+impl<B> Unpin for SendTo<B> {}
 
 impl<B> Future for SendTo<B>
 where
     B: AsRef<[u8]>,
 {
-    type Item = UdpSocket;
-    type Error = io::Error;
+    type Output = io::Result<UdpSocket>;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+        -> Poll<Self::Output>
+    {
         {
             let (buf, addr, socket) = self.0.as_mut().expect("polled a SendTo after completion");
             try_ready!(socket.async_send_to(buf.as_ref(), *addr, cx));
         }
         let (_, _, socket) = self.0.take().unwrap();
-        Ok(Async::Ready(socket))
+        Poll::Ready(Ok(socket))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use Executor;
-    use futures::{FutureExt, future};
+    use futures::TryFutureExt;
     use super::UdpSocket;
 
     #[test]
@@ -139,11 +148,10 @@ mod tests {
                 let recvbuf = vec![0; 11];
                 socket.recv_from(recvbuf)
             })
-            .and_then(|(_sock, recvbuf, received, sender)| {
+            .map_ok(|(_sock, recvbuf, received, sender)| {
                 assert_eq!(addr, sender);
                 assert_eq!(received, buf.len());
                 assert_eq!(&buf, &recvbuf.as_slice());
-                future::ok(())
             });
 
         exec.run_singlethreaded(fut).expect("failed to run udp socket test");

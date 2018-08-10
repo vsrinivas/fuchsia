@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use futures::{Async, Poll};
+use futures::Poll;
 use futures::task::{self, AtomicWaker};
 
 use executor::{PacketReceiver, ReceiverRegistration, EHandle};
@@ -105,24 +105,24 @@ impl<T> RWHandle<T> where T: AsHandleRef {
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "readable" signal arrives.
-    pub fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    pub fn poll_read(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (READABLE | CLOSED)) != 0 {
-            Ok(Async::Ready(()))
+            Poll::Ready(Ok(()))
         } else {
             self.need_read(cx)?;
-            Ok(Async::Pending)
+            Poll::Pending
         }
     }
 
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_write(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    pub fn poll_write(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (WRITABLE | CLOSED)) != 0 {
-            Ok(Async::Ready(()))
+            Poll::Ready(Ok(()))
         } else {
             self.need_write(cx)?;
-            Ok(Async::Pending)
+            Poll::Pending
         }
     }
 

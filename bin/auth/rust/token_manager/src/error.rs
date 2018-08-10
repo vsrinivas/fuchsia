@@ -6,7 +6,7 @@ use auth_cache::AuthCacheError;
 use auth_store::AuthDbError;
 use failure::Error;
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
-use futures::{Future, IntoFuture};
+use futures::future::{ready as fready, FutureObj};
 
 /// An Error type for problems encountered in the token manager. Each error
 /// contains the fuchsia.auth.Status that should be reported back to the
@@ -48,8 +48,8 @@ impl TokenManagerError {
     /// error.
     pub fn to_boxed_future<T: Send + 'static>(
         self,
-    ) -> Box<Future<Item = T, Error = TokenManagerError> + Send> {
-        Box::new(Err(self).into_future())
+    ) -> FutureObj<'static, Result<T, TokenManagerError>> {
+        FutureObj::new(Box::new(fready(Err(self))))
     }
 }
 

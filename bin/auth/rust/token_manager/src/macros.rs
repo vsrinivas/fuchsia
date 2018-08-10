@@ -10,7 +10,7 @@ macro_rules! future_try {
         match $expr {
             Ok(val) => val,
             Err(err) => {
-                return Box::new(Err(Into::into(err)).into_future());
+                return FutureObj::new(Box::new(::futures::future::ready(Err(Into::into(err)))));
             }
         }
     };

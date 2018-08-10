@@ -12,7 +12,6 @@ extern crate fidl_fidl_examples_echo;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
-use futures::future;
 use futures::prelude::*;
 use fidl::endpoints2::{ServiceMarker, RequestStream};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
@@ -20,19 +19,18 @@ use std::env;
 
 fn spawn_echo_server(chan: async::Channel, quiet: bool) {
     async::spawn(EchoRequestStream::from_channel(chan)
-        .for_each(move |EchoRequest::EchoString { value, responder }| {
+        .map_ok(move |EchoRequest::EchoString { value, responder }| {
             if !quiet {
                 println!("Received echo request for string {:?}", value);
             }
             responder.send(value.as_ref().map(|s| &**s))
-               .into_future()
                .map(move |_| if !quiet {
                    println!("echo response sent successfully");
                })
-               .recover(|e| eprintln!("error sending response: {:?}", e))
+               .unwrap_or_else(|e| eprintln!("error sending response: {:?}", e))
         })
-        .map(|_| ())
-        .recover(|e| eprintln!("error running echo server: {:?}", e)))
+        .try_collect::<()>()
+        .unwrap_or_else(|e| eprintln!("error running echo server: {:?}", e)))
 }
 
 fn main() -> Result<(), Error> {

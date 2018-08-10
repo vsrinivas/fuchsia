@@ -5,13 +5,13 @@
 // TODO(armansito): Remove this once a server channel can be killed using a Controller
 #![allow(unreachable_code)]
 
+use async::temp::Either::{Left, Right};
 use bt::error::Error as BTError;
 use common::gatt::start_gatt_loop;
 use failure::Error;
 use fidl::endpoints2;
 use fidl_ble::{CentralEvent, CentralProxy, RemoteDevice};
 use futures::future;
-use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use parking_lot::RwLock;
 use std::fmt;
@@ -48,14 +48,15 @@ impl CentralState {
 
 pub fn listen_central_events(
     state: CentralStatePtr,
-) -> impl Future<Item = (), Error = Never> + Send {
+) -> impl Future<Output = ()> {
+    const MAX_CONCURRENT: usize = 1000;
     let evt_stream = state.read().get_svc().take_event_stream();
     evt_stream
-        .for_each_concurrent(move |evt| {
+        .try_for_each_concurrent(MAX_CONCURRENT, move |evt| {
             match evt {
                 CentralEvent::OnScanStateChanged { scanning } => {
                     eprintln!("  scan state changed: {}", scanning);
-                    Left(future::ok(()))
+                    Left(future::ready(Ok(())))
                 }
                 CentralEvent::OnDeviceDiscovered { device } => {
                     let id = device.identifier.clone();
@@ -65,7 +66,7 @@ pub fn listen_central_events(
 
                     let central = state.read();
                     if !central.scan_once && !central.connect {
-                        return Left(future::ok(()));
+                        return Left(future::ready(Ok(())));
                     }
 
                     // Stop scanning.
@@ -73,41 +74,40 @@ pub fn listen_central_events(
                         eprintln!("request to stop scan failed: {}", e);
                         // TODO(armansito): kill the channel here instead
                         exit(0);
-                        Left(future::ok(()))
+                        Left(future::ready(Ok(())))
                     } else if central.connect && connectable {
-                        Right(connect_peripheral(state.clone(), id).recover(|_| {
+                        Right(connect_peripheral(state.clone(), id).unwrap_or_else(|_| {
                             // TODO(armansito): kill the channel here instead
                             exit(0);
                             ()
-                        }))
+                        }).map(Ok))
                     } else {
                         // TODO(armansito): kill the channel here instead
                         exit(0);
-                        Left(future::ok(()))
+                        Left(future::ready(Ok(())))
                     }
                 }
                 CentralEvent::OnPeripheralDisconnected { identifier } => {
                     eprintln!("  peer disconnected: {}", identifier);
                     // TODO(armansito): Close the channel here instead
                     exit(0);
-                    Left(future::ok(()))
+                    Left(future::ready(Ok(())))
                 }
             }
         })
-        .map(|_| ())
-        .recover(|e| eprintln!("failed to subscribe to BLE Central events: {:?}", e))
+        .unwrap_or_else(|e| eprintln!("failed to subscribe to BLE Central events: {:?}", e))
 }
 
 // Attempts to connect to the peripheral with the given |id| and begins the
 // GATT REPL if this succeeds.
 fn connect_peripheral(
     state: CentralStatePtr, mut id: String,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl Future<Output = Result<(), Error>> {
     let (proxy, server) = match endpoints2::create_endpoints() {
         Err(_) => {
-            return Left(future::err(
+            return Left(future::ready(Err(
                 BTError::new("Failed to create Client pair").into(),
-            ));
+            )));
         }
         Ok(res) => res,
     };
@@ -120,7 +120,7 @@ fn connect_peripheral(
             .map_err(|e| {
                 BTError::new(&format!("failed to initiate connect request: {}", e)).into()
             })
-            .and_then(move |status| match status.error {
+            .and_then(move |status| future::ready(match status.error {
                 Some(e) => {
                     println!(
                         "  failed to connect to peripheral: {}",
@@ -135,7 +135,7 @@ fn connect_peripheral(
                     println!("  device connected: {}", id);
                     Ok(proxy)
                 }
-            })
+            }))
             .and_then(|proxy| start_gatt_loop(proxy)),
     )
 }

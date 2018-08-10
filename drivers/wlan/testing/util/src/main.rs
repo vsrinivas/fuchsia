@@ -76,9 +76,8 @@ fn rm_wlanphy() -> Result<(), Error> {
 
 fn query_wlanphy() -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
-    let fut = proxy.query().and_then(|resp| {
+    let fut = proxy.query().map_ok(|resp| {
        println!("query results: {:?}", resp.info);
-       Ok(())
     });
     executor.run_singlethreaded(fut).map_err(Into::into)
 }
@@ -86,9 +85,8 @@ fn query_wlanphy() -> Result<(), Error> {
 fn create_wlanintf() -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
     let mut req = wlan::CreateIfaceRequest { role: wlan::MacRole::Client };
-    let fut = proxy.create_iface(&mut req).and_then(|resp| {
+    let fut = proxy.create_iface(&mut req).map_ok(|resp| {
        println!("create results: {:?}", resp);
-       Ok(())
     });
     executor.run_singlethreaded(fut).map_err(Into::into)
 }
@@ -96,9 +94,8 @@ fn create_wlanintf() -> Result<(), Error> {
 fn destroy_wlanintf(id: u16) -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
     let mut req = wlan::DestroyIfaceRequest { id: id };
-    let fut = proxy.destroy_iface(&mut req).and_then(|resp| {
+    let fut = proxy.destroy_iface(&mut req).map_ok(|resp| {
        println!("destroyed intf {} resp: {:?}", id, resp);
-       Ok(())
     });
     executor.run_singlethreaded(fut).map_err(Into::into)
 }

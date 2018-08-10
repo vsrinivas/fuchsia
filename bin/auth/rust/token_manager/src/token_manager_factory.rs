@@ -6,7 +6,7 @@ use async;
 use fidl::endpoints2::RequestStream;
 use fidl::Error;
 use fidl_fuchsia_auth::{TokenManagerFactoryRequest, TokenManagerFactoryRequestStream};
-use futures::future::{self, FutureResult};
+use futures::future;
 use futures::prelude::*;
 
 use super::token_manager::TokenManager;
@@ -20,14 +20,13 @@ impl TokenManagerFactory {
     pub fn spawn(chan: async::Channel) {
         async::spawn(
             TokenManagerFactoryRequestStream::from_channel(chan)
-                .for_each(Self::handle_request)
-                .map(|_| ())
-                .recover(|e| error!("Error running TokenManagerFactory {:?}", e)),
+                .try_for_each(Self::handle_request)
+                .unwrap_or_else(|e| error!("Error running TokenManagerFactory {:?}", e)),
         )
     }
 
     /// Handles a single request to the TokenManagerFactory.
-    fn handle_request(req: TokenManagerFactoryRequest) -> FutureResult<(), Error> {
+    fn handle_request(req: TokenManagerFactoryRequest) -> impl Future<Output = Result<(), Error>> {
         match req {
             TokenManagerFactoryRequest::GetTokenManager {
                 user_id,
@@ -48,7 +47,7 @@ impl TokenManagerFactory {
                     auth_context_provider,
                     token_manager,
                 );
-                future::ok::<(), Error>(())
+                future::ready(Ok(()))
             }
         }
     }

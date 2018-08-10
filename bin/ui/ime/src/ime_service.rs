@@ -8,7 +8,7 @@ use ime::IME;
 
 pub fn spawn_server(chan: async::Channel) {
     let stream_complete = uii::ImeServiceRequestStream::from_channel(chan)
-        .for_each(move |get_ime_request| {
+        .try_for_each(move |get_ime_request| {
             let uii::ImeServiceRequest::GetInputMethodEditor {
                 keyboard_type,
                 action,
@@ -23,9 +23,8 @@ pub fn spawn_server(chan: async::Channel) {
                     IME::new(keyboard_type, action, initial_state, client_proxy).bind(edit_stream);
                 }
             }
-            future::ok(())
+            future::ready(Ok(()))
         })
-        .map(|_| ())
-        .recover(|e| eprintln!("error running ime server: {:?}", e));
+        .unwrap_or_else(|e| eprintln!("error running ime server: {:?}", e));
     async::spawn(stream_complete);
 }

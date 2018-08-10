@@ -40,7 +40,7 @@ fn main() -> Result<(), Error> {
        .context("Failed to connect to echo service")?;
 
     let fut = echo.echo_string(Some("hello world!"))
-        .map(|res| println!("response: {:?}", res));
+        .map_ok(|res| println!("response: {:?}", res));
 
     executor.run_singlethreaded(fut).context("failed to execute echo future")?;
     Ok(())

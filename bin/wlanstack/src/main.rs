@@ -4,9 +4,7 @@
 
 //! System service for wireless networking
 
-// These features both have stable implementations and will become available on stable compilers
-// soon. They allow return types of `impl Future` rather than boxing or otherwise having to name
-// the future types.
+#![feature(futures_api, arbitrary_self_types, pin)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
@@ -22,10 +20,11 @@ extern crate fuchsia_app as component;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_wlan_dev as wlan_dev;
 extern crate fuchsia_zircon as zx;
-extern crate futures;
+#[macro_use] extern crate futures;
 #[macro_use]
 extern crate log;
 extern crate parking_lot;
+#[macro_use] extern crate pin_utils;
 extern crate wlan_sme;
 
 #[cfg(test)] extern crate fidl_fuchsia_wlan_tap as fidl_wlantap;
@@ -55,6 +54,15 @@ const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 static LOGGER: logger::Logger = logger::Logger;
 
+#[allow(missing_docs)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Never {}
+
+impl Never {
+    #[allow(missing_docs)]
+    pub fn into_any<T>(self) -> T { match self {} }
+}
+
 fn main() -> Result<(), Error> {
     log::set_logger(&LOGGER)?;
     log::set_max_level(MAX_LOG_LEVEL);
@@ -69,20 +77,20 @@ fn main() -> Result<(), Error> {
     let ifaces = Arc::new(ifaces);
 
     let phy_server = device::serve_phys(phys.clone())?
-        .and_then(|()| Err(format_err!("Phy server exited unexpectedly")));
+        .and_then(|()| future::ready(Err(format_err!("Phy server exited unexpectedly"))));
     let iface_server = device::serve_ifaces(ifaces.clone())?
-        .and_then(|()| Err(format_err!("Iface server exited unexpectedly")));
+        .and_then(|()| future::ready(Err(format_err!("Iface server exited unexpectedly"))));
     let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?
-        .map(|x| x.never_into());
+        .map_ok(Never::into_any);
 
-    exec.run_singlethreaded(services_server.join3(phy_server, iface_server))
+    exec.run_singlethreaded(services_server.try_join3(phy_server, iface_server))
         .map(|((), (), ())| ())
 }
 
 fn serve_fidl(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
               phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
               iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>)
-    -> Result<impl Future<Item = Never, Error = Error>, Error>
+    -> Result<impl Future<Output = Result<Never, Error>>, Error>
 {
     let (sender, receiver) = mpsc::unbounded();
     let fdio_server = ServicesServer::new()
@@ -91,9 +99,9 @@ fn serve_fidl(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
         }))
         .start()
         .context("error configuring device service")?
-        .and_then(|()| Err(format_err!("fdio server future exited unexpectedly")))
+        .and_then(|()| future::ready(Err(format_err!("fdio server future exited unexpectedly"))))
         .map_err(|e| e.context("fdio server terminated with error").into());
     let device_service = service::device_service(phys, ifaces, phy_events, iface_events, receiver);
-    Ok(fdio_server.join(device_service)
-        .map(|x: (Never, Never)| x.0))
+    Ok(fdio_server.try_join(device_service)
+        .map_ok(|x: (Never, Never)| x.0))
 }

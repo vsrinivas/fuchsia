@@ -4,6 +4,7 @@
 
 //! Library and runtime for fidl bindings.
 
+#![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 
@@ -11,7 +12,7 @@ extern crate fuchsia_zircon as zircon;
 extern crate byteorder;
 #[macro_use] extern crate failure;
 extern crate fuchsia_async as async;
-extern crate futures;
+#[macro_use] extern crate futures;
 extern crate parking_lot;
 extern crate slab;
 
@@ -61,22 +62,6 @@ impl ServeInner {
         self.shutdown.load(atomic::Ordering::Relaxed)
     }
 }
-
-/// A specialized `Box<Future<...>>` type for FIDL.
-/// This is a convenience to avoid writing
-/// `Future<Item = I, Error = Error> + Send`.
-/// The error type indicates various FIDL protocol errors, as well as general-purpose IO
-/// errors such as a closed channel.
-pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Send>;
-
-/// A specialized `Future<...>` type for FIDL.
-/// This is a convenience to avoid writing
-/// `Future<Item = I, Error = fidl::Error> + Send`.
-/// The error type indicates various FIDL protocol errors, as well as general-purpose IO
-/// errors such as a closed channel.
-pub trait Future<Item>: futures::Future<Item = Item, Error = Error> + Send {}
-impl<T, Item> Future<Item> for T
-    where T: futures::Future<Item = Item, Error = Error> + Send {}
 
 #[macro_export]
 macro_rules! fidl_enum {

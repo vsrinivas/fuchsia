@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api, pin, arbitrary_self_types)]
+#![deny(warnings)]
+
 extern crate clap;
 #[macro_use]
 extern crate failure;
@@ -20,8 +23,7 @@ use std::str::FromStr;
 use async::Executor;
 use clap::{App, Arg};
 use failure::Error;
-use futures::StreamExt;
-use futures::future::Either::{Left, Right};
+use futures::{TryStreamExt, StreamExt};
 
 use bluetooth::hci;
 use zircon::Channel;
@@ -50,11 +52,11 @@ fn start<W: io::Write>(
 
     // TODO(bwb): this is a temporary solution, we need a keyboard catching solution for Ruschsia
     let writer_loop = match count {
-        Some(num) => Left(snooper.take(num)),
-        None => Right(snooper),
+        Some(num) => snooper.take(num).left_stream(),
+        None => snooper.right_stream(),
     };
 
-    let writer_loop = writer_loop.for_each(|pkt| {
+    let writer_loop = writer_loop.map(Ok).try_for_each(|pkt| {
         let wrote = match format {
             Format::Btsnoop => out.write(pkt.to_btsnoop_fmt().as_slice()),
             Format::Pcap => out.write(pkt.to_pcap_fmt().as_slice()),
@@ -62,9 +64,9 @@ fn start<W: io::Write>(
         match wrote {
             Ok(_) => {
                 let _ = out.flush();
-                futures::future::ok(())
+                futures::future::ready(Ok(()))
             }
-            Err(_) => futures::future::err(format_err!("failed to write packet to file")),
+            Err(_) => futures::future::ready(Err(format_err!("failed to write packet to file"))),
         }
     });
 

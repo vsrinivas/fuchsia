@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
 extern crate failure;
@@ -38,18 +39,18 @@ fn main() -> Result<(), Error> {
     }
 }
 
-many_futures!(
+unsafe_many_futures!(
     IfFut,
     [List, GetInfo, Enable, Disable, AddrAdd, AddrDel, Error]
 );
 
-fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = Error> {
+fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Output = Result<(), Error>> {
     match cmd {
         IfCmd::List => IfFut::List({
             stack
                 .list_interfaces()
                 .map_err(|e| e.context("error getting response").into())
-                .map(|response| {
+                .map_ok(|response| {
                     for info in response {
                         println!("{}", pretty::InterfaceInfo::from(info));
                     }
@@ -59,7 +60,7 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
             stack
                 .get_interface_info(id)
                 .map_err(|e| e.context("error getting response").into())
-                .map(move |response| {
+                .map_ok(move |response| {
                     if let Some(e) = response.1 {
                         println!("Error getting interface {}: {:?}", id, e)
                     } else {
@@ -71,7 +72,7 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
             stack
                 .enable_interface(id)
                 .map_err(|e| e.context("error getting response").into())
-                .map(move |response| {
+                .map_ok(move |response| {
                     if let Some(e) = response {
                         println!("Error enabling interface {}: {:?}", id, e)
                     } else {
@@ -83,7 +84,7 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
             stack
                 .disable_interface(id)
                 .map_err(|e| e.context("error getting response").into())
-                .map(move |response| {
+                .map_ok(move |response| {
                     if let Some(e) = response {
                         println!("Error disabling interface {}: {:?}", id, e)
                     } else {
@@ -94,7 +95,7 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
         IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => IfFut::AddrAdd({
             let parsed_addr = match parse_ip_addr(&addr) {
                 Ok(a) => a,
-                Err(e) => return IfFut::Error({ futures::future::err(e) }),
+                Err(e) => return IfFut::Error({ futures::future::ready(Err(e)) }),
             };
             let mut fidl_addr = netstack::InterfaceAddress {
                 ip_address: parsed_addr,
@@ -104,7 +105,7 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
             stack
                 .add_interface_address(id, &mut fidl_addr)
                 .map_err(|e| e.context("error setting interface address").into())
-                .map(move |response| {
+                .map_ok(move |response| {
                     if let Some(e) = response {
                         println!("Error adding interface address {}: {:?}", id, e)
                     } else {
@@ -118,20 +119,20 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
         }),
         IfCmd::Addr(AddrCmd::Del { .. }) => IfFut::AddrDel({
             println!("{:?} not implemented!", cmd);
-            futures::future::ok(())
+            futures::future::ready(Ok(()))
         }),
     }
 }
 
-many_futures!(FwdFut, [List,]);
+unsafe_many_futures!(FwdFut, [List,]);
 
-fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> impl Future<Item = (), Error = Error> {
+fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> impl Future<Output = Result<(), Error>> {
     match cmd {
         FwdCmd::List => FwdFut::List({
             stack
                 .get_forwarding_table()
                 .map_err(|e| e.context("error retrieving forwarding table").into())
-                .map(move |response| {
+                .map_ok(move |response| {
                     for entry in response {
                         println!("{}", pretty::ForwardingEntry::from(entry));
                     }

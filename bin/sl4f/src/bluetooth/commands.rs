@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use async;
-use async::TimeoutExt;
+use async::{temp::TempFutureExt, TimeoutExt};
 use bt::error::Error as BTError;
 use failure::Error;
 use fidl_ble::{AdvertisingData, ScanFilter};
-use futures::future::ok as fok;
-use futures::future::Either::{Left, Right};
+use futures::future::ready as fready;
 use futures::prelude::*;
 use futures::FutureExt;
 use parking_lot::RwLock;
@@ -124,11 +123,11 @@ fn parse_identifier(args_raw: Value) -> Result<String, Error> {
 
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
-// To add new methods, add to the many_futures! macro
+// To add new methods, add to the unsafe_many_futures! macro
 pub fn ble_method_to_fidl(
     method_name: String, args: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    many_futures!(
+) -> impl Future<Output = Result<Value, Error>> {
+    unsafe_many_futures!(
         Output,
         [
             BleAdvertise,
@@ -144,7 +143,7 @@ pub fn ble_method_to_fidl(
         BluetoothMethod::BleAdvertise => {
             let (ad, interval) = match ble_advertise_to_fidl(args) {
                 Ok((adv_data, intv)) => (adv_data, intv),
-                Err(e) => return Output::Error(fok(Err(e))),
+                Err(e) => return Output::Error(fready(Err(e))),
             };
 
             let adv_fut = start_adv_async(bt_facade.clone(), ad, interval);
@@ -153,7 +152,7 @@ pub fn ble_method_to_fidl(
         BluetoothMethod::BleScan => {
             let (filter, timeout, count) = match ble_scan_to_fidl(args) {
                 Ok((f, t, c)) => (f, t, c),
-                Err(e) => return Output::Error(fok(Err(e))),
+                Err(e) => return Output::Error(fready(Err(e))),
             };
 
             let scan_fut = start_scan_async(bt_facade.clone(), filter, timeout, count);
@@ -162,7 +161,7 @@ pub fn ble_method_to_fidl(
         BluetoothMethod::BleStopAdvertise => {
             let advertisement_id = match ble_stop_advertise_to_fidl(args, bt_facade.clone()) {
                 Ok(aid) => aid,
-                Err(e) => return Output::Error(fok(Err(e))),
+                Err(e) => return Output::Error(fready(Err(e))),
             };
 
             let stop_fut = stop_adv_async(bt_facade.clone(), advertisement_id.clone());
@@ -171,7 +170,7 @@ pub fn ble_method_to_fidl(
         BluetoothMethod::BleConnectPeripheral => {
             let id = match parse_identifier(args) {
                 Ok(id) => id,
-                Err(e) => return Output::Error(fok(Err(e))),
+                Err(e) => return Output::Error(fready(Err(e))),
             };
 
             let connect_periph_fut = connect_peripheral_async(bt_facade.clone(), id.clone());
@@ -180,7 +179,7 @@ pub fn ble_method_to_fidl(
         BluetoothMethod::BleDisconnectPeripheral => {
             let id = match parse_identifier(args) {
                 Ok(id) => id,
-                Err(e) => return Output::Error(fok(Err(e))),
+                Err(e) => return Output::Error(fready(Err(e))),
             };
 
             let disc_periph_fut = disconnect_peripheral_async(bt_facade.clone(), id.clone());
@@ -189,46 +188,46 @@ pub fn ble_method_to_fidl(
         BluetoothMethod::BleListServices => {
             let id = match parse_identifier(args) {
                 Ok(id) => id,
-                Err(e) => return Output::Error(fok(Err(e))),
+                Err(e) => return Output::Error(fready(Err(e))),
             };
 
             let list_services_fut = list_services_async(bt_facade.clone(), id.clone());
             Output::BleListServices(list_services_fut)
         }
-        _ => Output::Error(fok(Err(BTError::new("Invalid BLE FIDL method").into()))),
+        _ => Output::Error(fready(Err(BTError::new("Invalid BLE FIDL method").into()))),
     }
 }
 
 fn start_adv_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, ad: Option<AdvertisingData>, interval: Option<u32>,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+) -> impl Future<Output = Result<Value, Error>> {
     let start_adv_fut = BluetoothFacade::start_adv(bt_facade.clone(), ad, interval);
 
     start_adv_fut.then(move |res| match res {
         Ok(_) => {
             let aid_response = bt_facade.read().get_adv_id();
             match to_value(aid_response) {
-                Ok(val) => fok(Ok(val)),
-                Err(e) => fok(Err(e.into())),
+                Ok(val) => fready(Ok(val)),
+                Err(e) => fready(Err(e.into())),
             }
         }
-        Err(e) => fok(Err(e.into())),
+        Err(e) => fready(Err(e.into())),
     })
 }
 
 fn stop_adv_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, advertisement_id: String,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+) -> impl Future<Output = Result<Value, Error>> {
     let stop_adv_fut = bt_facade.write().stop_adv(advertisement_id);
 
     stop_adv_fut.then(move |res| {
         BluetoothFacade::cleanup_peripheral(bt_facade.clone());
         match res {
             Ok(r) => match to_value(r) {
-                Ok(val) => fok(Ok(val)),
-                Err(e) => fok(Err(e.into())),
+                Ok(val) => fready(Ok(val)),
+                Err(e) => fready(Err(e.into())),
             },
-            Err(e) => fok(Err(e.into())),
+            Err(e) => fready(Err(e.into())),
         }
     })
 }
@@ -237,7 +236,7 @@ fn stop_adv_async(
 fn start_scan_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, filter: Option<ScanFilter>, timeout: Option<u64>,
     count: Option<u64>,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+) -> impl Future<Output = Result<Value, Error>> {
     let timeout_ms = timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS).millis();
     // Create scanning future and listen on central events for scan
     let scan_fut = BluetoothFacade::start_scan(bt_facade.clone(), filter);
@@ -245,22 +244,18 @@ fn start_scan_async(
     // Based on if a scan count is provided, either use TIMEOUT as termination criteria
     // or custom future to terminate when <count> remote devices are discovered
     let event_fut = if count.is_none() {
-        Left(async::Timer::new(timeout_ms.after_now()))
+        async::Timer::new(timeout_ms.after_now()).left_future()
     } else {
         // Future resolves when number of devices discovered is equal to count
         let custom_fut =
-            BluetoothFacade::new_devices_found_future(bt_facade.clone(), count.unwrap())
-                .map_err(|_| unreachable!("Failed to instantiate new_devices_found_future"));
+            BluetoothFacade::new_devices_found_future(bt_facade.clone(), count.unwrap());
 
         // Chain the custom future with a timeout
-        Right(
             custom_fut
-                .on_timeout(timeout_ms.after_now(), || Ok(()))
-                .expect("Failed to set timeout"),
-        )
+                .on_timeout(timeout_ms.after_now(), || ()).right_future()
     };
 
-    let fut = scan_fut.and_then(move |_| event_fut);
+    let fut = scan_fut.and_then(move |_| event_fut.map(Ok));
 
     // Grab the central proxy created
     let facade = bt_facade.clone();
@@ -275,11 +270,11 @@ fn start_scan_async(
         let devices = bt_facade.read().get_devices();
 
         if let Err(e) = central.stop_scan() {
-            fok(Err(e.into()))
+            fready(Err(e.into()))
         } else {
             match to_value(devices) {
-                Ok(dev) => fok(Ok(dev)),
-                Err(e) => fok(Err(e.into())),
+                Ok(dev) => fready(Ok(dev)),
+                Err(e) => fready(Err(e.into())),
             }
         }
     })
@@ -287,7 +282,7 @@ fn start_scan_async(
 
 fn connect_peripheral_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+) -> impl Future<Output = Result<Value, Error>> {
     let connect_periph_fut = BluetoothFacade::connect_peripheral(bt_facade.clone(), id.clone());
 
     let list_services_fut = connect_periph_fut
@@ -297,26 +292,26 @@ fn connect_peripheral_async(
         Ok(r) => {
             let result = BleConnectPeripheralResponse::new(r);
             match to_value(result) {
-                Ok(val) => fok(Ok(val)),
-                Err(e) => fok(Err(e.into())),
+                Ok(val) => fready(Ok(val)),
+                Err(e) => fready(Err(e.into())),
             }
         }
-        Err(e) => fok(Err(e.into())),
+        Err(e) => fready(Err(e.into())),
     })
 }
 
 fn disconnect_peripheral_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+) -> impl Future<Output = Result<Value, Error>> {
     let disconnect_periph_fut =
         BluetoothFacade::disconnect_peripheral(bt_facade.clone(), id.clone());
 
     disconnect_periph_fut.then(move |res| match res {
         Ok(r) => match to_value(r) {
-            Ok(val) => fok(Ok(val)),
-            Err(e) => fok(Err(e.into())),
+            Ok(val) => fready(Ok(val)),
+            Err(e) => fready(Err(e.into())),
         },
-        Err(e) => fok(Err(e.into())),
+        Err(e) => fready(Err(e.into())),
     })
 }
 
@@ -324,17 +319,17 @@ fn disconnect_peripheral_async(
 // fidl::ServiceInfo
 fn list_services_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+) -> impl Future<Output = Result<Value, Error>> {
     let list_services_fut = BluetoothFacade::list_services(bt_facade.clone(), id.clone());
 
     list_services_fut.then(move |res| match res {
         Ok(r) => {
             let result = BleConnectPeripheralResponse::new(r);
             match to_value(result) {
-                Ok(val) => fok(Ok(val)),
-                Err(e) => fok(Err(e.into())),
+                Ok(val) => fready(Ok(val)),
+                Err(e) => fready(Err(e.into())),
             }
         }
-        Err(e) => fok(Err(e.into())),
+        Err(e) => fready(Err(e.into())),
     })
 }

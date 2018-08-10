@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
     client.start()?;
     client.tx_listen_start()?;
 
-    let stream = client.get_stream().for_each(|evt| {
+    let stream = client.get_stream().try_for_each(|evt| {
         println!("{:?}", evt);
         match evt {
             ethernet::Event::Receive(rx) => {
@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
             },
             _ => (),
         }
-        futures::future::ok(())
+        futures::future::ready(Ok(()))
     });
     executor.run_singlethreaded(stream).map(|_| ())?;
     Ok(())

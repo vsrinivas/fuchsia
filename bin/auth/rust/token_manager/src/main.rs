@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api)]
+
 extern crate auth_cache;
 extern crate auth_store;
 #[macro_use]

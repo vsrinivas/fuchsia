@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
 #[macro_use] extern crate bitfield;
@@ -14,7 +15,7 @@ extern crate wlantap_client;
 extern crate fidl_fuchsia_wlan_device as wlan_device;
 extern crate fidl_fuchsia_wlan_service as fidl_wlan_service;
 extern crate fidl_fuchsia_wlan_tap as wlantap;
-extern crate futures;
+#[cfg_attr(test, macro_use)] extern crate futures;
 
 use futures::prelude::*;
 use std::sync::{Arc, Mutex};
@@ -142,7 +143,7 @@ fn main() -> Result<(), failure::Error> {
     let proxy = wlantap.create_phy(create_wlantap_config())?;
     let event_listener = {
         let state = state.clone();
-        proxy.take_event_stream().for_each(move |event| {
+        proxy.take_event_stream().try_for_each(move |event| {
             match event {
                 wlantap::WlantapPhyEvent::SetChannel{ args } => {
                     let mut state = state.lock().unwrap();
@@ -151,28 +152,21 @@ fn main() -> Result<(), failure::Error> {
                 },
                 _ => {}
             }
-            Ok(())
+            future::ready(Ok(()))
         })
-        .map(|_| ())
-        .recover(|e| eprintln!("error running wlantap event listener: {:?}", e))
+        .unwrap_or_else(|e| eprintln!("error running wlantap event listener: {:?}", e))
     };
-    let beacon_timer = async::Interval::<zx::Status>::new(102_400_000.nanos())
+    let beacon_timer = async::Interval::new(102_400_000.nanos())
         .for_each(move |_| {
-            let state = &mut *state.lock().map_err(|e| {
-                eprintln!("beacon timer callback: Failed to lock mutex: {:?}", e);
-                zx::Status::INTERNAL
-            })?;
+            let state = &mut *state.lock().unwrap();
             if state.current_channel.primary == 6 {
                 eprintln!("sending beacon!");
                 send_beacon(&mut state.frame_buf, &state.current_channel,
                             &[0x62, 0x73, 0x73, 0x62, 0x73, 0x73], "fakenet", &proxy).unwrap();
             }
-            Ok(())
-        })
-        .map(|_| ())
-        .recover::<Never, _>(|e| eprintln!("error running beacon timer: {:?}", e));
-    // Unwrap is OK since the error type is Never, which doesn't work with '?'
-    exec.run_singlethreaded(event_listener.join(beacon_timer)).unwrap();
+            future::ready(())
+        });
+    let ((), ()) = exec.run_singlethreaded(event_listener.join(beacon_timer));
     Ok(())
 }
 

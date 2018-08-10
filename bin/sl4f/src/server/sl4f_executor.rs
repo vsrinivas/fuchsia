@@ -7,9 +7,9 @@ use bt::error::Error as BTError;
 use failure::Error;
 use failure::ResultExt;
 use futures::channel::mpsc;
-use futures::future::ok as fok;
+use futures::future::ready as fready;
 use futures::prelude::*;
-use futures::{FutureExt, StreamExt};
+use futures::{StreamExt, TryFutureExt};
 use parking_lot::RwLock;
 use serde_json::Value;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ pub fn run_fidl_loop(
         .context("Error creating event loop")
         .expect("Failed to create an executor!");
 
-    let receiver_fut = receiver.for_each_concurrent(move |request| match request {
+    let receiver_fut = receiver.map(|request| match request {
         AsyncRequest {
             tx,
             id,
@@ -49,33 +49,32 @@ pub fn run_fidl_loop(
                 curr_sl4f_session.clone(),
             );
             fidl_fut.and_then(move |resp| {
-                let response = AsyncResponse::new(resp);
+                let response = AsyncResponse::new(Ok(resp));
 
                 // Ignore any tx sending errors, other requests can still be outstanding
-                let _ = tx.send(response);
-                Ok(())
-            })
+                tx.send(response).unwrap();
+                future::ready(Ok(()))
+            }).map(|_| ())
         }
-    });
+    }).buffered(10) // TODO figure out a good parallel value for this
+    .collect::<()>();
 
-    executor
-        .run_singlethreaded(receiver_fut)
-        .expect("Failed to execute requests from Rouille.");
+    executor.run_singlethreaded(receiver_fut)
 }
 
 fn method_to_fidl(
     method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    many_futures!(MethodType, [Bluetooth, Wlan, Error]);
+) -> impl Future<Output = Result<Value, Error>> {
+    unsafe_many_futures!(MethodType, [Bluetooth, Wlan, Error]);
     match FacadeType::from_str(method_type) {
         FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
             method_name,
             args,
             sl4f_session.write().get_bt_facade().clone(),
         )),
-        FacadeType::Wlan => MethodType::Wlan(fok(Err(BTError::new(
+        FacadeType::Wlan => MethodType::Wlan(fready(Err(BTError::new(
             "Nice try. WLAN not implemented yet",
         ).into()))),
-        _ => MethodType::Error(fok(Err(BTError::new("Invalid FIDL method type").into()))),
+        _ => MethodType::Error(fready(Err(BTError::new("Invalid FIDL method type").into()))),
     }
 }

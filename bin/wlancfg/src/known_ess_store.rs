@@ -184,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn recover_from_bad_file() {
+    fn unwrap_or_else_from_bad_file() {
         let temp_dir = tempdir::TempDir::new("ess_store_test").expect("failed to create temp dir");
         let path = temp_dir.path().join(STORE_JSON_PATH);
         let mut file = fs::File::create(&path)

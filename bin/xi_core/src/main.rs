@@ -25,7 +25,7 @@ use std::sync::Arc;
 use std::thread;
 
 use failure::{Error, ResultExt};
-use futures::{FutureExt, future};
+use futures::{TryFutureExt, future};
 
 use fidl_fuchsia_xi::{Json, JsonImpl, JsonMarker};
 
@@ -82,15 +82,15 @@ fn spawn_json_server(chan: async::Channel) {
     async::spawn(
     JsonImpl {
         state: (),
-        on_open: |_, _| future::ok(()),
+        on_open: |_, _| future::ready(()),
         connect_socket: |_state, socket, _controller| {
             eprintln!("connect_socket");
             let _ = thread::spawn(move || editor_main(socket));
-            future::ok(())
+            future::ready(())
         }
     }
     .serve(chan)
-    .recover(|e| eprintln!("error running xi Json server {:?}", e)))
+    .unwrap_or_else(|e| eprintln!("error running xi Json server {:?}", e)))
 }
 
 fn main() {

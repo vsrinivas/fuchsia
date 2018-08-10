@@ -23,8 +23,8 @@ mod tests {
     extern crate parking_lot;
     extern crate rand;
 
+    use self::futures::TryFutureExt;
     use self::fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
-    use self::futures::FutureExt;
     use self::parking_lot::Mutex;
     use self::syslog_listener::LogProcessor;
     use self::zx::DurationNum;
@@ -63,7 +63,7 @@ mod tests {
         };
         let listener_fut = syslog_listener::run_log_listener(l, Some(&mut options), false)
             .expect("failed to register listener");
-        async::spawn(listener_fut.recover(|e| {
+        async::spawn(listener_fut.unwrap_or_else(|e| {
             panic!("test fail {:?}", e);
         }));
         return logs;
@@ -84,8 +84,8 @@ mod tests {
             if logs.lock().len() >= 2 {
                 break;
             }
-            let timeout = async::Timer::<()>::new(100.millis().after_now());
-            executor.run_singlethreaded(timeout).unwrap();
+            let timeout = async::Timer::new(100.millis().after_now());
+            executor.run_singlethreaded(timeout);
         }
         let logs = logs.lock();
         assert_eq!(2, logs.len());

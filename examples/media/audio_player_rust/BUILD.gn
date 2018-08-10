@@ -19,7 +19,7 @@ rustc_binary("audio_player_rust") {
     "//garnet/public/rust/crates/mxruntime",
     "//garnet/public/rust/crates/mxruntime/mxruntime-sys",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:structopt",
     "//third_party/rust-crates/rustc_deps:url",
   ]

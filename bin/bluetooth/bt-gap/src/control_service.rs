@@ -7,10 +7,10 @@ use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream};
-use futures::future::ok as fok;
-use futures::future::Either::{Left, Right};
+use async::temp::Either::{Left, Right};
 use futures::prelude::*;
-use futures::{Future, FutureExt, Never};
+use failure::Error;
+use futures::{future, Future, FutureExt};
 use host_dispatcher::*;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -25,7 +25,7 @@ struct ControlServiceState {
 /// State is stored in the HostDispatcher object
 pub fn make_control_service(
     hd: Arc<RwLock<HostDispatcher>>, chan: async::Channel,
-) -> impl Future<Item = (), Error = Never> {
+) -> impl Future< Output = Result<(), Error>> {
     let state = Arc::new(RwLock::new(ControlServiceState {
         host: hd,
         discovery_token: None,
@@ -38,16 +38,16 @@ pub fn make_control_service(
 
     let stream = ControlRequestStream::from_channel(chan);
     hd.event_listeners.push(stream.control_handle());
-    many_futures!(Output, [A, B, C, D, E, F, G, H, I, J, K,]);
+    unsafe_many_futures!(Output, [A, B, C, D, E, F, G, H, I, J, K, L, M]);
 
     stream
-        .for_each(move |evt| match evt {
+        .try_for_each(move |evt| match evt {
             ControlRequest::Connect {
                 device_id: _,
                 responder,
             } => {
                 let _ = responder.send(&mut bt_fidl_status!(NotSupported));
-                Output::C(fok(()))
+                Output::B(future::ready(Ok(())))
             }
             ControlRequest::SetDiscoverable {
                 discoverable,
@@ -55,27 +55,35 @@ pub fn make_control_service(
             } => {
                 let fut = if discoverable {
                     let stateref = state.clone();
-                    Left(
-                        HostDispatcher::set_discoverable(state.read().host.clone()).and_then(
+                    Left(HostDispatcher::set_discoverable(state.read().host.clone()).and_then(
                             move |(mut resp, token)| {
                                 stateref.write().discoverable_token = token;
-                                responder.send(&mut resp).into_future()
+                                future::ready(responder.send(&mut resp))
                             },
-                        ),
+                        )
                     )
                 } else {
                     state.write().discoverable_token = None;
-                    Right(responder.send(&mut bt_fidl_status!()).into_future())
+                    Right(future::ready(responder.send(&mut bt_fidl_status!())))
                 };
-                Output::D(fut)
+                Output::C(fut)
             }
-            ControlRequest::SetIoCapabilities { .. } => Output::E(fok(())),
+            ControlRequest::SetIoCapabilities { .. } => Output::E(future::ready(Ok(()))),
+            ControlRequest::Forget { device_id: _, responder } => {
+                let _ = responder.send(&mut bt_fidl_status!(NotSupported));
+                Output::L(future::ready(Ok(())))
+            },
+            ControlRequest::Disconnect { device_id: _, responder } => {
+                let _ = responder.send(&mut bt_fidl_status!(NotSupported));
+                Output::M(future::ready(Ok(())))
+            },
+            ControlRequest::GetKnownRemoteDevices { .. } => Output::K(future::ready(Ok(()))),
             ControlRequest::IsBluetoothAvailable { responder } => {
                 let rstate = state.read();
                 let mut hd = rstate.host.write();
                 let is_available = hd.get_active_adapter_info().is_some();
                 let _ = responder.send(is_available);
-                Output::F(fok(()))
+                Output::F(future::ready(Ok(())))
             }
             ControlRequest::SetPairingDelegate {
                 delegate,
@@ -89,13 +97,13 @@ pub fn make_control_service(
                 } else {
                     wstate.host.write().pairing_delegate = None;
                 }
-                Output::G(fok(()))
+                Output::D(future::ready(Ok(())))
             }
             ControlRequest::GetAdapters { responder } => {
                 let wstate = state.write();
                 let mut hd = wstate.host.clone();
                 let fut = HostDispatcher::get_adapters(&mut hd)
-                    .and_then(move |mut resp| responder.send(Some(&mut resp.iter_mut())));
+                    .map_ok(move |mut resp| responder.send(Some(&mut resp.iter_mut()))).map(|_| Ok(()));
                 Output::H(fut)
             }
             ControlRequest::SetActiveAdapter {
@@ -105,7 +113,7 @@ pub fn make_control_service(
                 let wstate = state.write();
                 let mut success = wstate.host.write().set_active_adapter(identifier.clone());
                 let _ = responder.send(&mut success);
-                Output::I(fok(()))
+                Output::I(future::ready(Ok(())))
             }
             ControlRequest::GetActiveAdapterInfo { responder } => {
                 let wstate = state.write();
@@ -113,7 +121,7 @@ pub fn make_control_service(
                 let mut adap = hd.get_active_adapter_info();
 
                 let _ = responder.send(adap.as_mut().map(OutOfLine));
-                Output::J(fok(()))
+                Output::J(future::ready(Ok(())))
             }
             ControlRequest::RequestDiscovery {
                 discovery,
@@ -122,27 +130,25 @@ pub fn make_control_service(
                 let fut = if discovery {
                     let stateref = state.clone();
                     Left(
-                        HostDispatcher::start_discovery(state.read().host.clone()).and_then(
+                        HostDispatcher::start_discovery(state.read().host.clone()).map_ok(
                             move |(mut resp, token)| {
                                 stateref.write().discovery_token = token;
-                                responder.send(&mut resp).into_future()
+                                responder.send(&mut resp)
                             },
-                        ),
+                        ).map(|_| Ok(()))
                     )
                 } else {
                     state.write().discovery_token = None;
-                    Right(responder.send(&mut bt_fidl_status!()).into_future())
+                    Right(future::ready(responder.send(&mut bt_fidl_status!())))
                 };
-                Output::K(fut)
-            }
+                Output::G(fut)
+            },
             ControlRequest::SetName { name, responder } => {
                 let wstate = state.write();
                 Output::A(
                     HostDispatcher::set_name(wstate.host.clone(), name)
-                        .and_then(move |mut resp| responder.send(&mut resp)),
+                        .and_then(move |mut resp| future::ready(Ok(responder.send(&mut resp)))).map(|_| Ok(())),
                 )
             }
-            _ => Output::B(fok(())),
-        }).map(|_| ())
-        .recover(|e| eprintln!("error sending response: {:?}", e))
+        }).map(|_| Ok(()))
 }

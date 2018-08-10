@@ -12,6 +12,7 @@ extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate fidl_fuchsia_net_oldhttp as http;
 
+use async::temp::{copy_into, TempFutureExt};
 use failure::{Error, ResultExt};
 use futures::prelude::*;
 use futures::io::AllowStdIo;
@@ -76,7 +77,7 @@ fn main_res() -> Result<(), Error> {
     };
 
 	let loader_proxy = http::UrlLoaderProxy::new(proxy);
-    let fut = loader_proxy.start(&mut req).err_into().and_then(|resp| {
+    let fut = loader_proxy.start(&mut req).err_into().map_ok(|resp| {
         if let Some(e) = resp.error {
             let code = e.code;
             println!("Got error: {} ({})",
@@ -88,25 +89,24 @@ fn main_res() -> Result<(), Error> {
 
         match resp.body.map(|x| *x) {
             Some(http::UrlBody::Stream(s)) => {
-                Some(async::Socket::from_socket(s)
-                        .into_future()
-                        .err_into())
+                Some(async::Socket::from_socket(s))
             }
             Some(http::UrlBody::Buffer(_)) |
             Some(http::UrlBody::SizedBuffer(_)) |
-            None =>  None,
+            None => None,
         }
     }).and_then(|socket_opt| {
-        socket_opt.map(|socket| {
+        socket_opt.map_or(futures::future::ready(Ok(())).right_future(), |socket| {
             // stdout is blocking, but we'll pretend it's okay
             println!(">>> Body <<<");
 
             // Copy the bytes from the socket to stdout
-            socket.copy_into(AllowStdIo::new(::std::io::stdout()))
-                .map(|_| println!("\n>>> EOF <<<"))
+            copy_into(socket.unwrap(), AllowStdIo::new(::std::io::stdout()))
                 .err_into()
+                .map_ok(|_| println!("\n>>> EOF <<<")).left_future()
+
         })
-    }).map(|_| ());
+    });
 
     //// Run the future to completion
     exec.run_singlethreaded(fut)

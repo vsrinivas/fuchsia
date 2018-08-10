@@ -9,6 +9,7 @@ use failure::{Error, ResultExt};
 use fidl::endpoints2::ServerEnd;
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderFactoryProxy,
                         AuthProviderProxy, AuthProviderStatus};
+use futures::future::{ready as fready, FutureObj};
 use futures::prelude::*;
 use std::boxed::Box;
 use std::sync::{Arc, RwLock};
@@ -73,11 +74,11 @@ impl AuthProviderClient {
     /// provider interface from this factory.
     pub fn get_proxy(
         &self,
-    ) -> Box<Future<Item = Arc<AuthProviderProxy>, Error = Error> + Send + 'static> {
+    ) -> FutureObj<'static, Result<Arc<AuthProviderProxy>, Error>> {
         // First check if a proxy has already been created, and if so return
         // immediately.
         if let Some(client_state) = self.deferred_state.read().unwrap().get() {
-            return Box::new(Ok(client_state.provider_proxy.clone()).into_future());
+            return FutureObj::new(Box::new(fready(Ok(client_state.provider_proxy.clone()))));
         }
 
         // Launch the factory for the auth provider and prepare a channel to
@@ -89,7 +90,7 @@ impl AuthProviderClient {
         // Create a new reference to the DeferredOption that can live beyond our self
         // reference.
         let deferred_state = self.deferred_state.clone();
-        Box::new(
+        FutureObj::new(Box::new(
             factory_proxy
                 .get_auth_provider(ServerEnd::new(server_chan))
                 .map_err(|err| format_err!("GetAuthProvider method failed with {:?}", err))
@@ -102,12 +103,12 @@ impl AuthProviderClient {
                                 _app: app,
                                 provider_proxy: provider_proxy.clone(),
                             });
-                            Ok(provider_proxy)
+                            fready(Ok(provider_proxy))
                         }
-                        _ => Err(format_err!("Error getting auth provider: {:?}", status)),
-                    }.into_future()
+                        _ => fready(Err(format_err!("Error getting auth provider: {:?}", status))),
+                    }
                 }),
-        )
+        ))
     }
 
     /// Launches a new instance of the associated AuthProvider and connects to

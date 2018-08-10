@@ -92,7 +92,7 @@ fn main() -> Result<(), failure::Error> {
     device::ethernet::set_ip_addr(&mut state, eth_id.id(), FIXED_IPADDR, fixed_subnet);
 
     let mut buf = [0; 2048];
-    let stream = client.get_stream().for_each(|evt| {
+    let stream = client.get_stream().try_for_each(|evt| {
         match evt {
             eth::Event::Receive(rx) => {
                 let len = rx.read(&mut buf);
@@ -100,7 +100,7 @@ fn main() -> Result<(), failure::Error> {
             }
             other => println!("unhandled Ethernet event: {:?}", other),
         }
-        futures::future::ok(())
+        futures::future::ready(Ok(()))
     });
     executor
         .run_singlethreaded(stream)

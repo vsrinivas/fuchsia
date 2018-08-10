@@ -9,13 +9,15 @@ extern crate fdio;
 extern crate fidl_fuchsia_display as display;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
+extern crate futures;
 extern crate shared_buffer;
 
-use async::futures::{FutureExt, StreamExt};
+use async::futures::{StreamExt, TryFutureExt, TryStreamExt};
 use display::{ControllerEvent, ControllerProxy, ImageConfig};
 use failure::Error;
 use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
 use fdio::make_ioctl;
+use futures::future;
 use shared_buffer::SharedBuffer;
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
@@ -26,7 +28,7 @@ use std::rc::Rc;
 use zx::sys::{zx_cache_flush, zx_handle_t, ZX_CACHE_FLUSH_DATA};
 use zx::sys::zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING;
 use zx::VmarFlags;
-use zx::{Handle, Status, Vmar, Vmo};
+use zx::{Handle, Vmar, Vmo};
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -135,7 +137,7 @@ impl Frame {
         let vmo_response = framebuffer
             .controller
             .allocate_vmo(framebuffer.byte_size() as u64)
-            .map(|(status, allocated_vmo)| {
+            .map_ok(|(status, allocated_vmo)| {
                 if status == zx::sys::ZX_OK {
                     vmo.replace(allocated_vmo);
                 }
@@ -164,7 +166,7 @@ impl Frame {
         let import_response = framebuffer
             .controller
             .import_vmo_image(&mut image_config, image_vmo, 0)
-            .map(|(status, id)| {
+            .map_ok(|(status, id)| {
                 if status == zx::sys::ZX_OK {
                     image_id.replace(Some(id));
                 }
@@ -315,9 +317,9 @@ impl FrameBuffer {
     ) -> Result<Config, Error> {
         let display_info: Rc<RefCell<Option<(u64, u32, u32, u32)>>> = Rc::new(RefCell::new(None));
         let stream = proxy.take_event_stream();
-        let event_listener = stream
+        let mut event_listener = stream
             .filter(|event| {
-                if let ControllerEvent::DisplaysChanged { added, .. } = event {
+                if let Ok(ControllerEvent::DisplaysChanged { added, .. }) = event {
                     if added.len() > 0 {
                         let first_added = &added[0];
                         if first_added.pixel_format.len() > 0 && first_added.modes.len() > 0 {
@@ -329,20 +331,17 @@ impl FrameBuffer {
                         }
                     }
                 }
-                Ok(true)
-            })
-            .next();
+                future::ready(true)
+            });
 
-        executor
-            .run_singlethreaded(event_listener)
-            .map_err(|(e, _rest_of_stream)| e)?;
+        executor.run_singlethreaded(event_listener.try_next())?;
 
         let display_info = display_info.replace(None);
         if let Some((display_id, pixel_format, width, height)) = display_info {
             let stride: Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
             let stride_response = proxy
                 .compute_linear_image_stride(width, pixel_format)
-                .map(|px_stride| {
+                .map_ok(|px_stride| {
                     stride.replace(px_stride);
                 });
 
@@ -372,7 +371,7 @@ impl FrameBuffer {
         let layer_id: Rc<RefCell<Option<u64>>> = Rc::new(RefCell::new(None));
         let layer_id_response = proxy
             .create_layer()
-            .map(|(status, id)| {
+            .map_ok(|(status, id)| {
                 if status == zx::sys::ZX_OK {
                     layer_id.replace(Some(id));
                 }

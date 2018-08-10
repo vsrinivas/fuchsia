@@ -22,7 +22,7 @@ use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenResponder,
                         AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
                         AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderStatus, UserProfileInfo};
-use futures::future::FutureResult;
+use futures::future;
 use futures::prelude::*;
 use rand::{thread_rng, Rng};
 use std::time::Duration;
@@ -60,16 +60,15 @@ impl AuthProvider {
             }
             Ok(request_stream) => async::spawn(
                 request_stream
-                    .for_each(Self::handle_request)
-                    .map(|_| ())
-                    .recover(|e| warn!("Error running AuthProvider{:?}", e)),
+                    .try_for_each(|r| future::ready(Self::handle_request(r)))
+                    .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e)),
             ),
         };
     }
 
     /// Handle single `AuthProviderRequest` by calling the corresponding method
     /// according to the actual variant of the `AuthProviderRequest` enum.
-    fn handle_request(req: AuthProviderRequest) -> FutureResult<(), Error> {
+    fn handle_request(req: AuthProviderRequest) -> Result<(), Error> {
         match req {
             AuthProviderRequest::GetPersistentCredential { responder, .. } => {
                 Self::get_persistent_credential(responder)
@@ -115,7 +114,7 @@ impl AuthProvider {
     /// as we will never use it in the dev auth provider.
     fn get_persistent_credential(
         responder: AuthProviderGetPersistentCredentialResponder,
-    ) -> FutureResult<(), Error> {
+    ) -> Result<(), Error> {
         let mut user_profile_info = Some(UserProfileInfo {
             id: generate_random_string() + USER_PROFILE_INFO_ID_DOMAIN,
             display_name: Some(USER_PROFILE_INFO_DISPLAY_NAME.to_string()),
@@ -130,7 +129,6 @@ impl AuthProvider {
                 credential.as_ref().map(|s| &**s),
                 user_profile_info.as_mut().map(OutOfLine),
             )
-            .into_future()
     }
 
     /// Implementation of the `GetAppAccessToken` method for the `AuthProvider`
@@ -138,7 +136,7 @@ impl AuthProvider {
     fn get_app_access_token(
         credential: String, client_id: Option<String>,
         responder: AuthProviderGetAppAccessTokenResponder,
-    ) -> FutureResult<(), Error> {
+    ) -> Result<(), Error> {
         let mut auth_token = Some(fidl_fuchsia_auth::AuthToken {
             token_type: fidl_fuchsia_auth::TokenType::AccessToken,
             token: credential
@@ -151,14 +149,13 @@ impl AuthProvider {
 
         responder
             .send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
-            .into_future()
     }
 
     /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl
     /// interface.
     fn get_app_id_token(
         credential: String, responder: AuthProviderGetAppIdTokenResponder,
-    ) -> FutureResult<(), Error> {
+    ) -> Result<(), Error> {
         let mut auth_token = Some(fidl_fuchsia_auth::AuthToken {
             token_type: fidl_fuchsia_auth::TokenType::IdToken,
             token: credential + ":idt_" + &generate_random_string(),
@@ -167,14 +164,13 @@ impl AuthProvider {
 
         responder
             .send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
-            .into_future()
     }
 
     /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider`
     /// fidl interface.
     fn get_app_firebase_token(
         firebase_api_key: String, responder: AuthProviderGetAppFirebaseTokenResponder,
-    ) -> FutureResult<(), Error> {
+    ) -> Result<(), Error> {
         let mut firebase_token = Some(fidl_fuchsia_auth::FirebaseToken {
             id_token: firebase_api_key + ":fbt_" + &generate_random_string(),
             local_id: Some("local_id_".to_string() + &generate_random_string()),
@@ -187,31 +183,30 @@ impl AuthProvider {
                 AuthProviderStatus::Ok,
                 firebase_token.as_mut().map(OutOfLine),
             )
-            .into_future()
     }
 
     /// Implementation of the `RevokeAppOrPersistentCredential` method for the
     /// `AuthProvider` fidl interface.
     fn revoke_app_or_persistent_credential(
         responder: AuthProviderRevokeAppOrPersistentCredentialResponder,
-    ) -> FutureResult<(), Error> {
-        responder.send(AuthProviderStatus::Ok).into_future()
+    ) -> Result<(), Error> {
+        responder.send(AuthProviderStatus::Ok)
     }
 
     /// Implementation of the `GetPersistentCredentialFromAttestationJwt` method
     /// for the `AuthProvider` fidl interface.
     fn get_persistent_credential_from_attestation_jwt(
         responder: AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
-    ) -> FutureResult<(), Error> {
-        responder.send(AuthProviderStatus::BadRequest, None, None, None, None).into_future()
+    ) -> Result<(), Error> {
+        responder.send(AuthProviderStatus::BadRequest, None, None, None, None)
     }
 
     /// Implementation of the `GetAppAccessTokenFromAssertionJwt` method for the
     /// `AuthProvider` fidl interface.
     fn get_app_access_token_from_assertion_jwt(
         responder: AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
-    ) -> FutureResult<(), Error> {
-        responder.send(AuthProviderStatus::BadRequest, None, None, None).into_future()
+    ) -> Result<(), Error> {
+        responder.send(AuthProviderStatus::BadRequest, None, None, None)
     }
 
 }
@@ -235,7 +230,7 @@ mod tests {
     fn async_test<F, Fut>(f: F)
     where
         F: FnOnce(AuthProviderProxy) -> Fut,
-        Fut: Future<Item = (), Error = Error>,
+        Fut: Future<Output = Result<(), Error>>,
     {
         let (mut exec, dev_auth_provider) = set_up().expect("Test set up should not have failed.");
         let test_fut = f(dev_auth_provider);
@@ -248,7 +243,7 @@ mod tests {
         async_test(|dev_auth_provider| {
             dev_auth_provider
                 .get_persistent_credential(None, None)
-                .and_then(move |response| {
+                .map_ok(move |response| {
                     let (status, credential, user_profile_info) = response;
                     assert_eq!(status, AuthProviderStatus::Ok);
                     assert!(credential.unwrap().contains("rt_"));
@@ -267,7 +262,6 @@ mod tests {
                     assert!(id.contains(USER_PROFILE_INFO_ID_DOMAIN));
                     assert!(url.unwrap().contains(USER_PROFILE_INFO_URL));
                     assert!(image_url.unwrap().contains(USER_PROFILE_INFO_IMAGE_URL));
-                    Ok(())
                 })
         });
     }
@@ -280,7 +274,7 @@ mod tests {
             let mut scopes = vec![].into_iter();
             dev_auth_provider
                 .get_app_access_token(&credential, Some(&client_id), &mut scopes)
-                .and_then(move |response| match response {
+                .map_ok(move |response| match response {
                     (AuthProviderStatus::Ok, Some(access_token)) => {
                         assert_eq!(
                             access_token.token_type,
@@ -290,7 +284,6 @@ mod tests {
                         assert!(access_token.token.contains(&credential));
                         assert!(access_token.token.contains(&client_id));
                         assert!(access_token.token.contains("at_"));
-                        Ok(())
                     }
                     _ => panic!(
                         "AuthProviderStatus not correct. Or response doesn't contain access_token."
@@ -305,13 +298,12 @@ mod tests {
             let credential = "rt_".to_string() + &generate_random_string();
             dev_auth_provider
                 .get_app_id_token(&credential, None)
-                .and_then(move |response| match response {
+                .map_ok(move |response| match response {
                     (AuthProviderStatus::Ok, Some(id_token)) => {
                         assert_eq!(id_token.token_type, fidl_fuchsia_auth::TokenType::IdToken);
                         assert_eq!(id_token.expires_in, TOKEN_LIFETIME.as_secs());
                         assert!(id_token.token.contains(&credential));
                         assert!(id_token.token.contains("idt_"));
-                        Ok(())
                     }
                     _ => panic!(
                         "AuthProviderStatus not correct. Or response doesn't contain id_token."
@@ -325,11 +317,10 @@ mod tests {
         async_test(|dev_auth_provider| {
             dev_auth_provider
                 .get_app_firebase_token("test_id_token", "test_firebase_api_key")
-                .and_then(move |response| match response {
+                .map_ok(move |response| match response {
                     (AuthProviderStatus::Ok, Some(firebase_token)) => {
                         assert!(firebase_token.id_token.contains("test_firebase_api_key"));
                         assert_eq!(firebase_token.expires_in, TOKEN_LIFETIME.as_secs());
-                        Ok(())
                     }
                     _ => panic!(
                         "AuthProviderStatus not correct. Or response doesn't contain \
@@ -345,9 +336,8 @@ mod tests {
             let credential = "testing_credential";
             dev_auth_provider
                 .revoke_app_or_persistent_credential(credential)
-                .and_then(move |response| {
+                .map_ok(move |response| {
                     assert_eq!(response, AuthProviderStatus::Ok);
-                    Ok(())
                 })
         });
     }

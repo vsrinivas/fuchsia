@@ -11,7 +11,7 @@ rustc_library("fuchsia-vfs") {
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:bytes",
-    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:libc",
     "//third_party/rust-crates/rustc_deps:tempdir",
     "//zircon/public/lib/fs-management",

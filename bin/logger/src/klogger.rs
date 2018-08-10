@@ -7,8 +7,7 @@
 use async;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::{self, LogMessage};
-use futures::future::{loop_fn, Loop};
-use futures::FutureExt;
+use futures::{future, stream, TryFutureExt, TryStreamExt};
 use logger;
 use zx::sys::zx_handle_t;
 use zx::{self, AsHandleRef, Signals};
@@ -24,11 +23,12 @@ where
     let handle_ptr = &mut handle as *mut _ as *mut u32;
 
     unsafe {
-        zx::ok(zx::sys::zx_debuglog_create(zx::sys::ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, handle_ptr))?;
-    };
+        zx::ok(zx::sys::zx_debuglog_create(
+            zx::sys::ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, handle_ptr))?;
+    }
     let h = unsafe { zx::Handle::from_raw(handle) };
 
-    let f = loop_fn((callback, h), |(callback, handle)| {
+    let f = stream::repeat(Ok(())).try_fold((callback, h), |(callback, handle), ()| {
         // TODO: change OnSignals to wrap this so that is is not created again and again.
         async::OnSignals::new(&handle, Signals::LOG_READABLE).and_then(|_| {
             loop {
@@ -43,10 +43,10 @@ where
                 };
 
                 if status == zx::sys::ZX_ERR_SHOULD_WAIT {
-                    return Ok(Loop::Continue((callback, handle)));
+                    return future::ready(Ok((callback, handle)));
                 }
                 if status < 0 {
-                    return Err(zx::Status::from_raw(status));
+                    return future::ready(Err(zx::Status::from_raw(status)));
                 }
                 let mut l = LogMessage {
                     time: LittleEndian::read_u64(&buf[8..16]),
@@ -72,9 +72,9 @@ where
                 callback(l, size);
             }
         })
-    });
+    }).map_ok(|_| ());
 
-    async::spawn(f.recover(|e| {
+    async::spawn(f.unwrap_or_else(|e| {
         eprintln!(
             "logger: not able to apply listener to kernel logs, failed: {:?}",
             e

@@ -4,20 +4,21 @@
 
 use app;
 use async;
+use fidl;
+use async::temp::Either::{Left, Right};
 use bt::error::Error as BTError;
 use failure::{Error, Fail, ResultExt};
-use fidl;
+use std::marker::Unpin;
 use fidl::encoding2::OutOfLine;
 use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy, RemoteDevice};
 use fidl_ble::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
 use fidl_gatt::{ClientProxy, ServiceInfo};
-use futures::future;
-use futures::future::ok as fok;
-use futures::future::Either::{Left, Right};
+use futures::future::ready as fready;
 use futures::prelude::*;
 use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
+use std::mem::PinMut;
 use std::sync::Arc;
 
 // Sl4f-Constants and Bluetooth related functionality
@@ -131,7 +132,7 @@ impl BluetoothFacade {
         if bt_facade.read().adv_id.is_none() {
             bt_facade.write().adv_id = aid
         } else {
-            fx_log_warn!(tag: "set_adv_id", "Current aid: {:?}. Attempted aid: {:?}", 
+            fx_log_warn!(tag: "set_adv_id", "Current aid: {:?}. Attempted aid: {:?}",
                 bt_facade.read().adv_id, aid);
         }
     }
@@ -267,7 +268,7 @@ impl BluetoothFacade {
     pub fn start_adv(
         bt_facade: Arc<RwLock<BluetoothFacade>>, adv_data: Option<AdvertisingData>,
         interval: Option<u32>,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> impl Future<Output = Result<(), Error>> {
         // Default interval (ms) to 1 second
         let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
 
@@ -297,25 +298,25 @@ impl BluetoothFacade {
                         None => {
                             fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", aid);
                             BluetoothFacade::set_adv_id(facade, aid.clone());
-                            Ok(())
+                            fready(Ok(()))
                         }
                         Some(e) => {
                             let err = BTError::from(*e);
                             fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
-                            Err(err.into())
+                            fready(Err(err.into()))
                         }
                     }),
             ),
             None => {
                 fx_log_err!(tag: "start_adv", "No peripheral created.");
-                Left(future::err(
+                Left(fready(Err(
                     BTError::new("No peripheral proxy created.").into(),
-                ))
+                )))
             }
         }
     }
 
-    pub fn stop_adv(&self, aid: String) -> impl Future<Item = (), Error = Error> {
+    pub fn stop_adv(&self, aid: String) -> impl Future<Output = Result<(), Error>> {
         fx_log_info!(tag: "stop_adv", "stop_adv with aid: {:?}", aid);
 
         match &self.peripheral {
@@ -326,23 +327,23 @@ impl BluetoothFacade {
                         Some(e) => {
                             let err = BTError::from(*e);
                             fx_log_err!(tag: "stop_adv", "Failed to stop advertising: {:?}", err);
-                            Err(err.into())
+                            fready(Err(err.into()))
                         }
-                        None => Ok(()),
+                        None => fready(Ok(())),
                     }),
             ),
             None => {
                 fx_log_err!(tag: "stop_adv", "No peripheral proxy created!");
-                Left(future::err(
+                Left(fready(Err(
                     BTError::new("No peripheral proxy created.").into(),
-                ))
+                )))
             }
         }
     }
 
     pub fn start_scan(
         bt_facade: Arc<RwLock<BluetoothFacade>>, mut filter: Option<ScanFilter>,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> impl Future<Output = Result<(), Error>> {
         BluetoothFacade::cleanup_devices(bt_facade.clone());
         // Set the central proxy if necessary and start a central_listener
         BluetoothFacade::set_central_proxy(bt_facade.clone());
@@ -352,19 +353,19 @@ impl BluetoothFacade {
                 c.start_scan(filter.as_mut().map(OutOfLine))
                     .map_err(|e| e.context("failed to initiate scan.").into())
                     .and_then(|status| match status.error {
-                        None => Ok(()),
-                        Some(e) => Err(BTError::from(*e).into()),
+                        None => fready(Ok(())),
+                        Some(e) => fready(Err(BTError::from(*e).into())),
                     }),
             ),
-            None => Left(future::err(
+            None => Left(fready(Err(
                 BTError::new("No central proxy created.").into(),
-            )),
+            ))),
         }
     }
 
     pub fn connect_peripheral(
         bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> impl Future<Output = Result<(), Error>> {
         // Set the central proxy if necessary
         BluetoothFacade::set_central_proxy(bt_facade.clone());
 
@@ -374,7 +375,7 @@ impl BluetoothFacade {
         // Create server endpoints
         let (client_end, server_end) = match fidl::endpoints2::create_endpoints() {
             Err(e) => {
-                return Left(future::err(e.into()));
+                return Left(fready(Err(e.into())));
             }
             Ok(x) => x,
         };
@@ -394,20 +395,20 @@ impl BluetoothFacade {
                                 identifier.clone(),
                                 client_end,
                             );
-                            Ok(())
+                            fready(Ok(()))
                         }
-                        Some(e) => Err(BTError::from(*e).into()),
+                        Some(e) => fready(Err(BTError::from(*e).into())),
                     }),
             ),
-            None => Left(future::err(
+            _ => Left(fready(Err(
                 BTError::new("No central proxy created.").into(),
-            )),
+            ))),
         }
     }
 
     pub fn list_services(
         bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
-    ) -> impl Future<Item = Vec<ServiceInfo>, Error = Error> {
+    ) -> impl Future<Output = Result<Vec<ServiceInfo>, Error>> {
         let client_proxy = BluetoothFacade::get_client_from_peripherals(bt_facade.clone(), id);
 
         match client_proxy {
@@ -417,20 +418,20 @@ impl BluetoothFacade {
                     .and_then(move |(status, services)| match status.error {
                         None => {
                             fx_log_info!(tag: "list_services", "Found services: {:?}", services);
-                            Ok(services)
+                            fready(Ok(services))
                         }
-                        Some(e) => Err(BTError::from(*e).into()),
+                        Some(e) => fready(Err(BTError::from(*e).into())),
                     }),
             ),
-            None => Left(future::err(
+            None => Left(fready(Err(
                 BTError::new("No client exists with provided device id").into(),
-            )),
+            ))),
         }
     }
 
     pub fn disconnect_peripheral(
         bt_facade: Arc<RwLock<BluetoothFacade>>, id: String,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> impl Future<Output = Result<(), Error>> {
         let facade = bt_facade.clone();
 
         match &bt_facade.read().central {
@@ -441,31 +442,31 @@ impl BluetoothFacade {
                         None => {
                             // Remove current id from map of peripheral_ids
                             BluetoothFacade::remove_peripheral_id(facade.clone(), id.clone());
-                            Ok(())
+                            fready(Ok(()))
                         }
-                        Some(e) => Err(BTError::from(*e).into()),
+                        Some(e) => fready(Err(BTError::from(*e).into())),
                     }),
             ),
-            None => Left(future::err(
+            None => Left(fready(Err(
                 BTError::new("No central proxy created.").into(),
-            )),
+            ))),
         }
     }
 
     // Listens for central events
     pub fn listen_central_events(
         bt_facade: Arc<RwLock<BluetoothFacade>>,
-    ) -> impl Future<Item = (), Error = Never> {
+    ) -> impl Future<Output = ()> {
         let evt_stream = match bt_facade.read().central.clone() {
             Some(c) => c.take_event_stream(),
             None => panic!("No central created!"),
         };
 
         evt_stream
-            .for_each(move |evt| {
+            .map_ok(move |evt| {
                 match evt {
                     CentralEvent::OnScanStateChanged { scanning } => {
-                        fx_log_info!(tag: "listen_central_events", "Scan state changed: {:?}", 
+                        fx_log_info!(tag: "listen_central_events", "Scan state changed: {:?}",
                             scanning);
                     }
                     CentralEvent::OnDeviceDiscovered { device } => {
@@ -489,12 +490,10 @@ impl BluetoothFacade {
                         fx_log_info!(tag: "listen_central_events", "Peer disconnected: {:?}", identifier);
                     }
                 }
-                fok(())
             })
-            .map(|_| ())
-            .recover(
-                |e| fx_log_err!(tag: "listen_central_events", "failed to subscribe to BLE Central events: {:?}", e),
-            )
+            .try_collect::<()>()
+            .unwrap_or_else(|e|
+                fx_log_err!(tag: "listen_central_events", "failed to subscribe to BLE Central events: {:?}", e))
     }
 
     // Is there a way to add this to the BluetoothFacade impl? It requires the bt_facade
@@ -502,7 +501,7 @@ impl BluetoothFacade {
     // reference to self.
     pub fn new_devices_found_future(
         bt_facade: Arc<RwLock<BluetoothFacade>>, count: u64,
-    ) -> impl Future<Item = (), Error = Never> {
+    ) -> impl Future<Output = ()> {
         OnDeviceFoundFuture::new(bt_facade.clone(), count as usize)
     }
 }
@@ -514,6 +513,8 @@ pub struct OnDeviceFoundFuture {
     waker_key: Option<usize>,
     device_count: usize,
 }
+
+impl Unpin for OnDeviceFoundFuture {}
 
 impl OnDeviceFoundFuture {
     fn new(bt_facade: Arc<RwLock<BluetoothFacade>>, count: usize) -> OnDeviceFoundFuture {
@@ -534,24 +535,19 @@ impl OnDeviceFoundFuture {
 }
 
 impl Future for OnDeviceFoundFuture {
-    type Item = ();
-    type Error = Never;
+    type Output = ();
 
-    fn poll(&mut self, ctx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(mut self: PinMut<Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         // If the number of devices scanned is less than count, continue scanning
         if self.bt_facade.read().devices.len() < self.device_count {
+            let bt_facade = self.bt_facade.clone();
             if self.waker_key.is_none() {
-                self.waker_key = Some(
-                    self.bt_facade
-                        .write()
-                        .host_requests
-                        .insert(ctx.waker().clone()),
-                );
+                self.waker_key = Some(bt_facade.write().host_requests.insert(ctx.waker().clone()));
             }
-            Ok(Async::Pending)
+            Poll::Pending
         } else {
             self.remove_waker();
-            Ok(Async::Ready(()))
+            Poll::Ready(())
         }
     }
 }

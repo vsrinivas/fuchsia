@@ -12,7 +12,7 @@ extern crate fuchsia_zircon as zx;
 
 mod text;
 
-use async::futures::FutureExt;
+use async::futures::{FutureExt, TryFutureExt};
 use failure::Fail;
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
 use std::cell::RefCell;
@@ -111,13 +111,13 @@ fn main() {
     let list_srcs = amber_control
         .list_srcs()
         .map_err(|e| e.context("listlist_srcs failed"))
-        .map(move |src_list| {
+        .map_ok(move |src_list| {
             if src_list.len() > 0 {
                 let login = amber_control
                     .login(&src_list[0].id)
                     .map_err(|e| e.context("login failed"))
-                    .map(move |device_code| println!("device_code = {:#?}", device_code));
-                async::spawn_local(login.recover(move |err| {
+                    .map_ok(move |device_code| println!("device_code = {:#?}", device_code));
+                async::spawn_local(login.unwrap_or_else(move |err| {
                     println!("in login recover {:#?}", err);
                     let mut ui_local = ui_login.borrow_mut();
                     ui_local.draw(&src_list[0].id, "Login failed")
@@ -129,11 +129,11 @@ fn main() {
             }
         });
 
-    async::spawn_local(list_srcs.recover(|err| println!("in list_srcs recover {:#?}", err)));
+    async::spawn_local(list_srcs.unwrap_or_else(|err| println!("in list_srcs recover {:#?}", err)));
 
     loop {
-        let timeout = async::Timer::<()>::new(zx::Time::INFINITE);
-        executor.run_singlethreaded(timeout).unwrap();
+        let timeout = async::Timer::new(zx::Time::INFINITE);
+        executor.run_singlethreaded(timeout);
         println!("tick");
     }
 }

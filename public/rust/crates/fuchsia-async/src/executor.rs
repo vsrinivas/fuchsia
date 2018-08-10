@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use crossbeam::sync::SegQueue;
-use futures::{Async, Future, FutureExt, Never, Poll, task};
-use futures::executor::{Executor as FutureExecutor, SpawnError};
-use futures::task::AtomicWaker;
+use futures::{Poll, Future, FutureExt, task};
+use futures::future::{self, FutureObj, LocalFutureObj};
+use futures::task::{
+    AtomicWaker, local_waker_from_nonlocal, local_waker_ref_from_nonlocal,
+    Executor as FutureExecutor, SpawnObjError,
+};
 use parking_lot::{Mutex, Condvar};
 use slab::Slab;
 use zx;
@@ -14,6 +17,7 @@ use atomic_future::AtomicFuture;
 
 use std::{cmp, fmt, mem};
 use std::cell::RefCell;
+use std::marker::Unpin;
 use std::sync::{Arc, Weak};
 use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -28,9 +32,9 @@ const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
 /// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
 /// as they may be run on either a singlethreaded or multithreaded executor.
 pub fn spawn<F>(future: F)
-    where F: Future<Item = (), Error = Never> + Send + 'static
+    where F: Future<Output = ()> + Send + 'static
 {
-    Inner::spawn(&EHandle::local().inner, Box::new(future));
+    Inner::spawn(&EHandle::local().inner, FutureObj::new(Box::new(future)));
 }
 
 /// Spawn a new task to be run on the global executor.
@@ -40,9 +44,9 @@ pub fn spawn<F>(future: F)
 /// requires that the current executor never be run in a multithreaded mode-- only
 /// `run_singlethreaded` can be used.
 pub fn spawn_local<F>(future: F)
-    where F: Future<Item = (), Error = Never> + 'static
+    where F: Future<Output = ()> + 'static
 {
-    Inner::spawn_local(&EHandle::local().inner, Box::new(future));
+    Inner::spawn_local(&EHandle::local().inner, LocalFutureObj::new(Box::new(future)));
 }
 
 /// A trait for handling the arrival of a packet on a `zx::Port`.
@@ -153,26 +157,25 @@ impl Executor {
 
     /// Run a single future to completion on a single thread.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
-    pub fn run_singlethreaded<F>(&mut self, mut main_future: F) -> Result<F::Item, F::Error>
+    pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
         where F: Future
     {
-        let local_map = &mut task::LocalMap::new();
-        let waker = task::Waker::from(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+        pin_mut!(main_future);
+        let waker = local_waker_from_nonlocal(
+            Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
         let executor = EHandle { inner: self.inner.clone() };
         let executor_one = &mut &executor;
         let executor_two = &mut &executor;
 
-        let cx = &mut task::Context::new(local_map, &waker, executor_one);
+        let cx = &mut task::Context::new(&waker, executor_one);
 
-        let mut res = main_future.poll(cx);
+        let mut res = main_future.reborrow().poll(cx);
 
         loop {
-            if let Async::Ready(res) = res? {
-                return Ok(res);
+            if let Poll::Ready(res) =  res {
+                return res;
             }
-            res = Ok(Async::Pending);
-
 
             let packet = with_local_timer_heap(|timer_heap| {
                 let deadline = next_deadline(timer_heap).map(|t| t.time)
@@ -195,12 +198,14 @@ impl Executor {
             if let Some(packet) = packet {
                 match packet.key() {
                     EMPTY_WAKEUP_ID => {
-                        res = main_future.poll(cx);
+                        res = main_future.reborrow().poll(cx);
                     }
                     TASK_READY_WAKEUP_ID => {
                         // TODO: loop but don't starve
                         if let Some(task) = self.inner.ready_tasks.try_pop() {
-                            task.future.try_poll(&task.clone().into(), executor_two);
+                            let waker = local_waker_ref_from_nonlocal(&task);
+                            let mut cx = &mut task::Context::new(&waker, executor_two);
+                            task.future.try_poll(cx);
                         }
                     }
                     receiver_key => {
@@ -211,43 +216,48 @@ impl Executor {
         }
     }
 
-    /// Poll the future. If it is not ready, dispatch available packets and possibly try again.
+    /// PollResult the future. If it is not ready, dispatch available packets and possibly try again.
     /// Timers will not fire. Never blocks.
     ///
     /// Task-local data will not be persisted across different calls to this method.
     ///
     /// This is mainly intended for testing.
-    pub fn run_until_stalled<F>(&mut self, main_future: &mut F) -> Poll<F::Item, F::Error>
-        where F: Future
+    ///
+    /// Unpin: this function requires all futures to be `Unpin`able, so any `!Unpin`
+    /// futures must first be pinned using the `pin_mut!` macro from the `pin-utils` crate.
+    pub fn run_until_stalled<F>(&mut self, main_future: &mut F) -> Poll<F::Output>
+        where F: Future + Unpin
     {
-        let local_map = &mut task::LocalMap::new();
-        let waker = task::Waker::from(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+        let waker = local_waker_from_nonlocal(
+            Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
         let executor = EHandle { inner: self.inner.clone() };
         let executor_one = &mut &executor;
         let executor_two = &mut &executor;
 
-        let cx = &mut task::Context::new(local_map, &waker, executor_one);
-        let mut res = main_future.poll(cx)?;
+        let cx = &mut task::Context::new(&waker, executor_one);
+        let mut res = main_future.poll_unpin(cx);
 
         loop {
             if res.is_ready() {
-                return Ok(res);
+                return res;
             }
 
             let packet = match self.inner.port.wait(zx::Time::from_nanos(0)) {
                 Ok(packet) => packet,
-                Err(zx::Status::TIMED_OUT) => return Ok(Async::Pending),
+                Err(zx::Status::TIMED_OUT) => return Poll::Pending,
                 Err(status) => panic!("Error calling port wait: {:?}", status),
             };
 
             match packet.key() {
                 EMPTY_WAKEUP_ID => {
-                    res = main_future.poll(cx)?;
+                    res = main_future.poll_unpin(cx);
                 }
                 TASK_READY_WAKEUP_ID => {
                     if let Some(task) = self.inner.ready_tasks.try_pop() {
-                        task.future.try_poll(&task.clone().into(), executor_two);
+                        let waker = local_waker_ref_from_nonlocal(&task);
+                        let cx = &mut task::Context::new(&waker, executor_two);
+                        task.future.try_poll(cx);
                     }
                 }
                 receiver_key => {
@@ -266,9 +276,9 @@ impl Executor {
     ///
     ///     let deadline = 5.seconds().after_now();
     ///     let mut future = Timer::<Never>::new(deadline);
-    ///     assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+    ///     assert_eq!(Ok(Poll::Pending), exec.run_until_stalled(&mut future));
     ///     assert_eq!(Some(deadline), exec.wake_next_timer());
-    ///     assert_eq!(Ok(Async::Ready(())), exec.run_until_stalled(&mut future));
+    ///     assert_eq!(Ok(Poll::Ready(())), exec.run_until_stalled(&mut future));
     pub fn wake_next_timer(&mut self) -> Option<zx::Time> {
         with_local_timer_heap(|timer_heap| {
             let deadline = next_deadline(timer_heap).map(|waker| {
@@ -285,9 +295,9 @@ impl Executor {
     /// Run a single future to completion using multiple threads.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
     pub fn run<F>(&mut self, future: F, num_threads: usize)
-        -> Result<F::Item, F::Error>
+        -> F::Output
         where F: Future + Send + 'static,
-              Result<F::Item, F::Error>: Send + 'static,
+              F::Output: Send + 'static,
     {
         self.inner.threadiness.require_multithreaded()
             .expect("Error: called `run` on executor after using `spawn_local`. \
@@ -297,13 +307,13 @@ impl Executor {
         let pair2 = pair.clone();
 
         // Spawn a future which will set the result upon completion.
-        Inner::spawn(&self.inner, Box::new(future.then(move |fut_result| {
+        Inner::spawn(&self.inner, FutureObj::new(Box::new(future.then(move |fut_result| {
             let (lock, cvar) = &*pair2;
             let mut result = lock.lock();
             *result = Some(fut_result);
             cvar.notify_one();
-            Ok(())
-        })));
+            future::ready(())
+        }))));
 
         // Start worker threads, handing off timers from the current thread.
         self.inner.done.store(false, Ordering::SeqCst);
@@ -386,7 +396,9 @@ impl Executor {
                     TASK_READY_WAKEUP_ID => {
                         // TODO: loop but don't starve
                         if let Some(task) = inner.ready_tasks.try_pop() {
-                            task.future.try_poll(&task.clone().into(), &mut executor);
+                            let waker = local_waker_ref_from_nonlocal(&task);
+                            let cx = &mut task::Context::new(&waker, &mut executor);
+                            task.future.try_poll(cx);
                         }
                     }
                     receiver_key => {
@@ -457,13 +469,13 @@ impl fmt::Debug for EHandle {
 }
 
 impl FutureExecutor for EHandle {
-    fn spawn(&mut self, f: Box<Future<Item = (), Error = Never> + Send>) -> Result<(), SpawnError> {
-        <&EHandle>::spawn(&mut &*self, f)
+    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
+        <&EHandle>::spawn_obj(&mut &*self, f)
     }
 }
 
 impl<'a> FutureExecutor for &'a EHandle {
-    fn spawn(&mut self, f: Box<Future<Item = (), Error = Never> + Send>) -> Result<(), SpawnError> {
+    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
         Inner::spawn(&self.inner, f);
         Ok(())
     }
@@ -626,9 +638,9 @@ impl PartialEq for TimeWaker {
 }
 
 impl Inner {
-    fn spawn(arc_self: &Arc<Self>, future: Box<Future<Item = (), Error = Never> + Send>) {
+    fn spawn(arc_self: &Arc<Self>, future: FutureObj<'static, ()>) {
         let task = Arc::new(Task {
-            future: AtomicFuture::new(future, task::LocalMap::new()),
+            future: AtomicFuture::new(future),
             executor: arc_self.clone(),
         });
 
@@ -636,7 +648,7 @@ impl Inner {
         arc_self.notify_task_ready();
     }
 
-    fn spawn_local(arc_self: &Arc<Self>, future: Box<Future<Item = (), Error = Never>>) {
+    fn spawn_local(arc_self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
         arc_self.threadiness.require_singlethreaded()
             .expect("Error: called `spawn_local` after calling `run` on executor. \
                     Use `spawn` or `run_singlethreaded` instead.");
@@ -645,12 +657,7 @@ impl Inner {
             // Unsafety: we've confirmed that the boxed futures here will never be used
             // across multiple threads, so we can safely convert from a non-`Send`able
             // future to a `Send`able one.
-            unsafe {
-                mem::transmute::<
-                    Box<Future<Item = (), Error = Never>>,
-                    Box<Future<Item = (), Error = Never> + Send>,
-                >(future)
-            },
+            unsafe { future.into_future_obj() },
         )
     }
 
