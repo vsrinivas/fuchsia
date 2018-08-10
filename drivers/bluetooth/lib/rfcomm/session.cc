@@ -131,9 +131,67 @@ void Session::RxCallback(const l2cap::SDU& sdu) {
 
 void Session::ClosedCallback() { Closedown(); }
 
-bool Session::SendFrame(std::unique_ptr<Frame> frame,
-                        FrameResponseCallback callback) {
-  const bool expecting_response = static_cast<bool>(callback);
+void Session::SendCommand(FrameType frame_type, DLCI dlci,
+                          CommandResponseCallback command_response_cb) {
+  FXL_DCHECK(frame_type == FrameType::kSetAsynchronousBalancedMode ||
+             frame_type == FrameType::kDisconnect);
+  FXL_DCHECK(IsValidDLCI(dlci));
+  FXL_DCHECK(command_response_cb);
+  FXL_DCHECK(outstanding_frames_.find(dlci) == outstanding_frames_.end())
+      << "rfcomm: There is already an outstanding command frame for DLCI "
+      << static_cast<unsigned>(dlci);
+
+  auto timeout_cb = std::make_unique<async::TaskClosure>([this, dlci] {
+    FXL_LOG(ERROR) << "rfcomm: Outstanding frame on DLCI "
+                   << static_cast<unsigned>(dlci)
+                   << " timed out; closing down session";
+    Closedown();
+  });
+
+  // Set response and timeout callbacks.
+  auto callbacks =
+      std::make_pair(std::move(command_response_cb), std::move(timeout_cb));
+  outstanding_frames_.emplace(dlci, std::move(callbacks));
+
+  // A different timeout is used if this is a SABM command on a user data
+  // channel (RFCOMM 5.3).
+  zx::duration timeout =
+      (frame_type == FrameType::kSetAsynchronousBalancedMode &&
+       IsUserDLCI(dlci))
+          ? kAcknowledgementTimerUserDLCs
+          : kAcknowledgementTimer;
+
+  std::unique_ptr<Frame> frame;
+  if (frame_type == FrameType::kSetAsynchronousBalancedMode) {
+    frame = std::make_unique<SetAsynchronousBalancedModeCommand>(role_, dlci);
+  } else {
+    frame = std::make_unique<DisconnectCommand>(role_, dlci);
+  }
+
+  bool sent = SendFrame(std::move(frame), [this, timeout, dlci] {
+    outstanding_frames_[dlci].second->PostDelayed(dispatcher_, timeout);
+  });
+  FXL_DCHECK(sent);
+}
+
+void Session::SendResponse(FrameType frame_type, DLCI dlci) {
+  FXL_DCHECK(frame_type == FrameType::kUnnumberedAcknowledgement ||
+             frame_type == FrameType::kDisconnectedMode);
+  FXL_DCHECK(IsValidDLCI(dlci));
+
+  std::unique_ptr<Frame> frame;
+  if (frame_type == FrameType::kUnnumberedAcknowledgement)
+    frame = std::make_unique<UnnumberedAcknowledgementResponse>(role_, dlci);
+  else
+    frame = std::make_unique<DisconnectedModeResponse>(role_, dlci);
+
+  bool sent = SendFrame(std::move(frame));
+  FXL_DCHECK(sent);
+}
+
+bool Session::SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
+  FXL_DCHECK(frame);
+
   const DLCI dlci = frame->dlci();
   const FrameType type = static_cast<FrameType>(frame->control());
 
@@ -156,51 +214,12 @@ bool Session::SendFrame(std::unique_ptr<Frame> frame,
   }
   frame->Write(buffer->mutable_view());
 
-  // If we're expecting a frame-level response, store the callbacks
-  if (expecting_response) {
-    if (outstanding_frames_.find(dlci) != outstanding_frames_.end()) {
-      FXL_LOG(WARNING)
-          << "rfcomm: Drop frame, outstanding command frame for DLCI "
-          << static_cast<unsigned>(dlci);
-      return false;
-    }
-
-    // Make timeout callback
-    auto timeout_cb = std::make_unique<async::TaskClosure>([this, dlci] {
-      FXL_LOG(ERROR) << "rfcomm: Outstanding frame on DLCI "
-                     << static_cast<unsigned>(dlci)
-                     << " timed out; closing down session";
-      Closedown();
-    });
-
-    // Set response and timeout callbacks
-    FrameResponseCallbacks callbacks = {
-        std::move(callback),
-        std::move(timeout_cb),
-    };
-
-    // Start timeout callback. A different timeout is used if this is a SABM
-    // command on a user data channel (RFCOMM 5.3).
-    zx::duration timeout = (type == FrameType::kSetAsynchronousBalancedMode &&
-                            dlci >= kMinUserDLCI && dlci <= kMaxUserDLCI)
-                               ? kAcknowledgementTimerUserDLCs
-                               : kAcknowledgementTimer;
-    callbacks.second->PostDelayed(dispatcher_, timeout);
-
-    outstanding_frames_.emplace(dlci, std::move(callbacks));
-  }
-
   if (l2cap_channel_->Send(std::move(buffer))) {
+    if (sent_cb)
+      sent_cb();
     return true;
   } else {
-    FXL_VLOG(1) << "rfcomm: Failed to send frame";
-
-    if (expecting_response) {
-      // Cancel timeout and remove callbacks
-      outstanding_frames_[dlci].second->Cancel();
-      outstanding_frames_.erase(dlci);
-    }
-
+    FXL_LOG(ERROR) << "rfcomm: Failed to send frame";
     return false;
   }
 }
@@ -215,40 +234,41 @@ void Session::StartupMultiplexer() {
 
   role_ = Role::kNegotiating;
 
-  auto sabm_command = std::make_unique<SetAsynchronousBalancedModeCommand>(
-      role_, kMuxControlDLCI);
+  SendCommand(FrameType::kSetAsynchronousBalancedMode, kMuxControlDLCI,
+              [this](auto response) {
+                FXL_DCHECK(response);
 
-  bool sent = SendFrame(
-      std::move(sabm_command), [this](std::unique_ptr<Frame> response) {
-        FrameType type = static_cast<FrameType>(response->control());
-        FXL_DCHECK(type == FrameType::kUnnumberedAcknowledgement ||
-                   type == FrameType::kDisconnectedMode);
+                FrameType type = static_cast<FrameType>(response->control());
+                FXL_DCHECK(type == FrameType::kUnnumberedAcknowledgement ||
+                           type == FrameType::kDisconnectedMode);
 
-        switch (role_) {
-          case Role::kNegotiating: {
-            if (type == FrameType::kUnnumberedAcknowledgement) {
-              SetMultiplexerStarted(Role::kInitiator);
-            } else {
-              FXL_LOG(WARNING) << "rfcomm: Remote multiplexer startup refused"
-                               << " by remote";
-              role_ = Role::kUnassigned;
-            }
-            return;
-          }
-          case Role::kUnassigned:
-          case Role::kInitiator:
-          case Role::kResponder:
-            // TODO(guss): should a UA be received in any of these cases?
-            FXL_LOG(WARNING) << "rfcomm: Mux UA frame received in unexpected"
-                             << " state";
-            return;
-            break;
-          default:
-            FXL_NOTREACHED();
-            break;
-        }
-      });
-  FXL_DCHECK(sent);
+                switch (role_) {
+                  case Role::kNegotiating: {
+                    if (type == FrameType::kUnnumberedAcknowledgement) {
+                      SetMultiplexerStarted(Role::kInitiator);
+                    } else {
+                      FXL_LOG(WARNING)
+                          << "rfcomm: Remote multiplexer startup refused"
+                          << " by remote";
+                      role_ = Role::kUnassigned;
+                    }
+                    return;
+                  }
+                  case Role::kUnassigned:
+                  case Role::kInitiator:
+                  case Role::kResponder:
+                    // TODO(guss): should a UA be received in any of these
+                    // cases?
+                    FXL_LOG(WARNING)
+                        << "rfcomm: Mux UA frame received in unexpected"
+                        << " state";
+                    break;
+                  default:
+                    // TODO(gusss): shouldn't get here.
+                    FXL_NOTREACHED();
+                    break;
+                }
+              });
 }
 
 void Session::HandleSABM(DLCI dlci) {
@@ -264,6 +284,7 @@ void Session::HandleSABM(DLCI dlci) {
             std::make_unique<UnnumberedAcknowledgementResponse>(role_, dlci);
         bool sent = SendFrame(std::move(ua_response));
         FXL_DCHECK(sent);
+        SendResponse(FrameType::kUnnumberedAcknowledgement, dlci);
         SetMultiplexerStarted(Role::kResponder);
         return;
       }
@@ -286,6 +307,7 @@ void Session::HandleSABM(DLCI dlci) {
             std::make_unique<DisconnectedModeResponse>(role_, kMuxControlDLCI);
         bool sent = SendFrame(std::move(dm_response));
         FXL_DCHECK(sent);
+        SendResponse(FrameType::kDisconnectedMode, kMuxControlDLCI);
         async::PostDelayedTask(
             dispatcher_,
             [this] {

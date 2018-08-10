@@ -59,14 +59,21 @@ class Session {
   void RxCallback(const l2cap::SDU& sdu);
   void ClosedCallback();
 
-  // The raw frame-sending function. Some frames (e.g. SABM and DISC) expect a
-  // response (UA or DM). This function takes an optional callback which should
-  // be called when the response is received. If an error occurs, the callback
-  // is not called. Otherwise, if |callback| is given, it will be called with a
-  // valid UA or DM frame.
-  using FrameResponseCallback = fit::function<void(std::unique_ptr<Frame>)>;
-  bool SendFrame(std::unique_ptr<Frame> frame,
-                 FrameResponseCallback callback = nullptr);
+  // Send a SABM or a DISC command. When a response (UA or DM) is received,
+  // it is passed to |command_response_cb|. If an error occurs, the callback
+  // is not called. Otherwise, if the callback is given, it will be called with
+  // a valid UA or DM frame.
+  using CommandResponseCallback = fit::function<void(std::unique_ptr<Frame>)>;
+  void SendCommand(FrameType frame_type, DLCI dlci,
+                   CommandResponseCallback command_response_cb);
+
+  // Send a UA or DM response.
+  void SendResponse(FrameType frame_type, DLCI dlci);
+
+  // The raw frame-sending function. This function should only be called by the
+  // other frame-sending functions. |sent_cb| is called synchronously once the
+  // frame is actually sent.
+  bool SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb = nullptr);
 
   // Handle an incoming SABM request.
   void HandleSABM(DLCI dlci);
@@ -114,12 +121,13 @@ class Session {
   // response.
   using TimeoutCallback = async::TaskClosure;
 
-  // Outstanding frames awaiting responses. GSM 5.4.4.1 states that there can be
-  // at most one command with the P bit set to 1 outstanding on a given DLC at
-  // any time. Thus, we can identify outstanding frames by their DLCI.
-  using FrameResponseCallbacks =
-      std::pair<FrameResponseCallback, std::unique_ptr<TimeoutCallback>>;
-  std::unordered_map<DLCI, FrameResponseCallbacks> outstanding_frames_;
+  // Outstanding SABM and DISC commands awaiting responses. GSM 5.4.4.1 states
+  // that there can be at most one command with the P bit set to 1 outstanding
+  // on a given DLC at any time. Thus, we can identify outstanding frames by
+  // their DLCI.
+  using CommandResponseCallbacks =
+      std::pair<CommandResponseCallback, std::unique_ptr<TimeoutCallback>>;
+  std::unordered_map<DLCI, CommandResponseCallbacks> outstanding_frames_;
 
   fxl::WeakPtrFactory<Session> weak_ptr_factory_;
 

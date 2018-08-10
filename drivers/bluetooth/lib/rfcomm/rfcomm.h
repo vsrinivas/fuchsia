@@ -53,6 +53,14 @@ constexpr DLCI kMuxControlDLCI = 0;
 constexpr DLCI kMinUserDLCI = 2;
 constexpr DLCI kMaxUserDLCI = 61;
 
+constexpr bool IsUserDLCI(DLCI dlci) {
+  return dlci >= kMinUserDLCI && dlci <= kMaxUserDLCI;
+}
+
+constexpr bool IsValidDLCI(DLCI dlci) {
+  return dlci == kMuxControlDLCI || IsUserDLCI(dlci);
+}
+
 // Server Channels are 5 bits wide; they are the 5 most significant bits of the
 // DLCI. Server Channels are exposed to the outside world; a user who is
 // requesting to open a channel will know the Server Channel. DLCIs, on the
