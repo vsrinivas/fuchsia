@@ -330,10 +330,11 @@ def main():
     asan_bt = False
 
     while True:
-        line = args.file.readline().rstrip()
-        if args.echo and not args.file.isatty():
-          writeline(line)
+        line = args.file.readline()
         end_of_file = (line == '')
+        line = line.rstrip()
+        if args.echo and not args.file.isatty():
+            writeline(line)
         bt_end = bt_end_re.match(line)
         asan_bt_end = asan_bt and asan_bt_end_re.match(line)
         if bt_end or asan_bt_end or end_of_file:
@@ -459,13 +460,13 @@ def main():
             zircon_elf_path = find_file_in_build_dir("zircon.elf", build_dirs)
             if not zircon_elf_path:
                 sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need "
-                                  "to build zircon or specify the build directory with -b?")
+                                  "to build zircon or specify the build directory with -b?\n")
                 continue
             zircon_bt = True
             nm_result = run_tool(arch, "nm", zircon_elf_path)
             m = zircon_nm_codestart.search(nm_result)
             if not m:
-                sys.stderr.write("Failed to find __code_start from nm")
+                sys.stderr.write("Failed to find __code_start from nm\n")
                 continue
             zircon_code_start = int(m.group(1), 16)
             continue
