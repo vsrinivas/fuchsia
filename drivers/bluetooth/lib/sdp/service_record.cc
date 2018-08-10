@@ -56,19 +56,18 @@ bool ServiceRecord::HasAttribute(AttributeId id) const {
 
 void ServiceRecord::RemoveAttribute(AttributeId id) { attributes_.erase(id); }
 
-DataElement ServiceRecord::GetAttributes(
-    const std::unordered_set<AttributeId>& attributes) const {
-  std::set<AttributeId> sorted_attributes(attributes.begin(), attributes.end());
-  std::vector<DataElement> attr_seq;
-  for (const auto& attr : sorted_attributes) {
-    if (!HasAttribute(attr)) {
-      continue;
-    }
-    attr_seq.emplace_back(DataElement(attr));
-    attr_seq.emplace_back(GetAttribute(attr));
+std::set<AttributeId> ServiceRecord::GetAttributesInRange(
+    AttributeId start, AttributeId end) const {
+  std::set<AttributeId> attrs;
+  if (start > end) {
+    return attrs;
+  }
+  for (auto it = attributes_.lower_bound(start);
+       it != attributes_.end() && (it->first <= end); ++it) {
+    attrs.emplace(it->first);
   }
 
-  return DataElement(std::move(attr_seq));
+  return attrs;
 }
 
 bool ServiceRecord::FindUUID(

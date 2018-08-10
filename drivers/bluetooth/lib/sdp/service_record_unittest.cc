@@ -63,49 +63,30 @@ TEST_F(SDP_ServiceRecordTest, BasicFunctionality) {
   EXPECT_FALSE(record.HasAttribute(kServiceId));
 }
 
-// Test: GetAttributes
-//  - Returns the correct format
-//  - Returns any attributes that are present in the correct order.
-TEST_F(SDP_ServiceRecordTest, GetAttributes) {
-  ServiceRecord record(kSDPHandle);
+// Test: GetAttributesInRange
+//  - Returns any attributes that are present.
+TEST_F(SDP_ServiceRecordTest, GetAttributesInRange) {
+  ServiceRecord record(5);
 
   record.SetAttribute(0xf00d, DataElement());
   record.SetAttribute(0x0001, DataElement());
   record.SetAttribute(0xfeed, DataElement());
 
-  std::unordered_set<AttributeId> ids;
-  ids.insert(0xfeed);
-  ids.insert(kServiceRecordHandle);
-  ids.insert(0xb000);
-  ids.insert(0xf00d);
+  auto attrs =
+      record.GetAttributesInRange(kServiceRecordHandle, kServiceRecordHandle);
 
-  DataElement attr = record.GetAttributes(ids);
+  EXPECT_EQ(1u, attrs.size());
+  EXPECT_EQ(kServiceRecordHandle, *attrs.begin());
 
-  EXPECT_EQ(DataElement::Type::kSequence, attr.type());
+  // Get a copy of all elements
+  attrs = record.GetAttributesInRange(0, 0xFFFF);
 
-  // clang-format off
-  auto expected = common::CreateStaticByteBuffer(
-      0x35, 0x10, // Data Element Sequence with 1 byte length (16 bytes)
-      0x09, // uint16_t type (Attribute ID)
-      0x00, 0x00, // kServiceRecordHandle
-      0x0A, // uint32_t type (Service Record)
-      0x00, 0x00, 0x00, 0x00, // kSDPHandle
-      0x09, // uint16_t type (Attribute ID)
-      0xf0, 0x0d, // 0xf00d
-      0x00, // nil type (no data bytes)
-      0x09, // uint16_t type (Attribute ID)
-      0xfe, 0xed, // 0xfeed
-      0x00 // nil type (no data bytes)
-  );
-  // clang-format on
-
-  common::DynamicByteBuffer block(18);
-
-  size_t written = attr.Write(&block);
-
-  EXPECT_EQ(expected.size(), written);
-  EXPECT_EQ(written, attr.WriteSize());
-  EXPECT_TRUE(ContainersEqual(expected, block));
+  EXPECT_EQ(5u, attrs.size());  // kServiceRecord, kServiceId, three added above
+  EXPECT_NE(attrs.end(), attrs.find(kServiceRecordHandle));
+  EXPECT_NE(attrs.end(), attrs.find(kServiceId));
+  EXPECT_NE(attrs.end(), attrs.find(0xf00d));
+  EXPECT_NE(attrs.end(), attrs.find(0x0001));
+  EXPECT_NE(attrs.end(), attrs.find(0xfeed));
 }
 
 // Test: FindUUID

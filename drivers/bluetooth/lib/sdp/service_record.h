@@ -5,6 +5,7 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SERVICE_RECORD_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SERVICE_RECORD_H_
 
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -41,13 +42,12 @@ class ServiceRecord {
   // Returns the handle of this service.
   ServiceHandle handle() const { return handle_; }
 
-  // Fills a DataElement sequence conisting of alternating attribute IDs and
-  // attribute value DataElements, if they are present.  The attributes are
-  // ordered by attribute ID in ascentind order.
-  // If no attributes are present, returns a DataElement sequence with no
-  // elements.
-  DataElement GetAttributes(
-      const std::unordered_set<AttributeId>& attributes) const;
+  // Returns the set of attributes in this record that are in
+  // the range |start| - |end| inclusive.
+  // If |start| > |end| or no attributes are present, returns a
+  // an empty set.
+  std::set<AttributeId> GetAttributesInRange(AttributeId start,
+                                             AttributeId end) const;
 
   // Returns true if any value of the attributes in this service contain all
   // of the |uuids| given.  The uuids need not be in any specific attribute
@@ -98,7 +98,7 @@ class ServiceRecord {
  private:
   ServiceHandle handle_;
 
-  std::unordered_map<AttributeId, DataElement> attributes_;
+  std::map<AttributeId, DataElement> attributes_;
 
   // Additional protocol lists, by id.
   // Each one of these elements is a sequence of the form that would
