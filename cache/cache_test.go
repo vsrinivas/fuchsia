@@ -22,7 +22,7 @@ var testCases = []struct {
 }
 
 func TestAdd(t *testing.T) {
-	var cache LRUCache
+	var cache Cache = &LRUCache{}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("add %s", tc.key), func(t *testing.T) {
 			cache.Add(tc.key, tc.val)
@@ -36,7 +36,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	var cache LRUCache
+	var cache Cache = &LRUCache{}
 	for _, tc := range testCases {
 		cache.Add(tc.key, tc.val)
 	}

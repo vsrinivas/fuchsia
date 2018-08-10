@@ -12,16 +12,16 @@ type Key interface{}
 // Cache is the interface for cache.
 type Cache interface {
 	// Adds a value to the cache.
-	Add(key Key, value interface{}) bool
+	Add(key Key, value interface{}) interface{}
 
 	// Returns key's value from the cache.
-	Get(key Key) (value interface{}, ok bool)
+	Get(key Key) (interface{}, bool)
 
 	// Check if a key exsists in cache.
-	Contains(key Key) (ok bool)
+	Contains(key Key) (bool)
 
 	// Removes a key from the cache.
-	Remove(key Key) bool
+	Remove(key Key) interface{}
 
 	// Returns the number of items in the cache.
 	Len() int
@@ -46,15 +46,15 @@ type entry struct {
 }
 
 // Adds a value to the cache and updates the "recently used"-ness of the key.
-func (c *LRUCache) Add(key Key, value interface{}) {
+func (c *LRUCache) Add(key Key, value interface{}) interface{} {
 	if c.cache == nil {
 		c.cache = make(map[interface{}]*list.Element)
 		c.ll = list.New()
 	}
 	if e, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(e)
-		e.Value.(*entry).value = value
-		return
+		value, e.Value.(*entry).value = e.Value.(*entry).value, value
+		return value
 	}
 	e := c.ll.PushFront(&entry{key, value})
 	c.cache[key] = e
@@ -62,6 +62,7 @@ func (c *LRUCache) Add(key Key, value interface{}) {
 		v := c.ll.Remove(c.ll.Back())
 		delete(c.cache, v.(*entry).key)
 	}
+	return nil
 }
 
 // Returns key's value from the cache and updates the "recently used"-ness.
