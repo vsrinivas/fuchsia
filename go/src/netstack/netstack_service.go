@@ -327,6 +327,37 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result 
 	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }
 
+// TODO(NET-1263): Remove once clients registering with the ResolverAdmin interface
+// does not crash netstack.
+func (ni *netstackImpl) SetNameServers(servers []nsfidl.NetAddress) error {
+	d := dnsImpl{}
+	return d.SetNameServers(servers)
+}
+
+type dnsImpl struct{}
+
+func (*dnsImpl) SetNameServers(servers []nsfidl.NetAddress) error {
+	ss := make([]tcpip.Address, len(servers))
+
+	for i, s := range servers {
+		ss[i] = fidlconv.NetAddressToTCPIPAddress(s)
+	}
+
+	ns.dnsClient.SetDefaultServers(ss)
+	return nil
+}
+
+func (*dnsImpl) GetNameServers() ([]nsfidl.NetAddress, error) {
+	servers := ns.getDNSServers()
+	out := make([]nsfidl.NetAddress, len(servers))
+
+	for i, s := range servers {
+		out[i] = fidlconv.ToNetAddress(s)
+	}
+
+	return out, nil
+}
+
 var netstackService *nsfidl.NetstackService
 
 // AddNetstackService registers the NetstackService with the application context,

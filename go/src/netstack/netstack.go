@@ -213,7 +213,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 		return
 	}
 	log.Printf("NIC %s: DHCP acquired IP %s for %s", ifs.nic.Name, newAddr, config.LeaseLength)
-	log.Printf("NIC %s: DNS servers: %v", ifs.nic.Name, config.DNS)
+	log.Printf("NIC %s: Adding DNS servers: %v", ifs.nic.Name, config.DNS)
 
 	// Update default route with new gateway.
 	ifs.ns.mu.Lock()
@@ -225,7 +225,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 
 	OnInterfacesChanged()
 }
@@ -301,7 +301,7 @@ func (ifs *ifState) onEthStop() {
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 }
 
 func (ns *netstack) flattenRouteTables() []tcpip.Route {
@@ -327,21 +327,37 @@ func (ns *netstack) flattenRouteTables() []tcpip.Route {
 	return routes
 }
 
-func (ns *netstack) flattenDNSServers() []tcpip.Address {
+// Return a slice of references to each NIC's DNS servers.
+// The caller takes ownership of the returned slice.
+func (ns *netstack) getRuntimeDNSServerRefs() []*[]tcpip.Address {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
+	refs := make([]*[]tcpip.Address, 0, len(ns.ifStates))
+	for _, ifs := range ns.ifStates {
+		refs = append(refs, &ifs.nic.DNSServers)
+	}
+	return refs
+}
+
+func (ns *netstack) getDNSServers() []tcpip.Address {
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+
+	defaultServers := ns.dnsClient.GetDefaultServers()
 	uniqServers := make(map[tcpip.Address]struct{})
 	for _, ifs := range ns.ifStates {
 		for _, server := range ifs.nic.DNSServers {
 			uniqServers[server] = struct{}{}
 		}
 	}
-	servers := []tcpip.Address{}
+
+	out := make([]tcpip.Address, 0, len(defaultServers)+len(uniqServers))
+	out = append(out, defaultServers...)
 	for server := range uniqServers {
-		servers = append(servers, server)
+		out = append(out, server)
 	}
-	return servers
+	return out
 }
 
 func (ns *netstack) addLoopback() error {

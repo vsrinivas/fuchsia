@@ -37,8 +37,6 @@ import (
 )
 
 var staticDNSConfig = dnsConfig{
-	servers:  []tcpip.FullAddress{},
-	search:   []string{},
 	ndots:    100,
 	timeout:  3 * time.Second,
 	attempts: 3,
@@ -47,9 +45,6 @@ var staticDNSConfig = dnsConfig{
 
 func init() {
 	clientConf.dnsConfig = &staticDNSConfig
-	if clientConf.runtimeServers != nil {
-		clientConf.dnsConfig.servers = append(clientConf.dnsConfig.servers, clientConf.runtimeServers...)
-	}
 	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
 }
 
@@ -231,44 +226,50 @@ func (c *Client) exchange(server tcpip.FullAddress, name string, qtype dnsmessag
 // Do a lookup for a single name, which must be rooted
 // (otherwise answer will not find the answers).
 func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) (string, []dnsmessage.Resource, *dnsmessage.Message, error) {
-	if len(cfg.servers) == 0 {
-		return "", nil, nil, &Error{Err: "no DNS servers", Name: name}
-	}
-
 	var lastErr error
-	for i := 0; i < cfg.attempts; i++ {
-		for _, server := range cfg.servers {
-			server := tcpip.FullAddress{
-				Addr: server.Addr,
-				Port: server.Port,
-			}
-			msg, err := c.exchange(server, name, qtype, cfg.timeout)
-			if err != nil {
-				lastErr = &Error{
-					Err:    err.Error(),
-					Name:   name,
-					Server: &server,
-				}
-				continue
-			}
-			// libresolv continues to the next server when it receives
-			// an invalid referral response. See golang.org/issue/15434.
-			if msg.RCode == dnsmessage.RCodeSuccess && !msg.Authoritative && !msg.RecursionAvailable && len(msg.Answers) == 0 && len(msg.Additionals) == 0 {
-				lastErr = &Error{Err: "lame referral", Name: name, Server: &server}
-				continue
-			}
 
-			cname, rrs, err := answer(name, server, msg, qtype)
-			// If answer errored for rcodes dnsRcodeSuccess or dnsRcodeNameError,
-			// it means the response in msg was not useful and trying another
-			// server probably won't help. Return now in those cases.
-			// TODO: indicate this in a more obvious way, such as a field on Error?
-			if err == nil || msg.RCode == dnsmessage.RCodeSuccess || msg.RCode == dnsmessage.RCodeNameError {
-				return cname, rrs, msg, err
+	for i := 0; i < cfg.attempts; i++ {
+		for _, serverLists := range [][]*[]tcpip.Address{{&cfg.defaultServers}, cfg.runtimeServers} {
+			for _, serverList := range serverLists {
+				for _, server := range *serverList {
+					server := tcpip.FullAddress{
+						Addr: server,
+						Port: 53,
+					}
+					msg, err := c.exchange(server, name, qtype, cfg.timeout)
+					if err != nil {
+						lastErr = &Error{
+							Err:    err.Error(),
+							Name:   name,
+							Server: &server,
+						}
+						continue
+					}
+					// libresolv continues to the next server when it receives
+					// an invalid referral response. See golang.org/issue/15434.
+					if msg.RCode == dnsmessage.RCodeSuccess && !msg.Authoritative && !msg.RecursionAvailable && len(msg.Answers) == 0 && len(msg.Additionals) == 0 {
+						lastErr = &Error{Err: "lame referral", Name: name, Server: &server}
+						continue
+					}
+
+					cname, rrs, err := answer(name, server, msg, qtype)
+					// If answer errored for rcodes dnsRcodeSuccess or dnsRcodeNameError,
+					// it means the response in msg was not useful and trying another
+					// server probably won't help. Return now in those cases.
+					// TODO: indicate this in a more obvious way, such as a field on Error?
+					if err == nil || msg.RCode == dnsmessage.RCodeSuccess || msg.RCode == dnsmessage.RCodeNameError {
+						return cname, rrs, msg, err
+					}
+					lastErr = err
+				}
 			}
-			lastErr = err
 		}
 	}
+
+	if lastErr == nil {
+		lastErr = &Error{Err: "no DNS servers", Name: name}
+	}
+
 	return "", nil, nil, lastErr
 }
 
@@ -289,19 +290,19 @@ func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 
 // A clientConfig represents a DNS stub resolver configuration.
 type clientConfig struct {
-	mu             sync.RWMutex        // protects the following vars
-	dnsConfig      *dnsConfig          // parsed resolv.conf structure used in lookups
-	runtimeServers []tcpip.FullAddress // servers added while running (e.g. by DHCP)
-	resolver       Resolver            // a handler which answers DNS Questions
+	mu        sync.RWMutex // protects the following vars
+	dnsConfig *dnsConfig   // DNS configuration used in lookups. Should never be nil.
+	resolver  Resolver     // a handler which answers DNS Questions
 }
 
 type dnsConfig struct {
-	servers  []tcpip.FullAddress // server addresses (host and port) to use
-	search   []string            // rooted suffixes to append to local name
-	ndots    int                 // number of dots in name to trigger absolute lookup
-	timeout  time.Duration       // wait before giving up on a query, including retries
-	attempts int                 // lost packets before giving up on server
-	rotate   bool                // round robin among servers
+	defaultServers []tcpip.Address    // server addresses (host and port) to use
+	runtimeServers []*[]tcpip.Address // references to slices of DNS servers configured at runtime
+	search         []string           // rooted suffixes to append to local name
+	ndots          int                // number of dots in name to trigger absolute lookup
+	timeout        time.Duration      // wait before giving up on a query, including retries
+	attempts       int                // lost packets before giving up on server
+	rotate         bool               // round robin among servers
 }
 
 var clientConf clientConfig
@@ -310,20 +311,6 @@ func newNetworkResolver(cfg *dnsConfig) Resolver {
 	return func(c *Client, question dnsmessage.Question) (string, []dnsmessage.Resource, *dnsmessage.Message, error) {
 		return c.tryOneName(cfg, question.Name, question.Type)
 	}
-}
-
-func readConfig() *dnsConfig {
-	cfg := staticDNSConfig
-	return &cfg
-}
-
-// updateConfigLocked replaces the dnsConfig with the given value.
-func (conf *clientConfig) updateConfigLocked(dnsConfig *dnsConfig) {
-	conf.dnsConfig = dnsConfig
-	if conf.runtimeServers != nil {
-		conf.dnsConfig.servers = append(conf.dnsConfig.servers, conf.runtimeServers...)
-	}
-	conf.resolver = newCachedResolver(newNetworkResolver(conf.dnsConfig))
 }
 
 // avoidDNS reports whether this is a hostname for which we should not
@@ -373,23 +360,41 @@ func (conf *dnsConfig) nameList(name string) []string {
 	return names
 }
 
-// SetRuntimeServers sets the list of runtime servers to query. Servers are checked sequentially, in order.
-func (c *Client) SetRuntimeServers(addrs []tcpip.Address) {
+func (c *Client) GetDefaultServers() []tcpip.Address {
+	clientConf.mu.RLock()
+	defer clientConf.mu.RUnlock()
+
+	return append([]tcpip.Address(nil), clientConf.dnsConfig.defaultServers...)
+}
+
+// SetDefaultServers sets the default list of nameservers to query.
+// This usually comes from a system-wide configuration file.
+// Servers are checked sequentially, in order.
+// Takes ownership of the passed-in slice of addrs.
+func (c *Client) SetDefaultServers(servers []tcpip.Address) {
 	clientConf.mu.Lock()
 	defer clientConf.mu.Unlock()
 
-	clientConf.runtimeServers = nil
-	for _, addr := range addrs {
-		server := tcpip.FullAddress{
-			Addr: addr,
-			Port: 53,
-		}
-		clientConf.runtimeServers = append(clientConf.runtimeServers, server)
-	}
+	clientConf.dnsConfig.defaultServers = servers
+	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
+}
 
-	if clientConf.dnsConfig != nil {
-		clientConf.updateConfigLocked(clientConf.dnsConfig)
-	}
+// SetRuntimeServers sets the list of lists of runtime servers to query (e.g.
+// collected from DHCP responses).  Servers are checked sequentially, in order.
+// Takes ownership of the passed-in list of runtimeServerRefs.
+//
+// It's possible to introduce aliasing issues if a slice pointer passed here is
+// obviated later but SetRuntimeServers isn't called again.
+//
+// E.g., if one of the network interface structs containing a slice pointer is
+// deleted, SetRuntimeServers should be called again with an updated list of
+// runtime server refs.
+func (c *Client) SetRuntimeServers(runtimeServerRefs []*[]tcpip.Address) {
+	clientConf.mu.Lock()
+	defer clientConf.mu.Unlock()
+
+	clientConf.dnsConfig.runtimeServers = runtimeServerRefs
+	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
 }
 
 // LookupIP returns a list of IP addresses that are registered for the give domain name.
