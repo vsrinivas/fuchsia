@@ -114,7 +114,11 @@ zx_status_t GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_
 }
 
 zx_status_t GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
-    return RootVmar()->Unmap(guest_paddr, len);
+    zx_status_t status = RootVmar()->Unmap(guest_paddr, len);
+    if (status == ZX_ERR_INVALID_ARGS) {
+        return ZX_OK;
+    }
+    return status;
 }
 
 zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr) {

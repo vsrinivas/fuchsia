@@ -95,6 +95,28 @@ static bool guest_physical_address_space_unmap_range() {
     END_TEST;
 }
 
+static bool guest_physical_address_space_unmap_range_outside_of_mapping() {
+    BEGIN_TEST;
+
+    if (!hypervisor_supported()) {
+        return true;
+    }
+
+    // Setup.
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
+    EXPECT_EQ(ZX_OK, status, "Failed to setup VMO.\n");
+    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    status = create_gpas(vmo, &gpas);
+    EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
+
+    // Unmap page.
+    status = gpas->UnmapRange(PAGE_SIZE * 8, PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "Failed to unmap page from GuestPhysicalAddressSpace.\n");
+
+    END_TEST;
+}
+
 static bool guest_physical_address_space_get_page_not_present() {
     BEGIN_TEST;
 
@@ -339,6 +361,7 @@ static bool guest_physical_address_space_write_combining() {
 
 UNITTEST_START_TESTCASE(hypervisor)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range)
+HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_outside_of_mapping)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_complex)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_not_present)
