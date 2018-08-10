@@ -132,22 +132,11 @@ impl<C: Curve> EcPubKey<C> {
     /// Gets the curve of this key.
     ///
     /// `curve` is useful when you have an `EcPubKey` with a generic [`Curve`]
-    /// parameter. This allows you to call [`EcPrivKey::generate`], which
-    /// requires a [`Curve`] argument.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use mundane::public::ec::{Curve, EcPrivKey, EcPubKey};
-    /// use mundane::public::PrivateKey;
-    ///
-    /// fn generate_another<C: Curve>(key: EcPubKey<C>) -> EcPubKey<C> {
-    ///     EcPrivKey::generate(key.curve()).unwrap().public()
-    /// }
-    /// ```
+    /// parameter, and you want to inspect which curve it is. This includes keys
+    /// which are parsed using `parse_public_key_der_any_curve`.
     #[must_use]
-    pub fn curve(&self) -> C {
-        self.inner.curve()
+    pub fn curve(&self) -> EllipticCurve {
+        self.inner.curve().curve()
     }
 }
 
@@ -186,21 +175,11 @@ impl<C: Curve> EcPrivKey<C> {
     /// Gets the curve of this key.
     ///
     /// `curve` is useful when you have an `EcPrivKey` with a generic [`Curve`]
-    /// parameter. This allows you to call [`EcPrivKey::generate`], which
-    /// requires a [`Curve`] argument.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use mundane::public::ec::{Curve, EcPrivKey};
-    ///
-    /// fn generate_another<C: Curve>(key: EcPrivKey<C>) -> EcPrivKey<C> {
-    ///     EcPrivKey::generate(key.curve()).unwrap()
-    /// }
-    /// ```
+    /// parameter, and you want to inspect which curve it is. This includes keys
+    /// which are parsed using `parse_private_key_der_any_curve`.
     #[must_use]
-    pub fn curve(&self) -> C {
-        self.inner.curve()
+    pub fn curve(&self) -> EllipticCurve {
+        self.inner.curve().curve()
     }
 }
 

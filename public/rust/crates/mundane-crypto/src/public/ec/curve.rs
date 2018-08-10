@@ -31,10 +31,11 @@ mod inner {
     /// at compile time.
     ///
     /// Since generating a new key from a particular curve requires not just a
-    /// type parameter for that curve, but an instance of that type, there are
-    /// two ways to generate a new key on a curve: Use one of the static curve
-    /// types, which anyone can construct, or, having parsed an existing key,
-    /// generate a new key with the same curve as the parsed key.
+    /// type parameter for that curve, but an instance of that type, and since
+    /// there's no way for the user to get a `DynamicCurve` instance, the only
+    /// way to generate a new key on a curve is to use one of the static curve
+    /// types. The static curve types all implement `Default`, so code which is
+    /// generic over `C: Curve + Default` can still generate keys.
     pub trait Curve: Sized + Sealed {
         /// Returns a NID, or `None` for `DynamicCurve`.
         fn static_nid() -> Option<i32>;
@@ -67,7 +68,23 @@ mod inner {
 ///
 /// `Curve` is implemented by [`P256`], [`P384`], and [`P521`]. The P-224 curve
 /// is considered insecure, and thus is not supported.
-pub trait Curve: Sized + Copy + Display + Debug + Clone + self::inner::Curve {
+///
+/// For implementation detail reasons, `Curve` does not require `Default`.
+/// However, all of `P256`, `P384`, and `P521` implement `Default`. If code
+/// wishes to be generic over curve type and still be able to call
+/// `EcPrivKey::generate`, which takes a curve argument, it is sufficient to
+/// require a `C: Curve + Default` bound; it will be compatible with all of the
+/// curve types.
+///
+/// ```rust
+/// # use mundane::public::ec::{Curve, EcPrivKey};
+/// # use mundane::public::PrivateKey;
+/// # use mundane::Error;
+/// fn generate<C: Curve + Default>() -> Result<EcPrivKey<C>, Error> {
+///     EcPrivKey::generate(C::default())
+/// }
+/// ```
+pub trait Curve: Sized + Copy + Clone + Display + Debug + self::inner::Curve {
     /// Gets a dynamic representation of this curve.
     ///
     /// This is useful when you have a generic `Curve` type parameter, and want
@@ -79,7 +96,24 @@ pub trait Curve: Sized + Copy + Display + Debug + Clone + self::inner::Curve {
 /// Any of P-256, P384, and P-521.
 ///
 /// `EllipticCurve` is useful when you have a generic [`Curve`] type parameter,
-/// and want to inspect which curve it is using the [`Curve::curve`] method.
+/// and want to inspect which curve it is using the [`Curve::curve`] method. It
+/// is also returned from the `curve` method on `EcPubKey` and `EcPrivKey`,
+/// which is useful for the same reason.
+///
+/// `EllipticCurve` does not implement `Curve`; it cannot be used as a type
+/// parameter for `EcPrivKey` or `EcPubKey`. It is only meant for querying which
+/// curve type is in use in a particular key.
+///
+/// # Examples
+///
+/// ```rust
+/// # use mundane::public::ec::parse_private_key_der_any_curve;
+/// # use mundane::Error;
+/// fn curve_name_from_der(der: &[u8]) -> Result<String, Error> {
+///     let key = parse_private_key_der_any_curve(der)?;
+///     Ok(format!("{}", key.curve()))
+/// }
+/// ```
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum EllipticCurve {
     /// The P-256 curve.

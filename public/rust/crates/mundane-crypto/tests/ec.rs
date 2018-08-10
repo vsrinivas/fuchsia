@@ -14,24 +14,15 @@ fn parse_any_curve() {
     let p521 = marshal_private_key_der(&EcPrivKey::<P521>::generate(P521).unwrap());
 
     assert_eq!(
-        parse_private_key_der_any_curve(&p256)
-            .unwrap()
-            .curve()
-            .curve(),
+        parse_private_key_der_any_curve(&p256).unwrap().curve(),
         EllipticCurve::P256
     );
     assert_eq!(
-        parse_private_key_der_any_curve(&p384)
-            .unwrap()
-            .curve()
-            .curve(),
+        parse_private_key_der_any_curve(&p384).unwrap().curve(),
         EllipticCurve::P384
     );
     assert_eq!(
-        parse_private_key_der_any_curve(&p521)
-            .unwrap()
-            .curve()
-            .curve(),
+        parse_private_key_der_any_curve(&p521).unwrap().curve(),
         EllipticCurve::P521
     );
 }
