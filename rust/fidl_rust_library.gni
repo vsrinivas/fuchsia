@@ -35,7 +35,7 @@ template("fidl_rust_library") {
       "//garnet/public/lib/fidl/rust/fidl",
       "//garnet/public/rust/crates/fuchsia-async",
       "//garnet/public/rust/crates/fuchsia-zircon",
-      "//third_party/rust-crates/rustc_deps:futures",
+      "//third_party/rust-crates/rustc_deps:futures-preview",
     ]
 
     if (defined(invoker.public_deps)) {
