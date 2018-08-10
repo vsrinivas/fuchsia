@@ -14,13 +14,14 @@
 
 // infallible functions
 pub use boringssl_sys::{CBB_cleanup, CBB_len, CBS_init, CBS_len, EC_GROUP_get_curve_name,
-                        ERR_error_string_n, ERR_get_error, ERR_print_errors_cb};
+                        ERR_error_string_n, ERR_get_error, ERR_print_errors_cb, HMAC_CTX_init,
+                        HMAC_size};
 
 use std::num::NonZeroUsize;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
-use std::ptr::NonNull;
+use std::ptr::{self, NonNull};
 
-use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_PKEY, SHA512_CTX};
+use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_MD, EVP_PKEY, HMAC_CTX, SHA512_CTX};
 
 use boringssl::wrapper::CInit;
 use boringssl::BoringError;
@@ -41,6 +42,25 @@ pub unsafe fn CBB_init(cbb: *mut CBB, initial_capacity: usize) -> Result<(), Bor
 pub unsafe fn CBB_data(cbb: *const CBB) -> Result<NonNull<u8>, BoringError> {
     ptr_or_err("CBB_init", ::boringssl_sys::CBB_data(cbb) as *mut _)
 }
+
+// digest.h
+
+macro_rules! evp_digest {
+    ($name:ident) => {
+        #[allow(non_snake_case)]
+        #[must_use]
+        pub unsafe fn $name() -> NonNull<EVP_MD> {
+            // These return pointers to statically-allocated objects, so should
+            // never fail.
+            ptr_or_err(stringify!($name), ::boringssl_sys::$name() as *mut _).unwrap()
+        }
+    };
+}
+
+evp_digest!(EVP_sha1);
+evp_digest!(EVP_sha256);
+evp_digest!(EVP_sha384);
+evp_digest!(EVP_sha512);
 
 // ec.h
 
@@ -194,6 +214,42 @@ pub unsafe fn EVP_PKEY_get1_EC_KEY(pkey: *mut EVP_PKEY) -> Result<NonNull<EC_KEY
     )
 }
 
+// hmac.h
+
+// NOTE: We don't implement CInit because some functions that take an HMAC_CTX
+// pointer have extra invariants beyond simply having called HMAC_CTX_init. If
+// we implemented CInit, then safe code would be able to construct a
+// CStackWrapper<HMAC_CTX> using Default::default, and then pass a pointer to
+// that object to functions that require extra initialization, leading to
+// usoundness.
+impl_traits!(HMAC_CTX, CDestruct => HMAC_CTX_cleanup);
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn HMAC_Init_ex(
+    ctx: *mut HMAC_CTX, key: *const c_void, key_len: usize, md: *const EVP_MD,
+) -> Result<(), BoringError> {
+    one_or_err(
+        "HMAC_Init_ex",
+        ::boringssl_sys::HMAC_Init_ex(ctx, key, key_len, md, ptr::null_mut()),
+    )
+}
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const u8, data_len: usize) {
+    // HMAC_Update promises to return 1.
+    assert_eq!(::boringssl_sys::HMAC_Update(ctx, data, data_len), 1);
+}
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn HMAC_Final(
+    ctx: *mut HMAC_CTX, out: *mut u8, out_len: *mut c_uint,
+) -> Result<(), BoringError> {
+    one_or_err("HMAC_Final", ::boringssl_sys::HMAC_Final(ctx, out, out_len))
+}
+
 // sha.h
 
 #[allow(non_snake_case)]
@@ -205,6 +261,12 @@ pub unsafe fn SHA384_Init(ctx: *mut SHA512_CTX) {
 
 // Implemented manually (rather than via impl_traits! or c_init!) so that we can
 // assert_eq! that the return value is 1.
+unsafe impl CInit for ::boringssl_sys::SHA_CTX {
+    unsafe fn init(ctx: *mut Self) {
+        // SHA1_Init promises to return 1.
+        assert_eq!(::boringssl_sys::SHA1_Init(ctx), 1);
+    }
+}
 unsafe impl CInit for ::boringssl_sys::SHA256_CTX {
     unsafe fn init(ctx: *mut Self) {
         // SHA256_Init promises to return 1.
@@ -219,6 +281,7 @@ unsafe impl CInit for ::boringssl_sys::SHA512_CTX {
 }
 
 // implement no-op destructors
+impl_traits!(SHA_CTX, CDestruct => _);
 impl_traits!(SHA256_CTX, CDestruct => _);
 impl_traits!(SHA512_CTX, CDestruct => _);
 
@@ -238,6 +301,7 @@ macro_rules! sha {
     };
 }
 
+sha!(SHA_CTX, SHA1_Update, SHA1_Final);
 sha!(SHA256_CTX, SHA256_Update, SHA256_Final);
 sha!(SHA512_CTX, SHA384_Update, SHA384_Final);
 sha!(SHA512_CTX, SHA512_Update, SHA512_Final);

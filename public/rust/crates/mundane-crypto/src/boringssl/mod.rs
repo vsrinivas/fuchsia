@@ -52,10 +52,11 @@ mod wrapper;
 mod raw;
 
 // C types
-pub use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_PKEY, SHA256_CTX, SHA512_CTX};
+pub use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_MD, EVP_PKEY, HMAC_CTX, SHA256_CTX,
+                        SHA512_CTX, SHA_CTX};
 // C constants
 pub use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, SHA256_DIGEST_LENGTH,
-                        SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH};
+                        SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH, SHA_DIGEST_LENGTH};
 // wrapper types
 pub use boringssl::wrapper::{CHeapWrapper, CRef, CStackWrapper};
 
@@ -70,7 +71,8 @@ use boringssl::raw::{CBB_data, CBB_init, CBB_len, CBS_init, CBS_len, ECDSA_sign,
                      EC_KEY_generate_key, EC_KEY_get0_group, EC_KEY_marshal_private_key,
                      EC_KEY_parse_private_key, EC_KEY_set_group, EC_curve_nid2nist,
                      ERR_print_errors_cb, EVP_PKEY_assign_EC_KEY, EVP_PKEY_get1_EC_KEY,
-                     EVP_marshal_public_key, EVP_parse_public_key, SHA384_Init};
+                     EVP_marshal_public_key, EVP_parse_public_key, HMAC_CTX_init, HMAC_Final,
+                     HMAC_Init_ex, HMAC_Update, HMAC_size, SHA384_Init};
 
 impl CStackWrapper<CBB> {
     /// Creates a new `CBB` and initializes it with `CBB_init`.
@@ -299,11 +301,95 @@ impl CStackWrapper<SHA512_CTX> {
     /// `CStackWrapper<SHA512_CTX>` produces a context initialized for a SHA-512
     /// hash. In order to produce a context for a SHA-384 hash, use this
     /// constructor instead.
+    #[must_use]
     pub fn sha384_new() -> CStackWrapper<SHA512_CTX> {
         unsafe {
             let mut ctx = mem::uninitialized();
             SHA384_Init(&mut ctx);
             CStackWrapper::new(ctx)
+        }
+    }
+}
+
+macro_rules! impl_evp_digest {
+    (#[$doc:meta] $name:ident, $raw_name:ident) => {
+        #[$doc]
+        #[must_use]
+        pub fn $name() -> CRef<'static, EVP_MD> {
+            unsafe { CRef::new(::boringssl::raw::$raw_name()) }
+        }
+    };
+}
+
+impl CRef<'static, EVP_MD> {
+    impl_evp_digest!(
+        /// The `EVP_sha1` function.
+        evp_sha1,
+        EVP_sha1
+    );
+    impl_evp_digest!(
+        /// The `EVP_sha256` function.
+        evp_sha256,
+        EVP_sha256
+    );
+    impl_evp_digest!(
+        /// The `EVP_sha384` function.
+        evp_sha384,
+        EVP_sha384
+    );
+    impl_evp_digest!(
+        /// The `EVP_sha512` function.
+        evp_sha512,
+        EVP_sha512
+    );
+}
+
+impl CStackWrapper<HMAC_CTX> {
+    /// Initializes a new `HMAC_CTX`.
+    ///
+    /// `hmac_ctx_new` initializes a new `HMAC_CTX` using `HMAC_CTX_init` and
+    /// then further initializes it with `HMAC_CTX_Init_ex`.
+    #[must_use]
+    pub fn hmac_ctx_new(
+        key: &[u8], md: &CRef<'static, EVP_MD>,
+    ) -> Result<CStackWrapper<HMAC_CTX>, BoringError> {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            HMAC_CTX_init(&mut ctx);
+            HMAC_Init_ex(
+                &mut ctx,
+                key.as_ptr() as *const c_void,
+                key.len(),
+                md.as_const(),
+            )?;
+            Ok(CStackWrapper::new(ctx))
+        }
+    }
+
+    /// The `HMAC_Update` function.
+    #[must_use]
+    pub fn hmac_update(&mut self, data: &[u8]) {
+        unsafe { HMAC_Update(self.as_mut(), data.as_ptr(), data.len()) }
+    }
+
+    // NOTE(joshlf): We require exactly the right length (as opposed to just
+    // long enough) so that we don't have to have hmac_final return a length.
+
+    /// The `HMAC_Final` function.
+    ///
+    /// # Panics
+    ///
+    /// `hmac_final` panics if `out` is not exactly the right length (as defined
+    /// by `HMAC_size`).
+    #[must_use]
+    pub fn hmac_final(&mut self, out: &mut [u8]) -> Result<(), BoringError> {
+        unsafe {
+            let size = HMAC_size(self.as_const());
+            assert_eq!(out.len(), size);
+            let mut size = 0;
+            HMAC_Final(self.as_mut(), out.as_mut_ptr(), &mut size)?;
+            assert_eq!(out.len(), size as usize);
+            Ok(())
         }
     }
 }
@@ -346,6 +432,16 @@ macro_rules! impl_hash {
     (@doc_string $s:expr) => (#[doc="The `"] #[doc=$s] #[doc="` function."]);
 }
 
+impl_hash!(
+    SHA_CTX,
+    SHA_DIGEST_LENGTH,
+    /// The `SHA1_Update` function.
+    sha1_update,
+    SHA1_Update,
+    /// The `SHA1_Final` function.
+    sha1_final,
+    SHA1_Final
+);
 impl_hash!(
     SHA256_CTX,
     SHA256_DIGEST_LENGTH,
