@@ -11,7 +11,7 @@
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
-#include "garnet/bin/zxdb/client/symbols/value.h"
+#include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -24,7 +24,8 @@
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/verbs.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -228,15 +229,15 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   // Walk upward in the hierarchy to collect local variables until hitting a
   // function. Using the map allows collecting only the innermost version of
   // a given name, and sorts them as we go.
-  std::map<std::string, const Value*> vars;
+  std::map<std::string, const Variable*> vars;
   while (block) {
-    for (const auto& var : block->variables()) {
-      const Value* value = var.Get()->AsValue();
-      if (!value)
+    for (const auto& lazy_var : block->variables()) {
+      const Variable* var = lazy_var.Get()->AsVariable();
+      if (!var)
         continue;  // Symbols are corrupt.
-      const std::string& name = value->GetAssignedName();
+      const std::string& name = var->GetAssignedName();
       if (vars.find(name) == vars.end())
-        vars[name] = value;  // New one.
+        vars[name] = var;  // New one.
     }
 
     if (block == function)
@@ -244,15 +245,29 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     block = block->parent().Get()->AsCodeBlock();
   }
 
-  OutputBuffer out;
-  for (const auto& pair : vars) {
-    FormatValue(pair.second, &out);
-    out.Append("\n");
+  if (vars.empty()) {
+    Console::get()->Output(
+        OutputBuffer::WithContents("No local variables in scope."));
+    return Err();
   }
-  if (vars.empty())
-    out.Append("No local varialbes in scope.");
 
-  Console::get()->Output(std::move(out));
+  // TODO(brettw) provide a better way to manage the memory of this helper.
+  // I'm thinking we need to track app pending operations in some global
+  // list and also provide a way to cancel them (since some may take arbitrary
+  // time). For now, these deletes itself after the callback.
+  ValueFormatHelper* helper = new ValueFormatHelper;
+  for (const auto& pair : vars) {
+    helper->AppendVariableWithName(location.symbol_context(),
+                                   cmd.frame()->GetSymbolDataProvider(),
+                                   pair.second);
+    helper->Append(OutputBuffer::WithContents("\n"));
+  }
+
+  helper->Complete([helper](OutputBuffer out) {
+    Console::get()->Output(std::move(out));
+    // Delete the helper asynchronously to avoid reentrancy.
+    debug_ipc::MessageLoop::Current()->PostTask([helper]() { delete helper; });
+  });
   return Err();
 }
 
@@ -513,8 +528,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   }
 
   // We pass the given register name to the callback
-  auto regs_cb = [reg_name, cats = std::move(cats_to_show)](
-                     const Err& err, const RegisterSet& registers) {
+  auto regs_cb = [ reg_name, cats = std::move(cats_to_show) ](
+      const Err& err, const RegisterSet& registers) {
     OnRegsComplete(err, registers, reg_name, std::move(cats));
   };
 

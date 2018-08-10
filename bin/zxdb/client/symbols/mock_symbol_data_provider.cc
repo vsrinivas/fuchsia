@@ -10,6 +10,8 @@ namespace zxdb {
 
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
 
+uint64_t MockSymbolDataProvider::GetIP() const { return ip_; }
+
 void MockSymbolDataProvider::AddRegisterValue(int register_num,
                                               bool synchronous,
                                               uint64_t value) {

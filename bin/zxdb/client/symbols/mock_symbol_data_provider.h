@@ -16,12 +16,15 @@ class MockSymbolDataProvider : public SymbolDataProvider {
  public:
   MockSymbolDataProvider();
 
+  void set_ip(uint64_t ip) { ip_ = ip; }
+
   // Adds the given canned result for the given register. Set synchronous if
   // the register contents should be synchronously available, false if it
   // should require a callback to retrieve.
   void AddRegisterValue(int register_num, bool synchronous, uint64_t value);
 
   // SymbolDataProvider implementation.
+  uint64_t GetIP() const override;
   bool GetRegister(int dwarf_register_number, uint64_t* output) override;
   void GetRegisterAsync(
       int dwarf_register_number,
@@ -39,6 +42,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
     uint64_t value = 0;
   };
 
+  uint64_t ip_ = 0;
   std::map<int, RegData> regs_;
 
   fxl::WeakPtrFactory<MockSymbolDataProvider> weak_factory_;

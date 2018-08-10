@@ -29,6 +29,10 @@ enum class ErrType {
 
   // Some problem getting input from the user (parse error, etc.).
   kInput,
+
+  // The requested thing is not available becaose of optimization in the
+  // debugged program.
+  kOptimizedOut
 };
 
 class Err {

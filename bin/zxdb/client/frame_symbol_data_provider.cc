@@ -22,6 +22,15 @@ FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
 void FrameSymbolDataProvider::DisownFrame() { frame_ = nullptr; }
 
+uint64_t FrameSymbolDataProvider::GetIP() const {
+  if (!frame_)
+    return 0;
+  auto frames = frame_->GetThread()->GetFrames();
+  if (frames.empty())
+    return 0;
+  return frames[0]->GetAddress();
+}
+
 bool FrameSymbolDataProvider::GetRegister(int dwarf_register_number,
                                           uint64_t* output) {
   // TODO(brettw) enable synchronous access if the registers are cached.

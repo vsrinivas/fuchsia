@@ -23,6 +23,7 @@ class FrameSymbolDataProvider : public SymbolDataProvider {
   void DisownFrame();
 
   // SymbolDataProvider implementation:
+  uint64_t GetIP() const override;
   bool GetRegister(int dwarf_register_number, uint64_t* output) override;
   void GetRegisterAsync(
       int dwarf_register_number,

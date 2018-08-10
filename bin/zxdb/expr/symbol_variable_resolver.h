@@ -14,6 +14,7 @@ namespace zxdb {
 
 class Err;
 class ExprValue;
+class SymbolContext;
 class SymbolDataProvider;
 class Type;
 class Variable;
@@ -31,21 +32,21 @@ class SymbolVariableResolver {
   // The lifetime of this object will scope the operation. If this object is
   // destroyed before a callback is issued, the operation will be canceled and
   // the callback will not be issued.
-  SymbolVariableResolver(fxl::RefPtr<SymbolDataProvider> data_provider,
-                         uint64_t ip);
+  explicit SymbolVariableResolver(
+      fxl::RefPtr<SymbolDataProvider> data_provider);
   ~SymbolVariableResolver();
 
   // Does the resolution. If the operation completes synchronously, the
   // callback will be issued reentrantly (from within the call stack of this
   // function).
-  void ResolveVariable(const Variable* var, Callback cb);
+  void ResolveVariable(const SymbolContext& symbol_context, const Variable* var,
+                       Callback cb);
 
  private:
   // Callback for when the dwarf_eval_ has completed evaluation.
   void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<Type> type, Callback cb);
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
-  uint64_t ip_;
 
   DwarfExprEval dwarf_eval_;
 

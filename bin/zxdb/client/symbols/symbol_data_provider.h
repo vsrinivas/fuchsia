@@ -24,6 +24,14 @@ namespace zxdb {
 class SymbolDataProvider
     : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
+  // Returns the instruction pointer for the current thread. This is used for
+  // some operations to pick an applicable representation for the current
+  // CPU state.
+  //
+  // The implementation should return 0 if there is no IP for the current
+  // state.
+  virtual uint64_t GetIP() const = 0;
+
   // Request for synchronous register data. If the register data can be provided
   // synchronously, the data will be put into the output parameter and this
   // function will return true.

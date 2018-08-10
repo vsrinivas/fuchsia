@@ -6,7 +6,17 @@
 
 #include <limits>
 
+#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
+
 namespace zxdb {
+
+bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context,
+                                      uint64_t ip) const {
+  if (begin == 0 && end == 0)
+    return true;
+  return ip >= symbol_context.RelativeToAbsolute(begin) &&
+         ip <= symbol_context.RelativeToAbsolute(end);
+}
 
 VariableLocation::VariableLocation() = default;
 
@@ -23,5 +33,14 @@ VariableLocation::VariableLocation(std::vector<Entry> locations)
     : locations_(std::move(locations)) {}
 
 VariableLocation::~VariableLocation() = default;
+
+const VariableLocation::Entry* VariableLocation::EntryForIP(
+    const SymbolContext& symbol_context, uint64_t ip) const {
+  for (const auto& entry : locations_) {
+    if (entry.InRange(symbol_context, ip))
+      return &entry;
+  }
+  return nullptr;
+}
 
 }  // namespace zxdb

@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/client/symbols/variable_test_support.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -38,20 +39,23 @@ TEST_F(SymbolVariableResolverTest, Found) {
   constexpr uint64_t kValue = 0x1234567890123;
   provider()->AddRegisterValue(0, true, kValue);
 
+  provider()->set_ip(0x1010);
   auto var = MakeUint64VariableForTest("present", 0x1000, 0x2000,
                                        {llvm::dwarf::DW_OP_reg0});
 
-  SymbolVariableResolver resolver(provider(), 0x1010);
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  SymbolVariableResolver resolver(provider());
 
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  resolver.ResolveVariable(var.get(), [&called, &out_err, &out_value](
-                                          const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-  });
+  resolver.ResolveVariable(
+      symbol_context, var.get(),
+      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+        called = true;
+        out_err = err;
+        out_value = value;
+      });
 
   EXPECT_TRUE(called);
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
@@ -63,25 +67,27 @@ TEST_F(SymbolVariableResolverTest, RangeMiss) {
   constexpr uint64_t kValue = 0x1234567890123;
   provider()->AddRegisterValue(0, true, kValue);
 
+  provider()->set_ip(0x3000);
   auto var = MakeUint64VariableForTest("present", 0x1000, 0x2000,
                                        {llvm::dwarf::DW_OP_reg0});
 
-  SymbolVariableResolver resolver(provider(), 0x3000);
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  SymbolVariableResolver resolver(provider());
 
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  resolver.ResolveVariable(var.get(), [&called, &out_err, &out_value](
-                                          const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-  });
+  resolver.ResolveVariable(
+      symbol_context, var.get(),
+      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+        called = true;
+        out_err = err;
+        out_value = value;
+      });
 
   EXPECT_TRUE(called);
   EXPECT_TRUE(out_err.has_error());
-  EXPECT_EQ("The variable 'present' has been optimized out at this location.",
-            out_err.msg());
+  EXPECT_EQ(ErrType::kOptimizedOut, out_err.type());
   EXPECT_EQ(ExprValue(), out_value);
 }
 
@@ -89,17 +95,20 @@ TEST_F(SymbolVariableResolverTest, RangeMiss) {
 TEST_F(SymbolVariableResolverTest, DwarfEvalFailure) {
   auto var = MakeUint64VariableForTest("present", 0x1000, 0x2000, {});
 
-  SymbolVariableResolver resolver(provider(), 0x1000);
+  provider()->set_ip(0x1000);
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  SymbolVariableResolver resolver(provider());
 
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  resolver.ResolveVariable(var.get(), [&called, &out_err, &out_value](
-                                          const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-  });
+  resolver.ResolveVariable(
+      symbol_context, var.get(),
+      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+        called = true;
+        out_err = err;
+        out_value = value;
+      });
 
   EXPECT_TRUE(called);
   EXPECT_TRUE(out_err.has_error());
@@ -111,6 +120,7 @@ TEST_F(SymbolVariableResolverTest, CharValue) {
   constexpr uint64_t kValue = 0x1234567890123;
   constexpr int8_t kValueLo = 0x23;  // Low byte of kValue.
   provider()->AddRegisterValue(0, true, kValue);
+  provider()->set_ip(0x1010);
 
   // Make a variable and override type with a "char" type.
   auto var = MakeUint64VariableForTest("present", 0x1000, 0x2000,
@@ -121,17 +131,19 @@ TEST_F(SymbolVariableResolverTest, CharValue) {
   type->set_assigned_name("char");
   var->set_type(LazySymbol(type));
 
-  SymbolVariableResolver resolver(provider(), 0x1010);
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  SymbolVariableResolver resolver(provider());
 
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  resolver.ResolveVariable(var.get(), [&called, &out_err, &out_value](
-                                          const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-  });
+  resolver.ResolveVariable(
+      symbol_context, var.get(),
+      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+        called = true;
+        out_err = err;
+        out_value = value;
+      });
 
   EXPECT_TRUE(called);
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
