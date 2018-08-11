@@ -170,6 +170,15 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   }
 
   // sm::PairingState::Delegate override:
+  void OnPairingComplete(sm::Status status) override {
+    FXL_VLOG(1) << "gap: Pairing complete: " << status.ToString();
+    auto delegate = conn_mgr_->pairing_delegate();
+    if (delegate) {
+      delegate->CompletePairing(id_, status);
+    }
+  }
+
+  // sm::PairingState::Delegate override:
   void OnTemporaryKeyRequest(
       sm::PairingMethod method,
       sm::PairingState::Delegate::TkResponse responder) override {

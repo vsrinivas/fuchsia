@@ -339,12 +339,8 @@ void HostServer::SetPairingDelegate(
   io_capability_ = fidl_helpers::NewIoCapability(input, output);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  if (delegate) {
-    adapter()->le_connection_manager()->SetPairingDelegate(self);
-  } else {
-    adapter()->le_connection_manager()->SetPairingDelegate(
-        fxl::WeakPtr<PairingDelegate>());
-  }
+  adapter()->SetPairingDelegate(delegate ? self : fxl::WeakPtr<HostServer>());
+
   pairing_delegate_.Bind(std::move(delegate));
   pairing_delegate_.set_error_handler([self] {
     if (self) {
@@ -374,7 +370,10 @@ btlib::sm::IOCapability HostServer::io_capability() const {
   return io_capability_;
 }
 
-void HostServer::StopPairing(std::string id, btlib::sm::Status status) {
+void HostServer::CompletePairing(std::string id, btlib::sm::Status status) {
+  FXL_LOG(INFO) << "bthost: Pairing complete for device: " << id
+                << ", status: " << status.ToString();
+
   // TODO(armansito): implement
 }
 

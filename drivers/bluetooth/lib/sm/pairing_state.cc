@@ -167,7 +167,7 @@ void PairingState::AbortLegacyPairing(ErrorCode error_code) {
 
   le_smp_->Abort(error_code);
 
-  // "Abort" should trigger OnLEPairingFailed.
+  // "Abort" should trigger OnPairingFailed.
 }
 
 void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
@@ -343,6 +343,7 @@ void PairingState::CompleteLegacyPairing() {
 
   // TODO(armansito): Report CSRK when we support it.
   FXL_DCHECK(delegate_);
+  delegate_->OnPairingComplete(Status());
   delegate_->OnNewPairingData(ltk, irk, identity_addr, common::Optional<Key>());
 
   // Separate out the requests that are satisifed by the current security level
@@ -378,6 +379,9 @@ void PairingState::OnPairingFailed(Status status) {
 
   // TODO(NET-1201): implement "waiting interval" to prevent repeated attempts
   // as described in Vol 3, Part H, 2.3.6.
+
+  FXL_DCHECK(delegate_);
+  delegate_->OnPairingComplete(status);
 
   auto requests = std::move(request_queue_);
   while (!requests.empty()) {

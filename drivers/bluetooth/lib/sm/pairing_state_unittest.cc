@@ -59,7 +59,7 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
 
   void DestroyPairingState() { pairing_ = nullptr; }
 
-  // Called to obtain a Temporary Key during legacy pairing.
+  // Called by |pairing_| to obtain a Temporary Key during legacy pairing.
   void OnTemporaryKeyRequest(
       PairingMethod method,
       PairingState::Delegate::TkResponse responder) override {
@@ -68,6 +68,12 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
     } else {
       responder(true /* success */, 0);
     }
+  }
+
+  // Called by |pairing_| when the pairing procedure ends.
+  void OnPairingComplete(Status status) override {
+    pairing_complete_count_++;
+    pairing_complete_status_ = status;
   }
 
   // Called by |pairing_| when a new LTK is obtained.
@@ -224,6 +230,11 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   const Status& pairing_status() const { return pairing_status_; }
   const SecurityProperties& sec_props() const { return sec_props_; }
 
+  int pairing_complete_count() const { return pairing_complete_count_; }
+  const Status& pairing_complete_status() const {
+    return pairing_complete_status_;
+  }
+
   int pairing_data_callback_count() const {
     return pairing_data_callback_count_;
   }
@@ -276,6 +287,10 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   Optional<Key> irk_;
   Optional<DeviceAddress> identity_;
   Optional<Key> csrk_;
+
+  // State tracking the OnPairingComplete event.
+  int pairing_complete_count_ = 0;
+  Status pairing_complete_status_;
 
   // Callback used to notify when a call to OnTKRequest() is received.
   // OnTKRequest() will reply with 0 if a callback is not set.
@@ -420,6 +435,7 @@ TEST_F(SMP_MasterPairingTest, UpdateSecurityCurrentLevel) {
 
   // No pairing requests should have been made.
   EXPECT_EQ(0, pairing_request_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Pairing should succeed.
   EXPECT_EQ(1, pairing_callback_count());
@@ -444,6 +460,9 @@ TEST_F(SMP_MasterPairingTest, PairingFailedInPhase1) {
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(1, pairing_request_count());
   EXPECT_EQ(ErrorCode::kPairingNotSupported, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // Local aborts during Phase 1.
@@ -461,6 +480,9 @@ TEST_F(SMP_MasterPairingTest, PairingAbortedInPhase1) {
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(1, pairing_request_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // Local resets I/O capabilities while pairing. This should abort any ongoing
@@ -480,6 +502,9 @@ TEST_F(SMP_MasterPairingTest, PairingStateResetDuringPairing) {
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(1, pairing_request_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 
   UpdateSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
@@ -517,6 +542,9 @@ TEST_F(SMP_MasterPairingTest, ReceiveConfirmValueInPhase1) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // In Phase 2 but still waiting to receive TK.
@@ -538,6 +566,9 @@ TEST_F(SMP_MasterPairingTest, ReceiveConfirmValueWhileWaitingForTK) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // PairingState destroyed when TKResponse runs.
@@ -572,6 +603,9 @@ TEST_F(SMP_MasterPairingTest, PairingAbortedWhileWaitingForTK) {
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kPairingNotSupported, pairing_status().protocol_error());
 
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
+
   // This should have no effect.
   respond(true, 0);
   RunLoopUntilIdle();
@@ -581,6 +615,7 @@ TEST_F(SMP_MasterPairingTest, PairingAbortedWhileWaitingForTK) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(0, pairing_data_callback_count());
 }
 
@@ -600,6 +635,9 @@ TEST_F(SMP_MasterPairingTest, PairingRestartedWhileWaitingForTK) {
   RunLoopUntilIdle();
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kPairingNotSupported, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 
   // Reset the delegate so that |respond| doesn't get overwritten by the second
   // pairing.
@@ -625,6 +663,7 @@ TEST_F(SMP_MasterPairingTest, PairingRestartedWhileWaitingForTK) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(0, pairing_data_callback_count());
 }
 
@@ -653,6 +692,9 @@ TEST_F(SMP_MasterPairingTest, ReceiveRandomValueInPhase1) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // In Phase 2 but still waiting to receive TK.
@@ -674,6 +716,9 @@ TEST_F(SMP_MasterPairingTest, ReceiveRandomValueWhileWaitingForTK) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueReceivedTwice) {
@@ -706,6 +751,9 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueReceivedTwice) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2ReceiveRandomValueInWrongOrder) {
@@ -730,6 +778,9 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2ReceiveRandomValueInWrongOrder) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueInvalid) {
@@ -773,6 +824,9 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueInvalid) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kConfirmValueFailed, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2RandomValueReceivedTwice) {
@@ -824,6 +878,9 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2RandomValueReceivedTwice) {
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2ConfirmValuesExchanged) {
@@ -1094,7 +1151,9 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithoutKeyExchange) {
 
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_TRUE(pairing_status());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 
   EXPECT_EQ(SecurityLevel::kEncrypted, sec_props().level());
   EXPECT_EQ(16u, sec_props().enc_key_size());
@@ -1125,8 +1184,10 @@ TEST_F(SMP_MasterPairingTest, Phase3EncryptionInformationReceivedTwice) {
   RunLoopUntilIdle();
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // The slave sends EDIV and Rand before LTK.
@@ -1147,8 +1208,10 @@ TEST_F(SMP_MasterPairingTest, Phase3MasterIdentificationReceivedInWrongOrder) {
 
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, Phase3MasterIdentificationReceivedTwice) {
@@ -1168,8 +1231,10 @@ TEST_F(SMP_MasterPairingTest, Phase3MasterIdentificationReceivedTwice) {
 
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // Master starts encryption with LTK after receiving LTK, ediv, and rand.
@@ -1205,6 +1270,8 @@ TEST_F(SMP_MasterPairingTest, Phase3EncryptionWithLTKFails) {
 
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(1, pairing_complete_count());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // Pairing completes after obtaining encryption information only.
@@ -1238,7 +1305,9 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithEncKey) {
   // Pairing should succeed without notifying any keys.
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_TRUE(pairing_status());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 
   EXPECT_EQ(SecurityLevel::kEncrypted, sec_props().level());
   EXPECT_EQ(16u, sec_props().enc_key_size());
@@ -1272,14 +1341,17 @@ TEST_F(SMP_MasterPairingTest, Phase3IRKReceivedTwice) {
   // Waiting for identity address.
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Send an IRK again. This should cause pairing to fail.
   ReceiveIdentityResolvingKey(UInt128());
   RunLoopUntilIdle();
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // The slave sends its identity address before sending its IRK.
@@ -1292,6 +1364,7 @@ TEST_F(SMP_MasterPairingTest, Phase3IdentityAddressReceivedInWrongOrder) {
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
   EXPECT_EQ(0, pairing_data_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Send identity address before the IRK. This should cause pairing to fail.
   ReceiveIdentityAddress(kPeerAddr);
@@ -1299,8 +1372,10 @@ TEST_F(SMP_MasterPairingTest, Phase3IdentityAddressReceivedInWrongOrder) {
 
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 TEST_F(SMP_MasterPairingTest, Phase3IdentityAddressReceivedTwice) {
@@ -1314,6 +1389,7 @@ TEST_F(SMP_MasterPairingTest, Phase3IdentityAddressReceivedTwice) {
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
   EXPECT_EQ(0, pairing_data_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   ReceiveIdentityResolvingKey(UInt128());
   ReceiveIdentityAddress(kPeerAddr);
@@ -1322,8 +1398,10 @@ TEST_F(SMP_MasterPairingTest, Phase3IdentityAddressReceivedTwice) {
 
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 }
 
 // Pairing completes after obtaining identity information only.
@@ -1336,6 +1414,7 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithIdKey) {
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
   EXPECT_EQ(0, pairing_data_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   const UInt128 kIRK{{1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1, 0}};
 
@@ -1345,7 +1424,9 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithIdKey) {
 
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_TRUE(pairing_status());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 
   // The link remains encrypted with the STK.
   EXPECT_EQ(SecurityLevel::kEncrypted, sec_props().level());
@@ -1382,6 +1463,7 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithAllKeys) {
   // been made (the link should be encrypted with the STK).
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
   EXPECT_TRUE(fake_link()->ltk());
   EXPECT_NE(kLTK, fake_link()->ltk()->value());
   EXPECT_EQ(stk, fake_link()->ltk()->value());
@@ -1395,6 +1477,7 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithAllKeys) {
   // Pairing still pending. Encryption request with LTK should have been made.
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
   ASSERT_TRUE(fake_link()->ltk());
   EXPECT_EQ(kLTK, fake_link()->ltk()->value());
   EXPECT_EQ(kRand, fake_link()->ltk()->rand());
@@ -1409,7 +1492,9 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithAllKeys) {
   // Pairing should succeed without notifying any keys.
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_TRUE(pairing_status());
+  EXPECT_EQ(pairing_status(), pairing_complete_status());
 
   EXPECT_EQ(SecurityLevel::kEncrypted, sec_props().level());
   EXPECT_EQ(16u, sec_props().enc_key_size());
@@ -1442,6 +1527,7 @@ TEST_F(SMP_SlavePairingTest, ReceiveSecondPairingRequestWhilePairing) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // This should cause pairing to be aborted.
   ReceivePairingRequest();
@@ -1452,7 +1538,9 @@ TEST_F(SMP_SlavePairingTest, ReceiveSecondPairingRequestWhilePairing) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(received_error_code(), pairing_complete_status().protocol_error());
 }
 
 TEST_F(SMP_SlavePairingTest, ReceiveConfirmValueWhileWaitingForTK) {
@@ -1476,6 +1564,7 @@ TEST_F(SMP_SlavePairingTest, ReceiveConfirmValueWhileWaitingForTK) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Respond with the TK. This should cause us to send Sconfirm.
   respond(true, 0);
@@ -1484,6 +1573,7 @@ TEST_F(SMP_SlavePairingTest, ReceiveConfirmValueWhileWaitingForTK) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 }
 
 TEST_F(SMP_SlavePairingTest, LegacyPhase2ReceivePairingRandomInWrongOrder) {
@@ -1498,6 +1588,7 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ReceivePairingRandomInWrongOrder) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Master sends Mrand before Mconfirm.
   UInt128 random;
@@ -1509,7 +1600,10 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ReceivePairingRandomInWrongOrder) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+  EXPECT_EQ(ErrorCode::kUnspecifiedReason,
+            pairing_complete_status().protocol_error());
 }
 
 TEST_F(SMP_SlavePairingTest, LegacyPhase2MasterConfirmValueInvalid) {
@@ -1524,6 +1618,7 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2MasterConfirmValueInvalid) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Set up values that don't match.
   UInt128 confirm, random;
@@ -1540,6 +1635,7 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2MasterConfirmValueInvalid) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Master sends Mrand that doesn't match. Slave should reject the pairing
   // without sending Srand.
@@ -1551,7 +1647,10 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2MasterConfirmValueInvalid) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(1, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(ErrorCode::kConfirmValueFailed, received_error_code());
+  EXPECT_EQ(ErrorCode::kConfirmValueFailed,
+            pairing_complete_status().protocol_error());
 }
 
 TEST_F(SMP_SlavePairingTest, LegacyPhase2ConfirmValuesExchanged) {
@@ -1566,6 +1665,7 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ConfirmValuesExchanged) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Set up Sconfirm and Srand values that match.
   UInt128 confirm, random;
@@ -1582,6 +1682,7 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ConfirmValuesExchanged) {
   EXPECT_EQ(0, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Master sends Mrand.
   ReceivePairingRandom(random);
@@ -1594,6 +1695,7 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ConfirmValuesExchanged) {
   EXPECT_EQ(1, pairing_random_count());
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(0, pairing_complete_count());
 
   // Slave's Sconfirm/Srand should be correct.
   UInt128 expected_confirm;

@@ -53,6 +53,9 @@ class PairingState final : public Bearer::Listener {
     virtual void OnTemporaryKeyRequest(PairingMethod method,
                                        TkResponse response) = 0;
 
+    // Called when an ongoing pairing is completed with the given |status|.
+    virtual void OnPairingComplete(Status status) = 0;
+
     // Called when new pairing data has been obtained for this peer.
     virtual void OnNewPairingData(
         const common::Optional<LTK>& ltk, const common::Optional<Key>& irk,
