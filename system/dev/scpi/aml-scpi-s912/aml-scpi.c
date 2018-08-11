@@ -2,45 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
-#include <ddk/protocol/scpi.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
+#include <zircon/device/thermal.h>
 #include "aml-scpi.h"
 #include "aml-mailbox.h"
 
-static scpi_opp_t *scpi_opp[MAX_DVFS_DOMAINS];
+static scpi_opp_t* scpi_opp[MAX_DVFS_DOMAINS];
 
 static zx_status_t aml_scpi_get_mailbox(uint32_t cmd,
-                                    uint32_t *mailbox) {
+                                        uint32_t* mailbox) {
     if (!mailbox || !VALID_CMD(cmd)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    for (uint32_t i=0; i<countof(aml_low_priority_cmds); i++) {
+    for (uint32_t i = 0; i < countof(aml_low_priority_cmds); i++) {
         if (cmd == aml_low_priority_cmds[i]) {
             *mailbox = AP_NS_LOW_PRIORITY_MAILBOX;
             return ZX_OK;
         }
     }
 
-    for (uint32_t i=0; i<countof(aml_high_priority_cmds); i++) {
+    for (uint32_t i = 0; i < countof(aml_high_priority_cmds); i++) {
         if (cmd == aml_high_priority_cmds[i]) {
             *mailbox = AP_NS_HIGH_PRIORITY_MAILBOX;
             return ZX_OK;
         }
     }
 
-    for (uint32_t i=0; i<countof(aml_secure_cmds); i++) {
+    for (uint32_t i = 0; i < countof(aml_secure_cmds); i++) {
         if (cmd == aml_secure_cmds[i]) {
             *mailbox = AP_SECURE_MAILBOX;
             return ZX_OK;
@@ -56,9 +56,9 @@ static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
                                         uint32_t cmd, uint32_t client_id) {
     uint32_t mailbox_status = 0;
     mailbox_data_buf_t mdata;
-    mdata.cmd             = PACK_SCPI_CMD(cmd, client_id, 0);
-    mdata.tx_buf          = tx_buf;
-    mdata.tx_size         = tx_size;
+    mdata.cmd = PACK_SCPI_CMD(cmd, client_id, 0);
+    mdata.tx_buf = tx_buf;
+    mdata.tx_size = tx_size;
 
     mailbox_channel_t channel;
     zx_status_t status = aml_scpi_get_mailbox(cmd, &channel.mailbox);
@@ -67,7 +67,7 @@ static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
         return status;
     }
 
-    channel.rx_buf  = rx_buf;
+    channel.rx_buf = rx_buf;
     channel.rx_size = rx_size;
 
     status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
@@ -85,11 +85,11 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
     aml_scpi_t* scpi = ctx;
     zx_status_t status;
     struct {
-        uint32_t                status;
-        uint8_t                 reserved;
-        uint8_t                 operating_points;
-        uint16_t                latency;
-        scpi_opp_entry_t        opp[MAX_DVFS_OPPS];
+        uint32_t status;
+        uint8_t reserved;
+        uint8_t operating_points;
+        uint16_t latency;
+        scpi_opp_entry_t opp[MAX_DVFS_OPPS];
     } __PACKED aml_dvfs_info;
 
     if (!opps || power_domain >= MAX_DVFS_DOMAINS) {
@@ -106,15 +106,15 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
     }
 
     status = aml_scpi_execute_cmd(scpi,
-                                              &aml_dvfs_info, sizeof(aml_dvfs_info),
-                                              &power_domain, sizeof(power_domain),
-                                              SCPI_CMD_GET_DVFS_INFO, SCPI_CL_DVFS);
+                                  &aml_dvfs_info, sizeof(aml_dvfs_info),
+                                  &power_domain, sizeof(power_domain),
+                                  SCPI_CMD_GET_DVFS_INFO, SCPI_CL_DVFS);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    opps->count         = aml_dvfs_info.operating_points;
-    opps->latency       = aml_dvfs_info.latency;
+    opps->count = aml_dvfs_info.operating_points;
+    opps->latency = aml_dvfs_info.latency;
 
     if (opps->count > MAX_DVFS_OPPS) {
         SCPI_ERROR("Number of operating_points greater than MAX_DVFS_OPPS\n");
@@ -126,12 +126,12 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
     zxlogf(INFO, "Number of operating_points %u\n", aml_dvfs_info.operating_points);
     zxlogf(INFO, "latency %u uS\n", aml_dvfs_info.latency);
 
-    for (uint32_t i=0; i<opps->count; i++) {
+    for (uint32_t i = 0; i < opps->count; i++) {
         opps->opp[i].freq_hz = aml_dvfs_info.opp[i].freq_hz;
         opps->opp[i].volt_mv = aml_dvfs_info.opp[i].volt_mv;
         zxlogf(INFO, "Operating point %d - ", i);
-        zxlogf(INFO, "Freq %.4f Ghz ", (opps->opp[i].freq_hz)/(double)1000000000);
-        zxlogf(INFO, "Voltage %.4f V\n", (opps->opp[i].volt_mv)/(double)1000);
+        zxlogf(INFO, "Freq %.4f Ghz ", (opps->opp[i].freq_hz) / (double)1000000000);
+        zxlogf(INFO, "Voltage %.4f V\n", (opps->opp[i].volt_mv) / (double)1000);
     }
 
     scpi_opp[power_domain] = calloc(1, sizeof(scpi_opp_t));
@@ -148,7 +148,7 @@ fail:
     return status;
 }
 
-static zx_status_t aml_scpi_get_dvfs_idx(void *ctx, uint8_t power_domain, uint16_t* idx) {
+static zx_status_t aml_scpi_get_dvfs_idx(void* ctx, uint8_t power_domain, uint16_t* idx) {
     aml_scpi_t* scpi = ctx;
     struct {
         uint32_t status;
@@ -173,7 +173,7 @@ static zx_status_t aml_scpi_get_dvfs_idx(void *ctx, uint8_t power_domain, uint16
     return ZX_OK;
 }
 
-static zx_status_t aml_scpi_set_dvfs_idx(void *ctx, uint8_t power_domain, uint16_t idx) {
+static zx_status_t aml_scpi_set_dvfs_idx(void* ctx, uint8_t power_domain, uint16_t idx) {
     aml_scpi_t* scpi = ctx;
     struct {
         uint8_t power_domain;
@@ -184,8 +184,8 @@ static zx_status_t aml_scpi_set_dvfs_idx(void *ctx, uint8_t power_domain, uint16
         return ZX_ERR_INVALID_ARGS;
     }
 
-    aml_dvfs_idx_info.power_domain  = power_domain;
-    aml_dvfs_idx_info.idx           = idx;
+    aml_dvfs_idx_info.power_domain = power_domain;
+    aml_dvfs_idx_info.idx = idx;
 
     SCPI_INFO("OPP index for cluster %d to %d\n", power_domain, idx);
     return aml_scpi_execute_cmd(scpi,
@@ -195,7 +195,7 @@ static zx_status_t aml_scpi_set_dvfs_idx(void *ctx, uint8_t power_domain, uint16
 }
 
 static zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
-                                      uint32_t* sensor_value) {
+                                             uint32_t* sensor_value) {
     aml_scpi_t* scpi = ctx;
     struct {
         uint32_t status;
@@ -218,7 +218,7 @@ static zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
 }
 
 static zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
-                                uint32_t* sensor_value) {
+                                       uint32_t* sensor_value) {
     aml_scpi_t* scpi = ctx;
     struct {
         uint32_t status;
@@ -246,7 +246,7 @@ static zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
     }
 
     // Loop through all the sensors
-    for (uint32_t sensor_id=0; sensor_id<aml_sensor_cap.num_sensors; sensor_id++) {
+    for (uint32_t sensor_id = 0; sensor_id < aml_sensor_cap.num_sensors; sensor_id++) {
 
         status = aml_scpi_execute_cmd(scpi,
                                       &aml_sensor_info, sizeof(aml_sensor_info),
@@ -274,23 +274,23 @@ static zx_protocol_device_t aml_scpi_device_protocol = {
 };
 
 static scpi_protocol_ops_t scpi_ops = {
-    .get_sensor         = aml_scpi_get_sensor,
-    .get_sensor_value   = aml_scpi_get_sensor_value,
-    .get_dvfs_info      = aml_scpi_get_dvfs_info,
-    .get_dvfs_idx       = aml_scpi_get_dvfs_idx,
-    .set_dvfs_idx       = aml_scpi_set_dvfs_idx,
+    .get_sensor = aml_scpi_get_sensor,
+    .get_sensor_value = aml_scpi_get_sensor_value,
+    .get_dvfs_info = aml_scpi_get_dvfs_info,
+    .get_dvfs_idx = aml_scpi_get_dvfs_idx,
+    .set_dvfs_idx = aml_scpi_set_dvfs_idx,
 };
 
 static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
-    aml_scpi_t *scpi = calloc(1, sizeof(aml_scpi_t));
+    aml_scpi_t* scpi = calloc(1, sizeof(aml_scpi_t));
     if (!scpi) {
         return ZX_ERR_NO_MEMORY;
     }
 
     status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &scpi->pdev);
-    if (status !=  ZX_OK) {
+    if (status != ZX_OK) {
         SCPI_ERROR("Could not get parent protocol\n");
         goto fail;
     }
@@ -319,7 +319,7 @@ static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
     mtx_init(&scpi->lock, mtx_plain);
     platform_bus_protocol_t pbus;
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
-        SCPI_ERROR("ZX_PROTOCOL_PLATFORM_BUS not available %d \n",status);
+        SCPI_ERROR("ZX_PROTOCOL_PLATFORM_BUS not available %d \n", status);
         goto fail;
     }
 
@@ -331,8 +331,8 @@ fail:
 }
 
 static zx_driver_ops_t aml_scpi_driver_ops = {
-    .version    = DRIVER_OPS_VERSION,
-    .bind       = aml_scpi_bind,
+    .version = DRIVER_OPS_VERSION,
+    .bind = aml_scpi_bind,
 };
 
 ZIRCON_DRIVER_BEGIN(aml_scpi, aml_scpi_driver_ops, "zircon", "0.1", 4)

@@ -10,6 +10,7 @@
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/mailbox.h>
+#include <ddk/protocol/scpi.h>
 #include <ddk/debug.h>
 
 #define SCPI_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)

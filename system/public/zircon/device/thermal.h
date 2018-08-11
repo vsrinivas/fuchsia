@@ -8,16 +8,17 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <ddk/protocol/scpi.h>
 
+#define MAX_TRIP_POINTS                      16
+#define MAX_DVFS_DOMAINS                     2
 // temperature units are in 10th of a degree kelvin
-
 typedef struct {
     // state is a bitmask
     uint32_t state;
     // trip points for below states are defined below
-#define THERMAL_STATE_NORMAL         0
-#define THERMAL_STATE_TRIP_VIOLATION 1
-#define BIG_CLUSTER_POWER_DOMAIN        0
-#define LITTLE_CLUSTER_POWER_DOMAIN     1
+#define THERMAL_STATE_NORMAL                 0
+#define THERMAL_STATE_TRIP_VIOLATION         1
+#define BIG_CLUSTER_POWER_DOMAIN             0
+#define LITTLE_CLUSTER_POWER_DOMAIN          1
 
     // the sensor temperature at which the system should activate
     // passive cooling policy
@@ -56,8 +57,17 @@ typedef struct {
     // number of trip points
     uint32_t num_trip_points;
 
-#define MAX_TRIP_POINTS             9
+    // big-little architecture
+    bool big_little;
+
+    // critical temperature
+    uint32_t critical_temp;
+
+    // trip point information
     thermal_temperature_info_t trip_point_info[MAX_TRIP_POINTS];
+
+    // opps information
+    scpi_opp_t opps[MAX_DVFS_DOMAINS];
 } thermal_device_info_t;
 
 typedef struct {

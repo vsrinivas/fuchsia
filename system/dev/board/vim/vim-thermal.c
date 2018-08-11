@@ -53,11 +53,12 @@ static const pbus_gpio_t fanctl_gpios[] = {
  * Operating point -1 - INVALID/No throttling needed
  */
 
-static aml_thermal_config_t aml_vim2_config = {
+static thermal_device_info_t aml_vim2_config = {
     .active_cooling                 = true,
     .passive_cooling                = true,
     .gpu_throttling                 = true,
-    .trip_point_count               = 8,
+    .big_little                     = true,
+    .num_trip_points                = 8,
     .critical_temp                  = 81,
     .trip_point_info = {
         {

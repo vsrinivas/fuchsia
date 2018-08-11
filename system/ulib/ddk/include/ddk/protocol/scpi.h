@@ -8,7 +8,6 @@
 #include <zircon/types.h>
 
 #define MAX_DVFS_OPPS       16
-#define MAX_DVFS_DOMAINS    3
 
 __BEGIN_CDECLS;
 

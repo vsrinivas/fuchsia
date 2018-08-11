@@ -18,28 +18,11 @@
 #define THERMAL_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define THERMAL_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define MAX_TRIP_POINTS                 9
-
 // GPIO Indexes
 enum {
     FAN_CTL0,
     FAN_CTL1,
 };
-
-typedef struct {
-    scpi_opp_t                          opps[MAX_DVFS_DOMAINS];
-
-    uint32_t                            temp_sensor_id;
-
-    uint32_t                            trip_point_count;
-    thermal_temperature_info_t          trip_point_info[MAX_TRIP_POINTS];
-
-    uint32_t                            critical_temp;
-
-    bool                                active_cooling;
-    bool                                passive_cooling;
-    bool                                gpu_throttling;
-} aml_thermal_config_t;
 
 typedef struct {
     zx_device_t*                        zxdev;
@@ -52,7 +35,9 @@ typedef struct {
 
     thrd_t                              notify_thread;
 
-    aml_thermal_config_t                *device;
+    thermal_device_info_t               *device;
+
+    uint32_t                            temp_sensor_id;
 
     uint32_t                            current_trip_idx;
     uint32_t                            current_temperature;

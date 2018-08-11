@@ -70,7 +70,7 @@ static int aml_thermal_notify_thread(void* ctx) {
 
     while (true) {
         status = scpi_get_sensor_value(&dev->scpi,
-                                       dev->device->temp_sensor_id,
+                                       dev->temp_sensor_id,
                                        &temperature);
         if (status != ZX_OK) {
             THERMAL_ERROR("Unable to get thermal sensor value: Thermal disabled\n");
@@ -83,20 +83,20 @@ static int aml_thermal_notify_thread(void* ctx) {
         uint32_t idx = dev->current_trip_idx;
         bool signal = true;
 
-        if ((idx != dev->device->trip_point_count - 1) &&
+        if ((idx != dev->device->num_trip_points - 1) &&
             (temperature >= dev->device->trip_point_info[idx + 1].up_temp)) {
             // Triggered next trip point
             dev->current_trip_idx = idx + 1;
         } else if (idx != 0 && temperature < dev->device->trip_point_info[idx].down_temp) {
             // Triggered prev trip point
             dev->current_trip_idx = idx - 1;
-            if (idx == dev->device->trip_point_count - 1) {
+            if (idx == dev->device->num_trip_points - 1) {
                 // A prev trip point triggered, so the temperature
                 // is falling down below the critical temperature
                 // make a note of that
                 critical_temp_measure_taken = false;
             }
-        } else if ((idx == dev->device->trip_point_count - 1) &&
+        } else if ((idx == dev->device->num_trip_points - 1) &&
                    (temperature >= dev->device->critical_temp) &&
                    critical_temp_measure_taken != true) {
             // The device temperature is crossing the critical
@@ -157,12 +157,7 @@ static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
 
 static void aml_thermal_get_device_info(aml_thermal_t* dev,
                                         thermal_device_info_t* info) {
-    info->active_cooling = dev->device->active_cooling;
-    info->passive_cooling = dev->device->passive_cooling;
-    info->gpu_throttling = dev->device->gpu_throttling;
-    info->num_trip_points = dev->device->trip_point_count;
-    memcpy(&info->trip_point_info, &dev->device->trip_point_info,
-           sizeof(dev->device->trip_point_info));
+    memcpy(info, dev->device, sizeof(thermal_device_info_t));
 }
 
 static zx_status_t aml_thermal_get_state_change_port(aml_thermal_t* dev,
@@ -331,7 +326,7 @@ static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
     }
 
     // Populate thermal sensor info
-    status = scpi_get_sensor(&thermal->scpi, "aml_thermal", &thermal->device->temp_sensor_id);
+    status = scpi_get_sensor(&thermal->scpi, "aml_thermal", &thermal->temp_sensor_id);
     if (status != ZX_OK) {
         THERMAL_ERROR("Unable to get thermal sensor information: Thermal disabled\n");
         return status;
@@ -366,14 +361,14 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Populate board specific information
-    aml_thermal_config_t* dev_config = calloc(1, sizeof(aml_thermal_config_t));
+    thermal_device_info_t* dev_config = calloc(1, sizeof(thermal_device_info_t));
     if (!dev_config) {
         return ZX_ERR_NO_MEMORY;
     }
     size_t actual;
     status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE,
-                                 dev_config, sizeof(aml_thermal_config_t), &actual);
-    if (status != ZX_OK || actual != sizeof(aml_thermal_config_t)) {
+                                 dev_config, sizeof(thermal_device_info_t), &actual);
+    if (status != ZX_OK || actual != sizeof(thermal_device_info_t)) {
         THERMAL_ERROR("Could not get metadata\n");
         goto fail;
     }
