@@ -19,7 +19,7 @@ extern crate futures;
 
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{ClientEnd, ServiceMarker};
+use fidl::endpoints2::{ClientEnd, RequestStream, ServiceMarker};
 use futures::future::ok as fok;
 use futures::prelude::Never;
 use futures::Future;
@@ -30,9 +30,9 @@ use std::collections::HashSet;
 use std::collections::{vec_deque, VecDeque};
 use std::sync::Arc;
 
-use fidl_fuchsia_logger::{Log, LogFilterOptions, LogImpl, LogLevelFilter, LogListenerMarker,
-                          LogListenerProxy, LogMarker, LogMessage, LogSink, LogSinkImpl,
-                          LogSinkMarker};
+use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogListenerMarker, LogListenerProxy,
+                          LogMarker, LogMessage, LogRequest, LogRequestStream, LogSinkMarker,
+                          LogSinkRequest, LogSinkRequestStream};
 
 mod klogger;
 mod logger;
@@ -184,7 +184,7 @@ fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMess
 }
 
 fn log_manager_helper(
-    state: &mut LogManager, log_listener: ClientEnd<LogListenerMarker>,
+    state: &LogManager, log_listener: ClientEnd<LogListenerMarker>,
     options: Option<Box<LogFilterOptions>>, dump_logs: bool,
 ) -> impl Future<Item = (), Error = Never> {
     let ll = match log_listener.into_proxy() {
@@ -261,17 +261,24 @@ fn log_manager_helper(
 }
 
 fn spawn_log_manager(state: LogManager, chan: async::Channel) {
+    let state = Arc::new(state);
     async::spawn(
-        LogImpl {
-            state,
-            on_open: |_, _| fok(()),
-            dump_logs: |state, log_listener, options, _controller| {
-                log_manager_helper(state, log_listener, options, true)
-            },
-            listen: |state, log_listener, options, _controller| {
-                log_manager_helper(state, log_listener, options, false)
-            },
-        }.serve(chan)
+        LogRequestStream::from_channel(chan)
+            .for_each(move |req| {
+                let state = state.clone();
+                match req {
+                    LogRequest::Listen {
+                        log_listener,
+                        options,
+                        ..
+                    } => log_manager_helper(&state, log_listener, options, false),
+                    LogRequest::DumpLogs {
+                        log_listener,
+                        options,
+                        ..
+                    } => log_manager_helper(&state, log_listener, options, true),
+                }.map_err(|e| e.never_into())
+            }).map(|_| ())
             .recover(|e| eprintln!("Log manager failed: {:?}", e)),
     )
 }
@@ -283,33 +290,37 @@ fn process_log(shared_members: Arc<Mutex<LogManagerShared>>, mut log_msg: LogMes
 }
 
 fn spawn_log_sink(state: LogManager, chan: async::Channel) {
+    let state = Arc::new(state);
     async::spawn(
-        LogSinkImpl {
-            state,
-            on_open: |_, _| fok(()),
-            connect: |state, socket, _controller| {
-                let ls = match logger::LoggerStream::new(socket) {
-                    Err(e) => {
-                        eprintln!("Logger: Failed to create tokio socket: {:?}", e);
-                        // TODO: close channel
-                        return fok(());
+        LogSinkRequestStream::from_channel(chan)
+            .for_each(move |req| {
+                let state = state.clone();
+                match req {
+                    LogSinkRequest::Connect { socket, .. } => {
+                        let ls = match logger::LoggerStream::new(socket) {
+                            Err(e) => {
+                                eprintln!("Logger: Failed to create tokio socket: {:?}", e);
+                                // TODO: close channel
+                                return fok(());
+                            }
+                            Ok(ls) => ls,
+                        };
+
+                        let shared_members = state.shared_members.clone();
+                        let f = ls
+                            .for_each(move |(log_msg, size)| {
+                                process_log(shared_members.clone(), log_msg, size);
+                                Ok(())
+                            }).map(|_s| ());
+
+                        async::spawn(f.recover(|e| {
+                            eprintln!("Logger: Stream failed {:?}", e);
+                        }));
+
+                        fok(())
                     }
-                    Ok(ls) => ls,
-                };
-
-                let shared_members = state.shared_members.clone();
-                let f = ls.for_each(move |(log_msg, size)| {
-                    process_log(shared_members.clone(), log_msg, size);
-                    Ok(())
-                }).map(|_s| ());
-
-                async::spawn(f.recover(|e| {
-                    eprintln!("Logger: Stream failed {:?}", e);
-                }));
-
-                fok(())
-            },
-        }.serve(chan)
+                }
+            }).map(|_| ())
             .recover(|e| eprintln!("Log sink failed: {:?}", e)),
     )
 }
@@ -362,8 +373,8 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     use fidl::encoding2::OutOfLine;
-    use fidl_fuchsia_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker,
-                              LogProxy, LogSinkProxy};
+    use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerRequest,
+                              LogListenerRequestStream, LogProxy, LogSinkProxy};
     use logger::fx_log_packet_t;
     use zx::prelude::*;
 
@@ -460,32 +471,36 @@ mod tests {
     }
 
     fn spawn_log_listener(ll: LogListenerState, chan: async::Channel) {
+        let state = Arc::new(Mutex::new(ll));
         async::spawn(
-            LogListenerImpl {
-                state: ll,
-                on_open: |_, _| fok(()),
-                done: |ll, _| {
-                    println!("DEBUG: {}: done called", ll.test_name);
-                    ll.closed.store(true, Ordering::Relaxed);
-                    fok(())
-                },
-                log: |ll, msg, _controller| {
-                    println!("DEBUG: {}: log called", ll.test_name);
-                    ll.log(msg);
-                    fok(())
-                },
-                log_many: |ll, msgs, _controller| {
-                    println!(
-                        "DEBUG: {}: logMany called, msgs.len(): {}",
-                        ll.test_name,
-                        msgs.len()
-                    );
-                    for msg in msgs {
-                        ll.log(msg);
+            LogListenerRequestStream::from_channel(chan)
+                .for_each(move |req| {
+                    let state = state.clone();
+                    let mut state = state.lock();
+                    match req {
+                        LogListenerRequest::Log { log, .. } => {
+                            println!("DEBUG: {}: log called", state.test_name);
+                            state.log(log);
+                            fok(())
+                        }
+                        LogListenerRequest::LogMany { log, .. } => {
+                            println!(
+                                "DEBUG: {}: logMany called, msgs.len(): {}",
+                                state.test_name,
+                                log.len()
+                            );
+                            for msg in log {
+                                state.log(msg);
+                            }
+                            fok(())
+                        }
+                        LogListenerRequest::Done { .. } => {
+                            println!("DEBUG: {}: done called", state.test_name);
+                            state.closed.store(true, Ordering::Relaxed);
+                            fok(())
+                        }
                     }
-                    fok(())
-                },
-            }.serve(chan)
+                }).map(|_| ())
                 .recover(|e| panic!("test fail {:?}", e)),
         )
     }
