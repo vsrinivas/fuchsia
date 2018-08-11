@@ -133,7 +133,8 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
 // out_md - SHA256_DIGEST_LENGTH bytes long
-void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+void use_aac_decoder(async_dispatcher_t* codec_factory_dispatcher,
+                     fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      const std::string& input_adts_file,
                      const std::string& output_wav_file, uint8_t* out_md) {
   memset(out_md, 0, SHA256_DIGEST_LENGTH);
@@ -242,19 +243,48 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   // CodecClient in advance of the channel potentially being closed.
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(&loop);
-  VLOGF("before codec_factory->CreateAudioDecoder().\n");
-  // TODO(dustingreen): Before calling the CodecFactory proxy, we should post to
-  // the same dispatcher as is used for that proxy's binding, but currently we
-  // don't.
-  codec_factory->CreateDecoder(std::move(create_params),
-                               codec_client.GetTheRequestOnce());
+  async::PostTask(
+      codec_factory_dispatcher,
+      [&codec_factory, create_params = std::move(create_params),
+       codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
+        VLOGF("before codec_factory->CreateDecoder() (async)\n");
+        codec_factory->CreateDecoder(std::move(create_params),
+                                     std::move(codec_client_request));
+      });
   VLOGF("before codec_client.Start()...\n");
+  // This does a Sync(), so after this we can drop the CodecFactory without it
+  // potentially cancelling our Codec create.
   codec_client.Start();
 
   // We don't need the CodecFactory any more, and at this point any Codec
   // creation errors have had a chance to arrive via the
   // codec_factory.set_error_handler() lambda.
-  codec_factory.Unbind();
+  //
+  // Unbind() is only safe to call on the interfaces's dispatcher thread.  We
+  // also want to block the current thread until this is done, to avoid
+  // codec_factory potentially disapearing before this posted work finishes.
+  std::mutex unbind_mutex;
+  std::condition_variable unbind_done_condition;
+  bool unbind_done = false;
+  async::PostTask(
+      codec_factory_dispatcher,
+      [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
+        codec_factory.Unbind();
+        {  // scope lock
+          std::lock_guard<std::mutex> lock(unbind_mutex);
+          unbind_done = true;
+        }  // ~lock
+        unbind_done_condition.notify_all();
+        // All of codec_factory, unbind_mutex, unbind_done,
+        // unbind_done_condition are potentially gone by this point.
+      });
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(unbind_mutex);
+    while (!unbind_done) {
+      unbind_done_condition.wait(lock);
+    }
+  }  // ~lock
+  FXL_DCHECK(unbind_done);
 
   // We use a seprarate thread to provide input data, separate thread for output
   // data, and a separate FIDL thread (started above).  This is to avoid the

@@ -29,7 +29,8 @@
 //     non-empty, output audio data to the specified wav file.  When used as
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
-void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+void use_aac_decoder(async_dispatcher_t* codec_factory_dispatcher,
+                     fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      const std::string& input_adts_file,
                      const std::string& output_wav_file,
                      uint8_t out_md[SHA256_DIGEST_LENGTH]);

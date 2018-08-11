@@ -83,7 +83,8 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
 
 }  // namespace
 
-void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
+                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       const std::string& input_file,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
@@ -103,13 +104,6 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
       read_whole_file(input_file.c_str(), &input_size);
   VLOGF("done reading h264 file.\n");
 
-  // TODO(dustingreen): Do this before binding the codec_factory.
-  codec_factory.set_error_handler([] {
-    // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
-    // possible.
-    LOGF("codec_factory failed - unexpected\n");
-  });
-
   // Since the .h264 file has SPS + PPS NALs in addition to frame NALs, we don't
   // use codec_oob_bytes for this stream.
   //
@@ -119,21 +113,57 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
 
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(&loop);
-  VLOGF("before codec_factory->CreateDecoder().\n");
-  // TODO(dustingreen): Do this from codec_factory's FIDL thread.
-  codec_factory->CreateDecoder(
-      fuchsia::mediacodec::CreateDecoder_Params{
-          .input_details.format_details_version_ordinal = 0,
-          .input_details.mime_type = "video/h264",
-          // This is required for timestamp_ish values to transit the Codec.
-          .promise_separate_access_units_on_input = true,
-      },
-      codec_client.GetTheRequestOnce());
+
+  async::PostTask(
+      codec_factory_dispatcher,
+      [&codec_factory,
+       codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
+        VLOGF("before codec_factory->CreateDecoder() (async)\n");
+        codec_factory->CreateDecoder(
+            fuchsia::mediacodec::CreateDecoder_Params{
+                .input_details.format_details_version_ordinal = 0,
+                .input_details.mime_type = "video/h264",
+                // This is required for timestamp_ish values to transit the
+                // Codec.
+                .promise_separate_access_units_on_input = true,
+            },
+            std::move(codec_client_request));
+      });
+
   VLOGF("before codec_client.Start()...\n");
+  // This does a Sync(), so after this we can drop the CodecFactory without it
+  // potentially cancelling our Codec create.
   codec_client.Start();
 
-  // TODO(dustingreen): Do this from use_h264_decoder_loop thread.
-  codec_factory.Unbind();
+  // We don't need the CodecFactory any more, and at this point any Codec
+  // creation errors have had a chance to arrive via the
+  // codec_factory.set_error_handler() lambda.
+  //
+  // Unbind() is only safe to call on the interfaces's dispatcher thread.  We
+  // also want to block the current thread until this is done, to avoid
+  // codec_factory potentially disapearing before this posted work finishes.
+  std::mutex unbind_mutex;
+  std::condition_variable unbind_done_condition;
+  bool unbind_done = false;
+  async::PostTask(
+      codec_factory_dispatcher,
+      [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
+        codec_factory.Unbind();
+        {  // scope lock
+          std::lock_guard<std::mutex> lock(unbind_mutex);
+          unbind_done = true;
+        }  // ~lock
+        unbind_done_condition.notify_all();
+        // All of codec_factory, unbind_mutex, unbind_done,
+        // unbind_done_condition are potentially gone by this point.
+      });
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(unbind_mutex);
+    while (!unbind_done) {
+      unbind_done_condition.wait(lock);
+    }
+  }  // ~lock
+  FXL_DCHECK(unbind_done);
 
   VLOGF("before starting in_thread...\n");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(

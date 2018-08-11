@@ -50,8 +50,8 @@ CodecFactoryImpl::CodecFactoryImpl(CodecFactoryApp* app,
 // TODO(dustingreen): Seems simpler to avoid channel_temp_ and OwnSelf() and
 // just have CreateSelfOwned() directly create the binding.
 void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
-  binding_ =
-      std::make_unique<BindingType>(std::move(self), std::move(channel_temp_));
+  binding_ = std::make_unique<BindingType>(
+      std::move(self), std::move(channel_temp_), app_->loop()->dispatcher());
 }
 
 void CodecFactoryImpl::CreateDecoder(
@@ -76,6 +76,13 @@ void CodecFactoryImpl::CreateDecoder(
   if (factory) {
     // prefer HW-accelerated
     (*factory)->CreateDecoder(std::move(params), std::move(decoder));
+    return;
+  }
+
+  if (params.require_hw) {
+    printf("require_hw, but no matching HW decoder factory found; closing\n");
+    // TODO(dustingreen): Send epitaph when possible.
+    // ~decoder
     return;
   }
 
@@ -109,16 +116,16 @@ void CodecFactoryImpl::CreateDecoder(
   // implementation that clients use directly.
   factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
 
-  // We don't want to be forced to keep app_controller around.  When using an
-  // isolate, we trust that the ApplicationController will kill the app if we
-  // crash before this point, as this process crashing will kill the server
-  // side of the app_controller.  If we crash after this point, we trust that
-  // the isolate will receive the CreateAudioDecoder() message sent just above,
-  // and will either exit on failure to create the Codec server-side, or will
-  // exit later when the client side of the Codec channel closes, or will exit
-  // later when the Codec fails asynchronously in whatever way.  Essentially the
-  // Codec channel owns the isolate at this point, and we trust the isolate to
-  // exit when the Codec channel closes.
+  // We don't want to be forced to keep component_controller around.  When using
+  // an isolate, we trust that the ComponentController will kill the app if we
+  // crash before this point, as this process crashing will kill the server side
+  // of the component_controller.  If we crash after this point, we trust that
+  // the isolate will receive the CreateDecoder() message sent just above, and
+  // will either exit on failure to create the Codec server-side, or will exit
+  // later when the client side of the Codec channel closes, or will exit later
+  // when the Codec fails asynchronously in whatever way. Essentially the Codec
+  // channel owns the isolate at this point, and we trust the isolate to exit
+  // when the Codec channel closes.
   //
   // TODO(dustingreen): Double-check the above description with someone who is
   // likely to be more sure that this is plausible and reasonable for now.

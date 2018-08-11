@@ -11,6 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
+#include <lib/fxl/logging.h>
 
 void usage(const char* prog_name) {
   printf("usage: %s (--aac_adts|--h264) <input_file> [<output_file>]\n",
@@ -29,11 +30,18 @@ int main(int argc, char* argv[]) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   main_loop.StartThread("FIDL_thread");
 
+  fuchsia::mediacodec::CodecFactoryPtr codec_factory;
+  codec_factory.set_error_handler([] {
+    // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
+    // possible.
+    FXL_LOG(ERROR) << "codec_factory failed - unexpected";
+  });
+
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
-  fuchsia::mediacodec::CodecFactoryPtr codec_factory =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();
+  startup_context
+      ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
+          codec_factory.NewRequest());
 
   std::string input_file = command_line.positional_args()[0];
   std::string output_file;
@@ -44,10 +52,11 @@ int main(int argc, char* argv[]) {
   uint8_t md[SHA256_DIGEST_LENGTH];
 
   if (command_line.HasOption("aac_adts")) {
-    use_aac_decoder(std::move(codec_factory), input_file, output_file, md);
+    use_aac_decoder(main_loop.dispatcher(), std::move(codec_factory),
+                    input_file, output_file, md);
   } else if (command_line.HasOption("h264")) {
-    use_h264_decoder(std::move(codec_factory), input_file, output_file, md,
-                     nullptr);
+    use_h264_decoder(main_loop.dispatcher(), std::move(codec_factory),
+                     input_file, output_file, md, nullptr);
   } else {
     usage(command_line.argv0().c_str());
     return -1;

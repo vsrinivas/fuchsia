@@ -45,6 +45,7 @@ CodecClient::CodecClient(async::Loop* loop)
   // Only one request is ever created, so we create it in the constructor to
   // avoid needing any manual enforcement that we only do this once.
   temp_codec_request_ = codec_.NewRequest(loop_->dispatcher());
+
   // We treat event setup as much as possible like a hidden part of creating the
   // CodecPtr.  If NewBinding() has !is_valid(), we rely on the Codec server to
   // close the Codec channel async.

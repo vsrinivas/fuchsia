@@ -12,8 +12,7 @@
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  codec_factory::CodecFactoryApp app(
-      component::StartupContext::CreateFromStartupInfo(), &loop);
+  codec_factory::CodecFactoryApp app(&loop);
 
   loop.Run();
 

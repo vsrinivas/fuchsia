@@ -34,11 +34,18 @@ int main(int argc, char* argv[]) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   main_loop.StartThread("FIDL_thread");
 
+  fuchsia::mediacodec::CodecFactoryPtr codec_factory;
+  codec_factory.set_error_handler([] {
+    // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
+    // possible.
+    FXL_LOG(ERROR) << "codec_factory failed - unexpected";
+  });
+
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
-  fuchsia::mediacodec::CodecFactoryPtr codec_factory =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();
+  startup_context
+      ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
+          codec_factory.NewRequest());
 
   printf("The test file is: %s\n", kInputFilePath);
   printf("The expected sha256 is: %s\n", kGoldenSha256);
@@ -46,8 +53,8 @@ int main(int argc, char* argv[]) {
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   std::vector<std::pair<bool, uint64_t>> timestamps;
-  use_h264_decoder(std::move(codec_factory), kInputFilePath, "", md,
-                   &timestamps);
+  use_h264_decoder(main_loop.dispatcher(), std::move(codec_factory),
+                   kInputFilePath, "", md, &timestamps);
 
   std::set<uint64_t> expected_timestamps;
   for (uint64_t i = 0; i < 30; i++) {

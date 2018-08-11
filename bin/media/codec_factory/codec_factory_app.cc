@@ -17,16 +17,26 @@ namespace codec_factory {
 
 namespace {}  // namespace
 
-CodecFactoryApp::CodecFactoryApp(
-    std::unique_ptr<component::StartupContext> startup_context,
-    async::Loop* loop)
-    : startup_context_(std::move(startup_context)), loop_(loop) {
+CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   // TODO(dustingreen): Determine if this is useful and if we're holding it
   // right.
   trace::TraceProvider trace_provider(loop->dispatcher());
 
+  // We pump |loop| in here, so it's important that
+  // component::StartupContext::CreateFromStartupInfo() happen after
+  // DiscoverMediaCodecDrivers(), else the pumping of the loop will drop the
+  // incoming request for CodecFactory before AddServiceForName() below has had
+  // a chance to register for it.
   DiscoverMediaCodecDrivers();
 
+  // We delay doing this until we're completely ready to add services, because
+  // CreateFromStartupInfo() binds to |loop| implicitly, so we don't want any
+  // pumping of |loop| up to this point to drop service connection requests.
+  //
+  // It's fine that AddServiceForName() happens after CreateFromStartupInfo()
+  // only because |loop| doesn't have a separate thread, and the current thread
+  // won't pump |loop| until after AddServiceForName() is also done.
+  startup_context_ = component::StartupContext::CreateFromStartupInfo();
   startup_context_->outgoing_services()->AddServiceForName(
       [this](zx::channel request) {
         // The CodecFactoryImpl is self-owned and will self-delete when the
@@ -106,7 +116,7 @@ void CodecFactoryApp::DiscoverMediaCodecDrivers() {
                   << " mime_type: " << codec_description.mime_type;
     hw_codecs_.emplace_back(std::make_unique<CodecListEntry>(CodecListEntry{
         .description = std::move(codec_description),
-        .factory = codec_factory,
+        .factory = std::move(codec_factory),
     }));
   }
 

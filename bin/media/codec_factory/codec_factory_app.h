@@ -19,8 +19,7 @@ namespace codec_factory {
 // CodecFactoryApp is singleton per-process.
 class CodecFactoryApp {
  public:
-  CodecFactoryApp(std::unique_ptr<component::StartupContext> startup_context,
-                  async::Loop* loop);
+  CodecFactoryApp(async::Loop* loop);
 
   // The caller must only call this on the FIDL thread, and the returned * is
   // only valid for use until the caller returns from the caller's work on the
@@ -32,6 +31,8 @@ class CodecFactoryApp {
   const fuchsia::mediacodec::CodecFactoryPtr* FindHwDecoder(
       fit::function<bool(const fuchsia::mediacodec::CodecDescription&)>
           is_match);
+
+  async::Loop* loop() { return loop_; }
 
  private:
   struct CodecListEntry {

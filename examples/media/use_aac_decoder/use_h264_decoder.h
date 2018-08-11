@@ -33,7 +33,8 @@
 //     format details.
 // timestamps_out - out ordered <has_timestamp_ish, timestamp_ish> seen at the
 //     output of the decoder.
-void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
+                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       const std::string& input_file,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
