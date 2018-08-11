@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 # this has to match the binary name in examples/ui/Build.gn
+import("//build/package.gni")
 
 source_set("simple_camera_lib") {
   output_name = "simple_camera_lib"
@@ -9,6 +10,8 @@ source_set("simple_camera_lib") {
   sources = [
     "buffer.cc",
     "buffer.h",
+    "buffer_fence.cc",
+    "buffer_fence.h",
     "fake-camera-fidl.cc",
     "fake-camera-fidl.h",
     "fenced_buffer.cc",
@@ -41,5 +44,45 @@ source_set("simple_camera_lib") {
   include_dirs = [
     "//third_party/glm",
     "//lib",
+  ]
+}
+
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":simple_camera_unittests",
+  ]
+}
+
+executable("simple_camera_unittests") {
+  output_name = "simple_camera_unittests"
+
+  testonly = true
+
+  sources = [
+    "tests/buffer_fence_unittest.cc",
+  ]
+  deps = [
+    ":simple_camera_lib",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("camera_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  package_name = "simple_camera_unittests"
+
+  deps = [
+    "//garnet/lib/media/camera/simple_camera_lib:tests",
+  ]
+  tests = [
+    {
+      name = "simple_camera_unittests"
+    },
   ]
 }

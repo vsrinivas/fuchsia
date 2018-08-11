@@ -1,5 +1,6 @@
 {
     "packages": [
-        "//garnet/examples/camera/camera_client:example_camera_client"
+        "//garnet/examples/camera/camera_client:example_camera_client",
+        "//garnet/lib/media/camera/simple_camera_lib:camera_tests"
     ]
 }
