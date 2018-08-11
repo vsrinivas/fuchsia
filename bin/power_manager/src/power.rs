@@ -8,16 +8,16 @@ use self::libc::{int32_t, uint32_t};
 
 use async;
 use fdio::{self, fdio_sys};
-use futures::FutureExt;
 use futures::future::{loop_fn, Loop};
+use futures::FutureExt;
 use io::{self, Result};
 use std::fs::File;
 use std::marker::Send;
 use std::mem;
 use std::os::raw;
 use std::ptr;
-use zx::{self, Signals};
 use zx::sys::zx_handle_t;
+use zx::{self, Signals};
 
 const IOCTL_POWER_GET_INFO: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
@@ -129,7 +129,8 @@ where
         ).map_err(|e| e.into_io_error())?;
     };
     let h = unsafe { zx::Handle::from_raw(handle) };
-    let file_copy = file.try_clone()
+    let file_copy = file
+        .try_clone()
         .map_err(|e| io::Error::new(e.kind(), format!("error copying power device file: {}", e)))?;
 
     let f = loop_fn((callback, h, file_copy), |(callback, handle, file)| {

@@ -26,9 +26,9 @@ mod power;
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{RequestStream, ServiceMarker};
-use futures::StreamExt;
 use futures::future::ok as fok;
 use futures::prelude::*;
+use futures::StreamExt;
 use parking_lot::Mutex;
 use std::fs::File;
 use std::io;
@@ -36,8 +36,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 extern crate fidl_fuchsia_power;
-use fidl_fuchsia_power::{BatteryStatus, PowerManagerRequest, PowerManagerRequestStream, PowerManagerMarker,
-                         PowerManagerWatcherProxy, Status as power_status};
+use fidl_fuchsia_power::{BatteryStatus, PowerManagerMarker, PowerManagerRequest,
+                         PowerManagerRequestStream, PowerManagerWatcherProxy,
+                         Status as power_status};
 
 static POWER_DEVICE: &str = "/dev/class/power";
 
@@ -196,8 +197,7 @@ fn process_watch_event(
                     fx_log_err!("{}", e);
                 }
                 Ok(())
-            })
-            .map(|_| ());
+            }).map(|_| ());
 
         async::spawn(f);
     } else {
@@ -207,7 +207,7 @@ fn process_watch_event(
 }
 
 fn watch_power_device(
-    bsh: Arc<Mutex<BatteryStatusHelper>>
+    bsh: Arc<Mutex<BatteryStatusHelper>>,
 ) -> impl Future<Item = (), Error = Error> {
     File::open(POWER_DEVICE)
         .into_future()
@@ -215,8 +215,7 @@ fn watch_power_device(
         .and_then(|file| {
             vfs_watcher::Watcher::new(&file)
                 .map_err(|e| format_err!("error watching power device: {:?}", e))
-        })
-        .and_then(|watcher| {
+        }).and_then(|watcher| {
             let mut adapter_device_found = false;
             let mut battery_device_found = false;
             watcher
@@ -254,8 +253,7 @@ fn watch_power_device(
                         }
                     }
                     Ok(())
-                })
-                .map(|_s| ())
+                }).map(|_s| ())
                 .err_into()
         })
 }
@@ -289,9 +287,8 @@ fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
                         fok(())
                     }
                 }.into_future()
-            })
-            .map(|_| ())
-            .recover(|e| fx_log_err!("{:?}", e))
+            }).map(|_| ())
+            .recover(|e| fx_log_err!("{:?}", e)),
     )
 }
 
@@ -320,8 +317,7 @@ fn main_pm() -> Result<(), Error> {
                 battery_status_helper: bsh.clone(),
             };
             spawn_power_manager(pm, chan);
-        }))
-        .start()
+        })).start()
         .map_err(|e| e.context("starting service server"))?;
     Ok(executor.run(server_fut, 2).context("running server")?) // 2 threads
 }
