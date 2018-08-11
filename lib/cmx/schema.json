@@ -1,0 +1,121 @@
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "program": {
+      "$id": "/properties/program",
+      "type": "object",
+      "properties": {
+        "binary": {
+          "$id": "/properties/program/properties/binary",
+          "type": "string",
+          "title": "Program entry point",
+          "examples": [
+            "bin/app"
+          ]
+        }
+      }
+    },
+    "sandbox": {
+      "$id": "/properties/sandbox",
+      "type": "object",
+      "properties": {
+        "features": {
+          "$id": "/properties/sandbox/properties/features",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$id": "/properties/sandbox/properties/features/items",
+            "type": "string",
+            "title": "Specific environment features",
+            "enum": [
+              "persistent-storage",
+              "shell",
+              "root-ssl-certificates",
+              "system-temp",
+              "vulkan",
+              "deprecated-all-services"
+            ]
+          }
+        },
+        "system": {
+          "$id": "/properties/sandbox/properties/system",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$id": "/properties/sandbox/properties/system/items",
+            "type": "string",
+            "title": "Paths within the system package provided to the component",
+            "examples": [
+              "data/build"
+            ]
+          }
+        },
+        "pkgfs": {
+          "$id": "/properties/sandbox/properties/pkgfs",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$id": "/properties/sandbox/properties/pkgfs/items",
+            "type": "string",
+            "title": "Paths within pkgfs provided to the component",
+            "examples": [
+              "packages"
+            ]
+          }
+        },
+        "boot": {
+          "$id": "/properties/sandbox/properties/boot",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$id": "/properties/sandbox/properties/boot/items",
+            "type": "string",
+            "title": "Paths within the boot package provided to the component",
+            "examples": [
+              "log"
+            ]
+          }
+        },
+        "services": {
+          "$id": "/properties/sandbox/properties/services",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$id": "/properties/sandbox/properties/services/items",
+            "type": "string",
+            "title": "Services to provide",
+            "examples": [
+              "fuchsia.sys.Launcher",
+              "fuchsia.sys.Environment"
+            ]
+          }
+        }
+      }
+    },
+    "dev": {
+      "$id": "/properties/dev",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$id": "/properties/dev/items",
+        "type": "string",
+        "title": "Device directories to provide",
+        "examples": [
+          "class/wlanphy",
+          "class/wlanif",
+          "class/thermal"
+        ]
+      }
+    },
+    "runner": {
+      "$id": "/properties/runner",
+      "type": "string",
+      "title": "Runner required to launch the component",
+      "examples": [
+        "flutter_jit_runner",
+        "flutter_aot_runner"
+      ]
+    }
+  }
+}
