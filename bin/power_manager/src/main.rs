@@ -25,7 +25,7 @@ mod power;
 
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints2::{RequestStream, ServiceMarker};
 use futures::StreamExt;
 use futures::future::ok as fok;
 use futures::prelude::*;
@@ -36,7 +36,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 extern crate fidl_fuchsia_power;
-use fidl_fuchsia_power::{BatteryStatus, PowerManager, PowerManagerImpl, PowerManagerMarker,
+use fidl_fuchsia_power::{BatteryStatus, PowerManagerRequest, PowerManagerRequestStream, PowerManagerMarker,
                          PowerManagerWatcherProxy, Status as power_status};
 
 static POWER_DEVICE: &str = "/dev/class/power";
@@ -261,33 +261,37 @@ fn watch_power_device(
 }
 
 fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
+    let state = Arc::new(pm);
     async::spawn(
-        PowerManagerImpl {
-            state: pm,
-            on_open: |_, _| fok(()),
-            get_battery_status: |pm, c| {
-                fx_log_info!("get_battery_status called");
-                let mut bsh = pm.battery_status_helper.lock();
-                if let Err(e) = c.send(&mut bsh.battery_status) {
-                    fx_log_err!("sending battery status: {:?}", e);
-                }
-                fok(())
-            },
-            watch: |pm, watcher, _| {
-                fx_log_info!("watch called");
-                match watcher.into_proxy() {
-                    Err(e) => {
-                        fx_log_err!("getting watcher proxy: {:?}", e);
+        PowerManagerRequestStream::from_channel(chan)
+            .for_each(move |req| {
+                let state = state.clone();
+                match req {
+                    PowerManagerRequest::GetBatteryStatus { responder, .. } => {
+                        fx_log_info!("get_battery_status called");
+                        let mut bsh = state.battery_status_helper.lock();
+                        if let Err(e) = responder.send(&mut bsh.battery_status) {
+                            fx_log_err!("sending battery status: {:?}", e);
+                        }
+                        fok(())
                     }
-                    Ok(w) => {
-                        let mut bsh = pm.battery_status_helper.lock();
-                        bsh.add_watcher(w);
+                    PowerManagerRequest::Watch { watcher, .. } => {
+                        fx_log_info!("watch called");
+                        match watcher.into_proxy() {
+                            Err(e) => {
+                                fx_log_err!("getting watcher proxy: {:?}", e);
+                            }
+                            Ok(w) => {
+                                let mut bsh = state.battery_status_helper.lock();
+                                bsh.add_watcher(w);
+                            }
+                        }
+                        fok(())
                     }
-                }
-                fok(())
-            },
-        }.serve(chan)
-            .recover(|e| fx_log_err!("{:?}", e)),
+                }.into_future()
+            })
+            .map(|_| ())
+            .recover(|e| fx_log_err!("{:?}", e))
     )
 }
 
