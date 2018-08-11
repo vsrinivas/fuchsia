@@ -246,6 +246,10 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
   // Set default value for device appearance.
   fidl_device->appearance = ctrl::Appearance::UNKNOWN;
 
+  // |service_uuids| is not a nullable field, so we need to assign something
+  // to it.
+  fidl_device->service_uuids.resize(0);
+
   if (device.rssi() != ::btlib::hci::kRSSIInvalid) {
     fidl_device->rssi = Int8::New();
     fidl_device->rssi->value = device.rssi();
@@ -257,10 +261,6 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
 
   if (device.le()) {
     ::btlib::gap::AdvertisingData adv_data;
-
-    // |service_uuids| is not a nullable field, so we need to assign something
-    // to it.
-    fidl_device->service_uuids.resize(0);
 
     if (!::btlib::gap::AdvertisingData::FromBytes(
             device.le()->advertising_data(), &adv_data)) {

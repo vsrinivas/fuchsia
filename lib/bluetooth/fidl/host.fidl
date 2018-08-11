@@ -20,8 +20,13 @@ interface Host {
   3: RequestGattServer(request<fuchsia.bluetooth.gatt.Server> server);
   4: RequestProfile(request<fuchsia.bluetooth.bredr.Profile> profile);
 
-  // Closes all FIDL interface handles that are associated with this bt-host
-  // device (excluding any Host interface handles).
+  // Shuts down the host, ending all active Bluetooth procedures:
+  // * All FIDL interface handles associated with this host are closed and all
+  //   connections initiated via FIDL clients are severed.
+  // * All scan, discovery, and advertising procedures are stopped.
+  // * Bonded devices are cleared and removed from the auto-connect lists.
+  // This effectively resets the host to its initial state and the host remains
+  // available for future requests.
   5: Close();
 
   // Returns information about the Bluetooth adapter managed by this host.

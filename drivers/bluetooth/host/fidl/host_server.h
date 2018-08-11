@@ -35,7 +35,7 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
  public:
   HostServer(zx::channel channel, fxl::WeakPtr<btlib::gap::Adapter> adapter,
              fbl::RefPtr<GattHost> gatt_host);
-  ~HostServer() override = default;
+  ~HostServer() override;
 
  private:
   // ::fuchsia::bluetooth::Host overrides:

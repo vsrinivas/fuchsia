@@ -41,6 +41,8 @@ HostServer::HostServer(zx::channel channel,
     : AdapterServerBase(adapter, this, std::move(channel)),
       pairing_delegate_(nullptr),
       gatt_host_(gatt_host),
+      requesting_discovery_(false),
+      requesting_discoverable_(false),
       io_capability_(IOCapability::kNoInputNoOutput),
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(gatt_host_);
@@ -65,6 +67,8 @@ HostServer::HostServer(zx::channel channel,
         }
       });
 }
+
+HostServer::~HostServer() { Close(); }
 
 void HostServer::GetInfo(GetInfoCallback callback) {
   callback(fidl_helpers::NewAdapterInfo(*adapter()));
@@ -93,6 +97,12 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
     if (!self) {
       callback(
           fidl_helpers::NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
+      return;
+    }
+
+    if (!self->requesting_discovery_) {
+      callback(
+          fidl_helpers::NewFidlError(ErrorCode::CANCELED, "Request canceled"));
       return;
     }
 
@@ -146,6 +156,12 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
         if (!self) {
           callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
                                               "Adapter Shutdown"));
+          return;
+        }
+
+        if (!self->requesting_discovery_) {
+          callback(fidl_helpers::NewFidlError(ErrorCode::CANCELED,
+                                              "Request Canceled"));
           return;
         }
 
@@ -290,12 +306,21 @@ void HostServer::SetDiscoverable(bool discoverable,
                                               "Adapter Shutdown"));
           return;
         }
+
+        if (!self->requesting_discoverable_) {
+          callback(fidl_helpers::NewFidlError(ErrorCode::CANCELED,
+                                              "Request canceled"));
+          return;
+        }
+
         if (!status || !session) {
           bt_log(TRACE, "bt-host", "failed to set discoverable");
           callback(
               fidl_helpers::StatusToFidl(status, "Failed to set discoverable"));
           self->requesting_discoverable_ = false;
+          return;
         }
+
         self->bredr_discoverable_session_ = std::move(session);
         AdapterState state;
         state.discoverable = Bool::New();
@@ -357,9 +382,25 @@ void HostServer::RequestProfile(
 void HostServer::Close() {
   bt_log(TRACE, "bt-host", "closing FIDL handles");
 
-  // Destroy all bindings.
+  // Destroy all FIDL bindings.
   servers_.clear();
   gatt_host_->CloseServers();
+
+  // Cancel pending requests.
+  requesting_discovery_ = false;
+  requesting_discoverable_ = false;
+
+  // Stop all procedures initiated via host.
+  le_discovery_session_ = nullptr;
+  bredr_discovery_session_ = nullptr;
+  bredr_discoverable_session_ = nullptr;
+
+  // Disallow future pairing.
+  pairing_delegate_ = nullptr;
+  ResetPairingDelegate();
+
+  // TODO(NET-1092): Clean up connections here as well.
+  // TODO(armansito): Clear auto-connectable devices.
 }
 
 btlib::sm::IOCapability HostServer::io_capability() const {
