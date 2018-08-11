@@ -21,6 +21,7 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
+#include <fbl/string_printf.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
@@ -241,14 +242,18 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
     while (true) {
         ssize_t line_length = getline(&line, &line_capacity, test_list_file);
         if (line_length < 0) {
-            if (feof(test_list_file)) break;
+            if (feof(test_list_file)) {
+                break;
+            }
             return errno;
         }
         // Don't include trailing space.
         while (line_length && isspace(line[line_length - 1])) {
             line_length -= 1;
         }
-        if (!line_length) continue;
+        if (!line_length) {
+            continue;
+        }
         line[line_length] = '\0';
         test_paths->push_back(line);
     }
@@ -276,12 +281,16 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
         }
 
         // Assemble test binary args.
-        // max value for a signed char is 127, so 2 chars for "v=", 3 for integer, 1
-        // for terminator.
-        char verbosity_arg[6];
-        snprintf(verbosity_arg, sizeof(verbosity_arg), "v=%d", verbosity);
-        const char* argv1 = (verbosity >= 0)? verbosity_arg : nullptr;
-        const char* argv[] = {test_path.c_str(), argv1, nullptr};
+        fbl::Vector<const char*> argv;
+        argv.push_back(test_path.c_str());
+        fbl::String verbosity_arg;
+        if (verbosity >= 0) {
+            // verbosity defaults to -1: "unspecified". Only pass it along
+            // if it was specified: i.e., non-negative.
+            verbosity_arg = fbl::StringPrintf("v=%d", verbosity);
+            argv.push_back(verbosity_arg.c_str());
+        }
+        argv.push_back(nullptr); // Important, since there's no argc.
         const char* output_filename =
             output_filename_str.empty() ? nullptr : output_filename_str.c_str();
 
@@ -289,7 +298,7 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
         printf("\n------------------------------------------------\n"
                "RUNNING TEST: %s\n\n",
                test_path.c_str());
-        fbl::unique_ptr<Result> result = RunTest(argv, output_filename);
+        fbl::unique_ptr<Result> result = RunTest(argv.get(), output_filename);
         if (result->launch_status != SUCCESS) {
             *failed_count += 1;
         }
