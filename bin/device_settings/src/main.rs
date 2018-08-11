@@ -21,7 +21,7 @@ extern crate parking_lot;
 
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints2::{RequestStream, ServiceMarker};
 use futures::prelude::*;
 use futures::future::{FutureResult, ok as fok};
 use futures::io;
@@ -36,6 +36,8 @@ use fidl_fuchsia_devicesettings::{
     DeviceSettingsManager,
     DeviceSettingsManagerImpl,
     DeviceSettingsManagerMarker,
+    DeviceSettingsManagerRequest,
+    DeviceSettingsManagerRequestStream,
     DeviceSettingsWatcherProxy,
     Status,
     ValueType
@@ -101,102 +103,94 @@ fn read_file(file: &str) -> io::Result<String> {
     Ok(contents)
 }
 
-fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
-    where F: FnOnce() -> Result<(), fidl::Error>
-{
-    let res = f();
-    if let Err(e) = res {
-        fx_log_err!("Error running device_settings_server fidl handler {}: {:?}", ctx, e);
-    }
-    fok(())
-}
-
-fn device_settings_server(state: DeviceSettingsManagerServer, channel: async::Channel)
-    -> impl Future<Item = (), Error = Never>
-{
-    DeviceSettingsManagerImpl {
-        state,
-        on_open: |_,_| fok(()),
-        get_integer: |state, key, res| catch_and_log_err("get_integer", || {
-            let file = if let Some(f) = state.setting_file_map.get(&key) {
-                f
-            } else {
-                res.send(0, Status::ErrInvalidSetting)?;
-                return Ok(());
-            };
-            match read_file(file) {
-                Err(e) => {
-                    if e.kind() == io::ErrorKind::NotFound {
-                        res.send(0, Status::ErrNotSet)
+fn spawn_device_settings_server(state: DeviceSettingsManagerServer, chan: async::Channel) {
+    let state = Arc::new(Mutex::new(state));
+    async::spawn(DeviceSettingsManagerRequestStream::from_channel(chan)
+        .for_each(move |req| {
+            let state = state.clone();
+            let mut state = state.lock();
+            match req {
+                DeviceSettingsManagerRequest::GetInteger { key, responder } => {
+                    let file = if let Some(f) = state.setting_file_map.get(&key) {
+                        f
                     } else {
-                        fx_log_err!("reading integer: {:?}", e);
-                        res.send(0, Status::ErrRead)
+                        return responder.send(0, Status::ErrInvalidSetting)
+                            .into_future()
+                    };
+                    match read_file(file) {
+                        Err(e) => {
+                            if e.kind() == io::ErrorKind::NotFound {
+                                responder.send(0, Status::ErrNotSet)
+                            } else {
+                                fx_log_err!("reading integer: {:?}", e);
+                                responder.send(0, Status::ErrRead)
+                            }
+                        }
+                        Ok(str) => match str.parse::<i64>() {
+                            Err(_e) => responder.send(0, Status::ErrIncorrectType),
+                            Ok(i) => responder.send(i, Status::Ok),
+                        },
                     }
                 }
-                Ok(str) => match str.parse::<i64>() {
-                    Err(_e) => res.send(0, Status::ErrIncorrectType),
-                    Ok(i) => res.send(i, Status::Ok),
-                },
-            }
-        }),
-        set_integer: |state, key, val, res| catch_and_log_err("set_integer", || {
-            match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
-                Ok(r) => res.send(r),
-                Err(e) => {
-                    fx_log_err!("setting integer: {:?}", e);
-                    res.send(false)
-                }
-            }
-        }),
-        get_string: |state, key, res| catch_and_log_err("get_string", || {
-            let file = if let Some(f) = state.setting_file_map.get(&key) {
-                f
-            } else {
-                res.send("", Status::ErrInvalidSetting)?;
-                return Ok(());
-            };
-            match read_file(file) {
-                Err(e) => {
-                    if e.kind() == io::ErrorKind::NotFound {
-                        res.send("", Status::ErrNotSet)
+                DeviceSettingsManagerRequest::GetString { key, responder } => {
+                    let file = if let Some(f) = state.setting_file_map.get(&key) {
+                        f
                     } else {
-                        fx_log_err!("reading string: {:?}", e);
-                        res.send("", Status::ErrRead)
+                        return responder.send("", Status::ErrInvalidSetting).into_future()
+                    };
+                    match read_file(file) {
+                        Err(e) => {
+                            if e.kind() == io::ErrorKind::NotFound {
+                                responder.send("", Status::ErrNotSet)
+                            } else {
+                                fx_log_err!("reading string: {:?}", e);
+                                responder.send("", Status::ErrRead)
+                            }
+                        }
+                        Ok(s) => responder.send(&*s, Status::Ok),
                     }
                 }
-                Ok(s) => res.send(&*s, Status::Ok),
-            }
-        }),
-        set_string: |state, key, val, res| catch_and_log_err("set_string", || {
-            fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
-            match state.set_key(&key, val.as_bytes(), ValueType::Text) {
-                Ok(mut r) => res.send(r),
-                Err(e) => {
-                    fx_log_err!("setting string: {:?}", e);
-                    res.send(false)
+                DeviceSettingsManagerRequest::SetInteger { key, val, responder } => {
+                    match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
+                        Ok(r) => responder.send(r),
+                        Err(e) => {
+                            fx_log_err!("setting integer: {:?}", e);
+                            responder.send(false)
+                        }
+                    }
                 }
-            }
-        }),
-        watch: |state, key, watcher, res| catch_and_log_err("watch", || {
-            if !state.setting_file_map.contains_key(&key) {
-                return res.send(Status::ErrInvalidSetting);
-            }
-            match watcher.into_proxy() {
-                Err(e) => {
-                    fx_log_err!("getting watcher proxy: {:?}", e);
-                    res.send(Status::ErrUnknown)
+                DeviceSettingsManagerRequest::SetString { key, val, responder } => {
+                    fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
+                    match state.set_key(&key, val.as_bytes(), ValueType::Text) {
+                        Ok(mut r) => responder.send(r),
+                        Err(e) => {
+                            fx_log_err!("setting string: {:?}", e);
+                            responder.send(false)
+                        }
+                    }
                 }
-                Ok(w) => {
-                    let mut map = state.watchers.lock();
-                    let mv = map.entry(key).or_insert(Vec::new());
-                    mv.push(w);
-                    res.send(Status::Ok)
+                DeviceSettingsManagerRequest::Watch { key, watcher, responder } => {
+                    if !state.setting_file_map.contains_key(&key) {
+                        return responder.send(Status::ErrInvalidSetting).into_future();
+                    }
+                    match watcher.into_proxy() {
+                        Err(e) => {
+                            fx_log_err!("getting watcher proxy: {:?}", e);
+                            responder.send(Status::ErrUnknown)
+                        }
+                        Ok(w) => {
+                            let mut map = state.watchers.lock();
+                            let mv = map.entry(key).or_insert(Vec::new());
+                            mv.push(w);
+                            responder.send(Status::Ok)
+                        }
+                    }
                 }
-            }
-        }),
-    }
-    .serve(channel)
-    .recover(|e| fx_log_err!("error running device settings server: {:?}", e))
+            }.into_future()
+        })
+        .map(|_| ())
+        .recover(|e| eprintln!("error running device settings server: {:?}", e))
+    )
 }
 
 fn main() {
@@ -223,7 +217,8 @@ fn main_ds() -> Result<(), Error> {
             d.initialize_keys(DATA_DIR, &["DeviceName", "TestSetting",
                 "Display.Brightness", "Audio", "FactoryReset"]);
 
-            async::spawn(device_settings_server(d, channel))
+
+            spawn_device_settings_server(d, channel)
         }))
         .start()
         .map_err(|e| e.context("error starting service server"))?;
@@ -268,7 +263,7 @@ mod tests {
         let server_chan = async::Channel::from_channel(server_chan).unwrap();
         let client_chan = async::Channel::from_channel(client_chan).unwrap();
 
-        async::spawn(device_settings_server(device_settings, server_chan));
+        spawn_device_settings_server(device_settings, server_chan);
 
         let proxy = DeviceSettingsManagerProxy::new(client_chan);
 
