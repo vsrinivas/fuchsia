@@ -16,7 +16,7 @@ enum CaptureType {
 // the buffer collections.
 enum PixelFormat {
   INVALID = 0;      // default value, not supported
-  RGB32 = 1;        // 32bpp BGRA, 1 plane.
+  BGRA32 = 1;        // 32bpp BGRA, 1 plane.
   I420 = 2;
   M420 = 3;
   NV12 = 4;

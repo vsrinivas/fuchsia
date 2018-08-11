@@ -108,7 +108,7 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats;
 
   fuchsia::camera::driver::VideoFormat format = {
-      .pixel_format = fuchsia::camera::driver::PixelFormat::RGB32,
+      .pixel_format = fuchsia::camera::driver::PixelFormat::BGRA32,
       .width = 640,
       .height = 480,
       .bits_per_pixel = 4,

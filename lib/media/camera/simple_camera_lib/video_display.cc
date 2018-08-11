@@ -127,7 +127,7 @@ zx_status_t Gralloc(uint64_t buffer_size, uint32_t num_buffers,
 fuchsia::images::PixelFormat ConvertFormat(
     fuchsia::camera::driver::PixelFormat driver_format) {
   switch (driver_format) {
-    case fuchsia::camera::driver::PixelFormat::RGB32:
+    case fuchsia::camera::driver::PixelFormat::BGRA32:
       return fuchsia::images::PixelFormat::BGRA_8;
     case fuchsia::camera::driver::PixelFormat::YUY2:
       return fuchsia::images::PixelFormat::YUY2;

@@ -16,6 +16,8 @@ driver_module("usb_video_driver") {
     "usb-video-stream.h",
     "usb-video.cpp",
     "usb-video.h",
+    "uvc_format.cpp",
+    "uvc_format.h",
     "video-buffer.cpp",
     "video-buffer.h",
     "video-util.c",

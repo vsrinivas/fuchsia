@@ -25,7 +25,6 @@ namespace video {
 namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
-static constexpr uint32_t NANOSECS_IN_SEC = 1e9;
 
 // Only keep the first 11 bits of the USB SOF (Start of Frame) values.
 // The payload header SOF values only have 11 bits before wrapping around,
@@ -35,11 +34,11 @@ static constexpr uint16_t USB_SOF_MASK = 0x7FF;
 fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
 
 UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
-                               fbl::Vector<UsbVideoFormat>* formats,
+                               UvcFormatList format_list,
                                fbl::Vector<UsbVideoStreamingSetting>* settings)
     : UsbVideoStreamBase(parent),
       usb_(*usb),
-      formats_(fbl::move(*formats)),
+      format_list_(fbl::move(format_list)),
       streaming_settings_(fbl::move(*settings)) {
   if (fidl_dispatch_loop_ == nullptr) {
     fidl_dispatch_loop_ =
@@ -62,16 +61,15 @@ UsbVideoStream::~UsbVideoStream() {
 zx_status_t UsbVideoStream::Create(
     zx_device_t* device, usb_protocol_t* usb, int index,
     usb_interface_descriptor_t* intf, usb_video_vc_header_desc* control_header,
-    usb_video_vs_input_header_desc* input_header,
-    fbl::Vector<UsbVideoFormat>* formats,
+    usb_video_vs_input_header_desc* input_header, UvcFormatList format_list,
     fbl::Vector<UsbVideoStreamingSetting>* settings) {
-  if (!usb || !intf || !control_header || !input_header || !formats ||
-      formats->size() == 0 || !settings || settings->size() == 0) {
+  if (!usb || !intf || !control_header || !input_header || !settings ||
+      settings->size() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto dev = fbl::unique_ptr<UsbVideoStream>(
-      new UsbVideoStream(device, usb, formats, settings));
+      new UsbVideoStream(device, usb, std::move(format_list), settings));
 
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "usb-video-source-%d", index);
@@ -136,86 +134,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
       }
     }
   }
-
-  zx_status_t status = GenerateFormatMappings();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   return UsbVideoStreamBase::DdkAdd(devname);
-}
-
-UsbVideoStream::FormatMapping::FormatMapping(
-    const UsbVideoFormat* format, const UsbVideoFrameDesc* frame_desc) {
-  this->proto.capture_type = frame_desc->capture_type;
-  this->proto.pixel_format = format->pixel_format;
-  this->proto.width = frame_desc->width;
-  this->proto.height = frame_desc->height;
-  this->proto.stride = frame_desc->stride;
-  this->proto.bits_per_pixel = format->bits_per_pixel;
-  // The frame descriptor frame interval is expressed in 100ns units.
-  // e.g. a frame interval of 333333 is equivalent to 30fps (1e7 / 333333).
-  this->proto.frames_per_sec_numerator = NANOSECS_IN_SEC / 100;
-  this->proto.frames_per_sec_denominator = frame_desc->default_frame_interval;
-
-  this->format = format;
-  this->frame_desc = frame_desc;
-}
-
-zx_status_t UsbVideoStream::GetMapping(
-    const fuchsia::camera::driver::VideoFormat& format,
-    const UsbVideoFormat** out_format,
-    const UsbVideoFrameDesc** out_frame_desc) {
-  const fuchsia::camera::driver::VideoFormat& f1 = format;
-
-  for (const FormatMapping& mapping : format_mappings_) {
-    const fuchsia::camera::driver::VideoFormat& f2 = mapping.proto;
-
-    // Simplify frame rate fractions to a common denominator to check for
-    // equivalence. Both numerator and denominator are 32 bit.
-    bool has_equal_frame_rate =
-        (static_cast<uint64_t>(f1.frames_per_sec_numerator) *
-         f2.frames_per_sec_denominator) ==
-        (static_cast<uint64_t>(f2.frames_per_sec_numerator) *
-         f1.frames_per_sec_denominator);
-
-    if (f1.capture_type == f2.capture_type &&
-        f1.pixel_format == f2.pixel_format && f1.width == f2.width &&
-        f1.height == f2.height && f1.stride == f2.stride &&
-        f1.bits_per_pixel == f2.bits_per_pixel && has_equal_frame_rate) {
-      *out_format = mapping.format;
-      *out_frame_desc = mapping.frame_desc;
-      return ZX_OK;
-    }
-  }
-  return ZX_ERR_NOT_FOUND;
-}
-
-zx_status_t UsbVideoStream::GenerateFormatMappings() {
-  size_t num_mappings = 0;
-  for (const auto& format : formats_) {
-    num_mappings += format.frame_descs.size();
-  }
-
-  // The camera interface limits the number of formats we can send to the
-  // client, so flag an error early in case this ever happens.
-  if (num_mappings > fbl::numeric_limits<uint16_t>::max()) {
-    zxlogf(ERROR, "too many format mappings (%lu count)\n", num_mappings);
-    return ZX_ERR_INTERNAL;
-  }
-
-  fbl::AllocChecker ac;
-  this->format_mappings_.reserve(num_mappings, &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  for (const auto& format : formats_) {
-    for (const auto& frame : format.frame_descs) {
-      format_mappings_.push_back(FormatMapping(&format, &frame));
-    }
-  }
-  return ZX_OK;
 }
 
 zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
@@ -256,21 +175,19 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::TryFormatLocked(
-    const UsbVideoFormat* format, const UsbVideoFrameDesc* frame_desc) {
-  zxlogf(INFO, "trying format %u, frame desc %u\n", format->index,
-         frame_desc->index);
+zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
+                                            uint8_t frame_index,
+                                            uint32_t default_frame_interval) {
+  zxlogf(INFO, "trying format %u, frame desc %u\n", format_index, frame_index);
 
   usb_video_vc_probe_and_commit_controls proposal;
   memset(&proposal, 0, sizeof(usb_video_vc_probe_and_commit_controls));
   proposal.bmHint = USB_VIDEO_BM_HINT_FRAME_INTERVAL;
-  proposal.bFormatIndex = format->index;
+  proposal.bFormatIndex = format_index;
 
-  // Some formats do not have frame descriptors.
-  if (frame_desc != NULL) {
-    proposal.bFrameIndex = frame_desc->index;
-    proposal.dwFrameInterval = frame_desc->default_frame_interval;
-  }
+  // TODO(garratt): Some formats do not have frame descriptors.
+  proposal.bFrameIndex = frame_index;
+  proposal.dwFrameInterval = default_frame_interval;
 
   usb_video_vc_probe_and_commit_controls result;
   zx_status_t status =
@@ -315,8 +232,6 @@ zx_status_t UsbVideoStream::TryFormatLocked(
   // Round frame size up to a whole number of pages, to allow mapping the frames
   // individually to vmars.
   max_frame_size_ = ROUNDUP(negotiation_result_.dwMaxVideoFrameSize, PAGE_SIZE);
-  cur_format_ = format;
-  cur_frame_desc_ = frame_desc;
 
   if (negotiation_result_.dwClockFrequency != 0) {
     // This field is optional. If it isn't present, we instead
@@ -343,7 +258,7 @@ zx_status_t UsbVideoStream::TryFormatLocked(
   }
 
   zxlogf(INFO, "configured video: format index %u frame index %u\n",
-         cur_format_->index, cur_frame_desc_->index);
+         format_index, frame_index);
   zxlogf(INFO, "alternate setting %d, packet size %u transactions per mf %u\n",
          cur_streaming_setting_->alt_setting,
          cur_streaming_setting_->max_packet_size,
@@ -398,19 +313,7 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
 zx_status_t UsbVideoStream::GetFormats(
     fidl::VectorPtr<fuchsia::camera::driver::VideoFormat>& formats) {
   fbl::AutoLock lock(&lock_);
-
-  for (const UsbVideoStream::FormatMapping& mapping : format_mappings_) {
-    formats.push_back(
-        {.capture_type = mapping.proto.capture_type,
-         .width = mapping.proto.width,
-         .height = mapping.proto.height,
-         .stride = mapping.proto.stride,
-         .bits_per_pixel = mapping.proto.bits_per_pixel,
-         .pixel_format = mapping.proto.pixel_format,
-         .frames_per_sec_numerator = mapping.proto.frames_per_sec_numerator,
-         .frames_per_sec_denominator =
-             mapping.proto.frames_per_sec_denominator});
-  }
+  format_list_.FillFormats(formats);
   return ZX_OK;
 }
 
@@ -421,12 +324,13 @@ zx_status_t UsbVideoStream::SetFormat(
 
   // Convert from the client's video format proto to the device driver format
   // and frame descriptors.
-  const UsbVideoFormat* format;
-  const UsbVideoFrameDesc* frame_desc;
-  zx_status_t status = GetMapping(video_format, &format, &frame_desc);
-  if (status != ZX_OK) {
+  uint8_t format_index, frame_index;
+  uint32_t default_frame_interval;
+  bool is_matched = format_list_.MatchFormat(
+      video_format, &format_index, &frame_index, &default_frame_interval);
+  if (!is_matched) {
     zxlogf(ERROR, "could not find a mapping for the requested format\n");
-    return status;
+    return ZX_ERR_NOT_FOUND;
   }
 
   if (streaming_state_ != StreamingState::STOPPED) {
@@ -435,7 +339,8 @@ zx_status_t UsbVideoStream::SetFormat(
   }
 
   // Try setting the format on the device.
-  status = TryFormatLocked(format, frame_desc);
+  zx_status_t status =
+      TryFormatLocked(format_index, frame_index, default_frame_interval);
   if (status != ZX_OK) {
     zxlogf(ERROR, "setting format failed, err: %d\n", status);
     return status;

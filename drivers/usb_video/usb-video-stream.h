@@ -18,6 +18,7 @@
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video-camera.h"
 #include "garnet/drivers/usb_video/usb-video.h"
+#include "garnet/drivers/usb_video/uvc_format.h"
 #include "garnet/drivers/usb_video/video-buffer.h"
 
 namespace video {
@@ -39,7 +40,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
                             usb_interface_descriptor_t* intf,
                             usb_video_vc_header_desc* control_header,
                             usb_video_vs_input_header_desc* input_header,
-                            fbl::Vector<UsbVideoFormat>* formats,
+                            UvcFormatList format_list,
                             fbl::Vector<UsbVideoStreamingSetting>* settings);
 
   // DDK device implementation
@@ -56,19 +57,8 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
     STARTED,
   };
 
-  // Maps between a camera video format proto and pointers
-  // to the corresponding driver format and frame descriptors.
-  struct FormatMapping {
-    FormatMapping(const UsbVideoFormat* format,
-                  const UsbVideoFrameDesc* frame_desc);
-    fuchsia::camera::driver::VideoFormat proto;
-
-    const UsbVideoFormat* format;
-    const UsbVideoFrameDesc* frame_desc;
-  };
-
   UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
-                 fbl::Vector<UsbVideoFormat>* formats,
+                 UvcFormatList format_list,
                  fbl::Vector<UsbVideoStreamingSetting>* settings);
 
   zx_status_t Bind(const char* devname, usb_interface_descriptor_t* intf,
@@ -84,22 +74,9 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   // again with a different set of inputs.
   //
   // frame_desc may be NULL for non frame based formats.
-  zx_status_t TryFormatLocked(const UsbVideoFormat* format,
-                              const UsbVideoFrameDesc* frame_desc)
+  zx_status_t TryFormatLocked(uint8_t format_index, uint8_t frame_index,
+                              uint32_t default_frame_interval)
       __TA_REQUIRES(lock_);
-
-  // Finds the matching format and frame descriptors for the given
-  // video format proto.
-  // If found returns ZX_OK and populates out_format and out_frame_desc,
-  // else returns an error.
-  zx_status_t GetMapping(const fuchsia::camera::driver::VideoFormat& format,
-                         const UsbVideoFormat** out_format,
-                         const UsbVideoFrameDesc** out_frame_desc);
-
-  // Creates mappings between video format protos and their original
-  // format and frame descriptors. The result will be stored in
-  // format_mappings_.
-  zx_status_t GenerateFormatMappings();
 
   // Creates a new video buffer and maps it into our address space.
   // The current streaming state must be StreamingState::STOPPED.
@@ -153,17 +130,13 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);
 
   usb_protocol_t usb_;
+  UvcFormatList format_list_;
 
-  fbl::Vector<UsbVideoFormat> formats_;
   fbl::Vector<UsbVideoStreamingSetting> streaming_settings_;
-
-  fbl::Vector<FormatMapping> format_mappings_;
 
   // Stream configuration.
   usb_video_vc_probe_and_commit_controls negotiation_result_;
   const UsbVideoStreamingSetting* cur_streaming_setting_;
-  const UsbVideoFormat* cur_format_;
-  const UsbVideoFrameDesc* cur_frame_desc_;
   uint32_t max_frame_size_ = 0;
   uint32_t clock_frequency_hz_ = 0;
   // The number of bytes to request in a USB request to a streaming endpoint.
