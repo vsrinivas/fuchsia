@@ -127,7 +127,7 @@ Build one or the other or both, as needed for how you want build Zircon.
 
 ### GCC Toolchain
 
-We use GNU `binutils` 2.30(`*`) and GCC 8.2(`**`), configured with
+We use GNU `binutils` 2.31.1(`*`) and GCC 8.2, configured with
 `--enable-initfini-array --enable-gold`, and with `--target=x86_64-elf
 --enable-targets=x86_64-pep` for x86-64 or `--target=aarch64-elf` for ARM64.
 
@@ -149,15 +149,11 @@ documentation for more details.
 You may need various other `configure` switches or other prerequisites to
 build on your particular host system.  See the GNU documentation.
 
-(`*`) The `binutils` 2.30 release has some harmless `make check` failures in
+(`*`) The `binutils` 2.31.1 release has some harmless `make check` failures in
 the `aarch64-elf` and `x86_64-elf` configurations.  These are fixed on the
-upstream `binutils-2_30-branch` git branch, which is what we actually build.
-But the 2.30 release version works fine for building Zircon; it just has some
+upstream `binutils-2_31-branch` git branch, which is what we actually build.
+But the 2.31.1 release version works fine for building Zircon; it just has some
 spurious failures in its own test suite.
-
-(`**`) As of 2008-6-15, GCC 8.2 has not been released yet.  There is no
-released version of GCC that works for building Zircon without backporting
-some fixes.  What we actually use is the upstream `gcc-8-branch` git branch.
 
 ### Clang/LLVM Toolchain
 

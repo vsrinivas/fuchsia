@@ -37,7 +37,7 @@ fuchsia/clang/${platform} git_revision:74cf259dbddf3716da543b0d5767eafd7345f665
 
 # GCC
 @Subdir gcc
-fuchsia/gcc/${platform} git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
+fuchsia/gcc/${platform} git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,6ee91b1ef11dde1c34eda579e2aef6d4328b050e
 
 # sysroot
 @Subdir sysroot
