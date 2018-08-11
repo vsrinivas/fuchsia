@@ -13,6 +13,7 @@ extern crate fidl_fuchsia_bluetooth_gatt;
 extern crate fidl_fuchsia_bluetooth_host;
 extern crate fidl_fuchsia_bluetooth_le;
 extern crate fuchsia_app as app;
+#[macro_use]
 extern crate fuchsia_async as async;
 #[macro_use]
 extern crate fuchsia_bluetooth as bt;
