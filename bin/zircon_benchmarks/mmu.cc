@@ -91,7 +91,6 @@ bool MmuMapUnmapWithFaultsTest(perftest::RepeatState* state) {
   state->DeclareStep("fault_in");
   state->DeclareStep("unmap");
 
-  constexpr size_t kSize = MB(128);
   Helper helper;
   while (state->KeepRunning()) {
     // Map just under a large page at a time, to force small pages.  We map many
