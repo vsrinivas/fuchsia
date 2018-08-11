@@ -274,21 +274,21 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
             }
             output_filename_str = JoinPath(output_dir_for_test, output_file_basename);
         }
+
+        // Assemble test binary args.
         // max value for a signed char is 127, so 2 chars for "v=", 3 for integer, 1
         // for terminator.
         char verbosity_arg[6];
         snprintf(verbosity_arg, sizeof(verbosity_arg), "v=%d", verbosity);
-        if (verbosity > 0) {
-            printf("\n------------------------------------------------\n"
-                   "RUNNING TEST: %s\n\n",
-                   test_path.c_str());
-        }
-
-        // Execute the test binary.
         const char* argv1 = (verbosity >= 0)? verbosity_arg : nullptr;
         const char* argv[] = {test_path.c_str(), argv1, nullptr};
         const char* output_filename =
             output_filename_str.empty() ? nullptr : output_filename_str.c_str();
+
+        // Execute the test binary.
+        printf("\n------------------------------------------------\n"
+               "RUNNING TEST: %s\n\n",
+               test_path.c_str());
         fbl::unique_ptr<Result> result = RunTest(argv, output_filename);
         if (result->launch_status != SUCCESS) {
             *failed_count += 1;
