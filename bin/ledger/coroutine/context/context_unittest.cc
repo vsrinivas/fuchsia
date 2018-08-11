@@ -154,7 +154,10 @@ TEST(Context, MakeContextUnsafeStack) {
 __NO_SAFESTACK intptr_t GetSafeStackPointer() {
   char a = 0;
   // Suppress check about returning a stack memory address.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-stack-address"
   return reinterpret_cast<intptr_t>(&a);  // NOLINT
+#pragma clang diagnostic pop
 }
 
 void CheckDistinctStack(void* context) {
