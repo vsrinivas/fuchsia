@@ -47,11 +47,11 @@ void* operator new[](size_t s, const std::nothrow_t&) noexcept {
     return ::malloc(s);
 }
 
-void* operator new(size_t , void *p) noexcept {
+void* operator new(size_t , void *p) {
     return p;
 }
 
-void* operator new[](size_t , void* p) noexcept {
+void* operator new[](size_t , void* p) {
     return p;
 }
 

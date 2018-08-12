@@ -27,19 +27,7 @@ struct NullEq {
 // Partial specialization for |T| values comparable to nullptr.
 template <typename T>
 struct NullEq<T, decltype(*static_cast<T*>(nullptr) == nullptr)> {
-    // This is intended for a T that's a function pointer type.  However, it
-    // also matches for a T that can be implicitly coerced to a function
-    // pointer type, such as a function type or a captureless lambda's closure
-    // type.  In that case, the compiler might complain that the comparison is
-    // always false because the address of a function can never be a null
-    // pointer.  It's possible to do template selection to match function
-    // types, but it's not possible to match captureless lambda closure types
-    // that way.  So just suppress the warning.  The compiler will optimize
-    // away the always-false comparison.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Waddress"
     static constexpr bool Test(const T& v) { return v == nullptr; }
-#pragma GCC diagnostic pop
 };
 
 template <typename T>

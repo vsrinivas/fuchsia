@@ -159,7 +159,7 @@ GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 GLOBAL_COMPILEFLAGS += -Wno-format-truncation
 endif
 GLOBAL_CFLAGS := -std=c11 -Werror-implicit-function-declaration -Wstrict-prototypes -Wwrite-strings
-GLOBAL_CPPFLAGS := -std=c++17 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion -Wno-sign-conversion
+GLOBAL_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion -Wno-sign-conversion
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS :=
 GLOBAL_LDFLAGS := -nostdlib --build-id -z noexecstack
