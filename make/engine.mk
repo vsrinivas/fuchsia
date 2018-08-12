@@ -164,6 +164,7 @@ GLOBAL_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics 
 GLOBAL_ASMFLAGS :=
 GLOBAL_LDFLAGS := -nostdlib --build-id -z noexecstack
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
+GLOBAL_LDFLAGS += --pack-dyn-relocs=relr
 GLOBAL_LDFLAGS += -color-diagnostics
 endif
 # $(addprefix -L,$(LKINC)) XXX

@@ -1,4 +1,5 @@
 #include "dynlink.h"
+#include "relr.h"
 #include "libc.h"
 #include <zircon/compiler.h>
 #include <stdatomic.h>
@@ -21,7 +22,8 @@ __LOCAL __NO_SAFESTACK NO_ASAN dl_start_return_t _dl_start(void* start_arg,
     ElfW(Addr) base = (uintptr_t)__ehdr_start;
     const ElfW(Rel)* rel = NULL;
     const ElfW(Rela)* rela = NULL;
-    size_t relcount = 0, relacount = 0;
+    const ElfW(Addr)* relr = NULL;
+    size_t relcount = 0, relacount = 0, relrsz = 0;
 
     // We rely on having been linked with -z combreloc so we get
     // the DT_REL(A)COUNT tag and relocs are sorted with all the
@@ -35,11 +37,22 @@ __LOCAL __NO_SAFESTACK NO_ASAN dl_start_return_t _dl_start(void* start_arg,
         case DT_RELA:
             rela = (const void*)(base + d->d_un.d_ptr);
             break;
+        case DT_RELR:
+            relr = (const void*)(base + d->d_un.d_ptr);
+            break;
         case DT_RELCOUNT:
             relcount = d->d_un.d_val;
             break;
         case DT_RELACOUNT:
             relacount = d->d_un.d_val;
+            break;
+        case DT_RELRSZ:
+            relrsz = d->d_un.d_val;
+            break;
+        case DT_RELRENT:
+            if (d->d_un.d_val != sizeof(relr[0])) {
+                __builtin_trap();
+            }
             break;
         }
     }
@@ -55,6 +68,8 @@ __LOCAL __NO_SAFESTACK NO_ASAN dl_start_return_t _dl_start(void* start_arg,
         // Invariant (no asserts here): R_TYPE(rela[i].r_info) == REL_RELATIVE
         *addr = base + rela[i].r_addend;
     }
+
+    apply_relr(base, relr, relrsz);
 
     // Make sure all the relocations have landed before calling __dls2,
     // which relies on them.

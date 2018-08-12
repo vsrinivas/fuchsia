@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "dynlink.h"
+#include "relr.h"
 #include "libc.h"
 #include "asan_impl.h"
 #include "zircon_impl.h"
@@ -1078,8 +1079,8 @@ error:
 }
 
 __NO_SAFESTACK NO_ASAN static void decode_dyn(struct dso* p) {
-    size_t dyn[DYN_CNT];
-    decode_vec(p->l_map.l_ld, dyn, DYN_CNT);
+    size_t dyn[DT_NUM];
+    decode_vec(p->l_map.l_ld, dyn, DT_NUM);
     p->syms = laddr(p, dyn[DT_SYMTAB]);
     p->strings = laddr(p, dyn[DT_STRTAB]);
     if (dyn[0] & (1 << DT_SONAME))
@@ -1444,11 +1445,16 @@ __NO_SAFESTACK static void load_deps(struct dso* p) {
 }
 
 __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
-    size_t dyn[DYN_CNT];
+    size_t dyn[DT_NUM];
     for (; p; p = dso_next(p)) {
         if (p->relocated)
             continue;
-        decode_vec(p->l_map.l_ld, dyn, DYN_CNT);
+        decode_vec(p->l_map.l_ld, dyn, DT_NUM);
+        // _dl_start did apply_relr already.
+        if (p != &ldso) {
+            apply_relr(p->l_map.l_addr,
+                       laddr(p, dyn[DT_RELR]), dyn[DT_RELRSZ]);
+        }
         do_relocs(p, laddr(p, dyn[DT_JMPREL]), dyn[DT_PLTRELSZ], 2 + (dyn[DT_PLTREL] == DT_RELA));
         do_relocs(p, laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
         do_relocs(p, laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
@@ -1520,11 +1526,11 @@ __NO_SAFESTACK NO_ASAN static void kernel_mapped_dso(struct dso* p) {
 
 void __libc_exit_fini(void) {
     struct dso* p;
-    size_t dyn[DYN_CNT];
+    size_t dyn[DT_NUM];
     for (p = fini_head; p; p = p->fini_next) {
         if (!p->constructed)
             continue;
-        decode_vec(p->l_map.l_ld, dyn, DYN_CNT);
+        decode_vec(p->l_map.l_ld, dyn, DT_NUM);
         if (dyn[0] & (1 << DT_FINI_ARRAY)) {
             size_t n = dyn[DT_FINI_ARRAYSZ] / sizeof(size_t);
             size_t* fn = (size_t*)laddr(p, dyn[DT_FINI_ARRAY]) + n;
@@ -1539,7 +1545,7 @@ void __libc_exit_fini(void) {
 }
 
 static void do_init_fini(struct dso* p) {
-    size_t dyn[DYN_CNT];
+    size_t dyn[DT_NUM];
     /* Allow recursive calls that arise when a library calls
      * dlopen from one of its constructors, but block any
      * other threads until all ctors have finished. */
@@ -1548,7 +1554,7 @@ static void do_init_fini(struct dso* p) {
         if (p->constructed)
             continue;
         p->constructed = 1;
-        decode_vec(p->l_map.l_ld, dyn, DYN_CNT);
+        decode_vec(p->l_map.l_ld, dyn, DT_NUM);
         if (dyn[0] & ((1 << DT_FINI) | (1 << DT_FINI_ARRAY))) {
             p->fini_next = fini_head;
             fini_head = p;
@@ -1704,8 +1710,8 @@ dl_start_return_t __dls2(
      * can be reused in stage 3. There should be very few. If
      * something goes wrong and there are a huge number, abort
      * instead of risking stack overflow. */
-    size_t dyn[DYN_CNT];
-    decode_vec(ldso.l_map.l_ld, dyn, DYN_CNT);
+    size_t dyn[DT_NUM];
+    decode_vec(ldso.l_map.l_ld, dyn, DT_NUM);
     size_t* rel = laddr(&ldso, dyn[DT_REL]);
     size_t rel_size = dyn[DT_RELSZ];
     size_t symbolic_rel_cnt = 0;

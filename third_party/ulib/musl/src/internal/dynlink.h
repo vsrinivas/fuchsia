@@ -41,8 +41,6 @@ enum {
 #define DT_DEBUG_INDIRECT 0
 #endif
 
-#define DYN_CNT 32
-
 // This is the return value of the dynamic linker startup functions.
 // They return all the way back to _start so as to pop their stack
 // frames.  The DL_START_ASM code at _start then receives these two
