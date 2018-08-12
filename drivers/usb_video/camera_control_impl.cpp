@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
+
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video-stream.h"
 
@@ -55,23 +57,22 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   }
 }
 
-void ControlImpl::SetFormat(
-    fuchsia::camera::driver::VideoFormat format,
+void ControlImpl::CreateStream(
+    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+    fuchsia::camera::driver::FrameRate frame_rate,
     fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-    fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events,
-    SetFormatCallback callback) {
-  uint32_t max_frame_size;
-  zx_status_t status = usb_video_stream_->SetFormat(format, &max_frame_size);
+    fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) {
+  zx_status_t status =
+      usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
 
   if (status != ZX_OK) {
-    callback(0, status);
+    zxlogf(ERROR, "Failed to set format. Closing channel.\n");
+    binding_.Unbind();  // Close the channel on error.
     return;
   }
 
   stream_ = fbl::make_unique<StreamImpl>(*this, fbl::move(stream));
   stream_events_ = fbl::make_unique<StreamEventsImpl>(fbl::move(events));
-
-  callback(max_frame_size, ZX_OK);
 }
 
 void ControlImpl::StreamEventsImpl::OnFrameAvailable(
@@ -80,12 +81,6 @@ void ControlImpl::StreamEventsImpl::OnFrameAvailable(
 }
 
 void ControlImpl::StreamEventsImpl::Stopped() { binding_.events().Stopped(); }
-
-void ControlImpl::StreamImpl::SetBuffer(::zx::vmo buffer,
-                                        SetBufferCallback callback) {
-  zx_status_t result = owner_.usb_video_stream_->SetBuffer(fbl::move(buffer));
-  callback(result);
-}
 
 void ControlImpl::StreamImpl::Start(StartCallback callback) {
   zx_status_t status = owner_.usb_video_stream_->StartStreaming();

@@ -317,11 +317,13 @@ zx_status_t UsbVideoStream::GetFormats(
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::SetFormat(
-    const fuchsia::camera::driver::VideoFormat& video_format,
-    uint32_t* max_frame_size) {
+zx_status_t UsbVideoStream::CreateStream(
+    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+    fuchsia::camera::driver::FrameRate frame_rate) {
   fbl::AutoLock lock(&lock_);
-
+  fuchsia::camera::driver::VideoFormat video_format;
+  video_format.format = buffer_collection.format.image();
+  video_format.rate = frame_rate;
   // Convert from the client's video format proto to the device driver format
   // and frame descriptors.
   uint8_t format_index, frame_index;
@@ -346,38 +348,20 @@ zx_status_t UsbVideoStream::SetFormat(
     return status;
   }
 
-  *max_frame_size = max_frame_size_;
+  if (max_frame_size_ > buffer_collection.vmo_size) {
+    zxlogf(ERROR, "buffer provided is less than max size.\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // TODO(garratt): Check if we should clear previous buffers
+  // Now to set the buffers:
+  buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
 
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::SetBuffer(zx::vmo buffer) {
-  fbl::AutoLock lock(&lock_);
-
-  if (streaming_state_ != StreamingState::STOPPED) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (!buffer.is_valid()) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-
-  // Release any previously stored video buffer.
-  video_buffer_.reset();
-
-  zx_status_t res =
-      VideoBuffer::Create(fbl::move(buffer), &video_buffer_, max_frame_size_);
-
-  return res;
-}
-
 zx_status_t UsbVideoStream::StartStreaming() {
   fbl::AutoLock lock(&lock_);
-
-  if (!video_buffer_ || !video_buffer_->virt() ||
-      streaming_state_ != StreamingState::STOPPED) {
-    return ZX_ERR_BAD_STATE;
-  }
 
   // Initialize the state.
   num_frames_ = 0;
@@ -387,7 +371,7 @@ zx_status_t UsbVideoStream::StartStreaming() {
   // detected as a new frame.
   cur_frame_state_.fid = -1;
   bulk_payload_bytes_ = 0;
-  video_buffer_->Init();
+  buffers_.Reset();
 
   zx_status_t status =
       usb_set_interface(&usb_, iface_num_, cur_streaming_setting_->alt_setting);
@@ -417,9 +401,9 @@ zx_status_t UsbVideoStream::StopStreaming() {
   return usb_set_interface(&usb_, iface_num_, 0);
 }
 
-zx_status_t UsbVideoStream::FrameRelease(uint64_t frame_offset) {
+zx_status_t UsbVideoStream::FrameRelease(uint64_t buffer_id) {
   fbl::AutoLock lock(&lock_);
-  return video_buffer_->FrameRelease(frame_offset);
+  return buffers_.BufferRelease(buffer_id);
 }
 
 void UsbVideoStream::QueueRequestLocked() {
@@ -578,37 +562,38 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
   fuchsia::camera::driver::FrameAvailableEvent event = {};
   event.metadata.timestamp = cur_frame_state_.capture_time;
 
-  if (cur_frame_state_.error) {
-    event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
-
-  } else if (!has_video_buffer_offset_) {
+  // If we were not even writing to a buffer, return buffer full error:
+  if (!buffers_.HasBufferInProgress()) {
     event.frame_status =
         fuchsia::camera::driver::FrameStatus::ERROR_BUFFER_FULL;
-
-    // Only mark the frame completed if it had no errors and had data stored.
-  } else if (cur_frame_state_.bytes > 0) {
-    event.frame_size = cur_frame_state_.bytes;
-    event.frame_offset = video_buffer_offset_;
-
-    // Need to lock the frame before sending the notification.
-    zx_status_t status = video_buffer_->FrameCompleted();
-    // No longer have a frame offset to write to.
-    has_video_buffer_offset_ = false;
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "could not mark frame as complete: %d\n", status);
-      return ZX_ERR_BAD_STATE;
-    }
-
-  } else {
-    // No bytes were received, so don't send a notification.
+    camera_control_->OnFrameAvailable(event);
     return ZX_OK;
   }
 
-  zxlogf(SPEW,
-         "sending NOTIFY_FRAME, timestamp = %ld, size: %u, offset: %lu, error "
-         "= %d\n",
-         event.metadata.timestamp, event.frame_size, event.frame_offset,
-         event.frame_status);
+  // If we were writing to a buffer (we have to complete it)
+  // If we had a writing error:
+  if (cur_frame_state_.error) {
+    event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
+  }
+
+  zx_status_t status = buffers_.BufferCompleted(&event.buffer_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "could not mark frame as complete: %d\n", status);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // In the case that we didn't write anything, don't send a notification.
+  // We'll release the buffer just to make things neat though.
+  if (cur_frame_state_.bytes <= 0) {
+    // No bytes were received, so don't send a notification.
+    // release the buffer back:
+    status = buffers_.BufferRelease(event.buffer_id);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "could not release the buffer: %d\n", status);
+      return ZX_ERR_BAD_STATE;
+    }
+    return ZX_OK;
+  }
 
   camera_control_->OnFrameAvailable(event);
 
@@ -657,17 +642,11 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
     cur_frame_state_ = {};
     cur_frame_state_.fid = fid;
     num_frames_++;
-
-    if (!has_video_buffer_offset_) {
-      // Need to find a new frame offset to store the data in.
-      zx_status_t status = video_buffer_->GetNewFrame(&video_buffer_offset_);
-      if (status == ZX_OK) {
-        has_video_buffer_offset_ = true;
-      } else if (status == ZX_ERR_NOT_FOUND) {
-        zxlogf(ERROR, "no available frames, dropping frame #%u\n", num_frames_);
-      } else if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to get new frame, err: %d\n", status);
-      }
+    zx_status_t status = buffers_.GetNewBuffer();
+    if (status == ZX_ERR_NOT_FOUND) {
+      zxlogf(ERROR, "no available frames, dropping frame #%u\n", num_frames_);
+    } else if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to get new frame, err: %d\n", status);
     }
   }
   cur_frame_state_.eof = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_EOF;
@@ -730,7 +709,7 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     zxlogf(TRACE, "skipping payload of invalid frame #%u\n", num_frames_);
     return;
   }
-  if (!has_video_buffer_offset_) {
+  if (!buffers_.HasBufferInProgress()) {
     // There was no space in the video buffer when the frame's first payload
     // header was parsed.
     return;
@@ -746,14 +725,11 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
   }
 
   // Append the data to the end of the current frame.
-  uint64_t frame_end_offset = video_buffer_offset_ + cur_frame_state_.bytes;
-  ZX_DEBUG_ASSERT(frame_end_offset <= video_buffer_->size());
-
-  uint64_t avail = video_buffer_->size() - frame_end_offset;
+  uint64_t avail = buffers_.CurrentBufferSize() - cur_frame_state_.bytes;
   ZX_DEBUG_ASSERT(avail >= data_size);
 
-  uint8_t* dst =
-      reinterpret_cast<uint8_t*>(video_buffer_->virt()) + frame_end_offset;
+  uint8_t* dst = reinterpret_cast<uint8_t*>(buffers_.CurrentBufferAddress()) +
+                 cur_frame_state_.bytes;
   usb_req_copy_from(&usb_, req, dst, data_size, header_len);
 
   cur_frame_state_.bytes += data_size;

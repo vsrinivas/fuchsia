@@ -5,19 +5,29 @@
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
 
-#include "fake-camera-fidl.h"
+#include "fake-control-impl.h"
 
 namespace simple_camera {
 
-void ColorSource::WriteToBuffer(Buffer* buffer) {
-  if (!buffer) {
+void ColorSource::FillARGB(void* start, size_t buffer_size) {
+  if (!start) {
     FXL_LOG(ERROR) << "Must pass a valid buffer pointer";
     return;
   }
   uint8_t r, g, b;
   hsv_color(frame_color_, &r, &g, &b);
   FXL_VLOG(4) << "Filling with " << (int)r << " " << (int)g << " " << (int)b;
-  buffer->FillARGB(r, g, b);
+  uint32_t color = 0xff << 24 | r << 16 | g << 8 | b;
+  ZX_DEBUG_ASSERT(buffer_size % 4 == 0);
+  uint32_t num_pixels = buffer_size / 4;
+  uint32_t* pixels = reinterpret_cast<uint32_t*>(start);
+  for (unsigned int i = 0; i < num_pixels; i++) {
+    pixels[i] = color;
+  }
+
+  // Ignore if flushing the cache fails.
+  zx_cache_flush(start, buffer_size,
+                 ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
   frame_color_ += kFrameColorInc;
   if (frame_color_ > kMaxFrameColor) {
     frame_color_ -= kMaxFrameColor;
@@ -62,44 +72,43 @@ void FakeControlImpl::PostNextCaptureTask() {
               << " nsec from now";
 }
 
-void FakeControlImpl::SignalBufferFilled(uint32_t index) {
-  FXL_VLOG(4) << "Signalling: " << index;
-  if (index >= buffers_.size()) {
-    FXL_LOG(ERROR) << "index out of range!";
-    return;
-  }
-
-  fuchsia::camera::driver::FrameAvailableEvent frame;
-  frame.frame_size = buffers_[index]->size();
-  frame.frame_offset = buffers_[index]->vmo_offset();
-  // For realism, give the frame a timestamp that is kFramesOfDelay frames
-  // in the past:
-  frame.metadata.timestamp =
-      frame_to_timestamp_.Apply(frame_count_ - kFramesOfDelay);
-  FXL_DCHECK(frame.metadata.timestamp)
-      << "TimelineFunction gave negative result!";
-  FXL_DCHECK(frame.metadata.timestamp != media::TimelineRate::kOverflow)
-      << "TimelineFunction gave negative result!";
-
-  frame.frame_status = fuchsia::camera::driver::FrameStatus::OK;
-  // Inform the consumer that the frame is ready.
-  OnFrameAvailable(frame);
-  buffers_[index]->Signal();
-}
-
 // Checks which buffer can be written to,
 // writes it, then signals it ready.
 // Then sleeps until next cycle.
 void FakeControlImpl::ProduceFrame() {
-  for (uint64_t i = 0; i < buffers_.size(); ++i) {
-    if (buffers_[i]->IsAvailable()) {
-      // Fill buffer.  Currently, just uses a rotating color.
-      color_source_.WriteToBuffer(buffers_[i].get());
-      SignalBufferFilled(i);
-      break;
+  fuchsia::camera::driver::FrameAvailableEvent event = {};
+  // For realism, give the frame a timestamp that is kFramesOfDelay frames
+  // in the past:
+  event.metadata.timestamp =
+      frame_to_timestamp_.Apply(frame_count_ - kFramesOfDelay);
+  FXL_DCHECK(event.metadata.timestamp)
+      << "TimelineFunction gave negative result!";
+  FXL_DCHECK(event.metadata.timestamp != media::TimelineRate::kOverflow)
+      << "TimelineFunction gave negative result!";
+
+  zx_status_t status = buffers_.GetNewBuffer();
+  if (status != ZX_OK) {
+    if (status == ZX_ERR_NOT_FOUND) {
+      FXL_LOG(ERROR) << "no available frames, dropping frame #" << frame_count_;
+      event.frame_status =
+          fuchsia::camera::driver::FrameStatus::ERROR_BUFFER_FULL;
+    } else {
+      FXL_LOG(ERROR) << "failed to get new frame, err: " << status;
+      event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
+    }
+  } else {  // Got a buffer.  Fill it with color:
+
+    color_source_.FillARGB(buffers_.CurrentBufferAddress(),
+                           buffers_.CurrentBufferSize());
+
+    zx_status_t status = buffers_.BufferCompleted(&event.buffer_id);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "could not release the buffer: " << status;
+      event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
     }
   }
-  // If no buffers are available, quietly fail to fill.
+
+  OnFrameAvailable(event);
   // Schedule next frame:
   PostNextCaptureTask();
 }
@@ -121,21 +130,19 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   callback(fbl::move(formats), 1, ZX_OK);
 }
 
-void FakeControlImpl::SetFormat(
-    fuchsia::camera::driver::VideoFormat format,
+void FakeControlImpl::CreateStream(
+    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+    fuchsia::camera::driver::FrameRate frame_rate,
     fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-    fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events,
-    SetFormatCallback callback) {
-  format_ = format;
-  // TODO(garratt): The method for calculating the size varies on the format.
-  // Ideally, the format library should provide functions for calculating the
-  // size.
-  max_frame_size_ = format_.format.height * format_.format.bytes_per_row;
+    fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) {
+
+  rate_ = frame_rate;
+
+  buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
 
   stream_ = fbl::make_unique<FakeStreamImpl>(*this, fbl::move(stream));
   stream_events_ = fbl::make_unique<FakeStreamEventsImpl>(fbl::move(events));
 
-  callback(max_frame_size_, ZX_OK);
 }
 
 void FakeControlImpl::FakeStreamEventsImpl::OnFrameAvailable(
@@ -147,48 +154,15 @@ void FakeControlImpl::FakeStreamEventsImpl::Stopped() {
   binding_.events().Stopped();
 }
 
-void FakeControlImpl::FakeStreamImpl::SetBuffer(::zx::vmo vmo,
-                                                SetBufferCallback callback) {
-  uint64_t buffer_size;
-  vmo.get_size(&buffer_size);
-  if (owner_.max_frame_size_ == 0 ||
-      buffer_size < owner_.max_frame_size_ * kMinNumberOfBuffers) {
-    FXL_LOG(ERROR) << "Insufficient space has been allocated";
-    callback(ZX_ERR_NO_MEMORY);
-    return;
-  }
-  uint64_t num_buffers = buffer_size / owner_.max_frame_size_;
-  for (uint64_t i = 0; i < num_buffers; ++i) {
-    std::unique_ptr<Buffer> buffer =
-        Buffer::Create(owner_.max_frame_size_, vmo, owner_.max_frame_size_ * i);
-    if (!buffer) {
-      FXL_LOG(ERROR) << "Failed to create buffer.";
-      callback(ZX_ERR_INTERNAL);
-      return;
-    }
-    // Mark the buffer available.
-    buffer->Reset();
-    owner_.buffers_.push_back(std::move(buffer));
-  }
-
-  callback(ZX_OK);
-}
-
 void FakeControlImpl::FakeStreamImpl::Start(StartCallback callback) {
-  if (owner_.buffers_.empty()) {
-    FXL_LOG(ERROR) << "Error: FakeCameraSource not initialized!";
-    callback(ZX_ERR_BAD_STATE);
-    return;
-  }
-
   // Set a timeline function to convert from framecount to monotonic time.
   // The start time is now, the start frame number is 0, and the
   // conversion function from frame to time is:
   // frames_per_sec_denominator * 1e9 * num_frames) / frames_per_sec_numerator
   owner_.frame_to_timestamp_ =
       media::TimelineFunction(zx_clock_get(ZX_CLOCK_MONOTONIC), 0,
-                              owner_.format_.rate.frames_per_sec_denominator * 1e9,
-                              owner_.format_.rate.frames_per_sec_numerator);
+                              owner_.rate_.frames_per_sec_denominator * 1e9,
+                              owner_.rate_.frames_per_sec_numerator);
 
   owner_.frame_count_ = 0;
 
@@ -205,17 +179,14 @@ void FakeControlImpl::FakeStreamImpl::Stop(StopCallback callback) {
 }
 
 void FakeControlImpl::FakeStreamImpl::ReleaseFrame(
-    uint64_t data_offset, ReleaseFrameCallback callback) {
-  for (uint64_t i = 0; i < owner_.buffers_.size(); ++i) {
-    if (owner_.buffers_[i]->vmo_offset() == data_offset) {
-      owner_.buffers_[i]->Reset();
+    uint64_t buffer_index, ReleaseFrameCallback callback) {
+  zx_status_t status = owner_.buffers_.BufferRelease(buffer_index);
+  if (status == ZX_OK) {
       callback(ZX_OK);
       return;
-    }
   }
   FXL_LOG(ERROR) << "data offset does not correspond to a frame!";
   callback(ZX_ERR_INVALID_ARGS);
-  return;
 }
 
 FakeControlImpl::FakeStreamImpl::FakeStreamImpl(

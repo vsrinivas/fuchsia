@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CAMERA_FIDL_H_
-#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CAMERA_FIDL_H_
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/camera/driver/cpp/fidl.h>
@@ -12,8 +12,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/media/timeline/timeline_function.h>
-
-#include "garnet/lib/media/camera/simple_camera_lib/buffer.h"
+#include <lib/fzl/vmo-pool.h>
 
 namespace simple_camera {
 
@@ -23,7 +22,7 @@ namespace simple_camera {
 class ColorSource {
  public:
   // Write the next color in the progression to the buffer.
-  void WriteToBuffer(Buffer* buffer);
+  void FillARGB(void* start, size_t buffer_size);
 
  private:
   void hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b);
@@ -55,11 +54,11 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
-  void SetFormat(
-      fuchsia::camera::driver::VideoFormat format,
+  void CreateStream(
+      fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+      fuchsia::camera::driver::FrameRate frame_rate,
       fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-      fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events,
-      SetFormatCallback callback) override;
+      fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) override;
 
  private:
   class FakeStreamEventsImpl : public fuchsia::camera::driver::StreamEvents {
@@ -86,9 +85,6 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
         FakeControlImpl& owner,
         fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream);
 
-    // Set buffer storage used by camera capture
-    void SetBuffer(::zx::vmo buffer, SetBufferCallback callback) override;
-
     // Starts the streaming of frames.
     void Start(StartCallback callback) override;
 
@@ -110,8 +106,6 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   FakeControlImpl(const FakeControlImpl&) = delete;
   FakeControlImpl& operator=(const FakeControlImpl&) = delete;
 
-  void SignalBufferFilled(uint32_t index);
-
   // Checks which buffer can be written to,
   // writes it then signals it ready
   // sleeps until next cycle
@@ -122,10 +116,10 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   static constexpr uint32_t kMinNumberOfBuffers = 2;
   static constexpr uint32_t kFramesOfDelay = 2;
   ColorSource color_source_;
-  fuchsia::camera::driver::VideoFormat format_;
-  uint64_t max_frame_size_ = 0;
+  fuchsia::camera::driver::FrameRate rate_;
   uint64_t frame_count_ = 0;
-  std::vector<std::unique_ptr<Buffer>> buffers_;
+
+  fzl::VmoPool buffers_;
   media::TimelineFunction frame_to_timestamp_;
   async::TaskClosureMethod<FakeControlImpl, &FakeControlImpl::ProduceFrame>
       task_{this};
@@ -133,4 +127,4 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
 
 }  // namespace simple_camera
 
-#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CAMERA_FIDL_H_
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_

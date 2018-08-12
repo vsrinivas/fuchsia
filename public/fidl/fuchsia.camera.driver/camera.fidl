@@ -19,7 +19,7 @@ enum FrameStatus {
 };
 
 struct Metadata {
-    int64 timestamp;
+  int64 timestamp;
 };
 
 // Sent by the driver to the client when a frame is available for processing,
@@ -28,11 +28,8 @@ struct FrameAvailableEvent {
   // Non zero if an error occurred.
   FrameStatus frame_status;
 
-  // Number of bytes in the frame.
-  uint32 frame_size;
-
-  // The position (in bytes) of the start of the frame in the data buffer.
-  uint64 frame_offset;
+  // The index of the buffer in the buffer collection.
+  uint32 buffer_id;
 
   Metadata metadata;
 };
@@ -59,9 +56,9 @@ interface Control {
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
-  2: SetFormat(VideoFormat format,
-               request<Stream> stream,
-               request<StreamEvents> stream_events) -> (uint32 max_frame_size, zx.status status);
+  2: CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
+                FrameRate rate, request<Stream> stream,
+               request<StreamEvents> stream_events);
 };
 
 interface StreamEvents {
@@ -74,12 +71,6 @@ interface StreamEvents {
 };
 
 interface Stream {
-  // Set buffer storage used by camera capture.
-  // NOTE: The client must transfer a VMO handle for the data buffer
-  // with read-write permissions. The size of the VMO should be an
-  // integral multiple of max_frame_size returned in SET_FORMAT.
-  1: SetBuffer(handle<vmo> buffer) -> (zx.status status);
-
   // Starts the streaming of frames.
   2: Start() -> (zx.status status);
 

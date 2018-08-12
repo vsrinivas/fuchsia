@@ -38,11 +38,11 @@ class ControlImpl : public fuchsia::camera::driver::Control {
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
-  void SetFormat(
-      fuchsia::camera::driver::VideoFormat format,
+  void CreateStream(
+      fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+      fuchsia::camera::driver::FrameRate frame_rate,
       fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream,
-      fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events,
-      SetFormatCallback callback) override;
+      fidl::InterfaceRequest<fuchsia::camera::driver::StreamEvents> events) override;
 
  private:
   class StreamEventsImpl : public fuchsia::camera::driver::StreamEvents {
@@ -67,9 +67,6 @@ class ControlImpl : public fuchsia::camera::driver::Control {
    public:
     StreamImpl(ControlImpl& owner,
                fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream);
-
-    // Set buffer storage used by camera capture
-    void SetBuffer(::zx::vmo buffer, SetBufferCallback callback) override;
 
     // Starts the streaming of frames.
     void Start(StartCallback callback) override;

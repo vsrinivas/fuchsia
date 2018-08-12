@@ -10,6 +10,29 @@
 
 using namespace fuchsia::camera::driver;
 
+// This is a stand-in for some actual gralloc type service which would allocate
+// the right type of memory for the application and return it as a vmo.
+zx_status_t Gralloc(fuchsia::camera::driver::VideoFormat format,
+                    uint32_t num_buffers,
+                    fuchsia::sysmem::BufferCollectionInfo* buffer_collection) {
+  // In the future, some special alignment might happen here, or special
+  // memory allocated...
+  // Simple GetBufferSize.  Only valid for simple formats:
+  size_t buffer_size = format.format.height * format.format.bytes_per_row;
+  buffer_collection->buffer_count = num_buffers;
+  buffer_collection->vmo_size = buffer_size;
+  buffer_collection->format.set_image(std::move(format.format));
+  zx_status_t status;
+  for (uint32_t i = 0; i < num_buffers; ++i) {
+    status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to allocate Buffer Collection";
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t run_camera() {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
@@ -53,16 +76,24 @@ zx_status_t run_camera() {
   StreamEventsPtr stream_events;
   stream_events.events().OnFrameAvailable =
       [&stream, &frame_counter](FrameAvailableEvent frame) {
-        printf("Received FrameNotify Event %d at offset: %lu\n",
-               frame_counter++, frame.frame_offset);
+        printf("Received FrameNotify Event %d at index: %u\n",
+               frame_counter++, frame.buffer_id);
 
         zx_status_t driver_status;
         zx_status_t status =
-            stream->ReleaseFrame(frame.frame_offset, &driver_status);
+            stream->ReleaseFrame(frame.buffer_id, &driver_status);
         if (frame_counter > 10) {
           status = stream->Stop(&driver_status);
         }
       };
+
+  static constexpr uint16_t kNumberOfBuffers = 8;
+  fuchsia::sysmem::BufferCollectionInfo buffer_collection;
+  status = Gralloc(formats[0], kNumberOfBuffers, &buffer_collection);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
+    return status;
+  }
 
   stream_events.events().Stopped = [&loop, &frame_counter]() {
     printf("Received Stopped Event %d\n", frame_counter++);
@@ -70,35 +101,11 @@ zx_status_t run_camera() {
       loop.Quit();
   };
 
-  uint32_t out_max_frame_size;
-  status = client.camera()->SetFormat(formats[0], stream.NewRequest(),
-                                      stream_events.NewRequest(),
-                                      &out_max_frame_size, &driver_status);
+  status = client.camera()->CreateStream(
+      std::move(buffer_collection), formats[0].rate,
+      stream.NewRequest(), stream_events.NewRequest());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't set camera format (status " << status << ")";
-    return status;
-  }
-
-  printf("out_max_frame_size: %d\n", out_max_frame_size);
-
-  static constexpr uint16_t kNumberOfBuffers = 8;
-  size_t buffer_size = formats[0].format.bytes_per_row * formats[0].format.height;
-
-  FXL_LOG(INFO) << "Allocating vmo buffer of size: "
-                << kNumberOfBuffers * buffer_size;
-
-  zx::vmo vmo_buffer;
-  status = zx::vmo::create(
-      kNumberOfBuffers * buffer_size, 0, &vmo_buffer);
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't create VMO buffer: " << status;
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = stream->SetBuffer(std::move(vmo_buffer), &driver_status);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't set camera buffer (status " << status << ")";
     return status;
   }
 

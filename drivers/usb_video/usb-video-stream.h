@@ -15,11 +15,12 @@
 #include <lib/async/default.h>
 #include <lib/zx/vmo.h>
 
-#include "garnet/drivers/usb_video/camera_control_impl.h"
+#include <lib/fzl/vmo-pool.h>
 #include "garnet/drivers/usb_video/usb-video-camera.h"
 #include "garnet/drivers/usb_video/usb-video.h"
 #include "garnet/drivers/usb_video/uvc_format.h"
 #include "garnet/drivers/usb_video/video-buffer.h"
+#include "garnet/drivers/usb_video/camera_control_impl.h"
 
 namespace video {
 namespace usb {
@@ -78,20 +79,13 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
                               uint32_t default_frame_interval)
       __TA_REQUIRES(lock_);
 
-  // Creates a new video buffer and maps it into our address space.
-  // The current streaming state must be StreamingState::STOPPED.
-  zx_status_t CreateDataVideoBuffer();
-
  public:
   // Interface with the FIDL Camera Driver
   zx_status_t GetFormats(
       fidl::VectorPtr<fuchsia::camera::driver::VideoFormat>& formats);
 
-  zx_status_t SetFormat(
-      const fuchsia::camera::driver::VideoFormat& video_format,
-      uint32_t* max_frame_size);
-
-  zx_status_t SetBuffer(zx::vmo buffer);
+  zx_status_t CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                        fuchsia::camera::driver::FrameRate frame_rate);
 
   zx_status_t StartStreaming();
 
@@ -187,14 +181,6 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
 
   FrameState cur_frame_state_;
 
-  fbl::unique_ptr<VideoBuffer> video_buffer_ __TA_GUARDED(lock_);
-
-  // Whether a video buffer frame offset has been obtained to store the
-  // data. False if the video buffer was full.
-  bool has_video_buffer_offset_ __TA_GUARDED(lock_);
-  // Offset into the video buffer of the current frame we're writing to.
-  VideoBuffer::FrameOffset video_buffer_offset_ __TA_GUARDED(lock_);
-
   volatile StreamingState streaming_state_ __TA_GUARDED(lock_) =
       StreamingState::STOPPED;
 
@@ -218,6 +204,8 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
 
   // Loop used to run the FIDL server
   static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
+
+  fzl::VmoPool buffers_;
 };
 
 }  // namespace usb
