@@ -17,8 +17,6 @@
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
-#include <zircon/status.h>
-
 #define LOCAL_TRACE 0
 #define TRACE_EXCEPTIONS 1
 
@@ -175,13 +173,13 @@ static handler_status_t exception_handler_worker(uint exception_type,
             case ThreadDispatcher::ExceptionStatus::RESUME:
                 return HS_RESUME;
             default:
-                ASSERT_MSG(0, "invalid exception status %d", static_cast<int>(estatus));
+                ASSERT_MSG(0, "invalid exception status %d",
+                           static_cast<int>(estatus));
                 __UNREACHABLE;
             }
             break;
         default:
-            ASSERT_MSG(0, "unexpected exception result %d (%s)", static_cast<int>(status),
-                       zx_status_get_string(status));
+            ASSERT_MSG(0, "unexpected exception result %d", status);
             __UNREACHABLE;
         }
     }
