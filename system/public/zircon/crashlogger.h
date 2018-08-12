@@ -5,6 +5,8 @@
 #ifndef ZIRCON_CRASHLOGGER_H_
 #define ZIRCON_CRASHLOGGER_H_
 
+#include <stdint.h>
+
 #define ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC ((uint64_t)0xee726573756d65ee)
 
 // Invoke this function to cause crashlogger to print a backtrace
