@@ -7,6 +7,7 @@
 #include "garnet/bin/zxdb/client/frame_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
+#include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 
 namespace zxdb {
 
@@ -26,8 +27,7 @@ FrameImpl::~FrameImpl() {
 Thread* FrameImpl::GetThread() const { return thread_; }
 
 const Location& FrameImpl::GetLocation() const {
-  // This function is externally const but the symbols are populated lazily.
-  const_cast<FrameImpl*>(this)->EnsureSymbolized();
+  EnsureSymbolized();
   return location_;
 }
 
@@ -35,17 +35,28 @@ uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
 uint64_t FrameImpl::GetStackPointer() const { return stack_frame_.sp; }
 
-void FrameImpl::EnsureSymbolized() {
+void FrameImpl::EnsureSymbolized() const {
   if (location_.is_symbolized())
     return;
   location_ =
       thread_->process()->GetSymbols()->LocationForAddress(location_.address());
 }
 
-fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() {
-  if (!symbol_data_provider_)
-    symbol_data_provider_ = fxl::MakeRefCounted<FrameSymbolDataProvider>(this);
+fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() const {
+  if (!symbol_data_provider_) {
+    symbol_data_provider_ = fxl::MakeRefCounted<FrameSymbolDataProvider>(
+        const_cast<FrameImpl*>(this));
+  }
   return symbol_data_provider_;
+}
+
+fxl::RefPtr<ExprEvalContext> FrameImpl::GetExprEvalContext() const {
+  if (!symbol_eval_context_) {
+    EnsureSymbolized();
+    symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
+        GetSymbolDataProvider(), location_);
+  }
+  return symbol_eval_context_;
 }
 
 }  // namespace zxdb

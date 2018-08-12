@@ -20,11 +20,8 @@ fxl::RefPtr<Variable> MakeUint64VariableForTest(
   entry.expression = std::move(location_expression);
   variable->set_location(VariableLocation({entry}));
 
-  auto type = fxl::MakeRefCounted<BaseType>();
-  type->set_byte_size(8);
-  type->set_base_type(BaseType::kBaseTypeUnsigned);
-  type->set_assigned_name("uint64_t");
-  variable->set_type(LazySymbol(std::move(type)));
+  variable->set_type(LazySymbol(fxl::MakeRefCounted<BaseType>(
+      BaseType::kBaseTypeUnsigned, 8, "uint64_t")));
 
   return variable;
 }

@@ -71,7 +71,6 @@ fxl::RefPtr<BaseType> ExprValue::CreateSyntheticBaseType(int base_type,
 
 template <>
 int8_t ExprValue::GetAs<int8_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeSigned);
   FXL_DCHECK(data_.size() == 1);
   int8_t result;
   memcpy(&result, &data_[0], 1);
@@ -80,7 +79,6 @@ int8_t ExprValue::GetAs<int8_t>() const {
 
 template <>
 uint8_t ExprValue::GetAs<uint8_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeUnsigned);
   FXL_DCHECK(data_.size() == 1);
   uint8_t result;
   memcpy(&result, &data_[0], 1);
@@ -89,7 +87,6 @@ uint8_t ExprValue::GetAs<uint8_t>() const {
 
 template <>
 int16_t ExprValue::GetAs<int16_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeSigned);
   FXL_DCHECK(data_.size() == 2);
   int16_t result;
   memcpy(&result, &data_[0], 2);
@@ -98,7 +95,6 @@ int16_t ExprValue::GetAs<int16_t>() const {
 
 template <>
 uint16_t ExprValue::GetAs<uint16_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeUnsigned);
   FXL_DCHECK(data_.size() == 2);
   uint16_t result;
   memcpy(&result, &data_[0], 2);
@@ -107,7 +103,6 @@ uint16_t ExprValue::GetAs<uint16_t>() const {
 
 template <>
 int32_t ExprValue::GetAs<int32_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeSigned);
   FXL_DCHECK(data_.size() == 4);
   int32_t result;
   memcpy(&result, &data_[0], 4);
@@ -116,7 +111,6 @@ int32_t ExprValue::GetAs<int32_t>() const {
 
 template <>
 uint32_t ExprValue::GetAs<uint32_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeUnsigned);
   FXL_DCHECK(data_.size() == 4);
   uint32_t result;
   memcpy(&result, &data_[0], 4);
@@ -125,7 +119,6 @@ uint32_t ExprValue::GetAs<uint32_t>() const {
 
 template <>
 int64_t ExprValue::GetAs<int64_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeSigned);
   FXL_DCHECK(data_.size() == 8);
   int64_t result;
   memcpy(&result, &data_[0], 8);
@@ -134,9 +127,24 @@ int64_t ExprValue::GetAs<int64_t>() const {
 
 template <>
 uint64_t ExprValue::GetAs<uint64_t>() const {
-  FXL_DCHECK(GetBaseType() == BaseType::kBaseTypeUnsigned);
   FXL_DCHECK(data_.size() == 8);
   uint64_t result;
+  memcpy(&result, &data_[0], 8);
+  return result;
+}
+
+template <>
+float ExprValue::GetAs<float>() const {
+  FXL_DCHECK(data_.size() == 4);
+  float result;
+  memcpy(&result, &data_[0], 4);
+  return result;
+}
+
+template <>
+double ExprValue::GetAs<double>() const {
+  FXL_DCHECK(data_.size() == 8);
+  double result;
   memcpy(&result, &data_[0], 8);
   return result;
 }

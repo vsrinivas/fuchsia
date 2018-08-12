@@ -23,54 +23,45 @@ namespace zxdb {
 
 namespace {
 
-void ListFunctionParams(const Function* func, OutputBuffer* out) {
-  // Always list function parameters in the order specified.
-  for (const auto& param : func->parameters()) {
-    const Value* value = param.Get()->AsValue();
-    continue;             // Symbols are corrupt.
-    out->Append("    ");  // Indent.
-    FormatValue(value, out);
-    out->Append("\n");
-  }
-}
-
 void ListCompletedFrames(Thread* thread, bool long_format) {
   Console* console = Console::get();
   int active_frame_id = console->context().GetActiveFrameIdForThread(thread);
 
-  OutputBuffer out;
+  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
 
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.
   const auto& frames = thread->GetFrames();
   if (frames.empty()) {
-    out.Append("No stack frames.\n");
+    helper->Append("No stack frames.\n");
   } else {
     for (int i = 0; i < static_cast<int>(frames.size()); i++) {
       if (i == active_frame_id)
-        out.Append(GetRightArrow() + " ");
+        helper->Append(GetRightArrow() + " ");
       else
-        out.Append("  ");
+        helper->Append("  ");
 
       // The frames can get very long due to templates so use reverse video
       // to highlight the indices so the lines can be found.
-      out.Append(Syntax::kReversed, fxl::StringPrintf(" %d ", i));
-      out.Append(" ");
-      FormatFrame(frames[i], &out, long_format);
-
-      out.Append("\n");
+      helper->Append(OutputBuffer::WithContents(Syntax::kReversed,
+                                                fxl::StringPrintf(" %d ", i)));
+      helper->Append(" ");
 
       if (long_format) {
-        const Location& location = frames[i]->GetLocation();
-        if (location.function()) {
-          const Function* func = location.function().Get()->AsFunction();
-          if (func)
-            ListFunctionParams(func, &out);
-        }
+        FormatFrameLong(frames[i], helper.get(), FormatValueOptions(), i);
+      } else {
+        OutputBuffer out;
+        FormatFrame(frames[i], &out, i);
+        helper->Append(std::move(out));
       }
+
+      helper->Append("\n");
     }
   }
-  console->Output(std::move(out));
+
+  helper->Complete([helper = std::move(helper)](OutputBuffer out) {
+    Console::get()->Output(std::move(out));
+  });
 }
 
 }  // namespace
@@ -89,24 +80,42 @@ void OutputFrameList(Thread* thread, bool long_format) {
   }
 }
 
-void FormatFrame(const Frame* frame, OutputBuffer* out, bool long_format,
-                 int id) {
+void FormatFrame(const Frame* frame, OutputBuffer* out, int id) {
   if (id >= 0)
     out->Append(fxl::StringPrintf("Frame %d ", id));
+  out->Append(DescribeLocation(frame->GetLocation(), false));
+}
 
-  if (long_format) {
-    // Long format.
-    out->Append(fxl::StringPrintf("0x%" PRIx64, frame->GetAddress()));
+void FormatFrameLong(const Frame* frame, ValueFormatHelper* out,
+                     const FormatValueOptions& options, int id) {
+  if (id >= 0)
+    out->Append(OutputBuffer::WithContents(fxl::StringPrintf("Frame %d ", id)));
 
-    // Only print the location if it has symbols, otherwise the hex
-    // address will be shown twice.
-    if (frame->GetLocation().has_symbols())
-      out->Append(" " + DescribeLocation(frame->GetLocation(), false));
+  // Long format includes the IP address.
+  out->Append(OutputBuffer::WithContents(
+      fxl::StringPrintf("0x%" PRIx64, frame->GetAddress())));
 
-    // TODO(brettw) add function parameters here.
-  } else {
-    // Short format.
-    out->Append(DescribeLocation(frame->GetLocation(), false));
+  // Only print the location if it has symbols, otherwise the hex
+  // address will be shown twice.
+  const Location& location = frame->GetLocation();
+  if (location.has_symbols())
+    out->Append( " " + DescribeLocation(location, false));
+
+  if (location.function()) {
+    const Function* func = location.function().Get()->AsFunction();
+    if (func) {
+      // Always list function parameters in the order specified.
+      for (const auto& param : func->parameters()) {
+        const Variable* value = param.Get()->AsVariable();
+        if (!value)
+          continue;  // Symbols are corrupt.
+
+        out->Append("\n    ");  // Indent.
+        out->AppendVariableWithName(location.symbol_context(),
+                                    frame->GetSymbolDataProvider(), value,
+                                    options);
+      }
+    }
   }
 }
 

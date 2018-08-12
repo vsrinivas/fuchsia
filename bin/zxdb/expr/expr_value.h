@@ -101,4 +101,10 @@ int64_t ExprValue::GetAs<int64_t>() const;
 template <>
 uint64_t ExprValue::GetAs<uint64_t>() const;
 
+template <>
+float ExprValue::GetAs<float>() const;
+
+template <>
+double ExprValue::GetAs<double>() const;
+
 }  // namespace zxdb

@@ -23,7 +23,8 @@ class ExprTokenizer {
 
   const std::string& input() const { return input_; }
 
-  // The result of parsing.
+  // The result of parsing. This will be multiline and will indicate the
+  // location of the problem.
   const Err& err() const { return err_; }
 
   // When err is set, this will be the index into the input() string where the
@@ -34,6 +35,12 @@ class ExprTokenizer {
   const std::vector<ExprToken>& tokens() const { return tokens_; }
 
   std::vector<ExprToken> TakeTokens() { return std::move(tokens_); }
+
+  // Returns two context lines for an error message. It will quote a relevant
+  // portion of the input showing the byte offset, and add a "^" on the next
+  // line to indicate where the error is.
+  static std::string GetErrorContext(const std::string& input,
+                                     size_t byte_offset);
 
  private:
   void AdvanceOneChar();

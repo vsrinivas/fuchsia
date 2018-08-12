@@ -22,6 +22,7 @@
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/format_frame.h"
 #include "garnet/bin/zxdb/console/format_table.h"
+#include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/public/lib/fxl/logging.h"
@@ -77,7 +78,6 @@ Examples
 // Returns true if processing should stop (either a frame command or an error),
 // false to continue processing to the nex noun type.
 bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
-  Console* console = Console::get();
   if (!cmd.HasNoun(Noun::kFrame))
     return false;
 
@@ -101,10 +101,13 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  OutputBuffer out;
-  FormatFrame(cmd.frame(), &out, true,
-              context->GetActiveFrameIdForThread(cmd.thread()));
-  console->Output(out);
+  // Schedule asynchronous output of the full frame description.
+  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
+  FormatFrameLong(cmd.frame(), helper.get(), FormatValueOptions(),
+                  context->GetActiveFrameIdForThread(cmd.thread()));
+  helper->Complete([helper = std::move(helper)](OutputBuffer out) {
+    Console::get()->Output(std::move(out));
+  });
   return true;
 }
 

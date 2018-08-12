@@ -18,6 +18,13 @@ const int BaseType::kBaseTypeUnsignedChar;
 const int BaseType::kBaseTypeUTF;
 
 BaseType::BaseType() : Type(Symbol::kTagBaseType) {}
+
+BaseType::BaseType(int base_type, int byte_size, const std::string& name)
+    : Type(Symbol::kTagBaseType), base_type_(base_type) {
+  set_byte_size(byte_size);
+  set_assigned_name(name);
+}
+
 BaseType::~BaseType() = default;
 
 const BaseType* BaseType::AsBaseType() const { return this; }

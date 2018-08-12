@@ -21,7 +21,11 @@ TEST(ExprTokenizer, InvalidChar) {
 
   EXPECT_FALSE(t.Tokenize());
   EXPECT_TRUE(t.err().has_error());
-  EXPECT_EQ("Invalid character '@' in expression.", t.err().msg());
+  EXPECT_EQ(
+      "Invalid character '@' in expression.\n"
+      "  1234 @ hello\n"
+      "       ^",
+      t.err().msg());
   EXPECT_EQ(5u, t.error_location());
 }
 
@@ -140,6 +144,23 @@ TEST(ExprTokenizer, Names) {
   EXPECT_EQ(ExprToken::kName, tokens[5].type());
   EXPECT_EQ("a", tokens[5].value());
   EXPECT_EQ(21u, tokens[5].byte_offset());
+}
+
+TEST(ExprTokenizer, GetErrorContext) {
+  EXPECT_EQ(
+      "  foo\n"
+      "  ^",
+      ExprTokenizer::GetErrorContext("foo", 0));
+  EXPECT_EQ(
+      "  foo\n"
+      "    ^",
+      ExprTokenizer::GetErrorContext("foo", 2));
+
+  // One-past-the end is allowed.
+  EXPECT_EQ(
+      "  foo\n"
+      "     ^",
+      ExprTokenizer::GetErrorContext("foo", 3));
 }
 
 }  // namespace zxdb

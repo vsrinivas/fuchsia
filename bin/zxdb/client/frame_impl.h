@@ -12,6 +12,7 @@
 namespace zxdb {
 
 class FrameSymbolDataProvider;
+class SymbolEvalContext;
 class ThreadImpl;
 
 // A frame is lazily symbolized.
@@ -26,16 +27,18 @@ class FrameImpl final : public Frame {
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
   uint64_t GetStackPointer() const override;
-  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() override;
+  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
+  fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
 
  private:
-  void EnsureSymbolized();
+  void EnsureSymbolized() const;
 
   ThreadImpl* thread_;
 
   debug_ipc::StackFrame stack_frame_;
-  Location location_;
-  fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
+  mutable Location location_;  // Lazily symbolized.
+  mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
+  mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;  // Lazy.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameImpl);
 };

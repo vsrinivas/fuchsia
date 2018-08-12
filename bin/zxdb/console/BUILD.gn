@@ -82,6 +82,7 @@ source_set("tests") {
     "format_context_unittest.cc",
     "format_frame_unittest.cc",
     "format_table_unittest.cc",
+    "format_value_unittest.cc",
     "input_location_parser_unittest.cc",
     "line_input_unittest.cc",
     "memory_format_unittest.cc",

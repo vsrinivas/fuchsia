@@ -22,7 +22,9 @@ class ExprParser {
   // ad error_token()
   std::unique_ptr<ExprNode> Parse();
 
-  // The result of parsing.
+  // The result of parsing. Since this does not have access to the initial
+  // string, it will not indicate context for the error. That can be generated
+  // from the error_token() if desired.
   const Err& err() const { return err_; }
 
   ExprToken error_token() const { return error_token_; }

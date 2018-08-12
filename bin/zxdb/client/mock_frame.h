@@ -10,6 +10,7 @@
 namespace zxdb {
 
 class MockSymbolDataProvider;
+class SymbolEvalContext;
 
 // Provides a MockFrame implementation that just returns constant values for
 // everything. Tests can override this to implement the subset of functionality
@@ -28,14 +29,16 @@ class MockFrame : public Frame {
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
   uint64_t GetStackPointer() const override;
-  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() override;
+  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
+  fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
 
  private:
   Thread* thread_;
 
   debug_ipc::StackFrame stack_frame_;
   Location location_;
-  fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
+  mutable fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
+  mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;  // Lazy.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockFrame);
 };

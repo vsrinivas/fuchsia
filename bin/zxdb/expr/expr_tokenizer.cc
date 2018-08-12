@@ -54,6 +54,26 @@ bool ExprTokenizer::Tokenize() {
   return !has_error();
 }
 
+// static
+std::string ExprTokenizer::GetErrorContext(const std::string& input,
+                                           size_t byte_offset) {
+  // Index should be in range of the input string. Also allow indicating one
+  // character past the end.
+  FXL_DCHECK(byte_offset <= input.size());
+
+  // Future enhancements:
+  // - If we allow multiline expressions in the, the returned context should
+  //   not cross newlines or it will be messed up.
+  // - Input longer than 80 chars should be clipped to guarantee it doesn't
+  //   wrap.
+
+  std::string output;
+  output = "  " + input + "\n  ";
+  output.append(byte_offset, ' ');
+  output.push_back('^');
+  return output;
+}
+
 void ExprTokenizer::AdvanceOneChar() { cur_++; }
 
 void ExprTokenizer::AdvanceToNextToken() {
@@ -143,8 +163,9 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
       return ExprToken::kRightParen;
     default:
       error_location_ = cur_;
-      err_ =
-          Err(fxl::StringPrintf("Invalid character '%c' in expression.", cur));
+      err_ = Err(
+          fxl::StringPrintf("Invalid character '%c' in expression.\n", cur) +
+          GetErrorContext(input_, cur_));
       return ExprToken::kInvalid;
   }
 }

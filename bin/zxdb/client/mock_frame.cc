@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/mock_frame.h"
 
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
+#include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 
 namespace zxdb {
 
@@ -22,10 +23,18 @@ const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return stack_frame_.ip; }
 uint64_t MockFrame::GetStackPointer() const { return stack_frame_.sp; }
 
-fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() {
+fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
   if (!symbol_data_provider_)
     symbol_data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
   return symbol_data_provider_;
+}
+
+fxl::RefPtr<ExprEvalContext> MockFrame::GetExprEvalContext() const {
+  if (!symbol_eval_context_) {
+    symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
+        GetSymbolDataProvider(), location_);
+  }
+  return symbol_eval_context_;
 }
 
 }  // namespace zxdb

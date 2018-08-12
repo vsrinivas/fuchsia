@@ -57,6 +57,7 @@ class BaseType final : public Type {
   FRIEND_MAKE_REF_COUNTED(BaseType);
 
   BaseType();
+  BaseType(int base_type, int byte_size, const std::string& name);
   ~BaseType();
 
   int base_type_ = kBaseTypeNone;

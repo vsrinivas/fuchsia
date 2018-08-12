@@ -13,6 +13,7 @@
 
 namespace zxdb {
 
+class ExprEvalContext;
 class Location;
 class Thread;
 
@@ -36,9 +37,13 @@ class Frame : public ClientObject {
   // Returns the stack pointer at this location.
   virtual uint64_t GetStackPointer() const = 0;
 
-  // Returns the SymbolDataProvider that can be used to evaluate symbolic
-  // expressions in the context of this frame.
-  virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() = 0;
+  // Returns the SymbolDataProvider that can be used to evaluate symbols
+  // in the context of this frame.
+  virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const = 0;
+
+  // Returns the ExprEvalContext that can be used to evaluate expressions in
+  // the context of this frame.
+  virtual fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const = 0;
 
  private:
   fxl::WeakPtrFactory<Frame> weak_factory_;

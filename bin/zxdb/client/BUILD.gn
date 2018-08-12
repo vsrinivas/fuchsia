@@ -79,6 +79,7 @@ static_library("client") {
   public_deps = [
     "symbols",
     "//garnet/bin/zxdb/common",
+    "//garnet/bin/zxdb/expr",
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",

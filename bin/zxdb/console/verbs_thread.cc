@@ -24,6 +24,8 @@
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/verbs.h"
+#include "garnet/bin/zxdb/expr/expr.h"
+#include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -251,22 +253,18 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err();
   }
 
-  // TODO(brettw) provide a better way to manage the memory of this helper.
-  // I'm thinking we need to track app pending operations in some global
-  // list and also provide a way to cancel them (since some may take arbitrary
-  // time). For now, these deletes itself after the callback.
-  ValueFormatHelper* helper = new ValueFormatHelper;
+  // TODO(brettw) hook this up with switches on the command.
+  FormatValueOptions options;
+
+  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
   for (const auto& pair : vars) {
     helper->AppendVariableWithName(location.symbol_context(),
                                    cmd.frame()->GetSymbolDataProvider(),
-                                   pair.second);
+                                   pair.second, options);
     helper->Append(OutputBuffer::WithContents("\n"));
   }
-
-  helper->Complete([helper](OutputBuffer out) {
+  helper->Complete([helper = std::move(helper)](OutputBuffer out) {
     Console::get()->Output(std::move(out));
-    // Delete the helper asynchronously to avoid reentrancy.
-    debug_ipc::MessageLoop::Current()->PostTask([helper]() { delete helper; });
   });
   return Err();
 }
@@ -336,6 +334,93 @@ Err DoPause(ConsoleContext* context, const Command& cmd) {
       return err;
     context->session()->system().Pause();
   }
+
+  return Err();
+}
+
+// print -----------------------------------------------------------------------
+
+const char kPrintShortHelp[] = "print / p: Print a variable or expression.";
+const char kPrintHelp[] =
+    R"(print <expression>
+
+  Alias: p
+
+  Evaluates a simple expression or variable name and prints the result.
+
+  The expression is evaluated by default in the currently selected thread and
+  stack frame. You can override this with "frame <x> print ...".
+
+Expressions
+
+  The expression evaluator understands the following C/C++ things:
+
+    - Identifiers
+
+    - Struct and class member access: . ->
+
+    - Array access (for native arrays): [ <expression> ]
+
+    - Create or dereference pointers: & *
+
+    - Precedence: ( <expression> )
+
+  Not supported: function calls, overloaded operators, casting.
+
+Examples
+
+  p foo
+  print foo
+      Print a variable
+
+  p *foo->bar
+  print &foo.bar[2]
+      Deal with structs and arrays.
+
+  f 2 p foo
+  frame 2 print foo
+  thread 1 frame 2 print foo
+      Print a variable in the context of a specific stack frame.
+)";
+Err DoPrint(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, false, "print");
+  if (err.has_error())
+    return err;
+  err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+  if (err.has_error())
+    return err;
+  if (!cmd.frame())
+    return Err("There isn't a current frame for printing context.");
+
+  // This takes one expression that may have spaces, so concatenate everything
+  // the command parser has split apart back into one thing.
+  //
+  // If we run into limitations of this, we should add a "don't parse the args"
+  // flag to the command record.
+  std::string expr;
+  for (const auto& cur : cmd.args()) {
+    if (!expr.empty())
+      expr.push_back(' ');
+    expr += cur;
+  }
+
+  // TODO(brettw) parse options.
+  FormatValueOptions options;
+
+  EvalExpression(expr, cmd.frame()->GetExprEvalContext(),
+                 [options](const Err& err, ExprValue value) {
+                   OutputBuffer out;
+                   // Note that this doesn't use the variant of FormatExprValue
+                   // that takes an Err. That will rewrite the error to be in
+                   // <>, but when printing we can afford to output multiline
+                   // error messages, and the parser will generate such
+                   // messages.
+                   if (err.has_error())
+                     out.OutputErr(err);
+                   else
+                     FormatExprValue(value, options, &out);
+                   Console::get()->Output(std::move(out));
+                 });
 
   return Err();
 }
@@ -673,11 +758,11 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
                  CommandGroup::kProcess);
+  (*verbs)[Verb::kPrint] = VerbRecord(&DoPrint, {"print", "p"}, kPrintShortHelp,
+                                      kPrintHelp, CommandGroup::kQuery);
 
-  // regs ----------------------------------------------------------------------
-
+  // regs
   SwitchRecord regs_categories(kRegsCategoriesSwitch, true, "category", 'c');
-
   VerbRecord regs(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp,
                   CommandGroup::kAssembly);
   regs.switches.push_back(regs_categories);

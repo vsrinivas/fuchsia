@@ -14,7 +14,7 @@ class Err;
 class ExprValue;
 
 // Interface used by expression evaluation to communicate with the outside
-// world.
+// world. This provides access to the variables currently in scope.
 class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
  public:
   virtual ~ExprEvalContext() = default;
@@ -25,8 +25,9 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // The callback may be issued asynchronously in the future if communication
   // with the remote debugged application is required. The callback may be
   // issued reentrantly for synchronously available data.
-  virtual void GetVariable(const std::string& name,
-                            std::function<void(const Err& err, ExprValue value)>) = 0;
+  virtual void GetVariable(
+      const std::string& name,
+      std::function<void(const Err& err, ExprValue value)>) = 0;
 };
 
 }  // namespace zxdb

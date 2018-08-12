@@ -15,57 +15,161 @@
 
 namespace zxdb {
 
+namespace {
+
+void FormatBoolean(const ExprValue& value, OutputBuffer* out) {
+  bool result = false;
+  for (uint8_t byte : value.data())
+    result |= !!byte;
+  if (result)
+    out->Append("true");
+  else
+    out->Append("false");
+}
+
+void FormatSignedInt(const ExprValue& value, OutputBuffer* out) {
+  int64_t int_val = 0;
+  switch (value.data().size()) {
+    case 1:
+      int_val = value.GetAs<int8_t>();
+      break;
+    case 2:
+      int_val = value.GetAs<int16_t>();
+      break;
+    case 4:
+      int_val = value.GetAs<int32_t>();
+      break;
+    case 8:
+      int_val = value.GetAs<int64_t>();
+      break;
+    default:
+      out->Append("<unknown signed integer type>");
+      return;
+  }
+  out->Append(fxl::StringPrintf("%" PRId64, int_val));
+}
+
+// This formatted handles unsigned and hex output.
+void FormatUnsignedInt(const ExprValue& value,
+                       const FormatValueOptions& options, OutputBuffer* out) {
+  uint64_t int_val = 0;
+  switch (value.data().size()) {
+    case 1:
+      int_val = value.GetAs<uint8_t>();
+      break;
+    case 2:
+      int_val = value.GetAs<uint16_t>();
+      break;
+    case 4:
+      int_val = value.GetAs<uint32_t>();
+      break;
+    case 8:
+      int_val = value.GetAs<uint64_t>();
+      break;
+    default:
+      out->Append("<unknown unsigned integer type>");
+      return;
+  }
+  if (options.num_format == FormatValueOptions::NumFormat::kHex)
+    out->Append(fxl::StringPrintf("0x%" PRIx64, int_val));
+  else
+    out->Append(fxl::StringPrintf("%" PRIu64, int_val));
+}
+
+void FormatFloat(const ExprValue& value, OutputBuffer* out) {
+  switch (value.data().size()) {
+    case 4:
+      out->Append(fxl::StringPrintf("%g", value.GetAs<float>()));
+      break;
+    case 8:
+      out->Append(fxl::StringPrintf("%g", value.GetAs<double>()));
+      break;
+    default:
+      out->Append(fxl::StringPrintf("<unknown float of size %d>",
+                                    static_cast<int>(value.data().size())));
+      break;
+  }
+}
+
+void FormatChar(const ExprValue& value, OutputBuffer* out) {
+  // Just take the first byte for all char.
+  if (value.data().empty()) {
+    out->Append("<invalid char type>");
+    return;
+  }
+  char c = static_cast<char>(value.data()[0]);
+  out->Append(fxl::StringPrintf("'%c'", c));
+}
+
+// Returns true if the base type is some kind of number such that the NumFormat
+// of the format options should be applied.
+bool IsNumericBaseType(int base_type) {
+  return base_type == BaseType::kBaseTypeSigned ||
+         base_type == BaseType::kBaseTypeUnsigned ||
+         base_type == BaseType::kBaseTypeBoolean ||
+         base_type == BaseType::kBaseTypeFloat ||
+         base_type == BaseType::kBaseTypeSignedChar ||
+         base_type == BaseType::kBaseTypeUnsignedChar ||
+         base_type == BaseType::kBaseTypeUTF;
+}
+
+}  // namespace
+
 void FormatValue(const Value* value, OutputBuffer* out) {
   out->Append(Syntax::kVariable, value->GetAssignedName());
   out->Append(" = TODO");
 }
 
-void FormatExprValue(const ExprValue& value, OutputBuffer* out) {
+void FormatExprValue(const ExprValue& value, const FormatValueOptions& options,
+                     OutputBuffer* out) {
+  // Check for numeric types with an overridden format option.
+  int base_type = value.GetBaseType();
+  if (IsNumericBaseType(base_type) &&
+      options.num_format != FormatValueOptions::NumFormat::kDefault) {
+    switch (options.num_format) {
+      case FormatValueOptions::NumFormat::kUnsigned:
+      case FormatValueOptions::NumFormat::kHex:
+        FormatUnsignedInt(value, options, out);
+        break;
+      case FormatValueOptions::NumFormat::kSigned:
+        FormatSignedInt(value, out);
+        break;
+      case FormatValueOptions::NumFormat::kChar:
+        FormatChar(value, out);
+        break;
+      case FormatValueOptions::NumFormat::kDefault:
+        // Prevent warning for unused enum type.
+        break;
+    }
+    return;
+  }
+
+  // Default handling based on the number.
   switch (value.GetBaseType()) {
-    case BaseType::kBaseTypeSigned: {
-      int64_t int_val = 0;
-      switch (value.data().size()) {
-        case 1:
-          int_val = value.GetAs<int8_t>();
-          break;
-        case 2:
-          int_val = value.GetAs<int16_t>();
-          break;
-        case 4:
-          int_val = value.GetAs<int32_t>();
-          break;
-        case 8:
-          int_val = value.GetAs<int64_t>();
-          break;
-        default:
-          out->Append("<unknown signed integer type>");
-          return;
-      }
-      out->Append(fxl::StringPrintf("%" PRId64, int_val));
+    case BaseType::kBaseTypeAddress: {
+      // Always print addresses as unsigned hex.
+      FormatValueOptions overridden(options);
+      overridden.num_format = FormatValueOptions::NumFormat::kHex;
+      FormatUnsignedInt(value, options, out);
       break;
     }
-    case BaseType::kBaseTypeUnsigned: {
-      uint64_t int_val = 0;
-      switch (value.data().size()) {
-        case 1:
-          int_val = value.GetAs<uint8_t>();
-          break;
-        case 2:
-          int_val = value.GetAs<uint16_t>();
-          break;
-        case 4:
-          int_val = value.GetAs<uint32_t>();
-          break;
-        case 8:
-          int_val = value.GetAs<uint64_t>();
-          break;
-        default:
-          out->Append("<unknown unsigned integer type>");
-          return;
-      }
-      out->Append(fxl::StringPrintf("%" PRIu64, int_val));
+    case BaseType::kBaseTypeBoolean:
+      FormatBoolean(value, out);
       break;
-    }
+    case BaseType::kBaseTypeFloat:
+      FormatFloat(value, out);
+      break;
+    case BaseType::kBaseTypeSigned:
+      FormatSignedInt(value, out);
+      break;
+    case BaseType::kBaseTypeUnsigned:
+      FormatUnsignedInt(value, options, out);
+      break;
+    case BaseType::kBaseTypeSignedChar:
+    case BaseType::kBaseTypeUnsignedChar:
+    case BaseType::kBaseTypeUTF:
+      FormatChar(value, out);
+      break;
     default: {
       // For now, print a hex dump for everything else.
       std::string result;
@@ -81,7 +185,7 @@ void FormatExprValue(const ExprValue& value, OutputBuffer* out) {
 }
 
 void FormatExprValue(const Err& err, const ExprValue& value,
-                     OutputBuffer* out) {
+                     const FormatValueOptions& options, OutputBuffer* out) {
   if (err.has_error()) {
     // If the future we probably want to rewrite "optimized out" errors to
     // something shorter. The evaluator makes a longer message suitable for
@@ -92,7 +196,7 @@ void FormatExprValue(const Err& err, const ExprValue& value,
     //      out->Append("<optimized out>");
     out->Append("<" + err.msg() + ">");
   } else {
-    FormatExprValue(value, out);
+    FormatExprValue(value, options, out);
   }
 }
 
@@ -101,7 +205,8 @@ ValueFormatHelper::~ValueFormatHelper() = default;
 
 void ValueFormatHelper::AppendVariable(
     const SymbolContext& symbol_context,
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Variable* var) {
+    fxl::RefPtr<SymbolDataProvider> data_provider, const Variable* var,
+    const FormatValueOptions& options) {
   // Save an empty buffer for the output to be asynchronously written to.
   size_t index = buffers_.size();
   buffers_.emplace_back();
@@ -112,14 +217,16 @@ void ValueFormatHelper::AppendVariable(
 
   // We can capture "this" here since the callback will be scoped to the
   // lifetime of the resolver which this class owns.
-  resolver->ResolveVariable(symbol_context, var,
-                            [this, index](const Err& err, ExprValue val) {
-                              FormatExprValue(err, val, &buffers_[index]);
+  resolver->ResolveVariable(
+      symbol_context, var,
+      [this, index, options](const Err& err, ExprValue val) {
+        FormatExprValue(err, val, options, &buffers_[index]);
 
-                              FXL_DCHECK(pending_resolution_ > 0);
-                              pending_resolution_--;
-                              CheckPendingResolution();
-                            });
+        FXL_DCHECK(pending_resolution_ > 0);
+        pending_resolution_--;
+        CheckPendingResolution();
+        // WARNING: |this| may be deleted.
+      });
 
   // Keep in our class scope so the callbacks will be run.
   resolvers_.push_back(std::move(resolver));
@@ -127,14 +234,19 @@ void ValueFormatHelper::AppendVariable(
 
 void ValueFormatHelper::AppendVariableWithName(
     const SymbolContext& symbol_context,
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Variable* var) {
+    fxl::RefPtr<SymbolDataProvider> data_provider, const Variable* var,
+    const FormatValueOptions& options) {
   Append(OutputBuffer::WithContents(Syntax::kVariable, var->GetAssignedName()));
   Append(OutputBuffer::WithContents(" = "));
-  AppendVariable(symbol_context, std::move(data_provider), var);
+  AppendVariable(symbol_context, std::move(data_provider), var, options);
 }
 
 void ValueFormatHelper::Append(OutputBuffer out) {
   buffers_.push_back(std::move(out));
+}
+
+void ValueFormatHelper::Append(std::string str) {
+  Append(OutputBuffer::WithContents(std::move(str)));
 }
 
 void ValueFormatHelper::Complete(Callback callback) {
@@ -143,6 +255,7 @@ void ValueFormatHelper::Complete(Callback callback) {
 
   // If there are no pending formats, issue the callback right away.
   CheckPendingResolution();
+  // WARNING: |this| may be deleted.
 }
 
 void ValueFormatHelper::CheckPendingResolution() {
@@ -154,7 +267,7 @@ void ValueFormatHelper::CheckPendingResolution() {
       result.Append(std::move(cur));
 
     complete_callback_(std::move(result));
-    complete_callback_ = Callback();
+    // WARNING: |this| may be deleted!
   }
 }
 
