@@ -24,9 +24,9 @@ void* operator new[](size_t, void* caller, const std::nothrow_t&) noexcept;
 
 #endif // !_KERNEL
 
-void* operator new(size_t, void *ptr);
+void* operator new(size_t, void *ptr) noexcept;
 
-void* operator new[](size_t, void *ptr);
+void* operator new[](size_t, void *ptr) noexcept;
 
 void operator delete(void *p);
 void operator delete[](void *p);

@@ -93,11 +93,11 @@ void operator delete[](void *p, size_t s) {
 
 // Placement new is always the same trivial no-op everywhere.
 
-void* operator new(size_t , void *p) {
+void* operator new(size_t , void *p) noexcept {
     return p;
 }
 
-void* operator new[](size_t , void* p) {
+void* operator new[](size_t , void* p) noexcept {
     return p;
 }
 
