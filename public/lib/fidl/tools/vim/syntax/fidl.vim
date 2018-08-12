@@ -61,7 +61,7 @@ hi def link fidlKeyword Keyword
 
 hi def link fidlTodo            Todo
 hi def link fidlLineComment     Comment
-hi def link fidlLineDocComment  Comment
+hi def link fidlLineDocComment  SpecialComment
 hi def link fidlDocLink         SpecialComment
 
 hi def link fidlBlockCmd    Statement
