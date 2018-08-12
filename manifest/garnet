@@ -10,7 +10,7 @@
     <import remote="https://fuchsia.googlesource.com/buildtools"
             manifest="manifest/buildtools"
             name="buildtools"
-            revision="578691bd143c47284f17f0afcb08e34da8c35f82"/>
+            revision="41f30f5c6b2f18b652cecf1d8bf59e9398283038"/>
     <import remote="https://fuchsia.googlesource.com/scripts"
             manifest="manifest/scripts"
             name="scripts"
