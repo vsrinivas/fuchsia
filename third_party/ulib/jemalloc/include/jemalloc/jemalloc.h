@@ -39,7 +39,7 @@ extern "C" {
  * with C++.  The only justification for this is to match the prototypes that
  * glibc defines.
  */
-#define	JEMALLOC_USE_CXX_THROW
+#undef	JEMALLOC_USE_CXX_THROW
 
 #ifdef _MSC_VER
 #  ifdef _WIN64
