@@ -596,7 +596,7 @@ mod buffer {
     /// while still maintaining access to the entire buffer in case it is needed
     /// again in the future, such as to serialize new packets.
     pub struct BufferAndRange<B> {
-        buffer: B,
+        buffer: RefOrOwned<B>,
         range: Range<usize>,
     }
 
@@ -613,7 +613,7 @@ mod buffer {
         pub fn new<R: RangeBounds<usize>>(buffer: B, range: R) -> BufferAndRange<B> {
             let len = buffer.as_ref().len();
             BufferAndRange {
-                buffer,
+                buffer: RefOrOwned::Ref(buffer),
                 range: canonicalize_range_infallible(len, &range),
             }
         }
@@ -636,6 +636,57 @@ mod buffer {
                 bytes
             );
             self.range.end += bytes;
+        }
+
+        /// Ensure that this `BufferAndRange` satisfies certain prefix and
+        /// padding size requirements.
+        ///
+        /// `ensure_prefix_padding` ensures that this `BufferAndRange` has at
+        /// least `prefix` bytes preceding the range and at least
+        /// `range_plus_padding` bytes in the range plus any padding bytes
+        /// following the range. If it already has enough prefix and
+        /// range/padding bytes, then it is left unchanged. Otherwise, a new
+        /// buffer is allocated, the original range bytes are copied into the
+        /// new buffer, and the range is adjusted so that it matches the
+        /// location of the bytes in the new buffer.
+        ///
+        /// The "range plus padding" construction is useful when a packet format
+        /// requires a minimum body length, and the upper layers of the stack
+        /// which are producing the body to be encapsulated do not have enough
+        /// bytes to meet that minimum. In that case, it is necessary to add
+        /// extra padding bytes after the body in order to meet the minimum.
+        pub fn ensure_prefix_padding(&mut self, prefix: usize, range_plus_padding: usize) {
+            let range_len = self.range.end - self.range.start;
+            // normalize to guarantee that range_plus_padding >= range_len
+            let range_plus_padding = cmp::max(range_plus_padding, range_len);
+            if prefix > self.range.start
+                || range_plus_padding > self.buffer.as_ref().len() - self.range.start
+            {
+                // TODO(joshlf): Right now, we split the world into two cases -
+                // either the constraints aren't satisfied and so we need to
+                // reallocate, or they are, so we don't need to do anything. In
+                // fact, there's a third case, in which the constraints aren't
+                // satisfied, but the buffer is large enough to satisfy the
+                // constraints. In that case, we can avoid reallocating by
+                // simply moving the range within the existing buffer.
+
+                // The constraints aren't satisfied, and the buffer isn't large
+                // enough to satisfy the constraints, so we have to reallocate.
+                let range_len = self.range.end - self.range.start;
+                let total_len = prefix + range_plus_padding;
+                let mut vec = Vec::with_capacity(total_len);
+                vec.resize(total_len, 0);
+                vec[prefix..prefix + range_len]
+                    .copy_from_slice(slice(self.buffer.as_ref(), &self.range));
+                // adjust the range given the new prefix length
+                let offset =
+                    isize::try_from(prefix).unwrap() - isize::try_from(self.range.start).unwrap();
+                let range = translate_range(&self.range, offset);
+                *self = BufferAndRange {
+                    buffer: RefOrOwned::Owned(vec),
+                    range,
+                }
+            }
         }
     }
 
@@ -668,7 +719,7 @@ mod buffer {
         pub fn slice<R: RangeBounds<usize>>(&mut self, range: R) {
             let cur_range_len = self.range.end - self.range.start;
             let range = canonicalize_range_infallible(cur_range_len, &range);
-            self.range = translate_range(range, isize::try_from(self.range.start).unwrap());
+            self.range = translate_range(&range, isize::try_from(self.range.start).unwrap());
         }
 
         /// Extend the beginning of the range backwards towards the beginning of
@@ -695,12 +746,6 @@ mod buffer {
         /// Get the range.
         pub fn range(&self) -> Range<usize> {
             self.range.clone()
-        }
-
-        /// Consume the `BufferAndRange` and return the contained buffer and range.
-        pub fn into_buffer_and_range(self) -> (B, Range<usize>) {
-            let BufferAndRange { buffer, range } = self;
-            (buffer, range)
         }
     }
 
@@ -762,88 +807,26 @@ mod buffer {
         }
     }
 
-    /// Create a `BufferAndRange` with a guranteed prefix and padding size.
-    ///
-    /// Given a buffer and a range, `ensure_prefix_padding` returns a
-    /// `BufferAndRange` with  at least `prefix` bytes preceding the range and
-    /// at least `range_plus_padding` bytes in the range plus any padding bytes
-    /// following the range. If `buf` already has enough prefix and
-    /// range/padding bytes, then the returned `BufferAndRange` simply wraps a
-    /// reference to `buf`, and the range is left as is. Otherwise, a new buffer
-    /// is allocated, the original range bytes are copied into the new buffer,
-    /// and the range is adjusted so that it matches the location of the bytes
-    /// in the new buffer.
-    ///
-    /// The "range plus padding" construction is useful when a packet format
-    /// requires a minimum body length, and the upper layers of the stack which
-    /// are producing the body to be encapsulated do not have enough bytes to
-    /// meet that minimum. In that case, it is necessary to add extra padding
-    /// bytes after the body in order to meet the minimum.
-    pub fn ensure_prefix_padding<B: AsRef<[u8]>>(
-        buffer: BufferAndRange<B>, prefix: usize, range_plus_padding: usize,
-    ) -> BufferAndRange<RefOrOwned<B>> {
-        let (buffer, range) = buffer.into_buffer_and_range();
-        let range_len = range.end - range.start;
-        // normalize to guarantee that range_plus_padding >= range_len
-        let range_plus_padding = cmp::max(range_plus_padding, range_len);
-        if prefix <= range.start && range_plus_padding <= buffer.as_ref().len() - range.start {
-            // The constraints are already satisfied, so we don't have to
-            // reallocate.
-            BufferAndRange::new(
-                RefOrOwned {
-                    inner: RefOrOwnedInner::Ref(buffer),
-                },
-                range,
-            )
-        } else {
-            // TODO(joshlf): There's a third case, in which the constraints
-            // aren't satisfied, but the buffer is large enough to satisfy the
-            // constraints. In that case, we can avoid reallocating by simply
-            // moving the range within the existing buffer.
-
-            // The constraints aren't satisfied, and the buffer isn't large
-            // enough to satisfy the constraints, so we have to reallocate.
-            let range_len = range.end - range.start;
-            let total_len = prefix + range_plus_padding;
-            let mut vec = Vec::with_capacity(total_len);
-            vec.resize(total_len, 0);
-            vec[prefix..prefix + range_len].copy_from_slice(slice(buffer.as_ref(), &range));
-            // adjust the range given the new prefix length
-            let offset = isize::try_from(prefix).unwrap() - isize::try_from(range.start).unwrap();
-            let range = translate_range(range, offset);
-            BufferAndRange::new(
-                RefOrOwned {
-                    inner: RefOrOwnedInner::Owned(vec),
-                },
-                range,
-            )
-        }
-    }
-
     /// Either a reference or an owned allocated buffer.
-    pub struct RefOrOwned<B> {
-        inner: RefOrOwnedInner<B>,
-    }
-
-    enum RefOrOwnedInner<B> {
+    enum RefOrOwned<B> {
         Ref(B),
         Owned(Vec<u8>),
     }
 
     impl<B: AsRef<[u8]>> AsRef<[u8]> for RefOrOwned<B> {
         fn as_ref(&self) -> &[u8] {
-            match self.inner {
-                RefOrOwnedInner::Ref(ref r) => r.as_ref(),
-                RefOrOwnedInner::Owned(ref v) => v.as_slice(),
+            match self {
+                RefOrOwned::Ref(ref r) => r.as_ref(),
+                RefOrOwned::Owned(ref v) => v.as_slice(),
             }
         }
     }
 
     impl<B: AsMut<[u8]>> AsMut<[u8]> for RefOrOwned<B> {
         fn as_mut(&mut self) -> &mut [u8] {
-            match *(&mut self.inner) {
-                RefOrOwnedInner::Ref(ref mut r) => r.as_mut(),
-                RefOrOwnedInner::Owned(ref mut v) => v.as_mut_slice(),
+            match self {
+                RefOrOwned::Ref(ref mut r) => r.as_mut(),
+                RefOrOwned::Owned(ref mut v) => v.as_mut_slice(),
             }
         }
     }
@@ -874,7 +857,7 @@ mod buffer {
     ///
     /// `translate_range` panics if any addition overflows or any conversion
     /// between signed and unsigned types fails.
-    fn translate_range(range: Range<usize>, offset: isize) -> Range<usize> {
+    fn translate_range(range: &Range<usize>, offset: isize) -> Range<usize> {
         let start = isize::try_from(range.start).unwrap();
         let end = isize::try_from(range.end).unwrap();
         Range {
@@ -972,10 +955,6 @@ mod buffer {
                     &mut [6, 7, 8, 9][..]
                 )
             );
-
-            let (buf, range) = buf.into_buffer_and_range();
-            assert_eq!(buf, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            assert_eq!(range, 4..6);
         }
 
         #[test]
@@ -1006,7 +985,7 @@ mod buffer {
         #[test]
         fn test_ensure_prefix_padding() {
             fn verify<B: AsRef<[u8]> + AsMut<[u8]>>(
-                buffer: BufferAndRange<B>, prefix: usize, range_plus_padding: usize,
+                mut buffer: BufferAndRange<B>, prefix: usize, range_plus_padding: usize,
             ) {
                 let range_len_old = {
                     let range = buffer.range();
@@ -1015,7 +994,7 @@ mod buffer {
                 let mut range_old = Vec::with_capacity(range_len_old);
                 range_old.extend_from_slice(buffer.as_ref());
 
-                let mut buffer = ensure_prefix_padding(buffer, prefix, range_plus_padding);
+                buffer.ensure_prefix_padding(prefix, range_plus_padding);
                 let range_len_new = {
                     let range = buffer.range();
                     range.end - range.start

@@ -22,7 +22,7 @@ use crate::error::ParseError;
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
 use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-use crate::wire::{ensure_prefix_padding, AddrSerializationCallback, BufferAndRange, SerializationCallback};
+use crate::wire::{AddrSerializationCallback, BufferAndRange, SerializationCallback};
 use crate::StackState;
 
 // default IPv4 TTL or IPv6 hops
@@ -112,7 +112,8 @@ pub fn receive_ip_packet<I: Ip>(
                     // all of the link-layer headers or for the post-body
                     // padding, so use ensure_prefix_padding to ensure that we
                     // are using a buffer with sufficient space.
-                    ensure_prefix_padding(buffer, prefix_bytes, body_plus_padding_bytes)
+                    buffer.ensure_prefix_padding(prefix_bytes, body_plus_padding_bytes);
+                    buffer
                 },
             );
             return;

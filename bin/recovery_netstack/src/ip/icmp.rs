@@ -48,35 +48,28 @@ pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
 
                         // we're responding to the sender, so these are flipped
                         let (src_ip, dst_ip) = (dst_ip, src_ip);
-                        if false {
-                            send_ip_packet(
-                                state,
-                                dst_ip,
-                                IpProto::Icmp,
-                                |src_ip, min_prefix_size, min_body_and_padding_size| {
-                                    // TODO: Check IcmpPacket::serialize_len to
-                                    // make sure we've given enough space in the
-                                    // buffer. There definitely is since Echo
-                                    // Requests and Echo Replies have the same
-                                    // format, but we shouldn't be relying on
-                                    // that for correctness.
-                                    let buffer = IcmpPacket::serialize(buffer, src_ip, dst_ip, code, req);
-                                    // The current buffer may not have enough
-                                    // prefix space for all of the link-layer
-                                    // headers or for the post-body padding, so
-                                    // use ensure_prefix_padding to ensure that
-                                    // we are using a buffer with sufficient
-                                    // space.
+                        send_ip_packet(
+                            state,
+                            dst_ip,
+                            IpProto::Icmp,
+                            |src_ip, min_prefix_size, min_body_and_padding_size| {
+                                // TODO: Check IcmpPacket::serialize_len to make
+                                // sure we've given enough space in the buffer.
+                                // There definitely is since Echo Requests and
+                                // Echo Replies have the same format, but we
+                                // shouldn't be relying on that for correctness.
+                                let mut buffer = IcmpPacket::serialize(buffer, src_ip, dst_ip, code, req);
+                                // The current buffer may not have enough prefix
+                                // space for all of the link-layer headers or
+                                // for the post-body padding, so use
+                                // ensure_prefix_padding to ensure that we are
+                                // using a buffer with sufficient space.
 
-                                    // TODO(joshlf): Fix monomorphization
-                                    // overflow error that happens when this
-                                    // line is uncommented.
-                                    // ensure_prefix_padding(buffer, min_prefix_size, min_body_and_padding_size)
-                                    buffer
-                                },
-                            );
-                        }
-                        log_unimplemented!(false, "ip::icmp::receive_icmp_packet: Not implemented for this packet type")
+                                buffer.ensure_prefix_padding(min_prefix_size, min_body_and_padding_size);
+                                buffer
+                            },
+                        );
+                        true
                     }
                     Icmpv4Packet::EchoReply(echo_reply) => {
                         increment_counter!(state, "receive_icmp_packet::echo_reply");
@@ -101,9 +94,7 @@ mod tests {
     use super::*;
     use crate::ip::{Ip, Ipv4, Ipv4Addr};
 
-    // TODO(joshlf): Un-ignore once we've fixed the monomorphization overflow
-    // issue
-    #[ignore]
+    #[ignore] // TODO(joshlf): Debug why this panics
     #[test]
     fn test_send_echo_request() {
         use crate::ip::testdata::icmp_echo::*;

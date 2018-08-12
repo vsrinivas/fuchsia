@@ -91,7 +91,7 @@ finally makes its way to a layer of the stack that has a minimimum body length
 requirement, that layer is responsible for consuming any bytes following the
 range for use as padding.
 
-If an existing buffer is to be re-used, the `ensure_prefix_padding` function can
+If an existing buffer is to be re-used, the `ensure_prefix_padding` method can
 be used to ensure that the buffer has enough prefix and suffix bytes to satisfy
 the requirements discussed here, reallocating a larger buffer if necessary.
 

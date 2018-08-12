@@ -64,7 +64,7 @@ mod util;
 
 pub use self::ethernet::*;
 pub use self::udp::*;
-pub use self::util::{ensure_prefix_padding, BufferAndRange};
+pub use self::util::BufferAndRange;
 
 /// A callback used to serialize a packet.
 ///
