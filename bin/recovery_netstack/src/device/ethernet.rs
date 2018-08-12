@@ -9,17 +9,13 @@ use std::fmt::{self, Display, Formatter};
 use log::{debug, log, trace};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
+use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::DeviceId;
 use crate::ip::{IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
+use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::{BufferAndRange, SerializationCallback};
 use crate::StackState;
-
-/// The broadcast MAC address.
-///
-/// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame should
-/// be received by all receivers regardless of their local MAC address.
-pub const BROADCAST_MAC: Mac = Mac([0xFF; 6]);
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -31,6 +27,12 @@ unsafe impl AsBytes for Mac {}
 unsafe impl Unaligned for Mac {}
 
 impl Mac {
+    /// The broadcast MAC address.
+    ///
+    /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame should
+    /// be received by all receivers regardless of their local MAC address.
+    pub const BROADCAST: Mac = Mac([0xFF; 6]);
+
     /// Construct a new MAC address.
     pub const fn new(bytes: [u8; 6]) -> Mac {
         Mac(bytes)
@@ -64,7 +66,7 @@ impl Mac {
     /// Returns true if this is the broadcast MAC address, FF:FF:FF:FF:FF:FF.
     pub fn is_broadcast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
-        *self == BROADCAST_MAC
+        *self == Mac::BROADCAST
     }
 }
 
@@ -116,6 +118,7 @@ impl Display for EtherType {
 pub struct EthernetDeviceState {
     ipv4_addr: Option<(Ipv4Addr, Subnet<Ipv4Addr>)>,
     ipv6_addr: Option<(Ipv6Addr, Subnet<Ipv6Addr>)>,
+    ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -171,12 +174,25 @@ pub fn receive_frame(state: &mut StackState, device_id: u64, bytes: &mut [u8]) {
     };
 
     if let Some(Ok(ethertype)) = frame.ethertype() {
+        let (src, dst) = (frame.src_mac(), frame.dst_mac());
         let device = DeviceId::new_ethernet(device_id);
         let buffer = BufferAndRange::new(bytes, body_range);
         match ethertype {
             EtherType::Arp => {
-                println!("received ARP frame");
-                log_unimplemented!((), "device::ethernet::receive_frame: ARP not implemented")
+                let types = if let Ok(types) = peek_arp_types(buffer.as_ref()) {
+                    types
+                } else {
+                    // TODO(joshlf): Do something else here?
+                    return;
+                };
+                match types {
+                    (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
+                        crate::device::arp::receive_arp_packet::<Ipv4Addr, EthernetArpDevice, _>(
+                            state, device_id, src, dst, buffer,
+                        )
+                    }
+                    types => debug!("got ARP packet for unsupported types: {:?}", types),
+                }
             }
             EtherType::Ipv4 => crate::ip::receive_ip_packet::<Ipv4>(state, device, buffer),
             EtherType::Ipv6 => crate::ip::receive_ip_packet::<Ipv6>(state, device, buffer),
@@ -216,4 +232,25 @@ fn get_device_state(state: &mut StackState, device_id: u64) -> &mut EthernetDevi
         .ethernet
         .get_mut(&device_id)
         .expect(&format!("no such Ethernet device: {}", device_id))
+}
+
+// Dummy type used to implement ArpDevice.
+struct EthernetArpDevice;
+
+impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
+    type HardwareAddr = Mac;
+    const BROADCAST: Mac = Mac::BROADCAST;
+
+    fn send_arp_frame<B, F>(
+        state: &mut StackState, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
+    ) where
+        B: AsRef<[u8]> + AsMut<[u8]>,
+        F: SerializationCallback<B>,
+    {
+        log_unimplemented!((), "device::ethernet::send_arp_frame: Not implemented");
+    }
+
+    fn get_arp_state(state: &mut StackState, device_id: u64) -> &mut ArpState<Ipv4Addr, Self> {
+        &mut get_device_state(state, device_id).ipv4_arp
+    }
 }

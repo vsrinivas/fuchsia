@@ -4,8 +4,6 @@
 
 //! Macros used in `recovery_netstack`.
 
-use log::trace;
-
 /// Define a function which is specialized on [`ip::Ipv4`] and [`ip::Ipv6`].
 ///
 /// `specialize_ip` is used to define a generic function which has specialized
@@ -490,13 +488,16 @@ macro_rules! log_unimplemented {
 
         #[cfg(not(feature = "crash_on_unimplemented"))]
         {
-          trace!(concat!("Unimplemented: ", $fmt), $($arg),*);
-          $nocrash
+            // log doesn't play well with the new macro system; it expects all
+            // of its macros to be in scope
+            use log::*;
+            log::trace!(concat!("Unimplemented: ", $fmt), $($arg),*);
+            $nocrash
         }
     }};
 
     ($nocrash:expr, $fmt:expr $(,$arg:expr)*,) =>{
-      log_unimplemented!($nocrash, $fmt $(,$arg)*)
+        log_unimplemented!($nocrash, $fmt $(,$arg)*)
     };
 }
 
