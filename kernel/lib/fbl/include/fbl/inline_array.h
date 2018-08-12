@@ -12,7 +12,7 @@
 // We don't want to force a dependency on a particular implementation
 // of placement new, and therefore cannot rely on a header providing a
 // declaration of it. So we just forward declare it here.
-void* operator new(size_t, void *ptr);
+void* operator new(size_t, void *ptr) noexcept;
 
 namespace fbl {
 

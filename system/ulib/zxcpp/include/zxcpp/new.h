@@ -21,9 +21,9 @@ void* operator new[](size_t);
 void* operator new(size_t, const std::nothrow_t&) noexcept;
 void* operator new[](size_t, const std::nothrow_t&) noexcept;
 
-void* operator new(size_t, void *ptr);
+void* operator new(size_t, void *ptr) noexcept;
 
-void* operator new[](size_t, void *ptr);
+void* operator new[](size_t, void *ptr) noexcept;
 
 void operator delete(void *p);
 void operator delete[](void *p);
