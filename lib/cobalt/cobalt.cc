@@ -68,7 +68,7 @@ CobaltObservation::CobaltObservation(uint32_t metric_id,
 CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
     : CobaltObservation(rhs.metric_id_, CloneObservationValues(rhs.parts_)) {}
 
-CobaltObservation::CobaltObservation(CobaltObservation&& rhs)
+CobaltObservation::CobaltObservation(CobaltObservation&& rhs) noexcept
     : CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
 void CobaltObservation::Report(fuchsia::cobalt::EncoderPtr* encoder,
@@ -188,7 +188,7 @@ CobaltObservation& CobaltObservation::operator=(const CobaltObservation& rhs) {
   return *this;
 }
 
-CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
+CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) noexcept {
   if (this != &rhs) {
     metric_id_ = rhs.metric_id_;
     parts_ = std::move(rhs.parts_);
