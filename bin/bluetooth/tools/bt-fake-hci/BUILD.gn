@@ -7,11 +7,11 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bt-fake-hci") {
   name = "bt_fake_hci"
   with_unit_tests = true
+  edition= "2018"
 
   deps = [
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
     "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
