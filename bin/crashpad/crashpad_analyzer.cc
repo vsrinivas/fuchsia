@@ -165,7 +165,7 @@ int HandleException(zx::process process, zx::thread thread) {
       static_cast<crashpad::CrashReportUploadThread*>(upload_thread.Get()),
       &annotations, &attachments, nullptr);
 
-  return exception_handler.HandleExceptionHandles(process.get(), thread.get())
+  return exception_handler.HandleExceptionHandles(process, thread)
              ? EXIT_SUCCESS
              : EXIT_FAILURE;
 }
