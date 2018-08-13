@@ -25,6 +25,10 @@ class CmxMetadata {
   // any errors.
   bool ParseFromFileAt(int dirfd, const std::string& file);
 
+  // Initializes the CmxMetadata from a deprecated_runtime JSON file. Returns
+  // false if there were any errors.
+  bool ParseFromDeprecatedRuntimeFileAt(int dirfd, const std::string& file);
+
   // Returns true if |ParseSandboxMetadata| encountered an error.
   bool HasError() const;
   // Returns the error if |HasError| is true.

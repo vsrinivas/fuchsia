@@ -40,6 +40,18 @@ class CmxMetadataTest : public ::testing::Test {
     return cmx->ParseFromFileAt(dirfd, *json_basename);
   }
 
+  bool ParseFromDeprecatedRuntime(CmxMetadata* cmx, const std::string& json,
+                                  std::string* json_basename) {
+    std::string json_path;
+    if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
+      return false;
+    }
+    *json_basename = files::GetBaseName(json_path);
+    const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
+    return cmx->ParseFromDeprecatedRuntimeFileAt(dirfd, *json_basename);
+  }
+
+
  private:
   files::ScopedTempDir tmp_dir_;
 };
@@ -47,12 +59,16 @@ class CmxMetadataTest : public ::testing::Test {
 TEST_F(CmxMetadataTest, ParseMetadata) {
   CmxMetadata cmx;
   const std::string json = R"JSON({
-  "sandbox": { "dev": [ "class/input" ], "features": [ "feature_a" ] },
+  "sandbox": {
+      "dev": [ "class/input" ],
+      "features": [ "feature_a" ],
+      "services": []
+  },
   "runner": "dart_runner",
   "other": "stuff"
   })JSON";
   std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused));
+  EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused)) << cmx.error_str();
   EXPECT_FALSE(cmx.HasError());
   const auto& sandbox = cmx.sandbox_meta();
   EXPECT_FALSE(sandbox.IsNull());
@@ -64,19 +80,41 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
 }
 
 TEST_F(CmxMetadataTest, ParseEmpty) {
-  // No 'sandbox' or 'runner'. Valid syntax, but empty.
+  // No 'program' or 'runner'. Valid syntax, but empty.
   rapidjson::Value sandbox;
   std::string error;
   const std::string json = R"JSON(
-  { "sandwich": { "ingredients": [ "bacon", "lettuce", "tomato" ] } }
+  {
+    "sandwich": { "ingredients": [ "bacon", "lettuce", "tomato" ] },
+    "sandbox": { "services": [] }
+  }
   )JSON";
   CmxMetadata cmx;
   std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused));
-  EXPECT_TRUE(cmx.sandbox_meta().IsNull());
+  EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused)) << cmx.error_str();
+  EXPECT_FALSE(cmx.sandbox_meta().IsNull());
   EXPECT_TRUE(cmx.runtime_meta().IsNull());
   EXPECT_TRUE(cmx.program_meta().IsNull());
 }
+
+TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
+  rapidjson::Value sandbox;
+  std::string error;
+  const std::string json = R"JSON(
+  { "runner": "dart_runner" }
+  )JSON";
+  CmxMetadata cmx;
+  std::string file_unused;
+  EXPECT_TRUE(ParseFromDeprecatedRuntime(&cmx, json, &file_unused))
+      << cmx.error_str();
+  EXPECT_TRUE(cmx.sandbox_meta().IsNull());
+  EXPECT_FALSE(cmx.runtime_meta().IsNull());
+  EXPECT_EQ("dart_runner", cmx.runtime_meta().runner());
+  EXPECT_TRUE(cmx.program_meta().IsNull());
+}
+
+#define NO_SERVICES \
+    "$0: Sandbox must include either 'services' or 'deprecated-all-services'."
 
 TEST_F(CmxMetadataTest, ParseWithErrors) {
   rapidjson::Value sandbox;
@@ -87,11 +125,11 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON",
                     "$0: 'sandbox' is not an object.");
   ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON",
-                    "$0: 'dev' in sandbox is not an array.");
+                    "$0: 'dev' in sandbox is not an array.\n" NO_SERVICES);
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON",
-                    "$0: 'runner' is not a string.");
+                    NO_SERVICES "\n$0: 'runner' is not a string.");
   ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
-                    "$0: 'binary' in program is not a string.");
+                    NO_SERVICES "\n$0: 'binary' in program is not a string.");
 }
 
 TEST_F(CmxMetadataTest, GetDefaultComponentCmxPath) {

@@ -24,6 +24,8 @@ TEST(NamespaceBuilder, Control) {
   dev_array.PushBack("class/input", allocator);
   dev_array.PushBack("class/display-controller", allocator);
   document.AddMember("dev", dev_array, allocator);
+  rapidjson::Value services_array(rapidjson::kArrayType);
+  document.AddMember("services", services_array, allocator);
   rapidjson::Value feat_array(rapidjson::kArrayType);
   feat_array.PushBack("vulkan", allocator);
   document.AddMember("features", feat_array, allocator);
@@ -70,6 +72,8 @@ TEST(NamespaceBuilder, Shell) {
   rapidjson::Value feat_array(rapidjson::kArrayType);
   feat_array.PushBack("shell", allocator);
   document.AddMember("features", feat_array, allocator);
+  rapidjson::Value services_array(rapidjson::kArrayType);
+  document.AddMember("services", services_array, allocator);
   SandboxMetadata sandbox;
 
   json::JSONParser parser;

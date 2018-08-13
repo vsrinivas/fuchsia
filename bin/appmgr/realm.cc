@@ -606,7 +606,7 @@ void Realm::CreateComponentFromPackage(
   if (!cmx.sandbox_meta().IsNull()) {
     const auto& sandbox = cmx.sandbox_meta();
 
-    if (sandbox.has_services()) {
+    if (!sandbox.has_all_services()) {
       ns->SetServicesWhitelist(sandbox.services());
     }
 

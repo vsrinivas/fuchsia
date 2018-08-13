@@ -41,21 +41,15 @@ class SandboxMetadataTest : public ::testing::Test {
 };
 
 TEST_F(SandboxMetadataTest, Parse) {
-  // empty
-  {
-    SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, R"JSON({})JSON", &error));
-    EXPECT_EQ(error, "");
-    EXPECT_FALSE(sandbox.IsNull());
-  }
-
   // dev
   {
+    const std::string json = R"JSON({
+      "dev": [ "class/input" ],
+      "services": []
+    })JSON";
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(
-        ParseFrom(&sandbox, R"JSON({ "dev": [ "class/input" ] })JSON", &error));
+    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
@@ -63,36 +57,56 @@ TEST_F(SandboxMetadataTest, Parse) {
 
   // system
   {
+    const std::string json = R"JSON({
+      "system": [ "data" ],
+      "services": []
+    })JSON";
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(
-        ParseFrom(&sandbox, R"JSON({ "system": [ "data" ] })JSON", &error));
+    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.system(), ::testing::ElementsAre("data"));
-    EXPECT_FALSE(sandbox.has_services());
+    EXPECT_FALSE(sandbox.has_all_services());
   }
 
   // services
   {
+    const std::string json = R"JSON({
+      "services": [ "fuchsia.sys.Launcher" ]
+    })JSON";
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(
-        &sandbox, R"JSON({ "services": [ "fuchsia.sys.Launcher" ] })JSON",
-        &error));
+    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.services(),
                 ::testing::ElementsAre("fuchsia.sys.Launcher"));
-    EXPECT_TRUE(sandbox.has_services());
+    EXPECT_FALSE(sandbox.has_all_services());
+  }
+
+  // deprecated-all-services
+  {
+    SandboxMetadata sandbox;
+    std::string error;
+    EXPECT_TRUE(ParseFrom(
+        &sandbox, R"JSON({ "features": [ "deprecated-all-services" ] })JSON",
+        &error));
+    EXPECT_EQ(error, "");
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.services(), ::testing::ElementsAre());
+    EXPECT_TRUE(sandbox.has_all_services());
   }
 
   // pkgfs
   {
+    const std::string json = R"JSON({
+      "pkgfs": [ "packages" ],
+      "services": []
+    })JSON";
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(
-        ParseFrom(&sandbox, R"JSON({ "pkgfs": [ "packages" ] })JSON", &error));
+    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.pkgfs(), ::testing::ElementsAre("packages"));
@@ -100,10 +114,13 @@ TEST_F(SandboxMetadataTest, Parse) {
 
   // features
   {
+    const std::string json = R"JSON({
+      "features": [ "vulkan", "shell" ],
+      "services": []
+    })JSON";
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(ParseFrom(
-        &sandbox, R"JSON({ "features": [ "vulkan", "shell" ] })JSON", &error));
+    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.features(), ::testing::ElementsAre("vulkan", "shell"));
@@ -114,10 +131,13 @@ TEST_F(SandboxMetadataTest, Parse) {
 
   // boot
   {
+    const std::string json = R"JSON({
+      "boot": [ "log" ],
+      "services": []
+    })JSON";
     SandboxMetadata sandbox;
     std::string error;
-    EXPECT_TRUE(
-        ParseFrom(&sandbox, R"JSON({ "boot": [ "log" ] })JSON", &error));
+    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.boot(), ::testing::ElementsAre("log"));
@@ -138,6 +158,12 @@ TEST_F(SandboxMetadataTest, ParseWithErrors) {
         "services": [ "fuchsia.sys.Launcher" ]
       })JSON",
       "test_file: Sandbox may not include both 'services' and "
+      "'deprecated-all-services'.");
+  ExpectFailedParse(
+      R"JSON({
+        "features": [ "vulkan" ]
+      })JSON",
+      "test_file: Sandbox must include either 'services' or "
       "'deprecated-all-services'.");
 }
 

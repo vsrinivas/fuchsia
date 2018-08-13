@@ -54,7 +54,7 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     entry.second->clear();
   }
   null_ = true;
-  has_services_ = false;
+  has_all_services_ = false;
 
   if (!sandbox_value.IsObject()) {
     json_parser->ReportError("Sandbox is not an object.");
@@ -74,10 +74,17 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
   // TODO(CP-25): Make null services equivalent to empty services once all
   // component manifests are migrated.
   auto services_member = sandbox_value.FindMember(kServices);
-  has_services_ = (services_member != sandbox_value.MemberEnd());
-  if (has_services_ && HasFeature(kDeprecatedAllServices)) {
+  has_all_services_ = HasFeature(kDeprecatedAllServices);
+  const bool has_services_member =
+      (services_member != sandbox_value.MemberEnd());
+  if (has_all_services_ && has_services_member) {
     json_parser->ReportError(
         fxl::StringPrintf("Sandbox may not include both 'services' and "
+                          "'deprecated-all-services'."));
+  }
+  if (!has_all_services_ && !has_services_member) {
+    json_parser->ReportError(
+        fxl::StringPrintf("Sandbox must include either 'services' or "
                           "'deprecated-all-services'."));
   }
 

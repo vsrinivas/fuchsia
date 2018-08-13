@@ -38,6 +38,20 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file) {
   return !HasError();
 }
 
+bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(int dirfd,
+                                                   const std::string& file) {
+  rapidjson::Document document = json_parser_.ParseFromFileAt(dirfd, file);
+  if (HasError()) {
+    return false;
+  }
+  if (!document.IsObject()) {
+    json_parser_.ReportError("File is not a JSON object.");
+    return false;
+  }
+  runtime_meta_.ParseFromDocument(document, &json_parser_);
+  return !HasError();
+}
+
 bool CmxMetadata::HasError() const { return json_parser_.HasError(); }
 
 std::string CmxMetadata::error_str() const { return json_parser_.error_str(); }
@@ -63,15 +77,15 @@ std::string CmxMetadata::GetDefaultComponentCmxPath(
 void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document) {
   auto sandbox = document.FindMember(kSandbox);
   if (sandbox == document.MemberEnd()) {
-    // Valid syntax, but no value.
-    return;
-  }
-  if (!sandbox->value.IsObject()) {
+    // Valid syntax, but no value. Pass empty object.
+    rapidjson::Value sandbox_obj = rapidjson::Value(rapidjson::kObjectType);
+    sandbox_meta_.Parse(sandbox_obj, &json_parser_);
+  } else if (!sandbox->value.IsObject()) {
     json_parser_.ReportError("'sandbox' is not an object.");
     return;
+  } else {
+    sandbox_meta_.Parse(sandbox->value, &json_parser_);
   }
-
-  sandbox_meta_.Parse(sandbox->value, &json_parser_);
 }
 
 void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document) {
