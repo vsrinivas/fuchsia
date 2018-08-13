@@ -5,7 +5,6 @@
 #include "garnet/bin/guest/vmm/linux.h"
 
 #include <endian.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -14,6 +13,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <array>
+
+#include <fbl/unique_fd.h>
+#include <zircon/boot/e820.h>
 
 #include "garnet/bin/guest/vmm/kernel.h"
 #include "garnet/lib/machina/address.h"
@@ -67,9 +69,12 @@ struct MemRange {
   uint64_t size;
 };
 static constexpr std::array<MemRange, 3> kMemoryHoles = {
-    MemRange{machina::kPl031PhysBase, 0x10000},         // 4kb hole for RTC.
-    MemRange{machina::kPciMmioBarPhysBase, 0x1000000},  // 16mb hole for MMIO.
-    MemRange{machina::kPciEcamPhysBase, 0x1000000},     // 16mb hole for ECAM.
+    // Hole for RTC.
+    MemRange{machina::kPl031PhysBase, machina::kPl031Size},
+    // Hole for MMIO.
+    MemRange{machina::kPciMmioBarPhysBase, machina::kPciMmioBarSize},
+    // Hole for ECAM.
+    MemRange{machina::kPciEcamPhysBase, machina::kPciEcamSize},
 };
 
 // clang-format off
@@ -291,7 +296,7 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
     return ZX_ERR_BAD_STATE;
   }
   bp(phys_mem, E820_COUNT) = static_cast<uint8_t>(e820_entries);
-  const size_t e820_size = machina::e820_size(phys_mem.size());
+  const size_t e820_size = e820_entries * sizeof(e820entry_t);
   void* e820_addr =
       phys_mem.as<void>(kKernelOffset + kE820MapOffset, e820_size);
   machina::create_e820(e820_addr, phys_mem.size());

@@ -10,13 +10,6 @@
 namespace machina {
 
 /**
- * Return the size in bytes of e820 memory map.
- *
- * @param size Size of guest physical memory.
- */
-size_t e820_size(size_t size);
-
-/**
  * Return the number of entries in the e820 memory map.
  *
  * @param size Size of guest physical memory.

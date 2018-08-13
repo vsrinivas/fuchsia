@@ -14,6 +14,7 @@
 #include <libzbi/zbi.h>
 #include <zircon/assert.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
 #include "garnet/bin/guest/vmm/kernel.h"
@@ -245,7 +246,8 @@ static zx_status_t create_zbi(const GuestConfig& cfg,
     return ZX_ERR_INTERNAL;
   }
   // E820 memory map.
-  const size_t e820_size = machina::e820_size(phys_mem.size());
+  const size_t e820_size =
+      machina::e820_entries(phys_mem.size()) * sizeof(e820entry_t);
   void* e820_addr = nullptr;
   res = zbi_create_section(container_hdr, zbi_max, e820_size,
                            ZBI_TYPE_E820_TABLE, 0, 0, &e820_addr);

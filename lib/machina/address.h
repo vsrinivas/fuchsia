@@ -53,7 +53,8 @@ static constexpr uint64_t kPciEcamPhysBase                  = 0x3f000000;
 static constexpr uint64_t kPciMmioBarPhysBase               = 0xf0000000;
 static constexpr uint64_t kPciEcamPhysBase                  = 0xd0000000;
 #endif
-static constexpr uint64_t kPciEcamPhysTop                   = kPciEcamPhysBase + pci_ecam_size(0, 1) - 1;
+static constexpr uint64_t kPciMmioBarSize                   = 0x100000;
+static constexpr uint64_t kPciEcamSize                      = pci_ecam_size(0, 1);
 
 // TPM memory range.
 static constexpr uint64_t kTpmPhysBase                      = 0xfed40000;
