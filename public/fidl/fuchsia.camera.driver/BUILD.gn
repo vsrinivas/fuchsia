@@ -10,4 +10,8 @@ fidl("fuchsia.camera.driver") {
   sources = [
     "camera.fidl",
   ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-sysmem",
+  ]
 }

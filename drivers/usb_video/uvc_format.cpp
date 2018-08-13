@@ -41,36 +41,37 @@ UvcPixelFormat guid_to_pixel_format(uint8_t guid[GUID_LENGTH]) {
 
 fuchsia::camera::driver::VideoFormat ToFidl(const UvcFormat& format_in) {
   fuchsia::camera::driver::VideoFormat ret = {
-      .width = format_in.width,
-      .height = format_in.height,
-      .stride = format_in.stride,
+      .format.width = format_in.width,
+      .format.height = format_in.height,
+      .format.layers = 1,
+      .format.bytes_per_row = format_in.stride,
       // The frame descriptor frame interval is expressed in 100ns units.
       // e.g. a frame interval of 333333 is equivalent to 30fps (1e7 / 333333).
-      .frames_per_sec_numerator =
+      .rate.frames_per_sec_numerator =
           NANOSECS_IN_SEC / 100,  // static_cast<uint32_t>(1e7),
-      .frames_per_sec_denominator = format_in.default_frame_interval};
+      .rate.frames_per_sec_denominator = format_in.default_frame_interval};
   // Convert Pixel Format:
   switch (format_in.pixel_format) {
     case UvcPixelFormat::BGRA32:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::BGRA32;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
       break;
     case UvcPixelFormat::I420:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::I420;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::I420;
       break;
     case UvcPixelFormat::M420:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::M420;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::M420;
       break;
     case UvcPixelFormat::NV12:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::NV12;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
       break;
     case UvcPixelFormat::YUY2:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::YUY2;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::YUY2;
       break;
     case UvcPixelFormat::MJPEG:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::MJPEG;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::MJPEG;
       break;
     default:
-      ret.pixel_format = fuchsia::camera::driver::PixelFormat::INVALID;
+      ret.format.pixel_format.type = fuchsia::sysmem::PixelFormatType::INVALID;
   }
   return ret;
 }
@@ -80,15 +81,15 @@ bool Compare(const fuchsia::camera::driver::VideoFormat& vf,
   fuchsia::camera::driver::VideoFormat uvf = ToFidl(uf);
 
   bool has_equal_frame_rate =
-      (static_cast<uint64_t>(vf.frames_per_sec_numerator) *
-       uvf.frames_per_sec_denominator) ==
-      (static_cast<uint64_t>(vf.frames_per_sec_numerator) *
-       uvf.frames_per_sec_denominator);
+      (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
+       uvf.rate.frames_per_sec_denominator) ==
+      (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
+       uvf.rate.frames_per_sec_denominator);
 
-  if (vf.pixel_format == uvf.pixel_format &&
-      vf.width == uvf.width &&
-      vf.height == uvf.height &&
-      vf.stride == uvf.stride &&
+  if (vf.format.pixel_format == uvf.format.pixel_format &&
+      vf.format.width == uvf.format.width &&
+      vf.format.height == uvf.format.height &&
+      vf.format.bytes_per_row == uvf.format.bytes_per_row &&
       has_equal_frame_rate) {
     return true;
   }

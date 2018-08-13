@@ -108,14 +108,14 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats;
 
   fuchsia::camera::driver::VideoFormat format = {
-      .pixel_format = fuchsia::camera::driver::PixelFormat::BGRA32,
-      .width = 640,
-      .height = 480,
-      .bits_per_pixel = 4,
-      .stride = 4 * 640,
-      .frames_per_sec_numerator = 30,
-      .frames_per_sec_denominator = 1,
-  };
+      .format = {.pixel_format = {.type =
+                                      fuchsia::sysmem::PixelFormatType::BGRA32},
+                 .width = 640,
+                 .height = 480,
+                 // .bits_per_pixel = 4,
+                 .bytes_per_row = 4 * 640},
+      .rate = {.frames_per_sec_numerator = 30,
+               .frames_per_sec_denominator = 1}};
 
   formats.push_back(format);
   callback(fbl::move(formats), 1, ZX_OK);
@@ -130,7 +130,7 @@ void FakeControlImpl::SetFormat(
   // TODO(garratt): The method for calculating the size varies on the format.
   // Ideally, the format library should provide functions for calculating the
   // size.
-  max_frame_size_ = format_.width * format_.height * format_.bits_per_pixel;
+  max_frame_size_ = format_.format.height * format_.format.bytes_per_row;
 
   stream_ = fbl::make_unique<FakeStreamImpl>(*this, fbl::move(stream));
   stream_events_ = fbl::make_unique<FakeStreamEventsImpl>(fbl::move(events));
@@ -187,8 +187,8 @@ void FakeControlImpl::FakeStreamImpl::Start(StartCallback callback) {
   // frames_per_sec_denominator * 1e9 * num_frames) / frames_per_sec_numerator
   owner_.frame_to_timestamp_ =
       media::TimelineFunction(zx_clock_get(ZX_CLOCK_MONOTONIC), 0,
-                              owner_.format_.frames_per_sec_denominator * 1e9,
-                              owner_.format_.frames_per_sec_numerator);
+                              owner_.format_.rate.frames_per_sec_denominator * 1e9,
+                              owner_.format_.rate.frames_per_sec_numerator);
 
   owner_.frame_count_ = 0;
 

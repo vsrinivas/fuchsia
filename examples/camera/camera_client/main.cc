@@ -43,9 +43,9 @@ zx_status_t run_camera() {
   printf("Available formats: %d\n", (int)formats.size());
   for (int i = 0; i < (int)formats.size(); i++) {
     printf(
-        "format[%d] - width: %d, height: %d, stride: %d, bits_per_pixel: %d\n",
-        i, formats[i].width, formats[i].height, formats[i].stride,
-        formats[i].bits_per_pixel);
+        "format[%d] - width: %d, height: %d, stride: %lu\n",
+        i, formats[i].format.width, formats[i].format.height,
+        formats[i].format.bytes_per_row);
   }
 
   int frame_counter = 0;
@@ -82,13 +82,14 @@ zx_status_t run_camera() {
   printf("out_max_frame_size: %d\n", out_max_frame_size);
 
   static constexpr uint16_t kNumberOfBuffers = 8;
+  size_t buffer_size = formats[0].format.bytes_per_row * formats[0].format.height;
 
   FXL_LOG(INFO) << "Allocating vmo buffer of size: "
-                << kNumberOfBuffers * formats[0].stride * formats[0].height;
+                << kNumberOfBuffers * buffer_size;
 
   zx::vmo vmo_buffer;
   status = zx::vmo::create(
-      kNumberOfBuffers * formats[0].stride * formats[0].height, 0, &vmo_buffer);
+      kNumberOfBuffers * buffer_size, 0, &vmo_buffer);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't create VMO buffer: " << status;

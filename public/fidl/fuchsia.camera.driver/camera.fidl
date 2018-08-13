@@ -4,44 +4,6 @@
 
 library fuchsia.camera.driver;
 
-enum CaptureType {
-  INVALID = 0;
-  STILL_IMAGE = 1;       // The source will provide on image.
-  BURST  = 2;            // The source will provide a set of images.
-  STREAM = 3;            // The source will be continuously providing frames
-                         // until signalled to stop.
-};
-
-// This pixel type is a stand-in for the pixel_format that will be defined in
-// the buffer collections.
-enum PixelFormat {
-  INVALID = 0;      // default value, not supported
-  BGRA32 = 1;        // 32bpp BGRA, 1 plane.
-  I420 = 2;
-  M420 = 3;
-  NV12 = 4;
-  YUY2 = 5;
-  MJPEG = 6;
-};
-
-// A structure used along with the GetFormats command
-// to describe the formats supported by a video stream.
-struct VideoFormat {
-  CaptureType capture_type;
-  // The width, in pixels, of the decoded video.
-  uint32 width;
-  // The height, in pixels, of the decoded video.
-  uint32 height;
-  // The number of bytes per line of video.
-  uint32 stride;
-  // The number of bits per pixel used to specify color in the decoded video.
-  uint8 bits_per_pixel;
-  PixelFormat pixel_format;
-  // The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
-  uint32 frames_per_sec_numerator;
-  uint32 frames_per_sec_denominator;
-};
-
 const uint32 MAX_FORMATS_PER_RESPONSE = 16;
 
 // Status to be set when a frame is signalled available.
@@ -73,6 +35,17 @@ struct FrameAvailableEvent {
   uint64 frame_offset;
 
   Metadata metadata;
+};
+
+struct FrameRate {
+  // The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
+  uint32 frames_per_sec_numerator;
+  uint32 frames_per_sec_denominator;
+};
+
+struct VideoFormat {
+  fuchsia.sysmem.ImageFormat format;
+  FrameRate rate;
 };
 
 // These are the original interfaces, which are being used for compatibility.

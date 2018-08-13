@@ -125,13 +125,13 @@ zx_status_t Gralloc(uint64_t buffer_size, uint32_t num_buffers,
 // standardized accross the platform.  This is an issue, we are tracking
 // it as (MTWN-98).
 fuchsia::images::PixelFormat ConvertFormat(
-    fuchsia::camera::driver::PixelFormat driver_format) {
-  switch (driver_format) {
-    case fuchsia::camera::driver::PixelFormat::BGRA32:
+    fuchsia::sysmem::PixelFormat driver_format) {
+  switch (driver_format.type) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
       return fuchsia::images::PixelFormat::BGRA_8;
-    case fuchsia::camera::driver::PixelFormat::YUY2:
+    case fuchsia::sysmem::PixelFormatType::YUY2:
       return fuchsia::images::PixelFormat::YUY2;
-    case fuchsia::camera::driver::PixelFormat::NV12:
+    case fuchsia::sysmem::PixelFormatType::NV12:
       return fuchsia::images::PixelFormat::NV12;
     default:
       FXL_DCHECK(false) << "Unsupported format!";
@@ -178,10 +178,10 @@ zx_status_t VideoDisplay::FindOrCreateBuffer(
   FXL_VLOG(4) << "Creating ImageInfo ";
   // auto image_info = fuchsia::images::ImageInfo::New();
   fuchsia::images::ImageInfo image_info;
-  image_info.stride = format.stride;
+  image_info.stride = format.format.bytes_per_row;
   image_info.tiling = fuchsia::images::Tiling::LINEAR;
-  image_info.width = format.width;
-  image_info.height = format.height;
+  image_info.width = format.format.width;
+  image_info.height = format.format.height;
 
   // To make things look like a webcam application, mirror left-right.
   image_info.transform = fuchsia::images::Transform::FLIP_HORIZONTAL;
@@ -193,7 +193,7 @@ zx_status_t VideoDisplay::FindOrCreateBuffer(
     return status;
   }
 
-  image_info.pixel_format = ConvertFormat(format.pixel_format);
+  image_info.pixel_format = ConvertFormat(format.format.pixel_format);
   image_pipe_->AddImage(b->index(), image_info, std::move(vmo),
                         fuchsia::images::MemoryType::HOST_MEMORY, vmo_offset);
 
@@ -333,10 +333,10 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
     FXL_LOG(INFO) << "Available formats: " << formats.size();
     for (int i = 0; i < (int)formats.size(); i++) {
-      FXL_LOG(INFO) << "format[" << i << "] - width: " << formats[i].width
-                    << ", height: " << formats[i].height
-                    << ", stride: " << formats[i].stride
-                    << ", bits_per_pixel: " << formats[i].bits_per_pixel;
+      FXL_LOG(INFO) << "format[" << i
+                    << "] - width: " << formats[i].format.width
+                    << ", height: " << formats[i].format.height
+                    << ", stride: " << formats[i].format.bytes_per_row;
     }
 
     format_ = formats[0];
@@ -357,11 +357,11 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
     FXL_LOG(INFO) << "Allocating vmo buffer of size: "
                   << kNumberOfBuffers * max_frame_size;
-    if (max_frame_size < format_.stride * format_.height) {
+    if (max_frame_size < format_.format.bytes_per_row * format_.format.height) {
       FXL_LOG(INFO) << "SetFormat: max_frame_size: " << max_frame_size
                     << " < needed frame size: "
-                    << format_.stride * format_.height;
-      max_frame_size = format_.stride * format_.height;
+                    << format_.format.bytes_per_row * format_.format.height;
+      max_frame_size = format_.format.bytes_per_row * format_.format.height;
     }
 
     max_frame_size_ = max_frame_size;
