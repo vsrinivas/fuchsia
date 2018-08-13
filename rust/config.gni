@@ -86,7 +86,7 @@ rust_build_args = [
       "--sysroot",
       _sysroot,
       "--clang_prefix",
-      rebase_path(clang_prefix, "", root_out_dir),
+      rebase_path(clang_prefix, "", root_build_dir),
       "--opt-level",
       _rust_opt_level,
   ] + _platform_args
