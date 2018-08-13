@@ -22,13 +22,13 @@ StartupContextForTest::StartupContextForTest(
       ChannelConnectAt(directory_request_client.get(), "public"));
 
   // TODO(CP-57): simplify this
-  zx_status_t status = service_root_dir_->AddEntry(
-      FakeLauncher::Name_,
+  zx_status_t status = controller_.AddService(
       fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
         fake_launcher_.Bind(
             fidl::InterfaceRequest<fuchsia::sys::Launcher>(std::move(channel)));
         return ZX_OK;
-      })));
+      })),
+      FakeLauncher::Name_);
   ZX_ASSERT(status == ZX_OK);
 
   status = service_root_vfs_.ServeDirectory(service_root_dir_,

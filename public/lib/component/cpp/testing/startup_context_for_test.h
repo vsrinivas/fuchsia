@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
-#define LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
+#ifndef LIB_COMPONENT_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
+#define LIB_COMPONENT_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 
 #include <fs/pseudo-dir.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -36,6 +36,37 @@ class StartupContextForTest : public StartupContext {
       return context_->outgoing_public_services_;
     }
 
+    // Adds the specified interface to the set of incoming services in mocked
+    // context.
+    //
+    // Adds a supported service with the given |service_name|, using the given
+    // |interface_request_handler|.
+    //
+    // A typical usage may be:
+    //
+    //   AddService(foobar_bindings_.GetHandler(this));
+    //
+    template <typename Interface>
+    zx_status_t AddService(
+        fidl::InterfaceRequestHandler<Interface> handler,
+        const std::string& service_name = Interface::Name_) const {
+      return context_->service_root_dir_->AddEntry(
+          service_name.c_str(),
+          fbl::AdoptRef(new fs::Service(
+              [handler = std::move(handler)](zx::channel channel) {
+                handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+                return ZX_OK;
+              })));
+    }
+
+    // Adds the specified interface to the set of incoming services in mocked
+    // context.
+    zx_status_t AddService(const fbl::RefPtr<fs::Service> service,
+                           const std::string& service_name) const {
+      return context_->service_root_dir_->AddEntry(service_name.c_str(),
+                                                   service);
+    }
+
     FakeLauncher& fake_launcher() const { return context_->fake_launcher_; }
 
    protected:
@@ -66,4 +97,4 @@ class StartupContextForTest : public StartupContext {
 }  // namespace testing
 }  // namespace component
 
-#endif  // LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
+#endif  // LIB_COMPONENT_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
