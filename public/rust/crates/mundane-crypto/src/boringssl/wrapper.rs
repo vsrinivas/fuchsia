@@ -82,8 +82,9 @@ macro_rules! c_up_ref {
     ($name:ident, $up_ref:ident) => {
         unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl_sys::$name {
             unsafe fn up_ref(slf: *mut Self) {
+                use boringssl::abort::UnwrapAbort;
                 ::boringssl::raw::one_or_err(stringify!($up_ref), ::boringssl_sys::$up_ref(slf))
-                    .unwrap()
+                    .unwrap_abort()
             }
         }
     };
@@ -223,7 +224,8 @@ impl<C: CNew + CFree> Default for CHeapWrapper<C> {
         // later to call CFree::free on that object (e.g., see the safety
         // comment on CStackWrapper::new).
         unsafe {
-            let obj = C::new().expect("could not allocate object");
+            use boringssl::abort::UnwrapAbort;
+            let obj = C::new().expect_abort("could not allocate object");
             CHeapWrapper { obj }
         }
     }

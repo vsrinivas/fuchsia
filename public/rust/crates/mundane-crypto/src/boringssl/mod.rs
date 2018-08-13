@@ -45,8 +45,8 @@
 //! the `CHeapWrapper<EC_KEY>::ec_key_parse_private_key` function parses a
 //! private key from an input stream and returns a new `CHeapWrapper<EC_KEY>`.
 
-#![allow(unsafe_code)]
-
+#[macro_use]
+mod abort;
 #[macro_use]
 mod wrapper;
 mod raw;
@@ -217,7 +217,7 @@ pub fn ecdsa_sign(
     unsafe {
         // If we call ECDSA_sign with sig.len() < min_size, it will invoke UB.
         let min_size = ecdsa_size(key)?;
-        assert!(sig.len() >= min_size.get());
+        assert_abort!(sig.len() >= min_size.get());
 
         let mut sig_len: c_uint = 0;
         ECDSA_sign(
@@ -228,7 +228,7 @@ pub fn ecdsa_sign(
             &mut sig_len,
             key.as_const(),
         )?;
-        assert!(sig_len as usize <= min_size.get());
+        assert_abort!(sig_len as usize <= min_size.get());
         Ok(sig_len as usize)
     }
 }
@@ -385,10 +385,10 @@ impl CStackWrapper<HMAC_CTX> {
     pub fn hmac_final(&mut self, out: &mut [u8]) -> Result<(), BoringError> {
         unsafe {
             let size = HMAC_size(self.as_const());
-            assert_eq!(out.len(), size);
+            assert_abort_eq!(out.len(), size);
             let mut size = 0;
             HMAC_Final(self.as_mut(), out.as_mut_ptr(), &mut size)?;
-            assert_eq!(out.len(), size as usize);
+            assert_abort_eq!(out.len(), size as usize);
             Ok(())
         }
     }

@@ -52,7 +52,8 @@ macro_rules! evp_digest {
         pub unsafe fn $name() -> NonNull<EVP_MD> {
             // These return pointers to statically-allocated objects, so should
             // never fail.
-            ptr_or_err(stringify!($name), ::boringssl_sys::$name() as *mut _).unwrap()
+            use boringssl::abort::UnwrapAbort;
+            ptr_or_err(stringify!($name), ::boringssl_sys::$name() as *mut _).unwrap_abort()
         }
     };
 }
@@ -168,7 +169,7 @@ pub unsafe fn ECDSA_verify(
     match ::boringssl_sys::ECDSA_verify(type_, digest, digest_len, sig, sig_len, key) {
         1 => true,
         0 => false,
-        _ => unreachable!(),
+        _ => unreachable_abort!(),
     }
 }
 
@@ -239,7 +240,7 @@ pub unsafe fn HMAC_Init_ex(
 #[must_use]
 pub unsafe fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const u8, data_len: usize) {
     // HMAC_Update promises to return 1.
-    assert_eq!(::boringssl_sys::HMAC_Update(ctx, data, data_len), 1);
+    assert_abort_eq!(::boringssl_sys::HMAC_Update(ctx, data, data_len), 1);
 }
 
 #[allow(non_snake_case)]
@@ -256,27 +257,27 @@ pub unsafe fn HMAC_Final(
 #[must_use]
 pub unsafe fn SHA384_Init(ctx: *mut SHA512_CTX) {
     // SHA384_Init promises to return 1.
-    assert_eq!(::boringssl_sys::SHA384_Init(ctx), 1);
+    assert_abort_eq!(::boringssl_sys::SHA384_Init(ctx), 1);
 }
 
 // Implemented manually (rather than via impl_traits! or c_init!) so that we can
-// assert_eq! that the return value is 1.
+// assert_abort_eq! that the return value is 1.
 unsafe impl CInit for ::boringssl_sys::SHA_CTX {
     unsafe fn init(ctx: *mut Self) {
         // SHA1_Init promises to return 1.
-        assert_eq!(::boringssl_sys::SHA1_Init(ctx), 1);
+        assert_abort_eq!(::boringssl_sys::SHA1_Init(ctx), 1);
     }
 }
 unsafe impl CInit for ::boringssl_sys::SHA256_CTX {
     unsafe fn init(ctx: *mut Self) {
         // SHA256_Init promises to return 1.
-        assert_eq!(::boringssl_sys::SHA256_Init(ctx), 1);
+        assert_abort_eq!(::boringssl_sys::SHA256_Init(ctx), 1);
     }
 }
 unsafe impl CInit for ::boringssl_sys::SHA512_CTX {
     unsafe fn init(ctx: *mut Self) {
         // SHA512_Init promises to return 1.
-        assert_eq!(::boringssl_sys::SHA512_Init(ctx), 1);
+        assert_abort_eq!(::boringssl_sys::SHA512_Init(ctx), 1);
     }
 }
 
@@ -290,7 +291,7 @@ macro_rules! sha {
         #[allow(non_snake_case)]
         pub unsafe fn $update(ctx: *mut ::boringssl_sys::$ctx, data: *const c_void, len: usize) {
             // All XXX_Update functions promise to return 1.
-            assert_eq!(::boringssl_sys::$update(ctx, data, len), 1);
+            assert_abort_eq!(::boringssl_sys::$update(ctx, data, len), 1);
         }
         #[allow(non_snake_case)]
         pub unsafe fn $final(

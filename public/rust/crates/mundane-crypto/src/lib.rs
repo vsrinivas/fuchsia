@@ -18,6 +18,7 @@ extern crate boringssl_sys;
 extern crate failure;
 
 // Forbid unsafe code except in the boringssl module.
+#[allow(unsafe_code)]
 mod boringssl;
 #[forbid(unsafe_code)]
 pub mod hash;
