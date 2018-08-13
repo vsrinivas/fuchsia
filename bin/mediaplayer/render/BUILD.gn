@@ -1,0 +1,58 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("render") {
+  sources = [
+    "audio_renderer.h",
+    "fidl_audio_renderer.cc",
+    "fidl_audio_renderer.h",
+    "fidl_video_renderer.cc",
+    "fidl_video_renderer.h",
+    "renderer.cc",
+    "renderer.h",
+    "video_renderer.h",
+  ]
+
+  deps = [
+    "//garnet/bin/mediaplayer/fidl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/trace",
+  ]
+
+  public_deps = [
+    ":video_converter",
+    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/metrics",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/public/lib/ui/view_framework",
+  ]
+}
+
+config("optimize_video_converter") {
+  cflags = [ "-O3" ]
+}
+
+source_set("video_converter") {
+  sources = [
+    "video_converter.cc",
+    "video_converter.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/trace",
+  ]
+
+  public_deps = [
+    "//garnet/bin/mediaplayer/framework",
+    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.media",
+  ]
+
+  configs += [ ":optimize_video_converter" ]
+}

@@ -1,0 +1,57 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("framework") {
+  sources = [
+    "formatting.cc",
+    "formatting.h",
+    "graph.cc",
+    "graph.h",
+    "metadata.h",
+    "models/async_node.h",
+    "models/node.cc",
+    "models/node.h",
+    "models/stage.h",
+    "packet.cc",
+    "packet.h",
+    "payload_allocator.cc",
+    "payload_allocator.h",
+    "refs.cc",
+    "refs.h",
+    "result.h",
+    "stages/async_node_stage.cc",
+    "stages/async_node_stage.h",
+    "stages/input.cc",
+    "stages/input.h",
+    "stages/output.cc",
+    "stages/output.h",
+    "stages/stage_impl.cc",
+    "stages/stage_impl.h",
+    "types/audio_stream_type.cc",
+    "types/audio_stream_type.h",
+    "types/bytes.cc",
+    "types/bytes.h",
+    "types/stream_type.cc",
+    "types/stream_type.h",
+    "types/subpicture_stream_type.cc",
+    "types/subpicture_stream_type.h",
+    "types/text_stream_type.cc",
+    "types/text_stream_type.h",
+    "types/video_stream_type.cc",
+    "types/video_stream_type.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/media/timeline",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/bin/mediaplayer/util",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}

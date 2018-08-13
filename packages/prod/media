@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
-        "garnet/packages/prod/media_player"
+        "garnet/packages/prod/mediaplayer"
     ],
     "packages": [
         "//garnet/bin/media/signal_generator",

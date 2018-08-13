@@ -1,0 +1,51 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+source_set("demux") {
+  sources = [
+    "demux.h",
+    "fidl_reader.cc",
+    "fidl_reader.h",
+    "file_reader.cc",
+    "file_reader.h",
+    "http_reader.cc",
+    "http_reader.h",
+    "reader.h",
+    "reader_cache.cc",
+    "reader_cache.h",
+    "sparse_byte_buffer.cc",
+    "sparse_byte_buffer.h",
+  ]
+
+  deps = [
+    "//garnet/bin/http:errors",
+    "//garnet/bin/mediaplayer/fidl",
+    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/util",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+test("tests") {
+  output_name = "media_demux_tests"
+
+  sources = [
+    "test/sparse_byte_buffer_test.cc",
+  ]
+
+  deps = [
+    ":demux",
+    "//third_party/googletest:gtest_main",
+  ]
+}

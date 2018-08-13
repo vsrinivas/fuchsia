@@ -39,6 +39,7 @@
         "garnet/packages/tests/logger",
         "garnet/packages/tests/magma_non_hardware",
         "garnet/packages/tests/media",
+        "garnet/packages/tests/mediaplayer",
         "garnet/packages/tests/mime_sniffer",
         "garnet/packages/tests/netstack",
         "garnet/packages/tests/network",

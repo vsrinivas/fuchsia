@@ -7,7 +7,6 @@ import("//build/package.gni")
 group("services") {
   public_deps = [
     "//garnet/bin/media/codec_factory",
-    "//garnet/bin/media/media_player",
   ]
 }
 
@@ -75,10 +74,6 @@ package("tests") {
   deps = [
     "//garnet/bin/media/audio_core:tests",
     "//garnet/bin/media/audio_core/mixer:tests",
-    "//garnet/bin/media/media_player:tests",
-    "//garnet/bin/media/media_player/demux:tests",
-    "//garnet/bin/media/media_player/player:tests",
-    "//garnet/bin/media/media_player/util:tests",
     "//garnet/public/lib/media/audio_dfx:lib",
     "//garnet/public/lib/media/audio_dfx:tests",
     "//garnet/public/lib/media/timeline:tests",
@@ -105,27 +100,11 @@ package("tests") {
     },
 
     {
-      name = "media_demux_tests"
-    },
-
-    {
       name = "media_lib_timeline_tests"
     },
 
     {
       name = "media_lib_transport_tests"
-    },
-
-    {
-      name = "media_player_tests"
-    },
-
-    {
-      name = "media_util_tests"
-    },
-
-    {
-      name = "player_tests"
     },
   ]
 }

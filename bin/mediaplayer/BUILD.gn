@@ -1,0 +1,124 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("mediaplayer") {
+  deps = [
+    ":mediaplayer_bin",
+  ]
+
+  binary = "mediaplayer"
+}
+
+executable("mediaplayer_bin") {
+  output_name = "mediaplayer"
+
+  sources = [
+    "main.cc",
+    "media_player_impl.cc",
+    "media_player_impl.h",
+  ]
+
+  deps = [
+    "//garnet/bin/mediaplayer/decode",
+    "//garnet/bin/mediaplayer/demux",
+    "//garnet/bin/mediaplayer/fidl",
+    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/framework_create",
+    "//garnet/bin/mediaplayer/player",
+    "//garnet/bin/mediaplayer/render",
+    "//garnet/bin/mediaplayer/util",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/ui/view_framework",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+executable("tests") {
+  output_name = "mediaplayer_tests"
+
+  testonly = true
+
+  sources = [
+    "test/fakes/fake_audio_out.cc",
+    "test/fakes/fake_audio_out.h",
+    "test/fakes/fake_scenic.cc",
+    "test/fakes/fake_scenic.h",
+    "test/fakes/fake_session.cc",
+    "test/fakes/fake_session.h",
+    "test/fakes/fake_view.cc",
+    "test/fakes/fake_view.h",
+    "test/fakes/fake_view_manager.cc",
+    "test/fakes/fake_view_manager.h",
+    "test/fakes/fake_wav_reader.cc",
+    "test/fakes/fake_wav_reader.h",
+    "test/fakes/packet_info.cc",
+    "test/fakes/packet_info.h",
+    "test/main.cc",
+    "test/media_player_test_params.cc",
+    "test/media_player_test_params.h",
+    "test/media_player_test_unattended.cc",
+    "test/media_player_test_unattended.h",
+    "test/media_player_test_view.cc",
+    "test/media_player_test_view.h",
+  ]
+
+  deps = [
+    ":mediaplayer_bin",
+    "//garnet/bin/mediaplayer/fidl",
+    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/framework_create",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediacodec",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/hid",
+  ]
+}
+
+package("tests_package") {
+  testonly = true
+  deprecated_system_image = true
+
+  package_name = "mediaplayer_tests"
+
+  deps = [
+    "//garnet/bin/mediaplayer:tests",
+    "//garnet/bin/mediaplayer/demux:tests",
+    "//garnet/bin/mediaplayer/player:tests",
+    "//garnet/bin/mediaplayer/util:tests",
+  ]
+
+  tests = [
+    {
+      name = "media_demux_tests"
+    },
+
+    {
+      name = "mediaplayer_tests"
+    },
+
+    {
+      name = "media_util_tests"
+    },
+
+    {
+      name = "player_tests"
+    },
+  ]
+}

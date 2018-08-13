@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("framework_create") {
+  sources = [
+    "decoder.cc",
+    "demux.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/mediaplayer/decode",
+    "//garnet/bin/mediaplayer/demux",
+    "//garnet/bin/mediaplayer/ffmpeg",
+    "//garnet/bin/mediaplayer/fidl:decoders",
+    "//garnet/bin/mediaplayer/framework",
+    "//garnet/public/lib/fxl",
+  ]
+}

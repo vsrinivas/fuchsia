@@ -18,6 +18,6 @@
           action="bin/fonts/update.sh"/>
     <hook name="ffmpeg-update"
           project="garnet"
-          action="bin/media/media_player/ffmpeg/update_prebuilt_ffmpeg.sh"/>
+          action="bin/mediaplayer/ffmpeg/update_prebuilt_ffmpeg.sh"/>
   </hooks>
 </manifest>

@@ -38,7 +38,7 @@
         "garnet/packages/prod/media",
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
-        "garnet/packages/prod/media_player",
+        "garnet/packages/prod/mediaplayer",
         "garnet/packages/prod/net-cli",
         "garnet/packages/prod/netcfg",
         "garnet/packages/prod/netconnector",
