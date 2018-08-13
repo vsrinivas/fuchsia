@@ -66,7 +66,7 @@ toolchain {
   # Implicit dependencies for Fuchsia system functionality
   cxx_builtin_include_directory: "%{SYSROOT_${arch.short_name.upper()}}/include" # Platform parts of libc.
   cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/${arch.long_name}-fuchsia/include/c++/v1" # Platform libc++.
-  cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/clang/7.0.0/include" # Platform libc++.
+  cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/clang/8.0.0/include" # Platform libc++.
   ### end
 
   #### Common compiler options. ####

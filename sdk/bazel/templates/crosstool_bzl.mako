@@ -7,17 +7,17 @@ Defines a Fuchsia crosstool workspace.
 # TODO(alainv): Do not hardcode download URLs but export the URL from the
 #               the one used in //buildtools, using the CIPD APIs.
 CLANG_LINUX_DOWNLOAD_URL = (
-    "https://storage.googleapis.com/fuchsia/clang/linux-amd64/0c20cca57e424c54cd65644168c68725aae41c44"
+    "https://storage.googleapis.com/fuchsia/clang/linux-amd64/2a605accf10c22e7905d2cabec22ca317869f85d"
 )
 CLANG_LINUX_SHA256 = (
-    "fa304a74a9e39d1e6d4cdf29d368923abc58fa974d1ecb55662065252c4a1802"
+    "776b8b7b47da73199f095fc0cabca85e9d9ced7e3bbfc7707e0a4afaacc6544b"
 )
 
 CLANG_MAC_DOWNLOAD_URL = (
-    "https://storage.googleapis.com/fuchsia/clang/mac-amd64/21371c6cb01e83f8c1657af5f03ce0ff16c1fa0e"
+    "https://storage.googleapis.com/fuchsia/clang/mac-amd64/c0cea0a0fa8cff6d286e46aa4530ffc6b85baaaf"
 )
 CLANG_MAC_SHA256 = (
-    "3049d5ad7d8dc3f6e644c96ba206ccd16ef6a4ee7288d913a12bda8f40f9afed"
+    "f06e6cf9bcb09963a3042ff8c8bbfe998f43bf4d61dc5bbb1f1c496792d6bea2"
 )
 
 
