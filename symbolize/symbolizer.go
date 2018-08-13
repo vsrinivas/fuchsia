@@ -79,7 +79,7 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 			key := llvmSymbolizeArgsKey{args.build, args.modRelAddr}
 			if res, ok := s.cache.Get(key); ok {
 				args.output <- res.(LLVMSymbolizeResult)
-				return
+				continue
 			}
 			if len(strings.TrimSpace(args.file)) == 0 {
 				args.output <- LLVMSymbolizeResult{
