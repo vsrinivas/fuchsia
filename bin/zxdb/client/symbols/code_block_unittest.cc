@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -10,9 +11,11 @@ namespace zxdb {
 TEST(CodeBlock, ContainsAddress) {
   auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
 
+  SymbolContext context = SymbolContext::ForRelativeAddresses();
+
   // No code range: contains all addresses.
-  EXPECT_TRUE(block->ContainsAddress(0));
-  EXPECT_TRUE(block->ContainsAddress(0x2000));
+  EXPECT_TRUE(block->ContainsAddress(context, 0));
+  EXPECT_TRUE(block->ContainsAddress(context, 0x2000));
 
   // Set some ranges.
   CodeBlock::CodeRanges ranges;
@@ -21,14 +24,20 @@ TEST(CodeBlock, ContainsAddress) {
   block->set_code_ranges(ranges);
 
   // Blocks should count the beginning but not the end as inside them.
-  EXPECT_TRUE(block->ContainsAddress(0x1000));
-  EXPECT_TRUE(block->ContainsAddress(0x1100));
-  EXPECT_FALSE(block->ContainsAddress(0x2000));
+  EXPECT_TRUE(block->ContainsAddress(context, 0x1000));
+  EXPECT_TRUE(block->ContainsAddress(context, 0x1100));
+  EXPECT_FALSE(block->ContainsAddress(context, 0x2000));
 
-  EXPECT_FALSE(block->ContainsAddress(0x2fff));
-  EXPECT_TRUE(block->ContainsAddress(0x3000));
-  EXPECT_FALSE(block->ContainsAddress(0x3001));
-  EXPECT_FALSE(block->ContainsAddress(0x3002));
+  EXPECT_FALSE(block->ContainsAddress(context, 0x2fff));
+  EXPECT_TRUE(block->ContainsAddress(context, 0x3000));
+  EXPECT_FALSE(block->ContainsAddress(context, 0x3001));
+  EXPECT_FALSE(block->ContainsAddress(context, 0x3002));
+
+  // Test with a non-relative symbol context.
+  constexpr uint64_t kBase = 0x10000000;
+  SymbolContext base_context(kBase);
+  EXPECT_FALSE(block->ContainsAddress(base_context, 0x1000));
+  EXPECT_TRUE(block->ContainsAddress(base_context, kBase + 0x1000));
 }
 
 TEST(CodeBlock, GetMostSpecificChild) {
@@ -73,15 +82,17 @@ TEST(CodeBlock, GetMostSpecificChild) {
   inner_inner2.emplace_back(child_child2);
   second_child->set_inner_blocks(inner_inner2);
 
+  SymbolContext context = SymbolContext::ForRelativeAddresses();
+
   // Querying for something out-of-range.
-  EXPECT_EQ(nullptr, outer->GetMostSpecificChild(0x1));
+  EXPECT_EQ(nullptr, outer->GetMostSpecificChild(context, 0x1));
 
   // Something in the first level of children but not in the second.
-  EXPECT_EQ(first_child.get(), outer->GetMostSpecificChild(0x1200));
+  EXPECT_EQ(first_child.get(), outer->GetMostSpecificChild(context, 0x1200));
 
   // Lowest level of child.
-  EXPECT_EQ(child_child.get(), outer->GetMostSpecificChild(0x1000));
-  EXPECT_EQ(child_child2.get(), outer->GetMostSpecificChild(0x3000));
+  EXPECT_EQ(child_child.get(), outer->GetMostSpecificChild(context, 0x1000));
+  EXPECT_EQ(child_child2.get(), outer->GetMostSpecificChild(context, 0x3000));
 }
 
 }  // namespace zxdb

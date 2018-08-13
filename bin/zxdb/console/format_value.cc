@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/format_value.h"
 
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
+#include "garnet/bin/zxdb/client/symbols/modified_type.h"
 #include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -101,6 +102,19 @@ void FormatChar(const ExprValue& value, OutputBuffer* out) {
   out->Append(fxl::StringPrintf("'%c'", c));
 }
 
+void FormatPointer(const ExprValue& value, const ModifiedType* modified_type,
+                   OutputBuffer* out) {
+  // Expect all pointers to be 8 bytes.
+  if (value.data().size() != 8) {
+    out->Append("<bad pointer size>");
+  } else {
+    uint64_t pointer_value = value.GetAs<uint64_t>();
+    out->Append(fxl::StringPrintf("(%s) 0x%" PRIx64,
+                                  modified_type->GetFullName().c_str(),
+                                  pointer_value));
+  }
+}
+
 // Returns true if the base type is some kind of number such that the NumFormat
 // of the format options should be applied.
 bool IsNumericBaseType(int base_type) {
@@ -122,6 +136,23 @@ void FormatValue(const Value* value, OutputBuffer* out) {
 
 void FormatExprValue(const ExprValue& value, const FormatValueOptions& options,
                      OutputBuffer* out) {
+  const Type* type = value.type()->GetConcreteType();
+  if (!type) {
+    out->Append("<no type>");
+    return;
+  }
+
+  const ModifiedType* modified_type = type->AsModifiedType();
+  if (modified_type) {
+    switch (modified_type->tag()) {
+      case Symbol::kTagPointerType:
+        FormatPointer(value, modified_type, out);
+        break;
+        // TODO(brettw) need to handle various reference types here.
+    }
+    return;
+  }
+
   // Check for numeric types with an overridden format option.
   int base_type = value.GetBaseType();
   if (IsNumericBaseType(base_type) &&
@@ -144,7 +175,7 @@ void FormatExprValue(const ExprValue& value, const FormatValueOptions& options,
     return;
   }
 
-  // Default handling based on the number.
+  // Default handling for base types based on the number.
   switch (value.GetBaseType()) {
     case BaseType::kBaseTypeAddress: {
       // Always print addresses as unsigned hex.
@@ -170,17 +201,19 @@ void FormatExprValue(const ExprValue& value, const FormatValueOptions& options,
     case BaseType::kBaseTypeUTF:
       FormatChar(value, out);
       break;
-    default: {
-      // For now, print a hex dump for everything else.
-      std::string result;
-      for (size_t i = 0; i < value.data().size(); i++) {
-        if (i > 0)
-          result.push_back(' ');
-        result.append(fxl::StringPrintf("0x%02x", value.data()[i]));
+    default:
+      if (value.data().empty()) {
+        out->Append("<no data>");
+      } else {
+        // For now, print a hex dump for everything else.
+        std::string result;
+        for (size_t i = 0; i < value.data().size(); i++) {
+          if (i > 0)
+            result.push_back(' ');
+          result.append(fxl::StringPrintf("0x%02x", value.data()[i]));
+        }
+        out->Append(std::move(result));
       }
-
-      out->Append(std::move(result));
-    }
   }
 }
 

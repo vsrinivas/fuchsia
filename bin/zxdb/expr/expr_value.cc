@@ -50,9 +50,8 @@ int ExprValue::GetBaseType() const {
   if (!type_)
     return BaseType::kBaseTypeNone;
 
-  // TODO(brettw) this should skip over "const" modifiers. Need to check
-  // typedefs. And C++ references need to be handled.
-  BaseType* base_type = type_->AsBaseType();
+  // Remove "const", etc. and see if it's a base type.
+  const BaseType* base_type = type_->GetConcreteType()->AsBaseType();
   if (!base_type)
     return BaseType::kBaseTypeNone;
   return base_type->base_type();

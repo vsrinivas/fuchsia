@@ -25,7 +25,7 @@ VariableLocation::VariableLocation(const uint8_t* data, size_t size) {
   Entry& entry = locations_.back();
 
   entry.begin = 0;
-  entry.end = std::numeric_limits<uint64_t>::max();
+  entry.end = 0;
   entry.expression.assign(&data[0], &data[size]);
 }
 

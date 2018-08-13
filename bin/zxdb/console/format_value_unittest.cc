@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
+#include "garnet/bin/zxdb/client/symbols/modified_type.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "gtest/gtest.h"
@@ -159,6 +160,24 @@ TEST(FormatValue, Float) {
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double"),
       std::vector<uint8_t>(&buffer[0], &buffer[8]));
   EXPECT_EQ("9.875e+12", DoFormat(val_double, opts));
+}
+
+TEST(FormatValue, Pointer) {
+  FormatValueOptions opts;
+
+  auto base_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
+  auto ptr_type =
+      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol(base_type));
+
+  std::vector<uint8_t> data = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+  ExprValue value(ptr_type, data);
+  EXPECT_EQ("(int*) 0x807060504030201", DoFormat(value, opts));
+
+  // Test an invalid one with an incorrect size.
+  data.resize(7);
+  ExprValue bad_value(ptr_type, data);
+  EXPECT_EQ("<bad pointer size>", DoFormat(bad_value, opts));
 }
 
 }  // namespace zxdb

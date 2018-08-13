@@ -4,11 +4,16 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include <functional>
+#include <vector>
 
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
+
+class Err;
 
 // This interface is how the debugger backend provides memory and register data
 // to the symbol system to evaluate expressions.
@@ -24,13 +29,19 @@ namespace zxdb {
 class SymbolDataProvider
     : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
-  // Returns the instruction pointer for the current thread. This is used for
-  // some operations to pick an applicable representation for the current
-  // CPU state.
+  using GetMemoryCallback =
+      std::function<void(const Err&, std::vector<uint8_t>)>;
+  using GetRegisterCallback = std::function<void(const Err&, uint64_t)>;
+
+  // Special register numbers (normal DWARF registers are never negative).
+  // These will be mapped to the corresponding platform-specific registers for
+  // the current platform.
   //
-  // The implementation should return 0 if there is no IP for the current
-  // state.
-  virtual uint64_t GetIP() const = 0;
+  // These are guaranteed available synchronously. If the synchronous getter
+  // returns failure for them, it means the register isn't available in the
+  // current context.
+  static constexpr int kRegisterIP = -1;
+  static constexpr int kRegisterBP = -2;
 
   // Request for synchronous register data. If the register data can be provided
   // synchronously, the data will be put into the output parameter and this
@@ -47,9 +58,8 @@ class SymbolDataProvider
   // the register is not available now (maybe the thread is running), success
   // will be set to false. When the register value contains valid data, success
   // will indicate true.
-  virtual void GetRegisterAsync(
-      int dwarf_register_number,
-      std::function<void(bool success, uint64_t value)> callback) = 0;
+  virtual void GetRegisterAsync(int dwarf_register_number,
+                                GetRegisterCallback callback) = 0;
 
   // Request to retrieve a memory block from the debugged process. On success,
   // the implementation will call the callback with the retrieved data pointer.
@@ -59,9 +69,8 @@ class SymbolDataProvider
   //
   // On failure (if all or part of the memory is unreadable), the callback will
   // be issued with a null pointer.
-  virtual void GetMemoryAsync(
-      uint64_t address, uint32_t size,
-      std::function<void(const uint8_t* data)> callback) = 0;
+  virtual void GetMemoryAsync(uint64_t address, uint32_t size,
+                              GetMemoryCallback callback) = 0;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(SymbolDataProvider);

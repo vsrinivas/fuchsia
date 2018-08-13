@@ -82,8 +82,8 @@ void DwarfExprEval::ContinueEval() {
     if (instruction_count == kMaxInstructionsAtOnce) {
       // Enough instructions have run at once. Schedule a callback to continue
       // execution in the message loop.
-      debug_ipc::MessageLoop::Current()->PostTask(
-          [weak_eval = weak_factory_.GetWeakPtr()]() {
+      debug_ipc::MessageLoop::Current()
+          ->PostTask([weak_eval = weak_factory_.GetWeakPtr()]() {
             if (weak_eval)
               weak_eval->ContinueEval();
           });
@@ -223,15 +223,15 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_regx:
       return OpRegx();
     case llvm::dwarf::DW_OP_fbreg:
-      // TODO(brettw) implement this.
-      ReportUnimplementedOpcode(op);
-      return Completion::kSync;
+      return OpFbreg();
     case llvm::dwarf::DW_OP_bregx:
       return OpBregx();
     case llvm::dwarf::DW_OP_piece:
       // TODO(brettw) implement this.
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
+    case llvm::dwarf::DW_OP_deref:
+      return OpDeref();
     case llvm::dwarf::DW_OP_deref_size:
       // TODO(brettw) implement this.
       ReportUnimplementedOpcode(op);
@@ -275,15 +275,12 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
 
   // Must request async.
   data_provider_->GetRegisterAsync(
-      dwarf_register_number,
-      [weak_eval = weak_factory_.GetWeakPtr(), dwarf_register_number, offset](
-          bool success, uint64_t value) {
+      dwarf_register_number, [ weak_eval = weak_factory_.GetWeakPtr(), offset ](
+                                 const Err& err, uint64_t value) {
         if (!weak_eval)
           return;
-        if (!success) {
-          weak_eval->ReportError(fxl::StringPrintf(
-              "DWARF register %d is required but is not available.",
-              dwarf_register_number));
+        if (err.has_error()) {
+          weak_eval->ReportError(err);
           return;
         }
         weak_eval->Push(static_cast<uint64_t>(value + offset));
@@ -338,9 +335,13 @@ bool DwarfExprEval::ReadLEBUnsigned(uint64_t* output) {
 }
 
 void DwarfExprEval::ReportError(const std::string& msg) {
+  ReportError(Err(msg));
+}
+
+void DwarfExprEval::ReportError(const Err& err) {
   data_provider_ = fxl::RefPtr<SymbolDataProvider>();
   is_complete_ = true;
-  completion_callback_(this, Err(msg));
+  completion_callback_(this, err);
 
   // The callback should only be called once, so force accidental future uses
   // to fail.
@@ -445,11 +446,36 @@ DwarfExprEval::Completion DwarfExprEval::OpDup() {
   return Completion::kSync;
 }
 
+// 1 parameter: Signed LEB128 offset from frame base pointer.
+DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
+  uint64_t bp = 0;
+  if (!data_provider_->GetRegister(SymbolDataProvider::kRegisterBP, &bp)) {
+    ReportError("Stack frame pointer not available.");
+    return Completion::kSync;
+  }
+
+  // Certain problems can cause the BP to be set to 0 which is obviously
+  // invalid, report that error specifically.
+  if (bp == 0) {
+    ReportError("Base Pointer is 0, can't evaluate.");
+    return Completion::kSync;
+  }
+
+  int64_t offset = 0;
+  if (ReadLEBSigned(&offset)) {
+    result_type_ = ResultType::kPointer;
+    Push(bp + offset);
+  }
+  return Completion::kSync;
+}
+
 // 1 parameter: ULEB128 constant indexing the register.
 DwarfExprEval::Completion DwarfExprEval::OpRegx() {
   uint64_t reg = 0;
   if (!ReadLEBUnsigned(&reg))
     return Completion::kSync;
+
+  result_type_ = ResultType::kValue;
   return PushRegisterWithOffset(static_cast<int>(reg), 0);
 }
 
@@ -463,7 +489,40 @@ DwarfExprEval::Completion DwarfExprEval::OpBregx() {
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
+  result_type_ = ResultType::kPointer;
   return PushRegisterWithOffset(static_cast<int>(reg), offset);
+}
+
+// Pops the stack and pushes an address-sized value from memory at that
+// location.
+DwarfExprEval::Completion DwarfExprEval::OpDeref() {
+  if (stack_.empty()) {
+    ReportStackUnderflow();
+    return Completion::kSync;
+  }
+
+  uint64_t addr = stack_.back();
+  stack_.pop_back();
+  data_provider_->GetMemoryAsync(
+      addr, 8, [weak_eval = weak_factory_.GetWeakPtr()](
+                   const Err& err, std::vector<uint8_t> value) {
+        if (!weak_eval) {
+          return;
+        } else if (err.has_error()) {
+          weak_eval->ReportError(err);
+        } else if (value.size() != 8) {
+          weak_eval->ReportError("Bad size returned from memory read.");
+        } else {
+          // Success reading 8 bytes.
+          uint64_t to_push;
+          memcpy(&to_push, &value[0], 8);
+          weak_eval->Push(to_push);
+
+          // Picks up processing at the next instruction.
+          weak_eval->ContinueEval();
+        }
+      });
+  return Completion::kAsync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpMod() {

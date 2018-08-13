@@ -45,6 +45,21 @@ void DwarfDieDecoder::AddAddress(llvm::dwarf::Attribute attribute,
   });
 }
 
+void DwarfDieDecoder::AddHighPC(llvm::Optional<HighPC>* output) {
+  attrs_.emplace_back(
+      llvm::dwarf::DW_AT_high_pc, [output](const llvm::DWARFFormValue& form) {
+        if (form.isFormClass(llvm::DWARFFormValue::FC_Constant)) {
+          auto as_constant = form.getAsUnsignedConstant();
+          if (as_constant)
+            *output = HighPC(true, *as_constant);
+        } else if (form.isFormClass(llvm::DWARFFormValue::FC_Address)) {
+          auto as_addr = form.getAsAddress();
+          if (as_addr)
+            *output = HighPC(false, *as_addr);
+        }
+      });
+}
+
 void DwarfDieDecoder::AddCString(llvm::dwarf::Attribute attribute,
                                  llvm::Optional<const char*>* output) {
   attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {

@@ -33,11 +33,17 @@ namespace {
 // TODO(brettw) add a parameter for DW_AT_ranges to handle discontiguous code
 // ranges also (normally either that or low/high will be set).
 
-CodeBlock::CodeRanges MakeCodeRanges(const llvm::Optional<uint64_t>& low_pc,
-                                     const llvm::Optional<uint64_t>& high_pc) {
+CodeBlock::CodeRanges MakeCodeRanges(
+    const llvm::Optional<uint64_t>& low_pc,
+    const llvm::Optional<DwarfDieDecoder::HighPC>& high_pc) {
   CodeBlock::CodeRanges code_ranges;
   if (low_pc && high_pc) {
-    code_ranges.push_back(CodeBlock::CodeRange(*low_pc, *high_pc));
+    if (high_pc->is_constant) {
+      code_ranges.push_back(
+          CodeBlock::CodeRange(*low_pc, *low_pc + high_pc->value));
+    } else {
+      code_ranges.push_back(CodeBlock::CodeRange(*low_pc, high_pc->value));
+    }
   }
   return code_ranges;
 }
@@ -96,11 +102,28 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
     entries.emplace_back();
     VariableLocation::Entry& dest = entries.back();
 
-    dest.begin = llvm_entry.Begin;
-    dest.end = llvm_entry.End;
-    const uint8_t* data =
-        reinterpret_cast<const uint8_t*>(llvm_entry.Loc.data());
-    dest.expression.assign(data, data + llvm_entry.Loc.size());
+    // These location list begin and end values are "relative to the applicable
+    // base address of the compilation unit referencing this location list."
+    //
+    // "The applicable base address of a location list entry is determined by
+    // the closest preceding base address selection entry in the same location
+    // list. If there is no such selection entry, then the applicable base
+    // address defaults to the base address of the compilation unit."
+    //
+    // LLVM doesn't seem to handle the "base address selection entry" in
+    // location lists, so we assume that Clang won't generate them either.
+    // Assume all addresses are relative to the compilation unit's base
+    // address which is in DW_AT_low_pc
+    auto base_address = unit->getBaseAddress();
+    if (base_address) {
+      dest.begin = base_address->Address + llvm_entry.Begin;
+      dest.end = base_address->Address + llvm_entry.End;
+      const uint8_t* data =
+          reinterpret_cast<const uint8_t*>(llvm_entry.Loc.data());
+      dest.expression.assign(data, data + llvm_entry.Loc.size());
+    } else {
+      FXL_NOTREACHED() << "No base address.";
+    }
   }
   return VariableLocation(std::move(entries));
 }
@@ -195,8 +218,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   llvm::Optional<uint64_t> low_pc;
   decoder.AddAddress(llvm::dwarf::DW_AT_low_pc, &low_pc);
 
-  llvm::Optional<uint64_t> high_pc;
-  decoder.AddAddress(llvm::dwarf::DW_AT_high_pc, &high_pc);
+  llvm::Optional<DwarfDieDecoder::HighPC> high_pc;
+  decoder.AddHighPC(&high_pc);
 
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
@@ -345,8 +368,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(
   llvm::Optional<uint64_t> low_pc;
   decoder.AddAddress(llvm::dwarf::DW_AT_low_pc, &low_pc);
 
-  llvm::Optional<uint64_t> high_pc;
-  decoder.AddAddress(llvm::dwarf::DW_AT_high_pc, &high_pc);
+  llvm::Optional<DwarfDieDecoder::HighPC> high_pc;
+  decoder.AddHighPC(&high_pc);
 
   // TODO(brettw) handle DW_AT_ranges.
 
@@ -390,8 +413,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
   if (!decoder.Decode(die) || !modified.isValid())
     return fxl::MakeRefCounted<Symbol>();
 
-  auto result = fxl::MakeRefCounted<ModifiedType>(die.getTag());
-  result->set_modified(MakeLazy(modified));
+  auto result =
+      fxl::MakeRefCounted<ModifiedType>(die.getTag(), MakeLazy(modified));
   if (name)
     result->set_assigned_name(*name);
 
@@ -457,8 +480,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
 
   VariableLocation location;
   decoder.AddCustom(llvm::dwarf::DW_AT_location,
-                    [unit = die.getDwarfUnit(),
-                     &location](const llvm::DWARFFormValue& value) {
+                    [ unit = die.getDwarfUnit(),
+                      &location ](const llvm::DWARFFormValue& value) {
                       location = DecodeVariableLocation(unit, value);
                     });
 

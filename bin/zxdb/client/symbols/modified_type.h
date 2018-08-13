@@ -27,16 +27,18 @@ class ModifiedType final : public Type {
 
   // Type/Symbol overrides.
   const ModifiedType* AsModifiedType() const override;
+  const Type* GetConcreteType() const override;
 
-  // The underlying modified type.
+  // The underlying modified type. Note that there is no setter for this, it
+  // must be supplied in the constructor since the setter will decode the
+  // modified type if necessary to compute its size.
   const LazySymbol& modified() const { return modified_; }
-  void set_modified(const LazySymbol& m) { modified_ = m; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ModifiedType);
   FRIEND_MAKE_REF_COUNTED(ModifiedType);
 
-  explicit ModifiedType(int kind);
+  ModifiedType(int kind, LazySymbol modified);
   ~ModifiedType() override;
 
   // Symbol protected overrides.

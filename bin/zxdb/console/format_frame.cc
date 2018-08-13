@@ -70,7 +70,7 @@ void OutputFrameList(Thread* thread, bool long_format) {
   if (thread->HasAllFrames()) {
     ListCompletedFrames(thread, long_format);
   } else {
-    thread->SyncFrames([thread = thread->GetWeakPtr(), long_format]() {
+    thread->SyncFrames([ thread = thread->GetWeakPtr(), long_format ]() {
       Console* console = Console::get();
       if (thread)
         ListCompletedFrames(thread.get(), long_format);
@@ -91,15 +91,16 @@ void FormatFrameLong(const Frame* frame, ValueFormatHelper* out,
   if (id >= 0)
     out->Append(OutputBuffer::WithContents(fxl::StringPrintf("Frame %d ", id)));
 
-  // Long format includes the IP address.
-  out->Append(OutputBuffer::WithContents(
-      fxl::StringPrintf("0x%" PRIx64, frame->GetAddress())));
-
   // Only print the location if it has symbols, otherwise the hex
   // address will be shown twice.
   const Location& location = frame->GetLocation();
   if (location.has_symbols())
-    out->Append( " " + DescribeLocation(location, false));
+    out->Append(" " + DescribeLocation(location, false));
+
+  // Long format includes the IP address.
+  out->Append(OutputBuffer::WithContents(fxl::StringPrintf(
+      "\n    IP=0x%" PRIx64 ", BP=0x%" PRIx64 ", SP=0x%" PRIx64,
+      frame->GetAddress(), frame->GetBasePointer(), frame->GetStackPointer())));
 
   if (location.function()) {
     const Function* func = location.function().Get()->AsFunction();

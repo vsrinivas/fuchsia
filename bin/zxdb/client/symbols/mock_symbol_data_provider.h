@@ -17,21 +17,24 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   MockSymbolDataProvider();
 
   void set_ip(uint64_t ip) { ip_ = ip; }
+  void set_bp(uint64_t bp) { bp_ = bp; }
 
   // Adds the given canned result for the given register. Set synchronous if
   // the register contents should be synchronously available, false if it
   // should require a callback to retrieve.
   void AddRegisterValue(int register_num, bool synchronous, uint64_t value);
 
+  // Sets an expected memory value. This is currently very simple in that
+  // it only matches queries for exact addresses set by this function, not
+  // random subranges inside these.
+  void AddMemory(uint64_t address, std::vector<uint8_t> data);
+
   // SymbolDataProvider implementation.
-  uint64_t GetIP() const override;
   bool GetRegister(int dwarf_register_number, uint64_t* output) override;
-  void GetRegisterAsync(
-      int dwarf_register_number,
-      std::function<void(bool success, uint64_t value)> callback) override;
-  void GetMemoryAsync(
-      uint64_t address, uint32_t size,
-      std::function<void(const uint8_t* data)> callback) override;
+  void GetRegisterAsync(int dwarf_register_number,
+                        GetRegisterCallback callback) override;
+  void GetMemoryAsync(uint64_t address, uint32_t size,
+                      GetMemoryCallback callback) override;
 
  private:
   struct RegData {
@@ -43,7 +46,10 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   };
 
   uint64_t ip_ = 0;
+  uint64_t bp_ = 0;
   std::map<int, RegData> regs_;
+
+  std::map<uint64_t, std::vector<uint8_t>> mem_;
 
   fxl::WeakPtrFactory<MockSymbolDataProvider> weak_factory_;
 };

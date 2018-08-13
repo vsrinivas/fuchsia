@@ -15,7 +15,10 @@ namespace {
 
 class DwarfExprEvalTest : public testing::Test {
  public:
-  DwarfExprEvalTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) { loop_.Init(); }
+  DwarfExprEvalTest()
+      : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {
+    loop_.Init();
+  }
   ~DwarfExprEvalTest() { loop_.Cleanup(); }
 
   DwarfExprEval& eval() { return eval_; }
@@ -54,8 +57,8 @@ void DwarfExprEvalTest::DoEvalTest(
                 EXPECT_EQ(expected_message, err.msg());
               callback_issued = true;
 
-              // When we're doing an async completion, need to exit the message
-              // loop to continue with the test.
+              // When we're doing an async completion, need to exit the
+              // message loop to continue with the test.
               if (expected_completion == DwarfExprEval::Completion::kAsync)
                 debug_ipc::MessageLoop::Current()->QuitNow();
             }));
@@ -591,6 +594,39 @@ TEST_F(DwarfExprEvalTest, Ne) {
   DoEvalTest(
       {llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_ne},
       true, DwarfExprEval::Completion::kSync, 1u);
+}
+
+TEST_F(DwarfExprEvalTest, Fbreg) {
+  constexpr uint64_t kBase = 0x1000000;
+  provider()->set_bp(kBase);
+
+  DoEvalTest({llvm::dwarf::DW_OP_fbreg, 0}, true,
+             DwarfExprEval::Completion::kSync, kBase);
+
+  // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
+  DoEvalTest({llvm::dwarf::DW_OP_fbreg, 0x81, 0x01}, true,
+             DwarfExprEval::Completion::kSync, kBase + 129u);
+}
+
+TEST_F(DwarfExprEvalTest, Deref) {
+  // This is a real program Clang generated. 0x58 = -40 in SLEB128 so:
+  //   *[reg6 - 40] - 0x30
+  const std::vector<uint8_t> program = {llvm::dwarf::DW_OP_breg6, 0x58,
+  llvm::dwarf::DW_OP_deref,
+              llvm::dwarf::DW_OP_constu, 0x30, llvm::dwarf::DW_OP_minus};
+
+  constexpr uint64_t kReg6 = 0x1000;
+  provider()->AddRegisterValue(6, true, kReg6);
+  constexpr int64_t kOffsetFromReg6 = -40;
+
+  // Contents of the data at [reg6 - 40]
+  constexpr uint64_t kMemoryContents = 0x5000000000;
+  std::vector<uint8_t> mem;
+  mem.resize(sizeof(kMemoryContents));
+  memcpy(&mem[0], &kMemoryContents, sizeof(kMemoryContents));
+  provider()->AddMemory(kReg6 + kOffsetFromReg6, mem);
+
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, kMemoryContents - 0x30);
 }
 
 }  // namespace zxdb

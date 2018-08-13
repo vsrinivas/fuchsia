@@ -25,8 +25,8 @@ SymbolEvalContext::SymbolEvalContext(
       block_(std::move(code_block)),
       weak_factory_(this) {}
 
-SymbolEvalContext::SymbolEvalContext(fxl::RefPtr<SymbolDataProvider> data_provider,
-                                     const Location& location)
+SymbolEvalContext::SymbolEvalContext(
+    fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location)
     : symbol_context_(location.symbol_context()),
       resolver_(std::move(data_provider)),
       weak_factory_(this) {
@@ -37,8 +37,9 @@ SymbolEvalContext::SymbolEvalContext(fxl::RefPtr<SymbolDataProvider> data_provid
     return;
 
   // Const case unfortunately required for RefPtr constructor.
-  block_ = fxl::RefPtr<const CodeBlock>(const_cast<CodeBlock*>(
-      function->GetMostSpecificChild(location.address())));
+  block_ = fxl::RefPtr<const CodeBlock>(
+      const_cast<CodeBlock*>(function->GetMostSpecificChild(
+          location.symbol_context(), location.address())));
 }
 
 void SymbolEvalContext::GetVariable(const std::string& name, Callback cb) {

@@ -14,7 +14,7 @@ namespace debug_agent {
 
 zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
                         const zx::thread& thread, uint64_t ip, uint64_t sp,
-                        size_t max_depth,
+                        uint64_t bp, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack);
 
 }  // namespace debug_agent

@@ -224,7 +224,8 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err("Symbols are corrupt.");
 
   // Find the innermost lexical block for the current IP.
-  const CodeBlock* block = function->GetMostSpecificChild(location.address());
+  const CodeBlock* block = function->GetMostSpecificChild(
+      location.symbol_context(), location.address());
   if (!block)
     return Err("There is no symbol information for the current IP.");
 

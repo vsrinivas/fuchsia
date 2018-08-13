@@ -19,7 +19,10 @@ namespace {
 
 class SymbolEvalContextTest : public testing::Test {
  public:
-  SymbolEvalContextTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) { loop_.Init(); }
+  SymbolEvalContextTest()
+      : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {
+    loop_.Init();
+  }
   ~SymbolEvalContextTest() { loop_.Cleanup(); }
 
   DwarfExprEval& eval() { return eval_; }
@@ -29,9 +32,10 @@ class SymbolEvalContextTest : public testing::Test {
   fxl::RefPtr<CodeBlock> MakeCodeBlock() {
     auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
 
-    // Declare a variable in this code block.
-    auto variable = MakeUint64VariableForTest("present",
-    0x1000, 0x2000, {llvm::dwarf::DW_OP_reg0});
+    // Declare a variable in this code block stored in register 0.
+    auto variable = MakeUint64VariableForTest(
+        "present", 0x1000, 0x2000,
+        {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
     block->set_variables({LazySymbol(std::move(variable))});
 
     // TODO(brettw) this needs a type. Currently this test is very simple and
@@ -51,8 +55,7 @@ TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      SymbolContext::ForRelativeAddresses(),
-      provider(), MakeCodeBlock());
+      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   bool called = false;
@@ -76,8 +79,7 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
   provider()->AddRegisterValue(0, true, kValue);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      SymbolContext::ForRelativeAddresses(),
-      provider(), MakeCodeBlock());
+      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   bool called = false;
@@ -100,8 +102,7 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      SymbolContext::ForRelativeAddresses(),
-      provider(), MakeCodeBlock());
+      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   bool called = false;
@@ -121,7 +122,7 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
   // Running the message loop should complete the callback.
   loop().Run();
   EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error());
+  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
   EXPECT_EQ(ExprValue(kValue), out_value);
 }
 
@@ -132,8 +133,7 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      SymbolContext::ForRelativeAddresses(),
-      provider(), MakeCodeBlock());
+      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   // Look up an identifier that's not present.

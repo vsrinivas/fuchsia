@@ -14,4 +14,6 @@ Type::~Type() = default;
 
 const Type* Type::AsType() const { return this; }
 
+const Type* Type::GetConcreteType() const { return this; }
+
 }  // namespace zxdb

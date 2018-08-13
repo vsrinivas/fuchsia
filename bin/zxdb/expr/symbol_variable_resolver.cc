@@ -55,30 +55,36 @@ void SymbolVariableResolver::ResolveVariable(
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type(const_cast<Type*>(var->type().Get()->AsType()));
   if (!type) {
-    cb(Err("Missing type information for variable."), ExprValue());
+    cb(Err("Missing type information."), ExprValue());
+    return;
+  }
+
+  uint64_t ip = 0;
+  if (!data_provider_->GetRegister(SymbolDataProvider::kRegisterIP, &ip)) {
+    cb(Err("No location available."), ExprValue());
     return;
   }
 
   const VariableLocation::Entry* loc_entry =
-      var->location().EntryForIP(symbol_context, data_provider_->GetIP());
+      var->location().EntryForIP(symbol_context, ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
     cb(Err(ErrType::kOptimizedOut,
            fxl::StringPrintf("The variable '%s' has been optimized out. ",
                              var->GetAssignedName().c_str()) +
-               DescribeLocationMissError(
-                   symbol_context, data_provider_->GetIP(), var->location())),
+               DescribeLocationMissError(symbol_context, ip, var->location())),
        ExprValue());
     return;
   }
 
   // Schedule the expression to be evaluated.
-  dwarf_eval_.Eval(data_provider_, loc_entry->expression, [
-    cb, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()
-  ](DwarfExprEval * eval, const Err& err) {
-    if (weak_this)
-      weak_this->OnDwarfEvalComplete(err, std::move(type), std::move(cb));
-  });
+  dwarf_eval_.Eval(
+      data_provider_, loc_entry->expression,
+      [cb, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()](
+          DwarfExprEval* eval, const Err& err) {
+        if (weak_this)
+          weak_this->OnDwarfEvalComplete(err, std::move(type), std::move(cb));
+      });
 }
 
 void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
@@ -90,18 +96,34 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
     return;
   }
 
-  // TODO(brettw) this needs to be much more elaborate to handle the different
-  // result types. Currently this just assumes all results are integer values
-  // <= uint64_t and copies the data directly.
   uint64_t result_int = dwarf_eval_.GetResult();
-  size_t size_to_copy =
-      std::min(static_cast<size_t>(type->byte_size()), sizeof(result_int));
-  std::vector<uint8_t> data;
-  data.resize(size_to_copy);
-  memcpy(&data[0], &result_int, size_to_copy);
+  uint32_t type_size = type->byte_size();
 
-  ExprValue result(std::move(type), std::move(data));
-  cb(Err(), std::move(result));
+  if (dwarf_eval_.GetResultType() == DwarfExprEval::ResultType::kValue) {
+    // The DWARF expression produced the exact value (it's not in memory).
+    if (type_size > sizeof(uint64_t)) {
+      cb(Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
+                               "Please file a bug with a repro case.",
+                               type_size)),
+         ExprValue());
+      return;
+    }
+    std::vector<uint8_t> data;
+    data.resize(type_size);
+    memcpy(&data[0], &result_int, type_size);
+    cb(Err(), ExprValue(std::move(type), std::move(data)));
+  } else {
+    // The DWARF result is a pointer to the value.
+    data_provider_->GetMemoryAsync(
+        result_int, type_size,
+        [type = std::move(type), cb = std::move(cb)](
+            const Err& err, std::vector<uint8_t> data) {
+          if (err.has_error())
+            cb(err, ExprValue());
+          else
+            cb(Err(), ExprValue(std::move(type), std::move(data)));
+        });
+  }
 }
 
 }  // namespace zxdb

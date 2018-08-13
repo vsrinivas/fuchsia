@@ -115,6 +115,7 @@ class DwarfExprEval {
   bool ReadLEBUnsigned(uint64_t* output);
 
   void ReportError(const std::string& msg);
+  void ReportError(const Err& err);
   void ReportStackUnderflow();
   void ReportUnimplementedOpcode(uint8_t op);
 
@@ -132,9 +133,11 @@ class DwarfExprEval {
   // parameters will be consumed).
   Completion OpBra();
   Completion OpBreg(uint8_t op);
+  Completion OpDeref();
   Completion OpDiv();
   Completion OpDrop();
   Completion OpDup();
+  Completion OpFbreg();
   Completion OpRegx();
   Completion OpBregx();
   Completion OpMod();

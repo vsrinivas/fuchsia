@@ -21,6 +21,7 @@ MockFrame::~MockFrame() = default;
 Thread* MockFrame::GetThread() const { return thread_; }
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return stack_frame_.ip; }
+uint64_t MockFrame::GetBasePointer() const { return stack_frame_.bp; }
 uint64_t MockFrame::GetStackPointer() const { return stack_frame_.sp; }
 
 fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {

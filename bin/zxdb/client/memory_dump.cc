@@ -11,6 +11,17 @@ MemoryDump::MemoryDump(std::vector<debug_ipc::MemoryBlock>&& blocks)
     : blocks_(std::move(blocks)) {}
 MemoryDump::~MemoryDump() = default;
 
+bool MemoryDump::AllValid() const {
+  if (blocks_.empty())
+    return false;
+
+  for (const auto& block : blocks_) {
+    if (!block.valid)
+      return false;
+  }
+  return true;
+}
+
 bool MemoryDump::GetByte(uint64_t address, uint8_t* byte) const {
   *byte = 0;
 

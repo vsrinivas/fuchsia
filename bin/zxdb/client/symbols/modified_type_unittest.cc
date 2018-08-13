@@ -19,53 +19,64 @@ fxl::RefPtr<BaseType> MakeBaseType(const char* name, int base_type,
   return result;
 }
 
-fxl::RefPtr<ModifiedType> MakeModified(fxl::RefPtr<Type> modified, int tag) {
-  fxl::RefPtr<ModifiedType> result = fxl::MakeRefCounted<ModifiedType>(tag);
-  result->set_modified(LazySymbol(std::move(modified)));
-  return result;
-}
-
 }  // namespace
 
 TEST(ModifiedType, GetFullName) {
   // int
-  auto int_type = MakeBaseType("int", BaseType::kBaseTypeSigned, 8);
+  constexpr uint32_t kIntSize = 4u;
+  auto int_type = MakeBaseType("int", BaseType::kBaseTypeSigned, kIntSize);
   EXPECT_EQ("int", int_type->GetFullName());
+  EXPECT_EQ(kIntSize, int_type->byte_size());
 
   // int*
-  auto int_ptr = MakeModified(int_type, Symbol::kTagPointerType);
+  constexpr uint32_t kPtrSize = 8u;
+  auto int_ptr = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+                                                   LazySymbol(int_type));
   EXPECT_EQ("int*", int_ptr->GetFullName());
+  EXPECT_EQ(kPtrSize, int_ptr->byte_size());
 
   // const int
-  auto const_int = MakeModified(int_type, Symbol::kTagConstType);
+  auto const_int = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagConstType,
+                                                     LazySymbol(int_type));
   EXPECT_EQ("const int", const_int->GetFullName());
+  EXPECT_EQ(kIntSize, const_int->byte_size());
 
   // const int*
-  auto const_int_ptr = MakeModified(const_int, Symbol::kTagPointerType);
+  auto const_int_ptr = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol(const_int));
   EXPECT_EQ("const int*", const_int_ptr->GetFullName());
+  EXPECT_EQ(kPtrSize, const_int_ptr->byte_size());
 
   // const int* const
-  auto const_int_const_ptr = MakeModified(const_int_ptr, Symbol::kTagConstType);
+  auto const_int_const_ptr = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagConstType, LazySymbol(const_int_ptr));
   EXPECT_EQ("const int* const", const_int_const_ptr->GetFullName());
+  EXPECT_EQ(kPtrSize, const_int_const_ptr->byte_size());
 
   // const int* const&
-  auto const_int_const_ptr_ref =
-      MakeModified(const_int_const_ptr, Symbol::kTagReferenceType);
+  auto const_int_const_ptr_ref = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagReferenceType, LazySymbol(const_int_const_ptr));
   EXPECT_EQ("const int* const&", const_int_const_ptr_ref->GetFullName());
+  EXPECT_EQ(kPtrSize, const_int_const_ptr_ref->byte_size());
 
   // volatile
-  auto volatile_int = MakeModified(int_type, Symbol::kTagVolatileType);
+  auto volatile_int = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagVolatileType, LazySymbol(int_type));
   EXPECT_EQ("volatile int", volatile_int->GetFullName());
+  EXPECT_EQ(kIntSize, volatile_int->byte_size());
 
   // volatile int&&
-  auto volatile_int_rvalue_ref =
-      MakeModified(volatile_int, Symbol::kTagRvalueReferenceType);
+  auto volatile_int_rvalue_ref = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagRvalueReferenceType, LazySymbol(volatile_int));
   EXPECT_EQ("volatile int&&", volatile_int_rvalue_ref->GetFullName());
+  EXPECT_EQ(kPtrSize, volatile_int_rvalue_ref->byte_size());
 
   // typedef const int* Foo
-  auto typedef_etc = MakeModified(const_int_ptr, Symbol::kTagTypedef);
+  auto typedef_etc = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagTypedef, LazySymbol(const_int_ptr));
   typedef_etc->set_assigned_name("Foo");
   EXPECT_EQ("Foo", typedef_etc->GetFullName());
+  EXPECT_EQ(kPtrSize, typedef_etc->byte_size());
 }
 
 }  // namespace zxdb

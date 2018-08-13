@@ -62,6 +62,12 @@ static_library("lib") {
 
 if (include_test_app) {
   executable("zxdb_test_app") {
+    if (is_debug) {
+      # Force no optimization in debug builds.
+      configs -= [ "//build/config:debug" ]
+      cflags = [ "-O0" ]
+    }
+
     sources = [
       "zxdb_test_app.cc",
     ]

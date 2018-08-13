@@ -60,7 +60,8 @@ TEST(FormatFrame, Unsymbolized) {
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
-  EXPECT_EQ("0x12345678", SyncFormatFrameLong(&frame, FormatValueOptions()));
+  EXPECT_EQ("\n    IP=0x12345678, BP=0x0, SP=0x567890",
+            SyncFormatFrameLong(&frame, FormatValueOptions()));
 
   // With index.
   out = OutputBuffer();

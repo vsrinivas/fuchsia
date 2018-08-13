@@ -23,14 +23,11 @@ class FrameSymbolDataProvider : public SymbolDataProvider {
   void DisownFrame();
 
   // SymbolDataProvider implementation:
-  uint64_t GetIP() const override;
   bool GetRegister(int dwarf_register_number, uint64_t* output) override;
-  void GetRegisterAsync(
-      int dwarf_register_number,
-      std::function<void(bool success, uint64_t value)> callback) override;
-  void GetMemoryAsync(
-      uint64_t address, uint32_t size,
-      std::function<void(const uint8_t* data)> callback) override;
+  void GetRegisterAsync(int dwarf_register_number,
+                        GetRegisterCallback callback) override;
+  void GetMemoryAsync(uint64_t address, uint32_t size,
+                      GetMemoryCallback callback) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(FrameSymbolDataProvider);

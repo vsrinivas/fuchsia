@@ -49,6 +49,7 @@ bool IsBreakpointInstruction(zx::process& process, uint64_t address) {
 
 uint64_t* IPInRegs(zx_thread_state_general_regs* regs) { return &regs->pc; }
 uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
+uint64_t* BPInRegs(zx_thread_state_general_regs* regs) { return &regs->r[29]; }
 
 ::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kArm64; }
 

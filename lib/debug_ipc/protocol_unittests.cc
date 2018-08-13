@@ -378,8 +378,10 @@ TEST(Protocol, BacktraceReply) {
   initial.frames.resize(2);
   initial.frames[0].ip = 1234;
   initial.frames[0].sp = 9875;
+  initial.frames[0].bp = 6666;
   initial.frames[1].ip = 71562341;
   initial.frames[1].sp = 89236413;
+  initial.frames[1].bp = 777;
 
   BacktraceReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -387,8 +389,10 @@ TEST(Protocol, BacktraceReply) {
   EXPECT_EQ(2u, second.frames.size());
   EXPECT_EQ(initial.frames[0].ip, second.frames[0].ip);
   EXPECT_EQ(initial.frames[0].sp, second.frames[0].sp);
+  EXPECT_EQ(initial.frames[0].bp, second.frames[0].bp);
   EXPECT_EQ(initial.frames[1].ip, second.frames[1].ip);
   EXPECT_EQ(initial.frames[1].sp, second.frames[1].sp);
+  EXPECT_EQ(initial.frames[1].bp, second.frames[1].bp);
 }
 
 // Modules ---------------------------------------------------------------------

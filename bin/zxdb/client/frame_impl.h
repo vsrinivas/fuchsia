@@ -26,6 +26,7 @@ class FrameImpl final : public Frame {
   Thread* GetThread() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
+  uint64_t GetBasePointer() const override;
   uint64_t GetStackPointer() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
@@ -38,7 +39,7 @@ class FrameImpl final : public Frame {
   debug_ipc::StackFrame stack_frame_;
   mutable Location location_;  // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
-  mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;  // Lazy.
+  mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;         // Lazy.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameImpl);
 };

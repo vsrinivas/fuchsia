@@ -23,6 +23,10 @@ void DebugBreak() {
 #endif
 }
 
+struct Foo {
+  int bar;
+};
+
 // This function is helpful to test handling of duplicate functions on the
 // stack for e.g. "finish".
 __attribute__((noinline)) void RecursiveCall(int times) {
@@ -35,11 +39,23 @@ void PrintHello() {
   const char msg[] = "Hello from zxdb_test_app!\n";
   zx_debug_write(msg, strlen(msg));
 
-  // This code is here to test disassembly of FP instructions.
+  // This code is here to test disassembly of FP instructions and printing
+  // of values.
   volatile float a = 3.14159265358979;
   volatile float b = 2.71828182845904;
-  volatile float c = a * b;
+  volatile int z = 1;
+  volatile float c = a * b + z;
+  volatile int* pz = &z;
+  *pz = 45;
   (void)c;  // Prevent unused variable warning.
+}
+
+void DoFoo(Foo* f) {
+  if (f->bar > 1)
+    zx_debug_write(" ", 1);
+  volatile int a = 1;
+  (void)a;
+  PrintHello();
 }
 
 int main(int argc, char* argv[]) {
@@ -53,5 +69,11 @@ int main(int argc, char* argv[]) {
   DebugBreak();
   PrintHello();
   RecursiveCall(3);
+
+  Foo foo;
+  foo.bar = 0;
+  DoFoo(&foo);
+  foo.bar = 100;
+  DoFoo(&foo);
   return 0;
 }

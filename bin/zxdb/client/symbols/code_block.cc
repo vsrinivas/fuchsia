@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 
+#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {
@@ -13,19 +14,22 @@ CodeBlock::~CodeBlock() = default;
 
 const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 
-bool CodeBlock::ContainsAddress(uint64_t address) const {
+bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
+                                uint64_t absolute_address) const {
   if (code_ranges_.empty())
     return true;  // No defined code range, assume always valid.
 
   for (const auto& range : code_ranges_) {
-    if (address >= range.first && address < range.second)
+    if (absolute_address >= symbol_context.RelativeToAbsolute(range.first) &&
+        absolute_address < symbol_context.RelativeToAbsolute(range.second))
       return true;
   }
   return false;
 }
 
-const CodeBlock* CodeBlock::GetMostSpecificChild(uint64_t address) const {
-  if (!ContainsAddress(address))
+const CodeBlock* CodeBlock::GetMostSpecificChild(
+    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+  if (!ContainsAddress(symbol_context, absolute_address))
     return nullptr;  // This block doesn't contain the address.
 
   for (const auto& inner : inner_blocks_) {
@@ -35,7 +39,8 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(uint64_t address) const {
     const CodeBlock* inner_block = inner.Get()->AsCodeBlock();
     if (!inner_block)
       continue;  // Corrupted symbols.
-    const CodeBlock* found = inner_block->GetMostSpecificChild(address);
+    const CodeBlock* found =
+        inner_block->GetMostSpecificChild(symbol_context, absolute_address);
     if (found)
       return found;
   }

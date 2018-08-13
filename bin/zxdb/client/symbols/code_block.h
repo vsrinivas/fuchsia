@@ -8,6 +8,8 @@
 
 namespace zxdb {
 
+class SymbolContext;
+
 // Base class for anything that has code: lexical blocks, inlined subroutines,
 // and functions. A DWARF lexical block is represented as a CodeBlock rather
 // than a derived type since it has no additional attributes.
@@ -51,13 +53,15 @@ class CodeBlock : public Symbol {
 
   // Returns true if the block's code ranges contain the given address. A
   // block with no specified range will always return true.
-  bool ContainsAddress(uint64_t address) const;
+  bool ContainsAddress(const SymbolContext& symbol_context,
+                       uint64_t absolute_address) const;
 
   // Recursively searches all children of this block for the innermost block
   // covering the given address. Returns |this| if the current block is
   // already the most specific, or nullptr if the current block doesn't
   // contain the address.
-  const CodeBlock* GetMostSpecificChild(uint64_t address) const;
+  const CodeBlock* GetMostSpecificChild(const SymbolContext& symbol_context,
+                                        uint64_t absolute_address) const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);

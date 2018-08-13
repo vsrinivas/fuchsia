@@ -17,6 +17,18 @@ class Type : public Symbol {
   const Type* AsType() const final;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
+  // Returns the type with no "const" or "volatile" modifiers. If this is
+  // neither of those types, or the underlying modified typen can not be
+  // resolved, it will return |this|.
+  //
+  // Most operations don't care about "const" and "volatile". This function
+  // will follow modifiers until it finds a concrete type.
+  //
+  // It is on the Type class rather than the ModifiedType class so that calling
+  // code can unconditionally call type->GetConcreteType()->byte_size() or
+  // other functions to work with the type.
+  virtual const Type* GetConcreteType() const;
+
   // The name assigned in the DWARF file. This will be empty for modified
   // types (Which usually have no assigned name). See
   // Symbol::GetAssignedName).
@@ -36,7 +48,7 @@ class Type : public Symbol {
 
  private:
   std::string assigned_name_;
-  uint32_t byte_size_;
+  uint32_t byte_size_ = 0;
 };
 
 }  // namespace zxdb

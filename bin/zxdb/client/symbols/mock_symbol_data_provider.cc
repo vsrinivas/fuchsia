@@ -4,13 +4,15 @@
 
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 
+#include <inttypes.h>
+
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
-
-uint64_t MockSymbolDataProvider::GetIP() const { return ip_; }
 
 void MockSymbolDataProvider::AddRegisterValue(int register_num,
                                               bool synchronous,
@@ -18,8 +20,22 @@ void MockSymbolDataProvider::AddRegisterValue(int register_num,
   regs_[register_num] = RegData(synchronous, value);
 }
 
+void MockSymbolDataProvider::AddMemory(uint64_t address,
+                                       std::vector<uint8_t> data) {
+  mem_[address] = std::move(data);
+}
+
 bool MockSymbolDataProvider::GetRegister(int dwarf_register_number,
                                          uint64_t* output) {
+  if (dwarf_register_number == kRegisterIP) {
+    *output = ip_;
+    return true;
+  }
+  if (dwarf_register_number == kRegisterBP) {
+    *output = bp_;
+    return true;
+  }
+
   const auto& found = regs_.find(dwarf_register_number);
   if (found == regs_.end())
     return false;
@@ -31,28 +47,40 @@ bool MockSymbolDataProvider::GetRegister(int dwarf_register_number,
   return true;
 }
 
-void MockSymbolDataProvider::GetRegisterAsync(
-    int dwarf_register_number,
-    std::function<void(bool success, uint64_t value)> callback) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      [callback, weak_provider = weak_factory_.GetWeakPtr(),
-       dwarf_register_number]() {
-        if (!weak_provider) {
-          // Destroyed before callback ready.
-          return;
-        }
+void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
+                                              GetRegisterCallback callback) {
+  debug_ipc::MessageLoop::Current()->PostTask([
+    callback, weak_provider = weak_factory_.GetWeakPtr(), dwarf_register_number
+  ]() {
+    if (!weak_provider) {
+      // Destroyed before callback ready.
+      return;
+    }
 
-        const auto& found = weak_provider->regs_.find(dwarf_register_number);
-        if (found == weak_provider->regs_.end())
-          callback(false, 0);
-        callback(true, found->second.value);
-      });
+    const auto& found = weak_provider->regs_.find(dwarf_register_number);
+    if (found == weak_provider->regs_.end())
+      callback(Err("Failed"), 0);
+    callback(Err(), found->second.value);
+  });
 }
 
-void MockSymbolDataProvider::GetMemoryAsync(
-    uint64_t address, uint32_t size,
-    std::function<void(const uint8_t* data)> callback) {
-  // TODO(brettw) implement this.
+void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
+                                            GetMemoryCallback callback) {
+  auto found = mem_.find(address);
+  if (found == mem_.end() || size > found->second.size()) {
+    debug_ipc::MessageLoop::Current()->PostTask([callback, address]() {
+      callback(Err(fxl::StringPrintf("MockSymbolDataProvider::GetMemoryAsync: "
+                                     "Memory not found 0x%" PRIx64,
+                                     address)),
+               std::vector<uint8_t>());
+    });
+  } else {
+    std::vector<uint8_t> subset;
+    subset.resize(size);
+    memcpy(&subset[0], &found->second[0], size);
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, subset]() { callback(Err(), subset); });
+  }
 }
 
 }  // namespace zxdb

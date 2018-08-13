@@ -6,10 +6,48 @@
 
 namespace zxdb {
 
-ModifiedType::ModifiedType(int kind) : Type(kind) {}
+namespace {
+
+// Returns true if this tag is a modified type that is transparent with respect
+// to the data stored in it.
+bool IsTransparentTag(int tag) {
+  return tag == Symbol::kTagConstType || tag == Symbol::kTagVolatileType ||
+         tag == Symbol::kTagTypedef;
+}
+
+// Returns true if this modified holds some kind of pointer to the modified
+// type.
+bool IsPointerTag(int tag) {
+  return tag == Symbol::kTagPointerType || tag == Symbol::kTagReferenceType ||
+         tag == Symbol::kTagRvalueReferenceType;
+}
+
+}  // namespace
+
+ModifiedType::ModifiedType(int kind, LazySymbol modified)
+    : Type(kind), modified_(modified) {
+  if (IsTransparentTag(kind)) {
+    const Type* mod_type = modified_.Get()->AsType();
+    if (mod_type)
+      set_byte_size(mod_type->byte_size());
+  } else if (IsPointerTag(kind)) {
+    // Assume 64-bit pointers.
+    set_byte_size(8);
+  }
+}
+
 ModifiedType::~ModifiedType() = default;
 
 const ModifiedType* ModifiedType::AsModifiedType() const { return this; }
+
+const Type* ModifiedType::GetConcreteType() const {
+  if (IsTransparentTag(tag())) {
+    const Type* mod = modified_.Get()->AsType();
+    if (mod)
+      return mod->GetConcreteType();
+  }
+  return this;
+}
 
 // static
 bool ModifiedType::IsTypeModifierTag(int tag) {

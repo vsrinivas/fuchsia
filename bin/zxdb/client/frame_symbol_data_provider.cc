@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/frame_symbol_data_provider.h"
 
+#include <inttypes.h>
+
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
@@ -12,6 +14,7 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -22,74 +25,115 @@ FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
 void FrameSymbolDataProvider::DisownFrame() { frame_ = nullptr; }
 
-uint64_t FrameSymbolDataProvider::GetIP() const {
-  if (!frame_)
-    return 0;
-  auto frames = frame_->GetThread()->GetFrames();
-  if (frames.empty())
-    return 0;
-  return frames[0]->GetAddress();
-}
-
 bool FrameSymbolDataProvider::GetRegister(int dwarf_register_number,
                                           uint64_t* output) {
+  if (!frame_)
+    return false;
+
+  if (dwarf_register_number == kRegisterIP) {
+    *output = frame_->GetAddress();
+    return true;
+  }
+  if (dwarf_register_number == kRegisterBP) {
+    *output = frame_->GetBasePointer();
+    return true;
+  }
+
   // TODO(brettw) enable synchronous access if the registers are cached.
   // See GetRegisterAsync().
   return false;
 }
 
-void FrameSymbolDataProvider::GetRegisterAsync(
-    int dwarf_register_number,
-    std::function<void(bool success, uint64_t value)> callback) {
+void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
+                                               GetRegisterCallback callback) {
   // TODO(brettw) registers are not available except when this frame is the
   // top stack frame. Currently, there is no management of this and the frame
   // doesn't get notifications when it's topmost or not, and whether the thread
   // has been resumed (both things would invalidate cached registers). As
   // a result, currently we do not cache register values and always do a
   // full async request for each one.
+  //
+  // Additionally, some registers can be made available in non-top stack
+  // frames. Libunwind should be able to tell us the saved registers for older
+  // stack frames.
   if (!frame_ || !IsTopFrame()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [cb = std::move(callback)]() { cb(false, 0); });
+        [ dwarf_register_number, cb = std::move(callback) ]() {
+          cb(Err(fxl::StringPrintf("Register %d unavailable.",
+                                   dwarf_register_number)),
+             0);
+        });
     return;
   }
 
-  frame_->GetThread()->GetRegisters(
-      [dwarf_register_number, cb = std::move(callback)](
-          const Err& err, const RegisterSet& regs) {
-        // TODO(brettw) the callback should take an error so we can forward the
-        // one from getting the registers.
-        uint64_t value = 0;
-        if (err.has_error() ||
-            !regs.GetRegisterValueFromDWARF(dwarf_register_number, &value)) {
-          cb(false, 0);
-        } else {
-          cb(true, value);
-        }
-      });
+  frame_->GetThread()->GetRegisters([
+    dwarf_register_number, cb = std::move(callback)
+  ](const Err& err, const RegisterSet& regs) {
+    uint64_t value = 0;
+    if (err.has_error()) {
+      cb(err, 0);
+    } else if (regs.GetRegisterValueFromDWARF(dwarf_register_number, &value)) {
+      cb(Err(), value);  // Success.
+    } else {
+      cb(Err(fxl::StringPrintf("Register %d unavailable.",
+                               dwarf_register_number)),
+         0);
+    }
+  });
 }
 
-void FrameSymbolDataProvider::GetMemoryAsync(
-    uint64_t address, uint32_t size,
-    std::function<void(const uint8_t* data)> callback) {
+void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
+                                             GetMemoryCallback callback) {
   if (!frame_) {
+    debug_ipc::MessageLoop::Current()->PostTask([cb = std::move(callback)]() {
+      cb(Err("Call frame destroyed."), std::vector<uint8_t>());
+    });
+    return;
+  }
+
+  // Mistakes may make extremely large memory requests which can OOM the
+  // system. Prevent those.
+  if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [cb = std::move(callback)]() { cb(nullptr); });
+        [ address, size, cb = std::move(callback) ]() {
+          cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64
+                                   " is too large.",
+                                   size, address)),
+             std::vector<uint8_t>());
+        });
     return;
   }
 
   frame_->GetThread()->GetProcess()->ReadMemory(
-      address, size,
-      [address, size, cb = std::move(callback)](const Err&, MemoryDump dump) {
-        if (dump.address() != address || dump.size() != size) {
-          cb(nullptr);
+      address, size, [ address, size, cb = std::move(callback) ](
+                         const Err& err, MemoryDump dump) {
+        if (err.has_error()) {
+          cb(err, std::vector<uint8_t>());
           return;
         }
 
-        // TODO(brettw) Needs implementation and testing. In particular, the
-        // returned memory blocks may need to be coalesced into one sequential
-        // block to be passed to the callback.
-        FXL_NOTREACHED();
-        cb(nullptr);
+        // Request succeeded, but the memory's not necessarily valid.
+        if (!dump.AllValid()) {
+          cb(Err(fxl::StringPrintf("Unable to read 0x%" PRIx64, address)),
+             std::vector<uint8_t>());
+          return;
+        }
+
+        FXL_DCHECK(dump.address() == address);
+        FXL_DCHECK(dump.size() == size);
+        if (dump.blocks().size() == 1) {
+          // Common case: came back as one block.
+          cb(Err(), std::move(dump.blocks()[0].data));
+        } else {
+          // The debug agent doesn't guarantee that a memory dump will exist in
+          // only one block even if the memory is all valid. Flatten to a
+          // single buffer.
+          std::vector<uint8_t> flat;
+          flat.reserve(dump.size());
+          for (const auto block : dump.blocks())
+            flat.insert(flat.end(), block.data.begin(), block.data.end());
+          cb(Err(), std::move(flat));
+        }
       });
 }
 

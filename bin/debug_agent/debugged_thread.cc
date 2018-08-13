@@ -112,6 +112,7 @@ void DebuggedThread::OnException(uint32_t type) {
   FillThreadRecord(thread_, &notify.thread);
   notify.frame.ip = *arch::IPInRegs(&regs);
   notify.frame.sp = *arch::SPInRegs(&regs);
+  notify.frame.bp = *arch::BPInRegs(&regs);
 
   // Send notification.
   debug_ipc::MessageWriter writer;
@@ -153,8 +154,8 @@ void DebuggedThread::GetBacktrace(
 
   constexpr size_t kMaxStackDepth = 256;
   UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-              *arch::IPInRegs(&regs), *arch::SPInRegs(&regs), kMaxStackDepth,
-              frames);
+              *arch::IPInRegs(&regs), *arch::SPInRegs(&regs),
+              *arch::BPInRegs(&regs), kMaxStackDepth, frames);
 }
 
 void DebuggedThread::GetRegisters(

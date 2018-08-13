@@ -34,6 +34,9 @@ class Frame : public ClientObject {
   // GetLocation().address() since it doesn't need to be symbolized.
   virtual uint64_t GetAddress() const = 0;
 
+  // Returns the frame base pointer.
+  virtual uint64_t GetBasePointer() const = 0;
+
   // Returns the stack pointer at this location.
   virtual uint64_t GetStackPointer() const = 0;
 

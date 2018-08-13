@@ -35,6 +35,9 @@ class MemoryDump {
            blocks_.front().address;
   }
 
+  // Returns true if every block in this memory dump is valid.
+  bool AllValid() const;
+
   // The blocks in the memory dump will be contiguous. Anything not mapped will
   // be represented by a block marked not valid.
   const std::vector<debug_ipc::MemoryBlock>& blocks() const { return blocks_; }

@@ -32,6 +32,18 @@ namespace zxdb {
 // Decode().
 class DwarfDieDecoder {
  public:
+  // DW_AT_high_pc is special: If it is of class "address", it's an address,
+  // and if it's of class "constant" it's an unsigned integer offset from the
+  // low PC. This struct encodes whether it was a constant or not in the
+  // output. Use with AddHighPC().
+  struct HighPC {
+    HighPC() = default;
+    HighPC(bool c, uint64_t v) : is_constant(c), value(v) {}
+
+    bool is_constant = false;
+    uint64_t value = 0;
+  };
+
   // The context and unit must outlive this class.
   DwarfDieDecoder(llvm::DWARFContext* context, llvm::DWARFUnit* unit);
   ~DwarfDieDecoder();
@@ -58,6 +70,7 @@ class DwarfDieDecoder {
                          llvm::Optional<int64_t>* output);
   void AddAddress(llvm::dwarf::Attribute attribute,
                   llvm::Optional<uint64_t>* output);
+  void AddHighPC(llvm::Optional<HighPC>* output);
   void AddCString(llvm::dwarf::Attribute attribute,
                   llvm::Optional<const char*>* output);
   void AddLineTableFile(llvm::dwarf::Attribute attribute,
