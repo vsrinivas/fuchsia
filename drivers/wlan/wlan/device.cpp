@@ -113,7 +113,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
 
-    infof("wlanmac_info: %s\n", debug::Describe(wlanmac_info_).c_str());
     state_->set_address(common::MacAddr(wlanmac_info_.ifc_info.mac_addr));
 
     fbl::unique_ptr<Mlme> mlme;
