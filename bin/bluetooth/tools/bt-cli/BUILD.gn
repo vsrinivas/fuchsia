@@ -7,6 +7,7 @@ import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "bt_cli"
+  edition = "2018"
 
   deps = [
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
@@ -21,7 +22,6 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-mirrors/rustyline",
   ]
 }
@@ -32,11 +32,4 @@ package("bt-cli") {
   ]
 
   binary = "rust_crates/bt_cli"
-
-  meta = [
-    {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
-    },
-  ]
 }
