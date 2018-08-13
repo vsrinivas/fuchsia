@@ -27,6 +27,7 @@ const (
 	Milliseconds      = "milliseconds"
 
 	// Size-based units.
+	Bytes          = "bytes"
 	BytesPerSecond = "bytes/second"
 )
 
