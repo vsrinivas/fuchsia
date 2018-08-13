@@ -600,7 +600,7 @@ args->token = std::move(token);
 std::vector<zx::handle> handles;
 ZX_status_t status = buf.encode(example::Animal::Say_args::encoding,
     &handles);
-    if (status == NO_ERROR) {
+    if (status == ZX_OK) {
         status = channel.write(0, buf.data(), buf.size(),
         reinterpret_cast<const zx_handle_t*>(handles.data()),
         handles.size());
