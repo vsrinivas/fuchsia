@@ -42,4 +42,6 @@ guest_package("zircon_guest") {
     },
   ]
   block_devices = [ "/guest/data/${gpt_filename},ro" ]
+  cmdline = "console.path=/dev/class/console/virtio-console " +
+            "kernel.serial=legacy"
 }
