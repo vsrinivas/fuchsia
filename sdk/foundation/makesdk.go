@@ -106,8 +106,14 @@ func init() {
 		{
 			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
 			toolchainLibs,
-			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/7.0.0/lib/fuchsia", hostOs, hostCpu),
-			"toolchain_libs/clang/7.0.0/lib/fuchsia",
+			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/8.0.0/x86_64-fuchsia/lib", hostOs, hostCpu),
+			"toolchain_libs/clang/8.0.0/x86_64-fuchsia/lib",
+		},
+		{
+			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
+			toolchainLibs,
+			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/8.0.0/aarch64-fuchsia/lib", hostOs, hostCpu),
+			"toolchain_libs/clang/8.0.0/aarch64-fuchsia/lib",
 		},
 	}
 
