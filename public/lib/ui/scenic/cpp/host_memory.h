@@ -11,19 +11,19 @@
 
 #include <lib/zx/vmo.h>
 
-#include "lib/fxl/memory/ref_counted.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
 namespace scenic {
 
 // Provides access to data stored in a host-accessible shared memory region.
 // The memory is unmapped once all references to this object have been released.
-class HostData : public fxl::RefCountedThreadSafe<HostData> {
+class HostData : public std::enable_shared_from_this<HostData> {
  public:
   // Maps a range of an existing VMO into memory.
   HostData(const zx::vmo& vmo, off_t offset, size_t size,
            uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
                             ZX_VM_FLAG_MAP_RANGE);
+  ~HostData();
 
   HostData(const HostData&) = delete;
   HostData& operator=(const HostData&) = delete;
@@ -35,9 +35,6 @@ class HostData : public fxl::RefCountedThreadSafe<HostData> {
   void* ptr() const { return ptr_; }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(HostData);
-  ~HostData();
-
   size_t const size_;
   void* ptr_;
 };
@@ -58,7 +55,7 @@ class HostMemory final : public Memory {
   HostMemory& operator=(const HostMemory&) = delete;
 
   // Gets a reference to the underlying shared memory region.
-  const fxl::RefPtr<HostData>& data() const { return data_; }
+  const std::shared_ptr<HostData>& data() const { return data_; }
 
   // Gets the size of the data in bytes.
   size_t data_size() const { return data_->size(); }
@@ -68,9 +65,9 @@ class HostMemory final : public Memory {
 
  private:
   explicit HostMemory(Session* session,
-                      std::pair<zx::vmo, fxl::RefPtr<HostData>> init);
+                      std::pair<zx::vmo, std::shared_ptr<HostData>> init);
 
-  fxl::RefPtr<HostData> data_;
+  std::shared_ptr<HostData> data_;
 };
 
 // Represents an image resource backed by host-accessible shared memory bound to
@@ -83,7 +80,7 @@ class HostImage final : public Image {
   HostImage(const HostMemory& memory, off_t memory_offset,
             fuchsia::images::ImageInfo info);
   HostImage(Session* session, uint32_t memory_id, off_t memory_offset,
-            fxl::RefPtr<HostData> data, fuchsia::images::ImageInfo info);
+            std::shared_ptr<HostData> data, fuchsia::images::ImageInfo info);
   HostImage(HostImage&& moved);
   ~HostImage();
 
@@ -91,7 +88,7 @@ class HostImage final : public Image {
   HostImage& operator=(const HostImage&) = delete;
 
   // Gets a reference to the underlying shared memory region.
-  const fxl::RefPtr<HostData>& data() const { return data_; }
+  const std::shared_ptr<HostData>& data() const { return data_; }
 
   // Gets a pointer to the image data.
   void* image_ptr() const {
@@ -99,7 +96,7 @@ class HostImage final : public Image {
   }
 
  private:
-  fxl::RefPtr<HostData> data_;
+  std::shared_ptr<HostData> data_;
 };
 
 // Represents a pool of image resources backed by host-accessible shared memory

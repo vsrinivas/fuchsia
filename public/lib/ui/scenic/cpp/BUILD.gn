@@ -29,7 +29,6 @@ source_set("cpp") {
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/images/cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
