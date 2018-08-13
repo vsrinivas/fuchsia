@@ -17,9 +17,10 @@
 
 namespace machina {
 
-static uint8_t kPciCapTypeVendorSpecific = 0x9;
+static constexpr uint8_t kPciBar64BitMultiplier = 2;
 
-static uint16_t kPciVendorIdVirtio = 0x1af4;
+static constexpr uint8_t kPciCapTypeVendorSpecific = 0x9;
+static constexpr uint16_t kPciVendorIdVirtio = 0x1af4;
 
 // Virtio PCI Bar Layout.
 //
@@ -44,6 +45,8 @@ static uint16_t kPciVendorIdVirtio = 0x1af4;
 // These structures are defined in Virtio 1.0 Section 4.1.4.
 static constexpr uint8_t kVirtioPciBar = 0;
 static constexpr uint8_t kVirtioPciNotifyBar = 1;
+static_assert(kVirtioPciBar < kPciMaxBars && kVirtioPciNotifyBar < kPciMaxBars,
+              "Not enough BAR registers available");
 
 // Common configuration.
 static constexpr size_t kVirtioPciCommonCfgBase = 0;
@@ -373,7 +376,7 @@ void VirtioPci::SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap,
                          uint8_t cfg_type, size_t cap_len, size_t data_length,
                          uint8_t bar, size_t bar_offset) {
   virtio_cap->cfg_type = cfg_type;
-  virtio_cap->bar = bar;
+  virtio_cap->bar = bar * kPciBar64BitMultiplier;
   virtio_cap->offset = static_cast<uint32_t>(bar_offset);
   virtio_cap->length = static_cast<uint32_t>(data_length);
 
@@ -394,7 +397,7 @@ void VirtioPci::SetupCaps() {
   SetupCap(&capabilities_[1], &notify_cfg_cap_.cap, VIRTIO_PCI_CAP_NOTIFY_CFG,
            sizeof(notify_cfg_cap_), notify_size, kVirtioPciNotifyBar,
            kVirtioPciNotifyCfgBase);
-  bar_[kVirtioPciNotifyBar].size = static_cast<uint32_t>(notify_size);
+  bar_[kVirtioPciNotifyBar].size = notify_size;
   bar_[kVirtioPciNotifyBar].trap_type = TrapType::MMIO_BELL;
 
   // ISR configuration.
@@ -415,11 +418,8 @@ void VirtioPci::SetupCaps() {
                 "Incorrect number of capabilities");
   set_capabilities(capabilities_, kVirtioPciNumCapabilities);
 
-  static_assert(
-      kVirtioPciBar < PCI_MAX_BARS && kVirtioPciNotifyBar < PCI_MAX_BARS,
-      "Not enough BAR registers available");
-  bar_[kVirtioPciBar].size = static_cast<uint32_t>(
-      kVirtioPciDeviceCfgBase + device_->device_config_size_);
+  bar_[kVirtioPciBar].size =
+      kVirtioPciDeviceCfgBase + device_->device_config_size_;
   bar_[kVirtioPciBar].trap_type = TrapType::MMIO_SYNC;
 }
 

@@ -26,6 +26,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
             Name (_HID, EisaId ("PNP0A08") /* PCI Express Bus */)   // _HID: Hardware ID
             Name (_CID, EisaId ("PNP0A03") /* PCI Bus */)           // _CID: Compatible ID
             Name (_UID, 0)                                          // _UID: Unique ID
+            Name (_BBN, 0)                                          // _BBN: Base Bus Number
 
             Name(_PRT, Package()                                    // _PRT: PCI Routing Table
             {
@@ -50,7 +51,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
 
             NAME(_CRS, ResourceTemplate() {                         // _CRS: Current Resource Setting
                 // Allocate PCI Bus Numbers.
-                WORDBusNumber(                                      // Produce Bus 0-ff
+                WordBusNumber(                                      // Produce Bus 0-ff
                     ResourceProducer,
                     MinFixed,
                     MaxFixed,
@@ -73,7 +74,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
 
                 // Allocated port ranges that this bridge can map devices to.
                 // This is used for mapping PIO BARs.
-                WORDIO(                                             // Produce resource (8000-8FFF)
+                WordIO(                                             // Produce resource (8000-8FFF)
                     ResourceProducer,
                     MinFixed,
                     MaxFixed,
@@ -88,18 +89,18 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
 
                 // Allocated memory ranges that this bridge can map devices to.
                 // This is used for mapping MMIO BARs.
-                DWORDMemory(
-                    ResourceProducer,                               // Produce resource (0xf0000000 - 0xffffffff)
+                QWordMemory(
+                    ResourceProducer,                               // Produce resource (0x00000000f0000000 - 0x00000000ffffffff)
                     PosDecode,
                     MinFixed,
                     MaxFixed,
                     Cacheable,
                     ReadWrite,
-                    0x00000000,                                     // AddressGranularity
-                    0xf0000000,                                     // AddressMin
-                    0xffffffff,                                     // AddressMax
-                    0x00000000,                                     // AddressTranslation
-                    0x10000000                                      // Range Length
+                    0x0000000000000000,                             // AddressGranularity
+                    0x00000000f0000000,                             // AddressMin
+                    0x00000000ffffffff,                             // AddressMax
+                    0x0000000000000000,                             // AddressTranslation
+                    0x0000000010000000                              // Range Length
                 )
             })
         }

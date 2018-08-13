@@ -10,41 +10,47 @@
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/io.h"
 
 // clang-format off
 
-#define PCI_DEVICE_INVALID          UINT16_MAX
-#define PCI_MAX_DEVICES             16u
-#define PCI_MAX_BARS                2u
-
 // PCI configuration constants.
-#define PCI_BAR_ASPACE_MASK         0x0001u
-#define PCI_BAR_ASPACE_MMIO         0x0000u
 #define PCI_VENDOR_ID_INTEL         0x8086u
 #define PCI_DEVICE_ID_INTEL_Q35     0x29c0u
 #define PCI_CLASS_BRIDGE_HOST       0x0600u
-
-// PCI type 1 address manipulation.
-#define PCI_TYPE1_BUS(addr)         (((addr) >> 16) & 0xff)
-#define PCI_TYPE1_DEVICE(addr)      (((addr) >> 11) & 0x1f)
-#define PCI_TYPE1_FUNCTION(addr)    (((addr) >> 8) & 0x7)
-#define PCI_TYPE1_REGISTER_MASK     0xfc
-#define PCI_TYPE1_REGISTER(addr)    ((addr)&PCI_TYPE1_REGISTER_MASK)
-
-// PCI ECAM address manipulation.
-#define PCI_ECAM_BUS(addr)          (((addr) >> 20) & 0xff)
-#define PCI_ECAM_DEVICE(addr)       (((addr) >> 15) & 0x1f)
-#define PCI_ECAM_FUNCTION(addr)     (((addr) >> 12) & 0x7)
-#define PCI_ECAM_REGISTER(addr)     ((addr)&0xfff)
 
 // clang-format on
 
 class Guest;
 
 namespace machina {
+
+static constexpr size_t kPciMaxDevices = 16;
+static constexpr size_t kPciMaxBars = 2;
+
+static constexpr uint64_t kPciBarMmioAccessSpace = 0;
+static constexpr uint64_t kPciBarMmioType64Bit = 0b10 << 1;
+static constexpr uint64_t kPciBarMmioAddrMask = ~bit_mask<uint64_t>(4);
+
+// PCI type 1 address manipulation.
+constexpr uint8_t pci_type1_bus(uint64_t addr) {
+  return bits_shift(addr, 23, 16);
+}
+
+constexpr uint8_t pci_type1_device(uint64_t addr) {
+  return bits_shift(addr, 15, 11);
+}
+
+constexpr uint8_t pci_type1_function(uint64_t addr) {
+  return bits_shift(addr, 10, 8);
+}
+
+constexpr uint8_t pci_type1_register(uint64_t addr) {
+  return bits_shift(addr, 7, 2) << 2;
+}
 
 class PciBus;
 class PciDevice;
@@ -57,11 +63,11 @@ typedef struct pci_cap {
   // PCI capability ID as defined in PCI LOCAL BUS SPECIFICATION, REV. 3.0
   // Appendix H.
   uint8_t id;
-  // Data for this capability. Must be at least |len| bytes. The first
-  // two bytes will be ignored (id and next) as these will be populated
-  // dynamically. They're skipped over in the data pointer to allow common
-  // structures to be used for read/write where the id/next pointers are
-  // embedded in the structure.
+  // Data for this capability. Must be at least |len| bytes. The first two bytes
+  // will be ignored (id and next) as these will be populated dynamically.
+  // They're skipped over in the data pointer to allow common structures to be
+  // used for read/write where the id/next pointers are embedded in the
+  // structure.
   uint8_t* data;
   // Size of |data|.
   uint8_t len;
@@ -69,9 +75,9 @@ typedef struct pci_cap {
 
 struct PciBar : public IoHandler {
   // Register value.
-  uint32_t addr;
+  uint64_t addr;
   // Size of this BAR.
-  uint32_t size;
+  uint64_t size;
   // The type of trap to create for this region.
   TrapType trap_type;
 
@@ -84,8 +90,8 @@ struct PciBar : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
-  uint32_t aspace() const;
-  uint32_t base() const;
+  uint64_t aspace() const;
+  uint64_t base() const;
 };
 
 /* Stores the state of PCI devices. */
@@ -124,7 +130,7 @@ class PciDevice {
   // Determines if the given base address register is implemented for this
   // device.
   bool is_bar_implemented(size_t bar) const {
-    return bar < PCI_MAX_BARS && bar_[bar].size > 0;
+    return bar < kPciMaxBars && bar_[bar].size > 0;
   }
 
   // Returns a pointer to a base address register for this device.
@@ -144,7 +150,7 @@ class PciDevice {
   PciDevice(const Attributes attrs);
 
   // Base address registers.
-  PciBar bar_[PCI_MAX_BARS] = {};
+  PciBar bar_[kPciMaxBars] = {};
 
  private:
   friend class PciBus;
@@ -205,8 +211,8 @@ class PciBus {
 
   // Connect a PCI device to the bus.
   //
-  // |slot| must be between 1 and PCI_MAX_DEVICES (slot 0 is reserved for
-  // the root complex).
+  // |slot| must be between 1 and kPciMaxDevices (slot 0 is reserved for the
+  // root complex).
   //
   // This method is *not* thread-safe and must only be called during
   // initialization.
@@ -228,7 +234,7 @@ class PciBus {
   // Returns true if |bus|, |device|, |function| corresponds to a valid
   // device address.
   bool is_addr_valid(uint8_t bus, uint8_t device, uint8_t function) const {
-    return bus == 0 && device < PCI_MAX_DEVICES && function == 0 &&
+    return bus == 0 && device < kPciMaxDevices && function == 0 &&
            device_[device];
   }
 
@@ -249,13 +255,13 @@ class PciBus {
   uint32_t config_addr_ __TA_GUARDED(mutex_) = 0;
 
   // Devices on the virtual PCI bus.
-  PciDevice* device_[PCI_MAX_DEVICES] = {};
+  PciDevice* device_[kPciMaxDevices] = {};
   // IO APIC for use with interrupt redirects.
   InterruptController* interrupt_controller_ = nullptr;
   // Embedded root complex device.
   PciDevice root_complex_;
   // Next mmio window to be allocated to connected devices.
-  uint32_t mmio_base_ = kPciMmioBarPhysBase;
+  uint64_t mmio_base_ = kPciMmioBarPhysBase;
   // Pointer to the next open PCI slot.
   size_t next_open_slot_ = 0;
 };

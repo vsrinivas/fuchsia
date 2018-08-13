@@ -8,15 +8,17 @@
 #include "garnet/lib/machina/pci.h"
 #include "gtest/gtest.h"
 
-#define PCI_CONFIG_ADDRESS_PORT_BASE 0
-#define PCI_CONFIG_DATA_PORT_BASE 4
-
-#define PCI_TYPE1_ADDR(bus, device, function, reg)                     \
-  (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) | \
-   ((reg)&PCI_TYPE1_REGISTER_MASK))
-
 namespace machina {
 namespace {
+
+static constexpr uint16_t kPciConfigAddrPortBase = 0;
+static constexpr uint16_t kPciConfigDataPortBase = 4;
+
+constexpr uint64_t pci_type1_addr(uint8_t bus, uint8_t device, uint8_t function,
+                                  uint8_t reg) {
+  return 0x80000000 | (bus << 16) | (device << 11) | (function << 8) |
+         pci_type1_register(reg);
+}
 
 // Test we can read multiple fields in 1 32-bit word.
 TEST(PciDeviceTest, ReadConfigRegister) {
@@ -68,16 +70,42 @@ TEST(PciDeviceTest, ReadBarSize) {
   IoValue value;
   value.access_size = 4;
   value.u32 = UINT32_MAX;
-  EXPECT_EQ(device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES, value), ZX_OK);
+  EXPECT_EQ(device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 0, value), ZX_OK);
+  EXPECT_EQ(device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 4, value), ZX_OK);
+
+  // PCI Express Base Specification, Rev. 4.0 Version 1.0, Section 7.5.1.2.1:
+  // Base Address Registers
+  //
+  // Software saves the original value of the Base Address register, writes a
+  // value of all 1's to the register, then reads it back. Size calculation can
+  // be done from the 32 bit value read by first clearing encoding information
+  // bits (bits 1:0 for I/O, bits 3:0 for memory), inverting all 32 bits
+  // (logical NOT), then incrementing by 1. The resultant 32-bit value is the
+  // memory/I/O range size decoded by the register. Note that the upper 16 bits
+  // of the result is ignored if the Base Address register is for I/O and bits
+  // 31:16 returned zero upon read. The original value in the Base Address
+  // register is restored before re-enabling decode in the Command register of
+  // the Function.
+  //
+  // 64-bit (memory) Base Address registers can be handled the same, except that
+  // the second 32 bit register is considered an extension of the first (i.e.,
+  // bits 63:32). Software writes a value of all 1's to both registers, reads
+  // them back, and combines the result into a 64-bit value. Size calculation is
+  // done on the 64-bit value.
 
   // Read out BAR and compute size.
   value.access_size = 4;
   value.u32 = 0;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES, &value), ZX_OK);
-  EXPECT_EQ(value.u32 & PCI_BAR_ASPACE_MASK, PCI_BAR_ASPACE_MMIO);
+  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 0, &value), ZX_OK);
+  uint64_t reg = value.u32;
+  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 4, &value), ZX_OK);
+  reg |= static_cast<uint64_t>(value.u32) << 32;
+
+  EXPECT_EQ(reg & ~kPciBarMmioAddrMask,
+            kPciBarMmioType64Bit | kPciBarMmioAccessSpace);
   const PciBar* bar = device.bar(0);
   EXPECT_TRUE(bar != nullptr);
-  EXPECT_EQ(~(value.u32 & ~PCI_BAR_ASPACE_MASK) + 1, bar->size);
+  EXPECT_EQ(~(reg & kPciBarMmioAddrMask) + 1, bar->size);
 }
 
 // Verify stats & cap registers correctly show present capabilities and that
@@ -192,19 +220,19 @@ TEST(PciBusTest, WriteConfigAddressPort) {
   IoValue value;
   value.access_size = 4;
   value.u32 = 0x12345678;
-  EXPECT_EQ(bus.WriteIoPort(PCI_CONFIG_ADDRESS_PORT_BASE, value), ZX_OK);
+  EXPECT_EQ(bus.WriteIoPort(kPciConfigAddrPortBase, value), ZX_OK);
   EXPECT_EQ(bus.config_addr(), 0x12345678u);
 
   // 16 bit write to bits 31..16. Other bits remain unchanged.
   value.access_size = 2;
   value.u16 = 0xFACE;
-  EXPECT_EQ(bus.WriteIoPort(PCI_CONFIG_ADDRESS_PORT_BASE + 2, value), ZX_OK);
+  EXPECT_EQ(bus.WriteIoPort(kPciConfigAddrPortBase + 2, value), ZX_OK);
   EXPECT_EQ(bus.config_addr(), 0xFACE5678u);
 
   // 8 bit write to bits (15..8). Other bits remain unchanged.
   value.access_size = 1;
   value.u8 = 0x99;
-  EXPECT_EQ(bus.WriteIoPort(PCI_CONFIG_ADDRESS_PORT_BASE + 1, value), ZX_OK);
+  EXPECT_EQ(bus.WriteIoPort(kPciConfigAddrPortBase + 1, value), ZX_OK);
   EXPECT_EQ(bus.config_addr(), 0xFACE9978u);
 }
 
@@ -220,21 +248,21 @@ TEST(PciBusTest, ReadConfigAddressPort) {
   // 32 bit read (bits 31..0).
   IoValue value = {};
   value.access_size = 4;
-  EXPECT_EQ(bus.ReadIoPort(PCI_CONFIG_ADDRESS_PORT_BASE, &value), ZX_OK);
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigAddrPortBase, &value), ZX_OK);
   EXPECT_EQ(value.access_size, 4);
   EXPECT_EQ(value.u32, 0x12345678u);
 
   // 16 bit read (bits 31..16).
   value.access_size = 2;
   value.u16 = 0;
-  EXPECT_EQ(bus.ReadIoPort(PCI_CONFIG_ADDRESS_PORT_BASE + 2, &value), ZX_OK);
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigAddrPortBase + 2, &value), ZX_OK);
   EXPECT_EQ(value.access_size, 2);
   EXPECT_EQ(value.u16, 0x1234u);
 
   // 8 bit read (bits 15..8).
   value.access_size = 1;
   value.u8 = 0;
-  EXPECT_EQ(bus.ReadIoPort(PCI_CONFIG_ADDRESS_PORT_BASE + 1, &value), ZX_OK);
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigAddrPortBase + 1, &value), ZX_OK);
   EXPECT_EQ(value.access_size, 1);
   EXPECT_EQ(value.u8, 0x56u);
 }
@@ -249,9 +277,9 @@ TEST(PciBusTest, ReadConfigDataPort) {
   IoValue value = {};
 
   // 16-bit read.
-  bus.set_config_addr(PCI_TYPE1_ADDR(0, 0, 0, 0));
+  bus.set_config_addr(pci_type1_addr(0, 0, 0, 0));
   value.access_size = 2;
-  EXPECT_EQ(bus.ReadIoPort(PCI_CONFIG_DATA_PORT_BASE, &value), ZX_OK);
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigDataPortBase, &value), ZX_OK);
   EXPECT_EQ(value.access_size, 2);
   EXPECT_EQ(value.u16, PCI_VENDOR_ID_INTEL);
 
@@ -259,7 +287,7 @@ TEST(PciBusTest, ReadConfigDataPort) {
   // in the upper 16 bits
   value.access_size = 4;
   value.u32 = 0;
-  EXPECT_EQ(bus.ReadIoPort(PCI_CONFIG_DATA_PORT_BASE, &value), ZX_OK);
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigDataPortBase, &value), ZX_OK);
   EXPECT_EQ(value.access_size, 4);
   EXPECT_EQ(value.u32, PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16));
 
@@ -270,11 +298,11 @@ TEST(PciBusTest, ReadConfigDataPort) {
   // address port is added to the data port address.
   value.access_size = 2;
   value.u16 = 0;
-  bus.set_config_addr(PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID));
+  bus.set_config_addr(pci_type1_addr(0, 0, 0, PCI_CONFIG_DEVICE_ID));
   // Verify we're using a 4b aligned register address.
   EXPECT_EQ(bus.config_addr() & bit_mask<uint32_t>(2), 0u);
   // Add the register offset to the data port base address.
-  EXPECT_EQ(bus.ReadIoPort(PCI_CONFIG_DATA_PORT_BASE +
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigDataPortBase +
                                (PCI_CONFIG_DEVICE_ID & bit_mask<uint32_t>(2)),
                            &value),
             ZX_OK);
