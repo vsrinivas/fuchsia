@@ -731,54 +731,51 @@ zx_status_t PlatformDevice::AddMetaData(const pbus_metadata_t& pbm) {
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t PlatformDevice::Enable(bool enable) {
-    zx_status_t status = ZX_OK;
+zx_status_t PlatformDevice::DeviceAdd() {
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, vid_},
+        {BIND_PLATFORM_DEV_PID, 0, pid_},
+        {BIND_PLATFORM_DEV_DID, 0, did_},
+    };
 
-    if (enable && !enabled_) {
-        zx_device_prop_t props[] = {
-            {BIND_PLATFORM_DEV_VID, 0, vid_},
-            {BIND_PLATFORM_DEV_PID, 0, pid_},
-            {BIND_PLATFORM_DEV_DID, 0, did_},
-        };
+    char namestr[ZX_DEVICE_NAME_MAX];
+    if (vid_ == PDEV_VID_GENERIC && pid_ == PDEV_PID_GENERIC && did_ == PDEV_DID_KPCI) {
+        strlcpy(namestr, "pci", sizeof(namestr));
+    } else {
+        snprintf(namestr, sizeof(namestr), "%02x:%02x:%01x", vid_, pid_, did_);
+    }
+    char argstr[64];
+    snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
+    uint32_t flags = 0;
+    if (!(flags_ & PDEV_ADD_PBUS_DEVHOST)) {
+        flags |= DEVICE_ADD_MUST_ISOLATE;
+    }
+    if (metadata_.size() > 0) {
+        // Keep device invisible until after we add its metadata. 
+        flags |= DEVICE_ADD_INVISIBLE;
+    }
 
-        char namestr[ZX_DEVICE_NAME_MAX];
-        if (vid_ == PDEV_VID_GENERIC && pid_ == PDEV_PID_GENERIC && did_ == PDEV_DID_KPCI) {
-            strlcpy(namestr, "pci", sizeof(namestr));
-        } else {
+    auto status = DdkAdd(namestr, flags, props, countof(props), argstr);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-            snprintf(namestr, sizeof(namestr), "%02x:%02x:%01x", vid_, pid_, did_);
-        }
-        char argstr[64];
-        snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
-        uint32_t flags = 0;
-        if (!(flags_ & PDEV_ADD_PBUS_DEVHOST)) {
-            flags |= DEVICE_ADD_MUST_ISOLATE;
-        }
-        if (metadata_.size() > 0) {
-            flags |= DEVICE_ADD_INVISIBLE;
-        }
-
-        status = DdkAdd(namestr, flags, props, countof(props), argstr);
-
-        if (metadata_.size() > 0) {
-            for (const auto& pbm : metadata_) {
-                if (pbm.data && pbm.len) {
-                    DdkAddMetadata(pbm.type, pbm.data, pbm.len);
-                } else {
-                    AddMetaData(pbm);
-                }
+    if (metadata_.size() > 0) {
+        for (const auto& pbm : metadata_) {
+            if (pbm.data && pbm.len) {
+                status = DdkAddMetadata(pbm.type, pbm.data, pbm.len);
+            } else {
+                status = AddMetaData(pbm);
             }
-            DdkMakeVisible();
+            if (status != ZX_OK) {
+                DdkRemove();
+                return status;
+            }
         }
-     } else if (!enable && enabled_) {
-        DdkRemove();
+        DdkMakeVisible();
     }
 
-    if (status == ZX_OK) {
-        enabled_ = enable;
-    }
-
-    return status;
+    return ZX_OK;
 }
 
 } // namespace platform_bus

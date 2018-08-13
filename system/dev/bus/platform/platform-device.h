@@ -42,8 +42,6 @@ using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::GetProtocolable, ddk
 // This class represents a platform device attached to the platform bus.
 // Instances of this class are created by PlatformBus at boot time when the board driver
 // calls the platform bus protocol method pbus_device_add().
-// The PlatformDevice instances are never destroyed, but their underlying device in the devmger
-// can be added and removed dynamically via pbus_device_enable() method in the platform bus protoool.
 
 class PlatformDevice : public PlatformDeviceType, public ddk::PlatformDevProtocol<PlatformDevice> {
 public:
@@ -69,9 +67,8 @@ public:
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
 
-    // Adds or removes the underlying devmgr device.
-    // Called in response to the pbus_device_enable() method in the platform bus protocol.
-    zx_status_t Enable(bool enable);
+    // Adds the underlying devmgr device.
+    zx_status_t DeviceAdd();
 
 private:
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
@@ -117,7 +114,6 @@ private:
     const uint32_t pid_;
     const uint32_t did_;
     const serial_port_info_t serial_port_info_;
-    bool enabled_ = false;
 
     fbl::Vector<pbus_mmio_t> mmios_;
     fbl::Vector<pbus_irq_t> irqs_;

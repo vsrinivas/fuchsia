@@ -37,7 +37,6 @@
 //    zx_status_t SetProtocol(uint32_t proto_id, void* protocol);
 //    zx_status_t WaitProtocol(uint32_t proto_id);
 //    zx_status_t DeviceAdd(const pbus_dev_t* dev, uint32_t flags);
-//    zx_status_t DeviceEnable(uint32_t vid, uint32_t pid, uint32_t did, bool enable);
 //    const char* GetBoardName();
 //    zx_status_t SetBoardInfo(const pbus_board_info_t* info);
 //     ...
@@ -53,7 +52,6 @@ public:
         pbus_proto_ops_.set_protocol = SetProtocol;
         pbus_proto_ops_.wait_protocol = WaitProtocol;
         pbus_proto_ops_.device_add = DeviceAdd;
-        pbus_proto_ops_.device_enable = DeviceEnable;
         pbus_proto_ops_.get_board_name = GetBoardName;
         pbus_proto_ops_.set_board_info = SetBoardInfo;
 
@@ -77,11 +75,6 @@ private:
 
     static zx_status_t DeviceAdd(void* ctx, const pbus_dev_t* dev, uint32_t flags) {
         return static_cast<D*>(ctx)->DeviceAdd(dev, flags);
-    }
-
-    static zx_status_t DeviceEnable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
-                                    bool enable) {
-        return static_cast<D*>(ctx)->DeviceEnable(vid, pid, did, enable);
     }
 
     static const char* GetBoardName(void* ctx) {
@@ -109,10 +102,6 @@ public:
 
     zx_status_t DeviceAdd(const pbus_dev_t* dev, uint32_t flags) {
         return ops_->device_add(ctx_, dev, flags);
-    }
-
-    zx_status_t DeviceEnable(uint32_t vid, uint32_t pid, uint32_t did, bool enable) {
-        return ops_->device_enable(ctx_, vid, pid, did, enable);
     }
 
     const char* GetBoardName() {

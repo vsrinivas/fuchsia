@@ -134,7 +134,7 @@ zx_status_t PlatformBus::WaitProtocol(uint32_t proto_id) {
 }
 
 zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev, uint32_t flags) {
-    if (flags & ~(PDEV_ADD_DISABLED | PDEV_ADD_PBUS_DEVHOST)) {
+    if (flags & ~(PDEV_ADD_PBUS_DEVHOST)) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (!pdev->name) {
@@ -163,24 +163,7 @@ zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev, uint32_t flags) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((flags & PDEV_ADD_DISABLED) == 0) {
-        status = devices_[index]->Enable(true);
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t PlatformBus::DeviceEnable(uint32_t vid, uint32_t pid, uint32_t did, bool enable) {
-    for (auto& dev : devices_) {
-        if (dev->vid() == vid && dev->pid() == pid && dev->did() == did) {
-            return dev->Enable(enable);
-        }
-    }
-
-    return ZX_ERR_NOT_FOUND;
+    return devices_[index]->DeviceAdd();
 }
 
 const char* PlatformBus::GetBoardName() {

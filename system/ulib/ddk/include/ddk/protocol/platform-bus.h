@@ -79,10 +79,8 @@ typedef struct {
 
 // flags for pbus_device_add()
 enum {
-    // Add the device but to not publish it to the devmgr until enabled with pbus_device_enable().
-    PDEV_ADD_DISABLED = (1 << 0),
     // Add the device to run in platform bus devhost rather than in a new devhost.
-    PDEV_ADD_PBUS_DEVHOST = (1 << 1),
+    PDEV_ADD_PBUS_DEVHOST = (1 << 0),
 };
 
 typedef struct {
@@ -113,13 +111,6 @@ static inline zx_status_t pbus_wait_protocol(const platform_bus_protocol_t* pbus
 static inline zx_status_t pbus_device_add(const platform_bus_protocol_t* pbus, const pbus_dev_t* dev,
                                           uint32_t flags) {
     return pbus->ops->device_add(pbus->ctx, dev, flags);
-}
-
-// Dynamically enables or disables a platform device by adding or removing it
-// from the DDK device tree.
-static inline zx_status_t pbus_device_enable(const platform_bus_protocol_t* pbus, uint32_t vid,
-                                             uint32_t pid, uint32_t did, bool enable) {
-    return pbus->ops->device_enable(pbus->ctx, vid, pid, did, enable);
 }
 
 static inline const char* pbus_get_board_name(const platform_bus_protocol_t* pbus) {
