@@ -4163,10 +4163,12 @@ void __ath10k_scan_finish(struct ath10k* ar) {
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
         if (!ar->scan.is_roc) {
-            ar->wlanmac.ifc->indication(ar->wlanmac.cookie,
-                (ar->scan.state == ATH10K_SCAN_ABORTING)
-                    ? WLAN_INDICATION_HW_SCAN_ABORTED
-                    : WLAN_INDICATION_HW_SCAN_COMPLETE);
+            wlan_hw_scan_result_t result = {
+                .code = (ar->scan.state == ATH10K_SCAN_ABORTING)
+                    ? WLAN_HW_SCAN_ABORTED
+                    : WLAN_HW_SCAN_SUCCESS
+            };
+            ar->wlanmac.ifc->hw_scan_complete(ar->wlanmac.cookie, &result);
         } else if (ar->scan.roc_notify) {
 #if 0 // NEEDS PORTING
             ieee80211_remain_on_channel_expired(ar->hw);

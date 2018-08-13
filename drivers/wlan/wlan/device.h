@@ -50,6 +50,7 @@ class Device : public DeviceInterface {
     void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status);
     void WlanmacIndication(uint32_t ind);
     void WlanmacReportTxStatus(const wlan_tx_status_t* tx_status);
+    void WlanmacHwScanComplete(const wlan_hw_scan_result_t* result);
 
     // ddk ethmac_protocol_ops methods
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
@@ -80,6 +81,7 @@ class Device : public DeviceInterface {
         kPacketQueued,
         kIndication,
         kReportTxStatus,
+        kHwScanComplete,
     };
 
     zx_status_t AddWlanDevice();

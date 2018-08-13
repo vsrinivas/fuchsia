@@ -75,16 +75,11 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
-void ClientMlme::HwIndication(uint32_t ind) {
-    switch (ind) {
-    case WLAN_INDICATION_HW_SCAN_COMPLETE:
+void ClientMlme::HwScanComplete(uint8_t result_code) {
+    if (result_code == WLAN_HW_SCAN_SUCCESS) {
         scanner_->HandleHwScanComplete();
-        break;
-    case WLAN_INDICATION_HW_SCAN_ABORTED:
+    } else {
         scanner_->HandleHwScanAborted();
-        break;
-    default:
-        break;
     }
 }
 

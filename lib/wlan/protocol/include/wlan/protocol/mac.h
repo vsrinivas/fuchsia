@@ -179,6 +179,16 @@ typedef struct wlan_hw_scan_config {
     uint8_t channels[WLAN_CHANNELS_MAX_LEN];
 } wlan_hw_scan_config_t;
 
+enum {
+    WLAN_HW_SCAN_SUCCESS = 0,
+    WLAN_HW_SCAN_ABORTED = 1,
+};
+
+typedef struct wlan_hw_scan_result {
+    // Either WLAN_HW_SCAN_SUCCESS or WLAN_HW_SCAN_ABORTED
+    uint8_t code;
+} wlan_hw_scan_result_t;
+
 typedef struct wlanmac_ifc {
     // Report the status of the wlanmac device.
     void (*status)(void* cookie, uint32_t status);
@@ -202,6 +212,9 @@ typedef struct wlanmac_ifc {
     // Reports the status of an attempted transmission.
     // * tx_status: contains status info of one transmitted packet to one peer at one specific rate.
     void (*report_tx_status)(void* cookie, const wlan_tx_status_t* tx_status);
+
+    // Reports completion of a hardware scan
+    void (*hw_scan_complete)(void* cookie, const wlan_hw_scan_result_t* result);
 } wlanmac_ifc_t;
 
 typedef struct wlanmac_protocol_ops {
@@ -256,9 +269,7 @@ typedef struct wlanmac_protocol_ops {
     // via the regular rx path.
     //
     // Unless an error is returned immediately, the driver will eventually
-    // call wlanmac_ifc->indication() with one of the two values:
-    //      WLAN_INDICATION_HW_SCAN_COMPLETE: scan finished successfully
-    //      WLAN_INDICATION_HW_SCAN_ABORTED: scan was stopped because of an error
+    // call wlanmac_ifc->hw_scan_complete()
     zx_status_t (*start_hw_scan)(void* ctx, const wlan_hw_scan_config_t* scan_config);
 } wlanmac_protocol_ops_t;
 

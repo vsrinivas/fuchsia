@@ -63,6 +63,8 @@ static wlanmac_ifc_t wlanmac_ifc_ops = {
         [](void* cookie, const wlan_tx_status_t* tx_status) {
             DEV(cookie)->WlanmacReportTxStatus(tx_status);
         },
+    .hw_scan_complete = [](void* cookie, const wlan_hw_scan_result_t* result)
+            { DEV(cookie)->WlanmacHwScanComplete(result); },
 };
 
 static ethmac_protocol_ops_t ethmac_ops = {
@@ -374,6 +376,12 @@ void Device::WlanmacReportTxStatus(const wlan_tx_status_t* tx_status) {
     if (status != ZX_OK) { warnf("could not queue tx status report packet err=%d\n", status); }
 }
 
+void Device::WlanmacHwScanComplete(const wlan_hw_scan_result_t* result) {
+    debugf("WlanmacHwScanComplete %u\n", result->code);
+    auto status = QueueDevicePortPacket(DevicePacket::kHwScanComplete, result->code);
+    if (status != ZX_OK) { errorf("could not queue hw scan complete packet err=%d\n", status); }
+}
+
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     ZX_DEBUG_ASSERT(timer != nullptr);
     ZX_DEBUG_ASSERT(timer->get() == nullptr);
@@ -547,6 +555,9 @@ void Device::MainLoop() {
                 continue;
             case to_enum_type(DevicePacket::kIndication):
                 dispatcher_->HwIndication(pkt.status);
+                break;
+            case to_enum_type(DevicePacket::kHwScanComplete):
+                dispatcher_->HwScanComplete(pkt.status);
                 break;
             case to_enum_type(DevicePacket::kPacketQueued): {
                 fbl::unique_ptr<Packet> packet;

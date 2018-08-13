@@ -264,6 +264,11 @@ void Dispatcher::HwIndication(uint32_t ind) {
     mlme_->HwIndication(ind);
 }
 
+void Dispatcher::HwScanComplete(uint8_t result_code) {
+    debugfn();
+    mlme_->HwScanComplete(result_code);
+}
+
 void Dispatcher::ResetStats() {
     stats_.Reset();
 }
