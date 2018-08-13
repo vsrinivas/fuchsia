@@ -146,7 +146,7 @@ class Vp9Decoder : public VideoDecoder {
   void ProcessCompletedFrames();
   void ShowExistingFrame(HardwareRenderParams* params);
   void PrepareNewFrame();
-  void ConfigureFrameOutput(uint32_t width, uint32_t height);
+  void ConfigureFrameOutput(uint32_t width, uint32_t height, bool bit_depth_8);
   void ConfigureMcrcc();
   void UpdateLoopFilterThresholds();
   void ConfigureMotionPrediction();

@@ -523,22 +523,23 @@ void Vp9Decoder::ConfigureMotionPrediction() {
   }
 }
 
-void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
+void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
+                                      bool bit_depth_8) {
   // SAO stands for Sample Adaptive Offset, which is a type of filtering in
   // HEVC. Sao isn't used in VP9, but the hardware that handles it also handles
   // writing frames to memory.
 
   HevcSaoCtrl5::Get()
       .ReadFrom(owner_->dosbus())
-      .set_mode_8_bits(true)
+      .set_mode_8_bits(bit_depth_8)
       .WriteTo(owner_->dosbus());
 
   HevcdMppDecompCtl1::Get().FromValue(0).set_paged_mode(1).WriteTo(
       owner_->dosbus());
   uint32_t compressed_body_size =
-      ComputeCompressedBodySize(width, height, false);
+      ComputeCompressedBodySize(width, height, !bit_depth_8);
   uint32_t compressed_header_size =
-      ComputeCompressedHeaderSize(width, height, false);
+      ComputeCompressedHeaderSize(width, height, !bit_depth_8);
 
   HevcdMppDecompCtl2::Get()
       .FromValue(compressed_body_size >> 5)
@@ -754,7 +755,7 @@ void Vp9Decoder::PrepareNewFrame() {
   ConfigureMotionPrediction();
   ConfigureMcrcc();
 
-  ConfigureFrameOutput(width, height);
+  ConfigureFrameOutput(width, height, params.bit_depth == 0);
 
   UpdateLoopFilter(&params);
 

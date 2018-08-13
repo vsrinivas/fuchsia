@@ -218,7 +218,8 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
 
 class TestVP9 {
  public:
-  static void Decode(bool use_parser, const char* filename) {
+  static void Decode(bool use_parser, const char* input_filename,
+                     const char* filename) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -270,8 +271,7 @@ class TestVP9 {
               wait_valid.set_value();
           });
     }
-    auto test_ivf =
-        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+    auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
     ASSERT_NE(nullptr, test_ivf);
 
     // Put on a separate thread because it needs video decoding to progress in
@@ -459,10 +459,18 @@ class TestVP9 {
   }
 };
 
-TEST(VP9, Decode) { TestVP9::Decode(true, "/tmp/bearvp9.yuv"); }
+TEST(VP9, Decode) {
+  TestVP9::Decode(true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
+}
 
 TEST(VP9, DecodeNoParser) {
-  TestVP9::Decode(false, "/tmp/bearvp9noparser.yuv");
+  TestVP9::Decode(false, "video_test_data/test-25fps.vp9",
+                  "/tmp/bearvp9noparser.yuv");
+}
+
+TEST(VP9, Decode10Bit) {
+  TestVP9::Decode(false, "video_test_data/test-25fps.vp9_2",
+                  "/tmp/bearvp9noparser.yuv");
 }
 
 TEST(VP9, DecodePerFrame) { TestVP9::DecodePerFrame(); }

@@ -152,6 +152,7 @@ copy("test_files") {
     "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
     "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.h264",
     "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9",
+    "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9_2",
   ]
   outputs = [
     "$root_out_dir/firmware/video_test_data/{{source_file_part}}",
@@ -195,6 +196,9 @@ package("amlogic_video_decoder") {
       },
       {
         name = "firmware/video_test_data/test-25fps.vp9"
+      },
+      {
+        name = "firmware/video_test_data/test-25fps.vp9_2"
       },
     ]
   }
