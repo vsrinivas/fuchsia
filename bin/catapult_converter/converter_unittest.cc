@@ -778,6 +778,147 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
   AssertJsonEqual(output, expected_output);
 }
 
+TEST(CatapultConverter, ConvertBytesUnit) {
+  const char* input_str = R"JSON(
+[
+    {
+        "label": "ExampleWithBytesLong",
+        "test_suite": "my_test_suite",
+        "samples": [{"values": [200, 6, 100, 110]}],
+        "unit": "bytes"
+    },
+    {
+        "label": "ExampleWithBytesShort",
+        "test_suite": "my_test_suite",
+        "samples": [{"values": [200, 6, 100, 110]}],
+        "unit": "B"
+    }
+]
+)JSON";
+
+  const char* expected_output_str = R"JSON(
+[
+    {
+        "guid": "dummy_guid_0",
+        "type": "GenericSet",
+        "values": [
+            123004005006
+        ]
+    },
+    {
+        "guid": "dummy_guid_1",
+        "type": "GenericSet",
+        "values": [
+            "example_bots"
+        ]
+    },
+    {
+        "guid": "dummy_guid_2",
+        "type": "GenericSet",
+        "values": [
+            "example_masters"
+        ]
+    },
+    {
+        "guid": "dummy_guid_3",
+        "type": "GenericSet",
+        "values": [
+            [
+                "Build Log",
+                "https://ci.example.com/build/100"
+            ]
+        ]
+    },
+    {
+        "guid": "dummy_guid_4",
+        "type": "GenericSet",
+        "values": [
+            "my_test_suite"
+        ]
+    },
+    {
+        "name": "ExampleWithBytesLong",
+        "unit": "sizeInBytes",
+        "description": "",
+        "diagnostics": {
+            "chromiumCommitPositions": "dummy_guid_0",
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
+        },
+        "running": [
+            4,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_5",
+        "maxNumSampleValues": 4,
+        "numNans": 0
+    },
+    {
+        "name": "ExampleWithBytesShort",
+        "unit": "sizeInBytes",
+        "description": "",
+        "diagnostics": {
+            "chromiumCommitPositions": "dummy_guid_0",
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
+        },
+        "running": [
+            4,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_6",
+        "maxNumSampleValues": 4,
+        "numNans": 0
+    }]
+)JSON";
+
+  rapidjson::Document input;
+  CheckParseResult(input.Parse(input_str));
+
+  rapidjson::Document expected_output;
+  CheckParseResult(expected_output.Parse(expected_output_str));
+
+  rapidjson::Document output;
+  ConverterArgs args;
+  // Test a timestamp value that does not fit into a 32-bit int type.
+  args.timestamp = 123004005006;
+  args.masters = "example_masters";
+  args.bots = "example_bots";
+  args.log_url = "https://ci.example.com/build/100";
+  args.use_test_guids = true;
+  Convert(&input, &output, &args);
+
+  AssertApproxEqual(&output, &output[5]["running"][1], 200);
+  AssertApproxEqual(&output, &output[5]["running"][2], 4.098931);
+  AssertApproxEqual(&output, &output[5]["running"][3], 104);
+  AssertApproxEqual(&output, &output[5]["running"][4], 6);
+  AssertApproxEqual(&output, &output[5]["running"][5], 416);
+  AssertApproxEqual(&output, &output[5]["running"][6], 6290.666);
+
+  AssertApproxEqual(&output, &output[6]["running"][1], 200);
+  AssertApproxEqual(&output, &output[6]["running"][2], 4.098931);
+  AssertApproxEqual(&output, &output[6]["running"][3], 104);
+  AssertApproxEqual(&output, &output[6]["running"][4], 6);
+  AssertApproxEqual(&output, &output[6]["running"][5], 416);
+  AssertApproxEqual(&output, &output[6]["running"][6], 6290.666);
+
+  AssertJsonEqual(output, expected_output);
+}
+
 class TempFile {
  public:
   TempFile(const char* contents) {
