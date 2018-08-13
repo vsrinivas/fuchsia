@@ -12,12 +12,11 @@ extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate shared_buffer;
 
-use async::futures::{StreamExt, TryFutureExt, TryStreamExt};
 use display::{ControllerEvent, ControllerProxy, ImageConfig};
 use failure::Error;
 use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
 use fdio::make_ioctl;
-use futures::future;
+use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use shared_buffer::SharedBuffer;
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};

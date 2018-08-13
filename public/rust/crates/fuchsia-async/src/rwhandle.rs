@@ -8,8 +8,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use futures::Poll;
 use futures::task::{self, AtomicWaker};
 
-use executor::{PacketReceiver, ReceiverRegistration, EHandle};
-use zx::{self, AsHandleRef};
+use crate::executor::{PacketReceiver, ReceiverRegistration, EHandle};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 
 const READABLE: usize = 0b001;
 const WRITABLE: usize = 0b010;

@@ -4,7 +4,7 @@
 
 use bytes::{Buf, BufMut};
 use futures::io::{AsyncRead, AsyncWrite, Initializer};
-use futures::task;
+use futures::{task, ready, try_ready};
 use futures::{Poll, Future, Stream};
 use libc;
 use std::io::{self, Read, Write};
@@ -17,7 +17,7 @@ use std::os::unix::io::AsRawFd;
 
 use net2::{TcpBuilder, TcpStreamExt};
 
-use net::{set_nonblock, EventedFd};
+use crate::net::{set_nonblock, EventedFd};
 
 /// An I/O object representing a TCP socket listening for incoming connections.
 ///

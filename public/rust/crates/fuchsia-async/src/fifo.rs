@@ -7,10 +7,10 @@ use std::marker::{Unpin, PhantomData, Sized};
 use std::mem::PinMut;
 use std::vec::Vec;
 
-use futures::{task, Poll, Future};
-use zx::{self, AsHandleRef};
+use futures::{task, Poll, Future, try_ready};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 
-use RWHandle;
+use crate::RWHandle;
 
 /// Marker trait for types that can be read/written with a `Fifo`.
 /// Unsafe because not all types may be represented by arbitrary bit patterns.
@@ -271,8 +271,8 @@ impl<F: FifoReadable<R>, R: FifoEntry> Future for ReadEntry<F, R> {
 mod tests {
     use super::*;
     use futures::prelude::*;
-    use zx::prelude::*;
-    use {Executor, TimeoutExt, Timer};
+    use fuchsia_zircon::prelude::*;
+    use crate::{Executor, TimeoutExt, Timer};
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     #[repr(C)]

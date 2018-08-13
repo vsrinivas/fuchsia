@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::atomic_future::AtomicFuture;
 use crossbeam::sync::SegQueue;
+use fuchsia_zircon as zx;
 use futures::{Poll, Future, FutureExt, task};
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
@@ -10,11 +12,8 @@ use futures::task::{
     Executor as FutureExecutor, SpawnObjError,
 };
 use parking_lot::{Mutex, Condvar};
+use pin_utils::pin_mut;
 use slab::Slab;
-use zx;
-
-use atomic_future::AtomicFuture;
-
 use std::{cmp, fmt, mem};
 use std::cell::RefCell;
 use std::marker::Unpin;

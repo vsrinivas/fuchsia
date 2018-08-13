@@ -10,10 +10,12 @@
 
 use std::marker::Unpin;
 use std::mem::{self, PinMut};
+use futures::{ready, try_ready};
 use futures::task::{self, Poll};
 use futures::future::{Future, FutureExt};
 use futures::stream::{Stream, StreamExt};
 use futures::io::{self, AsyncRead, AsyncWrite};
+use pin_utils::unsafe_pinned;
 
 pub trait TempStreamExt: Stream + Sized {
     fn first_elem(self) -> FirstElem<Self> {

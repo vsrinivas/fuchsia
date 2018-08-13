@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::task;
+use futures::{task, try_ready};
 use futures::{Poll, Future};
 use std::io;
 use std::marker::Unpin;
@@ -10,7 +10,7 @@ use std::mem::PinMut;
 use std::net::{self, SocketAddr};
 use std::ops::Deref;
 
-use net::{set_nonblock, EventedFd};
+use crate::net::{set_nonblock, EventedFd};
 use std::os::unix::io::AsRawFd;
 
 /// An I/O object representing a UDP socket.
@@ -132,7 +132,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use Executor;
+    use crate::Executor;
     use futures::TryFutureExt;
     use super::UdpSocket;
 
