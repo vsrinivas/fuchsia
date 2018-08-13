@@ -7,6 +7,7 @@ import("//build/package.gni")
 
 rustc_binary("audio_player_rust") {
   name = "audio_player_rust"
+  edition = "2018"
 
   deps = [
     "//garnet/public/fidl/fuchsia.math:fuchsia.math-rustc",

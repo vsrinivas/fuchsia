@@ -2,33 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate failure;
-extern crate fdio;
-extern crate fidl;
-extern crate fidl_fuchsia_mediaplayer;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate mxruntime_sys;
-#[macro_use]
-extern crate structopt;
-extern crate url;
-
-use app::client::connect_to_service;
-use failure::{Error, ResultExt};
-use fdio::fdio_sys::*;
-use fidl_fuchsia_mediaplayer::*;
-use futures::prelude::*;
-use mxruntime_sys::*;
-use std::fs::File;
-use std::io;
-use std::mem;
-use std::os::unix::io::IntoRawFd;
-use structopt::StructOpt;
-use url::Url;
-use zx::*;
-use zx::sys::zx_handle_t;
+use {
+    failure::{Error, ResultExt},
+    fdio::fdio_sys::*,
+    fidl_fuchsia_mediaplayer::*,
+    fuchsia_app::client::connect_to_service,
+    fuchsia_async as fasync,
+    fuchsia_zircon::{
+        self as zx,
+        sys::zx_handle_t,
+    },
+    futures::prelude::*,
+    mxruntime_sys::*,
+    std::{
+        fs::File,
+        io,
+        mem,
+        os::unix::io::IntoRawFd,
+    },
+    structopt::StructOpt,
+    url::Url,
+};
 
 fn channel_from_file(file: File) -> Result<zx::Channel, io::Error> {
     unsafe {
@@ -39,17 +33,17 @@ fn channel_from_file(file: File) -> Result<zx::Channel, io::Error> {
             return Err(zx::Status::from_raw(status).into_io_error());
         } else if status != 1 {
             // status >0 indicates number of handles returned
-            for i in 0..status as usize { drop(Handle::from_raw(handles[i])) };
+            for i in 0..status as usize { drop(zx::Handle::from_raw(handles[i])) };
             return Err(io::Error::new(io::ErrorKind::Other, "unexpected handle count"));
         }
 
-        let handle = Handle::from_raw(handles[0]);
+        let handle = zx::Handle::from_raw(handles[0]);
 
         if types[0] != PA_FDIO_REMOTE {
             return Err(io::Error::new(io::ErrorKind::Other, "unexpected handle type"));
         }
 
-        Ok(Channel::from(handle))
+        Ok(zx::Channel::from(handle))
     }
 }
 
@@ -73,7 +67,7 @@ impl App {
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
-        let mut executor = async::Executor::new().context("Error creating executor")?;
+        let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
         let Opt { url } = Opt::from_args();
 
@@ -121,9 +115,6 @@ impl App {
     }
 }
 
-fn main() {
-    let mut app = App::new();
-    if let Err(e) = app.run() {
-        println!("Error: {:?}", e);
-    }
+fn main() -> Result<(), Error> {
+    App::new().run()
 }
