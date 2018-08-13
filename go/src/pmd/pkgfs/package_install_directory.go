@@ -339,7 +339,9 @@ func (f *installFile) importPackage() error {
 		}
 	}
 
-	needBlobs := map[string]struct{}{}
+	// a map from blob ID to whether or not it is present
+	pkgBlobs := make(map[string]bool)
+	needCount := 0
 	for i := range files {
 		// Silence apparent errors from last line in file/empty lines.
 		if len(files[i]) == 0 {
@@ -355,24 +357,30 @@ func (f *installFile) importPackage() error {
 		// XXX(raggi): this can race, which can deadlock package installs
 		if mayHaveBlob(root) && f.fs.blobfs.HasBlob(root) {
 			// DEBUG: log.Printf("pkgfs: blob already present for %s: %q", p, root)
+			pkgBlobs[root] = true
 			continue
 		}
 
-		needBlobs[root] = struct{}{}
-	}
-
-	if len(needBlobs) == 0 {
-		f.fs.index.Add(p, f.name)
-	} else {
-		f.fs.index.AddNeeds(f.name, p, needBlobs)
+		pkgBlobs[root] = false
+		needCount++
 	}
 
 	// in order to background the amber calls, we have to make a new copy of the
-	// blob list, as the index has taken write ownership over the map via AddNeeds
-	var needList = make([]string, 0, len(needBlobs))
-	for blob := range needBlobs {
+	// blob list, as the index will take write ownership over the map via TrackPkg
+	var needList = make([]string, 0, needCount)
+	for blob, has := range pkgBlobs {
+		if has {
+			continue
+		}
 		needList = append(needList, blob)
 	}
+
+	if needCount == 0 {
+		f.fs.index.Add(p, f.name)
+	} else {
+		f.fs.index.TrackPkg(f.name, p, pkgBlobs)
+	}
+
 	log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needList), p)
 	go func() {
 		for _, root := range needList {

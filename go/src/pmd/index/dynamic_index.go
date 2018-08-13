@@ -43,6 +43,14 @@ type DynamicIndex struct {
 
 	// Notifier is used to send activation notifications to Amber, if set.
 	Notifier PackageActivationNotifier
+
+	// installingCounts tracks the number of packages being installed which
+	// have a dependecy on the given content id
+	installingCounts map[string]uint
+
+	// installingPkgs is a map from a meta FAR content ID of a package currently being installed
+	// to all blobs needed by the package
+	installingPkgs map[string][]string
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
@@ -50,11 +58,13 @@ func NewDynamic(root string, static *StaticIndex) *DynamicIndex {
 	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
 	_ = os.MkdirAll(root, os.ModePerm)
 	return &DynamicIndex{
-		root:       root,
-		static:     static,
-		installing: make(map[string]pkg.Package),
-		needs:      make(map[string]map[string]struct{}),
-		waiting:    make(map[string]map[string]struct{}),
+		root:             root,
+		static:           static,
+		installing:       make(map[string]pkg.Package),
+		needs:            make(map[string]map[string]struct{}),
+		waiting:          make(map[string]map[string]struct{}),
+		installingCounts: make(map[string]uint),
+		installingPkgs:   make(map[string][]string),
 	}
 }
 
@@ -105,19 +115,42 @@ func (idx *DynamicIndex) PackagesDir() string {
 	return dir
 }
 
-func (idx *DynamicIndex) AddNeeds(root string, p pkg.Package, blobs map[string]struct{}) {
+// TrackPkg starts tracking the package so that the index can notify watchers
+// when it is fulfilled. blobStatus is a map from package blobs to a boolean
+// which should be true if the blob already exists on the device and false
+// if it is needed before the package can be considered fulfilled.
+func (idx *DynamicIndex) TrackPkg(root string, p pkg.Package, blobStatus map[string]bool) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
 	idx.installing[root] = p
-	for blob := range blobs {
+
+	// find the blobs that are part of the package which we don't have
+	neededBlobs := make(map[string]struct{})
+	for blob, has := range blobStatus {
+		if has {
+			continue
+		}
+		neededBlobs[blob] = struct{}{}
 		if _, found := idx.needs[blob]; found {
 			idx.needs[blob][root] = struct{}{}
 		} else {
 			idx.needs[blob] = map[string]struct{}{root: struct{}{}}
 		}
 	}
-	idx.waiting[root] = blobs
+	idx.waiting[root] = neededBlobs
+
+	// check if this package is already being installed
+	if _, ok := idx.installingPkgs[root]; !ok {
+		allBlobs := make([]string, 0, len(blobStatus)+1)
+		allBlobs = append(allBlobs, root)
+		idx.installingCounts[root]++
+		for blob := range blobStatus {
+			allBlobs = append(allBlobs, blob)
+			idx.installingCounts[blob]++
+		}
+		idx.installingPkgs[root] = allBlobs
+	}
 }
 
 func (idx *DynamicIndex) Fulfill(need string) []string {
@@ -127,6 +160,7 @@ func (idx *DynamicIndex) Fulfill(need string) []string {
 	fulfilled := []string{}
 	packageRoots := idx.needs[need]
 	delete(idx.needs, need)
+
 	for pkgRoot := range packageRoots {
 		waiting := idx.waiting[pkgRoot]
 		delete(waiting, need)
@@ -135,6 +169,21 @@ func (idx *DynamicIndex) Fulfill(need string) []string {
 			idx.Add(idx.installing[pkgRoot], pkgRoot)
 			delete(idx.installing, pkgRoot)
 			fulfilled = append(fulfilled, pkgRoot)
+
+			// remove reservations for all blobs needed by the fulfilled package
+			if pkgContents, ok := idx.installingPkgs[pkgRoot]; ok {
+				delete(idx.installingPkgs, pkgRoot)
+				for _, con := range pkgContents {
+					if c, ok := idx.installingCounts[con]; ok {
+						c--
+						if c == 0 {
+							delete(idx.installingCounts, con)
+						} else {
+							idx.installingCounts[con] = c
+						}
+					}
+				}
+			}
 			continue
 		}
 	}
@@ -148,6 +197,21 @@ func (idx *DynamicIndex) HasNeed(root string) bool {
 
 	_, found := idx.needs[root]
 	return found
+}
+
+// InstallingBlobs returns a list of all blobs IDs used by packages currently
+// being installed. These are both the blobs the system already has and those
+// still needed.
+func (idx *DynamicIndex) InstallingBlobs() []string {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	neededBlobs := make([]string, 0, len(idx.installingCounts))
+	for blob, _ := range idx.installingCounts {
+		neededBlobs = append(neededBlobs, blob)
+	}
+
+	return neededBlobs
 }
 
 func (idx *DynamicIndex) NeedsList() []string {
