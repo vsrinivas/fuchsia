@@ -135,8 +135,14 @@ enum {
     VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_SHIFT = 6u,
 };
 
-zx_status_t configure_osd(astro_display_t* display, uint8_t default_idx)
+void disable_osd(astro_display_t* display) {
+    display->current_image_valid = false;
+    SET_BIT32(VPU, VPU_VIU_OSD1_CTRL_STAT, 0, 1, 0);
+}
+
+zx_status_t configure_osd(astro_display_t* display)
 {
+    disable_osd(display);
     // TODO: OSD for g12a is slightly different from gxl. Currently, uBoot enables
     // scaling and 16bit mode (565) and configures various layers based on that assumption.
     // Since we don't have a full end-to-end driver at this moment, we cannot simply turn off
@@ -149,12 +155,11 @@ zx_status_t configure_osd(astro_display_t* display, uint8_t default_idx)
     // Set to use BGRX instead of BGRA.
     WRITE32_VPU_REG(VPU_VIU_OSD1_CTRL_STAT2, ctrl_stat2);
 
-    flip_osd(display, default_idx);
     return ZX_OK;
 }
 
 void flip_osd(astro_display_t* display, uint8_t idx) {
-
+    display->current_image_valid = true;
     display->current_image = idx;
     uint32_t cfg_w0 = (idx << VPU_VIU_OSD1_BLK_CFG_TBL_ADDR_SHIFT) |
         VPU_VIU_OSD1_BLK_CFG_LITTLE_ENDIAN |
@@ -162,4 +167,5 @@ void flip_osd(astro_display_t* display, uint8_t idx) {
         (VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_ARGB << VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_SHIFT);
 
     WRITE32_VPU_REG(VPU_VIU_OSD1_BLK0_CFG_W0, cfg_w0);
+    SET_BIT32(VPU, VPU_VIU_OSD1_CTRL_STAT, 1, 1, 0); // Enable OSD
 }

@@ -48,8 +48,10 @@ typedef struct vim2_display {
     // Lock for the display callback, for enforcing an ordering on
     // hotplug callbacks. Should be acquired before display_lock.
     mtx_t                               cb_lock;
+
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
+    bool                                current_image_valid;
     uint8_t                             current_image;
     uint8_t                             canvas_entries[NUM_CANVAS_ENTRIES / 8];
 
@@ -61,9 +63,6 @@ typedef struct vim2_display {
     io_buffer_t                         mmio_dmc;
     io_buffer_t                         mmio_cbus;
 
-    zx_handle_t                         fb_vmo;
-
-    uint8_t                             fb_canvas_idx;
     zx_handle_t                         vsync_interrupt;
 
     bool                                display_attached;
@@ -90,7 +89,8 @@ typedef struct vim2_display {
     list_node_t                         imported_images;
 } vim2_display_t;
 
-zx_status_t configure_osd2(vim2_display_t* display, uint8_t default_idx);
+void disable_osd2(vim2_display_t* display);
+zx_status_t configure_osd2(vim2_display_t* display);
 void flip_osd2(vim2_display_t* display, uint8_t idx);
 void osd_debug_dump_register_all(vim2_display_t* display);
 void osd_dump(vim2_display_t* display);

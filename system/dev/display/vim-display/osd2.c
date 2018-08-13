@@ -82,13 +82,20 @@ enum {
     VPU_VIU_OSD2_CTRL_STAT2_REPLACED_ALPHA_SHIFT = 6u,
 };
 
-zx_status_t configure_osd2(vim2_display_t* display, uint8_t default_idx)
+void disable_osd2(vim2_display_t* display) {
+    display->current_image_valid = false;
+    SET_BIT32(VPU, VPU_VIU_OSD2_CTRL_STAT, 0, 1, 0);
+}
+
+// Disables the OSD until a flip happens
+zx_status_t configure_osd2(vim2_display_t* display)
 {
     uint32_t x_start, x_end, y_start, y_end;
     x_start = y_start = 0;
     x_end = display->width - 1;
     y_end = display->height - 1;
 
+    disable_osd2(display);
     // disable scaling
     SET_BIT32(VPU, VPU_VPP_MISC, 0, 1, 12);
     WRITE32_VPU_REG(VPU_VPP_OSD_SC_CTRL0, 0);
@@ -98,7 +105,6 @@ zx_status_t configure_osd2(vim2_display_t* display, uint8_t default_idx)
     uint32_t ctrl_stat2 = READ32_VPU_REG(VPU_VIU_OSD2_CTRL_STAT2);
     WRITE32_VPU_REG(VPU_VIU_OSD2_CTRL_STAT2, ctrl_stat2 | VPU_VIU_OSD2_CTRL_STAT2_REPLACED_ALPHA_EN | (0xff << VPU_VIU_OSD2_CTRL_STAT2_REPLACED_ALPHA_SHIFT));
 
-    flip_osd2(display, default_idx);
     WRITE32_VPU_REG(VPU_VIU_OSD2_BLK0_CFG_W1, (x_end << 16) | (x_start));
     WRITE32_VPU_REG(VPU_VIU_OSD2_BLK0_CFG_W3, (x_end << 16) | (x_start));
 
@@ -118,10 +124,13 @@ zx_status_t configure_osd2(vim2_display_t* display, uint8_t default_idx)
 
 void flip_osd2(vim2_display_t* display, uint8_t idx) {
     display->current_image = idx;
+    display->current_image_valid = true;
     uint32_t cfg_w0 = (idx << VPU_VIU_OSD2_BLK_CFG_TBL_ADDR_SHIFT) |
                       VPU_VIU_OSD2_BLK_CFG_LITTLE_ENDIAN | VPU_VIU_OSD2_BLK_CFG_RGB_EN |
                       (VPU_VIU_OSD2_BLK_CFG_OSD_BLK_MODE_32_BIT << VPU_VIU_OSD2_BLK_CFG_OSD_BLK_MODE_SHIFT) |
                       (VPU_VIU_OSD2_BLK_CFG_COLOR_MATRIX_ARGB << VPU_VIU_OSD2_BLK_CFG_COLOR_MATRIX_SHIFT);
 
     WRITE32_VPU_REG(VPU_VIU_OSD2_BLK0_CFG_W0, cfg_w0);
+
+    SET_BIT32(VPU, VPU_VIU_OSD2_CTRL_STAT, 1, 1, 0); // Enable OSD
 }

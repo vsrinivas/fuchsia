@@ -156,6 +156,7 @@ typedef struct {
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
     uint8_t                             current_image;
+    bool                                current_image_valid;
 
     io_buffer_t                         mmio_dmc;
     io_buffer_t                         mmio_mipi_dsi;
@@ -163,8 +164,6 @@ typedef struct {
     io_buffer_t                         mmio_hhi;
     io_buffer_t                         mmio_vpu;
     io_buffer_t                         fbuffer;
-    zx_handle_t                         fb_vmo;
-    uint8_t                             fb_canvas_idx;
     zx_handle_t                         vsync_interrupt;
 
     uint32_t                            width;
@@ -198,8 +197,8 @@ typedef struct {
 // Below two functions setup the OSD layer
 // TODO: The function depends heavily on U-Boot setting up the OSD layer. Write a
 // proper OSD driver (ZX-2453)(ZX-2454)
-//
-zx_status_t configure_osd(astro_display_t* display, uint8_t default_idx);
+void disable_osd(astro_display_t* display);
+zx_status_t configure_osd(astro_display_t* display);
 void flip_osd(astro_display_t* display, uint8_t idx);
 
 // Backlight Initialization

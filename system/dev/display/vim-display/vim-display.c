@@ -234,11 +234,10 @@ static void vim_apply_configuration(void* ctx,
             return;
         }
         addr = (uint8_t) (uint64_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
+        flip_osd2(display, addr);
     } else {
-        addr = display->fb_canvas_idx;
+        disable_osd2(display);
     }
-
-    flip_osd2(display, addr);
 
     mtx_unlock(&display->display_lock);
 }
@@ -263,6 +262,7 @@ static void display_release(void* ctx) {
     vim2_display_t* display = ctx;
 
     if (display) {
+        disable_osd2(display);
         bool wait_for_vsync_shutdown = false;
         if (display->vsync_interrupt != ZX_HANDLE_INVALID) {
             zx_interrupt_trigger(display->vsync_interrupt, 0, 0);
@@ -291,7 +291,6 @@ static void display_release(void* ctx) {
         io_buffer_release(&display->mmio_vpu);
         io_buffer_release(&display->mmio_hdmitx_sec);
         io_buffer_release(&display->mmio_cbus);
-        zx_handle_close(display->fb_vmo);
         zx_handle_close(display->bti);
         zx_handle_close(display->vsync_interrupt);
         zx_handle_close(display->inth);
@@ -315,7 +314,6 @@ static zx_protocol_device_t main_device_proto = {
 static zx_status_t setup_hdmi(vim2_display_t* display)
 {
     zx_status_t status;
-    size_t size;
     // initialize HDMI
     status = init_hdmi_hardware(display);
     if (status != ZX_OK) {
@@ -339,57 +337,14 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     display->input_color_format = _ginput_color_format;
     display->color_depth = _gcolor_depth;
 
-    size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
-    status = allocate_vmo(display, size, &display->fb_vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // Create a duplicate handle
-    zx_handle_t fb_vmo_dup_handle;
-    status = zx_handle_duplicate(display->fb_vmo, ZX_RIGHT_SAME_RIGHTS, &fb_vmo_dup_handle);
-    if (status != ZX_OK) {
-        DISP_ERROR("Unable to duplicate FB VMO handle\n");
-        zx_handle_close(display->fb_vmo);
-        return status;
-    }
-
-    zx_vaddr_t virt;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, display->fb_vmo, 0,
-                         size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &virt);
-    if (status != ZX_OK) {
-        DISP_ERROR("zx_vmar_map failed %d size: %zu\n", status, size);
-        zx_handle_close(display->fb_vmo);
-        return status;
-    }
-
     status = init_hdmi_interface(display, display->p);
     if (status != ZX_OK) {
         DISP_ERROR("HDMI interface initialization failed\n");
         return status;
     }
 
-    /* Configure Canvas memory */
-    canvas_info_t info;
-    info.height         = display->height;
-    info.stride_bytes   = display->stride * ZX_PIXEL_FORMAT_BYTES(display->format);
-    info.wrap           = 0;
-    info.blkmode        = 0;
-    info.endianness     = 0;
-
-    status = canvas_config(&display->canvas, fb_vmo_dup_handle,
-                           0, &info, &display->fb_canvas_idx);
-    if (status != ZX_OK) {
-        DISP_ERROR("Unable to configure canvas %d\n", status);
-        return status;
-    }
-
     /* OSD2 setup */
-    configure_osd2(display, display->fb_canvas_idx);
-
-    zx_framebuffer_set_range(get_root_resource(), display->fb_vmo,
-                             size, display->format,
-                             display->width, display->height, display->stride);
+    configure_osd2(display);
 
     return ZX_OK;
 }
@@ -426,8 +381,6 @@ static int hdmi_irq_handler(void *arg) {
         } else if (!hpd && display->display_attached) {
             DISP_ERROR("Display Disconnected!\n");
             hdmi_shutdown(display);
-            canvas_free(&display->canvas, display->fb_canvas_idx);
-            zx_handle_close(display->fb_vmo);
 
             display_removed = display->display_id;
             display->display_id++;
@@ -470,12 +423,12 @@ static int vsync_thread(void *arg)
         uint64_t display_id = display->display_id;
         bool attached = display->display_attached;
         void* live = (void*) (uint64_t) display->current_image;
-        uint8_t is_client_handle = display->current_image != display->fb_canvas_idx;
+        bool current_image_valid = display->current_image_valid;
         mtx_unlock(&display->display_lock);
 
         if (display->dc_cb && attached) {
             display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id, timestamp,
-                                             &live, is_client_handle);
+                                             &live, current_image_valid);
         }
 
         mtx_unlock(&display->cb_lock);

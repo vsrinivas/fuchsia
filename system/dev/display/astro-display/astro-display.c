@@ -246,10 +246,10 @@ static void astro_apply_configuration(void* ctx,
         // Since Astro does not support plug'n play (fixed display), there is no way
         // a checked configuration could be invalid at this point.
         addr = (uint8_t) (uint64_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
+        flip_osd(display, addr);
     } else {
-        addr = display->fb_canvas_idx;
+        disable_osd(display);
     }
-    flip_osd(display, addr);
 
     mtx_unlock(&display->display_lock);
 }
@@ -275,6 +275,7 @@ static void display_release(void* ctx) {
     astro_display_t* display = ctx;
 
     if (display) {
+        disable_osd(display);
         zx_interrupt_destroy(display->vsync_interrupt);
         int res;
         thrd_join(display->vsync_thread, &res);
@@ -378,19 +379,6 @@ static zx_status_t setup_display_interface(astro_display_t* display) {
     display->stride = astro_compute_linear_stride(
             display, display->width, display->format);
 
-    size_t size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
-    if ((status = allocate_vmo(display, size, &display->fb_vmo)) != ZX_OK) {
-        goto fail;
-    }
-
-    // Create a duplicate handle
-    zx_handle_t fb_vmo_dup_handle;
-    status = zx_handle_duplicate(display->fb_vmo, ZX_RIGHT_SAME_RIGHTS, &fb_vmo_dup_handle);
-    if (status != ZX_OK) {
-        DISP_ERROR("Unable to duplicate FB VMO handle\n");
-        goto fail;
-    }
-
     if (!display->skip_disp_init) {
         // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
         // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
@@ -415,35 +403,7 @@ static zx_status_t setup_display_interface(astro_display_t* display) {
         }
     }
 
-    zx_vaddr_t virt;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, display->fb_vmo, 0, size,
-                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &virt);
-    if (status != ZX_OK) {
-        DISP_ERROR("zx_vmar_map failed %d size %zu\n", status, size);
-        goto fail;
-    }
-
-    // Configure Canvas memory
-    canvas_info_t canvas_info;
-    canvas_info.height              = display->height;
-    canvas_info.stride_bytes        = display->stride * ZX_PIXEL_FORMAT_BYTES(display->format);
-    canvas_info.wrap                = 0;
-    canvas_info.blkmode             = 0;
-    canvas_info.endianness          = 0;
-
-    status = canvas_config(&display->canvas, fb_vmo_dup_handle, 0, &canvas_info,
-                                &display->fb_canvas_idx);
-    if (status != ZX_OK) {
-        DISP_ERROR("Unable to configure canvas: %d\n", status);
-        goto fail;
-    }
-
-    configure_osd(display, display->fb_canvas_idx);
-
-    zx_framebuffer_set_range(get_root_resource(), display->fb_vmo,
-                             size, display->format,
-                             display->width, display->height,
-                             display->stride);
+    configure_osd(display);
 
     // Initialize and turn on backlight
     init_backlight(display);
@@ -459,9 +419,6 @@ static zx_status_t setup_display_interface(astro_display_t* display) {
     return ZX_OK;
 
 fail:
-    if (display->fb_vmo) {
-        zx_handle_close(display->fb_vmo);
-    }
     mtx_unlock(&display->display_lock);
     mtx_unlock(&display->cb_lock);
     return status;
@@ -483,12 +440,12 @@ static zx_status_t vsync_thread(void *arg) {
         mtx_lock(&display->display_lock);
 
         void* live = (void*)(uint64_t) display->current_image;
-        uint8_t is_client_handle = display->current_image != display->fb_canvas_idx;
+        bool current_image_valid = display->current_image_valid;
         mtx_unlock(&display->display_lock);
 
         if (display->dc_cb) {
             display->dc_cb->on_display_vsync(display->dc_cb_ctx, PANEL_DISPLAY_ID, timestamp,
-                                             &live, is_client_handle);
+                                             &live, current_image_valid);
         }
         mtx_unlock(&display->cb_lock);
     }
