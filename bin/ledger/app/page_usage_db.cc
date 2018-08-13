@@ -36,7 +36,8 @@ void GetPageFromOpenedRow(fxl::StringView row, std::string* ledger_name,
 // An iterator over PageUsageDb::PageInfo.
 // This class is a wrapper from a LevelDB iterator, deserializing the
 // ExtendedStringView key-value pairs to PageInfo entries.
-class PageInfoIterator : public storage::Iterator<const PageUsageDb::PageInfo> {
+class PageInfoIterator final
+    : public storage::Iterator<const PageUsageDb::PageInfo> {
  public:
   explicit PageInfoIterator(
       std::unique_ptr<storage::Iterator<const std::pair<

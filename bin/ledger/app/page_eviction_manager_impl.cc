@@ -240,7 +240,7 @@ void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name,
   delegate_->DeletePageStorage(
       ledger_name, page_id,
       [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
-       callback = std::move(callback)](Status status) {
+       callback = std::move(callback)](Status status) mutable {
         // |PAGE_NOT_FOUND| is not an error, but it must have been handled
         // before we try to evict the page.
         FXL_DCHECK(status != Status::PAGE_NOT_FOUND);
@@ -288,7 +288,7 @@ Status PageEvictionManagerImpl::GetPagesByTimestamp(
     // Sort out pages that are currently in use, i.e. those for which
     // timestamp is 0.
     if ((*pages_it)->timestamp.get() != 0) {
-      pages.push_back(std::move(**pages_it));
+      pages.push_back(**pages_it);
     }
     pages_it->Next();
   }

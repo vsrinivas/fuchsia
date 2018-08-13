@@ -82,7 +82,7 @@ TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
 
   };
 
-  for (auto content : contents) {
+  for (const auto& content : contents) {
     Status status;
     std::string value;
     EncryptCommit(content, &status, &value);

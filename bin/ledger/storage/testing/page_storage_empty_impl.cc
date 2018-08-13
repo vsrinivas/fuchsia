@@ -129,6 +129,7 @@ void PageStorageEmptyImpl::IsPieceSynced(
 void PageStorageEmptyImpl::MarkSyncedToPeer(
     fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::AddObjectFromLocal(

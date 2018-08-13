@@ -58,8 +58,7 @@ void GetLedger(component::StartupContext* context,
       std::move(request),
       [repository_factory = std::move(repository_factory),
        repository = std::move(repository), ledger_name = std::move(ledger_name),
-       ledger_repository_path = std::move(ledger_repository_path),
-       error_handler = std::move(error_handler),
+       ledger_repository_path, error_handler = std::move(error_handler),
        callback = std::move(callback)](Status status) mutable {
         if (status != Status::OK) {
           FXL_LOG(ERROR) << "Failure while getting repository.";

@@ -101,7 +101,7 @@ struct PageCommunicatorImpl::ObjectResponseHolder {
   std::unique_ptr<const storage::Object> object;
   bool is_synced = false;
 
-  ObjectResponseHolder(storage::ObjectIdentifier identifier)
+  explicit ObjectResponseHolder(storage::ObjectIdentifier identifier)
       : identifier(std::move(identifier)) {}
 };
 

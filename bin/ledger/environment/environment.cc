@@ -24,12 +24,12 @@ Environment::Environment(
   FXL_DCHECK(backoff_factory_);
 }
 
-Environment::Environment(Environment&& other)
+Environment::Environment(Environment&& other) noexcept
     : Environment(other.dispatcher_, other.io_dispatcher_,
                   std::move(other.coroutine_service_),
                   std::move(other.backoff_factory_)) {}
 
-Environment& Environment::operator=(Environment&& other) {
+Environment& Environment::operator=(Environment&& other) noexcept {
   dispatcher_ = other.dispatcher_;
   io_dispatcher_ = other.io_dispatcher_;
   coroutine_service_ = std::move(other.coroutine_service_);

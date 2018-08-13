@@ -424,7 +424,8 @@ void LedgerManager::CreatePageStorage(storage::PageId page_id,
                                       PageState page_state,
                                       PageManagerContainer* container) {
   page_availability_manager_.OnPageAvailable(
-      page_id, [this, page_id = std::move(page_id), page_state, container] {
+      page_id,
+      [this, page_id = std::move(page_id), page_state, container]() mutable {
         storage_->CreatePageStorage(
             std::move(page_id),
             [this, page_state, container](

@@ -23,12 +23,12 @@ using ::testing::IsEmpty;
 class FakeDelegate : public PageEvictionManager::Delegate {
  public:
   void PageIsClosedAndSynced(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
+      fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/,
       fit::function<void(Status, PageClosedAndSynced)> callback) override {
     callback(page_closed_and_synced_status, closed_and_synced);
   }
 
-  void DeletePageStorage(fxl::StringView ledger_name,
+  void DeletePageStorage(fxl::StringView /*ledger_name*/,
                          storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override {
     deleted_pages_.push_back(page_id.ToString());

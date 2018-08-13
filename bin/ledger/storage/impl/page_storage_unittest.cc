@@ -1711,7 +1711,7 @@ TEST_F(PageStorageTest, CommitWatchers) {
 TEST_F(PageStorageTest, SyncMetadata) {
   std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {
       {"foo1", "foo2"}, {"bar1", " bar2 "}};
-  for (auto key_and_value : keys_and_values) {
+  for (const auto& key_and_value : keys_and_values) {
     auto key = key_and_value.first;
     auto value = key_and_value.second;
     bool called;

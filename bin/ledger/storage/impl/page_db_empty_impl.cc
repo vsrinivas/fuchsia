@@ -73,8 +73,8 @@ Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
-                                     bool* page_is_online) {
+Status PageDbEmptyImpl::IsPageOnline(coroutine::CoroutineHandler* /*handler*/,
+                                     bool* /*page_is_online*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/,
@@ -148,7 +148,8 @@ Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageDbEmptyImpl::MarkPageOnline(coroutine::CoroutineHandler* handlers) {
+Status PageDbEmptyImpl::MarkPageOnline(
+    coroutine::CoroutineHandler* /*handlers*/) {
   return Status::NOT_IMPLEMENTED;
 }
 

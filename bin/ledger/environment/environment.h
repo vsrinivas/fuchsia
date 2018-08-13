@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_ENVIRONMENT_ENVIRONMENT_H_
 #define PERIDOT_BIN_LEDGER_ENVIRONMENT_ENVIRONMENT_H_
 
+#include <memory>
+
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>

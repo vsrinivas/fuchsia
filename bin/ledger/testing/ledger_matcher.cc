@@ -13,11 +13,11 @@ using testing::TypedEq;
 namespace ledger {
 
 namespace {
-MATCHER_P(InternalViewMatcher, sub_matcher, "") {
+MATCHER_P(InternalViewMatcher, sub_matcher, "") {  // NOLINT
   return ExplainMatchResult(sub_matcher, arg.ToString(), result_listener);
 }
 
-MATCHER_P(InternalBufferMatcher, sub_matcher, "") {
+MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
   std::string vmo_content;
   if (!TypedEq<bool>(true).MatchAndExplain(
           fsl::StringFromVmo(arg, &vmo_content), result_listener)) {
@@ -27,7 +27,7 @@ MATCHER_P(InternalBufferMatcher, sub_matcher, "") {
   return ExplainMatchResult(sub_matcher, vmo_content, result_listener);
 }
 
-MATCHER(PointWiseEntryMatches, "") {
+MATCHER(PointWiseEntryMatches, "") {  // NOLINT
   auto& a = std::get<0>(arg);
   auto& b = std::get<1>(arg);
   return ExplainMatchResult(EntryMatches(b), a, result_listener);

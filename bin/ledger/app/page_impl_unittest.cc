@@ -453,7 +453,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     // Objects are ordered by a randomly assigned object id, so we can't know
     // the correct possition of the value in the map.
     bool object_found = false;
-    for (auto object : objects) {
+    for (const auto& object : objects) {
       if (object.second == value) {
         object_found = true;
         object_digest1 = object.first.object_digest;
@@ -610,7 +610,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
     auto objects = fake_storage_->GetObjects();
     EXPECT_EQ(2u, objects.size());
     bool object_found = false;
-    for (auto object : objects) {
+    for (const auto& object : objects) {
       if (object.second == value2) {
         object_found = true;
         object_digest2 = object.first.object_digest;
