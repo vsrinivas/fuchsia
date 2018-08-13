@@ -18,7 +18,7 @@ public:
     uint32_t next_context_id() { return next_context_id_++; }
 
 private:
-    uint32_t next_context_id_;
+    uint32_t next_context_id_ = 1;
 };
 
 magma_connection_t* magma_create_connection(int32_t fd, uint32_t capabilities)
@@ -102,6 +102,11 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_t policy)
+{
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_create_command_buffer(magma_connection_t* connection, uint64_t size,
                                            magma_buffer_t* buffer_out)
 {
@@ -120,6 +125,11 @@ void magma_submit_command_buffer(struct magma_connection_t* connection, uint64_t
 {
     DLOG("magma_system submit command buffer - STUB");
 }
+
+void magma_execute_immediate_commands(struct magma_connection_t* connection, uint32_t context_id,
+                                      uint64_t command_count,
+                                      struct magma_system_inline_command_buffer* command_buffers)
+{}
 
 magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out)
@@ -188,6 +198,11 @@ magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t s
 void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
                           uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
                           uint64_t map_flags)
+{
+}
+
+void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
+                          uint64_t gpu_va)
 {
 }
 
