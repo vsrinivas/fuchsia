@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/net/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/util.h>
@@ -67,16 +68,20 @@ int main(int argc, char** argv) {
 
 #if USE_CRASHPAD
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  CrashpadAnalyzer crashpad_analyzer;
-
-  // TODO(DX-230): wait for network to come up instead of sleeping for 60s.
-  zx_nanosleep(zx_deadline_after(ZX_SEC(60)));
-
-  // Switch to crashlog.ToTransport() once we use fuchsia::mem::Buffer.
-  fuchsia::crash::Buffer buf;
-  buf.vmo = fbl::move(crashlog_vmo.vmo());
-  buf.size = crashlog_vmo.size();
-  crashpad_analyzer.Process(fbl::move(buf));
+  fuchsia::net::ConnectivityPtr connectivity =
+      component::StartupContext::CreateFromStartupInfo()
+          ->ConnectToEnvironmentService<fuchsia::net::Connectivity>();
+  connectivity.events().OnNetworkReachable = [&crashlog_vmo](bool reachable) {
+    if (!reachable) {
+      return;
+    }
+    CrashpadAnalyzer crashpad_analyzer;
+    // Switch to crashlog.ToTransport() once we use fuchsia::mem::Buffer.
+    fuchsia::crash::Buffer buf;
+    buf.vmo = fbl::move(crashlog_vmo.vmo());
+    buf.size = crashlog_vmo.size();
+    crashpad_analyzer.Process(fbl::move(buf));
+  };
   loop.Run();
 #endif  // USE_CRASHPAD
 
