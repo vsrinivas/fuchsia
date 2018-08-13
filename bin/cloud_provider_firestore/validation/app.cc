@@ -15,58 +15,28 @@
 
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 
 namespace cloud_provider_firestore {
-namespace {
-constexpr fxl::StringView kServerIdFlag = "server-id";
-constexpr fxl::StringView kApiKeyFlag = "api-key";
-constexpr fxl::StringView kCredentialsFlag = "credentials";
-}  // namespace
-
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: "
+  std::cerr << "Usage: "
             << executable_name
             // Comment to make clang format not break formatting.
-            << "--" << kServerIdFlag << "=<string> "
-            << "--" << kApiKeyFlag << "=<string> "
-            << "--" << kCredentialsFlag << "=<file path>" << std::endl;
+            << ledger::GetSyncParamsUsage();
 }
 
 }  // namespace cloud_provider_firestore
 
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  std::string server_id;
-  std::string api_key;
-  std::string credentials_path;
-  if (!command_line.GetOptionValue(
-          cloud_provider_firestore::kServerIdFlag.ToString(), &server_id) ||
-      !command_line.GetOptionValue(
-          cloud_provider_firestore::kApiKeyFlag.ToString(), &api_key) ||
-      !command_line.GetOptionValue(
-          cloud_provider_firestore::kCredentialsFlag.ToString(),
-          &credentials_path)) {
+
+  ledger::SyncParams sync_params;
+  if (!ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
   }
 
-  if (!files::IsFile(credentials_path)) {
-    std::cerr << "Cannot access " << credentials_path << std::endl;
-    cloud_provider_firestore::PrintUsage(argv[0]);
-    return -1;
-  }
-
-  std::string credentials;
-  if (!files::ReadFileToString(credentials_path, &credentials)) {
-    std::cerr << "Cannot read " << credentials_path << std::endl;
-    cloud_provider_firestore::PrintUsage(argv[0]);
-    return -1;
-  }
-
-  const std::set<std::string> known_options(
-      {cloud_provider_firestore::kServerIdFlag.ToString(),
-       cloud_provider_firestore::kApiKeyFlag.ToString(),
-       cloud_provider_firestore::kCredentialsFlag.ToString()});
+  const std::set<std::string> known_options = ledger::GetSyncParamFlags();
   std::vector<std::string> arguments;
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0u) {
@@ -79,7 +49,8 @@ int main(int argc, char** argv) {
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(
-      startup_context.get(), server_id, api_key, credentials);
+      startup_context.get(), sync_params.server_id, sync_params.api_key,
+      sync_params.credentials);
 
   cloud_provider::ValidationTestsLauncher launcher(
       startup_context.get(), [&factory](auto request) {

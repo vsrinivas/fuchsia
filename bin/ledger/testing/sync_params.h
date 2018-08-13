@@ -5,6 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_SYNC_PARAMS_H_
 #define PERIDOT_BIN_LEDGER_TESTING_SYNC_PARAMS_H_
 
+#include <set>
+#include <string>
+
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_view.h>
 
@@ -30,6 +33,10 @@ std::string GetSyncParamsUsage();
 // false if these parameters are missing or cannot be parsed.
 bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
                                     SyncParams* sync_params);
+
+// Returns the names of the flags parsed from the command line by
+// ParseSyncParamsFromCommandLine(), without the leading "--".
+std::set<std::string> GetSyncParamFlags();
 
 }  // namespace ledger
 

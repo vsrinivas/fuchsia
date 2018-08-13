@@ -59,4 +59,9 @@ bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
   return true;
 }
 
+std::set<std::string> GetSyncParamFlags() {
+  return {kServerIdFlag.ToString(), kApiKeyFlag.ToString(),
+          kCredentialsPathFlag.ToString()};
+}
+
 }  // namespace ledger
