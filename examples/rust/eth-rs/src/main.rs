@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
+
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -23,18 +25,16 @@ fn main() -> Result<(), Error> {
     client.start()?;
     client.tx_listen_start()?;
 
-    let stream = client.get_stream().try_for_each(|evt| {
-        println!("{:?}", evt);
-        match evt {
-            ethernet::Event::Receive(rx) => {
+    let events = client.get_stream();
+    let fut = async {
+        while let Some(evt) = await!(events.try_next())? {
+            if let ethernet::Event::Receive(rx) = evt {
                 let mut buf = [0; 64];
                 let r = rx.read(&mut buf);
                 println!("first {} bytes: {:02x?}", r, &buf[0..r]);
-            },
-            _ => (),
+            }
         }
-        futures::future::ready(Ok(()))
-    });
-    executor.run_singlethreaded(stream).map(|_| ())?;
-    Ok(())
+        Ok(())
+    };
+    executor.run_singlethreaded(fut)
 }
