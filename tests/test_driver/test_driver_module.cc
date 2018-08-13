@@ -59,7 +59,6 @@ class TestApp {
                    Signal(modular::testing::kTestShutdown);
                    return;
                  };
-                 RunTestDriver();
                });
   }
 
@@ -80,6 +79,7 @@ class TestApp {
         [this](const fuchsia::modular::StartModuleStatus status) {
           if (status == fuchsia::modular::StartModuleStatus::SUCCESS) {
             test_sub_module_launched_.Pass();
+            RunTestDriver();
           }
         });
     return true;
