@@ -4,10 +4,35 @@
 
 source_set("operation_calls") {
   public_deps = [
+    ":add_mod_call",
     ":find_modules_call",
     ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
+  ]
+}
+
+source_set("add_mod_call") {
+  sources = [
+    "add_mod_call.cc",
+    "add_mod_call.h",
+  ]
+
+  deps = [
+    ":find_modules_call",
+    ":get_link_path_for_parameter_name_call",
+    ":get_types_from_entity_call",
+    ":initialize_chain_call",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/entity/cpp:json",
+  ]
+
+  public_deps = [
+    "//peridot/bin/user_runner/storage:story_storage",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/lib/async/cpp:operation",
   ]
 }
 

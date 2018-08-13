@@ -92,12 +92,8 @@ source_set("add_mod_command_runner") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls",
-    "//peridot/lib/fidl:clone",
-    "//peridot/public/lib/entity/cpp:json",
+    "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls:add_mod_call",
   ]
 
   public_deps = [

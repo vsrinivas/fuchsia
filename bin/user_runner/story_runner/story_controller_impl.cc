@@ -31,6 +31,7 @@
 #include <lib/fxl/type_converter.h>
 
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
@@ -287,9 +288,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::modular::IntentHandlerPtr intent_handler;
     running_mod_info.module_controller_impl->services().ConnectToService(
         intent_handler.NewRequest());
-      fuchsia::modular::Intent intent;
-      module_data_.intent->Clone(&intent);
-      intent_handler->HandleIntent(std::move(intent));
+    fuchsia::modular::Intent intent;
+    module_data_.intent->Clone(&intent);
+    intent_handler->HandleIntent(std::move(intent));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -438,8 +439,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     story_controller_impl_->pending_views_.emplace(
         PathString(module_data_.module_path),
         PendingView{module_data_.module_path.Clone(), std::move(manifest_clone),
-                    std::move(surface_relation_clone), module_data_.module_source,
-                    std::move(view_owner_)});
+                    std::move(surface_relation_clone),
+                    module_data_.module_source, std::move(view_owner_)});
   }
 
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
@@ -705,7 +706,6 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
             fuchsia::modular::ModuleSource::EXTERNAL) {
       return;
     }
-
     // Check for existing module at the given path.
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path);
@@ -828,120 +828,29 @@ class StoryControllerImpl::AddIntentCall
  private:
   void Run() {
     FlowToken flow{this, &start_module_status_};
-    operation_queue_.Add(new FindModulesCall(
+    operation_queue_.Add(new AddModCall(
         story_controller_impl_->story_storage_,
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
-        CloneOptional(intent_), requesting_module_path_.Clone(),
+        fidl::VectorPtr<fidl::StringPtr>({module_name_}), std::move(*intent_),
+        std::move(surface_relation_), std::move(requesting_module_path_),
+        module_source_,
         [this, flow](fuchsia::modular::ExecuteResult result,
-                     fuchsia::modular::FindModulesResponse response) {
+                     fuchsia::modular::ModuleData module_data) {
+          if (result.status ==
+              fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND) {
+            start_module_status_ =
+                fuchsia::modular::StartModuleStatus::NO_MODULES_FOUND;
+            return;
+          }
           if (result.status != fuchsia::modular::ExecuteStatus::OK) {
             FXL_LOG(WARNING)
-                << "StoryController::FindModulesCall returned "
+                << "StoryController::AddIntentCall::AddModCall returned "
                 << "error response with message: " << result.error_message;
           }
-          AddModuleFromResult(flow, std::move(response));
+          module_data_ = std::move(module_data);
+          MaybeLaunchModule(flow);
         }));
-  }
-
-  void AddModuleFromResult(FlowToken flow,
-                           fuchsia::modular::FindModulesResponse response) {
-    if (response.results->empty()) {
-      start_module_status_ =
-          fuchsia::modular::StartModuleStatus::NO_MODULES_FOUND;
-      return;
-    }
-
-    // Add the resulting module to story state.
-    const auto& module_result = response.results->at(0);
-    auto create_parameter_map_info =
-        PopulateCreateParameterMapInfo(requesting_module_path_, intent_);
-
-    module_data_.module_url = module_result.module_id;
-    module_data_.module_path = requesting_module_path_.Clone();
-    module_data_.module_path.push_back(module_name_);
-    module_data_.module_source = module_source_;
-    fidl::Clone(surface_relation_, &module_data_.surface_relation);
-    module_data_.module_stopped = false;
-    module_data_.intent = std::move(intent_);
-    fidl::Clone(module_result.manifest, &module_data_.module_manifest);
-
-    // Initialize the chain, which we need to do to get
-    // fuchsia::modular::ModuleParameterMap, which belongs in |module_data_|.
-    operation_queue_.Add(new InitializeChainCall(
-        story_controller_impl_->story_storage_,
-        fidl::Clone(module_data_.module_path),
-        std::move(create_parameter_map_info),
-        [this, flow](fuchsia::modular::ExecuteResult result,
-                     fuchsia::modular::ModuleParameterMapPtr parameter_map) {
-          if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-            FXL_LOG(WARNING) << "StoryController::AddIntentCall got error "
-                             << "response from InitializeChainCall: "
-                             << result.error_message;
-          }
-          WriteModuleData(flow, std::move(parameter_map));
-        }));
-  }
-
-  fuchsia::modular::CreateModuleParameterMapInfoPtr
-  PopulateCreateParameterMapInfo(
-      const fidl::VectorPtr<fidl::StringPtr>& requesting_module_path,
-      const fuchsia::modular::IntentPtr& intent) {
-    auto param_map = fuchsia::modular::CreateModuleParameterMapInfo::New();
-    for (auto& param : *intent->parameters) {
-      if (param.data.is_entity_reference()) {
-        fuchsia::modular::CreateLinkInfo create_link;
-        fsl::SizedVmo vmo;
-        FXL_CHECK(fsl::VmoFromString(
-            EntityReferenceToJson(param.data.entity_reference()), &vmo));
-        create_link.initial_data = std::move(vmo).ToTransport();
-        fuchsia::modular::CreateModuleParameterMapEntry entry;
-        entry.key = param.name;
-        entry.value.set_create_link(std::move(create_link));
-        param_map->property_info.push_back(std::move(entry));
-      } else if (param.data.is_json()) {
-        fuchsia::modular::CreateLinkInfo create_link;
-        param.data.json().Clone(&create_link.initial_data);
-        fuchsia::modular::CreateModuleParameterMapEntry entry;
-        entry.key = param.name;
-        entry.value.set_create_link(std::move(create_link));
-        param_map->property_info.push_back(std::move(entry));
-      } else if (param.data.is_link_name() || param.data.is_link_path()) {
-        LinkPath lp;
-        if (param.data.is_link_name()) {
-          lp = std::move(*story_controller_impl_->GetLinkPathForParameterName(
-              requesting_module_path, param.data.link_name()));
-        } else {
-          param.data.link_path().Clone(&lp);
-        }
-
-        fuchsia::modular::CreateModuleParameterMapEntry entry;
-        entry.key = param.name;
-        entry.value.set_link_path(std::move(lp));
-        param_map->property_info.push_back(std::move(entry));
-      } else if (param.data.is_entity_type()) {
-        // Create a link, but don't populate it. This is useful in the event
-        // that the link is used as an 'output' link.
-        fuchsia::modular::CreateModuleParameterMapEntry entry;
-        entry.key = param.name;
-        entry.value.set_create_link(fuchsia::modular::CreateLinkInfo{});
-        param_map->property_info.push_back(std::move(entry));
-      } else {
-        FXL_DCHECK(false) << "Unhandled intent parameter type";
-      }
-    }
-    return param_map;
-  }
-
-  void WriteModuleData(FlowToken flow,
-                       fuchsia::modular::ModuleParameterMapPtr parameter_map) {
-    fidl::Clone(*parameter_map, &module_data_.parameter_map);
-    // Write the module's data.
-    fuchsia::modular::ModuleData module_data_copy;
-    module_data_.Clone(&module_data_copy);
-    story_controller_impl_->story_storage_
-        ->WriteModuleData(std::move(module_data_copy))
-        ->WeakThen(GetWeakPtr(), [this, flow] { MaybeLaunchModule(flow); });
   }
 
   void MaybeLaunchModule(FlowToken flow) {
@@ -988,10 +897,6 @@ class StoryControllerImpl::AddIntentCall
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   const fuchsia::modular::ModuleSource module_source_;
-
-  // Returned to us from the resolver, and cached here so that InitializeChain()
-  // has access to it.
-  fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info_;
 
   // Created by AddModuleFromResult, and ultimately written to story state.
   fuchsia::modular::ModuleData module_data_;
