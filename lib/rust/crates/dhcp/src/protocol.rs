@@ -316,13 +316,14 @@ pub enum MessageType {
     DHCPACK = 5,
     DHCPNAK = 6,
     DHCPRELEASE = 7,
+    DHCPINFORM = 8,
 }
 
 impl From<u8> for MessageType {
     /// Creates a `MessageType` value from a `u8`.
     ///
     /// The mapping of `u8` value to `MessageType` reflects the mapping defined in
-    /// RFC 1533 with on exception: `u8` values outside of the RFC defined mappings
+    /// RFC 2132 with on exception: `u8` values outside of the RFC defined mappings
     /// will return a `MessageType::Unknown`. The client should treat this value
     /// as an error case.
     fn from(num: u8) -> Self {
@@ -334,6 +335,7 @@ impl From<u8> for MessageType {
             5 => MessageType::DHCPACK,
             6 => MessageType::DHCPNAK,
             7 => MessageType::DHCPRELEASE,
+            8 => MessageType::DHCPINFORM,
             _ => MessageType::Unknown,
         }
     }

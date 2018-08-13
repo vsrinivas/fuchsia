@@ -49,9 +49,15 @@ impl Server {
     pub fn dispatch(&mut self, msg: Message) -> Option<Message> {
         match msg.get_dhcp_type() {
             Some(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
+            Some(MessageType::DHCPOFFER) => None,
             Some(MessageType::DHCPREQUEST) => self.handle_request(msg),
+            Some(MessageType::DHCPDECLINE) => None,
+            Some(MessageType::DHCPACK) => None,
+            Some(MessageType::DHCPNAK) => None,
             Some(MessageType::DHCPRELEASE) => self.handle_release(msg),
-            _ => None,
+            Some(MessageType::DHCPINFORM) => self.handle_inform(msg),
+            Some(MessageType::Unknown) => None,
+            None => None,
         }
     }
 
@@ -145,6 +151,15 @@ impl Server {
             self.pool.free_addr(rel.ciaddr);
         }
         None
+    }
+
+    fn handle_inform(&mut self, inf: Message) -> Option<Message> {
+        // When responding to an INFORM, the server must leave yiaddr zeroed.
+        let yiaddr = Ipv4Addr::new(0, 0, 0, 0);
+        let mut ack = build_ack(inf, yiaddr, &self.config);
+        ack.options.clear();
+        add_inform_ack_options(&mut ack, &self.config);
+        Some(ack)
     }
 
     /// Releases all allocated IP addresses whose leases have expired back to
@@ -324,6 +339,25 @@ fn add_recommended_options(msg: &mut Message, config: &ServerConfig) {
     msg.options.push(ConfigOption {
         code: OptionCode::RebindingTime,
         value: rebinding_time,
+    });
+}
+
+fn add_inform_ack_options(msg: &mut Message, config: &ServerConfig) {
+    msg.options.push(ConfigOption {
+        code: OptionCode::DhcpMessageType,
+        value: vec![MessageType::DHCPINFORM as u8],
+    });
+    msg.options.push(ConfigOption {
+        code: OptionCode::ServerId,
+        value: config.server_ip.octets().to_vec(),
+    });
+    msg.options.push(ConfigOption {
+        code: OptionCode::Router,
+        value: ip_vec_to_bytes(&config.routers),
+    });
+    msg.options.push(ConfigOption {
+        code: OptionCode::NameServer,
+        value: ip_vec_to_bytes(&config.name_servers),
     });
 }
 
@@ -592,6 +626,43 @@ mod tests {
             value: vec![MessageType::DHCPRELEASE as u8],
         });
         release
+    }
+
+    fn new_test_inform() -> Message {
+        let mut inform = Message::new();
+        inform.xid = 42;
+        inform.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
+        inform.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        inform.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPINFORM as u8],
+        });
+        inform
+    }
+
+    fn new_test_inform_ack() -> Message {
+        let mut ack = Message::new();
+        ack.op = OpCode::BOOTREPLY;
+        ack.xid = 42;
+        ack.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
+        ack.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        ack.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPINFORM as u8],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: vec![192, 168, 1, 1],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: vec![192, 168, 1, 1],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::NameServer,
+            value: vec![8, 8, 8, 8, 8, 8, 4, 4],
+        });
+        ack
     }
 
     #[test]
@@ -1210,5 +1281,17 @@ mod tests {
             &client_config,
             "server did not retain cached client settings"
         );
+    }
+
+    #[test]
+    fn test_dispatch_with_inform_returns_ack() {
+        let inform = new_test_inform();
+        let mut server = new_test_server();
+
+        let got = server.dispatch(inform).unwrap();
+
+        let mut want = new_test_inform_ack();
+
+        assert_eq!(got, want, "expected: {:?}\ngot: {:?}", want, got);
     }
 }
