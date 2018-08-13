@@ -9,6 +9,7 @@ import (
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/rust"
+	"fidl/compiler/backend/syzkaller"
 	"fidl/compiler/backend/types"
 	"flag"
 	"log"
@@ -20,9 +21,10 @@ type GenerateFidl interface {
 }
 
 var generators = map[string]GenerateFidl{
-	"cpp":  cpp.FidlGenerator{},
-	"go":   golang.FidlGenerator{},
-	"rust": rust.FidlGenerator{},
+	"cpp":       cpp.FidlGenerator{},
+	"go":        golang.FidlGenerator{},
+	"rust":      rust.FidlGenerator{},
+	"syzkaller": syzkaller.FidlGenerator{},
 }
 
 func main() {
