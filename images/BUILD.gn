@@ -556,7 +556,7 @@ images += [
     deps = [
       ":fvm.sparse.blk",
     ]
-    jons = {
+    json = {
       name = "storage-sparse"
       type = "blk"
     }
