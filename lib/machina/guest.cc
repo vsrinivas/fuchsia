@@ -58,27 +58,27 @@ namespace machina {
 zx_status_t Guest::Init(size_t mem_size) {
   zx_status_t status = phys_mem_.Init(mem_size);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create guest physical memory";
+    FXL_LOG(ERROR) << "Failed to create guest physical memory " << status;
     return status;
   }
 
   zx::resource resource;
   status = guest_get_resource(&resource);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get hypervisor resource";
+    FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status;
     return status;
   }
 
   status = zx::guest::create(resource, 0, &guest_, &vmar_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create guest";
+    FXL_LOG(ERROR) << "Failed to create guest " << status;
     return status;
   }
 
   zx_gpaddr_t addr;
   status = vmar_.map(0, phys_mem_.vmo(), 0, mem_size, kMapFlags, &addr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map guest physical memory";
+    FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
     return status;
   }
 
@@ -87,7 +87,7 @@ zx_status_t Guest::Init(size_t mem_size) {
     name_buffer.AppendPrintf("io-handler-%zu", i);
     status = device_loop_.StartThread(name_buffer.c_str());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create async worker";
+      FXL_LOG(ERROR) << "Failed to create async worker " << status;
       return status;
     }
   }

@@ -94,7 +94,8 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
                   << " -> " << std::hex << target_pages;
     zx_status_t status = balloon->UpdateNumPages(target_pages);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " updating balloon size";
+      FXL_LOG(ERROR) << "Error " << status << " updating balloon size "
+                     << status;
     }
     return;
   }
@@ -208,7 +209,7 @@ int main(int argc, char** argv) {
 #if __x86_64__
   status = machina::create_page_table(guest.phys_mem());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create page table";
+    FXL_LOG(ERROR) << "Failed to create page table " << status;
     return status;
   }
 
@@ -220,7 +221,7 @@ int main(int argc, char** argv) {
   };
   status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create ACPI table";
+    FXL_LOG(ERROR) << "Failed to create ACPI table " << status;
     return status;
   }
 #endif  // __x86_64__
@@ -240,7 +241,8 @@ int main(int argc, char** argv) {
       return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path();
+    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path() << " "
+                   << status;
     return status;
   }
 
@@ -249,8 +251,8 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < kNumUarts; i++) {
     status = uart[i].Init(&guest, kUartBases[i]);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create UART at " << std::hex
-                     << kUartBases[i];
+      FXL_LOG(ERROR) << "Failed to create UART at " << std::hex << kUartBases[i]
+                     << " " << status;
       return status;
     }
   }
@@ -262,7 +264,7 @@ int main(int argc, char** argv) {
   status = interrupt_controller.Init(&guest);
 #endif
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create interrupt controller";
+    FXL_LOG(ERROR) << "Failed to create interrupt controller " << status;
     return status;
   }
 
@@ -271,13 +273,14 @@ int main(int argc, char** argv) {
                              uint64_t id, machina::Vcpu* vcpu) {
     zx_status_t status = vcpu->Create(guest, guest_ip, id);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VCPU";
+      FXL_LOG(ERROR) << "Failed to create VCPU " << status;
       return status;
     }
     // Register VCPU with ID 0.
     status = interrupt_controller.RegisterVcpu(id, vcpu);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller";
+      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller "
+                     << status;
       return status;
     }
     // Setup initial VCPU state.
@@ -297,7 +300,7 @@ int main(int argc, char** argv) {
   machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create PL031 RTC";
+    FXL_LOG(ERROR) << "Failed to create PL031 RTC " << status;
     return status;
   }
 #elif __x86_64__
@@ -305,14 +308,14 @@ int main(int argc, char** argv) {
   machina::IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create IO ports";
+    FXL_LOG(ERROR) << "Failed to create IO ports " << status;
     return status;
   }
   // Setup TPM
   machina::Tpm tpm;
   status = tpm.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create TPM";
+    FXL_LOG(ERROR) << "Failed to create TPM " << status;
     return status;
   }
 #endif
@@ -321,7 +324,7 @@ int main(int argc, char** argv) {
   machina::PciBus bus(&guest, &interrupt_controller);
   status = bus.Init();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create PCI bus";
+    FXL_LOG(ERROR) << "Failed to create PCI bus " << status;
     return status;
   }
 
@@ -350,7 +353,7 @@ int main(int argc, char** argv) {
           block_spec.mode, block_spec.data_plane, guest.phys_mem(),
           &dispatcher);
     } else {
-      FXL_LOG(ERROR) << "Block spec missing path or GUID attributes";
+      FXL_LOG(ERROR) << "Block spec missing path or GUID attributes " << status;
       return ZX_ERR_INVALID_ARGS;
     }
     if (status != ZX_OK) {
@@ -361,7 +364,8 @@ int main(int argc, char** argv) {
       status = machina::BlockDispatcher::CreateVolatileWrapper(
           std::move(dispatcher), &dispatcher);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to create volatile block dispatcher";
+        FXL_LOG(ERROR) << "Failed to create volatile block dispatcher "
+                       << status;
         return status;
       }
     }
