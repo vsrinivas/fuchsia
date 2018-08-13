@@ -614,7 +614,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   auto focus_provider_request_puppet_master =
       focus_provider_puppet_master.NewRequest();
   fuchsia::modular::StoryProviderPtr story_provider_puppet_master;
-  auto story_provider_puppet_master_request = story_provider.NewRequest();
+  auto story_provider_puppet_master_request =
+      story_provider_puppet_master.NewRequest();
 
   // Initialize the PuppetMaster.
   // TODO(miguelfrde): there's no clean runtime interface we can inject to

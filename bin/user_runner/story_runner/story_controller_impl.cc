@@ -1143,6 +1143,11 @@ StoryControllerImpl::StoryControllerImpl(
       [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         intelligence_services_->GetContextWriter(std::move(request));
       });
+
+  story_storage_->set_on_module_data_updated(
+      [this](fuchsia::modular::ModuleData module_data) {
+        OnModuleDataUpdated(std::move(module_data));
+      });
 }
 
 StoryControllerImpl::~StoryControllerImpl() = default;
