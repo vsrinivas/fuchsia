@@ -1202,24 +1202,6 @@ func (s *socketServer) GetAddrInfo(node *string, service *string, transProto tcp
 	return net.AddrInfoStatusOk, addrs, port
 }
 
-func (s *socketServer) opFcntl(ios *iostate, msg *zxsocket.Msg) zx.Status {
-	cmd := uint32(msg.Arg)
-	if debug2 {
-		log.Printf("fcntl: cmd %v, flags %v", cmd, msg.FcntlFlags())
-	}
-	switch cmd {
-	case fdio.OpFcntlCmdGetFL:
-		// Set flags to 0 as O_NONBLOCK is handled on the client side.
-		msg.SetFcntlFlags(0)
-	case fdio.OpFcntlCmdSetFL:
-		// Do nothing.
-	default:
-		return zx.ErrNotSupported
-	}
-	msg.Datalen = 0
-	return zx.ErrOk
-}
-
 func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 	s.mu.Lock()
 	delete(s.io, cookie)
@@ -1283,24 +1265,11 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 
 	switch op {
 	case fdio.OpConnect:
-		return s.opConnect(ios, msg) // do_connect
+		return s.opConnect(ios, msg)
 	case fdio.OpClose:
 		return s.opClose(ios, cookie)
-	case fdio.OpRead:
-		if debug {
-			log.Printf("unexpected opRead")
-		}
-	case fdio.OpWrite:
-		if debug {
-			log.Printf("unexpected opWrite")
-		}
-	case fdio.OpWriteAt:
 	case fdio.OpSeek:
 		return zx.ErrOk
-	case fdio.OpStat:
-	case fdio.OpTruncate:
-	case fdio.OpSync:
-	case fdio.OpSetAttr:
 	case fdio.OpBind:
 		return s.opBind(ios, msg)
 	case fdio.OpListen:
@@ -1315,8 +1284,6 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 		return s.opGetSockOpt(ios, msg)
 	case fdio.OpSetSockOpt:
 		return s.opSetSockOpt(ios, msg)
-	case fdio.OpFcntl:
-		return s.opFcntl(ios, msg)
 	default:
 		log.Printf("zxsocketHandler: unknown socket op: %v", op)
 		return zx.ErrNotSupported
