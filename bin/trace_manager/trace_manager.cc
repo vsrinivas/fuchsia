@@ -48,22 +48,22 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
   fuchsia::tracelink::BufferingMode tracelink_buffering_mode;
   const char* mode_name;
   switch (options.buffering_mode) {
-  case fuchsia::tracing::BufferingMode::ONESHOT:
-    tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::ONESHOT;
-    mode_name = "oneshot";
-    break;
-  case fuchsia::tracing::BufferingMode::CIRCULAR:
-    tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::CIRCULAR;
-    mode_name = "circular";
-    break;
-  case fuchsia::tracing::BufferingMode::STREAMING:
-    tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::STREAMING;
-    mode_name = "streaming";
-    break;
-  default:
-    FXL_LOG(ERROR) << "Invalid buffering mode: "
-                   << static_cast<unsigned>(options.buffering_mode);
-    return;
+    case fuchsia::tracing::BufferingMode::ONESHOT:
+      tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::ONESHOT;
+      mode_name = "oneshot";
+      break;
+    case fuchsia::tracing::BufferingMode::CIRCULAR:
+      tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::CIRCULAR;
+      mode_name = "circular";
+      break;
+    case fuchsia::tracing::BufferingMode::STREAMING:
+      tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::STREAMING;
+      mode_name = "streaming";
+      break;
+    default:
+      FXL_LOG(ERROR) << "Invalid buffering mode: "
+                     << static_cast<unsigned>(options.buffering_mode);
+      return;
   }
 
   FXL_LOG(INFO) << "Starting trace with " << buffer_size_megabytes

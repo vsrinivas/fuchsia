@@ -26,7 +26,8 @@ class TraceManagerApp {
   std::unique_ptr<component::StartupContext> context_;
   TraceManager trace_manager_;
   fidl::BindingSet<fuchsia::tracelink::Registry> trace_registry_bindings_;
-  fidl::BindingSet<fuchsia::tracing::TraceController> trace_controller_bindings_;
+  fidl::BindingSet<fuchsia::tracing::TraceController>
+      trace_controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);
 };

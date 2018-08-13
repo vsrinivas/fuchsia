@@ -83,7 +83,8 @@ void TraceSession::Stop(fit::closure done_callback, zx::duration timeout) {
   for (const auto& tracee : tracees_)
     tracee->Stop();
 
-  session_finalize_timeout_.PostDelayed(async_get_default_dispatcher(), timeout);
+  session_finalize_timeout_.PostDelayed(async_get_default_dispatcher(),
+                                        timeout);
   FinishSessionIfEmpty();
 }
 
@@ -192,13 +193,15 @@ void TraceSession::TransitionToState(State new_state) {
   state_ = new_state;
 }
 
-void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
+void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher,
+                                       async::TaskBase* task,
                                        zx_status_t status) {
   FXL_LOG(WARNING) << "Waiting for start timed out.";
   NotifyStarted();
 }
 
-void TraceSession::SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
+void TraceSession::SessionFinalizeTimeout(async_dispatcher_t* dispatcher,
+                                          async::TaskBase* task,
                                           zx_status_t status) {
   FinishSessionDueToTimeout();
 }

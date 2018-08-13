@@ -29,8 +29,7 @@ class Config {
   }
 
   // Well-known providers to start automatically.
-  const std::map<std::string, fuchsia::sys::LaunchInfoPtr>& providers()
-      const {
+  const std::map<std::string, fuchsia::sys::LaunchInfoPtr>& providers() const {
     return providers_;
   }
 

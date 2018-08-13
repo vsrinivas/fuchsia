@@ -55,11 +55,9 @@ class Tracee {
   ~Tracee();
 
   bool operator==(TraceProviderBundle* bundle) const;
-  bool Start(fidl::VectorPtr<fidl::StringPtr> categories,
-             size_t buffer_size,
+  bool Start(fidl::VectorPtr<fidl::StringPtr> categories, size_t buffer_size,
              fuchsia::tracelink::BufferingMode buffering_mode,
-             fit::closure started_callback,
-             fit::closure stopped_callback);
+             fit::closure started_callback, fit::closure stopped_callback);
   void Stop();
 
   // Called once at the end of the trace to transfer all collected records
@@ -80,19 +78,16 @@ class Tracee {
   }
 
   void TransitionToState(State new_state);
-  void OnHandleReady(async_dispatcher_t* dispatcher,
-                     async::WaitBase* wait,
-                     zx_status_t status,
-                     const zx_packet_signal_t* signal);
-  void OnFifoReadable(async_dispatcher_t* dispatcher,
-                      async::WaitBase* wait);
+  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                     zx_status_t status, const zx_packet_signal_t* signal);
+  void OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait);
   void OnHandleError(zx_status_t status);
 
-  bool VerifyBufferHeader(const trace::internal::BufferHeaderReader* header) const;
+  bool VerifyBufferHeader(
+      const trace::internal::BufferHeaderReader* header) const;
 
-  TransferStatus WriteChunk(const zx::socket& socket,
-                            size_t vmo_offset, size_t size,
-                            const char* name) const;
+  TransferStatus WriteChunk(const zx::socket& socket, size_t vmo_offset,
+                            size_t size, const char* name) const;
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
   TransferStatus WriteProviderBufferOverflowEvent(

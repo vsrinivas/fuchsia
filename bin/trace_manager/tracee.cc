@@ -21,8 +21,7 @@ namespace {
 // TransferStatus::kReceiverDead indicates that the peer was closed
 // during the transfer.
 Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
-                                           const uint8_t* buffer,
-                                           size_t len) {
+                                           const uint8_t* buffer, size_t len) {
   size_t offset = 0;
   while (offset < len) {
     zx_status_t status = ZX_OK;
@@ -58,14 +57,14 @@ Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
 fuchsia::tracelink::BufferingMode EngineBufferingModeToTracelinkMode(
     trace_buffering_mode_t mode) {
   switch (mode) {
-  case TRACE_BUFFERING_MODE_ONESHOT:
-    return fuchsia::tracelink::BufferingMode::ONESHOT;
-  case TRACE_BUFFERING_MODE_CIRCULAR:
-    return fuchsia::tracelink::BufferingMode::CIRCULAR;
-  case TRACE_BUFFERING_MODE_STREAMING:
-    return fuchsia::tracelink::BufferingMode::STREAMING;
-  default:
-    __UNREACHABLE;
+    case TRACE_BUFFERING_MODE_ONESHOT:
+      return fuchsia::tracelink::BufferingMode::ONESHOT;
+    case TRACE_BUFFERING_MODE_CIRCULAR:
+      return fuchsia::tracelink::BufferingMode::CIRCULAR;
+    case TRACE_BUFFERING_MODE_STREAMING:
+      return fuchsia::tracelink::BufferingMode::STREAMING;
+    default:
+      __UNREACHABLE;
   }
 }
 
@@ -115,20 +114,16 @@ bool Tracee::Start(fidl::VectorPtr<fidl::StringPtr> categories,
   }
 
   zx::fifo fifo, fifo_for_provider;
-  status = zx::fifo::create(kFifoSizeInPackets,
-                            sizeof(trace_provider_packet_t), 0u,
-                            &fifo, &fifo_for_provider);
+  status = zx::fifo::create(kFifoSizeInPackets, sizeof(trace_provider_packet_t),
+                            0u, &fifo, &fifo_for_provider);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to create trace buffer fifo: status="
-                   << status;
+                   << ": Failed to create trace buffer fifo: status=" << status;
     return false;
   }
 
-  bundle_->provider->Start(buffering_mode,
-                           std::move(buffer_vmo_for_provider),
-                           std::move(fifo_for_provider),
-                           std::move(categories));
+  bundle_->provider->Start(buffering_mode, std::move(buffer_vmo_for_provider),
+                           std::move(fifo_for_provider), std::move(categories));
 
   buffering_mode_ = buffering_mode;
   buffer_vmo_ = std::move(buffer_vmo);
@@ -137,8 +132,7 @@ bool Tracee::Start(fidl::VectorPtr<fidl::StringPtr> categories,
   started_callback_ = std::move(started_callback);
   stopped_callback_ = std::move(stopped_callback);
   wait_.set_object(fifo_.get());
-  wait_.set_trigger(ZX_FIFO_READABLE |
-                    ZX_FIFO_PEER_CLOSED);
+  wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
   dispatcher_ = async_get_default_dispatcher();
   status = wait_.Begin(dispatcher_);
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
@@ -160,8 +154,7 @@ void Tracee::TransitionToState(State new_state) {
 }
 
 void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
-                           async::WaitBase* wait,
-                           zx_status_t status,
+                           async::WaitBase* wait, zx_status_t status,
                            const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     OnHandleError(status);
@@ -195,8 +188,8 @@ void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
 void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
                             async::WaitBase* wait) {
   trace_provider_packet_t packet;
-  auto status2 = zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u,
-                              nullptr);
+  auto status2 =
+      zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u, nullptr);
   FXL_DCHECK(status2 == ZX_OK);
   if (packet.reserved != 0) {
     FXL_LOG(ERROR) << *bundle_
@@ -207,51 +200,50 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
   }
 
   switch (packet.request) {
-  case TRACE_PROVIDER_STARTED:
-    // The provider should only be signalling us when it has finished
-    // startup.
-    if (packet.data32 != TRACE_PROVIDER_FIFO_PROTOCOL_VERSION) {
-      FXL_LOG(ERROR) << *bundle_
-                     << ": Received bad packet, unexpected version: "
-                     << packet.data32;
+    case TRACE_PROVIDER_STARTED:
+      // The provider should only be signalling us when it has finished
+      // startup.
+      if (packet.data32 != TRACE_PROVIDER_FIFO_PROTOCOL_VERSION) {
+        FXL_LOG(ERROR) << *bundle_
+                       << ": Received bad packet, unexpected version: "
+                       << packet.data32;
+        Stop();
+        break;
+      }
+      if (packet.data64 != 0) {
+        FXL_LOG(ERROR) << *bundle_
+                       << ": Received bad packet, non-zero data64 field: "
+                       << packet.data64;
+        Stop();
+        break;
+      }
+      if (state_ == State::kStartPending) {
+        TransitionToState(State::kStarted);
+        fit::closure started_callback = std::move(started_callback_);
+        FXL_DCHECK(started_callback);
+        started_callback();
+      } else {
+        FXL_LOG(WARNING) << *bundle_
+                         << ": Received TRACE_PROVIDER_STARTED in state "
+                         << state_;
+      }
+      break;
+    case TRACE_PROVIDER_BUFFER_OVERFLOW:
+      if (state_ == State::kStarted || state_ == State::kStopping) {
+        FXL_LOG(WARNING)
+            << *bundle_
+            << ": Records got dropped, probably due to buffer overflow";
+      } else {
+        FXL_LOG(WARNING)
+            << *bundle_ << ": Received TRACE_PROVIDER_BUFFER_OVERFLOW in state "
+            << state_;
+      }
+      break;
+    default:
+      FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, unknown request: "
+                     << packet.request;
       Stop();
       break;
-    }
-    if (packet.data64 != 0) {
-      FXL_LOG(ERROR) << *bundle_
-                     << ": Received bad packet, non-zero data64 field: "
-                     << packet.data64;
-      Stop();
-      break;
-    }
-    if (state_ == State::kStartPending) {
-      TransitionToState(State::kStarted);
-      fit::closure started_callback = std::move(started_callback_);
-      FXL_DCHECK(started_callback);
-      started_callback();
-    } else {
-      FXL_LOG(WARNING) << *bundle_
-                       << ": Received TRACE_PROVIDER_STARTED in state "
-                       << state_;
-    }
-    break;
-  case TRACE_PROVIDER_BUFFER_OVERFLOW:
-    if (state_ == State::kStarted || state_ == State::kStopping) {
-      FXL_LOG(WARNING)
-        << *bundle_
-        << ": Records got dropped, probably due to buffer overflow";
-    } else {
-      FXL_LOG(WARNING)
-        << *bundle_
-        << ": Received TRACE_PROVIDER_BUFFER_OVERFLOW in state "
-        << state_;
-    }
-    break;
-  default:
-    FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, unknown request: "
-                   << packet.request;
-    Stop();
-    break;
   }
 }
 
@@ -265,10 +257,10 @@ void Tracee::OnHandleError(zx_status_t status) {
   TransitionToState(State::kStopped);
 }
 
-bool Tracee::VerifyBufferHeader(const trace::internal::BufferHeaderReader* header) const {
-  if (EngineBufferingModeToTracelinkMode(
-        static_cast<trace_buffering_mode_t>(header->buffering_mode())) !=
-      buffering_mode_) {
+bool Tracee::VerifyBufferHeader(
+    const trace::internal::BufferHeaderReader* header) const {
+  if (EngineBufferingModeToTracelinkMode(static_cast<trace_buffering_mode_t>(
+          header->buffering_mode())) != buffering_mode_) {
     FXL_LOG(ERROR) << *bundle_ << ": header corrupt, wrong buffering mode: "
                    << header->buffering_mode();
     return false;
@@ -278,12 +270,10 @@ bool Tracee::VerifyBufferHeader(const trace::internal::BufferHeaderReader* heade
 }
 
 Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
-                                          size_t vmo_offset,
-                                          size_t size,
+                                          size_t vmo_offset, size_t size,
                                           const char* name) const {
-  FXL_VLOG(2) << *bundle_ << ": Writing chunk for " << name
-              << ": vmo offset 0x" << std::hex << vmo_offset
-              << ", size 0x" << std::hex << size;
+  FXL_VLOG(2) << *bundle_ << ": Writing chunk for " << name << ": vmo offset 0x"
+              << std::hex << vmo_offset << ", size 0x" << std::hex << size;
 
   // TODO(dje): Loop on smaller buffer.
   // Better yet, be able to pass the entire vmo to the socket (still in
@@ -291,16 +281,14 @@ Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
   std::vector<uint8_t> buffer(size);
 
   if (buffer_vmo_.read(buffer.data(), vmo_offset, size) != ZX_OK) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to read data from buffer_vmo: "
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to read data from buffer_vmo: "
                    << "offset=" << vmo_offset << ", size=" << size;
     return TransferStatus::kCorrupted;
   }
 
   auto status = WriteBufferToSocket(socket, buffer.data(), size);
   if (status != TransferStatus::kComplete) {
-      FXL_LOG(ERROR) << *bundle_
-                     << ": Failed to write " << name << " records";
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to write " << name << " records";
   }
   return status;
 }
@@ -337,9 +325,8 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   }
 
   if (header->num_records_dropped() > 0) {
-    FXL_LOG(WARNING)
-      << *bundle_
-      << ": " << header->num_records_dropped() << " records were dropped";
+    FXL_LOG(WARNING) << *bundle_ << ": " << header->num_records_dropped()
+                     << " records were dropped";
     // If we can't write the buffer overflow record, it's not the end of the
     // world.
     if (WriteProviderBufferOverflowEvent(socket) != TransferStatus::kComplete) {
@@ -367,18 +354,18 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     auto size = header->nondurable_data_end(buffer_number);
     if (size > 0) {
       auto offset = header->GetNondurableBufferOffset(buffer_number);
-      auto name = buffer_number == 0
-        ? "nondurable buffer 0" : "nondurable buffer 1";
+      auto name =
+          buffer_number == 0 ? "nondurable buffer 0" : "nondurable buffer 1";
       return WriteChunk(socket, offset, size, name);
     }
     return TransferStatus::kComplete;
   };
 
- if (header->wrapped_count() > 0) {
-   int buffer_number = get_buffer_number(header->wrapped_count() - 1);
-   transfer_status = write_chunk(buffer_number);
-   if (transfer_status != TransferStatus::kComplete) {
-     return transfer_status;
+  if (header->wrapped_count() > 0) {
+    int buffer_number = get_buffer_number(header->wrapped_count() - 1);
+    transfer_status = write_chunk(buffer_number);
+    if (transfer_status != TransferStatus::kComplete) {
+      return transfer_status;
     }
   }
   int buffer_number = get_buffer_number(header->wrapped_count());
@@ -393,16 +380,13 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
       header->durable_data_end() > kInitRecordSizeBytes) {
     FXL_LOG(INFO) << *bundle_ << " trace stats";
     FXL_LOG(INFO) << "Wrapped count: " << header->wrapped_count();
-    FXL_LOG(INFO) << "Durable buffer: 0x"
-                  << std::hex << header->durable_data_end()
-                  << ", size 0x"
-                  << std::hex << header->durable_buffer_size();
-    FXL_LOG(INFO) << "Non-durable buffer: 0x"
-                  << std::hex << header->nondurable_data_end(0)
-                  << ",0x"
-                  << std::hex << header->nondurable_data_end(1)
-                  << ", size 0x"
-                  << std::hex << header->nondurable_buffer_size();
+    FXL_LOG(INFO) << "Durable buffer: 0x" << std::hex
+                  << header->durable_data_end() << ", size 0x" << std::hex
+                  << header->durable_buffer_size();
+    FXL_LOG(INFO) << "Non-durable buffer: 0x" << std::hex
+                  << header->nondurable_data_end(0) << ",0x" << std::hex
+                  << header->nondurable_data_end(1) << ", size 0x" << std::hex
+                  << header->nondurable_buffer_size();
   }
 
   return TransferStatus::kComplete;

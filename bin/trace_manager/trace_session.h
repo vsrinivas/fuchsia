@@ -76,10 +76,10 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   void TransitionToState(State state);
 
-  void SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
-                           zx_status_t status);
-  void SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
-                              zx_status_t status);
+  void SessionStartTimeout(async_dispatcher_t* dispatcher,
+                           async::TaskBase* task, zx_status_t status);
+  void SessionFinalizeTimeout(async_dispatcher_t* dispatcher,
+                              async::TaskBase* task, zx_status_t status);
 
   State state_ = State::kReady;
   zx::socket destination_;
