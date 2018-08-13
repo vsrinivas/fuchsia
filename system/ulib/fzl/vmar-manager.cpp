@@ -8,8 +8,8 @@
 namespace fzl {
 
 fbl::RefPtr<VmarManager> VmarManager::Create(size_t size,
-                                        fbl::RefPtr<VmarManager> parent,
-                                        zx_vm_option_t options) {
+                                             fbl::RefPtr<VmarManager> parent,
+                                             zx_vm_option_t options) {
     if (!size || (parent && !parent->vmar().is_valid())) {
         return nullptr;
     }

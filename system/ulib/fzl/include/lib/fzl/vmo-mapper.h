@@ -20,19 +20,12 @@ public:
 
     // Move support
     VmoMapper(VmoMapper&& other) {
-        *this = fbl::move(other);
+        MoveFromOther(&other);
     }
 
     VmoMapper& operator=(VmoMapper&& other) {
         Unmap();
-        vmar_manager_ = fbl::move(other.vmar_manager_);
-
-        start_ = other.start_;
-        other.start_ = nullptr;
-
-        size_ = other.size_;
-        other.size_ = 0;
-
+        MoveFromOther(&other);
         return *this;
     }
 
@@ -78,10 +71,11 @@ public:
     // Unmap the VMO from whichever VMAR it was mapped into.
     void Unmap();
 
-    void* start() const { return start_; }
+    void* start() const { return reinterpret_cast<void*>(start_); }
     uint64_t size() const { return size_; }
+    const fbl::RefPtr<VmarManager>& manager() const { return vmar_manager_; }
 
-private:
+protected:
     zx_status_t CheckReadyToMap(const fbl::RefPtr<VmarManager>& vmar_manager);
     zx_status_t InternalMap(const zx::vmo& vmo,
                             uint64_t offset,
@@ -89,8 +83,18 @@ private:
                             uint32_t map_flags,
                             fbl::RefPtr<VmarManager> vmar_manager);
 
+    void MoveFromOther(VmoMapper* other) {
+        vmar_manager_ = fbl::move(other->vmar_manager_);
+
+        start_ = other->start_;
+        other->start_ = 0;
+
+        size_ = other->size_;
+        other->size_ = 0;
+    }
+
     fbl::RefPtr<VmarManager> vmar_manager_;
-    void* start_ = nullptr;
+    uintptr_t start_ = 0;
     uint64_t size_ = 0;
 };
 

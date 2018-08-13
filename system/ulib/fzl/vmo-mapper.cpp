@@ -91,24 +91,24 @@ zx_status_t VmoMapper::Map(const zx::vmo& vmo,
 }
 
 void VmoMapper::Unmap() {
-    if (start_ != nullptr) {
+    if (start() != nullptr) {
         ZX_DEBUG_ASSERT(size_ != 0);
         zx_handle_t vmar_handle = (vmar_manager_ == nullptr)
             ? zx::vmar::root_self()->get()
             : vmar_manager_->vmar().get();
 
         __UNUSED zx_status_t res;
-        res = zx_vmar_unmap(vmar_handle, reinterpret_cast<uintptr_t>(start_), size_);
+        res = zx_vmar_unmap(vmar_handle, start_, size_);
         ZX_DEBUG_ASSERT(res == ZX_OK);
     }
 
     vmar_manager_.reset();
-    start_ = nullptr;
+    start_ = 0;
     size_ = 0;
 }
 
 zx_status_t VmoMapper::CheckReadyToMap(const fbl::RefPtr<VmarManager>& vmar_manager) {
-    if (start_ != nullptr) {
+    if (start_ != 0) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -125,21 +125,19 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
                                    zx_vm_option_t map_options,
                                    fbl::RefPtr<VmarManager> vmar_manager) {
     ZX_DEBUG_ASSERT(vmo.is_valid());
-    ZX_DEBUG_ASSERT(start_ == nullptr);
+    ZX_DEBUG_ASSERT(start() == nullptr);
     ZX_DEBUG_ASSERT(size_ == 0);
     ZX_DEBUG_ASSERT(vmar_manager_ == nullptr);
 
-    uintptr_t tmp;
     zx_handle_t vmar_handle = (vmar_manager == nullptr)
         ? zx::vmar::root_self()->get()
         : vmar_manager->vmar().get();
 
-    zx_status_t res = zx_vmar_map(vmar_handle, map_options, 0, vmo.get(), offset, size, &tmp);
+    zx_status_t res = zx_vmar_map(vmar_handle, map_options, 0, vmo.get(), offset, size, &start_);
     if (res != ZX_OK) {
         return res;
     }
 
-    start_ = reinterpret_cast<void*>(tmp);
     size_ = size;
     vmar_manager_ = fbl::move(vmar_manager);
 
