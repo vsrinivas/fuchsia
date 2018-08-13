@@ -8,6 +8,7 @@ import("//build/package.gni")
 rustc_binary("bin") {
   name = "net_cli"
   with_unit_tests = true
+  edition = "2018"
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",

@@ -5,32 +5,22 @@
 #![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_net as net;
-extern crate fidl_fuchsia_net_stack as netstack;
-extern crate fuchsia_app as component;
-#[macro_use]
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-#[macro_use]
-extern crate structopt;
-
-use component::client::connect_to_service;
 use failure::{Error, Fail, ResultExt};
+use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
+use fuchsia_app::client::connect_to_service;
+use fuchsia_async::{self as fasync, unsafe_many_futures};
 use futures::prelude::*;
-use netstack::{StackMarker, StackProxy};
 use structopt::StructOpt;
 
 mod opts;
 mod pretty;
 
-use opts::*;
+use crate::opts::*;
 
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
-    let mut exec = async::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
 
     match opt {

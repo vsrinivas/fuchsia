@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use net;
-use netstack;
+use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_stack as netstack;
 use std::convert::From;
 use std::fmt;
 
