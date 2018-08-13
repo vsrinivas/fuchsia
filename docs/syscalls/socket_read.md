@@ -22,7 +22,8 @@ successful, the number of bytes actually read are return via
 
 If a NULL *buffer* and 0 *buffer_size* are passed in, then this syscall
 instead requests that the number of outstanding bytes to be returned
-via *actual*.
+via *actual*. In this case, if no bytes are available, this syscall will
+return **ZX_OK**, rather than **ZX_ERR_SHOULD_WAIT**.
 
 If a NULL *actual* is passed in, it will be ignored.
 
@@ -58,7 +59,9 @@ or if *options* is not either zero or **ZX_SOCKET_CONTROL*.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
 
-**ZX_ERR_SHOULD_WAIT**  The socket contained no data to read.
+**ZX_ERR_SHOULD_WAIT**  The socket contained no data to read. (However, if a
+NULL *buffer* and 0 *buffer_size* are passed in, ZX_OK will be returned in
+this case.)
 
 **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed and no data is
 readable.
