@@ -12,7 +12,7 @@ echo [INTEGRATION TEST START=]
 /system/test/magma_abi_conformance_tests
 /system/test/msd_arm_mali_integration_tests
 if [ -e /pkgfs/packages/vulkan-tests/0/test/vkext ]; then
-  /pkgfs/packages/vulkan-tests/0/test/vkext --gtest_filter=-VulkanExtension.Scanout
+  run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkext.cmx --gtest_filter=-VulkanExtension.Scanout
   /pkgfs/packages/vulkan-tests/0/test/vkreadback
 else
   echo SKIPPED app tests - no /pkgfs/packages/vulkan-tests/0/test/vkext
