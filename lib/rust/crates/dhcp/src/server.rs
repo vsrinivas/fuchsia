@@ -50,6 +50,7 @@ impl Server {
         match msg.get_dhcp_type() {
             Some(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
             Some(MessageType::DHCPREQUEST) => self.handle_request(msg),
+            Some(MessageType::DHCPRELEASE) => self.handle_release(msg),
             _ => None,
         }
     }
@@ -139,6 +140,13 @@ impl Server {
         Some(build_ack(req, client_ip, &self.config))
     }
 
+    fn handle_release(&mut self, rel: Message) -> Option<Message> {
+        if self.cache.contains_key(&rel.chaddr) {
+            self.pool.free_addr(rel.ciaddr);
+        }
+        None
+    }
+
     /// Releases all allocated IP addresses whose leases have expired back to
     /// the pool of addresses available for allocation.
     pub fn release_expired_leases(&mut self) {
@@ -168,7 +176,7 @@ type CachedClients = HashMap<MacAddr, CachedConfig>;
 
 type MacAddr = [u8; 6];
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct CachedConfig {
     client_addr: Ipv4Addr,
     options: Vec<ConfigOption>,
@@ -572,6 +580,18 @@ mod tests {
             value: vec![192, 168, 1, 1],
         });
         nak
+    }
+
+    fn new_test_release() -> Message {
+        let mut release = Message::new();
+        release.xid = 42;
+        release.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
+        release.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        release.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPRELEASE as u8],
+        });
+        release
     }
 
     #[test]
@@ -1118,5 +1138,77 @@ mod tests {
         );
         assert_eq!(server.pool.available_addrs.len(), 1);
         assert_eq!(server.pool.allocated_addrs.len(), 2);
+    }
+
+    #[test]
+    fn test_dispatch_with_known_release() {
+        let release = new_test_release();
+        let mut server = new_test_server();
+        let client_ip = Ipv4Addr::new(192, 168, 1, 2);
+        server.pool.allocate_addr(client_ip);
+        let client_mac = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        let client_config = CachedConfig {
+            client_addr: client_ip,
+            options: vec![],
+            expiration: zx::Time::INFINITE,
+        };
+        server.cache.insert(client_mac, client_config.clone());
+
+        let got = server.dispatch(release);
+
+        assert!(got.is_none(), "server returned a Message value");
+        assert!(
+            !server.pool.addr_is_allocated(client_ip),
+            "server did not free client address"
+        );
+        assert!(
+            server.pool.addr_is_available(client_ip),
+            "server did not free client address"
+        );
+        assert!(
+            server.cache.contains_key(&client_mac),
+            "server did not retain cached client settings"
+        );
+        assert_eq!(
+            server.cache.get(&client_mac).unwrap(),
+            &client_config,
+            "server did not retain cached client settings"
+        );
+    }
+
+    #[test]
+    fn test_dispatch_with_unknown_release() {
+        let release = new_test_release();
+        let mut server = new_test_server();
+        let client_ip = Ipv4Addr::new(192, 168, 1, 2);
+        server.pool.allocate_addr(client_ip);
+        let cached_mac = [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA];
+        let client_config = CachedConfig {
+            client_addr: client_ip,
+            options: vec![],
+            expiration: zx::Time::INFINITE,
+        };
+        server.cache.insert(cached_mac, client_config.clone());
+
+        let got = server.dispatch(release);
+
+        assert!(got.is_none(), "server returned a Message value");
+        assert!(
+            server.pool.addr_is_allocated(client_ip),
+            "server did not free client address"
+        );
+        assert!(
+            !server.pool.addr_is_available(client_ip),
+            "server did not free client address"
+        );
+        assert!(
+            server.cache.contains_key(&cached_mac),
+            "server did not retain cached client settings"
+        );
+        assert_eq!(
+            server.cache.get(&cached_mac).unwrap(),
+            &client_config,
+            "server did not retain cached client settings"
+        );
     }
 }
