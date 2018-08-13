@@ -284,7 +284,8 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
       }
       storage_->AddCommitsFromSync(
           std::move(commits), storage::ChangeSource::P2P,
-          [this](storage::Status status) {
+          [this](storage::Status status,
+                 std::vector<storage::CommitId> missing_ids) {
             if (status != storage::Status::OK) {
               // TODO(etiennej): At this point, we should initiate a full
               // backlog sync. See LE-476.

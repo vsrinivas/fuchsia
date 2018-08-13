@@ -81,7 +81,8 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       const storage::ChangeSource /*source*/,
-      fit::function<void(storage::Status)> callback) override {
+      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
+          callback) override {
     commits_from_sync_.emplace_back(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(ids_and_bytes)),
@@ -100,8 +101,9 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   }
 
   storage::CommitWatcher* watcher_ = nullptr;
-  std::vector<std::pair<std::vector<storage::PageStorage::CommitIdAndBytes>,
-                        fit::function<void(storage::Status)>>>
+  std::vector<std::pair<
+      std::vector<storage::PageStorage::CommitIdAndBytes>,
+      fit::function<void(storage::Status, std::vector<storage::CommitId>)>>>
       commits_from_sync_;
   storage::Status mark_synced_to_peer_status = storage::Status::OK;
 
@@ -873,7 +875,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   EXPECT_EQ("data 2", storage_2.commits_from_sync_[0].first[1].bytes);
 
   // Verify we don't crash on response from storage
-  storage_2.commits_from_sync_[0].second(storage::Status::OK);
+  storage_2.commits_from_sync_[0].second(storage::Status::OK, {});
   RunLoopUntilIdle();
 }
 

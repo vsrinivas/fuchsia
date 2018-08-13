@@ -21,6 +21,7 @@
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_printf.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -40,6 +41,8 @@
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+
+using testing::ElementsAre;
 
 namespace storage {
 
@@ -274,9 +277,11 @@ class PageStorageTest : public ledger::TestWithEnvironment {
 
     bool called;
     Status status;
+    std::vector<CommitId> missing_ids;
     storage_->AddCommitsFromSync(
         CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &missing_ids));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -653,7 +658,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::ILLEGAL_STATE, status);
+  EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
 TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
@@ -678,12 +683,14 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
 
   bool called;
   Status status;
+  std::vector<CommitId> missing_ids;
   storage_->AddCommitsFromSync(
       std::move(commits_and_bytes), ChangeSource::CLOUD,
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &missing_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::ILLEGAL_STATE, status);
+  EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
@@ -731,9 +738,11 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     sync.object_requests.clear();
     bool called;
     Status status;
+    std::vector<CommitId> missing_ids;
     storage_->AddCommitsFromSync(
         CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &missing_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -747,7 +756,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     sync.object_requests.clear();
     storage_->AddCommitsFromSync(
         CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &missing_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -804,9 +814,11 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
+  std::vector<CommitId> missing_ids;
   storage_->AddCommitsFromSync(
       std::move(commits_and_bytes), ChangeSource::CLOUD,
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &missing_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -1797,9 +1809,11 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
 
     bool called;
     Status status;
+    std::vector<CommitId> missing_ids;
     storage_->AddCommitsFromSync(
         std::move(commits_and_bytes), ChangeSource::CLOUD,
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &missing_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1976,10 +1990,11 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
+  std::vector<CommitId> missing_ids;
   storage_->AddCommitsFromSync(
       std::move(commits_and_bytes), ChangeSource::CLOUD,
       callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
-                        &commits_from_sync_status));
+                        &commits_from_sync_status, &missing_ids));
 
   // Make the loop run until GetObject is called in sync, and before
   // AddCommitsFromSync finishes.
@@ -2101,6 +2116,39 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   EXPECT_EQ(4u, unsynced_commits.size());
   EXPECT_EQ(commit_merge->GetId(), unsynced_commits.back()->GetId());
   EXPECT_LT(commit_merge->GetTimestamp(), commit_c->GetTimestamp());
+}
+
+// Add a commit for which we don't have its parent. Verify that an error is
+// returned, along with the id of the missing parent.
+TEST_F(PageStorageTest, AddCommitsMissingParent) {
+  std::unique_ptr<const btree::TreeNode> node;
+  ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
+  ObjectIdentifier root_identifier = node->GetIdentifier();
+
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+  auto commit_parent = CommitImpl::FromContentAndParents(
+      storage_.get(), root_identifier, std::move(parent));
+  parent.clear();
+  parent.push_back(commit_parent->Clone());
+  auto commit_child = CommitImpl::FromContentAndParents(
+      storage_.get(), root_identifier, std::move(parent));
+
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+  commits_and_bytes.emplace_back(commit_child->GetId(),
+                                 commit_child->GetStorageBytes().ToString());
+
+  bool called;
+  Status status;
+  std::vector<CommitId> missing_ids;
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes), ChangeSource::P2P,
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &missing_ids));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_THAT(missing_ids, ElementsAre(commit_parent->GetId()));
 }
 
 }  // namespace

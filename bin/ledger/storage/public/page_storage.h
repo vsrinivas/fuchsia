@@ -63,9 +63,11 @@ class PageStorage : public PageSyncClient {
   // callback is called when the storage has finished processing the commits. If
   // the status passed to the callback is OK, this indicates that storage
   // fetched all referenced objects and is ready to accept subsequent commits.
-  virtual void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
-                                  ChangeSource source,
-                                  fit::function<void(Status)> callback) = 0;
+  // In case of error due to missing commits, |callback| will be passed a list
+  // of the missing commit IDs.
+  virtual void AddCommitsFromSync(
+      std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
+      fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Starts a new journal based on the commit with the given |commit_id|. The
   // base commit must be one of the head commits. If |journal_type| is
   // |EXPLICIT|, all changes will be lost after a crash. Otherwise, changes to

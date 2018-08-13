@@ -155,14 +155,16 @@ void PageStorageImpl::AddCommitFromLocal(
 
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
-    fit::function<void(Status)> callback) {
+    fit::function<void(Status, std::vector<CommitId>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, ids_and_bytes = std::move(ids_and_bytes), source](
           CoroutineHandler* handler,
-          fit::function<void(Status)> callback) mutable {
-        callback(SynchronousAddCommitsFromSync(
-            handler, std::move(ids_and_bytes), source));
+          fit::function<void(Status, std::vector<CommitId>)> callback) mutable {
+        std::vector<CommitId> missing_ids;
+        Status status = SynchronousAddCommitsFromSync(
+            handler, std::move(ids_and_bytes), source, &missing_ids);
+        callback(status, std::move(missing_ids));
       });
 }
 
@@ -1145,12 +1147,12 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
   commits.push_back(std::move(commit));
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::LOCAL,
-                               std::move(new_objects));
+                               std::move(new_objects), nullptr);
 }
 
 Status PageStorageImpl::SynchronousAddCommitsFromSync(
     CoroutineHandler* handler, std::vector<CommitIdAndBytes> ids_and_bytes,
-    ChangeSource source) {
+    ChangeSource source, std::vector<CommitId>* missing_ids) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
   std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
@@ -1229,7 +1231,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   }
 
   return SynchronousAddCommits(handler, std::move(commits), source,
-                               std::vector<ObjectIdentifier>());
+                               std::vector<ObjectIdentifier>(), missing_ids);
 }
 
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(
@@ -1286,7 +1288,8 @@ Status PageStorageImpl::SynchronousMarkCommitSyncedInBatch(
 Status PageStorageImpl::SynchronousAddCommits(
     CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>> commits, ChangeSource source,
-    std::vector<ObjectIdentifier> new_objects) {
+    std::vector<ObjectIdentifier> new_objects,
+    std::vector<CommitId>* missing_ids) {
   // Make sure that only one AddCommits operation is executed at a time.
   // Otherwise, if db_ operations are asynchronous, ContainsCommit (below) may
   // return NOT_FOUND while another commit is added, and batch->Execute() will
@@ -1346,9 +1349,11 @@ Status PageStorageImpl::SynchronousAddCommits(
                          << ToHex(parent_id) << "\" of commit \""
                          << convert::ToHex(commit->GetId()) << "\".";
           if (s == Status::NOT_FOUND) {
-            orphaned_commits++;
+            if (missing_ids) {
+              missing_ids->push_back(parent_id.ToString());
+            }
             commit.reset();
-            break;
+            continue;
           }
           return Status::INTERNAL_IO_ERROR;
         }
@@ -1365,6 +1370,7 @@ Status PageStorageImpl::SynchronousAddCommits(
 
     // The commit could not be added. Skip it.
     if (!commit) {
+      orphaned_commits++;
       continue;
     }
 
@@ -1393,8 +1399,8 @@ Status PageStorageImpl::SynchronousAddCommits(
     ledger::ReportEvent(
         ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
     FXL_LOG(ERROR) << "Failed adding commits. Found " << orphaned_commits
-                   << " orphaned commits.";
-    return Status::ILLEGAL_STATE;
+                   << " orphaned commits (one of their parent was not found).";
+    return Status::NOT_FOUND;
   }
 
   // Update heads in Db.
