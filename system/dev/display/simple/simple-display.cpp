@@ -29,23 +29,16 @@ void SimpleDisplay::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t
     cb_ctx_ = cb_ctx;
     cb_ = cb;
 
-    uint64_t display_id = kDisplayId;
-    cb->on_displays_changed(cb_ctx, &display_id, 1, nullptr, 0);
-}
+    added_display_args_t args = {};
+    args.display_id = kDisplayId;
+    args.edid_present = false;
+    args.panel.params.height = height_;
+    args.panel.params.width = width_;
+    args.panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
+    args.pixel_formats = &format_;
+    args.pixel_format_count = 1;
 
-zx_status_t SimpleDisplay::GetDisplayInfo(uint64_t display_id, display_info_t* info) {
-    if (display_id != kDisplayId) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    info->edid_present = false;
-    info->panel.params.height = height_;
-    info->panel.params.width = width_;
-    info->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    info->pixel_formats = &format_;
-    info->pixel_format_count = 1;
-
-    return ZX_OK;
+    cb->on_displays_changed(cb_ctx, &args, 1, nullptr, 0);
 }
 
 zx_status_t SimpleDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {

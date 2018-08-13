@@ -38,9 +38,18 @@ static uint32_t imx8m_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_
     return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
+static void populate_added_display_args(imx8m_display_t* display, added_display_args_t* args) {
+    args->display_id = PANEL_DISPLAY_ID;
+    args->edid_present = false;
+    args->panel.params.height = DISPLAY_HEIGHT;
+    args->panel.params.width = DISPLAY_WIDTH;
+    args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
+    args->pixel_formats = &supported_pixel_formats;
+    args->pixel_format_count = sizeof(supported_pixel_formats) / sizeof(zx_pixel_format_t);
+}
+
 static void imx8m_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
     imx8m_display_t* display = ctx;
-    mtx_lock(&display->cb_lock);
 
     mtx_lock(&display->display_lock);
 
@@ -48,30 +57,12 @@ static void imx8m_set_display_controller_cb(void* ctx, void* cb_ctx, display_con
     display->dc_cb = cb;
     display->dc_cb_ctx = cb_ctx;
 
-    mtx_unlock(&display->display_lock);
-
+    added_display_args_t args;
+    populate_added_display_args(display, &args);
     if (notify_display) {
-        uint64_t display_id = PANEL_DISPLAY_ID;
-        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &display_id, 1, NULL, 0);
+        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
     }
-    mtx_unlock(&display->cb_lock);
-}
-
-static zx_status_t imx8m_get_display_info(void* ctx, uint64_t display_id, display_info_t* info) {
-    ZX_DEBUG_ASSERT(display_id == PANEL_DISPLAY_ID);
-
-    imx8m_display_t* display = ctx;
-    mtx_lock(&display->display_lock);
-
-    info->edid_present = false;
-    info->panel.params.height = DISPLAY_HEIGHT;
-    info->panel.params.width = DISPLAY_WIDTH;
-    info->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    info->pixel_formats = &supported_pixel_formats;
-    info->pixel_format_count = sizeof(supported_pixel_formats) / sizeof(zx_pixel_format_t);
-
     mtx_unlock(&display->display_lock);
-    return ZX_OK;
 }
 
 static zx_status_t imx8m_import_vmo_image(void* ctx, image_t* image,
@@ -204,7 +195,6 @@ static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) 
 
 static display_controller_protocol_ops_t display_controller_ops = {
     .set_display_controller_cb = imx8m_set_display_controller_cb,
-    .get_display_info = imx8m_get_display_info,
     .import_vmo_image = imx8m_import_vmo_image,
     .release_image = imx8m_release_image,
     .check_configuration = imx8m_check_configuration,
@@ -242,7 +232,6 @@ static int main_hdmi_thread(void *arg) {
     imx8m_display_t* display = arg;
     zx_status_t status;
 
-    mtx_lock(&display->cb_lock);
     mtx_lock(&display->display_lock);
 
     uint32_t stride = imx8m_compute_linear_stride(display, DISPLAY_WIDTH, DISPLAY_FORMAT);
@@ -251,19 +240,17 @@ static int main_hdmi_thread(void *arg) {
                             IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         mtx_unlock(&display->display_lock);
-        mtx_unlock(&display->cb_lock);
         return status;
     }
 
     writel(io_buffer_phys(&display->fbuffer), io_buffer_virt(&display->mmio_dc) +  0x80c0);
 
-    mtx_unlock(&display->display_lock);
-
     if (display->dc_cb) {
-        uint64_t display_added = PANEL_DISPLAY_ID;
-        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &display_added, 1, NULL, 0);
+        added_display_args_t args;
+        populate_added_display_args(display, &args);
+        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
     }
-    mtx_unlock(&display->cb_lock);
+    mtx_unlock(&display->display_lock);
 
     return ZX_OK;
 }
@@ -279,7 +266,6 @@ zx_status_t imx8m_display_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&display->imported_images);
     mtx_init(&display->display_lock, mtx_plain);
     mtx_init(&display->image_lock, mtx_plain);
-    mtx_init(&display->cb_lock, mtx_plain);
 
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
     if (status !=  ZX_OK) {

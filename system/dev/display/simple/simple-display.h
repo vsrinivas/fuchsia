@@ -30,7 +30,6 @@ public:
     zx_status_t Bind(const char* name, fbl::unique_ptr<SimpleDisplay>* controller_ptr);
 
     void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
-    zx_status_t GetDisplayInfo(uint64_t display_id, display_info_t* info);
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
     void CheckConfiguration(const display_config_t** display_config,

@@ -52,24 +52,17 @@ void GpuDevice::virtio_gpu_set_display_controller_cb(void* ctx, void* cb_ctx,
         gd->dc_cb_ctx_ = cb_ctx;
     }
 
-    uint64_t disp_id = kDisplayId;
-    cb->on_displays_changed(cb_ctx, &disp_id, 1, nullptr, 0);
-}
-
-zx_status_t GpuDevice::virtio_gpu_get_display_info(void* ctx, uint64_t id, display_info_t* info) {
-    if (id != kDisplayId) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    GpuDevice* gd = static_cast<GpuDevice*>(ctx);
-
-    info->edid_present = false;
-    info->panel.params.width = gd->pmode_.r.width;
-    info->panel.params.height = gd->pmode_.r.height;
-    info->panel.params.refresh_rate_e2 = kRefreshRateHz * 100;
-
-    info->pixel_formats = &gd->supported_formats_;
-    info->pixel_format_count = 1;
-    return ZX_OK;
+    added_display_args_t args = {};
+    args.display_id = kDisplayId,
+    args.edid_present = false,
+    args.panel.params = {
+        .width = gd->pmode_.r.width,
+        .height = gd->pmode_.r.height,
+        .refresh_rate_e2 = kRefreshRateHz * 100,
+    },
+    args.pixel_formats = &gd->supported_formats_,
+    args.pixel_format_count = 1,
+    cb->on_displays_changed(cb_ctx, &args, 1, nullptr, 0);
 }
 
 zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image,
@@ -464,7 +457,6 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     LTRACEF("publishing device\n");
 
     display_proto_ops_.set_display_controller_cb = virtio_gpu_set_display_controller_cb;
-    display_proto_ops_.get_display_info = virtio_gpu_get_display_info;
     display_proto_ops_.import_vmo_image = virtio_gpu_import_vmo_image;
     display_proto_ops_.release_image = virtio_gpu_release_image;
     display_proto_ops_.check_configuration = virtio_gpu_check_configuration;

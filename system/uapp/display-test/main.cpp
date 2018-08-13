@@ -58,39 +58,50 @@ static bool bind_display(fbl::Vector<Display>* displays) {
         return false;
     }
 
+    uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
+    fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
+    while (displays->is_empty()) {
+        printf("Wating for display\n");
+        if (!wait_for_driver_event(ZX_TIME_INFINITE)) {
+            return false;
+        }
+
+        printf("Querying display\n");
+        if (msg.Read(dc_handle, 0) != ZX_OK) {
+            printf("Read failed\n");
+            return false;
+        }
+
+        if (msg.ordinal() == fuchsia_display_ControllerDisplaysChangedOrdinal) {
+            const char* err_msg;
+            if (msg.Decode(&fuchsia_display_ControllerDisplaysChangedEventTable,
+                           &err_msg) != ZX_OK) {
+                printf("Fidl decode error %d %s\n", msg.ordinal(), err_msg);
+                return false;
+            }
+
+            auto changes = reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(
+                    msg.bytes().data());
+            auto display_info = reinterpret_cast<fuchsia_display_Info*>(changes->added.data);
+
+            for (unsigned i = 0; i < changes->added.count; i++) {
+                displays->push_back(Display(display_info + i));
+            }
+        } else if (msg.ordinal() == fuchsia_display_ControllerClientOwnershipChangeOrdinal) {
+            has_ownership = ((fuchsia_display_ControllerClientOwnershipChangeEvent*)
+                    msg.bytes().data())->has_ownership;
+        } else {
+            printf("Got unexpected message %d\n", msg.ordinal());
+            return false;
+        }
+    }
+
     fuchsia_display_ControllerEnableVsyncRequest enable_vsync;
     enable_vsync.hdr.ordinal = fuchsia_display_ControllerEnableVsyncOrdinal;
     enable_vsync.enable = true;
     if (zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync), nullptr, 0) != ZX_OK) {
         printf("Failed to enable vsync\n");
         return false;
-    }
-
-    printf("Wating for display\n");
-    if (!wait_for_driver_event(ZX_TIME_INFINITE)) {
-        return false;
-    }
-
-    printf("Querying display\n");
-    uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-    fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
-    if (msg.Read(dc_handle, 0) != ZX_OK) {
-        printf("Read failed\n");
-        return false;
-    }
-
-    const char* err_msg;
-    if (msg.Decode(&fuchsia_display_ControllerDisplaysChangedEventTable, &err_msg) != ZX_OK) {
-        printf("Fidl decode error %s\n", err_msg);
-        return false;
-    }
-
-    auto changes = reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(
-            msg.bytes().data());
-    auto display_info = reinterpret_cast<fuchsia_display_Info*>(changes->added.data);
-
-    for (unsigned i = 0; i < changes->added.count; i++) {
-        displays->push_back(Display(display_info + i));
     }
 
     return true;

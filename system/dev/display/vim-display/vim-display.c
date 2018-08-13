@@ -48,6 +48,16 @@ enum {
     MMIO_COUNT  // Must be the final entry
 };
 
+void populate_added_display_args(vim2_display_t* display, added_display_args_t* args) {
+    args->display_id = display->display_id;
+    args->edid_present = true;
+    args->panel.edid.data = display->edid_buf;
+    args->panel.edid.length = display->edid_length;
+    args->pixel_formats = &_gsupported_pixel_formats;
+    args->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
+    args->cursor_info_count = 0;
+}
+
 static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
     // The vim2 display controller needs buffers with a stride that is an even
     // multiple of 32.
@@ -56,39 +66,17 @@ static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_fo
 
 static void vim_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
     vim2_display_t* display = ctx;
-    mtx_lock(&display->cb_lock);
-
     mtx_lock(&display->display_lock);
 
     display->dc_cb = cb;
     display->dc_cb_ctx = cb_ctx;
 
-    uint64_t display_id = display->display_id;
-    bool attached = display->display_attached;
-    mtx_unlock(&display->display_lock);
-
-    if (attached) {
-        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &display_id, 1, NULL, 0);
+    if (display->display_attached) {
+        added_display_args_t args;
+        populate_added_display_args(display, &args);
+        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
     }
-    mtx_unlock(&display->cb_lock);
-}
-
-static zx_status_t vim_get_display_info(void* ctx, uint64_t display_id, display_info_t* info) {
-    vim2_display_t* display = ctx;
-    mtx_lock(&display->display_lock);
-    if (!display->display_attached || display_id != display->display_id) {
-        mtx_unlock(&display->display_lock);
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    info->edid_present = true;
-    info->panel.edid.data = display->edid_buf;
-    info->panel.edid.length = display->edid_length;
-    info->pixel_formats = &_gsupported_pixel_formats;
-    info->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
-
     mtx_unlock(&display->display_lock);
-    return ZX_OK;
 }
 
 static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo, size_t offset) {
@@ -256,7 +244,6 @@ static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) 
 
 static display_controller_protocol_ops_t display_controller_ops = {
     .set_display_controller_cb = vim_set_display_controller_cb,
-    .get_display_info = vim_get_display_info,
     .import_vmo_image = vim_import_vmo_image,
     .release_image = vim_release_image,
     .check_configuration = vim_check_configuration,
@@ -373,16 +360,17 @@ static int hdmi_irq_handler(void *arg) {
             continue;
         }
 
-        mtx_lock(&display->cb_lock);
         mtx_lock(&display->display_lock);
 
-        uint64_t display_added = INVALID_DISPLAY_ID;
+        bool display_added = false;
+        added_display_args_t args;
         uint64_t display_removed = INVALID_DISPLAY_ID;
         if (hpd && !display->display_attached) {
             DISP_ERROR("Display is connected\n");
             if (setup_hdmi(display) == ZX_OK) {
                 display->display_attached = true;
-                display_added = display->display_id;
+                populate_added_display_args(display, &args);
+                display_added = true;
                 gpio_set_polarity(&display->gpio, 0, GPIO_POLARITY_LOW);
             }
         } else if (!hpd && display->display_attached) {
@@ -396,18 +384,16 @@ static int hdmi_irq_handler(void *arg) {
             gpio_set_polarity(&display->gpio, 0, GPIO_POLARITY_HIGH);
         }
 
-        mtx_unlock(&display->display_lock);
-
         if (display->dc_cb &&
-                (display_removed != INVALID_DISPLAY_ID || display_added != INVALID_DISPLAY_ID)) {
+                (display_removed != INVALID_DISPLAY_ID || display_added)) {
             display->dc_cb->on_displays_changed(display->dc_cb_ctx,
-                                                &display_added,
-                                                display_added != INVALID_DISPLAY_ID,
+                                                &args,
+                                                display_added ? 1 : 0,
                                                 &display_removed,
                                                 display_removed != INVALID_DISPLAY_ID);
         }
 
-        mtx_unlock(&display->cb_lock);
+        mtx_unlock(&display->display_lock);
     }
 }
 
@@ -424,21 +410,18 @@ static int vsync_thread(void *arg)
             break;
         }
 
-        mtx_lock(&display->cb_lock);
         mtx_lock(&display->display_lock);
 
         uint64_t display_id = display->display_id;
         bool attached = display->display_attached;
         void* live = (void*) (uint64_t) display->current_image;
         bool current_image_valid = display->current_image_valid;
-        mtx_unlock(&display->display_lock);
 
         if (display->dc_cb && attached) {
             display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id, timestamp,
                                              &live, current_image_valid);
         }
-
-        mtx_unlock(&display->cb_lock);
+        mtx_unlock(&display->display_lock);
     }
 
     return 0;
@@ -597,7 +580,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&display->imported_images);
     mtx_init(&display->display_lock, mtx_plain);
     mtx_init(&display->image_lock, mtx_plain);
-    mtx_init(&display->cb_lock, mtx_plain);
 
     thrd_create_with_name(&display->main_thread, hdmi_irq_handler, display, "hdmi_irq_handler");
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");

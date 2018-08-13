@@ -45,9 +45,6 @@ typedef struct vim2_display {
     mtx_t                               display_lock;
     // Lock for imported images.
     mtx_t                               image_lock;
-    // Lock for the display callback, for enforcing an ordering on
-    // hotplug callbacks. Should be acquired before display_lock.
-    mtx_t                               cb_lock;
 
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.

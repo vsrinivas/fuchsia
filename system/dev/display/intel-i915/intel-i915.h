@@ -53,7 +53,6 @@ public:
     void FinishInit();
 
     void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
-    zx_status_t GetDisplayInfo(uint64_t display_id, display_info_t* info);
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
     void CheckConfiguration(const display_config_t** display_config,
@@ -105,6 +104,9 @@ private:
     void InitDisplayBuffers();
     DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
 
+    void CallOnDisplaysChanged(DisplayDevice** added, uint32_t added_count, uint64_t* removed,
+                               uint32_t removed_count) __TA_REQUIRES(display_lock_);
+
     // Gets the layer_t* config for the given pipe/plane. Return false if there is no layer.
     bool GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
                        const display_config_t** configs, uint32_t display_count,
@@ -148,23 +150,9 @@ private:
     bool gpu_released_ = false;
     bool display_released_ = false;
 
-    void* dc_cb_ctx_ __TA_GUARDED(_dc_cb_lock_);
-    display_controller_cb_t* _dc_cb_ __TA_GUARDED(_dc_cb_lock_) = nullptr;
-    mtx_t _dc_cb_lock_;
-    bool ready_for_callback_ __TA_GUARDED(_dc_cb_lock_) = false;
-
-    // To prevent deadlocks, require that only the callback lock is held when making
-    // callbacks and that the callback lock is acquired before any other locks.
-    display_controller_cb_t* dc_cb() __TA_REQUIRES(_dc_cb_lock_)
-                                     __TA_EXCLUDES(display_lock_, gtt_lock_, bar_lock_) {
-        return _dc_cb_;
-    }
-    // TODO: Use __TA_ACQUIRED_BEFORE when it works as well as __TA_EXCLUDES
-    void acquire_dc_cb_lock() __TA_ACQUIRE(_dc_cb_lock_)
-                              __TA_EXCLUDES(display_lock_, gtt_lock_, bar_lock_) {
-        mtx_lock(&_dc_cb_lock_);
-    }
-    void release_dc_cb_lock() __TA_RELEASE(_dc_cb_lock_) { mtx_unlock(&_dc_cb_lock_); }
+    void* dc_cb_ctx_ __TA_GUARDED(display_lock_);
+    display_controller_cb_t* dc_cb_ __TA_GUARDED(display_lock_) = nullptr;
+    bool ready_for_callback_ __TA_GUARDED(display_lock_) = false;
 
     Gtt gtt_ __TA_GUARDED(gtt_lock_);
     mtx_t gtt_lock_;

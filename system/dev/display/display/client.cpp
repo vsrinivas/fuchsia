@@ -1118,10 +1118,10 @@ void Client::SetOwnership(bool is_owner) {
     ApplyConfig();
 }
 
-void Client::OnDisplaysChanged(uint64_t* displays_added,
-                               uint32_t added_count,
-                               uint64_t* displays_removed, uint32_t removed_count) {
+void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
+                               const uint64_t* displays_removed, uint32_t removed_count) {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
@@ -1141,118 +1141,114 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
         }
     }
 
-    {
-        fbl::AutoLock lock(controller_->mtx());
-        for (unsigned i = 0; i < added_count; i++) {
-            fbl::AllocChecker ac;
-            auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
-            if (!ac.check()) {
-                zxlogf(WARN, "Out of memory when processing hotplug\n");
-                continue;
-            }
-
-            config->id = displays_added[i];
-
-            if (!controller_->GetSupportedPixelFormats(config->id,
-                                                       &config->pixel_format_count_,
-                                                       &config->pixel_formats_)) {
-                zxlogf(WARN, "Failed to get pixel formats when processing hotplug\n");
-                continue;
-            }
-
-            if (!controller_->GetCursorInfo(config->id,
-                                            &config->cursor_info_count_, &config->cursor_infos_)) {
-                zxlogf(WARN, "Failed to get cursor info when processing hotplug\n");
-                continue;
-            }
-
-            const fbl::Vector<edid::timing_params_t>* edid_timings;
-            const display_params_t* params;
-            if (!controller_->GetPanelConfig(config->id, &edid_timings, &params)) {
-                // This can only happen if the display was already disconnected.
-                zxlogf(WARN, "No config when adding display\n");
-                continue;
-            }
-            req->added.count++;
-
-            config->current_.display_id = config->id;
-            config->current_.layers = nullptr;
-            config->current_.layer_count = 0;
-
-            if (edid_timings) {
-                Controller::PopulateDisplayMode((*edid_timings)[0], &config->current_.mode);
-            } else {
-                config->current_.mode = {};
-                config->current_.mode.h_addressable = params->width;
-                config->current_.mode.v_addressable = params->height;
-            }
-
-            config->current_.cc_flags = 0;
-
-            config->pending_ = config->current_;
-
-            configs_.insert(fbl::move(config));
+    for (unsigned i = 0; i < added_count; i++) {
+        fbl::AllocChecker ac;
+        auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
+        if (!ac.check()) {
+            zxlogf(WARN, "Out of memory when processing hotplug\n");
+            continue;
         }
 
-        // We need 2 loops, since we need to make sure we allocate the
-        // correct size array in the fidl response.
-        fuchsia_display_Info* coded_configs = nullptr;
-        if (req->added.count > 0) {
-            coded_configs =
-                    builder.NewArray<fuchsia_display_Info>(static_cast<uint32_t>(req->added.count));
+        config->id = displays_added[i];
+
+        if (!controller_->GetSupportedPixelFormats(config->id,
+                                                   &config->pixel_formats_)) {
+            zxlogf(WARN, "Failed to get pixel formats when processing hotplug\n");
+            continue;
         }
 
-        for (unsigned i = 0; i < added_count; i++) {
-            auto config = configs_.find(displays_added[i]);
-            if (!config.IsValid()) {
-                continue;
-            }
+        if (!controller_->GetCursorInfo(config->id, &config->cursor_infos_)) {
+            zxlogf(WARN, "Failed to get cursor info when processing hotplug\n");
+            continue;
+        }
 
-            const fbl::Vector<edid::timing_params>* edid_timings;
-            const display_params_t* params;
-            controller_->GetPanelConfig(config->id, &edid_timings, &params);
+        const fbl::Vector<edid::timing_params_t>* edid_timings;
+        const display_params_t* params;
+        if (!controller_->GetPanelConfig(config->id, &edid_timings, &params)) {
+            // This can only happen if the display was already disconnected.
+            zxlogf(WARN, "No config when adding display\n");
+            continue;
+        }
+        req->added.count++;
 
-            coded_configs[i].id = config->id;
-            coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-            coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-            coded_configs[i].cursor_configs.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        config->current_.display_id = config->id;
+        config->current_.layers = nullptr;
+        config->current_.layer_count = 0;
 
-            if (edid_timings) {
-                coded_configs[i].modes.count = edid_timings->size();
-                for (auto timing : *edid_timings) {
-                    auto mode = builder.New<fuchsia_display_Mode>();
+        if (edid_timings) {
+            Controller::PopulateDisplayMode((*edid_timings)[0], &config->current_.mode);
+        } else {
+            config->current_.mode = {};
+            config->current_.mode.h_addressable = params->width;
+            config->current_.mode.v_addressable = params->height;
+        }
 
-                    mode->horizontal_resolution = timing.horizontal_addressable;
-                    mode->vertical_resolution = timing.vertical_addressable;
-                    mode->refresh_rate_e2 = timing.vertical_refresh_e2;
-                }
-            } else {
-                coded_configs[i].modes.count = 1;
+        config->current_.cc_flags = 0;
+
+        config->pending_ = config->current_;
+
+        configs_.insert(fbl::move(config));
+    }
+
+    // We need 2 loops, since we need to make sure we allocate the
+    // correct size array in the fidl response.
+    fuchsia_display_Info* coded_configs = nullptr;
+    if (req->added.count > 0) {
+        coded_configs =
+                builder.NewArray<fuchsia_display_Info>(static_cast<uint32_t>(req->added.count));
+    }
+
+    for (unsigned i = 0; i < added_count; i++) {
+        auto config = configs_.find(displays_added[i]);
+        if (!config.IsValid()) {
+            continue;
+        }
+
+        const fbl::Vector<edid::timing_params>* edid_timings;
+        const display_params_t* params;
+        controller_->GetPanelConfig(config->id, &edid_timings, &params);
+
+        coded_configs[i].id = config->id;
+        coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        coded_configs[i].cursor_configs.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+        if (edid_timings) {
+            coded_configs[i].modes.count = edid_timings->size();
+            for (auto timing : *edid_timings) {
                 auto mode = builder.New<fuchsia_display_Mode>();
-                mode->horizontal_resolution = params->width;
-                mode->vertical_resolution = params->height;
-                mode->refresh_rate_e2 = params->refresh_rate_e2;
-            }
 
-            static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
-            coded_configs[i].pixel_format.count = config->pixel_format_count_;
-            memcpy(builder.NewArray<zx_pixel_format_t>(config->pixel_format_count_),
-                   config->pixel_formats_.get(),
-                   sizeof(zx_pixel_format_t) * config->pixel_format_count_);
-
-            static_assert(offsetof(cursor_info_t, width) ==
-                    offsetof(fuchsia_display_CursorInfo, width), "Bad struct");
-            static_assert(offsetof(cursor_info_t, height) ==
-                    offsetof(fuchsia_display_CursorInfo, height), "Bad struct");
-            static_assert(offsetof(cursor_info_t, format) ==
-                    offsetof(fuchsia_display_CursorInfo, pixel_format), "Bad struct");
-            static_assert(sizeof(cursor_info_t) <= sizeof(fuchsia_display_CursorInfo), "Bad size");
-            coded_configs[i].cursor_configs.count = config->cursor_info_count_;
-            auto coded_cursor_configs =
-                    builder.NewArray<fuchsia_display_CursorInfo>(config->cursor_info_count_);
-            for (unsigned i = 0; i < config->cursor_info_count_; i++) {
-                memcpy(&coded_cursor_configs[i], &config->cursor_infos_[i], sizeof(cursor_info_t));
+                mode->horizontal_resolution = timing.horizontal_addressable;
+                mode->vertical_resolution = timing.vertical_addressable;
+                mode->refresh_rate_e2 = timing.vertical_refresh_e2;
             }
+        } else {
+            coded_configs[i].modes.count = 1;
+            auto mode = builder.New<fuchsia_display_Mode>();
+            mode->horizontal_resolution = params->width;
+            mode->vertical_resolution = params->height;
+            mode->refresh_rate_e2 = params->refresh_rate_e2;
+        }
+
+        static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
+        coded_configs[i].pixel_format.count = config->pixel_formats_.size();
+        memcpy(builder.NewArray<zx_pixel_format_t>(
+                        static_cast<uint32_t>(config->pixel_formats_.size())),
+               config->pixel_formats_.get(),
+               sizeof(zx_pixel_format_t) * config->pixel_formats_.size());
+
+        static_assert(offsetof(cursor_info_t, width) ==
+                offsetof(fuchsia_display_CursorInfo, width), "Bad struct");
+        static_assert(offsetof(cursor_info_t, height) ==
+                offsetof(fuchsia_display_CursorInfo, height), "Bad struct");
+        static_assert(offsetof(cursor_info_t, format) ==
+                offsetof(fuchsia_display_CursorInfo, pixel_format), "Bad struct");
+        static_assert(sizeof(cursor_info_t) <= sizeof(fuchsia_display_CursorInfo), "Bad size");
+        coded_configs[i].cursor_configs.count = config->cursor_infos_.size();
+        auto coded_cursor_configs = builder.NewArray<fuchsia_display_CursorInfo>(
+                static_cast<uint32_t>(config->cursor_infos_.size()));
+        for (unsigned i = 0; i < config->cursor_infos_.size(); i++) {
+            memcpy(&coded_cursor_configs[i], &config->cursor_infos_[i], sizeof(cursor_info_t));
         }
     }
 
@@ -1431,44 +1427,10 @@ void ClientProxy::SetOwnership(bool is_owner) {
     task->Post(controller_->loop().dispatcher());
 }
 
-zx_status_t ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
-                                           uint32_t added_count, const uint64_t* displays_removed,
-                                           uint32_t removed_count) {
-    fbl::unique_ptr<uint64_t[]> added;
-    fbl::unique_ptr<uint64_t[]> removed;
-
-    fbl::AllocChecker ac;
-    if (added_count) {
-        added = fbl::unique_ptr<uint64_t[]>(new (&ac) uint64_t[added_count]);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
-    if (removed_count) {
-        removed = fbl::unique_ptr<uint64_t[]>(new (&ac) uint64_t[removed_count]);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
-
-    memcpy(removed.get(), displays_removed, sizeof(*displays_removed) * removed_count);
-    memcpy(added.get(), displays_added, sizeof(*displays_added) * added_count);
-
-    auto task = new async::Task();
-    task->set_handler([client_handler = &handler_,
-                       added_ptr = added.release(), removed_ptr = removed.release(),
-                       added_count, removed_count]
-                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
-            if (status == ZX_OK && client_handler->IsValid()) {
-                client_handler->OnDisplaysChanged(added_ptr, added_count,
-                                                  removed_ptr, removed_count);
-            }
-
-            delete[] added_ptr;
-            delete[] removed_ptr;
-            delete task;
-    });
-    return task->Post(controller_->loop().dispatcher());
+void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
+                                    uint32_t added_count, const uint64_t* displays_removed,
+                                    uint32_t removed_count) {
+    handler_.OnDisplaysChanged(displays_added, added_count, displays_removed, removed_count);
 }
 
 void ClientProxy::ReapplyConfig() {

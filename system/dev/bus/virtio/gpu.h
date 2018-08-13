@@ -39,7 +39,6 @@ private:
     // DDK driver hooks
     static void virtio_gpu_set_display_controller_cb(
             void* ctx, void* cb_ctx, display_controller_cb_t* cb);
-    static zx_status_t virtio_gpu_get_display_info(void* ctx, uint64_t id, display_info_t* info);
     static zx_status_t virtio_gpu_import_vmo_image(
             void* ctx, image_t* image, zx_handle_t vmo, size_t offset);
     static void virtio_gpu_release_image(void* ctx, image_t* image);

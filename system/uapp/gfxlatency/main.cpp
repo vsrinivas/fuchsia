@@ -773,33 +773,42 @@ int main(int argc, char* argv[]) {
     }
 
     zx_status_t status;
-    zx_handle_t observed;
-    uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    if ((status = zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE,
-                                     &observed)) != ZX_OK) {
-        fprintf(stderr, "failed waiting for display\n");
-        return -1;
-    }
-    if (observed & ZX_CHANNEL_PEER_CLOSED) {
-        fprintf(stderr, "display controller connection closed\n");
-        return -1;
-    }
-
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     uint32_t actual_bytes, actual_handles;
-    if ((status = zx_channel_read(dc_handle, 0, bytes, NULL,
-                                  ZX_CHANNEL_MAX_MSG_BYTES, 0, &actual_bytes,
-                                  &actual_handles)) != ZX_OK) {
-        fprintf(stderr, "reading display addded callback failed\n");
-        return -1;
-    }
+    bool has_display = false;
+    while (!has_display) {
+        zx_handle_t observed;
+        uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        if ((status = zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE,
+                                         &observed)) != ZX_OK) {
+            fprintf(stderr, "failed waiting for display\n");
+            return -1;
+        }
+        if (observed & ZX_CHANNEL_PEER_CLOSED) {
+            fprintf(stderr, "display controller connection closed\n");
+            return -1;
+        }
 
-    const char* err_msg;
-    if ((status =
-             fidl_decode(&fuchsia_display_ControllerDisplaysChangedEventTable,
-                         bytes, actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
-        fprintf(stderr, "%s\n", err_msg);
-        return -1;
+        if ((status = zx_channel_read(
+                 dc_handle, 0, bytes, NULL, ZX_CHANNEL_MAX_MSG_BYTES, 0,
+                 &actual_bytes, &actual_handles)) != ZX_OK ||
+            actual_bytes < sizeof(fidl_message_header_t)) {
+            fprintf(stderr, "reading display addded callback failed\n");
+            return -1;
+        }
+
+        fidl_message_header_t* hdr = (fidl_message_header_t*)bytes;
+        if (hdr->ordinal != fuchsia_display_ControllerDisplaysChangedOrdinal) {
+            continue;
+        }
+        const char* err_msg;
+        if ((status = fidl_decode(
+                 &fuchsia_display_ControllerDisplaysChangedEventTable, bytes,
+                 actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
+            fprintf(stderr, "%s\n", err_msg);
+            return -1;
+        }
+        has_display = true;
     }
 
     // We're guaranteed that added contains at least one display, since we

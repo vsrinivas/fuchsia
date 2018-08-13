@@ -110,11 +110,8 @@ private:
     fbl::SinglyLinkedList<layer_node_t*> pending_layers_;
     fbl::SinglyLinkedList<layer_node_t*> current_layers_;
 
-    fbl::unique_ptr<zx_pixel_format_t[]> pixel_formats_;
-    uint32_t pixel_format_count_;
-
-    fbl::unique_ptr<cursor_info_t[]> cursor_infos_;
-    uint32_t cursor_info_count_;
+    fbl::Array<zx_pixel_format_t> pixel_formats_;
+    fbl::Array<cursor_info_t> cursor_infos_;
 
     uint32_t vsync_layer_count_;
     bool display_config_change_ = false;
@@ -132,9 +129,9 @@ public:
     ~Client();
     zx_status_t Init(zx_handle_t server_handle);
 
-    void OnDisplaysChanged(uint64_t* displays_added,
+    void OnDisplaysChanged(const uint64_t* displays_added,
                            uint32_t added_count,
-                           uint64_t* displays_removed,
+                           const uint64_t* displays_removed,
                            uint32_t removed_count);
     void SetOwnership(bool is_owner);
     void ApplyConfig();
@@ -259,8 +256,8 @@ public:
     // Requires holding controller_->mtx() lock
     void OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                         uint64_t* image_ids, uint32_t count);
-    zx_status_t OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
-                                  const uint64_t* displays_removed, uint32_t removed_count);
+    void OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
+                           const uint64_t* displays_removed, uint32_t removed_count);
     void SetOwnership(bool is_owner);
     void ReapplyConfig();
 

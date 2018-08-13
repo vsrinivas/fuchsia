@@ -18,7 +18,6 @@ class DisplayControllerProtocol : public internal::base_protocol {
     DisplayControllerProtocol() {
         // TODO(stevensd): Add subclass check once API is stabilized
         ops_.set_display_controller_cb = SetDisplayControllerCb;
-        ops_.get_display_info = GetDisplayInfo;
         ops_.import_vmo_image = ImportVmoImage;
         ops_.release_image = ReleaseImage;
         ops_.check_configuration = CheckConfiguration;
@@ -35,10 +34,6 @@ class DisplayControllerProtocol : public internal::base_protocol {
   private:
     static void SetDisplayControllerCb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
         static_cast<D*>(ctx)->SetDisplayControllerCb(cb_ctx, cb);
-    }
-
-    static zx_status_t GetDisplayInfo(void* ctx, uint64_t display_id, display_info_t* info) {
-        return static_cast<D*>(ctx)->GetDisplayInfo(display_id, info);
     }
 
     static zx_status_t ImportVmoImage(void* ctx, image_t* image, zx_handle_t vmo, size_t offset) {

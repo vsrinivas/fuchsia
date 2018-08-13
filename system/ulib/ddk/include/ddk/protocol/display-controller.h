@@ -14,6 +14,35 @@ __BEGIN_CDECLS;
  * protocol/display-controller.h - display controller protocol definitions
  */
 
+// The image is linear and VMO backed.
+#define IMAGE_TYPE_SIMPLE 0
+
+// a structure containing information about each plane of an image.
+typedef struct image_plane {
+    uint32_t byte_offset;
+    uint32_t bytes_per_row;
+} image_plane_t;
+
+// a structure containing information about an image
+typedef struct image {
+    // the width and height of the image in pixels
+    uint32_t width;
+    uint32_t height;
+
+    // the pixel format of the image
+    zx_pixel_format_t pixel_format;
+
+    // The type conveys information about what is providing the pixel data. If this is not
+    // IMAGE_FORMAT_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
+    // of the value through some mechanism outside the scope of this API.
+    uint32_t type;
+
+    image_plane_t planes[4];
+
+    // A driver-defined handle to the image. Each handle must be unique.
+    void* handle;
+} image_t;
+
 #define INVALID_DISPLAY_ID 0
 
 // a fallback structure to convey display information without an edid
@@ -32,7 +61,9 @@ typedef struct cursor_info {
 } cursor_info_t;
 
 // a structure containing information a connected display
-typedef struct display_info {
+typedef struct added_display_args {
+    uint64_t display_id;
+
     // A flag indicating whether or not the display has a valid edid. If no edid is
     // present, then the meaning of display_config's mode structure is undefined, and
     // drivers should ignore it.
@@ -60,37 +91,10 @@ typedef struct display_info {
     // should be valid at most times.
     const cursor_info_t* cursor_infos;
     uint32_t cursor_info_count;
-} display_info_t;
+} added_display_args_t;
 
-// The image is linear and VMO backed.
-#define IMAGE_TYPE_SIMPLE 0
-
-// as structure containing information about each plane of an image.
-typedef struct image_plane {
-    uint32_t byte_offset;
-    uint32_t bytes_per_row;
-} image_plane_t;
-
-// a structure containing information about an image
-typedef struct image {
-    // the width and height of the image in pixels
-    uint32_t width;
-    uint32_t height;
-
-    // the pixel format of the image
-    zx_pixel_format_t pixel_format;
-
-    // The type conveys information about what is providing the pixel data. If this is not
-    // IMAGE_FORMAT_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
-    // of the value through some mechanism outside the scope of this API.
-    uint32_t type;
-
-    image_plane_t planes[4];
-
-    // A driver-defined handle to the image. Each handle must be unique.
-    void* handle;
-} image_t;
-
+// The client will not make any ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL calls into the device
+// during these callbacks.
 typedef struct display_controller_cb {
     // Callbacks which are invoked when displays are added or removed. |displays_added| and
     // |displays_removed| point to arrays of the display ids which were added and removed. If
@@ -101,8 +105,8 @@ typedef struct display_controller_cb {
     // The driver should call this function when the callback is registered if any displays
     // are present.
     void (*on_displays_changed)(void* ctx,
-                                uint64_t* displays_added, uint32_t added_count,
-                                uint64_t* displays_removed, uint32_t removed_count);
+                                added_display_args_t* added_displays, uint32_t added_count,
+                                uint64_t* removed_displays, uint32_t removed_count);
 
     // |timestamp| is the ZX_CLOCK_MONOTONIC timestamp at which the vsync occurred.
     // |handles| points to an array of image handles of each framebuffer being
@@ -288,12 +292,9 @@ typedef struct display_config {
 // The client guarantees that check_configuration and apply_configuration are always
 // made from a single thread. The client makes no other threading guarantees.
 typedef struct display_controller_protocol_ops {
+    // The function will only be called once, and it will be called before any other
+    // functions are called.
     void (*set_display_controller_cb)(void* ctx, void* cb_ctx, display_controller_cb_t* cb);
-
-    // Gets all information about the display. Pointers returned in |info| must remain
-    // valid until the the display is removed with on_displays_changed or the device's
-    // release device-op is invoked.
-    zx_status_t (*get_display_info)(void* ctx, uint64_t display_id, display_info_t* info);
 
     // Imports a VMO backed image into the driver. The driver should set image->handle. The
     // driver does not own the vmo handle passed to this function.

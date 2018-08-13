@@ -33,9 +33,6 @@ typedef struct {
     mtx_t                               display_lock;
     // Lock for imported images.
     mtx_t                               image_lock;
-    // Lock for the display callback, for enforcing an ordering on
-    // hotplug callbacks. Should be acquired before display_lock.
-    mtx_t                               cb_lock;
 
     io_buffer_t                         mmio_dc;
     io_buffer_t                         fbuffer;

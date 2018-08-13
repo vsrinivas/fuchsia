@@ -13,7 +13,7 @@
 
 namespace {
 
-void on_displays_changed(void* ctx, uint64_t* displays_added, uint32_t added_count,
+void on_displays_changed(void* ctx, added_display_args_t* displays_added, uint32_t added_count,
                          uint64_t* displays_removed, uint32_t removed_count) {
     static_cast<display::Controller*>(ctx)->OnDisplaysChanged(
             displays_added, added_count, displays_removed, removed_count);
@@ -53,32 +53,96 @@ void Controller::PopulateDisplayMode(const edid::timing_params_t& params, displa
     static_assert(MODE_FLAG_DOUBLE_CLOCKED == edid::timing_params::kDoubleClocked, "");
 }
 
-void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_count,
-                                   uint64_t* displays_removed, uint32_t removed_count) {
-    uint64_t added_success[added_count];
-    int32_t added_success_count = 0;
-    uint64_t removed_success[removed_count];
-    int32_t removed_success_count = 0;
+bool Controller::PopulateDisplayTimings(DisplayInfo* info) {
+    // Go through all the display mode timings and record whether or not
+    // a basic layer configuration is acceptable.
+    layer_t test_layer = {};
+    layer_t* test_layers[] = { &test_layer };
+    test_layer.cfg.primary.image.pixel_format = info->pixel_formats_[0];
 
-    fbl::AutoLock lock(&mtx_);
-    for (unsigned i = 0; i < removed_count; i++) {
-        auto target = displays_.erase(displays_removed[i]);
-        if (target) {
-            removed_success[removed_success_count++] = displays_removed[i];
+    display_config_t test_config;
+    const display_config_t* test_configs[] = { &test_config };
+    test_config.display_id = info->id;
+    test_config.layer_count = 1;
+    test_config.layers = test_layers;
 
-            image_node_t* node;
-            while ((node = list_remove_head_type(&target->images, image_node_t, link)) != nullptr) {
-                node->self->StartRetire();
-                node->self->OnRetire();
-                node->self.reset();
+    for (auto timing : info->edid) {
+        uint32_t width = timing.horizontal_addressable;
+        uint32_t height = timing.vertical_addressable;
+        bool duplicate = false;
+        for (auto& existing_timing : info->edid_timings) {
+            if (existing_timing.vertical_refresh_e2 == timing.vertical_refresh_e2
+                    && existing_timing.horizontal_addressable == width
+                    && existing_timing.vertical_addressable == height) {
+                duplicate = true;
+                break;
             }
-        } else {
-            zxlogf(TRACE, "Unknown display %ld removed\n", displays_removed[i]);
+        }
+        if (!duplicate) {
+            test_layer.cfg.primary.image.width = width;
+            test_layer.cfg.primary.image.height = height;
+            test_layer.cfg.primary.src_frame.width = width;
+            test_layer.cfg.primary.src_frame.height = height;
+            test_layer.cfg.primary.dest_frame.width = width;
+            test_layer.cfg.primary.dest_frame.height = height;
+            PopulateDisplayMode(timing, &test_config.mode);
+
+            uint32_t display_cfg_result;
+            uint32_t layer_result = 0;
+            uint32_t* display_layer_results[] = { &layer_result };
+            ops_.ops->check_configuration(ops_.ctx, test_configs, &display_cfg_result,
+                                          display_layer_results, 1);
+            if (display_cfg_result == CONFIG_DISPLAY_OK) {
+                fbl::AllocChecker ac;
+                info->edid_timings.push_back(timing, &ac);
+                if (!ac.check()) {
+                    zxlogf(WARN, "Edid skip allocation failed\n");
+                    break;
+                }
+            }
         }
     }
 
+    // It's possible that the display could be removed after the mutex is unlocked, but
+    // that gets taken care of with the disconnect hotplug event.
+    bool res = !info->edid_timings.is_empty();
+    return res;
+}
+
+void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_t added_count,
+                                   uint64_t* displays_removed, uint32_t removed_count) {
+    fbl::unique_ptr<fbl::unique_ptr<DisplayInfo>[]> added_success;
+    fbl::unique_ptr<uint64_t[]> removed;
+    fbl::unique_ptr<async::Task> task;
+    uint32_t added_success_count = 0;
+
+    fbl::AllocChecker ac;
+    if (added_count) {
+        added_success = fbl::unique_ptr<fbl::unique_ptr<DisplayInfo>[]>(
+                new (&ac) fbl::unique_ptr<DisplayInfo>[added_count]);
+        if (!ac.check()) {
+            zxlogf(ERROR, "No memory when processing hotplug\n");
+            return;
+        }
+    }
+    if (removed_count) {
+        removed = fbl::unique_ptr<uint64_t[]>(new (&ac) uint64_t[removed_count]);
+        if (!ac.check()) {
+            zxlogf(ERROR, "No memory when processing hotplug\n");
+            return;
+        }
+        memcpy(removed.get(), displays_removed, removed_count * sizeof(uint64_t));
+    }
+    task = fbl::make_unique_checked<async::Task>(&ac);
+    if (!ac.check()) {
+        zxlogf(ERROR, "No memory when processing hotplug\n");
+        return;
+    }
+
+    fbl::AutoLock lock(&mtx_);
+
     for (unsigned i = 0; i < added_count; i++) {
-        fbl::AllocChecker ac;
+        fbl::AllocChecker ac, ac2;
         fbl::unique_ptr<DisplayInfo> info = fbl::make_unique_checked<DisplayInfo>(&ac);
         if (!ac.check()) {
             zxlogf(INFO, "Out of memory when processing display hotplug\n");
@@ -87,101 +151,112 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
         info->pending_layer_change = false;
         info->vsync_layer_count = 0;
 
-        info->id = displays_added[i];
-        if (ops_.ops->get_display_info(ops_.ctx, info->id, &info->info) != ZX_OK) {
-            zxlogf(TRACE, "Error getting display info for %ld\n", info->id);
-            continue;
+        auto& display_params = displays_added[i];
+
+        info->id = display_params.display_id;
+
+        info->pixel_formats_ = fbl::Array<zx_pixel_format_t>(
+                new (&ac) zx_pixel_format_t[display_params.pixel_format_count],
+                display_params.pixel_format_count);
+        info->cursor_infos_ = fbl::Array<cursor_info_t>(
+                new (&ac2) cursor_info_t[display_params.cursor_info_count],
+                display_params.cursor_info_count);
+        if (!ac.check() || !ac2.check()) {
+            zxlogf(INFO, "Out of memory when processing display hotplug\n");
+            break;
         }
-        if (info->info.edid_present) {
+        memcpy(info->pixel_formats_.get(), display_params.pixel_formats,
+               display_params.pixel_format_count * sizeof(zx_pixel_format_t));
+        memcpy(info->cursor_infos_.get(), display_params.cursor_infos,
+               display_params.cursor_info_count * sizeof(cursor_info_t));
+
+        if (display_params.edid_present) {
+            info->edid_data_ = fbl::Array<uint8_t>(
+                    new (&ac) uint8_t[display_params.panel.edid.length],
+                    display_params.panel.edid.length);
+            if (!ac.check()) {
+                zxlogf(INFO, "Out of memory when processing display hotplug\n");
+                break;
+            }
+            memcpy(info->edid_data_.get(),
+                   display_params.panel.edid.data,
+                   display_params.panel.edid.length);
+
             const char* edid_err = "No preferred timing";
-            if (!info->edid.Init(info->info.panel.edid.data,
-                                 info->info.panel.edid.length, &edid_err)) {
+            if (!info->edid.Init(info->edid_data_.get(),
+                                 static_cast<uint16_t>(info->edid_data_.size()), &edid_err)) {
                 zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
-                continue;
-            }
-
-            // Go through all the display mode timings and record whether or not
-            // a basic layer configuration is acceptable.
-            layer_t test_layer = {};
-            layer_t* test_layers[] = { &test_layer };
-            test_layer.cfg.primary.image.pixel_format = info->info.pixel_formats[0];
-
-            display_config_t test_config;
-            const display_config_t* test_configs[] = { &test_config };
-            test_config.display_id = displays_added[i];
-            test_config.layer_count = 1;
-            test_config.layers = test_layers;
-
-            for (auto timing : info->edid) {
-                uint32_t width = timing.horizontal_addressable;
-                uint32_t height = timing.vertical_addressable;
-                bool duplicate = false;
-                for (auto& existing_timing : info->edid_timings) {
-                    if (existing_timing.vertical_refresh_e2 == timing.vertical_refresh_e2
-                            && existing_timing.horizontal_addressable == width
-                            && existing_timing.vertical_addressable == height) {
-                        duplicate = true;
-                        break;
-                    }
-                }
-                if (!duplicate) {
-                    test_layer.cfg.primary.image.width = width;
-                    test_layer.cfg.primary.image.height = height;
-                    test_layer.cfg.primary.src_frame.width = width;
-                    test_layer.cfg.primary.src_frame.height = height;
-                    test_layer.cfg.primary.dest_frame.width = width;
-                    test_layer.cfg.primary.dest_frame.height = height;
-                    PopulateDisplayMode(timing, &test_config.mode);
-
-                    uint32_t display_cfg_result;
-                    uint32_t layer_result = 0;
-                    uint32_t* display_layer_results[] = { &layer_result };
-                    ops_.ops->check_configuration(ops_.ctx, test_configs, &display_cfg_result,
-                                                  display_layer_results, 1);
-                    if (display_cfg_result == CONFIG_DISPLAY_OK) {
-                        fbl::AllocChecker ac;
-                        info->edid_timings.push_back(timing, &ac);
-                        if (!ac.check()) {
-                            zxlogf(WARN, "Edid skip allocation failed\n");
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (info->edid_timings.is_empty()) {
-                zxlogf(INFO, "Display with no compatible edid timings\n");
                 continue;
             }
 
             if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
                 info->edid.Print([](const char* str) {printf("%s", str);});
             }
-        }
-
-        uint64_t id = info->id;
-        if (displays_.insert_or_find(fbl::move(info))) {
-            added_success[added_success_count++] = id;
         } else {
-            zxlogf(INFO, "Ignoring duplicate display\n");
+            info->params = display_params.panel.params;
         }
+
+        added_success[added_success_count++] = fbl::move(info);
     }
 
-    zx_status_t status;
-    if (vc_client_) {
-        status = vc_client_->OnDisplaysChanged(added_success, added_success_count,
-                                               removed_success, removed_success_count);
-        if (status != ZX_OK) {
-            zxlogf(INFO, "Error when processing hotplug (%d)\n", status);
-        }
-    }
-    if (primary_client_) {
-        status = primary_client_->OnDisplaysChanged(added_success, added_success_count,
-                                                    removed_success, removed_success_count);
-        if (status != ZX_OK) {
-            zxlogf(INFO, "Error when processing hotplug (%d)\n", status);
-        }
-    }
+    task->set_handler([this,
+                       added_ptr = added_success.release(), removed_ptr = removed.release(),
+                       added_success_capture = added_success_count, removed_count]
+                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+            if (status == ZX_OK) {
+                uint32_t added_success_count = added_success_capture;
+                for (unsigned i = 0; i < added_success_count; i++) {
+                    if (!PopulateDisplayTimings(added_ptr[i].get())) {
+                        zxlogf(WARN, "Ignoring display with no compatible edid timings\n");
+
+                        added_ptr[i] = fbl::move(added_ptr[--added_success_count]);
+                        i--;
+                    }
+                }
+                fbl::AutoLock lock(&mtx_);
+
+                for (unsigned i = 0; i < removed_count; i++) {
+                    auto target = displays_.erase(removed_ptr[i]);
+                    if (target) {
+                        image_node_t* n;
+                        while ((n = list_remove_head_type(&target->images, image_node_t, link))) {
+                            n->self->StartRetire();
+                            n->self->OnRetire();
+                            n->self.reset();
+                        }
+                    } else {
+                        zxlogf(TRACE, "Unknown display %ld removed\n", removed_ptr[i]);
+                    }
+                }
+
+                uint64_t added_ids[added_success_count];
+                uint32_t final_added_success_count = 0;
+                for (unsigned i = 0; i < added_success_count; i++) {
+                    uint64_t id = added_ptr[i]->id;
+                    if (displays_.insert_or_find(fbl::move(added_ptr[i]))) {
+                        added_ids[final_added_success_count++] = id;
+                    } else {
+                        zxlogf(INFO, "Ignoring duplicate display\n");
+                    }
+                }
+
+                if (vc_client_ && vc_ready_) {
+                    vc_client_->OnDisplaysChanged(
+                            added_ids, final_added_success_count, removed_ptr, removed_count);
+                }
+                if (primary_client_ && primary_ready_) {
+                    primary_client_->OnDisplaysChanged(
+                            added_ids, final_added_success_count, removed_ptr, removed_count);
+                }
+            } else {
+                zxlogf(ERROR, "Failed to dispatch display change task %d\n", status);
+            }
+
+            delete[] added_ptr;
+            delete[] removed_ptr;
+            delete task;
+    });
+    task.release()->Post(loop_.dispatcher());
 }
 
 void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
@@ -438,11 +513,11 @@ bool Controller::GetPanelConfig(uint64_t display_id,
     ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
     for (auto& display : displays_) {
         if (display.id == display_id) {
-            if (display.info.edid_present) {
+            if (display.edid_data_.size()) {
                 *timings = &display.edid_timings;
                 *params = nullptr;
             } else {
-                *params = &display.info.panel.params;
+                *params = &display.params;
                 *timings = nullptr;
             }
             return true;
@@ -451,33 +526,39 @@ bool Controller::GetPanelConfig(uint64_t display_id,
     return false;
 }
 
-#define GET_DISPLAY_INFO(FN_NAME, COUNT_FIELD, TYPE_FIELD, TYPE) \
-bool Controller::FN_NAME(uint64_t display_id, uint32_t* count_out, \
-                         fbl::unique_ptr<TYPE[]>* data_out) { \
+#define GET_DISPLAY_INFO(FN_NAME, FIELD, TYPE) \
+bool Controller::FN_NAME(uint64_t display_id, fbl::Array<TYPE>* data_out) { \
     ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy); \
     for (auto& display : displays_) { \
         if (display.id == display_id) { \
-            *count_out = display.info.COUNT_FIELD; \
             fbl::AllocChecker ac; \
-            *data_out = fbl::unique_ptr<TYPE[]>(new (&ac) TYPE[*count_out]); \
+            size_t size = display.FIELD.size(); \
+            *data_out = fbl::Array<TYPE>(new (&ac) TYPE[size], size); \
             if (!ac.check()) { \
                 return false; \
             } \
-            memcpy(data_out->get(), display.info.TYPE_FIELD, sizeof(TYPE) * *count_out); \
+            memcpy(data_out->get(), display.FIELD.get(), sizeof(TYPE) * size); \
             return true; \
         } \
     } \
     return false; \
 }
 
-GET_DISPLAY_INFO(GetCursorInfo, cursor_info_count, cursor_infos, cursor_info_t)
-GET_DISPLAY_INFO(GetSupportedPixelFormats, pixel_format_count, pixel_formats, zx_pixel_format_t);
+GET_DISPLAY_INFO(GetCursorInfo,  cursor_infos_, cursor_info_t)
+GET_DISPLAY_INFO(GetSupportedPixelFormats, pixel_formats_, zx_pixel_format_t);
 
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     return DdkOpenAt(dev_out, "", flags);
 }
 
 zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
+    if (!ac.check()) {
+        zxlogf(TRACE, "Failed to alloc client task\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
     fbl::AutoLock lock(&mtx_);
 
     bool is_vc = strcmp("virtcon", path) == 0;
@@ -486,7 +567,6 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    fbl::AllocChecker ac;
     auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc);
     if (!ac.check()) {
         zxlogf(TRACE, "Failed to alloc client\n");
@@ -497,19 +577,6 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
     if (status != ZX_OK) {
         zxlogf(TRACE, "Failed to init client %d\n", status);
         return status;
-    }
-
-    // Add all existing displays to the client
-    if (displays_.size() > 0) {
-        uint64_t current_displays[displays_.size()];
-        int idx = 0;
-        for (const DisplayInfo& display : displays_) {
-            current_displays[idx++] = display.id;
-        }
-        if ((status = client->OnDisplaysChanged(current_displays, idx, nullptr, 0)) != ZX_OK) {
-            zxlogf(TRACE, "Failed to init client %d\n", status);
-            return status;
-        }
     }
 
     if ((status = client->DdkAdd(is_vc ? "dc-vc" : "dc", DEVICE_ADD_INSTANCE)) != ZX_OK) {
@@ -524,12 +591,38 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
     if (is_vc) {
         vc_client_ = client_ptr;
+        vc_ready_ = false;
     } else {
         primary_client_ = client_ptr;
+        primary_ready_ = false;
     }
     HandleClientOwnershipChanges();
 
-    return ZX_OK;
+    task->set_handler([this, client_ptr]
+                      (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+            if (status == ZX_OK) {
+                fbl::AutoLock lock(&mtx_);
+                if (client_ptr == vc_client_ || client_ptr == primary_client_) {
+                    // Add all existing displays to the client
+                    if (displays_.size() > 0) {
+                        uint64_t current_displays[displays_.size()];
+                        int idx = 0;
+                        for (const DisplayInfo& display : displays_) {
+                            current_displays[idx++] = display.id;
+                        }
+                        client_ptr->OnDisplaysChanged(current_displays, idx, nullptr, 0);
+                    }
+
+                    if (vc_client_ == client_ptr) {
+                        vc_ready_ = true;
+                    } else {
+                        primary_ready_ = true;
+                    }
+                }
+            }
+            delete task;
+    });
+    return task.release()->Post(loop_.dispatcher());
 }
 
 zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {

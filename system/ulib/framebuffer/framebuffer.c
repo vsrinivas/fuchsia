@@ -79,31 +79,39 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         goto err;
     }
 
-    zx_handle_t observed;
-    uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    if ((status = zx_object_wait_one(dc_handle,
-                                     signals, ZX_TIME_INFINITE, &observed)) != ZX_OK) {
-        *err_msg_out = "Failed waiting for display";
-        goto err;
-    }
-    if (observed & ZX_CHANNEL_PEER_CLOSED) {
-        *err_msg_out = "Display controller connection closed";
-        status = ZX_ERR_PEER_CLOSED;
-        goto err;
-    }
-
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     uint32_t actual_bytes, actual_handles;
-    if ((status = zx_channel_read(dc_handle, 0, bytes, NULL, ZX_CHANNEL_MAX_MSG_BYTES, 0,
-                                  &actual_bytes, &actual_handles)) != ZX_OK) {
-        *err_msg_out = "Reading display addded callback failed";
-        goto err;
-    }
+    bool has_display = false;
+    do {
+        zx_handle_t observed;
+        uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        if ((status = zx_object_wait_one(dc_handle,
+                                         signals, ZX_TIME_INFINITE, &observed)) != ZX_OK) {
+            *err_msg_out = "Failed waiting for display";
+            goto err;
+        }
+        if (observed & ZX_CHANNEL_PEER_CLOSED) {
+            *err_msg_out = "Display controller connection closed";
+            status = ZX_ERR_PEER_CLOSED;
+            goto err;
+        }
 
-    if ((status = fidl_decode(&fuchsia_display_ControllerDisplaysChangedEventTable,
-                              bytes, actual_bytes, NULL, 0, err_msg_out)) != ZX_OK) {
-        goto err;
-    }
+        if ((status = zx_channel_read(dc_handle, 0, bytes, NULL, ZX_CHANNEL_MAX_MSG_BYTES, 0,
+                                      &actual_bytes, &actual_handles)) != ZX_OK
+                || actual_bytes < sizeof(fidl_message_header_t)) {
+            *err_msg_out = "Reading display addded callback failed";
+            goto err;
+        }
+
+        fidl_message_header_t* hdr = (fidl_message_header_t*) bytes;
+        if (hdr->ordinal == fuchsia_display_ControllerDisplaysChangedOrdinal) {
+            if ((status = fidl_decode(&fuchsia_display_ControllerDisplaysChangedEventTable,
+                                      bytes, actual_bytes, NULL, 0, err_msg_out)) != ZX_OK) {
+                goto err;
+            }
+            has_display = true;
+        }
+    } while (!has_display);
 
     // We're guaranteed that added contains at least one display, since we haven't
     // been notified of any displays to remove.

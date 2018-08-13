@@ -67,6 +67,17 @@ static void copy_disp_setting(astro_display_t* display) {
     display->disp_setting.bit_rate_max = g_disp_setting->bit_rate_max;
 }
 
+void populate_added_display_args(astro_display_t* display, added_display_args_t* args) {
+    args->display_id = PANEL_DISPLAY_ID;
+    args->edid_present = false;
+    args->panel.params.height = display->height;
+    args->panel.params.width = display->width;
+    args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
+    args->pixel_formats = &_gsupported_pixel_formats;
+    args->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
+    args->cursor_info_count = 0;
+}
+
 typedef struct image_info {
     zx_handle_t     pmt;
     uint8_t         canvas_idx;
@@ -83,36 +94,15 @@ static uint32_t astro_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static void astro_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
     astro_display_t* display = ctx;
-    mtx_lock(&display->cb_lock);
-
     mtx_lock(&display->display_lock);
 
     display->dc_cb = cb;
     display->dc_cb_ctx = cb_ctx;
 
+    added_display_args_t args;
+    populate_added_display_args(display, &args);
+    display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
     mtx_unlock(&display->display_lock);
-
-    uint64_t display_id = PANEL_DISPLAY_ID;
-    display->dc_cb->on_displays_changed(display->dc_cb_ctx, &display_id, 1, NULL, 0);
-    mtx_unlock(&display->cb_lock);
-}
-
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-static zx_status_t astro_get_display_info(void* ctx, uint64_t display_id, display_info_t* info) {
-    ZX_DEBUG_ASSERT(display_id == PANEL_DISPLAY_ID);
-
-    astro_display_t* display = ctx;
-    mtx_lock(&display->display_lock);
-
-    info->edid_present = false;
-    info->panel.params.height = display->height;
-    info->panel.params.width = display->width;
-    info->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    info->pixel_formats = &_gsupported_pixel_formats;
-    info->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
-
-    mtx_unlock(&display->display_lock);
-    return ZX_OK;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
@@ -269,7 +259,6 @@ static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) 
 
 static display_controller_protocol_ops_t display_controller_ops = {
     .set_display_controller_cb = astro_set_display_controller_cb,
-    .get_display_info = astro_get_display_info,
     .import_vmo_image = astro_import_vmo_image,
     .release_image = astro_release_image,
     .check_configuration = astro_check_configuration,
@@ -342,7 +331,6 @@ static void populate_panel_type(astro_display_t* display) {
 static zx_status_t setup_display_interface(astro_display_t* display) {
     zx_status_t status;
 
-    mtx_lock(&display->cb_lock);
     mtx_lock(&display->display_lock);
 
     display->skip_disp_init = false;
@@ -415,19 +403,17 @@ static zx_status_t setup_display_interface(astro_display_t* display) {
     // Initialize and turn on backlight
     init_backlight(display);
 
-    mtx_unlock(&display->display_lock);
-
     if (display->dc_cb) {
-        uint64_t display_added = PANEL_DISPLAY_ID;
-        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &display_added, 1, NULL, 0);
+        added_display_args_t args;
+        populate_added_display_args(display, &args);
+        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
     }
-    mtx_unlock(&display->cb_lock);
+    mtx_unlock(&display->display_lock);
 
     return ZX_OK;
 
 fail:
     mtx_unlock(&display->display_lock);
-    mtx_unlock(&display->cb_lock);
     return status;
 }
 
@@ -443,18 +429,16 @@ static zx_status_t vsync_thread(void *arg) {
             break;
         }
 
-        mtx_lock(&display->cb_lock);
         mtx_lock(&display->display_lock);
 
         void* live = (void*)(uint64_t) display->current_image;
         bool current_image_valid = display->current_image_valid;
-        mtx_unlock(&display->display_lock);
 
         if (display->dc_cb) {
             display->dc_cb->on_display_vsync(display->dc_cb_ctx, PANEL_DISPLAY_ID, timestamp,
                                              &live, current_image_valid);
         }
-        mtx_unlock(&display->cb_lock);
+        mtx_unlock(&display->display_lock);
     }
 
     return status;
@@ -569,7 +553,6 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&display->imported_images);
     mtx_init(&display->display_lock, mtx_plain);
     mtx_init(&display->image_lock, mtx_plain);
-    mtx_init(&display->cb_lock, mtx_plain);
 
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");
     return ZX_OK;
