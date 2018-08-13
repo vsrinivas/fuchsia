@@ -139,6 +139,9 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     status = WriteCountry(&w);
     if (status != ZX_OK) { return status; }
 
+    status = WriteExtendedSupportedRates(&w);
+    if (status != ZX_OK) { return status; }
+
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
@@ -146,9 +149,6 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
         status = WriteHtOperation(&w);
         if (status != ZX_OK) { return status; }
     }
-
-    status = WriteExtendedSupportedRates(&w);
-    if (status != ZX_OK) { return status; }
 
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
 
