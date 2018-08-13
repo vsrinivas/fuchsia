@@ -189,11 +189,16 @@ msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
     return DRETP(nullptr, "not implemented");
 }
 
-void msd_device_destroy(msd_device_t* dev) {}
+void msd_device_destroy(msd_device_t* device) { delete MsdVslDevice::cast(device); }
 
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out)
 {
-    return MAGMA_STATUS_UNIMPLEMENTED;
+    switch (id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            *value_out = MsdVslDevice::cast(device)->device_id();
+            return MAGMA_STATUS_OK;
+    }
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {}

@@ -12,6 +12,7 @@
 #include "page_table_arrays.h"
 #include "platform_bus_mapper.h"
 #include "platform_device.h"
+#include <memory>
 
 class MsdVslDevice : public msd_device_t {
 public:
@@ -25,6 +26,13 @@ public:
     uint32_t device_id() { return device_id_; }
 
     bool IsIdle();
+
+    static MsdVslDevice* cast(msd_device_t* dev)
+    {
+        DASSERT(dev);
+        DASSERT(dev->magic_ == kMagic);
+        return static_cast<MsdVslDevice*>(dev);
+    }
 
 private:
     bool Init(void* device_handle);
