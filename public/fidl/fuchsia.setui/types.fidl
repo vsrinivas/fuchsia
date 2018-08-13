@@ -1,6 +1,4 @@
-library fuchsia.setui.service;
-
-using fuchsia.setui.wifi;
+library fuchsia.setui;
 
 enum SettingType {
     UNKNOWN = 0;
