@@ -79,7 +79,7 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
     }
     auto iter = traps->find(addr);
     if (iter.IsValid()) {
-        dprintf(INFO, "Port range for kind %u (addr %#lx len %lu key %lu) already exists "
+        dprintf(INFO, "Trap for kind %u (addr %#lx len %lu key %lu) already exists "
                 "(addr %#lx len %lu key %lu)\n", kind, addr, len, key, iter->addr(), iter->len(),
                 iter->key());
         return ZX_ERR_ALREADY_EXISTS;
