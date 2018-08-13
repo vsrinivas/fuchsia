@@ -4,18 +4,20 @@
 
 #![deny(warnings)]
 
-extern crate failure;
-extern crate fidl;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate fidl_fuchsia_net_oldhttp as http;
-
-use async::temp::{copy_into, TempFutureExt};
-use failure::{Error, ResultExt};
-use futures::prelude::*;
-use futures::io::AllowStdIo;
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_net_oldhttp as http,
+    fuchsia_app as component,
+    fuchsia_async::{
+        self as fasync,
+        temp::{copy_into, TempFutureExt},
+    },
+    fuchsia_zircon as zx,
+    futures::{
+        io::AllowStdIo,
+        future::TryFutureExt,
+    },
+};
 
 fn print_headers(resp: &http::UrlResponse) {
     println!(">>> Headers <<<");
@@ -52,14 +54,14 @@ fn main_res() -> Result<(), Error> {
     };
 
     // Set up async executor
-    let mut exec = async::Executor::new()?;
+    let mut exec = fasync::Executor::new()?;
 
     // Connect to the http service
     let net = component::client::connect_to_service::<http::HttpServiceMarker>()?;
 
     // Create a UrlLoader instance
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
-    let proxy = async::Channel::from_channel(p).context("failed to make async channel")?;
+    let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
 
     let loader_server = fidl::endpoints2::ServerEnd::<http::UrlLoaderMarker>::new(s);
     net.create_url_loader(loader_server)?;
@@ -89,7 +91,7 @@ fn main_res() -> Result<(), Error> {
 
         match resp.body.map(|x| *x) {
             Some(http::UrlBody::Stream(s)) => {
-                Some(async::Socket::from_socket(s))
+                Some(fasync::Socket::from_socket(s))
             }
             Some(http::UrlBody::Buffer(_)) |
             Some(http::UrlBody::SizedBuffer(_)) |
