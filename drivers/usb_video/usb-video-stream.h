@@ -19,7 +19,6 @@
 #include "garnet/drivers/usb_video/usb-video-camera.h"
 #include "garnet/drivers/usb_video/usb-video.h"
 #include "garnet/drivers/usb_video/uvc_format.h"
-#include "garnet/drivers/usb_video/video-buffer.h"
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 
 namespace video {

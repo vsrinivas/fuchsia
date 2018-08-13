@@ -8,14 +8,10 @@ source_set("simple_camera_lib") {
   output_name = "simple_camera_lib"
 
   sources = [
-    "buffer.cc",
-    "buffer.h",
     "buffer_fence.cc",
     "buffer_fence.h",
     "fake-control-impl.cc",
     "fake-control-impl.h",
-    "fenced_buffer.cc",
-    "fenced_buffer.h",
     "frame_scheduler.cc",
     "frame_scheduler.h",
     "video_display.cc",
