@@ -29,6 +29,43 @@ package("magma-vsl-gc") {
         },
       ]
     }
+
+    resources = []
+    libraries = []
+
+    if (build_libvulkan != []) {
+      foreach(entry, build_libvulkan) {
+        dir = get_label_info(entry, "dir")
+        if (dir == "//third_party/verisilicon-gc/fuchsia") {
+          deps += [ entry ]
+
+          icd_name = get_label_info(entry, "name")
+          filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+          icd_data = [
+            "{",
+            "\"file_format_version\": \"1.0.0\",",
+            "\"ICD\": {",
+            "\"library_path\": \"$icd_name.so\",",
+            "\"api_version\": \"1.0.68\"",
+            "}",
+            "}",
+          ]
+          write_file(filename, icd_data)
+
+          resources += [
+            {
+              path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
+              dest = "vulkan/icd.d/$icd_name.json"
+            },
+          ]
+          libraries += [
+            {
+              name = "$icd_name.so"
+            },
+          ]
+        }
+      }
+    }
   }
 }
 
