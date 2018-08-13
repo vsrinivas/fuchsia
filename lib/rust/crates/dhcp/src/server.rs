@@ -272,27 +272,60 @@ fn build_offer(client: Message, config: &ServerConfig) -> Message {
     offer.siaddr = Ipv4Addr::new(0, 0, 0, 0);
     offer.sname = String::new();
     offer.file = String::new();
-    add_required_options(&mut offer, &config);
+    add_required_options(&mut offer, config, MessageType::DHCPOFFER);
+    add_recommended_options(&mut offer, config);
 
     offer
 }
 
-fn add_required_options(offer: &mut Message, config: &ServerConfig) {
-    offer.options.clear();
+fn add_required_options(msg: &mut Message, config: &ServerConfig, msg_type: MessageType) {
+    msg.options.clear();
     let mut lease = vec![0; 4];
     BigEndian::write_u32(&mut lease, config.default_lease_time);
-    offer.options.push(ConfigOption {
+    msg.options.push(ConfigOption {
         code: OptionCode::IpAddrLeaseTime,
         value: lease,
     });
-    offer.options.push(ConfigOption {
+    msg.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPOFFER as u8],
+        value: vec![msg_type as u8],
     });
-    offer.options.push(ConfigOption {
+    msg.options.push(ConfigOption {
         code: OptionCode::ServerId,
         value: config.server_ip.octets().to_vec(),
     });
+}
+
+fn add_recommended_options(msg: &mut Message, config: &ServerConfig) {
+    msg.options.push(ConfigOption {
+        code: OptionCode::Router,
+        value: ip_vec_to_bytes(&config.routers),
+    });
+    msg.options.push(ConfigOption {
+        code: OptionCode::NameServer,
+        value: ip_vec_to_bytes(&config.name_servers),
+    });
+    let mut renewal_time = vec![0, 0, 0, 0];
+    BigEndian::write_u32(&mut renewal_time, config.default_lease_time / 2);
+    msg.options.push(ConfigOption {
+        code: OptionCode::RenewalTime,
+        value: renewal_time,
+    });
+    let mut rebinding_time = vec![0, 0, 0, 0];
+    BigEndian::write_u32(&mut rebinding_time, config.default_lease_time / 4);
+    msg.options.push(ConfigOption {
+        code: OptionCode::RebindingTime,
+        value: rebinding_time,
+    });
+}
+
+fn ip_vec_to_bytes<'a, T>(ips: T) -> Vec<u8>
+where
+    T: IntoIterator<Item = &'a Ipv4Addr>,
+{
+    ips.into_iter()
+        .flat_map(|ip| ip.octets().to_vec())
+        .collect()
 }
 
 fn is_recipient(server_ip: Ipv4Addr, req: &Message) -> bool {
@@ -320,20 +353,8 @@ fn build_ack(req: Message, requested_ip: Ipv4Addr, config: &ServerConfig) -> Mes
     ack.secs = 0;
     ack.yiaddr = requested_ip;
     ack.options.clear();
-    let mut lease = vec![0; 4];
-    BigEndian::write_u32(&mut lease, config.default_lease_time);
-    ack.options.push(ConfigOption {
-        code: OptionCode::IpAddrLeaseTime,
-        value: lease,
-    });
-    ack.options.push(ConfigOption {
-        code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPACK as u8],
-    });
-    ack.options.push(ConfigOption {
-        code: OptionCode::ServerId,
-        value: config.server_ip.octets().to_vec(),
-    });
+    add_required_options(&mut ack, config, MessageType::DHCPACK);
+    add_recommended_options(&mut ack, config);
 
     ack
 }
@@ -420,7 +441,12 @@ mod tests {
     fn new_test_server() -> Server {
         let mut server = Server::new();
         server.config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
-        server.config.default_lease_time = 42;
+        server.config.default_lease_time = 100;
+        server.config.routers.push(Ipv4Addr::new(192, 168, 1, 1));
+        server
+            .config
+            .name_servers
+            .extend_from_slice(&vec![Ipv4Addr::new(8, 8, 8, 8), Ipv4Addr::new(8, 8, 4, 4)]);
         server
             .pool
             .available_addrs
@@ -447,7 +473,7 @@ mod tests {
         offer.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
         offer.options.push(ConfigOption {
             code: OptionCode::IpAddrLeaseTime,
-            value: vec![0, 0, 0, 42],
+            value: vec![0, 0, 0, 100],
         });
         offer.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
@@ -456,6 +482,22 @@ mod tests {
         offer.options.push(ConfigOption {
             code: OptionCode::ServerId,
             value: vec![192, 168, 1, 1],
+        });
+        offer.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: vec![192, 168, 1, 1],
+        });
+        offer.options.push(ConfigOption {
+            code: OptionCode::NameServer,
+            value: vec![8, 8, 8, 8, 8, 8, 4, 4],
+        });
+        offer.options.push(ConfigOption {
+            code: OptionCode::RenewalTime,
+            value: vec![0, 0, 0, 50],
+        });
+        offer.options.push(ConfigOption {
+            code: OptionCode::RebindingTime,
+            value: vec![0, 0, 0, 25],
         });
         offer
     }
@@ -487,7 +529,7 @@ mod tests {
         ack.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
         ack.options.push(ConfigOption {
             code: OptionCode::IpAddrLeaseTime,
-            value: vec![0, 0, 0, 42],
+            value: vec![0, 0, 0, 100],
         });
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
@@ -496,6 +538,22 @@ mod tests {
         ack.options.push(ConfigOption {
             code: OptionCode::ServerId,
             value: vec![192, 168, 1, 1],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: vec![192, 168, 1, 1],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::NameServer,
+            value: vec![8, 8, 8, 8, 8, 8, 4, 4],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::RenewalTime,
+            value: vec![0, 0, 0, 50],
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::RebindingTime,
+            value: vec![0, 0, 0, 25],
         });
         ack
     }

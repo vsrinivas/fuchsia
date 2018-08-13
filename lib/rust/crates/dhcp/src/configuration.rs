@@ -29,6 +29,11 @@ pub struct ServerConfig {
     /// The IPv4 addresses which the server is reponsible for managing and leasing to
     /// clients.
     pub managed_addrs: Vec<Ipv4Addr>,
+    /// The IPv4 addresses, in order of priority, for the default gateway/router of the local
+    /// network.
+    pub routers: Vec<Ipv4Addr>,
+    /// The IPv4 addresses, in order of priority, for the default DNS servers of the local network.
+    pub name_servers: Vec<Ipv4Addr>,
 }
 
 impl ServerConfig {
@@ -38,6 +43,8 @@ impl ServerConfig {
             default_lease_time: 60 * 60 * 24, // One day in seconds
             subnet_mask: 24,
             managed_addrs: vec![],
+            routers: vec![],
+            name_servers: vec![],
         }
     }
 }
