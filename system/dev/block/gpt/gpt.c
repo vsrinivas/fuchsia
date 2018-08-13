@@ -114,7 +114,6 @@ static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
         char* guid = reply;
         if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.type, GPT_GUID_LEN);
-        return GPT_GUID_LEN;
         *out_actual = GPT_GUID_LEN;
         return ZX_OK;
     }
