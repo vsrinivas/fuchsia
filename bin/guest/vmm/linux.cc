@@ -63,8 +63,8 @@ static constexpr uintptr_t kDtbBootParamsOffset =
     kDtbOffset + sizeof(SetupData);
 
 struct MemRange {
-  uint32_t addr;
-  uint32_t size;
+  uint64_t addr;
+  uint64_t size;
 };
 static constexpr std::array<MemRange, 3> kMemoryHoles = {
     MemRange{machina::kPl031PhysBase, 0x10000},         // 4kb hole for RTC.
@@ -316,10 +316,9 @@ static void device_tree_error_msg(const char* property_name) {
 }
 
 static zx_status_t add_memory_entry(void* dtb, int memory_off, MemRange range) {
-  // TODO(PD-125): Use 64bit values here.
-  uint32_t entry[2];
-  entry[0] = htobe32(range.addr);
-  entry[1] = htobe32(range.size);
+  uint64_t entry[2];
+  entry[0] = htobe64(range.addr);
+  entry[1] = htobe64(range.size);
   int ret = fdt_appendprop(dtb, memory_off, "reg", entry, sizeof(entry));
   if (ret < 0) {
     device_tree_error_msg("reg");
@@ -466,12 +465,12 @@ static zx_status_t load_device_tree(const int dtb_fd,
     }
   }
 
+#if __aarch64__
   int gic_off = fdt_path_offset(dtb, "/interrupt-controller@e82b0000");
   if (gic_off < 0) {
     FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
-#if __aarch64__
   if (cfg.gic_version() == machina::GicVersion::V2) {
     ret = fdt_setprop_string(dtb, gic_off, "compatible", "arm,gic-400");
     if (ret != 0) {
@@ -521,16 +520,6 @@ static zx_status_t load_device_tree(const int dtb_fd,
                             MemRange{.addr = 0xe82b2000, .size = 0x2000});
   if (status != ZX_OK) {
     return status;
-  }
-  ret = fdt_setprop_u32(dtb, gic_off, "#address-cells", 0);
-  if (ret != 0) {
-    device_tree_error_msg("#address-cells");
-    return ZX_ERR_BAD_STATE;
-  }
-  ret = fdt_setprop_u32(dtb, gic_off, "#interrupt-cells", 3);
-  if (ret != 0) {
-    device_tree_error_msg("#interrupt-cells");
-    return ZX_ERR_BAD_STATE;
   }
 #endif // __aarch64__
 

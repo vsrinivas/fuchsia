@@ -8,8 +8,8 @@
 / {
   model = "Machina";
   interrupt-parent = <&gic>;
-  #address-cells = <1>;
-  #size-cells = <1>;
+  #address-cells = <2>;
+  #size-cells = <2>;
 
   chosen {
     // Will be populated at run-time.
@@ -51,13 +51,13 @@
   rtc@09010000 {
     compatible = "arm,pl031", "arm,primecell";
     arm,primecell-periphid = <0x00041031>;
-    reg = <0x09010000 0x1000>;
+    reg = <0 0x09010000 0 0x1000>;
   };
 
   serial@fff32000 {
     compatible = "arm,pl011", "arm,primecell";
     arm,primecell-periphid = <0x00341011>;
-    reg = <0xfff32000 0x1000>;
+    reg = <0 0xfff32000 0 0x1000>;
     clock-names = "apb_pclk";
     clocks = <&pclk>;
     interrupts = <0 79 4>; // SPI 111 HIGH/CPU-0
@@ -65,15 +65,18 @@
 
   gic: interrupt-controller@e82b0000 {
     interrupt-controller;
+    #address-cells = <0>;
+    ranges;
+    #interrupt-cells = <3>;
     // Interrupt controller is populated at run-time.
   };
 
   pci@10000000 {
     device_type = "pci";
     compatible = "pci-host-ecam-generic";
-    reg = <0x3f000000 0x1000000>;
+    reg = <0 0x3f000000 0 0x1000000>;
     bus-range = <0 0>;
-    ranges = <0x2000000 0 0x10001000 0x10001000 0 0xfff000>;
+    ranges = <0x2000000 0 0x10001000 0 0x10001000 0 0xfff000>;
     interrupt-map-mask = <0xf800 0 0 1>;
     interrupt-map = <0x0000 0 0 1 &gic 0 0 4>,  // HIGH MID LOW WIRE GIC SPI 32 HIGH/CPU-0
                     <0x0800 0 0 1 &gic 0 1 4>,  // HIGH MID LOW WIRE GIC SPI 33 HIGH/CPU-0
