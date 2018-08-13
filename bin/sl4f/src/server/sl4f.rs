@@ -298,3 +298,38 @@ fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Respons
 
     rouille::Response::json(&ack)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_string_test() {
+        // Standard command
+        let mut method_name = "bt.send".to_string();
+        assert_eq!(
+            ("bt".to_string(), "send".to_string()),
+            split_string(method_name)
+        );
+
+        // Invalid command (should result in empty result)
+        method_name = "bluetooth_send".to_string();
+        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
+
+        // Too many separators in command
+        method_name = "wlan.scan.start".to_string();
+        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
+
+        // Empty command
+        method_name = "".to_string();
+        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
+
+        // No separator
+        method_name = "BluetoothSend".to_string();
+        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
+
+        // Invalid separator
+        method_name = "Bluetooth,Scan".to_string();
+        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
+    }
+}
