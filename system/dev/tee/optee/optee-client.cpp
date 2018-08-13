@@ -2,10 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "optee-client.h"
-
-#include "optee-smc.h"
 #include <ddk/debug.h>
+#include <fbl/type_support.h>
+#include <string.h>
+
+#include "optee-client.h"
+#include "optee-smc.h"
+
+template <typename SRC_T, typename DST_T>
+static constexpr typename fbl::enable_if<
+    fbl::is_unsigned_integer<SRC_T>::value &&
+    fbl::is_unsigned_integer<DST_T>::value>::type
+SplitInto32BitParts(SRC_T src, DST_T* dst_hi, DST_T* dst_lo) {
+    static_assert(sizeof(SRC_T) == 8, "Type SRC_T should be 64 bits!");
+    static_assert(sizeof(DST_T) >= 4, "Type DST_T should be at least 32 bits!");
+    ZX_DEBUG_ASSERT(dst_hi != nullptr);
+    ZX_DEBUG_ASSERT(dst_lo != nullptr);
+    *dst_hi = static_cast<DST_T>(src >> 32);
+    *dst_lo = static_cast<DST_T>(static_cast<uint32_t>(src));
+}
+
+template <typename SRC_T, typename DST_T>
+static constexpr typename fbl::enable_if<
+    fbl::is_unsigned_integer<SRC_T>::value &&
+    fbl::is_unsigned_integer<DST_T>::value>::type
+JoinFrom32BitParts(SRC_T src_hi, SRC_T src_lo, DST_T* dst) {
+    static_assert(sizeof(SRC_T) >= 4, "Type SRC_T should be at least 32 bits!");
+    static_assert(sizeof(DST_T) >= 8, "Type DST_T should be at least 64-bits!");
+    ZX_DEBUG_ASSERT(dst != nullptr);
+    *dst = (static_cast<DST_T>(src_hi) << 32) | static_cast<DST_T>(static_cast<uint32_t>(src_lo));
+}
 
 namespace optee {
 
@@ -86,7 +112,8 @@ zx_status_t OpteeClient::OpenSession(const tee_ioctl_session_request_t* session_
                                               session_request->cancel_id,
                                               params);
 
-    if (controller_->CallWithMessage(message) != kReturnOk) {
+    if (controller_->CallWithMessage(message,
+                                     fbl::BindMember(this, &OpteeClient::HandleRpc)) != kReturnOk) {
         zxlogf(ERROR, "optee: failed to communicate with OP-TEE\n");
         out_session->return_code = kTeecErrorCommunication;
         out_session->return_origin = kTeecOriginComms;
@@ -151,6 +178,130 @@ zx_status_t OpteeClient::ConvertIoctlParamsToOpteeParams(
     }
 
     *out_optee_params = fbl::move(optee_params);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::AllocateSharedMemory(size_t size, SharedMemory** out_shared_memory) {
+    ZX_DEBUG_ASSERT(out_shared_memory != nullptr);
+
+    if (size == 0) {
+        *out_shared_memory = nullptr;
+        return ZX_OK;
+    }
+
+    fbl::unique_ptr<SharedMemory> sh_mem;
+    zx_status_t status = controller_->driver_pool()->Allocate(size, &sh_mem);
+    if (status == ZX_OK) {
+        // Track the new piece of allocated SharedMemory in the list
+        allocated_shared_memory_.push_back(fbl::move(sh_mem));
+        *out_shared_memory = &allocated_shared_memory_.back();
+
+        // TODO(godtamit): Remove this when all of RPC is implemented
+        zxlogf(INFO,
+               "optee: allocated shared memory at physical addr 0x%" PRIuPTR
+               " with cookie 0x%" PRIuPTR "\n",
+               (*out_shared_memory)->paddr(),
+               reinterpret_cast<uintptr_t>(out_shared_memory));
+    }
+
+    return status;
+}
+
+zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResult* out_result) {
+    ZX_DEBUG_ASSERT(out_result != nullptr);
+
+    zx_status_t status;
+    uint32_t func_code = GetRpcFunctionCode(args.generic.status);
+
+    switch (func_code) {
+    case kRpcFunctionIdAllocateMemory:
+        status = HandleRpcAllocateMemory(args.allocate_memory, &out_result->allocate_memory);
+        break;
+    case kRpcFunctionIdFreeMemory:
+        status = HandleRpcFreeMemory(args.free_memory, &out_result->free_memory);
+        break;
+    case kRpcFunctionIdDeliverIrq:
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+    case kRpcFunctionIdExecuteCommand:
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+    default:
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+    }
+
+    // Set the function to return from RPC
+    out_result->generic.func_id = optee::kReturnFromRpcFuncId;
+
+    return status;
+}
+
+/* HandleRpcAllocateMemory
+ *
+ * Fulfill request from secure world to allocate memory.
+ *
+ * Return:
+ * ZX_OK:               Memory allocation was successful.
+ * ZX_ERR_NO_MEMORY:    Memory allocation failed due to resource constraints.
+ */
+zx_status_t OpteeClient::HandleRpcAllocateMemory(const RpcFunctionAllocateMemoryArgs& args,
+                                                 RpcFunctionAllocateMemoryResult* out_result) {
+    ZX_DEBUG_ASSERT(out_result != nullptr);
+
+    SharedMemory* sh_mem;
+
+    zx_status_t status = AllocateSharedMemory(static_cast<size_t>(args.size), &sh_mem);
+    if (status == ZX_OK && sh_mem != nullptr) {
+        // Put the physical address of allocated memory in the args
+        SplitInto32BitParts(sh_mem->paddr(),
+                            &out_result->phys_addr_upper32,
+                            &out_result->phys_addr_lower32);
+
+        // Use address of the linked list node of SharedMemory as the "cookie" to this memory
+        SplitInto32BitParts(reinterpret_cast<uintptr_t>(sh_mem),
+                            &out_result->mem_cookie_upper32,
+                            &out_result->mem_cookie_lower32);
+    } else {
+        out_result->phys_addr_upper32 = 0;
+        out_result->phys_addr_lower32 = 0;
+        out_result->mem_cookie_upper32 = 0;
+        out_result->mem_cookie_lower32 = 0;
+    }
+
+    return status;
+}
+
+/* HandleRpcFreeMemory
+ *
+ * Fulfill request from secure world to free previously allocated memory.
+ *
+ * Return:
+ * ZX_OK:               Memory free was successful.
+ * ZX_ERR_NOT_FOUND:    Requested memory address to free was not found in the allocated list.
+ */
+zx_status_t OpteeClient::HandleRpcFreeMemory(const RpcFunctionFreeMemoryArgs& args,
+                                             RpcFunctionFreeMemoryResult* out_result) {
+    ZX_DEBUG_ASSERT(out_result != nullptr);
+
+    uintptr_t memory_cookie;
+    JoinFrom32BitParts(args.mem_cookie_upper32, args.mem_cookie_lower32, &memory_cookie);
+
+    // Use the 64-bit "cookie" as the address for the SharedMemory
+    SharedMemory* sh_mem_raw = reinterpret_cast<SharedMemory*>(memory_cookie);
+
+    // Remove memory block from allocated list (if it exists)
+    fbl::unique_ptr<SharedMemory> sh_mem = allocated_shared_memory_.erase_if(
+        [sh_mem_raw](const SharedMemory& item) {
+            return &item == sh_mem_raw;
+        });
+
+    // TODO(godtamit): Remove this when all of RPC is implemented
+    zxlogf(INFO,
+           "optee: successfully freed shared memory at phys 0x%" PRIuPTR "\n",
+           sh_mem->paddr());
+
+    // When sh_mem falls out of scope, destructor will automatically free block back into pool
     return ZX_OK;
 }
 

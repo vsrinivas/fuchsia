@@ -52,9 +52,16 @@ private:
     zx_status_t ConvertIoctlParamsToOpteeParams(const tee_ioctl_param_t* params,
                                                 size_t num_params,
                                                 fbl::Array<MessageParam>* out_optee_params);
+    zx_status_t AllocateSharedMemory(size_t size, SharedMemory** out_shared_memory);
+    zx_status_t HandleRpc(const RpcFunctionArgs& args, RpcFunctionResult* out_result);
+    zx_status_t HandleRpcAllocateMemory(const RpcFunctionAllocateMemoryArgs& args,
+                                        RpcFunctionAllocateMemoryResult* out_result);
+    zx_status_t HandleRpcFreeMemory(const RpcFunctionFreeMemoryArgs& args,
+                                    RpcFunctionFreeMemoryResult* out_result);
 
     OpteeController* controller_;
     bool needs_to_close_ = false;
+    fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>> allocated_shared_memory_;
 };
 
 } // namespace optee

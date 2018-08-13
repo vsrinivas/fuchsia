@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <region-alloc/region-alloc.h>
@@ -42,7 +43,7 @@ namespace optee {
 // TODO(rjascani): Add ability to create vmo object from a shared memory object that was created
 // from the client pool.
 
-class SharedMemory {
+class SharedMemory : public fbl::DoublyLinkedListable<fbl::unique_ptr<SharedMemory>> {
 public:
     using RegionPtr = RegionAllocator::Region::UPtr;
 

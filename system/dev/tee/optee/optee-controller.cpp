@@ -16,7 +16,6 @@
 
 #include "optee-client.h"
 #include "optee-controller.h"
-#include "optee-smc.h"
 
 namespace optee {
 
@@ -255,12 +254,12 @@ zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
 }
 
 void OpteeController::AddClient(OpteeClient* client) {
-    fbl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&clients_lock_);
     clients_.push_back(client);
 }
 
 void OpteeController::CloseClients() {
-    fbl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&clients_lock_);
     for (auto& client : clients_) {
         client.MarkForClosing();
     }
@@ -291,17 +290,21 @@ zx_status_t OpteeController::GetDescription(tee_ioctl_description_t* out_descrip
 }
 
 void OpteeController::RemoveClient(OpteeClient* client) {
-    fbl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&clients_lock_);
     ZX_DEBUG_ASSERT(client != nullptr);
     if (client->InContainer()) {
         clients_.erase(*client);
     }
 }
 
-uint32_t OpteeController::CallWithMessage(const Message& message) {
+uint32_t OpteeController::CallWithMessage(const Message& message, RpcHandler rpc_handler) {
     uint32_t return_value = tee::kSmc32ReturnUnknownFunction;
 
-    zx_smc_parameters_t func_call = tee::CreateSmcFunctionCall(
+    union {
+        zx_smc_parameters_t params;
+        RpcFunctionResult rpc_result;
+    } func_call;
+    func_call.params = tee::CreateSmcFunctionCall(
         optee::kCallWithArgFuncId,
         static_cast<uint32_t>(message.paddr() >> 32),
         static_cast<uint32_t>(message.paddr()));
@@ -311,9 +314,10 @@ uint32_t OpteeController::CallWithMessage(const Message& message) {
         union {
             zx_smc_result_t raw;
             CallWithArgResult response;
+            RpcFunctionArgs rpc_args;
         } result;
 
-        zx_status_t status = zx_smc_call(secure_monitor_, &func_call, &result.raw);
+        zx_status_t status = zx_smc_call(secure_monitor_, &func_call.params, &result.raw);
 
         if (status != ZX_OK) {
             zxlogf(ERROR, "optee: Unable to invoke SMC\n");
@@ -326,15 +330,20 @@ uint32_t OpteeController::CallWithMessage(const Message& message) {
             zxlogf(ERROR, "optee: Hit thread limit, need to fix this\n");
             break;
         } else if (optee::IsReturnRpc(result.response.status)) {
-            // TODO(rjascani): Need proper RPC handling here.
-            zxlogf(ERROR,
+            // TODO(godtamit): Remove this when all of RPC is implemented
+            zxlogf(INFO,
                    "optee: rpc call: %" PRIx32 " arg1: %" PRIx32
                    " arg2: %" PRIx32 " arg3: %" PRIx32 "\n",
                    result.response.status,
                    result.response.arg1,
                    result.response.arg2,
                    result.response.arg3);
-            break;
+            status = rpc_handler(result.rpc_args, &func_call.rpc_result);
+
+            // Crash if we run into unsupported functionality
+            // Otherwise, if status != ZX_OK, we can still call the TEE with the response and let it
+            // clean up on its end.
+            ZX_DEBUG_ASSERT(status != ZX_ERR_NOT_SUPPORTED);
         } else {
             return_value = result.response.status;
             break;
@@ -342,7 +351,6 @@ uint32_t OpteeController::CallWithMessage(const Message& message) {
     }
     return return_value;
 }
-
 } // namespace optee
 
 extern "C" zx_status_t optee_bind(void* ctx, zx_device_t* parent) {

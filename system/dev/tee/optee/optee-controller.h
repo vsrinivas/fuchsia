@@ -7,6 +7,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/tee.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -14,6 +15,7 @@
 #include <zircon/thread_annotations.h>
 
 #include "optee-message.h"
+#include "optee-smc.h"
 #include "shared-memory.h"
 
 namespace optee {
@@ -23,10 +25,11 @@ class OpteeClient;
 class OpteeController;
 using OpteeControllerBase = ddk::Device<OpteeController, ddk::Openable, ddk::Unbindable>;
 using OpteeControllerProtocol = ddk::TeeProtocol<OpteeController>;
-
 class OpteeController : public OpteeControllerBase,
                         public OpteeControllerProtocol {
 public:
+    using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
+
     explicit OpteeController(zx_device_t* parent)
         : OpteeControllerBase(parent) {}
 
@@ -44,7 +47,7 @@ public:
 
     void RemoveClient(OpteeClient* client);
 
-    uint32_t CallWithMessage(const Message& message);
+    uint32_t CallWithMessage(const Message& message, RpcHandler rpc_handler);
 
     SharedMemoryManager::DriverMemoryPool* driver_pool() const {
         return shared_memory_manager_->driver_pool();
@@ -68,9 +71,8 @@ private:
     zx_handle_t secure_monitor_ = ZX_HANDLE_INVALID;
     uint32_t secure_world_capabilities_ = 0;
     tee_revision_t os_revision_ = {};
-    fbl::Mutex lock_;
-    fbl::DoublyLinkedList<OpteeClient*> clients_ TA_GUARDED(lock_);
-
+    fbl::Mutex clients_lock_;
+    fbl::DoublyLinkedList<OpteeClient*> clients_ TA_GUARDED(clients_lock_);
     fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 
