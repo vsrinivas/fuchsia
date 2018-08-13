@@ -2,13 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate ethernet;
-extern crate failure;
-extern crate fuchsia_async as fasync;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-
 use failure::{Error, ResultExt};
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::prelude::*;
 use std::env;
 use std::fs::File;
