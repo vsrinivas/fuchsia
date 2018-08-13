@@ -4,7 +4,7 @@
 
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 
 namespace media_player {
 

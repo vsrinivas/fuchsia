@@ -4,10 +4,10 @@
 
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 
-#include "garnet/bin/mediaplayer/framework/types/audio_stream_type.h"
-#include "garnet/bin/mediaplayer/framework/types/subpicture_stream_type.h"
-#include "garnet/bin/mediaplayer/framework/types/text_stream_type.h"
-#include "garnet/bin/mediaplayer/framework/types/video_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/subpicture_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/text_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/video_stream_type.h"
 
 namespace fxl {
 

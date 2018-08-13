@@ -16,7 +16,7 @@
 #include "lib/media/timeline/type_converters.h"
 #include "lib/url/gurl.h"
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 
 namespace media_player {
 namespace test {

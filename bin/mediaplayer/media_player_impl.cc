@@ -13,14 +13,14 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
+#include "garnet/bin/mediaplayer/core/demux_source_segment.h"
+#include "garnet/bin/mediaplayer/core/renderer_sink_segment.h"
 #include "garnet/bin/mediaplayer/demux/fidl_reader.h"
 #include "garnet/bin/mediaplayer/demux/file_reader.h"
 #include "garnet/bin/mediaplayer/demux/http_reader.h"
 #include "garnet/bin/mediaplayer/demux/reader_cache.h"
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
-#include "garnet/bin/mediaplayer/framework/formatting.h"
-#include "garnet/bin/mediaplayer/player/demux_source_segment.h"
-#include "garnet/bin/mediaplayer/player/renderer_sink_segment.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "garnet/bin/mediaplayer/render/fidl_audio_renderer.h"
 #include "garnet/bin/mediaplayer/render/fidl_video_renderer.h"
 #include "garnet/bin/mediaplayer/util/safe_clone.h"
@@ -52,7 +52,7 @@ MediaPlayerImpl::MediaPlayerImpl(
     : dispatcher_(async_get_default_dispatcher()),
       startup_context_(startup_context),
       quit_callback_(std::move(quit_callback)),
-      player_(dispatcher_) {
+      core_(dispatcher_) {
   FXL_DCHECK(request);
   FXL_DCHECK(startup_context_);
   FXL_DCHECK(quit_callback_);
@@ -91,7 +91,7 @@ MediaPlayerImpl::MediaPlayerImpl(
              << "pending seek to:    " << AsNs(target_position_);
         }
 
-        player_.Dump(os << std::boolalpha);
+        core_.Dump(os << std::boolalpha);
         os << "\n";
         *out = os.str();
         return ZX_OK;
@@ -102,7 +102,7 @@ MediaPlayerImpl::MediaPlayerImpl(
 
   bindings_.set_empty_set_handler([this]() { quit_callback_(); });
 
-  player_.SetUpdateCallback([this]() {
+  core_.SetUpdateCallback([this]() {
     SendStatusUpdates();
     Update();
   });
@@ -111,7 +111,7 @@ MediaPlayerImpl::MediaPlayerImpl(
 }
 
 MediaPlayerImpl::~MediaPlayerImpl() {
-  player_.SetUpdateCallback(nullptr);
+  core_.SetUpdateCallback(nullptr);
 
   if (video_renderer_) {
     video_renderer_->SetGeometryUpdateCallback(nullptr);
@@ -119,7 +119,7 @@ MediaPlayerImpl::~MediaPlayerImpl() {
 }
 
 void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
-  if (player_.has_sink_segment(medium)) {
+  if (core_.has_sink_segment(medium)) {
     // Renderer already exists.
     return;
   }
@@ -136,9 +136,9 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
           audio_renderer_->SetGain(gain_);
         }
 
-        player_.SetSinkSegment(RendererSinkSegment::Create(
-                                   audio_renderer_, decoder_factory_.get()),
-                               medium);
+        core_.SetSinkSegment(RendererSinkSegment::Create(
+                                 audio_renderer_, decoder_factory_.get()),
+                             medium);
       }
       break;
     case StreamType::Medium::kVideo:
@@ -147,9 +147,9 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
         video_renderer_->SetGeometryUpdateCallback(
             [this]() { SendStatusUpdates(); });
 
-        player_.SetSinkSegment(RendererSinkSegment::Create(
-                                   video_renderer_, decoder_factory_.get()),
-                               medium);
+        core_.SetSinkSegment(RendererSinkSegment::Create(
+                                 video_renderer_, decoder_factory_.get()),
+                             medium);
       }
       break;
     default:
@@ -163,7 +163,7 @@ void MediaPlayerImpl::Update() {
   // current state and recent events. The current state is in |state_|. Recent
   // events are recorded in |target_state_|, which indicates what state we'd
   // like to transition to, |target_position_|, which can indicate a position
-  // we'd like to stream to, and |player_.end_of_stream()| which tells us we've
+  // we'd like to stream to, and |core_.end_of_stream()| which tells us we've
   // reached end of stream.
   //
   // The states are as follows:
@@ -205,7 +205,7 @@ void MediaPlayerImpl::Update() {
         if (setting_reader_) {
           // We have a new reader. Get rid of the current reader and transition
           // to inactive state. From there, we'll set up the new reader.
-          player_.SetSourceSegment(nullptr, nullptr);
+          core_.SetSourceSegment(nullptr, nullptr);
           state_ = State::kInactive;
           break;
         }
@@ -246,7 +246,7 @@ void MediaPlayerImpl::Update() {
                 }
 
                 // Seek to the new position.
-                player_.Seek(target_position, [this]() {
+                core_.Seek(target_position, [this]() {
                   state_ = State::kFlushed;
                   Update();
                 });
@@ -265,9 +265,9 @@ void MediaPlayerImpl::Update() {
           // when the operation is complete.
           state_ = State::kWaiting;
           waiting_reason_ = "for priming to complete";
-          player_.SetProgramRange(0, program_range_min_pts_, kMaxTime);
+          core_.SetProgramRange(0, program_range_min_pts_, kMaxTime);
 
-          player_.Prime([this]() {
+          core_.Prime([this]() {
             state_ = State::kPrimed;
             Update();
           });
@@ -289,7 +289,7 @@ void MediaPlayerImpl::Update() {
           state_ = State::kWaiting;
           waiting_reason_ = "for flushing to complete";
 
-          player_.Flush(ShouldHoldFrame(), [this]() {
+          core_.Flush(ShouldHoldFrame(), [this]() {
             state_ = State::kFlushed;
             Update();
           });
@@ -338,7 +338,7 @@ void MediaPlayerImpl::Update() {
           return;
         }
 
-        if (player_.end_of_stream()) {
+        if (core_.end_of_stream()) {
           // We've reached end of stream. The presentation timeline stops by
           // itself, so we just need to transition to |kPrimed|.
           target_state_ = State::kPrimed;
@@ -359,7 +359,7 @@ void MediaPlayerImpl::Update() {
 
 void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
                                           fit::closure callback) {
-  player_.SetTimelineFunction(
+  core_.SetTimelineFunction(
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
       std::move(callback));
@@ -398,7 +398,7 @@ void MediaPlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
 void MediaPlayerImpl::FinishSetReader() {
   FXL_DCHECK(setting_reader_);
   FXL_DCHECK(state_ == State::kInactive);
-  FXL_DCHECK(!player_.has_source_segment());
+  FXL_DCHECK(!core_.has_source_segment());
 
   setting_reader_ = false;
 
@@ -422,7 +422,7 @@ void MediaPlayerImpl::FinishSetReader() {
 
   new_reader_ = nullptr;
 
-  player_.SetSourceSegment(DemuxSourceSegment::Create(demux), [this]() {
+  core_.SetSourceSegment(DemuxSourceSegment::Create(demux), [this]() {
     state_ = State::kFlushed;
     SendStatusUpdates();
     Update();
@@ -476,7 +476,7 @@ void MediaPlayerImpl::SetAudioOut(
     audio_renderer_->SetGain(gain_);
   }
 
-  player_.SetSinkSegment(
+  core_.SetSinkSegment(
       RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
       StreamType::Medium::kAudio);
 }
@@ -501,20 +501,18 @@ void MediaPlayerImpl::SendStatusUpdates() {
 void MediaPlayerImpl::UpdateStatus() {
   status_.timeline_function =
       fidl::MakeOptional(fxl::To<fuchsia::mediaplayer::TimelineFunction>(
-          player_.timeline_function()));
-  status_.end_of_stream = player_.end_of_stream();
+          core_.timeline_function()));
+  status_.end_of_stream = core_.end_of_stream();
   status_.content_has_audio =
-      player_.content_has_medium(StreamType::Medium::kAudio);
+      core_.content_has_medium(StreamType::Medium::kAudio);
   status_.content_has_video =
-      player_.content_has_medium(StreamType::Medium::kVideo);
-  status_.audio_connected =
-      player_.medium_connected(StreamType::Medium::kAudio);
-  status_.video_connected =
-      player_.medium_connected(StreamType::Medium::kVideo);
+      core_.content_has_medium(StreamType::Medium::kVideo);
+  status_.audio_connected = core_.medium_connected(StreamType::Medium::kAudio);
+  status_.video_connected = core_.medium_connected(StreamType::Medium::kVideo);
 
-  status_.duration_ns = player_.duration_ns();
+  status_.duration_ns = core_.duration_ns();
 
-  auto metadata = player_.metadata();
+  auto metadata = core_.metadata();
   status_.metadata =
       metadata ? fidl::MakeOptional(
                      fxl::To<fuchsia::mediaplayer::Metadata>(*metadata))
@@ -526,7 +524,7 @@ void MediaPlayerImpl::UpdateStatus() {
         SafeClone(video_renderer_->pixel_aspect_ratio());
   }
 
-  status_.problem = SafeClone(player_.problem());
+  status_.problem = SafeClone(core_.problem());
 }
 
 // static

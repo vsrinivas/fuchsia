@@ -53,7 +53,7 @@ source_set("ffmpeg") {
   deps = [
     "//garnet/bin/mediaplayer/decode",
     "//garnet/bin/mediaplayer/demux",
-    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/graph",
     "//garnet/bin/mediaplayer/util",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/fidl/fuchsia.mediaplayer",

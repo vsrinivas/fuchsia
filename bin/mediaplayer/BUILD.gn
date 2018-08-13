@@ -22,12 +22,12 @@ executable("mediaplayer_bin") {
   ]
 
   deps = [
+    "//garnet/bin/mediaplayer/core",
     "//garnet/bin/mediaplayer/decode",
     "//garnet/bin/mediaplayer/demux",
     "//garnet/bin/mediaplayer/fidl",
-    "//garnet/bin/mediaplayer/framework",
-    "//garnet/bin/mediaplayer/framework_create",
-    "//garnet/bin/mediaplayer/player",
+    "//garnet/bin/mediaplayer/graph",
+    "//garnet/bin/mediaplayer/graph_create",
     "//garnet/bin/mediaplayer/render",
     "//garnet/bin/mediaplayer/util",
     "//garnet/public/fidl/fuchsia.media",
@@ -75,8 +75,8 @@ executable("tests") {
   deps = [
     ":mediaplayer_bin",
     "//garnet/bin/mediaplayer/fidl",
-    "//garnet/bin/mediaplayer/framework",
-    "//garnet/bin/mediaplayer/framework_create",
+    "//garnet/bin/mediaplayer/graph",
+    "//garnet/bin/mediaplayer/graph_create",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/fidl/fuchsia.mediaplayer",
@@ -99,14 +99,14 @@ package("tests_package") {
 
   deps = [
     "//garnet/bin/mediaplayer:tests",
+    "//garnet/bin/mediaplayer/core:tests",
     "//garnet/bin/mediaplayer/demux:tests",
-    "//garnet/bin/mediaplayer/player:tests",
     "//garnet/bin/mediaplayer/util:tests",
   ]
 
   tests = [
     {
-      name = "media_demux_tests"
+      name = "mediaplayer_demux_tests"
     },
 
     {
@@ -114,11 +114,11 @@ package("tests_package") {
     },
 
     {
-      name = "media_util_tests"
+      name = "mediaplayer_util_tests"
     },
 
     {
-      name = "player_tests"
+      name = "mediaplayer_core_tests"
     },
   ]
 }

@@ -14,7 +14,7 @@ source_set("metrics") {
   ]
 
   deps = [
-    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/graph",
     "//garnet/public/lib/fxl",
   ]
 }

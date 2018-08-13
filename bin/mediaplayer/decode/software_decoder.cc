@@ -6,7 +6,7 @@
 
 #include <lib/async/default.h>
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 

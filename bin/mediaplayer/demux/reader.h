@@ -10,7 +10,7 @@
 
 #include <lib/fit/function.h>
 
-#include "garnet/bin/mediaplayer/framework/result.h"
+#include "garnet/bin/mediaplayer/graph/result.h"
 
 namespace media_player {
 

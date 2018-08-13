@@ -10,7 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 

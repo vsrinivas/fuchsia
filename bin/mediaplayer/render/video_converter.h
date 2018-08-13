@@ -10,7 +10,7 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 
-#include "garnet/bin/mediaplayer/framework/types/video_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/video_stream_type.h"
 
 namespace media_player {
 

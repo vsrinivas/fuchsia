@@ -9,7 +9,7 @@
 #include <trace/event.h>
 
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 

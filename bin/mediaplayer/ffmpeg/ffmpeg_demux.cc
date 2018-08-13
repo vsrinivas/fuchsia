@@ -16,7 +16,7 @@
 #include "garnet/bin/mediaplayer/ffmpeg/av_io_context.h"
 #include "garnet/bin/mediaplayer/ffmpeg/av_packet.h"
 #include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_demux.h"
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "garnet/bin/mediaplayer/util/incident.h"
 #include "garnet/bin/mediaplayer/util/safe_clone.h"
 #include "lib/fxl/functional/make_copyable.h"

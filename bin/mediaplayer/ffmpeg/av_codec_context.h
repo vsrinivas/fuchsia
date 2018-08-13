@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_FFMPEG_AV_CODEC_CONTEXT_H_
 #define GARNET_BIN_MEDIAPLAYER_FFMPEG_AV_CODEC_CONTEXT_H_
 
-#include "garnet/bin/mediaplayer/framework/types/stream_type.h"
-#include "garnet/bin/mediaplayer/framework/types/video_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/video_stream_type.h"
 extern "C" {
 #include "libavformat/avformat.h"
 }

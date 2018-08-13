@@ -23,7 +23,7 @@ source_set("render") {
 
   public_deps = [
     ":video_converter",
-    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/graph",
     "//garnet/bin/mediaplayer/metrics",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/fxl",
@@ -49,7 +49,7 @@ source_set("video_converter") {
   ]
 
   public_deps = [
-    "//garnet/bin/mediaplayer/framework",
+    "//garnet/bin/mediaplayer/graph",
     "//garnet/public/fidl/fuchsia.math",
     "//garnet/public/fidl/fuchsia.media",
   ]

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "garnet/bin/mediaplayer/framework/types/audio_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
 
 namespace media_player {
 

@@ -8,7 +8,7 @@
 #include <trace/event.h>
 
 #include "garnet/bin/mediaplayer/ffmpeg/av_codec_context.h"
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {

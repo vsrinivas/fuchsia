@@ -6,7 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media_player {

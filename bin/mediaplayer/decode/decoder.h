@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_DECODE_DECODER_H_
 #define GARNET_BIN_MEDIAPLAYER_DECODE_DECODER_H_
 
-#include "garnet/bin/mediaplayer/framework/models/async_node.h"
-#include "garnet/bin/mediaplayer/framework/packet.h"
-#include "garnet/bin/mediaplayer/framework/payload_allocator.h"
-#include "garnet/bin/mediaplayer/framework/result.h"
-#include "garnet/bin/mediaplayer/framework/types/stream_type.h"
+#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/packet.h"
+#include "garnet/bin/mediaplayer/graph/payload_allocator.h"
+#include "garnet/bin/mediaplayer/graph/result.h"
+#include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "lib/component/cpp/startup_context.h"
 
 namespace media_player {

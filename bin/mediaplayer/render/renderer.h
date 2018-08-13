@@ -9,8 +9,8 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
-#include "garnet/bin/mediaplayer/framework/models/async_node.h"
-#include "garnet/bin/mediaplayer/framework/types/stream_type.h"
+#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media_player {

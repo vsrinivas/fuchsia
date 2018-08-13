@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
-#include "garnet/bin/mediaplayer/framework/formatting.h"
-#include "garnet/bin/mediaplayer/framework/types/audio_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
+#include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 

@@ -4,8 +4,8 @@
 
 #include "garnet/bin/mediaplayer/metrics/rate_tracker.h"
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
-#include "garnet/bin/mediaplayer/framework/packet.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
+#include "garnet/bin/mediaplayer/graph/packet.h"
 
 namespace media_player {
 

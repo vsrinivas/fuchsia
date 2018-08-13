@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "garnet/bin/mediaplayer/framework/types/video_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/video_stream_type.h"
 extern "C" {
 #include "libavformat/avformat.h"
 }

@@ -11,11 +11,11 @@
 #include <lib/fit/function.h>
 
 #include "garnet/bin/mediaplayer/demux/reader.h"
-#include "garnet/bin/mediaplayer/framework/metadata.h"
-#include "garnet/bin/mediaplayer/framework/models/async_node.h"
-#include "garnet/bin/mediaplayer/framework/packet.h"
-#include "garnet/bin/mediaplayer/framework/result.h"
-#include "garnet/bin/mediaplayer/framework/types/stream_type.h"
+#include "garnet/bin/mediaplayer/graph/metadata.h"
+#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/packet.h"
+#include "garnet/bin/mediaplayer/graph/result.h"
+#include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "lib/component/cpp/startup_context.h"
 
 namespace media_player {

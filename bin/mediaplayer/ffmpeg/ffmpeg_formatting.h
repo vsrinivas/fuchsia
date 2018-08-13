@@ -7,7 +7,7 @@
 
 #include <ostream>
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 extern "C" {
 #include "libavformat/avformat.h"
 }

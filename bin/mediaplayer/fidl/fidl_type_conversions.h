@@ -9,11 +9,11 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 
-#include "garnet/bin/mediaplayer/framework/metadata.h"
-#include "garnet/bin/mediaplayer/framework/result.h"
-#include "garnet/bin/mediaplayer/framework/types/audio_stream_type.h"
-#include "garnet/bin/mediaplayer/framework/types/stream_type.h"
-#include "garnet/bin/mediaplayer/framework/types/video_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/metadata.h"
+#include "garnet/bin/mediaplayer/graph/result.h"
+#include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/stream_type.h"
+#include "garnet/bin/mediaplayer/graph/types/video_stream_type.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/type_converter.h"

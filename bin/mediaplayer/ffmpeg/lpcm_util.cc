@@ -4,7 +4,7 @@
 
 #include "garnet/bin/mediaplayer/ffmpeg/lpcm_util.h"
 
-#include "garnet/bin/mediaplayer/framework/formatting.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {

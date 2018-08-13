@@ -11,10 +11,10 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
+#include "garnet/bin/mediaplayer/core/player_core.h"
 #include "garnet/bin/mediaplayer/decode/decoder.h"
 #include "garnet/bin/mediaplayer/demux/demux.h"
 #include "garnet/bin/mediaplayer/demux/reader.h"
-#include "garnet/bin/mediaplayer/player/player.h"
 #include "garnet/bin/mediaplayer/render/fidl_audio_renderer.h"
 #include "garnet/bin/mediaplayer/render/fidl_video_renderer.h"
 #include "lib/component/cpp/startup_context.h"
@@ -123,7 +123,7 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   component::StartupContext* startup_context_;
   fit::closure quit_callback_;
   fidl::BindingSet<fuchsia::mediaplayer::MediaPlayer> bindings_;
-  Player player_;
+  PlayerCore core_;
   std::unique_ptr<DemuxFactory> demux_factory_;
   std::unique_ptr<DecoderFactory> decoder_factory_;
 
