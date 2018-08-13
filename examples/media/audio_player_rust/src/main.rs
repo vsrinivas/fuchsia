@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+
 use {
-    failure::{Error, ResultExt},
+    failure::{bail, Error, ResultExt},
     fdio::fdio_sys::*,
     fidl_fuchsia_mediaplayer::*,
     fuchsia_app::client::connect_to_service,
@@ -66,9 +68,7 @@ impl App {
         Default::default()
     }
 
-    pub fn run(&mut self) -> Result<(), Error> {
-        let mut executor = fasync::Executor::new().context("Error creating executor")?;
-
+    pub async fn run(&mut self) -> Result<(), Error> {
         let Opt { url } = Opt::from_args();
 
         let player = connect_to_service::<MediaPlayerMarker>().context("Failed to connect to media player")?;
@@ -81,21 +81,14 @@ impl App {
         }
         player.play()?;
 
-        let mut event_listener = player.take_event_stream().filter(move |event| {
-            match event {
-                Ok(MediaPlayerEvent::StatusChanged { status }) => {
-                    self.display_status(&status);
-
-                    futures::future::ready(status.end_of_stream)
-                }
-                _ => futures::future::ready(false)
-            }
-        });
-
-        executor.run_singlethreaded(event_listener.next())
-            .unwrap()
-            .map(|_| ())
-            .map_err(Into::into)
+        let mut player_event_stream = player.take_event_stream();
+        if let Some(event) = await!(player_event_stream.try_next())? {
+            let MediaPlayerEvent::StatusChanged { status } = event;
+            self.display_status(&status);
+            Ok(())
+        } else {
+            bail!("No media player status change detected")
+        }
     }
 
     fn display_status(&mut self, status: &MediaPlayerStatus) {
@@ -116,5 +109,6 @@ impl App {
 }
 
 fn main() -> Result<(), Error> {
-    App::new().run()
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    executor.run_singlethreaded(App::new().run())
 }
