@@ -29,7 +29,7 @@ import (
 
 const usage = `usage: amber_ctl <command> [opts]
 Commands
-    get_up    - get an update for a package
+    get_up        - get an update for a package
       Options
         -n:      name of the package
         -v:      version of the package to retrieve, if none is supplied any
@@ -39,7 +39,7 @@ Commands
         -nowait: exit once package installation has started, but don't wait for
                  package activation
 
-    get_blob  - get the specified content blob
+    get_blob      - get the specified content blob
         -i: content ID of the blob
 
     add_src   - add a source to the list we can use
@@ -53,19 +53,18 @@ Commands
         -p: length of time (in milliseconds) over which the limit passed to
             '-l' applies, 0 for no limit
 
-    rm_src    - remove a source, if it exists
+    rm_src        - remove a source, if it exists
         -n: name of the update source
 
-    list_srcs - list the set of sources we can use
+    list_srcs     - list the set of sources we can use
 
     enable_src
-		-n: name of the update source
+        -n: name of the update source
 
     disable_src
-		-n: name of the update source
+        -n: name of the update source
 
-    check     - query the list of sources for updates to any of the regularly
-                monitored packages
+    system_update - check for, download, and apply any available system update
 `
 
 var (
