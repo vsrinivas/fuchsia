@@ -15,6 +15,7 @@
 #include <poll.h>
 #include <unistd.h>
 
+#include "usb-handler.h"
 #include "xdc-server.h"
 
 namespace xdc {
@@ -37,6 +38,11 @@ std::unique_ptr<XdcServer> XdcServer::Create() {
 }
 
 bool XdcServer::Init() {
+    usb_handler_ = UsbHandler::Create();
+    if (!usb_handler_) {
+        return false;
+    }
+
     socket_fd_.reset(socket(AF_UNIX, SOCK_STREAM, 0));
     if (!socket_fd_) {
         fprintf(stderr, "failed to create socket, err: %s\n", strerror(errno));
@@ -71,15 +77,51 @@ bool XdcServer::Init() {
     return true;
 }
 
+void XdcServer::UpdateUsbHandlerFds() {
+    std::map<int, short> added_fds;
+    std::set<int> removed_fds;
+    usb_handler_->GetFdUpdates(added_fds, removed_fds);
+
+    for (auto iter : added_fds) {
+        int fd = iter.first;
+        short events = iter.second;
+
+        auto match = std::find_if(poll_fds_.begin(), poll_fds_.end(),
+                                  [&fd](auto& pollfd) { return pollfd.fd == fd; } );
+        if (match != poll_fds_.end()) {
+            fprintf(stderr, "already have usb handler fd: %d\n", fd);
+            continue;
+        }
+        poll_fds_.push_back(pollfd { fd, events, 0 });
+        printf("usb handler added fd: %d\n", fd);
+    }
+    for (auto fd : removed_fds) {
+        auto match = std::remove_if(poll_fds_.begin(), poll_fds_.end(),
+                     [&fd](auto& pollfd) { return pollfd.fd == fd; } );
+        if (match == poll_fds_.end()) {
+            fprintf(stderr, "could not find usb handler fd: %d to delete\n", fd);
+            continue;
+        }
+        poll_fds_.erase(match, poll_fds_.end());
+        printf("usb handler removed fd: %d\n", fd);
+    }
+}
+
 void XdcServer::Run() {
     printf("Waiting for connections on: %s\n", XDC_SOCKET_PATH);
 
     // Listen for new client connections.
     poll_fds_.push_back(pollfd{ socket_fd_.get(), POLLIN, 0 });
 
-    // TODO(jocelyndang): listen for libusb events.
+    // Initialize to true as we want to get the initial usb handler fds.
+    bool update_usb_handler_fds = true;
 
     for (;;) {
+         if (update_usb_handler_fds) {
+            UpdateUsbHandlerFds();
+            update_usb_handler_fds = false;
+        }
+
         // poll expects an array of pollfds.
         int num = poll(&poll_fds_[0], poll_fds_.size(), -1 /* timeout */);
         if (num < 0) {
@@ -95,6 +137,10 @@ void XdcServer::Run() {
                 if (poll_fds_[i].revents & POLLIN) {
                     ClientConnect();
                     // Don't need to increment num_sockets as there aren't poll events for it yet.
+                }
+            } else if (usb_handler_->IsValidFd(poll_fds_[i].fd)) {
+                if (poll_fds_[i].revents) {
+                    update_usb_handler_fds = usb_handler_->HandleEvents();
                 }
             } else {
                 auto iter = clients_.find(poll_fds_[i].fd);

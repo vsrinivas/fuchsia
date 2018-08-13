@@ -9,6 +9,8 @@
 #include <poll.h>
 #include <vector>
 
+#include "usb-handler.h"
+
 namespace xdc {
 
 class Client {
@@ -42,6 +44,9 @@ public:
 private:
     bool Init();
 
+    // Updates poll_fds_ with any newly added or removed usb handler fds.
+    void UpdateUsbHandlerFds();
+
     // Processes new client connections on the server socket.
     void ClientConnect();
 
@@ -50,6 +55,8 @@ private:
 
     // Returns the client registered to the given stream id, or nullptr if none was foumd.
     std::shared_ptr<Client> GetClient(uint32_t stream_id);
+
+    std::unique_ptr<UsbHandler> usb_handler_;
 
     // Server socket we receive client connections on.
     fbl::unique_fd socket_fd_;

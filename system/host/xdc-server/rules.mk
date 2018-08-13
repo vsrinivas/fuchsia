@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR).server
 MODULE_TYPE := hostapp
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/usb-handler.cpp \
     $(LOCAL_DIR)/xdc-server.cpp \
 
 MODULE_COMPILEFLAGS := \
