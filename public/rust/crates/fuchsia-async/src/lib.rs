@@ -4,7 +4,7 @@
 
 //! A futures-rs executor design specifically for Fuchsia OS.
 
-#![feature(futures_api, pin, arbitrary_self_types, rust_2018_preview)]
+#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
