@@ -221,12 +221,12 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // persist it to.
   const fidl::StringPtr story_id_;
 
-  // This is the canonical source for state. The value in the ledger is just a
-  // write-behind copy of this value.
+  // This is the canonical source for state. This state is per device and only
+  // kept in memory.
   fuchsia::modular::StoryState state_{fuchsia::modular::StoryState::STOPPED};
 
   // This is the canonical source for a story's visibility state within user
-  // shell. This state is per device and only persisted in memory.
+  // shell. This state is per device and only kept in memory.
   fuchsia::modular::StoryVisibilityState visibility_state_{
       fuchsia::modular::StoryVisibilityState::DEFAULT};
 

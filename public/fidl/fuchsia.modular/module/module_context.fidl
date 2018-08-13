@@ -87,9 +87,18 @@ interface ModuleContext {
   // no more running modules in the story the story will be stopped.
   12: Done();
 
-  // Requests the visibility state for the current story within the user shell.
-  // The framework will decide whether to honor this request, then forward it to the
-  // user shell.
+  // Requests to update the visibility state of the current story within the
+  // user shell. The framework will decide whether to honor this request, then
+  // forward it to the user shell.
+  //
+  // Modules should not have any knowledge of the story's visibility state, nor
+  // should it ever operate with any assumption of the visibility state.
+  //
+  // Note that the framework keeps this state only in memory, which means that
+  // across reboots, the story visibility state will revert back to DEFAULT.
+  // This makes it unsafe for any component outside the framework to make
+  // assumptions about the story visibility state. Also, this differs from other
+  // UI states such as focus state, which is persisted across reboots.
   13: RequestStoryVisibilityState(StoryVisibilityState visibility_state);
 };
 
