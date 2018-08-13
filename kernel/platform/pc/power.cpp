@@ -117,10 +117,12 @@ void platform_halt(
         break;
     }
 
+    if (reason == HALT_REASON_SW_PANIC) {
 #if WITH_LIB_DEBUGLOG
-    thread_print_current_backtrace();
-    dlog_bluescreen_halt();
+        thread_print_current_backtrace();
+        dlog_bluescreen_halt();
 #endif
+    }
 
     if (!halt_on_panic) {
         printf("Rebooting...\n");

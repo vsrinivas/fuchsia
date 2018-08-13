@@ -471,12 +471,11 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         power_shutdown();
     }
 
-#if WITH_LIB_DEBUGLOG
-    thread_print_current_backtrace();
-    dlog_bluescreen_halt();
-#endif
-
     if (reason == HALT_REASON_SW_PANIC) {
+#if WITH_LIB_DEBUGLOG
+        thread_print_current_backtrace();
+        dlog_bluescreen_halt();
+#endif
         if (!halt_on_panic) {
             power_reboot(REBOOT_NORMAL);
             printf("reboot failed\n");
