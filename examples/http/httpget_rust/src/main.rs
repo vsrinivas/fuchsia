@@ -3,20 +3,15 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(async_await, await_macro, futures_api)]
 
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_net_oldhttp as http,
     fuchsia_app as component,
-    fuchsia_async::{
-        self as fasync,
-        temp::{copy_into, TempFutureExt},
-    },
+    fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{
-        io::AllowStdIo,
-        future::TryFutureExt,
-    },
+    futures::io::{AllowStdIo, AsyncReadExt},
 };
 
 fn print_headers(resp: &http::UrlResponse) {
@@ -31,14 +26,7 @@ fn print_headers(resp: &http::UrlResponse) {
     }
 }
 
-fn main() {
-    if let Err(e) = main_res() {
-        println!("Error: {:?}", e);
-    }
-}
-
-/// Connects to the http service, sends a url request, and prints the response.
-fn main_res() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let url = match std::env::args().nth(1) {
         Some(url) => {
             if url.find("://").is_none() {
@@ -56,6 +44,12 @@ fn main_res() -> Result<(), Error> {
     // Set up async executor
     let mut exec = fasync::Executor::new()?;
 
+    //// Run the future to completion
+    exec.run_singlethreaded(http_get(url))
+}
+
+/// Connects to the http service, sends a url request, and prints the response.
+async fn http_get(url: String) -> Result<(), Error> {
     // Connect to the http service
     let net = component::client::connect_to_service::<http::HttpServiceMarker>()?;
 
@@ -79,37 +73,30 @@ fn main_res() -> Result<(), Error> {
     };
 
 	let loader_proxy = http::UrlLoaderProxy::new(proxy);
-    let fut = loader_proxy.start(&mut req).err_into().map_ok(|resp| {
-        if let Some(e) = resp.error {
-            let code = e.code;
-            println!("Got error: {} ({})",
-                    code,
-                    e.description.unwrap_or("".into()));
-            return None;
-        }
-        print_headers(&resp);
+    let resp = await!(loader_proxy.start(&mut req))?;
+    if let Some(e) = resp.error {
+        let code = e.code;
+        println!("Got error: {} ({})",
+                code,
+                e.description.unwrap_or("".into()));
+        return Ok(());
+    }
+    print_headers(&resp);
 
-        match resp.body.map(|x| *x) {
-            Some(http::UrlBody::Stream(s)) => {
-                Some(fasync::Socket::from_socket(s))
-            }
-            Some(http::UrlBody::Buffer(_)) |
-            Some(http::UrlBody::SizedBuffer(_)) |
-            None => None,
-        }
-    }).and_then(|socket_opt| {
-        socket_opt.map_or(futures::future::ready(Ok(())).right_future(), |socket| {
-            // stdout is blocking, but we'll pretend it's okay
-            println!(">>> Body <<<");
+    let mut socket = match resp.body.map(|x| *x) {
+        Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
+        Some(http::UrlBody::Buffer(_))
+        | Some(http::UrlBody::SizedBuffer(_))
+        | None => return Ok(()),
+    };
 
-            // Copy the bytes from the socket to stdout
-            copy_into(socket.unwrap(), AllowStdIo::new(::std::io::stdout()))
-                .err_into()
-                .map_ok(|_| println!("\n>>> EOF <<<")).left_future()
+    // stdout is blocking, but we'll pretend it's okay
+    println!(">>> Body <<<");
 
-        })
-    });
+    // Copy the bytes from the socket to stdout
+    let mut stdio = AllowStdIo::new(std::io::stdout());
+    await!(socket.copy_into(&mut stdio))?;
+    println!("\n>>> EOF <<<");
 
-    //// Run the future to completion
-    exec.run_singlethreaded(fut)
+    Ok(())
 }
