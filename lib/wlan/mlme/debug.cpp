@@ -329,10 +329,21 @@ std::string DescribeSuppressed(const Packet& p) {
     return "";
 }
 
+std::string DescribeChannel(const uint8_t arr[], size_t size) {
+    char buf[1024];
+    size_t offset = 0;
+    buf[0] = 0;
+    for (size_t idx = 0; idx < size && arr[idx] != 0; idx++) {
+        BUFFER("%u", arr[idx]);
+    }
+    return std::string(buf);
+}
+
 std::string DescribeArray(const uint8_t arr[], size_t size) {
     char buf[1024];
     buf[0] = 0;
     size_t offset = 0;
+    buf[0] = 0;
     for (size_t idx = 0; idx < size; idx++) {
         BUFFER("%02x", arr[idx]);
     }
@@ -343,6 +354,7 @@ std::string DescribeVector(const std::vector<uint8_t> vec) {
     char buf[1024];
     buf[0] = 0;
     size_t offset = 0;
+    buf[0] = 0;
     for (auto const& v : vec) {
         BUFFER("%02x", v);
     }
@@ -353,17 +365,17 @@ std::string Describe(const HtCapabilityInfo& hci) {
     char buf[256];
     size_t offset = 0;
     BUFFER("ldcp:%u", hci.ldpc_coding_cap());
-    BUFFER("chan_width_set:%u", hci.chan_width_set());
-    BUFFER("sm_power_save:%u", hci.sm_power_save());
-    BUFFER("greenfield:%u", hci.greenfield());
+    BUFFER("chanwidth:%u", hci.chan_width_set());
+    BUFFER("smps:%u", hci.sm_power_save());
+    BUFFER("gf:%u", hci.greenfield());
     BUFFER("sgi20:%u", hci.short_gi_20());
     BUFFER("sgi40:%u", hci.short_gi_40());
     BUFFER("tx_stbc:%u", hci.tx_stbc());
     BUFFER("delayed_back:%u", hci.delayed_block_ack());
     BUFFER("max_amsdu_len:%u", hci.max_amsdu_len());
-    BUFFER("dsss_in_40:%u", hci.dsss_in_40());
+    BUFFER("dsss40:%u", hci.dsss_in_40());
     BUFFER("int40:%u", hci.intolerant_40());
-    BUFFER("lsig_txop_protect:%u", hci.lsig_txop_protect());
+    BUFFER("lsig_txop:%u", hci.lsig_txop_protect());
     return std::string(buf);
 }
 
@@ -378,10 +390,10 @@ std::string Describe(const AmpduParams& ampdu) {
 std::string Describe(const SupportedMcsSet& mcs_set) {
     char buf[256];
     size_t offset = 0;
-    BUFFER("rx_bitmask1:%016lx", mcs_set.rx_mcs_head.bitmask());
-    BUFFER("rx_bitmask2:%04x", mcs_set.rx_mcs_tail.bitmask());
-    BUFFER("highest_rate:%u", mcs_set.rx_mcs_tail.highest_rate());
-    BUFFER("tx_set_defined:%u", mcs_set.tx_mcs.set_defined());
+    BUFFER("rx1:0x%016lx", mcs_set.rx_mcs_head.bitmask());
+    BUFFER("rx2:0x%04x", mcs_set.rx_mcs_tail.bitmask());
+    BUFFER("high_rate:%u", mcs_set.rx_mcs_tail.highest_rate());
+    BUFFER("tx_set:%u", mcs_set.tx_mcs.set_defined());
     BUFFER("tx_rx_diff:%u", mcs_set.tx_mcs.rx_diff());
     BUFFER("max_ss:%u", mcs_set.tx_mcs.max_ss());
     BUFFER("ueqm:%u", mcs_set.tx_mcs.ueqm());
@@ -425,12 +437,12 @@ std::string Describe(const AselCapability& asel) {
     char buf[512];
     size_t offset = 0;
     BUFFER("asel:%u", asel.asel());
-    BUFFER("csi_feedback_tx:%u", asel.csi_feedback_tx_asel());
-    BUFFER("and_idx_feedback_tx:%u", asel.ant_idx_feedback_tx_asel());
-    BUFFER("exp_csi_feedback:%u", asel.explicit_csi_feedback());
-    BUFFER("ant_idx_feedback:%u", asel.antenna_idx_feedback());
+    BUFFER("csi_tx:%u", asel.csi_feedback_tx_asel());
+    BUFFER("ant_idx_tx:%u", asel.ant_idx_feedback_tx_asel());
+    BUFFER("exp_csi:%u", asel.explicit_csi_feedback());
+    BUFFER("ant_idx:%u", asel.antenna_idx_feedback());
     BUFFER("rx_asel:%u", asel.rx_asel());
-    BUFFER("tx_sounding:%u", asel.tx_sounding_ppdu());
+    BUFFER("tx_sound:%u", asel.tx_sounding_ppdu());
     return std::string(buf);
 }
 
@@ -438,7 +450,7 @@ std::string Describe(const HtCapabilities& ht_cap) {
     char buf[2048];
     size_t offset = 0;
     BUFFER("hci:[%s]", Describe(ht_cap.ht_cap_info).c_str());
-    BUFFER("ampdu_params:[%s]", Describe(ht_cap.ampdu_params).c_str());
+    BUFFER("ampdu:[%s]", Describe(ht_cap.ampdu_params).c_str());
     BUFFER("mcs_set:[%s]", Describe(ht_cap.mcs_set).c_str());
     BUFFER("ext_cap:[%s]", Describe(ht_cap.ht_ext_cap).c_str());
     BUFFER("txbf_cap:[%s]", Describe(ht_cap.txbf_cap).c_str());
@@ -461,7 +473,7 @@ std::string Describe(const wlan_chan_list& wl) {
     char buf[512];
     size_t offset = 0;
     BUFFER("base_freq:%u", wl.base_freq);
-    BUFFER("channels:[%s]", DescribeArray(wl.channels, 64).c_str());
+    BUFFER("channels:[%s]", DescribeChannel(wl.channels, 64).c_str());
     return std::string(buf);
 }
 
@@ -482,14 +494,14 @@ std::string Describe(const wlanmac_info& wi) {
     size_t offset = 0;
 
     auto& ii = wi.ifc_info;
-    BUFFER("mac:%s", common::MacAddr(ii.mac_addr).ToString().c_str());
-    BUFFER("role:%04x", ii.mac_role);
-    BUFFER("phys:%04x", ii.supported_phys);
-    BUFFER("feat:%08x", ii.driver_features);
-    BUFFER("cap:%08x", ii.caps);
+    BUFFER("mac:[%s]", common::MacAddr(ii.mac_addr).ToString().c_str());
+    BUFFER("role:%u", ii.mac_role);
+    BUFFER("phys:0x%04x", ii.supported_phys);
+    BUFFER("feat:0x%08x", ii.driver_features);
+    BUFFER("cap:0x%08x", ii.caps);
     BUFFER("#bands:%u", ii.num_bands);
     for (uint8_t i = 0; i < ii.num_bands; i++) {
-        BUFFER("[band %u] %s", i, Describe(ii.bands[i]).c_str());
+        BUFFER("[band %u]%s", i, Describe(ii.bands[i]).c_str());
     }
     return std::string(buf);
 }

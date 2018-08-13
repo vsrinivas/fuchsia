@@ -33,6 +33,7 @@ std::string Describe(const AmsduSubframe& s);
 
 std::string DescribeSuppressed(const Packet& p);
 
+std::string DescribeChannel(const uint8_t arr[], size_t size);
 std::string DescribeArray(const uint8_t arr[], size_t size);
 std::string DescribeVector(const std::vector<uint8_t> vec);
 
