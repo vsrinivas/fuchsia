@@ -31,6 +31,11 @@ class Packet;
 class Timer;
 
 // Information defined only within a context of association
+// Beware the subtle interpretation of each field: they are designed to
+// reflect the parameters safe to use within an association
+// Many parameters do not distinguish Rx capability from Tx capability.
+// In those cases, a capability is commonly applied to both Rx and Tx.
+// Some parameters are distinctively for Rx only, and some are Tx only.
 struct AssocContext {
     // TODO(porce): Move association-related variables of class Station to here
     zx::time ts_start;  // timestamp of the beginning of the association
@@ -44,12 +49,17 @@ struct AssocContext {
     std::vector<uint8_t> supported_rates;
     std::vector<uint8_t> ext_supported_rates;
 
+    // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
+    // the peer can receive at from this device, considering this device's Tx capability.
     bool has_ht_cap;
     HtCapabilities ht_cap;
+
     bool has_ht_op;
     HtOperation ht_op;
+
     bool has_vht_cap;
     VhtCapabilities vht_cap;
+
     bool has_vht_op;
     VhtOperation vht_op;
 };

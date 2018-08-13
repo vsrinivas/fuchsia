@@ -1546,6 +1546,12 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
 
     assoc_ctx_.has_ht_cap = ap.has_ht_cap && client.has_ht_cap;
     if (assoc_ctx_.has_ht_cap) {
+        // TODO(porce): Supported MCS Set field from the outcome of the intersection
+        // requires the conditional treatment depending on the value of the following fields:
+        // - "Tx MCS Set Defined"
+        // - "Tx Rx MCS Set Not Equal"
+        // - "Tx Maximum Number Spatial Streams Supported"
+        // - "Tx Unequal Modulation Supported"
         assoc_ctx_.ht_cap = IntersectHtCap(ap.ht_cap, client.ht_cap);
         assoc_ctx_.has_ht_op = ap.has_ht_op;
         if (assoc_ctx_.has_ht_op) { assoc_ctx_.ht_op = ap.ht_op; }

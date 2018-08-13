@@ -63,6 +63,12 @@ typedef struct wlan_bss_config {
     bool remote;
 } wlan_bss_config_t;
 
+// Information defined only within a context of association
+// Beware the subtle interpretation of each field: they are designed to
+// reflect the parameters safe to use within an association
+// Many parameters do not distinguish Rx capability from Tx capability.
+// In those cases, a capability is commonly applied to both Rx and Tx.
+// Some parameters are distinctively for Rx only, and some are Tx only.
 typedef struct wlan_assoc_ctx {
     uint8_t bssid[6];
     uint16_t aid;
@@ -79,6 +85,8 @@ typedef struct wlan_assoc_ctx {
     uint8_t cap_info[2];
 
     // IEEE Std 802.11-2016, 9.4.2.56, 57
+    // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
+    // the peer can receive at from this device, considering this device's Tx capability.
     bool has_ht;
     uint8_t ht_cap[26];
     uint8_t ht_op[22];
