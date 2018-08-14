@@ -5,34 +5,22 @@
 #![feature(futures_api, arbitrary_self_types, pin)]
 #![deny(warnings)]
 
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_wlan_device as wlan;
-extern crate fidl_fuchsia_wlan_device_service as wlan_service;
-extern crate fidl_fuchsia_wlan_sme as fidl_sme;
-extern crate fuchsia_app as component;
-#[macro_use]
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-#[macro_use]
-extern crate structopt;
-
-use async::temp::TempFutureExt;
-use component::client::connect_to_service;
-use failure::{Error, Fail, ResultExt};
+use failure::{format_err, Error, Fail, ResultExt};
 use fidl::endpoints2;
-use fidl_sme::{ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent};
+use fidl_fuchsia_wlan_device_service::{self as wlan_service, DeviceServiceMarker,
+                                       DeviceServiceProxy};
+use fidl_fuchsia_wlan_sme::{self as fidl_sme, ConnectResultCode, ConnectTransactionEvent,
+                            ScanTransactionEvent};
+use fuchsia_app::client::connect_to_service;
+use fuchsia_async::temp::TempFutureExt;
+use fuchsia_async::{self as fasync, unsafe_many_futures};
+use fuchsia_zircon as zx;
 use futures::prelude::*;
 use std::fmt;
 use structopt::StructOpt;
-use wlan_service::{DeviceServiceMarker, DeviceServiceProxy};
 
 mod opts;
-use opts::*;
+use crate::opts::*;
 
 type WlanSvc = DeviceServiceProxy;
 
@@ -40,7 +28,7 @@ fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     println!("{:?}", opt);
 
-    let mut exec = async::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let wlan_svc =
         connect_to_service::<DeviceServiceMarker>().context("failed to connect to device service")?;
 
