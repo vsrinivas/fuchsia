@@ -15,10 +15,9 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/fuchsia-run-test.cpp \
     $(LOCAL_DIR)/fuchsia-test-main.cpp \
-    $(LOCAL_DIR)/fuchsia-run-test.cpp \
-    $(LOCAL_DIR)/runtests-utils-test.cpp \
-    $(LOCAL_DIR)/runtests-utils-test-utils.cpp \
     $(LOCAL_DIR)/log-exporter-test.cpp \
+    $(LOCAL_DIR)/runtests-utils-test-utils.cpp \
+    $(LOCAL_DIR)/runtests-utils-test.cpp \
 
 # We have to include this from runtests-utils because transitive dependencies don't
 # get linked in automatically.
