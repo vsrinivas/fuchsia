@@ -13,6 +13,8 @@ source_set("src") {
     "msd_vsl_buffer.h",
     "msd_vsl_connection.cc",
     "msd_vsl_connection.h",
+    "msd_vsl_context.cc",
+    "msd_vsl_context.h",
     "msd_vsl_device.cc",
     "msd_vsl_device.h",
     "msd_vsl_driver.cc",

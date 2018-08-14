@@ -30,6 +30,8 @@ public:
 
     uint32_t page_table_array_slot() { return page_table_array_slot_; }
 
+    std::shared_ptr<AddressSpace> address_space() { return address_space_; }
+
 private:
     // AddressSpace::Owner
     magma::PlatformBusMapper* bus_mapper() override { return owner_->bus_mapper(); }
