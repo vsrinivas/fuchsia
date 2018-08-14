@@ -19,6 +19,25 @@ type row struct {
 	Filesz uint64
 }
 
+// Symbol represents data about one symbol in the produced Bloaty output.
+type Symbol struct {
+	Name     string   `json:"Name"`
+	Vmsz     uint64   `json:"Vmsz"`
+	Filesz   uint64   `json:"Filesz"`
+	Binaries []string `json:"Binaries"`
+}
+
+// File represents all data about one file in the produced Bloaty output
+type File struct {
+	Symbols     map[string]*Symbol `json:"Symbols"`
+	TotalFilesz uint64             `json:"TotalFilesz"`
+}
+
+// Segment represents all data about one segment in the produced Bloaty output
+type Segment struct {
+	Files map[string]*File
+}
+
 func parseRow(rawRow []string) (row, bool, error) {
 	var out row
 	if len(rawRow) != 5 {

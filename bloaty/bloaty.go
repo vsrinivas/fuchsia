@@ -10,25 +10,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 )
 
 type bloatyOutput struct {
-	key  string
-	data Symbol
+	data row
 	file string
 	err  error
-}
-
-// Symbol represents all data about one symbol in the produced Bloaty output.
-type Symbol struct {
-	Name        string         `json:"Name"`
-	File        string         `json:"File"`
-	Segs        map[string]int `json:"Segs"`
-	TotalVmsz   uint64         `json:"TotalVmsz"`
-	TotalFilesz uint64         `json:"TotalFilesz"`
-	Binaries    []string       `json:"Binaries"`
 }
 
 // TODO(jakehehrlich): Add reading ids.txt to elflib, since there are now three
@@ -83,20 +73,10 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 	}()
 
 	for r := range rows {
-		data := bloatyOutput{
-			key: r.Symbol + ":" + r.File,
-			data: Symbol{
-				Name:        r.Symbol,
-				File:        r.File,
-				Segs:        make(map[string]int),
-				TotalVmsz:   r.Vmsz,
-				TotalFilesz: r.Filesz,
-				Binaries:    append([]string{}, file),
-			},
+		out <- bloatyOutput{
+			data: r,
 			file: file,
 		}
-		data.data.Segs[r.Seg] += 1
-		out <- data
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -106,28 +86,108 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 
 }
 
-func updateSymbol(sym, newSym Symbol, file string) Symbol {
-	sym.Name = newSym.Name
-	sym.File = newSym.File
-	// TODO: Filtering by section would allow some of these symbols to be ignored
-	// or considered on a more useful global level.
-	for seg, count := range newSym.Segs {
-		sym.Segs[seg] += count
-	}
-	sym.TotalVmsz += newSym.TotalVmsz
-	sym.TotalFilesz += newSym.TotalFilesz
+func updateSymbol(newSym *row, file string, sym *Symbol) {
+	sym.Name = newSym.Symbol
+	sym.Vmsz += newSym.Vmsz
+	sym.Filesz += newSym.Filesz
 	sym.Binaries = append(sym.Binaries, file)
-	return sym
 }
 
-func RunBloaty(bloatyPath, idsPath string) (map[string]Symbol, error) {
+func addRowToOutput(r *row, file string, output map[string]*Segment) {
+	if _, ok := output[r.Seg]; !ok {
+		output[r.Seg] = &Segment{make(map[string]*File)}
+	}
+	seg := output[r.Seg]
+
+	if _, ok := seg.Files[r.File]; !ok {
+		seg.Files[r.File] = &File{Symbols: make(map[string]*Symbol)}
+	}
+	f := seg.Files[r.File]
+
+	if _, ok := f.Symbols[r.Symbol]; !ok {
+		f.Symbols[r.Symbol] = &Symbol{}
+	}
+	updateSymbol(r, file, f.Symbols[r.Symbol])
+	seg.Files[r.File] = f
+	output[r.Seg] = seg
+}
+
+func getTopN(fileSizes map[string]uint64, topFiles, topSyms uint64, output *map[string]*Segment) {
+	// If both topFiles and topSyms are 0, bail early because we're returning everything.
+	if topFiles == 0 && topSyms == 0 {
+		return
+	}
+	type sortedFile struct {
+		name string
+		size uint64
+	}
+
+	smallFiles := make(map[string]uint64)
+	if topFiles > 0 && topFiles < uint64(len(fileSizes)) {
+		var all []struct {
+			name string
+			size uint64
+		}
+		for name, size := range fileSizes {
+			all = append(all, sortedFile{name, size})
+		}
+		sort.Slice(all, func(i, j int) bool {
+			return all[i].size < all[j].size
+		})
+
+		for _, d := range all[:uint64(len(all))-topFiles] {
+			smallFiles[d.name] = d.size
+		}
+	}
+
+	for _, segData := range *output {
+		smallFilesSize := uint64(0)
+		for file, fileData := range segData.Files {
+			smallSyms := Symbol{Name: "all small syms"}
+			// If the file labeled a small file, add to small files size and delete the sym data.
+			if size, exists := smallFiles[file]; exists {
+				smallFilesSize += size
+				delete(segData.Files, file)
+			} else if topSyms > 0 && topSyms < uint64(len(fileData.Symbols)) {
+				var all []*Symbol
+				for _, sym := range fileData.Symbols {
+					all = append(all, sym)
+				}
+				sort.Slice(all, func(i, j int) bool {
+					return all[i].Filesz < all[j].Filesz
+				})
+
+				for _, d := range all[:uint64(len(all))-topSyms] {
+					if sym, exists := fileData.Symbols[d.Name]; exists {
+						smallSyms.Vmsz += sym.Vmsz
+						smallSyms.Filesz += sym.Filesz
+						delete(fileData.Symbols, d.Name)
+					}
+				}
+			}
+
+			if topSyms > 0 {
+				fileData.Symbols["all small syms"] = &smallSyms
+			}
+		}
+
+		if topFiles > 0 {
+			segData.Files["all small files"] = &File{TotalFilesz: smallFilesSize}
+		}
+	}
+}
+
+// RunBloaty runs bloaty on all files in ids.txt, and returns a mapping of the
+// symbols and files by segment.
+func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms uint64) (map[string]*Segment, error) {
 	files, err := getFiles(idsPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var wg sync.WaitGroup
-	output := make(map[string]Symbol)
+	output := make(map[string]*Segment)
+	fileSizes := make(map[string]uint64)
 	data := make(chan bloatyOutput)
 
 	for _, file := range files {
@@ -145,15 +205,13 @@ func RunBloaty(bloatyPath, idsPath string) (map[string]Symbol, error) {
 
 	for d := range data {
 		if d.err != nil {
-			fmt.Printf("error: %v", d.err)
+			fmt.Printf("%v", d.err)
 			continue
 		}
-		if sym, ok := output[d.key]; !ok {
-			output[d.key] = d.data
-		} else {
-			output[d.key] = updateSymbol(sym, d.data, d.file)
-		}
+		addRowToOutput(&d.data, d.file, output)
+		fileSizes[d.data.File] += d.data.Filesz
 	}
 
+	getTopN(fileSizes, topFiles, topSyms, &output)
 	return output, nil
 }

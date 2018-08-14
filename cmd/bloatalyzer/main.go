@@ -19,12 +19,16 @@ var (
 	bloatyPath string
 	idsPath    string
 	output     string
+	topFiles   uint64
+	topSyms    uint64
 )
 
 func init() {
 	flag.StringVar(&bloatyPath, "b", "", "path to bloaty executable")
 	flag.StringVar(&idsPath, "i", "", "path to ids.txt")
 	flag.StringVar(&output, "o", "", "output path")
+	flag.Uint64Var(&topFiles, "top-files", 0, "max number of files to keep")
+	flag.Uint64Var(&topSyms, "top-syms", 0, "max number of symbols to keep per file")
 }
 
 func main() {
@@ -43,7 +47,7 @@ func main() {
 		logger.Fatalf(ctx, "%s", "must provide path to ids.txt file.")
 	}
 
-	data, err := bloaty.RunBloaty(bloatyPath, idsPath)
+	data, err := bloaty.RunBloaty(bloatyPath, idsPath, topFiles, topSyms)
 	if err != nil {
 		logger.Fatalf(ctx, "%v", err)
 	}
