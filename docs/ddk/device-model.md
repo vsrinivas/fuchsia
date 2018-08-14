@@ -17,7 +17,7 @@ drivers for security or stability reasons and colocating drivers for performance
 reasons.
 
 NOTE: The current policy is simple (each device representing a physical bus-master
-capable hardware device and its children are place into a separate devhost).  It
+capable hardware device and its children are placed into a separate devhost).  It
 will evolve to provide finer-grained partitioning.
 
 
@@ -87,11 +87,11 @@ to interact with parent devices in a device-specific manner. The
 [Ethermac Protocol](../../system/ulib/ddk/include/ddk/protocol/ethernet.h), are
 examples of these.  Protocols are usually in-process interactions between
 devices in the same devhost, but in cases of driver isolation, they may take
-place via RPC to a "higher" devhost.
+place via RPC to a "higher" devhost (via proxy).
 
 Devices may implement Interfaces, which are RPC protocols that clients (services,
-applications, etc) use.  The base device interface supports posix style
-open/close/read/write style IO.  Currently, Interfaces are supported via the ioctl
+applications, etc) use.  The base device interface supports POSIX style
+open/close/read/write IO.  Currently, Interfaces are supported via the ioctl
 operation in the base device interface.  In the future, Fuchsia's interface definition
 language and bindings (FIDL) will be supported.
 
@@ -108,7 +108,7 @@ Devices exist in the Device Filesystem under a topological path, like
 `/sys/pci/00:02:00/intel-ethernet`.  If they are a specific class, they also appear
 as an alias under `/dev/class/CLASSNAME/...`.  The `intel-ethernet` driver implements
 the Ethermac interface, so it also shows up at `/dev/class/ethermac/000`.  The names
-within class directories are unique but not meaningful, assigned on demand.
+within class directories are unique but not meaningful, and are assigned on demand.
 
 NOTE: Currently names in class directories are 3 digit decimal numbers, but they
 are likely to change form in the future.  Clients should not assume there is any
@@ -138,9 +138,9 @@ ZIRCON_DRIVER_END(intel_ethernet)
 ```
 
 The ZIRCON_DRIVER_BEGIN and _END macros include the necessary compiler directives
-to put the binding program into an ELF NOTE section which allows it to be inspected
+to put the binding program into an ELF NOTE section, allowing it to be inspected
 by the Device Coordinator without needing to fully load the driver into its process.
-The second parameter to the _BEGIN macro is a zx_driver_ops_t structure pointer (defined
+The second parameter to the _BEGIN macro is a `zx_driver_ops_t` structure pointer (defined
 by `[ddk/driver.h](../../system/ulib/ddk/include/ddk/driver.h)` which defines the
 init, bind, create, and release methods.
 
@@ -211,3 +211,87 @@ with the device.  It is not valid to refer to the `zx_device_t` for that device
 after `release()` returns.  Calling any device methods or protocol methods for
 protocols obtained from the parent device past this point is illegal and will
 likely result in a crash.
+
+### An Example of the Tear-Down Sequence
+
+To explain how the `unbind()` and `release()` work during the tear-down process,
+below is an example of how a USB WLAN driver would usually handle it.  In short,
+the `unbind()` call sequence is top-down while the `release()` sequence is bottom-up.
+
+Note that this is just an example. This might not match what exactly the real WLAN driver
+is doing.
+
+Assume a WLAN device is plugged in as a USB device, and a PHY interface has been
+created under the USB device. In addition to the PHY interface, 2 MAC interfaces
+have been created under the PHY interface.
+
+```
+            +------------+
+            | USB Device |
+            +------------+
+                  |
+            +------------+
+            |  WLAN PHY  | .unbind()
+            +------------+ .release()
+              |        |
+    +------------+  +------------+
+    | WLAN MAC 0 |  | WLAN MAC 1 | .unbind()
+    +------------+  +------------+ .release()
+```
+
+Now, we unplug this USB WLAN device.
+
+* The USB XHCI detects the removal and calls `device_remove(usb_device)`.
+
+* Since the parent device is being removed, the WLAN PHY's `unbind()` is called.
+  In this `unbind()`, it would remove the interface it created via `device_add()`:
+
+```
+    wlan_phy_unbind(void* ctx) {
+        // Stop interrupt or anything to prevent incoming requests.
+        ...
+
+        device_remove(wlan_phy);
+    }
+```
+
+* When wlan_phy is removed, unbind() will be called on all of its children (wlan_mac_0, wlan_mac_1).
+
+```
+    wlan_mac_unbind(void* ctx) {
+        // Stop accepting new requests, and notify clients that this device is offline (often just
+        // by returning an ZX_ERR_IO_NOT_PRESENT to any requests that happen after unbind).
+        ...
+
+        device_remove(iface_mac_X);
+    }
+```
+
+* Once all the clients of a device have been removed, and that device has no children,
+  its refcount will reach zero and its release() method will be called.
+
+* WLAN MAC 0 and 1's `release()` are called.
+
+```
+    wlan_mac_release(void* ctx) {
+        // Release sources allocated at creation.
+        ...
+
+        // Delete the object here.
+        ...
+    }
+```
+
+* The wlan_phy has no open connections, but still has child devices (wlan_mac_0 and wlan_mac_1).
+  Once they have both been `release()`'d, its refcount finally reaches zero and its release()
+  method is invoked.
+
+```
+    wlan_phy_release(void* ctx) {
+        // Release sources allocated at creation.
+        ...
+
+        // Delete the object here.
+        ...
+    }
+```
