@@ -8,6 +8,7 @@
 
 #include <dev/udisplay.h>
 #include <err.h>
+#include <fbl/atomic.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lib/crashlog.h>
@@ -40,6 +41,13 @@ static dlog_t DLOG = {
     .readers_lock = MUTEX_INITIAL_VALUE(DLOG.readers_lock),
     .readers = LIST_INITIAL_VALUE(DLOG.readers),
 };
+
+static thread_t* notifier_thread;
+static thread_t* dumper_thread;
+
+// Used to request that notifier and dumper threads terminate.
+static fbl::atomic_bool notifier_shutdown_requested;
+static fbl::atomic_bool dumper_shutdown_requested;
 
 // The debug log maintains a circular buffer of debug log records,
 // consisting of a common header (dlog_header_t) followed by up
@@ -257,6 +265,9 @@ static int debuglog_notifier(void* arg) {
     dlog_t* log = &DLOG;
 
     for (;;) {
+        if (notifier_shutdown_requested.load()) {
+            break;
+        }
         event_wait(&log->event);
 
         // notify readers that new log items were posted
@@ -298,6 +309,8 @@ static void debuglog_dumper_notify(void* cookie) {
     event_signal(event, false);
 }
 
+static event_t dumper_event = EVENT_INITIAL_VALUE(dumper_event, 0, EVENT_FLAG_AUTOUNSIGNAL);
+
 static int debuglog_dumper(void* arg) {
     // assembly buffer with room for log text plus header text
     char tmp[DLOG_MAX_DATA + 128];
@@ -307,13 +320,14 @@ static int debuglog_dumper(void* arg) {
         char data[DLOG_MAX_DATA + 1];
     } rec;
 
-    event_t event = EVENT_INITIAL_VALUE(event, 0, EVENT_FLAG_AUTOUNSIGNAL);
-
     dlog_reader_t reader;
-    dlog_reader_init(&reader, debuglog_dumper_notify, &event);
+    dlog_reader_init(&reader, debuglog_dumper_notify, &dumper_event);
 
     for (;;) {
-        event_wait(&event);
+        if (dumper_shutdown_requested.load()) {
+            break;
+        }
+        event_wait(&dumper_event);
 
         // dump records to kernel console
         size_t actual;
@@ -361,18 +375,50 @@ void dlog_bluescreen_init(void) {
     crashlog.base_address = (uintptr_t)__code_start;
 }
 
-static void dlog_init_hook(uint level) {
-    thread_t* rthread;
+void dlog_shutdown(void) {
+    DEBUG_ASSERT(!arch_ints_disabled());
 
-    if ((rthread = thread_create("debuglog-notifier", debuglog_notifier, NULL,
-                                 HIGH_PRIORITY - 1, DEFAULT_STACK_SIZE)) != NULL) {
-        thread_resume(rthread);
+    dprintf(INFO, "Shutting down debuglog\n");
+
+    // Limit how long we wait for the threads to terminate.
+    const zx_time_t deadline = current_time() + ZX_SEC(5);
+
+    // Shutdown the notifier thread first. Ordering is important because the notifier thread is
+    // responsible for passing log records to the dumper.
+    notifier_shutdown_requested.store(true);
+    event_signal(&DLOG.event, false);
+    if (notifier_thread != nullptr) {
+        zx_status_t status = thread_join(notifier_thread, nullptr, deadline);
+        if (status != ZX_OK) {
+            dprintf(INFO, "Failed to join notifier thread: %d\n", status);
+        }
+        notifier_thread = nullptr;
+    }
+
+    dumper_shutdown_requested.store(true);
+    event_signal(&dumper_event, false);
+    if (dumper_thread != nullptr) {
+        zx_status_t status = thread_join(dumper_thread, nullptr, deadline);
+        if (status != ZX_OK) {
+            dprintf(INFO, "Failed to join dumper thread: %d\n", status);
+        }
+        dumper_thread = nullptr;
+    }
+}
+
+static void dlog_init_hook(uint level) {
+    DEBUG_ASSERT(notifier_thread == nullptr);
+    DEBUG_ASSERT(dumper_thread == nullptr);
+
+    if ((notifier_thread = thread_create("debuglog-notifier", debuglog_notifier, NULL,
+                                         HIGH_PRIORITY - 1, DEFAULT_STACK_SIZE)) != NULL) {
+        thread_resume(notifier_thread);
     }
 
     if (platform_serial_enabled() || platform_early_console_enabled()) {
-        if ((rthread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
-                                     HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
-            thread_resume(rthread);
+        if ((dumper_thread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
+                                           HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
+            thread_resume(dumper_thread);
         }
     }
 }

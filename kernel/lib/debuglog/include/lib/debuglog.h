@@ -91,4 +91,9 @@ void dlog_bluescreen_init(void);
 // (for example, creating a qrcode)
 void dlog_bluescreen_halt(void);
 
+// Shutdown the debuglog subsystem.
+//
+// Note: This may block for an extended period of time.
+void dlog_shutdown(void);
+
 __END_CDECLS

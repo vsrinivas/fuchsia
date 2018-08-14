@@ -106,12 +106,11 @@ int main(int argc, char** argv) {
     if (!success) {
         return EXIT_FAILURE;
     }
-    // The continuous integration infrastructure looks for this string in the output.
-    // This exact string is matched in the recipe code. They need to be kept in sync.
-    // Print it many times to try to ensure it's seen even if part of the output is lost.
-    for (size_t i = 0; i < 1024; ++i) {
-        // String that's unlikely to be produced by other code paths, generated randomly.
-        fprintf(stderr, "core-tests succeeded RZMm59f7zOSs6aZUIXZR\n");
-    }
+
+    // The continuous integration infrastructure looks for this string in the output. This exact
+    // string is matched in the recipe code. They need to be kept in sync. This random value was
+    // chosen because it's unlikely to be produced by other code paths.
+    fprintf(stderr, "core-tests succeeded RZMm59f7zOSs6aZUIXZR\n");
+
     return EXIT_SUCCESS;
 }
