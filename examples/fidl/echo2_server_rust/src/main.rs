@@ -2,30 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
+
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{ServiceMarker, RequestStream};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 
 use std::env;
 
 fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
-    fasync::spawn(EchoRequestStream::from_channel(chan)
-        .map_ok(move |EchoRequest::EchoString { value, responder }| {
+    fasync::spawn(async move {
+        let mut stream = EchoRequestStream::from_channel(chan);
+        while let Some(EchoRequest::EchoString { value, responder }) =
+            await!(stream.try_next()).context("error running echo server")?
+        {
             if !quiet {
                 println!("Received echo request for string {:?}", value);
             }
-            responder.send(value.as_ref().map(|s| &**s))
-               .map(move |_| if !quiet {
-                   println!("echo response sent successfully");
-               })
-               .unwrap_or_else(|e| eprintln!("error sending response: {:?}", e))
-        })
-        .try_collect::<()>()
-        .unwrap_or_else(|e| eprintln!("error running echo server: {:?}", e)))
+            responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
+            println!("echo response sent successfully");
+        }
+        Ok(())
+    }.unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)));
 }
 
 fn main() -> Result<(), Error> {

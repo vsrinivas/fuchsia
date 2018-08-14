@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
+
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::EchoMarker;
 use fuchsia_app::client::Launcher;
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use structopt::StructOpt;
 
@@ -31,9 +32,11 @@ fn main() -> Result<(), Error> {
     let echo = app.connect_to_service(EchoMarker)
        .context("Failed to connect to echo service")?;
 
-    let fut = echo.echo_string(Some("hello world!"))
-        .map_ok(|res| println!("response: {:?}", res));
+    let fut = async {
+        let res = await!(echo.echo_string(Some("hello world!")))?;
+        println!("response: {:?}", res);
+        Ok(())
+    };
 
-    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
-    Ok(())
+    executor.run_singlethreaded(fut)
 }
