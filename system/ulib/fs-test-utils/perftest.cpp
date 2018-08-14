@@ -55,16 +55,16 @@ Usage:
                                        pseudo-ramdom number generator.
 
     [Test Options]
-         --out PATH                    In performace test mode, collected
+         --out PATH                    In performance test mode, collected
                                        results will be written to PATH.
 
-         --summary_path PATH           In performace test mode, result summary
+         --summary_path PATH           In performance test mode, result summary
                                        statistics will be written to PATH.
 
-         --print_statistics            In performace test mode, result summary
+         --print_statistics            In performance test mode, result summary
                                        statistics will be written to STDOUT.
 
-         --runs COUNT                  In performace test mode, limits the
+         --runs COUNT                  In performance test mode, limits the
                                        number of times to execute each test to
                                        COUNT.
 
