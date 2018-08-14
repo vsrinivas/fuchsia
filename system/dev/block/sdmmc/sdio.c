@@ -20,20 +20,14 @@
 #include "sdmmc.h"
 #include "sdio.h"
 
-static zx_status_t sdio_read_byte(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
-                                  uint8_t *read_byte) {
+static zx_status_t sdio_rw_byte(sdmmc_device_t *dev, bool write, uint8_t fn_idx, uint32_t addr,
+                                uint8_t write_byte, uint8_t *read_byte) {
     if (!sdio_fn_idx_valid(fn_idx)) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return sdio_io_rw_direct(dev, false, fn_idx, addr, 0, read_byte);
-}
-
-static zx_status_t sdio_write_byte(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
-                                   uint8_t write_byte) {
-    if (!sdio_fn_idx_valid(fn_idx)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return sdio_io_rw_direct(dev, true, fn_idx, addr, write_byte, NULL);
+    read_byte = write ? NULL : read_byte;
+    write_byte = write ? write_byte : 0;
+    return sdio_io_rw_direct(dev, write, fn_idx, addr, write_byte, read_byte);
 }
 
 static zx_status_t sdio_read_after_write_byte(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
@@ -51,17 +45,22 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
 
     sdmmc_device_t *dev = ctx;
     zx_status_t st = ZX_OK;
-
-    bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
-    bool dma_supported = sdmmc_use_dma(dev);
-
     uint32_t addr = txn->addr;
     uint32_t data_size = txn->data_size;
     bool use_dma = txn->use_dma;
+
+    // Single byte reads at some addresses are stuck when using io_rw_extended.
+    // Use io_rw_direct whenever possible.
+    if (!use_dma && data_size == 1) {
+        return sdio_rw_byte(dev, txn->write, fn_idx, addr,
+                            *(uintptr_t*)(txn->virt), txn->virt);
+    }
+
+    bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
+    bool dma_supported = sdmmc_use_dma(dev);
     void *buf = use_dma ? NULL : txn->virt;
     zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
     uint64_t buf_offset = txn->buf_offset;
-
     uint32_t func_blk_size = (dev->sdio_dev.funcs[fn_idx]).cur_blk_size;
     uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
     uint32_t data_processed = 0;
@@ -815,7 +814,7 @@ complete:
         st = sdio_init_func(dev, i);
     }
 
-    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized succesfully\n");
+    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized successfully\n");
     zxlogf(INFO, "          Manufacturer: 0x%x\n", dev->sdio_dev.funcs[0].hw_info.manufacturer_id);
     zxlogf(INFO, "          Product: 0x%x\n", dev->sdio_dev.funcs[0].hw_info.product_id);
     zxlogf(INFO, "          cccr vsn: 0x%x\n", dev->sdio_dev.hw_info.cccr_vsn);
