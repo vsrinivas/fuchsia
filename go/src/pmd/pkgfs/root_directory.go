@@ -18,6 +18,14 @@ type rootDirectory struct {
 	dirs map[string]fs.Directory
 }
 
+func (d *rootDirectory) Lock() {
+	d.mu.Lock()
+}
+
+func (d *rootDirectory) Unlock() {
+	d.mu.Unlock()
+}
+
 func (d *rootDirectory) Dup() (fs.Directory, error) {
 	return d, nil
 }
@@ -72,4 +80,15 @@ func (d *rootDirectory) setDir(path string, newDir fs.Directory) {
 	defer d.mu.Unlock()
 
 	d.dirs[path] = newDir
+}
+
+func (d *rootDirectory) dir(path string) fs.Directory {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	return d.dirLocked(path)
+}
+
+func (d *rootDirectory) dirLocked(path string) fs.Directory {
+	return d.dirs[path]
 }
