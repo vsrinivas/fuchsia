@@ -37,13 +37,6 @@ bool edid_rgb_disp(const uint8_t* edid_buf)
     return (!!((edid->feature_support & (1 << 2)) >> 2));
 }
 
-void edid_get_max_size(const uint8_t* edid_buf, uint8_t* hoz, uint8_t* ver)
-{
-    const edid_t* edid = (edid_t *) edid_buf;
-    *hoz = edid->max_hoz_img_size;
-    *ver = edid->max_ver_img_size;
-}
-
 static char* get_mfg_id(const uint8_t* edid_buf)
 {
     char *mfg_str = calloc(1, sizeof(char));;
@@ -283,18 +276,14 @@ static zx_status_t get_vic(vim2_display_t* display)
         display->p->is4K = false;
     }
 
-    // Aspect ratio determination. 4:3 otherwise 16:9
-    uint8_t h, v, tmp;
-    edid_get_max_size(display->edid_buf, &h, &v);
-    if ( (h % 4 == 0) && (v % 3) == 0) {
-        tmp = h / 4;
-        if ( ((v % tmp) == 0) && ((v / tmp) == 3)) {
-                display->p->aspect_ratio = HDMI_ASPECT_RATIO_4x3;
-        } else {
-            display->p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
-        }
-    } else {
+    // Picture aspect ratio determination. 4:3 otherwise 16:9
+    if (display->p->timings.hactive * 3 == display->p->timings.vactive * 4) {
+        display->p->aspect_ratio = HDMI_ASPECT_RATIO_4x3;
+    } else if (display->p->timings.hactive * 9 == display->p->timings.vactive * 16) {
         display->p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
+    } else {
+        zxlogf(INFO, "HDMI monitor with non-standard aspect ratio\n");
+        display->p->aspect_ratio = HDMI_ASPECT_RATIO_NONE;
     }
 
     display->p->colorimetry = HDMI_COLORIMETRY_ITU601;

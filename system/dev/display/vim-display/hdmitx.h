@@ -230,6 +230,7 @@ struct hdmi_param {
 #define HDMI_COLOR_FORMAT_RGB   0
 #define HDMI_COLOR_FORMAT_444   1
 
+#define HDMI_ASPECT_RATIO_NONE  0
 #define HDMI_ASPECT_RATIO_4x3   1
 #define HDMI_ASPECT_RATIO_16x9  2
 
