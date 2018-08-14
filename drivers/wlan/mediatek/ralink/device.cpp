@@ -3093,6 +3093,7 @@ static const uint8_t kDataRates[4][8] = {
 static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is_sgi) {
     uint8_t rate = 0;            // Mbps * 2
     uint8_t rate_tbl_idx = 255;  // Init with invalid idx.
+    uint8_t nss = 1;             // Minimum NSS
 
     if (phy_mode >= fbl::count_of(kDataRates)) { return rate; }
 
@@ -3119,6 +3120,9 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
         if (mcs == kHtDuplicateMcs) {
             // 40MHz, ShortGuardInterval case: HT duplicate 6 Mbps.
             rate_tbl_idx = 0;
+        } else if (mcs < kHtDuplicateMcs) {
+            rate_tbl_idx = mcs % fbl::count_of(kDataRates[0]);
+            nss = 1 + mcs / fbl::count_of(kDataRates[0]);
         } else {
             rate_tbl_idx = mcs;
         }
@@ -3135,7 +3139,7 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
         return rate;
     }
 
-    rate = kDataRates[phy_mode][rate_tbl_idx];
+    rate = kDataRates[phy_mode][rate_tbl_idx] * nss;
     if (is_40mhz) {
         // 802.11n case
         // Set the multipler by the ratio of the subcarriers, not by the ratio of the bandwidth
