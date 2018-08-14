@@ -28,6 +28,7 @@ macro_rules! debug_err {
         // TODO(joshlf): Uncomment once attributes are allowed on expressions
         // #[cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
         {
+            use log::{debug, log};
             debug!($($arg)*);
             $err
         }
@@ -43,6 +44,7 @@ macro_rules! debug_err_fn {
         // TODO(joshlf): Uncomment once attributes are allowed on expressions
         // #[cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
         || {
+            use log::{debug, log};
             debug!($($arg)*);
             $err
         }

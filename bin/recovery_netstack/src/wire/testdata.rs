@@ -6,7 +6,7 @@
 //!
 //! This data was obtained by capturing live network traffic.
 
-use device::ethernet::Mac;
+use crate::device::ethernet::Mac;
 
 /// IPv4 headers.
 pub const IPV4_HEADERS: &[&[u8]] = &[
@@ -50,7 +50,7 @@ pub mod dns_request {
 
     use std::ops::Range;
 
-    use ip::Ipv4Addr;
+    use crate::ip::Ipv4Addr;
 
     pub use super::ETHERNET_DST_MAC;
     pub use super::ETHERNET_SRC_MAC;
@@ -95,8 +95,8 @@ pub mod tls_client_hello {
 
     use std::ops::Range;
 
-    use ip::Ipv4Addr;
-    use transport::tcp::TcpOption;
+    use crate::ip::Ipv4Addr;
+    use crate::transport::tcp::TcpOption;
 
     pub use super::ETHERNET_DST_MAC;
     pub use super::ETHERNET_SRC_MAC;
@@ -266,7 +266,7 @@ pub mod icmp_dest_unreachable {
 }
 
 pub mod icmp_redirect {
-    use ip::Ipv4Addr;
+    use crate::ip::Ipv4Addr;
 
     pub const IP_PACKET_BYTES: &[u8] = &[
         0x45, 0x00, 0x00, 0x38, 0x01, 0x38, 0x00, 0x00, 0xff, 0x01, 0xa5, 0x94, 0x0a, 0x7b, 0x00,

@@ -10,10 +10,12 @@ pub mod ethernet;
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
 
-use device::ethernet::EthernetDeviceState;
-use ip::{IpAddr, Subnet};
-use wire::SerializationCallback;
-use StackState;
+use log::{debug, log};
+
+use crate::device::ethernet::EthernetDeviceState;
+use crate::ip::{IpAddr, Subnet};
+use crate::wire::SerializationCallback;
+use crate::StackState;
 
 /// An ID identifying a device.
 #[derive(Copy, Clone)]

@@ -4,6 +4,8 @@
 
 //! Macros used in `recovery_netstack`.
 
+use log::trace;
+
 /// Define a function which is specialized on [`ip::Ipv4`] and [`ip::Ipv6`].
 ///
 /// `specialize_ip` is used to define a generic function which has specialized
@@ -61,13 +63,13 @@ macro_rules! specialize_ip {
         }
     ) => (
         specialize_ip_inner!(
-            ::ip::Ip;
+            crate::ip::Ip;
             fn $fn_name<$($ty_name),*>($($arg_name: $arg_ty),*) -> $ret
             where
                 $($where_ty: $where_bound_first $(+ $where_bound_rest)*,)*
             {
-                ::ip::Ipv4 => $ipv4
-                ::ip::Ipv6 => $ipv6
+                crate::ip::Ipv4 => $ipv4
+                crate::ip::Ipv6 => $ipv6
             }
         );
     );
@@ -137,13 +139,13 @@ macro_rules! specialize_ip {
         }
     ) => (
         specialize_ip_inner!(
-            ::ip::Ip;
+            crate::ip::Ip;
             fn $fn_name($($arg_name: $arg_ty),*) -> $ret
             where
                 $($where_ty: $where_bound_first $(+ $where_bound_rest)*,)*
             {
-                ::ip::Ipv4 => $ipv4
-                ::ip::Ipv6 => $ipv6
+                crate::ip::Ipv4 => $ipv4
+                crate::ip::Ipv6 => $ipv6
             }
         );
     );
@@ -255,13 +257,13 @@ macro_rules! specialize_ip_addr {
         }
     ) => (
         specialize_ip_inner!(
-            ::ip::IpAddr;
+            crate::ip::IpAddr;
             fn $fn_name<$($ty_name),*>($($arg_name: $arg_ty),*) -> $ret
             where
                 $($where_ty: $where_bound_first $(+ $where_bound_rest)*,)*
             {
-                ::ip::Ipv4Addr => $ipv4
-                ::ip::Ipv6Addr => $ipv6
+                crate::ip::Ipv4Addr => $ipv4
+                crate::ip::Ipv6Addr => $ipv6
             }
         );
     );
@@ -331,13 +333,13 @@ macro_rules! specialize_ip_addr {
         }
     ) => (
         specialize_ip_inner!(
-            ::ip::IpAddr;
+            crate::ip::IpAddr;
             fn $fn_name($($arg_name: $arg_ty),*) -> $ret
             where
                 $($where_ty: $where_bound_first $(+ $where_bound_rest)*,)*
             {
-                ::ip::Ipv4Addr => $ipv4
-                ::ip::Ipv6Addr => $ipv6
+                crate::ip::Ipv4Addr => $ipv4
+                crate::ip::Ipv6Addr => $ipv6
             }
         );
     );
@@ -516,14 +518,14 @@ mod test {
         where
             T: Debug,
         {
-            Ipv4 => { (t, if true { a } else { ::ip::Ipv4 }) }
-            Ipv6 => { (t, if true { a } else { ::ip::Ipv6 }) }
+            Ipv4 => { (t, if true { a } else { crate::ip::Ipv4 }) }
+            Ipv6 => { (t, if true { a } else { crate::ip::Ipv6 }) }
         }
     );
     specialize_ip!(
         fn _ip_types_ret<T>(t: T, a: Self) -> (T, Self) {
-            Ipv4 => { (t, if true { a } else { ::ip::Ipv4 }) }
-            Ipv6 => { (t, if true { a } else { ::ip::Ipv6 }) }
+            Ipv4 => { (t, if true { a } else { crate::ip::Ipv4 }) }
+            Ipv6 => { (t, if true { a } else { crate::ip::Ipv6 }) }
         }
     );
     specialize_ip!(
@@ -543,14 +545,14 @@ mod test {
     );
     specialize_ip!(
         fn _ip_ret_where(a: Self) -> Self where {
-            Ipv4 => { if true { a } else { ::ip::Ipv4 } }
-            Ipv6 => { if true { a } else { ::ip::Ipv6 } }
+            Ipv4 => { if true { a } else { crate::ip::Ipv4 } }
+            Ipv6 => { if true { a } else { crate::ip::Ipv6 } }
         }
     );
     specialize_ip!(
         fn _ip_ret(a: Self) -> Self {
-            Ipv4 => { if true { a } else { ::ip::Ipv4 } }
-            Ipv6 => { if true { a } else { ::ip::Ipv6 } }
+            Ipv4 => { if true { a } else { crate::ip::Ipv4 } }
+            Ipv6 => { if true { a } else { crate::ip::Ipv6 } }
         }
     );
     specialize_ip!(
@@ -571,14 +573,14 @@ mod test {
         where
             T: Debug,
         {
-            Ipv4Addr => { (t, if true { a } else { use ip::Ip; ::ip::Ipv4::LOOPBACK_ADDRESS }) }
-            Ipv6Addr => { (t, if true { a } else { use ip::Ip; ::ip::Ipv6::LOOPBACK_ADDRESS }) }
+            Ipv4Addr => { (t, if true { a } else { use crate::ip::Ip; crate::ip::Ipv4::LOOPBACK_ADDRESS }) }
+            Ipv6Addr => { (t, if true { a } else { use crate::ip::Ip; crate::ip::Ipv6::LOOPBACK_ADDRESS }) }
         }
     );
     specialize_ip_addr!(
         fn _ip_addr_types_ret<T>(t: T, a: Self) -> (T, Self) {
-            Ipv4Addr => { (t, if true { a } else { use ip::Ip; ::ip::Ipv4::LOOPBACK_ADDRESS }) }
-            Ipv6Addr => { (t, if true { a } else { use ip::Ip; ::ip::Ipv6::LOOPBACK_ADDRESS }) }
+            Ipv4Addr => { (t, if true { a } else { use crate::ip::Ip; crate::ip::Ipv4::LOOPBACK_ADDRESS }) }
+            Ipv6Addr => { (t, if true { a } else { use crate::ip::Ip; crate::ip::Ipv6::LOOPBACK_ADDRESS }) }
         }
     );
     specialize_ip_addr!(
@@ -598,14 +600,14 @@ mod test {
     );
     specialize_ip_addr!(
         fn _ip_addr_ret_where(a: Self) -> Self where {
-            Ipv4Addr => { if true { a } else { use ip::Ip; ::ip::Ipv4::LOOPBACK_ADDRESS } }
-            Ipv6Addr => { if true { a } else { use ip::Ip; ::ip::Ipv6::LOOPBACK_ADDRESS } }
+            Ipv4Addr => { if true { a } else { use crate::ip::Ip; crate::ip::Ipv4::LOOPBACK_ADDRESS } }
+            Ipv6Addr => { if true { a } else { use crate::ip::Ip; crate::ip::Ipv6::LOOPBACK_ADDRESS } }
         }
     );
     specialize_ip_addr!(
         fn _ip_addr_ret(a: Self) -> Self {
-            Ipv4Addr => { if true { a } else { use ip::Ip; ::ip::Ipv4::LOOPBACK_ADDRESS } }
-            Ipv6Addr => { if true { a } else { use ip::Ip; ::ip::Ipv6::LOOPBACK_ADDRESS } }
+            Ipv4Addr => { if true { a } else { use crate::ip::Ip; crate::ip::Ipv4::LOOPBACK_ADDRESS } }
+            Ipv6Addr => { if true { a } else { use crate::ip::Ip; crate::ip::Ipv6::LOOPBACK_ADDRESS } }
         }
     );
     specialize_ip_addr!(

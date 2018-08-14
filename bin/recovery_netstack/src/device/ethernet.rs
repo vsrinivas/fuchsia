@@ -6,13 +6,14 @@
 
 use std::fmt::{self, Display, Formatter};
 
+use log::{debug, log, trace};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use device::DeviceId;
-use ip::{IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
-use wire::ethernet::EthernetFrame;
-use wire::{BufferAndRange, SerializationCallback};
-use StackState;
+use crate::device::DeviceId;
+use crate::ip::{IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
+use crate::wire::ethernet::EthernetFrame;
+use crate::wire::{BufferAndRange, SerializationCallback};
+use crate::StackState;
 
 /// The broadcast MAC address.
 ///
@@ -143,7 +144,7 @@ where
     B: AsRef<[u8]> + AsMut<[u8]>,
     F: SerializationCallback<B>,
 {
-    use wire::ethernet::{MAX_HEADER_LEN, MIN_BODY_LEN};
+    use crate::wire::ethernet::{MAX_HEADER_LEN, MIN_BODY_LEN};
     let mut buffer = get_buffer(MAX_HEADER_LEN, MIN_BODY_LEN);
     let range_len = {
         let range = buffer.range();
@@ -177,8 +178,8 @@ pub fn receive_frame(state: &mut StackState, device_id: u64, bytes: &mut [u8]) {
                 println!("received ARP frame");
                 log_unimplemented!((), "device::ethernet::receive_frame: ARP not implemented")
             }
-            EtherType::Ipv4 => ::ip::receive_ip_packet::<Ipv4>(state, device, buffer),
-            EtherType::Ipv6 => ::ip::receive_ip_packet::<Ipv6>(state, device, buffer),
+            EtherType::Ipv4 => crate::ip::receive_ip_packet::<Ipv4>(state, device, buffer),
+            EtherType::Ipv6 => crate::ip::receive_ip_packet::<Ipv6>(state, device, buffer),
         }
     } else {
         // TODO(joshlf): Do something else?

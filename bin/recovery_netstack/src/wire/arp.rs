@@ -13,10 +13,10 @@ use std::mem;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use device::arp::{ArpHardwareType, ArpOp};
-use device::ethernet::{EtherType, Mac};
-use error::ParseError;
-use ip::Ipv4Addr;
+use crate::device::arp::{ArpHardwareType, ArpOp};
+use crate::device::ethernet::{EtherType, Mac};
+use crate::error::ParseError;
+use crate::ip::Ipv4Addr;
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ARP
 // header. Thus, we can simply reinterpret the bytes of the ARP header as a
@@ -388,8 +388,8 @@ impl<B, HwAddr, ProtoAddr> Debug for ArpPacket<B, HwAddr, ProtoAddr> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ip::Ipv4Addr;
-    use wire::ethernet::EthernetFrame;
+    use crate::ip::Ipv4Addr;
+    use crate::wire::ethernet::EthernetFrame;
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_parse_full() {
-        use wire::testdata::*;
+        use crate::wire::testdata::*;
 
         let (frame, _) = EthernetFrame::parse(ARP_REQUEST).unwrap();
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));

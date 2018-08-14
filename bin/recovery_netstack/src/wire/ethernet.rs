@@ -9,9 +9,9 @@ use std::ops::Range;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use device::ethernet::{EtherType, Mac};
-use error::ParseError;
-use wire::util::BufferAndRange;
+use crate::device::ethernet::{EtherType, Mac};
+use crate::error::ParseError;
+use crate::wire::util::BufferAndRange;
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
 // Ethernet header prefix. Thus, we can simply reinterpret the bytes of the

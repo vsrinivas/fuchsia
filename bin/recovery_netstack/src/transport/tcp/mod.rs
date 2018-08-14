@@ -13,10 +13,10 @@ pub use self::types::*;
 use std::collections::HashMap;
 use std::num::NonZeroU16;
 
-use ip::{Ip, IpAddr, Ipv4, Ipv6};
-use wire::tcp::TcpSegment;
-use wire::BufferAndRange;
-use StackState;
+use crate::ip::{Ip, IpAddr, Ipv4, Ipv6};
+use crate::wire::tcp::TcpSegment;
+use crate::wire::BufferAndRange;
+use crate::StackState;
 
 use self::conn::Conn;
 use self::listen::Listener;

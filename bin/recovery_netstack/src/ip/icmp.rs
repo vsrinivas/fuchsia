@@ -6,10 +6,12 @@
 
 use std::mem;
 
-use ip::{send_ip_packet, IpAddr, IpProto};
-use wire::icmp::{IcmpPacket, Icmpv4Packet};
-use wire::{ensure_prefix_padding, BufferAndRange};
-use StackState;
+use log::{log, trace};
+
+use crate::ip::{send_ip_packet, IpAddr, IpProto};
+use crate::wire::icmp::{IcmpPacket, Icmpv4Packet};
+use crate::wire::BufferAndRange;
+use crate::StackState;
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
@@ -97,14 +99,14 @@ pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ip::{Ip, Ipv4, Ipv4Addr};
+    use crate::ip::{Ip, Ipv4, Ipv4Addr};
 
     // TODO(joshlf): Un-ignore once we've fixed the monomorphization overflow
     // issue
     #[ignore]
     #[test]
     fn test_send_echo_request() {
-        use ip::testdata::icmp_echo::*;
+        use crate::ip::testdata::icmp_echo::*;
 
         let mut state: StackState = Default::default();
         let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;

@@ -12,10 +12,10 @@ use std::ops::Range;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use error::ParseError;
-use ip::{Ip, IpAddr, IpProto};
-use transport::tcp::TcpOption;
-use wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options};
+use crate::error::ParseError;
+use crate::ip::{Ip, IpAddr, IpProto};
+use crate::transport::tcp::TcpOption;
+use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options};
 
 use self::options::TcpOptionImpl;
 
@@ -395,8 +395,8 @@ mod options {
 
     use byteorder::{ByteOrder, NetworkEndian};
 
-    use transport::tcp::{TcpOption, TcpSackBlock};
-    use wire::util::OptionImpl;
+    use crate::transport::tcp::{TcpOption, TcpSackBlock};
+    use crate::wire::util::OptionImpl;
 
     fn parse_sack_block(bytes: &[u8]) -> TcpSackBlock {
         TcpSackBlock {
@@ -480,10 +480,10 @@ impl<B> Debug for TcpSegment<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use device::ethernet::EtherType;
-    use ip::{IpProto, Ipv4Addr, Ipv6Addr};
-    use wire::ethernet::EthernetFrame;
-    use wire::ipv4::Ipv4Packet;
+    use crate::device::ethernet::EtherType;
+    use crate::ip::{IpProto, Ipv4Addr, Ipv6Addr};
+    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ipv4::Ipv4Packet;
 
     const TEST_SRC_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_DST_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_parse_full() {
-        use wire::testdata::tls_client_hello::*;
+        use crate::wire::testdata::tls_client_hello::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
         assert_eq!(body_range, ETHERNET_BODY_RANGE);

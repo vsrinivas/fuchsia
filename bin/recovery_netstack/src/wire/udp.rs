@@ -12,9 +12,9 @@ use std::ops::Range;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use error::ParseError;
-use ip::{Ip, IpAddr, IpProto};
-use wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum};
+use crate::error::ParseError;
+use crate::ip::{Ip, IpAddr, IpProto};
+use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as a UDP
 // header. Thus, we can simply reinterpret the bytes of the UDP header as a
@@ -346,10 +346,10 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
-    use device::ethernet::EtherType;
-    use ip::{Ipv4Addr, Ipv6Addr};
-    use wire::ethernet::EthernetFrame;
-    use wire::ipv4::Ipv4Packet;
+    use crate::device::ethernet::EtherType;
+    use crate::ip::{Ipv4Addr, Ipv6Addr};
+    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ipv4::Ipv4Packet;
 
     use super::*;
 
@@ -363,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_parse_full() {
-        use wire::testdata::dns_request::*;
+        use crate::wire::testdata::dns_request::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
         assert_eq!(body_range, ETHERNET_BODY_RANGE);

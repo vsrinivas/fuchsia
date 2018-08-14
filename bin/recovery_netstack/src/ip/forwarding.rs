@@ -4,8 +4,8 @@
 
 use std::fmt::{self, Debug, Formatter};
 
-use device::DeviceId;
-use ip::*;
+use crate::device::DeviceId;
+use crate::ip::*;
 
 // TODO(joshlf):
 // - Implement route deletion.

@@ -4,11 +4,9 @@
 
 //! The Address Resolution Protocol (ARP).
 
-use device::ethernet::Mac;
-use ip::Ipv4Addr;
 use std::collections::HashMap;
 use std::hash::Hash;
-use wire::arp::{ArpPacket, HType, PType};
+use crate::wire::arp::{HType, PType};
 
 /// The type of an ARP operation.
 #[derive(Debug, PartialEq)]
@@ -96,7 +94,9 @@ impl<H: HType, P: PType + Eq + Hash> ArpTable<H, P> {
 
 #[cfg(test)]
 mod tests {
-    use device::arp::*;
+    use crate::device::arp::*;
+    use crate::device::ethernet::Mac;
+    use crate::ip::Ipv4Addr;
 
     #[test]
     fn test_arp_table() {

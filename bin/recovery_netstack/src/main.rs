@@ -20,19 +20,9 @@
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 
-extern crate byteorder;
-extern crate ethernet as eth;
-#[macro_use]
-extern crate failure;
-extern crate fuchsia_async as fasync;
-extern crate fuchsia_syslog;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
-extern crate zerocopy;
+use ethernet as eth;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 
 #[macro_use]
 mod macros;
@@ -47,12 +37,12 @@ pub mod testutil;
 pub mod transport;
 pub mod wire;
 
-use device::DeviceLayerState;
-use eventloop::EventLoop;
-use failure::{Error, ResultExt};
+use crate::device::DeviceLayerState;
+use crate::eventloop::EventLoop;
+use failure::ResultExt;
 use futures::prelude::*;
-use ip::IpLayerState;
-use transport::TransportLayerState;
+use crate::ip::IpLayerState;
+use crate::transport::TransportLayerState;
 
 use std::env;
 use std::fs::File;

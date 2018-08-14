@@ -4,6 +4,8 @@
 
 //! Custom error types for the netstack.
 
+use failure::Fail;
+
 /// Top-level error type the netstack.
 #[derive(Fail, Debug)]
 pub enum NetstackError {

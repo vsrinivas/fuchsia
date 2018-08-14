@@ -8,11 +8,12 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use log::{debug, log};
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
-use error::ParseError;
-use ip::{IpProto, Ipv6Addr};
-use wire::util::BufferAndRange;
+use crate::error::ParseError;
+use crate::ip::{IpProto, Ipv6Addr};
+use crate::wire::util::BufferAndRange;
 
 const FIXED_HEADER_SIZE: usize = 40;
 
@@ -324,9 +325,6 @@ impl Ipv6PacketBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use device::ethernet::EtherType;
-    use testutil::set_logger_for_test;
-    use wire::ethernet::EthernetFrame;
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);

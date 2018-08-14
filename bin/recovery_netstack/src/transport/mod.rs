@@ -7,9 +7,9 @@
 pub mod tcp;
 pub mod udp;
 
-use ip::{IpAddr, IpProto};
-use wire::BufferAndRange;
-use StackState;
+use crate::ip::{IpAddr, IpProto};
+use crate::wire::BufferAndRange;
+use crate::StackState;
 
 /// The state associated with the transport layer.
 #[derive(Default)]

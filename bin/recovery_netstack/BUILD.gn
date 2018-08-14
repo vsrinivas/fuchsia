@@ -7,6 +7,7 @@ import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "recovery_netstack"
+  edition = "2018"
   with_unit_tests = true
 
   deps = [

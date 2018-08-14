@@ -12,18 +12,18 @@ mod types;
 
 pub use self::types::*;
 
-use std::fmt::{self, Debug, Formatter};
+use log::{debug, log, trace};
+use std::fmt::Debug;
 use std::mem;
 use std::ops::Range;
 
-use device::DeviceId;
-use error::ParseError;
-use ip::forwarding::{Destination, ForwardingTable};
-use wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
-use wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-use wire::{ensure_prefix_padding, AddrSerializationCallback, BufferAndRange, SerializationCallback};
-use zerocopy::ByteSlice;
-use StackState;
+use crate::device::DeviceId;
+use crate::error::ParseError;
+use crate::ip::forwarding::{Destination, ForwardingTable};
+use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+use crate::wire::{ensure_prefix_padding, AddrSerializationCallback, BufferAndRange, SerializationCallback};
+use crate::StackState;
 
 // default IPv4 TTL or IPv6 hops
 const DEFAULT_TTL: u8 = 64;
@@ -47,7 +47,7 @@ fn dispatch_receive_ip_packet<I: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
     increment_counter!(state, "dispatch_receive_ip_packet");
     match proto {
         IpProto::Icmp => icmp::receive_icmp_packet(state, src_ip, dst_ip, buffer),
-        _ => ::transport::receive_ip_packet(state, src_ip, dst_ip, proto, buffer),
+        _ => crate::transport::receive_ip_packet(state, src_ip, dst_ip, proto, buffer),
     }
 }
 
@@ -103,7 +103,7 @@ pub fn receive_ip_packet<I: Ip>(
             packet.set_ttl(ttl - 1);
             // drop packet so we can re-use the underlying buffer
             mem::drop(packet);
-            ::device::send_ip_frame(
+            crate::device::send_ip_frame(
                 state,
                 dest.device,
                 dest.next_hop,
@@ -152,7 +152,7 @@ fn deliver<A: IpAddr>(state: &mut StackState, device: DeviceId, dst_ip: A) -> bo
             Ipv6Addr => { log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted") }
         }
     );
-    A::deliver(dst_ip, ::device::get_ip_addr::<A>(state, device))
+    A::deliver(dst_ip, crate::device::get_ip_addr::<A>(state, device))
 }
 
 // Should we forward this packet, and if so, to whom?
@@ -218,7 +218,7 @@ where
         // (w.r.t ICMP) if this were a remote host?
         dispatch_receive_ip_packet(proto, state, A::Version::LOOPBACK_ADDRESS, dst_ip, buffer);
     } else if let Some(dest) = lookup_route(&state.ip, dst_ip) {
-        let (src_ip, _) = ::device::get_ip_addr(state, dest.device)
+        let (src_ip, _) = crate::device::get_ip_addr(state, dest.device)
             .expect("IP device route set for device without IP address");
         send_ip_packet_from(
             state,
@@ -272,7 +272,7 @@ pub fn send_ip_packet_from<A, B, F>(
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
-    ::device::send_ip_frame(
+    crate::device::send_ip_frame(
         state,
         device,
         next_hop,
@@ -289,7 +289,7 @@ pub fn send_ip_packet_from<A, B, F>(
 fn max_header_len<I: Ip>() -> usize {
     specialize_ip!(
         fn max_header_len() -> usize {
-            Ipv4 => { ::wire::ipv4::MAX_HEADER_LEN }
+            Ipv4 => { crate::wire::ipv4::MAX_HEADER_LEN }
             Ipv6 => { log_unimplemented!(60, "ip::max_header_len: Ipv6 not implemented") }
         }
     );
@@ -300,8 +300,8 @@ fn max_header_len<I: Ip>() -> usize {
 fn min_header_len<I: Ip>() -> usize {
     specialize_ip!(
         fn min_header_len() -> usize {
-            Ipv4 => { ::wire::ipv4::MIN_HEADER_LEN }
-            Ipv6 => { ::wire::ipv6::MIN_HEADER_LEN }
+            Ipv4 => { crate::wire::ipv4::MIN_HEADER_LEN }
+            Ipv6 => { crate::wire::ipv6::MIN_HEADER_LEN }
         }
     );
     I::min_header_len()

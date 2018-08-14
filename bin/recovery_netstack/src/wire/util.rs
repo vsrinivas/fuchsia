@@ -164,8 +164,8 @@ mod checksum {
         use rand::Rng;
 
         use super::*;
-        use testutil::new_rng;
-        use wire::testdata::IPV4_HEADERS;
+        use crate::testutil::new_rng;
+        use crate::wire::testdata::IPV4_HEADERS;
 
         #[test]
         fn test_checksum() {

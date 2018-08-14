@@ -10,9 +10,9 @@ use std::ops::Range;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
-use error::ParseError;
-use ip::{IpProto, Ipv4Addr, Ipv4Option};
-use wire::util::{BufferAndRange, Checksum, Options};
+use crate::error::ParseError;
+use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
+use crate::wire::util::{BufferAndRange, Checksum, Options};
 
 use self::options::Ipv4OptionImpl;
 
@@ -452,8 +452,8 @@ const DF_FLAG_OFFSET: u32 = 1;
 const MF_FLAG_OFFSET: u32 = 0;
 
 mod options {
-    use ip::{Ipv4Option, Ipv4OptionData};
-    use wire::util::OptionImpl;
+    use crate::ip::{Ipv4Option, Ipv4OptionData};
+    use crate::wire::util::OptionImpl;
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -493,15 +493,15 @@ mod options {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use device::ethernet::EtherType;
-    use wire::ethernet::EthernetFrame;
+    use crate::device::ethernet::EtherType;
+    use crate::wire::ethernet::EthernetFrame;
 
     const DEFAULT_SRC_IP: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const DEFAULT_DST_IP: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
 
     #[test]
     fn test_parse_full_tcp() {
-        use wire::testdata::tls_client_hello::*;
+        use crate::wire::testdata::tls_client_hello::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
         assert_eq!(body_range, ETHERNET_BODY_RANGE);
@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn test_parse_full_udp() {
-        use wire::testdata::dns_request::*;
+        use crate::wire::testdata::dns_request::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
         assert_eq!(body_range, ETHERNET_BODY_RANGE);

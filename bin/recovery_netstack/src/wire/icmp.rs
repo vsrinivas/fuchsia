@@ -12,11 +12,11 @@ use std::ops::Range;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use error::ParseError;
-use ip::{Ip, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6};
-use wire::util::fits_in_u32;
-use wire::util::Checksum;
-use wire::{ipv4, BufferAndRange};
+use crate::error::ParseError;
+use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6};
+use crate::wire::util::fits_in_u32;
+use crate::wire::util::Checksum;
+use crate::wire::{ipv4, BufferAndRange};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ICMP
 // header. Thus, we can simply reinterpret the bytes of the ICMP header as a
@@ -227,7 +227,7 @@ pub trait IcmpMessage<I: IcmpIpExt>: Sized + Copy + FromBytes + AsBytes + Unalig
     /// Parse a `Code` from the 8-bit "code" field in the ICMP header. Not all
     /// values for this field are valid. If an invalid value is passed,
     /// `code_from_u8` returns `None`.
-    fn code_from_u8(u8) -> Option<Self::Code>;
+    fn code_from_u8(_: u8) -> Option<Self::Code>;
 }
 
 /// An ICMP message that contains data from the original packet that caused the message.
@@ -860,8 +860,7 @@ impl_icmp_message!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use testutil::set_logger_for_test;
-    use wire::ipv4::Ipv4Packet;
+    use crate::wire::ipv4::Ipv4Packet;
 
     fn serialize_to_bytes<I: Ip, B: ByteSlice, M: IcmpMessage<I>>(
         src_ip: I::Addr, dst_ip: I::Addr, icmp: &IcmpPacket<I, B, M>,
@@ -881,7 +880,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_echo_request() {
-        use wire::testdata::icmp_echo::*;
+        use crate::wire::testdata::icmp_echo::*;
         let (ip, _) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range
@@ -897,7 +896,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_echo_response() {
-        use wire::testdata::icmp_echo::*;
+        use crate::wire::testdata::icmp_echo::*;
         let (ip, _) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range
@@ -913,7 +912,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_timestamp_request() {
-        use wire::testdata::icmp_timestamp::*;
+        use crate::wire::testdata::icmp_timestamp::*;
         let (ip, _) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range
@@ -937,7 +936,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_timestamp_reply() {
-        use wire::testdata::icmp_timestamp::*;
+        use crate::wire::testdata::icmp_timestamp::*;
         let (ip, _) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range
@@ -958,7 +957,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_dest_unreachable() {
-        use wire::testdata::icmp_dest_unreachable::*;
+        use crate::wire::testdata::icmp_dest_unreachable::*;
         let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range
@@ -973,7 +972,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_redirect() {
-        use wire::testdata::icmp_redirect::*;
+        use crate::wire::testdata::icmp_redirect::*;
         let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range
@@ -988,7 +987,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_time_exceeded() {
-        use wire::testdata::icmp_time_exceeded::*;
+        use crate::wire::testdata::icmp_time_exceeded::*;
         let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         // TODO: Check range

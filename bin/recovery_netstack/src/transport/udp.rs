@@ -4,10 +4,12 @@
 
 //! The User Datagram Protocol (UDP).
 
-use ip::IpAddr;
-use wire::udp::UdpPacket;
-use wire::BufferAndRange;
-use StackState;
+use crate::ip::IpAddr;
+use crate::wire::udp::UdpPacket;
+use crate::wire::BufferAndRange;
+use crate::StackState;
+
+use log::{log, trace};
 
 /// The state associated with the UDP protocol.
 #[derive(Default)]
