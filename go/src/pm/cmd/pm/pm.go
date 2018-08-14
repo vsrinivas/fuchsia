@@ -23,27 +23,29 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
 	"fuchsia.googlesource.com/pm/cmd/pm/serve"
 	"fuchsia.googlesource.com/pm/cmd/pm/sign"
+	"fuchsia.googlesource.com/pm/cmd/pm/snapshot"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
 	"fuchsia.googlesource.com/pm/cmd/pm/verify"
 )
 
 const usage = `Usage: %s [-k key] [-m manifest] [-o output dir] [-t tempdir] <command>
 Commands
-    init    - initialize a package meta directory in the standard form
-    genkey  - generate a new private key
+    init     - initialize a package meta directory in the standard form
+    genkey   - generate a new private key
 
-    build   - perform update, sign and seal in order
-    update  - update the merkle roots in meta/contents
-    sign    - sign a package with the given key
-    seal    - seal package metadata into a signed meta.far
-    verify  - verify metadata signature against the embedded public key
-    archive - construct a single .far representation of the package
-    expand  - expand a single .far representation of a package into a repository
-    publish - publish the package to a local TUF directory
-    serve   - serve a TUF directory of packages
+    build    - perform update, sign and seal in order
+    update   - update the merkle roots in meta/contents
+    sign     - sign a package with the given key
+    seal     - seal package metadata into a signed meta.far
+    verify   - verify metadata signature against the embedded public key
+    archive  - construct a single .far representation of the package
+    expand   - expand a single .far representation of a package into a repository
+    publish  - publish the package to a local TUF directory
+    serve    - serve a TUF directory of packages
+    snapshot - capture metadata from multiple packages in a single file
 
 Dev Only:
-    install - install a single .far representation of the package
+    install  - install a single .far representation of the package
 `
 
 var tracePath = flag.String("trace", "", "write runtime trace to `file`")
@@ -110,6 +112,9 @@ func doMain() int {
 
 	case "serve":
 		err = serve.Run(cfg, flag.Args()[1:])
+
+	case "snapshot":
+		err = snapshot.Run(cfg, flag.Args()[1:])
 
 	case "update":
 		err = update.Run(cfg, flag.Args()[1:])

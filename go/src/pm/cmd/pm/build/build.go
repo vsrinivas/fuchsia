@@ -139,27 +139,13 @@ func buildDepfile(cfg *build.Config) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type PackageBlobInfo struct {
-	// The path of the blob relative to the output directory.
-	SourcePath string `json:"source_path"`
-
-	// The path within the package.
-	Path string `json:"path"`
-
-	// Merkle root for the blob.
-	Merkle build.MerkleRoot `json:"merkle"`
-
-	// Size of blob, in bytes.
-	Size int64 `json:"size"`
-}
-
-func buildPackageBlobInfo(cfg *build.Config) ([]PackageBlobInfo, error) {
+func buildPackageBlobInfo(cfg *build.Config) ([]build.PackageBlobInfo, error) {
 	manifest, err := cfg.Manifest()
 	if err != nil {
 		return nil, err
 	}
 
-	var result []PackageBlobInfo
+	var result []build.PackageBlobInfo
 
 	// Include a meta FAR entry first. If blobs.sizes becomes the new root
 	// blob for a package, targets need to know which unnamed blob is the
@@ -179,7 +165,7 @@ func buildPackageBlobInfo(cfg *build.Config) ([]PackageBlobInfo, error) {
 			return nil, err
 		}
 
-		result = append(result, PackageBlobInfo{
+		result = append(result, build.PackageBlobInfo{
 			SourcePath: cfg.MetaFAR(),
 			Path:       "meta/",
 			Merkle:     merkle,
@@ -199,7 +185,7 @@ func buildPackageBlobInfo(cfg *build.Config) ([]PackageBlobInfo, error) {
 			return nil, err
 		}
 
-		result = append(result, PackageBlobInfo{
+		result = append(result, build.PackageBlobInfo{
 			SourcePath: manifest.Paths[path],
 			Path:       path,
 			Merkle:     merkle,
@@ -210,7 +196,7 @@ func buildPackageBlobInfo(cfg *build.Config) ([]PackageBlobInfo, error) {
 	return result, nil
 }
 
-func buildSizesFile(blobs []PackageBlobInfo) []byte {
+func buildSizesFile(blobs []build.PackageBlobInfo) []byte {
 	var buf bytes.Buffer
 
 	for _, member := range blobs {
@@ -220,6 +206,6 @@ func buildSizesFile(blobs []PackageBlobInfo) []byte {
 	return buf.Bytes()
 }
 
-func buildContentsManifest(blobs []PackageBlobInfo) ([]byte, error) {
+func buildContentsManifest(blobs []build.PackageBlobInfo) ([]byte, error) {
 	return json.Marshal(blobs)
 }
