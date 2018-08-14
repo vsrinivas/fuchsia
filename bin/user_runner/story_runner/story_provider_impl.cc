@@ -310,72 +310,6 @@ struct StoryProviderImpl::LinkPeer {
   std::unique_ptr<fidl::Binding<Link>> binding;
 };
 
-class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
- public:
-  GetLinkPeerCall(StoryProviderImpl* const impl,
-                  SessionStorage* const session_storage,
-                  fidl::StringPtr story_id,
-                  fidl::VectorPtr<fidl::StringPtr> module_path,
-                  fidl::StringPtr link_name,
-                  fidl::InterfaceRequest<fuchsia::modular::Link> request)
-      : Operation("StoryProviderImpl::GetLinkPeerCall", [] {}),
-        impl_(impl),
-        session_storage_(session_storage),
-        story_id_(story_id),
-        module_path_(std::move(module_path)),
-        link_name_(link_name),
-        request_(std::move(request)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    session_storage_->GetStoryDataById(story_id_)->Then(
-        [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
-          if (!story_data) {
-            // The InterfaceRequest<fuchsia::modular::Link> will go out of
-            // scope, and the channel closed with an error.
-            return;
-          }
-          auto link_peer = std::make_unique<LinkPeer>();
-
-          link_peer->ledger_client =
-              session_storage_->ledger_client()->GetLedgerClientPeer();
-          link_peer->storage = std::make_unique<StoryStorage>(
-              link_peer->ledger_client.get(),
-              CloneStruct(*story_data->story_page_id));
-
-          auto link_path = fuchsia::modular::LinkPath::New();
-          link_path->module_path = module_path_.Clone();
-          link_path->link_name = link_name_;
-
-          link_peer->link = std::make_unique<LinkImpl>(link_peer->storage.get(),
-                                                       std::move(*link_path));
-
-          link_peer->binding = std::make_unique<fidl::Binding<Link>>(
-              link_peer->link.get(), std::move(request_));
-
-          impl_->link_peers_.emplace_back(std::move(link_peer));
-
-          // TODO(thatguy): Eliminate the usage of LinkPeers entirely, as they
-          // are only used for tests.
-          // MI4-1085
-        });
-  }
-
-  StoryProviderImpl* const impl_;          // not owned
-  SessionStorage* const session_storage_;  // not owned
-  const fidl::StringPtr story_id_;
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
-  const fidl::StringPtr link_name_;
-  fidl::InterfaceRequest<fuchsia::modular::Link> request_;
-
-  // Sub operations run in this queue.
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetLinkPeerCall);
-};
-
 StoryProviderImpl::StoryProviderImpl(
     Environment* const user_environment, std::string device_id,
     SessionStorage* const session_storage,
@@ -768,15 +702,6 @@ void StoryProviderImpl::NotifyStoryWatchers(
     (*i)->OnChange(CloneStruct(story_data->story_info), story_state,
                    story_visibility_state);
   }
-}
-
-void StoryProviderImpl::GetLinkPeer(
-    fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> module_path,
-    fidl::StringPtr link_name,
-    fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  operation_queue_.Add(new GetLinkPeerCall(this, session_storage_, story_id,
-                                           std::move(module_path), link_name,
-                                           std::move(request)));
 }
 
 void StoryProviderImpl::GetPresentation(

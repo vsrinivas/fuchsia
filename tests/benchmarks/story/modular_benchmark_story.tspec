@@ -252,11 +252,6 @@
     },
     {
       "type": "duration",
-      "event_name": "StoryProviderImpl::GetLinkPeerCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
       "event_name": "StoryStorage::ReadLinkDataCall",
       "event_category": "modular"
     },

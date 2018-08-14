@@ -169,12 +169,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
 
   // |fuchsia::modular::StoryProvider|
-  void GetLinkPeer(
-      fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> module_path,
-      fidl::StringPtr link_name,
-      fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
-
-  // |fuchsia::modular::StoryProvider|
   void SetKindOfProtoStoryOption(
       fidl::StringPtr story_id, bool is_kind_of_proto_story,
       SetKindOfProtoStoryOptionCallback callback) override;

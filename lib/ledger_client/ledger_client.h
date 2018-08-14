@@ -41,24 +41,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
     watchers_.emplace_back(std::move(watcher));
   }
 
-  // Creates a new LedgerClient instance connected to the same Ledger as the
-  // LedgerClient it was obtained from, but it creates new Page connections for
-  // its PageClients. This allows the creation of PageClients that behave as if
-  // they run on another device. Useful to simplify testing of cross device
-  // behavior. See fuchsia::modular::StoryProvider.GetLinkPeer().
-  //
-  // The Peer instance does NOT register itself as a conflict resolver for the
-  // Ledger, as the primary LedgerClient must remain the conflict resolver.
-  // (Ledger currently does not support registration of multiple conflict
-  // resolvers for the same ledger, even on different connections. Later
-  // registrations simply overwrite earlier ones.)
-  std::unique_ptr<LedgerClient> GetLedgerClientPeer();
-
  private:
-  // Supports GetLedgerClientPeer().
-  LedgerClient(fuchsia::ledger::internal::LedgerRepository* ledger_repository,
-               const std::string& name);
-
   friend class PageClient;
   class ConflictResolverImpl;
   struct PageEntry;
