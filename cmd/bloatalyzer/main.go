@@ -8,25 +8,61 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"fuchsia.googlesource.com/tools/bloaty"
 	"fuchsia.googlesource.com/tools/logger"
 )
 
+type Format int
+
+const (
+	FormatJSON Format = iota
+	FormatHTML
+)
+
+func (f *Format) Set(value string) error {
+	switch strings.ToLower(value) {
+	case "json":
+		*f = FormatJSON
+	case "html":
+		*f = FormatHTML
+	default:
+		return fmt.Errorf("Unknown format type.")
+	}
+	return nil
+}
+
+func (f *Format) String() string {
+	switch *f {
+	case FormatJSON:
+		return "json"
+	case FormatHTML:
+		return "html"
+	default:
+		return "unknown"
+	}
+}
+
 var (
 	bloatyPath string
 	idsPath    string
 	output     string
+	format     Format
+	title      string
 	topFiles   uint64
 	topSyms    uint64
 )
 
 func init() {
-	flag.StringVar(&bloatyPath, "b", "", "path to bloaty executable")
-	flag.StringVar(&idsPath, "i", "", "path to ids.txt")
-	flag.StringVar(&output, "o", "", "output path")
+	flag.StringVar(&bloatyPath, "bloaty", "", "path to bloaty executable")
+	flag.StringVar(&idsPath, "input", "", "path to ids.txt")
+	flag.StringVar(&output, "output", "", "output path")
+	flag.Var(&format, "format", "output format (options: json, html)")
+	flag.StringVar(&title, "title", "Bloaty Analysis", "title for html page")
 	flag.Uint64Var(&topFiles, "top-files", 0, "max number of files to keep")
 	flag.Uint64Var(&topSyms, "top-syms", 0, "max number of symbols to keep per file")
 }
@@ -52,12 +88,6 @@ func main() {
 		logger.Fatalf(ctx, "%v", err)
 	}
 
-	logger.Debugf(ctx, "Marshalling json...")
-	json_out, err := json.Marshal(data)
-	if err != nil {
-		logger.Fatalf(ctx, "%v", err)
-	}
-
 	var out io.Writer
 	if output != "" {
 		var err error
@@ -69,9 +99,21 @@ func main() {
 		out = os.Stdout
 	}
 
-	logger.Debugf(ctx, "Writing data...")
-	if _, err = out.Write(json_out); err != nil {
-		logger.Fatalf(ctx, "%v", err)
-		return
+	switch format {
+	case FormatHTML:
+		logger.Debugf(ctx, "Writing HTML...")
+		err = bloaty.Chart(data, title, out)
+		if err != nil {
+			logger.Fatalf(ctx, "%v", err)
+		}
+	case FormatJSON:
+		logger.Debugf(ctx, "Marshalling JSON...")
+		enc := json.NewEncoder(out)
+		err := enc.Encode(data)
+		if err != nil {
+			logger.Fatalf(ctx, "%v", err)
+		}
+	default:
+		logger.Fatalf(ctx, "Unknown format.")
 	}
 }
