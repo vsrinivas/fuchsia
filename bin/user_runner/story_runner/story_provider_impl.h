@@ -187,9 +187,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void OnStoryStorageUpdated(fidl::StringPtr story_id,
                              fuchsia::modular::internal::StoryData story_data);
 
-  // Called by ContextHandler.
-  void OnContextChange();
-
   void NotifyImportanceWatchers();
 
   void NotifyStoryWatchers(
