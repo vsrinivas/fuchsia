@@ -270,6 +270,10 @@ OffChannelRequest Scanner::CreateOffChannelRequest() {
 }
 
 void Scanner::HandleHwScanAborted() {
+    if (!IsRunning()) {
+        errorf("got a HwScanAborted event while the scanner is not running\n");
+        return;
+    }
     errorf("scanner: hardware scan was aborted. Throwing out %zu BSS descriptions\n",
             current_bss_.size());
     SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
@@ -277,6 +281,11 @@ void Scanner::HandleHwScanAborted() {
 }
 
 void Scanner::HandleHwScanComplete() {
+    if (!IsRunning()) {
+        errorf("got a HwScanComplete event while the scanner is not running\n");
+        return;
+    }
+
     // TODO(gbonik): remove legacy support once wlanstack2 lands
     if (req_->txn_id != 0) {
         zx_status_t status = SendResults(device_, req_->txn_id, current_bss_);
