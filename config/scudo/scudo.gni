@@ -20,5 +20,6 @@ declare_args() {
                                        # is resolved
     "DeleteSizeMismatch=false",        # TODO(flowerhack) re-enable when US-495
                                        # is resolved
+    "allocator_may_return_null=true",
   ]
 }
