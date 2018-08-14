@@ -19,6 +19,7 @@ import (
 	"amber/pkg"
 
 	"syscall/zx"
+	"syscall/zx/fidl"
 )
 
 type ControlSrvr struct {
@@ -38,7 +39,7 @@ const ZXSIO_DAEMON_ERROR = zx.SignalUser0
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
 func NewControlSrvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) *ControlSrvr {
-	go bindings.Serve()
+	go fidl.Serve()
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
 	w := make(chan *startUpdateRequest, 1)
