@@ -359,10 +359,10 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConfigReqRspPendingEmpty) {
       't', 'e', 's', 't');
   const BufferView& req_options = expected_config_req.view(4, 4);
 
-  // Disconnect Response payload
+  // Configuration Response payload
   auto pending_config_req = CreateStaticByteBuffer(
       // Source CID
-      LowerBits(kRemoteCId), UpperBits(kRemoteCId),
+      LowerBits(kLocalCId), UpperBits(kLocalCId),
 
       // Flags (non-zero to test encoding)
       0x04, 0x00,
@@ -385,7 +385,7 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConfigReqRspPendingEmpty) {
        &rsp_options](const BrEdrCommandHandler::ConfigurationResponse& rsp) {
         cb_called = true;
         EXPECT_EQ(SignalingChannel::Status::kSuccess, rsp.status());
-        EXPECT_EQ(kRemoteCId, rsp.remote_cid());
+        EXPECT_EQ(kLocalCId, rsp.local_cid());
         EXPECT_EQ(0x0004, rsp.flags());
         EXPECT_EQ(ConfigurationResult::kPending, rsp.result());
         EXPECT_TRUE(common::ContainersEqual(rsp_options, rsp.options()));

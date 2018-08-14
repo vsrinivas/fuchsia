@@ -183,7 +183,7 @@ bool BrEdrCommandHandler::SendConfigurationRequest(
     common::PacketView<ConfigurationResponsePayload> config_rsp(
         &rsp_payload,
         rsp_payload.size() - sizeof(ConfigurationResponsePayload));
-    rsp.remote_cid_ = letoh16(config_rsp.header().src_cid);
+    rsp.local_cid_ = letoh16(config_rsp.header().src_cid);
     rsp.flags_ = letoh16(config_rsp.header().flags);
     rsp.result_ =
         static_cast<ConfigurationResult>(letoh16(config_rsp.header().result));
