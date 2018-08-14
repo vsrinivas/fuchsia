@@ -74,11 +74,12 @@ enum {
 };
 
 enum {
-    WLAN_TX_INFO_VALID_PHY = (1 << 0),
-    WLAN_TX_INFO_VALID_DATA_RATE = (1 << 1),
-    WLAN_TX_INFO_VALID_CHAN_WIDTH = (1 << 2),
-    WLAN_TX_INFO_VALID_MCS = (1 << 3),
-    // Bits 4-31 reserved
+    WLAN_TX_INFO_VALID_DATA_RATE = (1 << 0),
+    WLAN_TX_INFO_VALID_RATE_IDX = (1 << 1),
+    WLAN_TX_INFO_VALID_PHY = (1 << 2),
+    WLAN_TX_INFO_VALID_CHAN_WIDTH = (1 << 3),
+    WLAN_TX_INFO_VALID_MCS = (1 << 4),
+    // Bits 5-31 reserved
 };
 
 typedef struct wlan_tx_info {
@@ -90,16 +91,30 @@ typedef struct wlan_tx_info {
     // must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
     // the wlanmac driver.
     uint32_t valid_fields;
+    // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
+    uint32_t data_rate;
+    // Used by Minstrel as an index into its rate table, will be sent back in wlan_tx_status_t if
+    // Minstrel is enabled for the device.
+    uint16_t rate_idx;
     // The PHY format to be used to transmit this packet.
     uint16_t phy;
     // The channel width to be used to transmit this packet.
     uint8_t cbw;
-    // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
-    uint32_t data_rate;
     // The modulation and coding scheme index for this packet. Depends on the PHY format and
     // channel width.
     uint8_t mcs;
 } wlan_tx_info_t;
+
+typedef struct wlan_tx_status {
+    // Destination mac address, or addr1 in packet header.
+    uint8_t peer_addr[6];
+    // Used by Minstrel as an index into its rate table.
+    uint16_t rate_idx;
+    // Number of retries after the first attempt.  0 if transmission succeeds on first attempt.
+    uint16_t retries;
+    // Outcome of packet transmission. True iff ACK was received from peer.
+    bool success;
+} wlan_tx_status_t;
 
 enum {
     WLAN_PROTECTION_NONE = 0,
@@ -185,14 +200,8 @@ typedef struct wlanmac_ifc {
     void (*indication)(void* cookie, uint32_t ind);
 
     // Reports the status of an attempted transmission.
-    // * tx_info: the transmit parameters for the attempted transmission.
-    // * retry_count: the number of unsuccessful retries before the final status. This will be 0,
-    //   for example, if transmission immediately succeeded or failed.
-    // * status: the transmission disposition.
-    //   ZX_OK: transmission was successful.
-    //   Other: transmission was not successful.
-    void (*report_tx_status)(void* cookie, const wlan_tx_info_t* tx_info, uint32_t retry_count,
-                             zx_status_t status);
+    // * tx_status: contains status info of one transmitted packet to one peer at one specific rate.
+    void (*report_tx_status)(void* cookie, const wlan_tx_status_t* tx_status);
 } wlanmac_ifc_t;
 
 typedef struct wlanmac_protocol_ops {
