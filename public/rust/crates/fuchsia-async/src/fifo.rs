@@ -199,7 +199,7 @@ pub struct WriteEntry<'a, F: 'a, W: 'a> {
 impl<'a, F, W> Unpin for WriteEntry<'a, F, W> {}
 
 impl<'a, F: FifoWritable<W>, W: FifoEntry> WriteEntry<'a, F, W> {
-    /// Create a new WriteEntry, which owns the `FifoWritable` type
+    /// Create a new WriteEntry, which borrows the `FifoWritable` type
     /// until the future completes.
     pub fn new(fifo: &'a F, entries: &'a [W]) -> Self {
         WriteEntry { fifo, entries }
@@ -228,7 +228,7 @@ pub struct ReadEntry<'a, F: 'a, R: 'a> {
 impl<'a, F, W> Unpin for ReadEntry<'a, F, W> {}
 
 impl<'a, F: FifoReadable<R>, R: FifoEntry> ReadEntry<'a, F, R> {
-    /// Create a new ReadEntry, which owns the `FifoReadable` type
+    /// Create a new ReadEntry, which borrows the `FifoReadable` type
     /// until the future completes.
     pub fn new(fifo: &'a F) -> ReadEntry<F, R> {
         ReadEntry {
