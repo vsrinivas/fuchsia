@@ -140,7 +140,7 @@ zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
 zx_status_t sys_eventpair_create(uint32_t options,
                                  user_out_handle* out0,
                                  user_out_handle* out1) {
-    if (options != 0u)  // No options defined/supported yet.
+    if (options != 0u) // No options defined/supported yet.
         return ZX_ERR_NOT_SUPPORTED;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -246,7 +246,7 @@ zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_out_ptr<void
     return sys_debuglog_read(log_handle, options, ptr, len);
 }
 
-zx_status_t sys_cprng_draw_new(user_out_ptr<void> buffer, size_t len) {
+zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
     if (len > kMaxCPRNGDraw)
         return ZX_ERR_INVALID_ARGS;
 
@@ -261,10 +261,6 @@ zx_status_t sys_cprng_draw_new(user_out_ptr<void> buffer, size_t len) {
     if (buffer.copy_array_to_user(kernel_buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
     return ZX_OK;
-}
-
-zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
-    return sys_cprng_draw_new(buffer, len);
 }
 
 zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t len) {
