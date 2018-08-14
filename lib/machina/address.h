@@ -42,23 +42,19 @@ static_assert(kGicv3RedistributorStride >= kGicv3RedistributorSize + kGicv3Redis
               "GICv3 Redistributor stride must be >= the size of a single mapping");
 
 // IO APIC memory range.
-static constexpr uint64_t kIoApicPhysBase                   = 0xfec00000;
+static constexpr uint64_t kIoApicPhysBase                   = 0xf8000000;
 static constexpr uint64_t kIoApicSize                       = PAGE_SIZE;
 
 // PCI memory ranges.
 #if __aarch64__
-static constexpr uint64_t kPciMmioBarPhysBase               = 0x10000000;
 static constexpr uint64_t kPciEcamPhysBase                  = 0x3f000000;
+static constexpr uint64_t kPciMmioBarPhysBase               = 0x10000000;
 #elif __x86_64__
-static constexpr uint64_t kPciMmioBarPhysBase               = 0xf0000000;
-static constexpr uint64_t kPciEcamPhysBase                  = 0xd0000000;
+static constexpr uint64_t kPciEcamPhysBase                  = 0xf8100000;
+static constexpr uint64_t kPciMmioBarPhysBase               = 0xf8200000;
 #endif
-static constexpr uint64_t kPciMmioBarSize                   = 0x100000;
 static constexpr uint64_t kPciEcamSize                      = pci_ecam_size(0, 1);
-
-// TPM memory range.
-static constexpr uint64_t kTpmPhysBase                      = 0xfed40000;
-static constexpr uint64_t kTpmSize                          = 0x5000;
+static constexpr uint64_t kPciMmioBarSize                   = 0x100000;
 
 // PL011 memory range.
 static constexpr uint64_t kPl011PhysBase                    = 0xfff32000;

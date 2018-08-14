@@ -90,17 +90,17 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
                 // Allocated memory ranges that this bridge can map devices to.
                 // This is used for mapping MMIO BARs.
                 QWordMemory(
-                    ResourceProducer,                               // Produce resource (0x00000000f0000000 - 0x00000000ffffffff)
+                    ResourceProducer,                               // Produce resource (0x00000000f8200000 - 0x00000000f8300000)
                     PosDecode,
                     MinFixed,
                     MaxFixed,
                     Cacheable,
                     ReadWrite,
                     0x0000000000000000,                             // AddressGranularity
-                    0x00000000f0000000,                             // AddressMin
-                    0x00000000ffffffff,                             // AddressMax
+                    0x00000000f8200000,                             // AddressMin
+                    0x00000000f82fffff,                             // AddressMax
                     0x0000000000000000,                             // AddressTranslation
-                    0x0000000010000000                              // Range Length
+                    0x0000000000100000                              // Range Length
                 )
             })
         }

@@ -89,7 +89,6 @@ source_set("machina") {
       "arch/x86/io_port.h",
       "arch/x86/page_table.cc",
       "arch/x86/page_table.h",
-      "arch/x86/tpm.h",
     ]
 
     include_dirs = [ "//zircon/third_party/lib/acpica/source/include" ]

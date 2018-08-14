@@ -58,7 +58,6 @@ static constexpr uint64_t kUartBases[kNumUarts] = {
 #include "garnet/lib/machina/arch/x86/acpi.h"
 #include "garnet/lib/machina/arch/x86/io_port.h"
 #include "garnet/lib/machina/arch/x86/page_table.h"
-#include "garnet/lib/machina/arch/x86/tpm.h"
 
 static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
@@ -309,13 +308,6 @@ int main(int argc, char** argv) {
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create IO ports " << status;
-    return status;
-  }
-  // Setup TPM
-  machina::Tpm tpm;
-  status = tpm.Init(&guest);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create TPM " << status;
     return status;
   }
 #endif

@@ -16,7 +16,7 @@
 
 [024h 0036   8]                     Reserved : 0
 
-[02Ch 0044   8]                 Base Address : D0000000
+[02Ch 0044   8]                 Base Address : 00000000f8100000
 [034h 0052   2]         Segment Group Number : 0
 [036h 0054   1]             Start Bus Number : 0
 [037h 0055   1]               End Bus Number : 0
