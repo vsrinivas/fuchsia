@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
+import("//build/gn/packages.gni")
 
 declare_args() {
   # The package key to use for signing Fuchsia packages made by the
@@ -69,6 +70,9 @@ template("pm_build_package") {
 
       # seal
       "$pkg_out_dir/meta.far.merkle",
+
+      # package blob manifest
+      "$pkg_out_dir/blobs.json",
     ]
 
     args = [
@@ -80,6 +84,7 @@ template("pm_build_package") {
       rebase_path(pkg_manifest_file, root_build_dir),
       "build",
       "-depfile",
+      "-blobsfile"
     ]
   }
 }
@@ -301,7 +306,9 @@ template("package") {
       if (!defined(tests)) {
         tests = []
       }
+      package_set = ""
     }
+
     pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
     pkg_desc = "Package ${pkg_label} (${pkg.package_name}):"
     if (pkg.deprecated_system_image) {
@@ -551,6 +558,47 @@ template("package") {
           "--entry-manifest=${pkg_label}",
           "--entry=${pkg.package_name}/meta.far=" +
               rebase_path("${pkg_target_name}.meta/meta.far",
+                          root_build_dir,
+                          target_out_dir),
+        ]
+      }
+    }
+
+    # Determine why this package is being built.
+    if (!pkg.deprecated_system_image) {
+      foreach(name, available_packages) {
+        if (name == pkg_label) {
+          pkg.package_set = "available"
+        }
+      }
+      foreach(name, preinstall_packages) {
+        if (name == pkg_label) {
+          pkg.package_set = "preinstall"
+        }
+      }
+      foreach(name, monolith_packages) {
+        if (name == pkg_label) {
+          pkg.package_set = "monolith"
+        }
+      }
+    }
+
+    generate_response_file("${pkg_target_name}.system_index.rsp") {
+      if (pkg.deprecated_system_image) {
+        # A system_image package will be included directly in the system package.
+        response_file_contents = []
+      } else {
+        deps = [
+          ":${pkg_target_name}.meta",
+        ]
+        if (pkg.package_set == "") {
+          package_tags = ""
+        } else {
+          package_tags = "#${pkg.package_set}"
+        }
+        response_file_contents = [
+          "--entry=${pkg.package_name}/${pkg.package_version}${package_tags}=" +
+              rebase_path("${pkg_target_name}.meta/blobs.json",
                           root_build_dir,
                           target_out_dir),
         ]

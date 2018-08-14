@@ -1230,6 +1230,83 @@ action("amber_index") {
   deps += [ ":update.meta" ]
 }
 
+# The system index is the index of all available packages, naming each blobs.json
+# file instead of its merkleroot, and including a tag of the package set the
+# package is a part of (monolith/preinstall/available). Additionally the
+# system_index has the system package itself, and the system update package.
+system_index = "$target_out_dir/system_index"
+
+action("system_index") {
+  visibility = [ ":system_snapshot" ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [ "--absolute" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, available_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.system_index.rsp"
+    deps += [ "${pkg_label}.system_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+
+  system_image_meta_dir =
+      get_label_info(":system_image.meta", "target_out_dir") +
+      "/system_image.meta"
+  system_image_blobs_json = system_image_meta_dir + "/blobs.json"
+  args += [
+    "--entry",
+    "system_image/0#monolith=" + rebase_path(system_image_blobs_json, root_build_dir),
+  ]
+  deps += [ ":system_image.meta" ]
+
+  update_meta_dir =
+      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_blobs_json = update_meta_dir + "/blobs.json"
+  args += [
+    "--entry",
+    "update/0#monolith=" + rebase_path(update_blobs_json, root_build_dir),
+  ]
+  deps += [ ":update.meta" ]
+}
+
+compiled_action("system_snapshot") {
+  tool = "//garnet/go/src/pm:pm_bin"
+  tool_output_name = "pm"
+
+  visibility = [ ":updates" ]
+  testonly = true
+
+  deps = [
+    ":system_index",
+  ]
+
+  inputs = [
+    system_index,
+  ]
+
+  outputs = [
+    "$target_out_dir/system.snapshot",
+  ]
+
+  args = [
+    "snapshot",
+    "--manifest",
+    rebase_path(inputs[0], root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+
 # The blob.manifest that drives blob.blk is just a flat list of files.
 # blob_merkleroot.manifest is a manifest file of "HEXDIGITS=FILENAME"
 # lines.  Note that this repeats all the same merkleroot computations
@@ -1302,6 +1379,7 @@ group("updates") {
     ":amber_publish_blobs",
     ":amber_publish_index",
     ":ids.txt",
+    ":system_snapshot",
   ]
 }
 
