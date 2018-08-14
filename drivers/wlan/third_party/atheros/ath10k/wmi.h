@@ -6647,9 +6647,7 @@ int ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg* arg);
 
 int ath10k_wmi_event_scan(struct ath10k* ar, struct ath10k_msg_buf* buf);
 int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* buf);
-#if 0 // NEEDS PORTING
-void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb);
-#endif // NEEDS PORTING
+void ath10k_wmi_event_chan_info(struct ath10k* ar, struct ath10k_msg_buf* buf);
 void ath10k_wmi_event_echo(struct ath10k* ar, struct ath10k_msg_buf* buf);
 #if 0 // NEEDS PORTING
 int ath10k_wmi_event_debug_mesg(struct ath10k* ar, struct sk_buff* skb);

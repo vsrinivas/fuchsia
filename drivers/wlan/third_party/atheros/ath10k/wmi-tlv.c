@@ -464,8 +464,7 @@ static void ath10k_wmi_tlv_op_rx(struct ath10k* ar, struct ath10k_msg_buf* msg_b
         ath10k_wmi_event_scan(ar, msg_buf);
         break;
     case WMI_TLV_CHAN_INFO_EVENTID:
-        ath10k_err("WMI_TLV_CHAN_INFO_EVENTID unimplemented\n");
-        // ath10k_wmi_event_chan_info(ar, skb);
+        ath10k_wmi_event_chan_info(ar, msg_buf);
         break;
     case WMI_TLV_ECHO_EVENTID:
         ath10k_wmi_event_echo(ar, msg_buf);

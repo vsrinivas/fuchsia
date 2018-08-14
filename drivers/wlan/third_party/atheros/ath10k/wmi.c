@@ -2472,8 +2472,10 @@ static int ath10k_wmi_10_4_op_pull_ch_info_ev(struct ath10k* ar,
 
     return 0;
 }
+#endif // NEEDS PORTING
 
-void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
+void ath10k_wmi_event_chan_info(struct ath10k* ar, struct ath10k_msg_buf* buf) {
+#if 0 // NEEDS PORTING
     struct wmi_ch_info_ev_arg arg = {};
     struct survey_info* survey;
     uint32_t err_code, freq, cmd_flags, noise_floor, rx_clear_count, cycle_count;
@@ -2542,8 +2544,8 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
 
 exit:
     mtx_unlock(&ar->data_lock);
-}
 #endif // NEEDS PORTING
+}
 
 void ath10k_wmi_event_echo(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
     struct wmi_echo_ev_arg arg = {};
@@ -5311,8 +5313,7 @@ static void ath10k_wmi_10_2_op_rx(struct ath10k* ar, struct ath10k_msg_buf* msg_
         ath10k_wmi_queue_set_coverage_class_work(ar);
         break;
     case WMI_10_2_CHAN_INFO_EVENTID:
-        ath10k_err("WMI_10_2_CHAN_INFO_EVENTID unimplemented\n");
-        // ath10k_wmi_event_chan_info(ar, skb);
+        ath10k_wmi_event_chan_info(ar, msg_buf);
         break;
     case WMI_10_2_ECHO_EVENTID:
         ath10k_wmi_event_echo(ar, msg_buf);
