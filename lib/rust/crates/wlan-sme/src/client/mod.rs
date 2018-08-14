@@ -89,7 +89,7 @@ pub enum ConnectResult {
 #[derive(Debug)]
 pub enum UserEvent<T: Tokens> {
     ScanFinished {
-        token: T::ScanToken,
+        tokens: Vec<T::ScanToken>,
         result: DiscoveryResult,
     },
     ConnectFinished {
@@ -213,9 +213,9 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                         });
                         state
                     },
-                    ScanResult::DiscoveryFinished { token, result } => {
+                    ScanResult::DiscoveryFinished { tokens, result } => {
                         self.user_sink.send(UserEvent::ScanFinished {
-                            token,
+                            tokens,
                             result
                         });
                         state

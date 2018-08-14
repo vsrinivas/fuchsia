@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_mlme::{self, BssDescription, ScanResultCodes, ScanRequest};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
@@ -38,8 +38,8 @@ pub struct ScanScheduler<D, J> {
     // always takes priority over discovery scans. There can only be one such pending request:
     // if SME requests another one, the newer one wins and overwrites an existing request.
     pending_join: Option<JoinScan<J>>,
-    // A queue of pending discovery requests from the user
-    pending_discovery: VecDeque<DiscoveryScan<D>>,
+    // Pending discovery requests from the user
+    pending_discovery: Vec<D>,
     device_info: Arc<DeviceInfo>,
     last_mlme_txn_id: u64,
 }
@@ -53,7 +53,7 @@ enum ScanState<D, J> {
         best_bss: Option<BssDescription>
     },
     ScanningToDiscover {
-        cmd: DiscoveryScan<D>,
+        tokens: Vec<D>,
         mlme_txn_id: u64,
         bss_list: Vec<BssDescription>
     },
@@ -89,7 +89,7 @@ pub enum ScanResult<D, J> {
     // "Discovery" scan has finished, either successfully or not.
     // SME is expected to forward the result to the user.
     DiscoveryFinished {
-        token: D,
+        tokens: Vec<D>,
         result: DiscoveryResult,
     },
 }
@@ -109,7 +109,7 @@ impl<D, J> ScanScheduler<D, J> {
         ScanScheduler {
             current: ScanState::NotScanning,
             pending_join: None,
-            pending_discovery: VecDeque::new(),
+            pending_discovery: Vec::new(),
             device_info,
             last_mlme_txn_id: 0,
         }
@@ -133,9 +133,14 @@ impl<D, J> ScanScheduler<D, J> {
     }
 
     // Initiate a "discovery" scan. The scan might or might not begin immediately.
+    // The request can be merged with any pending or ongoing requests.
     // If a ScanRequest is returned, the caller is responsible for forwarding it to MLME.
     pub fn enqueue_scan_to_discover(&mut self, s: DiscoveryScan<D>) -> Option<ScanRequest> {
-        self.pending_discovery.push_back(s);
+        if let ScanState::ScanningToDiscover { tokens, .. } = &mut self.current {
+            tokens.push(s.token);
+            return None
+        }
+        self.pending_discovery.push(s.token);
         self.start_next_scan()
     }
 
@@ -201,9 +206,9 @@ impl<D, J> ScanScheduler<D, J> {
                     }
                 }
             },
-            ScanState::ScanningToDiscover{ cmd, bss_list, .. } => {
+            ScanState::ScanningToDiscover{ tokens, bss_list, .. } => {
                 ScanResult::DiscoveryFinished {
-                    token: cmd.token,
+                    tokens,
                     result: convert_discovery_result(msg, bss_list),
                 }
             }
@@ -245,12 +250,12 @@ impl<D, J> ScanScheduler<D, J> {
                         best_bss: None,
                     };
                     Some(request)
-                } else if let Some(discovery_scan) = self.pending_discovery.pop_front() {
+                } else if !self.pending_discovery.is_empty() {
                     self.last_mlme_txn_id += 1;
                     let request = new_discovery_scan_request(
-                        self.last_mlme_txn_id, &discovery_scan, &self.device_info);
+                        self.last_mlme_txn_id, &self.device_info);
                     self.current = ScanState::ScanningToDiscover{
-                        cmd: discovery_scan,
+                        tokens: mem::replace(&mut self.pending_discovery, Vec::new()),
                         mlme_txn_id: self.last_mlme_txn_id,
                         bss_list: Vec::new(),
                     };
@@ -285,9 +290,8 @@ fn new_join_scan_request<T>(mlme_txn_id: u64,
     }
 }
 
-fn new_discovery_scan_request<T>(mlme_txn_id: u64,
-                                 _discovery_scan: &DiscoveryScan<T>,
-                                 device_info: &DeviceInfo) -> ScanRequest {
+fn new_discovery_scan_request(mlme_txn_id: u64,
+                              device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
         txn_id: mlme_txn_id,
         bss_type: fidl_mlme::BssTypes::Infrastructure,
@@ -386,8 +390,8 @@ mod tests {
         });
         assert!(req.is_none());
         let result = match result {
-            ScanResult::DiscoveryFinished { token, result } => {
-                assert_eq!(10, token);
+            ScanResult::DiscoveryFinished { tokens, result } => {
+                assert_eq!(vec![10], tokens);
                 result
             },
             _ => panic!("expected ScanResult::DiscoveryFinished")
@@ -396,6 +400,52 @@ mod tests {
             .into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"foo".to_vec(), b"qux".to_vec()], ssid_list);
+    }
+
+    #[test]
+    fn discovery_scans_grouped_together() {
+        let mut sched = create_sched();
+
+        // Post one scan command, expect a message to MLME
+        let mlme_req = sched.enqueue_scan_to_discover(DiscoveryScan { token: 10 })
+            .expect("expected a ScanRequest");
+        let txn_id = mlme_req.txn_id;
+
+        // Report a scan result
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_description(b"foo".to_vec()),
+        });
+
+        // Post another command. It should not issue another request to the MLME since
+        // there is already an on-going one
+        assert!(sched.enqueue_scan_to_discover(DiscoveryScan { token: 20 }).is_none());
+
+        // Report another scan result and the end of the scan transaction
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_description(b"bar".to_vec()),
+        });
+        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+
+        // We don't expect another request to the MLME
+        assert!(req.is_none());
+
+        // Expect a discovery result with both tokens and both SSIDs
+        let result = match result {
+            ScanResult::DiscoveryFinished { tokens, result } => {
+                assert_eq!(vec![10, 20], tokens);
+                result
+            },
+            _ => panic!("expected ScanResult::DiscoveryFinished")
+        };
+        let mut ssid_list = result.expect("expected a successful scan result")
+            .into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
+        ssid_list.sort();
+        assert_eq!(vec![b"bar".to_vec(), b"foo".to_vec()], ssid_list);
     }
 
     #[test]

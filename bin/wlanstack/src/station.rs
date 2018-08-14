@@ -214,13 +214,8 @@ fn serve_user_stream(stream: client::UserStream<ClientTokens>)
     stream
         .for_each(|e| {
             future::ready(match e {
-                client::UserEvent::ScanFinished{ token, result } => {
-                    send_scan_results(token, result).unwrap_or_else(|e| {
-                        if !is_peer_closed(&e) {
-                            error!("Error sending scan results to user: {}", e);
-                        }
-                    })
-                },
+                client::UserEvent::ScanFinished{ tokens, result } =>
+                    send_all_scan_results(tokens, result),
                 client::UserEvent::ConnectFinished { token, result } => {
                     send_connect_result(token, result).unwrap_or_else(|e| {
                         if !is_peer_closed(&e) {
@@ -242,25 +237,38 @@ fn is_peer_closed(e: &fidl::Error) -> bool {
     }
 }
 
-fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
-                     result: DiscoveryResult)
-    -> Result<(), fidl::Error>
-{
-    match result {
-        Ok(ess_list) => {
-            let mut results = ess_list.into_iter().map(convert_ess_info).collect::<Vec<_>>();
-            token.send_on_result(&mut results.iter_mut())?;
-            token.send_on_finished()?;
-        },
-        Err(e) => {
-            token.send_on_error(&mut fidl_sme::ScanError {
-                code: match &e {
+fn send_all_scan_results(tokens: Vec<fidl_sme::ScanTransactionControlHandle>,
+                         result: DiscoveryResult) {
+    let mut fidl_result = result
+        .map(|ess_list| ess_list.into_iter().map(convert_ess_info).collect::<Vec<_>>())
+        .map_err(|e| {
+            fidl_sme::ScanError {
+                code: match e {
                     DiscoveryError::NotSupported => fidl_sme::ScanErrorCode::NotSupported,
                     DiscoveryError::InternalError => fidl_sme::ScanErrorCode::InternalError,
                 },
                 message: e.to_string()
-            })?;
-        }
+            }
+        });
+    for token in tokens {
+        send_scan_results(token, &mut fidl_result).unwrap_or_else(|e| {
+            if !is_peer_closed(&e) {
+                error!("Error sending scan results to user: {}", e);
+            }
+        })
+    }
+}
+
+fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
+                     result: &mut Result<Vec<fidl_sme::EssInfo>, fidl_sme::ScanError>)
+    -> Result<(), fidl::Error>
+{
+    match result {
+        Ok(ess_list) => {
+            token.send_on_result(&mut ess_list.iter_mut())?;
+            token.send_on_finished()?;
+        },
+        Err(e) => token.send_on_error(e)?
     }
     Ok(())
 }
