@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api, arbitrary_self_types, pin)]
+#![feature(async_await, await_macro, futures_api, arbitrary_self_types, pin)]
 #![deny(warnings)]
 
-use failure::{format_err, Error, Fail, ResultExt};
+use failure::{format_err, Error, ResultExt};
 use fidl::endpoints2;
 use fidl_fuchsia_wlan_device_service::{self as wlan_service, DeviceServiceMarker,
                                        DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ConnectResultCode, ConnectTransactionEvent,
                             ScanTransactionEvent};
 use fuchsia_app::client::connect_to_service;
-use fuchsia_async::temp::TempFutureExt;
-use fuchsia_async::{self as fasync, unsafe_many_futures};
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use std::fmt;
@@ -32,126 +31,97 @@ fn main() -> Result<(), Error> {
     let wlan_svc =
         connect_to_service::<DeviceServiceMarker>().context("failed to connect to device service")?;
 
-    match opt {
-        Opt::Phy(cmd) => exec.run_singlethreaded(do_phy(cmd, wlan_svc)),
-        Opt::Iface(cmd) => exec.run_singlethreaded(do_iface(cmd, wlan_svc)),
-        Opt::Client(cmd) => exec.run_singlethreaded(do_client(cmd, wlan_svc)),
-    }
+    let fut = async {
+        match opt {
+            Opt::Phy(cmd) => await!(do_phy(cmd, wlan_svc)),
+            Opt::Iface(cmd) => await!(do_iface(cmd, wlan_svc)),
+            Opt::Client(cmd) => await!(do_client(cmd, wlan_svc)),
+        }
+    };
+    exec.run_singlethreaded(fut)
 }
 
-fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> impl Future<Output = Result<(), Error>> {
+async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::PhyCmd::List => {
             // TODO(tkilbourn): add timeouts to prevent hanging commands
-            wlan_svc
-                .list_phys()
-                .map_err(|e| e.context("error getting response").into())
-                .map_ok(|response| {
-                    println!("response: {:?}", response);
-                }).left_future()
-        },
+            let response = await!(wlan_svc.list_phys()).context("error getting response")?;
+            println!("response: {:?}", response);
+        }
         opts::PhyCmd::Query { phy_id } => {
             let mut req = wlan_service::QueryPhyRequest { phy_id };
-            wlan_svc
-                .query_phy(&mut req)
-                .map_err(|e| e.context("error querying phy").into())
-                .map_ok(|response| {
-                    println!("response: {:?}", response);
-                }).right_future()
+            let response = await!(wlan_svc.query_phy(&mut req)).context("error querying phy")?;
+            println!("response: {:?}", response);
         }
     }
+    Ok(())
 }
 
-fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Output = Result<(), Error>> {
-    unsafe_many_futures!(IfaceFut, [ New, Delete, List ]);
+async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
-        opts::IfaceCmd::New { phy_id, role } => IfaceFut::New({
+        opts::IfaceCmd::New { phy_id, role } => {
             let mut req = wlan_service::CreateIfaceRequest {
                 phy_id: phy_id,
                 role: role.into(),
             };
 
-            wlan_svc
-                .create_iface(&mut req)
-                .map_err(|e| e.context("error getting response").into())
-                .map_ok(|response| {
-                    println!("response: {:?}", response);
-                })
-        }),
-        opts::IfaceCmd::Delete { phy_id, iface_id } => IfaceFut::Delete({
+            let response = await!(wlan_svc.create_iface(&mut req)).context("error getting response")?;
+            println!("response: {:?}", response);
+        }
+        opts::IfaceCmd::Delete { phy_id, iface_id } => {
             let mut req = wlan_service::DestroyIfaceRequest {
                 phy_id: phy_id,
                 iface_id: iface_id,
             };
 
-            wlan_svc
-                .destroy_iface(&mut req)
-                .map_ok(move |status| match zx::Status::ok(status) {
-                    Ok(()) => println!("destroyed iface {:?}", iface_id),
-                    Err(s) => println!("error destroying iface: {:?}", s),
-                })
-                .map_err(|e| e.context("error destroying iface").into())
-        }),
-        opts::IfaceCmd::List => IfaceFut::List({
-            wlan_svc.list_ifaces()
-                .map_err(|e| e.context("error getting response").into())
-                .map_ok(|response| {
-                    println!("response: {:?}", response);
-                })
-        }),
+            let response = await!(wlan_svc.destroy_iface(&mut req)).context("error destroying iface")?;
+            match zx::Status::ok(response) {
+                Ok(()) => println!("destroyed iface {:?}", iface_id),
+                Err(s) => println!("error destroying iface: {:?}", s),
+            }
+        }
+        opts::IfaceCmd::List => {
+            let response = await!(wlan_svc.list_ifaces()).context("error getting response")?;
+            println!("response: {:?}", response);
+        }
     }
+    Ok(())
 }
 
-fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Output = Result<(), Error>> {
-    unsafe_many_futures!(ClientFut, [ Scan, Connect, Status ]);
+async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
-        opts::ClientCmd::Scan { iface_id } => ClientFut::Scan(get_client_sme(wlan_svc, iface_id)
-            .err_into::<Error>()
-            .and_then(|sme| {
-                let (local, remote) = match endpoints2::create_endpoints() {
-                    Ok(x) => x,
-                    Err(e) => return future::ready(Err(e.into())),
-                };
-                let mut req = fidl_sme::ScanRequest {
-                    timeout: 10
-                };
-                future::ready(
-                    sme.scan(&mut req, remote)
-                        .map(move |()| local)
-                        .map_err(|e| e.context("error sending scan request").into()))
-            })
-            .and_then(handle_scan_transaction)),
-        opts::ClientCmd::Connect { iface_id, ssid, password } =>
-            ClientFut::Connect(get_client_sme(wlan_svc, iface_id)
-            .and_then(move |sme| {
-                let (local, remote) = match endpoints2::create_endpoints() {
-                    Ok(x) => x,
-                    Err(e) => return future::ready(Err(e.into())),
-                };
-                let mut req = fidl_sme::ConnectRequest {
-                    ssid: ssid.as_bytes().to_vec(),
-                    password: password.as_bytes().to_vec(),
-                };
-                future::ready(sme.connect(&mut req, Some(remote))
-                    .map(move |()| local)
-                    .map_err(|e| e.context("error sending connect request").into()))
-            })
-            .and_then(handle_connect_transaction)
-            .err_into()),
-        opts::ClientCmd::Status { iface_id } => ClientFut::Status(get_client_sme(wlan_svc, iface_id)
-            .and_then(|sme| sme.status().err_into())
-            .map_ok(|st| {
-                match st.connected_to {
-                    Some(bss) => {
-                        println!("Connected to '{}' (bssid {})",
-                                 String::from_utf8_lossy(&bss.ssid), Bssid(bss.bssid));
-                    },
-                    None => println!("Not connected to a network"),
-                }
-                if !st.connecting_to_ssid.is_empty() {
-                    println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
-                }
-            }))
+        opts::ClientCmd::Scan { iface_id } => {
+            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+            let (local, remote) = endpoints2::create_endpoints()?;
+            let mut req = fidl_sme::ScanRequest { timeout: 10 };
+            sme.scan(&mut req, remote).context("error sending scan request")?;
+            await!(handle_scan_transaction(local))
+        }
+        opts::ClientCmd::Connect { iface_id, ssid, password } => {
+            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+            let (local, remote) = endpoints2::create_endpoints()?;
+            let mut req = fidl_sme::ConnectRequest {
+                ssid: ssid.as_bytes().to_vec(),
+                password: password.as_bytes().to_vec(),
+            };
+            sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
+            await!(handle_connect_transaction(local))
+        }
+        opts::ClientCmd::Status { iface_id } => {
+            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+            let st = await!(sme.status())?;
+            match st.connected_to {
+                Some(bss) => {
+                    println!("Connected to '{}' (bssid {})",
+                    String::from_utf8_lossy(&bss.ssid), Bssid(bss.bssid));
+                },
+                None => println!("Not connected to a network"),
+            }
+            if !st.connecting_to_ssid.is_empty() {
+                println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -164,39 +134,28 @@ impl fmt::Display for Bssid {
     }
 }
 
-fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy)
-    -> impl Future<Output = Result<(), Error>>
-{
+async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Result<(), Error> {
     let mut printed_header = false;
-    scan_txn.take_event_stream()
-        .map_ok(move |e| {
-            match e {
-                ScanTransactionEvent::OnResult { aps } => {
-                    if !printed_header {
-                        print_scan_header();
-                        printed_header = true;
-                    }
-                    for ap in aps {
-                        print_scan_result(ap);
-                    }
-                    false
-                },
-                ScanTransactionEvent::OnFinished { } => true,
-                ScanTransactionEvent::OnError { error } => {
-                    eprintln!("Error: {}", error.message);
-                    true
-                },
+    let mut events = scan_txn.take_event_stream();
+    while let Some(evt) = await!(events.try_next()).context("failed to fetch all results before the channel was closed")? {
+        match evt {
+            ScanTransactionEvent::OnResult { aps } => {
+                if !printed_header {
+                    print_scan_header();
+                    printed_header = true;
+                }
+                for ap in aps {
+                    print_scan_result(ap);
+                }
             }
-        })
-        .try_fold(false, |_prev, done| future::ready(Ok(done)))
-        .err_into::<Error>()
-        .and_then(|done| {
-            future::ready(if done {
-                Ok(())
-            } else {
-                Err(format_err!("Failed to fetch all results before the channel was closed"))
-            })
-        })
+            ScanTransactionEvent::OnFinished { } => break,
+            ScanTransactionEvent::OnError { error } => {
+                eprintln!("Error: {}", error.message);
+                break;
+            },
+        }
+    }
+    Ok(())
 }
 
 fn print_scan_header() {
@@ -212,53 +171,38 @@ fn print_scan_result(ess: fidl_sme::EssInfo) {
         String::from_utf8_lossy(&ess.best_bss.ssid));
 }
 
-fn handle_connect_transaction(connect_txn: fidl_sme::ConnectTransactionProxy)
-    -> impl Future<Output = Result<(), Error>>
+async fn handle_connect_transaction(connect_txn: fidl_sme::ConnectTransactionProxy)
+    -> Result<(), Error>
 {
-    connect_txn.take_event_stream()
-        .map_ok(|e| {
-            match e {
-                ConnectTransactionEvent::OnFinished { code } => {
-                    match code {
-                        ConnectResultCode::Success => println!("Connected successfully"),
-                        ConnectResultCode::Canceled =>
-                            eprintln!("Connecting was canceled or superseded by another command"),
-                        ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
-                        ConnectResultCode::BadCredentials =>
-                            eprintln!("Failed to connect to network; bad credentials"),
-                    }
-                    true
-                },
+    let mut events = connect_txn.take_event_stream();
+    while let Some(evt) = await!(events.try_next()).context("failed to receive connect result before the channel was closed")? {
+        match evt {
+            ConnectTransactionEvent::OnFinished { code } => {
+                match code {
+                    ConnectResultCode::Success => println!("Connected successfully"),
+                    ConnectResultCode::Canceled =>
+                        eprintln!("Connecting was canceled or superseded by another command"),
+                    ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
+                    ConnectResultCode::BadCredentials =>
+                        eprintln!("Failed to connect to network; bad credentials"),
+                }
+                break;
             }
-        })
-        .try_fold(false, |_prev, done| future::ready(Ok(done)))
-        .err_into::<Error>()
-        .and_then(|done| {
-            future::ready(if done {
-                Ok(())
-            } else {
-                Err(format_err!(
-                    "Failed to receiver a connect result before the channel was closed"))
-            })
-        })
+        }
+    }
+    Ok(())
 }
 
-fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
-    -> impl Future<Output = Result<fidl_sme::ClientSmeProxy, Error>>
+async fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
+    -> Result<fidl_sme::ClientSmeProxy, Error>
 {
-    future::ready(endpoints2::create_endpoints())
-        .err_into()
-        .and_then(move |(proxy, remote)| {
-            wlan_svc.get_client_sme(iface_id, remote)
-                .map_err(|e| e.context("error sending GetClientSme request").into())
-                .and_then(move |status| {
-                    future::ready(if status == zx::sys::ZX_OK {
-                        Ok(proxy)
-                    } else {
-                        Err(format_err!("Invalid interface id {}", iface_id))
-                    })
-                })
-        })
+    let (proxy, remote) = endpoints2::create_endpoints()?;
+    let status = await!(wlan_svc.get_client_sme(iface_id, remote)).context("error sending GetClientSme request")?;
+    if status == zx::sys::ZX_OK {
+        Ok(proxy)
+    } else {
+        Err(format_err!("Invalid interface id {}", iface_id))
+    }
 }
 
 #[cfg(test)]
