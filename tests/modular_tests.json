@@ -33,10 +33,6 @@
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=link_passing_test_module1"
     },
     {
-      "name":"link_update",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=link_update_test_user_shell --story_shell=dev_story_shell"
-    },
-    {
       "name":"parent_child",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=parent_child_test_parent_module"
     },

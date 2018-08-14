@@ -243,5 +243,33 @@ TEST_F(LinkImplTest, SetAndGetEntity) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return done; }));
 }
 
+TEST_F(LinkImplTest, MultipleConnections) {
+  // Create two storage instances, where each one gets its own connection to
+  // the Ledger. Then, create a LinkImpl on top of each, and test end-to-end.
+  auto storage1 = MakeStorage("page");
+  auto link1 = MakeLink(storage1.get(), "mylink");
+
+  auto storage2 = MakeStorage("page");
+  auto link2 = MakeLink(storage2.get(), "mylink");
+
+  int notified_count{0};
+  fidl::StringPtr last_value;
+  WatchAll(link1.get(), [&](const fidl::StringPtr& value) {
+    ++notified_count;
+    last_value = value;
+  });
+
+  // Set two values on |link2|. On |link1|, we are guaranteed to get a
+  // notification about the second value, eventually.
+  SetLink(link2.get(), nullptr, "3");
+  SetLink(link2.get(), nullptr, "4");
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return last_value == "4"; }));
+  // There is always an initial notification of the current state, so we
+  // will have been notified either 2 or 3 times: 2 if we only got a
+  // notification about the set to "4", and 3 if we got both the set to "3" and
+  // "4".
+  EXPECT_TRUE(notified_count == 2 || notified_count == 3) << notified_count;
+}
+
 }  // namespace
 }  // namespace modular

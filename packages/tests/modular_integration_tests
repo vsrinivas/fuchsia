@@ -32,7 +32,6 @@
         "//peridot/tests/link_passing:link_passing_test_module1",
         "//peridot/tests/link_passing:link_passing_test_module2",
         "//peridot/tests/link_passing:link_passing_test_module3",
-        "//peridot/tests/link_update:link_update_test_user_shell",
         "//peridot/tests:modular_tests",
         "//peridot/tests/module_context:module_context_test_user_shell",
         "//peridot/tests/module_context:module_context_test_module",
