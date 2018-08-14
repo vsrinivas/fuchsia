@@ -5,43 +5,12 @@
 import("//build/config/fuchsia/zircon.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
-action("gpt_image") {
-  visibility = [ ":*" ]
-  gpt_image = "$target_out_dir/zircon.gpt"
-
-  script = "//garnet/bin/guest/pkg/zircon_guest/mkgpt.sh"
-  args = [
-    "-o",
-    rebase_path("$target_out_dir"),
-    target_cpu,
-  ]
-
-  outputs = [
-    gpt_image,
-  ]
-}
-
 guest_package("zircon_guest") {
   # TODO(PD-162): This should just use zircon.zbi as zircon and have no
   # ramdisk, when the guest loader supports that.
   zircon = "$zircon_build_dir/kernel.zbi"
   ramdisk = "$zircon_build_dir/zircon.zbi"
 
-  deps = [
-    ":gpt_image",
-  ]
-
-  cmdline = "TERM=uart console.path=/dev/class/console/virtio-console"
-
-  gpt_outputs = get_target_outputs(":gpt_image")
-  gpt_filename = "gpt.img"
-  resources = [
-    {
-      path = rebase_path(gpt_outputs[0])
-      dest = gpt_filename
-    },
-  ]
-  block_devices = [ "/guest/data/${gpt_filename},ro" ]
   cmdline = "console.path=/dev/class/console/virtio-console " +
             "kernel.serial=legacy"
 }
