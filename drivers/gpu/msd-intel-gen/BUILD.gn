@@ -13,6 +13,9 @@ driver_module("msd_intel") {
     ":msd_intel_entry",
     "src",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 # The gpu device; runs gtests at startup
@@ -25,6 +28,9 @@ driver_module("msd_intel_test") {
     ":msd_intel_test_entry",
     "src",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 source_set("msd_intel_entry") {
@@ -68,9 +74,9 @@ source_set("msd_intel_test_entry") {
   libs = [ "zircon" ]
   deps += [
     "tests/unit_tests:hardware_tests",
+    "//garnet/lib/magma/src/sys_driver:pci_driver_gtest",
     "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
-    "//garnet/lib/magma/src/sys_driver:pci_driver_gtest",
   ]
 }
 

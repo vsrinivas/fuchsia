@@ -28,7 +28,11 @@ driver_module("wlan_driver") {
     "//zircon/public/lib/zx",
   ]
 
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
 }
 
 package("wlan") {
@@ -38,7 +42,9 @@ package("wlan") {
     ":wlan_driver",
   ]
 
-  drivers = [ {
-        name = "wlan.so"
-      } ]
+  drivers = [
+    {
+      name = "wlan.so"
+    },
+  ]
 }

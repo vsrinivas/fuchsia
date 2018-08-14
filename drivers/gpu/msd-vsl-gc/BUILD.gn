@@ -13,6 +13,9 @@ driver_module("msd_vsl") {
     ":msd_vsl_entry",
     "src",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 driver_module("msd_vsl_test") {
@@ -22,6 +25,9 @@ driver_module("msd_vsl_test") {
     ":msd_vsl_test_entry",
     "src",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 magma_pdev_entry("msd_vsl_entry") {

@@ -26,14 +26,16 @@ driver_module("ralink_driver") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 if (internal_access) {

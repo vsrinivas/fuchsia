@@ -14,6 +14,9 @@ driver_module("msd_arm") {
     ":msd_arm_entry",
     "src",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 driver_module("msd_arm_test") {
@@ -25,6 +28,9 @@ driver_module("msd_arm_test") {
     "src",
     "tests:gtest",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 magma_pdev_entry("msd_arm_entry") {
