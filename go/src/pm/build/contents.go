@@ -69,6 +69,18 @@ func (m *MerkleRoot) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// LessThan provides a sort ordering for MerkleRoot
+func (m MerkleRoot) LessThan(other MerkleRoot) bool {
+	for i := 0; i < len(m); i++ {
+		if m[i] < other[i] {
+			return true
+		} else if m[i] > other[i] {
+			return false
+		}
+	}
+	return false
+}
+
 // MetaContents maps file paths within a package to their content IDs
 type MetaContents map[string]MerkleRoot
 

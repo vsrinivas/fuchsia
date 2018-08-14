@@ -169,7 +169,7 @@ func buildPackageBlobInfo(cfg *build.Config) ([]build.PackageBlobInfo, error) {
 			SourcePath: cfg.MetaFAR(),
 			Path:       "meta/",
 			Merkle:     merkle,
-			Size:       info.Size(),
+			Size:       uint64(info.Size()),
 		})
 	}
 
@@ -189,7 +189,7 @@ func buildPackageBlobInfo(cfg *build.Config) ([]build.PackageBlobInfo, error) {
 			SourcePath: manifest.Paths[path],
 			Path:       path,
 			Merkle:     merkle,
-			Size:       info.Size(),
+			Size:       uint64(info.Size()),
 		})
 	}
 

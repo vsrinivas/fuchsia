@@ -16,5 +16,5 @@ type PackageBlobInfo struct {
 	Merkle MerkleRoot `json:"merkle"`
 
 	// Size of blob, in bytes
-	Size int64 `json:"size"`
+	Size uint64 `json:"size"`
 }

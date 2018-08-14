@@ -176,7 +176,7 @@ func buildSnapshot(c snapshotConfig) (*build.Snapshot, error) {
 
 		for _, blob := range blobs {
 			pkg.Files[blob.Path] = blob.Merkle
-			snapshot.Blobs[blob.Merkle] = build.BlobInfo{int(blob.Size)}
+			snapshot.Blobs[blob.Merkle] = build.BlobInfo{blob.Size}
 		}
 
 		snapshot.Packages[pkgInfo.Name] = pkg
@@ -201,7 +201,7 @@ func buildSnapshot(c snapshotConfig) (*build.Snapshot, error) {
 
 			for _, blob := range blobs {
 				pkg.Files[blob.Path] = blob.Merkle
-				snapshot.Blobs[blob.Merkle] = build.BlobInfo{int(blob.Size)}
+				snapshot.Blobs[blob.Merkle] = build.BlobInfo{blob.Size}
 			}
 
 			snapshot.Packages[entry.Name] = pkg

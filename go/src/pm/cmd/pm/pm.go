@@ -15,6 +15,7 @@ import (
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/archive"
 	buildcmd "fuchsia.googlesource.com/pm/cmd/pm/build"
+	"fuchsia.googlesource.com/pm/cmd/pm/delta"
 	"fuchsia.googlesource.com/pm/cmd/pm/expand"
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
@@ -43,6 +44,7 @@ Commands
     publish  - publish the package to a local TUF directory
     serve    - serve a TUF directory of packages
     snapshot - capture metadata from multiple packages in a single file
+    delta    - compare two snapshot files
 
 Dev Only:
     install  - install a single .far representation of the package
@@ -88,6 +90,9 @@ func doMain() int {
 
 	case "build":
 		err = buildcmd.Run(cfg, flag.Args()[1:])
+
+	case "delta":
+		err = delta.Run(cfg, flag.Args()[1:])
 
 	case "expand":
 		err = expand.Run(cfg, flag.Args()[1:])
