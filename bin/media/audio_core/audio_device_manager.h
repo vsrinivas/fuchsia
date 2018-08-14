@@ -5,19 +5,19 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_MANAGER_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_MANAGER_H_
 
-#include <set>
-
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <set>
 
 #include "garnet/bin/media/audio_core/audio_device.h"
 #include "garnet/bin/media/audio_core/audio_input.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
 #include "garnet/bin/media/audio_core/audio_plug_detector.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
+#include "garnet/bin/media/audio_core/mixer/fx_loader.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 namespace media {
@@ -35,8 +35,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   //
   // 1) Initialize the mixing thread pool.
   // 2) Instantiate all of the built-in audio output devices.
-  // 3) Being monitoring for plug/unplug events for pluggable audio output
-  //    devices.
+  // 3) Monitor for plug/unplug events for pluggable audio output devices.
+  // 4) Load the device effects library.
   zx_status_t Init();
 
   // Blocking call.  Called by the service, once, when it is time to shutdown
@@ -45,10 +45,9 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // perform a clean shutdown.  If an unclean shutdown must be performed in
   // order to implode in a timely fashion, so be it.
   //
-  // Shutdown must be idempotent, and safe to call from the output manager's
-  // destructor, although it should never be necessary to do so.  If the
-  // shutdown called from the destructor has to do real work, something has gone
-  // Very Seriously Wrong.
+  // Shutdown must be idempotent and safe to call from this object's destructor
+  // (although this should never be necessary). If a shutdown called from this
+  // destructor must do real work, something has gone Very Seriously Wrong.
   void Shutdown();
 
   // Add a new client for the device enumerator functionality.  Called from the
@@ -68,14 +67,13 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
     audio_outs_.erase(*audio_out);
   }
 
-  // Select the initial set of outputs for an AudioOut which has just been
-  // configured.
+  // Select the initial set of outputs for a newly-configured AudioOut.
   void SelectOutputsForAudioOut(AudioOutImpl* audio_out);
 
-  // Link an output to an audio out
+  // Link an output to an AudioOut.
   void LinkOutputToAudioOut(AudioOutput* output, AudioOutImpl* audio_out);
 
-  // Add/remove a audio in to/from the set of active audio ins.
+  // Add/remove an AudioIn to/from the set of active AudioIns.
   void AddAudioIn(fbl::RefPtr<AudioInImpl> audio_in);
   void RemoveAudioIn(AudioInImpl* audio_in);
 
@@ -85,17 +83,14 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // Begin the process of initializing a device and add it to the set of device
   // which are waiting to be initialized.
   //
-  // Called from the plug detector when a new stream device shows up for the
-  // first time.
+  // Called from the plug detector when a new stream device first shows up.
   zx_status_t AddDevice(const fbl::RefPtr<AudioDevice>& device);
 
-  // Move a device from the pending init list to the active device_'s list.
-  // Notify users of the presence of a new device, and re-evaluate policy
-  // decisions.
+  // Move a device from the pending init list to the active device's list.
+  // Notify users of this new device, and re-evaluate policy decisions.
   void ActivateDevice(const fbl::RefPtr<AudioDevice>& device);
 
-  // Shutdown the specified audio device and remove it from the appropriate set
-  // of active devices.
+  // Shutdown this device; remove it from the appropriate set of active devices.
   void RemoveDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Handles a plugged/unplugged state change for the supplied audio device.
@@ -130,8 +125,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
 
  private:
-  // KeyTraits we will use to sort our set of AudioDeviceSettings to ensure
-  // uniqueness.
+  // KeyTraits we use to sort our AudioDeviceSettings set to ensure uniqueness.
   struct AudioDeviceSettingsKeyTraits {
     static const AudioDeviceSettings* GetKey(const AudioDeviceSettings& obj) {
       return &obj;
@@ -155,10 +149,9 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
                                           fbl::RefPtr<AudioDeviceSettings>,
                                           AudioDeviceSettingsKeyTraits>;
 
-  // Find the last plugged input or output (excluding the throttle_output) in
-  // the system.  If allow_unplugged is true, the most recently unplugged
-  // input/output will be returned if no plugged outputs can be found.
-  // Otherwise, nullptr.
+  // Find the most-recently plugged device (per type: input or output) excluding
+  // throttle_output. If allow_unplugged, return the most-recently UNplugged
+  // device if no plugged devices are found -- otherwise return nullptr.
   fbl::RefPtr<AudioDevice> FindLastPlugged(AudioObject::Type type,
                                            bool allow_unplugged = false);
 
@@ -174,9 +167,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
     return fbl::RefPtr<AudioInput>::Downcast(std::move(dev));
   }
 
-  // Methods for dealing with routing policy when a device becomes unplugged or
-  // completely removed from the system, or has become plugged/newly added to
-  // the system.
+  // Methods to handle routing policy -- when an existing device is unplugged or
+  // completely removed, or when a new device is plugged or added to the system.
   void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device,
                          zx_time_t plug_time);
   void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
@@ -184,27 +176,22 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   void LinkToAudioIns(const fbl::RefPtr<AudioDevice>& device);
 
-  // Commit any pending changes to a device's settings to disk (if the settings
-  // are disk backed), then remove the settings from the
-  // persisted_device_settings_ map.
+  // Commit any pending device-settings changes to disk (if settings are disk-
+  // backed), then remove the settings from our persisted_device_settings_ map.
   void FinalizeDeviceSettings(const AudioDevice& device);
 
-  // Send a notification to users that a given device's gain settings have
-  // changed.
+  // Send notification to users that this device's gain settings have changed.
   void NotifyDeviceGainChanged(const AudioDevice& device);
 
-  // Re-evaluate which device should be the default device, and send
-  // notifications to users if the default device has changed.
+  // Re-evaluate which device is the default. Notify users, if this has changed.
   void UpdateDefaultDevice(bool input);
 
-  // Update a device's gain the the current "system" gain as exposed by the top
-  // level service.
+  // Update a device gain to the "system" gain exposed by the top-level service.
   //
-  // TODO(johngro) : Remove this when we remove system gain entirely.
+  // TODO(johngro): Remove this when we remove system gain entirely.
   void UpdateDeviceToSystemGain(AudioDevice* device);
 
-  // Commit dirty settings to storage if needed, and schedule/reschedule the
-  // timer as needed.
+  // Commit any dirty settings to storage, (re)scheduling the timer as needed.
   void CommitDirtySettings();
   void CommitDirtySettingsThunk(async_dispatcher_t*, async::TaskBase*,
                                 zx_status_t) {
@@ -218,7 +205,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<::fuchsia::media::AudioDeviceEnumerator> bindings_;
 
-  // Our sets of currently active audio devices, audio ins, and audio outs.
+  // Our sets of currently active audio devices, AudioIns, and AudioOuts.
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
@@ -227,8 +214,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   fbl::DoublyLinkedList<fbl::RefPtr<AudioInImpl>> audio_ins_;
   fbl::DoublyLinkedList<fbl::RefPtr<AudioOutImpl>> audio_outs_;
 
-  // The special throttle output.  This output always exists, and is always used
-  // by all audio outs.
+  // The special throttle output always exists and is used by every AudioOut.
   fbl::RefPtr<AudioOutput> throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
@@ -240,12 +226,13 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
 
-  // The unique set of AudioDeviceSettings we are currently tracking which need
-  // to be persisted to disk.
+  // The unique AudioDeviceSettings subset we track that needs disk-persistence.
   DeviceSettingsSet persisted_device_settings_;
   async::TaskMethod<AudioDeviceManager,
                     &AudioDeviceManager::CommitDirtySettingsThunk>
       commit_settings_task_{this};
+
+  FxLoader fx_loader_;
 };
 
 }  // namespace audio

@@ -4,15 +4,15 @@
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 
-#include <string>
-
 #include <fbl/algorithm.h>
+#include <string>
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 #include "garnet/bin/media/audio_core/audio_in_impl.h"
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
 #include "garnet/bin/media/audio_core/audio_plug_detector.h"
+#include "garnet/bin/media/audio_core/mixer/fx_loader.h"
 #include "garnet/bin/media/audio_core/throttle_output.h"
 
 namespace media {
@@ -26,9 +26,9 @@ AudioDeviceManager::~AudioDeviceManager() {
   FXL_DCHECK(devices_.is_empty());
 }
 
+// Configure this admin singleton object to manage audio device instances.
 zx_status_t AudioDeviceManager::Init() {
-  // Give the device settings class a chance to make sure it's storage is
-  // happy.
+  // Give AudioDeviceSettings a chance to ensure its storage is happy.
   AudioDeviceSettings::Initialize();
 
   // Instantiate and initialize the default throttle output.
@@ -48,8 +48,7 @@ zx_status_t AudioDeviceManager::Init() {
   }
   throttle_output_ = std::move(throttle_output);
 
-  // Being monitoring for plug/unplug events for pluggable audio output
-  // devices.
+  // Start monitoring for plug/unplug events of pluggable audio output devices.
   res = plug_detector_.Start(this);
   if (res != ZX_OK) {
     FXL_LOG(WARNING) << "AudioDeviceManager failed to start plug detector (res "
@@ -57,29 +56,37 @@ zx_status_t AudioDeviceManager::Init() {
     return res;
   }
 
-  return ZX_OK;
+  // Initialize the FxLoader and load the device effect library, if present.
+  res = fx_loader_.LoadLibrary();
+  if (res == ZX_ERR_ALREADY_EXISTS) {
+    FXL_LOG(ERROR) << "FxLoader already started!";
+  } else if (res != ZX_OK) {
+    FXL_LOG(WARNING) << "FxLoader::LoadLibrary failed (res: " << res << ")";
+  }
+
+  return res;
 }
 
+// We are no longer managing audio devices, unwind everything.
 void AudioDeviceManager::Shutdown() {
   // Step #1: Stop monitoring plug/unplug events and cancel any pending settings
   // commit task.  We are shutting down and no longer care about these things.
   plug_detector_.Stop();
   commit_settings_task_.Cancel();
 
-  // Step #2: Shutdown all of the active audio ins in the system.
+  // Step #2: Shut down each active AudioIn in the system.
   while (!audio_ins_.is_empty()) {
     auto audio_in = audio_ins_.pop_front();
     audio_in->Shutdown();
   }
 
-  // Step #3: Shutdown all of the active audio outs in the system.
+  // Step #3: Shut down each active AudioOut in the system.
   while (!audio_outs_.is_empty()) {
     auto audio_out = audio_outs_.pop_front();
     audio_out->Shutdown();
   }
 
-  // Step #4: Shut down each device which is currently waiting to become
-  // initialized.
+  // Step #4: Shut down each device which is waiting for initialization.
   while (!devices_pending_init_.is_empty()) {
     auto device = devices_pending_init_.pop_front();
     device->Shutdown();
@@ -92,6 +99,10 @@ void AudioDeviceManager::Shutdown() {
     FinalizeDeviceSettings(*device);
   }
 
+  // Step #6: Close and unload the device effect library SO.
+  fx_loader_.UnloadLibrary();
+
+  // Step #7: Shut down the throttle output.
   throttle_output_->Shutdown();
   throttle_output_ = nullptr;
 }
@@ -123,15 +134,13 @@ void AudioDeviceManager::ActivateDevice(
   FXL_DCHECK(device != throttle_output_);
 
   // Have we already been removed from the pending list?  If so, the device is
-  // already shutting down and there is
-  // nothing to be done.
+  // already shutting down and there is nothing to be done.
   if (!device->InContainer()) {
     return;
   }
 
   // TODO(johngro): remove this when system gain is fully deprecated.
-  // For now, if this is an output device, update its gain to be whatever the
-  // current "system" gain is set to.
+  // For now, set each output "device" gain to the "system" gain value.
   if (device->is_output()) {
     UpdateDeviceToSystemGain(device.get());
   }
@@ -141,13 +150,11 @@ void AudioDeviceManager::ActivateDevice(
   //
   // If these settings are currently unique in the system, attempt to load the
   // persisted settings from disk, or create a new persisted settings file for
-  // this device if there isn't a file currently, or if the file appears to be
-  // corrupt.
+  // this device if the file is either absent or corrupt.
   //
-  // If these settings are not currently unique, then copy the current state
-  // of the settings for the device we conflict with, and then proceed without
-  // persistence.  Currently, only the first instance of a device settings
-  // conflict will end up persisting its settings.
+  // If these settings are not unique, then copy the settings of the device we
+  // conflict with, and use them without persistence. Currently, when device
+  // instances conflict, we persist only the first instance's settings.
   DeviceSettingsSet::iterator collision;
   fbl::RefPtr<AudioDeviceSettings> settings = device->device_settings();
   FXL_DCHECK(settings != nullptr);
@@ -167,14 +174,13 @@ void AudioDeviceManager::ActivateDevice(
     settings->InitFromClone(*collision);
   }
 
-  // Has this device been configured to be ignored?  If so, remove the device
-  // instead of activating it.
+  // Is this device configured to be ignored? If so, remove (don't activate) it.
   if (settings->ignore_device()) {
     RemoveDevice(device);
     return;
   }
 
-  // Move the deivce over to the set of active devices.
+  // Move the device over to the set of active devices.
   devices_.insert(devices_pending_init_.erase(*device));
   device->SetActivated();
 
@@ -195,10 +201,9 @@ void AudioDeviceManager::ActivateDevice(
   settings->GetGainInfo(&gain_info);
   device->SetGainInfo(gain_info, kAllSetFlags);
 
-  // Notify interested users of the new device.  We need to check to see if
-  // this is going to become the new default device so that we can fill out
-  // is_default field of the notification properly.  Right now, we define
-  // "default" device to mean simply last-plugged.
+  // Notify interested users of this new device. Check whether this will become
+  // the new default device, so we can set 'is_default' in the notification
+  // properly. Right now, "default" device is defined simply as last-plugged.
   ::fuchsia::media::AudioDeviceInfo info;
   device->GetDeviceInfo(&info);
 
@@ -210,15 +215,13 @@ void AudioDeviceManager::ActivateDevice(
     client->events().OnDeviceAdded(info);
   }
 
-  // Reconsider our current routing policy now that we have a new device
-  // present in the system.
+  // Reconsider our current routing policy now that a new device has arrived.
   if (device->plugged()) {
     zx_time_t plug_time = device->plug_time();
     OnDevicePlugged(device, plug_time);
   }
 
-  // Check to see if the default device has changed and update users if it
-  // has.
+  // Check whether the default device has changed; if so, update users.
   UpdateDefaultDevice(device->is_input());
 
   // Commit (or schedule a commit for) any dirty settings.
@@ -244,8 +247,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;
     device_set.erase(*device);
 
-    // If the device was active, reconsider what the default device is now,
-    // and let clients know that this device has gone away.
+    // If device was active: reset the default & notify clients of the removal.
     if (device->activated()) {
       UpdateDefaultDevice(device->is_input());
 
@@ -260,8 +262,7 @@ void AudioDeviceManager::HandlePlugStateChange(
     const fbl::RefPtr<AudioDevice>& device, bool plugged, zx_time_t plug_time) {
   FXL_DCHECK(device != nullptr);
 
-  // Update the device's plug state in our bookkeeping.  If there was no
-  // change, then we are done.
+  // Update bookkeeping for the device's plug state. If no change, we're done.
   if (!device->UpdatePlugState(plugged, plug_time)) {
     return;
   }
@@ -272,8 +273,7 @@ void AudioDeviceManager::HandlePlugStateChange(
     OnDeviceUnplugged(device, plug_time);
   }
 
-  // Check to see if the default device has changed and update users if it
-  // has.
+  // Check whether the default device has changed; if so, update users.
   UpdateDefaultDevice(device->is_input());
 }
 
@@ -346,11 +346,9 @@ void AudioDeviceManager::SelectOutputsForAudioOut(AudioOutImpl* audio_out) {
   FXL_DCHECK(audio_out->format_info_valid());
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
-  // TODO(johngro): Add some way to assert that we are executing on the main
-  // message loop thread.
+  // TODO(johngro): Add a way to assert that we are on the message loop thread.
 
-  // Regardless of policy, all audio outs should always be linked to the
-  // special throttle output.
+  // Regardless of policy, link the special throttle output to every AudioOut.
   LinkOutputToAudioOut(throttle_output_.get(), audio_out);
 
   switch (routing_policy_) {
@@ -382,9 +380,9 @@ void AudioDeviceManager::LinkOutputToAudioOut(AudioOutput* output,
   FXL_DCHECK(output);
   FXL_DCHECK(audio_out);
 
-  // Do not create any links if the AudioOut's output format has not been set.
-  // Links will be created during SelectOutputsForAudioOut when the audio out
-  // finally has its format set via AudioOutImpl::SetStreamType
+  // Do not create any links if the AudioOut's output format is not yet set.
+  // Links will be created during SelectOutputsForAudioOut when the AudioOut
+  // format is finally set via AudioOutImpl::SetStreamType.
   if (!audio_out->format_info_valid())
     return;
 
@@ -441,10 +439,9 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
              (type == AudioObject::Type::Input));
   AudioDevice* best = nullptr;
 
-  // TODO(johngro) : Consider tracking last plugged time using a fbl::WAVLTree
-  // so that this operation becomes O(1).  N is pretty low right now, so the
-  // benefits do not currently outweigh the complexity of maintaining this
-  // index.
+  // TODO(johngro): Consider tracking last-plugged times in a fbl::WAVLTree, so
+  // this operation becomes O(1). N is pretty low right now, so the benefits do
+  // not currently outweigh the complexity of maintaining this index.
   for (auto& obj : devices_) {
     auto device = static_cast<AudioDevice*>(&obj);
     if ((device->type() != type) ||
@@ -488,21 +485,19 @@ void AudioDeviceManager::SetRoutingPolicy(
 
   // Iterate thru all of our audio devices -- only a subset are affected.
   for (auto& dev_obj : devices_) {
-    // If device is an input, it is unaffected by this change in
-    // output-routing.
+    // Input devices are unaffected by changes in output-routing.
     if (dev_obj.is_input()) {
       continue;
     }
 
-    // If (output) device is not plugged-in, it is unaffected by
-    // output-routing.
+    // Only plugged-in (output) devices are affected by output-routing.
     auto output = static_cast<AudioOutput*>(&dev_obj);
     if (!output->plugged()) {
       continue;
     }
 
-    // If device is most-recently plugged, it is unaffected by this change in
-    // policy (either way, it will continue to be attached to all audio outs).
+    // If device is most-recently plugged, it is also unaffected by this policy
+    // change -- either way, it will continue to be attached to every AudioOut.
     FXL_DCHECK(output != throttle_output_.get());
     if (output == last_plugged_output.get()) {
       continue;
@@ -512,10 +507,10 @@ void AudioDeviceManager::SetRoutingPolicy(
     // output. For each remaining output (based on the new policy), we ...
     if (routing_policy ==
         fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
-      // ...disconnect it (i.e. link audio outs to Last-Plugged only), or...
+      // ...disconnect it (i.e. link each AudioOut to Last-Plugged only), or...
       dev_obj.UnlinkSources();
     } else {
-      // ...attach it (i.e. link audio outs to All Outputs).
+      // ...attach it (i.e. link each AudioOut to all output devices).
       for (auto& obj : audio_outs_) {
         FXL_DCHECK(obj.is_audio_out());
         auto audio_out = static_cast<AudioOutImpl*>(&obj);
@@ -524,8 +519,7 @@ void AudioDeviceManager::SetRoutingPolicy(
     }
   }
 
-  // After changing routing, determine new minimum clock lead time
-  // requirements.
+  // After a route change, recalculate minimum clock lead time requirements.
   for (auto& obj : audio_outs_) {
     FXL_DCHECK(obj.is_audio_out());
     auto audio_out = static_cast<AudioOutImpl*>(&obj);
@@ -538,18 +532,15 @@ void AudioDeviceManager::OnDeviceUnplugged(
   FXL_DCHECK(device);
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
-  // Start by checking to see if this device was the last plugged device
-  // (before we update the plug state).
+  // First, see if the device is last-plugged (before updating its plug state).
   bool was_last_plugged = FindLastPlugged(device->type()) == device;
 
-  // Update the plug state of the device.  If this was not an actual change in
-  // the plug state of the device, then we are done.
+  // Update the device's plug state. If no change, then we are done.
   if (!device->UpdatePlugState(false, plug_time)) {
     return;
   }
 
-  // This device was just unplugged.  Unlink it from everything it is
-  // currently linked to.
+  // This device is newly-unplugged. Unlink all its current connections.
   device->Unlink();
 
   // If the device which was unplugged was not the last plugged device in the
@@ -577,9 +568,9 @@ void AudioDeviceManager::OnDeviceUnplugged(
         LinkToAudioIns(replacement);
       }
     } else {
-      // This was an input.  Find the new most recently plugged in input (if
-      // any), then go over our list of audio ins and link all of the
-      // non-loopback audio ins to the new input.
+      // Removed device was the most-recently-plugged input device. Determine
+      // the new most-recently-plugged input (if any remain), and iterate our
+      // AudioIn list to link each non-loopback AudioIn to the new default.
       FXL_DCHECK(device->is_input());
 
       fbl::RefPtr<AudioInput> replacement = FindLastPluggedInput();
@@ -589,8 +580,7 @@ void AudioDeviceManager::OnDeviceUnplugged(
     }
   }
 
-  // If the device which was removed was an output, recompute our AudioOuts'
-  // minimum lead time requirements.
+  // If removed device was an output, recompute the AudioOut minimum lead time.
   if (device->is_output()) {
     for (auto& audio_out : audio_outs_) {
       audio_out.RecomputeMinClockLeadTime();
@@ -603,15 +593,13 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
   FXL_DCHECK(device);
 
   if (device->is_output()) {
-    // This new device is an output.  Go over our list of AudioOuts and "do
-    // the right thing" based on our current routing policy.  If we are using
-    // last plugged policy, replace all of the AudioOuts' current output with
-    // this new one (assuming that this new one is actually the most recently
-    // plugged). If we are using the "all plugged" policy, then just add this
-    // new output to all of the AudioOuts.
+    // This new device is an output. Inspect the AudioOut list; "do the right
+    // thing" based on our routing policy. If last-plugged policy, change the
+    // target for every AudioOut to this device (assuming it IS  most-recently-
+    // plugged). If all-plugged policy, add this output to the list.
     //
-    // Then, apply last plugged policy to all of the audio ins which are in
-    // loopback mode.
+    // Then, apply last-plugged policy to all AudioIns with loopback sources.
+    // The policy mentioned above currently only pertains to Output Routing.
     fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
     auto output = static_cast<AudioOutput*>(device.get());
 

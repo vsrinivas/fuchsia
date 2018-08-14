@@ -20,9 +20,16 @@ group("tools") {
 package("audio_core") {
   deps = [
     "//garnet/bin/media/audio_core",
+    "//garnet/bin/media/audio_core/libaudiofx",
   ]
 
   binary = "audio_core"
+
+  loadable_modules = [
+    {
+      name = "libaudiofx.so"
+    },
+  ]
 
   meta = [
     {
@@ -82,7 +89,7 @@ package("tests") {
 
   libraries = [
     {
-      # This is audio_dfx:lib, a test library hosted in audio_dfx_tests process
+      # This is audio_dfx:lib, a test lib hosted in the audio_dfx_tests process.
       name = "libaudio_dfx.so"
     },
   ]
