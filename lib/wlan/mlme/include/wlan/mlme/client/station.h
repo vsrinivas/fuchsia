@@ -172,6 +172,7 @@ class Station {
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
     zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);
+    zx_status_t NotifyAssocContext();
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;

@@ -1552,6 +1552,57 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     return ZX_OK;
 }
 
+zx_status_t Station::NotifyAssocContext() {
+    wlan_assoc_ctx_t ddk{};
+    assoc_ctx_.bssid.CopyTo(ddk.bssid);
+    ddk.aid = assoc_ctx_.aid;
+
+    auto& sr = assoc_ctx_.supported_rates;
+    ZX_DEBUG_ASSERT(sr.size() <= WLAN_MAC_SUPPORTED_RATES_MAX_LEN);
+    ddk.supported_rates_cnt = sr.size();
+    std::copy(sr.begin(), sr.end(), ddk.supported_rates);
+
+    auto& esr = assoc_ctx_.ext_supported_rates;
+    ZX_DEBUG_ASSERT(esr.size() <= WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
+    ddk.ext_supported_rates_cnt = esr.size();
+    std::copy(esr.begin(), esr.end(), ddk.ext_supported_rates);
+
+    static_assert(sizeof(ddk.ht_cap) + sizeof(ElementHeader) == sizeof(assoc_ctx_.ht_cap),
+                  "Size mismatch between DDK and AssocContext: ht_cap");
+    static_assert(sizeof(ddk.ht_op) + sizeof(ElementHeader) == sizeof(assoc_ctx_.ht_op),
+                  "Size mismatch between DDK and AssocContext: ht_op");
+    static_assert(sizeof(ddk.vht_cap) + sizeof(ElementHeader) == sizeof(assoc_ctx_.vht_cap),
+                  "Size mismatch between DDK and AssocContext: vht_cap");
+    static_assert(sizeof(ddk.vht_op) + sizeof(ElementHeader) == sizeof(assoc_ctx_.vht_op),
+                  "Size mismatch between DDK and AssocContext: vht_op");
+
+    ddk.has_ht_cap = assoc_ctx_.has_ht_cap;
+    if (ddk.has_ht_cap) {
+        memcpy(ddk.ht_cap, reinterpret_cast<uint8_t*>(&assoc_ctx_.ht_cap) + sizeof(ElementHeader),
+               sizeof(ddk.ht_cap));
+    }
+
+    ddk.has_ht_op = assoc_ctx_.has_ht_op;
+    if (ddk.has_ht_op) {
+        memcpy(ddk.ht_op, reinterpret_cast<uint8_t*>(&assoc_ctx_.ht_op) + sizeof(ElementHeader),
+               sizeof(ddk.ht_op));
+    }
+
+    ddk.has_vht_cap = assoc_ctx_.has_vht_cap;
+    if (ddk.has_vht_cap) {
+        memcpy(ddk.ht_cap, reinterpret_cast<uint8_t*>(&assoc_ctx_.vht_cap) + sizeof(ElementHeader),
+               sizeof(ddk.vht_cap));
+    }
+
+    ddk.has_vht_op = assoc_ctx_.has_vht_op;
+    if (ddk.has_vht_op) {
+        memcpy(ddk.vht_op, reinterpret_cast<uint8_t*>(&assoc_ctx_.vht_op) + sizeof(ElementHeader),
+               sizeof(ddk.vht_op));
+    }
+
+    return device_->ConfigureAssoc(&ddk);
+}
+
 wlan_stats::ClientMlmeStats Station::stats() const {
     return stats_.ToFidl();
 }
