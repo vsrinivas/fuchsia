@@ -272,7 +272,7 @@ static ssize_t zxrio_write(fdio_t* io, const void* data, size_t len) {
 
 static ssize_t zxrio_write_at(fdio_t* io, const void* data, size_t len, off_t offset) {
     zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status = ZX_ERR_IO;
+    zx_status_t status = ZX_OK;
     uint64_t count = 0;
     uint64_t xfer;
     while (len > 0) {
@@ -297,7 +297,7 @@ static ssize_t zxrio_write_at(fdio_t* io, const void* data, size_t len, off_t of
 
 static ssize_t zxrio_read(fdio_t* io, void* data, size_t len) {
     zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status;
+    zx_status_t status = ZX_OK;
     uint64_t count = 0;
     uint64_t xfer;
     while (len > 0) {
@@ -321,7 +321,7 @@ static ssize_t zxrio_read(fdio_t* io, void* data, size_t len) {
 
 static ssize_t zxrio_read_at(fdio_t* io, void* data, size_t len, off_t offset) {
     zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status;
+    zx_status_t status = ZX_OK;
     uint64_t count = 0;
     uint64_t xfer;
     while (len > 0) {
