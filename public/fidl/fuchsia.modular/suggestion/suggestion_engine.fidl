@@ -8,8 +8,7 @@ library fuchsia.modular;
 [Discoverable]
 interface SuggestionEngine {
   // Initializes the SuggestionEngine and provides dependencies.
-  1: Initialize(StoryProvider story_provider, FocusProvider focus_provider,
-      ContextWriter context_writer, ContextReader context_reader,
+  1: Initialize(ContextWriter context_writer, ContextReader context_reader,
       PuppetMaster puppet_master);
 
   // Registers a component that produces suggestions.

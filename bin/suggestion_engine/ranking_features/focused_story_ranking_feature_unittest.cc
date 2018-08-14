@@ -25,53 +25,53 @@ void SetFocusedStoryContextUpdate(
   context_update.push_back(std::move(value));
 }
 
-TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
+SuggestionPrototype BuildSuggestionPrototype(std::string story_name,
+                                             bool story_affinity) {
   fuchsia::modular::Proposal proposal;
-  proposal.story_affinity = true;
+  proposal.story_affinity = story_affinity;
+  proposal.story_name = story_name;
   SuggestionPrototype prototype;
-  prototype.story_id = "focused_story";
+  prototype.source_url = "fake_url";
   prototype.proposal = std::move(proposal);
+  return prototype;
+}
+
+TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
+  auto prototype = BuildSuggestionPrototype("focused_story", true);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
   fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetFocusedStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
+
   double value = focused_story_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, 1.0);
 }
 
 TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureNonFocusedStory) {
-  fuchsia::modular::Proposal proposal;
-  proposal.story_id = "other_story";
-  proposal.story_affinity = true;
-  SuggestionPrototype prototype;
-  prototype.story_id = "other_story";
-  prototype.proposal = std::move(proposal);
+  auto prototype = BuildSuggestionPrototype("other_story", true);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
   fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetFocusedStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
+
   double value = focused_story_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, 0.0);
 }
 
 TEST_F(FocusedStoryRankingFeatureTest,
        ComputeFeatureNonFocusedStoryNoStoryAffinity) {
-  fuchsia::modular::Proposal proposal;
-  proposal.story_id = "other_story";
-  proposal.story_affinity = false;
-  SuggestionPrototype prototype;
-  prototype.story_id = "other_story";
-  prototype.proposal = std::move(proposal);
+  auto prototype = BuildSuggestionPrototype("other_story", false);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
   fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetFocusedStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
+
   double value = focused_story_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, 1.0);
 }

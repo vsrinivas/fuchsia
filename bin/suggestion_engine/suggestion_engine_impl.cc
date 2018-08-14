@@ -14,6 +14,7 @@
 #include <lib/fxl/time/time_delta.h>
 #include <lib/fxl/time/time_point.h>
 #include "lib/fidl/cpp/clone.h"
+#include "lib/fxl/random/uuid.h"
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
@@ -33,11 +34,6 @@
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
-
-std::string StoryNameKey(const std::string& source_url,
-                         const std::string& story_name) {
-  return source_url + story_name;
-}
 
 namespace {
 
@@ -62,14 +58,20 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 
 void SuggestionEngineImpl::AddNextProposal(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
+  if (!proposal.story_name) {
+    // TODO(MI4-1272): deprecate all external use cases of proposal.story_id.
+    // Suggestion Engine should be 100% free of them.
+    if (proposal.story_id) {
+      proposal.story_name = proposal.story_id;
+    } else {
+      proposal.story_name = fxl::GenerateUUID();
+    }
+  }
   if (proposal.wants_rich_suggestion &&
-      CanComponentUseRichSuggestions(source->component_url())) {
+      ComponentCanUseRichSuggestions(source->component_url())) {
     AddProposalWithRichSuggestion(source, std::move(proposal));
   } else {
-    auto story_id =
-        StoryIdFromName(source->component_url(), proposal.story_name);
-    next_processor_.AddProposal(source->component_url(), story_id,
-                                std::move(proposal));
+    next_processor_.AddProposal(source->component_url(), std::move(proposal));
   }
 }
 
@@ -81,18 +83,26 @@ void SuggestionEngineImpl::ProposeNavigation(
 void SuggestionEngineImpl::AddProposalWithRichSuggestion(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+  puppet_master_->ControlStory(proposal.story_name,
+                               story_puppet_master.NewRequest());
   fuchsia::modular::StoryOptions story_options;
   story_options.kind_of_proto_story = true;
-  story_provider_->CreateStoryWithOptions(
-      std::move(story_options),
-      fxl::MakeCopyable([this, proposal = std::move(proposal),
-                         source_url = source->component_url(),
-                         activity](fidl::StringPtr preloaded_story_id) mutable {
-        auto story_id = StoryIdFromName(source_url, proposal.story_name);
-        ExecuteActions(std::move(proposal.on_selected),
-                       nullptr /* proposal_listener */, proposal.id,
-                       preloaded_story_id);
-        next_processor_.AddProposal(source_url, story_id, preloaded_story_id,
+  story_puppet_master->SetCreateOptions(std::move(story_options));
+
+  auto performed_actions = PerformActions(std::move(story_puppet_master),
+                                          std::move(proposal.on_selected));
+  performed_actions->Then(fxl::MakeCopyable(
+      [this, performed_actions, activity, source_url = source->component_url(),
+       proposal = std::move(proposal)](
+          fuchsia::modular::ExecuteResult result) mutable {
+        if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+          FXL_LOG(WARNING) << "Preloading of rich suggestion actions resulted "
+                           << "non successful status="
+                           << (uint32_t)result.status
+                           << " message=" << result.error_message;
+        }
+        next_processor_.AddProposal(source_url, result.story_id,
                                     std::move(proposal));
       }));
 }
@@ -102,18 +112,47 @@ void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
   SuggestionPrototype* suggestion =
       next_processor_.GetSuggestion(component_url, proposal_id);
   if (suggestion && !suggestion->preloaded_story_id.empty()) {
-    story_provider_->DeleteStory(suggestion->preloaded_story_id, [] {});
+    auto story_name = suggestion->proposal.story_name;
+    puppet_master_->DeleteStory(
+        story_name, [this, story_name, component_url, proposal_id] {
+          next_processor_.RemoveProposal(component_url, proposal_id);
+        });
+  } else {
+    next_processor_.RemoveProposal(component_url, proposal_id);
   }
-  next_processor_.RemoveProposal(component_url, proposal_id);
 }
 
-void SuggestionEngineImpl::PromoteNextProposal(
-    const std::string& component_url, const std::string& preloaded_story_id,
+modular::FuturePtr<> SuggestionEngineImpl::PromoteNextProposal(
+    const std::string& component_url, const std::string& story_name,
     const std::string& proposal_id) {
+  FXL_DCHECK(!story_name.empty()) << "SuggestionEngineImpl#PromoteNextProposal "
+                                  << "story_name shouldn't be empty";
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  story_provider_->SetKindOfProtoStoryOption(preloaded_story_id, false,
-                                             [activity]() {});
-  next_processor_.RemoveProposal(component_url, proposal_id);
+
+  fuchsia::modular::SetKindOfProtoStoryOption set_kind_of_proto_story_option;
+  set_kind_of_proto_story_option.value = true;
+  fuchsia::modular::StoryCommand command;
+  command.set_set_kind_of_proto_story_option(
+      std::move(set_kind_of_proto_story_option));
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  commands.push_back(std::move(command));
+
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+  puppet_master_->ControlStory(story_name, story_puppet_master.NewRequest());
+  story_puppet_master->Enqueue(std::move(commands));
+  auto fut =
+      modular::Future<>::Create("SuggestionEngineImpl#PromoteNextProposal.fut");
+  story_puppet_master->Execute(
+      fxl::MakeCopyable([fut, activity, sp = std::move(story_puppet_master),
+                         proposal_id](fuchsia::modular::ExecuteResult result) {
+        if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+          FXL_LOG(WARNING) << "Promoting proposal " << proposal_id
+                           << "returned status=" << (uint32_t)result.status
+                           << " message=" << result.error_message;
+        }
+        fut->Complete();
+      }));
+  return fut;
 }
 
 void SuggestionEngineImpl::Connect(
@@ -174,66 +213,61 @@ void SuggestionEngineImpl::NotifyInteraction(
     suggestion_in_ask = true;
   }
 
-  // If it exists (and it should), perform the action and clean up
-  if (suggestion) {
-    auto component_url = suggestion->prototype->source_url;
-    std::string log_detail = suggestion->prototype
-                                 ? short_proposal_str(*suggestion->prototype)
-                                 : "invalid";
-
-    FXL_LOG(INFO) << (interaction.type ==
-                              fuchsia::modular::InteractionType::SELECTED
-                          ? "Accepted"
-                          : "Dismissed")
-                  << " suggestion " << suggestion_uuid << " (" << log_detail
-                  << ")";
-
-    debug_->OnSuggestionSelected(suggestion->prototype);
-
-    auto& proposal = suggestion->prototype->proposal;
-    auto proposal_id = proposal.id;
-    auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
-    suggestion->interrupting = false;
-    switch (interaction.type) {
-      case fuchsia::modular::InteractionType::SELECTED: {
-        if (!preloaded_story_id.empty()) {
-          // Notify before we promote + remove from next since the proposal
-          // won't be available when that happens.
-          if (proposal.listener) {
-            auto listener = proposal.listener.Bind();
-            listener->OnProposalAccepted(proposal.id, preloaded_story_id);
-          }
-          PromoteNextProposal(component_url, preloaded_story_id, proposal_id);
-          // Only next suggestions can be rich so we can finish early.
-          // No need to remove.
-          return;
-        }
-        PerformActions(std::move(proposal.on_selected),
-                       std::move(proposal.listener), proposal.id,
-                       proposal.story_name, component_url, proposal.story_id);
-        break;
-      }
-      case fuchsia::modular::InteractionType::DISMISSED: {
-        break;  // Remove suggestion since it was dismissed by user.
-      }
-      // These actions .
-      case fuchsia::modular::InteractionType::EXPIRED:
-      case fuchsia::modular::InteractionType::SNOOZED: {
-        // No need to remove since it was either expired by a timeout in
-        // user shell or snoozed by the user.
-        return;
-      }
-    }
-
-    if (suggestion_in_ask) {
-      query_processor_.CleanUpPreviousQuery();
-    } else {
-      RemoveNextProposal(component_url, proposal_id);
-    }
-  } else {
-    FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "
-                     << suggestion_uuid;
+  if (!suggestion) {
+    FXL_LOG(WARNING) << "Requested suggestion in notify interaction not found. "
+                     << "UUID: " << suggestion_uuid;
+    return;
   }
+
+  // If it exists (and it should), perform the action and clean up
+  auto component_url = suggestion->prototype->source_url;
+  std::string log_detail = suggestion->prototype
+                               ? short_proposal_str(*suggestion->prototype)
+                               : "invalid";
+
+  FXL_LOG(INFO) << (interaction.type ==
+                            fuchsia::modular::InteractionType::SELECTED
+                        ? "Accepted"
+                        : "Dismissed")
+                << " suggestion " << suggestion_uuid << " (" << log_detail
+                << ")";
+
+  debug_->OnSuggestionSelected(suggestion->prototype);
+
+  auto& proposal = suggestion->prototype->proposal;
+  auto proposal_id = proposal.id;
+  auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
+  suggestion->interrupting = false;
+
+  modular::FuturePtr<> fut;
+  switch (interaction.type) {
+    case fuchsia::modular::InteractionType::SELECTED: {
+      fut = HandleSelectedInteraction(component_url, preloaded_story_id,
+                                      proposal);
+      break;  // Remove suggestion from Next since it was selected by user.
+    }
+    case fuchsia::modular::InteractionType::DISMISSED: {
+      fut = modular::Future<>::CreateCompleted(
+          "SuggestionEngineImpl#NotifyInteraction");
+      break;  // Remove suggestion from Next since it was dismissed by user.
+    }
+    case fuchsia::modular::InteractionType::EXPIRED:
+    case fuchsia::modular::InteractionType::SNOOZED: {
+      // No need to remove since it was either expired by a timeout in
+      // user shell or snoozed by the user.
+      return;
+    }
+  }
+
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
+  fut->Then(
+      [this, fut, activity, suggestion_in_ask, component_url, proposal_id] {
+        if (suggestion_in_ask) {
+          query_processor_.CleanUpPreviousQuery();
+        } else {
+          RemoveNextProposal(component_url, proposal_id);
+        }
+      });
 }
 
 // |fuchsia::modular::SuggestionEngine|
@@ -259,13 +293,9 @@ void SuggestionEngineImpl::RegisterQueryHandler(
 
 // |fuchsia::modular::SuggestionEngine|
 void SuggestionEngineImpl::Initialize(
-    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer,
     fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader,
     fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master) {
-  story_provider_.Bind(std::move(story_provider));
-  focus_provider_ptr_.Bind(std::move(focus_provider));
   context_reader_.Bind(std::move(context_reader));
   query_processor_.Initialize(std::move(context_writer));
   puppet_master_.Bind(std::move(puppet_master));
@@ -339,292 +369,128 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   next_processor_.SetPassiveFilters(std::move(passive_filters));
 }
 
-void SuggestionEngineImpl::PerformActions(
-    fidl::VectorPtr<fuchsia::modular::Action> actions,
-    fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id, const std::string& story_name,
-    const std::string& source_url, const std::string& proposal_story_id) {
-  if (story_name.empty()) {
-    ExecuteActions(std::move(actions), std::move(listener), proposal_id,
-                   proposal_story_id);
-    return;
+modular::FuturePtr<fuchsia::modular::ExecuteResult>
+SuggestionEngineImpl::PerformActions(
+    fuchsia::modular::StoryPuppetMasterPtr story_puppet_master,
+    fidl::VectorPtr<fuchsia::modular::Action> actions) {
+  std::vector<fuchsia::modular::Action> pending_actions;
+
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  for (auto& action : *actions) {
+    auto command = ActionToStoryCommand(action);
+    // Some actions aren't supported as story commands (yet). In particular:
+    //   - QueryAction: should be transformed into a SessionCommand
+    //   - CustomAction: we would like to fully remove it and all its uses.
+    if (command.has_invalid_tag()) {
+      pending_actions.push_back(std::move(action));
+    } else {
+      commands.push_back(std::move(command));
+    }
   }
-  const std::string key = StoryNameKey(source_url, story_name);
-  auto it = story_name_mapping_.find(key);
-  if (it == story_name_mapping_.end()) {
-    story_provider_->CreateStory(
-        nullptr /* module_url */,
-        fxl::MakeCopyable([this, actions = std::move(actions),
-                           listener = std::move(listener), proposal_id,
-                           story_name, source_url](
-                              const fidl::StringPtr& story_id) mutable {
-          story_name_mapping_[StoryNameKey(source_url, story_name)] = story_id;
-          // TODO(miguelfrde): better expect clients to send focus action?
-          focus_provider_ptr_->Request(story_id);
-          ExecuteActions(std::move(actions), std::move(listener), proposal_id,
-                         story_id);
-        }));
-  } else {
-    ExecuteActions(std::move(actions), std::move(listener), proposal_id,
-                   it->second);
-  }
+  auto fut = modular::Future<fuchsia::modular::ExecuteResult>::Create(
+      "SuggestionEngine::PerformActions.fut");
+  // TODO(miguelfred): break up |commands| if it is too large of a list for one
+  // FIDL message.
+  story_puppet_master->Enqueue(std::move(commands));
+  story_puppet_master->Execute(fut->Completer());
+  return fut->Map(fxl::MakeCopyable(
+      [this, fut, story_puppet_master = std::move(story_puppet_master),
+       deprecated_actions = std::move(pending_actions)](
+          fuchsia::modular::ExecuteResult result) mutable {
+        // Perform actions that are not supported after the rest of the
+        // supported actions have been executed.
+        PerformDeprecatedActions(std::move(deprecated_actions));
+        return result;
+      }));
 }
 
-void SuggestionEngineImpl::ExecuteActions(
-    fidl::VectorPtr<fuchsia::modular::Action> actions,
-    fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id, const std::string& override_story_id) {
-  for (auto& action : *actions) {
+fuchsia::modular::StoryCommand SuggestionEngineImpl::ActionToStoryCommand(
+    const fuchsia::modular::Action& action) {
+  fuchsia::modular::StoryCommand command;
+  switch (action.Which()) {
+    case fuchsia::modular::Action::Tag::kCreateStory: {
+      FXL_LOG(WARNING) << "CreateStory action is deprecated. Use AddModule "
+                       << "with a story_name in the Proposal.";
+      break;
+    }
+    case fuchsia::modular::Action::Tag::kFocusStory: {
+      fuchsia::modular::SetFocusState set_focus_state;
+      set_focus_state.focused = true;
+      FXL_LOG(INFO) << "FocusStory action story_id ignored in favor of proposal"
+                    << " story_name.";
+      command.set_set_focus_state(std::move(set_focus_state));
+      break;
+    }
+    case fuchsia::modular::Action::Tag::kFocusModule: {
+      fuchsia::modular::FocusMod focus_mod;
+      focus_mod.mod_name = action.focus_module().module_path.Clone();
+      command.set_focus_mod(std::move(focus_mod));
+      break;
+    }
+    case fuchsia::modular::Action::Tag::kAddModule: {
+      fuchsia::modular::AddMod add_mod;
+      add_mod.mod_name.push_back(action.add_module().module_name);
+      action.add_module().intent.Clone(&add_mod.intent);
+      action.add_module().surface_relation.Clone(&add_mod.surface_relation);
+      add_mod.surface_parent_mod_name =
+          action.add_module().surface_parent_module_path.Clone();
+      command.set_add_mod(std::move(add_mod));
+      break;
+    }
+    case fuchsia::modular::Action::Tag::kSetLinkValueAction: {
+      fuchsia::modular::SetLinkValue set_link_value;
+      action.set_link_value_action().link_path.Clone(&set_link_value.path);
+      fidl::Clone(action.set_link_value_action().value, &set_link_value.value);
+      command.set_set_link_value(std::move(set_link_value));
+      break;
+    }
+    case fuchsia::modular::Action::Tag::kUpdateModule: {
+      fuchsia::modular::UpdateMod update_mod;
+      update_mod.mod_name = action.update_module().module_name.Clone();
+      fidl::Clone(action.update_module().parameters, &update_mod.parameters);
+      command.set_update_mod(std::move(update_mod));
+      break;
+    }
+    case fuchsia::modular::Action::Tag::kQueryAction:
+    case fuchsia::modular::Action::Tag::kCustomAction:
+    case fuchsia::modular::Action::Tag::Invalid:
+      break;
+  }
+  return command;
+}
+
+void SuggestionEngineImpl::PerformDeprecatedActions(
+    std::vector<fuchsia::modular::Action> actions) {
+  for (auto& action : actions) {
     switch (action.Which()) {
-      // TODO(miguelfrde): CreateStory is deprecated, remove.
-      case fuchsia::modular::Action::Tag::kCreateStory: {
-        // If we are overriding a story, no need to create a new story. Ignore
-        // this action.
-        if (override_story_id.empty()) {
-          PerformCreateStoryAction(action, std::move(listener), proposal_id);
-        } else {
-          FXL_LOG(INFO) << "Ignored CreateStory action since we are overriding "
-                        << " a story.";
-        }
-        break;
-      }
-      case fuchsia::modular::Action::Tag::kFocusStory: {
-        PerformFocusStoryAction(action, override_story_id);
-        break;
-      }
-      case fuchsia::modular::Action::Tag::kFocusModule: {
-        PerformFocusModuleAction(action, override_story_id);
-        break;
-      }
-      case fuchsia::modular::Action::Tag::kAddModule: {
-        PerformAddModuleAction(action, std::move(listener), proposal_id,
-                               override_story_id);
-        break;
-      }
       case fuchsia::modular::Action::Tag::kQueryAction: {
+        FXL_LOG(INFO) << "Performing query action but it's deprecated.";
         PerformQueryAction(action);
         break;
       }
-      case fuchsia::modular::Action::Tag::kSetLinkValueAction: {
-        PerformSetLinkValueAction(action, override_story_id);
-        break;
-      }
-      case fuchsia::modular::Action::Tag::kUpdateModule: {
-        PerformUpdateModuleAction(&action, override_story_id);
-        break;
-      }
       case fuchsia::modular::Action::Tag::kCustomAction: {
+        FXL_LOG(INFO) << "Performing custom action but it's deprecated.";
         PerformCustomAction(&action);
         break;
       }
-      default:
-        FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action.Which();
+      case fuchsia::modular::Action::Tag::kCreateStory:
+      case fuchsia::modular::Action::Tag::kFocusStory:
+      case fuchsia::modular::Action::Tag::kFocusModule:
+      case fuchsia::modular::Action::Tag::kAddModule:
+      case fuchsia::modular::Action::Tag::kSetLinkValueAction:
+      case fuchsia::modular::Action::Tag::kUpdateModule:
+      case fuchsia::modular::Action::Tag::Invalid: {
+        FXL_DCHECK(false) << "This action should have been translated to a "
+                          << "StoryCommand.";
+        break;
+      }
     }
   }
-
-  if (listener) {
-    auto proposal_listener = listener.Bind();
-    proposal_listener->OnProposalAccepted(proposal_id, override_story_id);
-  }
-}
-
-void SuggestionEngineImpl::PerformCreateStoryAction(
-    const fuchsia::modular::Action& action,
-    fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id) {
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  auto& create_story = action.create_story();
-
-  if (!story_provider_) {
-    FXL_LOG(WARNING) << "Unable to add module; no story provider";
-    return;
-  }
-
-  fuchsia::modular::Intent intent;
-  create_story.intent.Clone(&intent);
-
-  if (intent.handler) {
-    FXL_LOG(INFO) << "Creating story with module " << intent.handler;
-  } else {  // intent.action
-    FXL_LOG(INFO) << "Creating story with action " << intent.action;
-  }
-
-  story_provider_->CreateStory(
-      nullptr /* module_url */,
-      fxl::MakeCopyable([this, listener = std::move(listener), proposal_id,
-                         intent = std::move(intent),
-                         activity](const fidl::StringPtr& story_id) mutable {
-        fuchsia::modular::StoryControllerPtr story_controller;
-        story_provider_->GetController(story_id, story_controller.NewRequest());
-        // TODO(thatguy): We give the first module the name "root". We'd like to
-        // move away from module names being assigned by the framework or other
-        // components, and rather have clients always provide a module name.
-        story_controller->AddModule(nullptr /* parent module path */,
-                                    "root" /* module name */, std::move(intent),
-                                    nullptr /* surface relation */);
-        focus_provider_ptr_->Request(story_id);
-
-        if (listener) {
-          auto proposal_listener = listener.Bind();
-          proposal_listener->OnProposalAccepted(proposal_id, story_id);
-        }
-      }));
-}
-
-void SuggestionEngineImpl::PerformFocusStoryAction(
-    const fuchsia::modular::Action& action,
-    const std::string& override_story_id) {
-  if (override_story_id.empty()) {
-    FXL_LOG(WARNING) << "No story provided for focus action.";
-    return;
-  }
-  FXL_LOG(INFO) << "Requesting focus for story_id " << override_story_id;
-  focus_provider_ptr_->Request(override_story_id);
-}
-
-void SuggestionEngineImpl::PerformFocusModuleAction(
-    const fuchsia::modular::Action& action, const std::string& story_id) {
-  if (story_id.empty()) {
-    FXL_LOG(WARNING) << "Unable to focus module; no story id provided";
-    return;
-  }
-  fuchsia::modular::StoryControllerPtr story_controller;
-  story_provider_->GetController(story_id, story_controller.NewRequest());
-  auto module_path = action.focus_module().module_path.Clone();
-  if (module_path->empty()) {
-    FXL_LOG(WARNING) << "Unable to focus module; no module path provided";
-    return;
-  }
-
-  fuchsia::modular::ModuleControllerPtr mod_controller;
-  story_controller->GetModuleController(std::move(module_path),
-                                        mod_controller.NewRequest());
-  mod_controller->Focus();
-}
-
-void SuggestionEngineImpl::PerformAddModuleAction(
-    const fuchsia::modular::Action& action,
-    fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id, const std::string& override_story_id) {
-  if (!story_provider_) {
-    FXL_LOG(WARNING) << "Unable to add module; no story provider";
-    return;
-  }
-  const auto& add_module = action.add_module();
-  const auto& module_name = add_module.module_name;
-
-  if (override_story_id.empty()) {
-    FXL_LOG(WARNING) << "Unable to add module; no story.";
-    return;
-  }
-
-  auto parent_module_path = add_module.surface_parent_module_path.Clone();
-
-  fuchsia::modular::StoryControllerPtr story_controller;
-  story_provider_->GetController(override_story_id,
-                                 story_controller.NewRequest());
-  fuchsia::modular::Intent intent;
-  fidl::Clone(add_module.intent, &intent);
-  story_controller->AddModule(parent_module_path.Clone(), module_name,
-                              std::move(intent),
-                              fidl::MakeOptional(add_module.surface_relation));
-
-  // Focus the added module.
-  parent_module_path.push_back(module_name);
-  fuchsia::modular::ModuleControllerPtr mod_controller;
-  story_controller->GetModuleController(std::move(parent_module_path),
-                                        mod_controller.NewRequest());
-  mod_controller->Focus();
-
-  //  Notify with story id where the mod was added. This notifications will be
-  //  done in a central place once the refactor into puppet master is completed.
-  //  For now we notify here to be able to send the right story id in which the
-  //  mod was added: aadd_module.story_id or override_story_id.
-  if (listener) {
-    auto proposal_listener = listener.Bind();
-    proposal_listener->OnProposalAccepted(proposal_id, override_story_id);
-  }
-}
-
-void SuggestionEngineImpl::PerformUpdateModuleAction(
-    fuchsia::modular::Action* const action, const std::string& story_id) {
-  if (!story_provider_) {
-    FXL_LOG(WARNING) << "Unable to set entity; no story provider";
-    return;
-  }
-
-  fuchsia::modular::StoryControllerPtr story_controller;
-  story_provider_->GetController(story_id, story_controller.NewRequest());
-  story_controller->GetModules(fxl::MakeCopyable(
-      [this, story_controller = std::move(story_controller),
-       module_name = std::move(action->update_module().module_name),
-       parameters = std::move(action->update_module().parameters)](
-          fidl::VectorPtr<fuchsia::modular::ModuleData> module_datas) {
-        for (const auto& module_data : *module_datas) {
-          if (module_data.module_path != module_name) {
-            continue;
-          }
-          for (auto& parameter : *parameters) {
-            for (auto& entry : *module_data.parameter_map.entries) {
-              if (entry.name != parameter.name) {
-                continue;
-              }
-
-              fuchsia::modular::LinkPtr link;
-              story_controller->GetLink(fidl::Clone(entry.link_path),
-                                        link.NewRequest());
-              switch (parameter.data.Which()) {
-                case fuchsia::modular::IntentParameterData::Tag::
-                    kEntityReference: {
-                  link->SetEntity(parameter.data.entity_reference());
-                  break;
-                }
-                case fuchsia::modular::IntentParameterData::Tag::kJson: {
-                  fuchsia::mem::Buffer data;
-                  parameter.data.json().Clone(&data);
-                  link->Set(nullptr, std::move(data));
-                  break;
-                }
-                case fuchsia::modular::IntentParameterData::Tag::kEntityType:
-                case fuchsia::modular::IntentParameterData::Tag::kLinkName:
-                case fuchsia::modular::IntentParameterData::Tag::kLinkPath:
-                case fuchsia::modular::IntentParameterData::Tag::Invalid: {
-                  FXL_LOG(WARNING) << "fuchsia::modular::UpdateModule action "
-                                      "with unsupported "
-                                   << "parameter data tag #"
-                                   << (uint32_t)parameter.data.Which();
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }));
 }
 
 void SuggestionEngineImpl::PerformCustomAction(
     fuchsia::modular::Action* action) {
   action->custom_action().Bind()->Execute();
-}
-
-void SuggestionEngineImpl::PerformSetLinkValueAction(
-    const fuchsia::modular::Action& action, const std::string& story_id) {
-  if (!story_provider_) {
-    FXL_LOG(WARNING) << "Unable to set entity; no story provider";
-    return;
-  }
-
-  fuchsia::modular::StoryControllerPtr story_controller;
-  story_provider_->GetController(story_id, story_controller.NewRequest());
-
-  const auto& set_link_value = action.set_link_value_action();
-  fuchsia::modular::LinkPtr link;
-
-  story_controller->GetLink(fidl::Clone(set_link_value.link_path),
-                            link.NewRequest());
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(*set_link_value.value, &vmo));
-  link->Set(nullptr, std::move(vmo).ToTransport());
 }
 
 void SuggestionEngineImpl::PerformQueryAction(
@@ -648,22 +514,40 @@ void SuggestionEngineImpl::OnContextUpdate(
   next_processor_.UpdateRanking();
 }
 
-std::string SuggestionEngineImpl::StoryIdFromName(
-    const std::string& source_url, const std::string& story_name) {
-  auto it = story_name_mapping_.find(StoryNameKey(source_url, story_name));
-  if (it != story_name_mapping_.end()) {
-    return it->second;
-  }
-  return "";
-}
-
-bool SuggestionEngineImpl::CanComponentUseRichSuggestions(
+bool SuggestionEngineImpl::ComponentCanUseRichSuggestions(
     const std::string& component_url) {
   // Only kronk is allowed to preload stories in suggestions to make
   // rich suggestions.
   // Proposinator is used for testing.
   return component_url.find("kronk") != std::string::npos ||
          component_url.find("Proposinator") != std::string::npos;
+}
+
+modular::FuturePtr<> SuggestionEngineImpl::HandleSelectedInteraction(
+    const std::string& component_url, const std::string& preloaded_story_id,
+    fuchsia::modular::Proposal& proposal) {
+  if (!preloaded_story_id.empty()) {
+    if (proposal.listener) {
+      auto listener = proposal.listener.Bind();
+      listener->OnProposalAccepted(proposal.id, preloaded_story_id);
+    }
+    return PromoteNextProposal(component_url, preloaded_story_id, proposal.id);
+  }
+
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+  puppet_master_->ControlStory(proposal.story_name,
+                               story_puppet_master.NewRequest());
+  return PerformActions(std::move(story_puppet_master),
+                        std::move(proposal.on_selected))
+      ->Then(fxl::MakeCopyable(
+          [listener = std::move(proposal.listener), proposal_id = proposal.id](
+              fuchsia::modular::ExecuteResult result) mutable {
+            // TODO(miguelfrde): check status.
+            if (listener) {
+              auto bound_listener = listener.Bind();
+              bound_listener->OnProposalAccepted(proposal_id, result.story_id);
+            }
+          }));
 }
 
 }  // namespace modular

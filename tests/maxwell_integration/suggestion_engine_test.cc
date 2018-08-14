@@ -214,17 +214,6 @@ class SuggestionEngineTest : public ContextEngineTestBase,
         suggestion_services
             .ConnectToService<fuchsia::modular::SuggestionDebug>();
 
-    // Initialize the fuchsia::modular::SuggestionEngine.
-    fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
-        story_provider_handle;
-    story_provider_binding_.Bind(story_provider_handle.NewRequest());
-
-    // Hack to get an unbound fuchsia::modular::FocusController for
-    // Initialize().
-    fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
-        focus_provider_handle;
-    focus_provider_handle.NewRequest();
-
     // Hack to get an unbound fuchsia::modular::PuppetMaster for
     // Initialize().
     fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle;
@@ -243,10 +232,9 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     context_engine()->GetReader(std::move(scope),
                                 context_reader_handle.NewRequest());
 
-    suggestion_engine()->Initialize(
-        std::move(story_provider_handle), std::move(focus_provider_handle),
-        std::move(context_writer_handle), std::move(context_reader_handle),
-        std::move(puppet_master_handle));
+    suggestion_engine()->Initialize(std::move(context_writer_handle),
+                                    std::move(context_reader_handle),
+                                    std::move(puppet_master_handle));
   }
 
  protected:
@@ -322,7 +310,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
 
   // Story ID when a proposal is accepted. This is the ID of a story that was
   // created as result of the execution of a proposal actions, either through
-  // CreateStory or for a rich suggestion.
+  // AddModule or for a rich suggestion.
   std::string accepted_proposal_story_id_;
 
  private:
@@ -684,307 +672,6 @@ TEST_F(NextTest, SubscribeBeyondController) {
   EXPECT_EQ(2, suggestion_count());
 }
 
-class SuggestionInteractionTest : public NextTest {};
-
-TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  fuchsia::modular::CreateStory create_story;
-  fuchsia::modular::Intent intent;
-  intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
-
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-  EXPECT_EQ("foo://bar",
-            story_provider()->story_controller().last_added_module());
-}
-
-TEST_F(SuggestionInteractionTest, AcceptSuggestionCallback) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  fuchsia::modular::CreateStory create_story;
-  fuchsia::modular::Intent intent;
-  intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  AddProposalListenerBinding(proposal.listener.NewRequest());
-  p.Propose(std::move(proposal));
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-
-  EXPECT_EQ(accepted_proposal_id_, "1");
-}
-
-TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateStory) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  fuchsia::modular::CreateStory create_story;
-  fuchsia::modular::Intent intent;
-  intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
-
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  AddProposalListenerBinding(proposal.listener.NewRequest());
-  p.Propose(std::move(proposal));
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-  EXPECT_TRUE(created_story_action_);
-}
-
-// Tests that accepting a suggestion that creates multiple stories only notifies
-// the proposal listener once.
-TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateMultipleStories) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  fuchsia::modular::CreateStory create_story;
-  fuchsia::modular::Intent intent;
-  intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
-  fuchsia::modular::Action action2;
-  action2.set_create_story(std::move(create_story));
-
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  actions.push_back(std::move(action2));
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  AddProposalListenerBinding(proposal.listener.NewRequest());
-  p.Propose(std::move(proposal));
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-  EXPECT_EQ(accepted_proposal_count_, 1);
-}
-
-TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  fuchsia::modular::Intent intent;
-  intent.handler = "foo://bar";
-  fuchsia::modular::CreateStory create_story;
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
-  WaitUntilIdle();
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-  EXPECT_EQ("foo://bar",
-            story_provider()->story_controller().last_added_module());
-}
-
-TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  auto module_id = "foo://bar1";
-
-  fuchsia::modular::AddModule add_module;
-  add_module.module_name = module_id;
-  add_module.intent.handler = module_id;
-  add_module.surface_parent_module_path =
-      fidl::VectorPtr<fidl::StringPtr>::New(0);
-  add_module.surface_relation = fuchsia::modular::SurfaceRelation();
-
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  proposal.story_id = "foo://bar";
-  p.Propose(std::move(proposal));
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-
-  WaitUntilIdle();
-  EXPECT_EQ(module_id,
-            story_provider()->story_controller().last_added_module());
-}
-
-TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
-  Proposinator p(suggestion_engine());
-  StartListening(10 /* max_results */);
-
-  auto module_id = "foo://bar1";
-
-  fuchsia::modular::AddModule add_module;
-  add_module.module_name = module_id;
-  add_module.intent.handler = module_id;
-  add_module.surface_parent_module_path =
-      fidl::VectorPtr<fidl::StringPtr>::New(0);
-  add_module.surface_relation = fuchsia::modular::SurfaceRelation();
-
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  AddProposalListenerBinding(proposal.listener.NewRequest());
-  proposal.wants_rich_suggestion = true;
-  p.Propose(std::move(proposal));
-
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  // Ensure no call to OnProposalAccepted is made when creating a rich
-  // suggestion.
-  EXPECT_TRUE(accepted_proposal_story_id_.empty());
-
-  // There should be one suggestion, and the add module action should have
-  // been executed. A KindOfProtoStory should have been created, but not
-  // yet promoted. That only happens if the 'user' accepts the suggestion.
-  auto suggestion = GetOnlySuggestion();
-  EXPECT_EQ(suggestion->preloaded_story_id, "kindoffoo");
-  EXPECT_EQ(suggestion->display.headline, "1");
-
-  EXPECT_EQ(story_provider()->last_created_kind_of_story(), "kindoffoo");
-  EXPECT_EQ(module_id,
-            story_provider()->story_controller().last_added_module());
-  EXPECT_EQ(story_provider()->last_created_story(), "");
-  EXPECT_EQ(story_provider()->last_promoted_story(), "");
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-
-  // The story provider mock uses "kindoffoo" as the story id for KindOfProto
-  // stories.
-  EXPECT_EQ(story_provider()->last_promoted_story(), "kindoffoo");
-  EXPECT_EQ(accepted_proposal_id_, "1");
-  EXPECT_EQ(accepted_proposal_story_id_, "kindoffoo");
-}
-
-TEST_F(SuggestionInteractionTest, DeleteProposalWithRichSuggestion) {
-  Proposinator p(suggestion_engine());
-  StartListening(10 /* max_results */);
-
-  auto module_id = "foo://bar1";
-
-  fuchsia::modular::AddModule add_module;
-  add_module.module_name = module_id;
-  add_module.intent.handler = module_id;
-  add_module.surface_parent_module_path =
-      fidl::VectorPtr<fidl::StringPtr>::New(0);
-  add_module.surface_relation = fuchsia::modular::SurfaceRelation();
-
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  AddProposalListenerBinding(proposal.listener.NewRequest());
-  proposal.wants_rich_suggestion = true;
-  p.Propose(std::move(proposal));
-
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  p.Remove("1");
-  WaitUntilIdle();
-
-  EXPECT_EQ(0, suggestion_count());
-  EXPECT_NE(story_provider()->deleted_story(), "");
-}
-
-TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
-  AskProposinator p(suggestion_engine(), &loop_);
-  StartListening(10);
-
-  fuchsia::modular::UserInput user_input;
-  user_input.text = "test query";
-  fuchsia::modular::QueryAction query_action;
-  query_action.input = std::move(user_input);
-  fuchsia::modular::Action action;
-  action.set_query_action(std::move(query_action));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
-
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  // fuchsia::modular::Suggestion is selected.
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-
-  // Expect query handler to be called with the query action input.
-  p.WaitForQuery();
-  EXPECT_EQ(p.query(), "test query");
-
-  // Response from fuchsia::modular::QueryHandler.
-  fuchsia::modular::CreateStory create_story;
-  fuchsia::modular::Intent intent;
-  intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action2;
-  action2.set_create_story(std::move(create_story));
-  fidl::VectorPtr<fuchsia::modular::Action> suggested_actions;
-  suggested_actions.push_back(std::move(action2));
-  p.ProposeForAsk("2", "suggestion", fuchsia::modular::AnnoyanceType::NONE,
-                  std::move(suggested_actions));
-  p.Commit();
-
-  WaitUntilIdle();
-  EXPECT_EQ("foo://bar",
-            story_provider()->story_controller().last_added_module());
-}
-
 TEST_F(AskTest, DefaultAsk) {
   AskProposinator p(suggestion_engine(), &loop_);
 
@@ -1205,13 +892,15 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
   intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
+  fuchsia::modular::AddModule add_module;
+  add_module.module_name = "foo";
+  add_module.intent = std::move(intent);
+  add_module.surface_parent_module_path.resize(0);
 
   fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
+  action.set_add_module(std::move(add_module));
   fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
@@ -1234,13 +923,15 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
       std::move(story_info), fuchsia::modular::StoryState::STOPPED,
       fuchsia::modular::StoryVisibilityState::DEFAULT);
 
-  fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
   intent.handler = "foo://bar";
-  create_story.intent = std::move(intent);
+  fuchsia::modular::AddModule add_module;
+  add_module.intent = std::move(intent);
+  add_module.module_name = "foo";
+  add_module.surface_parent_module_path.resize(0);
 
   fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
+  action.set_add_module(std::move(add_module));
   fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));

@@ -100,10 +100,9 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   context_engine_->GetWriter(std::move(scope1), context_writer.NewRequest());
   context_engine_->GetReader(std::move(scope2), context_reader.NewRequest());
 
-  suggestion_engine_->Initialize(
-      Duplicate(story_provider_), Duplicate(focus_provider_),
-      std::move(context_writer), std::move(context_reader),
-      Duplicate(puppet_master_));
+  suggestion_engine_->Initialize(std::move(context_writer),
+                                 std::move(context_reader),
+                                 Duplicate(puppet_master_));
 
   StartActionLog(suggestion_engine_.get());
 }

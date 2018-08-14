@@ -59,7 +59,7 @@ class TestApp : fuchsia::modular::ProposalListener {
 
           fuchsia::modular::Proposal proposal;
           proposal.id = kProposalId;
-          proposal.story_id = story_id;
+          proposal.story_name = story_id;
           proposal.display = std::move(suggestion_display);
           proposal.on_selected.push_back(std::move(action));
           proposal_listener_bindings_.AddBinding(

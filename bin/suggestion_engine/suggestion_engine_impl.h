@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
@@ -152,8 +153,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
 
   // |fuchsia::modular::SuggestionEngine|
   void Initialize(
-      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
       fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer,
       fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader,
       fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master)
@@ -166,65 +165,25 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   friend class NextProcessor;
   friend class QueryProcessor;
 
-  void PromoteNextProposal(const std::string& component_url,
-                           const std::string& preloaded_story_id,
-                           const std::string& proposal_id);
+  modular::FuturePtr<> PromoteNextProposal(const std::string& component_url,
+                                           const std::string& story_name,
+                                           const std::string& proposal_id);
 
   // Used by AddNextProposal to create a kind-of-proto-story and pre execute
   // actions when |proposal.preload| is true.
   void AddProposalWithRichSuggestion(ProposalPublisherImpl* source,
                                      fuchsia::modular::Proposal proposal);
 
-  // TODO(andrewosh): Performing actions should be handled by a separate
-  // interface that's passed to the SuggestionEngineImpl.
-  //
+  // |story_puppet_master| for the story where the actions will be executed.
   // |actions| are the actions to perform.
-  // |listener| is the listener to be notified when the actions have been
-  // performed.
-  // |proposal_id| is the id of the proposal that was the source of the actions.
-  // |story_name| is the external id for the story that the client chooses.
-  // |source_url| is the url of the source of the proposal containing
-  // the provided actions.
-  // |proposal_story_id| is the story id associated with the proposal. This will
-  // be empty if a new story is being created.
-  void PerformActions(
-      fidl::VectorPtr<fuchsia::modular::Action> actions,
-      fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id, const std::string& story_name,
-      const std::string& source_url, const std::string& proposal_story_id);
+  modular::FuturePtr<fuchsia::modular::ExecuteResult> PerformActions(
+      fuchsia::modular::StoryPuppetMasterPtr story_puppet_master,
+      fidl::VectorPtr<fuchsia::modular::Action> actions);
 
-  void ExecuteActions(
-      fidl::VectorPtr<fuchsia::modular::Action> actions,
-      fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id, const std::string& override_story_id);
+  fuchsia::modular::StoryCommand ActionToStoryCommand(
+      const fuchsia::modular::Action& action);
 
-  // Performs an action that creates a story.
-  //
-  // |proposal| is the proposal that initiated the action, and its listener will
-  // be notified with the created story id.
-  void PerformCreateStoryAction(
-      const fuchsia::modular::Action& action,
-      fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id);
-
-  void PerformFocusStoryAction(const fuchsia::modular::Action& action,
-                               const std::string& override_story_id);
-
-  void PerformFocusModuleAction(const fuchsia::modular::Action& action,
-                                const std::string& story_id);
-
-  // The listener will be called with the id of the story to which the module
-  // was added. This can be override_story_id or the action.story_id.
-  void PerformAddModuleAction(
-      const fuchsia::modular::Action& action,
-      fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id, const std::string& override_story_id);
-
-  void PerformSetLinkValueAction(const fuchsia::modular::Action& action,
-                                 const std::string& story_id);
-
-  void PerformUpdateModuleAction(fuchsia::modular::Action* const action,
-                                 const std::string& story_id);
+  void PerformDeprecatedActions(std::vector<fuchsia::modular::Action> actions);
 
   void PerformQueryAction(const fuchsia::modular::Action& action);
 
@@ -235,30 +194,21 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // |fuchsia::modular::ContextListener|
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override;
 
-  std::string StoryIdFromName(const std::string& source_url,
-                              const std::string& story_name);
-
   // Returns true iff the component at |component_url| is allowed to make rich
   // suggestions (i.e. pre-load stories to be displayed as suggestions).
-  bool CanComponentUseRichSuggestions(const std::string& component_url);
+  bool ComponentCanUseRichSuggestions(const std::string& component_url);
+
+  // Executes the Interaction::SELECTED operation. If a |preloaded_story_id| is
+  // provided, it will be promoted. Otherwise the actions will be executed.
+  // Also notifies of OnProposalAccepted on the |proposal.listener|.
+  modular::FuturePtr<> HandleSelectedInteraction(
+      const std::string& component_url, const std::string& preloaded_story_id,
+      fuchsia::modular::Proposal& proposal);
 
   fidl::BindingSet<fuchsia::modular::SuggestionEngine> bindings_;
   fidl::BindingSet<fuchsia::modular::SuggestionProvider>
       suggestion_provider_bindings_;
   fidl::BindingSet<fuchsia::modular::SuggestionDebug> debug_bindings_;
-
-  // Maps a story name (external id) to its framework id.
-  // TODO(miguelfrde): move this into the framework.
-  std::map<std::string, std::string> story_name_mapping_;
-
-  // Both story_provider_ and focus_provider_ptr are used exclusively during
-  // fuchsia::modular::Action execution (in the PerformActions call inside
-  // NotifyInteraction).
-  //
-  // These are required to create new Stories and interact with the current
-  // Story.
-  fuchsia::modular::StoryProviderPtr story_provider_;
-  fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_ptr_;
 
   // The debugging interface for all Suggestions.
   std::shared_ptr<SuggestionDebugImpl> debug_;

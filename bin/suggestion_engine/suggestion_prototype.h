@@ -14,11 +14,6 @@ namespace modular {
 
 struct SuggestionPrototype {
   std::string suggestion_id;
-  // Story ID is set when the proposal came with a name.
-  // fuchsia::modular::SuggestionEngine maps this name namespaced by the source
-  // to this ID and propagates it here. If this story id was not set, it can be
-  // set to the (deprecated) proposal.story_id.
-  std::string story_id;
   std::string preloaded_story_id;
   std::string source_url;
   zx::time timestamp;

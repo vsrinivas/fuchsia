@@ -18,7 +18,7 @@ double FocusedStoryRankingFeature::ComputeFeatureInternal(
   }
   for (auto& context_value : *ContextValues()) {
     const std::string focused_story_id = context_value.meta.story->id;
-    if (focused_story_id == suggestion.prototype->story_id) {
+    if (focused_story_id == suggestion.prototype->proposal.story_name) {
       return kMaxConfidence;
     }
   }

@@ -16,17 +16,17 @@ double DeadStoryRankingFeature::ComputeFeatureInternal(
     const fuchsia::modular::UserInput& query,
     const RankedSuggestion& ranked_suggestion) {
   bool story_affinity = ranked_suggestion.prototype->proposal.story_affinity;
-  const auto& story_id = ranked_suggestion.prototype->story_id;
+  const auto& story_name = ranked_suggestion.prototype->proposal.story_name;
 
-  // fuchsia::modular::Proposal not tied to any story.
-  if (!story_affinity || story_id.empty()) {
+  // Proposal not tied to any story.
+  if (!(story_affinity && story_name)) {
     return kMinConfidence;
   }
 
   // TODO(miguelfrde): cache ids of stories in context in an unordered_set for
   // average O(1) lookup.
   for (auto& context_value : *ContextValues()) {
-    if (story_id == context_value.meta.story->id) {
+    if (story_name == context_value.meta.story->id) {
       return kMinConfidence;
     }
   }

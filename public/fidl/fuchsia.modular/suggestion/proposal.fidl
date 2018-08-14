@@ -122,7 +122,7 @@ struct SetLinkValueAction {
 
   // The bytes that will be written to the link.
   // If empty, unsets the link value.
-  string? value;
+  fuchsia.mem.Buffer? value;
 };
 
 struct UpdateModule {

@@ -10,14 +10,13 @@ namespace modular {
 
 SuggestionPrototype* CreateSuggestionPrototype(
     SuggestionPrototypeMap* owner, const std::string& source_url,
-    const std::string& story_id, fuchsia::modular::Proposal proposal) {
-  return CreateSuggestionPrototype(owner, source_url, story_id, "",
-                                   std::move(proposal));
+    fuchsia::modular::Proposal proposal) {
+  return CreateSuggestionPrototype(owner, source_url, "", std::move(proposal));
 }
 
 SuggestionPrototype* CreateSuggestionPrototype(
     SuggestionPrototypeMap* owner, const std::string& source_url,
-    const std::string& story_id, const std::string& preloaded_story_id,
+    const std::string& preloaded_story_id,
     fuchsia::modular::Proposal proposal) {
   auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal.id),
                                        std::make_unique<SuggestionPrototype>());
@@ -27,12 +26,6 @@ SuggestionPrototype* CreateSuggestionPrototype(
   suggestion_prototype->preloaded_story_id = preloaded_story_id;
   suggestion_prototype->suggestion_id = fxl::GenerateUUID();
   suggestion_prototype->source_url = source_url;
-
-  if (story_id.empty()) {
-    suggestion_prototype->story_id = proposal.story_id;
-  } else {
-    suggestion_prototype->story_id = story_id;
-  }
   suggestion_prototype->timestamp = zx::clock::get_monotonic();
   suggestion_prototype->proposal = std::move(proposal);
 
