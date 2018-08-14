@@ -362,6 +362,7 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
                     LOG_ERROR(ZX_ERR_INVALID_ARGS,
                               "Unknown disk_format %s. Support values are minfs and blobfs.\n",
                               optarg);
+                    return false;
                 }
                 break;
             case 8:

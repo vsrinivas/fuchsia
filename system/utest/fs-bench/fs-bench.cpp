@@ -179,7 +179,7 @@ bool RunBenchmark(int argc, char** argv) {
     };
 
     if (!fs_test_utils::ParseCommandLineArgs(argc, argv, &f_opts, &p_opts)) {
-        return true;
+        return false;
     }
 
     fbl::Vector<TestCaseInfo> testcases;
