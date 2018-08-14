@@ -17,9 +17,11 @@ MODULE_COMPILEFLAGS := \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/xdc-host-utils/include \
+    -Isystem/ulib/xdc-server-utils/include \
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
+    system/ulib/xdc-server-utils.hostlib \
 
 MODULE_NAME := xdc-server
 

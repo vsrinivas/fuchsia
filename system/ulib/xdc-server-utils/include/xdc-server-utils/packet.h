@@ -6,6 +6,10 @@
 
 #include <zircon/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     uint32_t stream_id;
     size_t total_length;
@@ -25,3 +29,7 @@ typedef struct {
 // Returns ZX_OK if successful, or an error if the data buffer was malformed.
 zx_status_t xdc_update_packet_state(xdc_packet_state_t* packet_state,
                                     void* data, size_t data_len, bool* out_new_packet);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

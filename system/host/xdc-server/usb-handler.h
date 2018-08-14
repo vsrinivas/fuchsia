@@ -6,6 +6,7 @@
 
 #include <set>
 #include <map>
+#include <vector>
 
 namespace xdc {
 
@@ -14,15 +15,44 @@ class UsbHandler {
     struct ConstructorTag { explicit ConstructorTag() = default; };
 
 public:
+    class Transfer {
+    public:
+        // Create should be called instead. This is public for make_shared.
+        explicit Transfer(ConstructorTag tag) {}
+
+        unsigned char* data() const { return data_; }
+        int actual_length() const { return actual_length_; }
+
+    private:
+        // Only UsbHandler should create transfers.
+        static std::unique_ptr<Transfer> Create();
+
+        // TODO(jocelyndang): this should store a libusb_transfer instead.
+        unsigned char* data_;
+        int actual_length_;
+
+        friend class UsbHandler;
+    };
+
     // Create should be called instead. This is public for make_unique.
     explicit UsbHandler(ConstructorTag tag) {}
 
     static std::unique_ptr<UsbHandler> Create();
 
     // Handles any pending events.
+    //
+    // Parameters:
+    // completed_reads  A vector which will be populated with the usb transfers containing data
+    //                  read from the xdc device. Once the client has finished processing a read,
+    //                  it should be returned back to the UsbHandler by calling RequeueRead.
+    //
     // Returns whether the usb handler fds have changed.
     // If true, the newly added or removed fds should be fetched via GetFdUpdates.
-    bool HandleEvents();
+    bool HandleEvents(std::vector<std::unique_ptr<Transfer>>& completed_reads);
+
+    // Returns the read transfer back to the UsbHandler to be requeued.
+    void RequeueRead(std::unique_ptr<Transfer> transfer);
+
     // Populates added_fds and removed_fds with the fds that have been added
     // and removed since GetFdUpdates was last called.
     //

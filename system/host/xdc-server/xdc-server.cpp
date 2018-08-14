@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/auto_call.h>
 #include <xdc-host-utils/conn.h>
+#include <xdc-server-utils/msg.h>
+#include <xdc-server-utils/packet.h>
 #include <zircon/device/debug.h>
 
 #include <errno.h>
@@ -140,7 +143,11 @@ void XdcServer::Run() {
                 }
             } else if (usb_handler_->IsValidFd(poll_fds_[i].fd)) {
                 if (poll_fds_[i].revents) {
-                    update_usb_handler_fds = usb_handler_->HandleEvents();
+                    std::vector<std::unique_ptr<UsbHandler::Transfer>> completed_reads;
+                    update_usb_handler_fds = usb_handler_->HandleEvents(completed_reads);
+                    for (auto& usb_transfer : completed_reads) {
+                        UsbReadComplete(std::move(usb_transfer));
+                    }
                 }
             } else {
                 auto iter = clients_.find(poll_fds_[i].fd);
@@ -242,6 +249,47 @@ std::shared_ptr<Client> XdcServer::GetClient(uint32_t stream_id) {
     };
     auto iter = std::find_if(clients_.begin(), clients_.end(), is_client);
     return iter == clients_.end() ? nullptr : iter->second;
+}
+
+void XdcServer::UsbReadComplete(std::unique_ptr<UsbHandler::Transfer> transfer) {
+    auto requeue = fbl::MakeAutoCall([&]() { usb_handler_->RequeueRead(std::move(transfer)); });
+
+    bool is_new_packet;
+    uint32_t stream_id;
+
+    zx_status_t status = xdc_update_packet_state(&read_packet_state_, transfer->data(),
+                                                 transfer->actual_length(), &is_new_packet);
+    if (status != ZX_OK) {
+        fprintf(stderr, "error processing transfer: %d, dropping read of size %d\n",
+                status, transfer->actual_length());
+    }
+    stream_id = read_packet_state_.header.stream_id;
+    if (is_new_packet && stream_id == XDC_MSG_STREAM) {
+        HandleCtrlMsg(transfer->data(), transfer->actual_length());
+    }
+    // TODO(jocelyndang): check if the completed transfer should be send to a registered client.
+}
+
+void XdcServer::HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len) {
+    int data_len = transfer_len - (int)sizeof(xdc_packet_header_t);
+    if (data_len < (int)sizeof(xdc_msg_t)) {
+        fprintf(stderr, "malformed msg, got %d bytes, need %lu\n", data_len, sizeof(xdc_msg_t));
+        return;
+    }
+    xdc_msg_t* msg = reinterpret_cast<xdc_msg_t*>(transfer_buf + sizeof(xdc_packet_header_t));
+    switch (msg->opcode) {
+    case XDC_NOTIFY_STREAM_STATE: {
+        uint32_t stream_id = msg->notify_stream_state.stream_id;
+        bool online = msg->notify_stream_state.online;
+        printf("xdc device stream id %u is now %s\n", stream_id, online ? "online" : "offline");
+
+        // TODO(jocelyndang): update any matching client as connected and ready to transfer.
+
+        break;
+    }
+    default:
+        fprintf(stderr, "unknown msg opcode: %u\n", msg->opcode);
+    }
 }
 
 }  // namespace xdc

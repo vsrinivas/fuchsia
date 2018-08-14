@@ -56,6 +56,9 @@ private:
     // Returns the client registered to the given stream id, or nullptr if none was foumd.
     std::shared_ptr<Client> GetClient(uint32_t stream_id);
 
+    void UsbReadComplete(std::unique_ptr<UsbHandler::Transfer> transfer);
+    void HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len);
+
     std::unique_ptr<UsbHandler> usb_handler_;
 
     // Server socket we receive client connections on.
@@ -68,6 +71,8 @@ private:
 
     // File descriptors we are currently polling on.
     std::vector<pollfd> poll_fds_;
+
+    xdc_packet_state_t read_packet_state_;
 };
 
 }  // namespace xdc
