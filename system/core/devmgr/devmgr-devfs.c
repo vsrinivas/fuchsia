@@ -503,15 +503,21 @@ static void devfs_open(devnode_t* dirdn, zx_handle_t h, char* path, uint32_t fla
 
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
 
+    bool no_remote = (dn->device == NULL) || (dn->device->hrpc == ZX_HANDLE_INVALID);
+    bool local_required = devnode_is_local(dn);
+    bool local_requested = flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY);
+
     if (r == ZX_ERR_NEXT) {
-        // we only partially matched -- there's more path to walk
-        if ((dn->device == NULL) || (dn->device->hrpc == ZX_HANDLE_INVALID)) {
-            // no remote to pass this on to
+        // We only partially matched -- there's more path to walk.
+        if (no_remote || local_required) {
+            // No remote to pass this on to.
             r = ZX_ERR_NOT_FOUND;
-        } else if (flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) {
-            // local requested, but this is remote only
+        } else if (local_requested) {
+            // Local requested, but this is remote only.
             r = ZX_ERR_NOT_SUPPORTED;
         } else {
+            // There is more path to walk, and this node can accept
+            // remote requests.
             r = ZX_OK;
         }
     } else {
@@ -530,7 +536,7 @@ fail:
 
     // If we are a local-only node, or we are asked to not go remote,
     // or we are asked to open-as-a-directory, open locally:
-    if ((flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) || devnode_is_local(dn)) {
+    if (local_requested || local_required) {
         if ((r = iostate_create(dn, h)) < 0) {
             goto fail;
         }
