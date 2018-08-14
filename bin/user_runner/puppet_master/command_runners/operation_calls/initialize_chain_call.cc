@@ -55,8 +55,6 @@ void InitializeChainCall::Run() {
         FXL_CHECK(
             fsl::StringFromVmo(info.create_link().initial_data, &initial_json));
       }
-      // TODO(miguelfrde): UpdateLinkValue can return an error StoryStatus. We
-      // should handle it.
       fuchsia::modular::LinkPath out_path;
       mapping->link_path.Clone(&out_path);
       operations_.Add(new SetLinkValueCall(
