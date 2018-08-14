@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
 #![deny(warnings)]
 
 mod canvas;
@@ -74,42 +75,34 @@ impl ViewController {
         let view_controller = Arc::new(Mutex::new(view_controller));
         {
             let view_controller = view_controller.clone();
-            fasync::spawn(
-                session_listener_request
-                    .into_stream()
-                    .unwrap()
-                    .map_ok(move |request| {
-                        match request {
-                            SessionListenerRequest::OnEvent {
-                                events,
-                                control_handle: _,
-                            } => view_controller.lock().handle_session_events(events),
-                            _ => (),
-                        }
-                    })
-                    .try_collect::<()>()
-                    .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
-            );
+            fasync::spawn(async move {
+                let mut stream = session_listener_request.into_stream()?;
+                while let Some(request) = await!(stream.try_next())? {
+                    match request {
+                        SessionListenerRequest::OnEvent {
+                            events,
+                            control_handle: _,
+                        } => view_controller.lock().handle_session_events(events),
+                        _ => (),
+                    }
+                }
+                Ok(())
+            }.unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)));
         }
         {
             let view_controller = view_controller.clone();
-            fasync::spawn(
-                view_listener_request
-                    .into_stream()
-                    .unwrap()
-                    .map_ok(
-                        move |ViewListenerRequest::OnPropertiesChanged {
-                                  properties,
-                                  responder,
-                              }| {
-                            view_controller.lock().handle_properies_changed(properties);
-                            responder.send()
-                                .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
-                        },
-                    )
-                    .try_collect::<()>()
-                    .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
-            );
+            fasync::spawn(async move {
+                let mut stream = view_listener_request.into_stream()?;
+                while let Some(req) = await!(stream.try_next())? {
+                    let ViewListenerRequest::OnPropertiesChanged {
+                        properties,
+                        responder,
+                    } = req;
+                    view_controller.lock().handle_properies_changed(properties);
+                    responder.send().unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
+                }
+                Ok(())
+            }.unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)));
         }
         Ok(view_controller)
     }
@@ -181,12 +174,12 @@ impl ViewController {
     }
 
     fn present(&self) {
-        fasync::spawn(
-            self.session
+        fasync::spawn(async move {
+            await!(self.session
                 .lock()
                 .present(0)
-                .map(|_| ())
-        );
+                .map(|_| ()))
+        });
     }
 
     fn handle_session_events(&mut self, events: Vec<scenic::Event>) {
@@ -227,17 +220,16 @@ impl App {
 
     pub fn spawn_view_provider_server(app: &AppPtr, channel: fasync::Channel) {
         let app = app.clone();
-        fasync::spawn(
-            ViewProviderRequestStream::from_channel(channel)
-                .map_ok(move |request| {
-                    let CreateView { view_owner, .. } = request;
-                    app.lock()
-                        .create_view(view_owner)
-                        .expect("failed to create view");
-                })
-                .try_collect::<()>()
-                .unwrap_or_else(|e| eprintln!("error running view_provider server: {:?}", e)),
-        )
+        fasync::spawn(async move {
+            let mut stream = ViewProviderRequestStream::from_channel(channel);
+            while let Some(request) = await!(stream.try_next())? {
+                let CreateView { view_owner, .. } = request;
+                app.lock()
+                    .create_view(view_owner)
+                    .expect("failed to create view");
+            }
+            Ok(())
+        }.unwrap_or_else(|e: failure::Error| eprintln!("error running view_provider server: {:?}", e)));
     }
 
     pub fn create_view(
