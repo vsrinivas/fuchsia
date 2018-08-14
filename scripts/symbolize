@@ -305,6 +305,9 @@ class Symbolizer:
         self.args = args
         self.arch = "x86_64"
         self.build_dirs = choose_build_dirs(self.args, self.arch)
+        self.reset()
+
+    def reset(self):
         self.bias = 0
         self.name_to_buildid = {}
         self.bias_to_name = {}
@@ -337,14 +340,7 @@ class Symbolizer:
                 (message, self.total_stack_size, self.args.stack_size))
             for frame, size in self.frame_sizes:
                 writeline("#%s: %d bytes" % (frame, size))
-        # Since we don't have the last stack frame, leave some leeway
-        # when warning about stackoverflow
-        self.processed_lines = []
-        self.frames_sizes = []
-        self.total_stack_size = 0
-        self.prev_sp = None
-        self.zircon_bt = False
-        self.asan_bt = False
+        self.reset()
 
     # If the architecture has changed, choose our new build dirs and
     # clear our DSO cache.  We may be symbolizing the output of
