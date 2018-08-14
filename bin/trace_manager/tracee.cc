@@ -21,12 +21,13 @@ namespace {
 // TransferStatus::kReceiverDead indicates that the peer was closed
 // during the transfer.
 Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
-                                           const uint8_t* buffer, size_t len) {
+                                           const void* buffer, size_t len) {
+  auto data = reinterpret_cast<const uint8_t*>(buffer);
   size_t offset = 0;
   while (offset < len) {
     zx_status_t status = ZX_OK;
     size_t actual = 0;
-    if ((status = socket.write(0u, buffer + offset, len - offset, &actual)) <
+    if ((status = socket.write(0u, data + offset, len - offset, &actual)) <
         0) {
       if (status == ZX_ERR_SHOULD_WAIT) {
         zx_signals_t pending = 0;
@@ -66,6 +67,24 @@ fuchsia::tracelink::BufferingMode EngineBufferingModeToTracelinkMode(
     default:
       __UNREACHABLE;
   }
+}
+
+uint64_t GetBufferWordsWritten(const uint64_t* buffer,
+                               uint64_t size_in_words) {
+  const uint64_t* start = buffer;
+  const uint64_t* current = start;
+  const uint64_t* end = start + size_in_words;
+
+  while (current < end) {
+    auto length = trace::RecordFields::RecordSize::Get<uint16_t>(*current);
+    if (length == 0 || length > trace::RecordFields::kMaxRecordSizeBytes ||
+        current + length >= end) {
+      break;
+    }
+    current += length;
+  }
+
+  return current - start;
 }
 
 }  // namespace
@@ -278,7 +297,13 @@ Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
   // TODO(dje): Loop on smaller buffer.
   // Better yet, be able to pass the entire vmo to the socket (still in
   // three chunks: the writer will need vmo,offset,size parameters).
-  std::vector<uint8_t> buffer(size);
+
+  uint64_t size_in_words = trace::BytesToWords(size);
+  // |size| is always the size of a trace buffer, therefore we know it's a
+  // multiple of 8. For paranoia purposes verify this so we don't risk
+  // overflowing the buffer later.
+  FXL_DCHECK(trace::WordsToBytes(size_in_words) == size);
+  std::vector<uint64_t> buffer(size_in_words);
 
   if (buffer_vmo_.read(buffer.data(), vmo_offset, size) != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_ << ": Failed to read data from buffer_vmo: "
@@ -286,7 +311,10 @@ Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
     return TransferStatus::kCorrupted;
   }
 
-  auto status = WriteBufferToSocket(socket, buffer.data(), size);
+  uint64_t words_written = GetBufferWordsWritten(buffer.data(), size_in_words);
+  uint64_t bytes_written = trace::WordsToBytes(words_written);
+
+  auto status = WriteBufferToSocket(socket, buffer.data(), bytes_written);
   if (status != TransferStatus::kComplete) {
     FXL_LOG(ERROR) << *bundle_ << ": Failed to write " << name << " records";
   }
@@ -336,9 +364,9 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     }
   }
 
-  if (header->durable_data_end() > 0) {
+  if (buffering_mode_ != fuchsia::tracelink::BufferingMode::ONESHOT) {
     auto offset = header->get_durable_buffer_offset();
-    auto size = header->durable_data_end();
+    auto size = header->durable_buffer_size();
     if ((transfer_status = WriteChunk(socket, offset, size, "durable")) !=
         TransferStatus::kComplete) {
       return transfer_status;
@@ -351,14 +379,11 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   // referenced by the later buffer.
 
   auto write_chunk = [this, &socket, &header](int buffer_number) {
-    auto size = header->nondurable_data_end(buffer_number);
-    if (size > 0) {
-      auto offset = header->GetNondurableBufferOffset(buffer_number);
-      auto name =
-          buffer_number == 0 ? "nondurable buffer 0" : "nondurable buffer 1";
-      return WriteChunk(socket, offset, size, name);
-    }
-    return TransferStatus::kComplete;
+    auto size = header->nondurable_buffer_size();
+    auto offset = header->GetNondurableBufferOffset(buffer_number);
+    auto name =
+      buffer_number == 0 ? "nondurable buffer 0" : "nondurable buffer 1";
+    return WriteChunk(socket, offset, size, name);
   };
 
   if (header->wrapped_count() > 0) {
