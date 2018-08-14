@@ -271,7 +271,7 @@ int main(int argc, const char** argv) {
       value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
+      !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }

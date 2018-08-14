@@ -38,15 +38,15 @@ std::string GetSyncParamsUsage() {
   return result.str();
 }
 
-bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
+bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     SyncParams* sync_params) {
   std::string credentials_path;
-  bool ret = command_line->GetOptionValue(kServerIdFlag.ToString(),
-                                          &sync_params->server_id) &&
-             command_line->GetOptionValue(kApiKeyFlag.ToString(),
-                                          &sync_params->api_key) &&
-             command_line->GetOptionValue(kCredentialsPathFlag.ToString(),
-                                          &credentials_path);
+  bool ret = command_line.GetOptionValue(kServerIdFlag.ToString(),
+                                         &sync_params->server_id) &&
+             command_line.GetOptionValue(kApiKeyFlag.ToString(),
+                                         &sync_params->api_key) &&
+             command_line.GetOptionValue(kCredentialsPathFlag.ToString(),
+                                         &credentials_path);
   if (!ret) {
     WarnIncorrectSyncParams();
     return false;

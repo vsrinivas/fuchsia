@@ -206,7 +206,7 @@ int main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }

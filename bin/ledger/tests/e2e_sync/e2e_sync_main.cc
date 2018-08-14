@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   ledger::SyncParams sync_params;
-  if (!ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
+  if (!ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     std::cerr << ledger::GetSyncParamsUsage();
     return -1;
   }

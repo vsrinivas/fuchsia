@@ -31,7 +31,7 @@ std::string GetSyncParamsUsage();
 
 // Reads the sync parameters from the command-line. Prints a warning and returns
 // false if these parameters are missing or cannot be parsed.
-bool ParseSyncParamsFromCommandLine(fxl::CommandLine* command_line,
+bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     SyncParams* sync_params);
 
 // Returns the names of the flags parsed from the command line by

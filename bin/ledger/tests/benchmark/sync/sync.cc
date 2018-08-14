@@ -225,7 +225,7 @@ int main(int argc, const char** argv) {
                                     &entries_per_change) ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ledger::ParseSyncParamsFromCommandLine(&command_line, &sync_params)) {
+      !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     PrintUsage(argv[0]);
     return -1;
   }
