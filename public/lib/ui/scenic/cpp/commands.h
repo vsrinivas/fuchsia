@@ -38,6 +38,7 @@ fuchsia::ui::gfx::Command NewCreateBufferCmd(uint32_t id, uint32_t memory_id,
                                              uint32_t memory_offset,
                                              uint32_t num_bytes);
 
+fuchsia::ui::gfx::Command NewCreateCompositorCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateDisplayCompositorCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateLayerStackCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateLayerCmd(uint32_t id);

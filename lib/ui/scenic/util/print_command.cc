@@ -172,6 +172,9 @@ std::ostream& operator<<(std::ostream& stream,
     case ResourceArgs::Tag::kShapeNode:
       stream << "ShapeNode";
       break;
+    case ResourceArgs::Tag::kCompositor:
+      stream << "Compositor";
+      break;
     case ResourceArgs::Tag::kDisplayCompositor:
       stream << "DisplayCompositor";
       break;

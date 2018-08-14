@@ -94,6 +94,15 @@ fuchsia::ui::gfx::Command NewCreateBufferCmd(uint32_t id, uint32_t memory_id,
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
+fuchsia::ui::gfx::Command NewCreateCompositorCmd(uint32_t id) {
+  fuchsia::ui::gfx::CompositorArgs compositor;
+
+  fuchsia::ui::gfx::ResourceArgs resource;
+  resource.set_compositor(std::move(compositor));
+
+  return NewCreateResourceCmd(id, std::move(resource));
+}
+
 fuchsia::ui::gfx::Command NewCreateDisplayCompositorCmd(uint32_t id) {
   fuchsia::ui::gfx::DisplayCompositorArgs display_compositor;
 

@@ -35,6 +35,7 @@ union ResourceArgs {
   MaterialArgs material;
 
   // Layers.
+  CompositorArgs compositor;
   DisplayCompositorArgs display_compositor;
   ImagePipeCompositorArgs image_pipe_compositor;
   LayerStackArgs layer_stack;

@@ -257,6 +257,9 @@ bool Session::ApplyCreateResourceCmd(
                                    std::move(command.resource.entity_node()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kShapeNode:
       return ApplyCreateShapeNode(id, std::move(command.resource.shape_node()));
+    case ::fuchsia::ui::gfx::ResourceArgs::Tag::kCompositor:
+      return ApplyCreateCompositor(
+          id, std::move(command.resource.compositor()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(
           id, std::move(command.resource.display_compositor()));
