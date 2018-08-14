@@ -253,6 +253,7 @@ impl Debug for DynamicCurve {
     }
 }
 
+// NOTE: Can only return an error due to an unknown NID
 fn nid_name(nid: c_int) -> Result<Cow<'static, str>, BoringError> {
     Ok(boringssl::ec_curve_nid2nist(nid)?.to_string_lossy())
 }

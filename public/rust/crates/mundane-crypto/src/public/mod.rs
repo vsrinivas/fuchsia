@@ -34,9 +34,10 @@ mod inner {
     /// A wrapper around a BoringSSL key object.
     pub trait BoringKey: Sized {
         // evp_pkey_assign_xxx
-        fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) -> Result<(), Error>;
+        fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>);
 
-        // evp_pkey_get_xxx
+        // evp_pkey_get_xxx; panics if the key is an EC key and doesn't have a group set,
+        // and errors if pkey isn't the expected key type
         fn pkey_get(pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) -> Result<Self, Error>;
 
         // xxx_parse_private_key
@@ -67,12 +68,13 @@ mod inner {
 #[must_use]
 pub fn marshal_public_key_der<P: PublicKey>(key: &P) -> Vec<u8> {
     let mut evp_pkey = CHeapWrapper::default();
-    key.get_boring().pkey_assign(&mut evp_pkey).unwrap();
+    key.get_boring().pkey_assign(&mut evp_pkey);
+    // cbb_new can only fail due to OOM
     let mut cbb = CStackWrapper::cbb_new(64).unwrap();
     evp_pkey
         .evp_marshal_public_key(&mut cbb)
         .expect("failed to marshal public key");
-    cbb.cbb_with_data(<[u8]>::to_vec).unwrap()
+    cbb.cbb_with_data(<[u8]>::to_vec)
 }
 
 /// Marshals a private key in DER format.
@@ -86,11 +88,12 @@ pub fn marshal_public_key_der<P: PublicKey>(key: &P) -> Vec<u8> {
 /// [RFC 3447]: https://tools.ietf.org/html/rfc3447
 #[must_use]
 pub fn marshal_private_key_der<P: PrivateKey>(key: &P) -> Vec<u8> {
+    // cbb_new can only fail due to OOM
     let mut cbb = CStackWrapper::cbb_new(64).unwrap();
     key.get_boring()
         .marshal_private_key(&mut cbb)
         .expect("failed to marshal private key");
-    cbb.cbb_with_data(<[u8]>::to_vec).unwrap()
+    cbb.cbb_with_data(<[u8]>::to_vec)
 }
 
 /// Parses a public key in DER format.
@@ -109,6 +112,9 @@ pub fn marshal_private_key_der<P: PrivateKey>(key: &P) -> Vec<u8> {
 pub fn parse_public_key_der<P: PublicKey>(bytes: &[u8]) -> Result<P, Error> {
     CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
         let mut evp_pkey = CHeapWrapper::evp_parse_public_key(cbs)?;
+        // NOTE: For EC, panics if evp_pkey doesn't have its group set. This is
+        // OK because EVP_parse_public_key guarantees that the returned key has
+        // its group set.
         let key = P::Boring::pkey_get(&mut evp_pkey)?;
         if cbs.cbs_len() > 1 {
             return Err(Error::new("malformed DER input".to_string()));

@@ -20,7 +20,7 @@
 //!   `Box` or `Rc`, and handles allocation, reference counting, and freeing;
 //!   and `CRef`, which is analogous to a Rust reference.
 //! - This module builds on top of the `raw` and `wrapper` modules to provide a
-//!   safe API. This allows us to `#![deny(unsafe_code)]` in the rest of the
+//!   safe API. This allows us to `#![forbid(unsafe_code)]` in the rest of the
 //!   crate, which in turn means that this is the only module whose memory
 //!   safety needs to be manually verified.
 //!
@@ -44,6 +44,23 @@
 //! take those arguments and return a new instance of that type. For example,
 //! the `CHeapWrapper<EC_KEY>::ec_key_parse_private_key` function parses a
 //! private key from an input stream and returns a new `CHeapWrapper<EC_KEY>`.
+//!
+//! # API Guidelines
+//!
+//! This module is meant to be as close as possible to a direct set of FFI
+//! bindings while still providing a safe API. While memory safety is handled
+//! internally, and certain error conditions which could affect memory safety
+//! are checked internally (and cause the process to abort if they fail), most
+//! errors are returned from the API, as they are considered business logic,
+//! which is outside the scope of this module.
+
+// NOTES on safety requirements of the BoringSSL API:
+// - Though it may not be explicitly documented, calling methods on uinitialized
+//   values is UB. Remember, this is C! Always initialize (usually via XXX_init
+//   or a similarly-named function) before calling any methods or functions.
+// - Any BoringSSL documentation that says "x property must hold" means that, if
+//   that property doesn't hold, it may cause UB - you are not guaranteed that
+//   it will be detected and an error will be returned.
 
 #[macro_use]
 mod abort;
@@ -66,6 +83,7 @@ use std::num::NonZeroUsize;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 use std::{mem, ptr, slice};
 
+use boringssl::abort::UnwrapAbort;
 use boringssl::raw::{CBB_data, CBB_init, CBB_len, CBS_init, CBS_len, CRYPTO_memcmp, ECDSA_sign,
                      ECDSA_size, ECDSA_verify, EC_GROUP_get_curve_name,
                      EC_GROUP_new_by_curve_name, EC_KEY_generate_key, EC_KEY_get0_group,
@@ -76,6 +94,8 @@ use boringssl::raw::{CBB_data, CBB_init, CBB_len, CBS_init, CBS_len, CRYPTO_memc
 
 impl CStackWrapper<CBB> {
     /// Creates a new `CBB` and initializes it with `CBB_init`.
+    ///
+    /// `cbb_new` can only fail due to OOM.
     #[must_use]
     pub fn cbb_new(initial_capacity: usize) -> Result<CStackWrapper<CBB>, BoringError> {
         unsafe {
@@ -90,19 +110,26 @@ impl CStackWrapper<CBB> {
     /// `cbb_with_data` accepts a callback, and invokes that callback, passing a
     /// slice of the current contents of this `CBB`.
     #[must_use]
-    pub fn cbb_with_data<O, F: Fn(&[u8]) -> O>(&self, with_data: F) -> Result<O, BoringError> {
+    pub fn cbb_with_data<O, F: Fn(&[u8]) -> O>(&self, with_data: F) -> O {
         unsafe {
             // NOTE: The return value of CBB_data is only valid until the next
-            // operation on the CBB. (we're pretty sure that doesn't include
-            // CBB_len, but just in case, we put them in this order). This
-            // method is safe because the slice reference cannot outlive this
-            // function body, and thus cannot live beyond another method call
-            // that could invalidate the buffer.
+            // operation on the CBB. This method is safe because the slice
+            // reference cannot outlive this function body, and thus cannot live
+            // beyond another method call that could invalidate the buffer.
             let len = CBB_len(self.as_const());
-            let ptr = CBB_data(self.as_const())?;
-            // TODO(joshlf): Can with_data use this to smuggle out the
-            // reference, outliving the lifetime of self?
-            Ok(with_data(slice::from_raw_parts(ptr.as_ptr(), len)))
+            if len == 0 {
+                // If len is 0, then CBB_data could technically return a null
+                // pointer. Constructing a slice from a null pointer is likely
+                // invalid, so we do this instead.
+                with_data(&[])
+            } else {
+                // Since the length is non-zero, CBB_data should not return a
+                // null pointer.
+                let ptr = CBB_data(self.as_const()).unwrap_abort();
+                // TODO(joshlf): Can with_data use this to smuggle out the
+                // reference, outliving the lifetime of self?
+                with_data(slice::from_raw_parts(ptr.as_ptr(), len))
+            }
         }
     }
 }
@@ -209,14 +236,15 @@ impl CHeapWrapper<EC_KEY> {
 /// # Panics
 ///
 /// `ecdsa_sign` panics if `sig` is shorter than the minimum required signature
-/// size given by `ecdsa_size`.
+/// size given by `ecdsa_size`, or if `key` doesn't have a group set.
 #[must_use]
 pub fn ecdsa_sign(
     digest: &[u8], sig: &mut [u8], key: &CHeapWrapper<EC_KEY>,
 ) -> Result<usize, BoringError> {
     unsafe {
         // If we call ECDSA_sign with sig.len() < min_size, it will invoke UB.
-        let min_size = ecdsa_size(key)?;
+        // ECDSA_size fails if the key doesn't have a group set.
+        let min_size = ecdsa_size(key).unwrap_abort();
         assert_abort!(sig.len() >= min_size.get());
 
         let mut sig_len: c_uint = 0;
@@ -228,6 +256,8 @@ pub fn ecdsa_sign(
             &mut sig_len,
             key.as_const(),
         )?;
+        // ECDSA_sign guarantees that it only needs ECDSA_size bytes for the
+        // signature.
         assert_abort!(sig_len as usize <= min_size.get());
         Ok(sig_len as usize)
     }
@@ -271,16 +301,15 @@ impl CHeapWrapper<EVP_PKEY> {
 
     /// The `EVP_PKEY_assign_EC_KEY` function.
     #[must_use]
-    pub fn evp_pkey_assign_ec_key(
-        &mut self, ec_key: CHeapWrapper<EC_KEY>,
-    ) -> Result<(), BoringError> {
+    pub fn evp_pkey_assign_ec_key(&mut self, ec_key: CHeapWrapper<EC_KEY>) {
         unsafe {
             // NOTE: It's very important that we use 'into_mut' here so that
             // ec_key's refcount is not decremented. That's because
             // EVP_PKEY_assign_EC_KEY doesn't increment the refcount of its
             // argument.
             let key = ec_key.into_mut();
-            EVP_PKEY_assign_EC_KEY(self.as_mut(), key)
+            // EVP_PKEY_assign_EC_KEY only fails if key is NULL.
+            EVP_PKEY_assign_EC_KEY(self.as_mut(), key).unwrap_abort()
         }
     }
 
@@ -348,7 +377,8 @@ impl CStackWrapper<HMAC_CTX> {
     /// Initializes a new `HMAC_CTX`.
     ///
     /// `hmac_ctx_new` initializes a new `HMAC_CTX` using `HMAC_CTX_init` and
-    /// then further initializes it with `HMAC_CTX_Init_ex`.
+    /// then further initializes it with `HMAC_CTX_Init_ex`. It can only fail
+    /// due to OOM.
     #[must_use]
     pub fn hmac_ctx_new(
         key: &[u8], md: &CRef<'static, EVP_MD>,
@@ -382,14 +412,22 @@ impl CStackWrapper<HMAC_CTX> {
     /// `hmac_final` panics if `out` is not exactly the right length (as defined
     /// by `HMAC_size`).
     #[must_use]
-    pub fn hmac_final(&mut self, out: &mut [u8]) -> Result<(), BoringError> {
+    pub fn hmac_final(&mut self, out: &mut [u8]) {
         unsafe {
             let size = HMAC_size(self.as_const());
             assert_abort_eq!(out.len(), size);
             let mut size = 0;
-            HMAC_Final(self.as_mut(), out.as_mut_ptr(), &mut size)?;
+            // HMAC_Final is documented to fail on allocation failure, but an
+            // internal comment states that it's infallible. In either case, we
+            // want to panic. Normally, for allocation failure, we'd put the
+            // unwrap higher in the stack, but since this is supposed to be
+            // infallible anyway, we put it here.
+            //
+            // TODO(joshlf): Remove this comment once HMAC_Final is documented
+            // as being infallible.
+            HMAC_Final(self.as_mut(), out.as_mut_ptr(), &mut size).unwrap_abort();
+            // Guaranteed to be the value returned by HMAC_size.
             assert_abort_eq!(out.len(), size as usize);
-            Ok(())
         }
     }
 }
@@ -420,11 +458,21 @@ macro_rules! impl_hash {
             #[must_use]
             pub fn $final(
                 &mut self,
-            ) -> Result<[u8; ::boringssl_sys::$digest_len as usize], BoringError> {
+            ) -> [u8; ::boringssl_sys::$digest_len as usize] {
                 unsafe {
                     let mut md: [u8; ::boringssl_sys::$digest_len as usize] = mem::uninitialized();
-                    ::boringssl::raw::$final_raw((&mut md[..]).as_mut_ptr(), self.as_mut())?;
-                    Ok(md)
+                    // SHA1_Final promises to return 1. SHA256_Final,
+                    // SHA384_Final, and SHA512_Final all document that they
+                    // only fail due to programmer error. The only input to the
+                    // function which could cause this is the context. I suspect
+                    // that the error condition is that XXX_Final is called
+                    // twice without resetting, but I'm not sure. Until we
+                    // figure it out, let's err on the side of caution and abort
+                    // here.
+                    //
+                    // TODO(joshlf): Figure out how XXX_Final can fail.
+                    ::boringssl::raw::$final_raw((&mut md[..]).as_mut_ptr(), self.as_mut()).unwrap_abort();
+                    md
                 }
             }
         }

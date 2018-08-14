@@ -38,6 +38,7 @@ mod inner {
     impl<C: Curve> EcKey<C> {
         pub fn generate(curve: C) -> Result<EcKey<C>, BoringError> {
             let mut key = CHeapWrapper::default();
+            // EC_KEY_set_group only errors if there's already a group set
             key.ec_key_set_group(&curve.group()).unwrap();
             key.ec_key_generate_key()?;
             Ok(EcKey { key, curve })
@@ -51,20 +52,27 @@ mod inner {
         ///
         /// If `C` is not `DynamicCurve`, `from_EC_KEY` validates that `key`'s
         /// curve is `C`.
+        ///
+        /// # Panics
+        ///
+        /// `from_EC_KEY` panics if `key`'s group is not set.
         #[allow(non_snake_case)]
         pub fn from_EC_KEY(key: CHeapWrapper<boringssl::EC_KEY>) -> Result<EcKey<C>, Error> {
             // If C is DynamicCurve, then from_group is infallible.
+            // ec_key_get0_group returns the EC_KEY's internal group pointer,
+            // which is guaranteed to be set by the caller.
             let curve = C::from_group(key.ec_key_get0_group().unwrap())?;
             Ok(EcKey { key, curve })
         }
     }
 
     impl<C: Curve> BoringKey for EcKey<C> {
-        fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) -> Result<(), Error> {
+        fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) {
             pkey.evp_pkey_assign_ec_key(self.key.clone())
-                .map_err(From::from)
         }
 
+        // NOTE: panics if the key is an EC key and doesn't have a group set
+        // (due to EcKey::from_EC_KEY)
         fn pkey_get(pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) -> Result<Self, Error> {
             let key = pkey.evp_pkey_get1_ec_key()?;
             EcKey::from_EC_KEY(key)

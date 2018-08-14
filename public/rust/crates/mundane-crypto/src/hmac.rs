@@ -24,6 +24,7 @@ impl<H: Hasher> Hmac<H> {
         // TODO(joshlf): Do we want to put any constraints on what constitutes a
         // valid key?
         Hmac {
+            // hmac_ctx_new can only fail due to OOM
             ctx: CStackWrapper::hmac_ctx_new(key, &H::evp_md()).unwrap(),
             _marker: PhantomData,
         }
@@ -37,7 +38,7 @@ impl<H: Hasher> Hmac<H> {
     /// Returns the HMAC of the bytes added so far.
     pub fn finish(mut self) -> H::Digest {
         let mut out = H::Digest::zero();
-        self.ctx.hmac_final(out.as_mut()).unwrap();
+        self.ctx.hmac_final(out.as_mut());
         out
     }
 }

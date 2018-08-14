@@ -161,7 +161,7 @@ macro_rules! impl_hash {
             }
             fn finish(mut self) -> Self::Digest {
                 #[allow(deprecated)]
-                $digest_name(self.ctx.$final().unwrap())
+                $digest_name(self.ctx.$final())
             }
         }
         #[allow(deprecated)]

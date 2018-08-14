@@ -169,6 +169,7 @@ pub unsafe fn ECDSA_verify(
     match ::boringssl_sys::ECDSA_verify(type_, digest, digest_len, sig, sig_len, key) {
         1 => true,
         0 => false,
+        // ECDSA_verify promises to only return 0 or 1
         _ => unreachable_abort!(),
     }
 }
