@@ -11,21 +11,21 @@
       "event_name": "writer_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",
-      "argument_unit": "B"
+      "argument_unit": "bytes"
     },
     {
       "type": "argument_value",
       "event_name": "uploader_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",
-      "argument_unit": "B"
+      "argument_unit": "bytes"
     },
     {
       "type": "argument_value",
       "event_name": "reader_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",
-      "argument_unit": "B"
+      "argument_unit": "bytes"
     }
   ]
 }

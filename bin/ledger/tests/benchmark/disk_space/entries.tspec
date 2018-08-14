@@ -11,7 +11,7 @@
       "event_name": "ledger_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",
-      "argument_unit": "B"
+      "argument_unit": "bytes"
     }
   ]
 }
