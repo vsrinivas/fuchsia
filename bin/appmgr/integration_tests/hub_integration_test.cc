@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <glob.h>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 
@@ -11,6 +9,7 @@
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/files/glob.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
@@ -55,29 +54,20 @@ class HubTest : public component::testing::TestWithEnvironment {
 
 TEST(ProbeHub, Component) {
   auto glob_str = fxl::StringPrintf("/hub/c/sysmgr/*/out/debug");
-  glob_t globbuf;
-  ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
-      << glob_str << " does not exist.";
-  EXPECT_EQ(globbuf.gl_pathc, 1u);
-  globfree(&globbuf);
+  files::Glob glob(glob_str);
+  EXPECT_EQ(glob.size(), 1u) << glob_str << " expected to match once.";
 }
 
 TEST(ProbeHub, Realm) {
   auto glob_str = fxl::StringPrintf("/hub/r/sys/*/c/");
-  glob_t globbuf;
-  ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
-      << glob_str << " does not exist.";
-  EXPECT_EQ(globbuf.gl_pathc, 1u);
-  globfree(&globbuf);
+  files::Glob glob(glob_str);
+  EXPECT_EQ(glob.size(), 1u) << glob_str << " expected to match once.";
 }
 
 TEST(ProbeHub, RealmSvc) {
   auto glob_str = fxl::StringPrintf("/hub/r/sys/*/svc/fuchsia.sys.Environment");
-  glob_t globbuf;
-  ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
-      << glob_str << " does not exist.";
-  EXPECT_EQ(globbuf.gl_pathc, 1u);
-  globfree(&globbuf);
+  files::Glob glob(glob_str);
+  EXPECT_EQ(glob.size(), 1u);
 }
 
 TEST_F(HubTest, ScopePolicy) {

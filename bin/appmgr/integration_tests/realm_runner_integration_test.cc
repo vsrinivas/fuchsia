@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <glob.h>
 #include <unistd.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
@@ -260,7 +259,6 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
 TEST_F(RealmRunnerTest, ProbeHub) {
   auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner/*/c/%s/*",
                                     kRealm, kComponentForRunner);
-  glob_t globbuf;
   // launch two components and make sure both show up in /hub.
   auto component1 =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
@@ -268,17 +266,14 @@ TEST_F(RealmRunnerTest, ProbeHub) {
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
   WaitForComponentCount(2);
-  ASSERT_EQ(glob(glob_str.data(), 0, nullptr, &globbuf), 0)
-      << glob_str << " does not exist.";
 
-  auto guard = fxl::MakeAutoCall([&]() { globfree(&globbuf); });
+  files::Glob glob(glob_str);
+  ASSERT_EQ(glob.size(), 2u) << glob_str << " expected 2 matches.";
 
-  ASSERT_EQ(globbuf.gl_pathc, 2u);
-
-  const std::string path1 = globbuf.gl_pathv[0];
-  const std::string path2 = globbuf.gl_pathv[1];
-  EXPECT_NE(path1, path2);
-  EXPECT_EQ(files::GetDirectoryName(path1), files::GetDirectoryName(path2));
+  std::vector<std::string> paths = {glob.begin(), glob.end()};
+  EXPECT_NE(paths[0], paths[1]);
+  EXPECT_EQ(files::GetDirectoryName(paths[0]),
+            files::GetDirectoryName(paths[1]));
 }
 
 }  // namespace

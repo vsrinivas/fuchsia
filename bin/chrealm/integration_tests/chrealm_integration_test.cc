@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <glob.h>
 #include <unistd.h>
 #include <cstdio>
 #include <string>
@@ -26,6 +25,7 @@
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/files/glob.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
@@ -53,14 +53,7 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
     const std::string kRealmGlob =
         fxl::StringPrintf("/hub/r/sys/*/r/%s/*", kRealm);
 
-    // Verify the realm doesn't exist to start with.
-    glob_t globbuf;
-    auto guard = fxl::MakeAutoCall([&]() {
-      if (globbuf.gl_pathc > 0) {
-        globfree(&globbuf);
-      }
-    });
-    ASSERT_EQ(GLOB_NOMATCH, glob(kRealmGlob.c_str(), 0, nullptr, &globbuf));
+    ASSERT_EQ(files::Glob(kRealmGlob).size(), 0u);
 
     // Create a nested realm to test with.
     auto env = CreateNewEnclosingEnvironment(kRealm);
@@ -71,10 +64,9 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
 
     // Get the path to the test realm in /hub. Test is running in the root
     // realm, so we find the realm under sys.
-    ASSERT_EQ(0, glob(kRealmGlob.c_str(), 0, nullptr, &globbuf))
-        << "glob found no matches";
-    ASSERT_EQ(1u, globbuf.gl_pathc);
-    *realm_path = globbuf.gl_pathv[0];
+    files::Glob glob(kRealmGlob);
+    ASSERT_EQ(glob.size(), 1u);
+    *realm_path = *glob.begin();
   }
 
   void KillRealm() {
