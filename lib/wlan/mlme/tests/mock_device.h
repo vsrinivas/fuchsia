@@ -96,6 +96,8 @@ struct MockDevice : public DeviceInterface {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final { return ZX_OK; }
+
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
     const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
