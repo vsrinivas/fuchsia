@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-use async::temp::Either::{Left, Right};
+use crate::host_dispatcher::HostDispatcher;
 use fidl;
 use fidl::endpoints2::RequestStream;
 use fidl_fuchsia_bluetooth_control::{PairingDelegateRequest, PairingDelegateRequestStream};
+use fuchsia_async::{self as fasync,
+                    temp::Either::{Left, Right}};
+use fuchsia_syslog::{fx_log, fx_log_warn};
 use futures::future;
 use futures::{Future, TryFutureExt, TryStreamExt};
-use host_dispatcher::HostDispatcher;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -18,7 +19,7 @@ use std::sync::Arc;
 const MAX_CONCURRENT: usize = 100;
 
 pub fn start_pairing_delegate(
-    hd: Arc<RwLock<HostDispatcher>>, channel: async::Channel,
+    hd: Arc<RwLock<HostDispatcher>>, channel: fasync::Channel,
 ) -> impl Future<Output = Result<(), fidl::Error>> {
     let stream = PairingDelegateRequestStream::from_channel(channel);
     let hd = hd.clone();

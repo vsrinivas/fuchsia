@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-use async::temp::Either::{Left, Right};
-use async::TimeoutExt;
-use bt;
-use bt::util::clone_host_info;
+use crate::host_device::{self, HostDevice};
+use crate::services;
+use crate::util;
 use failure::Error;
 use fidl;
 use fidl::encoding2::OutOfLine;
@@ -16,12 +14,18 @@ use fidl_fuchsia_bluetooth_control::{AdapterInfo, BondingControlHandle, ControlC
 use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
 use fidl_fuchsia_bluetooth_host::HostProxy;
 use fidl_fuchsia_bluetooth_le::CentralProxy;
+use fuchsia_async::{self as fasync,
+                    temp::Either::{Left, Right},
+                    TimeoutExt};
+use fuchsia_bluetooth::{self as bt, bt_fidl_status, util::clone_host_info};
+use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info, fx_log_warn};
+use fuchsia_vfs_watcher as vfs_watcher;
+use fuchsia_zircon as zx;
+use fuchsia_zircon::Duration;
 use futures::future;
 use futures::TryStreamExt;
 use futures::{task, Future, Poll, TryFutureExt};
-use host_device::{self, HostDevice};
 use parking_lot::RwLock;
-use services;
 use slab::Slab;
 use std::collections::HashMap;
 use std::fs::File;
@@ -29,10 +33,6 @@ use std::io;
 use std::marker::Unpin;
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};
-use util;
-use vfs_watcher;
-use zx;
-use zx::Duration;
 
 pub static HOST_INIT_TIMEOUT: u64 = 5; // Seconds
 
@@ -339,9 +339,9 @@ impl HostDispatcher {
                 let event = &hd.read().bonding_events;
                 future::ready(Ok(match event {
                     Some(events) => {
-                        let _res = events
-                            .send_on_delete_bond(id.as_str())
-                            .map_err(|e| error!("Failed to send device updated event: {:?}", e));
+                        let _res = events.send_on_delete_bond(id.as_str()).map_err(|e| {
+                            fx_log_err!("Failed to send device updated event: {:?}", e)
+                        });
 
                         status
                     }
@@ -481,7 +481,7 @@ fn add_adapter(
     fx_log_info!("Adding Adapter: {:?}", host_path);
     let host = File::open(host_path.clone()).unwrap();
     let handle = bt::host::open_host_channel(&host).unwrap();
-    let host = HostProxy::new(async::Channel::from_channel(handle.into()).unwrap());
+    let host = HostProxy::new(fasync::Channel::from_channel(handle.into()).unwrap());
     host.get_info()
         .and_then(move |adapter_info| {
             // Set the adapter as connectable
@@ -496,10 +496,10 @@ fn add_adapter(
         }).and_then(|(hd, host_device)| {
             // Connect the pairing delegate to the host
             let (delegate_local, delegate_remote) = zx::Channel::create().unwrap();
-            let delegate_local = async::Channel::from_channel(delegate_local).unwrap();
+            let delegate_local = fasync::Channel::from_channel(delegate_local).unwrap();
             let delegate_ptr =
                 fidl::endpoints2::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
-            async::spawn(
+            fasync::spawn(
                 services::start_pairing_delegate(hd.clone(), delegate_local)
                     .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
             );
@@ -576,11 +576,11 @@ pub fn watch_hosts(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Output = Resu
                     })))
                 }
                 vfs_watcher::WatchEvent::IDLE => {
-                    debug!("HostDispatcher is IDLE");
+                    fx_log_info!("HostDispatcher is IDLE");
                     Right(future::ready(Ok(())))
                 }
                 e => {
-                    warn!("Unrecognized host watch event: {:?}", e);
+                    fx_log_warn!("Unrecognized host watch event: {:?}", e);
                     Right(future::ready(Ok(())))
                 }
             }

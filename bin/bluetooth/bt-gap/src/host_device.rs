@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-use async::temp::Either::{Left, Right};
+use crate::host_dispatcher::HostDispatcher;
+use crate::util::clone_host_state;
 use fidl;
 use fidl::endpoints2::ClientEnd;
 use fidl_fuchsia_bluetooth;
@@ -14,16 +14,18 @@ use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
 use fidl_fuchsia_bluetooth_gatt::ClientProxy;
 use fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy};
 use fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy};
+use fuchsia_async::{self as fasync,
+                    temp::Either::{Left, Right}};
+use fuchsia_bluetooth::{bt_fidl_status, make_clones};
+use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_zircon as zx;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures::{future, Future};
-use host_dispatcher::HostDispatcher;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use util::clone_host_state;
-use zx;
 
 pub struct HostDevice {
     pub path: PathBuf,
@@ -90,7 +92,7 @@ impl HostDevice {
     pub fn connect_le_central(&mut self) -> Result<CentralProxy, fidl::Error> {
         // TODO map_err
         let (service_local, service_remote) = zx::Channel::create().unwrap();
-        let service_local = async::Channel::from_channel(service_local).unwrap();
+        let service_local = fasync::Channel::from_channel(service_local).unwrap();
         let server = fidl::endpoints2::ServerEnd::<CentralMarker>::new(service_remote);
         self.host.request_low_energy_central(server)?;
         let proxy = CentralProxy::new(service_local);
@@ -134,7 +136,7 @@ pub fn run(
                 for listener in hd.read().event_listeners.iter() {
                     let _res = listener
                         .send_on_device_updated(&mut device)
-                        .map_err(|e| error!("Failed to send device updated event: {:?}", e));
+                        .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
                 }
             }
             // TODO(NET-1038): Add integration test for this.
@@ -142,7 +144,7 @@ pub fn run(
                 for listener in hd.read().event_listeners.iter() {
                     let _res = listener
                         .send_on_device_removed(&identifier)
-                        .map_err(|e| error!("Failed to send device removed event: {:?}", e));
+                        .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
                 }
             }
             HostEvent::OnNewBondingData { mut data } => {
@@ -151,7 +153,7 @@ pub fn run(
                 if let Some(ref bond_events) = hd.read().bonding_events {
                     let _res = bond_events
                         .send_on_new_bonding_data(id.as_str(), &mut data)
-                        .map_err(|e| error!("Failed to send device bonded event: {:?}", e));
+                        .map_err(|e| fx_log_err!("Failed to send device bonded event: {:?}", e));
                 }
             }
         };

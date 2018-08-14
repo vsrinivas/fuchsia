@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-use async::temp::Either::{Left, Right};
+use crate::host_dispatcher::*;
 use failure::Error;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream};
+use fuchsia_async::{self as fasync,
+                    temp::Either::{Left, Right},
+                    unsafe_many_futures};
+use fuchsia_bluetooth::bt_fidl_status;
 use futures::prelude::*;
 use futures::{future, Future, FutureExt};
-use host_dispatcher::*;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -24,7 +26,7 @@ struct ControlServiceState {
 /// Build the ControlImpl to interact with fidl messages
 /// State is stored in the HostDispatcher object
 pub fn start_control_service(
-    hd: Arc<RwLock<HostDispatcher>>, chan: async::Channel,
+    hd: Arc<RwLock<HostDispatcher>>, chan: fasync::Channel,
 ) -> impl Future<Output = Result<(), Error>> {
     let state = Arc::new(RwLock::new(ControlServiceState {
         host: hd,
