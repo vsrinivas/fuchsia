@@ -29,7 +29,7 @@
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Compositor;
@@ -207,6 +207,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_

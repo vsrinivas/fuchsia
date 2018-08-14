@@ -11,7 +11,7 @@
 
 #include "garnet/lib/ui/gfx/resources/import.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Stores a list of imports that have not yet been bound to an export handle.
@@ -65,6 +65,6 @@ class UnresolvedImports {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_UNRESOLVED_IMPORTS_H_

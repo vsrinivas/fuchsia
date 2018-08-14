@@ -10,15 +10,15 @@
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
-namespace scenic {
+namespace scenic_impl {
 class EventReporter;
 class ErrorReporter;
-}  // namespace scenic
+}  // namespace scenic_impl
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
-using SessionId = ::scenic::SessionId;
+using SessionId = ::scenic_impl::SessionId;
 
 class SessionHandler;
 class Session;
@@ -77,6 +77,6 @@ class SessionManager {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_SESSION_MANAGER_H_

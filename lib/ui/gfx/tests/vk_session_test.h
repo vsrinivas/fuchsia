@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -22,6 +22,6 @@ class VkSessionTest : public SessionTest {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_VK_SESSION_TEST_H_

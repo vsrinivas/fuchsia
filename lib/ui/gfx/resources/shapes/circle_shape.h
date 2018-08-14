@@ -7,14 +7,14 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class CircleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  CircleShape(Session* session, scenic::ResourceId id, float initial_radius);
+  CircleShape(Session* session, ResourceId id, float initial_radius);
 
   float radius() const { return radius_; }
 
@@ -34,6 +34,6 @@ class CircleShape final : public PlanarShape {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_CIRCLE_SHAPE_H_

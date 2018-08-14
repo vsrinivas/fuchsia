@@ -6,13 +6,13 @@
 
 #include <utility>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo ShapeNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kShapeNode, "ShapeNode"};
 
-ShapeNode::ShapeNode(Session* session, scenic::ResourceId node_id)
+ShapeNode::ShapeNode(Session* session, ResourceId node_id)
     : Node(session, node_id, ShapeNode::kTypeInfo) {}
 
 void ShapeNode::SetMaterial(MaterialPtr material) {
@@ -27,4 +27,4 @@ bool ShapeNode::GetIntersection(const escher::ray4& ray,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

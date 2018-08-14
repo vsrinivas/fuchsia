@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 namespace {
@@ -298,4 +298,4 @@ TEST_F(HitTestTest, Clipping) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

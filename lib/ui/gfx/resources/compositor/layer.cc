@@ -11,12 +11,12 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Layer::kTypeInfo = {ResourceType::kLayer, "Layer"};
 
-Layer::Layer(Session* session, scenic::ResourceId id)
+Layer::Layer(Session* session, ResourceId id)
     : Resource(session, id, Layer::kTypeInfo), translation_(0) {}
 
 Layer::~Layer() = default;
@@ -116,4 +116,4 @@ escher::ViewingVolume Layer::GetViewingVolume() const {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

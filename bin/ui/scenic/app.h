@@ -11,7 +11,7 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 class App {
  public:
@@ -23,6 +23,6 @@ class App {
   fidl::BindingSet<Scenic> bindings_;
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_BIN_UI_SCENIC_APP_H_

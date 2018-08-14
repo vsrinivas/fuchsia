@@ -10,14 +10,14 @@
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class ShapeNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ShapeNode(Session* session, scenic::ResourceId node_id);
+  ShapeNode(Session* session, ResourceId node_id);
 
   void SetMaterial(MaterialPtr material);
   void SetShape(ShapePtr shape);
@@ -36,6 +36,6 @@ class ShapeNode final : public Node {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_SHAPE_NODE_H_

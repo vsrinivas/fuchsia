@@ -13,7 +13,7 @@
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 FrameScheduler::FrameScheduler(Display* display)
@@ -275,4 +275,4 @@ bool FrameScheduler::TooMuchBackPressure() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

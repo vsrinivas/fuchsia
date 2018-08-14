@@ -7,13 +7,13 @@
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Scene::kTypeInfo = {
     ResourceType::kNode | ResourceType::kScene, "Scene"};
 
-Scene::Scene(Session* session, scenic::ResourceId node_id)
+Scene::Scene(Session* session, ResourceId node_id)
     : Node(session, node_id, Scene::kTypeInfo) {}
 
 Scene::~Scene() = default;
@@ -41,4 +41,4 @@ bool Scene::Detach() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

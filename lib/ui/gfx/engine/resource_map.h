@@ -11,7 +11,7 @@
 
 #include <unordered_map>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class ResourceMap {
@@ -24,11 +24,11 @@ class ResourceMap {
 
   // Attempt to add the resource; return true if successful.  Return false if
   // the ID is already present in the map, which is left unchanged.
-  bool AddResource(scenic::ResourceId id, ResourcePtr resource);
+  bool AddResource(ResourceId id, ResourcePtr resource);
 
   // Attempt to remove the specified resource.  Return true if successful, and
   // false if the ID was not present in the map.
-  bool RemoveResource(scenic::ResourceId id);
+  bool RemoveResource(ResourceId id);
 
   size_t size() const { return resources_.size(); }
 
@@ -42,7 +42,7 @@ class ResourceMap {
   // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
   fxl::RefPtr<ResourceT> FindResource(
-      scenic::ResourceId id,
+      ResourceId id,
       ErrorBehavior report_errors = ErrorBehavior::kReportErrors) {
     auto it = resources_.find(id);
 
@@ -68,7 +68,7 @@ class ResourceMap {
   }
 
   template <class ResourceT>
-  fxl::RefPtr<ResourceT> FindVariableResource(scenic::ResourceId id) {
+  fxl::RefPtr<ResourceT> FindVariableResource(ResourceId id) {
     auto it = resources_.find(id);
 
     if (it == resources_.end()) {
@@ -99,11 +99,11 @@ class ResourceMap {
   }
 
  private:
-  std::unordered_map<scenic::ResourceId, ResourcePtr> resources_;
+  std::unordered_map<ResourceId, ResourcePtr> resources_;
   ErrorReporter* const error_reporter_;
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_RESOURCE_MAP_H_

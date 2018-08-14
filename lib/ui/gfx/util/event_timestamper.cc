@@ -6,7 +6,7 @@
 
 #include <lib/async/default.h>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 EventTimestamper::EventTimestamper()
@@ -132,4 +132,4 @@ void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

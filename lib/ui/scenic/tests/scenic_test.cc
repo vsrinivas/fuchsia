@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace test {
 
 std::unique_ptr<component::StartupContext> ScenicTest::app_context_;
@@ -70,4 +70,4 @@ void ScenicTest::EnqueueEvent(fuchsia::ui::scenic::Command event) {
 }
 
 }  // namespace test
-}  // namespace scenic
+}  // namespace scenic_impl

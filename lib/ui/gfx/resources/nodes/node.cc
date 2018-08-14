@@ -14,7 +14,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 namespace {
@@ -35,7 +35,7 @@ constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode;
 
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 
-Node::Node(Session* session, scenic::ResourceId node_id,
+Node::Node(Session* session, ResourceId node_id,
            const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
@@ -424,4 +424,4 @@ View* Node::FindOwningView() const {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

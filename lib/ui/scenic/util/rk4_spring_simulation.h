@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_UTIL_RK4_SPRING_SIMULATION_H_
 #define GARNET_LIB_UI_SCENIC_UTIL_RK4_SPRING_SIMULATION_H_
 
-namespace scenic {
+namespace scenic_impl {
 
 class RK4SpringSimulation {
  public:
@@ -76,6 +76,6 @@ class RK4SpringSimulation {
   float spring_value_;
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_UTIL_RK4_SPRING_SIMULATION_H_

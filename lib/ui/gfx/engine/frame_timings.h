@@ -10,7 +10,7 @@
 
 #include "lib/escher/base/reffable.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class FrameTimings;
@@ -86,6 +86,6 @@ class FrameTimings : public escher::Reffable {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_FRAME_TIMINGS_H_

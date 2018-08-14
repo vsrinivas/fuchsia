@@ -4,14 +4,14 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo EntityNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kEntityNode, "EntityNode"};
 
-EntityNode::EntityNode(Session* session, scenic::ResourceId node_id)
+EntityNode::EntityNode(Session* session, ResourceId node_id)
     : Node(session, node_id, EntityNode::kTypeInfo) {}
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

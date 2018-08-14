@@ -4,10 +4,10 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
-PlanarShape::PlanarShape(Session* session, scenic::ResourceId id,
+PlanarShape::PlanarShape(Session* session, ResourceId id,
                          const ResourceTypeInfo& type_info)
     : Shape(session, id, type_info) {}
 
@@ -38,4 +38,4 @@ bool PlanarShape::GetIntersection(const escher::ray4& ray,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

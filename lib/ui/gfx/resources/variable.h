@@ -13,7 +13,7 @@
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/geometry/types.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Variable;
@@ -30,7 +30,7 @@ class OnVariableValueChangedListener {
 
 class Variable : public Resource {
  public:
-  Variable(Session* session, scenic::ResourceId id);
+  Variable(Session* session, ResourceId id);
   virtual ~Variable();
 
   static const ResourceTypeInfo kTypeInfo;
@@ -43,7 +43,7 @@ class Variable : public Resource {
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 class TypedVariable : public Variable {
  public:
-  TypedVariable(Session* session, scenic::ResourceId id);
+  TypedVariable(Session* session, ResourceId id);
 
   static constexpr ::fuchsia::ui::gfx::Value::Tag ValueType() { return VT; }
   ::fuchsia::ui::gfx::Value::Tag value_type() override { return VT; }
@@ -95,6 +95,6 @@ using QuaternionVariablePtr = fxl::RefPtr<QuaternionVariable>;
 // using TransformVariablePtr = fxl::RefPtr<TransformVariable>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_VARIABLE_H_

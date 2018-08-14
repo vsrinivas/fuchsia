@@ -9,7 +9,7 @@
 #include "garnet/lib/ui/gfx/id.h"
 #include "lib/escher/geometry/types.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Describes where a hit occurred within the content of a tagged node.
@@ -37,6 +37,6 @@ struct Hit {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_HIT_H_

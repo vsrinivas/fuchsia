@@ -19,7 +19,7 @@
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class ImagePipe;
@@ -29,8 +29,8 @@ class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, scenic::ResourceId id);
-  ImagePipe(Session* session, scenic::ResourceId id,
+  ImagePipe(Session* session, ResourceId id);
+  ImagePipe(Session* session, ResourceId id,
             ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
@@ -80,7 +80,7 @@ class ImagePipe : public ImageBase {
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
   struct Frame {
-    scenic::ResourceId image_id;
+    ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
     ::fidl::VectorPtr<zx::event> release_fences;
@@ -92,7 +92,7 @@ class ImagePipe : public ImageBase {
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
 
-  scenic::ResourceId current_image_id_ = 0;
+  ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
   ::fidl::VectorPtr<zx::event> current_release_fences_;
 
@@ -103,6 +103,6 @@ class ImagePipe : public ImageBase {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_H_

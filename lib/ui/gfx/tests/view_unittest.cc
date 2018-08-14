@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -29,16 +29,16 @@ TEST_F(ViewTest, Children) {
   zx::eventpair view_holder_token, view_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
-  const scenic::ResourceId view_id = 1;
+  const ResourceId view_id = 1;
   EXPECT_TRUE(
       Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
-  const scenic::ResourceId node1_id = 2;
+  const ResourceId node1_id = 2;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node1_id)));
   EXPECT_ERROR_COUNT(0);
 
-  const scenic::ResourceId node2_id = 3;
+  const ResourceId node2_id = 3;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node2_id)));
   EXPECT_ERROR_COUNT(0);
 
@@ -78,7 +78,7 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
   zx::eventpair view_holder_token, view_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
-  const scenic::ResourceId view_holder_id = 1;
+  const ResourceId view_holder_id = 1;
   EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Test")));
   EXPECT_ERROR_COUNT(0);
@@ -97,7 +97,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
   zx::eventpair view_holder_token, view_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
-  const scenic::ResourceId view_id = 1;
+  const ResourceId view_id = 1;
   EXPECT_TRUE(
       Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
@@ -116,7 +116,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   zx::eventpair view_holder_token, view_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
-  const scenic::ResourceId view_holder_id = 1u;
+  const ResourceId view_holder_id = 1u;
   EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]")));
   EXPECT_ERROR_COUNT(0);
@@ -130,7 +130,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_EQ(0u, engine_->view_linker()->ImportCount());
   EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
 
-  const scenic::ResourceId view_id = 2u;
+  const ResourceId view_id = 2u;
   EXPECT_TRUE(
       Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
@@ -155,7 +155,7 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
     // view_holder_token dies now.
   }
 
-  const scenic::ResourceId view_holder_id = 1;
+  const ResourceId view_holder_id = 1;
   EXPECT_FALSE(Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token_out), "Test")));
   EXPECT_ERROR_COUNT(1);  // Dead handles cause a session error.
@@ -171,4 +171,4 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

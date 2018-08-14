@@ -6,13 +6,13 @@
 
 #include <utility>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo OpacityNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kOpacityNode, "OpacityNode"};
 
-OpacityNode::OpacityNode(Session* session, scenic::ResourceId node_id)
+OpacityNode::OpacityNode(Session* session, ResourceId node_id)
     : Node(session, node_id, OpacityNode::kTypeInfo) {
   FXL_LOG(WARNING) << "Opacity support is limited. Z sorting and shadows may "
                       "not behave correctly.";
@@ -24,4 +24,4 @@ void OpacityNode::SetOpacity(float opacity) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

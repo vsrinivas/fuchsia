@@ -9,7 +9,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace {
 
 // Define a "no-op" event reporter so that we may always assume
@@ -57,4 +57,4 @@ void EventReporter::EnqueueEvent(fuchsia::ui::scenic::Event event) {
 
 EventReporter* EventReporter::Default() { return GetIdleEventReporter(); }
 
-}  // namespace scenic
+}  // namespace scenic_impl

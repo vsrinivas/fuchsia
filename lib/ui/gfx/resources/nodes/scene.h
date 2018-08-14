@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "lib/fxl/macros.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class AmbientLight;
@@ -24,7 +24,7 @@ class Scene final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Scene(Session* session, scenic::ResourceId node_id);
+  Scene(Session* session, ResourceId node_id);
   ~Scene() override;
 
   bool AddLight(const LightPtr& light);
@@ -51,6 +51,6 @@ class Scene final : public Node {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_SCENE_H_

@@ -4,16 +4,16 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Shape::kTypeInfo = {ResourceType::kShape, "Shape"};
 
-Shape::Shape(Session* session, scenic::ResourceId id,
+Shape::Shape(Session* session, ResourceId id,
              const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

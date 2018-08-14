@@ -11,19 +11,19 @@
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "lib/escher/flib/fence.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo ImagePipe::kTypeInfo = {
     ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
 
-ImagePipe::ImagePipe(Session* session, scenic::ResourceId id)
+ImagePipe::ImagePipe(Session* session, ResourceId id)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       images_(session->error_reporter()) {}
 
 ImagePipe::ImagePipe(
-    Session* session, scenic::ResourceId id,
+    Session* session, ResourceId id,
     ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
@@ -107,7 +107,7 @@ void ImagePipe::PresentImage(
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
     session()->error_reporter()->ERROR()
-        << "scenic::gfx::ImagePipe: Present called with out-of-order "
+        << "ImagePipe: Present called with out-of-order "
            "presentation time."
         << "presentation_time=" << presentation_time
         << ", last scheduled presentation time="
@@ -148,7 +148,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
                  presentation_interval);
 
   bool present_next_image = false;
-  scenic::ResourceId next_image_id = current_image_id_;
+  ResourceId next_image_id = current_image_id_;
   ::fidl::VectorPtr<zx::event> next_release_fences;
 
   while (!frames_.empty() &&
@@ -220,4 +220,4 @@ const escher::ImagePtr& ImagePipe::GetEscherImage() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

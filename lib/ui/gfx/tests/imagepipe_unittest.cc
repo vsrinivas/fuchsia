@@ -12,7 +12,7 @@
 #include "lib/escher/util/image_utils.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -138,7 +138,7 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
                            std::move(callback));
 
   ExpectLastReportedError(
-      "scenic::gfx::ImagePipe: Present called with out-of-order presentation "
+      "ImagePipe: Present called with out-of-order presentation "
       "time.presentation_time=0, last scheduled presentation time=1");
 }
 
@@ -269,4 +269,4 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

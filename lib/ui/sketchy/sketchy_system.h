@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/scenic/system.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 // TODO(MZ-552): document.
 class SketchySystem : public System {
@@ -39,6 +39,6 @@ class SketchyCommandDispatcher : public CommandDispatcher {
   gfx::GfxSystem* const gfx_system_;
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SKETCHY_SKETCHY_SYSTEM_H_

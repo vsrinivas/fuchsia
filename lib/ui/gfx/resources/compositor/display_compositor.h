@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Display;
@@ -18,7 +18,7 @@ class DisplayCompositor : public Compositor {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  DisplayCompositor(Session* session, scenic::ResourceId id, Display* display,
+  DisplayCompositor(Session* session, ResourceId id, Display* display,
                     std::unique_ptr<Swapchain> swapchain);
 
   ~DisplayCompositor() override;
@@ -33,6 +33,6 @@ class DisplayCompositor : public Compositor {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_DISPLAY_COMPOSITOR_H_

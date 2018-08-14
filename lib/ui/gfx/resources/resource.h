@@ -12,11 +12,11 @@
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "lib/fxl/memory/ref_counted.h"
 
-namespace scenic {
+namespace scenic_impl {
 class ErrorReporter;
 }
 
-namespace scenic {
+namespace scenic_impl {
 using ResourceId = uint32_t;
 
 namespace gfx {
@@ -41,7 +41,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
 
   // The session this Resource lives in and the id it was created with there.
   Session* session() const { return session_; }
-  scenic::ResourceId id() const { return id_; }
+  ResourceId id() const { return id_; }
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.
@@ -97,7 +97,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   virtual bool Detach();
 
  protected:
-  Resource(Session* session, scenic::ResourceId id,
+  Resource(Session* session, ResourceId id,
            const ResourceTypeInfo& type_info);
 
   friend class ResourceLinker;
@@ -116,7 +116,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
 
  private:
   Session* const session_;
-  const scenic::ResourceId id_;
+  const ResourceId id_;
   const ResourceTypeInfo& type_info_;
   std::string label_;
   uint32_t event_mask_ = 0u;
@@ -129,6 +129,6 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
 using ResourcePtr = fxl::RefPtr<Resource>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_H_

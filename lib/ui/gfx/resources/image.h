@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/vk/image.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Image;
@@ -32,7 +32,7 @@ class Image : public ImageBase {
   // caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static ImagePtr New(Session* session, scenic::ResourceId id, MemoryPtr memory,
+  static ImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
                       const fuchsia::images::ImageInfo& image_info,
                       uint64_t memory_offset, ErrorReporter* error_reporter);
 
@@ -43,14 +43,13 @@ class Image : public ImageBase {
   const escher::ImagePtr& GetEscherImage() override { return image_; }
 
  protected:
-  Image(Session* session, scenic::ResourceId id,
-        const ResourceTypeInfo& type_info);
+  Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 
   // GPU memory-backed image.
   escher::ImagePtr image_;
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_H_

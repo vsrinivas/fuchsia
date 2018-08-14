@@ -7,7 +7,7 @@
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
@@ -15,7 +15,7 @@ const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
     "RoundedRectangleShape"};
 
 RoundedRectangleShape::RoundedRectangleShape(
-    Session* session, scenic::ResourceId id,
+    Session* session, ResourceId id,
     const escher::RoundedRectSpec& spec, escher::MeshPtr mesh)
     : PlanarShape(session, id, RoundedRectangleShape::kTypeInfo),
       spec_(spec),
@@ -31,4 +31,4 @@ escher::Object RoundedRectangleShape::GenerateRenderObject(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

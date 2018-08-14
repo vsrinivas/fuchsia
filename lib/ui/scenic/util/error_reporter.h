@@ -10,7 +10,7 @@
 #include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 // Flexible error reporting with an ostream-like interface.  Subclasses must
 // implement ReportError().
@@ -58,6 +58,6 @@ class ErrorReporter {
                            std::string error_string) = 0;
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_UTIL_ERROR_REPORTER_H_

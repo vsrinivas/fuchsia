@@ -20,7 +20,7 @@
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // static
@@ -115,4 +115,4 @@ void Screenshotter::TakeScreenshot(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

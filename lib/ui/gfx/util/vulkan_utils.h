@@ -7,12 +7,12 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 vk::SurfaceKHR CreateVulkanMagmaSurface(const vk::Instance& instance);
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_VULKAN_UTILS_H_

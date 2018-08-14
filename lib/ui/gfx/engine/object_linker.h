@@ -17,7 +17,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Allows linking of peer objects in different sessions via eventpairs.  Two
@@ -280,6 +280,6 @@ ObjectLinker<Export, Import>::CreateImport(zx::eventpair token,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_OBJECT_LINKER_H_

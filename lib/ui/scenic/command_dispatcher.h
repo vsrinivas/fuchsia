@@ -11,7 +11,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 // Provides the capabilities that a CommandDispatcher needs to do its job,
 // without directly exposing the Session.
@@ -69,6 +69,6 @@ class TempSessionDelegate : public CommandDispatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_

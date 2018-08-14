@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 //
@@ -106,6 +106,6 @@ bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_TRAVERSAL_H_

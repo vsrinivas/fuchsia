@@ -15,7 +15,7 @@
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 namespace {
@@ -312,4 +312,4 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

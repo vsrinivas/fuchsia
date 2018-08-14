@@ -7,14 +7,14 @@
 
 #include "garnet/lib/ui/gfx/resources/camera.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class StereoCamera final : public Camera {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  StereoCamera(Session* session, scenic::ResourceId id, ScenePtr scene);
+  StereoCamera(Session* session, ResourceId id, ScenePtr scene);
 
   void SetStereoProjection(const glm::mat4 left_projection,
                            const glm::mat4 right_projection);
@@ -36,6 +36,6 @@ class StereoCamera final : public Camera {
 using StereoCameraPtr = fxl::RefPtr<StereoCamera>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_STEREO_CAMERA_H_

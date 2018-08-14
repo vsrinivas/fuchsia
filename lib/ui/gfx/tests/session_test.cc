@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -46,4 +46,4 @@ void SessionTest::EnqueueEvent(fuchsia::ui::scenic::Command unhandled) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

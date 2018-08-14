@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // All subclasses of Resource are represented here.
@@ -88,6 +88,6 @@ struct ResourceTypeInfo {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_TYPE_INFO_H_

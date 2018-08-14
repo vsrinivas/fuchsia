@@ -7,14 +7,14 @@
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     ResourceType::kCompositor | ResourceType::kDisplayCompositor,
     "DisplayCompositor"};
 
-DisplayCompositor::DisplayCompositor(Session* session, scenic::ResourceId id,
+DisplayCompositor::DisplayCompositor(Session* session, ResourceId id,
                                      Display* display,
                                      std::unique_ptr<Swapchain> swapchain)
     : Compositor(session, id, DisplayCompositor::kTypeInfo,
@@ -26,4 +26,4 @@ DisplayCompositor::DisplayCompositor(Session* session, scenic::ResourceId id,
 DisplayCompositor::~DisplayCompositor() = default;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

@@ -12,7 +12,7 @@
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_swapchain.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Display;
@@ -53,6 +53,6 @@ class VulkanDisplaySwapchain : public Swapchain {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_VULKAN_DISPLAY_SWAPCHAIN_H_

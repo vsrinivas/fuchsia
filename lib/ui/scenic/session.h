@@ -20,7 +20,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 class CommandDispatcher;
 class Scenic;
@@ -118,6 +118,6 @@ class Session final : public fuchsia::ui::scenic::Session,
   FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_SESSION_H_

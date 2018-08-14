@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace scenic {
+namespace scenic_impl {
 
 class Clock;
 class CommandDispatcher;
@@ -16,6 +16,6 @@ class Session;
 
 using SessionId = uint64_t;
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_FORWARD_DECLARATIONS_H_

@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace scenic {
+namespace scenic_impl {
 RK4SpringSimulation::RK4SpringSimulation(float initial_value, float tension,
                                          float friction)
     : tension_(tension),
@@ -102,4 +102,4 @@ bool RK4SpringSimulation::EvaluateRK(float step_size) {
   return net_value_is_low && net_velocity_is_low;
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl

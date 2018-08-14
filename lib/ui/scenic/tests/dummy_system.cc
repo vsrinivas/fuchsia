@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/tests/dummy_system.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace test {
 
 DummySystem::DummySystem(SystemContext context,
@@ -26,4 +26,4 @@ void DummyCommandDispatcher::DispatchCommand(
     fuchsia::ui::scenic::Command command) {}
 
 }  // namespace test
-}  // namespace scenic
+}  // namespace scenic_impl

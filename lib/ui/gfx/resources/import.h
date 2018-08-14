@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Import;
@@ -40,8 +40,7 @@ class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Import(Session* session, scenic::ResourceId id,
-         ::fuchsia::ui::gfx::ImportSpec spec);
+  Import(Session* session, ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec);
 
   ~Import() override;
 
@@ -96,6 +95,6 @@ class Import final : public Resource {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_

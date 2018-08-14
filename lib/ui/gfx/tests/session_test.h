@@ -16,7 +16,7 @@
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -41,7 +41,7 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   }
 
   template <class ResourceT>
-  fxl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
+  fxl::RefPtr<ResourceT> FindResource(ResourceId id) {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
@@ -53,6 +53,6 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_SESSION_TEST_H_

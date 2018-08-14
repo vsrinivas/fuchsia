@@ -11,7 +11,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 inline escher::vec2 Unwrap(::fuchsia::ui::gfx::vec2 args) {
@@ -199,6 +199,6 @@ inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_

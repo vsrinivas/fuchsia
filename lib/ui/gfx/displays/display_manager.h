@@ -18,7 +18,7 @@
 #include <zircon/pixelformat.h>
 #include <zx/event.h>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Provides support for enumerating available displays.
@@ -99,6 +99,6 @@ class DisplayManager {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_MANAGER_H_

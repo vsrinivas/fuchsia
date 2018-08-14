@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/input/view_id.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace input {
 
 ViewId::operator bool() {
@@ -44,4 +44,4 @@ std::ostream& operator<<(std::ostream& os, const ViewStack& value) {
 }
 
 }  // namespace input
-}  // namespace scenic
+}  // namespace scenic_impl

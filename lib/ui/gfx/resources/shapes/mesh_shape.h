@@ -11,7 +11,7 @@
 
 #include "lib/escher/shape/mesh.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Encapsulates an Escher mesh.  The Scenic API allows clients to dynamically
@@ -20,7 +20,7 @@ class MeshShape final : public Shape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  MeshShape(Session* session, scenic::ResourceId id);
+  MeshShape(Session* session, ResourceId id);
 
   // These correspond to BindMeshBuffersCmd in commands.fidl.
   bool BindBuffers(BufferPtr index_buffer,
@@ -55,6 +55,6 @@ class MeshShape final : public Shape {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_

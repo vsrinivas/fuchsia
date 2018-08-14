@@ -14,7 +14,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/scene/viewing_volume.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Layer;
@@ -31,7 +31,7 @@ class Layer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Layer(Session* session, scenic::ResourceId id);
+  Layer(Session* session, ResourceId id);
 
   ~Layer() override;
 
@@ -87,6 +87,6 @@ class Layer : public Resource {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_LAYER_H_

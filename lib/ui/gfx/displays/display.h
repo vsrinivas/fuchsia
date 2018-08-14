@@ -11,7 +11,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/zx/event.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Display is a placeholder that provides make-believe values for screen
@@ -59,6 +59,6 @@ class Display {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_H_

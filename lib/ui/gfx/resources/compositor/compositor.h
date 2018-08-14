@@ -30,7 +30,7 @@ class PoseBufferLatchingShader;
 }
 }  // namespace escher
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Compositor;
@@ -51,7 +51,7 @@ class Compositor : public Resource {
 
   // TODO(SCN-452): there is currently no way to create/attach a display, so
   // this compositor will never render anything.
-  static CompositorPtr New(Session* session, scenic::ResourceId id);
+  static CompositorPtr New(Session* session, ResourceId id);
 
   ~Compositor() override;
 
@@ -91,7 +91,7 @@ class Compositor : public Resource {
 
   escher::Escher* escher() const { return escher_.get(); }
 
-  Compositor(Session* session, scenic::ResourceId id,
+  Compositor(Session* session, ResourceId id,
              const ResourceTypeInfo& type_info,
              std::unique_ptr<Swapchain> swapchain);
 
@@ -122,6 +122,6 @@ class Compositor : public Resource {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_

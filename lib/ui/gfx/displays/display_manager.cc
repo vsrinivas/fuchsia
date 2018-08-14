@@ -14,7 +14,7 @@
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 DisplayManager::DisplayManager() = default;
@@ -241,4 +241,4 @@ bool DisplayManager::EnableVsync(VsyncCallback vsync_cb) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

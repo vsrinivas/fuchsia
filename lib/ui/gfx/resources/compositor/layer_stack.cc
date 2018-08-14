@@ -7,13 +7,13 @@
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo LayerStack::kTypeInfo = {ResourceType::kLayerStack,
                                                 "LayerStack"};
 
-LayerStack::LayerStack(Session* session, scenic::ResourceId id)
+LayerStack::LayerStack(Session* session, ResourceId id)
     : Resource(session, id, LayerStack::kTypeInfo) {}
 
 LayerStack::~LayerStack() = default;
@@ -71,4 +71,4 @@ void LayerStack::RemoveLayer(Layer* layer) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

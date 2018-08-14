@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 ResourceMap::ResourceMap(ErrorReporter* error_reporter)
@@ -14,7 +14,7 @@ ResourceMap::~ResourceMap() {}
 
 void ResourceMap::Clear() { resources_.clear(); }
 
-bool ResourceMap::AddResource(scenic::ResourceId id, ResourcePtr resource) {
+bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
   FXL_DCHECK(resource);
 
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
@@ -27,7 +27,7 @@ bool ResourceMap::AddResource(scenic::ResourceId id, ResourcePtr resource) {
   return true;
 }
 
-bool ResourceMap::RemoveResource(scenic::ResourceId id) {
+bool ResourceMap::RemoveResource(ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
     error_reporter_->ERROR()
@@ -39,4 +39,4 @@ bool ResourceMap::RemoveResource(scenic::ResourceId id) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

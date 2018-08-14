@@ -6,13 +6,13 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo DirectionalLight::kTypeInfo = {
     ResourceType::kLight | ResourceType::kDirectionalLight, "DirectionalLight"};
 
-DirectionalLight::DirectionalLight(Session* session, scenic::ResourceId id)
+DirectionalLight::DirectionalLight(Session* session, ResourceId id)
     : Light(session, id, DirectionalLight::kTypeInfo) {}
 
 bool DirectionalLight::SetDirection(const glm::vec3& direction) {
@@ -28,4 +28,4 @@ bool DirectionalLight::SetDirection(const glm::vec3& direction) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

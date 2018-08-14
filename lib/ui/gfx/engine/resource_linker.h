@@ -17,7 +17,7 @@
 #include "garnet/lib/ui/gfx/engine/unresolved_imports.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 /// Allows linking of resources in different sessions.
@@ -138,6 +138,6 @@ class ResourceLinker {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_RESOURCE_LINKER_H_

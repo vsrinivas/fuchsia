@@ -6,12 +6,12 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Buffer::kTypeInfo = {ResourceType::kBuffer, "Buffer"};
 
-Buffer::Buffer(Session* session, scenic::ResourceId id, GpuMemoryPtr memory,
+Buffer::Buffer(Session* session, ResourceId id, GpuMemoryPtr memory,
                uint32_t size, uint32_t offset)
     : Resource(session, id, Buffer::kTypeInfo),
       memory_(std::move(memory)),
@@ -26,4 +26,4 @@ Buffer::Buffer(Session* session, scenic::ResourceId id, GpuMemoryPtr memory,
           size, offset)) {}
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

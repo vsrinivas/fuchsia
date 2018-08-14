@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Base class for Resource objects that wrap memory. Subclassed by GpuMemory
@@ -21,13 +21,13 @@ class Memory : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
  protected:
-  Memory(Session* session, scenic::ResourceId id,
+  Memory(Session* session, ResourceId id,
          const ResourceTypeInfo& type_info);
 };
 
 using MemoryPtr = fxl::RefPtr<Memory>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_MEMORY_H_

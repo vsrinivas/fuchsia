@@ -13,7 +13,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -47,6 +47,6 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_UTIL_H_

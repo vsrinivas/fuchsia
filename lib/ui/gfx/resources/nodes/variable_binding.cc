@@ -6,7 +6,7 @@
 
 #include <lib/fit/function.h>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
@@ -36,4 +36,4 @@ template class TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kQuaternion,
                                     escher::quat>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

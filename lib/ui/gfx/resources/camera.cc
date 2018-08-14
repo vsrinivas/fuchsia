@@ -6,15 +6,15 @@
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 
-Camera::Camera(Session* session, scenic::ResourceId id, ScenePtr scene)
+Camera::Camera(Session* session, ResourceId id, ScenePtr scene)
     : Resource(session, id, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
-Camera::Camera(Session* session, scenic::ResourceId id, ScenePtr scene,
+Camera::Camera(Session* session, ResourceId id, ScenePtr scene,
                const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info), scene_(std::move(scene)) {}
 
@@ -87,4 +87,4 @@ std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

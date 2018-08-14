@@ -41,7 +41,7 @@ class ImageGridView : public mozart::BaseView {
   uint64_t last_update_time_ = 0u;
   float x_offset_ = 0.f;
   float max_scroll_offset_ = 0.f;
-  scenic::RK4SpringSimulation spring_;
+  scenic_impl::RK4SpringSimulation spring_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImageGridView);
 };

@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 namespace {
 
@@ -53,4 +53,4 @@ ErrorReporter* ErrorReporter::Default() {
   return &reporter;
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl

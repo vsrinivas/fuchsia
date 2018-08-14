@@ -10,7 +10,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 SessionHitTester::SessionHitTester(Session* session) : session_(session) {
@@ -143,4 +143,4 @@ bool HitTester::IsRayWithinClippedContentInner(Node* node,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

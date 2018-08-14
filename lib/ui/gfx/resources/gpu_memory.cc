@@ -8,21 +8,20 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo GpuMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kGpuMemory, "GpuMemory"};
 
-GpuMemory::GpuMemory(Session* session, scenic::ResourceId id, vk::Device device,
+GpuMemory::GpuMemory(Session* session, ResourceId id, vk::Device device,
                      vk::DeviceMemory mem, vk::DeviceSize size,
                      uint32_t memory_type_index)
     : Memory(session, id, GpuMemory::kTypeInfo),
       escher_gpu_mem_(
           escher::GpuMem::New(device, mem, size, memory_type_index)) {}
 
-GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
-                            vk::Device device,
+GpuMemoryPtr GpuMemory::New(Session* session, ResourceId id, vk::Device device,
                             ::fuchsia::ui::gfx::MemoryArgs args,
                             ErrorReporter* error_reporter) {
   if (args.memory_type != fuchsia::images::MemoryType::VK_DEVICE_MEMORY) {
@@ -34,13 +33,12 @@ GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
   return New(session, id, device, std::move(args.vmo), error_reporter);
 }
 
-GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
-                            vk::Device device, zx::vmo vmo,
-                            ErrorReporter* error_reporter) {
+GpuMemoryPtr GpuMemory::New(Session* session, ResourceId id, vk::Device device,
+                            zx::vmo vmo, ErrorReporter* error_reporter) {
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 
   if (!device) {
-    error_reporter->ERROR() << "scenic::gfx::Session::CreateMemory(): "
+    error_reporter->ERROR() << "scenic_impl::gfx::Session::CreateMemory(): "
                                "Getting VkDevice failed.";
     return nullptr;
   }
@@ -61,7 +59,7 @@ GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
   vk::Result err =
       device.allocateMemory(&memory_allocate_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
-    error_reporter->ERROR() << "scenic::gfx::Session::CreateMemory(): "
+    error_reporter->ERROR() << "scenic_impl::gfx::Session::CreateMemory(): "
                                "VkAllocateMemory failed.";
     return nullptr;
   }
@@ -76,4 +74,4 @@ GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

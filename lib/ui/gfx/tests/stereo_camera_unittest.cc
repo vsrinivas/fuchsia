@@ -15,16 +15,16 @@
 #include "lib/escher/util/epsilon_compare.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
 using StereoCameraTest = SessionTest;
 
 TEST_F(StereoCameraTest, Basic) {
-  const scenic::ResourceId invalid_id = 0;
-  const scenic::ResourceId scene_id = 1;
-  const scenic::ResourceId camera_id = 2;
+  const ResourceId invalid_id = 0;
+  const ResourceId scene_id = 1;
+  const ResourceId camera_id = 2;
   ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(scene_id)));
   EXPECT_TRUE(Apply(scenic::NewCreateStereoCameraCmd(camera_id, scene_id)));
   EXPECT_FALSE(Apply(scenic::NewCreateStereoCameraCmd(camera_id, invalid_id)));
@@ -50,4 +50,4 @@ TEST_F(StereoCameraTest, Basic) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

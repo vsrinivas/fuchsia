@@ -11,12 +11,12 @@
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
-View::View(Session* session, scenic::ResourceId id, ViewLinker::ImportLink link)
+View::View(Session* session, ResourceId id, ViewLinker::ImportLink link)
     : Resource(session, id, View::kTypeInfo), link_(std::move(link)) {
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
@@ -103,4 +103,4 @@ void View::SendViewHolderDisconnectedEvent() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

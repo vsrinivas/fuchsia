@@ -13,7 +13,7 @@
 // TODO(MZ-547): Merge with existing image conversion libraries in media:
 // bin/media/video/video_converter.h
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace image_formats {
 
@@ -24,6 +24,6 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
 
 }  // namespace image_formats
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_IMAGE_FORMATS_H_

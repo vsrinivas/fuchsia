@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/material/material.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class ImageBase;
@@ -21,7 +21,7 @@ class Material : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Material(Session* session, scenic::ResourceId id);
+  Material(Session* session, ResourceId id);
 
   void SetColor(float red, float green, float blue, float alpha);
   void SetTexture(ImageBasePtr texture_image);
@@ -46,6 +46,6 @@ class Material : public Resource {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_MATERIAL_H_

@@ -8,18 +8,18 @@
 
 #include "gtest/gtest.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
 using PoseBufferTest = VkSessionTest;
 
 VK_TEST_F(PoseBufferTest, Validation) {
-  const scenic::ResourceId invalid_id = 0;
-  const scenic::ResourceId scene_id = 1;
-  const scenic::ResourceId camera_id = 2;
-  const scenic::ResourceId memory_id = 3;
-  const scenic::ResourceId buffer_id = 4;
+  const ResourceId invalid_id = 0;
+  const ResourceId scene_id = 1;
+  const ResourceId camera_id = 2;
+  const ResourceId memory_id = 3;
+  const ResourceId buffer_id = 4;
 
   ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(scene_id)));
   ASSERT_TRUE(Apply(scenic::NewCreateCameraCmd(camera_id, scene_id)));
@@ -68,4 +68,4 @@ VK_TEST_F(PoseBufferTest, Validation) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

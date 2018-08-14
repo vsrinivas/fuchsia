@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/vk/image.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class GpuImage;
@@ -35,7 +35,7 @@ class GpuImage : public Image {
   // the caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static GpuImagePtr New(Session* session, scenic::ResourceId id,
+  static GpuImagePtr New(Session* session, ResourceId id,
                          GpuMemoryPtr memory,
                          const fuchsia::images::ImageInfo& image_info,
                          uint64_t memory_offset, ErrorReporter* error_reporter);
@@ -54,7 +54,7 @@ class GpuImage : public Image {
   // |memory| is the GPU memory that is associated with this image.
   // |memory_offset| is the offset in bytes into the memory where the image is
   // stored.
-  GpuImage(Session* session, scenic::ResourceId id, GpuMemoryPtr memory,
+  GpuImage(Session* session, ResourceId id, GpuMemoryPtr memory,
            uint64_t memory_offset, escher::ImageInfo image_info,
            vk::Image vk_image_);
 
@@ -62,6 +62,6 @@ class GpuImage : public Image {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_GPU_IMAGE_H_

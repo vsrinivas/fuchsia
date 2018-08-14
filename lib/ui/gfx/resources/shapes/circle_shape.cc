@@ -4,13 +4,13 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
 
-CircleShape::CircleShape(Session* session, scenic::ResourceId id,
+CircleShape::CircleShape(Session* session, ResourceId id,
                          float initial_radius)
     : PlanarShape(session, id, CircleShape::kTypeInfo),
       radius_(initial_radius) {}
@@ -25,4 +25,4 @@ escher::Object CircleShape::GenerateRenderObject(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

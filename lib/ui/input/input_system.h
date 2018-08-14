@@ -13,7 +13,7 @@
 #include "garnet/lib/ui/input/view_id.h"
 #include "garnet/lib/ui/scenic/system.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace input {
 
 // Routes input events from a root presenter to Scenic clients.
@@ -72,6 +72,6 @@ class InputCommandDispatcher : public CommandDispatcher {
 };
 
 }  // namespace input
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_INPUT_INPUT_SYSTEM_H_

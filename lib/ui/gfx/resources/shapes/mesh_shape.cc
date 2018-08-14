@@ -7,13 +7,13 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "lib/escher/geometry/intersection.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo MeshShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kMesh, "MeshShape"};
 
-MeshShape::MeshShape(Session* session, scenic::ResourceId id)
+MeshShape::MeshShape(Session* session, ResourceId id)
     : Shape(session, id, MeshShape::kTypeInfo) {}
 
 escher::Object MeshShape::GenerateRenderObject(
@@ -86,4 +86,4 @@ bool MeshShape::BindBuffers(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

@@ -9,13 +9,13 @@
 #include "garnet/lib/ui/gfx/resources/image_base.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
 
-Material::Material(Session* session, scenic::ResourceId id)
+Material::Material(Session* session, ResourceId id)
     : Resource(session, id, Material::kTypeInfo),
       escher_material_(fxl::MakeRefCounted<escher::Material>()) {}
 
@@ -51,4 +51,4 @@ void Material::UpdateEscherMaterial() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

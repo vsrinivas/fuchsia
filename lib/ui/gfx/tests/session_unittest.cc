@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -24,7 +24,8 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
                                ::fidl::VectorPtr<zx::event>(),
                                ::fidl::VectorPtr<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
-      "scenic::gfx::Session: Present called with out-of-order presentation "
+      "scenic_impl::gfx::Session: Present called with out-of-order "
+      "presentation "
       "time. requested presentation time=0, last scheduled presentation "
       "time=1.");
 }
@@ -76,7 +77,7 @@ TEST_F(SessionTest, AddAndRemoveResource) {
 }
 
 TEST_F(SessionTest, Labeling) {
-  const scenic::ResourceId kNodeId = 1;
+  const ResourceId kNodeId = 1;
   const std::string kShortLabel = "test!";
   const std::string kLongLabel =
       std::string(::fuchsia::ui::gfx::kLabelMaxLength, 'x');
@@ -107,4 +108,4 @@ TEST_F(SessionTest, Labeling) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

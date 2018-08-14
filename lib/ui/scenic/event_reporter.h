@@ -9,7 +9,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
-namespace scenic {
+namespace scenic_impl {
 
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
@@ -30,6 +30,6 @@ class EventReporter {
   static EventReporter* Default();
 };
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_

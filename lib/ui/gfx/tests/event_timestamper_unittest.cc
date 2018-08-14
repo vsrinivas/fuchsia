@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -59,4 +59,4 @@ TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

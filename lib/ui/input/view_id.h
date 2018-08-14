@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/gfx/id.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace input {
 
 // A View is a Resource in a Session. Need both to uniquely identify.
@@ -37,5 +37,5 @@ std::ostream& operator<<(std::ostream& os, const ViewId& value);
 std::ostream& operator<<(std::ostream& os, const ViewStack& value);
 
 }  // namespace input
-}  // namespace scenic
+}  // namespace scenic_impl
 #endif  // GARNET_LIB_UI_INPUT_VIEW_ID_H_

@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class GpuMemory;
@@ -23,7 +23,7 @@ class GpuMemory : public Memory {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  GpuMemory(Session* session, scenic::ResourceId id, vk::Device device,
+  GpuMemory(Session* session, ResourceId id, vk::Device device,
             vk::DeviceMemory mem, vk::DeviceSize size,
             uint32_t memory_type_index);
 
@@ -32,13 +32,13 @@ class GpuMemory : public Memory {
   // that represents a VkDeviceMemory. Releases the VMO.
   //
   // Returns the created GpuMemory object or nullptr if there was an error.
-  static GpuMemoryPtr New(Session* session, scenic::ResourceId id,
+  static GpuMemoryPtr New(Session* session, ResourceId id,
                           vk::Device device, zx::vmo vmo,
                           ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
-  static GpuMemoryPtr New(Session* session, scenic::ResourceId id,
+  static GpuMemoryPtr New(Session* session, ResourceId id,
                           vk::Device device,
                           ::fuchsia::ui::gfx::MemoryArgs args,
                           ErrorReporter* error_reporter);
@@ -54,6 +54,6 @@ class GpuMemory : public Memory {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_GPU_MEMORY_H_

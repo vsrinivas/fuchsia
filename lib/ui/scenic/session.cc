@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-namespace scenic {
+namespace scenic_impl {
 
 Session::Session(
     Scenic* owner, SessionId id,
@@ -157,4 +157,4 @@ void Session::ReportError(fxl::LogSeverity severity, std::string error_string) {
   }
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl

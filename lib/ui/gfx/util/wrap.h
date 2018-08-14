@@ -8,7 +8,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "lib/escher/geometry/transform.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 inline ::fuchsia::ui::gfx::mat4 Wrap(const escher::mat4& args) {
@@ -44,6 +44,6 @@ inline ::fuchsia::ui::gfx::vec4 Wrap(const escher::vec4& p) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_WRAP_H_

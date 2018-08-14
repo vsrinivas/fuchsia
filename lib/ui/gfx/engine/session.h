@@ -17,10 +17,10 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
-using SessionId = ::scenic::SessionId;
+using SessionId = ::scenic_impl::SessionId;
 
 class Image;
 using ImagePtr = ::fxl::RefPtr<Image>;
@@ -60,7 +60,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   size_t GetTotalResourceCount() const { return resource_count_; }
 
   // Return the number of resources that a client can identify via a
-  // scenic::ResourceId. This number is decremented when a
+  // ResourceId. This number is decremented when a
   // ReleaseResourceCmd is applied.  However, the resource may continue to
   // exist if it is referenced by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
@@ -179,114 +179,114 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       ::fuchsia::ui::gfx::SetDisableClippingCmd command);
 
   // Resource creation functions, called by ApplyCreateResourceCmd().
-  bool ApplyCreateMemory(scenic::ResourceId id,
+  bool ApplyCreateMemory(ResourceId id,
                          ::fuchsia::ui::gfx::MemoryArgs args);
-  bool ApplyCreateImage(scenic::ResourceId id,
+  bool ApplyCreateImage(ResourceId id,
                         ::fuchsia::ui::gfx::ImageArgs args);
-  bool ApplyCreateImagePipe(scenic::ResourceId id,
+  bool ApplyCreateImagePipe(ResourceId id,
                             ::fuchsia::ui::gfx::ImagePipeArgs args);
-  bool ApplyCreateBuffer(scenic::ResourceId id,
+  bool ApplyCreateBuffer(ResourceId id,
                          ::fuchsia::ui::gfx::BufferArgs args);
-  bool ApplyCreateScene(scenic::ResourceId id,
+  bool ApplyCreateScene(ResourceId id,
                         ::fuchsia::ui::gfx::SceneArgs args);
-  bool ApplyCreateCamera(scenic::ResourceId id,
+  bool ApplyCreateCamera(ResourceId id,
                          ::fuchsia::ui::gfx::CameraArgs args);
-  bool ApplyCreateStereoCamera(scenic::ResourceId id,
+  bool ApplyCreateStereoCamera(ResourceId id,
                                ::fuchsia::ui::gfx::StereoCameraArgs args);
-  bool ApplyCreateRenderer(scenic::ResourceId id,
+  bool ApplyCreateRenderer(ResourceId id,
                            ::fuchsia::ui::gfx::RendererArgs args);
-  bool ApplyCreateAmbientLight(scenic::ResourceId id,
+  bool ApplyCreateAmbientLight(ResourceId id,
                                ::fuchsia::ui::gfx::AmbientLightArgs args);
   bool ApplyCreateDirectionalLight(
-      scenic::ResourceId id, ::fuchsia::ui::gfx::DirectionalLightArgs args);
-  bool ApplyCreateRectangle(scenic::ResourceId id,
+      ResourceId id, ::fuchsia::ui::gfx::DirectionalLightArgs args);
+  bool ApplyCreateRectangle(ResourceId id,
                             ::fuchsia::ui::gfx::RectangleArgs args);
   bool ApplyCreateRoundedRectangle(
-      scenic::ResourceId id, ::fuchsia::ui::gfx::RoundedRectangleArgs args);
-  bool ApplyCreateCircle(scenic::ResourceId id,
+      ResourceId id, ::fuchsia::ui::gfx::RoundedRectangleArgs args);
+  bool ApplyCreateCircle(ResourceId id,
                          ::fuchsia::ui::gfx::CircleArgs args);
-  bool ApplyCreateMesh(scenic::ResourceId id,
+  bool ApplyCreateMesh(ResourceId id,
                        ::fuchsia::ui::gfx::MeshArgs args);
-  bool ApplyCreateMaterial(scenic::ResourceId id,
+  bool ApplyCreateMaterial(ResourceId id,
                            ::fuchsia::ui::gfx::MaterialArgs args);
-  bool ApplyCreateView(scenic::ResourceId id,
+  bool ApplyCreateView(ResourceId id,
                        ::fuchsia::ui::gfx::ViewArgs args);
-  bool ApplyCreateViewHolder(scenic::ResourceId id,
+  bool ApplyCreateViewHolder(ResourceId id,
                              ::fuchsia::ui::gfx::ViewHolderArgs args);
-  bool ApplyCreateClipNode(scenic::ResourceId id,
+  bool ApplyCreateClipNode(ResourceId id,
                            ::fuchsia::ui::gfx::ClipNodeArgs args);
-  bool ApplyCreateEntityNode(scenic::ResourceId id,
+  bool ApplyCreateEntityNode(ResourceId id,
                              ::fuchsia::ui::gfx::EntityNodeArgs args);
-  bool ApplyCreateOpacityNode(scenic::ResourceId id,
+  bool ApplyCreateOpacityNode(ResourceId id,
                               ::fuchsia::ui::gfx::OpacityNodeArgs args);
-  bool ApplyCreateShapeNode(scenic::ResourceId id,
+  bool ApplyCreateShapeNode(ResourceId id,
                             ::fuchsia::ui::gfx::ShapeNodeArgs args);
   bool ApplyCreateCompositor(scenic::ResourceId id,
                              ::fuchsia::ui::gfx::CompositorArgs args);
   bool ApplyCreateDisplayCompositor(
-      scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
+      ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
   bool ApplyCreateImagePipeCompositor(
-      scenic::ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args);
-  bool ApplyCreateLayerStack(scenic::ResourceId id,
+      ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args);
+  bool ApplyCreateLayerStack(ResourceId id,
                              ::fuchsia::ui::gfx::LayerStackArgs args);
-  bool ApplyCreateLayer(scenic::ResourceId id,
+  bool ApplyCreateLayer(ResourceId id,
                         ::fuchsia::ui::gfx::LayerArgs args);
-  bool ApplyCreateVariable(scenic::ResourceId id,
+  bool ApplyCreateVariable(ResourceId id,
                            ::fuchsia::ui::gfx::VariableArgs args);
 
   // Actually create resources.
-  ResourcePtr CreateMemory(scenic::ResourceId id,
+  ResourcePtr CreateMemory(ResourceId id,
                            ::fuchsia::ui::gfx::MemoryArgs args);
-  ResourcePtr CreateImage(scenic::ResourceId id, MemoryPtr memory,
+  ResourcePtr CreateImage(ResourceId id, MemoryPtr memory,
                           ::fuchsia::ui::gfx::ImageArgs args);
-  ResourcePtr CreateBuffer(scenic::ResourceId id, MemoryPtr memory,
+  ResourcePtr CreateBuffer(ResourceId id, MemoryPtr memory,
                            uint32_t memory_offset, uint32_t num_bytes);
 
-  ResourcePtr CreateScene(scenic::ResourceId id,
+  ResourcePtr CreateScene(ResourceId id,
                           ::fuchsia::ui::gfx::SceneArgs args);
-  ResourcePtr CreateCamera(scenic::ResourceId id,
+  ResourcePtr CreateCamera(ResourceId id,
                            ::fuchsia::ui::gfx::CameraArgs args);
-  ResourcePtr CreateStereoCamera(scenic::ResourceId id,
+  ResourcePtr CreateStereoCamera(ResourceId id,
                                  ::fuchsia::ui::gfx::StereoCameraArgs args);
-  ResourcePtr CreateRenderer(scenic::ResourceId id,
+  ResourcePtr CreateRenderer(ResourceId id,
                              ::fuchsia::ui::gfx::RendererArgs args);
 
-  ResourcePtr CreateAmbientLight(scenic::ResourceId id);
-  ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
+  ResourcePtr CreateAmbientLight(ResourceId id);
+  ResourcePtr CreateDirectionalLight(ResourceId id);
 
-  ResourcePtr CreateView(scenic::ResourceId id,
+  ResourcePtr CreateView(ResourceId id,
                          ::fuchsia::ui::gfx::ViewArgs args);
-  ResourcePtr CreateViewHolder(scenic::ResourceId id,
+  ResourcePtr CreateViewHolder(ResourceId id,
                                ::fuchsia::ui::gfx::ViewHolderArgs args);
-  ResourcePtr CreateClipNode(scenic::ResourceId id,
+  ResourcePtr CreateClipNode(ResourceId id,
                              ::fuchsia::ui::gfx::ClipNodeArgs args);
-  ResourcePtr CreateEntityNode(scenic::ResourceId id,
+  ResourcePtr CreateEntityNode(ResourceId id,
                                ::fuchsia::ui::gfx::EntityNodeArgs args);
-  ResourcePtr CreateOpacityNode(scenic::ResourceId id,
+  ResourcePtr CreateOpacityNode(ResourceId id,
                                 ::fuchsia::ui::gfx::OpacityNodeArgs args);
-  ResourcePtr CreateShapeNode(scenic::ResourceId id,
+  ResourcePtr CreateShapeNode(ResourceId id,
                               ::fuchsia::ui::gfx::ShapeNodeArgs args);
 
   ResourcePtr CreateCompositor(scenic::ResourceId id,
                                ::fuchsia::ui::gfx::CompositorArgs args);
   ResourcePtr CreateDisplayCompositor(
-      scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
+      ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
   ResourcePtr CreateImagePipeCompositor(
-      scenic::ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args);
-  ResourcePtr CreateLayerStack(scenic::ResourceId id,
+      ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args);
+  ResourcePtr CreateLayerStack(ResourceId id,
                                ::fuchsia::ui::gfx::LayerStackArgs args);
-  ResourcePtr CreateLayer(scenic::ResourceId id,
+  ResourcePtr CreateLayer(ResourceId id,
                           ::fuchsia::ui::gfx::LayerArgs args);
-  ResourcePtr CreateCircle(scenic::ResourceId id, float initial_radius);
-  ResourcePtr CreateRectangle(scenic::ResourceId id, float width, float height);
-  ResourcePtr CreateRoundedRectangle(scenic::ResourceId id, float width,
+  ResourcePtr CreateCircle(ResourceId id, float initial_radius);
+  ResourcePtr CreateRectangle(ResourceId id, float width, float height);
+  ResourcePtr CreateRoundedRectangle(ResourceId id, float width,
                                      float height, float top_left_radius,
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);
-  ResourcePtr CreateMesh(scenic::ResourceId id);
-  ResourcePtr CreateMaterial(scenic::ResourceId id);
-  ResourcePtr CreateVariable(scenic::ResourceId id,
+  ResourcePtr CreateMesh(ResourceId id);
+  ResourcePtr CreateMaterial(ResourceId id);
+  ResourcePtr CreateVariable(ResourceId id,
                              ::fuchsia::ui::gfx::VariableArgs args);
 
   // Return false and log an error if the value is not of the expected type.
@@ -352,6 +352,6 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_SESSION_H_

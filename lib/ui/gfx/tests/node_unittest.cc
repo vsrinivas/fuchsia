@@ -9,14 +9,14 @@
 
 #include "gtest/gtest.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
 using NodeTest = SessionTest;
 
 TEST_F(NodeTest, Tagging) {
-  const scenic::ResourceId kNodeId = 1;
+  const ResourceId kNodeId = 1;
 
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
@@ -28,9 +28,9 @@ TEST_F(NodeTest, Tagging) {
 }
 
 TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
-  const scenic::ResourceId kNodeId = 1;
-  const scenic::ResourceId kMaterialId = 2;
-  const scenic::ResourceId kShapeId = 3;
+  const ResourceId kNodeId = 1;
+  const ResourceId kMaterialId = 2;
+  const ResourceId kShapeId = 3;
 
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
   EXPECT_TRUE(Apply(scenic::NewCreateMaterialCmd(kMaterialId)));
@@ -51,16 +51,16 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
 
 TEST_F(NodeTest, NodesWithChildren) {
   // Child node that we will attach to various types of nodes.
-  const scenic::ResourceId kChildNodeId = 1;
+  const ResourceId kChildNodeId = 1;
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kChildNodeId)));
   auto child_node = FindResource<Node>(kChildNodeId);
 
   // OK to detach a child that hasn't been attached.
   EXPECT_TRUE(Apply(scenic::NewDetachCmd(kChildNodeId)));
 
-  const scenic::ResourceId kEntityNodeId = 10;
-  const scenic::ResourceId kShapeNodeId = 11;
-  // TODO: const scenic::ResourceId kClipNodeId = 12;
+  const ResourceId kEntityNodeId = 10;
+  const ResourceId kShapeNodeId = 11;
+  // TODO: const ResourceId kClipNodeId = 12;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(kEntityNodeId)));
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId)));
   // TODO:
@@ -85,7 +85,7 @@ TEST_F(NodeTest, NodesWithChildren) {
 }
 
 TEST_F(NodeTest, SettingHitTestBehavior) {
-  const scenic::ResourceId kNodeId = 1;
+  const ResourceId kNodeId = 1;
 
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
 
@@ -101,4 +101,4 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

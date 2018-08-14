@@ -13,7 +13,7 @@
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class HostMemory;
@@ -25,7 +25,7 @@ class HostMemory : public Memory {
   static const ResourceTypeInfo kTypeInfo;
 
   // Constructor for host memory.
-  HostMemory(Session* session, scenic::ResourceId id, zx::vmo vmo,
+  HostMemory(Session* session, ResourceId id, zx::vmo vmo,
              uint64_t vmo_size);
 
   // Helper method for creating HostMemory object from a
@@ -33,13 +33,13 @@ class HostMemory : public Memory {
   // host memory-backed VMO.
   //
   // Returns the created HostMemory object or nullptr if there was an error.
-  static HostMemoryPtr New(Session* session, scenic::ResourceId id,
+  static HostMemoryPtr New(Session* session, ResourceId id,
                            vk::Device device, zx::vmo vmo,
                            ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
-  static HostMemoryPtr New(Session* session, scenic::ResourceId id,
+  static HostMemoryPtr New(Session* session, ResourceId id,
                            vk::Device device,
                            ::fuchsia::ui::gfx::MemoryArgs args,
                            ErrorReporter* error_reporter);
@@ -55,6 +55,6 @@ class HostMemory : public Memory {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_HOST_MEMORY_H_

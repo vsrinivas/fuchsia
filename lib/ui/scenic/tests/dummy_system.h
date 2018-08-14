@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/scenic/system.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace test {
 
 class DummySystem : public System {
@@ -34,6 +34,6 @@ class DummyCommandDispatcher : public CommandDispatcher {
 };
 
 }  // namespace test
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_TESTS_DUMMY_SYSTEM_H_

@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "lib/escher/flib/release_fence_signaller.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -84,6 +84,6 @@ class EngineForTest : public Engine {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_MOCKS_H_

@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Abstract superclass for Image and ImagePipe.
@@ -20,13 +20,12 @@ class ImageBase : public Resource {
   virtual const escher::ImagePtr& GetEscherImage() = 0;
 
  protected:
-  ImageBase(Session* session, scenic::ResourceId id,
-            const ResourceTypeInfo& type_info);
+  ImageBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 };
 
 using ImageBasePtr = fxl::RefPtr<ImageBase>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_BASE_H_

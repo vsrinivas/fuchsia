@@ -7,14 +7,14 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class OpacityNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  OpacityNode(Session* session, scenic::ResourceId node_id);
+  OpacityNode(Session* session, ResourceId node_id);
 
   // valid range: [0, 1]
   void SetOpacity(float opacity);
@@ -29,6 +29,6 @@ class OpacityNode final : public Node {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_OPACITY_NODE_H_

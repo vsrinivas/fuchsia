@@ -11,19 +11,19 @@
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "lib/escher/util/image_utils.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
-Image::Image(Session* session, scenic::ResourceId id,
+Image::Image(Session* session, ResourceId id,
              const ResourceTypeInfo& type_info)
     : ImageBase(session, id, Image::kTypeInfo) {
   FXL_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
 }
 
-ImagePtr Image::New(Session* session, scenic::ResourceId id, MemoryPtr memory,
+ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,
                     const fuchsia::images::ImageInfo& image_info,
                     uint64_t memory_offset, ErrorReporter* error_reporter) {
   // Create from host memory.
@@ -42,4 +42,4 @@ ImagePtr Image::New(Session* session, scenic::ResourceId id, MemoryPtr memory,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

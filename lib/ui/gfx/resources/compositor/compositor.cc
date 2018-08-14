@@ -28,7 +28,7 @@
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
@@ -344,4 +344,4 @@ escher::ImagePtr Compositor::GetLayerFramebufferImage(uint32_t width,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

@@ -16,7 +16,7 @@
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 namespace {
@@ -454,4 +454,4 @@ vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
 }  // namespace
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

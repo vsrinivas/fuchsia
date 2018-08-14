@@ -16,7 +16,7 @@
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Session;
@@ -45,7 +45,7 @@ class View final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  View(Session* session, scenic::ResourceId id, ViewLinker::ImportLink link);
+  View(Session* session, ResourceId id, ViewLinker::ImportLink link);
   ~View() override;
 
   // | Resource |
@@ -90,6 +90,6 @@ class View final : public Resource {
 using ViewPtr = fxl::RefPtr<View>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_VIEW_H_

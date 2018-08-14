@@ -8,7 +8,7 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class ImagePipe;
@@ -16,7 +16,7 @@ class ImagePipe;
 class ImagePipeHandler : public fuchsia::images::ImagePipe {
  public:
   ImagePipeHandler(::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-                   scenic::gfx::ImagePipe* image_pipe);
+                   ::scenic_impl::gfx::ImagePipe* image_pipe);
 
  private:
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
@@ -30,10 +30,10 @@ class ImagePipeHandler : public fuchsia::images::ImagePipe {
                     PresentImageCallback callback) override;
 
   ::fidl::Binding<fuchsia::images::ImagePipe> binding_;
-  scenic::gfx::ImagePipe* image_pipe_;
+  ::scenic_impl::gfx::ImagePipe* image_pipe_;
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_

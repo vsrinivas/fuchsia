@@ -7,7 +7,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/images/cpp/images.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace image_formats {
 
@@ -179,4 +179,4 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
 
 }  // namespace image_formats
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

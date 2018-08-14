@@ -10,14 +10,14 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/shape/rounded_rect.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class RoundedRectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RoundedRectangleShape(Session* session, scenic::ResourceId id,
+  RoundedRectangleShape(Session* session, ResourceId id,
                         const escher::RoundedRectSpec& spec,
                         escher::MeshPtr mesh);
 
@@ -45,6 +45,6 @@ class RoundedRectangleShape final : public PlanarShape {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_ROUNDED_RECTANGLE_SHAPE_H_

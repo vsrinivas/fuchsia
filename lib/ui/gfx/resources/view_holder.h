@@ -14,7 +14,7 @@
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Session;
@@ -45,7 +45,7 @@ class ViewHolder final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, scenic::ResourceId id,
+  ViewHolder(Session* session, ResourceId id,
              ViewLinker::ExportLink link);
   ~ViewHolder() override;
 
@@ -96,6 +96,6 @@ class ViewHolder final : public Resource {
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_H_

@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 SystemContext::SystemContext(component::StartupContext* app_context,
                              fit::closure quit_callback)
@@ -39,4 +39,4 @@ TempSystemDelegate::TempSystemDelegate(SystemContext context,
                                        bool initialized_after_construction)
     : System(std::move(context), initialized_after_construction) {}
 
-}  // namespace scenic
+}  // namespace scenic_impl

@@ -4,14 +4,14 @@
 
 #include "garnet/lib/ui/gfx/resources/memory.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
-Memory::Memory(Session* session, scenic::ResourceId id,
+Memory::Memory(Session* session, ResourceId id,
                const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {}
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

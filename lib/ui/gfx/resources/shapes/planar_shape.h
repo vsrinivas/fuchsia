@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // A shape that lies within the Z=0 plane of the local coordinate system.
@@ -23,11 +23,11 @@ class PlanarShape : public Shape {
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
  protected:
-  PlanarShape(Session* session, scenic::ResourceId id,
+  PlanarShape(Session* session, ResourceId id,
               const ResourceTypeInfo& type_info);
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_PLANAR_SHAPE_H_

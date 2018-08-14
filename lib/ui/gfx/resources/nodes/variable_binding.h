@@ -9,7 +9,7 @@
 
 #include <lib/fit/function.h>
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Node;
@@ -45,6 +45,6 @@ using QuaternionVariableBinding =
                          escher::quat>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_VARIABLE_BINDING_H_

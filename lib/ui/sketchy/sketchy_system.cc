@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/sketchy/sketchy_system.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 SketchySystem::SketchySystem(SystemContext context, gfx::GfxSystem* gfx_system)
     : System(std::move(context)), gfx_system_(gfx_system) {}
@@ -28,4 +28,4 @@ SketchyCommandDispatcher::~SketchyCommandDispatcher() = default;
 void SketchyCommandDispatcher::DispatchCommand(
     fuchsia::ui::scenic::Command command) {}
 
-}  // namespace scenic
+}  // namespace scenic_impl

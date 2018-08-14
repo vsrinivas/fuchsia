@@ -9,7 +9,7 @@
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -40,7 +40,7 @@ class GfxSystemForTest : public GfxSystem {
   DisplayManager display_manager_;
 };
 
-class GfxSystemTest : public ::scenic::test::ScenicTest {
+class GfxSystemTest : public ::scenic_impl::test::ScenicTest {
  public:
   // ::testing::Test virtual method.
   void SetUp() override {
@@ -71,6 +71,6 @@ class GfxSystemTest : public ::scenic::test::ScenicTest {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_GFX_TEST_H_

@@ -32,7 +32,7 @@
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 DumpVisitor::DumpVisitor(std::ostream& output) : output_(output) {}
@@ -411,4 +411,4 @@ void DumpVisitor::EndLine() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

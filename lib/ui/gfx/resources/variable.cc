@@ -7,19 +7,19 @@
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Variable::kTypeInfo = {ResourceType::kVariable,
                                               "Variable"};
 
-Variable::Variable(Session* session, scenic::ResourceId id)
+Variable::Variable(Session* session, ResourceId id)
     : Resource(session, id, Variable::kTypeInfo) {}
 
 Variable::~Variable() {}
 
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
-TypedVariable<VT, T>::TypedVariable(Session* session, scenic::ResourceId id)
+TypedVariable<VT, T>::TypedVariable(Session* session, ResourceId id)
     : Variable(session, id),
       value_()  // Initialize |value_| to its type's default value.
 {}
@@ -60,4 +60,4 @@ template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kQuaternion,
 // escher::Transform>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

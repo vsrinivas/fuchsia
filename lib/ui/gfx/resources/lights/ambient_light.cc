@@ -4,14 +4,14 @@
 
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo AmbientLight::kTypeInfo = {
     ResourceType::kLight | ResourceType::kAmbientLight, "AmbientLight"};
 
-AmbientLight::AmbientLight(Session* session, scenic::ResourceId id)
+AmbientLight::AmbientLight(Session* session, ResourceId id)
     : Light(session, id, AmbientLight::kTypeInfo) {}
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

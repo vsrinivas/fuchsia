@@ -6,12 +6,12 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo Light::kTypeInfo = {ResourceType::kLight, "Light"};
 
-Light::Light(Session* session, scenic::ResourceId node_id,
+Light::Light(Session* session, ResourceId node_id,
              const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Light::kTypeInfo));
@@ -30,4 +30,4 @@ bool Light::SetColor(const glm::vec3& color) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

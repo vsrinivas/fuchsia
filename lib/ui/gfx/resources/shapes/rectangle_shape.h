@@ -7,14 +7,14 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class RectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RectangleShape(Session* session, scenic::ResourceId id, float initial_width,
+  RectangleShape(Session* session, ResourceId id, float initial_width,
                  float initial_height);
 
   float width() const { return width_; }
@@ -37,6 +37,6 @@ class RectangleShape final : public PlanarShape {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_RECTANGLE_SHAPE_H_

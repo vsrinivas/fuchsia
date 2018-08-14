@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 class Clock;
 
@@ -104,6 +104,6 @@ SystemT* Scenic::RegisterSystem(Args... args) {
   return system;
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_SCENIC_H_

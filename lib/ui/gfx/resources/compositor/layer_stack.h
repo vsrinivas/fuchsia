@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Layer;
@@ -55,6 +55,6 @@ class LayerStack : public Resource {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_LAYER_STACK_H_

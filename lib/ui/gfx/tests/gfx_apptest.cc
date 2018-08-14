@@ -10,7 +10,7 @@
 #include "lib/escher/flib/release_fence_signaller.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -151,4 +151,4 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

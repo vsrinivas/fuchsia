@@ -6,7 +6,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 
-namespace scenic {
+namespace scenic_impl {
 
 Scenic::Scenic(component::StartupContext* app_context,
                fit::closure quit_callback)
@@ -101,4 +101,4 @@ void Scenic::GetDisplayOwnershipEvent(
   delegate->GetDisplayOwnershipEvent(std::move(callback));
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl

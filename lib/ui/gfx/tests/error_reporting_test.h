@@ -13,7 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -57,6 +57,6 @@ class ErrorReportingTest : public ::gtest::TestLoopFixture {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_ERROR_REPORTING_TEST_H_

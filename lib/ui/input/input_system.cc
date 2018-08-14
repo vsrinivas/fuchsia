@@ -22,7 +22,7 @@
 #include "lib/ui/geometry/cpp/formatting.h"
 #include "lib/ui/input/cpp/formatting.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace input {
 
 InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
@@ -42,7 +42,7 @@ std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
 }
 
 InputCommandDispatcher::InputCommandDispatcher(
-    CommandDispatcherContext context, scenic::gfx::GfxSystem* gfx_system)
+    CommandDispatcherContext context, gfx::GfxSystem* gfx_system)
     : CommandDispatcher(std::move(context)),
       gfx_system_(gfx_system) {
   FXL_CHECK(gfx_system_);
@@ -224,4 +224,4 @@ void InputCommandDispatcher::EnqueueEventToView(
 }
 
 }  // namespace input
-}  // namespace scenic
+}  // namespace scenic_impl

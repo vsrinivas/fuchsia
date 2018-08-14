@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_UPDATE_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_UPDATE_SCHEDULER_H_
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class UpdateScheduler {
@@ -15,6 +15,6 @@ class UpdateScheduler {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_UPDATE_SCHEDULER_H_

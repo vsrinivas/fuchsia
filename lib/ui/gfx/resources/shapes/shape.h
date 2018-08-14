@@ -9,7 +9,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/scene/object.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Shape : public Resource {
@@ -32,13 +32,13 @@ class Shape : public Resource {
       const escher::mat4& transform, const escher::MaterialPtr& material) = 0;
 
  protected:
-  Shape(Session* session, scenic::ResourceId id,
+  Shape(Session* session, ResourceId id,
         const ResourceTypeInfo& type_info);
 };
 
 using ShapePtr = fxl::RefPtr<Shape>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_SHAPE_H_

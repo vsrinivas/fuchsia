@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_VISITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_VISITOR_H_
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Import;
@@ -82,6 +82,6 @@ class ResourceVisitor {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_VISITOR_H_

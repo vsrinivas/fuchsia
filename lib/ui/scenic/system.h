@@ -17,7 +17,7 @@ namespace component {
 class StartupContext;
 }  // namespace component
 
-namespace scenic {
+namespace scenic_impl {
 
 class Clock;
 class Session;
@@ -125,6 +125,6 @@ inline System::TypeId SystemTypeForCmd(
   }
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_SYSTEM_H_

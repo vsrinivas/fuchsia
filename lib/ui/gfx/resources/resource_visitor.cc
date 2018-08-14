@@ -34,7 +34,7 @@
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 void GpuMemory::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
@@ -100,4 +100,4 @@ void DirectionalLight::Accept(ResourceVisitor* visitor) {
 void Import::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

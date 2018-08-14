@@ -4,13 +4,13 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo RectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRectangle, "RectangleShape"};
 
-RectangleShape::RectangleShape(Session* session, scenic::ResourceId id,
+RectangleShape::RectangleShape(Session* session, ResourceId id,
                                float initial_width, float initial_height)
     : PlanarShape(session, id, RectangleShape::kTypeInfo),
       width_(initial_width),
@@ -35,4 +35,4 @@ escher::Object RectangleShape::GenerateRenderObject(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/escher/escher.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Compositor;
@@ -90,6 +90,6 @@ class GfxSystem : public TempSystemDelegate {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_GFX_SYSTEM_H_

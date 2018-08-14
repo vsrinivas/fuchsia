@@ -14,7 +14,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // EventTimestamper uses a background thread to watch for signals specified
@@ -114,6 +114,6 @@ class EventTimestamper {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_EVENT_TIMESTAMPER_H_

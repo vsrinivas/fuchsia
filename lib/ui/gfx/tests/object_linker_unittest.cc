@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "gtest/gtest.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -617,4 +617,4 @@ TEST_F(ObjectLinkerTest, ExportTokenDeathCausesImportDisconnection) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

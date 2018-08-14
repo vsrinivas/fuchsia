@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<component::StartupContext> app_context(
       component::StartupContext::CreateFromStartupInfo());
 
-  scenic::App app(app_context.get(), [&loop] { loop.Quit(); });
+  scenic_impl::App app(app_context.get(), [&loop] { loop.Quit(); });
 
   loop.Run();
 

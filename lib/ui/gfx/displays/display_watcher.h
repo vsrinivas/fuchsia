@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/zx/event.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Waits for a display device to be available, and returns the display
@@ -41,6 +41,6 @@ class DisplayWatcher {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_WATCHER_H_

@@ -15,7 +15,7 @@
 #include "lib/escher/geometry/transform.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Node;
@@ -119,7 +119,7 @@ class Node : public Resource {
   View* FindOwningView() const;
 
  protected:
-  Node(Session* session, scenic::ResourceId node_id,
+  Node(Session* session, ResourceId node_id,
        const ResourceTypeInfo& type_info);
 
  private:
@@ -189,6 +189,6 @@ inline const escher::mat4& Node::GetGlobalTransform() const {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_NODE_H_

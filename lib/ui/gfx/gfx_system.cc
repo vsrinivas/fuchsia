@@ -16,7 +16,7 @@
 #include "lib/escher/util/check_vulkan_support.h"
 #include "public/lib/syslog/cpp/logger.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 GfxSystem::GfxSystem(SystemContext context)
@@ -286,4 +286,4 @@ void GfxSystem::AddInitClosure(fit::closure closure) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

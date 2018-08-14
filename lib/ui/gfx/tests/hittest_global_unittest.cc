@@ -35,7 +35,7 @@
 // merit its own file.  We access the global hit test through the compositor,
 // instead of through a session.
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -220,4 +220,4 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

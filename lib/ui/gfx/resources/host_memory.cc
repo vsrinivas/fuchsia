@@ -4,20 +4,20 @@
 
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo HostMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kHostMemory, "HostMemory"};
 
-HostMemory::HostMemory(Session* session, scenic::ResourceId id, zx::vmo vmo,
+HostMemory::HostMemory(Session* session, ResourceId id, zx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
       shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo),
                                                       ZX_VM_FLAG_PERM_READ)),
       size_(vmo_size) {}
 
-HostMemoryPtr HostMemory::New(Session* session, scenic::ResourceId id,
+HostMemoryPtr HostMemory::New(Session* session, ResourceId id,
                               vk::Device device,
                               ::fuchsia::ui::gfx::MemoryArgs args,
                               ErrorReporter* error_reporter) {
@@ -30,7 +30,7 @@ HostMemoryPtr HostMemory::New(Session* session, scenic::ResourceId id,
   return New(session, id, device, std::move(args.vmo), error_reporter);
 }
 
-HostMemoryPtr HostMemory::New(Session* session, scenic::ResourceId id,
+HostMemoryPtr HostMemory::New(Session* session, ResourceId id,
                               vk::Device device, zx::vmo vmo,
                               ErrorReporter* error_reporter) {
   uint64_t vmo_size;
@@ -39,4 +39,4 @@ HostMemoryPtr HostMemory::New(Session* session, scenic::ResourceId id,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

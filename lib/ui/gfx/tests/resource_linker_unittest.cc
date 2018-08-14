@@ -13,7 +13,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -148,7 +148,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   }
 
   ResourceLinker* linker = engine_->resource_linker();
-  scenic::gfx::ResourcePtr resource;
+  scenic_impl::gfx::ResourcePtr resource;
   ImportPtr import;
   bool expiry_cb_called = false;
 
@@ -238,7 +238,7 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
     // destination dies now.
   }
 
-  scenic::gfx::ResourcePtr resource;
+  scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
   async::PostTask(
@@ -273,7 +273,7 @@ TEST_F(ResourceLinkerTest,
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   ResourceLinker* linker = engine_->resource_linker();
-  scenic::gfx::ResourcePtr resource;
+  scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
   async::PostTask(
@@ -312,7 +312,7 @@ TEST_F(ResourceLinkerTest,
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   ResourceLinker* linker = engine_->resource_linker();
-  scenic::gfx::ResourcePtr resource;
+  scenic_impl::gfx::ResourcePtr resource;
   ImportPtr import;
   bool did_resolve = false;
 
@@ -556,4 +556,4 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

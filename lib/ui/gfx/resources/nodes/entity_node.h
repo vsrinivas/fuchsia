@@ -7,19 +7,19 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class EntityNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  EntityNode(Session* session, scenic::ResourceId node_id);
+  EntityNode(Session* session, ResourceId node_id);
 
   void Accept(class ResourceVisitor* visitor) override;
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_ENTITY_NODE_H_

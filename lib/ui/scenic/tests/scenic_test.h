@@ -14,7 +14,7 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
@@ -61,6 +61,6 @@ class ScenicTest : public ::gtest::TestLoopFixture,
 };
 
 }  // namespace test
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_

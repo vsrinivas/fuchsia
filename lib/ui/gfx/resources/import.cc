@@ -7,10 +7,10 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace {
-ResourcePtr CreateDelegate(Session* session, scenic::ResourceId id,
+ResourcePtr CreateDelegate(Session* session, ResourceId id,
                            ::fuchsia::ui::gfx::ImportSpec spec) {
   switch (spec) {
     case ::fuchsia::ui::gfx::ImportSpec::NODE:
@@ -23,7 +23,7 @@ ResourcePtr CreateDelegate(Session* session, scenic::ResourceId id,
 constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
-Import::Import(Session* session, scenic::ResourceId id,
+Import::Import(Session* session, ResourceId id,
                ::fuchsia::ui::gfx::ImportSpec spec)
     : Resource(session, id, Import::kTypeInfo),
       import_spec_(spec),
@@ -61,4 +61,4 @@ void Import::UnbindImportedResource() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

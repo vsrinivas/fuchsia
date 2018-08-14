@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -69,4 +69,4 @@ EngineForTest::EngineForTest(DisplayManager* display_manager,
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

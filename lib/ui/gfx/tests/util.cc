@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -83,4 +83,4 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

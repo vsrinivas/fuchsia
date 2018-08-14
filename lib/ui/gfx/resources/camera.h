@@ -12,14 +12,14 @@
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/stage.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Camera : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Camera(Session* session, scenic::ResourceId id, ScenePtr scene);
+  Camera(Session* session, ResourceId id, ScenePtr scene);
   virtual ~Camera() {}
 
   // |Resource|.
@@ -55,7 +55,7 @@ class Camera : public Resource {
 
  protected:
   // Note: StereoCamera subclasses Camera and provides its own ResourceTypeInfo.
-  Camera(Session* session, scenic::ResourceId id, ScenePtr scene,
+  Camera(Session* session, ResourceId id, ScenePtr scene,
          const ResourceTypeInfo& type_info);
 
   ScenePtr scene_;
@@ -75,6 +75,6 @@ class Camera : public Resource {
 using CameraPtr = fxl::RefPtr<Camera>;
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_CAMERA_H_

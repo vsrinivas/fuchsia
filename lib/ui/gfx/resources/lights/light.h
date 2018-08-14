@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/geometry/types.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Light;
@@ -24,7 +24,7 @@ class Light : public Resource {
   const glm::vec3& color() const { return color_; }
 
  protected:
-  Light(Session* session, scenic::ResourceId node_id,
+  Light(Session* session, ResourceId node_id,
         const ResourceTypeInfo& type_info);
 
   // |Resource|.
@@ -35,6 +35,6 @@ class Light : public Resource {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_LIGHT_H_

@@ -13,7 +13,7 @@
 #include "garnet/lib/ui/gfx/engine/update_scheduler.h"
 #include "garnet/lib/ui/scenic/session.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 SessionHandler* SessionManager::FindSession(SessionId id) {
@@ -35,7 +35,7 @@ std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
     CommandDispatcherContext context, Engine* engine) {
   SessionId session_id = next_session_id_++;
 
-  scenic::Session* session = context.session();
+  scenic_impl::Session* session = context.session();
   auto handler = CreateSessionHandler(std::move(context), engine, session_id,
                                       session, session->error_reporter());
   session_manager_.insert({session_id, handler.get()});
@@ -95,4 +95,4 @@ void SessionManager::TearDownSession(SessionId id) {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

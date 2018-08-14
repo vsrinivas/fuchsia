@@ -10,14 +10,14 @@
 #include "garnet/lib/ui/gfx/util/image_formats.h"
 #include "lib/images/cpp/images.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo HostImage::kTypeInfo = {
     ResourceType::kHostImage | ResourceType::kImage | ResourceType::kImageBase,
     "HostImage"};
 
-HostImage::HostImage(Session* session, scenic::ResourceId id,
+HostImage::HostImage(Session* session, ResourceId id,
                      HostMemoryPtr memory, escher::ImagePtr image,
                      uint64_t host_memory_offset,
                      fuchsia::images::ImageInfo host_image_format)
@@ -30,7 +30,7 @@ HostImage::HostImage(Session* session, scenic::ResourceId id,
       image_formats::GetFunctionToConvertToBgra8(host_image_format);
 }
 
-ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
+ImagePtr HostImage::New(Session* session, ResourceId id,
                         HostMemoryPtr host_memory,
                         const fuchsia::images::ImageInfo& host_image_info,
                         uint64_t memory_offset, ErrorReporter* error_reporter) {
@@ -132,7 +132,7 @@ bool HostImage::UpdatePixels() {
   return false;
 }
 
-ImagePtr HostImage::NewForTesting(Session* session, scenic::ResourceId id,
+ImagePtr HostImage::NewForTesting(Session* session, ResourceId id,
                                   escher::ResourceManager* image_owner,
                                   HostMemoryPtr host_memory) {
   escher::ImagePtr escher_image = escher::Image::New(
@@ -145,4 +145,4 @@ ImagePtr HostImage::NewForTesting(Session* session, scenic::ResourceId id,
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

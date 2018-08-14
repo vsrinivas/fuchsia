@@ -12,7 +12,7 @@
 #include "lib/escher/vk/image.h"
 #include "lib/fxl/macros.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Screenshotter {
@@ -32,6 +32,6 @@ class Screenshotter {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_SCREENSHOTTER_H_

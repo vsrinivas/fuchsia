@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
@@ -53,4 +53,4 @@ void Display::Unclaim() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

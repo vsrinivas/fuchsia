@@ -9,7 +9,7 @@
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class Node;
@@ -128,6 +128,6 @@ class GlobalHitTester : public HitTester {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_HIT_TESTER_H_

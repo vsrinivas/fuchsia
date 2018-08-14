@@ -7,20 +7,20 @@
 
 #include "garnet/lib/ui/gfx/resources/lights/light.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class AmbientLight final : public Light {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  AmbientLight(Session* session, scenic::ResourceId id);
+  AmbientLight(Session* session, ResourceId id);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_AMBIENT_LIGHT_H_

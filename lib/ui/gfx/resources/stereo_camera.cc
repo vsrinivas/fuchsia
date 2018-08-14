@@ -4,14 +4,13 @@
 
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo StereoCamera::kTypeInfo = {
     ResourceType::kCamera | ResourceType::kStereoCamera, "StereoCamera"};
 
-StereoCamera::StereoCamera(Session* session, scenic::ResourceId id,
-                           ScenePtr scene)
+StereoCamera::StereoCamera(Session* session, ResourceId id, ScenePtr scene)
     : Camera(session, id, scene, StereoCamera::kTypeInfo) {
   viewports_[Eye::LEFT] = {0.f, 0.f, 0.5f, 1.f};
   viewports_[Eye::RIGHT] = {0.5f, 0.f, 0.5f, 1.f};
@@ -40,4 +39,4 @@ escher::Camera StereoCamera::GetEscherCamera(Eye eye) const {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

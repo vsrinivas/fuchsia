@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 FrameTimings::FrameTimings() : FrameTimings(nullptr, 0, 0) {}
@@ -103,4 +103,4 @@ void FrameTimings::Finalize() {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

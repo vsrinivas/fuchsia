@@ -20,12 +20,12 @@
 #include "garnet/lib/ui/input/input_system.h"
 #endif
 
-namespace scenic {
+namespace scenic_impl {
 
 App::App(component::StartupContext* app_context, fit::closure quit_callback)
     : scenic_(std::make_unique<Scenic>(app_context, std::move(quit_callback))) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx = scenic_->RegisterSystem<scenic::gfx::GfxSystem>();
+  auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>();
   FXL_DCHECK(gfx);
 #endif
 
@@ -40,7 +40,7 @@ App::App(component::StartupContext* app_context, fit::closure quit_callback)
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto input = scenic_->RegisterSystem<scenic::input::InputSystem>(gfx);
+  auto input = scenic_->RegisterSystem<input::InputSystem>(gfx);
   FXL_DCHECK(input);
 #else
 #error InputSystem requires gfx::GfxSystem.
@@ -48,4 +48,4 @@ App::App(component::StartupContext* app_context, fit::closure quit_callback)
 #endif
 }
 
-}  // namespace scenic
+}  // namespace scenic_impl

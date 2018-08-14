@@ -59,7 +59,7 @@ class DisplayRotater {
   // Presentation time at which animation values were last set.
   uint64_t last_animation_update_time_ = 0;
 
-  scenic::RK4SpringSimulation spring_;
+  scenic_impl::RK4SpringSimulation spring_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayRotater);
 };

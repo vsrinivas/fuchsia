@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 namespace test {
 
@@ -59,4 +59,4 @@ void ErrorReportingTest::ExpectLastReportedError(
 
 }  // namespace test
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

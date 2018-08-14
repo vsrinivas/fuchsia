@@ -16,7 +16,7 @@
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class SceneManagerImpl;
@@ -34,7 +34,7 @@ class SessionHandler : public TempSessionDelegate {
                  ErrorReporter* error_reporter);
   virtual ~SessionHandler();
 
-  scenic::gfx::Session* session() const { return session_.get(); }
+  scenic_impl::gfx::Session* session() const { return session_.get(); }
 
  protected:
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
@@ -72,7 +72,7 @@ class SessionHandler : public TempSessionDelegate {
 
   EventReporter* const event_reporter_;
   ErrorReporter* const error_reporter_;
-  scenic::gfx::SessionPtr session_;
+  scenic_impl::gfx::SessionPtr session_;
 
   // TODO(SCN-710): We reallocate this everytime we std::move it into
   // ScheduleUpdate().  The bug has some ideas about how to do better.
@@ -80,6 +80,6 @@ class SessionHandler : public TempSessionDelegate {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_

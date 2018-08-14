@@ -10,7 +10,7 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/logging.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::eventpair token,
@@ -210,4 +210,4 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

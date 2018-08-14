@@ -7,14 +7,14 @@
 
 #include "garnet/lib/ui/gfx/resources/lights/light.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class DirectionalLight final : public Light {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  DirectionalLight(Session* session, scenic::ResourceId id);
+  DirectionalLight(Session* session, ResourceId id);
 
   // The direction will be normalized before storing.  Returns false if the
   // length of |direction| is nearly zero.
@@ -31,6 +31,6 @@ class DirectionalLight final : public Light {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_DIRECTIONAL_LIGHT_H_

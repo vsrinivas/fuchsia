@@ -28,7 +28,7 @@
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 // Determine a plausible memory type index for importing memory from VMOs.
@@ -311,4 +311,4 @@ std::string Engine::DumpScenes() const {
 }
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl

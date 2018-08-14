@@ -12,7 +12,7 @@
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/image.h"
 
-namespace scenic {
+namespace scenic_impl {
 namespace gfx {
 
 class HostImage;
@@ -38,12 +38,12 @@ class HostImage : public Image {
   // the caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static ImagePtr New(Session* session, scenic::ResourceId id,
+  static ImagePtr New(Session* session, ResourceId id,
                       HostMemoryPtr memory,
                       const fuchsia::images::ImageInfo& host_image_info,
                       uint64_t memory_offset, ErrorReporter* error_reporter);
 
-  static ImagePtr NewForTesting(Session* session, scenic::ResourceId id,
+  static ImagePtr NewForTesting(Session* session, ResourceId id,
                                 escher::ResourceManager* image_owner,
                                 HostMemoryPtr host_memory);
 
@@ -61,7 +61,7 @@ class HostImage : public Image {
   // |image| is the escher::Image that is being wrapped.
   // |host_memory_offset| specifies the offset into |memory| where the image is
   // stored.
-  HostImage(Session* session, scenic::ResourceId id, HostMemoryPtr memory,
+  HostImage(Session* session, ResourceId id, HostMemoryPtr memory,
             escher::ImagePtr image, uint64_t host_memory_offset,
             fuchsia::images::ImageInfo host_image_format);
 
@@ -75,6 +75,6 @@ class HostImage : public Image {
 };
 
 }  // namespace gfx
-}  // namespace scenic
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_HOST_IMAGE_H_
