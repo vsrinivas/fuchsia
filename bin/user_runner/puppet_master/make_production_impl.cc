@@ -10,6 +10,7 @@
 #include "peridot/bin/user_runner/puppet_master/command_runners/focus_mod_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/remove_mod_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/set_focus_state_command_runner.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/set_kind_of_proto_story_option_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
@@ -48,6 +49,9 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
                           new RemoveModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
                           new SetLinkValueCommandRunner());
+  command_runners.emplace(
+      fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
+      new SetKindOfProtoStoryOptionCommandRunner(session_storage));
 
   auto executor = std::make_unique<DispatchStoryCommandExecutor>(
       session_storage, std::move(command_runners));

@@ -159,7 +159,9 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
           {fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
            "StoryCommand::SetLinkValue"},
           {fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-           "StoryCommand::SetFocusState"}} {
+           "StoryCommand::SetFocusState"},
+          {fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
+           "StoryCommand::SetKindOfProtoStoryOption"}} {
   FXL_DCHECK(session_storage_ != nullptr);
 }
 

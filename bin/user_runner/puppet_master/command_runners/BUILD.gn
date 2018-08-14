@@ -214,3 +214,34 @@ executable("focus_mod_command_runner_unittest") {
     "//third_party/googletest:gtest_main",
   ]
 }
+
+source_set("set_kind_of_proto_story_option_command_runner") {
+  sources = [
+    "set_kind_of_proto_story_option_command_runner.cc",
+    "set_kind_of_proto_story_option_command_runner.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("set_kind_of_proto_story_option_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "set_kind_of_proto_story_option_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":set_kind_of_proto_story_option_command_runner",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gtest_main",
+  ]
+}

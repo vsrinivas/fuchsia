@@ -32,6 +32,9 @@ union StoryCommand {
 
   // Brings focus to a mod.
   FocusMod focus_mod;
+
+  // Updates the kind_of_proto_story option in a story.
+  SetKindOfProtoStoryOption set_kind_of_proto_story_option;
 };
 
 struct SetFocusState {
@@ -79,4 +82,9 @@ struct SetLinkValue {
 // Instructs the user shell to focus the mod under |mod_name|.
 struct FocusMod {
   vector<string> mod_name;
+};
+
+// Updates the kind_of_proto_story option in a story.
+struct SetKindOfProtoStoryOption {
+  bool value;
 };
