@@ -16,6 +16,10 @@
 #include "garnet/lib/ui/views/view_system.h"
 #endif
 
+#ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
+#include "garnet/lib/ui/input/input_system.h"
+#endif
+
 namespace scenic {
 
 App::App(component::StartupContext* app_context, fit::closure quit_callback)
@@ -34,12 +38,12 @@ App::App(component::StartupContext* app_context, fit::closure quit_callback)
 #endif
 #endif
 
-#ifdef SCENIC_ENABLE_VIEWS_SUBSYSTEM
+#ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto views = scenic_->RegisterSystem<ViewSystem>(scenic);
-  FXL_DCHECK(views);
+  auto input = scenic_->RegisterSystem<scenic::input::InputSystem>(scenic);
+  FXL_DCHECK(input);
 #else
-#error ViewSystem requires gfx::GfxSystem.
+#error InputSystem requires gfx::GfxSystem.
 #endif
 #endif
 }

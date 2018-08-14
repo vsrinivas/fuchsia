@@ -10,8 +10,8 @@
 declare_args() {
   enable_value_subsystem = false
   enable_gfx_subsystem = true
-  enable_views_subsystem = true
   enable_sketchy_subsystem = true
+  enable_input_subsystem = true
 }
 
 executable("scenic") {
@@ -36,9 +36,9 @@ executable("scenic") {
     deps += [ "//garnet/lib/ui/sketchy" ]
   }
 
-  if (enable_views_subsystem) {
-    defines += [ "SCENIC_ENABLE_VIEWS_SUBSYSTEM" ]
-    deps += [ "//garnet/lib/ui/views" ]
+  if (enable_input_subsystem) {
+    defines += [ "SCENIC_ENABLE_INPUT_SUBSYSTEM" ]
+    deps += [ "//garnet/lib/ui/input" ]
   }
 }
 

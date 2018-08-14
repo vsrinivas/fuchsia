@@ -52,9 +52,9 @@ class System {
  public:
   enum TypeId {
     kGfx = 0,
-    kViews = 1,
-    kSketchy = 2,
-    kVectorial = 3,
+    kSketchy = 1,
+    kVectorial = 2,
+    kInput = 3,
     kDummySystem = 4,
     kMaxSystems = 5,
     kInvalid = kMaxSystems,
@@ -115,8 +115,8 @@ inline System::TypeId SystemTypeForCmd(
   switch (command.Which()) {
     case fuchsia::ui::scenic::Command::Tag::kGfx:
       return System::TypeId::kGfx;
-    case fuchsia::ui::scenic::Command::Tag::kViews:
-      return System::TypeId::kViews;
+    case fuchsia::ui::scenic::Command::Tag::kInput:
+      return System::TypeId::kInput;
     case fuchsia::ui::scenic::Command::Tag::kVectorial:
       return System::TypeId::kVectorial;
     default:

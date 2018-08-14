@@ -2,14 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("views") {
+source_set("input") {
   sources = [
-    "view_system.cc",
-    "view_system.h",
+    "input_system.cc",
+    "input_system.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
   ]
 
   public_deps = [
-    "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
   ]
 }
