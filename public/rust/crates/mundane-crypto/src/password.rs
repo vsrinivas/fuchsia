@@ -94,6 +94,27 @@ pub mod scrypt {
         p: u64,
     }
 
+    impl ScryptParams {
+        /// Gets the parameter N.
+        #[allow(non_snake_case)]
+        #[must_use]
+        pub fn N(&self) -> u64 {
+            self.N
+        }
+
+        /// Gets the parameter r.
+        #[must_use]
+        pub fn r(&self) -> u64 {
+            self.r
+        }
+
+        /// Gets the parameter p.
+        #[must_use]
+        pub fn p(&self) -> u64 {
+            self.p
+        }
+    }
+
     // Don't put a limit on the memory used by scrypt; it's too prone to
     // failure. Instead, rely on choosing sane defaults for N, r, and p to
     // ensure that we don't use too much memory.
@@ -109,24 +130,44 @@ pub mod scrypt {
     }
 
     impl ScryptHash {
+        // NOTE(joshlf): Normally, having three different parameters in a row of
+        // the same type would be dangerous because it's too easy to
+        // accidentally pass arguments in the wrong order. In this particular
+        // case, it's less of a concern because ScryptHash is only passed to the
+        // scrypt_verify function, so the worst that reordering these parameters
+        // can due is cause a valid hash to be mistakenly rejected as invalid.
+        // If this were a constructor on ScryptParams, which is passed as an
+        // argument to scrypt_generate, then a mistake might lead to
+        // accidentally generating a hash with weak security parameters, which
+        // would be a problem.
+
         /// Constructs a new `ScryptHash`.
+        #[allow(non_snake_case)]
+        #[must_use]
         pub fn new(
-            hash: [u8; SCRYPT_HASH_LEN], salt: [u8; SCRYPT_SALT_LEN], params: ScryptParams,
+            hash: [u8; SCRYPT_HASH_LEN], salt: [u8; SCRYPT_SALT_LEN], N: u64, r: u64, p: u64,
         ) -> ScryptHash {
-            ScryptHash { hash, salt, params }
+            ScryptHash {
+                hash,
+                salt,
+                params: ScryptParams { N, r, p },
+            }
         }
 
         /// Gets the hash.
+        #[must_use]
         pub fn hash(&self) -> &[u8; SCRYPT_HASH_LEN] {
             &self.hash
         }
 
         /// Gets the salt.
+        #[must_use]
         pub fn salt(&self) -> &[u8; SCRYPT_SALT_LEN] {
             &self.salt
         }
 
         /// Gets the params.
+        #[must_use]
         pub fn params(&self) -> ScryptParams {
             self.params
         }
