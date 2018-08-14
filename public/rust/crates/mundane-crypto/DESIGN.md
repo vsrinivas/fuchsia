@@ -14,6 +14,31 @@ TODO
 
 # Design Patterns
 
+## Do work for the user
+
+Some cryptographic operations have setup phases, require generating random
+values, etc. While many cryptographic APIs split these into multiple steps that
+must be performed by the user in the right order, prefer APIs which perform all
+setup steps on behalf of the user. This reduces the opportunities for the user
+to make a mistake.
+
+For example, the scrypt password-based key derivation function takes a salt.
+When generating a key from a new password, the salt should always be randomly
+generated anew. Instead of taking the salt as an argument, as many cryptographic
+APIs do, we generate the salt as part of the generation function -
+`scrypt_generate` - so that the user is not given the opportunity to improperly
+generate it.
+
+As another example, while scrypt can be used as a general-purpose key derivation
+function, we expose it specifically for password verification. Thus, instead of
+having the API expose the ability to take a password and a salt and generate a
+hash, leaving it up to the user to verify that the calculated hash matches the
+expected one, our API takes a password, a salt, and a hash, computes the new
+hash, checks it against the expected one, and returns a boolean. Not only does
+this ensure that the comparison is not accidentally skipped, it also allows us
+to ensure that the comparison is performed using a constant-time comparison
+function, which is a subtle detail that is often overlooked by users.
+
 ## Types
 
 Most cryptographic operations have data associated with them. Hash functions

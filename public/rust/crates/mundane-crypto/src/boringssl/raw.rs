@@ -216,6 +216,30 @@ pub unsafe fn EVP_PKEY_get1_EC_KEY(pkey: *mut EVP_PKEY) -> Result<NonNull<EC_KEY
     )
 }
 
+#[allow(non_snake_case)]
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub unsafe fn EVP_PBE_scrypt(
+    password: *const c_char, password_len: usize, salt: *const u8, salt_len: usize, N: u64, r: u64,
+    p: u64, max_mem: usize, out_key: *mut u8, key_len: usize,
+) -> Result<(), BoringError> {
+    one_or_err(
+        "EVP_PBE_scrypt",
+        ::boringssl_sys::EVP_PBE_scrypt(
+            password,
+            password_len,
+            salt,
+            salt_len,
+            N,
+            r,
+            p,
+            max_mem,
+            out_key,
+            key_len,
+        ),
+    )
+}
+
 // hmac.h
 
 // NOTE: We don't implement CInit because some functions that take an HMAC_CTX
@@ -250,6 +274,15 @@ pub unsafe fn HMAC_Final(
     ctx: *mut HMAC_CTX, out: *mut u8, out_len: *mut c_uint,
 ) -> Result<(), BoringError> {
     one_or_err("HMAC_Final", ::boringssl_sys::HMAC_Final(ctx, out, out_len))
+}
+
+// rand.h
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn RAND_bytes(buf: *mut u8, len: usize) {
+    // RAND_bytes promises to return 1.
+    assert_abort_eq!(::boringssl_sys::RAND_bytes(buf, len), 1);
 }
 
 // sha.h

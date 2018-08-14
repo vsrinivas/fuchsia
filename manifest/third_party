@@ -5,7 +5,7 @@
     <import remote="https://fuchsia.googlesource.com/third_party/boringssl"
             manifest="manifest"
             name="third_party/boringssl"
-            revision="df6dc0790da053b4f7919893fa080660b188949e"/>
+            revision="7ae3682570b4547e3a9b8ff41de5c69e0253fd49"/>
   </imports>
   <projects>
     <project name="docs"

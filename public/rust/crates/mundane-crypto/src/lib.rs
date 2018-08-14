@@ -27,6 +27,8 @@ pub mod hmac;
 #[forbid(unsafe_code)]
 pub mod insecure;
 #[forbid(unsafe_code)]
+pub mod password;
+#[forbid(unsafe_code)]
 pub mod public;
 #[forbid(unsafe_code)]
 mod util;
