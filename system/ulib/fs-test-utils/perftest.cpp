@@ -64,7 +64,7 @@ Usage:
          --print_statistics            In performace test mode, result summary
                                        statistics will be written to STDOUT.
 
-         --run COUNT                   In performace test mode, limits the
+         --runs COUNT                  In performace test mode, limits the
                                        number of times to execute each test to
                                        COUNT.
 
