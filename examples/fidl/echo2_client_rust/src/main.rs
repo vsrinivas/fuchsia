@@ -2,24 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate fidl;
-extern crate fidl_fidl_examples_echo;
-extern crate failure;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-#[macro_use]
-extern crate structopt;
-
-use component::client::Launcher;
 use failure::{Error, ResultExt};
-use futures::prelude::*;
 use fidl_fidl_examples_echo::EchoMarker;
+use fuchsia_app::client::Launcher;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use futures::prelude::*;
 use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     #[derive(StructOpt, Debug)]
     #[structopt(name = "echo_client_rust")]

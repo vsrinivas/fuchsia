@@ -2,23 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate fidl;
-extern crate failure;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate fidl_fidl_examples_echo;
-
-use component::server::ServicesServer;
 use failure::{Error, ResultExt};
-use futures::prelude::*;
 use fidl::endpoints2::{ServiceMarker, RequestStream};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use futures::prelude::*;
+
 use std::env;
 
-fn spawn_echo_server(chan: async::Channel, quiet: bool) {
-    async::spawn(EchoRequestStream::from_channel(chan)
+fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
+    fasync::spawn(EchoRequestStream::from_channel(chan)
         .map_ok(move |EchoRequest::EchoString { value, responder }| {
             if !quiet {
                 println!("Received echo request for string {:?}", value);
@@ -34,7 +29,7 @@ fn spawn_echo_server(chan: async::Channel, quiet: bool) {
 }
 
 fn main() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let quiet = env::args().any(|arg| arg == "-q");
 
     let fut = ServicesServer::new()
