@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Describes the hardware environment in which a test will be run. Associated
+# JSON is written to $root_build_dir/test_specs.
+#
+# Parameters
+#
+#   test_path
+#     Required: Path on target to a test binary.
+#
+#   device_type
+#     Optional: Type of device to target; if unspecified, the associated test
+#     will run within QEMU.
+
+template("test_spec") {
+  assert(defined(invoker.test_path), "test_path must be defined.")
+  forward_variables_from(invoker,
+                         [
+                           "test_path",
+                           "device_type",
+                         ])
+
+  test_spec = {
+    test = {
+      location = test_path
+    }
+  }
+  spec_name = target_name
+
+  if (defined(device_type)) {
+    test_spec.device = {
+      type = device_type
+    }
+    spec_name = "$target_name-${device_type}"
+  }
+  write_file("$root_build_dir/test_specs/$spec_name.json", test_spec, "json")
+
+  # TODO(IN-575): Run a policy check to ensure that the spec is valid.
+}
