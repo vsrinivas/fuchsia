@@ -6,19 +6,11 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-extern crate fuchsia_zircon as zx;
-extern crate mxruntime as mx;
-
-#[cfg_attr(test, macro_use)]
-extern crate log;
-
-#[macro_use]
-extern crate lazy_static;
-
+use lazy_static::lazy_static;
 use log::{Level, LevelFilter, Metadata, Record};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use zx::sys::*;
+use fuchsia_zircon::{self as zx, sys::*};
 use std::fmt::Arguments;
 
 #[allow(non_camel_case_types)]
@@ -26,7 +18,7 @@ mod syslog;
 
 /// Encapsulates Log Levels.
 pub mod levels {
-    use syslog;
+    use crate::syslog;
 
     /// Defines log levels for clients.
     pub type LogLevel = i32;
@@ -39,6 +31,14 @@ pub mod levels {
 
     /// ERROR log level
     pub const ERROR: LogLevel = syslog::FX_LOG_ERROR;
+}
+
+/// Convenient re-export of macros for globed imports Rust Edition 2018
+pub mod macros {
+    pub use crate::fx_log;
+    pub use crate::fx_log_info;
+    pub use crate::fx_log_warn;
+    pub use crate::fx_log_err;
 }
 
 /// Maps log crate log levels to syslog severity levels.
@@ -260,7 +260,7 @@ pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
     let config = syslog::fx_logger_config_t {
         severity: levels::INFO,
         fd: -1,
-        log_service_channel: mx::ZX_HANDLE_INVALID,
+        log_service_channel: mxruntime::ZX_HANDLE_INVALID,
         tags: c_tags.as_ptr(),
         num_tags: c_tags.len(),
     };
@@ -296,6 +296,7 @@ mod test {
 
     use super::*;
 
+    use log::{log, trace, error, debug, info, warn};
     use self::tempdir::TempDir;
     use std::fs::File;
     use std::ptr;
@@ -310,7 +311,7 @@ mod test {
         let config = syslog::fx_logger_config_t {
             severity: levels::INFO,
             fd: tmp_file.as_raw_fd(),
-            log_service_channel: mx::ZX_HANDLE_INVALID,
+            log_service_channel: mxruntime::ZX_HANDLE_INVALID,
             tags: ptr::null(),
             num_tags: 0,
         };
