@@ -17,6 +17,7 @@ source_set("src") {
     "msd_vsl_driver.cc",
     "msd_vsl_driver.h",
     "msd_vsl_semaphore.cc",
+    "msd_vsl_semaphore.h",
     "page_table_arrays.cc",
     "page_table_arrays.h",
   ]
@@ -30,6 +31,7 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
     "//garnet/lib/magma/src/magma_util/platform:device",
     "//garnet/lib/magma/src/magma_util/platform:mmio",
+    "//garnet/lib/magma/src/magma_util/platform:semaphore",
   ]
   friend = [
     "../tests/unit_tests:*",
