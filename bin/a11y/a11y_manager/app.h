@@ -5,11 +5,14 @@
 #ifndef GARNET_BIN_A11Y_A11Y_MANAGER_APP_H_
 #define GARNET_BIN_A11Y_A11Y_MANAGER_APP_H_
 
+#include <memory>
+
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "garnet/bin/a11y/a11y_manager/manager_impl.h"
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
+#include "garnet/bin/a11y/a11y_manager/toggler_impl.h"
 #include "lib/component/cpp/startup_context.h"
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -29,6 +32,7 @@ class App {
 
   std::unique_ptr<SemanticTree> semantic_tree_;
   std::unique_ptr<ManagerImpl> a11y_manager_;
+  std::unique_ptr<TogglerImpl> toggler_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

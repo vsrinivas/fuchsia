@@ -27,6 +27,8 @@ source_set("lib") {
     "manager_impl.h",
     "semantic_tree.cc",
     "semantic_tree.h",
+    "toggler_impl.cc",
+    "toggler_impl.h",
   ]
 
   public_deps = [
