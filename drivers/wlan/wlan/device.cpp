@@ -59,6 +59,10 @@ static wlanmac_ifc_t wlanmac_ifc_ops = {
     .complete_tx = [](void* cookie, wlan_tx_packet_t* pkt,
                       zx_status_t status) { DEV(cookie)->WlanmacCompleteTx(pkt, status); },
     .indication = [](void* cookie, uint32_t ind) { DEV(cookie)->WlanmacIndication(ind); },
+    .report_tx_status =
+        [](void* cookie, const wlan_tx_status_t* tx_status) {
+            DEV(cookie)->WlanmacReportTxStatus(tx_status);
+        },
 };
 
 static ethmac_protocol_ops_t ethmac_ops = {
@@ -137,6 +141,10 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     }
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
     dispatcher_->CreateAndStartTelemetry();
+    if ((wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
+        !(wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION)) {
+        minstrel_.reset(new MinstrelManager);
+    }
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
@@ -358,6 +366,14 @@ void Device::WlanmacIndication(uint32_t ind) {
     if (status != ZX_OK) { warnf("could not queue driver indication packet err=%d\n", status); }
 }
 
+void Device::WlanmacReportTxStatus(const wlan_tx_status_t* tx_status) {
+    zx_packet_user_t user_pkt;
+    static_assert(sizeof(zx_packet_user_t) >= sizeof(wlan_tx_status_t), "tx_status size > 32");
+    memcpy(user_pkt.c8, reinterpret_cast<const uint8_t*>(tx_status), sizeof(wlan_tx_status_t));
+    auto status = QueueDevicePortPacketUser(DevicePacket::kReportTxStatus, user_pkt);
+    if (status != ZX_OK) { warnf("could not queue tx status report packet err=%d\n", status); }
+}
+
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     ZX_DEBUG_ASSERT(timer != nullptr);
     ZX_DEBUG_ASSERT(timer->get() == nullptr);
@@ -543,6 +559,9 @@ void Device::MainLoop() {
                 if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
                 break;
             }
+            case to_enum_type(DevicePacket::kReportTxStatus): {
+                break;
+            }
             default:
                 errorf("unknown device port key subtype: %" PRIu64 "\n", pkt.user.u64[0]);
                 break;
@@ -633,6 +652,15 @@ zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
     pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
     pkt.type = ZX_PKT_TYPE_USER;
     pkt.status = status;
+    return port_.queue(&pkt);
+}
+
+zx_status_t Device::QueueDevicePortPacketUser(DevicePacket id, zx_packet_user_t user_pkt) {
+    debugfn();
+    zx_port_packet_t pkt = {};
+    pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
+    pkt.type = ZX_PKT_TYPE_USER;
+    pkt.user = user_pkt;
     return port_.queue(&pkt);
 }
 
