@@ -27,7 +27,12 @@ public:
           library_(&compiled_libraries_, &error_reporter_) {
     }
 
-    bool Parse() {
+    bool Parse(std::unique_ptr<fidl::raw::File> &ast_ptr) {
+        ast_ptr.reset(parser_.Parse().release());
+        return parser_.Ok();
+    }
+
+    bool Compile() {
         auto ast = parser_.Parse();
         return parser_.Ok() &&
                library_.ConsumeFile(std::move(ast)) &&
@@ -59,6 +64,10 @@ public:
             }
         }
         return nullptr;
+    }
+
+    fidl::SourceFile source_file() {
+        return source_file_;
     }
 
 private:

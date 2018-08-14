@@ -118,7 +118,7 @@ bool valid_superinterface_test() {
     BEGIN_TEST;
 
     ValidSuperinterfaces library;
-    EXPECT_TRUE(library.Parse());
+    EXPECT_TRUE(library.Compile());
 
     auto interface_d = library.LookupInterface("D");
     EXPECT_NONNULL(interface_d);
@@ -134,7 +134,7 @@ bool invalid_name_superinterface_test() {
     BEGIN_TEST;
 
     InvalidNameSuperinterfaces library;
-    EXPECT_FALSE(library.Parse());
+    EXPECT_FALSE(library.Compile());
 
     END_TEST;
 }
@@ -145,7 +145,7 @@ bool invalid_ordinal_superinterface_test() {
     BEGIN_TEST;
 
     InvalidOrdinalSuperinterfaces library;
-    EXPECT_FALSE(library.Parse());
+    EXPECT_FALSE(library.Compile());
 
     END_TEST;
 }
@@ -156,7 +156,7 @@ bool invalid_simple_superinterface_test() {
     BEGIN_TEST;
 
     InvalidSimpleSuperinterfaces library;
-    EXPECT_FALSE(library.Parse());
+    EXPECT_FALSE(library.Compile());
 
     END_TEST;
 }

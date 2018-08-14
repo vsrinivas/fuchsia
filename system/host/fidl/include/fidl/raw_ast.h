@@ -22,6 +22,11 @@
 // here, like everywhere in the fidl compiler, are backed by a string
 // view whose contents are owned by a SourceManager.
 
+// This class has a tight coupling with the TreeVisitor class.  Each node has a
+// corresponding method in that class.  Each node type also has an Accept()
+// method to help visitors visit the node.  When you add a new node, or add a
+// field to an existing node, you must ensure the Accept method works.
+
 // A raw::File is produced by parsing a token stream. All of the
 // Files in a library are then flattened out into a Library.
 
@@ -38,45 +43,63 @@ namespace raw {
 // associated with any node.  In order to reconstruct that text, raw::File
 // contains an end token; the previous_end field of that token points to the end
 // of the last interesting token.
-struct SourceElement {
-    SourceElement(Token start, Token end)
+class TreeVisitor;
+
+class SourceElement {
+public:
+    explicit SourceElement(Token start, Token end)
         : start_(start), end_(end) {}
 
     SourceLocation location() const { return start_.location(); }
 
-    // The start_ token is the first token associated with the AST node, and
-    // contains everything in the gap between the end of the previous "interesting"
-    // token and the end of the first token in this AST node.  "Interesting" means
-    // "not discarded by previous compiler passes", and includes whitespace,
-    // comments, and things like braces / parentheses that aren't at the end of a
-    // node.
-    Token start_;
+    virtual ~SourceElement() {}
 
-    // The end_ token is the end of the source for the node; often a
-    // right curly brace or semicolon.  Note that these values might not be unique.
-    // For example, the token that starts an identifier list is also the token for
-    // the first identifier in the list.
+    Token start_;
     Token end_;
 };
 
-struct Identifier : SourceElement {
+class SourceElementMark {
+public:
+    SourceElementMark(TreeVisitor& tv,
+                      const SourceElement& element);
+
+    ~SourceElementMark();
+
+private:
+    TreeVisitor& tv_;
+    const SourceElement& element_;
+};
+
+class Identifier : public SourceElement {
+public:
     explicit Identifier(Token token)
         : SourceElement(token, token) {}
 
     explicit Identifier(Token start_token, Token identifier_token)
         : SourceElement(Token(start_token.previous_end(), identifier_token.location(), identifier_token.kind()), identifier_token) {}
+
+    virtual ~Identifier() {}
+
+    void Accept(TreeVisitor& visitor) {
+        SourceElementMark sem(visitor, *this);
+    }
 };
 
-struct CompoundIdentifier : SourceElement {
+class CompoundIdentifier : public SourceElement {
+public:
     CompoundIdentifier(Token start, Token end, std::vector<std::unique_ptr<Identifier>> components)
         : SourceElement(start, end), components(std::move(components)) {}
 
+
+    virtual ~CompoundIdentifier() {}
+
     std::vector<std::unique_ptr<Identifier>> components;
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct Literal : SourceElement {
-    virtual ~Literal() {}
-
+class Literal : public SourceElement {
+public:
     enum struct Kind {
         kString,
         kNumeric,
@@ -87,33 +110,46 @@ struct Literal : SourceElement {
     explicit Literal(Token token, Kind kind)
         : SourceElement(token, token), kind(kind) {}
 
+    virtual ~Literal() {}
+
     const Kind kind;
 };
 
-struct StringLiteral : public Literal {
+class StringLiteral : public Literal {
+public:
     explicit StringLiteral(Token start)
         : Literal(start, Kind::kString) {}
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct NumericLiteral : public Literal {
-    explicit NumericLiteral(Token token)
+class NumericLiteral : public Literal {
+public:
+    NumericLiteral(Token token)
         : Literal(token, Kind::kNumeric) {}
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct TrueLiteral : public Literal {
-    explicit TrueLiteral(Token token)
+class TrueLiteral : public Literal {
+public:
+    TrueLiteral(Token token)
         : Literal(token, Kind::kTrue) {}
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct FalseLiteral : public Literal {
-    explicit FalseLiteral(Token token)
+class FalseLiteral : public Literal {
+public:
+    FalseLiteral(Token token)
         : Literal(token, Kind::kFalse) {}
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct Constant : SourceElement {
-    virtual ~Constant() {}
-
-    enum struct Kind {
+class Constant : public SourceElement {
+public:
+    enum class Kind {
         kIdentifier,
         kLiteral,
     };
@@ -121,36 +157,46 @@ struct Constant : SourceElement {
     explicit Constant(Token token, Kind kind)
         : SourceElement(token, token), kind(kind) {}
 
+    virtual ~Constant() {}
+
     const Kind kind;
 };
 
-struct IdentifierConstant : Constant {
+class IdentifierConstant : public Constant {
+public:
     explicit IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
         : Constant(identifier->start_, Kind::kIdentifier), identifier(std::move(identifier)) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct LiteralConstant : Constant {
+class LiteralConstant : public Constant {
+public:
     explicit LiteralConstant(std::unique_ptr<Literal> literal)
         : Constant(literal->start_, Kind::kLiteral), literal(std::move(literal)) {}
 
     std::unique_ptr<Literal> literal;
+
+    void Accept(TreeVisitor& visitor);
 };
 
-struct Attribute : SourceElement {
+class Attribute : public SourceElement {
+public:
     Attribute(Token start, Token end, std::unique_ptr<Identifier> name, std::unique_ptr<StringLiteral> value)
         : SourceElement(start, end), name(std::move(name)), value(std::move(value)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Identifier> name;
     std::unique_ptr<StringLiteral> value;
 };
 
-struct AttributeList : SourceElement {
+class AttributeList : public SourceElement {
+public:
     AttributeList(Token start, Token end, std::vector<std::unique_ptr<Attribute>> attribute_list)
         : SourceElement(start, end), attribute_list(std::move(attribute_list)) {}
-
-    std::vector<std::unique_ptr<Attribute>> attribute_list;
 
     bool HasAttribute(fidl::StringView name) const {
         for (const auto& attribute : attribute_list) {
@@ -159,9 +205,14 @@ struct AttributeList : SourceElement {
         }
         return false;
     }
+
+    void Accept(TreeVisitor& visitor);
+
+    std::vector<std::unique_ptr<Attribute>> attribute_list;
 };
 
-struct Type : SourceElement {
+class Type : public SourceElement {
+public:
     virtual ~Type() {}
 
     enum struct Kind {
@@ -180,81 +231,107 @@ struct Type : SourceElement {
     const Kind kind;
 };
 
-struct ArrayType : public Type {
+class ArrayType : public Type {
+public:
     ArrayType(Token start, Token end, std::unique_ptr<Type> element_type, std::unique_ptr<Constant> element_count)
         : Type(start, end, Kind::kArray), element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 
+    void Accept(TreeVisitor& visitor);
     std::unique_ptr<Type> element_type;
     std::unique_ptr<Constant> element_count;
 };
 
-struct VectorType : public Type {
+class VectorType : public Type {
+public:
     VectorType(Token start, Token end, std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
                types::Nullability nullability)
         : Type(start, end, Kind::kVector), element_type(std::move(element_type)),
           maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<Type> element_type;
     std::unique_ptr<Constant> maybe_element_count;
     types::Nullability nullability;
 };
 
-struct StringType : public Type {
+class StringType : public Type {
+public:
     StringType(Token start, Token end, std::unique_ptr<Constant> maybe_element_count, types::Nullability nullability)
         : Type(start, end, Kind::kString), maybe_element_count(std::move(maybe_element_count)),
           nullability(nullability) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Constant> maybe_element_count;
     types::Nullability nullability;
 };
 
-struct HandleType : public Type {
+class HandleType : public Type {
+public:
     HandleType(Token start, Token end, types::HandleSubtype subtype, types::Nullability nullability)
         : Type(start, end, Kind::kHandle), subtype(subtype), nullability(nullability) {}
+
+    void Accept(TreeVisitor& visitor);
 
     types::HandleSubtype subtype;
     types::Nullability nullability;
 };
 
-struct RequestHandleType : public Type {
+class RequestHandleType : public Type {
+public:
     RequestHandleType(Token start, Token end, std::unique_ptr<CompoundIdentifier> identifier,
                       types::Nullability nullability)
         : Type(start, end, Kind::kRequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;
 };
 
-struct PrimitiveType : public Type {
-    PrimitiveType(Token start, Token end, types::PrimitiveSubtype subtype)
+class PrimitiveType : public Type {
+public:
+    explicit PrimitiveType(Token start, Token end, types::PrimitiveSubtype subtype)
         : Type(start, end, Kind::kPrimitive), subtype(subtype) {}
+
+    void Accept(TreeVisitor& visitor);
 
     types::PrimitiveSubtype subtype;
 };
 
-struct IdentifierType : public Type {
+class IdentifierType : public Type {
+public:
     IdentifierType(Token start, Token end, std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
         : Type(start, end, Kind::kIdentifier), identifier(std::move(identifier)), nullability(nullability) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;
 };
 
-struct Using : SourceElement {
+class Using : public SourceElement {
+public:
     Using(Token start, Token end, std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias, std::unique_ptr<PrimitiveType> maybe_primitive)
         : SourceElement(start, end), using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)), maybe_primitive(std::move(maybe_primitive)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<CompoundIdentifier> using_path;
     std::unique_ptr<Identifier> maybe_alias;
     std::unique_ptr<PrimitiveType> maybe_primitive;
 };
 
-struct ConstDeclaration : SourceElement {
+class ConstDeclaration : public SourceElement {
+public:
     ConstDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes, std::unique_ptr<Type> type,
                      std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> constant)
         : SourceElement(start, end), attributes(std::move(attributes)), type(std::move(type)),
           identifier(std::move(identifier)), constant(std::move(constant)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Type> type;
@@ -262,15 +339,19 @@ struct ConstDeclaration : SourceElement {
     std::unique_ptr<Constant> constant;
 };
 
-struct EnumMember : SourceElement {
+class EnumMember : public SourceElement {
+public:
     EnumMember(Token end, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value)
         : SourceElement(identifier->start_, end), identifier(std::move(identifier)), value(std::move(value)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<Constant> value;
 };
 
-struct EnumDeclaration : SourceElement {
+class EnumDeclaration : public SourceElement {
+public:
     EnumDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<PrimitiveType> maybe_subtype,
@@ -278,28 +359,37 @@ struct EnumDeclaration : SourceElement {
         : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           maybe_subtype(std::move(maybe_subtype)), members(std::move(members)) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<PrimitiveType> maybe_subtype;
     std::vector<std::unique_ptr<EnumMember>> members;
 };
 
-struct Parameter : SourceElement {
+class Parameter : public SourceElement {
+public:
     Parameter(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
         : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
 };
 
-struct ParameterList : SourceElement {
+class ParameterList : public SourceElement {
+public:
     ParameterList(Token start, Token end, std::vector<std::unique_ptr<Parameter>> parameter_list)
         : SourceElement(start, end), parameter_list(std::move(parameter_list)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::vector<std::unique_ptr<Parameter>> parameter_list;
 };
 
-struct InterfaceMethod : SourceElement {
+class InterfaceMethod : public SourceElement {
+public:
     InterfaceMethod(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<NumericLiteral> ordinal,
                     std::unique_ptr<Identifier> identifier,
@@ -309,6 +399,8 @@ struct InterfaceMethod : SourceElement {
           ordinal(std::move(ordinal)), identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
@@ -316,7 +408,8 @@ struct InterfaceMethod : SourceElement {
     std::unique_ptr<ParameterList> maybe_response;
 };
 
-struct InterfaceDeclaration : SourceElement {
+class InterfaceDeclaration : public SourceElement {
+public:
     InterfaceDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                          std::unique_ptr<Identifier> identifier,
                          std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces,
@@ -324,24 +417,30 @@ struct InterfaceDeclaration : SourceElement {
         : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces;
     std::vector<std::unique_ptr<InterfaceMethod>> methods;
 };
 
-struct StructMember : SourceElement {
+class StructMember : public SourceElement {
+public:
     StructMember(Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
                  std::unique_ptr<Constant> maybe_default_value)
         : SourceElement(type->start_, end), type(std::move(type)), identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<Constant> maybe_default_value;
 };
 
-struct StructDeclaration : SourceElement {
+class StructDeclaration : public SourceElement {
+public:
     // Note: A nullptr passed to attributes means an empty attribute list.
     StructDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                       std::unique_ptr<Identifier> identifier,
@@ -349,32 +448,41 @@ struct StructDeclaration : SourceElement {
         : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           members(std::move(members)) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<StructMember>> members;
 };
 
-struct UnionMember : SourceElement {
+class UnionMember : public SourceElement {
+public:
     UnionMember(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
         : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
 };
 
-struct UnionDeclaration : SourceElement {
+class UnionDeclaration : public SourceElement {
+public:
     UnionDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
                      std::unique_ptr<Identifier> identifier,
                      std::vector<std::unique_ptr<UnionMember>> members)
         : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
           members(std::move(members)) {}
 
+    void Accept(TreeVisitor& visitor);
+
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<UnionMember>> members;
 };
 
-struct File : SourceElement {
+class File : public SourceElement {
+public:
     File(Token start, Token end,
          std::unique_ptr<AttributeList> attributes,
          std::unique_ptr<CompoundIdentifier> library_name,
@@ -394,6 +502,8 @@ struct File : SourceElement {
           struct_declaration_list(std::move(struct_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)),
           end_(end) {}
+
+    void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<CompoundIdentifier> library_name;

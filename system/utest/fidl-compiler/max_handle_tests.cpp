@@ -75,7 +75,7 @@ static bool simple_structs(void) {
     BEGIN_TEST;
 
     MaxHandlesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto one_bool = test_library.LookupStruct("OneBool");
     EXPECT_NONNULL(one_bool);
@@ -92,7 +92,7 @@ static bool arrays(void) {
     BEGIN_TEST;
 
     MaxHandlesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto handle_array = test_library.LookupStruct("HandleArray");
     EXPECT_NONNULL(handle_array);
@@ -109,7 +109,7 @@ static bool vectors(void) {
     BEGIN_TEST;
 
     MaxHandlesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto handle_vector = test_library.LookupStruct("HandleVector");
     EXPECT_NONNULL(handle_vector);
@@ -134,7 +134,7 @@ static bool unions(void) {
     BEGIN_TEST;
 
     MaxHandlesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto no_handle_union = test_library.LookupUnion("NoHandleUnion");
     EXPECT_NONNULL(no_handle_union);

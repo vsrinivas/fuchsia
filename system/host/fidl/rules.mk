@@ -21,9 +21,11 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/library_zx.cpp \
     $(LOCAL_DIR)/lib/names.cpp \
     $(LOCAL_DIR)/lib/parser.cpp \
+    $(LOCAL_DIR)/lib/raw_ast.cpp \
     $(LOCAL_DIR)/lib/source_file.cpp \
     $(LOCAL_DIR)/lib/source_location.cpp \
     $(LOCAL_DIR)/lib/source_manager.cpp \
     $(LOCAL_DIR)/lib/tables_generator.cpp \
+    $(LOCAL_DIR)/lib/tree_visitor.cpp \
 
 include make/module.mk

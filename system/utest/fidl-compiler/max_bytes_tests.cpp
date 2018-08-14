@@ -95,7 +95,7 @@ static bool simple_structs(void) {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto one_bool = test_library.LookupStruct("OneBool");
     EXPECT_NONNULL(one_bool);
@@ -124,7 +124,7 @@ static bool optional_structs(void) {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto one_bool = test_library.LookupStruct("OptionalOneBool");
     EXPECT_NONNULL(one_bool);
@@ -153,7 +153,7 @@ static bool unions(void) {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto a_union = test_library.LookupUnion("UnionOfThings");
     EXPECT_NONNULL(a_union);
@@ -172,7 +172,7 @@ static bool vectors(void) {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto padded_vector = test_library.LookupStruct("PaddedVector");
     EXPECT_NONNULL(padded_vector);
@@ -196,7 +196,7 @@ static bool strings(void) {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto short_string = test_library.LookupStruct("ShortString");
     EXPECT_NONNULL(short_string);
@@ -215,7 +215,7 @@ static bool arrays(void) {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
-    EXPECT_TRUE(test_library.Parse());
+    EXPECT_TRUE(test_library.Compile());
 
     auto an_array = test_library.LookupStruct("AnArray");
     EXPECT_NONNULL(an_array);
