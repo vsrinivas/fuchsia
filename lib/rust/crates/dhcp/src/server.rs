@@ -51,7 +51,7 @@ impl Server {
             Some(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
             Some(MessageType::DHCPOFFER) => None,
             Some(MessageType::DHCPREQUEST) => self.handle_request(msg),
-            Some(MessageType::DHCPDECLINE) => None,
+            Some(MessageType::DHCPDECLINE) => self.handle_decline(msg),
             Some(MessageType::DHCPACK) => None,
             Some(MessageType::DHCPNAK) => None,
             Some(MessageType::DHCPRELEASE) => self.handle_release(msg),
@@ -144,6 +144,17 @@ impl Server {
             return None;
         }
         Some(build_ack(req, client_ip, &self.config))
+    }
+
+    fn handle_decline(&mut self, dec: Message) -> Option<Message> {
+        let declined_ip = get_requested_ip_addr(&dec)?;
+        if is_recipient(self.config.server_ip, &dec)
+            && !is_assigned(&dec, declined_ip, &self.cache, &self.pool)
+        {
+            self.pool.allocate_addr(declined_ip);
+        }
+        self.cache.remove(&dec.chaddr);
+        None
     }
 
     fn handle_release(&mut self, rel: Message) -> Option<Message> {
@@ -663,6 +674,25 @@ mod tests {
             value: vec![8, 8, 8, 8, 8, 8, 4, 4],
         });
         ack
+    }
+
+    fn new_test_decline() -> Message {
+        let mut decline = Message::new();
+        decline.xid = 42;
+        decline.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        decline.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPDECLINE as u8],
+        });
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: vec![192, 168, 1, 2],
+        });
+        decline.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: vec![192, 168, 1, 1],
+        });
+        decline
     }
 
     #[test]
@@ -1293,5 +1323,37 @@ mod tests {
         let mut want = new_test_inform_ack();
 
         assert_eq!(got, want, "expected: {:?}\ngot: {:?}", want, got);
+    }
+
+    #[test]
+    fn test_dispatch_with_decline_marks_addr_allocated() {
+        let decline = new_test_decline();
+        let mut server = new_test_server();
+        let already_used_ip = Ipv4Addr::new(192, 168, 1, 2);
+        server.config.managed_addrs.push(already_used_ip);
+        let client_config = CachedConfig {
+            client_addr: already_used_ip,
+            options: vec![],
+            expiration: zx::Time::INFINITE,
+        };
+        server.cache.insert(decline.chaddr, client_config);
+
+        let got = server.dispatch(decline);
+
+        assert!(got.is_none(), "server returned a Message value");
+        assert!(
+            !server.pool.addr_is_available(already_used_ip),
+            "addr still marked available"
+        );
+        assert!(
+            server.pool.addr_is_allocated(already_used_ip),
+            "addr not marked allocated"
+        );
+        assert!(
+            !server
+                .cache
+                .contains_key(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]),
+            "client config retained"
+        );
     }
 }
