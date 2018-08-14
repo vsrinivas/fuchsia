@@ -20,9 +20,6 @@ typedef uint32_t zx_pixel_format_t;
 #define ZX_PIXEL_FORMAT_MONO_8     ((zx_pixel_format_t)0x00010007)
 #define ZX_PIXEL_FORMAT_GRAY_8     ((zx_pixel_format_t)0x00010007)
 
-// to be removed:
-#define ZX_PIXEL_FORMAT_MONO_1     ((zx_pixel_format_t)0x00000006)
-
 #define ZX_PIXEL_FORMAT_BYTES(pf)  (((pf) >> 16) & 7)
 
 #endif // ZIRCON_PIXELFORMAT_H_
