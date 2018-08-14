@@ -39,7 +39,7 @@ else
 fi
 
 # Test block device performance.
-# TODO(DNO-2466): Enable this test for ARM64 hardware bots once they exist
+# TODO(ZX-2466): Enable this test for ARM64 hardware bots once they exist
 # and have storage devices attached.
 if [ "${benchmarks_bot_name}" = garnet-x64-perf-swift_canyon ]; then
   block_device=/dev/sys/pci/00:17.0/ahci/sata2/block
