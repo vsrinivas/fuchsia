@@ -36,6 +36,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-realpath.cpp \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-resize.cpp \
+    $(LOCAL_DIR)/test-rw.cpp \
     $(LOCAL_DIR)/test-rw-workers.c \
     $(LOCAL_DIR)/test-sparse.cpp \
     $(LOCAL_DIR)/test-sync.c \
