@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma_util/macros.h"
-#include "msd.h"
+#include "msd_vsl_connection.h"
 
-void msd_connection_close(msd_connection_t* connection) {}
+void msd_connection_close(msd_connection_t* connection)
+{
+    delete MsdVslAbiConnection::cast(connection);
+}
 
 msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection)
 {

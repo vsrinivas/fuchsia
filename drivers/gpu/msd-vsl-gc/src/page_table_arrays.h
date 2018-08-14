@@ -23,7 +23,11 @@ public:
         return bus_mapping_->Get()[0];
     }
 
+    static uint32_t size() { return kPageTableArrayEntries; }
+
     void HardwareInit(magma::RegisterIo* register_io);
+    void Enable(magma::RegisterIo* register_io, bool enable);
+    void AssignAddressSpace(uint32_t index, AddressSpace* address_space);
 
 private:
     static constexpr uint32_t kPageTableArraySizeInPages = 1;
@@ -31,8 +35,6 @@ private:
         kPageTableArraySizeInPages * PAGE_SIZE / sizeof(uint64_t);
 
     bool Init(magma::PlatformBusMapper* bus_mapper);
-    void AssignAddressSpace(uint32_t index, AddressSpace* address_space);
-    void Enable(magma::RegisterIo* register_io, bool enable);
 
     std::unique_ptr<magma::PlatformBuffer> page_table_array_;
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping_;

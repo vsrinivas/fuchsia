@@ -28,7 +28,7 @@ public:
         this->dev = &device_;
         this->stream = &command_stream_;
 
-        device_.msd_vsl_device = MsdVslDevice::Create(GetTestDeviceHandle());
+        device_.msd_vsl_device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
         if (!device_.msd_vsl_device)
             return DRETF(false, "no test device");
 

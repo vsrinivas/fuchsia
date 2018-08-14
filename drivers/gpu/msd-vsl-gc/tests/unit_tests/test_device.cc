@@ -15,13 +15,13 @@ class TestMsdVslDevice {
 public:
     static void CreateAndDestroy()
     {
-        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle());
+        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
         EXPECT_NE(device, nullptr);
     }
 
     static void DeviceId()
     {
-        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle());
+        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
         ASSERT_NE(device, nullptr);
         EXPECT_EQ(0x7000u, device->device_id());
     }
@@ -30,7 +30,7 @@ public:
     {
         constexpr uint32_t kPageCount = 1;
 
-        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle());
+        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
         ASSERT_NE(device, nullptr);
 
         EXPECT_TRUE(device->IsIdle());
@@ -86,7 +86,7 @@ public:
 
         // Ensure we can do this > once
         for (uint32_t i = 0; i < 2; i++) {
-            std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle());
+            std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
             ASSERT_NE(device, nullptr);
 
             EXPECT_TRUE(device->IsIdle());
@@ -149,6 +149,26 @@ public:
             device->page_table_arrays()->Enable(device->register_io(), true);
         }
     }
+
+    static void Connections()
+    {
+        std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
+        EXPECT_NE(device, nullptr);
+        std::vector<std::unique_ptr<MsdVslConnection>> connections;
+        for (uint32_t i = 0; i < PageTableArrays::size(); i++) {
+            auto connection = device->Open(i);
+            EXPECT_NE(nullptr, connection);
+            EXPECT_EQ(connection->client_id(), i);
+            connections.push_back(std::move(connection));
+        }
+        // Reached the limit
+        auto connection = device->Open(0);
+        EXPECT_EQ(nullptr, connection);
+        connections.clear();
+        // Ok to create more now
+        connection = device->Open(0);
+        EXPECT_NE(nullptr, connection);
+    }
 };
 
 TEST(MsdVslDevice, CreateAndDestroy) { TestMsdVslDevice::CreateAndDestroy(); }
@@ -158,3 +178,5 @@ TEST(MsdVslDevice, DeviceId) { TestMsdVslDevice::DeviceId(); }
 TEST(MsdVslDevice, FetchEngineDma) { TestMsdVslDevice::FetchEngineDma(); }
 
 TEST(MsdVslDevice, LoadAddressSpace) { TestMsdVslDevice::LoadAddressSpace(); }
+
+TEST(MsdVslDevice, Connections) { TestMsdVslDevice::Connections(); }

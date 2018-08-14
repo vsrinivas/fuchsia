@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_vsl_device.h"
+
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "platform_mmio.h"
@@ -10,17 +11,17 @@
 #include <chrono>
 #include <thread>
 
-std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle)
+std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle, bool enable_mmu)
 {
     auto device = std::make_unique<MsdVslDevice>();
 
-    if (!device->Init(device_handle))
+    if (!device->Init(device_handle, enable_mmu))
         return DRETP(nullptr, "Failed to initialize device");
 
     return device;
 }
 
-bool MsdVslDevice::Init(void* device_handle)
+bool MsdVslDevice::Init(void* device_handle, bool enable_mmu)
 {
     platform_device_ = magma::PlatformDevice::Create(device_handle);
     if (!platform_device_)
@@ -70,12 +71,12 @@ bool MsdVslDevice::Init(void* device_handle)
         return DRETF(false, "failed to create page table arrays");
 
     Reset();
-    HardwareInit();
+    HardwareInit(enable_mmu);
 
     return true;
 }
 
-void MsdVslDevice::HardwareInit()
+void MsdVslDevice::HardwareInit(bool enable_mmu)
 {
     {
         auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io_.get());
@@ -84,6 +85,10 @@ void MsdVslDevice::HardwareInit()
     }
 
     page_table_arrays_->HardwareInit(register_io_.get());
+    page_table_arrays_->Enable(register_io(), enable_mmu);
+
+    page_table_slot_allocator_ =
+        std::make_unique<PageTableSlotAllocator>(page_table_arrays_->size());
 }
 
 void MsdVslDevice::Reset()
@@ -182,11 +187,30 @@ bool MsdVslDevice::SubmitCommandBuffer(uint32_t gpu_addr, uint32_t length, uint1
     return true;
 }
 
+std::unique_ptr<MsdVslConnection> MsdVslDevice::Open(msd_client_id_t client_id)
+{
+    uint32_t page_table_array_slot;
+    if (!page_table_slot_allocator_->Alloc(&page_table_array_slot))
+        return DRETP(nullptr, "couldn't allocate page table slot");
+
+    auto address_space = AddressSpace::Create(this);
+    if (!address_space)
+        return DRETP(nullptr, "failed to create address space");
+
+    page_table_arrays_->AssignAddressSpace(page_table_array_slot, address_space.get());
+
+    return std::make_unique<MsdVslConnection>(this, page_table_array_slot, std::move(address_space),
+                                              client_id);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
+msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_id)
 {
-    return DRETP(nullptr, "not implemented");
+    auto connection = MsdVslDevice::cast(device)->Open(client_id);
+    if (!connection)
+        return DRETP(nullptr, "failed to create connection");
+    return new MsdVslAbiConnection(std::move(connection));
 }
 
 void msd_device_destroy(msd_device_t* device) { delete MsdVslDevice::cast(device); }
