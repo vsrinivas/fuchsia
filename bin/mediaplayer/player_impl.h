@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_MEDIA_PLAYER_IMPL_H_
-#define GARNET_BIN_MEDIAPLAYER_MEDIA_PLAYER_IMPL_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_PLAYER_IMPL_H_
+#define GARNET_BIN_MEDIAPLAYER_PLAYER_IMPL_H_
 
 #include <unordered_map>
 
@@ -25,17 +25,17 @@
 namespace media_player {
 
 // Fidl agent that renders streams.
-class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
+class PlayerImpl : public fuchsia::mediaplayer::Player {
  public:
-  static std::unique_ptr<MediaPlayerImpl> Create(
-      fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+  static std::unique_ptr<PlayerImpl> Create(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request,
       component::StartupContext* startup_context, fit::closure quit_callback);
 
-  MediaPlayerImpl(
-      fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-      component::StartupContext* startup_context, fit::closure quit_callback);
+  PlayerImpl(fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request,
+             component::StartupContext* startup_context,
+             fit::closure quit_callback);
 
-  ~MediaPlayerImpl() override;
+  ~PlayerImpl() override;
 
   // MediaPlayer implementation.
   void SetHttpSource(fidl::StringPtr http_url) override;
@@ -52,18 +52,19 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
 
   void Seek(int64_t position) override;
 
-  void SetGain(float gain) override;
-
   void CreateView(
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
 
+  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
+                           gain_control_request) override;
+
   void SetAudioOut(
       fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) override;
 
-  void AddBinding(fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
-                      request) override;
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
@@ -122,12 +123,11 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   async_dispatcher_t* dispatcher_;
   component::StartupContext* startup_context_;
   fit::closure quit_callback_;
-  fidl::BindingSet<fuchsia::mediaplayer::MediaPlayer> bindings_;
+  fidl::BindingSet<fuchsia::mediaplayer::Player> bindings_;
   PlayerCore core_;
   std::unique_ptr<DemuxFactory> demux_factory_;
   std::unique_ptr<DecoderFactory> decoder_factory_;
 
-  float gain_ = 1.0f;
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;
   std::shared_ptr<FidlVideoRenderer> video_renderer_;
 
@@ -162,9 +162,9 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   // reader and transition to kInactive.
   std::shared_ptr<Reader> new_reader_;
 
-  fuchsia::mediaplayer::MediaPlayerStatus status_;
+  fuchsia::mediaplayer::PlayerStatus status_;
 };
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_MEDIA_PLAYER_IMPL_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_PLAYER_IMPL_H_

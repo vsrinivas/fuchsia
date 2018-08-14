@@ -21,7 +21,7 @@ namespace media_player {
 // This class run single-threaded with the execption of the |PayloadAllocator|
 // methods, which can run on an arbitrary thread.
 class FidlAudioRenderer
-    : public AudioRendererInProc,
+    : public AudioRenderer,
       public PayloadAllocator,
       public std::enable_shared_from_this<FidlAudioRenderer> {
  public:
@@ -32,7 +32,7 @@ class FidlAudioRenderer
 
   ~FidlAudioRenderer() override;
 
-  // AudioRendererInProc implementation.
+  // AudioRenderer implementation.
   const char* label() const override;
 
   void Dump(std::ostream& os) const override;
@@ -60,7 +60,8 @@ class FidlAudioRenderer
   void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fit::closure callback) override;
 
-  void SetGain(float gain) override;
+  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
+                           gain_control_request) override;
 
   // PayloadAllocator implementation:
   void* AllocatePayloadBuffer(size_t size) override;
@@ -91,7 +92,6 @@ class FidlAudioRenderer
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   fuchsia::media::AudioOutPtr audio_out_;
-  fuchsia::media::GainControlPtr gain_control_;
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = 0;
   int64_t last_departed_pts_ns_ = 0;

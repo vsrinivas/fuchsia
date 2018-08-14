@@ -289,13 +289,9 @@ void FidlAudioRenderer::SetTimelineFunction(
   }
 }
 
-void FidlAudioRenderer::SetGain(float gain) {
-  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
-  if (!gain_control_) {
-    audio_out_->BindGainControl(gain_control_.NewRequest());
-  }
-
-  gain_control_->SetGain(gain);
+void FidlAudioRenderer::BindGainControl(
+    fidl::InterfaceRequest<fuchsia::media::GainControl> gain_control_request) {
+  audio_out_->BindGainControl(std::move(gain_control_request));
 }
 
 void* FidlAudioRenderer::AllocatePayloadBuffer(size_t size) {

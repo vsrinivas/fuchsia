@@ -17,8 +17,8 @@ executable("mediaplayer_bin") {
 
   sources = [
     "main.cc",
-    "media_player_impl.cc",
-    "media_player_impl.h",
+    "player_impl.cc",
+    "player_impl.h",
   ]
 
   deps = [
@@ -64,12 +64,12 @@ executable("tests") {
     "test/fakes/packet_info.cc",
     "test/fakes/packet_info.h",
     "test/main.cc",
-    "test/media_player_test_params.cc",
-    "test/media_player_test_params.h",
-    "test/media_player_test_unattended.cc",
-    "test/media_player_test_unattended.h",
-    "test/media_player_test_view.cc",
-    "test/media_player_test_view.h",
+    "test/mediaplayer_test_params.cc",
+    "test/mediaplayer_test_params.h",
+    "test/mediaplayer_test_unattended.cc",
+    "test/mediaplayer_test_unattended.h",
+    "test/mediaplayer_test_view.cc",
+    "test/mediaplayer_test_view.h",
   ]
 
   deps = [

@@ -31,11 +31,10 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
-  media_player_ =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
-  media_player_.events().StatusChanged =
-      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+  player_ = startup_context
+                ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
+  player_.events().OnStatusChanged =
+      [this](fuchsia::mediaplayer::PlayerStatus status) {
         HandleStatusChanged(status);
       };
 
@@ -43,20 +42,20 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
     url::GURL url = url::GURL(params.url());
 
     if (url.SchemeIsFile()) {
-      media_player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
+      player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
           fxl::UniqueFD(open(url.path().c_str(), O_RDONLY)).get()));
     } else {
-      media_player_->SetHttpSource(params.url());
+      player_->SetHttpSource(params.url());
     }
 
-    media_player_->Play();
+    player_->Play();
   }
 }
 
 AudioPlayer::~AudioPlayer() {}
 
 void AudioPlayer::HandleStatusChanged(
-    const fuchsia::mediaplayer::MediaPlayerStatus& status) {
+    const fuchsia::mediaplayer::PlayerStatus& status) {
   // Process status received from the player.
   if (status.end_of_stream && quit_when_done_) {
     quit_callback_();

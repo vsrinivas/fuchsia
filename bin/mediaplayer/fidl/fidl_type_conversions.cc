@@ -57,31 +57,16 @@ bool KnownEncodingsMatch() {
 }  // namespace
 
 media_player::Result
-TypeConverter<media_player::Result, fuchsia::mediaplayer::MediaResult>::Convert(
-    fuchsia::mediaplayer::MediaResult media_result) {
+TypeConverter<media_player::Result, fuchsia::mediaplayer::SeekingReaderResult>::
+    Convert(fuchsia::mediaplayer::SeekingReaderResult media_result) {
   switch (media_result) {
-    case fuchsia::mediaplayer::MediaResult::OK:
+    case fuchsia::mediaplayer::SeekingReaderResult::OK:
       return media_player::Result::kOk;
-    case fuchsia::mediaplayer::MediaResult::INTERNAL_ERROR:
-      return media_player::Result::kInternalError;
-    case fuchsia::mediaplayer::MediaResult::UNSUPPORTED_OPERATION:
-    case fuchsia::mediaplayer::MediaResult::NOT_IMPLEMENTED:
-      return media_player::Result::kUnsupportedOperation;
-    case fuchsia::mediaplayer::MediaResult::INVALID_ARGUMENT:
+    case fuchsia::mediaplayer::SeekingReaderResult::INVALID_ARGUMENT:
       return media_player::Result::kInvalidArgument;
-    case fuchsia::mediaplayer::MediaResult::NOT_FOUND:
+    case fuchsia::mediaplayer::SeekingReaderResult::NOT_FOUND:
       return media_player::Result::kNotFound;
-    case fuchsia::mediaplayer::MediaResult::UNKNOWN_ERROR:
-    case fuchsia::mediaplayer::MediaResult::UNSUPPORTED_CONFIG:
-    case fuchsia::mediaplayer::MediaResult::INSUFFICIENT_RESOURCES:
-    case fuchsia::mediaplayer::MediaResult::BAD_STATE:
-    case fuchsia::mediaplayer::MediaResult::BUF_OVERFLOW:
-    case fuchsia::mediaplayer::MediaResult::FLUSHED:
-    case fuchsia::mediaplayer::MediaResult::BUSY:
-    case fuchsia::mediaplayer::MediaResult::PROTOCOL_ERROR:
-    case fuchsia::mediaplayer::MediaResult::ALREADY_EXISTS:
-    case fuchsia::mediaplayer::MediaResult::SHUTTING_DOWN:
-    case fuchsia::mediaplayer::MediaResult::CONNECTION_LOST:
+    case fuchsia::mediaplayer::SeekingReaderResult::UNKNOWN_ERROR:
       break;
   }
 

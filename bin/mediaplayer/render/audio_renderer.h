@@ -10,15 +10,15 @@
 namespace media_player {
 
 // Abstract base class for sinks that render packets.
-// TODO(dalesat): Rename this.
-class AudioRendererInProc : public Renderer {
+class AudioRenderer : public Renderer {
  public:
-  AudioRendererInProc() {}
+  AudioRenderer() {}
 
-  ~AudioRendererInProc() override {}
+  ~AudioRenderer() override {}
 
-  // Sets the gain for this renderer.
-  virtual void SetGain(float gain) = 0;
+  virtual void BindGainControl(
+      fidl::InterfaceRequest<fuchsia::media::GainControl>
+          gain_control_request) = 0;
 };
 
 }  // namespace media_player

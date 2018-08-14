@@ -31,9 +31,9 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
 
   media_player_ =
       startup_context_
-          ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
-  media_player_.events().StatusChanged =
-      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+          ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
+  media_player_.events().OnStatusChanged =
+      [this](fuchsia::mediaplayer::PlayerStatus status) {
         if (status.end_of_stream) {
           FXL_LOG(INFO) << "MediaPlayerTest "
                         << (fake_audio_out_.expected() ? "SUCCEEDED"

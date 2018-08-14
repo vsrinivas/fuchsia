@@ -21,9 +21,10 @@
 namespace fxl {
 
 template <>
-struct TypeConverter<media_player::Result, fuchsia::mediaplayer::MediaResult> {
+struct TypeConverter<media_player::Result,
+                     fuchsia::mediaplayer::SeekingReaderResult> {
   static media_player::Result Convert(
-      fuchsia::mediaplayer::MediaResult media_result);
+      fuchsia::mediaplayer::SeekingReaderResult media_result);
 };
 
 template <>

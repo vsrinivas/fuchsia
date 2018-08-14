@@ -49,7 +49,7 @@ void FakeWavReader::Bind(
 }
 
 void FakeWavReader::Describe(DescribeCallback callback) {
-  callback(fuchsia::mediaplayer::MediaResult::OK, size_, true);
+  callback(fuchsia::mediaplayer::SeekingReaderResult::OK, size_, true);
 }
 
 void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
@@ -60,7 +60,8 @@ void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
   zx::socket other_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &other_socket);
   FXL_DCHECK(status == ZX_OK);
-  callback(fuchsia::mediaplayer::MediaResult::OK, std::move(other_socket));
+  callback(fuchsia::mediaplayer::SeekingReaderResult::OK,
+           std::move(other_socket));
 
   position_ = position;
 

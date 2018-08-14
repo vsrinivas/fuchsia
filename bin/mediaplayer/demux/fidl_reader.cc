@@ -25,15 +25,16 @@ FidlReader::FidlReader(
 
   read_in_progress_ = false;
 
-  seeking_reader_->Describe([this](fuchsia::mediaplayer::MediaResult result,
-                                   uint64_t size, bool can_seek) {
-    result_ = fxl::To<Result>(result);
-    if (result_ == Result::kOk) {
-      size_ = size;
-      can_seek_ = can_seek;
-    }
-    ready_.Occur();
-  });
+  seeking_reader_->Describe(
+      [this](fuchsia::mediaplayer::SeekingReaderResult result, uint64_t size,
+             bool can_seek) {
+        result_ = fxl::To<Result>(result);
+        if (result_ == Result::kOk) {
+          size_ = size;
+          can_seek_ = can_seek;
+        }
+        ready_.Occur();
+      });
 }
 
 FidlReader::~FidlReader() {}
@@ -99,7 +100,8 @@ void FidlReader::ContinueReadAt() {
 
     seeking_reader_->ReadAt(
         read_at_position_,
-        [this](fuchsia::mediaplayer::MediaResult result, zx::socket socket) {
+        [this](fuchsia::mediaplayer::SeekingReaderResult result,
+               zx::socket socket) {
           result_ = fxl::To<Result>(result);
           if (result_ != Result::kOk) {
             CompleteReadAt(result_);

@@ -71,7 +71,7 @@ impl App {
     pub async fn run(&mut self) -> Result<(), Error> {
         let Opt { url } = Opt::from_args();
 
-        let player = connect_to_service::<MediaPlayerMarker>().context("Failed to connect to media player")?;
+        let player = connect_to_service::<PlayerMarker>().context("Failed to connect to media player")?;
         if url.scheme() == "file" {
             let file = File::open(url.path())?;
             let channel = channel_from_file(file)?;
@@ -83,7 +83,7 @@ impl App {
 
         let mut player_event_stream = player.take_event_stream();
         if let Some(event) = await!(player_event_stream.try_next())? {
-            let MediaPlayerEvent::StatusChanged { status } = event;
+            let PlayerEvent::OnStatusChanged { status } = event;
             self.display_status(&status);
             Ok(())
         } else {
@@ -91,7 +91,7 @@ impl App {
         }
     }
 
-    fn display_status(&mut self, status: &MediaPlayerStatus) {
+    fn display_status(&mut self, status: &PlayerStatus) {
         if let Some(ref metadata) = status.metadata {
             if self.metadata_displayed {
                 return;

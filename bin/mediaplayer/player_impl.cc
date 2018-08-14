@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/media_player_impl.h"
+#include "garnet/bin/mediaplayer/player_impl.h"
 
 #include <sstream>
 
@@ -39,15 +39,15 @@ static const char* kDumpEntry = "dump";
 }  // namespace
 
 // static
-std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+std::unique_ptr<PlayerImpl> PlayerImpl::Create(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request,
     component::StartupContext* startup_context, fit::closure quit_callback) {
-  return std::make_unique<MediaPlayerImpl>(std::move(request), startup_context,
-                                           std::move(quit_callback));
+  return std::make_unique<PlayerImpl>(std::move(request), startup_context,
+                                      std::move(quit_callback));
 }
 
-MediaPlayerImpl::MediaPlayerImpl(
-    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+PlayerImpl::PlayerImpl(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request,
     component::StartupContext* startup_context, fit::closure quit_callback)
     : dispatcher_(async_get_default_dispatcher()),
       startup_context_(startup_context),
@@ -110,7 +110,7 @@ MediaPlayerImpl::MediaPlayerImpl(
   state_ = State::kInactive;
 }
 
-MediaPlayerImpl::~MediaPlayerImpl() {
+PlayerImpl::~PlayerImpl() {
   core_.SetUpdateCallback(nullptr);
 
   if (video_renderer_) {
@@ -118,7 +118,7 @@ MediaPlayerImpl::~MediaPlayerImpl() {
   }
 }
 
-void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
+void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
   if (core_.has_sink_segment(medium)) {
     // Renderer already exists.
     return;
@@ -132,10 +132,6 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
         fuchsia::media::AudioOutPtr audio_renderer;
         audio->CreateAudioOut(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
-        if (gain_ != 1.0f) {
-          audio_renderer_->SetGain(gain_);
-        }
-
         core_.SetSinkSegment(RendererSinkSegment::Create(
                                  audio_renderer_, decoder_factory_.get()),
                              medium);
@@ -158,7 +154,7 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
   }
 }
 
-void MediaPlayerImpl::Update() {
+void PlayerImpl::Update() {
   // This method is called whenever we might want to take action based on the
   // current state and recent events. The current state is in |state_|. Recent
   // events are recorded in |target_state_|, which indicates what state we'd
@@ -357,8 +353,8 @@ void MediaPlayerImpl::Update() {
   }
 }
 
-void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
-                                          fit::closure callback) {
+void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
+                                     fit::closure callback) {
   core_.SetTimelineFunction(
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
@@ -367,15 +363,15 @@ void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
   SendStatusUpdates();
 }
 
-void MediaPlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
+void PlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
   BeginSetReader(HttpReader::Create(startup_context_, http_url));
 }
 
-void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
+void PlayerImpl::SetFileSource(zx::channel file_channel) {
   BeginSetReader(FileReader::Create(std::move(file_channel)));
 }
 
-void MediaPlayerImpl::SetReaderSource(
+void PlayerImpl::SetReaderSource(
     fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle) {
   if (!reader_handle) {
     BeginSetReader(nullptr);
@@ -385,7 +381,7 @@ void MediaPlayerImpl::SetReaderSource(
   BeginSetReader(FidlReader::Create(reader_handle.Bind()));
 }
 
-void MediaPlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
+void PlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
   // Note the pending reader change and advance the state machine. When the
   // old reader (if any) is shut down, the state machine will call
   // |FinishSetReader|.
@@ -395,7 +391,7 @@ void MediaPlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
   async::PostTask(dispatcher_, [this]() { Update(); });
 }
 
-void MediaPlayerImpl::FinishSetReader() {
+void PlayerImpl::FinishSetReader() {
   FXL_DCHECK(setting_reader_);
   FXL_DCHECK(state_ == State::kInactive);
   FXL_DCHECK(!core_.has_source_segment());
@@ -429,30 +425,22 @@ void MediaPlayerImpl::FinishSetReader() {
   });
 }
 
-void MediaPlayerImpl::Play() {
+void PlayerImpl::Play() {
   target_state_ = State::kPlaying;
   Update();
 }
 
-void MediaPlayerImpl::Pause() {
+void PlayerImpl::Pause() {
   target_state_ = State::kPrimed;
   Update();
 }
 
-void MediaPlayerImpl::Seek(int64_t position) {
+void PlayerImpl::Seek(int64_t position) {
   target_position_ = position;
   Update();
 }
 
-void MediaPlayerImpl::SetGain(float gain) {
-  if (audio_renderer_) {
-    audio_renderer_->SetGain(gain);
-  } else {
-    gain_ = gain;
-  }
-}
-
-void MediaPlayerImpl::CreateView(
+void PlayerImpl::CreateView(
     fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
@@ -465,48 +453,53 @@ void MediaPlayerImpl::CreateView(
                               std::move(view_owner_request));
 }
 
-void MediaPlayerImpl::SetAudioOut(
+void PlayerImpl::BindGainControl(
+    fidl::InterfaceRequest<fuchsia::media::GainControl> gain_control_request) {
+  if (!audio_renderer_) {
+    MaybeCreateRenderer(StreamType::Medium::kAudio);
+  }
+
+  FXL_DCHECK(audio_renderer_);
+  audio_renderer_->BindGainControl(std::move(gain_control_request));
+}
+
+void PlayerImpl::SetAudioOut(
     fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) {
   if (audio_renderer_) {
     return;
   }
 
   audio_renderer_ = FidlAudioRenderer::Create(audio_renderer.Bind());
-  if (gain_ != 1.0f) {
-    audio_renderer_->SetGain(gain_);
-  }
 
   core_.SetSinkSegment(
       RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
       StreamType::Medium::kAudio);
 }
 
-void MediaPlayerImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request) {
+void PlayerImpl::AddBinding(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) {
   FXL_DCHECK(request);
   bindings_.AddBinding(this, std::move(request));
 
-  // Fire |StatusChanged| event for the new client.
-  bindings_.bindings().back()->events().StatusChanged(fidl::Clone(status_));
+  // Fire |OnStatusChanged| event for the new client.
+  bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status_));
 }
 
-void MediaPlayerImpl::SendStatusUpdates() {
+void PlayerImpl::SendStatusUpdates() {
   UpdateStatus();
 
   for (auto& binding : bindings_.bindings()) {
-    binding->events().StatusChanged(fidl::Clone(status_));
+    binding->events().OnStatusChanged(fidl::Clone(status_));
   }
 }
 
-void MediaPlayerImpl::UpdateStatus() {
+void PlayerImpl::UpdateStatus() {
   status_.timeline_function =
       fidl::MakeOptional(fxl::To<fuchsia::mediaplayer::TimelineFunction>(
           core_.timeline_function()));
   status_.end_of_stream = core_.end_of_stream();
-  status_.content_has_audio =
-      core_.content_has_medium(StreamType::Medium::kAudio);
-  status_.content_has_video =
-      core_.content_has_medium(StreamType::Medium::kVideo);
+  status_.has_audio = core_.content_has_medium(StreamType::Medium::kAudio);
+  status_.has_video = core_.content_has_medium(StreamType::Medium::kVideo);
   status_.audio_connected = core_.medium_connected(StreamType::Medium::kAudio);
   status_.video_connected = core_.medium_connected(StreamType::Medium::kVideo);
 
@@ -528,7 +521,7 @@ void MediaPlayerImpl::UpdateStatus() {
 }
 
 // static
-const char* MediaPlayerImpl::ToString(State value) {
+const char* PlayerImpl::ToString(State value) {
   switch (value) {
     case State::kInactive:
       return "inactive";

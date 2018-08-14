@@ -22,7 +22,7 @@ namespace media_player {
 
 // VideoRenderer that renders video via FIDL services.
 class FidlVideoRenderer
-    : public VideoRendererInProc,
+    : public VideoRenderer,
       public std::enable_shared_from_this<FidlVideoRenderer> {
  public:
   static std::shared_ptr<FidlVideoRenderer> Create();
@@ -31,7 +31,7 @@ class FidlVideoRenderer
 
   ~FidlVideoRenderer() override;
 
-  // VideoRendererInProc implementation.
+  // VideoRenderer implementation.
   const char* label() const override;
 
   void Dump(std::ostream& os) const override;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
-#define GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
+#ifndef GARNET_EXAMPLES_MEDIAPLAYER_AUDIO_PLAYER_AUDIO_PLAYER_H_
+#define GARNET_EXAMPLES_MEDIAPLAYER_AUDIO_PLAYER_AUDIO_PLAYER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
@@ -24,8 +24,7 @@ class AudioPlayer {
 
  private:
   // Handles a status update from the player.
-  void HandleStatusChanged(
-      const fuchsia::mediaplayer::MediaPlayerStatus& status);
+  void HandleStatusChanged(const fuchsia::mediaplayer::PlayerStatus& status);
 
   // Logs a metadata property, if it exists.
   void MaybeLogMetadataProperty(const fuchsia::mediaplayer::Metadata& metadata,
@@ -33,7 +32,7 @@ class AudioPlayer {
                                 const std::string& prefix);
 
   fit::closure quit_callback_;
-  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
+  fuchsia::mediaplayer::PlayerPtr player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
   bool quit_when_done_;
@@ -43,4 +42,4 @@ class AudioPlayer {
 
 }  // namespace examples
 
-#endif  // GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
+#endif  // GARNET_EXAMPLES_MEDIAPLAYER_AUDIO_PLAYER_AUDIO_PLAYER_H_

@@ -4,15 +4,6 @@
 
 library fuchsia.mediaplayer;
 
-const string kProblemInternal = "ProblemInternal";
-const string kProblemAssetNotFound = "ProblemAssetNotFound";
-const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
-const string kProblemAudioEncodingNotSupported =
-    "ProblemAudioEncodingNotSupported";
-const string kProblemVideoEncodingNotSupported =
-    "ProblemVideoEncodingNotSupported";
-const string kProblemConnectionFailed = "ProblemConnectionFailed";
-
 // Models a problem preventing intended operation.
 //
 // A |Problem| is generally surfaced as part of a component's status, probably
@@ -31,3 +22,12 @@ struct Problem {
   // Type-dependent details.
   string? details;
 };
+
+const string kProblemInternal = "ProblemInternal";
+const string kProblemAssetNotFound = "ProblemAssetNotFound";
+const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
+const string kProblemAudioEncodingNotSupported =
+    "ProblemAudioEncodingNotSupported";
+const string kProblemVideoEncodingNotSupported =
+    "ProblemVideoEncodingNotSupported";
+const string kProblemConnectionFailed = "ProblemConnectionFailed";

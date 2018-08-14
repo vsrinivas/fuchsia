@@ -4,9 +4,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/mediaplayer/test/media_player_test_params.h"
-#include "garnet/bin/mediaplayer/test/media_player_test_unattended.h"
-#include "garnet/bin/mediaplayer/test/media_player_test_view.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_unattended.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_view.h"
 #include "lib/fxl/command_line.h"
 #include "lib/ui/view_framework/view_provider_app.h"
 

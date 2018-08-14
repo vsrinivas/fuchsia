@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_VIEW_H_
-#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_VIEW_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_VIEW_H_
+#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_VIEW_H_
 
 #include <memory>
 #include <queue>
@@ -55,8 +55,7 @@ class MediaPlayerTestView : public mozart::BaseView {
   void Layout();
 
   // Handles a status changed event from the player.
-  void HandleStatusChanged(
-      const fuchsia::mediaplayer::MediaPlayerStatus& status);
+  void HandleStatusChanged(const fuchsia::mediaplayer::PlayerStatus& status);
 
   // Handle transition to end-of-stream.
   void OnEndOfStream();
@@ -82,7 +81,7 @@ class MediaPlayerTestView : public mozart::BaseView {
   scenic::ShapeNode progress_bar_slider_node_;
   std::unique_ptr<scenic::EntityNode> video_host_node_;
 
-  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
+  fuchsia::mediaplayer::PlayerPtr media_player_;
   fuchsia::math::Size video_size_;
   fuchsia::math::Size pixel_aspect_ratio_;
   State state_ = State::kPaused;
@@ -104,4 +103,4 @@ class MediaPlayerTestView : public mozart::BaseView {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_VIEW_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_VIEW_H_

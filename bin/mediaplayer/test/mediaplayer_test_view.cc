@@ -90,10 +90,10 @@ MediaPlayerTestView::MediaPlayerTestView(
   // Create a player from all that stuff.
   media_player_ =
       startup_context
-          ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
+          ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
 
-  media_player_.events().StatusChanged =
-      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+  media_player_.events().OnStatusChanged =
+      [this](fuchsia::mediaplayer::PlayerStatus status) {
         HandleStatusChanged(status);
       };
 
@@ -305,7 +305,7 @@ void MediaPlayerTestView::OnChildUnavailable(uint32_t child_key) {
 }
 
 void MediaPlayerTestView::HandleStatusChanged(
-    const fuchsia::mediaplayer::MediaPlayerStatus& status) {
+    const fuchsia::mediaplayer::PlayerStatus& status) {
   // Process status received from the player.
   if (status.timeline_function) {
     timeline_function_ =

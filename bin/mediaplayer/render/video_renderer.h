@@ -12,12 +12,11 @@
 namespace media_player {
 
 // Abstract base class for sinks that render packets.
-// TODO(dalesat): Rename this.
-class VideoRendererInProc : public Renderer {
+class VideoRenderer : public Renderer {
  public:
-  VideoRendererInProc() {}
+  VideoRenderer() {}
 
-  ~VideoRendererInProc() override {}
+  ~VideoRenderer() override {}
 
   // Returns the current size of the video in pixels.
   virtual fuchsia::math::Size video_size() const = 0;

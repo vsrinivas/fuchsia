@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
-#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UNATTENDED_H_
+#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UNATTENDED_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -30,10 +30,10 @@ class MediaPlayerTestUnattended {
   fit::function<void(int)> quit_callback_;
   FakeWavReader fake_reader_;
   FakeAudioOut fake_audio_out_;
-  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
+  fuchsia::mediaplayer::PlayerPtr media_player_;
 };
 
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UNATTENDED_H_

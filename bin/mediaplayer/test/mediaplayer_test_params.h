@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_PARAMS_H_
-#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_PARAMS_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_PARAMS_H_
+#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_PARAMS_H_
 
 #include <string>
 #include <vector>
@@ -45,4 +45,4 @@ class MediaPlayerTestParams {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIA_PLAYER_TEST_PARAMS_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_PARAMS_H_

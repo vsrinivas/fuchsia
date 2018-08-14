@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/test/media_player_test_params.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
 
 #include <iostream>
 
@@ -55,9 +55,8 @@ MediaPlayerTestParams::MediaPlayerTestParams(
 }
 
 void MediaPlayerTestParams::Usage() {
-  std::cerr << "media_player_tests usage:\n";
-  std::cerr
-      << "    set_root_view media_player_tests [ options ] url-or-path*\n";
+  std::cerr << "mediaplayer_tests usage:\n";
+  std::cerr << "    set_root_view mediaplayer_tests [ options ] url-or-path*\n";
   std::cerr << "options:\n";
   std::cerr << "    --loop       play the files in a loop\n";
   std::cerr << "    --test-seek  play random segments of one file\n";
