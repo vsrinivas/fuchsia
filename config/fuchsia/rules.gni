@@ -30,4 +30,12 @@ set_defaults("driver_module") {
   # Sets the default configs for driver_module, which can be modified later
   # by the invoker. This overrides the loadable_module default.
   configs = default_shared_library_configs
+
+  # In general, drivers should not use the C++ standard library, and drivers
+  # cannot dynamically link against it. This config tells the linker to not
+  # link against the C++ standard library.
+  # Drivers that do require standard library functionality should remove this
+  # config line and add "//build/config/fuchsia:static_cpp_standard_library" to
+  # statically link it into the driver.
+  configs += [ "//build/config/fuchsia:no_cpp_standard_library" ]
 }

@@ -140,3 +140,11 @@ config("zircon_asserts") {
     configs = [ ":enable_zircon_asserts" ]
   }
 }
+
+config("no_cpp_standard_library") {
+  ldflags = [ "-nostdlib++" ]
+}
+
+config("static_cpp_standard_library") {
+  ldflags = [ "-static-libstdc++" ]
+}
