@@ -4,40 +4,28 @@
 
 #![deny(warnings)]
 
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_images as images;
-extern crate fidl_fuchsia_math;
-extern crate fidl_fuchsia_ui_gfx as gfx;
-extern crate fidl_fuchsia_ui_scenic as scenic;
-extern crate fidl_fuchsia_ui_viewsv1;
-extern crate fidl_fuchsia_ui_viewsv1token;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_scenic;
-extern crate fuchsia_zircon;
-extern crate futures;
-extern crate parking_lot;
-
 mod canvas;
 
-use canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
-use component::client::connect_to_service;
-use component::server::ServiceFactory;
+use crate::canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
+use fidl_fuchsia_ui_scenic::{self as scenic, ScenicMarker, ScenicProxy, SessionListenerMarker,
+                             SessionListenerRequest, SessionMarker};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
 use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManagerMarker,
                               ViewManagerProxy, ViewMarker, ViewProperties, ViewProviderMarker,
                               ViewProviderRequestStream, ViewProxy};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
+use fidl_fuchsia_ui_gfx as gfx;
+use fuchsia_app::client::connect_to_service;
+use fuchsia_app::server::ServiceFactory;
+use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
 use fuchsia_zircon::{Channel, EventPair};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
-use scenic::{ScenicMarker, ScenicProxy, SessionListenerMarker, SessionListenerRequest,
-             SessionMarker};
 use std::env;
 use std::sync::Arc;
 
@@ -86,7 +74,7 @@ impl ViewController {
         let view_controller = Arc::new(Mutex::new(view_controller));
         {
             let view_controller = view_controller.clone();
-            async::spawn(
+            fasync::spawn(
                 session_listener_request
                     .into_stream()
                     .unwrap()
@@ -105,7 +93,7 @@ impl ViewController {
         }
         {
             let view_controller = view_controller.clone();
-            async::spawn(
+            fasync::spawn(
                 view_listener_request
                     .into_stream()
                     .unwrap()
@@ -193,7 +181,7 @@ impl ViewController {
     }
 
     fn present(&self) {
-        async::spawn(
+        fasync::spawn(
             self.session
                 .lock()
                 .present(0)
@@ -237,9 +225,9 @@ impl App {
         })))
     }
 
-    pub fn spawn_view_provider_server(app: &AppPtr, channel: async::Channel) {
+    pub fn spawn_view_provider_server(app: &AppPtr, channel: fasync::Channel) {
         let app = app.clone();
-        async::spawn(
+        fasync::spawn(
             ViewProviderRequestStream::from_channel(channel)
                 .map_ok(move |request| {
                     let CreateView { view_owner, .. } = request;
@@ -288,7 +276,7 @@ impl ServiceFactory for ViewProvider {
         ViewProviderMarker::NAME
     }
 
-    fn spawn_service(&mut self, channel: async::Channel) {
+    fn spawn_service(&mut self, channel: fasync::Channel) {
         App::spawn_view_provider_server(&self.app, channel);
     }
 }
@@ -296,10 +284,10 @@ impl ServiceFactory for ViewProvider {
 fn main() -> Result<(), Error> {
     env::set_var("RUST_BACKTRACE", "1");
 
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let app = App::new()?;
 
-    let fut = component::server::ServicesServer::new()
+    let fut = fuchsia_app::server::ServicesServer::new()
         .add_service(ViewProvider { app: app.clone() })
         .start()
         .context("Error starting view provider server")?;

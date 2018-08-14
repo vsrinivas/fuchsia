@@ -4,11 +4,8 @@
 
 #![deny(warnings)]
 
-extern crate font_rs;
-extern crate shared_buffer;
-
-use self::shared_buffer::SharedBuffer;
-use canvas::font_rs::font::{parse, Font, FontError, GlyphBitmap};
+use font_rs::font::{parse, Font, FontError, GlyphBitmap};
+use shared_buffer::SharedBuffer;
 use std::collections::HashMap;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
