@@ -17,10 +17,12 @@
 namespace fsl {
 
 DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch,
-                             Callback callback)
+                             ExistsCallback exists_callback,
+                             IdleCallback idle_callback)
     : dir_fd_(std::move(dir_fd)),
       dir_watch_(std::move(dir_watch)),
-      callback_(std::move(callback)),
+      exists_callback_(std::move(exists_callback)),
+      idle_callback_(std::move(idle_callback)),
       wait_(this, dir_watch_.get(),
             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       weak_ptr_factory_(this) {
@@ -28,8 +30,15 @@ DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch,
   FXL_DCHECK(status == ZX_OK);
 }
 
-std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
-                                                     Callback callback) {
+std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(
+    std::string directory_path, ExistsCallback exists_callback) {
+  return CreateWithIdleCallback(directory_path, std::move(exists_callback),
+                                [] {});
+}
+
+std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
+    std::string directory_path, ExistsCallback exists_callback,
+    IdleCallback idle_callback) {
   // Open the directory.
   int open_result = open(directory_path.c_str(), O_DIRECTORY | O_RDONLY);
   if (open_result < 0) {
@@ -41,7 +50,8 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
 
   // Create the directory watch channel.
   vfs_watch_dir_t wd;
-  wd.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING;
+  wd.mask =
+      VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE;
   wd.options = 0;
   zx_handle_t dir_watch_handle;
   if (zx_channel_create(0, &wd.channel, &dir_watch_handle) < 0) {
@@ -57,8 +67,9 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
   }
   zx::channel dir_watch(dir_watch_handle);  // take ownership of handle here
 
-  return std::unique_ptr<DeviceWatcher>(new DeviceWatcher(
-      std::move(dir_fd), std::move(dir_watch), std::move(callback)));
+  return std::unique_ptr<DeviceWatcher>(
+      new DeviceWatcher(std::move(dir_fd), std::move(dir_watch),
+                        std::move(exists_callback), std::move(idle_callback)));
 }
 
 void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
@@ -83,12 +94,14 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
         break;
       }
       if ((event == VFS_WATCH_EVT_ADDED) || (event == VFS_WATCH_EVT_EXISTING)) {
-        callback_(dir_fd_.get(),
-                  std::string(reinterpret_cast<char*>(msg), namelen));
-        // Note: Callback may have destroyed the DeviceWatcher before returning.
-        if (!weak) {
-          return;
-        }
+        exists_callback_(dir_fd_.get(),
+                         std::string(reinterpret_cast<char*>(msg), namelen));
+      } else if (event == VFS_WATCH_EVT_IDLE) {
+        idle_callback_();
+      }
+      // Note: Callback may have destroyed the DeviceWatcher before returning.
+      if (!weak) {
+        return;
       }
       msg += namelen;
       size -= namelen;
