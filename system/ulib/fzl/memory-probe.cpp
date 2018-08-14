@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/memory_probe.h>
+#include <lib/fzl/memory-probe.h>
 
 #include <limits.h>
 #include <stdio.h>

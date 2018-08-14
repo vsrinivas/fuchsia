@@ -18,7 +18,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/atomic.h>
 #include <fbl/function.h>
-#include <fbl/memory_probe.h>
+#include <lib/fzl/memory-probe.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 

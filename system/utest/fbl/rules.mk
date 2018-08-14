@@ -46,7 +46,6 @@ fbl_device_tests := $(fbl_common_tests)
 # host. TODO(ZX-1053): Support fbl::Mutex on the host and make the ref counted
 # and slab allocator tests work.
 fbl_device_tests += \
-    $(LOCAL_DIR)/memory_probe_tests.cpp \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/slab_allocator_tests.cpp \
 
