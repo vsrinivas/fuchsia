@@ -69,17 +69,19 @@ typedef struct wlan_bss_config {
 // Many parameters do not distinguish Rx capability from Tx capability.
 // In those cases, a capability is commonly applied to both Rx and Tx.
 // Some parameters are distinctively for Rx only, and some are Tx only.
+#define WLAN_MAC_SUPPORTED_RATES_MAX_LEN 8
+#define WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN 255
 typedef struct wlan_assoc_ctx {
     uint8_t bssid[6];
     uint16_t aid;
 
     // IEEE Std 802.11-2016, 9.4.2.3
     uint8_t supported_rates_cnt;
-    uint8_t supported_rates[8];
+    uint8_t supported_rates[WLAN_MAC_SUPPORTED_RATES_MAX_LEN];
 
     // IEEE Std 802.11-2016, 9.4.2.13
     uint8_t ext_supported_rates_cnt;
-    uint8_t ext_supported_rates[255];
+    uint8_t ext_supported_rates[WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN];
 
     // IEEE Std 802.11-2016, 9.4.1.4
     uint8_t cap_info[2];
@@ -87,13 +89,15 @@ typedef struct wlan_assoc_ctx {
     // IEEE Std 802.11-2016, 9.4.2.56, 57
     // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
     // the peer can receive at from this device, considering this device's Tx capability.
-    bool has_ht;
+    bool has_ht_cap;
     uint8_t ht_cap[26];
+    bool has_ht_op;
     uint8_t ht_op[22];
 
     // IEEE Std 802.11-2016, 9.4.2.158, 159
-    bool has_vht;
+    bool has_vht_cap;
     uint8_t vht_cap[12];
+    bool has_vht_op;
     uint8_t vht_op[5];
 } wlan_assoc_ctx_t;
 
