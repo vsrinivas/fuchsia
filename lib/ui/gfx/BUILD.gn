@@ -184,7 +184,7 @@ source_set("gfx") {
     "//garnet/lib/ui/yuv",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/images/cpp",
-    "//garnet/public/lib/ui/scenic/cpp:commands",
+    "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/fidl/fuchsia-display",
     "//zircon/public/lib/trace",
   ]
