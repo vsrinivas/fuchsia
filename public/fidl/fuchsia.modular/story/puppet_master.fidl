@@ -104,4 +104,11 @@ interface StoryPuppetMaster {
   // If an error occurs, execution is stopped and an error code
   // and message are returned in |result|.
   2: Execute() -> (ExecuteResult result);
+
+  // If this story is new, sets the options for its creation. Must be called
+  // before the first call to Execute(). Any subsequent calls (either on the
+  // same channel or on a new StoryPuppetMaster for an existing story) are
+  // ignored. Some StoryOptions can be changed through specific story commands.
+  // See story_command.fidl for details.
+  3: SetCreateOptions(StoryOptions story_options);
 };

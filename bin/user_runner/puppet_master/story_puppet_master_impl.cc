@@ -19,12 +19,14 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   ExecuteOperation(SessionStorage* const session_storage,
                    StoryCommandExecutor* const executor,
                    fidl::StringPtr story_name,
+                   fuchsia::modular::StoryOptions story_options,
                    std::vector<fuchsia::modular::StoryCommand> commands,
                    ResultCall done)
       : Operation("StoryPuppetMasterImpl.ExecuteOpreation", std::move(done)),
         session_storage_(session_storage),
         executor_(executor),
         story_name_(std::move(story_name)),
+        story_options_(std::move(story_options)),
         commands_(std::move(commands)) {}
 
  private:
@@ -45,7 +47,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   void CreateStory() {
     session_storage_
         ->CreateStory(story_name_, nullptr /* extra_info */,
-                      {} /* story_options */)
+                      std::move(story_options_))
         ->WeakThen(GetWeakPtr(),
                    [this](fidl::StringPtr story_id, auto /* ignored */) {
                      story_id_ = story_id;
@@ -64,6 +66,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   SessionStorage* const session_storage_;
   StoryCommandExecutor* const executor_;
   fidl::StringPtr story_name_;
+  fuchsia::modular::StoryOptions story_options_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
   fidl::StringPtr story_id_;
@@ -96,7 +99,13 @@ void StoryPuppetMasterImpl::Enqueue(
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   // First ensure that the story is created.
   operations_.Add(new ExecuteOperation(session_storage_, executor_, story_name_,
+                                       std::move(story_options_),
                                        std::move(enqueued_commands_), done));
+}
+
+void StoryPuppetMasterImpl::SetCreateOptions(
+    fuchsia::modular::StoryOptions story_options) {
+  story_options_ = std::move(story_options);
 }
 
 }  // namespace modular

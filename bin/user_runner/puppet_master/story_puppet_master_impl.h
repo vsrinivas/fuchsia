@@ -34,6 +34,9 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   // |StoryPuppetMaster|
   void Execute(ExecuteCallback done) override;
 
+  // |StoryPuppetMaster|
+  void SetCreateOptions(fuchsia::modular::StoryOptions story_options) override;
+
   fidl::StringPtr story_name_;
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
@@ -41,6 +44,8 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   std::vector<fuchsia::modular::StoryCommand> enqueued_commands_;
 
   OperationCollection operations_;
+
+  fuchsia::modular::StoryOptions story_options_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryPuppetMasterImpl);
 };
