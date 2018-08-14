@@ -87,11 +87,11 @@ TEST(Substitute, Error) {
 TEST(Substitute, Error) {
   // Not enough args.
   EXPECT_DEATH_IF_SUPPORTED(Substitute("Hello $0$1", "world"),
-                            "fxl::Substitute missing argument for $1:");
+                            "fxl::Substitute missing argument for \\$1:");
   EXPECT_DEATH_IF_SUPPORTED(Substitute("$0 world$1$2", "Hello", "!"),
-                            "fxl::Substitute missing argument for $2:");
+                            "fxl::Substitute missing argument for \\$2:");
   EXPECT_DEATH_IF_SUPPORTED(Substitute("$0 world$", "Hello"),
-                            "fxl::Substitute encountered trailing '$':");
+                            "fxl::Substitute encountered trailing '\\$':");
 }
 #endif
 
