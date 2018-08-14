@@ -630,7 +630,11 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     assoc_timeout_ = zx::time();
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
+
+    // Spread the good news upward
     service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::SUCCESS, aid_);
+    // Spread the good news downward
+    NotifyAssocContext();
 
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
     timer_->SetTimer(signal_report_timeout_);
