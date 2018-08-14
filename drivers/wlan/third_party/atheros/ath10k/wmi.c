@@ -2289,8 +2289,9 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
     rx_info.valid_fields |= WLAN_RX_INFO_VALID_SNR;
     rx_info.snr_dbh = arg.snr;
 
-    memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
     rx_info.chan.primary = arg.channel;
+    rx_info.chan.cbw = CBW20;
+    rx_info.chan.secondary80 = 0;
 
     rx_status = arg.status;
 
