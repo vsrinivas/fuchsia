@@ -1605,47 +1605,43 @@ ath10k_wmi_tlv_op_gen_start_scan(struct ath10k* ar,
     return ZX_OK;
 }
 
-#if 0 // NEEDS PORTING
-static struct sk_buff*
-ath10k_wmi_tlv_op_gen_stop_scan(struct ath10k* ar,
-                                const struct wmi_stop_scan_arg* arg) {
-    struct wmi_stop_scan_cmd* cmd;
-    struct wmi_tlv* tlv;
-    struct sk_buff* skb;
-    uint32_t scan_id;
-    uint32_t req_id;
-
+static zx_status_t ath10k_wmi_tlv_op_gen_stop_scan(struct ath10k* ar,
+                                                   struct ath10k_msg_buf** msg_buf_ptr,
+                                                   const struct wmi_stop_scan_arg* arg) {
     if (arg->req_id > 0xFFF) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
     if (arg->req_type == WMI_SCAN_STOP_ONE && arg->u.scan_id > 0xFFF) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*tlv) + sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t ret = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_STOP_SCAN, 0);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    scan_id = arg->u.scan_id;
+    uint32_t scan_id = arg->u.scan_id;
     scan_id |= WMI_HOST_SCAN_REQ_ID_PREFIX;
 
-    req_id = arg->req_id;
+    uint32_t req_id = arg->req_id;
     req_id |= WMI_HOST_SCAN_REQUESTOR_ID_PREFIX;
 
-    tlv = (void*)skb->data;
+    struct wmi_tlv* tlv = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV);
     tlv->tag = WMI_TLV_TAG_STRUCT_STOP_SCAN_CMD;
-    tlv->len = sizeof(*cmd);
-    cmd = (void*)tlv->value;
+    tlv->len = sizeof(struct wmi_stop_scan_cmd);
+
+    struct wmi_stop_scan_cmd* cmd = ath10k_msg_buf_get_header(msg_buf,
+                                                              ATH10K_MSG_TYPE_WMI_TLV_STOP_SCAN);
     cmd->req_type = arg->req_type;
     cmd->vdev_id = arg->u.vdev_id;
     cmd->scan_id = scan_id;
     cmd->scan_req_id = req_id;
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv stop scan\n");
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
-#endif // NEEDS PORTING
 
 static zx_status_t
 ath10k_wmi_tlv_op_gen_vdev_create(struct ath10k* ar,
@@ -3675,9 +3671,7 @@ static const struct wmi_ops wmi_tlv_ops = {
     .gen_pdev_set_param = ath10k_wmi_tlv_op_gen_pdev_set_param,
     .gen_init = ath10k_wmi_tlv_op_gen_init,
     .gen_start_scan = ath10k_wmi_tlv_op_gen_start_scan,
-#if 0 // NEEDS PORTING
     .gen_stop_scan = ath10k_wmi_tlv_op_gen_stop_scan,
-#endif // NEEDS PORTING
     .gen_vdev_create = ath10k_wmi_tlv_op_gen_vdev_create,
     .gen_vdev_delete = ath10k_wmi_tlv_op_gen_vdev_delete,
     .gen_vdev_start = ath10k_wmi_tlv_op_gen_vdev_start,

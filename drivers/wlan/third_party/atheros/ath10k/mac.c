@@ -4291,9 +4291,11 @@ static zx_status_t ath10k_start_scan(struct ath10k* ar,
     }
 
     if (sync_completion_wait(&ar->scan.started, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
+        ath10k_warn("scan start timed out waiting for confirmation\n");
         ret = ath10k_scan_stop(ar);
-        if (ret) {
-            ath10k_warn("failed to stop scan: %d\n", ret);
+        if (ret != ZX_OK) {
+            ath10k_warn("attempt to reset (scan_stop) from failed scan start also failed: %s\n",
+                        zx_status_get_string(ret));
         }
         return ZX_ERR_TIMED_OUT;
     }
