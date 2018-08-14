@@ -4,6 +4,7 @@
 
 //! A networking stack.
 
+#![feature(async_await, await_macro)]
 #![feature(const_fn)]
 #![feature(never_type)]
 #![feature(nll)]
@@ -82,20 +83,19 @@ fn main() -> Result<(), failure::Error> {
     device::ethernet::set_ip_addr(&mut state, eth_id.id(), FIXED_IPADDR, fixed_subnet);
 
     let mut buf = [0; 2048];
-    let stream = client.get_stream().try_for_each(|evt| {
-        match evt {
-            eth::Event::Receive(rx) => {
+    let mut events = client.get_stream();
+    let fut = async {
+        while let Some(evt) = await!(events.try_next())? {
+            if let eth::Event::Receive(rx) = evt {
                 let len = rx.read(&mut buf);
                 device::receive_frame(&mut state, eth_id, &mut buf[..len]);
+            } else {
+                println!("unhandled Ethernet event: {:?}", evt);
             }
-            other => println!("unhandled Ethernet event: {:?}", other),
         }
-        futures::future::ready(Ok(()))
-    });
-    executor
-        .run_singlethreaded(stream)
-        .map(|_| ())
-        .map_err(Into::into)
+        Ok(())
+    };
+    executor.run_singlethreaded(fut)
 }
 
 /// The state associated with the network stack.
