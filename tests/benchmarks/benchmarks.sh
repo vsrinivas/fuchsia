@@ -38,15 +38,23 @@ else
   echo "Vulkan not supported; Scenic tests skipped."
 fi
 
-# Test block device performance.
-# TODO(ZX-2466): Enable this test for ARM64 hardware bots once they exist
+# Test storage performance.
+# TODO(ZX-2466): Enable these tests for ARM64 hardware bots once they exist
 # and have storage devices attached.
 if [ "${benchmarks_bot_name}" = garnet-x64-perf-swift_canyon ]; then
   block_device=/dev/sys/pci/00:17.0/ahci/sata2/block
   waitfor class=block topo=${block_device} timeout=30000
+
+  # Test block device performance.
   runbench_exec "${OUT_DIR}/block_device_throughput.json" \
       biotime -output-file "${OUT_DIR}/block_device_throughput.json" \
       ${block_device}
+
+  # Test filesystem performance.
+  runbench_exec "${OUT_DIR}/fs_bench.json" \
+      /system/test/fs/fs-bench-test -p --fs minfs \
+      --block_device ${block_device} \
+      --print_statistics --out "${OUT_DIR}/fs_bench.json"
 fi
 
 # Exit with a code indicating whether any errors occurred.
