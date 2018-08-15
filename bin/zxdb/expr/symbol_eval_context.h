@@ -35,16 +35,19 @@ class SymbolEvalContext : public ExprEvalContext {
 
   // ExprEvalContext implementation.
   void GetVariable(const std::string& name, Callback cb) override;
+  void Dereference(
+      const ExprValue& value,
+      std::function<void(const Err& err, ExprValue value)> cb) override;
 
  private:
   // Searches the given vector of values for one with the given name. If found,
   // executes the given callback (possibly asynchronously in the future) with
   // it and returns true. False means the variable was not found.
-  bool SearchVariableVector(
-      const std::vector<LazySymbol>& vect, const std::string& search_for,
-      Callback& cb);
+  bool SearchVariableVector(const std::vector<LazySymbol>& vect,
+                            const std::string& search_for, Callback& cb);
 
   SymbolContext symbol_context_;
+  fxl::RefPtr<SymbolDataProvider> data_provider_;
   SymbolVariableResolver resolver_;
 
   // Innermost block of the current context. May be null if there is none

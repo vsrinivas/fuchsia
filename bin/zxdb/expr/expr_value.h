@@ -9,10 +9,12 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/symbols/type.h"
+#include "garnet/bin/zxdb/expr/expr_value_source.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
+class Err;
 class Type;
 
 // Holds a value for an expression. This could be the value of a variable in
@@ -34,7 +36,8 @@ class ExprValue {
   explicit ExprValue(uint64_t value);
 
   // Full constructor.
-  ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data);
+  ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data,
+            const ExprValueSource& source = ExprValueSource());
   ~ExprValue();
 
   // Used for tests. If a SymbolType is defined, the string representation is
@@ -43,6 +46,10 @@ class ExprValue {
 
   // May be null if there's no symbol type.
   Type* type() const { return type_.get(); }
+  const fxl::RefPtr<Type>& type_ref() const { return type_; }
+
+  // Indicates the location where this value came from.
+  const ExprValueSource& source() const { return source_; }
 
   const std::vector<uint8_t>& data() const { return data_; }
 
@@ -51,19 +58,20 @@ class ExprValue {
   // TODO(brettw) the base type should probably be turned into a proper enum.
   int GetBaseType() const;
 
-  // Creates a synthetic BaseType symbol for the given data. This is used for
-  // internally-generated values that don't have a corresponding real symbol
-  // entry in the program. The base_type int is one of the values from
-  // BaseType::kBaseType...
-  static fxl::RefPtr<BaseType> CreateSyntheticBaseType(int base_type,
-                                                       const char* type_name,
-                                                       uint32_t byte_size);
+  // Returns an error if the size of the data doesn't match the parameter.
+  Err EnsureSizeIs(size_t size) const;
 
   // These return the data casted to the corresponding value (specializations
   // below class declaration). It will assert if the internal type and data
   // size doesn't match the requested type.
   template <typename T>
   T GetAs() const;
+
+  // Gets the result as a [u]int64_t, promoting all shorter values to the
+  // longer ones. If the data size is empty or greater than 64 bits it will
+  // return an error.
+  Err PromoteToInt64(int64_t* output) const;
+  Err PromoteToUint64(uint64_t* output) const;
 
  private:
   // Internal constructor for the primitive types that constructs an on-the-fly
@@ -73,6 +81,8 @@ class ExprValue {
 
   // Application-defined type from the symbols.
   fxl::RefPtr<Type> type_;
+
+  ExprValueSource source_;
 
   std::vector<uint8_t> data_;
 };

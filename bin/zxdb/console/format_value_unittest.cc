@@ -45,15 +45,15 @@ TEST(FormatValue, Signed) {
   EXPECT_EQ("67305985", DoFormat(val_int32, opts));
 
   // 64-bit.
-  ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned,
-                                                   8, "long long"),
-                     {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
+  ExprValue val_int64(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 8, "long long"),
+      {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
   EXPECT_EQ("-2", DoFormat(val_int64, opts));
 
   // Force a 32-bit float to an int.
-  ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat,
-                                                   4, "float"),
-                     {0x04, 0x03, 0x02, 0x01});
+  ExprValue val_float(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
+      {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatValueOptions::NumFormat::kSigned;
   EXPECT_EQ("16909060", DoFormat(val_float, opts));
 }
@@ -81,14 +81,14 @@ TEST(FormatValue, Unsigned) {
 
   // 64-bit.
   ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned,
-                                                   1, "long long"),
-                     {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
+                                                    1, "long long"),
+                      {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
   EXPECT_EQ("18446744073709551614", DoFormat(val_int64, opts));
 
   // Force a 32-bit float to an unsigned and a hex.
-  ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat,
-                                                   4, "float"),
-                     {0x04, 0x03, 0x02, 0x01});
+  ExprValue val_float(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
+      {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatValueOptions::NumFormat::kUnsigned;
   EXPECT_EQ("16909060", DoFormat(val_float, opts));
   opts.num_format = FormatValueOptions::NumFormat::kHex;
@@ -167,17 +167,20 @@ TEST(FormatValue, Pointer) {
 
   auto base_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
-  auto ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol(base_type));
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+                                                    LazySymbol(base_type));
 
-  std::vector<uint8_t> data = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+  std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   ExprValue value(ptr_type, data);
   EXPECT_EQ("(int*) 0x807060504030201", DoFormat(value, opts));
 
   // Test an invalid one with an incorrect size.
   data.resize(7);
   ExprValue bad_value(ptr_type, data);
-  EXPECT_EQ("<bad pointer size>", DoFormat(bad_value, opts));
+  EXPECT_EQ(
+      "<The value of type 'int*' is the incorrect size (expecting 8, got 7). "
+      "Please file a bug.>",
+      DoFormat(bad_value, opts));
 }
 
 }  // namespace zxdb

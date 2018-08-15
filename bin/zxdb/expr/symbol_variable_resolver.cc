@@ -78,13 +78,27 @@ void SymbolVariableResolver::ResolveVariable(
   }
 
   // Schedule the expression to be evaluated.
-  dwarf_eval_.Eval(
-      data_provider_, loc_entry->expression,
-      [cb, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()](
-          DwarfExprEval* eval, const Err& err) {
-        if (weak_this)
-          weak_this->OnDwarfEvalComplete(err, std::move(type), std::move(cb));
-      });
+  dwarf_eval_.Eval(data_provider_, loc_entry->expression, [
+    cb, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()
+  ](DwarfExprEval * eval, const Err& err) {
+    if (weak_this)
+      weak_this->OnDwarfEvalComplete(err, std::move(type), std::move(cb));
+  });
+}
+
+void SymbolVariableResolver::ResolveFromAddress(uint64_t address,
+                                                fxl::RefPtr<Type> type,
+                                                Callback cb) {
+  uint32_t type_size = type->byte_size();
+  data_provider_->GetMemoryAsync(address, type_size, [
+    type = std::move(type), address, cb = std::move(cb)
+  ](const Err& err, std::vector<uint8_t> data) {
+    if (err.has_error())
+      cb(err, ExprValue());
+    else
+      cb(Err(),
+         ExprValue(std::move(type), std::move(data), ExprValueSource(address)));
+  });
 }
 
 void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
@@ -97,10 +111,10 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
   }
 
   uint64_t result_int = dwarf_eval_.GetResult();
-  uint32_t type_size = type->byte_size();
 
   if (dwarf_eval_.GetResultType() == DwarfExprEval::ResultType::kValue) {
     // The DWARF expression produced the exact value (it's not in memory).
+    uint32_t type_size = type->byte_size();
     if (type_size > sizeof(uint64_t)) {
       cb(Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
                                "Please file a bug with a repro case.",
@@ -114,15 +128,7 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
     cb(Err(), ExprValue(std::move(type), std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    data_provider_->GetMemoryAsync(
-        result_int, type_size,
-        [type = std::move(type), cb = std::move(cb)](
-            const Err& err, std::vector<uint8_t> data) {
-          if (err.has_error())
-            cb(err, ExprValue());
-          else
-            cb(Err(), ExprValue(std::move(type), std::move(data)));
-        });
+    ResolveFromAddress(result_int, std::move(type), std::move(cb));
   }
 }
 

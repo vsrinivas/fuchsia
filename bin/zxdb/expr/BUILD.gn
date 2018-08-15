@@ -16,6 +16,7 @@ static_library("expr") {
     "expr_tokenizer.h",
     "expr_value.cc",
     "expr_value.h",
+    "expr_value_source.h",
     "symbol_eval_context.cc",
     "symbol_eval_context.h",
     "symbol_variable_resolver.cc",

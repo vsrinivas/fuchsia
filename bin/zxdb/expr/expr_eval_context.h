@@ -28,6 +28,11 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   virtual void GetVariable(
       const std::string& name,
       std::function<void(const Err& err, ExprValue value)>) = 0;
+
+  // Dereferences the given value, calling the callback with the result.
+  virtual void Dereference(
+      const ExprValue& value,
+      std::function<void(const Err& err, ExprValue value)> cb) = 0;
 };
 
 }  // namespace zxdb

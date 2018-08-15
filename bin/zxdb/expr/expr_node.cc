@@ -7,6 +7,7 @@
 #include <ostream>
 
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
+#include "garnet/bin/zxdb/client/symbols/modified_type.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
@@ -74,9 +75,24 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
 
 }  // namespace
 
-void AddressOfExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+void AddressOfExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                              EvalCallback cb) const {
-  cb(Err("Unimplemented"), ExprValue());
+  expr_->Eval(context, [cb = std::move(cb)](const Err& err, ExprValue value) {
+    if (value.source().type() != ExprValueSource::Type::kMemory) {
+      cb(Err("Can't take the address of a temporary."), ExprValue());
+    } else {
+      // Construct a pointer type to the variable.
+      auto ptr_type = fxl::MakeRefCounted<ModifiedType>(
+          Symbol::kTagPointerType, LazySymbol(value.type_ref()));
+
+      std::vector<uint8_t> contents;
+      contents.resize(sizeof(uint64_t));
+      uint64_t address = value.source().address();
+      memcpy(&contents[0], &address, sizeof(uint64_t));
+
+      cb(Err(), ExprValue(std::move(ptr_type), std::move(contents)));
+    }
+  });
 }
 
 void AddressOfExprNode::Print(std::ostream& out, int indent) const {
@@ -84,7 +100,7 @@ void AddressOfExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
-void ArrayAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+void ArrayAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
   cb(Err("Unimplemented"), ExprValue());
 }
@@ -95,9 +111,32 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
   inner_->Print(out, indent + 1);
 }
 
-void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+ConstantExprNode::ConstantExprNode(ExprValue value)
+    : value_(std::move(value)) {}
+
+void ConstantExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+                            EvalCallback cb) const {
+  cb(Err(), value_);
+}
+
+void ConstantExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "CONSTANT\n";
+}
+
+void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
-  cb(Err("Unimplemented"), ExprValue());
+  expr_->Eval(context, [ context, cb = std::move(cb) ](const Err& err,
+                                                       ExprValue value) {
+    // Note that we need to capture the context in the lambda
+    // even though we don't use it to keep a ref to it throughout
+    // this call. Otherwise it could be destroyed and the callback
+    // will never be executed.
+    context->Dereference(value, [ context, cb = std::move(cb) ](
+                                    const Err& err, ExprValue value) {
+      (void)context;
+      cb(err, std::move(value));
+    });
+  });
 }
 
 void DereferenceExprNode::Print(std::ostream& out, int indent) const {
@@ -105,7 +144,7 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
-void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                               EvalCallback cb) const {
   context->GetVariable(name_.value(), std::move(cb));
 }
@@ -114,7 +153,7 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "IDENTIFIER(" << name_.value() << ")\n";
 }
 
-void IntegerExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+void IntegerExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
   cb(Err("Unimplemented"), ExprValue());
 }
@@ -123,7 +162,7 @@ void IntegerExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "INTEGER(" << integer_.value() << ")\n";
 }
 
-void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
   cb(Err("Unimplemented"), ExprValue());
 }
@@ -134,15 +173,15 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent + 1) << member_.value() << "\n";
 }
 
-void UnaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext>& context,
+void UnaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
-  expr_->Eval(context,
-              [cb = std::move(cb), op = op_](const Err& err, ExprValue value) {
-                if (err.has_error())
-                  cb(err, std::move(value));
-                else
-                  EvalUnaryOperator(op, value, std::move(cb));
-              });
+  expr_->Eval(context, [ cb = std::move(cb), op = op_ ](const Err& err,
+                                                        ExprValue value) {
+    if (err.has_error())
+      cb(err, std::move(value));
+    else
+      EvalUnaryOperator(op, value, std::move(cb));
+  });
 }
 
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {

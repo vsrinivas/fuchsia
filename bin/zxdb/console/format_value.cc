@@ -19,10 +19,11 @@ namespace zxdb {
 namespace {
 
 void FormatBoolean(const ExprValue& value, OutputBuffer* out) {
-  bool result = false;
-  for (uint8_t byte : value.data())
-    result |= !!byte;
-  if (result)
+  uint64_t int_val = 0;
+  Err err = value.PromoteToUint64(&int_val);
+  if (err.has_error())
+    out->Append("<" + err.msg() + ">");
+  else if (int_val)
     out->Append("true");
   else
     out->Append("false");
@@ -30,48 +31,21 @@ void FormatBoolean(const ExprValue& value, OutputBuffer* out) {
 
 void FormatSignedInt(const ExprValue& value, OutputBuffer* out) {
   int64_t int_val = 0;
-  switch (value.data().size()) {
-    case 1:
-      int_val = value.GetAs<int8_t>();
-      break;
-    case 2:
-      int_val = value.GetAs<int16_t>();
-      break;
-    case 4:
-      int_val = value.GetAs<int32_t>();
-      break;
-    case 8:
-      int_val = value.GetAs<int64_t>();
-      break;
-    default:
-      out->Append("<unknown signed integer type>");
-      return;
-  }
-  out->Append(fxl::StringPrintf("%" PRId64, int_val));
+  Err err = value.PromoteToInt64(&int_val);
+  if (err.has_error())
+    out->Append("<" + err.msg() + ">");
+  else
+    out->Append(fxl::StringPrintf("%" PRId64, int_val));
 }
 
 // This formatted handles unsigned and hex output.
 void FormatUnsignedInt(const ExprValue& value,
                        const FormatValueOptions& options, OutputBuffer* out) {
   uint64_t int_val = 0;
-  switch (value.data().size()) {
-    case 1:
-      int_val = value.GetAs<uint8_t>();
-      break;
-    case 2:
-      int_val = value.GetAs<uint16_t>();
-      break;
-    case 4:
-      int_val = value.GetAs<uint32_t>();
-      break;
-    case 8:
-      int_val = value.GetAs<uint64_t>();
-      break;
-    default:
-      out->Append("<unknown unsigned integer type>");
-      return;
-  }
-  if (options.num_format == FormatValueOptions::NumFormat::kHex)
+  Err err = value.PromoteToUint64(&int_val);
+  if (err.has_error())
+    out->Append("<" + err.msg() + ">");
+  else if (options.num_format == FormatValueOptions::NumFormat::kHex)
     out->Append(fxl::StringPrintf("0x%" PRIx64, int_val));
   else
     out->Append(fxl::StringPrintf("%" PRIu64, int_val));
@@ -79,10 +53,10 @@ void FormatUnsignedInt(const ExprValue& value,
 
 void FormatFloat(const ExprValue& value, OutputBuffer* out) {
   switch (value.data().size()) {
-    case 4:
+    case sizeof(float):
       out->Append(fxl::StringPrintf("%g", value.GetAs<float>()));
       break;
-    case 8:
+    case sizeof(double):
       out->Append(fxl::StringPrintf("%g", value.GetAs<double>()));
       break;
     default:
@@ -105,8 +79,9 @@ void FormatChar(const ExprValue& value, OutputBuffer* out) {
 void FormatPointer(const ExprValue& value, const ModifiedType* modified_type,
                    OutputBuffer* out) {
   // Expect all pointers to be 8 bytes.
-  if (value.data().size() != 8) {
-    out->Append("<bad pointer size>");
+  Err err = value.EnsureSizeIs(sizeof(uint64_t));
+  if (err.has_error()) {
+    out->Append("<" + err.msg() + ">");
   } else {
     uint64_t pointer_value = value.GetAs<uint64_t>();
     out->Append(fxl::StringPrintf("(%s) 0x%" PRIx64,

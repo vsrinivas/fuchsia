@@ -9,16 +9,17 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/expr/expr_token.h"
+#include "garnet/bin/zxdb/expr/expr_value.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
 class AddressOfExprNode;
 class ArrayAccessExprNode;
+class ConstantExprNode;
 class DereferenceExprNode;
 class Err;
 class ExprEvalContext;
-class ExprValue;
 class IdentifierExprNode;
 class IntegerExprNode;
 class MemberAccessExprNode;
@@ -34,6 +35,7 @@ class ExprNode {
 
   virtual const AddressOfExprNode* AsAddressOf() const { return nullptr; }
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
+  virtual const ConstantExprNode* AsConstant() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const IntegerExprNode* AsInteger() const { return nullptr; }
@@ -60,11 +62,7 @@ class ExprNode {
   // start using expressions in conditional breakpoints and find that
   // performance is unacceptable, this should be optimized to support evals
   // that do not require callbacks unless necessary.
-  //
-  // Passing "context" as a reference to a RefPtr is unusual but I feel like
-  // it's dangerous to pass as a raw pointer, and don't want to incur a
-  // threadsafe ref for every single call.
-  virtual void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  virtual void Eval(fxl::RefPtr<ExprEvalContext> context,
                     EvalCallback cb) const = 0;
 
   // Dumps the tree to a stream with the given indent. Used for unit testing
@@ -80,7 +78,7 @@ class AddressOfExprNode : public ExprNode {
   ~AddressOfExprNode() override = default;
 
   const AddressOfExprNode* AsAddressOf() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -98,13 +96,28 @@ class ArrayAccessExprNode : public ExprNode {
   ~ArrayAccessExprNode() override = default;
 
   const ArrayAccessExprNode* AsArrayAccess() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
   std::unique_ptr<ExprNode> left_;
   std::unique_ptr<ExprNode> inner_;
+};
+
+// Returns a predefined ExprValue when evaluated.
+class ConstantExprNode : public ExprNode {
+ public:
+  explicit ConstantExprNode(ExprValue value);
+  ~ConstantExprNode() override = default;
+
+  const ConstantExprNode* AsConstant() const override { return this; }
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  ExprValue value_;
 };
 
 // Implements dereferencing a pointer ("*" in C).
@@ -116,7 +129,7 @@ class DereferenceExprNode : public ExprNode {
   ~DereferenceExprNode() override = default;
 
   const DereferenceExprNode* AsDereference() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -132,7 +145,7 @@ class IdentifierExprNode : public ExprNode {
   ~IdentifierExprNode() override = default;
 
   const IdentifierExprNode* AsIdentifier() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -151,7 +164,7 @@ class IntegerExprNode : public ExprNode {
   ~IntegerExprNode() override = default;
 
   const IntegerExprNode* AsInteger() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -172,7 +185,7 @@ class MemberAccessExprNode : public ExprNode {
   ~MemberAccessExprNode() override = default;
 
   const MemberAccessExprNode* AsMemberAccess() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -201,7 +214,7 @@ class UnaryOpExprNode : public ExprNode {
   ~UnaryOpExprNode() override = default;
 
   const UnaryOpExprNode* AsUnaryOp() const override { return this; }
-  void Eval(fxl::RefPtr<ExprEvalContext>& context,
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 

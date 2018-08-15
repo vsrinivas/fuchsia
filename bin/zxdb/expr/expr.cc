@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/expr/expr.h"
 
+#include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_node.h"
 #include "garnet/bin/zxdb/expr/expr_parser.h"
 #include "garnet/bin/zxdb/expr/expr_tokenizer.h"
