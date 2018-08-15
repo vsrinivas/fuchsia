@@ -1,0 +1,66 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# Adds a config to persist logs to disk
+#
+# The persist_logs template is used to generate a config for sysmgr that runs an
+# instance of log_listener. This instance will be configured to listen for (and
+# ignore) specific tags, and to write logs it finds into a target file.
+#
+# The file the logs are written to is located at /data/logs.${target_name}
+#
+# Parameters
+#
+#   tags (optional):
+#     [list of strings] Logs with these tags will be written to the log file.
+#
+#   ignore_tags (optional):
+#     [list of strings] Logs with these tags will NOT be written to the log
+#     file, even if the log has tags included in the "tags" section.
+#
+# Example:
+# 
+#   persist_logs("amber_logs") {
+#     tags = [ "amber" ]
+#     ignore_tags = [ "klog" ]
+#   }
+
+template("persist_logs") {
+  name = target_name
+  logs_action_name = "logs/${target_name}"
+  output_file = "$target_out_dir/${target_name}_log_listener.config"
+  action(logs_action_name) {
+    script = "//build/gn/gen_persistent_log_config.py"
+    outputs = [ output_file ]
+    args = [ name ] + rebase_path(outputs, root_build_dir)
+    if (defined(invoker.tags)) {
+      if (invoker.tags != []) {
+        args += [ "--tags" ]
+        foreach(tag, invoker.tags) {
+          args += [ tag ]
+        }
+      }
+    }
+    if (defined(invoker.ignore_tags)) {
+      if (invoker.ignore_tags != []) {
+        args += [ "--ignore-tags" ]
+        foreach(ignore_tag, invoker.ignore_tags) {
+          args += [ ignore_tag ]
+        }
+      }
+    }
+  }
+  package(target_name) {
+    deprecated_system_image = true
+    resources = [
+      {
+        dest = "sysmgr/${target_name}_log_listener.config"
+        path = output_file
+      },
+    ]
+    deps = [ ":$logs_action_name" ]
+  }
+}
