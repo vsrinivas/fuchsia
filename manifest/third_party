@@ -52,12 +52,12 @@
     <project name="cobalt"
              path="third_party/cobalt"
              remote="https://fuchsia.googlesource.com/cobalt"
-             revision="677c659ca5baed4cb58a728081147f0e4fa2524d"
+             revision="008d7a817f0a7f819aebaae08ab0d11bb8eb6f2f"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="cobalt_config"
              path="third_party/cobalt_config"
              remote="https://cobalt-analytics.googlesource.com/config"
-             revision="48de625135a15d0e134f84b753bb090e6f96476d"
+             revision="522a7a343a4b48c5ff404eca072ecbeb1a70fe25"
              gerrithost="https://cobalt-analytics-review.googlesource.com"/>
     <project name="third_party/crashpad"
              path="third_party/crashpad"

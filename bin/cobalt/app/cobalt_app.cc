@@ -30,7 +30,6 @@ const std::chrono::seconds kDeadlinePerSendAttempt(60);
 
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
 const size_t kMaxBytesTotal = 1024 * 1024;       // 1 MiB
-const size_t kMinEnvelopeSendSize = 10 * 1024;   // 10 K
 
 constexpr char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
 const char kClearcutServerUri[] = "https://jmt17.google.com/log";
@@ -61,16 +60,14 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       timer_manager_(dispatcher),
       controller_impl_(
           new CobaltControllerImpl(dispatcher, &shipping_dispatcher_)) {
-  store_dispatcher_.Register(
-      ObservationMetadata::LEGACY_BACKEND,
-      std::make_unique<MemoryObservationStore>(
-          fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION, kMaxBytesPerEnvelope,
-          kMaxBytesTotal, kMinEnvelopeSendSize));
-  store_dispatcher_.Register(
-      ObservationMetadata::V1_BACKEND,
-      std::make_unique<MemoryObservationStore>(
-          fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION, kMaxBytesPerEnvelope,
-          kMaxBytesTotal, kMinEnvelopeSendSize));
+  store_dispatcher_.Register(ObservationMetadata::LEGACY_BACKEND,
+                             std::make_unique<MemoryObservationStore>(
+                                 fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION,
+                                 kMaxBytesPerEnvelope, kMaxBytesTotal));
+  store_dispatcher_.Register(ObservationMetadata::V1_BACKEND,
+                             std::make_unique<MemoryObservationStore>(
+                                 fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION,
+                                 kMaxBytesPerEnvelope, kMaxBytesTotal));
 
   auto schedule_params =
       ShippingManager::ScheduleParams(schedule_interval, min_interval);
