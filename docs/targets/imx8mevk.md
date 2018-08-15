@@ -23,7 +23,8 @@ First step involves flashing the board with the custom u-boot binary:
 
 # Requirements:
  + Linux Host Machine
- + Connect USB cable from the USB-C port on the board to your host
+ + For serial console: connect USB from your host to the Micro USB port on the board
+ + For fastboot: connect USB cable from your host to the USB-C port on the board
  + Create a file under /etc/udev/rules.d/70-nxp.rules with the following content:
 
  SUBSYSTEM=="usb", ATTR{idVendor}=="0525", MODE="0664", GROUP="plugdev", TAG+="uaccess"
@@ -31,7 +32,7 @@ First step involves flashing the board with the custom u-boot binary:
 
 # From Device (iMX8 EVK):
 
-+ Reboot board and press space to halt autoboot
++ Reboot board and in serial console press space to halt autoboot
 + From u-boot command line do the following:
     + fastboot 0
 
