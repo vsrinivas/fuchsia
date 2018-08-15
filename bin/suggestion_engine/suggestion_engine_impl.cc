@@ -474,20 +474,12 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
 void SuggestionEngineImpl::PerformFocusStoryAction(
     const fuchsia::modular::Action& action,
     const std::string& override_story_id) {
-  const auto& focus_story = action.focus_story();
-  std::string story_id = focus_story.story_id;
-  if (!override_story_id.empty()) {
-    story_id = override_story_id;
-    if (override_story_id != focus_story.story_id) {
-      FXL_LOG(WARNING)
-          << "story_id provided on fuchsia::modular::Proposal ("
-          << override_story_id
-          << ") does not match that on fuchsia::modular::FocusStory action ("
-          << focus_story.story_id << "). Using " << override_story_id << ".";
-    }
+  if (override_story_id.empty()) {
+    FXL_LOG(WARNING) << "No story provided for focus action.";
+    return;
   }
-  FXL_LOG(INFO) << "Requesting focus for story_id " << story_id;
-  focus_provider_ptr_->Request(story_id);
+  FXL_LOG(INFO) << "Requesting focus for story_id " << override_story_id;
+  focus_provider_ptr_->Request(override_story_id);
 }
 
 void SuggestionEngineImpl::PerformFocusModuleAction(
@@ -520,27 +512,17 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   }
   const auto& add_module = action.add_module();
   const auto& module_name = add_module.module_name;
-  std::string story_id = add_module.story_id;
 
-  if (!override_story_id.empty()) {
-    story_id = override_story_id;
-    if (!add_module.story_id->empty() &&
-        override_story_id != add_module.story_id) {
-      FXL_LOG(WARNING)
-          << "story_id provided on fuchsia::modular::Proposal ("
-          << override_story_id
-          << ") does not match that on fuchsia::modular::AddModule action ("
-          << add_module.story_id << "). Using " << override_story_id << ".";
-    }
+  if (override_story_id.empty()) {
+    FXL_LOG(WARNING) << "Unable to add module; no story.";
+    return;
   }
-
-  FXL_CHECK(!story_id.empty())
-      << "Attempting to add module without specifying a story id.";
 
   auto parent_module_path = add_module.surface_parent_module_path.Clone();
 
   fuchsia::modular::StoryControllerPtr story_controller;
-  story_provider_->GetController(story_id, story_controller.NewRequest());
+  story_provider_->GetController(override_story_id,
+                                 story_controller.NewRequest());
   fuchsia::modular::Intent intent;
   fidl::Clone(add_module.intent, &intent);
   story_controller->AddModule(parent_module_path.Clone(), module_name,
@@ -560,7 +542,7 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   //  mod was added: aadd_module.story_id or override_story_id.
   if (listener) {
     auto proposal_listener = listener.Bind();
-    proposal_listener->OnProposalAccepted(proposal_id, story_id);
+    proposal_listener->OnProposalAccepted(proposal_id, override_story_id);
   }
 }
 

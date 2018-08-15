@@ -205,13 +205,13 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     fidl::Clone(intent, intent_out);
     add_module.intent = std::move(intent);
     add_module.module_name = module_result.module_id;
-    add_module.story_id = story_id;
     add_module.surface_parent_module_path = std::move(parent_mod_path);
     fuchsia::modular::Action action;
     action.set_add_module(std::move(add_module));
 
     fuchsia::modular::Proposal proposal;
     proposal.id = std::to_string(proposal_id);
+    proposal.story_id = story_id;
     proposal.on_selected.push_back(std::move(action));
 
     fuchsia::modular::SuggestionDisplay display;

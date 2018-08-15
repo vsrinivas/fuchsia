@@ -827,7 +827,6 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   auto module_id = "foo://bar1";
 
   fuchsia::modular::AddModule add_module;
-  add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
   add_module.intent.handler = module_id;
   add_module.surface_parent_module_path =
@@ -838,7 +837,10 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   action.set_add_module(std::move(add_module));
   fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
+  auto proposal = CreateProposal("1", "1", std::move(actions),
+                                 fuchsia::modular::AnnoyanceType::NONE);
+  proposal.story_id = "foo://bar";
+  p.Propose(std::move(proposal));
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
 

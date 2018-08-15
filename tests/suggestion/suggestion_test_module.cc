@@ -46,7 +46,6 @@ class TestApp : fuchsia::modular::ProposalListener {
           received_story_id_.Pass();
 
           fuchsia::modular::FocusStory focus_story;
-          focus_story.story_id = story_id;
 
           fuchsia::modular::Action action;
           action.set_focus_story(std::move(focus_story));
@@ -60,6 +59,7 @@ class TestApp : fuchsia::modular::ProposalListener {
 
           fuchsia::modular::Proposal proposal;
           proposal.id = kProposalId;
+          proposal.story_id = story_id;
           proposal.display = std::move(suggestion_display);
           proposal.on_selected.push_back(std::move(action));
           proposal_listener_bindings_.AddBinding(
