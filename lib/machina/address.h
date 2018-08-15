@@ -22,18 +22,27 @@ static inline constexpr uint64_t pci_ecam_size(uint64_t start_bus,
 
 // clang-format off
 
+#if __aarch64__
+
+// For arm64, memory addresses must be in a 36-bit range. This is due to limits
+// placed within the MMU code based on the limits of a Cortex-A53.
+//
+//See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
+
 // GIC v2 distributor memory range.
-static constexpr uint64_t kGicv2DistributorPhysBase         = 0xe82b1000;
-static constexpr uint64_t kGicv2DistributorSize             = PAGE_SIZE;
+static constexpr uint64_t kGicv2DistributorPhysBase         = 0x800001000;
+static constexpr uint64_t kGicv2DistributorSize             = 0x1000;
 
 // GIC v3 distributor memory range.
-static constexpr uint64_t kGicv3DistributorPhysBase         = 0xe82b0000;
+static constexpr uint64_t kGicv3DistributorPhysBase         = 0x800000000;
 static constexpr uint64_t kGicv3DistributorSize             = 0x10000;
 
-// GIC v3 Redistributor memory range. See GIC v3.0/v4.0 Architecture Spec 8.10.
-static constexpr uint64_t kGicv3RedistributorPhysBase       = 0xe8350000; // GICR_RD_BASE
+// GIC v3 Redistributor memory range.
+//
+// See GIC v3.0/v4.0 Architecture Spec 8.10.
+static constexpr uint64_t kGicv3RedistributorPhysBase       = 0x800010000; // GICR_RD_BASE
 static constexpr uint64_t kGicv3RedistributorSize           = 0x10000;
-static constexpr uint64_t kGicv3RedistributorSgiPhysBase    = 0xe8360000; // GICR_SGI_BASE
+static constexpr uint64_t kGicv3RedistributorSgiPhysBase    = 0x800020000; // GICR_SGI_BASE
 static constexpr uint64_t kGicv3RedistributorSgiSize        = 0x10000;
 static constexpr uint64_t kGicv3RedistributorStride         = 0x20000;
 static_assert(kGicv3RedistributorPhysBase + kGicv3RedistributorSize == kGicv3RedistributorSgiPhysBase,
@@ -41,28 +50,38 @@ static_assert(kGicv3RedistributorPhysBase + kGicv3RedistributorSize == kGicv3Red
 static_assert(kGicv3RedistributorStride >= kGicv3RedistributorSize + kGicv3RedistributorSgiSize,
               "GICv3 Redistributor stride must be >= the size of a single mapping");
 
-// IO APIC memory range.
-static constexpr uint64_t kIoApicPhysBase                   = 0xf8000000;
-static constexpr uint64_t kIoApicSize                       = PAGE_SIZE;
-
 // PCI memory ranges.
-#if __aarch64__
-static constexpr uint64_t kPciEcamPhysBase                  = 0x3f000000;
-static constexpr uint64_t kPciMmioBarPhysBase               = 0x10000000;
-#elif __x86_64__
-static constexpr uint64_t kPciEcamPhysBase                  = 0xf8100000;
-static constexpr uint64_t kPciMmioBarPhysBase               = 0xf8200000;
-#endif
+static constexpr uint64_t kPciEcamPhysBase                  = 0x808100000;
 static constexpr uint64_t kPciEcamSize                      = pci_ecam_size(0, 1);
+static constexpr uint64_t kPciMmioBarPhysBase               = 0x808200000;
 static constexpr uint64_t kPciMmioBarSize                   = 0x100000;
 
 // PL011 memory range.
-static constexpr uint64_t kPl011PhysBase                    = 0xfff32000;
-static constexpr uint64_t kPl011Size                        = PAGE_SIZE;
+static constexpr uint64_t kPl011PhysBase                    = 0x808300000;
+static constexpr uint64_t kPl011Size                        = 0x1000;
 
 // PL031 memory range.
-static constexpr uint64_t kPl031PhysBase                    = 0x09010000;
-static constexpr uint64_t kPl031Size                        = PAGE_SIZE;
+static constexpr uint64_t kPl031PhysBase                    = 0x808301000;
+static constexpr uint64_t kPl031Size                        = 0x1000;
+
+#elif __x86_64__
+
+// For x86-64, memory addresses must be in a 32-bit range. For the IO APIC, this
+// is due to the ACPICA library used by Zircon and Linux limiting the usable
+// address to 32-bits. For PCI, both Zircon and Linux place further limits on
+// where the PCI address region may be located.
+
+// IO APIC memory range.
+static constexpr uint64_t kIoApicPhysBase                   = 0xf8000000;
+static constexpr uint64_t kIoApicSize                       = 0x1000;
+
+// PCI memory ranges.
+static constexpr uint64_t kPciEcamPhysBase                  = 0xf8100000;
+static constexpr uint64_t kPciEcamSize                      = pci_ecam_size(0, 1);
+static constexpr uint64_t kPciMmioBarPhysBase               = 0xf8200000;
+static constexpr uint64_t kPciMmioBarSize                   = 0x100000;
+
+// For x86-64, port IO addresses must be in a 16-bit range.
 
 // I8250 ports.
 static constexpr uint64_t kI8250Base0                       = 0x3f8;
@@ -99,6 +118,8 @@ static constexpr uint64_t kPm1ControlPort                   = 0x2000;
 // PCI config ports.
 static constexpr uint64_t kPciConfigPortBase                = 0xcf8;
 static constexpr uint64_t kPciConfigPortSize                = 0x8;
+
+#endif
 
 // clang-format on
 

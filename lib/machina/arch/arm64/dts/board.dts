@@ -48,22 +48,7 @@
     #clock-cells = <0>;
   };
 
-  rtc@09010000 {
-    compatible = "arm,pl031", "arm,primecell";
-    arm,primecell-periphid = <0x00041031>;
-    reg = <0 0x09010000 0 0x1000>;
-  };
-
-  serial@fff32000 {
-    compatible = "arm,pl011", "arm,primecell";
-    arm,primecell-periphid = <0x00341011>;
-    reg = <0 0xfff32000 0 0x1000>;
-    clock-names = "apb_pclk";
-    clocks = <&pclk>;
-    interrupts = <0 79 4>; // SPI 111 HIGH/CPU-0
-  };
-
-  gic: interrupt-controller@e82b0000 {
+  gic: interrupt-controller@800000000 {
     interrupt-controller;
     #address-cells = <0>;
     ranges;
@@ -71,12 +56,12 @@
     // Interrupt controller is populated at run-time.
   };
 
-  pci@10000000 {
+  pci@808200000 {
     device_type = "pci";
     compatible = "pci-host-ecam-generic";
-    reg = <0 0x3f000000 0 0x1000000>;
+    reg = <0x8 0x08100000 0 0x100000>;
     bus-range = <0 0>;
-    ranges = <0x2000000 0 0x10001000 0 0x10001000 0 0xfff000>;
+    ranges = <0x2000000 0x8 0x08201000 0x8 0x08201000 0 0xff000>;
     interrupt-map-mask = <0xf800 0 0 1>;
     interrupt-map = <0x0000 0 0 1 &gic 0 0 4>,  // HIGH MID LOW WIRE GIC SPI 32 HIGH/CPU-0
                     <0x0800 0 0 1 &gic 0 1 4>,  // HIGH MID LOW WIRE GIC SPI 33 HIGH/CPU-0
@@ -97,5 +82,20 @@
     #address-cells = <3>;
     #size-cells = <2>;
     #interrupt-cells = <1>;
+  };
+
+  serial@808300000 {
+    compatible = "arm,pl011", "arm,primecell";
+    arm,primecell-periphid = <0x00341011>;
+    reg = <0x8 0x08300000 0 0x1000>;
+    clock-names = "apb_pclk";
+    clocks = <&pclk>;
+    interrupts = <0 79 4>; // SPI 111 HIGH/CPU-0
+  };
+
+  rtc@808301000 {
+    compatible = "arm,pl031", "arm,primecell";
+    arm,primecell-periphid = <0x00041031>;
+    reg = <0x8 0x08301000 0 0x1000>;
   };
 };

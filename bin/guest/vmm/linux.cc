@@ -68,14 +68,6 @@ struct MemRange {
   uint64_t addr;
   uint64_t size;
 };
-static constexpr std::array<MemRange, 3> kMemoryHoles = {
-    // Hole for RTC.
-    MemRange{machina::kPl031PhysBase, machina::kPl031Size},
-    // Hole for MMIO.
-    MemRange{machina::kPciMmioBarPhysBase, machina::kPciMmioBarSize},
-    // Hole for ECAM.
-    MemRange{machina::kPciEcamPhysBase, machina::kPciEcamSize},
-};
 
 // clang-format off
 
@@ -427,51 +419,20 @@ static zx_status_t load_device_tree(const int dtb_fd,
     }
   }
 
+  // Add memory to device tree.
   int memory_off = fdt_path_offset(dtb, "/memory@0");
   if (memory_off < 0) {
     FXL_LOG(ERROR) << "Failed to find \"/memory\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  // NOTE: The following assumes that kMemoryHoles is non-overlapping.
-  std::vector<MemRange> memory_map = {
-      {0, static_cast<uint32_t>(phys_mem.size())},
-  };
-  for (auto hole : kMemoryHoles) {
-    auto entry =
-        std::find_if(memory_map.begin(), memory_map.end(), [hole](auto range) {
-          return range.addr < hole.addr + hole.size &&
-                 range.addr + range.size > hole.addr;
-        });
-    if (entry == memory_map.end()) {
-      continue;
-    }
-    uint32_t entry_end = entry->addr + entry->size;
-    uint32_t hole_end = hole.addr + hole.size;
-    if (hole.addr == entry->addr) {
-      // The current entry is now degenerate (has size of 0), so we construct
-      // our new entry by modifying the current entry.
-      entry->addr = hole_end;
-      entry->size = entry_end - hole_end;
-      continue;
-    }
-    entry->size = hole.addr - entry->addr;
-    if (hole_end < entry_end) {
-      // Insert the new entry directly after the current entry to preserve the
-      // order of the memory map. This way it will be written to the device
-      // tree in the correct order.
-      memory_map.emplace(
-          entry + 1, MemRange{.addr = hole_end, .size = entry_end - hole_end});
-    }
-  }
-  for (auto entry : memory_map) {
-    status = add_memory_entry(dtb, memory_off, entry);
-    if (status != ZX_OK) {
-      return status;
-    }
+  status = add_memory_entry(dtb, memory_off,
+                            MemRange{.addr = 0, .size = phys_mem.size()});
+  if (status != ZX_OK) {
+    return status;
   }
 
 #if __aarch64__
-  int gic_off = fdt_path_offset(dtb, "/interrupt-controller@e82b0000");
+  int gic_off = fdt_path_offset(dtb, "/interrupt-controller@800000000");
   if (gic_off < 0) {
     FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
     return ZX_ERR_BAD_STATE;
@@ -487,6 +448,15 @@ static zx_status_t load_device_tree(const int dtb_fd,
         add_memory_entry(dtb, gic_off,
                          MemRange{.addr = machina::kGicv2DistributorPhysBase,
                                   .size = machina::kGicv2DistributorSize});
+    if (status != ZX_OK) {
+      return status;
+    }
+    // GICC memory map
+    status =
+        add_memory_entry(dtb, gic_off,
+                         MemRange{.addr = machina::kGicv2DistributorPhysBase +
+                                          machina::kGicv2DistributorSize,
+                                  .size = 0x2000});
     if (status != ZX_OK) {
       return status;
     }
@@ -520,13 +490,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
       return status;
     }
   }
-  // GICC memory map
-  status = add_memory_entry(dtb, gic_off,
-                            MemRange{.addr = 0xe82b2000, .size = 0x2000});
-  if (status != ZX_OK) {
-    return status;
-  }
-#endif // __aarch64__
+#endif  // __aarch64__
 
   return ZX_OK;
 }

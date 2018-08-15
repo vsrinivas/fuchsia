@@ -18,6 +18,7 @@
 #include <zircon/boot/image.h>
 
 #include "garnet/bin/guest/vmm/kernel.h"
+#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 
 #if __aarch64__
@@ -27,30 +28,12 @@ static zbi_mem_range_t mem_config[] = {
     {
         .type = ZBI_MEM_RANGE_RAM,
         .paddr = 0,
-        .length = 0x40000000,  // Set to phys_mem.size().
+        .length = 0,  // Set to phys_mem.size().
     },
     {
         .type = ZBI_MEM_RANGE_PERIPHERAL,
-        .paddr = 0xe8100000,
-        .length = 0x17f00000,
-    },
-    {
-        // Reserved for RTC.
-        .type = ZBI_MEM_RANGE_RESERVED,
-        .paddr = 0x09010000,
-        .length = 0x1000,  // 4KB
-    },
-    {
-        // Reserved for MMIO.
-        .type = ZBI_MEM_RANGE_RESERVED,
-        .paddr = 0x06fe0000,
-        .length = 0x1000000,  // 16MB
-    },
-    {
-        // Reserved for ECAM.
-        .type = ZBI_MEM_RANGE_RESERVED,
-        .paddr = 0x2e000000,
-        .length = 0x1000000,  // 16MB
+        .paddr = 0x800000000,
+        .length = 0x8400000,
     },
 };
 
@@ -61,26 +44,24 @@ static constexpr zbi_platform_id_t kPlatformId = {
 };
 
 static constexpr dcfg_simple_t kUartDriver = {
-    .mmio_phys = 0xfff32000,
+    .mmio_phys = machina::kPl011PhysBase,
     .irq = 111,
 };
 
 static constexpr dcfg_arm_gicv2_driver_t kGicV2Driver = {
-    .mmio_phys = 0xe82b0000,
-    .gicd_offset = 0x1000,
-    .gicc_offset = 0x2000,
-    .gich_offset = 0x4000,
-    .gicv_offset = 0x6000,
+    .mmio_phys = machina::kGicv2DistributorPhysBase,
+    .gicd_offset = 0x0000,
+    .gicc_offset = machina::kGicv2DistributorSize,
     .ipi_base = 12,
     .optional = true,
     .use_msi = true,
 };
 
 static constexpr dcfg_arm_gicv3_driver_t kGicV3Driver = {
-    .mmio_phys = 0xe82b0000,
+    .mmio_phys = machina::kGicv3DistributorPhysBase,
     .gicd_offset = 0x00000,
-    .gicr_offset = 0xa0000,
-    .gicr_stride = 0x20000,
+    .gicr_offset = machina::kGicv3RedistributorSize,
+    .gicr_stride = machina::kGicv3RedistributorStride,
     .ipi_base = 12,
     .optional = true,
 };

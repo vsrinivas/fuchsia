@@ -28,7 +28,7 @@ if (target_cpu == "x64") {
   }
 } else if (target_cpu == "arm64") {
   image_dir = "debian-arm64"
-  arch_cmdline = "earlycon=pl011,0xfff32000"
+  arch_cmdline = "earlycon=pl011,0x808300000"
   if (debian_guest_usb_root) {
     # Standard aarch64 Linux Root GPT GUID
     partition_guid = "B921B045-1DF0-41C3-AF44-4C6F280D3FAE"
