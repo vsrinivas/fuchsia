@@ -84,6 +84,7 @@ __BEGIN_CDECLS
 typedef zx_status_t (*zxfidl_cb_t)(fidl_msg_t* msg, fidl_txn_t* txn,
                                    void* cookie);
 
+//TODO: this really should be private to fidl.c, but is used by libfs
 typedef struct zxfidl_connection {
     fidl_txn_t txn;
     zx_handle_t channel;

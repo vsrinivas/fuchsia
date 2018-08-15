@@ -14,7 +14,6 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/auto_call.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
@@ -26,23 +25,21 @@
 
 #define MXDEBUG 0
 
-namespace {
-
-zx_status_t TxnReply(fidl_txn_t* txn, const fidl_msg_t* msg) {
-    auto connection = reinterpret_cast<zxfidl_connection_t*>(txn);
-    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
-    hdr->txid = connection->txid;
-    return zx_channel_write(connection->channel, 0, msg->bytes, msg->num_bytes,
+static zx_status_t txn_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+    zxfidl_connection_t* cnxn = (void*) txn;
+    fidl_message_header_t* hdr = msg->bytes;
+    hdr->txid = cnxn->txid;
+    return zx_channel_write(cnxn->channel, 0, msg->bytes, msg->num_bytes,
                             msg->handles, msg->num_handles);
 };
 
 // Don't actually send anything on a channel when completing this operation.
 // This is useful for mocking out "close" requests.
-zx_status_t TxnNullReply(fidl_txn_t* reply, const fidl_msg_t* msg) {
+static zx_status_t txn_null_reply(fidl_txn_t* reply, const fidl_msg_t* msg) {
     return ZX_OK;
 }
 
-zx_status_t HandleRpcClose(zxfidl_cb_t cb, void* cookie) {
+static zx_status_t handle_rpc_close(zxfidl_cb_t cb, void* cookie) {
     fuchsia_io_ObjectCloseRequest request;
     memset(&request, 0, sizeof(request));
     request.hdr.ordinal = ZXFIDL_CLOSE;
@@ -53,20 +50,20 @@ zx_status_t HandleRpcClose(zxfidl_cb_t cb, void* cookie) {
         .num_handles = 0u,
     };
 
-    zxfidl_connection_t connection = {
+    zxfidl_connection_t cnxn = {
         .txn = {
-            .reply = TxnNullReply,
+            .reply = txn_null_reply,
         },
         .channel = ZX_HANDLE_INVALID,
         .txid = 0,
     };
 
     // Remote side was closed.
-    cb(&msg, reinterpret_cast<fidl_txn_t*>(&connection), cookie);
+    cb(&msg, &cnxn.txn, cookie);
     return ERR_DISPATCHER_DONE;
 }
 
-zx_status_t HandleRpc(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
+static zx_status_t handle_rpc(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
     uint8_t bytes[ZXFIDL_MAX_MSG_BYTES];
     zx_handle_t handles[ZXFIDL_MAX_MSG_HANDLES];
     fidl_msg_t msg = {
@@ -83,39 +80,32 @@ zx_status_t HandleRpc(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
         return r;
     }
 
-    auto cleanup = fbl::MakeAutoCall([&] {
-        zx_handle_close_many(msg.handles, msg.num_handles);
-    });
-
     if (msg.num_bytes < sizeof(fidl_message_header_t)) {
+        zx_handle_close_many(msg.handles, msg.num_handles);
         return ZX_ERR_IO;
     }
 
-    fidl_message_header_t& header = *reinterpret_cast<fidl_message_header_t*>(msg.bytes);
-    zxfidl_connection_t connection = {
+    fidl_message_header_t* hdr = msg.bytes;
+    zxfidl_connection_t cnxn = {
         .txn = {
-            .reply = TxnReply,
+            .reply = txn_reply,
         },
         .channel = h,
-        .txid = header.txid,
+        .txid = hdr->txid,
     };
 
     // Callback is responsible for decoding the message, and closing
     // any associated handles.
-    cleanup.cancel();
-    r = cb(&msg, &connection.txn, cookie);
-    return r;
+    return cb(&msg, &cnxn.txn, cookie);
 }
-
-} // namespace
 
 zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
     if (h == ZX_HANDLE_INVALID) {
-        return HandleRpcClose(cb, cookie);
+        return handle_rpc_close(cb, cookie);
     } else {
         ZX_ASSERT(zx_object_get_info(h, ZX_INFO_HANDLE_VALID, NULL, 0,
                                      NULL, NULL) == ZX_OK);
-        return HandleRpc(h, cb, cookie);
+        return handle_rpc(h, cb, cookie);
     }
 }
 
@@ -141,7 +131,7 @@ zx_status_t fidl_close(zxrio_t* rio) {
 zx_status_t fidl_write(zxrio_t* rio, const void* data, uint64_t length,
                        uint64_t* actual) {
     zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_FileWrite(zxrio_handle(rio), static_cast<const uint8_t*>(data),
+    if ((io_status = fuchsia_io_FileWrite(zxrio_handle(rio), data,
                                           length, &status, actual)) != ZX_OK) {
         return io_status;
     }
@@ -154,7 +144,7 @@ zx_status_t fidl_write(zxrio_t* rio, const void* data, uint64_t length,
 zx_status_t fidl_writeat(zxrio_t* rio, const void* data, uint64_t length,
                          off_t offset, uint64_t* actual) {
     zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_FileWriteAt(zxrio_handle(rio), static_cast<const uint8_t*>(data),
+    if ((io_status = fuchsia_io_FileWriteAt(zxrio_handle(rio), data,
                                                          length, offset, &status,
                                                          actual)) != ZX_OK) {
         return io_status;
@@ -168,7 +158,7 @@ zx_status_t fidl_writeat(zxrio_t* rio, const void* data, uint64_t length,
 zx_status_t fidl_read(zxrio_t* rio, void* data, uint64_t length, uint64_t* actual) {
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_FileRead(zxrio_handle(rio), length, &status,
-                                         static_cast<uint8_t*>(data), length, actual)) != ZX_OK) {
+                                         data, length, actual)) != ZX_OK) {
         return io_status;
     }
     if (*actual > length) {
@@ -181,7 +171,7 @@ zx_status_t fidl_readat(zxrio_t* rio, void* data, uint64_t length, off_t offset,
                         uint64_t* actual) {
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_FileReadAt(zxrio_handle(rio), length, offset, &status,
-                                           static_cast<uint8_t*>(data), length, actual)) != ZX_OK) {
+                                           data, length, actual)) != ZX_OK) {
         return io_status;
     }
     if (*actual > length) {
@@ -197,7 +187,7 @@ static_assert(SEEK_END == fuchsia_io_SeekOrigin_End, "");
 zx_status_t fidl_seek(zxrio_t* rio, off_t offset, int whence, off_t* out) {
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_FileSeek(zxrio_handle(rio), offset, whence, &status,
-                                         reinterpret_cast<uint64_t*>(out))) != ZX_OK) {
+                                         (uint64_t*) out)) != ZX_OK) {
         return io_status;
     }
     return status;
@@ -227,13 +217,14 @@ zx_status_t fidl_stat(zxrio_t* rio, vnattr_t* out) {
     return ZX_OK;
 }
 
+// Setup the request message primary
+// TODO(smklein): Replace with autogenerated constants
+#define kFlagCreationTime 1
+#define kFlagModificationTime 2
+static_assert(kFlagCreationTime == ATTR_CTIME, "SetAttr flags unaligned");
+static_assert(kFlagModificationTime == ATTR_MTIME, "SetAttr flags unaligned");
+
 zx_status_t fidl_setattr(zxrio_t* rio, const vnattr_t* attr) {
-    // Setup the request message primary
-    // TODO(smklein): Replace with autogenerated constants
-    const uint32_t kFlagCreationTime = 1;
-    const uint32_t kFlagModificationTime = 2;
-    static_assert(kFlagCreationTime == ATTR_CTIME, "SetAttr flags unaligned");
-    static_assert(kFlagModificationTime == ATTR_MTIME, "SetAttr flags unaligned");
     uint32_t flags = attr->valid;
     fuchsia_io_NodeAttributes attrs;
     memset(&attrs, 0, sizeof(attrs));
@@ -259,8 +250,7 @@ zx_status_t fidl_sync(zxrio_t* rio) {
 zx_status_t fidl_readdirents(zxrio_t* rio, void* data, size_t length, size_t* out_sz) {
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_DirectoryReadDirents(zxrio_handle(rio), length,
-                                                     &status, static_cast<uint8_t*>(data),
-                                                     length, out_sz)) != ZX_OK) {
+                                                     &status, data, length, out_sz)) != ZX_OK) {
         return io_status;
     }
     if (*out_sz > length) {
@@ -361,12 +351,11 @@ zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
     size_t out_handle_actual;
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_NodeIoctl(zxrio_handle(rio), op,
-                                          out_len, static_cast<const zx_handle_t*>(in_buf),
-                                          in_handle_count, static_cast<const uint8_t*>(in_buf),
+                                          out_len, (zx_handle_t*) in_buf,
+                                          in_handle_count, in_buf,
                                           in_len, &status, hbuf,
                                           out_handle_count, &out_handle_actual,
-                                          static_cast<uint8_t*>(out_buf), out_len,
-                                          out_actual)) != ZX_OK) {
+                                          out_buf, out_len, out_actual)) != ZX_OK) {
         return io_status;
     }
 
