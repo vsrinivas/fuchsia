@@ -141,7 +141,7 @@
 + [interrupt_create](syscalls/interrupt_create.md) - Create a physical or virtual interrupt object
 + [interrupt_destroy](syscalls/interrupt_destroy.md) - Destroy an interrupt object
 + [interrupt_trigger](syscalls/interrupt_trigger.md) - Trigger a virtual interrupt object
-+ [interrupt_wait](interrupt_wait.md) - Wait on an interrupt object
++ [interrupt_wait](syscalls/interrupt_wait.md) - Wait on an interrupt object
 + [smc_call](syscalls/smc_call.md) - Make an SMC call from user space
 + acpi_uefi_rsdp
 + ioports_request
