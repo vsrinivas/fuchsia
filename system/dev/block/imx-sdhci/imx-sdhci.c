@@ -40,7 +40,7 @@
 // #define ENABLE_POLLING
 
 // Uncomment to disable DMA Mode
-// #define DISABLE_DMA
+#define DISABLE_DMA
 
 // Uncomment to print logs at all levels
 // #define SDHCI_LOG_ALL 1
