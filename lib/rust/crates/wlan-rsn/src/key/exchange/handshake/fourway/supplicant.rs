@@ -11,13 +11,12 @@ use eapol;
 use failure;
 use integrity;
 use key::exchange::Key;
-use key::exchange::handshake::fourway::{self, FourwayHandshakeKeyFrame};
+use key::exchange::handshake::fourway::{self, FourwayHandshakeFrame};
 use key::gtk::Gtk;
 use key::ptk::Ptk;
 use key_data;
 use rsna::{SecAssocResult, SecAssocUpdate, VerifiedKeyFrame};
 use rsne::Rsne;
-use std::rc::Rc;
 
 #[derive(Debug, Default, PartialEq)]
 struct PtkInitState {}
@@ -26,7 +25,7 @@ struct GtkInitState {}
 
 impl PtkInitState {
     // IEEE Std 802.1X-2010, 12.7.6.2
-    fn on_message_1(&self, shared: &mut SharedState, msg1: FourwayHandshakeKeyFrame)
+    fn on_message_1(&self, shared: &mut SharedState, msg1: FourwayHandshakeFrame)
         -> Result<(eapol::KeyFrame, Ptk), failure::Error>
     {
         let anonce = &msg1.get().key_nonce;
@@ -97,7 +96,7 @@ impl PtkInitState {
 
 impl GtkInitState {
     // IEEE Std 802.1X-2010, 12.7.6.4
-    fn on_message_3(&self, shared: &mut SharedState, msg3: FourwayHandshakeKeyFrame)
+    fn on_message_3(&self, shared: &mut SharedState, msg3: FourwayHandshakeFrame)
         -> Result<(eapol::KeyFrame, Gtk), failure::Error>
     {
         let mut gtk: Option<key_data::kde::Gtk> = None;
@@ -169,7 +168,7 @@ enum State {
 }
 
 impl State {
-    pub fn on_eapol_key_frame(self, shared: &mut SharedState, frame: FourwayHandshakeKeyFrame)
+    pub fn on_eapol_key_frame(self, shared: &mut SharedState, frame: FourwayHandshakeFrame)
         -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
     {
         match fourway::message_number(frame.get()) {
@@ -181,7 +180,7 @@ impl State {
         }
     }
 
-    fn on_message_1(self, shared: &mut SharedState, msg1: FourwayHandshakeKeyFrame)
+    fn on_message_1(self, shared: &mut SharedState, msg1: FourwayHandshakeFrame)
         -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
     {
         // Always reset Handshake when first message was received.
@@ -213,7 +212,7 @@ impl State {
         }
     }
 
-    fn on_message_3(self, shared: &mut SharedState, msg3: FourwayHandshakeKeyFrame)
+    fn on_message_3(self, shared: &mut SharedState, msg3: FourwayHandshakeFrame)
         -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
     {
         // Third message of Handshake is only processed once to prevent replay attacks such as
@@ -246,7 +245,7 @@ struct SharedState {
     pmk: Vec<u8>,
     kek: Vec<u8>,
     kck: Vec<u8>,
-    cfg: Rc<fourway::Config>,
+    cfg: fourway::Config,
     nonce_rdr: NonceReader,
 }
 
@@ -257,7 +256,7 @@ pub struct Supplicant {
 }
 
 impl Supplicant {
-    pub fn new(cfg: Rc<fourway::Config>, pmk: Vec<u8>) -> Result<Self, failure::Error> {
+    pub fn new(cfg: fourway::Config, pmk: Vec<u8>) -> Result<Self, failure::Error> {
         let nonce_rdr = NonceReader::new(cfg.s_addr)?;
         Ok(Supplicant {
             state: Some(State::PtkInit(PtkInitState {})),
@@ -276,12 +275,16 @@ impl Supplicant {
         &self.shared.anonce[..]
     }
 
-    pub fn on_eapol_key_frame(&mut self, frame: FourwayHandshakeKeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&mut self, frame: FourwayHandshakeFrame) -> SecAssocResult {
         self.state.take().map_or_else(|| Ok(vec![]), |state| {
             let (state, updates) = state.on_eapol_key_frame(&mut self.shared, frame)?;
             self.state = Some(state);
             Ok(updates.unwrap_or_default())
         })
+    }
+
+    pub fn destroy(self) -> fourway::Config {
+        self.shared.cfg
     }
 }
 

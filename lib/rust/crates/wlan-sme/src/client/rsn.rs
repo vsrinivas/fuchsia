@@ -58,7 +58,7 @@ fn make_ess_sa(ssid: &[u8], passphrase: &[u8], sta_addr: [u8; 6], sta_rsne: Rsne
     let negotiated_rsne = NegotiatedRsne::from_rsne(&sta_rsne)?;
     let auth_cfg = auth::Config::for_psk(passphrase, ssid)?;
     let ptk_cfg = exchange::Config::for_4way_handshake(Role::Supplicant, sta_addr, sta_rsne, bssid, bss_rsne)?;
-    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, sta_addr, bssid)?;
+    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, negotiated_rsne.akm.clone());
     EssSa::new(Role::Supplicant, negotiated_rsne, auth_cfg, ptk_cfg, gtk_cfg)
 }
 

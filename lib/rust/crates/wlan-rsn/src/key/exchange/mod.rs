@@ -5,6 +5,8 @@
 pub mod handshake;
 
 use self::handshake::{fourway::{self, Fourway}, group_key::{self, GroupKey}};
+use akm::Akm;
+use cipher::Cipher;
 use Error;
 use eapol;
 use failure;
@@ -32,17 +34,17 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn from_config(cfg: Config, key: Vec<u8>) -> Result<Method, failure::Error> {
-        match cfg {
-            Config::FourWayHandshake(c) => Ok(Method::FourWayHandshake(Fourway::new(c, key)?)),
-            Config::GroupKeyHandshake(c) => Ok(Method::GroupKeyHandshake(GroupKey::new(c, key)?)),
-        }
-    }
-
     pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
         match self {
             Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(frame),
             Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(frame),
+        }
+    }
+
+    pub fn destroy(self) -> Config {
+        match self {
+            Method::FourWayHandshake(hs) => hs.destroy(),
+            Method::GroupKeyHandshake(hs) => hs.destroy(),
         }
     }
 }
@@ -66,9 +68,8 @@ impl Config {
             .map(|c| Config::FourWayHandshake(c))
     }
 
-    pub fn for_groupkey_handshake(role: Role, sta_addr: [u8; 6], peer_addr: [u8; 6])
-        -> Result<Config, failure::Error>
+    pub fn for_groupkey_handshake(role: Role, akm: Akm) -> Config
     {
-        Ok(Config::GroupKeyHandshake(group_key::Config{role, sta_addr, peer_addr}))
+        Config::GroupKeyHandshake(group_key::Config{role, akm})
     }
 }

@@ -161,13 +161,19 @@ impl <'a> VerifiedKeyFrame<'a> {
                 bail!(Error::InvalidKeyLength(frame.key_len, 0))
             },
             // Authenticator must use the pairwise cipher's key length.
-            Role::Authenticator => {
-                let tk_bits = rsne.pairwise
-                    .tk_bits()
-                    .ok_or(Error::UnsupportedCipherSuite)?;
-                if frame.key_len != tk_bits / 8 {
-                    bail!(Error::InvalidKeyLength(frame.key_len, tk_bits / 8))
-                }
+            Role::Authenticator => match frame.key_info.key_type() {
+                eapol::KEY_TYPE_PAIRWISE => {
+                    let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
+                    if frame.key_len != tk_bits / 8 {
+                        bail!(Error::InvalidKeyLength(frame.key_len, tk_bits / 8))
+                    }
+                },
+                // IEEE Std 802.11-2016, 12.7.2 c) conflicts with IEEE Std 802.11-2016, 12.7.7.2
+                // such that latter one requires the key length to be set to 0, while former is
+                // to vague to derive any key type specific requirements.
+                // Thus, leave it to the group key exchange method to enforce its requirements.
+                eapol::KEY_TYPE_GROUP_SMK => {},
+                _ => bail!(Error::UnsupportedKeyDerivation),
             },
             _ => {}
         };

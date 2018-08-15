@@ -9,7 +9,7 @@ use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use Error;
 use failure;
-use key::exchange::{self, Key};
+use key::exchange::{self, Key, handshake::{fourway::Fourway, group_key::GroupKey}};
 use key::{gtk::Gtk, ptk::Ptk};
 use rsna::{NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame};
 use rsne::Rsne;
@@ -37,22 +37,29 @@ impl Ptksa {
     fn initialize(&mut self, pmk: Vec<u8>) -> Result<(), failure::Error> {
         let cfg = match self {
             Ptksa::Uninitialized(cfg) => cfg.take(),
-            _ => None,
+            _ => bail!("PTKSA already initialized"),
         };
-        let cfg = cfg.expect("invalid state: PTK configuration cannot be None");
-        *self = Ptksa::Initialized(PtksaCfg {
-            cfg: Some(cfg.clone()),
-            method: exchange::Method::from_config(cfg, pmk)?,
-            ptk: None,
-        });
+
+        let method = match cfg {
+            Some(exchange::Config::FourWayHandshake(cfg)) => {
+                exchange::Method::FourWayHandshake(Fourway::new(cfg, pmk)?)
+            },
+            _ => bail!("unsupported method for PTKSA: {:?}", cfg),
+        };
+
+        *self = Ptksa::Initialized(PtksaCfg {method, ptk: None});
         Ok(())
     }
 
     fn reset(&mut self) {
-        *self = Ptksa::Uninitialized(match self {
-            Ptksa::Uninitialized(cfg) => cfg.take(),
-            Ptksa::Initialized(PtksaCfg{cfg, ..}) => cfg.take(),
-        });
+        let ptska = match mem::replace(self, Ptksa::Uninitialized(None)) {
+            Ptksa::Initialized(ptksa_cfg) => {
+                let cfg = ptksa_cfg.method.destroy();
+                Ptksa::Uninitialized(Some(cfg))
+            },
+            uninitialized => uninitialized,
+        };
+        *self = ptska;
     }
 
     fn ptk(&self) -> Option<&Ptk> {
@@ -65,7 +72,6 @@ impl Ptksa {
 
 #[derive(Debug, PartialEq)]
 struct PtksaCfg {
-    cfg: Option<exchange::Config>,
     method: exchange::Method,
     ptk: Option<Ptk>,
 }
@@ -78,31 +84,37 @@ enum Gtksa {
 
 #[derive(Debug, PartialEq)]
 struct GtksaCfg {
-    cfg: Option<exchange::Config>,
     method: exchange::Method,
     gtk: Option<Gtk>,
 }
 
 impl Gtksa {
-    fn initialize(&mut self, ptk: Vec<u8>) -> Result<(), failure::Error> {
+    fn initialize(&mut self, kck: &[u8]) -> Result<(), failure::Error> {
         let cfg = match self {
             Gtksa::Uninitialized(cfg) => cfg.take(),
-            _ => None,
+            _ => bail!("GTKSA already initialized"),
         };
-        let cfg = cfg.expect("invalid state: GTK configuration cannot be None");
-        *self = Gtksa::Initialized(GtksaCfg {
-            cfg: Some(cfg.clone()),
-            method: exchange::Method::from_config(cfg, ptk)?,
-            gtk: None,
-        });
+
+        let method = match cfg {
+            Some(exchange::Config::GroupKeyHandshake(cfg)) => {
+                exchange::Method::GroupKeyHandshake(GroupKey::new(cfg, kck)?)
+            },
+            _ => bail!("unsupported method for GTKSA: {:?}", cfg),
+        };
+
+        *self = Gtksa::Initialized(GtksaCfg {method, gtk: None});
         Ok(())
     }
 
     fn reset(&mut self) {
-        *self = Gtksa::Uninitialized(match self {
-            Gtksa::Uninitialized(cfg) => cfg.take(),
-            Gtksa::Initialized(GtksaCfg{cfg, ..}) => cfg.take(),
-        });
+        let gtksa = match mem::replace(self, Gtksa::Uninitialized(None)) {
+            Gtksa::Initialized(gtksa_cfg) => {
+                let cfg = gtksa_cfg.method.destroy();
+                Gtksa::Uninitialized(Some(cfg))
+            },
+            uninitialized => uninitialized,
+        };
+        *self = gtksa;
     }
 
     fn gtk(&self) -> Option<&Gtk> {
@@ -155,6 +167,7 @@ impl EssSa {
     pub fn reset(&mut self) {
         self.pmksa.reset();
         self.ptksa.reset();
+        self.gtksa.reset();
     }
 
     fn is_established(&self) -> bool {
@@ -174,7 +187,7 @@ impl EssSa {
                 // The PTK carries KEK and KCK which is used in the Group Key Handshake, thus,
                 // reset GTKSA whenever the PTK changed.
                 self.gtksa.reset();
-                self.gtksa.initialize(ptk.ptk().to_vec());
+                self.gtksa.initialize(ptk.kck());
 
                 if let Ptksa::Initialized(ptksa) = &mut self.ptksa {
                     ptksa.ptk = Some(ptk);
@@ -309,6 +322,7 @@ mod tests {
 
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];
+    const GTK_REKEY: [u8; 16] = [0x1F; 16];
 
     #[test]
     fn test_zero_key_replay_counter_msg1() {
@@ -470,6 +484,37 @@ mod tests {
             SecAssocStatus::EssSaEstablished => {},
             _ => assert!(false),
         };
+
+        // Cause re-keying of GTK via Group-Key Handshake.
+
+        let updates = send_group_key_msg1(&mut esssa, &ptk, |_| {})
+            .expect("Supplicant failed processing 1st message of group key handshake");
+
+        // Verify 4th message was received and is correct.
+        let msg2 = extract_eapol_resp(&updates[..])
+            .expect("Supplicant did not respond with 2nd message of group key handshake");
+        assert_eq!(msg2.version, 1);
+        assert_eq!(msg2.packet_type, 3);
+        assert_eq!(msg2.packet_body_len as usize, msg2.len() - 4);
+        assert_eq!(msg2.descriptor_type, 2);
+        assert_eq!(msg2.key_info.value(), 0x0302);
+        assert_eq!(msg2.key_len, 0);
+        assert_eq!(msg2.key_replay_counter, 3);
+        assert!(test_util::is_zero(&msg2.key_nonce[..]));
+        assert!(test_util::is_zero(&msg2.key_iv[..]));
+        assert_eq!(msg2.key_rsc, 0);
+        assert!(!test_util::is_zero(&msg2.key_mic[..]));
+        assert_eq!(msg2.key_mic.len(), test_util::mic_len());
+        assert_eq!(msg2.key_data.len(), 0);
+        assert!(test_util::is_zero(&msg2.key_data[..]));
+        // Verify the message's MIC.
+        let mic = test_util::compute_mic(ptk.kck(), &msg2);
+        assert_eq!(&msg2.key_mic[..], &mic[..]);
+
+        // Verify GTK was reported.
+        let reported_gtk = extract_reported_gtk(&updates[..])
+            .expect("Supplicant did not report re-key'ed GTK");
+        assert_eq!(&GTK_REKEY[..], reported_gtk.gtk());
     }
 
     // TODO(hahnr): Add additional tests to validate replay attacks,
@@ -520,6 +565,13 @@ mod tests {
         where F: Fn(&mut eapol::KeyFrame)
     {
         let (msg, _) = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
+        esssa.on_eapol_frame(&eapol::Frame::Key(msg))
+    }
+
+    fn send_group_key_msg1<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F) -> SecAssocResult
+        where F: Fn(&mut eapol::KeyFrame)
+    {
+        let (msg, _) = test_util::get_group_key_hs_msg1(ptk, &GTK_REKEY[..], msg_modifier);
         esssa.on_eapol_frame(&eapol::Frame::Key(msg))
     }
 }

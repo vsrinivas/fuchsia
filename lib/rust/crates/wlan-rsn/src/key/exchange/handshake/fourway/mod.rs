@@ -14,8 +14,8 @@ use bytes::BytesMut;
 use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use failure;
-use key::exchange::Key;
-use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame};
+use key::exchange::{self, Key};
+use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame, NegotiatedRsne};
 use rsne::Rsne;
 use std::rc::Rc;
 
@@ -35,17 +35,16 @@ pub enum MessageNumber {
 
 // Struct which carries EAPOL key frames which comply with IEEE Std 802.11-2016, 12.7.2 and
 // IEEE Std 802.11-2016, 12.7.6.
-// TODO(hahnr): Make constructable only from a VerifiedKeyFrame.
-pub struct FourwayHandshakeKeyFrame<'a> {
+pub struct FourwayHandshakeFrame<'a> {
     frame: &'a eapol::KeyFrame,
     kd_plaintext: Bytes,
 }
 
-impl <'a> FourwayHandshakeKeyFrame<'a> {
+impl <'a> FourwayHandshakeFrame<'a> {
 
     pub fn from_verified(
-        valid_frame: VerifiedKeyFrame<'a>, role: &Role, nonce: &[u8])
-        -> Result<FourwayHandshakeKeyFrame<'a>, failure::Error>
+        valid_frame: VerifiedKeyFrame<'a>, role: Role, nonce: &[u8])
+        -> Result<FourwayHandshakeFrame<'a>, failure::Error>
     {
         let frame = valid_frame.get();
         let kd_plaintext = valid_frame.key_data_plaintext();
@@ -73,7 +72,7 @@ impl <'a> FourwayHandshakeKeyFrame<'a> {
             MessageNumber::Message4 => validate_message_4(frame),
         }?;
 
-        Ok(FourwayHandshakeKeyFrame{ frame, kd_plaintext: Bytes::from(kd_plaintext) })
+        Ok(FourwayHandshakeFrame{ frame, kd_plaintext: Bytes::from(kd_plaintext) })
     }
 
     pub fn get(&self) -> &'a eapol::KeyFrame {
@@ -101,51 +100,42 @@ impl Config {
         a_addr: [u8; 6],
         a_rsne: Rsne,
     ) -> Result<Config, failure::Error> {
-        // TODO(hahnr): Validate configuration for:
-        // (1) Correct RSNE subset
-        // (2) Correct AKM and Cipher Suite configuration
-        Ok(Config {
-            role,
-            s_addr,
-            s_rsne,
-            a_addr,
-            a_rsne,
-        })
+        let _ = NegotiatedRsne::from_rsne(&s_rsne)?;
+        Ok(Config {role, s_addr, s_rsne, a_addr, a_rsne})
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Fourway {
-    cfg: Rc<Config>,
-    handler: RoleHandler,
-}
+pub struct Fourway(RoleHandler);
 
 impl Fourway {
     pub fn new(cfg: Config, pmk: Vec<u8>) -> Result<Fourway, failure::Error> {
-        let shared_cfg = Rc::new(cfg);
-        let handler = match &shared_cfg.role {
-            &Role::Supplicant => RoleHandler::Supplicant(Supplicant::new(shared_cfg.clone(), pmk)?),
-            &Role::Authenticator => RoleHandler::Authenticator(Authenticator::new()?),
+        let handler = match &cfg.role {
+            Role::Supplicant => RoleHandler::Supplicant(Supplicant::new(cfg, pmk)?),
+            Role::Authenticator => RoleHandler::Authenticator(Authenticator::new(cfg)?),
         };
-        Ok(Fourway {
-            cfg: shared_cfg,
-            handler: handler,
-        })
+        Ok(Fourway(handler))
     }
 
     pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
-         match &mut self.handler {
+         match &mut self.0 {
             RoleHandler::Authenticator(a) => {
-                let frame = FourwayHandshakeKeyFrame::from_verified(frame, &self.cfg.role, a.snonce())?;
+                let frame = FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, a.snonce())?;
                 a.on_eapol_key_frame(frame)
             },
             RoleHandler::Supplicant(s) => {
-                let frame = FourwayHandshakeKeyFrame::from_verified(frame, &self.cfg.role, s.anonce())?;
+                let frame = FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, s.anonce())?;
                 s.on_eapol_key_frame(frame)
             },
         }
     }
 
+    pub fn destroy(self) -> exchange::Config {
+        match self.0 {
+            RoleHandler::Supplicant(s) => exchange::Config::FourWayHandshake(s.destroy()),
+            RoleHandler::Authenticator(a) => exchange::Config::FourWayHandshake(a.destroy()),
+        }
+    }
 }
 
 // Verbose and explicit verification of Message 1 to 4 against IEEE Std 802.11-2016, 12.7.6.2.

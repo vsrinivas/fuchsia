@@ -75,8 +75,7 @@ pub fn get_esssa() -> EssSa {
     let ptk_exch_cfg =
         exchange::Config::for_4way_handshake(Role::Supplicant, S_ADDR, s_rsne, A_ADDR, a_rsne)
             .expect("could not construct PTK exchange method");
-    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, S_ADDR, A_ADDR)
-        .expect("could not construct GTK exchange method");
+    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, negotiated_rsne.akm.clone());
     EssSa::new(Role::Supplicant, negotiated_rsne, auth_cfg, ptk_exch_cfg, gtk_cfg)
         .expect("error constructing ESS Security Assocation")
 }
@@ -201,6 +200,48 @@ pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F)
         key_rsc: 0,
         key_iv: [0u8; 16],
         key_nonce: eapol::to_array(anonce),
+        key_data_len: encrypted_key_data.len() as u16,
+        key_data: Bytes::from(encrypted_key_data),
+    };
+    msg_modifier(&mut msg);
+    msg.update_packet_body_len();
+
+    let mic = compute_mic(ptk.kck(), &msg);
+    msg.key_mic = Bytes::from(mic);
+
+    (msg, Bytes::from(&buf[..]))
+}
+
+pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F) -> (eapol::KeyFrame, Bytes)
+    where F: Fn(&mut eapol::KeyFrame)
+{
+    let mut buf = Vec::with_capacity(256);
+
+    // Write GTK KDE
+    let gtk_kde = kde::Gtk::new(3, kde::GtkInfoTx::BothRxTx, gtk);
+    if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
+        hdr.as_bytes(&mut buf);
+        gtk.as_bytes(&mut buf);
+    }
+
+    // Add optional padding
+    key_data::add_padding(&mut buf);
+
+    // Encrypt key data
+    let encrypted_key_data = encrypt_key_data(ptk.kek(), &buf[..]);
+
+    let mut msg = eapol::KeyFrame {
+        version: 1,
+        packet_type: 3,
+        packet_body_len: 0, // Updated afterwards
+        descriptor_type: 2,
+        key_info: eapol::KeyInformation(0x1382),
+        key_len: 0,
+        key_replay_counter: 3,
+        key_mic: Bytes::from(vec![0u8; mic_len()]),
+        key_rsc: 0,
+        key_iv: [0u8; 16],
+        key_nonce: [0u8; 32],
         key_data_len: encrypted_key_data.len() as u16,
         key_data: Bytes::from(encrypted_key_data),
     };
