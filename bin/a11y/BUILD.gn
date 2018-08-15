@@ -13,6 +13,9 @@ package("a11y_tests") {
 
   tests = [
     {
+      name = "a11y_manager_apptests"
+    },
+    {
       name = "talkback_apptests"
     },
   ]
