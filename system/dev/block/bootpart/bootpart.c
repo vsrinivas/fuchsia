@@ -70,7 +70,6 @@ static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_
         char* guid = reply;
         if (max < ZBI_PARTITION_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->part.type_guid, ZBI_PARTITION_GUID_LEN);
-        return ZBI_PARTITION_GUID_LEN;
         *out_actual = ZBI_PARTITION_GUID_LEN;
         return ZX_OK;
     }
