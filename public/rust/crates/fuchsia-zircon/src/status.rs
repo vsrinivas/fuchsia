@@ -1,7 +1,7 @@
 use failure;
+use fuchsia_zircon_sys as sys;
 use std::ffi::NulError;
 use std::io;
-use sys;
 use std::fmt;
 
 /// Status type indicating the result of a Fuchsia syscall.

@@ -6,8 +6,9 @@
 
 use std::mem;
 
-use {AsHandleRef, HandleBased, Handle, HandleRef, Signals, Status, Time};
-use {sys, ok};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Signals, Status, Time};
+use crate::ok;
+use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
 /// [port](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/port.md).
@@ -184,7 +185,7 @@ pub enum WaitAsyncOpts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Event};
+    use crate::{DurationNum, Event};
 
     #[test]
     fn port_basic() {

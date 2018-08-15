@@ -1,4 +1,5 @@
-use {Status, ok, sys};
+use crate::{Status, ok};
+use fuchsia_zircon_sys as sys;
 
 /// Draw random bytes from the kernel's CPRNG to fill the given buffer. Returns the actual number of
 /// bytes drawn, which is always the size of the buffer provided.

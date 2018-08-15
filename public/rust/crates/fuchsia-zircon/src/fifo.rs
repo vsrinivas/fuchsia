@@ -4,8 +4,9 @@
 
 //! Type-safe bindings for Zircon fifo objects.
 
-use {AsHandleRef, HandleBased, Handle, HandleRef, Status};
-use {sys, ok};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
+use crate::ok;
+use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon fifo.
 ///

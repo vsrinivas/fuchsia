@@ -4,8 +4,9 @@
 
 //! Type-safe bindings for Zircon event pairs.
 
-use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Peered, Status};
-use {sys, ok};
+use crate::{AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Peered, Status};
+use crate::ok;
+use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
 /// [event pair](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Other-IPC_Events_Event-Pairs_and-User-Signals).
@@ -40,7 +41,7 @@ impl EventPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Signals};
+    use crate::{DurationNum, Signals};
 
     #[test]
     fn wait_and_signal_peer() {

@@ -4,8 +4,10 @@
 
 //! Type-safe bindings for Zircon sockets.
 
-use {AsHandleRef, HandleBased, Handle, HandleRef, Peered};
-use {sys, Status, ok};
+use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Peered};
+use crate::{Status, ok};
+use fuchsia_zircon_sys as sys;
 
 use std::ptr;
 

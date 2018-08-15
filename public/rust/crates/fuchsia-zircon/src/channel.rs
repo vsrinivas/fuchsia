@@ -4,8 +4,9 @@
 
 //! Type-safe bindings for Zircon channel objects.
 
-use {AsHandleRef, HandleBased, Handle, HandleRef, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
-use {sys, ok};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
+use crate::ok;
+use fuchsia_zircon_sys as sys;
 use std::mem;
 
 /// An object representing a Zircon
@@ -292,7 +293,7 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Rights, Signals, Vmo};
+    use crate::{DurationNum, Rights, Signals, Vmo};
     use std::thread;
 
     #[test]

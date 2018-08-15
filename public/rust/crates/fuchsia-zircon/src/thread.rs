@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon thread.
 
-use {AsHandleRef, HandleBased, Handle, HandleRef};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef};
 
 /// An object representing a Zircon thread.
 ///

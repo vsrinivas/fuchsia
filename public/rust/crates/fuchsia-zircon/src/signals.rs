@@ -1,4 +1,5 @@
-use sys::*;
+use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use fuchsia_zircon_sys::*;
 
 bitflags! {
     /// Signals that can be waited upon.

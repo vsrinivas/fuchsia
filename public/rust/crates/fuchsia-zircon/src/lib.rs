@@ -7,14 +7,13 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate bitflags;
-extern crate failure;
-pub extern crate fuchsia_zircon_sys as sys;
+pub mod sys {
+    pub use fuchsia_zircon_sys::*;
+}
 
 #[deprecated(note="use fuchsia_zircon::sys::ZX_CPRNG_DRAW_MAX_LEN instead")]
 #[doc(hidden)]
-pub use sys::ZX_CPRNG_DRAW_MAX_LEN;
+pub use crate::sys::ZX_CPRNG_DRAW_MAX_LEN;
 
 // Implements the HandleBased traits for a Handle newtype struct
 macro_rules! impl_handle_based {
@@ -97,28 +96,28 @@ mod thread;
 mod vmar;
 mod vmo;
 
-pub use channel::*;
-pub use cprng::*;
-pub use event::*;
-pub use eventpair::*;
-pub use fifo::*;
-pub use handle::*;
-pub use job::*;
-pub use port::*;
-pub use process::*;
-pub use rights::*;
-pub use socket::*;
-pub use signals::*;
-pub use status::*;
-pub use thread::*;
-pub use time::*;
-pub use vmar::*;
-pub use vmo::*;
+pub use crate::channel::*;
+pub use crate::cprng::*;
+pub use crate::event::*;
+pub use crate::eventpair::*;
+pub use crate::fifo::*;
+pub use crate::handle::*;
+pub use crate::job::*;
+pub use crate::port::*;
+pub use crate::process::*;
+pub use crate::rights::*;
+pub use crate::socket::*;
+pub use crate::signals::*;
+pub use crate::status::*;
+pub use crate::thread::*;
+pub use crate::time::*;
+pub use crate::vmar::*;
+pub use crate::vmo::*;
 
 /// Prelude containing common utility traits.
 /// Designed for use like `use fuchsia_zircon::prelude::*;`
 pub mod prelude {
-    pub use {
+    pub use crate::{
         AsHandleRef,
         Cookied,
         DurationNum,

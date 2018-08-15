@@ -1,4 +1,5 @@
-use {Port, Rights, Signals, Status, Time, WaitAsyncOpts, ok, sys};
+use crate::{Port, Rights, Signals, Status, Time, WaitAsyncOpts, ok};
+use fuchsia_zircon_sys as sys;
 use std::marker::PhantomData;
 use std::mem::{self, ManuallyDrop};
 

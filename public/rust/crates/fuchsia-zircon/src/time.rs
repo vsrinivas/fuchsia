@@ -4,8 +4,9 @@
 
 //! Type-safe bindings for Zircon timer objects.
 
-use {AsHandleRef, ClockId, HandleBased, Handle, HandleRef, Status};
-use {sys, ok};
+use crate::{AsHandleRef, ClockId, HandleBased, Handle, HandleRef, Status};
+use crate::ok;
+use fuchsia_zircon_sys as sys;
 use std::ops;
 use std::time as stdtime;
 
@@ -297,7 +298,7 @@ impl Timer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Signals;
+    use crate::Signals;
 
     #[test]
     fn create_timer_invalid_clock() {

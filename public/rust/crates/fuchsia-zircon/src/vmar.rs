@@ -4,8 +4,10 @@
 
 //! Type-safe bindings for Zircon vmar objects.
 
-use {ok, sys};
-use {AsHandleRef, Handle, HandleBased, HandleRef, Status, Unowned, Vmo};
+use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use crate::ok;
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Unowned, Vmo};
+use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
 /// [virtual memory address region](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_address_region.md).

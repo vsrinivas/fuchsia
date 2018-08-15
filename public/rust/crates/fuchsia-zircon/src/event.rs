@@ -4,8 +4,9 @@
 
 //! Type-safe bindings for Zircon event objects.
 
-use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
-use {sys, ok};
+use crate::{AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
+use crate::ok;
+use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
 /// [event object](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/event.md).

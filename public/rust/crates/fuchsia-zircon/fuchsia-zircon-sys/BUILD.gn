@@ -6,4 +6,5 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-zircon-sys") {
   version = "0.3.3"
+  edition = "2018"
 }

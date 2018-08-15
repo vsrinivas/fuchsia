@@ -1,4 +1,5 @@
-use sys;
+use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use fuchsia_zircon_sys as sys;
 
 bitflags! {
     /// Rights associated with a handle.
