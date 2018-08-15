@@ -185,8 +185,9 @@ public:
     // Called under the handle table lock.
     zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
 
-    // Called under the handle table lock. Returns true if at least one packet was
-    // removed from the queue.
+    // Returns true if at least one packet was removed from the queue.
+    // Called under the handle table lock when |handle| is not null.
+    // When |handle| is null, ephemeral PortPackets are removed from the queue but not freed.
     bool CancelQueued(const void* handle, uint64_t key);
 
     // Bits for options passed to port_create

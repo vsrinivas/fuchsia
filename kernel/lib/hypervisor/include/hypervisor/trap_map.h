@@ -36,6 +36,7 @@ class Trap : public fbl::WAVLTreeContainable<fbl::unique_ptr<Trap>> {
 public:
     Trap(uint32_t kind, zx_gpaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
          uint64_t key);
+    ~Trap();
 
     zx_status_t Init();
     zx_status_t Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator);

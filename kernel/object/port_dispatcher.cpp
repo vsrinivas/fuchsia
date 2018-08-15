@@ -403,11 +403,6 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     bool packet_removed = false;
 
     for (auto it = packets_.begin(); it != packets_.end();) {
-        if (it->handle == nullptr) {
-            ++it;
-            continue;
-        }
-
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
             delete packets_.erase(to_remove)->observer;

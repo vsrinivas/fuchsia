@@ -48,6 +48,13 @@ Trap::Trap(uint32_t kind, zx_gpaddr_t addr, size_t len, fbl::RefPtr<PortDispatch
     (void) key_;
 }
 
+Trap::~Trap() {
+    if (port_ == nullptr) {
+        return;
+    }
+    port_->CancelQueued(nullptr /* handle */, key_);
+}
+
 zx_status_t Trap::Init() {
     return port_allocator_.Init();
 }
