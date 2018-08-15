@@ -9,6 +9,11 @@
 
 EXPORT const int* GetIntPtr() { return nullptr; }  // Line 10.
 
+EXPORT char GetString() {
+  const char str_array[14] = "Hello, world.";
+  return str_array[0];
+}
+
 namespace my_ns {
 
 struct Struct {

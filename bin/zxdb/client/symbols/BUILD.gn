@@ -11,6 +11,7 @@ static_library("symbols") {
   ]
 
   public = [
+    "array_type.h",
     "base_type.h",
     "code_block.h",
     "data_member.h",
@@ -41,6 +42,7 @@ static_library("symbols") {
   ]
 
   sources = [
+    "array_type.cc",
     "base_type.cc",
     "code_block.cc",
     "data_member.cc",

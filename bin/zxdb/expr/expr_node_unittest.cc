@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/expr/expr_node.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
+#include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 
@@ -21,10 +22,41 @@ namespace zxdb {
 
 namespace {
 
+// Custom ExprNode that just returns a known value, either synchronously or
+// asynchronously.
+class TestExprNode : public ExprNode {
+ public:
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override {
+    if (is_synchronous_) {
+      cb(Err(), value_);
+    } else {
+      debug_ipc::MessageLoop::Current()->PostTask(
+          [ value = value_, cb ]() { cb(Err(), value); });
+    }
+  }
+  void Print(std::ostream& out, int indent) const override {}
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(TestExprNode);
+  FRIEND_MAKE_REF_COUNTED(TestExprNode);
+
+  TestExprNode(bool is_synchronous, ExprValue value)
+      : is_synchronous_(is_synchronous), value_(value) {}
+  ~TestExprNode() override = default;
+
+  bool is_synchronous_;
+  ExprValue value_;
+};
+
 class TestEvalContext : public ExprEvalContext {
  public:
-  TestEvalContext() = default;
+  TestEvalContext()
+      : data_provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()),
+        resolver_(data_provider_) {}
   ~TestEvalContext() = default;
+
+  MockSymbolDataProvider* data_provider() { return data_provider_.get(); }
 
   void AddVariable(const std::string& name, ExprValue v) { values_[name] = v; }
 
@@ -38,11 +70,14 @@ class TestEvalContext : public ExprEvalContext {
     else
       cb(Err(), found->second);
   }
+  SymbolVariableResolver& GetVariableResolver() override { return resolver_; }
   void Dereference(
       const ExprValue& value,
       std::function<void(const Err& err, ExprValue value)> cb) override {}
 
  private:
+  fxl::RefPtr<MockSymbolDataProvider> data_provider_;
+  SymbolVariableResolver resolver_;
   std::map<std::string, ExprValue> values_;
 };
 
@@ -65,13 +100,13 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
   context->AddVariable("foo", foo_expected);
 
   // This identifier should be found synchronously and returned.
-  IdentifierExprNode good_identifier(
+  auto good_identifier = fxl::MakeRefCounted<IdentifierExprNode>(
       ExprToken(ExprToken::Type::kName, "foo", 0));
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  good_identifier.Eval(context, [&called, &out_err, &out_value](
-                                    const Err& err, ExprValue value) {
+  good_identifier->Eval(context, [&called, &out_err, &out_value](
+                                     const Err& err, ExprValue value) {
     called = true;
     out_err = err;
     out_value = value;
@@ -83,12 +118,12 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
   EXPECT_EQ(foo_expected, out_value);
 
   // This identifier should be not found.
-  IdentifierExprNode bad_identifier(
+  auto bad_identifier = fxl::MakeRefCounted<IdentifierExprNode>(
       ExprToken(ExprToken::Type::kName, "bar", 0));
   called = false;
   out_value = ExprValue();
-  bad_identifier.Eval(context, [&called, &out_err, &out_value](
-                                   const Err& err, ExprValue value) {
+  bad_identifier->Eval(context, [&called, &out_err, &out_value](
+                                    const Err& err, ExprValue value) {
     called = true;
     out_err = err;
     out_value = ExprValue();  // value;
@@ -106,7 +141,7 @@ void DoUnaryMinusTest(T in) {
   ExprValue foo_expected(in);
   context->AddVariable("foo", foo_expected);
 
-  auto identifier = std::make_unique<IdentifierExprNode>(
+  auto identifier = fxl::MakeRefCounted<IdentifierExprNode>(
       ExprToken(ExprToken::kName, "foo", 0));
 
   // Validate the value by itself. This also has the effect of checking the
@@ -128,14 +163,14 @@ void DoUnaryMinusTest(T in) {
   out_value = ExprValue();
 
   // Apply a unary '-' to that value.
-  UnaryOpExprNode unary(ExprToken(ExprToken::kMinus, "-", 0),
-                        std::move(identifier));
-  unary.Eval(context,
-             [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-               called = true;
-               out_err = err;
-               out_value = value;
-             });
+  auto unary = fxl::MakeRefCounted<UnaryOpExprNode>(
+      ExprToken(ExprToken::kMinus, "-", 0), std::move(identifier));
+  unary->Eval(context,
+              [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                called = true;
+                out_err = err;
+                out_value = value;
+              });
 
   // This checked that the type conversions have followed C rules. This is
   // the expected value (int/unsigned unchanged, everything smaller than an int
@@ -180,20 +215,20 @@ TEST_F(ExprNodeTest, UnaryMinus) {
       {0, 0, 0});
   context->AddVariable("foo", expected);
 
-  auto identifier = std::make_unique<IdentifierExprNode>(
+  auto identifier = fxl::MakeRefCounted<IdentifierExprNode>(
       ExprToken(ExprToken::kName, "foo", 0));
-  UnaryOpExprNode unary(ExprToken(ExprToken::kMinus, "-", 0),
-                        std::move(identifier));
+  auto unary = fxl::MakeRefCounted<UnaryOpExprNode>(
+      ExprToken(ExprToken::kMinus, "-", 0), std::move(identifier));
 
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  unary.Eval(context,
-             [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-               called = true;
-               out_err = err;
-               out_value = value;
-             });
+  unary->Eval(context,
+              [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                called = true;
+                out_err = err;
+                out_value = value;
+              });
   EXPECT_TRUE(called);
   EXPECT_TRUE(out_err.has_error());
   EXPECT_EQ("Negation for this value is not supported.", out_err.msg());
@@ -228,8 +263,8 @@ TEST_F(ExprNodeTest, DereferenceReference) {
                       {0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
 
   // Execute the dereference.
-  auto deref_node = std::make_unique<DereferenceExprNode>(
-      std::make_unique<ConstantExprNode>(ptr_value));
+  auto deref_node = fxl::MakeRefCounted<DereferenceExprNode>(
+      fxl::MakeRefCounted<TestExprNode>(true, ptr_value));
   bool called = false;
   Err out_err;
   ExprValue out_value;
@@ -254,8 +289,8 @@ TEST_F(ExprNodeTest, DereferenceReference) {
   EXPECT_EQ(kValue, out_value.GetAs<uint32_t>());
 
   // Now go backwards and get the address of the value.
-  auto addr_node = std::make_unique<AddressOfExprNode>(
-      std::make_unique<ConstantExprNode>(out_value));
+  auto addr_node = fxl::MakeRefCounted<AddressOfExprNode>(
+      fxl::MakeRefCounted<TestExprNode>(true, out_value));
 
   called = false;
   out_err = Err();
@@ -287,13 +322,13 @@ TEST_F(ExprNodeTest, DereferenceReference) {
 
   // Try to dereference an invalid address.
   ExprValue bad_ptr_value(const_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
-  auto bad_deref_node = std::make_unique<DereferenceExprNode>(
-      std::make_unique<ConstantExprNode>(bad_ptr_value));
+  auto bad_deref_node = fxl::MakeRefCounted<DereferenceExprNode>(
+      fxl::MakeRefCounted<TestExprNode>(true, bad_ptr_value));
   called = false;
   out_err = Err();
   out_value = ExprValue();
-  bad_deref_node->Eval(context, [&called, &out_err, &out_value](const Err& err,
-                                                            ExprValue value) {
+  bad_deref_node->Eval(context, [&called, &out_err, &out_value](
+                                    const Err& err, ExprValue value) {
     called = true;
     out_err = err;
     out_value = value;
@@ -307,7 +342,66 @@ TEST_F(ExprNodeTest, DereferenceReference) {
   EXPECT_TRUE(out_err.has_error());
   EXPECT_EQ("MockSymbolDataProvider::GetMemoryAsync: Memory not found 0x0",
             out_err.msg());
+}
 
+TEST_F(ExprNodeTest, ArrayAccess) {
+  // The base address of the array (of type uint32_t*).
+  auto uint32_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 4, "uint32_t");
+  auto uint32_ptr_type = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol(uint32_type));
+  constexpr uint64_t kAddress = 0x12345678;
+  ExprValue pointer_value(uint32_ptr_type,
+                          {0x78, 0x56, 0x34, 0x12, 0x00, 0x00, 0x00, 0x00});
+  auto pointer_node = fxl::MakeRefCounted<TestExprNode>(false, pointer_value);
+
+  // The index of the array access.
+  constexpr uint32_t kIndex = 5;
+  auto index = fxl::MakeRefCounted<TestExprNode>(false, ExprValue(kIndex));
+
+  // The node to evaluate the access. Note the pointer are index nodes are
+  // moved here so the source reference is gone. This allows us to test that
+  // they stay in scope during an async call below.
+  auto access = fxl::MakeRefCounted<ArrayAccessExprNode>(
+      std::move(pointer_node), std::move(index));
+
+  // We expect it to read @ kAddress[kIndex]. Insert a value there.
+  constexpr uint64_t kExpectedAddr = kAddress + 4 * kIndex;
+  constexpr uint32_t kExpectedValue = 0x11223344;
+  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  context->data_provider()->AddMemory(kExpectedAddr, {0x44, 0x33, 0x22, 0x11});
+
+  // Execute.
+  bool called = false;
+  Err out_err;
+  ExprValue out_value;
+  access->Eval(context, [&called, &out_err, &out_value](const Err& err,
+                                                        ExprValue value) {
+    called = true;
+    out_err = err;
+    out_value = value;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+
+  // The two parts of the expression were set as async above, so it should not
+  // have been called yet.
+  EXPECT_FALSE(called);
+
+  // Clear out references to the stuff being executed. It should not crash, the
+  // relevant data should remain alive.
+  context = fxl::RefPtr<TestEvalContext>();
+  access = fxl::RefPtr<ArrayAccessExprNode>();
+
+  loop().Run();
+
+  // Should have succeeded asynchronously.
+  EXPECT_TRUE(called);
+  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
+
+  // Should have found our data at the right place.
+  EXPECT_EQ(uint32_type.get(), out_value.type());
+  EXPECT_EQ(kExpectedValue, out_value.GetAs<uint32_t>());
+  EXPECT_EQ(kExpectedAddr, out_value.source().address());
 }
 
 }  // namespace zxdb

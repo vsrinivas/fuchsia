@@ -12,6 +12,7 @@
 
 namespace zxdb {
 
+class ArrayType;
 class BaseType;
 class CodeBlock;
 class DataMember;
@@ -33,7 +34,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
   // Type modifier for arrays ("foo[]") of an underlying type. May have a
   // SubrangeType child that indicates the size of the array.
-  static constexpr int kTagArray = 0x01;
+  static constexpr int kTagArrayType = 0x01;
 
   // C++ class definition.
   static constexpr int kTagClassType = 0x02;
@@ -239,6 +240,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   const std::string& GetFullName() const;
 
   // Manual RTTI.
+  virtual const ArrayType* AsArrayType() const;
   virtual const BaseType* AsBaseType() const;
   virtual const CodeBlock* AsCodeBlock() const;
   virtual const DataMember* AsDataMember() const;
@@ -251,6 +253,10 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const Variable* AsVariable() const;
 
   // Non-const manual RTTI wrappers.
+  ArrayType* AsArrayType() {
+    return const_cast<ArrayType*>(
+        const_cast<const Symbol*>(this)->AsArrayType());
+  }
   BaseType* AsBaseType() {
     return const_cast<BaseType*>(const_cast<const Symbol*>(this)->AsBaseType());
   }

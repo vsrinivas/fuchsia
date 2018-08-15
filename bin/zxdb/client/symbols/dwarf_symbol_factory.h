@@ -36,6 +36,7 @@ class DwarfSymbolFactory : public SymbolFactory {
   // to parse the specification of a function implementation.
   fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die,
                                      bool is_specification = false);
+  fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeDataMember(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeLexicalBlock(const llvm::DWARFDie& die);

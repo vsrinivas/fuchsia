@@ -17,13 +17,13 @@ class ExprParserTest : public testing::Test {
   // Valid after Parse() is called.
   ExprParser& parser() { return *parser_; }
 
-  std::unique_ptr<ExprNode> Parse(const char* input) {
+  fxl::RefPtr<ExprNode> Parse(const char* input) {
     parser_.reset();
 
     tokenizer_ = std::make_unique<ExprTokenizer>(input);
     if (!tokenizer_->Tokenize()) {
       ADD_FAILURE() << "Tokenization failure: " << input;
-      return std::unique_ptr<ExprNode>();
+      return fxl::RefPtr<ExprNode>();
     }
 
     parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens());

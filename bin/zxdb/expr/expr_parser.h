@@ -20,7 +20,7 @@ class ExprParser {
   // Returns the root expression node on successful parsing. On error, returns
   // an empty pointer in which case the error message can be read from err()
   // ad error_token()
-  std::unique_ptr<ExprNode> Parse();
+  fxl::RefPtr<ExprNode> Parse();
 
   // The result of parsing. Since this does not have access to the initial
   // string, it will not indicate context for the error. That can be generated
@@ -35,20 +35,20 @@ class ExprParser {
   // When recursively calling this function, call with the same precedence as
   // the current expression for left-associativity (operators evaluated from
   // left-to-right), and one less for right-associativity.
-  std::unique_ptr<ExprNode> ParseExpression(int precedence);
+  fxl::RefPtr<ExprNode> ParseExpression(int precedence);
 
-  std::unique_ptr<ExprNode> AmpersandPrefix(const ExprToken& token);
-  std::unique_ptr<ExprNode> DotOrArrowInfix(std::unique_ptr<ExprNode> left,
+  fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                             const ExprToken& token);
-  std::unique_ptr<ExprNode> IntegerPrefix(const ExprToken& token);
-  std::unique_ptr<ExprNode> LeftParenPrefix(const ExprToken& token);
-  std::unique_ptr<ExprNode> LeftSquareInfix(std::unique_ptr<ExprNode> left,
+  fxl::RefPtr<ExprNode> IntegerPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left,
                                             const ExprToken& token);
-  std::unique_ptr<ExprNode> MinusPrefix(const ExprToken& token);
-  std::unique_ptr<ExprNode> NamePrefix(const ExprToken& token);
-  std::unique_ptr<ExprNode> NameInfix(std::unique_ptr<ExprNode> left,
+  fxl::RefPtr<ExprNode> MinusPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> NameInfix(fxl::RefPtr<ExprNode> left,
                                       const ExprToken& token);
-  std::unique_ptr<ExprNode> StarPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
 
   // Returns the next token or the invalid token if nothing is left. Advances
   // to the next token.

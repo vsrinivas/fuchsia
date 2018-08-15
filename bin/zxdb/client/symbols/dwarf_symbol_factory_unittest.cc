@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
+#include "garnet/bin/zxdb/client/symbols/array_type.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/data_member.h"
+#include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
 #include "garnet/bin/zxdb/client/symbols/dwarf_test_util.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
@@ -123,6 +124,35 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   // This is not a bitfield.
   EXPECT_EQ(0u, base->bit_size());
   EXPECT_EQ(0u, base->bit_offset());
+}
+
+TEST(DwarfSymbolFactory, ArrayType) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetString function.
+  const char kGetString[] = "GetString";
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kGetString);
+  ASSERT_TRUE(function);
+
+  // Find the "str_array" variable in the function.
+  ASSERT_EQ(1u, function->variables().size());
+  const Variable* str_array = function->variables()[0].Get()->AsVariable();
+  ASSERT_TRUE(str_array);
+  EXPECT_EQ("str_array", str_array->GetAssignedName());
+
+  // It should be an array type with length 14.
+  const ArrayType* array_type = str_array->type().Get()->AsArrayType();
+  ASSERT_TRUE(array_type);
+  EXPECT_EQ(14u, array_type->num_elts());
+  EXPECT_EQ("const char[14]", array_type->GetFullName());
+
+  // The inner type should be a "char".
+  const Type* elt_type = array_type->value_type().Get()->AsType();
+  ASSERT_TRUE(elt_type);
+  EXPECT_EQ("const char", elt_type->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, StructClass) {

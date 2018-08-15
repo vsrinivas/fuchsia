@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
 
+#include "garnet/bin/zxdb/client/symbols/array_type.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 #include "garnet/bin/zxdb/client/symbols/data_member.h"
@@ -155,6 +156,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
 
   fxl::RefPtr<Symbol> symbol;
   switch (tag) {
+    case llvm::dwarf::DW_TAG_array_type:
+      symbol = DecodeArrayType(die);
+      break;
     case llvm::dwarf::DW_TAG_base_type:
       symbol = DecodeBaseType(die);
       break;
@@ -294,6 +298,50 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   }
 
   return function;
+}
+
+// We expect array types to have two things:
+// - An attribute linking to the underlying type of the array.
+// - A DW_TAG_subrange_type child that holds the size of the array in a
+//   DW_AT_count attribute.
+//
+// The subrange child is weird because the subrange links to its own type.
+// LLVM generates a synthetic type __ARRAY_SIZE_TYPE__ that the
+// DW_TAG_subrange_count DIE references from DW_AT_type attribute. We ignore
+// this and only use the count.
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(
+    const llvm::DWARFDie& die) {
+  // Extract the type attribute from the root DIE (should be a
+  // DW_TAG_array_type).
+  DwarfDieDecoder array_decoder(symbols_->context(), die.getDwarfUnit());
+  llvm::DWARFDie type;
+  array_decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
+  if (!array_decoder.Decode(die) || !type)
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Find the subrange child DIE (normally there will be only this one child).
+  llvm::DWARFDie subrange_die;
+  for (const llvm::DWARFDie& child : die) {
+    if (child.getTag() == llvm::dwarf::DW_TAG_subrange_type) {
+      subrange_die = child;
+      break;
+    }
+  }
+
+  // Require a subrange with a count in it. If we find cases where this isn't
+  // the case, we could add support for array types with unknown lengths,
+  // but currently ArrayType requires a size.
+  if (!subrange_die)
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Extract the DW_AT_count attribute (an unsigned number).
+  DwarfDieDecoder range_decoder(symbols_->context(), subrange_die.getDwarfUnit());
+  llvm::Optional<uint64_t> count;
+  range_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_count, &count);
+  if (!range_decoder.Decode(subrange_die) || !count)
+    return fxl::MakeRefCounted<Symbol>();
+
+  return fxl::MakeRefCounted<ArrayType>(MakeLazy(type), *count);
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(

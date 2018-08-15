@@ -10,7 +10,7 @@ namespace zxdb {
 
 // Provide storage for the constants.
 const int Symbol::kTagNone;
-const int Symbol::kTagArray;
+const int Symbol::kTagArrayType;
 const int Symbol::kTagClassType;
 const int Symbol::kTagEntryPoint;
 const int Symbol::kTagEnumerationType;
@@ -90,6 +90,7 @@ const std::string& Symbol::GetFullName() const {
   return full_name_;
 }
 
+const ArrayType* Symbol::AsArrayType() const { return nullptr; }
 const BaseType* Symbol::AsBaseType() const { return nullptr; }
 const CodeBlock* Symbol::AsCodeBlock() const { return nullptr; }
 const DataMember* Symbol::AsDataMember() const { return nullptr; }

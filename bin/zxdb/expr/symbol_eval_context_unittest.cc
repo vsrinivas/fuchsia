@@ -137,12 +137,13 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   // Look up an identifier that's not present.
-  IdentifierExprNode present(ExprToken(ExprToken::Type::kName, "present", 0));
+  auto present = fxl::MakeRefCounted<IdentifierExprNode>(
+      ExprToken(ExprToken::Type::kName, "present", 0));
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  present.Eval(eval_context, [&called, &out_err, &out_value](const Err& err,
-                                                             ExprValue value) {
+  present->Eval(eval_context, [&called, &out_err, &out_value](const Err& err,
+                                                              ExprValue value) {
     called = true;
     out_err = err;
     out_value = value;

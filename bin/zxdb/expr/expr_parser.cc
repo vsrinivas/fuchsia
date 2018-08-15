@@ -37,9 +37,9 @@ namespace {
 // Some things can be both prefix and infix. An example in C is "(" which is
 // prefix when used in casts and math expressions: "(a + b)" "a + (b + c)" but
 // infix when used for function calls: "foo(bar)".
-using PrefixFunc = std::unique_ptr<ExprNode> (ExprParser::*)(const ExprToken&);
-using InfixFunc = std::unique_ptr<ExprNode> (ExprParser::*)(
-    std::unique_ptr<ExprNode> left, const ExprToken& token);
+using PrefixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(const ExprToken&);
+using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
+    fxl::RefPtr<ExprNode> left, const ExprToken& token);
 
 // Precedence constants used in DispatchInfo. Note that these aren't
 // contiguous. At least need to do every-other-one to handle the possible
@@ -91,7 +91,7 @@ ExprParser::ExprParser(std::vector<ExprToken> tokens)
                 "kDispatchInfo needs updating to match ExprToken::Type");
 }
 
-std::unique_ptr<ExprNode> ExprParser::Parse() {
+fxl::RefPtr<ExprNode> ExprParser::Parse() {
   auto result = ParseExpression(0);
 
   // That should have consumed everything, as we don't support multiple
@@ -99,14 +99,14 @@ std::unique_ptr<ExprNode> ExprParser::Parse() {
   // and wrote something like "foo 5"
   if (!has_error() && !at_end()) {
     SetError(cur_token(), "Unexpected input, did you forget an operator?");
-    return std::unique_ptr<ExprNode>();
+    return fxl::RefPtr<ExprNode>();
   }
   return result;
 }
 
-std::unique_ptr<ExprNode> ExprParser::ParseExpression(int precedence) {
+fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (at_end())
-    return std::unique_ptr<ExprNode>();
+    return fxl::RefPtr<ExprNode>();
 
   const ExprToken& token = Consume();
   PrefixFunc prefix = kDispatchInfo[token.type()].prefix;
@@ -114,10 +114,10 @@ std::unique_ptr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (!prefix) {
     SetError(token, fxl::StringPrintf("Unexpected token '%s'.",
                                       token.value().c_str()));
-    return std::unique_ptr<ExprNode>();
+    return fxl::RefPtr<ExprNode>();
   }
 
-  std::unique_ptr<ExprNode> left = (this->*prefix)(token);
+  fxl::RefPtr<ExprNode> left = (this->*prefix)(token);
   if (has_error())
     return left;
 
@@ -128,47 +128,47 @@ std::unique_ptr<ExprNode> ExprParser::ParseExpression(int precedence) {
     if (!infix) {
       SetError(token, fxl::StringPrintf("Unexpected token '%s'.",
                                         next_token.value().c_str()));
-      return std::unique_ptr<ExprNode>();
+      return fxl::RefPtr<ExprNode>();
     }
     left = (this->*infix)(std::move(left), next_token);
     if (has_error())
-      return std::unique_ptr<ExprNode>();
+      return fxl::RefPtr<ExprNode>();
   }
 
   return left;
 }
 
-std::unique_ptr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
-  std::unique_ptr<ExprNode> right = ParseExpression(kPrecedenceUnary);
+fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
+  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
   if (!has_error() && !right)
     SetError(token, "Expected expression for '*'.");
   if (has_error())
-    return std::unique_ptr<ExprNode>();
-  return std::make_unique<AddressOfExprNode>(std::move(right));
+    return fxl::RefPtr<ExprNode>();
+  return fxl::MakeRefCounted<AddressOfExprNode>(std::move(right));
 }
 
-std::unique_ptr<ExprNode> ExprParser::DotOrArrowInfix(
-    std::unique_ptr<ExprNode> left, const ExprToken& token) {
+fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
+                                                  const ExprToken& token) {
   // These are left-assocaitive.
-  std::unique_ptr<ExprNode> right = ParseExpression(kPrecedenceCallAccess);
+  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceCallAccess);
   if (!right || !right->AsIdentifier()) {
     SetError(token, fxl::StringPrintf(
                         "Expected identifier for right-hand-side of \"%s\".",
                         token.value().c_str()));
-    return std::unique_ptr<ExprNode>();
+    return fxl::RefPtr<ExprNode>();
   }
 
   // Use the name from the right-hand-side identifier, we don't need a full
   // expression for that. If we add function calls it will ne necessary.
-  return std::make_unique<MemberAccessExprNode>(std::move(left), token,
-                                                right->AsIdentifier()->name());
+  return fxl::MakeRefCounted<MemberAccessExprNode>(
+      std::move(left), token, right->AsIdentifier()->name());
 }
 
-std::unique_ptr<ExprNode> ExprParser::IntegerPrefix(const ExprToken& token) {
-  return std::make_unique<IntegerExprNode>(token);
+fxl::RefPtr<ExprNode> ExprParser::IntegerPrefix(const ExprToken& token) {
+  return fxl::MakeRefCounted<IntegerExprNode>(token);
 }
 
-std::unique_ptr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
+fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   // "(" as a prefix is a grouping or cast: "a + (b + c)" or "(Foo)bar" where
   // it doesn't modify the thing on the left. Evaluate the thing inside the
   // () and return it.
@@ -181,24 +181,24 @@ std::unique_ptr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   if (!has_error())
     Consume(ExprToken::kRightParen, token, "Expected ')' to match.");
   if (has_error())
-    return std::unique_ptr<ExprNode>();
+    return fxl::RefPtr<ExprNode>();
   return expr;
 }
 
-std::unique_ptr<ExprNode> ExprParser::LeftSquareInfix(
-    std::unique_ptr<ExprNode> left, const ExprToken& token) {
+fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
+                                                  const ExprToken& token) {
   auto inner = ParseExpression(0);
   if (!has_error() && !inner)
     SetError(token, "Expected expression inside '['.");
   if (!has_error())
     Consume(ExprToken::kRightSquare, token, "Expected ']' to match.");
   if (has_error())
-    return std::unique_ptr<ExprNode>();
-  return std::make_unique<ArrayAccessExprNode>(std::move(left),
-                                               std::move(inner));
+    return fxl::RefPtr<ExprNode>();
+  return fxl::MakeRefCounted<ArrayAccessExprNode>(std::move(left),
+                                                  std::move(inner));
 }
 
-std::unique_ptr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
+fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
   // Currently we only implement "-" as a prefix which is for unary "-" when
   // you type "-5" or "-foo[6]". An infix version would be needed to parse the
   // binary operator for "a - 6".
@@ -206,26 +206,26 @@ std::unique_ptr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
   if (!has_error() && !inner)
     SetError(token, "Expected expression for '-'.");
   if (has_error())
-    return std::unique_ptr<ExprNode>();
-  return std::make_unique<UnaryOpExprNode>(token, std::move(inner));
+    return fxl::RefPtr<ExprNode>();
+  return fxl::MakeRefCounted<UnaryOpExprNode>(token, std::move(inner));
 }
 
-std::unique_ptr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
-  return NameInfix(std::unique_ptr<ExprNode>(), token);
+fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
+  return NameInfix(fxl::RefPtr<ExprNode>(), token);
 }
 
-std::unique_ptr<ExprNode> ExprParser::NameInfix(std::unique_ptr<ExprNode> left,
-                                                const ExprToken& token) {
-  return std::make_unique<IdentifierExprNode>(token);
+fxl::RefPtr<ExprNode> ExprParser::NameInfix(fxl::RefPtr<ExprNode> left,
+                                            const ExprToken& token) {
+  return fxl::MakeRefCounted<IdentifierExprNode>(token);
 }
 
-std::unique_ptr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
-  std::unique_ptr<ExprNode> right = ParseExpression(kPrecedenceUnary);
+fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
+  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
   if (!has_error() && !right)
     SetError(token, "Expected expression for '*'.");
   if (has_error())
-    return std::unique_ptr<ExprNode>();
-  return std::make_unique<DereferenceExprNode>(std::move(right));
+    return fxl::RefPtr<ExprNode>();
+  return fxl::MakeRefCounted<DereferenceExprNode>(std::move(right));
 }
 
 const ExprToken& ExprParser::Consume() {

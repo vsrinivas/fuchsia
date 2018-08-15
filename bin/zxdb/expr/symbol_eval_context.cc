@@ -70,6 +70,10 @@ void SymbolEvalContext::GetVariable(const std::string& name, Callback cb) {
      ExprValue());
 }
 
+SymbolVariableResolver& SymbolEvalContext::GetVariableResolver() {
+  return resolver_;
+}
+
 void SymbolEvalContext::Dereference(
     const ExprValue& value,
     std::function<void(const Err& err, ExprValue value)> cb) {
