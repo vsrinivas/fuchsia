@@ -6,15 +6,7 @@ source_set("testing") {
   testonly = true
 
   sources = [
-    "fake_controller.cc",
-    "fake_controller.h",
-    "fake_controller_base.cc",
-    "fake_controller_base.h",
     "fake_controller_test.h",
-    "fake_device.cc",
-    "fake_device.h",
-    "fake_gatt_server.cc",
-    "fake_gatt_server.h",
     "test_controller.cc",
     "test_controller.h",
   ]
@@ -24,22 +16,38 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//garnet/drivers/bluetooth/lib/common",
-    "//garnet/public/lib/fxl",
+    ":fake_controller",
     "//garnet/public/lib/gtest",
+  ]
+}
+
+# Target that includes Fake HCI emulation support. This should NOT depend on
+# gtest.
+source_set("fake_controller") {
+  sources = [
+    "fake_controller.cc",
+    "fake_controller.h",
+    "fake_controller_base.cc",
+    "fake_controller_base.h",
+    "fake_device.cc",
+    "fake_device.h",
+    "fake_gatt_server.cc",
+    "fake_gatt_server.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+    # TODO(armansito): Pull in just the hci:definitions target.
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap:definitions",
+    "//garnet/drivers/bluetooth/lib/att:definitions",
+    "//garnet/drivers/bluetooth/lib/gatt:definitions",
+
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-
-    # Production dependencies are for the protocol headers only. FakeController
-    # does not depend on any logic from these libraries.
-    "//garnet/drivers/bluetooth/lib/att:definitions",
-    "//garnet/drivers/bluetooth/lib/gatt:definitions",
-
-    # TODO(armansito): Pull in just the hci:definitions target.
-    "//garnet/drivers/bluetooth/lib/hci",
-    "//garnet/drivers/bluetooth/lib/l2cap:definitions",
   ]
 }
