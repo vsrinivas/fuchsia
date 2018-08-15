@@ -7,9 +7,11 @@
 
 #include <map>
 
+#include <fbl/function.h>
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
 
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
@@ -27,14 +29,14 @@ namespace sdp {
 // TODO(jamuraa): make calls thread-safe or ensure single-threadedness
 class Server final {
  public:
-  // A new SDP server, which starts with the ServiceDiscoveryService record.
-  Server();
-  ~Server() = default;
+  // A new SDP server, which starts with just a ServiceDiscoveryService record.
+  // Registers itself with |l2cap| when created.
+  explicit Server(fbl::RefPtr<l2cap::L2CAP> l2cap);
+  ~Server();
 
   // Initialize a new SDP profile connection with |peer_id| on |channel|.
   // Returns false if the channel cannot be activated.
-  bool AddConnection(const std::string& peer_id,
-                     fbl::RefPtr<l2cap::Channel> channel);
+  bool AddConnection(fbl::RefPtr<l2cap::Channel> channel);
 
   // Create a new ServiceRecord for a service, allocate a new handle for it, and
   // call |callback| synchronously populate it. When |callback| returns, the
@@ -78,11 +80,15 @@ class Server final {
       const std::unordered_set<common::UUID>& search_pattern,
       const std::list<AttributeRange>& attribute_ranges) const;
 
-  // l2cap::channel callbacks
-  void OnChannelClosed(const std::string& peer_id);
-  void OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu);
+  // The L2CAP layer this server is running on.  Used to register callbacks for
+  // the channels of services registered.
+  fbl::RefPtr<l2cap::L2CAP> l2cap_;
 
-  std::unordered_map<std::string, l2cap::ScopedChannel> channels_;
+  // l2cap::channel callbacks
+  void OnChannelClosed(const hci::ConnectionHandle& handle);
+  void OnRxBFrame(const hci::ConnectionHandle& handle, const l2cap::SDU& sdu);
+
+  std::unordered_map<hci::ConnectionHandle, l2cap::ScopedChannel> channels_;
   std::unordered_map<ServiceHandle, ServiceRecord> records_;
 
   // The next available ServiceHandle.
