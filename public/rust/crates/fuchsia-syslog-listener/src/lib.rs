@@ -1,25 +1,20 @@
-//! Rust fuchsia logger library.
-
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+//! Rust fuchsia logger library.
+
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-extern crate failure;
-extern crate fidl;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-
-use app::client::connect_to_service;
+use fuchsia_app::client::connect_to_service;
 use failure::{Error, ResultExt};
 use fidl::encoding2::OutOfLine;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::future::ready;
 
 // Include the generated FIDL bindings for the `Logger` service.
-extern crate fidl_fuchsia_logger;
 use fidl_fuchsia_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker,
                           LogListenerServer, LogMarker, LogMessage};
 
@@ -69,7 +64,7 @@ where
 {
     let logger = connect_to_service::<LogMarker>()?;
     let (log_listener_local, log_listener_remote) = zx::Channel::create()?;
-    let log_listener_local = async::Channel::from_channel(log_listener_local)?;
+    let log_listener_local = fasync::Channel::from_channel(log_listener_local)?;
     let listener_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
 
     let options = options.map(OutOfLine);
