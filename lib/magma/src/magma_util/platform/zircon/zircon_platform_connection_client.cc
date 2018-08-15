@@ -305,7 +305,7 @@ private:
 
     zx::channel channel_;
     zx::channel notification_channel_;
-    uint32_t next_context_id_{};
+    uint32_t next_context_id_ = 1;
     magma_status_t error_{};
 };
 
