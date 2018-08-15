@@ -11,10 +11,6 @@ pub mod sys {
     pub use fuchsia_zircon_sys::*;
 }
 
-#[deprecated(note="use fuchsia_zircon::sys::ZX_CPRNG_DRAW_MAX_LEN instead")]
-#[doc(hidden)]
-pub use crate::sys::ZX_CPRNG_DRAW_MAX_LEN;
-
 // Implements the HandleBased traits for a Handle newtype struct
 macro_rules! impl_handle_based {
     ($type_name:path) => {
