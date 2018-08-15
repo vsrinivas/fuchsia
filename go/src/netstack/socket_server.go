@@ -1210,7 +1210,7 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 	ios := s.io[cookie]
 	s.mu.Unlock()
 	if ios == nil {
-		if op == fdio.OpClose && rh == 0 {
+		if op == zxsocket.OpClose && rh == 0 {
 			// The close op was synthesized by Dispatcher (because the peer channel was closed).
 			return zx.ErrOk
 		}
@@ -1219,25 +1219,23 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 	}
 
 	switch op {
-	case fdio.OpConnect:
+	case zxsocket.OpConnect:
 		return s.opConnect(ios, msg)
-	case fdio.OpClose:
+	case zxsocket.OpClose:
 		return s.opClose(ios, cookie)
-	case fdio.OpSeek:
-		return zx.ErrOk
-	case fdio.OpBind:
+	case zxsocket.OpBind:
 		return s.opBind(ios, msg)
-	case fdio.OpListen:
+	case zxsocket.OpListen:
 		return s.opListen(ios, msg)
-	case fdio.OpIoctl:
+	case zxsocket.OpIoctl:
 		return s.opIoctl(ios, msg)
-	case fdio.OpGetSockname:
+	case zxsocket.OpGetSockname:
 		return s.opGetSockName(ios, msg)
-	case fdio.OpGetPeerName:
+	case zxsocket.OpGetPeerName:
 		return s.opGetPeerName(ios, msg)
-	case fdio.OpGetSockOpt:
+	case zxsocket.OpGetSockOpt:
 		return s.opGetSockOpt(ios, msg)
-	case fdio.OpSetSockOpt:
+	case zxsocket.OpSetSockOpt:
 		return s.opSetSockOpt(ios, msg)
 	default:
 		log.Printf("zxsocketHandler: unknown socket op: %v", op)
