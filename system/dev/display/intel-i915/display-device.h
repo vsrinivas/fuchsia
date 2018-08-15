@@ -7,7 +7,6 @@
 #include <ddk/protocol/display-controller.h>
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
-#include <lib/edid/edid.h>
 #include <region-alloc/region-alloc.h>
 #include <lib/zx/vmo.h>
 
@@ -32,7 +31,7 @@ typedef struct display_ref {
 } display_ref_t;
 
 
-class DisplayDevice : protected edid::EdidDdcSource {
+class DisplayDevice {
 public:
     DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
     virtual ~DisplayDevice();
@@ -50,23 +49,22 @@ public:
     uint64_t id() const { return id_; }
     registers::Ddi ddi() const { return ddi_; }
     Controller* controller() { return controller_; }
-    const edid::Edid& edid() { return edid_; }
+
+    virtual uint32_t i2c_bus_id() const = 0;
 
     Pipe* pipe() const { return pipe_; }
 
-    uint32_t width() const { return info_.v_addressable; }
-    uint32_t height() const { return info_.h_addressable; }
-    uint32_t format() const { return ZX_PIXEL_FORMAT_ARGB_8888; }
+    bool is_hdmi() const { return is_hdmi_; }
+    void set_is_hdmi(bool is_hdmi) { is_hdmi_ = is_hdmi; }
 
     virtual bool HasBacklight() { return false; }
     virtual void SetBacklightState(bool power, uint8_t brightness) {}
     virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
 
     virtual bool CheckDisplayLimits(const display_config_t* config) = 0;
-
 protected:
-    // Attempts to initialize the ddi. If successful, populates |edid|.
-    virtual bool InitDdi(edid::Edid* edid) = 0;
+    // Attempts to initialize the ddi.
+    virtual bool InitDdi() = 0;
 
     // Configures the hardware to display content at the given resolution.
     virtual bool DdiModeset(const display_mode_t& mode) = 0;
@@ -82,11 +80,7 @@ protected:
 
     hwreg::RegisterIo* mmio_space() const;
 
-    virtual uint32_t i2c_bus_id() const = 0;
-
 private:
-    bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len);
-
     // Borrowed reference to Controller instance
     Controller* controller_;
 
@@ -99,7 +93,7 @@ private:
 
     bool inited_ = false;
     display_mode_t info_ = {};
-    edid::Edid edid_;
+    bool is_hdmi_ = false;
 
     zx_device_t* backlight_device_ = nullptr;
     display_ref_t* display_ref_ = nullptr;

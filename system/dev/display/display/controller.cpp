@@ -30,6 +30,31 @@ display_controller_cb_t dc_cb = {
     .on_display_vsync = on_display_vsync,
 };
 
+typedef struct i2c_bus {
+    i2c_impl_protocol_t* i2c;
+    uint32_t bus_id;
+} i2c_bus_t;
+
+edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_t count) -> bool {
+    auto i2c = static_cast<i2c_bus_t*>(ctx);
+    // TODO(ZX-2487): Remove the special casing when the i2c_impl API gets updated
+    if (count == 3) {
+        ZX_ASSERT(!msgs[0].is_read);
+        if (i2c_impl_transact(i2c->i2c, i2c->bus_id,
+                              msgs->addr, msgs->buf, msgs->length, nullptr, 0)) {
+            return false;
+        }
+        msgs++;
+    }
+    ZX_ASSERT(!msgs[0].is_read);
+    ZX_ASSERT(msgs[1].is_read);
+    ZX_ASSERT(msgs[0].addr == msgs[1].addr);
+
+    return i2c_impl_transact(i2c->i2c, i2c->bus_id,
+                             msgs[0].addr, msgs[0].buf, msgs[0].length,
+                             msgs[1].buf, msgs[1].length) == ZX_OK;
+};
+
 } // namespace
 
 namespace display {
@@ -171,7 +196,8 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                display_params.cursor_info_count * sizeof(cursor_info_t));
 
         info->has_edid = display_params.edid_present;
-        if (info->has_edid) {
+        if (info->has_edid && display_params.panel.edid.data) {
+            // TODO(stevensd): Remove this branch when vim2 is moved to i2c ops
             info->edid_data_ = fbl::Array<uint8_t>(
                     new (&ac) uint8_t[display_params.panel.edid.length],
                     display_params.panel.edid.length);
@@ -189,9 +215,46 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                 zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
                 continue;
             }
+        } else if (info->has_edid) {
+            if (!has_i2c_ops_) {
+                zxlogf(ERROR, "Presented edid display with no i2c bus\n");
+                continue;
+            }
+
+            bool success = false;
+            const char* edid_err = "unknown error";
+
+            uint32_t edid_attempt = 0;
+            static constexpr uint32_t kEdidRetries = 3;
+            do {
+                if (edid_attempt != 0) {
+                    zxlogf(TRACE, "Error %d/%d initializing edid: \"%s\"\n",
+                           edid_attempt, kEdidRetries, edid_err);
+                    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+                }
+                edid_attempt++;
+
+                struct i2c_bus i2c = { &i2c_ops_, display_params.panel.edid.i2c_bus_id };
+                success = info->edid.Init(&i2c, ddc_tx, &edid_err);
+                if (success && !info->edid.CheckForHdmi(&display_params.is_hdmi_out)) {
+                    edid_err = "Failed to parse edid for hdmi";
+                    success = false;
+                }
+            } while (!success && edid_attempt < kEdidRetries);
+
+            if (!success) {
+                zxlogf(INFO, "Failed to parse edid \"%s\"\n", edid_err);
+                continue;
+            }
+
+            display_params.is_standard_srgb_out = info->edid.is_standard_rgb();
 
             if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
-                info->edid.Print([](const char* str) {printf("%s", str);});
+                char c1, c2, c3;
+                info->edid.manufacturer_id(&c1, &c2, &c3);
+                zxlogf(TRACE, "Manufacturer %c%c%c, product %04x\n",
+                       c1, c2, c3, info->edid.product_code());
+                info->edid.Print([](const char* str) {zxlogf(TRACE, "%s", str);});
             }
         } else {
             info->params = display_params.panel.params;
@@ -632,6 +695,12 @@ zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
     if (device_get_protocol(parent_, ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, &ops_)) {
         ZX_DEBUG_ASSERT_MSG(false, "Display controller bind mismatch");
         return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (device_get_protocol(parent_, ZX_PROTOCOL_I2C_IMPL, &i2c_ops_) == ZX_OK) {
+        has_i2c_ops_ = true;
+    } else {
+        has_i2c_ops_ = false;
     }
 
     status = loop_.StartThread("display-client-loop", &loop_thread_);

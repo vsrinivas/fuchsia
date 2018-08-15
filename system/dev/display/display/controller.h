@@ -9,6 +9,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/i2c-impl.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
@@ -123,6 +124,8 @@ private:
     async::Loop loop_;
     thrd_t loop_thread_;
     display_controller_protocol_t ops_;
+    i2c_impl_protocol_t i2c_ops_;
+    bool has_i2c_ops_;
 };
 
 } // namespace display

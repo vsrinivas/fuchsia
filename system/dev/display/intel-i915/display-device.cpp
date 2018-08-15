@@ -135,27 +135,7 @@ hwreg::RegisterIo* DisplayDevice::mmio_space() const {
 bool DisplayDevice::Init() {
     ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
 
-    if (!controller_->ResetDdi(ddi()) || !InitDdi(&edid_)) {
-        return false;
-    }
-
-    auto preferred_timing = edid_.begin();
-    if (!(preferred_timing != edid_.end())) {
-        return false;
-    }
-
-    info_.pixel_clock_10khz = preferred_timing->pixel_freq_10khz;
-    info_.h_addressable = preferred_timing->horizontal_addressable;
-    info_.h_front_porch = preferred_timing->horizontal_front_porch;
-    info_.h_sync_pulse = preferred_timing->horizontal_sync_pulse;
-    info_.h_blanking = preferred_timing->horizontal_blanking;
-    info_.v_addressable = preferred_timing->vertical_addressable;
-    info_.v_front_porch = preferred_timing->vertical_front_porch;
-    info_.v_sync_pulse = preferred_timing->vertical_sync_pulse;
-    info_.v_blanking = preferred_timing->vertical_blanking;
-    info_.flags = preferred_timing->flags;
-
-    if (!DdiModeset(info_)) {
+    if (!controller_->ResetDdi(ddi()) || !InitDdi()) {
         return false;
     }
 
@@ -217,9 +197,11 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
     if (pipe) {
         pipe->AttachToDisplay(id_, controller()->igd_opregion().IsEdp(ddi()));
 
-        PipeConfigPreamble(info_, pipe->pipe(), pipe->transcoder());
-        pipe->ApplyModeConfig(info_);
-        PipeConfigEpilogue(info_, pipe->pipe(), pipe->transcoder());
+        if (info_.h_addressable) {
+            PipeConfigPreamble(info_, pipe->pipe(), pipe->transcoder());
+            pipe->ApplyModeConfig(info_);
+            PipeConfigEpilogue(info_, pipe->pipe(), pipe->transcoder());
+        }
     }
     pipe_ = pipe;
     return true;
@@ -241,20 +223,6 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     }
 
     pipe_->ApplyConfiguration(config);
-}
-
-bool DisplayDevice::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
-    constexpr uint32_t kTries = 3;
-    for (unsigned i = 0; i < kTries; i++) {
-        if ((controller_->Transact(i2c_bus_id(), kDdcSegmentI2cAddress,
-                                   &segment, 1, nullptr, 0) == ZX_OK || segment == 0)
-                && controller_->Transact(i2c_bus_id(),
-                                         kDdcDataI2cAddress, &offset, 1, buf, len) == ZX_OK) {
-            return true;
-        }
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-    }
-    return false;
 }
 
 } // namespace i915

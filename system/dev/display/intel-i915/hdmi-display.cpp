@@ -465,7 +465,7 @@ namespace i915 {
 HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
         : DisplayDevice(controller, id, ddi) { }
 
-bool HdmiDisplay::InitDdi(edid::Edid* edid) {
+bool HdmiDisplay::InitDdi() {
     // HDMI isn't supported on these DDIs
     if (ddi_to_pin(ddi()) == -1) {
         return false;
@@ -475,17 +475,20 @@ bool HdmiDisplay::InitDdi(edid::Edid* edid) {
     registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
     registers::GMBus4::Get().FromValue(0).WriteTo(mmio_space());
 
-    const char* edid_err;
-    if (!edid->Init(this, &edid_err)) {
-        LOG_TRACE("hdmi edid init failed \"%s\"\n", edid_err);
-        return false;
-    } else if (!edid->CheckForHdmi(&is_hdmi_display_)) {
-        LOG_TRACE("Failed to find valid timing and hdmi\n");
-        return false;
+    // The only way to tell if an HDMI monitor is actually connected is
+    // to try to read from it over I2C.
+    for (unsigned i = 0; i < 3; i++) {
+        uint8_t test_data = 0;
+        registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
+        if (controller()->Transact(i2c_bus_id(), kDdcDataAddress,
+                                   &test_data, 1, nullptr, 0) == ZX_OK) {
+            LOG_TRACE("Found a hdmi/dvi monitor\n");
+            return true;
+        }
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     }
-    LOG_TRACE("Found a %s monitor\n", is_hdmi_display_ ? "hdmi" : "dvi");
-
-    return true;
+    LOG_TRACE("Failed to query hdmi i2c bus\n");
+    return false;
 }
 
 bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
@@ -609,7 +612,7 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode,
     auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
     ddi_func.set_trans_ddi_function_enable(1);
     ddi_func.set_ddi_select(ddi());
-    ddi_func.set_trans_ddi_mode_select(is_hdmi_display_ ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
+    ddi_func.set_trans_ddi_mode_select(is_hdmi() ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
     ddi_func.set_bits_per_color(ddi_func.k8bbc);
     ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
                                 | (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
@@ -676,7 +679,7 @@ bool HdmiDisplay::CheckDisplayLimits(const display_config_t* config) {
 
     // See comments in DpDisplay::CheckDisplayLimits for details about constants
     return (width <= 1920 && height <= 1200 && refresh_rate <= 60)
-            || (is_hdmi_display_ && width <= 4096 && height <= 2160 && refresh_rate <= 30);
+            || (is_hdmi() && width <= 4096 && height <= 2160 && refresh_rate <= 30);
 }
 
 } // namespace i915

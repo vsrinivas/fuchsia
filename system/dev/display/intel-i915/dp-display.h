@@ -47,7 +47,7 @@ public:
     DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
 private:
-    bool InitDdi(edid::Edid* edid) final;
+    bool InitDdi() final;
     bool DdiModeset(const display_mode_t& mode) final;
     bool PipeConfigPreamble(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;

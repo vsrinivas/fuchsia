@@ -62,9 +62,19 @@ bool CeaEdidTimingExtension::validate() const {
     return true;
 }
 
-bool Edid::Init(EdidDdcSource* edid_source, const char** err_msg) {
+bool Edid::Init(void* ctx, ddc_i2c_transact transact, const char** err_msg) {
+    uint8_t segment_address = 0;
+    uint8_t segment_offset = 0;
+    ddc_i2c_msg_t msgs[3] = {
+        { .is_read = false, .addr = kDdcSegmentI2cAddress, .buf = &segment_address, .length = 1 },
+        { .is_read = false, .addr = kDdcDataI2cAddress, .buf = &segment_offset, .length = 1 },
+        { .is_read = true, .addr = kDdcDataI2cAddress, .buf = nullptr, .length = kBlockSize },
+    };
+
     BaseEdid base_edid;
-    if (!edid_source->DdcRead(0, 0, reinterpret_cast<uint8_t*>(&base_edid), kBlockSize)) {
+    msgs[2].buf = reinterpret_cast<uint8_t*>(&base_edid);
+    // + 1 to skip trying to set the segment for the first block
+    if (!transact(ctx, msgs + 1, 2)) {
         *err_msg = "Failed to read base edid";
         return false;
     } else if (!base_edid.validate()) {
@@ -82,10 +92,11 @@ bool Edid::Init(EdidDdcSource* edid_source, const char** err_msg) {
 
     memcpy(edid_bytes_.get(), reinterpret_cast<void*>(&base_edid), kBlockSize);
     for (uint8_t i = 1; i && i <= base_edid.num_extensions; i++) {
-        uint8_t segment = i / 2;
-        uint8_t segment_offset = i % 2 ? kBlockSize : 0;
-        if (!edid_source->DdcRead(segment, segment_offset,
-                                  edid_bytes_.get() + i * kBlockSize, kBlockSize)) {
+        *msgs[0].buf = i / 2;
+        *msgs[1].buf = i % 2 ? kBlockSize : 0;
+        msgs[2].buf = edid_bytes_.get() + i * kBlockSize;
+        bool include_segment = i % 2;
+        if (!transact(ctx, msgs + include_segment, 3 - include_segment)) {
             *err_msg = "Failed to read full edid";
             return false;
         }
@@ -444,6 +455,21 @@ void Edid::Print(void (*print_fn)(const char* str)) const {
                 i % kBytesPerLine == kBytesPerLine - 1 ? "\n" : " ");
         print_fn(str_buf);
     }
+}
+
+uint16_t Edid::product_code() {
+    return base_edid_.product_code;
+}
+
+void Edid::manufacturer_id(char* c1, char* c2, char* c3) {
+    *c1 = static_cast<uint8_t>(((base_edid_.manufacturer_id1 & 0x7c) >> 2) + 'A' - 1);
+    *c2 = static_cast<uint8_t>((((base_edid_.manufacturer_id1 & 0x03) << 3)
+            | (base_edid_.manufacturer_id2 & 0xe0) >> 5) + 'A' - 1);
+    *c3  = static_cast<uint8_t>(((base_edid_.manufacturer_id2 & 0x1f)) + 'A' - 1);
+}
+
+bool Edid::is_standard_rgb() {
+    return base_edid_.standard_srgb();
 }
 
 } // namespace edid

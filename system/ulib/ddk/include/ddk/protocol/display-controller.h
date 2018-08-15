@@ -64,15 +64,23 @@ typedef struct cursor_info {
 typedef struct added_display_args {
     uint64_t display_id;
 
-    // A flag indicating whether or not the display has a valid edid. If no edid is
-    // present, then the meaning of display_config's mode structure is undefined, and
-    // drivers should ignore it.
+    // A flag indicating whether or not the display has a valid edid.
+    //
+    // If true, the device should expose an ZX_PROTOCOL_I2C_IMPL device through get_protocol, in
+    // addition to the ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL protocol. Note that the i2c device
+    // will be called from the on_displays_changed callback, so care should be taken to avoid
+    // deadlocks or double-locking.
+    //
+    // If no edid is present, then the meaning of display_config's mode structure is
+    // undefined, and drivers should ignore it in check_configuration and apply_configuration.
     bool edid_present;
     union {
-        // the display's edid
         struct {
+            // TODO(stevensd): Remove these when vim2 stops using them
             const uint8_t* data;
             uint16_t length;
+            // the bus_id to use to read this display's edid from the device's i2c protocol
+            uint32_t i2c_bus_id;
         } edid;
         // the display's parameters if an edid is not present
         display_params_t params;
@@ -91,6 +99,10 @@ typedef struct added_display_args {
     // should be valid at most times.
     const cursor_info_t* cursor_infos;
     uint32_t cursor_info_count;
+
+    // Out parameters will be populated before on_displays_changed returns.
+    bool is_hdmi_out;
+    bool is_standard_srgb_out;
 } added_display_args_t;
 
 // The client will not make any ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL calls into the device

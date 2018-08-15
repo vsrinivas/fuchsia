@@ -601,8 +601,7 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
         assert(ac.check());
 
         fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
-        LOG_INFO("Display %ld connected (%d x %d, fmt=%08x)\n", new_device->id(),
-                 new_device->width(), new_device->height(), new_device->format());
+        LOG_INFO("Display %ld connected\n", new_device->id());
     } else {
         LOG_WARN("Failed to add display device\n");
         return ZX_ERR_NO_MEMORY;
@@ -619,14 +618,16 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, uint32_t added_cou
         added_args[i].display_id = added[i]->id();
         added_args[i].edid_present = true;
         added_args[i].panel.edid.data = nullptr;
-        added_args[i].panel.edid.data = added[i]->edid().edid_bytes();
-        added_args[i].panel.edid.length = added[i]->edid().edid_length();
+        added_args[i].panel.edid.i2c_bus_id = added[i]->i2c_bus_id();
         added_args[i].pixel_formats = supported_formats;
         added_args[i].pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
         added_args[i].cursor_infos = cursor_infos;
         added_args[i].cursor_info_count = static_cast<uint32_t>(fbl::count_of(cursor_infos));
     }
     dc_cb_->on_displays_changed(dc_cb_ctx_, added_args, added_count, removed, removed_count);
+    for (unsigned i = 0; i < added_count; i++) {
+        added[i]->set_is_hdmi(added_args[i].is_hdmi_out);
+    }
 }
 
 // DisplayController methods

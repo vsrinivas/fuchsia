@@ -134,13 +134,20 @@ struct BaseEdid {
 
     // Offset 0
     uint8_t header[8];
-    uint8_t unused1[10];
+    uint8_t manufacturer_id1;
+    uint8_t manufacturer_id2;
+    uint16_t product_code;
+    uint8_t unused1[6];
     uint8_t edid_version;
     uint8_t edid_revision;
     uint8_t video_input_definition;
     DEF_SUBBIT(video_input_definition, 7, digital);
+    uint8_t horizontal_size_cm;
+    uint8_t vertical_size_cm;
+    uint8_t features_bitmap;
+    DEF_SUBBIT(features_bitmap, 2, standard_srgb);
 
-    uint8_t various[17]; // Fields that we don't need to read yet.
+    uint8_t various[14]; // Fields that we don't need to read yet.
     StandardTimingDescriptor standard_timings[8];
     DetailedTimingDescriptor detailed_timings[4];
     uint8_t num_extensions;
@@ -252,15 +259,19 @@ struct DataBlock {
 };
 static_assert(sizeof(DataBlock) == 32, "Bad size for DataBlock");
 
-class EdidDdcSource {
-public:
-    // The I2C address for writing the DDC segment
-    static constexpr int kDdcSegmentI2cAddress = 0x30;
-    // The I2C address for writing the DDC data offset/reading DDC data
-    static constexpr int kDdcDataI2cAddress = 0x50;
 
-    virtual bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
-};
+typedef struct ddc_i2c_msg {
+    bool is_read;
+    uint8_t addr;
+    uint8_t* buf;
+    uint8_t length;
+} ddc_i2c_msg_t;
+
+typedef bool (*ddc_i2c_transact)(void* ctx, ddc_i2c_msg_t* msgs, uint32_t msg_count);
+// The I2C address for writing the DDC segment
+static constexpr uint8_t kDdcSegmentI2cAddress = 0x30;
+// The I2C address for writing the DDC data offset/reading DDC data
+static constexpr uint8_t kDdcDataI2cAddress = 0x50;
 
 class Edid {
 public:
@@ -305,7 +316,7 @@ public:
 
 
     // Creates an Edid from the EdidDdcSource. Does not retain a reference to the source.
-    bool Init(EdidDdcSource* edid_source, const char** err_msg);
+    bool Init(void* ctx, ddc_i2c_transact edid_source, const char** err_msg);
     // Creates an Edid from raw bytes. The bytes array must remain valid for the duration
     // of the Edid object's lifetime.
     bool Init(const uint8_t* bytes, uint16_t len, const char** err_msg);
@@ -316,6 +327,10 @@ public:
 
     const uint8_t* edid_bytes() const { return bytes_; }
     uint16_t edid_length() const { return len_; }
+
+    uint16_t product_code();
+    void manufacturer_id(char* c1, char* c2, char* c3);
+    bool is_standard_rgb();
 
     timing_iterator begin() const { return timing_iterator(this, 0, UINT32_MAX); }
     timing_iterator end() const { return timing_iterator(this, UINT8_MAX, UINT32_MAX); }

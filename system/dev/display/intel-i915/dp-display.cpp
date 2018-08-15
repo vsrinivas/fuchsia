@@ -4,7 +4,6 @@
 
 #include <ddk/driver.h>
 #include <endian.h>
-#include <lib/edid/edid.h>
 #include <string.h>
 #include <zircon/assert.h>
 
@@ -874,19 +873,14 @@ namespace i915 {
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
         : DisplayDevice(controller, id, ddi) { }
 
-bool DpDisplay::InitDdi(edid::Edid* edid) {
+bool DpDisplay::InitDdi() {
     // For eDP displays, assume that the BIOS has enabled panel power, given
     // that we need to rely on it properly configuring panel power anyway. For
     // general DP displays, the default power state is D0, so we don't have to
     // worry about AUX failures because of power saving mode.
-    const char* edid_err = "Failed to find timing";
-    if (!edid->Init(this, &edid_err)) {
-        LOG_TRACE("dp edid init failed \"%s\"\n", edid_err);
-        return false;
-    }
 
     if (!DpcdRead(dpcd::DPCD_CAP_START, dpcd_capabilities_, fbl::count_of(dpcd_capabilities_))) {
-        LOG_ERROR("Failed to read dpcd capabilities\n");
+        LOG_TRACE("Failed to read dpcd capabilities\n");
         return false;
     }
 

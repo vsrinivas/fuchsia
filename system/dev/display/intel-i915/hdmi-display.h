@@ -37,7 +37,7 @@ public:
     HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
 private:
-    bool InitDdi(edid::Edid* edid) final;
+    bool InitDdi() final;
     bool DdiModeset(const display_mode_t& mode) final;
     bool PipeConfigPreamble(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;
@@ -47,8 +47,6 @@ private:
     bool CheckDisplayLimits(const display_config_t* config) final;
 
     uint32_t i2c_bus_id() const final { return ddi(); }
-
-    bool is_hdmi_display_;
 };
 
 } // namespace i915
