@@ -8,6 +8,8 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 
+#include <zircon/ethernet/c/fidl.h>
+
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
@@ -549,25 +551,15 @@ static int eth_tx_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len,
-                                        size_t* out_actual) {
-    if (out_len < sizeof(eth_fifos_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (edev->tx_fifo != ZX_HANDLE_INVALID) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
-
-    eth_fifos_t* fifos = out_buf;
-
+static zx_status_t eth_get_fifos_locked(ethdev_t* edev, struct zircon_ethernet_Fifos* fifos) {
     zx_status_t status;
-    if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->tx_fifo, &edev->tx_fifo)) < 0) {
+    if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->tx, &edev->tx_fifo)) < 0) {
         zxlogf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d\n", edev->name, status);
         return status;
     }
-    if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->rx_fifo, &edev->rx_fifo)) < 0) {
+    if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->rx, &edev->rx_fifo)) < 0) {
         zxlogf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d\n", edev->name, status);
-        zx_handle_close(fifos->tx_fifo);
+        zx_handle_close(fifos->tx);
         zx_handle_close(edev->tx_fifo);
         edev->tx_fifo = ZX_HANDLE_INVALID;
         return status;
@@ -578,8 +570,29 @@ static zx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t ou
     fifos->tx_depth = FIFO_DEPTH;
     fifos->rx_depth = FIFO_DEPTH;
 
-    *out_actual = sizeof(*fifos);
     return ZX_OK;
+}
+
+static zx_status_t eth_get_fifos_locked_ioctl(ethdev_t* edev, void* out_buf,
+                                              size_t out_len, size_t* out_actual) {
+    if (out_len < sizeof(eth_fifos_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (edev->tx_fifo != ZX_HANDLE_INVALID) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+
+    struct zircon_ethernet_Fifos fifos;
+    zx_status_t status = eth_get_fifos_locked(edev, &fifos);
+
+    eth_fifos_t* eth_fifos = out_buf;
+    eth_fifos->tx_fifo = fifos.tx;
+    eth_fifos->rx_fifo = fifos.rx;
+    eth_fifos->tx_depth = fifos.tx_depth;
+    eth_fifos->rx_depth = fifos.rx_depth;
+
+    *out_actual = sizeof(*eth_fifos);
+    return status;
 }
 
 static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
@@ -797,7 +810,7 @@ static zx_status_t eth_ioctl(void* ctx, uint32_t op,
         break;
     }
     case IOCTL_ETHERNET_GET_FIFOS:
-        status = eth_get_fifos_locked(edev, out_buf, out_len, out_actual);
+        status = eth_get_fifos_locked_ioctl(edev, out_buf, out_len, out_actual);
         break;
     case IOCTL_ETHERNET_SET_IOBUF:
         status = eth_set_iobuf_locked(edev, in_buf, in_len);
@@ -845,6 +858,96 @@ done:
 
     return status;
 }
+
+#define REPLY(x) zircon_ethernet_Device ## x ## _reply
+
+static zx_status_t fidl_GetInfo_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zircon_ethernet_Info info;
+    memset(&info, 0, sizeof(info));
+    memcpy(info.mac.octets, edev->edev0->info.mac, ETH_MAC_SIZE);
+    if (edev->edev0->info.features & ETHMAC_FEATURE_WLAN) {
+        info.features |= ETH_FEATURE_WLAN;
+    }
+    if (edev->edev0->info.features & ETHMAC_FEATURE_SYNTH) {
+        info.features |= ETH_FEATURE_SYNTH;
+    }
+    info.mtu = edev->edev0->info.mtu;
+    return REPLY(GetInfo)(txn, ZX_OK, &info);
+}
+
+static zx_status_t fidl_GetFifos_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zircon_ethernet_Fifos fifos;
+    return REPLY(GetFifos)(txn, eth_get_fifos_locked(edev, &fifos), &fifos);
+}
+
+static zx_status_t fidl_SetIOBuffer_locked(void* ctx, zx_handle_t h, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    return REPLY(SetIOBuffer)(txn, eth_set_iobuf_locked(edev, &h, sizeof(h)));
+}
+
+static zx_status_t fidl_Start_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    return REPLY(Start)(txn, eth_start_locked(edev));
+}
+
+static zx_status_t fidl_Stop_locked(void* ctx) {
+    ethdev_t* edev = ctx;
+    eth_stop_locked(edev);
+    return ZX_OK;
+}
+
+static zx_status_t fidl_ListenStart_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    return REPLY(ListenStart)(txn, eth_tx_listen_locked(edev, true));
+}
+
+static zx_status_t fidl_ListenStop_locked(void* ctx) {
+    ethdev_t* edev = ctx;
+    eth_tx_listen_locked(edev, false);
+    return ZX_OK;
+}
+
+static zx_status_t fidl_SetClientName_locked(void* ctx, const char* buf, size_t len,
+                                             fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    return REPLY(SetClientName)(txn, eth_set_client_name_locked(edev, buf, len));
+}
+
+static zx_status_t fidl_GetStatus_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    return REPLY(GetStatus)(txn, edev->edev0->status);
+}
+
+static zx_status_t fidl_SetPromisc_locked(void* ctx, bool enabled, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    return REPLY(SetPromiscuousMode)(txn, eth_set_promisc_locked(edev, enabled));
+}
+
+#undef REPLY
+
+zircon_ethernet_Device_ops_t fidl_ops = {
+    .GetInfo = fidl_GetInfo_locked,
+    .GetFifos = fidl_GetFifos_locked,
+    .SetIOBuffer = fidl_SetIOBuffer_locked,
+    .Start = fidl_Start_locked,
+    .Stop = fidl_Stop_locked,
+    .ListenStart = fidl_ListenStart_locked,
+    .ListenStop = fidl_ListenStop_locked,
+    .SetClientName = fidl_SetClientName_locked,
+    .GetStatus = fidl_GetStatus_locked,
+    .SetPromiscuousMode = fidl_SetPromisc_locked,
+};
+
+static zx_status_t eth_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    mtx_lock(&edev->edev0->lock);
+    zx_status_t status = zircon_ethernet_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    mtx_unlock(&edev->edev0->lock);
+    return status;
+}
+
 
 // kill tx thread, release buffers, etc
 // called from unbind and close
@@ -927,6 +1030,7 @@ static zx_protocol_device_t ethdev_ops = {
     .version = DEVICE_OPS_VERSION,
     .close = eth_close,
     .ioctl = eth_ioctl,
+    .message = eth_message,
     .release = eth_release,
 };
 

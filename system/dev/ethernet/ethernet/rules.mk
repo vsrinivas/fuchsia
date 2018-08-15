@@ -10,7 +10,9 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/ethernet.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_FIDL_LIBS := system/fidl/zircon-ethernet
+
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
