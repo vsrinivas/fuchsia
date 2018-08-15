@@ -41,7 +41,7 @@
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -67,7 +67,7 @@ constexpr char kMaxwellUrl[] = "maxwell";
 constexpr char kContextEngineUrl[] = "context_engine";
 constexpr char kContextEngineComponentNamespace[] = "context_engine";
 constexpr char kModuleResolverUrl[] = "module_resolver";
-constexpr char kUserScopeLabelPrefix[] = "user-";
+constexpr char kUserEnvironmentLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kUserShellLinkName[] = "user-shell-link";
@@ -235,10 +235,10 @@ void UserRunnerImpl::InitializeUser(
   account_ = std::move(account);
   AtEnd(Reset(&account_));
 
-  user_scope_ = std::make_unique<Scope>(
+  user_environment_ = std::make_unique<Environment>(
       startup_context_->environment(),
-      std::string(kUserScopeLabelPrefix) + GetAccountId(account_));
-  AtEnd(Reset(&user_scope_));
+      std::string(kUserEnvironmentLabelPrefix) + GetAccountId(account_));
+  AtEnd(Reset(&user_environment_));
 }
 
 void UserRunnerImpl::InitializeLedger() {
@@ -260,7 +260,7 @@ void UserRunnerImpl::InitializeLedger() {
 
   ledger_app_ =
       std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
-          user_scope_->GetLauncher(), std::move(ledger_config), "",
+          user_environment_->GetLauncher(), std::move(ledger_config), "",
           std::move(service_list));
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
@@ -278,7 +278,7 @@ void UserRunnerImpl::InitializeLedger() {
     cloud_provider_config.args = fidl::VectorPtr<fidl::StringPtr>::New(0);
     cloud_provider_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_scope_->GetLauncher(), std::move(cloud_provider_config));
+            user_environment_->GetLauncher(), std::move(cloud_provider_config));
     cloud_provider_app_->services().ConnectToService(
         cloud_provider_factory_.NewRequest());
 
@@ -321,11 +321,11 @@ void UserRunnerImpl::InitializeLedger() {
 void UserRunnerImpl::InitializeLedgerDashboard() {
   if (test_)
     return;
-  ledger_dashboard_scope_ = std::make_unique<Scope>(
-      user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
-  AtEnd(Reset(&ledger_dashboard_scope_));
+  ledger_dashboard_environment_ = std::make_unique<Environment>(
+      user_environment_->environment(), std::string(kLedgerDashboardEnvLabel));
+  AtEnd(Reset(&ledger_dashboard_environment_));
 
-  ledger_dashboard_scope_->AddService<
+  ledger_dashboard_environment_->AddService<
       fuchsia::ledger::internal::LedgerRepositoryDebug>(
       [this](fidl::InterfaceRequest<
              fuchsia::ledger::internal::LedgerRepositoryDebug>
@@ -347,7 +347,7 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
 
   ledger_dashboard_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          ledger_dashboard_scope_->GetLauncher(),
+          ledger_dashboard_environment_->GetLauncher(),
           std::move(ledger_dashboard_config));
 
   AtEnd(Reset(&ledger_dashboard_app_));
@@ -366,9 +366,9 @@ void UserRunnerImpl::InitializeDeviceMap() {
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
       device_name_, device_id, device_profile, ledger_client_.get(),
       fuchsia::ledger::PageId());
-  user_scope_->AddService<fuchsia::modular::DeviceMap>(
+  user_environment_->AddService<fuchsia::modular::DeviceMap>(
       [this](fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request) {
-        // device_map_impl_ may be reset before user_scope_.
+        // device_map_impl_ may be reset before user_environment_.
         if (device_map_impl_) {
           device_map_impl_->Connect(std::move(request));
         }
@@ -380,7 +380,7 @@ void UserRunnerImpl::InitializeClipboard() {
   agent_runner_->ConnectToAgent(kAppId, kClipboardAgentUrl,
                                 services_from_clipboard_agent_.NewRequest(),
                                 clipboard_agent_controller_.NewRequest());
-  user_scope_->AddService<fuchsia::modular::Clipboard>(
+  user_environment_->AddService<fuchsia::modular::Clipboard>(
       [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
         services_from_clipboard_agent_->ConnectToService(
             fuchsia::modular::Clipboard::Name_, request.TakeChannel());
@@ -455,7 +455,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
   maxwell_app_ = std::make_unique<
       AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>(
-      user_scope_->GetLauncher(), std::move(maxwell_config));
+      user_environment_->GetLauncher(), std::move(maxwell_config));
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
       std::move(context_engine), std::move(story_provider),
       std::move(focus_provider_maxwell), std::move(visible_stories_provider),
@@ -472,7 +472,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&agent_runner_storage_));
 
   agent_runner_.reset(new AgentRunner(
-      user_scope_->GetLauncher(), message_queue_manager_.get(),
+      user_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
       token_provider_factory_.get(), user_intelligence_provider_.get(),
       entity_provider_runner_.get()));
@@ -507,7 +507,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
     context_engine_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_scope_->GetLauncher(), std::move(context_engine_config),
+            user_environment_->GetLauncher(), std::move(context_engine_config),
             "" /* data_origin */, std::move(service_list));
     context_engine_app_->services().ConnectToService(
         std::move(context_engine_request));
@@ -566,7 +566,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
     // isolate the data it reads to a subdir of /data and map that in here.
     module_resolver_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_scope_->GetLauncher(), std::move(module_resolver_config),
+            user_environment_->GetLauncher(), std::move(module_resolver_config),
             "" /* data_origin */, std::move(service_list));
     AtEnd(Reset(&module_resolver_app_));
     AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
@@ -600,7 +600,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       new SessionStorage(ledger_client_.get(), fuchsia::ledger::PageId()));
   AtEnd(Reset(&session_storage_));
   story_provider_impl_.reset(new StoryProviderImpl(
-      user_scope_.get(), device_map_impl_->current_device_id(),
+      user_environment_.get(), device_map_impl_->current_device_id(),
       session_storage_.get(), std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
@@ -683,7 +683,7 @@ void UserRunnerImpl::InitializeUserShell(
 
 void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
   user_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      user_scope_->GetLauncher(), std::move(user_shell));
+      user_environment_->GetLauncher(), std::move(user_shell));
 
   if (user_shell_.is_bound()) {
     user_shell_.Unbind();

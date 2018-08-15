@@ -21,7 +21,7 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/fidl/environment.h"
 
 namespace modular {
 
@@ -77,7 +77,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
 
-  std::unique_ptr<Scope> user_runner_scope_;
+  std::unique_ptr<Environment> user_runner_environment_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> user_runner_app_;
   fuchsia::modular::internal::UserRunnerPtr user_runner_;
 

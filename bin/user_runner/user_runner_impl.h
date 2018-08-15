@@ -29,7 +29,7 @@
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
@@ -190,7 +190,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   // Provides services to the Ledger
   component::ServiceProviderImpl ledger_service_provider_;
 
-  std::unique_ptr<Scope> user_scope_;
+  std::unique_ptr<Environment> user_environment_;
 
   fuchsia::modular::auth::AccountPtr account_;
 
@@ -258,7 +258,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
       user_shell_link_bindings_;
 
   // For the Ledger Debug Dashboard
-  std::unique_ptr<Scope> ledger_dashboard_scope_;
+  std::unique_ptr<Environment> ledger_dashboard_environment_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> ledger_dashboard_app_;
 
   // Holds the actions scheduled by calls to the AtEnd() method.

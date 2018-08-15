@@ -31,7 +31,7 @@
 
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -208,6 +208,15 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
+  // Initializes the Environment under which all new processes in the story are
+  // launched. Use |story_environment_| to manipulate the environment's
+  // services.
+  void InitStoryEnvironment();
+
+  // Destroys the Environment created for this story, tearing down all
+  // processes.
+  void DestroyStoryEnvironment();
+
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.
   const fidl::StringPtr story_id_;
@@ -225,8 +234,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   StoryStorage* const story_storage_;
 
-  // The scope in which the modules within this story run.
-  Scope story_scope_;
+  // The application environment (which abstracts a zx::job) in which the
+  // modules within this story run. This environment is only valid (not null) if
+  // the story is running.
+  std::unique_ptr<Environment> story_environment_;
 
   // Implements the primary service provided here:
   // fuchsia::modular::StoryController.

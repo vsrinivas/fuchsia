@@ -71,10 +71,10 @@ source_set("clone") {
   ]
 }
 
-source_set("scope") {
+source_set("environment") {
   sources = [
-    "scope.cc",
-    "scope.h",
+    "environment.cc",
+    "environment.h",
   ]
 
   public_deps = [

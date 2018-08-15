@@ -377,7 +377,7 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
 };
 
 StoryProviderImpl::StoryProviderImpl(
-    Scope* const user_scope, std::string device_id,
+    Environment* const user_environment, std::string device_id,
     SessionStorage* const session_storage,
     fuchsia::modular::AppConfig story_shell,
     const ComponentContextInfo& component_context_info,
@@ -387,7 +387,7 @@ StoryProviderImpl::StoryProviderImpl(
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
     PresentationProvider* const presentation_provider, const bool test)
-    : user_scope_(user_scope),
+    : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
       story_shell_(std::move(story_shell)),
@@ -516,7 +516,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 
   auto story_shell_app =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          user_scope_->GetLauncher(), CloneStruct(story_shell_));
+          user_environment_->GetLauncher(), CloneStruct(story_shell_));
 
   // CreateView must be called in order to get the Flutter application to
   // run

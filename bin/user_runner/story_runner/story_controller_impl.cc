@@ -62,7 +62,7 @@ struct less<fuchsia::modular::LinkPath> {
 
 namespace modular {
 
-constexpr char kStoryScopeLabelPrefix[] = "story-";
+constexpr char kStoryEnvironmentLabelPrefix[] = "story-";
 
 namespace {
 
@@ -231,7 +231,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     running_mod_info.module_controller_impl =
         std::make_unique<ModuleControllerImpl>(
             story_controller_impl_,
-            story_controller_impl_->story_scope_.GetLauncher(),
+            story_controller_impl_->story_environment_->GetLauncher(),
             std::move(module_config), running_mod_info.module_data.get(),
             std::move(service_list), std::move(view_provider_request));
 
@@ -449,11 +449,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
 class StoryControllerImpl::StopCall : public Operation<> {
  public:
-  StopCall(StoryControllerImpl* const story_controller_impl, const bool notify,
-           std::function<void()> done)
+  StopCall(StoryControllerImpl* const story_controller_impl,
+           const bool notify_watchers, std::function<void()> done)
       : Operation("StoryControllerImpl::StopCall", done),
         story_controller_impl_(story_controller_impl),
-        notify_(notify) {}
+        notify_watchers_(notify_watchers) {}
 
  private:
   // StopCall may be run even on a story impl that is not running.
@@ -503,9 +503,9 @@ class StoryControllerImpl::StopCall : public Operation<> {
           story_controller_impl_->link_impls_.CloseAll();
 
           // If this StopCall is part of a DeleteCall, then we don't notify
-          // story state changes; the pertinent state change will be the delete
-          // notification instead.
-          if (notify_) {
+          // watchers story state changes; the pertinent state change will be
+          // the delete notification instead.
+          if (notify_watchers_) {
             story_controller_impl_->SetState(
                 fuchsia::modular::StoryState::STOPPED);
           } else {
@@ -513,12 +513,15 @@ class StoryControllerImpl::StopCall : public Operation<> {
                 fuchsia::modular::StoryState::STOPPED;
           }
 
+          story_controller_impl_->DestroyStoryEnvironment();
+
           Done();
         });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const bool notify_;  // Whether to notify state change; false in DeleteCall.
+  const bool
+      notify_watchers_;  // Whether to notify state change; false in DeleteCall.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
@@ -618,8 +621,8 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
         story_controller_impl_, story_controller_impl_->story_storage_,
         module_path_, [this, flow] {
           if (story_controller_impl_->running_mod_infos_.empty()) {
-            operation_queue_.Add(new StopCall(story_controller_impl_,
-                                              true /* notify */, [flow] {}));
+            operation_queue_.Add(new StopCall(
+                story_controller_impl_, true /* notify watchers */, [flow] {}));
           }
         }));
   }
@@ -644,8 +647,8 @@ class StoryControllerImpl::DeleteCall : public Operation<> {
   void Run() override {
     // No call to Done(), in order to block all further operations on the queue
     // until the instance is deleted.
-    operation_queue_.Add(
-        new StopCall(story_controller_impl_, false /* notify */, done_));
+    operation_queue_.Add(new StopCall(story_controller_impl_,
+                                      false /* notify watchers */, done_));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1096,6 +1099,8 @@ class StoryControllerImpl::StartCall : public Operation<> {
     // module.
     storage_->ReadAllModuleData()->Then(
         [this, flow](fidl::VectorPtr<fuchsia::modular::ModuleData> data) {
+          story_controller_impl_->InitStoryEnvironment();
+
           for (auto& module_data : *data) {
             if (module_data.module_source !=
                     fuchsia::modular::ModuleSource::EXTERNAL ||
@@ -1128,8 +1133,6 @@ StoryControllerImpl::StoryControllerImpl(
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       story_storage_(story_storage),
-      story_scope_(story_provider_impl_->user_scope(),
-                   kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this) {
   auto story_scope = fuchsia::modular::StoryScope::New();
   story_scope->story_id = story_id;
@@ -1138,12 +1141,6 @@ StoryControllerImpl::StoryControllerImpl(
   story_provider_impl_->user_intelligence_provider()
       ->GetComponentIntelligenceServices(std::move(*scope),
                                          intelligence_services_.NewRequest());
-
-  story_scope_.AddService<fuchsia::modular::ContextWriter>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
-        intelligence_services_->GetContextWriter(std::move(request));
-      });
-
   story_storage_->set_on_module_data_updated(
       [this](fuchsia::modular::ModuleData module_data) {
         OnModuleDataUpdated(std::move(module_data));
@@ -1171,7 +1168,7 @@ void StoryControllerImpl::StopForDelete(const StopCallback& done) {
 }
 
 void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
-  operation_queue_.Add(new StopCall(this, false /* notify */, done));
+  operation_queue_.Add(new StopCall(this, false /* notify watchers */, done));
 }
 
 fuchsia::modular::StoryState StoryControllerImpl::GetStoryState() const {
@@ -1419,7 +1416,7 @@ void StoryControllerImpl::Start(
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(new StopCall(this, true /* notify */, done));
+  operation_queue_.Add(new StopCall(this, true /* notify watchers */, done));
 }
 
 void StoryControllerImpl::Watch(
@@ -1622,6 +1619,23 @@ void StoryControllerImpl::HandleStoryVisibilityStateRequest(
 
   story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
                                                visibility_state_);
+}
+
+void StoryControllerImpl::InitStoryEnvironment() {
+  FXL_DCHECK(!story_environment_)
+      << "Story scope already running for story_id = " << story_id_;
+
+  story_environment_ = std::make_unique<Environment>(
+      story_provider_impl_->user_environment(),
+      kStoryEnvironmentLabelPrefix + story_id_.get());
+  story_environment_->AddService<fuchsia::modular::ContextWriter>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
+        intelligence_services_->GetContextWriter(std::move(request));
+      });
+}
+
+void StoryControllerImpl::DestroyStoryEnvironment() {
+  story_environment_.reset();
 }
 
 }  // namespace modular

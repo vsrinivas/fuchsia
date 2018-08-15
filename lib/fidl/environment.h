@@ -13,18 +13,19 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/function.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
 
 namespace modular {
 
 // Provides fate separation of sets of applications run by one application. The
 // environment services are delegated to the parent environment.
-class Scope {
+class Environment {
  public:
-  Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
-        const std::string& label);
+  Environment(const fuchsia::sys::EnvironmentPtr& parent_env,
+              const std::string& label);
 
-  Scope(const Scope* parent_scope, const std::string& label);
+  Environment(const Environment* parent_scope, const std::string& label);
 
   template <typename Interface>
   void AddService(fidl::InterfaceRequestHandler<Interface> handler,
@@ -32,13 +33,18 @@ class Scope {
     service_provider_bridge_.AddService(std::move(handler), service_name);
   }
 
+  // Kills the underlying environment. Calls |done| when completed. This
+  // |Environment| object must not be used (and must be deleted) after |Kill()|
+  // returns.
+  void Kill(fit::function<void()> done);
+
   fuchsia::sys::Launcher* GetLauncher();
 
   const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
 
  private:
-  void InitScope(const fuchsia::sys::EnvironmentPtr& parent_env,
-                 const std::string& label);
+  void InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env,
+                       const std::string& label);
 
   component::ServiceProviderBridge service_provider_bridge_;
   fuchsia::sys::EnvironmentPtr env_;

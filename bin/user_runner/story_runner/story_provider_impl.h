@@ -27,7 +27,7 @@
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/proxy.h"
-#include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -44,8 +44,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
                           fuchsia::modular::FocusWatcher {
  public:
   StoryProviderImpl(
-      Scope* user_scope, std::string device_id, SessionStorage* session_storage,
-      fuchsia::modular::AppConfig story_shell,
+      Environment* user_environment, std::string device_id,
+      SessionStorage* session_storage, fuchsia::modular::AppConfig story_shell,
       const ComponentContextInfo& component_context_info,
       fuchsia::modular::FocusProviderPtr focus_provider,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
@@ -64,7 +64,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void Teardown(const std::function<void()>& callback);
 
   // Called by StoryControllerImpl.
-  const Scope* user_scope() const { return user_scope_; }
+  const Environment* user_environment() const { return user_environment_; }
 
   // The device ID for this user/device.
   const std::string device_id() const { return device_id_; }
@@ -198,7 +198,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   void MaybeLoadStoryShellDelayed();
 
-  Scope* const user_scope_;
+  Environment* const user_environment_;
 
   SessionStorage* session_storage_;  // Not owned.
 
