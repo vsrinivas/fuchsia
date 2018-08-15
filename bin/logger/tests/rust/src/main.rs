@@ -4,34 +4,22 @@
 
 #![deny(warnings)]
 
-#[cfg_attr(test, macro_use)]
-extern crate fuchsia_syslog as syslog;
-
-#[cfg_attr(test, macro_use)]
-extern crate log;
-
 // dummy main. We do not copy this binary to fuchsia, only tests.
 fn main() {}
 
 #[cfg(test)]
 mod tests {
-    extern crate fidl_fuchsia_logger;
-    extern crate fuchsia_async as async;
-    extern crate fuchsia_syslog_listener as syslog_listener;
-    extern crate fuchsia_zircon as zx;
-    extern crate futures;
-    extern crate parking_lot;
-    extern crate rand;
-
-    use self::futures::TryFutureExt;
-    use self::fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
-    use self::parking_lot::Mutex;
-    use self::syslog_listener::LogProcessor;
-    use self::zx::DurationNum;
+    use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
+    use fuchsia_async as fasync;
+    use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
+    use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
+    use fuchsia_zircon::DurationNum;
+    use futures::TryFutureExt;
+    use log::{log, warn};
+    use parking_lot::Mutex;
 
     use std::sync::Arc;
     use std::vec::Vec;
-    use syslog;
 
     struct Listener {
         log_messages: Arc<Mutex<Vec<LogMessage>>>,
@@ -63,7 +51,7 @@ mod tests {
         };
         let listener_fut = syslog_listener::run_log_listener(l, Some(&mut options), false)
             .expect("failed to register listener");
-        async::spawn(listener_fut.unwrap_or_else(|e| {
+        fasync::spawn(listener_fut.unwrap_or_else(|e| {
             panic!("test fail {:?}", e);
         }));
         return logs;
@@ -71,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_full_stack() {
-        let mut executor = async::Executor::new().unwrap();
+        let mut executor = fasync::Executor::new().unwrap();
         let random = rand::random::<u16>();
         let tag = "logger_integration_rust".to_string() + &random.to_string();
         syslog::init_with_tags(&[&tag]).expect("should not fail");
@@ -84,7 +72,7 @@ mod tests {
             if logs.lock().len() >= 2 {
                 break;
             }
-            let timeout = async::Timer::new(100.millis().after_now());
+            let timeout = fasync::Timer::new(100.millis().after_now());
             executor.run_singlethreaded(timeout);
         }
         let logs = logs.lock();
