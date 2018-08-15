@@ -322,7 +322,8 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
       tq = &indication_queue_;
       break;
     default:
-      FXL_VLOG(1) << "att: invalid opcode: " << reader.opcode();
+      FXL_VLOG(1) << "att: invalid opcode: "
+                  << static_cast<unsigned>(reader.opcode());
       return false;
   }
 
