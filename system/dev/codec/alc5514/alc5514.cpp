@@ -155,37 +155,35 @@ zx_status_t Alc5514Device::Initialize() {
     UpdateReg(DOWNFILTER1_CTRL2, DOWNFILTER_CTRL_AD_AD_GAIN_MASK, 0x6E);
 
     // Power up
-    WriteReg(PWR_ANA1, PWR_ANA1_EN_SLEEP_RESET |
-                       PWR_ANA1_DMIC_DATA_IN2 |
-                       PWR_ANA1_POW_CKDET |
-                       PWR_ANA1_POW_PLL |
-                       PWR_ANA1_POW_LDO18_IN |
-                       PWR_ANA1_POW_LDO18_ADC |
-                       PWR_ANA1_POW_LDO21 |
-                       PWR_ANA1_POW_BG_LDO18 |
-                       PWR_ANA1_POW_BG_LDO21);
-    WriteReg(PWR_ANA2, PWR_ANA2_POW_PLL2 |
-                       PWR_ANA2_RSTB_PLL2 |
-                       PWR_ANA2_POW_PLL2_LDO |
-                       PWR_ANA2_POW_PLL1 |
-                       PWR_ANA2_RSTB_PLL1 |
-                       PWR_ANA2_POW_PLL1_LDO |
-                       PWR_ANA2_POW_BG_MBIAS |
-                       PWR_ANA2_POW_MBIAS |
-                       PWR_ANA2_POW_VREF2 |
-                       PWR_ANA2_POW_VREF1 |
-                       PWR_ANA2_POWR_LDO16 |
-                       PWR_ANA2_POWL_LDO16 |
-                       PWR_ANA2_POW_ADC2 |
-                       PWR_ANA2_POW_INPUT_BUF |
-                       PWR_ANA2_POW_ADC1_R |
-                       PWR_ANA2_POW_ADC1_L |
-                       PWR_ANA2_POW2_BSTR |
-                       PWR_ANA2_POW2_BSTL |
-                       PWR_ANA2_POW_BSTR |
-                       PWR_ANA2_POW_BSTL |
-                       PWR_ANA2_POW_ADCFEDR |
-                       PWR_ANA2_POW_ADCFEDL);
+    constexpr uint32_t pwr1 = PWR_ANA1_POW_CKDET |
+                              PWR_ANA1_POW_LDO18_IN |
+                              PWR_ANA1_POW_LDO18_ADC |
+                              PWR_ANA1_POW_LDO21 |
+                              PWR_ANA1_POW_BG_LDO18 |
+                              PWR_ANA1_POW_BG_LDO21;
+    UpdateReg(PWR_ANA1, pwr1, pwr1);
+
+    constexpr uint32_t pwr2 = PWR_ANA2_POW_PLL2 |
+                              PWR_ANA2_POW_PLL2_LDO |
+                              PWR_ANA2_POW_PLL1 |
+                              PWR_ANA2_POW_PLL1_LDO |
+                              PWR_ANA2_POW_BG_MBIAS |
+                              PWR_ANA2_POW_MBIAS |
+                              PWR_ANA2_POW_VREF2 |
+                              PWR_ANA2_POW_VREF1 |
+                              PWR_ANA2_POWR_LDO16 |
+                              PWR_ANA2_POWL_LDO16 |
+                              PWR_ANA2_POW_ADC2 |
+                              PWR_ANA2_POW_INPUT_BUF |
+                              PWR_ANA2_POW_ADC1_R |
+                              PWR_ANA2_POW_ADC1_L |
+                              PWR_ANA2_POW2_BSTR |
+                              PWR_ANA2_POW2_BSTL |
+                              PWR_ANA2_POW_BSTR |
+                              PWR_ANA2_POW_BSTL |
+                              PWR_ANA2_POW_ADCFEDR |
+                              PWR_ANA2_POW_ADCFEDL;
+    UpdateReg(PWR_ANA2, pwr2, pwr2);
 
     // Enable DMIC1/2, ADC1, DownFilter0/1 clock
     uint32_t clk_enable = CLK_CTRL1_CLK_AD_ANA1_EN |
