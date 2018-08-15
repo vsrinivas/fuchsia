@@ -96,6 +96,13 @@ static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t default_message(void *ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    fidl_message_header_t* hdr = (fidl_message_header_t*) msg->bytes;
+    printf("devhost: Unsupported FIDL operation: 0x%x\n", hdr->ordinal);
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_protocol_device_t device_default_ops = {
     .open = default_open,
     .open_at = default_open_at,
@@ -109,6 +116,7 @@ zx_protocol_device_t device_default_ops = {
     .suspend = default_suspend,
     .resume = default_resume,
     .rxrpc = default_rxrpc,
+    .message = default_message,
 };
 
 static void device_invalid_fatal(void* ctx) {
@@ -129,6 +137,7 @@ static zx_protocol_device_t device_invalid_ops = {
     .suspend = (void*) device_invalid_fatal,
     .resume = (void*) device_invalid_fatal,
     .rxrpc = (void*) device_invalid_fatal,
+    .message = (void*) device_invalid_fatal,
 };
 
 // Maximum number of dead devices to hold on the dead device list
@@ -372,6 +381,7 @@ static zx_status_t device_validate(zx_device_t* dev) REQ_DM_LOCK {
     DEFAULT_IF_NULL(ops, suspend);
     DEFAULT_IF_NULL(ops, resume);
     DEFAULT_IF_NULL(ops, rxrpc);
+    DEFAULT_IF_NULL(ops, message);
 
     return ZX_OK;
 }

@@ -608,8 +608,7 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
                hdr->ordinal <= fuchsia_io_DirectoryLinkOrdinal) {
         return fuchsia_io_Directory_dispatch(cookie, txn, msg, &kDirectoryOps);
     } else {
-        fprintf(stderr, "devhost: Unsupported FIDL operation: 0x%x\n", hdr->ordinal);
-        zx_handle_close_many(msg->handles, msg->num_handles);
-        return ZX_ERR_NOT_SUPPORTED;
+        devhost_iostate_t* ios = cookie;
+        return dev_op_message(ios->dev, msg, txn);
     }
 }

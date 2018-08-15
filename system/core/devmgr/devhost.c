@@ -229,6 +229,10 @@ static zx_status_t dh_null_reply(fidl_txn_t* reply, const fidl_msg_t* msg) {
     return ZX_OK;
 }
 
+static fidl_txn_t dh_null_txn = {
+    .reply = dh_null_reply,
+};
+
 static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     dc_msg_t msg;
     zx_handle_t hin[3];
@@ -254,15 +258,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             .num_handles = hcount,
         };
 
-        zxfidl_connection_t connection = {
-            .txn = {
-                .reply = dh_null_reply,
-            },
-            .channel = ZX_HANDLE_INVALID,
-            .txid = 0,
-        };
-
-        if ((r = devhost_fidl_handler(&fidl_msg, &connection.txn, ios)) != ZX_OK) {
+        if ((r = devhost_fidl_handler(&fidl_msg, &dh_null_txn, ios)) != ZX_OK) {
             log(ERROR, "devhost: OPEN failed: %d\n", r);
             return r;
         }

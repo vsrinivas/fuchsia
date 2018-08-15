@@ -121,3 +121,7 @@ static inline zx_status_t dev_op_ioctl(zx_device_t* dev, uint32_t op,
                                       void* out_buf, size_t out_len, size_t* out_actual) {
     return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
 }
+
+static inline zx_status_t dev_op_message(zx_device_t* dev, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return dev->ops->message(dev->ctx, msg, txn);
+}
