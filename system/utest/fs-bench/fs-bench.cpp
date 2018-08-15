@@ -102,12 +102,9 @@ bool PathWalkDown(const fbl::String& op_name, const fbl::Function<int(const char
     PathComponentGen component;
     path->Append(fixture->fs_path());
 
-    state->DeclareStep(op_name.c_str());
-    state->DeclareStep("path_update");
     while (state->KeepRunning()) {
         path->Append(component.current);
         ASSERT_EQ(op(path->c_str()), 0);
-        state->NextStep();
         component.Next();
     }
     END_HELPER;
@@ -117,11 +114,8 @@ bool PathWalkUp(const fbl::String& op_name, const fbl::Function<int(const char*)
                 perftest::RepeatState* state, Fixture* fixture,
                 fbl::StringBuffer<fs_test_utils::kPathSize>* path) {
     BEGIN_HELPER;
-    state->DeclareStep(op_name.c_str());
-    state->DeclareStep("path_update");
     while (state->KeepRunning() && *path != fixture->fs_path()) {
         ASSERT_EQ(op(path->c_str()), 0, path->c_str());
-        state->NextStep();
         uint32_t new_size = static_cast<uint32_t>(path->length() - kComponentLength);
         path->Resize(new_size);
     }
