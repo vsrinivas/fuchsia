@@ -22,12 +22,13 @@ constexpr char kServiceRootPath[] = "/svc";
 }  // namespace
 
 StartupContext::StartupContext(zx::channel service_root,
-                               zx::channel directory_request) {
-  incoming_services_.Bind(std::move(service_root));
+                               zx::channel directory_request)
+    : incoming_services_(std::make_shared<Services>()) {
+  incoming_services_->Bind(std::move(service_root));
   outgoing_.Serve(std::move(directory_request));
 
-  incoming_services_.ConnectToService(environment_.NewRequest());
-  incoming_services_.ConnectToService(launcher_.NewRequest());
+  incoming_services_->ConnectToService(environment_.NewRequest());
+  incoming_services_->ConnectToService(launcher_.NewRequest());
 }
 
 StartupContext::~StartupContext() = default;
@@ -68,7 +69,7 @@ std::unique_ptr<StartupContext> StartupContext::CreateFrom(
 
 void StartupContext::ConnectToEnvironmentService(
     const std::string& interface_name, zx::channel channel) {
-  incoming_services().ConnectToService(std::move(channel), interface_name);
+  incoming_services()->ConnectToService(std::move(channel), interface_name);
 }
 
 }  // namespace component

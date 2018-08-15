@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_STARTUP_CONTEXT_H_
-#define LIB_APP_CPP_STARTUP_CONTEXT_H_
+#ifndef LIB_COMPONENT_CPP_STARTUP_CONTEXT_H_
+#define LIB_COMPONENT_CPP_STARTUP_CONTEXT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 
@@ -54,7 +54,7 @@ class StartupContext {
 
   // Whether this component was given services by its environment.
   bool has_environment_services() const {
-    return !!incoming_services().directory();
+    return !!incoming_services()->directory();
   }
 
   // Gets the component launcher service provided to the component by
@@ -63,7 +63,9 @@ class StartupContext {
   // May be null if the component does not have access to its environment.
   const fuchsia::sys::LauncherPtr& launcher() const { return launcher_; }
 
-  const Services& incoming_services() const { return incoming_services_; }
+  const std::shared_ptr<Services>& incoming_services() const {
+    return incoming_services_;
+  }
   const Outgoing& outgoing() const { return outgoing_; }
 
   // Gets a service provider implementation by which the component can
@@ -77,7 +79,7 @@ class StartupContext {
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
-    return incoming_services().ConnectToService<Interface>(interface_name);
+    return incoming_services()->ConnectToService<Interface>(interface_name);
   }
 
   // Connects to a service provided by the component's environment,
@@ -86,8 +88,8 @@ class StartupContext {
   void ConnectToEnvironmentService(
       fidl::InterfaceRequest<Interface> request,
       const std::string& interface_name = Interface::Name_) {
-    return incoming_services().ConnectToService(std::move(request),
-                                                interface_name);
+    return incoming_services()->ConnectToService(std::move(request),
+                                                 interface_name);
   }
 
   // Connects to a service provided by the component's environment,
@@ -99,11 +101,11 @@ class StartupContext {
   fuchsia::sys::LauncherPtr launcher_;
 
  private:
-  Services incoming_services_;
+  std::shared_ptr<Services> incoming_services_;
   Outgoing outgoing_;
   fuchsia::sys::EnvironmentPtr environment_;
 };
 
 }  // namespace component
 
-#endif  // LIB_APP_CPP_STARTUP_CONTEXT_H_
+#endif  // LIB_COMPONENT_CPP_STARTUP_CONTEXT_H_

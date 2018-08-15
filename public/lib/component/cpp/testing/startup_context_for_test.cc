@@ -35,7 +35,7 @@ StartupContextForTest::StartupContextForTest(
                                             std::move(service_root_server));
   ZX_ASSERT(status == ZX_OK);
 
-  incoming_services().ConnectToService(launcher_.NewRequest());
+  incoming_services()->ConnectToService(launcher_.NewRequest());
 }
 
 std::unique_ptr<StartupContextForTest> StartupContextForTest::Create() {
