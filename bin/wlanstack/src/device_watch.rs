@@ -7,7 +7,7 @@
 use failure;
 use fidl_mlme;
 use futures::prelude::*;
-use std::{io, thread, time};
+use std::io;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -43,13 +43,6 @@ pub fn watch_iface_devices()
 {
     Ok(watch_new_devices(IFACE_PATH)?
         .try_filter_map(|path| {
-            // Temporarily delay opening the iface since only one service may open a channel to a
-            // device at a time. If the legacy wlantack is running, it should take priority. For
-            // development of wlanstack2, kill the wlanstack process first to let wlanstack2 take
-            // over.
-            debug!("sleeping 100ms...");
-            let open_delay = time::Duration::from_millis(100);
-            thread::sleep(open_delay);
             future::ready(Ok(handle_open_error(&path, new_iface(&path))))
         }))
 }

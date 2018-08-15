@@ -5,7 +5,6 @@
         "garnet/packages/config/netcfg",
         "garnet/packages/config/openssh_keys",
         "garnet/packages/config/thermd",
-        "garnet/packages/config/wlancfg",
         "garnet/packages/all"
     ]
 }

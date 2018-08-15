@@ -43,6 +43,7 @@ use app::server::ServicesServer;
 use config::Config;
 use known_ess_store::KnownEssStore;
 use failure::{Error, ResultExt};
+use fidl::endpoints2::{RequestStream, ServiceMarker};
 use futures::prelude::*;
 use std::sync::Arc;
 use wlan_service::DeviceServiceMarker;
@@ -57,27 +58,12 @@ fn serve_fidl(_client_ref: shim::ClientRef)
     -> impl Future<Output = Result<Never, Error>>
 {
     future::ready(ServicesServer::new()
-        // To test the legacy API server, change
-        //     "fuchsia.wlan.service.Wlan": "wlanstack"
-        // to
-        //     "fuchsia.wlan.service.Wlan": "wlancfg"
-        // in 'bin/sysmgr/config/services.config'
-        //
-        // Also, comment out the following lines in 'bin/wlancfg/BUILD.gn':
-        //    {
-        //      dest = "sysmgr/wlancfg.config"
-        //      path = rebase_path("wlancfg.config")
-        //    },
-        //
-        // Then, uncomment the following code:
-        /*
-        .add_service((<legacy::WlanMarker as ::fidl::endpoints2::ServiceMarker>::NAME, move |channel| {
-            let stream = <legacy::WlanRequestStream as ::fidl::endpoints2::RequestStream>::from_channel(channel);
+        .add_service((legacy::WlanMarker::NAME, move |channel| {
+            let stream = legacy::WlanRequestStream::from_channel(channel);
             let fut = shim::serve_legacy(stream, _client_ref.clone())
                 .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
             async::spawn(fut)
         }))
-        */
         .start())
         .and_then(|fut| fut)
         .and_then(|()| future::ready(Err(format_err!("FIDL server future exited unexpectedly"))))
