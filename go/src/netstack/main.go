@@ -20,14 +20,15 @@ import (
 
 	"fidl/fuchsia/devicesettings"
 	"fidl/fuchsia/net"
-	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/net/stack"
+	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	tcpipstack "github.com/google/netstack/tcpip/stack"
+	"github.com/google/netstack/tcpip/transport/ping"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -49,10 +50,10 @@ func main() {
 		ipv6.ProtocolName,
 		arp.ProtocolName,
 	}, []string{
-		ipv4.PingProtocolName,
+		ping.ProtocolName4,
 		tcp.ProtocolName,
 		udp.ProtocolName,
-	})
+	}, tcpipstack.Options{})
 	s, err := newSocketServer(stk, ctx)
 	if err != nil {
 		log.Fatal(err)

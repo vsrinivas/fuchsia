@@ -43,8 +43,7 @@ func TestRewritePacketICMPv4(t *testing.T) {
 			t.Errorf("ipv4 checksum=%x, want=%x", got, want)
 		}
 
-		tCksum := icmpv4.CalculateChecksum(0)
-		if got, want := tCksum, uint16(0xffff); got != want {
+		if got, want := header.Checksum(icmpv4, 0), uint16(0xffff); got != want {
 			t.Errorf("icmpv4 checksum=%x, want=%x", got, want)
 		}
 
@@ -66,8 +65,7 @@ func TestRewritePacketICMPv4(t *testing.T) {
 			t.Errorf("ipv4 checksum=%x, want=%x", got, want)
 		}
 
-		tCksum = icmpv4.CalculateChecksum(0)
-		if got, want := tCksum, uint16(0xffff); got != want {
+		if got, want := header.Checksum(icmpv4, 0), uint16(0xffff); got != want {
 			t.Errorf("icmpv4 checksum=%x, want=%x", got, want)
 		}
 	}

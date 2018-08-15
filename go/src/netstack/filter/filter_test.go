@@ -18,7 +18,7 @@ func ruleset1() ([]*Rule, error) {
 		return nil, err
 	}
 	return []*Rule{
-		&Rule{
+		{
 			action:     Drop,
 			direction:  Incoming,
 			transProto: header.TCPProtocolNumber,
@@ -35,13 +35,13 @@ func ruleset2() ([]*Rule, error) {
 		return nil, err
 	}
 	return []*Rule{
-		&Rule{
+		{
 			action:     Drop,
 			direction:  Incoming,
 			transProto: header.UDPProtocolNumber,
 			log:        true,
 		},
-		&Rule{
+		{
 			action:     Pass,
 			direction:  Incoming,
 			transProto: header.UDPProtocolNumber,
@@ -100,11 +100,8 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to generate a ruleset: %v", err)
 		}
-		b := test.packet()
-		vv := buffer.NewVectorisedView(len(b), []buffer.View{b})
-		a := f.Run(test.dir, test.netProto, &vv)
-		if a != test.want {
-			t.Fatalf("wrong action, want %v, got %v", test.want, a)
+		if got := f.Run(test.dir, test.netProto, buffer.NewPrependableFromView(test.packet()), buffer.VectorisedView{}); got != test.want {
+			t.Fatalf("wrong action, want %v, got %v", test.want, got)
 		}
 	}
 }

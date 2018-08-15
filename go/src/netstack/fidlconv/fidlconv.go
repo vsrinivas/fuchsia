@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"netstack/util"
+
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
@@ -90,8 +92,8 @@ func ToNetSubnets(addrs []tcpip.Address) ([]net.Subnet, error) {
 func ToTCPIPSubnet(sn net.Subnet) (tcpip.Subnet, error) {
 	// Use ToTCPIPAddress to abstract the IPv4 vs IPv6 behavior.
 	a := []byte(ToTCPIPAddress(sn.Addr))
-	m := tcpip.CIDRMask(int(sn.PrefixLen), int(len(a)*8))
-	for i, _ := range a {
+	m := util.CIDRMask(int(sn.PrefixLen), int(len(a)*8))
+	for i := range a {
 		a[i] = a[i] & m[i]
 	}
 	return tcpip.NewSubnet(tcpip.Address(a), m)
