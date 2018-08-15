@@ -1,3 +1,9 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! Type-safe bindings for Zircon handles.
+//!
 use crate::{Port, Rights, Signals, Status, Time, WaitAsyncOpts, ok};
 use fuchsia_zircon_sys as sys;
 use std::marker::PhantomData;
