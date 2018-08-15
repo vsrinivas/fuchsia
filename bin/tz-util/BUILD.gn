@@ -12,10 +12,11 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.timezone",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.timezone",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -25,7 +26,9 @@ package("tz-util") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "tz-util"
-      } ]
+  binaries = [
+    {
+      name = "tz-util"
+    },
+  ]
 }

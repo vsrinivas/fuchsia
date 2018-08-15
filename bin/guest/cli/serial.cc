@@ -120,12 +120,11 @@ void SerialConsole::Start(zx::socket socket) {
   output_writer_->Start(std::move(socket));
 }
 
-void handle_serial(uint32_t env_id, uint32_t cid) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
+void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
+                   component::StartupContext* context) {
   // Connect to environment.
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  context->ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
   guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 
@@ -139,7 +138,7 @@ void handle_serial(uint32_t env_id, uint32_t cid) {
     std::cerr << "Failed to open serial port\n";
     return;
   }
-  SerialConsole console(&loop);
+  SerialConsole console(loop);
   console.Start(std::move(socket));
-  loop.Run();
+  loop->Run();
 }

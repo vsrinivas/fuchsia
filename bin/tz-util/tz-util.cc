@@ -7,7 +7,7 @@
 #include <zircon/syscalls.h>
 
 #include <fuchsia/timezone/cpp/fidl.h>
-#include "lib/component/cpp/environment_services.h"
+#include <lib/async-loop/cpp/loop.h>
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -20,7 +20,10 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 
 class TzUtil {
  public:
-  TzUtil() { component::ConnectToEnvironmentService(timezone_.NewRequest()); }
+  TzUtil(std::unique_ptr<component::StartupContext> context)
+      : context_(std::move(context)) {
+    context_->ConnectToEnvironmentService(timezone_.NewRequest());
+  }
 
   void Run(fxl::CommandLine command_line) {
     if (command_line.HasOption("help")) {
@@ -76,7 +79,7 @@ class TzUtil {
               << "--" << kGetOffsetCmd << "]" << std::endl;
     std::cout << std::endl;
   }
-
+  std::unique_ptr<component::StartupContext> context_;
   fuchsia::timezone::TimezoneSyncPtr timezone_;
 };
 
@@ -85,7 +88,9 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;
   }
-  TzUtil app;
+  // loop is needed by StartupContext.
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  TzUtil app(component::StartupContext::CreateFromStartupInfoNotChecked());
   app.Run(command_line);
   return 0;
 }

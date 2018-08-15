@@ -9,15 +9,14 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
-#include "lib/component/cpp/environment_services.h"
 #include "lib/svc/cpp/services.h"
 
-void handle_launch(int argc, const char* argv[]) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
+void handle_launch(int argc, const char* argv[], async::Loop* loop,
+                   component::StartupContext* context) {
   // Create environment.
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+
+  context->ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->CreateEnvironment(argv[0], guest_env.NewRequest());
 
@@ -31,10 +30,10 @@ void handle_launch(int argc, const char* argv[]) {
   fuchsia::guest::GuestInfo guest_info;
   guest_env->LaunchGuest(std::move(launch_info), guest_controller.NewRequest(),
                          &guest_info);
-  guest_controller.set_error_handler([&loop] { loop.Shutdown(); });
+  guest_controller.set_error_handler([loop] { loop->Shutdown(); });
 
   // Create the framebuffer view.
-  guest_controller->GetViewProvider([](auto view_provider) {
+  guest_controller->GetViewProvider([context](auto view_provider) {
     if (!view_provider.is_valid()) {
       return;
     }
@@ -45,14 +44,14 @@ void handle_launch(int argc, const char* argv[]) {
 
     // Ask the presenter to display it.
     fuchsia::ui::policy::PresenterSyncPtr presenter;
-    component::ConnectToEnvironmentService(presenter.NewRequest());
+    context->ConnectToEnvironmentService(presenter.NewRequest());
     presenter->Present(std::move(view_owner), nullptr);
   });
 
   // Open the serial service of the guest and process IO.
   zx::socket socket;
-  SerialConsole console(&loop);
+  SerialConsole console(loop);
   guest_controller->GetSerial(
       [&console](zx::socket socket) { console.Start(std::move(socket)); });
-  loop.Run();
+  loop->Run();
 }

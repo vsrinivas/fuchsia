@@ -5,6 +5,11 @@
 #ifndef GARNET_BIN_GUEST_CLI_LAUNCH_H_
 #define GARNET_BIN_GUEST_CLI_LAUNCH_H_
 
-void handle_launch(int argc, const char* argv[]);
+#include <lib/async-loop/cpp/loop.h>
+
+#include "lib/component/cpp/startup_context.h"
+
+void handle_launch(int argc, const char* argv[], async::Loop* loop,
+                   component::StartupContext* context);
 
 #endif  // GARNET_BIN_GUEST_CLI_LAUNCH_H_

@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 
 #include "garnet/bin/guest/cli/dump.h"
@@ -11,6 +12,7 @@
 #include "garnet/bin/guest/cli/list.h"
 #include "garnet/bin/guest/cli/serial.h"
 #include "garnet/bin/guest/cli/socat.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -38,7 +40,8 @@ bool parse_id(const char* arg, uint32_t* id) {
   return true;
 }
 
-static bool parse_args(int argc, const char** argv, CommandFunc* func) {
+static bool parse_args(int argc, const char** argv, async::Loop* loop,
+                       component::StartupContext* context, CommandFunc* func) {
   if (argc < 2) {
     return false;
   }
@@ -64,9 +67,13 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
       std::cerr << "Invalid length " << len_view << "\n";
       return false;
     }
-    *func = [env_id, cid, addr, len] { handle_dump(env_id, cid, addr, len); };
+    *func = [env_id, cid, addr, len, context] {
+      handle_dump(env_id, cid, addr, len, context);
+    };
   } else if (cmd_view == "launch" && argc >= 3) {
-    *func = [argc, argv]() { handle_launch(argc - 2, argv + 2); };
+    *func = [argc, argv, loop, context]() {
+      handle_launch(argc - 2, argv + 2, loop, context);
+    };
   } else if (cmd_view == "serial" && argc == 4) {
     uint32_t env_id;
     if (!parse_id(argv[2], &env_id)) {
@@ -76,7 +83,9 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
     if (!parse_id(argv[3], &cid)) {
       return false;
     }
-    *func = [env_id, cid]() { handle_serial(env_id, cid); };
+    *func = [env_id, cid, loop, context]() {
+      handle_serial(env_id, cid, loop, context);
+    };
   } else if ((cmd_view == "socat" || cmd_view == "socat-listen") && argc >= 4) {
     uint32_t env_id;
     fxl::StringView env_id_view(argv[2]);
@@ -98,8 +107,8 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
         std::cerr << "Invalid port: " << port_view << "\n";
         return false;
       }
-      *func = [env_id, cid, port]() {
-        handle_socat_connect(env_id, cid, port);
+      *func = [env_id, cid, port, loop, context]() {
+        handle_socat_connect(env_id, cid, port, loop, context);
       };
       return true;
     } else if (cmd_view == "socat-listen" && argc == 4) {
@@ -109,12 +118,14 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
         std::cerr << "Invalid port: " << host_port_view << "\n";
         return false;
       }
-      *func = [env_id, host_port]() { handle_socat_listen(env_id, host_port); };
+      *func = [env_id, host_port, loop, context]() {
+        handle_socat_listen(env_id, host_port, loop, context);
+      };
       return true;
     }
     return false;
   } else if (cmd_view == "list") {
-    *func = handle_list;
+    *func = [context]() { handle_list(context); };
     return true;
   } else {
     return false;
@@ -124,7 +135,9 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
 
 int main(int argc, const char** argv) {
   CommandFunc func;
-  if (!parse_args(argc, argv, &func)) {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
+  if (!parse_args(argc, argv, &loop, context.get(), &func)) {
     usage();
     return ZX_ERR_INVALID_ARGS;
   }

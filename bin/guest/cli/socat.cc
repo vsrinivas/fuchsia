@@ -44,17 +44,16 @@ class GuestVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
   SerialConsole console_;
 };
 
-void handle_socat_listen(uint32_t env_id, uint32_t port) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
+void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
+                         component::StartupContext* context) {
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  context->ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
   guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
-  GuestVsockAcceptor acceptor(port, &loop);
+  GuestVsockAcceptor acceptor(port, loop);
   fidl::Binding<fuchsia::guest::HostVsockAcceptor> binding(&acceptor);
   zx_status_t status;
   vsock_endpoint->Listen(port, binding.NewBinding(), &status);
@@ -63,14 +62,14 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
     return;
   }
 
-  loop.Run();
+  loop->Run();
 }
 
-void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
+void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
+                          async::Loop* loop,
+                          component::StartupContext* context) {
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  context->ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
@@ -89,7 +88,7 @@ void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
     return;
   }
 
-  SerialConsole console(&loop);
+  SerialConsole console(loop);
   console.Start(std::move(socket));
-  loop.Run();
+  loop->Run();
 }
