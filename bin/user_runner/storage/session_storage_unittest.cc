@@ -131,7 +131,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
   future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
-    delete_done = storage->DeleteStory(id);
+    delete_done = storage->DeleteStoryById(id);
   });
 
   auto future_all_data = storage->GetAllStoryData();
@@ -202,7 +202,7 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // Now delete one of them, and we should see that GetAllStoryData() only
   // returns one entry.
   bool delete_done{};
-  storage->DeleteStory(story1_id)->Then([&] { delete_done = true; });
+  storage->DeleteStoryByName("story1")->Then([&] { delete_done = true; });
 
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
@@ -293,7 +293,7 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   EXPECT_TRUE(updated_story_data.story_options.kind_of_proto_story);
 
   // Delete the story and expect to see a notification.
-  storage->DeleteStory(created_story_id);
+  storage->DeleteStoryById(created_story_id);
   RunLoopUntil([&] { return deleted; });
   EXPECT_EQ(created_story_id, deleted_story_id);
 }
@@ -347,7 +347,7 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   EXPECT_TRUE(updated_story_data.story_options.kind_of_proto_story);
 
   // Delete the story and expect to see a notification.
-  remote_storage->DeleteStory(created_story_id);
+  remote_storage->DeleteStoryById(created_story_id);
   RunLoopUntil([&] { return deleted; });
   EXPECT_EQ(created_story_id, deleted_story_id);
 }

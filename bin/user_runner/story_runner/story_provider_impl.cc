@@ -143,7 +143,7 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
     if (already_deleted_) {
       Teardown(flow);
     } else {
-      session_storage_->DeleteStory(story_id_)->WeakThen(
+      session_storage_->DeleteStoryById(story_id_)->WeakThen(
           GetWeakPtr(), [this, flow] { Teardown(flow); });
     }
   }

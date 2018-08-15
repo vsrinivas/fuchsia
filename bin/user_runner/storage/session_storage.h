@@ -83,6 +83,22 @@ class SessionStorage : public PageClient {
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
       fuchsia::modular::StoryOptions story_options);
 
+  // Deletes the |story_name| from the list of known stories and completes the
+  // returned Future when done.
+  //
+  // Does not currently delete the story's page, so it is left dangling.
+  //
+  // TODO(thatguy): Deleting stories is a two-step process:
+  //   1) Remove the story from the list of active stories (so it doesn't show
+  //      up on the timeline).
+  //   2) Delete the underlying story storage page.
+  //
+  // We only do (1). Find a way to split (1) and (2): either have the client
+  // pass in a Future that signals when it's OK to delete the story storage (ie,
+  // once the story has shut down cleanly) or split the function into two calls.
+  // MI4-1002
+  FuturePtr<> DeleteStoryByName(fidl::StringPtr story_name);
+
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.
   //
@@ -97,7 +113,7 @@ class SessionStorage : public PageClient {
   // pass in a Future that signals when it's OK to delete the story storage (ie,
   // once the story has shut down cleanly) or split the function into two calls.
   // MI4-1002
-  FuturePtr<> DeleteStory(fidl::StringPtr story_id);
+  FuturePtr<> DeleteStoryById(fidl::StringPtr story_id);
 
   // Sets the last focused timestamp for |story_id| to |ts|. Completes the
   // returned Future when done.

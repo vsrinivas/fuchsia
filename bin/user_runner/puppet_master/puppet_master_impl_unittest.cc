@@ -297,6 +297,31 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
         EXPECT_TRUE(data->story_options.kind_of_proto_story);
         done = true;
       });
+
+  RunLoopUntil([&] { return done; });
+}
+
+TEST_F(PuppetMasterTest, DeleteStory) {
+  std::string story_id;
+
+  // Create a story.
+  storage_->CreateStory("foo", {} /* extra_info */, {} /* story_options */)
+      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
+        story_id = id;
+      });
+
+  // Delete it
+  bool done{};
+  ptr_->DeleteStory("foo", [&] { done = true; });
+  RunLoopUntil([&] { return done; });
+
+  done = false;
+  storage_->GetStoryDataById(story_id)->Then(
+      [&](fuchsia::modular::internal::StoryDataPtr story_data) {
+        EXPECT_EQ(story_data, nullptr);
+        done = true;
+      });
+
   RunLoopUntil([&] { return done; });
 }
 

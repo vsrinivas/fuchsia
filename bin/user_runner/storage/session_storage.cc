@@ -139,10 +139,65 @@ FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
                      std::move(story_options));
 }
 
-FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
-  auto ret = Future<>::Create("SessionStorage.DeleteStory.ret");
+namespace {
+class DeleteStoryByNameCall : public Operation<> {
+ public:
+  DeleteStoryByNameCall(fuchsia::ledger::Page* const page,
+                        fidl::StringPtr story_name, ResultCall result_call)
+      : Operation("SessionStorage::DeleteStoryByNameCall",
+                  std::move(result_call)),
+        page_(page),
+        story_name_(story_name) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    operation_queue_.Add(
+        new ReadAllDataCall<fuchsia::modular::internal::StoryData>(
+            page_, kStoryKeyPrefix, XdrStoryData, [this, flow](auto all_data) {
+              for (auto& entry : *all_data) {
+                if (entry.story_name == story_name_) {
+                  Cont(flow, entry.story_info.id);
+                  return;
+                }
+              }
+              // Finish since flow goes out of scope
+            }));
+  }
+
+  void Cont(FlowToken flow, std::string story_id) {
+    page_->Delete(to_array(StoryIdToLedgerKey(story_id)),
+                  [this, flow](fuchsia::ledger::Status status) {
+                    // Deleting a key that doesn't exist is OK, not
+                    // KEY_NOT_FOUND.
+                    if (status != fuchsia::ledger::Status::OK) {
+                      FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
+                                     << fidl::ToUnderlying(status);
+                    }
+                  });
+  }
+
+  fuchsia::ledger::Page* const page_;  // not owned
+  const fidl::StringPtr story_name_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryByNameCall);
+};
+}  // namespace
+
+FuturePtr<> SessionStorage::DeleteStoryByName(fidl::StringPtr story_name) {
+  auto ret = Future<>::Create("SessionStorage.DeleteStoryByName.ret");
+  operation_queue_.Add(
+      new DeleteStoryByNameCall(page(), story_name, ret->Completer()));
+  return ret;
+}
+
+FuturePtr<> SessionStorage::DeleteStoryById(fidl::StringPtr story_id) {
+  auto ret = Future<>::Create("SessionStorage.DeleteStoryById.ret");
   operation_queue_.Add(NewCallbackOperation(
-      "SessionStorage::DeleteStory",
+      "SessionStorage::DeleteStoryById",
       [this, story_id](OperationBase* op) {
         auto deleted = Future<>::Create("SessionStorage.DeleteStory.deleted");
         page()->Delete(to_array(StoryIdToLedgerKey(story_id)),

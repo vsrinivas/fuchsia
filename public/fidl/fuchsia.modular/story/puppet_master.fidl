@@ -67,6 +67,9 @@ interface PuppetMaster {
   // duplicate. This is only needed right now because "maxwell" is starting
   // kronk when it should be the framework.
   3: Duplicate(request<PuppetMaster> @request);
+
+  // Deletes a story associated to |story_name|.
+  4: DeleteStory(string story_name) -> ();
 };
 
 struct WatchSessionOptions {

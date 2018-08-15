@@ -44,6 +44,10 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
   void Duplicate(
       fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) override;
 
+  // |PuppetMaster|
+  void DeleteStory(fidl::StringPtr story_name,
+                   DeleteStoryCallback done) override;
+
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
 
