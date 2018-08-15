@@ -73,6 +73,11 @@ enum class VSync {
     ADAPTIVE,
 };
 
+enum class TouchDevice {
+    PARADISE_V2,
+    PARADISE_V3,
+};
+
 typedef struct point {
     uint32_t x;
     uint32_t y;
@@ -294,6 +299,54 @@ static void prepare_poll(int touchfd, int touchpadfd, int* startfd, int* endfd,
         fds[1].events = POLLIN;
         fds[1].revents = 0;
         *endfd = 2;
+    }
+}
+
+template <typename T>
+void parse_paradise_touch_report(uint8_t* r, uint32_t width, uint32_t height,
+                                 pointf_t touch[NUM_FINGERS]) {
+    const auto report = reinterpret_cast<T*>(r);
+
+    for (uint8_t c = 0; c < NUM_FINGERS; c++) {
+        touch[c].x = NAN;
+        touch[c].y = NAN;
+        if (paradise_finger_flags_tswitch(report->fingers[c].flags)) {
+            touch[c].x =
+                (float)scale(report->fingers[c].x, width, PARADISE_X_MAX);
+            touch[c].y =
+                (float)scale(report->fingers[c].y, height, PARADISE_Y_MAX);
+        }
+    }
+}
+
+void parse_paradise_touchpad_report(uint8_t* r, uint32_t width, uint32_t height,
+                                    pointf_t touch[NUM_FINGERS],
+                                    uint8_t* button) {
+    const auto report = reinterpret_cast<paradise_touchpad_t*>(r);
+
+    for (uint8_t c = 0; c < NUM_FINGERS; c++) {
+        touch[c].x = NAN;
+        touch[c].y = NAN;
+        if (report->fingers[c].tip_switch) {
+            touch[c].x =
+                (float)scale(report->fingers[c].x, width, PARADISE_X_MAX);
+            touch[c].y =
+                (float)scale(report->fingers[c].y, height, PARADISE_Y_MAX);
+        }
+    }
+    *button = report->button;
+}
+
+void parse_paradise_stylus_report(uint8_t* r, uint32_t width, uint32_t height,
+                                  pointf_t* pen) {
+    const auto report = reinterpret_cast<paradise_stylus_t*>(r);
+
+    if (paradise_stylus_status_tswitch(report->status)) {
+        pen->x = (float)scale(report->x, width, PARADISE_STYLUS_X_MAX);
+        pen->y = (float)scale(report->y, height, PARADISE_STYLUS_Y_MAX);
+    } else {
+        pen->x = NAN;
+        pen->y = NAN;
     }
 }
 
@@ -989,6 +1042,7 @@ int main(int argc, char* argv[]) {
     }
 
     ssize_t ret;
+    TouchDevice touch_device;
     int touchfd = -1;
     int touchpadfd = -1;
     struct dirent* de;
@@ -1024,7 +1078,14 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        if (is_paradise_touch_v2_report_desc(rpt_desc, rpt_desc_len)) {
+            touch_device = TouchDevice::PARADISE_V2;
+            touchfd = fd;
+            continue;
+        }
+
         if (is_paradise_touch_v3_report_desc(rpt_desc, rpt_desc_len)) {
+            touch_device = TouchDevice::PARADISE_V3;
             touchfd = fd;
             continue;
         }
@@ -1190,33 +1251,26 @@ int main(int argc, char* argv[]) {
 
                 uint8_t id = *(uint8_t*)rpt_buf;
                 if (id == PARADISE_RPT_ID_TOUCH) {
-                    paradise_touch_t* rpt = (paradise_touch_t*)rpt_buf;
-
+                    if (touch_device == TouchDevice::PARADISE_V2) {
+                        parse_paradise_touch_report<paradise_touch_v2_t>(
+                            rpt_buf, width, height, touch);
+                    } else {
+                        parse_paradise_touch_report<paradise_touch_t>(
+                            rpt_buf, width, height, touch);
+                    }
                     for (uint8_t c = 0; c < NUM_FINGERS; c++) {
-                        touch[c].x = NAN;
-                        touch[c].y = NAN;
-                        if (paradise_finger_flags_tswitch(
-                                rpt->fingers[c].flags)) {
-                            touch[c].x = (float)scale(rpt->fingers[c].x, width,
-                                                      PARADISE_X_MAX);
-                            touch[c].y = (float)scale(rpt->fingers[c].y, height,
-                                                      PARADISE_Y_MAX);
+                        if (!isnan(touch[c].x) && !isnan(touch[c].y)) {
                             show_cursor = false;
                         }
                     }
                 } else if (id == PARADISE_RPT_ID_STYLUS) {
-                    paradise_stylus_t* rpt = (paradise_stylus_t*)rpt_buf;
+                    parse_paradise_stylus_report(rpt_buf, width, height,
+                                                 &pen[STYLUS_PEN]);
 
-                    if (paradise_stylus_status_tswitch(rpt->status)) {
-                        pen[STYLUS_PEN].x =
-                            (float)scale(rpt->x, width, PARADISE_STYLUS_X_MAX);
-                        pen[STYLUS_PEN].y =
-                            (float)scale(rpt->y, height, PARADISE_STYLUS_Y_MAX);
+                    if (!isnan(pen[STYLUS_PEN].x) &&
+                        !isnan(pen[STYLUS_PEN].y)) {
                         points[STYLUS_PEN].push_back(pen[STYLUS_PEN]);
                         show_cursor = false;
-                    } else {
-                        pen[STYLUS_PEN].x = NAN;
-                        pen[STYLUS_PEN].y = NAN;
                     }
                 }
             }
@@ -1226,16 +1280,13 @@ int main(int argc, char* argv[]) {
                 ssize_t bytes = read(touchpadfd, rpt_buf, max_touchpad_rpt_sz);
                 ZX_ASSERT(bytes > 0);
 
-                paradise_touchpad_t* rpt = (paradise_touchpad_t*)rpt_buf;
+                uint8_t button = 0;
+                parse_paradise_touchpad_report(rpt_buf, width, height, touch,
+                                               &button);
+
                 uint32_t contact_count = 0;
                 for (uint8_t c = 0; c < NUM_FINGERS; c++) {
-                    touch[c].x = NAN;
-                    touch[c].y = NAN;
-                    if (rpt->fingers[c].tip_switch) {
-                        touch[c].x = (float)scale(rpt->fingers[c].x, width,
-                                                  PARADISE_X_MAX);
-                        touch[c].y = (float)scale(rpt->fingers[c].y, height,
-                                                  PARADISE_Y_MAX);
+                    if (!isnan(touch[c].x) && !isnan(touch[c].y)) {
                         ++contact_count;
                     }
                 }
@@ -1243,9 +1294,10 @@ int main(int argc, char* argv[]) {
                 pen[TOUCH_PEN].x = NAN;
                 pen[TOUCH_PEN].y = NAN;
                 // Show cursor if we only have one contact point.
-                if (contact_count == 1 && rpt->fingers[0].tip_switch) {
+                if (contact_count == 1 &&
+                    (!isnan(touch[0].x) && !isnan(touch[0].y))) {
                     show_cursor = true;
-                    if (rpt->button) {
+                    if (button) {
                         pen[TOUCH_PEN].x = cursor.x;
                         pen[TOUCH_PEN].y = cursor.y;
                         points[TOUCH_PEN].push_back(pen[TOUCH_PEN]);
