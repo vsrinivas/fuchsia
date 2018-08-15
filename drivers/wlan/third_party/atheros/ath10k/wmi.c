@@ -6260,12 +6260,8 @@ void ath10k_wmi_start_scan_init(struct wmi_start_scan_arg* arg) {
     arg->max_scan_time = 20000;
     arg->probe_delay = 5;
     arg->notify_scan_events = WMI_SCAN_EVENT_STARTED
-                              | WMI_SCAN_EVENT_COMPLETED
-                              | WMI_SCAN_EVENT_BSS_CHANNEL
-                              | WMI_SCAN_EVENT_FOREIGN_CHANNEL
-                              | WMI_SCAN_EVENT_FOREIGN_CHANNEL_EXIT
-                              | WMI_SCAN_EVENT_DEQUEUED;
-    arg->scan_ctrl_flags |= WMI_SCAN_CHAN_STAT_EVENT;
+                              | WMI_SCAN_EVENT_COMPLETED;
+    arg->scan_ctrl_flags = 0;
     arg->n_bssids = 1;
 
     static uint8_t wildcard_bssid[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
