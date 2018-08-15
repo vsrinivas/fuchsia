@@ -113,6 +113,11 @@ class Node : public Resource {
   virtual bool GetIntersection(const escher::ray4& ray,
                                float* out_distance) const;
 
+  // Walk up tree until we find the responsible View; otherwise return nullptr.
+  // N.B. Typically the view and node are in the same session, but it's possible
+  // to have them inhabit different sessions.
+  View* FindOwningView() const;
+
  protected:
   Node(Session* session, scenic::ResourceId node_id,
        const ResourceTypeInfo& type_info);
@@ -146,6 +151,7 @@ class Node : public Resource {
   void set_view(View* view) { view_ = view; }
 
   uint32_t tag_value_ = 0u;
+
   Node* parent_ = nullptr;
   Scene* scene_ = nullptr;
   View* view_ = nullptr;

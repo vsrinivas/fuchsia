@@ -13,7 +13,9 @@
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
+#include "garnet/lib/ui/input/focus.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/geometry/cpp/formatting.h"
@@ -90,6 +92,24 @@ void InputCommandDispatcher::DispatchCommand(
       }
 
       FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
+
+      // Set up focus chain, send out focus events
+      FocusChain focus;
+      for (gfx::Hit hit : hits) {
+        ViewId view_id;
+
+        gfx::Session* session = gfx_system_->GetSession(hit.view_session);
+        if (session) {
+          gfx::ViewPtr owning_view =
+              session->resources()->FindResource<gfx::View>(hit.view_resource);
+          if (owning_view) {
+            view_id.session_id = hit.view_session;
+            view_id.resource_id = hit.view_resource;
+            focus.chain.push_back(view_id);
+          }
+        }
+      }
+
     }
   } else if (input_command.is_send_keyboard_input()) {
     FXL_VLOG(1) << "Scenic dispatch: " << input_command.send_keyboard_input();

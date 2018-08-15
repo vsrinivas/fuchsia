@@ -277,7 +277,8 @@ Compositor* GfxSystem::GetCompositor(scenic::ResourceId compositor_id) const {
 }
 
 gfx::Session* GfxSystem::GetSession(SessionId session_id) const {
-  return engine_->session_manager()->FindSession(session_id)->session();
+  SessionHandler* handler = engine_->session_manager()->FindSession(session_id);
+  return handler ? handler->session() : nullptr;
 }
 
 void GfxSystem::AddInitClosure(fit::closure closure) {

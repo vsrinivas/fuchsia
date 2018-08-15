@@ -411,5 +411,17 @@ void Node::RefreshScene(Scene* new_scene) {
   }
 }
 
+View* Node::FindOwningView() const {
+  const Node* node = this;
+  while (node) {
+    View *view = node->view();
+    if (view) {
+      return view;
+    }
+    node = node->parent();
+  }
+  return nullptr;
+}
+
 }  // namespace gfx
 }  // namespace scenic

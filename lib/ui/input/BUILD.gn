@@ -4,6 +4,7 @@
 
 source_set("input") {
   sources = [
+    "focus.h",
     "input_system.cc",
     "input_system.h",
   ]
@@ -11,6 +12,7 @@ source_set("input") {
   deps = [
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/geometry/cpp",

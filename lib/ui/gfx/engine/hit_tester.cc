@@ -4,8 +4,10 @@
 
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
-#include "lib/escher/util/type_utils.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
+#include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic {
@@ -27,7 +29,7 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   hits_.clear();  // Reset to good state after std::move.
 
   // Trace the ray.
-  RayInfo local_ray_info{ray, escher::mat4(1.f)};
+  RayInfo local_ray_info{ray, glm::mat4(1.f)};
   ray_info_ = &local_ray_info;
   AccumulateHitsLocal(node);
   ray_info_ = nullptr;
@@ -50,7 +52,7 @@ void HitTester::AccumulateHitsOuter(Node* node) {
 
   // Apply the node's transformation to derive a new local ray.
   auto inverse_transform =
-      glm::inverse(static_cast<escher::mat4>(node->transform()));
+      glm::inverse(static_cast<glm::mat4>(node->transform()));
   RayInfo* outer_ray_info = ray_info_;
   RayInfo local_ray_info{inverse_transform * outer_ray_info->ray,
                          inverse_transform * outer_ray_info->inverse_transform};
@@ -81,8 +83,11 @@ void HitTester::AccumulateHitsLocal(Node* node) {
   tag_info_ = outer_tag_info;
 
   if (local_tag_info.is_hit()) {
-    hits_.emplace_back(Hit{node->tag_value(), ray_info_->ray,
-                           ray_info_->inverse_transform,
+    View* view = node->FindOwningView();
+    SessionId view_session_id = view ? view->session()->id() : 0u;
+    ResourceId view_resource_id = view ? view->id() : 0u;
+    hits_.emplace_back(Hit{node->tag_value(), view_session_id, view_resource_id,
+                           ray_info_->ray, ray_info_->inverse_transform,
                            local_tag_info.distance});
     if (outer_tag_info)
       outer_tag_info->ReportIntersection(local_tag_info.distance);
@@ -115,7 +120,7 @@ bool HitTester::IsRayWithinClippedContentOuter(Node* node,
   }
 
   auto inverse_transform =
-      glm::inverse(static_cast<escher::mat4>(node->transform()));
+      glm::inverse(static_cast<glm::mat4>(node->transform()));
   escher::ray4 local_ray = inverse_transform * ray;
   return IsRayWithinClippedContentInner(node, local_ray);
 }
