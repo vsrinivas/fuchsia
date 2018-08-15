@@ -15,6 +15,8 @@ import (
 
 	"fidl/fuchsia/devicesettings"
 	nsfidl "fidl/fuchsia/netstack"
+
+	"netstack/dns"
 	"netstack/filter"
 	"netstack/link/eth"
 	"netstack/link/stats"
@@ -43,6 +45,7 @@ type netstack struct {
 	socketServer *socketServer
 
 	deviceSettings *devicesettings.DeviceSettingsManagerInterface
+	dnsClient      *dns.Client
 
 	mu       sync.Mutex
 	nodename string
@@ -222,7 +225,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.socketServer.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
 
 	OnInterfacesChanged()
 }
@@ -298,7 +301,7 @@ func (ifs *ifState) onEthStop() {
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.socketServer.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
 }
 
 func (ns *netstack) flattenRouteTables() []tcpip.Route {

@@ -16,11 +16,8 @@ import (
 	"syscall/zx/zxwait"
 	"time"
 
-	"netstack/dns"
-
 	"app/context"
 	"fidl/fuchsia/devicesettings"
-	"fidl/fuchsia/net"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -88,10 +85,9 @@ func signalConnectSuccess(s zx.Socket, outgoing bool) error {
 
 func newSocketServer(stk *stack.Stack, ctx *context.Context) (*socketServer, error) {
 	a := socketServer{
-		stack:     stk,
-		dnsClient: dns.NewClient(stk),
-		io:        make(map[cookie]*iostate),
-		next:      1,
+		stack: stk,
+		io:    make(map[cookie]*iostate),
+		next:  1,
 	}
 	return &a, nil
 }
@@ -590,9 +586,8 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 }
 
 type socketServer struct {
-	stack     *stack.Stack
-	dnsClient *dns.Client
-	ns        *netstack
+	stack *stack.Stack
+	ns    *netstack
 
 	mu   sync.Mutex
 	next cookie
@@ -1160,46 +1155,6 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	}
 
 	return zx.ErrOk
-}
-
-func (s *socketServer) GetAddrInfo(node *string, service *string, transProto tcpip.TransportProtocolNumber) (status net.AddrInfoStatus, addrs []tcpip.Address, port uint16) {
-	s.mu.Lock()
-	dnsClient := s.dnsClient
-	s.mu.Unlock()
-
-	if dnsClient == nil {
-		log.Println("getaddrinfo called, but no DNS client available.")
-		return net.AddrInfoStatusFail, nil, 0
-	}
-
-	var err error
-	if service != nil && *service != "" {
-		port, err = serviceLookup(*service, transProto)
-		if err != nil {
-			if debug {
-				log.Printf("getaddrinfo: serviceLookup: %v", err)
-			}
-			return net.AddrInfoStatusSystemError, nil, 0
-		}
-	}
-
-	if node == nil {
-		addrs = append(addrs, "\x00\x00\x00\x00")
-	} else {
-		addrs, err = dnsClient.LookupIP(*node)
-		if err != nil {
-			if *node == "localhost" {
-				addrs = append(addrs, "\x7f\x00\x00\x01")
-			} else {
-				addrs = append(addrs, tcpip.Parse(*node))
-				if debug2 {
-					log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
-				}
-			}
-		}
-	}
-
-	return net.AddrInfoStatusOk, addrs, port
 }
 
 func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {

@@ -116,9 +116,32 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 		return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
 	}
 
-	status, addrs, port := ns.socketServer.GetAddrInfo(node, service, transProto)
-	if status != 0 {
-		return status, 0, nil, nil, nil, nil, nil
+	var port uint16
+	if service != nil && *service != "" {
+		port, err = serviceLookup(*service, transProto)
+		if err != nil {
+			if debug {
+				log.Printf("getaddrinfo: serviceLookup: %v", err)
+			}
+			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
+		}
+	}
+
+	var addrs []tcpip.Address
+	if node == nil {
+		addrs = append(addrs, "\x00\x00\x00\x00")
+	} else {
+		addrs, err = ns.dnsClient.LookupIP(*node)
+		if err != nil {
+			if *node == "localhost" {
+				addrs = append(addrs, "\x7f\x00\x00\x01")
+			} else {
+				addrs = append(addrs, tcpip.Parse(*node))
+				if debug2 {
+					log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
+				}
+			}
+		}
 	}
 	if len(addrs) == 0 || len(addrs[0]) == 0 {
 		return net.AddrInfoStatusNoName, 0, nil, nil, nil, nil, nil

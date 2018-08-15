@@ -10,6 +10,7 @@ import (
 
 	"app/context"
 
+	"netstack/dns"
 	"netstack/link/eth"
 	"netstack/watcher"
 
@@ -82,6 +83,7 @@ func main() {
 		arena:          arena,
 		stack:          stk,
 		socketServer:   s,
+		dnsClient:      dns.NewClient(stk),
 		deviceSettings: ds,
 		ifStates:       make(map[tcpip.NICID]*ifState),
 	}
