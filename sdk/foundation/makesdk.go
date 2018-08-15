@@ -25,14 +25,12 @@ import (
 var archive = flag.Bool("archive", true, "Whether to archive the output")
 var output = flag.String("output", "fuchsia-sdk.tgz", "Name of the archive")
 var outDir = flag.String("out-dir", "", "Output directory")
-var toolchain = flag.Bool("toolchain", false, "Include toolchain")
 var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain libraries in SDK. Typically used when --toolchain is false")
 var sysroot = flag.Bool("sysroot", true, "Include sysroot")
 var kernelImg = flag.Bool("kernel-img", true, "Include kernel image")
 var kernelDebugObjs = flag.Bool("kernel-dbg", true, "Include kernel objects with debug symbols")
 var bootdata = flag.Bool("bootdata", true, "Include bootdata")
 var qemu = flag.Bool("qemu", true, "Include QEMU binary")
-var tools = flag.Bool("tools", true, "Include additional tools")
 var verbose = flag.Bool("v", false, "Verbose output")
 var dryRun = flag.Bool("n", false, "Dry run - print what would happen but don't actually do it")
 
@@ -94,16 +92,6 @@ func init() {
 			"qemu",
 		},
 		{
-			tools,
-			"out/build-zircon/tools",
-			"tools",
-		},
-		{
-			toolchain,
-			fmt.Sprintf("buildtools/%s-%s/clang", hostOs, hostCpu),
-			"clang",
-		},
-		{
 			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
 			toolchainLibs,
 			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/8.0.0/x86_64-fuchsia/lib", hostOs, hostCpu),
@@ -118,52 +106,7 @@ func init() {
 	}
 
 	files := []file{
-		{
-			kernelImg,
-			"out/build-zircon/build-arm64/qemu-zircon.bin",
-			"target/aarch64/zircon.bin",
-		},
-		{
-			kernelImg,
-			path.Join(armBuildDir, "bootdata-blob-qemu.bin"),
-			"target/aarch64/bootdata-blob.bin",
-		},
-		{
-			kernelImg,
-			path.Join(armBuildDir, "images/fvm.blk"),
-			"target/aarch64/fvm.blk",
-		},
-
-		{
-			kernelImg,
-			"out/build-zircon/build-x64/zircon.bin",
-			"target/x86_64/zircon.bin",
-		},
-		{
-			kernelImg,
-			path.Join(x64BuildDir, "bootdata-blob-pc.bin"),
-			"target/x86_64/bootdata-blob.bin",
-		},
-		{
-			kernelImg,
-			path.Join(x64BuildDir, "images/local-pc.esp.blk"),
-			"target/x86_64/local.esp.blk",
-		},
-		{
-			kernelImg,
-			path.Join(x64BuildDir, "images/zircon-pc.vboot"),
-			"target/x86_64/zircon.vboot",
-		},
-		{
-			kernelImg,
-			path.Join(x64BuildDir, "images/fvm.blk"),
-			"target/x86_64/fvm.blk",
-		},
-		{
-			kernelImg,
-			path.Join(x64BuildDir, "images/fvm.sparse.blk"),
-			"target/x86_64/fvm.sparse.blk",
-		},
+		// TODO(BLD-245): remove these toolchain libraries.
 		{
 			sysroot,
 			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++.so.2"),
@@ -193,16 +136,6 @@ func init() {
 			sysroot,
 			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libunwind.so.1"),
 			"arch/arm64/dist/libunwind.so.1",
-		},
-		{
-			tools,
-			path.Join(x64BuildDir, "host_x64/far"),
-			"tools/far",
-		},
-		{
-			tools,
-			path.Join(x64BuildDir, "host_x64/pm"),
-			"tools/pm",
 		},
 	}
 
@@ -266,7 +199,7 @@ func createLayout(manifest, fuchsiaRoot, outDir string) {
 		}
 		out, err := exec.Command(cmd, args...).CombinedOutput()
 		if err != nil {
-			log.Fatal("create_layout.py failed with output", string(out), "error", err)
+			log.Fatal("generate.py failed with output", string(out), "error", err)
 		}
 	}
 }
