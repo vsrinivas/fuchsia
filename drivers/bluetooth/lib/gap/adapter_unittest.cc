@@ -32,8 +32,9 @@ class AdapterTest : public TestingBase {
     TestingBase::SetUp();
     transport_closed_called_ = false;
 
-    adapter_ = std::make_unique<Adapter>(transport(),
-                                         l2cap::testing::FakeLayer::Create(),
+    l2cap_ = l2cap::testing::FakeLayer::Create();
+    l2cap_->Initialize();
+    adapter_ = std::make_unique<Adapter>(transport(), l2cap_,
                                          gatt::testing::FakeLayer::Create());
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
@@ -61,6 +62,7 @@ class AdapterTest : public TestingBase {
 
  private:
   bool transport_closed_called_;
+  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
   std::unique_ptr<Adapter> adapter_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AdapterTest);
