@@ -111,12 +111,27 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
     renderer_.SetParam(std::move(param));
   }
 
+  // Set up |a11y_toggle_| to listen for turning on/off a11y support.
+  {
+    a11y_toggle_.events().OnAccessibilityToggle =
+        fit::bind_member(this, &Presentation1::OnAccessibilityToggle);
+    a11y_toggle_.set_error_handler([this]() {
+      FXL_LOG(INFO) << "Disconnected from a11y toggle broadcaster.";
+      // If we disconnect from the a11y toggler, we have no way of turning on or
+      // off accessibility support, so we just force it to stay disabled.
+      accessibility_mode_ = false;
+    });
+    startup_context->ConnectToEnvironmentService(a11y_toggle_.NewRequest());
+  }
+
   // Set up |a11y_input_connection_| to listen for simulated events when a11y is
   // turned on.
-  a11y_input_connection_.events().OnReturnInputEvent =
-      fit::bind_member(this, &Presentation1::OnEvent);
-  a11y_input_connection_.set_error_handler(
-      [this] { a11y_input_connection_.Unbind(); });
+  {
+    a11y_input_connection_.events().OnReturnInputEvent =
+        fit::bind_member(this, &Presentation1::OnEvent);
+    a11y_input_connection_.set_error_handler(
+        [this] { a11y_input_connection_.Unbind(); });
+  }
 
   FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
       << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
@@ -715,6 +730,10 @@ void Presentation1::OnAccessibilityEvent(fuchsia::ui::input::InputEvent event) {
     return;
   }
   OnEvent(std::move(event));
+}
+
+void Presentation1::OnAccessibilityToggle(bool enabled) {
+  accessibility_mode_ = enabled;
 }
 
 void Presentation1::OnSensorEvent(uint32_t device_id,

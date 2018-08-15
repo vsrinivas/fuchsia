@@ -218,6 +218,10 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // accessibility input dispatch.
   void OnAccessibilityEvent(fuchsia::ui::input::InputEvent event);
 
+  // Enable or disable accessibility support in this presentation.
+  // Event handler for |a11y_toggle_.events().OnAccessibilityToggle|.
+  void OnAccessibilityToggle(bool enabled);
+
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
   void PresentScene();
@@ -346,6 +350,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // Used to reconnect |a11y_input_connection_| once the presentation receives
   // input.
   component::StartupContext* startup_context_;
+  fuchsia::accessibility::ToggleBroadcasterPtr a11y_toggle_;
   // Flag to allow connecting to |a11y_input_connection_| and piping input to
   // it. We currently leave no way to set this to true, while a11y
   // infrastructure is still in development.
