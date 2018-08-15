@@ -16,7 +16,7 @@ use std::num::NonZeroU16;
 use crate::ip::{Ip, IpAddr, Ipv4, Ipv6};
 use crate::wire::tcp::TcpSegment;
 use crate::wire::BufferAndRange;
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 use self::conn::Conn;
 use self::listen::Listener;
@@ -49,8 +49,8 @@ struct FourTuple<A: IpAddr> {
 }
 
 /// Receive a TCP segment in an IP packet.
-pub fn receive_ip_packet<A: IpAddr, B: AsMut<[u8]>>(
-    state: &mut StackState, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: AsMut<[u8]>>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
 ) {
     println!("received tcp packet: {:x?}", buffer.as_mut());
     let (segment, body_range) =

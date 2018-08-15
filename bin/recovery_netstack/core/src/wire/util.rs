@@ -712,7 +712,8 @@ mod buffer {
         ///
         /// # Examples
         ///
-        /// ```rust
+        /// ```rust,ignore
+        /// # // TODO(joshlf): Make this compile and remove the ignore
         /// let buf = [0; 10];
         /// let mut buf = BufferAndRange::new(&buf, 2..8);
         /// assert_eq!(buf.as_ref().len(), 6);
@@ -855,7 +856,8 @@ mod buffer {
     /// equivalent to the following code, except with overflow explicitly
     /// checked:
     ///
-    /// ```rust
+    /// ```rust,ignore
+    /// # // TODO(joshlf): Make this compile and remove the ignore
     /// Range {
     ///     start: ((range.start as isize) + offset) as usize,
     ///     end: ((range.end as isize) + offset) as usize,

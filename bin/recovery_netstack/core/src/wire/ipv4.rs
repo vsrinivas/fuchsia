@@ -384,7 +384,8 @@ impl Ipv4PacketBuilder {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
+    /// # // TODO(joshlf): Make this compile and remove the ignore
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
     /// let builder = Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto);

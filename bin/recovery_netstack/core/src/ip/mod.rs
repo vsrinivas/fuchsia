@@ -23,7 +23,7 @@ use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
 use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use crate::wire::{AddrSerializationCallback, BufferAndRange, SerializationCallback};
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 // default IPv4 TTL or IPv6 hops
 const DEFAULT_TTL: u8 = 64;
@@ -41,19 +41,19 @@ struct IpLayerStateInner<I: Ip> {
     table: ForwardingTable<I>,
 }
 
-fn dispatch_receive_ip_packet<I: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
-    proto: IpProto, state: &mut StackState, src_ip: I, dst_ip: I, mut buffer: BufferAndRange<B>,
+fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
+    ctx: &mut Context<D>, proto: IpProto, src_ip: I, dst_ip: I, mut buffer: BufferAndRange<B>,
 ) -> bool {
-    increment_counter!(state, "dispatch_receive_ip_packet");
+    increment_counter!(ctx, "dispatch_receive_ip_packet");
     match proto {
-        IpProto::Icmp => icmp::receive_icmp_packet(state, src_ip, dst_ip, buffer),
-        _ => crate::transport::receive_ip_packet(state, src_ip, dst_ip, proto, buffer),
+        IpProto::Icmp => icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer),
+        _ => crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer),
     }
 }
 
 /// Receive an IP packet from a device.
-pub fn receive_ip_packet<I: Ip>(
-    state: &mut StackState, device: DeviceId, mut buffer: BufferAndRange<&mut [u8]>,
+pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
+    ctx: &mut Context<D>, device: DeviceId, mut buffer: BufferAndRange<&mut [u8]>,
 ) {
     trace!("receive_ip_packet({})", device);
     let (mut packet, body_range) =
@@ -79,7 +79,7 @@ pub fn receive_ip_packet<I: Ip>(
             "got packet from remote host for loopback address {}",
             packet.dst_ip()
         );
-    } else if deliver(state, device, packet.dst_ip()) {
+    } else if deliver(ctx, device, packet.dst_ip()) {
         trace!("receive_ip_packet: delivering locally");
         // TODO(joshlf):
         // - Do something with ICMP if we don't have a handler for that protocol?
@@ -91,12 +91,12 @@ pub fn receive_ip_packet<I: Ip>(
             mem::drop(packet);
             // slice the buffer to be only the body range
             buffer.slice(body_range);
-            dispatch_receive_ip_packet(proto, state, src_ip, dst_ip, buffer)
+            dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer)
         } else {
             // TODO(joshlf): Log unrecognized protocol number
             false
         };
-    } else if let Some(dest) = forward(state, packet.dst_ip()) {
+    } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
@@ -104,7 +104,7 @@ pub fn receive_ip_packet<I: Ip>(
             // drop packet so we can re-use the underlying buffer
             mem::drop(packet);
             crate::device::send_ip_frame(
-                state,
+                ctx,
                 dest.device,
                 dest.next_hop,
                 |prefix_bytes, body_plus_padding_bytes| {
@@ -137,7 +137,9 @@ pub fn receive_ip_packet<I: Ip>(
 // - dst_ip is equal to the address set on the device
 // - dst_ip is equal to the broadcast address of the subnet set on the device
 // - dst_ip is equal to the global broadcast address
-fn deliver<A: IpAddr>(state: &mut StackState, device: DeviceId, dst_ip: A) -> bool {
+fn deliver<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, device: DeviceId, dst_ip: A,
+) -> bool {
     // TODO(joshlf):
     // - This implements a strict host model (in which we only accept packets
     //   which are addressed to the device over which they were received). This
@@ -153,19 +155,22 @@ fn deliver<A: IpAddr>(state: &mut StackState, device: DeviceId, dst_ip: A) -> bo
             Ipv6Addr => { log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted") }
         }
     );
-    A::deliver(dst_ip, crate::device::get_ip_addr::<A>(state, device))
+    A::deliver(dst_ip, crate::device::get_ip_addr::<D, A>(ctx, device))
 }
 
 // Should we forward this packet, and if so, to whom?
-fn forward<A: IpAddr>(state: &mut StackState, dst_ip: A) -> Option<Destination<A::Version>> {
+fn forward<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, dst_ip: A,
+) -> Option<Destination<A::Version>> {
     specialize_ip_addr!(
         fn forwarding_enabled(state: &IpLayerState) -> bool {
             Ipv4Addr => { state.v4.forward }
             Ipv6Addr => { state.v6.forward }
         }
     );
-    if A::forwarding_enabled(&state.ip) {
-        lookup_route(&state.ip, dst_ip)
+    let ip_state = &ctx.state().ip;
+    if A::forwarding_enabled(ip_state) {
+        lookup_route(ip_state, dst_ip)
     } else {
         None
     }
@@ -195,7 +200,7 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 /// size passed to the callback.
 ///
 /// For more details on the callback, see the
-/// [`core::wire::AddrSerializationCallback`] documentation.
+/// [`crate::wire::AddrSerializationCallback`] documentation.
 ///
 /// # Panics
 ///
@@ -203,26 +208,27 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 /// have sufficient space preceding the body for all encapsulating headers or
 /// does not have enough body plus padding bytes to satisfy the requirement
 /// passed to the callback.
-pub fn send_ip_packet<A, B, F>(state: &mut StackState, dst_ip: A, proto: IpProto, get_buffer: F)
-where
+pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
+    ctx: &mut Context<D>, dst_ip: A, proto: IpProto, get_buffer: F,
+) where
     A: IpAddr,
     B: AsRef<[u8]> + AsMut<[u8]>,
     F: AddrSerializationCallback<A, B>,
 {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
-    increment_counter!(state, "send_ip_packet");
+    increment_counter!(ctx, "send_ip_packet");
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
-        increment_counter!(state, "send_ip_packet::loopback");
+        increment_counter!(ctx, "send_ip_packet::loopback");
         let buffer = get_buffer(A::Version::LOOPBACK_ADDRESS, 0, 0);
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
-        dispatch_receive_ip_packet(proto, state, A::Version::LOOPBACK_ADDRESS, dst_ip, buffer);
-    } else if let Some(dest) = lookup_route(&state.ip, dst_ip) {
-        let (src_ip, _) = crate::device::get_ip_addr(state, dest.device)
+        dispatch_receive_ip_packet(ctx, proto, A::Version::LOOPBACK_ADDRESS, dst_ip, buffer);
+    } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
+        let (src_ip, _) = crate::device::get_ip_addr(ctx, dest.device)
             .expect("IP device route set for device without IP address");
         send_ip_packet_from(
-            state,
+            ctx,
             dest.device,
             src_ip,
             dst_ip,
@@ -250,8 +256,8 @@ where
 /// post-body padding must not be smaller than the minimum size passed to the
 /// callback.
 ///
-/// For more details on the callback, see the [`core::wire::SerializationCallback`]
-/// documentation.
+/// For more details on the callback, see the
+/// [`crate::wire::SerializationCallback`] documentation.
 ///
 /// # Panics
 ///
@@ -263,8 +269,8 @@ where
 /// Since `send_ip_packet_from` specifies a physical device, it cannot send to
 /// or from a loopback IP address. If either `src_ip` or `dst_ip` are in the
 /// loopback subnet, `send_ip_packet_from` will panic.
-pub fn send_ip_packet_from<A, B, F>(
-    state: &mut StackState, device: DeviceId, src_ip: A, dst_ip: A, next_hop: A, proto: IpProto,
+pub fn send_ip_packet_from<D: EventDispatcher, A, B, F>(
+    ctx: &mut Context<D>, device: DeviceId, src_ip: A, dst_ip: A, next_hop: A, proto: IpProto,
     get_buffer: F,
 ) where
     A: IpAddr,
@@ -274,7 +280,7 @@ pub fn send_ip_packet_from<A, B, F>(
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
     crate::device::send_ip_frame(
-        state,
+        ctx,
         device,
         next_hop,
         |mut prefix_bytes, mut body_plus_padding_bytes| {

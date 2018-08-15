@@ -32,8 +32,10 @@ mod testutil;
 mod transport;
 mod wire;
 
-pub use crate::device::{ethernet::Mac, receive_frame, set_ip_addr, DeviceId};
+pub use crate::device::{ethernet::Mac, receive_frame, set_ip_addr, DeviceId,
+                        DeviceLayerEventDispatcher};
 pub use crate::ip::{Ipv4Addr, Subnet};
+pub use crate::transport::TransportLayerEventDispatcher;
 
 use crate::device::DeviceLayerState;
 use crate::ip::IpLayerState;
@@ -54,4 +56,48 @@ impl StackState {
     pub fn add_ethernet_device(&mut self, mac: Mac) -> DeviceId {
         self.device.add_ethernet_device(mac)
     }
+}
+
+/// Context available during the execution of the netstack.
+///
+/// `Context` provides access to the state of the netstack and to an event
+/// dispatcher which can be used to emit events and schedule timeouts. A mutable
+/// reference to a `Context` is passed to every function in the netstack.
+pub struct Context<D: EventDispatcher> {
+    state: StackState,
+    dispatcher: D,
+}
+
+impl<D: EventDispatcher> Context<D> {
+    /// Construct a new `Context`.
+    pub fn new(state: StackState, dispatcher: D) -> Context<D> {
+        Context { state, dispatcher }
+    }
+
+    /// Get the stack state.
+    pub fn state(&mut self) -> &mut StackState {
+        &mut self.state
+    }
+
+    /// Get the dispatcher.
+    pub fn dispatcher(&mut self) -> &mut D {
+        &mut self.dispatcher
+    }
+}
+
+/// An object which can dispatch events to a real system.
+///
+/// An `EventDispatcher` provides access to a real system. It provides the
+/// ability to emit events and schedule timeouts. Each layer of the stack
+/// provides its own event dispatcher trait which specifies the types of actions
+/// that must be supported in order to support that layer of the stack. The
+/// `EventDispatcher` trait is a sub-trait of all of these traits.
+pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispatcher {
+    // TODO(joshlf): Figure out how to cancel timeouts.
+
+    /// Schedule a callback to be invoked after a timeout.
+    ///
+    /// `schedule_timeout` schedules `f` to be invoked after `duration` has
+    /// elapsed.
+    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, duration: (), f: F);
 }

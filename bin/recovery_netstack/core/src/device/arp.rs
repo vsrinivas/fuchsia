@@ -9,7 +9,7 @@ use std::hash::Hash;
 
 use crate::wire::{arp::{ArpPacket, HType, PType},
                   BufferAndRange, SerializationCallback};
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 /// The type of an ARP operation.
 #[derive(Debug, Eq, PartialEq)]
@@ -84,7 +84,7 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// to the callback.
     ///
     /// For more details on the callback, see the
-    /// [`::wire::SerializationCallback`] documentation.
+    /// [`crate::wire::SerializationCallback`] documentation.
     ///
     /// # Panics
     ///
@@ -92,14 +92,16 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// not have sufficient space preceding the body for all encapsulating
     /// headers or does not have enough body plus padding bytes to satisfy the
     /// requirement passed to the callback.
-    fn send_arp_frame<B, F>(
-        state: &mut StackState, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
+    fn send_arp_frame<D: EventDispatcher, B, F>(
+        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
     ) where
         B: AsRef<[u8]> + AsMut<[u8]>,
         F: SerializationCallback<B>;
 
     /// Get a mutable reference to a device's ARP state.
-    fn get_arp_state(state: &mut StackState, device_id: u64) -> &mut ArpState<P, Self>;
+    fn get_arp_state<D: EventDispatcher>(
+        ctx: &mut Context<D>, device_id: u64,
+    ) -> &mut ArpState<P, Self>;
 }
 
 /// Receive an ARP packet from a device.
@@ -109,11 +111,16 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
 /// hardware types in a given context, it is the caller's responsibility to call
 /// `peek_arp_types` in order to determine which types to use in calling this
 /// function.
-pub fn receive_arp_packet<P: PType + Eq + Hash, D: ArpDevice<P>, B: AsRef<[u8]> + AsMut<[u8]>>(
-    state: &mut StackState, device_id: u64, src_addr: D::HardwareAddr, dst_addr: D::HardwareAddr,
+pub fn receive_arp_packet<
+    D: EventDispatcher,
+    P: PType + Eq + Hash,
+    AD: ArpDevice<P>,
+    B: AsRef<[u8]> + AsMut<[u8]>,
+>(
+    ctx: &mut Context<D>, device_id: u64, src_addr: AD::HardwareAddr, dst_addr: AD::HardwareAddr,
     mut buffer: BufferAndRange<B>,
 ) {
-    let packet = if let Ok(packet) = ArpPacket::<_, D::HardwareAddr, P>::parse(buffer.as_mut()) {
+    let packet = if let Ok(packet) = ArpPacket::<_, AD::HardwareAddr, P>::parse(buffer.as_mut()) {
         packet
     } else {
         // TODO(joshlf): Do something else here?
@@ -123,15 +130,15 @@ pub fn receive_arp_packet<P: PType + Eq + Hash, D: ArpDevice<P>, B: AsRef<[u8]> 
 }
 
 /// Look up the hardware address for a network protocol address.
-pub fn lookup<P: PType + Eq + Hash, D: ArpDevice<P>>(
-    state: &mut StackState, device_id: u64, local_addr: D::HardwareAddr, lookup: P,
-) -> Option<D::HardwareAddr> {
+pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+    ctx: &mut Context<D>, device_id: u64, local_addr: AD::HardwareAddr, lookup: P,
+) -> Option<AD::HardwareAddr> {
     // TODO(joshlf): Figure out what to do if a frame can't be sent right now
     // because it needs to wait for an ARP reply. Where do we put those frames?
     // How do we associate them with the right ARP reply? How do we retreive
     // them when we get that ARP reply? How do we time out so we don't hold onto
     // a stale frame forever?
-    D::get_arp_state(state, device_id)
+    AD::get_arp_state(ctx, device_id)
         .table
         .lookup(lookup)
         .map(|val| val.addr)

@@ -15,10 +15,10 @@ use log::{debug, log};
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{IpAddr, Subnet};
 use crate::wire::SerializationCallback;
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct DeviceId {
     id: u64,
     protocol: DeviceProtocol,
@@ -50,7 +50,7 @@ impl Debug for DeviceId {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum DeviceProtocol {
     Ethernet,
 }
@@ -94,6 +94,14 @@ impl DeviceLayerState {
     }
 }
 
+/// An event dispatcher for the device layer.
+///
+/// See the `EventDispatcher` trait in the crate root for more details.
+pub trait DeviceLayerEventDispatcher {
+    /// Send a frame to a device driver.
+    fn send_frame(&mut self, device: DeviceId, frame: &[u8]);
+}
+
 /// Send an IP packet in a device layer frame.
 ///
 /// `send_ip_frame` accepts a device ID, a local IP address, and a callback. It
@@ -105,8 +113,8 @@ impl DeviceLayerState {
 /// number of bytes in the body and the post-body padding must not be smaller
 /// than the minimum size passed to the callback.
 ///
-/// For more details on the callback, see the [`crate::wire::SerializationCallback`]
-/// documentation.
+/// For more details on the callback, see the
+/// [`crate::wire::SerializationCallback`] documentation.
 ///
 /// # Panics
 ///
@@ -114,8 +122,8 @@ impl DeviceLayerState {
 /// have sufficient space preceding the body for all encapsulating headers or
 /// does not have enough body plus padding bytes to satisfy the requirement
 /// passed to the callback.
-pub fn send_ip_frame<A, B, F>(
-    state: &mut StackState, device: DeviceId, local_addr: A, get_buffer: F,
+pub fn send_ip_frame<D: EventDispatcher, A, B, F>(
+    ctx: &mut Context<D>, device: DeviceId, local_addr: A, get_buffer: F,
 ) where
     A: IpAddr,
     B: AsRef<[u8]> + AsMut<[u8]>,
@@ -123,31 +131,33 @@ pub fn send_ip_frame<A, B, F>(
 {
     match device.protocol {
         DeviceProtocol::Ethernet => {
-            self::ethernet::send_ip_frame(state, device.id, local_addr, get_buffer)
+            self::ethernet::send_ip_frame(ctx, device.id, local_addr, get_buffer)
         }
     }
 }
 
 /// Receive a device layer frame from the network.
-pub fn receive_frame(state: &mut StackState, device: DeviceId, bytes: &mut [u8]) {
+pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId, bytes: &mut [u8]) {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::receive_frame(state, device.id, bytes),
+        DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id, bytes),
     }
 }
 
 /// Get the IP address and subnet associated with this device.
-pub fn get_ip_addr<A: IpAddr>(state: &mut StackState, device: DeviceId) -> Option<(A, Subnet<A>)> {
+pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, device: DeviceId,
+) -> Option<(A, Subnet<A>)> {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr(state, device.id),
+        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr(ctx, device.id),
     }
 }
 
 /// Set the IP address and subnet associated with this device.
-pub fn set_ip_addr<A: IpAddr>(
-    state: &mut StackState, device: DeviceId, addr: A, subnet: Subnet<A>,
+pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, device: DeviceId, addr: A, subnet: Subnet<A>,
 ) {
     assert!(subnet.contains(addr));
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::set_ip_addr(state, device.id, addr, subnet),
+        DeviceProtocol::Ethernet => self::ethernet::set_ip_addr(ctx, device.id, addr, subnet),
     }
 }

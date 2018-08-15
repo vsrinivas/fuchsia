@@ -321,7 +321,8 @@ impl TcpSegmentBuilder {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
+    /// # // TODO(joshlf): Make this compile and remove the ignore
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
     /// let builder = TcpSegmentBuilder::new(src_port, dst_port, seq_num, ack_num, window_size);

@@ -7,7 +7,7 @@
 use crate::ip::IpAddr;
 use crate::wire::udp::UdpPacket;
 use crate::wire::BufferAndRange;
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 use log::log;
 
@@ -16,8 +16,8 @@ use log::log;
 pub struct UdpState;
 
 /// Receive a UDP packet in an IP packet.
-pub fn receive_ip_packet<A: IpAddr, B: AsMut<[u8]>>(
-    state: &mut StackState, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: AsMut<[u8]>>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
 ) {
     println!("received udp packet: {:x?}", buffer.as_mut());
     let (packet, body_range) =

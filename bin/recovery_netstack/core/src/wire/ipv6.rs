@@ -272,7 +272,8 @@ impl Ipv6PacketBuilder {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
+    /// # // TODO(joshlf): Make this compile and remove the ignore
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
     /// let builder = Ipv6PacketBuilder::new(src_ip, dst_ip, hop_limit, proto);

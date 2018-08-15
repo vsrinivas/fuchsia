@@ -4,7 +4,8 @@
 
 //! Macros used in `recovery_netstack`.
 
-/// Define a function which is specialized on [`ip::Ipv4`] and [`ip::Ipv6`].
+/// Define a function which is specialized on [`crate::ip::Ipv4`] and
+/// [`crate::ip::Ipv6`].
 ///
 /// `specialize_ip` is used to define a generic function which has specialized
 /// implementations depending on which IP version is used - `Ipv4` or `Ipv6`.
@@ -19,7 +20,8 @@
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
+/// # // TODO(joshlf): Make this compile and remove the ignore
 /// pub struct IpState {
 ///     ipv4_table: ForwardingTable<Ipv4>,
 ///     ipv6_table: ForwardingTable<Ipv6>,
@@ -197,8 +199,8 @@ macro_rules! specialize_ip {
     );
 }
 
-/// Define a function which is specialized on [`ip::Ipv4Addr`] and
-/// [`ip::Ipv6Addr`].
+/// Define a function which is specialized on [`crate::ip::Ipv4Addr`] and
+/// [`crate::ip::Ipv6Addr`].
 ///
 /// `specialize_ip_addr` is used to define a generic function which has
 /// specialized implementations depending on which IP address version is used -
@@ -213,7 +215,8 @@ macro_rules! specialize_ip {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
+/// # // TODO(joshlf): Make this compile and remove the ignore
 /// pub struct EthernetDeviceState {
 ///     ipv4_addr: Option<Ipv4Addr>,
 ///     ipv6_addr: Option<Ipv6Addr>,
@@ -502,9 +505,9 @@ macro_rules! log_unimplemented {
 }
 
 macro_rules! increment_counter {
-    ($state:ident, $key:expr) => {
+    ($ctx:ident, $key:expr) => {
         #[cfg(test)]
-        $state.test_counters.increment($key);
+        $ctx.state().test_counters.increment($key);
     };
 }
 

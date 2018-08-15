@@ -334,7 +334,8 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
+    /// # // TODO(joshlf): Make this compile and remove the ignore
     /// let mut buffer = [0u8; 1024];
     /// ArpPacket::serialize(
     ///     &mut buffer,

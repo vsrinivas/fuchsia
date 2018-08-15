@@ -11,22 +11,23 @@ use log::{log, trace};
 use crate::ip::{send_ip_packet, IpAddr, IpProto};
 use crate::wire::icmp::{IcmpPacket, Icmpv4Packet};
 use crate::wire::BufferAndRange;
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
-pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
-    state: &mut StackState, src_ip: A, dst_ip: A, buffer: BufferAndRange<B>,
+pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, buffer: BufferAndRange<B>,
 ) -> bool {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 
-    // serialize_ip! can't handle trait bounds with type arguments, so create
-    // AsMutU8 which is equivalent to AsMut<[u8]>, but without the type
+    // specialize_ip_addr! can't handle trait bounds with type arguments, so
+    // create AsMutU8 which is equivalent to AsMut<[u8]>, but without the type
     // arguments. Ew.
     trait AsU8: AsRef<[u8]> + AsMut<[u8]> {}
     impl<A: AsRef<[u8]> + AsMut<[u8]>> AsU8 for A {}
     specialize_ip_addr!(
-        fn receive_icmp_packet<B>(state: &mut StackState, src_ip: Self, dst_ip: Self, buffer: BufferAndRange<B>) -> bool
+        fn receive_icmp_packet<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, buffer: BufferAndRange<B>) -> bool
         where
+            D: EventDispatcher,
             B: AsU8,
         {
             Ipv4Addr => {
@@ -38,7 +39,7 @@ pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
 
                 match packet {
                     Icmpv4Packet::EchoRequest(echo_request) => {
-                        increment_counter!(state, "receive_icmp_packet::echo_request");
+                        increment_counter!(ctx, "receive_icmp_packet::echo_request");
                         let req = *echo_request.message();
                         let code = echo_request.code();
                         // drop packet so we can re-use the underlying buffer
@@ -49,7 +50,7 @@ pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
                         // we're responding to the sender, so these are flipped
                         let (src_ip, dst_ip) = (dst_ip, src_ip);
                         send_ip_packet(
-                            state,
+                            ctx,
                             dst_ip,
                             IpProto::Icmp,
                             |src_ip, min_prefix_size, min_body_and_padding_size| {
@@ -72,7 +73,7 @@ pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
                         true
                     }
                     Icmpv4Packet::EchoReply(echo_reply) => {
-                        increment_counter!(state, "receive_icmp_packet::echo_reply");
+                        increment_counter!(ctx, "receive_icmp_packet::echo_reply");
                         trace!("receive_icmp_packet: Received an EchoReply message");
                         true
                     }
@@ -86,40 +87,40 @@ pub fn receive_icmp_packet<A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
         }
     );
 
-    A::receive_icmp_packet(state, src_ip, dst_ip, buffer)
+    A::receive_icmp_packet(ctx, src_ip, dst_ip, buffer)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ip::{Ip, Ipv4, Ipv4Addr};
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::ip::{Ip, Ipv4, Ipv4Addr};
 
-    #[ignore] // TODO(joshlf): Debug why this panics
-    #[test]
-    fn test_send_echo_request() {
-        use crate::ip::testdata::icmp_echo::*;
+//     #[ignore] // TODO(joshlf): Debug why this panics
+//     #[test]
+//     fn test_send_echo_request() {
+//         use crate::ip::testdata::icmp_echo::*;
 
-        let mut state: StackState = Default::default();
-        let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;
-        let dst = Ipv4Addr::new([192, 168, 1, 5]);
-        let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
-        let len = bytes.len();
-        let buf = BufferAndRange::new(&mut bytes, 20..len);
+//         let mut state: StackState = Default::default();
+//         let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;
+//         let dst = Ipv4Addr::new([192, 168, 1, 5]);
+//         let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
+//         let len = bytes.len();
+//         let buf = BufferAndRange::new(&mut bytes, 20..len);
 
-        receive_icmp_packet(&mut state, src, dst, buf);
+//         receive_icmp_packet(&mut ctx, src, dst, buf);
 
-        assert_eq!(
-            state.test_counters.get("receive_icmp_packet::echo_request"),
-            &1
-        );
+//         assert_eq!(
+//             state.test_counters.get("receive_icmp_packet::echo_request"),
+//             &1
+//         );
 
-        // Check that the echo request was replied to.
-        assert_eq!(state.test_counters.get("send_ip_packet"), &1);
-        assert_eq!(state.test_counters.get("send_ip_packet::loopback"), &1);
-        assert_eq!(state.test_counters.get("dispatch_receive_ip_packet"), &1);
-        assert_eq!(
-            state.test_counters.get("receive_icmp_packet::echo_reply"),
-            &1
-        );
-    }
-}
+//         // Check that the echo request was replied to.
+//         assert_eq!(state.test_counters.get("send_ip_packet"), &1);
+//         assert_eq!(state.test_counters.get("send_ip_packet::loopback"), &1);
+//         assert_eq!(state.test_counters.get("dispatch_receive_ip_packet"), &1);
+//         assert_eq!(
+//             state.test_counters.get("receive_icmp_packet::echo_reply"),
+//             &1
+//         );
+//     }
+// }

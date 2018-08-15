@@ -165,6 +165,6 @@ impl<B, F: FnOnce(usize, usize) -> BufferAndRange<B>> SerializationCallback<B> f
 
 /// A `SerializationCallback` that also takes an address.
 ///
-/// See the [`::wire::SerializationCallback`] documentation for more details.
+/// See the [`SerializationCallback`] documentation for more details.
 pub trait AddrSerializationCallback<A, B>: FnOnce(A, usize, usize) -> BufferAndRange<B> {}
 impl<A, B, F: FnOnce(A, usize, usize) -> BufferAndRange<B>> AddrSerializationCallback<A, B> for F {}

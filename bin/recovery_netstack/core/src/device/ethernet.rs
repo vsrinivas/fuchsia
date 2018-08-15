@@ -11,11 +11,11 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::DeviceId;
-use crate::ip::{IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
+use crate::ip::{Ip, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::{BufferAndRange, SerializationCallback};
-use crate::StackState;
+use crate::{Context, EventDispatcher};
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -144,8 +144,8 @@ impl EthernetDeviceState {
 /// number of bytes in the body and the post-body padding must not be smaller
 /// than the minimum size passed to the callback.
 ///
-/// For more details on the callback, see the [`crate::wire::SerializationCallback`]
-/// documentation.
+/// For more details on the callback, see the
+/// [`crate::wire::SerializationCallback`] documentation.
 ///
 /// # Panics
 ///
@@ -153,8 +153,9 @@ impl EthernetDeviceState {
 /// have sufficient space preceding the body for all encapsulating headers or
 /// does not have enough body plus padding bytes to satisfy the requirement
 /// passed to the callback.
-pub fn send_ip_frame<A, B, F>(state: &mut StackState, device_id: u64, local_addr: A, get_buffer: F)
-where
+pub fn send_ip_frame<D: EventDispatcher, A, B, F>(
+    ctx: &mut Context<D>, device_id: u64, local_addr: A, get_buffer: F,
+) where
     A: IpAddr,
     B: AsRef<[u8]> + AsMut<[u8]>,
     F: SerializationCallback<B>,
@@ -173,11 +174,45 @@ where
         // leaking information from packets previously stored in this buffer.
         buffer.extend_forwards_zero(MIN_BODY_LEN - range_len);
     }
-    // TODO(joshlf): Figure out routing informationa and serialize
+
+    // specialize_ip_addr! can't handle trait bounds with type arguments, so
+    // create AsMutU8 which is equivalent to AsMut<[u8]>, but without the type
+    // arguments. Ew.
+    trait AsU8: AsRef<[u8]> + AsMut<[u8]> {}
+    impl<A: AsRef<[u8]> + AsMut<[u8]>> AsU8 for A {}
+    specialize_ip_addr!(
+        fn send_ip_frame<D, B>(ctx: &mut Context<D>, device_id: u64, local_addr: Self, buffer: BufferAndRange<B>)
+        where
+            D: EventDispatcher,
+            B: AsU8,
+        {
+            Ipv4Addr => {
+                let src_mac = get_device_state(ctx, device_id).mac;
+                let dst_mac = if let Some(dst_mac) =
+                    crate::device::arp::lookup::<_, _, EthernetArpDevice>(
+                        ctx, device_id, src_mac, local_addr,
+                    ) {
+                    dst_mac
+                } else {
+                    log_unimplemented!(
+                        (),
+                        "device::ethernet::send_ip_frame: unimplemented on arp cache miss"
+                    );
+                    return;
+                };
+                let buffer = EthernetFrame::serialize(buffer, src_mac, dst_mac, EtherType::Ipv4);
+                ctx.dispatcher()
+                    .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+            }
+            Ipv6Addr => { log_unimplemented!((), "device::ethernet::send_ip_frame: IPv6 unimplemented") }
+        }
+    );
+
+    A::send_ip_frame(ctx, device_id, local_addr, buffer);
 }
 
 /// Receive an Ethernet frame from the network.
-pub fn receive_frame(state: &mut StackState, device_id: u64, bytes: &mut [u8]) {
+pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, bytes: &mut [u8]) {
     let (frame, body_range) = if let Ok(frame) = EthernetFrame::parse(&mut bytes[..]) {
         frame
     } else {
@@ -199,15 +234,15 @@ pub fn receive_frame(state: &mut StackState, device_id: u64, bytes: &mut [u8]) {
                 };
                 match types {
                     (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
-                        crate::device::arp::receive_arp_packet::<Ipv4Addr, EthernetArpDevice, _>(
-                            state, device_id, src, dst, buffer,
+                        crate::device::arp::receive_arp_packet::<D, Ipv4Addr, EthernetArpDevice, _>(
+                            ctx, device_id, src, dst, buffer,
                         )
                     }
                     types => debug!("got ARP packet for unsupported types: {:?}", types),
                 }
             }
-            EtherType::Ipv4 => crate::ip::receive_ip_packet::<Ipv4>(state, device, buffer),
-            EtherType::Ipv6 => crate::ip::receive_ip_packet::<Ipv6>(state, device, buffer),
+            EtherType::Ipv4 => crate::ip::receive_ip_packet::<D, Ipv4>(ctx, device, buffer),
+            EtherType::Ipv6 => crate::ip::receive_ip_packet::<D, Ipv6>(ctx, device, buffer),
         }
     } else {
         // TODO(joshlf): Do something else?
@@ -216,18 +251,22 @@ pub fn receive_frame(state: &mut StackState, device_id: u64, bytes: &mut [u8]) {
 }
 
 /// Get the IP address associated with this device.
-pub fn get_ip_addr<A: IpAddr>(state: &mut StackState, device_id: u64) -> Option<(A, Subnet<A>)> {
+pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, device_id: u64,
+) -> Option<(A, Subnet<A>)> {
     specialize_ip_addr!(
         fn get_ip_addr(state: &EthernetDeviceState) -> Option<(Self, Subnet<Self>)> {
             Ipv4Addr => { state.ipv4_addr }
             Ipv6Addr => { state.ipv6_addr }
         }
     );
-    A::get_ip_addr(get_device_state(state, device_id))
+    A::get_ip_addr(get_device_state(ctx, device_id))
 }
 
 /// Set the IP address associated with this device.
-pub fn set_ip_addr<A: IpAddr>(state: &mut StackState, device_id: u64, addr: A, subnet: Subnet<A>) {
+pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, device_id: u64, addr: A, subnet: Subnet<A>,
+) {
     // TODO(joshlf): Perform any other necessary setup
     specialize_ip_addr!(
         fn set_ip_addr(state: &mut EthernetDeviceState, addr: Self, subnet: Subnet<Self>) {
@@ -235,11 +274,13 @@ pub fn set_ip_addr<A: IpAddr>(state: &mut StackState, device_id: u64, addr: A, s
             Ipv6Addr => { state.ipv6_addr = Some((addr, subnet)) }
         }
     );
-    A::set_ip_addr(get_device_state(state, device_id), addr, subnet)
+    A::set_ip_addr(get_device_state(ctx, device_id), addr, subnet)
 }
 
-fn get_device_state(state: &mut StackState, device_id: u64) -> &mut EthernetDeviceState {
-    state
+fn get_device_state<D: EventDispatcher>(
+    ctx: &mut Context<D>, device_id: u64,
+) -> &mut EthernetDeviceState {
+    ctx.state()
         .device
         .ethernet
         .get_mut(&device_id)
@@ -253,8 +294,8 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
     const BROADCAST: Mac = Mac::BROADCAST;
 
-    fn send_arp_frame<B, F>(
-        state: &mut StackState, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
+    fn send_arp_frame<D: EventDispatcher, B, F>(
+        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
     ) where
         B: AsRef<[u8]> + AsMut<[u8]>,
         F: SerializationCallback<B>,
@@ -262,7 +303,9 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         log_unimplemented!((), "device::ethernet::send_arp_frame: Not implemented");
     }
 
-    fn get_arp_state(state: &mut StackState, device_id: u64) -> &mut ArpState<Ipv4Addr, Self> {
-        &mut get_device_state(state, device_id).ipv4_arp
+    fn get_arp_state<D: EventDispatcher>(
+        ctx: &mut Context<D>, device_id: u64,
+    ) -> &mut ArpState<Ipv4Addr, Self> {
+        &mut get_device_state(ctx, device_id).ipv4_arp
     }
 }
