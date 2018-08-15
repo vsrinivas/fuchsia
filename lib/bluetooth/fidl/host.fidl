@@ -21,12 +21,17 @@ interface Host {
   4: RequestProfile(request<fuchsia.bluetooth.bredr.Profile> profile);
 
   // Shuts down the host, ending all active Bluetooth procedures:
+  //
   // * All FIDL interface handles associated with this host are closed and all
   //   connections initiated via FIDL clients are severed.
   // * All scan, discovery, and advertising procedures are stopped.
   // * Bonded devices are cleared and removed from the auto-connect lists.
+  //
   // This effectively resets the host to its initial state and the host remains
   // available for future requests.
+  //
+  // The Host will continue to send OnDeviceUpdated events as procedures get
+  // terminated.
   5: Close();
 
   // Returns information about the Bluetooth adapter managed by this host.
@@ -41,13 +46,17 @@ interface Host {
   // On the LE transport, only general-discoverable and connectable peripherals will be reported.
   //
   // Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
-  // Adapter gets disconnected.
+  // Adapter gets disconnected. If the device does not support BR/EDR, only LE
+  // discovery will be performed.
+  //
+  // An OnDeviceUpdated event will be sent when the discovery procedures are
+  // started.
   8: StartDiscovery() -> (fuchsia.bluetooth.Status status);
 
   // Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
   // receiving device discovery notifications.
   //
-  // NOTE: If another client is performing discovery (e.g. via its own Adapter interface handle),
+  // NOTE: If another client is performing discovery (e.g. via its own le.Central interface handle),
   // then the system will continue performing device discovery even if this method results in
   // success.
   9: StopDiscovery() -> (fuchsia.bluetooth.Status status);

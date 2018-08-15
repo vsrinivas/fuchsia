@@ -76,9 +76,20 @@ void HostServer::GetInfo(GetInfoCallback callback) {
 
 void HostServer::SetLocalName(::fidl::StringPtr local_name,
                               SetLocalNameCallback callback) {
+  ZX_DEBUG_ASSERT(!local_name.is_null());
+  // Make a copy of |local_name| to move separately into the lambda.
+  std::string name_copy(*local_name);
   adapter()->SetLocalName(
-      local_name, [self = weak_ptr_factory_.GetWeakPtr(),
-                   callback = std::move(callback)](auto status) {
+      std::move(local_name),
+      [self = weak_ptr_factory_.GetWeakPtr(), local_name = std::move(name_copy),
+       callback = std::move(callback)](auto status) {
+        // Send adapter state update on success and if the connection is still
+        // open.
+        if (status && self) {
+          AdapterState state;
+          state.local_name = std::move(local_name);
+          self->binding()->events().OnAdapterStateChanged(std::move(state));
+        }
         callback(fidl_helpers::StatusToFidl(status, "Can't Set Local Name"));
       });
 }
@@ -390,17 +401,39 @@ void HostServer::Close() {
   requesting_discovery_ = false;
   requesting_discoverable_ = false;
 
+  // Diff for final adapter state update.
+  bool send_update = false;
+  AdapterState state;
+
   // Stop all procedures initiated via host.
-  le_discovery_session_ = nullptr;
-  bredr_discovery_session_ = nullptr;
-  bredr_discoverable_session_ = nullptr;
+  if (le_discovery_session_ || bredr_discovery_session_) {
+    send_update = true;
+    le_discovery_session_ = nullptr;
+    bredr_discovery_session_ = nullptr;
+
+    state.discovering = Bool::New();
+    state.discovering->value = false;
+  }
+
+  if (bredr_discoverable_session_) {
+    send_update = true;
+    bredr_discoverable_session_ = nullptr;
+
+    state.discoverable = Bool::New();
+    state.discoverable->value = false;
+  }
+
+  // TODO(NET-1092): Clean up connections here as well.
+  // TODO(armansito): Clear auto-connectable devices.
 
   // Disallow future pairing.
   pairing_delegate_ = nullptr;
   ResetPairingDelegate();
 
-  // TODO(NET-1092): Clean up connections here as well.
-  // TODO(armansito): Clear auto-connectable devices.
+  // Send adapter state change.
+  if (send_update) {
+    binding()->events().OnAdapterStateChanged(std::move(state));
+  }
 }
 
 btlib::sm::IOCapability HostServer::io_capability() const {
