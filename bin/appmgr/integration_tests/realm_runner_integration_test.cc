@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <glob.h>
+#include <unistd.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
 
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/fxl/files/glob.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -102,15 +104,30 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
+
+  auto glob_str =
+      fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner/*", kRealm);
+  files::Glob glob(glob_str);
+  ASSERT_EQ(glob.size(), 1u);
+  std::string runner_path_in_hub = *(glob.begin());
+
   int64_t return_code = INT64_MIN;
   component.events().OnTerminated =
       [&](int64_t code, TerminationReason reason) { return_code = code; };
   runner_registry_.runner()->runner_ptr()->Crash();
   ASSERT_TRUE(WaitForRunnerToDie());
-  // make sure component is dead. This makes sure that runner was killed inside
-  // appmgr.
+  // Make sure component is dead.
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return return_code != INT64_MIN; }, kTimeout));
+
+  // Make sure we no longer have runner in hub. This will make sure that appmgr
+  // knows that runner died, before we try to launch component again.
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [runner_path = runner_path_in_hub.c_str()] {
+        struct stat s;
+        return stat(runner_path, &s) != 0;
+      },
+      kTimeout));
 
   // launch again and check that runner was executed again
   component =
