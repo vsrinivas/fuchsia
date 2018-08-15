@@ -38,7 +38,7 @@ sdk_atom("sysroot_sdk") {
   ]
 
   files = [
-    % for path, file in sorted(data.files.iteritems()):
+    % for path, file in sorted(data.sdk_files.iteritems()):
     {
       source = "${file}"
       dest = "${path}"
