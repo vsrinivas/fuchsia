@@ -32,3 +32,7 @@ struct Subnet {
     // For IPv6, prefix_len must be in the range [0, 128].
     uint8 prefix_len;
 };
+
+struct MacAddress {
+    array<uint8>:6 addr;
+};
