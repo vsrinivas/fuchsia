@@ -193,7 +193,7 @@ impl EssSa {
 
     fn init_pmksa(&mut self) -> Result<(), failure::Error> {
         // PSK allows deriving the PMK without exchanging
-        let pmk = match self.pmksa.method.by_ref() {
+        let pmk = match &self.pmksa.method {
             auth::Method::Psk(psk) => Some(psk.compute()),
             _ => None,
         };
@@ -209,7 +209,7 @@ impl EssSa {
 
     fn init_ptksa(&mut self) -> Result<(), failure::Error> {
         match self.pmksa.pmk.as_ref() {
-            None => Err(Error::PmksaNotEstablished.into()),
+            None => bail!(Error::PmksaNotEstablished),
             Some(pmk) => self.ptksa.initialize(pmk.to_vec()),
         }
     }
@@ -254,8 +254,11 @@ impl EssSa {
                                                       self.key_replay_counter,
                                                       self.ptksa.ptk(), self.gtksa.gtk());
         let verified_frame = match result {
-            Err(Error::WrongAesKeywrapKey) => {
-                return Ok(vec![SecAssocUpdate::Status(SecAssocStatus::WrongPassword)])
+            Err(e) => match e.cause().downcast_ref::<Error>() {
+                Some(Error::WrongAesKeywrapKey) => {
+                    return Ok(vec![SecAssocUpdate::Status(SecAssocStatus::WrongPassword)])
+                },
+                _ => bail!(e),
             }
             other => other,
         }?;

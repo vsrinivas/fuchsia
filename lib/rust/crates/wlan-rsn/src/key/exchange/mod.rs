@@ -25,12 +25,6 @@ pub enum Key {
     Stk(Vec<u8>),
 }
 
-impl Key {
-    pub fn by_ref(&self) -> &Self {
-        self
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum Method {
     FourWayHandshake(Fourway),
@@ -50,10 +44,6 @@ impl Method {
             Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(frame),
             Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(frame),
         }
-    }
-
-    pub fn by_mut_ref(&mut self) -> &mut Self {
-        self
     }
 }
 
@@ -80,9 +70,5 @@ impl Config {
         -> Result<Config, failure::Error>
     {
         Ok(Config::GroupKeyHandshake(group_key::Config{role, sta_addr, peer_addr}))
-    }
-
-    pub fn by_ref(&self) -> &Self {
-        self
     }
 }

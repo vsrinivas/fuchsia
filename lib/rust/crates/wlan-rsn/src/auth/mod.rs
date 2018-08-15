@@ -19,7 +19,7 @@ pub enum Method {
 impl Method {
     pub fn from_config(cfg: Config) -> Result<Method, failure::Error> {
         match cfg {
-            Config::Psk(c) => Ok(Method::Psk(Psk::new(c)?)),
+            Config::Psk(c) => Ok(Method::Psk(Psk{config: c})),
         }
     }
 
@@ -28,10 +28,6 @@ impl Method {
             // None of the supported authentication methods requires EAPOL frame exchange.
             _ => Ok(vec![]),
         }
-    }
-
-    pub fn by_ref(&self) -> &Self {
-        self
     }
 }
 
@@ -45,9 +41,5 @@ impl Config {
         psk::Config::new(passphrase, ssid)
             .map_err(|e| e.into())
             .map(|c| Config::Psk(c))
-    }
-
-    pub fn by_ref(&self) -> &Self {
-        self
     }
 }

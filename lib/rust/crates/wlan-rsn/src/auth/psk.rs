@@ -5,14 +5,15 @@
 use crypto::hmac::Hmac;
 use crypto::pbkdf2;
 use crypto::sha1::Sha1;
-use {Error, Result};
+use failure;
+use Error;
 
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases
 /// are unlikely to prevent attacks.
 #[derive(Debug, PartialEq)]
 pub struct Psk {
-    config: Config,
+    pub config: Config,
 }
 
 #[derive(Debug, PartialEq)]
@@ -22,34 +23,26 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(passphrase: &[u8], ssid: &[u8]) -> Result<Config> {
+    pub fn new(passphrase: &[u8], ssid: &[u8]) -> Result<Config, failure::Error> {
         // IEEE Std 802.11-2016, 9.4.2.2
-        if ssid.len() > 32 {
-            return Err(Error::InvalidSsidLen(ssid.len()));
-        }
+        ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
 
         // IEEE Std 802.11-2016, J.4.1
-        if passphrase.len() < 8 || passphrase.len() > 63 {
-            Err(Error::InvalidPassphraseLen(passphrase.len()))
-        } else {
-            for c in passphrase {
-                if *c < 32 || *c > 126 {
-                    return Err(Error::InvalidPassphraseChar(*c));
-                }
-            }
-            Ok(Config {
-                ssid: ssid.to_vec(),
-                passphrase: passphrase.to_vec(),
-            })
+        ensure!(passphrase.len() >= 8 && passphrase.len() <= 63,
+                Error::InvalidPassphraseLen(passphrase.len()));
+
+        for c in passphrase {
+            ensure!(*c >= 32 && *c <= 126, Error::InvalidPassphraseChar(*c));
         }
+
+        Ok(Config {
+            ssid: ssid.to_vec(),
+            passphrase: passphrase.to_vec(),
+        })
     }
 }
 
 impl Psk {
-    pub(crate) fn new(config: Config) -> Result<Psk> {
-        Ok(Psk { config })
-    }
-
     pub fn compute(&self) -> Vec<u8> {
         // IEEE Std 802.11-2016, J.4.1
         let size: usize = 256 / 8;
@@ -69,9 +62,7 @@ mod tests {
         let cfg_result = Config::new(password.as_bytes(), ssid.as_bytes());
         assert_eq!(cfg_result.is_ok(), true);
 
-        let psk_result = Psk::new(cfg_result.unwrap());
-        assert_eq!(psk_result.is_ok(), true);
-        let psk = psk_result.unwrap();
+        let psk = Psk{config: cfg_result.unwrap()};
         let actual = psk.compute();
         let expected = Vec::from_hex(expected).unwrap();
         assert_eq!(actual, expected);

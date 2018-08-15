@@ -7,31 +7,29 @@ pub mod nonce;
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::sha1::Sha1;
-use {Error, Result};
+use Error;
+use failure;
 
 const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 
 // IEEE Std 802.11-2016, 12.7.1.2
-pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>> {
-    if !VALID_PRF_BIT_SIZES.contains(&bits) {
-        Err(Error::InvalidBitSize(bits))
-    } else {
-        let mut result: Vec<u8> = Vec::with_capacity(bits / 8);
+pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>, failure::Error> {
+    ensure!(VALID_PRF_BIT_SIZES.contains(&bits), Error::InvalidBitSize(bits));
 
-        let mut hmac = Hmac::new(Sha1::new(), k);
-        let zero = [0u8];
-        let iterations = (bits + 159) / 160;
-        for i in 0..iterations {
-            hmac.input(a.as_bytes());
-            hmac.input(&zero[..]);
-            hmac.input(b);
-            hmac.input(&[i as u8][..]);
-            result.extend_from_slice(hmac.result().code());
-            hmac.reset();
-        }
-        result.resize(bits / 8, 0);
-        Ok(result)
+    let mut result: Vec<u8> = Vec::with_capacity(bits / 8);
+    let mut hmac = Hmac::new(Sha1::new(), k);
+    let zero = [0u8];
+    let iterations = (bits + 159) / 160;
+    for i in 0..iterations {
+        hmac.input(a.as_bytes());
+        hmac.input(&zero[..]);
+        hmac.input(b);
+        hmac.input(&[i as u8][..]);
+        result.extend_from_slice(hmac.result().code());
+        hmac.reset();
     }
+    result.resize(bits / 8, 0);
+    Ok(result)
 }
 
 #[cfg(test)]

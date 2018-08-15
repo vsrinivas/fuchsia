@@ -131,9 +131,7 @@ pub fn mic_len() -> usize {
 }
 
 pub fn get_nonce() -> Vec<u8> {
-    NonceReader::new(S_ADDR)
-        .expect("error creating nonce reader")
-        .next()
+    NonceReader::new(S_ADDR).expect("error creating NonceReader").next()
 }
 
 pub fn get_akm() -> akm::Akm {

@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 #![allow(dead_code)]
 
-use super::{Error, Result};
+use Error;
 use bytes::Bytes;
+use failure;
 use std::fmt;
 use suite_selector;
 
@@ -120,12 +121,9 @@ impl Cipher {
 impl suite_selector::Factory for Cipher {
     type Suite = Cipher;
 
-    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite> {
-        if oui.len() != 3 {
-            Err(Error::InvalidOuiLength(oui.len()))
-        } else {
-            Ok(Cipher { oui, suite_type })
-        }
+    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite, failure::Error> {
+        ensure!(oui.len() == 3, Error::InvalidOuiLength(oui.len()));
+        Ok(Cipher { oui, suite_type })
     }
 }
 

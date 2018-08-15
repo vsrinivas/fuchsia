@@ -5,12 +5,13 @@
 
 use bytes::Bytes;
 use crypto_utils;
+use failure;
 use integrity;
 use integrity::hmac_sha1::HmacSha1;
 use keywrap;
 use std::fmt;
 use suite_selector;
-use {Error, Result};
+use Error;
 
 macro_rules! return_none_if_unknown_algo {
     ($e:expr) => {
@@ -129,7 +130,9 @@ impl Akm {
         }
     }
 
-    pub fn prf(&self, k: &[u8], a: &str, b: &[u8], bits: usize) -> Option<Result<Vec<u8>>> {
+    pub fn prf(&self, k: &[u8], a: &str, b: &[u8], bits: usize)
+        -> Option<Result<Vec<u8>, failure::Error>>
+    {
         return_none_if_unknown_algo!(self);
 
         // IEEE 802.11-2016, 12.7.1.2
@@ -143,12 +146,9 @@ impl Akm {
 impl suite_selector::Factory for Akm {
     type Suite = Akm;
 
-    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite> {
-        if oui.len() != 3 {
-            Err(Error::InvalidOuiLength(oui.len()))
-        } else {
-            Ok(Akm { oui, suite_type })
-        }
+    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite, failure::Error> {
+        ensure!(oui.len() == 3, Error::InvalidOuiLength(oui.len()));
+        Ok(Akm { oui, suite_type })
     }
 }
 

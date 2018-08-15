@@ -5,10 +5,11 @@
 pub mod kde;
 
 use bytes::{BufMut, BytesMut};
+use failure;
 use nom::IResult::{Done, Incomplete};
 use nom::{IResult, Needed};
 use rsne;
-use {Error, Result};
+use Error;
 
 #[derive(Debug)]
 pub enum Element {
@@ -50,15 +51,14 @@ fn parse_element<'a>(input: &'a [u8]) -> IResult<&'a [u8], Element> {
 
 named!(parse_elements<&[u8], Vec<Element>>, many0!(parse_element));
 
-pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>> {
+pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error> {
     // Key Data field must be at least 16 bytes long and its length a multiple of 8.
-    if key_data.len() % 8 != 0 || key_data.len() < 16 {
-        Err(Error::InvaidKeyDataLength(key_data.len()))
-    } else {
-        parse_elements(key_data)
-            .to_full_result()
-            .map_err(|e| Error::InvalidKeyData(e))
-    }
+    ensure!(key_data.len() % 8 == 0 && key_data.len() >= 16,
+            Error::InvaidKeyDataLength(key_data.len()));
+
+    parse_elements(key_data)
+        .to_full_result()
+        .map_err(|e| Error::InvalidKeyData(e).into())
 }
 
 // IEEE Std 802.11-2016, 12.7.2 j)

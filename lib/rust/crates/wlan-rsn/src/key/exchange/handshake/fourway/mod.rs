@@ -56,11 +56,11 @@ impl <'a> FourwayHandshakeKeyFrame<'a> {
             // Authenticator should only receive message 2 and 4.
             Role::Authenticator => match msg_no {
                 MessageNumber::Message2 | MessageNumber::Message4 => {},
-                _ => return Err(Error::Unexpected4WayHandshakeMessage(msg_no).into()),
+                _ => bail!(Error::Unexpected4WayHandshakeMessage(msg_no)),
             },
             Role::Supplicant => match msg_no {
                 MessageNumber::Message1 | MessageNumber::Message3 => {},
-                _ => return Err(Error::Unexpected4WayHandshakeMessage(msg_no).into()),
+                _ => bail!(Error::Unexpected4WayHandshakeMessage(msg_no)),
             },
         };
 
@@ -152,39 +152,27 @@ impl Fourway {
 
 fn validate_message_1(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    if frame.key_info.install() {
-        Err(Error::InvalidInstallBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    } else if !frame.key_info.key_ack() {
-        Err(Error::InvalidKeyAckBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    } else if frame.key_info.key_mic() {
-        Err(Error::InvalidKeyMicBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    } else if frame.key_info.secure() {
-        Err(Error::InvalidSecureBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
-    } else if frame.key_info.error() {
-        Err(Error::InvalidErrorBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    } else if frame.key_info.request() {
-        Err(Error::InvalidRequestBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    } else if frame.key_info.encrypted_key_data() {
-        Err(Error::InvalidEncryptedKeyDataBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.encrypted_key_data(),
+            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 e)
-    } else if is_zero(&frame.key_nonce[..]) {
-        Err(Error::InvalidNonce(message_number(frame)).into())
+    ensure!(!is_zero(&frame.key_nonce[..]), Error::InvalidNonce(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.2
-    } else if !is_zero(&frame.key_iv[..]) {
-        Err(Error::InvalidIv(frame.version, message_number(frame)).into())
+    ensure!(is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 g)
-    } else if frame.key_rsc != 0 {
-        Err(Error::InvalidRsc(message_number(frame)).into())
-    } else {
-        Ok(())
-    }
+    ensure!(frame.key_rsc == 0, Error::InvalidRsc(message_number(frame)));
 
     // The first message of the Handshake is also required to carry a zeroed MIC.
     // Some routers however send messages without zeroing out the MIC beforehand.
@@ -193,45 +181,36 @@ fn validate_message_1(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // This assumption faces no security risk because the message's MIC is only
     // validated in the Handshake and not in the Supplicant or Authenticator
     // implementation.
+    Ok(())
 }
 
 fn validate_message_2(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    if frame.key_info.install() {
-        Err(Error::InvalidInstallBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    } else if frame.key_info.key_ack() {
-        Err(Error::InvalidKeyAckBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    } else if !frame.key_info.key_mic() {
-        Err(Error::InvalidKeyMicBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    } else if frame.key_info.secure() {
-        Err(Error::InvalidSecureBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     // Error bit only set by Supplicant in MIC failures in SMK derivation.
     // SMK derivation not yet supported.
-    } else if frame.key_info.error() {
-        Err(Error::InvalidErrorBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    } else if frame.key_info.request() {
-        Err(Error::InvalidRequestBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    } else if frame.key_info.encrypted_key_data() {
-        Err(Error::InvalidEncryptedKeyDataBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.encrypted_key_data(),
+            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 e)
-    } else if is_zero(&frame.key_nonce[..]) {
-        Err(Error::InvalidNonce(message_number(frame)).into())
+    ensure!(!is_zero(&frame.key_nonce[..]), Error::InvalidNonce(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.3
-    } else if !is_zero(&frame.key_iv[..]) {
-        Err(Error::InvalidIv(frame.version, message_number(frame)).into())
+    ensure!(is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 g)
-    } else if frame.key_rsc != 0 {
-        Err(Error::InvalidRsc(message_number(frame)).into())
-    } else {
-        Ok(())
-    }
+    ensure!(frame.key_rsc == 0, Error::InvalidRsc(message_number(frame)));
+
+    Ok(())
 }
 
 fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8])
@@ -239,80 +218,62 @@ fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8])
 {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     // Install = 0 is only used in key mapping with TKIP and WEP, neither is supported by Fuchsia.
-    if !frame.key_info.install() {
-        Err(Error::InvalidInstallBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    } else if !frame.key_info.key_ack() {
-        Err(Error::InvalidKeyAckBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    } else if !frame.key_info.key_mic() {
-        Err(Error::InvalidKeyMicBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    } else if !frame.key_info.secure() {
-        Err(Error::InvalidSecureBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
-    } else if frame.key_info.error() {
-        Err(Error::InvalidErrorBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    } else if frame.key_info.request() {
-        Err(Error::InvalidRequestBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    } else if !frame.key_info.encrypted_key_data() {
-        Err(Error::InvalidEncryptedKeyDataBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.encrypted_key_data(),
+            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 e)
-    } else if is_zero(&frame.key_nonce[..]) || &frame.key_nonce[..] != nonce {
-        Err(Error::InvalidNonce(message_number(frame)).into())
+    ensure!(!is_zero(&frame.key_nonce[..]) && &frame.key_nonce[..] == nonce,
+            Error::InvalidNonce(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.4
     // IEEE 802.11-2016 requires a zeroed IV for 802.1X-2004+ and allows random ones for older
     // protocols. Some APs such as TP-Link violate this requirement and send non-zeroed IVs while
     // using 802.1X-2004. For compatibility, random IVs are allowed for 802.1X-2004.
-    } else if frame.version >= eapol::ProtocolVersion::Ieee802dot1x2010 as u8 &&
-        !is_zero(&frame.key_iv[..]) {
-        Err(Error::InvalidIv(frame.version, message_number(frame)).into())
+    ensure!(frame.version < eapol::ProtocolVersion::Ieee802dot1x2010 as u8 ||
+            is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 i) & j)
     // Key Data must not be empty.
-    } else if frame.key_data_len == 0 {
-        Err(Error::EmptyKeyData(message_number(frame)).into())
-    } else {
-        Ok(())
-    }
+    ensure!(frame.key_data_len != 0, Error::EmptyKeyData(message_number(frame)));
+
+    Ok(())
 }
 
 fn validate_message_4(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    if frame.key_info.install() {
-        Err(Error::InvalidInstallBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    } else if frame.key_info.key_ack() {
-        Err(Error::InvalidKeyAckBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    } else if !frame.key_info.key_mic() {
-        Err(Error::InvalidKeyMicBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    } else if !frame.key_info.secure() {
-        Err(Error::InvalidSecureBitValue(message_number(frame)).into())
+    ensure!(frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     // Error bit only set by Supplicant in MIC failures in SMK derivation.
     // SMK derivation not yet supported.
-    } else if frame.key_info.error() {
-        Err(Error::InvalidErrorBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    } else if frame.key_info.request() {
-        Err(Error::InvalidRequestBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    } else if frame.key_info.encrypted_key_data() {
-        Err(Error::InvalidEncryptedKeyDataBitValue(message_number(frame)).into())
+    ensure!(!frame.key_info.encrypted_key_data(),
+            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.5
-    } else if !is_zero(&frame.key_iv[..]) {
-        Err(Error::InvalidIv(frame.version, message_number(frame)).into())
+    ensure!(is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
     // IEEE Std 802.11-2016, 12.7.2 g)
-    } else if frame.key_rsc != 0 {
-        Err(Error::InvalidRsc(message_number(frame)).into())
-    } else {
-        Ok(())
-    }
+    ensure!(frame.key_rsc == 0, Error::InvalidRsc(message_number(frame)));
+
+    Ok(())
 }
 
 fn message_number(rx_frame: &eapol::KeyFrame) -> MessageNumber {

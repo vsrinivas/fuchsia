@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Result;
 use bytes::{BufMut, BytesMut};
 use crypto_utils::prf;
+use failure;
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
 use time;
@@ -15,7 +15,7 @@ pub struct NonceReader {
 }
 
 impl NonceReader {
-    pub fn new(sta_addr: [u8; 6]) -> Result<NonceReader> {
+    pub fn new(sta_addr: [u8; 6]) -> Result<NonceReader, failure::Error> {
         // Write time and STA's address to buffer for PRF-256.
         // IEEE Std 802.11-2016, 12.7.5 recommends using a time in NTP format.
         // Fuchsia has no support for NTP yet; instead use a regular timestamp.
@@ -47,10 +47,7 @@ mod tests {
     #[test]
     fn test_next_nonce() {
         let addr: [u8; 6] = [1, 2, 3, 4, 5, 6];
-        let result = NonceReader::new(addr);
-        assert_eq!(result.is_ok(), true);
-
-        let mut rdr = result.unwrap();
+        let mut rdr = NonceReader::new(addr).expect("error creating NonceReader");
         let mut previous_nonce = rdr.next();
         for _ in 0..300 {
             let nonce = rdr.next();

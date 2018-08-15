@@ -33,26 +33,15 @@ impl Ptk {
         akm: &Akm,
         cipher: &Cipher,
     ) -> Result<Ptk, failure::Error> {
-        if anonce.len() != 32 {
-            return Err(Error::InvalidNonceSize(anonce.len()).into());
-        }
-        if snonce.len() != 32 {
-            return Err(Error::InvalidNonceSize(snonce.len()).into());
-        }
+        ensure!(anonce.len() == 32 && snonce.len() == 32, Error::InvalidNonceSize(anonce.len()));
 
-        let pmk_bits = akm.pmk_bits()
-            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedAkmError))?;
-        if pmk.len() != (pmk_bits / 8) as usize {
-            return Err(Error::PtkHierarchyInvalidPmkError.into());
-        }
+        let pmk_len = akm.pmk_bits().map(|bits| (bits / 8) as usize)
+            .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        ensure!(pmk.len() == pmk_len, Error::PtkHierarchyInvalidPmkError);
 
-        let kck_bits = akm.kck_bits()
-            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedAkmError))?;
-        let kek_bits = akm.kek_bits()
-            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedAkmError))?;
-        let tk_bits = cipher
-            .tk_bits()
-            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedCipherError))?;
+        let kck_bits = akm.kck_bits().ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        let kek_bits = akm.kek_bits().ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        let tk_bits = cipher.tk_bits().ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
         let prf_bits = kck_bits + kek_bits + tk_bits;
 
         // data length = 6 (aa) + 6 (spa) + 32 (anonce) + 32 (snonce)

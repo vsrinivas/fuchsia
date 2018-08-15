@@ -4,9 +4,9 @@
 
 pub mod aes;
 
-use Result;
+use failure::Error;
 
 pub trait Algorithm {
-    fn wrap(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>>;
-    fn unwrap(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>>;
+    fn wrap(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error>;
+    fn unwrap(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error>;
 }

@@ -34,8 +34,6 @@ use key::exchange::handshake::fourway::MessageNumber;
 use rsna::Role;
 use std::result;
 
-pub type Result<T> = result::Result<T, Error>;
-
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "unexpected IO error: {}", _0)]
@@ -62,6 +60,8 @@ pub enum Error {
     PtkHierarchyUnsupportedAkmError,
     #[fail(display = "error deriving PTK; unsupported cipher suite")]
     PtkHierarchyUnsupportedCipherError,
+    #[fail(display = "error deriving GTK; unsupported cipher suite")]
+    GtkHierarchyUnsupportedCipherError,
     #[fail(display = "error invalid key size for AES keywrap: {}", _0)]
     InvalidAesKeywrapKeySize(usize),
     #[fail(display = "error data must be a multiple of 64-bit blocks and at least 128 bits: {}",

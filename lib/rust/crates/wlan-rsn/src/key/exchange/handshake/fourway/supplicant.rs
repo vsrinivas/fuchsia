@@ -116,14 +116,11 @@ impl GtkInitState {
         // Proceed if key data held a GTK and RSNE and RSNE is the Authenticator's announced one.
         match (gtk, rsne) {
             (Some(gtk), Some(rsne)) => {
-                if &rsne == &shared.cfg.a_rsne {
-                    let msg4 = self.create_message_4(shared, msg3.get())?;
-                    Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id())))
-                } else {
-                    Err(Error::InvalidKeyDataRsne.into())
-                }
+                ensure!(&rsne == &shared.cfg.a_rsne, Error::InvalidKeyDataRsne);
+                let msg4 = self.create_message_4(shared, msg3.get())?;
+                Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id())))
             }
-            _ => Err(Error::InvalidKeyDataContent.into()),
+            _ => bail!(Error::InvalidKeyDataContent),
         }
     }
 
@@ -180,7 +177,7 @@ impl State {
             fourway::MessageNumber::Message1 => self.on_message_1(shared, frame),
             fourway::MessageNumber::Message3 => self.on_message_3(shared, frame),
             // Drop any other message with an error.
-            unexpected_msg => Err(Error::Unexpected4WayHandshakeMessage(unexpected_msg).into()),
+            unexpected_msg => bail!(Error::Unexpected4WayHandshakeMessage(unexpected_msg)),
         }
     }
 

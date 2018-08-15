@@ -72,7 +72,7 @@ impl <'a> VerifiedKeyFrame<'a> {
         key_replay_counter: u64,
         ptk: Option<&Ptk>,
         gtk: Option<&Gtk>
-    ) -> Result<VerifiedKeyFrame<'a>, Error> {
+    ) -> Result<VerifiedKeyFrame<'a>, failure::Error> {
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
@@ -81,24 +81,21 @@ impl <'a> VerifiedKeyFrame<'a> {
         // IEEE Std 802.11-2016, 12.7.2 a)
         // IEEE Std 802.1X-2010, 11.9
         let key_descriptor = match eapol::KeyDescriptor::from_u8(frame.descriptor_type) {
-            Some(eapol::KeyDescriptor::Ieee802dot11) => Ok(eapol::KeyDescriptor::Ieee802dot11),
+            Some(eapol::KeyDescriptor::Ieee802dot11) => eapol::KeyDescriptor::Ieee802dot11,
             // Use of RC4 is deprecated.
-            Some(_) => Err(Error::InvalidKeyDescriptor(
+            Some(_) => bail!(Error::InvalidKeyDescriptor(
                 frame.descriptor_type,
                 eapol::KeyDescriptor::Ieee802dot11,
             )),
             // Invalid value.
-            None => Err(Error::UnsupportedKeyDescriptor(frame.descriptor_type)),
-        }?;
+            None => bail!(Error::UnsupportedKeyDescriptor(frame.descriptor_type)),
+        };
 
 
         // IEEE Std 802.11-2016, 12.7.2 b.1)
         let expected_version = derive_key_descriptor_version(key_descriptor, rsne);
-        if frame.key_info.key_descriptor_version() != expected_version {
-            return Err(Error::UnsupportedKeyDescriptorVersion(
-                frame.key_info.key_descriptor_version(),
-            ));
-        }
+        ensure!(frame.key_info.key_descriptor_version() == expected_version,
+                Error::UnsupportedKeyDescriptorVersion(frame.key_info.key_descriptor_version()));
 
         // IEEE Std 802.11-2016, 12.7.2 b.2)
         // IEEE Std 802.11-2016, 12.7.2 b.4)
@@ -106,18 +103,14 @@ impl <'a> VerifiedKeyFrame<'a> {
             eapol::KEY_TYPE_PAIRWISE => {},
             eapol::KEY_TYPE_GROUP_SMK => {
                 // IEEE Std 802.11-2016, 12.7.2 b.4 ii)
-                if frame.key_info.install() {
-                    return Err(Error::InvalidInstallBitGroupSmkHandshake);
-                }
+                ensure!(!frame.key_info.install(), Error::InvalidInstallBitGroupSmkHandshake);
             },
-            _ => return Err(Error::UnsupportedKeyDerivation),
+            _ => bail!(Error::UnsupportedKeyDerivation),
         };
 
         // IEEE Std 802.11-2016, 12.7.2 b.5)
-        if frame.key_info.key_ack() {
-            if let Role::Supplicant = sender {
-                return Err(Error::InvalidKeyAckBitSupplicant);
-            }
+        if let Role::Supplicant = sender {
+            ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitSupplicant);
         }
 
         // IEEE Std 802.11-2016, 12.7.2 b.6)
@@ -136,45 +129,36 @@ impl <'a> VerifiedKeyFrame<'a> {
                 // derivation so far and no known key exchange method sends such "unsecured" frames
                 // in between PTK and GTK derivation, we can relax IEEE's assumption and require the
                 // secure bit to only be set if at least the PTK was derived.
-                Role::Authenticator if !ptk_established => {
-                    return Err(Error::SecureBitWithUnknownPtk);
-                },
+                Role::Authenticator => ensure!(ptk_established, Error::SecureBitWithUnknownPtk),
                 // Frames sent by Supplicant must have the secure bit set once PTKSA and GTKSA are
                 // established.
-                Role::Supplicant if !ptk_established || !gtk_established => {
-                    return Err(Error::SecureBitNotSetWithKnownPtkGtk);
-                },
+                Role::Supplicant => ensure!(ptk_established && gtk_established,
+                                            Error::SecureBitNotSetWithKnownPtkGtk),
                 _ => {}
             };
         }
 
         // IEEE Std 802.11-2016, 12.7.2 b.8)
-        if frame.key_info.error() {
-            if let Role::Authenticator = sender {
-                return Err(Error::InvalidErrorBitAuthenticator);
-            }
+        if let Role::Authenticator = sender {
+            ensure!(!frame.key_info.error(), Error::InvalidErrorBitAuthenticator);
         }
 
         // IEEE Std 802.11-2016, 12.7.2 b.9)
-        if frame.key_info.request() {
-            if let Role::Authenticator = sender {
-                return Err(Error::InvalidRequestBitAuthenticator);
-            }
+        if let Role::Authenticator = sender {
+            ensure!(!frame.key_info.request(), Error::InvalidRequestBitAuthenticator);
         }
 
         // IEEE Std 802.11-2016, 12.7.2 b.10)
         // Encrypted key data is validated at the end once all other validations succeeded.
 
         // IEEE Std 802.11-2016, 12.7.2 b.11)
-        if frame.key_info.smk_message() {
-            return Err(Error::SmkHandshakeNotSupported);
-        }
+        ensure!(!frame.key_info.smk_message(), Error::SmkHandshakeNotSupported);
 
         // IEEE Std 802.11-2016, 12.7.2 c)
         match sender {
             // Supplicant always uses a key length of 0.
             Role::Supplicant if frame.key_len != 0 => {
-                Err(Error::InvalidKeyLength(frame.key_len, 0))
+                bail!(Error::InvalidKeyLength(frame.key_len, 0))
             },
             // Authenticator must use the pairwise cipher's key length.
             Role::Authenticator => {
@@ -182,20 +166,16 @@ impl <'a> VerifiedKeyFrame<'a> {
                     .tk_bits()
                     .ok_or(Error::UnsupportedCipherSuite)?;
                 if frame.key_len != tk_bits / 8 {
-                    Err(Error::InvalidKeyLength(frame.key_len, tk_bits / 8))
-                } else {
-                    Ok(())
+                    bail!(Error::InvalidKeyLength(frame.key_len, tk_bits / 8))
                 }
             },
-            _ => Ok(())
-        }?;
+            _ => {}
+        };
 
         // IEEE Std 802.11-2016, 12.7.2, d)
-        if key_replay_counter > 0 && frame.key_replay_counter <= key_replay_counter {
-            return Err(Error::InvalidKeyReplayCounter(
-                frame.key_replay_counter,
-                key_replay_counter
-            ));
+        if key_replay_counter > 0 {
+            ensure!(frame.key_replay_counter > key_replay_counter,
+                    Error::InvalidKeyReplayCounter(frame.key_replay_counter, key_replay_counter));
         }
 
         // IEEE Std 802.11-2016, 12.7.2, e)
@@ -209,11 +189,9 @@ impl <'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
-        let mic_bytes = rsne.akm.mic_bytes()
-            .ok_or(Error::UnsupportedAkmSuite)?;
-        if frame.key_mic.len() != mic_bytes as usize {
-            return Err(Error::InvalidMicSize.into());
-        }
+        let mic_bytes = rsne.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
+        ensure!(frame.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
+
         if frame.key_info.key_mic() {
             // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
             match ptk {
@@ -225,32 +203,26 @@ impl <'a> VerifiedKeyFrame<'a> {
                         .integrity_algorithm()
                         .ok_or(Error::UnsupportedAkmSuite)?
                         .verify(ptk.kck(), &buf[..], &frame.key_mic[..]);
-                    if !valid_mic {
-                        Err(Error::InvalidMic)
-                    } else {
-                        Ok(())
-                    }
+                    ensure!(valid_mic, Error::InvalidMic);
                 },
                 // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
-                None => Err(Error::UnexpectedMic),
-            }?;
+                None => bail!(Error::UnexpectedMic),
+            };
         }
 
         // IEEE Std 802.11-2016, 12.7.2 i) & j)
         // IEEE Std 802.11-2016, 12.7.2 b.10)
-        if frame.key_data_len as usize != frame.key_data.len() {
-            return Err(Error::InvalidKeyDataLength);
-        }
+        ensure!(frame.key_data_len as usize == frame.key_data.len(), Error::InvalidKeyDataLength);
         let kd_plaintext: Bytes;
         if frame.key_info.encrypted_key_data() {
             kd_plaintext = Bytes::from(match ptk {
                 Some(ptk) => {
                     rsne.akm.keywrap_algorithm()
                         .ok_or(Error::UnsupportedAkmSuite)?
-                        .unwrap(ptk.kek(), &frame.key_data[..])
+                        .unwrap(ptk.kek(), &frame.key_data[..])?
                 },
-                None => Err(Error::UnexpectedEncryptedKeyData),
-            }?);
+                None => bail!(Error::UnexpectedEncryptedKeyData),
+            });
         } else {
             kd_plaintext = Bytes::from(&frame.key_data[..]);
         }

@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{Error, Result};
 use bytes::Bytes;
+use failure;
+use Error;
 
 pub type Pmkid = Bytes;
 
-pub fn new(pmkid: Bytes) -> Result<Pmkid> {
-    if pmkid.len() != 16 {
-        Err(Error::InvalidPmkidLength(pmkid.len()))
-    } else {
-        Ok(pmkid)
-    }
+pub fn new(pmkid: Bytes) -> Result<Pmkid, failure::Error> {
+    ensure!(pmkid.len() == 16, Error::InvalidPmkidLength(pmkid.len()));
+    Ok(pmkid)
 }
