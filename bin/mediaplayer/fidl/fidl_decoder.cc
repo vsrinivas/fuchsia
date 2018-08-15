@@ -275,7 +275,7 @@ void FidlDecoder::OnInputConstraints(
     input_buffers_.current_set().FreeAllBuffersOwnedBy(kCodec);
   }
 
-  input_buffers_.ApplyConstraints(constraints);
+  input_buffers_.ApplyConstraints(constraints, true);
   FXL_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
 
@@ -318,7 +318,10 @@ void FidlDecoder::OnOutputConfig(
     output_buffers_.current_set().FreeAllBuffersOwnedBy(kCodec);
   }
 
-  output_buffers_.ApplyConstraints(config.buffer_constraints);
+  // Use a single VMO for audio, VMO per buffer for video.
+  output_buffers_.ApplyConstraints(
+      config.buffer_constraints,
+      stream_type_->medium() == StreamType::Medium::kAudio);
 
   FXL_DCHECK(output_buffers_.has_current_set());
   BufferSet& current_set = output_buffers_.current_set();

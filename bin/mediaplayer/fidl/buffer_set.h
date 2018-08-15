@@ -21,15 +21,14 @@ namespace media_player {
 // This class uses a single vmo for all the buffers in a set. mediacodec
 // allows each buffer to use its own vmo, a mode which isn't currently
 // supported by this class.
-// TODO(dalesat): support vmo-per-buffer for video decoding
 class BufferSet {
  public:
   static std::unique_ptr<BufferSet> Create(
       const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-      uint64_t lifetime_ordinal);
+      uint64_t lifetime_ordinal, bool single_vmo);
 
   BufferSet(const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-            uint64_t lifetime_ordinal);
+            uint64_t lifetime_ordinal, bool single_vmo);
 
   ~BufferSet() = default;
 
@@ -79,9 +78,28 @@ class BufferSet {
   void FreeAllBuffersOwnedBy(uint8_t party);
 
  private:
+  struct VmoInfo {
+    fzl::VmoMapper mapper_;
+    zx::vmo vmo_;
+  };
+
+  // Gets the vmo and mapper for the specified index.
+  VmoInfo& buffer_vmo_info(size_t buffer_index) {
+    FXL_DCHECK(buffer_index < buffer_count());
+    return vmo_info_by_index_ ? vmo_info_by_index_[buffer_index]
+                              : single_vmo_info_;
+  }
+
+  // Gets the vmo and mapper for the specified index (const version).
+  const VmoInfo& buffer_vmo_info(size_t buffer_index) const {
+    FXL_DCHECK(buffer_index < buffer_count());
+    return vmo_info_by_index_ ? vmo_info_by_index_[buffer_index]
+                              : single_vmo_info_;
+  }
+
   fuchsia::mediacodec::CodecPortBufferSettings settings_;
-  fzl::VmoMapper vmo_mapper_;
-  zx::vmo vmo_;
+  VmoInfo single_vmo_info_;
+  std::unique_ptr<VmoInfo[]> vmo_info_by_index_;
 
   // |owners_by_index_| indicates who owns each buffer. 0 indicates the buffer
   // is free. Non-zero values refer to owners assigned by the caller.
@@ -118,9 +136,12 @@ class BufferSetManager {
     return *current_set_;
   }
 
-  // Applies the specified constraints, creating a new buffer set.
+  // Applies the specified constraints, creating a new buffer set. If
+  // |single_vmo| is true, one vmo will be used for all the new buffers.
+  // Otherwise, each new buffer will have its own vmo.
   void ApplyConstraints(
-      const fuchsia::mediacodec::CodecBufferConstraints& constraints);
+      const fuchsia::mediacodec::CodecBufferConstraints& constraints,
+      bool single_vmo);
 
   // Frees a buffer with the given lifetime ordinal and index. Returns
   // true if the buffer was from the current set, and the set was previously

@@ -11,25 +11,46 @@ namespace media_player {
 // static
 std::unique_ptr<BufferSet> BufferSet::Create(
     const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-    uint64_t buffer_lifetime_ordinal) {
-  return std::make_unique<BufferSet>(settings, buffer_lifetime_ordinal);
+    uint64_t buffer_lifetime_ordinal, bool single_vmo) {
+  return std::make_unique<BufferSet>(settings, buffer_lifetime_ordinal,
+                                     single_vmo);
 }
 
 BufferSet::BufferSet(
     const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-    uint64_t buffer_lifetime_ordinal)
+    uint64_t buffer_lifetime_ordinal, bool single_vmo)
     : settings_(settings),
       owners_by_index_(settings_.packet_count_for_codec +
                        settings_.packet_count_for_client) {
   free_buffer_count_ = buffer_count();
   settings_.buffer_lifetime_ordinal = buffer_lifetime_ordinal;
-  uint64_t vmo_size = settings_.per_packet_buffer_bytes * buffer_count();
-  zx_status_t status = vmo_mapper_.CreateAndMap(
-      vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr, &vmo_,
-      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-          ZX_RIGHT_DUPLICATE);
-  if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "Failed to create and map vmo, status " << status;
+
+  if (single_vmo) {
+    uint64_t vmo_size = settings_.per_packet_buffer_bytes * buffer_count();
+    zx_status_t status = single_vmo_info_.mapper_.CreateAndMap(
+        vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
+        &single_vmo_info_.vmo_,
+        ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
+            ZX_RIGHT_DUPLICATE);
+    if (status != ZX_OK) {
+      FXL_LOG(FATAL) << "Failed to create and map vmo, status " << status;
+    }
+  } else {
+    uint64_t vmo_size = settings_.per_packet_buffer_bytes;
+    vmo_info_by_index_ = std::make_unique<VmoInfo[]>(buffer_count());
+
+    for (uint32_t buffer_index = 0; buffer_index << buffer_count();
+         ++buffer_index) {
+      VmoInfo& vmo_info = buffer_vmo_info(buffer_index);
+      zx_status_t status = vmo_info.mapper_.CreateAndMap(
+          vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
+          &vmo_info.vmo_,
+          ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
+              ZX_RIGHT_DUPLICATE);
+      if (status != ZX_OK) {
+        FXL_LOG(FATAL) << "Failed to create and map vmo, status " << status;
+      }
+    }
   }
 }
 
@@ -42,11 +63,12 @@ fuchsia::mediacodec::CodecBuffer BufferSet::GetBufferDescriptor(
   buffer.buffer_index = buffer_index;
 
   fuchsia::mediacodec::CodecBufferDataVmo buffer_data_vmo;
+  const VmoInfo& vmo_info = buffer_vmo_info(buffer_index);
 
   zx_status_t status =
-      vmo_.duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-                         (writeable ? ZX_RIGHT_WRITE : 0),
-                     &buffer_data_vmo.vmo_handle);
+      vmo_info.vmo_.duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
+                             (writeable ? ZX_RIGHT_WRITE : 0),
+                         &buffer_data_vmo.vmo_handle);
   if (status != ZX_OK) {
     FXL_LOG(FATAL) << "Failed to duplicate vmo, status " << status;
   }
@@ -62,7 +84,8 @@ fuchsia::mediacodec::CodecBuffer BufferSet::GetBufferDescriptor(
 
 void* BufferSet::GetBufferData(uint32_t buffer_index) const {
   FXL_DCHECK(buffer_index < buffer_count());
-  return reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
+  const VmoInfo& vmo_info = buffer_vmo_info(buffer_index);
+  return reinterpret_cast<uint8_t*>(vmo_info.mapper_.start()) +
          buffer_index * settings_.per_packet_buffer_bytes;
 }
 
@@ -145,7 +168,8 @@ void BufferSet::FreeAllBuffersOwnedBy(uint8_t party) {
 }
 
 void BufferSetManager::ApplyConstraints(
-    const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
+    const fuchsia::mediacodec::CodecBufferConstraints& constraints,
+    bool single_vmo) {
   uint64_t lifetime_ordinal = 1;
 
   if (current_set_) {
@@ -158,8 +182,11 @@ void BufferSetManager::ApplyConstraints(
     }
   }
 
-  current_set_ =
-      BufferSet::Create(constraints.default_settings, lifetime_ordinal);
+  // TODO(dalesat): Support is_physically_contiguous_required == true;
+  FXL_DCHECK(!constraints.is_physically_contiguous_required);
+
+  current_set_ = BufferSet::Create(constraints.default_settings,
+                                   lifetime_ordinal, single_vmo);
 }
 
 bool BufferSetManager::FreeBuffer(uint64_t lifetime_ordinal, uint32_t index) {
