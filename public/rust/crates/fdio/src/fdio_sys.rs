@@ -1548,8 +1548,7 @@ extern "C" {
         out_len: usize,
     ) -> isize;
     pub fn fdio_pipe_half(handle: *mut zx_handle_t, type_: *mut u32) -> zx_status_t;
-    pub fn fdio_get_vmo_copy(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
-    pub fn fdio_get_vmo_clone(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
+    pub fn fdio_get_vmo(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_get_exact_vmo(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_vmo_fd(vmo: zx_handle_t, offset: u64, length: u64) -> raw::c_int;
     pub fn fdio_ns_create(out: *mut *mut fdio_ns_t) -> zx_status_t;
