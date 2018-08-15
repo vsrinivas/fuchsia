@@ -1,7 +1,7 @@
 package sme
 
 import (
-	bindings "fidl/bindings"
+	bindings "syscall/zx/fidl"
 )
 
 type Transport interface {

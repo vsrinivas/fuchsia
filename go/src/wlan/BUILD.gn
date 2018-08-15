@@ -15,7 +15,6 @@ go_library("wlan_lib") {
     "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
     "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
     "//garnet/public/go/third_party:golang.org/x/crypto",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }
 
@@ -27,7 +26,6 @@ go_library("wlanstack_lib") {
     "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
     ":wlan_lib",
   ]
 }

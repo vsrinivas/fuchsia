@@ -15,7 +15,6 @@ go_library("power_manager_lib") {
     "//garnet/public/fidl/fuchsia.power($go_toolchain)",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }
 

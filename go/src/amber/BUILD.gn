@@ -19,7 +19,6 @@ go_library("amber_lib") {
     "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
     "//garnet/public/go/third_party:golang.org/x/oauth2",
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//garnet/public/lib/syslog/go/src/syslog",
   ]
 }

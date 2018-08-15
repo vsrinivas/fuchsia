@@ -5,12 +5,12 @@
 package context
 
 import (
-	"fidl/bindings"
 	"fmt"
 	"svc/svcns"
 
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/fidl"
 	"syscall/zx/mxruntime"
 
 	"fidl/fuchsia/sys"
@@ -89,14 +89,14 @@ func (c *Context) Serve() {
 	if c.appServices.IsValid() {
 		c.services.Add(c.OutgoingService, zx.Channel(c.appServices), nil)
 	}
-	go bindings.Serve()
+	go fidl.Serve()
 }
 
-func (c *Context) ConnectToEnvService(r bindings.ServiceRequest) {
+func (c *Context) ConnectToEnvService(r fidl.ServiceRequest) {
 	c.connector.ConnectToEnvService(r)
 }
 
-func (c *Connector) ConnectToEnvService(r bindings.ServiceRequest) {
+func (c *Connector) ConnectToEnvService(r fidl.ServiceRequest) {
 	c.ConnectToEnvServiceAt(r.Name(), r.ToChannel())
 }
 

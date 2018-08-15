@@ -29,7 +29,7 @@ const (
 	SyscallZxPackage = "syscall/zx"
 	SyscallZxAlias   = "_zx"
 
-	BindingsPackage = "fidl/bindings"
+	BindingsPackage = "syscall/zx/fidl"
 	BindingsAlias   = "_bindings"
 )
 

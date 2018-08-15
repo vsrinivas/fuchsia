@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"app/context"
-	"fidl/bindings"
+	"syscall/zx/fidl"
 
 	"fidl/fuchsia/power"
 )
@@ -61,9 +61,9 @@ func TestPowerManagerWatcher(t *testing.T) {
 
 	pmWatcher := &WatcherMock{called: 0}
 	s := power.PowerManagerWatcherStub{Impl: pmWatcher}
-	bs := bindings.BindingSet{}
+	bs := fidl.BindingSet{}
 	bs.Add(&s, rw.Channel, nil)
-	go bindings.Serve()
+	go fidl.Serve()
 
 	err = pmClient.pm.Watch(*pw)
 	if err != nil {

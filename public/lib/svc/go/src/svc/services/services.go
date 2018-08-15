@@ -7,10 +7,9 @@
 package services
 
 import (
-	"fidl/bindings"
-
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/fidl"
 	"syscall/zx/io"
 )
 
@@ -36,7 +35,7 @@ func (p *Provider) NewRequest() (zx.Channel, error) {
 		p.directory.Close()
 	}
 	p.directory = pxy
-	return (bindings.InterfaceRequest(req)).Channel, nil
+	return (fidl.InterfaceRequest(req)).Channel, nil
 }
 
 // Bind stores an io.DirectoryInterface in the Provider. If another channel was already held in
@@ -63,6 +62,6 @@ func (p *Provider) ConnectToServiceAt(c zx.Channel, path string) error {
 
 // ConnectToService connects an InterfaceRequest to a service in the directory referenced
 // by the Provider using the interface name as the path.
-func (p *Provider) ConnectToService(sr bindings.ServiceRequest) error {
+func (p *Provider) ConnectToService(sr fidl.ServiceRequest) error {
 	return p.ConnectToServiceAt(sr.ToChannel(), sr.Name())
 }

@@ -17,7 +17,6 @@ go_library("echo2_server_go_lib") {
   name = "echo2_server_go"
   deps = [
     "//garnet/examples/fidl/services:echo2($go_toolchain)",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/svc/go/src/svc",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",

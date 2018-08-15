@@ -5,7 +5,6 @@
 package wlan
 
 import (
-	bindings "fidl/bindings"
 	"fidl/fuchsia/wlan/mlme"
 	wlan_service "fidl/fuchsia/wlan/service"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"os"
 	"syscall"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"syscall/zx/mxerror"
 	"syscall/zx/zxwait"
 	"time"
@@ -251,16 +251,16 @@ event_loop:
 	log.Printf("exiting event loop for %v", c.path)
 }
 
-func (c *Client) SendMessage(msg bindings.Payload, ordinal uint32) error {
+func (c *Client) SendMessage(msg fidl.Payload, ordinal uint32) error {
 	// All MLME messages are one-way, so the txid is 0.
-	h := &bindings.MessageHeader{
+	h := &fidl.MessageHeader{
 		Txid:    0,
 		Flags:   0,
 		Ordinal: ordinal,
 	}
 
 	msgBuf := make([]byte, zx.ChannelMaxMessageBytes)
-	nb, _, err := bindings.MarshalMessage(h, msg, msgBuf, nil)
+	nb, _, err := fidl.MarshalMessage(h, msg, msgBuf, nil)
 	if err != nil {
 		return fmt.Errorf("could not encode message %T: %v", msg, err)
 	}
@@ -345,63 +345,63 @@ func (c *Client) handleResponse(obs zx.Signals, err error) (state, error) {
 }
 
 func parseResponse(buf []byte) (interface{}, error) {
-	var header bindings.MessageHeader
-	if err := bindings.UnmarshalHeader(buf, &header); err != nil {
+	var header fidl.MessageHeader
+	if err := fidl.UnmarshalHeader(buf, &header); err != nil {
 		return nil, fmt.Errorf("could not decode api header: %v", err)
 	}
-	buf = buf[bindings.MessageHeaderSize:]
+	buf = buf[fidl.MessageHeaderSize:]
 	switch header.Ordinal {
 	case mlme.MlmeScanConfOrdinal:
 		var resp mlme.ScanConfirm
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode ScanConfirm: %v", err)
 		}
 		return &resp, nil
 	case mlme.MlmeJoinConfOrdinal:
 		var resp mlme.JoinConfirm
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode JoinConfirm: %v", err)
 		}
 		return &resp, nil
 	case mlme.MlmeAuthenticateConfOrdinal:
 		var resp mlme.AuthenticateConfirm
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode AuthenticateConfirm: %v", err)
 		}
 		return &resp, nil
 	case mlme.MlmeDeauthenticateConfOrdinal:
 		var resp mlme.DeauthenticateConfirm
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode DeauthenticateConfirm: %v", err)
 		}
 		return &resp, nil
 	case mlme.MlmeDeauthenticateIndOrdinal:
 		var ind mlme.DeauthenticateIndication
-		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode DeauthenticateIndication: %v", err)
 		}
 		return &ind, nil
 	case mlme.MlmeAssociateConfOrdinal:
 		var resp mlme.AssociateConfirm
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode AssociateConfirm: %v", err)
 		}
 		return &resp, nil
 	case mlme.MlmeDisassociateIndOrdinal:
 		var ind mlme.DisassociateIndication
-		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode DisassociateIndication: %v", err)
 		}
 		return &ind, nil
 	case mlme.MlmeSignalReportOrdinal:
 		var ind mlme.SignalReportIndication
-		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode SignalReportIndication: %v", err)
 		}
 		return &ind, nil
 	case mlme.MlmeEapolIndOrdinal:
 		var ind mlme.EapolIndication
-		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode EapolIndication: %v", err)
 		}
 		return &ind, nil
@@ -410,13 +410,13 @@ func parseResponse(buf []byte) (interface{}, error) {
 		return &resp, nil
 	case mlme.MlmeDeviceQueryConfOrdinal:
 		var resp mlme.DeviceQueryConfirm
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode DeviceQueryConfirm: %v", err)
 		}
 		return &resp, nil
 	case mlme.MlmeStatsQueryRespOrdinal:
 		var resp mlme.StatsQueryResponse
-		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+		if err := fidl.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode StatsQueryResponse: %v", err)
 		}
 		return &resp, nil

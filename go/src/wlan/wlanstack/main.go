@@ -6,7 +6,6 @@ package main
 
 import (
 	"app/context"
-	"fidl/bindings"
 
 	"fidl/fuchsia/wlan/stats"
 	wlan_service "fidl/fuchsia/wlan/service"
@@ -187,7 +186,7 @@ func main() {
 
 	ws := &Wlanstack{}
 
-	service := &bindings.BindingSet{}
+	service := &fidl.BindingSet{}
 	ctx := context.CreateFromStartupInfo()
 	ctx.OutgoingService.AddService(wlan_service.WlanName, func(c zx.Channel) error {
 		_, err := service.Add(&wlan_service.WlanStub{Impl: ws}, c, nil)

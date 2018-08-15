@@ -12,7 +12,6 @@ go_binary("netstat") {
   deps = [
     "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }
 
@@ -22,6 +21,5 @@ go_test("netstack_netstat_test") {
   deps = [
     "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }

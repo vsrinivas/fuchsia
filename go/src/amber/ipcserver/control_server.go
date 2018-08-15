@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"sync"
 
-	"fidl/bindings"
 	"fidl/fuchsia/amber"
 
 	"amber/daemon"
@@ -25,7 +24,7 @@ import (
 type ControlSrvr struct {
 	daemonGate  sync.Once
 	daemon      *daemon.Daemon
-	bs          bindings.BindingSet
+	bs          fidl.BindingSet
 	actMon      *ActivationMonitor
 	activations chan<- string
 	compReqs    chan<- *completeUpdateRequest

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"app/context"
-	"fidl/bindings"
 
 	"syscall/zx"
+	"syscall/zx/fidl"
 
 	"fidl/fidl/examples/heartbeat"
 )
@@ -24,7 +24,7 @@ func main() {
 		return err
 	})
 	c.Serve()
-	go bindings.Serve()
+	go fidl.Serve()
 
 	go func() {
 		for {
