@@ -4,10 +4,14 @@
 
 #![deny(warnings)]
 
-use std::path::Path;
 use failure::Error;
 use std::fs::{File, OpenOptions};
+use std::path::Path;
 
 pub fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
-    OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path)
+        .map_err(|e| e.into())
 }

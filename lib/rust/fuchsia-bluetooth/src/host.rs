@@ -4,11 +4,21 @@
 
 use failure::Error;
 use fdio::{fdio_sys, ioctl, make_ioctl};
+use fuchsia_zircon::{self as zircon, Handle};
 use std;
+use std::fs::read_dir;
 use std::fs::File;
 use std::mem;
 use std::os::raw;
-use fuchsia_zircon::{self as zircon, Handle};
+use std::path::PathBuf;
+
+/// Returns the filesystem paths to the all bt-host devices.
+pub fn list_host_devices() -> Vec<PathBuf> {
+    let paths = read_dir("/dev/class/bt-host/").unwrap();
+    paths
+        .filter_map(|entry| entry.ok().and_then(|e| Some(e.path())))
+        .collect::<Vec<PathBuf>>()
+}
 
 /// Opens a Host Fidl interface on a bt-host device using an Ioctl
 pub fn open_host_channel(device: &File) -> Result<zircon::Handle, Error> {
@@ -22,7 +32,7 @@ pub fn open_host_channel(device: &File) -> Result<zircon::Handle, Error> {
             &mut handle as *mut _ as *mut std::os::raw::c_void,
             mem::size_of::<zircon::sys::zx_handle_t>(),
         ).map(|_| Handle::from_raw(handle))
-            .map_err(|e| e.into())
+        .map_err(|e| e.into())
     }
 }
 

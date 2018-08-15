@@ -9,11 +9,11 @@ use failure::{format_err, Error};
 use rand::{self, Rng};
 use std;
 use std::ffi::{CString, OsStr, OsString};
-use std::fs::{read_dir, File, OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::mem;
 use std::os::raw;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use fdio::{fdio_sys, ioctl, make_ioctl};
 use fuchsia_zircon::{self as zircon, Handle};
@@ -41,13 +41,6 @@ pub fn create_and_bind_device() -> Result<(File, String), Error> {
     let dev = dev.ok_or_else(|| format_err!("could not open {:?}", devpath))?;
     bind_fake_device(&dev)?;
     Ok((dev, id))
-}
-
-pub fn list_host_devices() -> Vec<PathBuf> {
-    let paths = read_dir("/dev/class/bt-host/").unwrap();
-    paths
-        .filter_map(|entry| entry.ok().and_then(|e| Some(e.path())))
-        .collect::<Vec<PathBuf>>()
 }
 
 pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<OsString, Error> {
@@ -88,7 +81,7 @@ pub fn bind_fake_device(device: &File) -> Result<(), Error> {
             ::std::ptr::null_mut() as *mut raw::c_void,
             0,
         ).map(|_| ())
-            .map_err(|e| e.into())
+        .map_err(|e| e.into())
     }
 }
 
@@ -103,7 +96,7 @@ pub fn destroy_device(device: &File) -> Result<(), Error> {
             ::std::ptr::null_mut() as *mut raw::c_void,
             0,
         ).map(|_| ())
-            .map_err(|e| e.into())
+        .map_err(|e| e.into())
     }
 }
 
@@ -146,7 +139,7 @@ pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
             &mut handle as *mut _ as *mut std::os::raw::c_void,
             mem::size_of::<zircon::sys::zx_handle_t>(),
         ).map(|_| Handle::from_raw(handle))
-            .map_err(|e| e.into())
+        .map_err(|e| e.into())
     }
 }
 

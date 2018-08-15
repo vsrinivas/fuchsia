@@ -4,24 +4,14 @@
 
 import("//build/package.gni")
 
-executable("bt-host-unittests") {
-  testonly = true
-
-  deps = [
-    "//garnet/drivers/bluetooth/lib:tests",
-    "//garnet/drivers/bluetooth/lib/testing:gtest_main",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-package("bluetooth_tests") {
+package("tests") {
   testonly = true
 
   package_name = "bluetooth_tests"
 
   deps = [
     ":bt-host-unittests",
-    "//garnet/bin/bluetooth/tests/integration",
+    "integration",
   ]
 
   tests = [
@@ -29,7 +19,22 @@ package("bluetooth_tests") {
       name = "bt-host-unittests"
     },
     {
-      name = "rust_crates/bt_lifecycle_integration_test"
+      name = "rust_crates/host_integration"
+      dest = "bt-host-integration-tests"
     },
+    {
+      name = "rust_crates/host_lifecycle"
+      dest = "bt-host-lifecycle-test"
+    },
+  ]
+}
+
+executable("bt-host-unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib:tests",
+    "//garnet/drivers/bluetooth/lib/testing:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }

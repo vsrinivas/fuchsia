@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate fdio;
 extern crate failure;
-extern crate rand;
-pub extern crate fuchsia_bluetooth as bluetooth;
-extern crate fuchsia_async as async;
+extern crate fdio;
 extern crate fidl_fuchsia_bluetooth_host;
+extern crate fuchsia_async as async;
+extern crate fuchsia_bluetooth;
 extern crate futures;
+extern crate rand;
 
+use failure::Error;
 use fidl_fuchsia_bluetooth_host::HostProxy;
+use fuchsia_bluetooth::fake_hci::FakeHciDevice;
+use fuchsia_bluetooth::hci;
+use fuchsia_bluetooth::host;
 use std::path::PathBuf;
 use std::{thread, time};
-use bluetooth::hci;
-use bluetooth::host;
 
 mod common;
 
@@ -27,9 +29,10 @@ fn sleep() -> () {
     thread::sleep(time::Duration::from_millis(SLEEP_MS));
 }
 
-fn main() {
-    let original_hosts = hci::list_host_devices();
-    let (hci_device, _) = hci::create_and_bind_device().unwrap();
+// Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
+fn lifecycle_test() -> Result<(), Error> {
+    let original_hosts = host::list_host_devices();
+    let mut fake_hci = Some(FakeHciDevice::new()?);
 
     // TODO(armansito): Use a device watcher instead of polling.
 
@@ -37,7 +40,7 @@ fn main() {
     let mut retry = 0;
     'find_device: while retry < ITERATIONS {
         retry += 1;
-        let new_hosts = hci::list_host_devices();
+        let new_hosts = host::list_host_devices();
         for host in new_hosts {
             if !original_hosts.contains(&host) {
                 bthost = host;
@@ -71,15 +74,15 @@ fn main() {
     }
 
     // Remove the bt-hci device
-    hci::destroy_device(&hci_device);
+    fake_hci = None;
 
     // Check the host driver is also destroyed
-    let post_destroy_hosts = hci::list_host_devices();
+    let post_destroy_hosts = host::list_host_devices();
     let mut device_found = true;
     let mut retry = 0;
     while retry < ITERATIONS {
         retry += 1;
-        let new_hosts = hci::list_host_devices();
+        let new_hosts = host::list_host_devices();
         if !new_hosts.contains(&bthost) {
             device_found = false;
             break;
@@ -87,4 +90,10 @@ fn main() {
         sleep();
     }
     assert!(!device_found);
+
+    Ok(())
+}
+
+fn main() -> Result<(), Error> {
+    lifecycle_test()
 }
