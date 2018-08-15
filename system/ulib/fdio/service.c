@@ -10,6 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include "private.h"
+#include "private-remoteio.h"
 #include "unistd.h"
 
 typedef struct {
@@ -91,15 +92,24 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
         mtx_unlock(&fdio_lock);
         zx_status_t r;
         if (io->ops == &zx_svc_ops) {
-            // is a service, extract handle
+            // is an unknown service, extract handle
             zxsvc_t* svc = (zxsvc_t*) io;
             *out = svc->h;
             svc->h = ZX_HANDLE_INVALID;
             r = ZX_OK;
+        } else if (io->ops == &zx_remote_ops) {
+            // is a fuchsia.io.* service, extract handle
+            zxrio_t* rio = (zxrio_t*) io;
+            *out = rio->h;
+            rio->h = ZX_HANDLE_INVALID;
+            zx_handle_close(rio->h2);
+            rio->h2 = ZX_HANDLE_INVALID;
+            r = ZX_OK;
         } else {
-            r = io->ops->close(io);
-            fdio_release(io);
+            r = ZX_ERR_NOT_SUPPORTED;
+            io->ops->close(io);
         }
+        fdio_release(io);
         return r;
     }
 }

@@ -836,7 +836,7 @@ static zx_status_t zxrio_set_flags(fdio_t* io, uint32_t flags) {
     return fidl_setflags(rio, flags);
 }
 
-static fdio_ops_t zx_remote_ops = {
+fdio_ops_t zx_remote_ops = {
     .read = zxrio_read,
     .read_at = zxrio_read_at,
     .write = zxrio_write,

@@ -83,3 +83,5 @@ zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
 //
 // Does not close |h|, even on error.
 zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info);
+
+extern fdio_ops_t zx_remote_ops;

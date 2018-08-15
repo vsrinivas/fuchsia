@@ -49,9 +49,15 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd);
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** io_out);
 
 // If this fd represents a "service" (an rpc channel speaking
-// a non-fdio protocol), this call will return ZX_OK and
-// return the underlying handle.
+// an unknown fidl protocol or a fuchsia.io.* protocol),
+// this call will return ZX_OK and return the underlying handle.
 // On both success and failure, the fd is effectively closed.
+//
+// ZX_ERR_NOT_SUPPORTED is returned if this fd does not represent
+// a FIDL transport
+//
+// ZX_ERR_UNAVAILABLE is returned if this fd has been dup()'d and
+// duplicates are sharing the FIDL transport
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out);
 
 // creates a do-nothing fdio_t
