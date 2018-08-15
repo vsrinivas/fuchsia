@@ -88,6 +88,7 @@ class InputInterpreter {
   template <typename ReportT>
   bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
   bool ParseParadiseSensorReport(uint8_t* report, size_t len);
+  bool ParseParadiseStylusReport(uint8_t* report, size_t len);
   bool ParseEyoyoTouchscreenReport(uint8_t* report, size_t len);
   bool ParseFt3x27TouchscreenReport(uint8_t* r, size_t len);
 

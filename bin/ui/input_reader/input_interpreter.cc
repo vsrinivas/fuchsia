@@ -205,6 +205,25 @@ bool InputInterpreter::Initialize() {
 
     touch_device_type_ = TouchDeviceType::PARADISEv1;
   } else if (protocol == HidDecoder::Protocol::ParadiseV2Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has stylus";
+    has_stylus_ = true;
+    stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
+
+    stylus_descriptor_->x.range.min = 0;
+    stylus_descriptor_->x.range.max = PARADISE_STYLUS_X_MAX;
+    stylus_descriptor_->x.resolution = 1;
+
+    stylus_descriptor_->y.range.min = 0;
+    stylus_descriptor_->y.range.max = PARADISE_STYLUS_Y_MAX;
+    stylus_descriptor_->y.resolution = 1;
+
+    stylus_descriptor_->is_invertible = false;
+
+    stylus_descriptor_->buttons |= fuchsia::ui::input::kStylusBarrel;
+
+    stylus_report_ = fuchsia::ui::input::InputReport::New();
+    stylus_report_->stylus = fuchsia::ui::input::StylusReport::New();
+
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -226,6 +245,25 @@ bool InputInterpreter::Initialize() {
 
     touch_device_type_ = TouchDeviceType::PARADISEv2;
   } else if (protocol == HidDecoder::Protocol::ParadiseV3Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has stylus";
+    has_stylus_ = true;
+    stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
+
+    stylus_descriptor_->x.range.min = 0;
+    stylus_descriptor_->x.range.max = PARADISE_STYLUS_X_MAX;
+    stylus_descriptor_->x.resolution = 1;
+
+    stylus_descriptor_->y.range.min = 0;
+    stylus_descriptor_->y.range.max = PARADISE_STYLUS_Y_MAX;
+    stylus_descriptor_->y.resolution = 1;
+
+    stylus_descriptor_->is_invertible = false;
+
+    stylus_descriptor_->buttons |= fuchsia::ui::input::kStylusBarrel;
+
+    stylus_report_ = fuchsia::ui::input::InputReport::New();
+    stylus_report_->stylus = fuchsia::ui::input::StylusReport::New();
+
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -555,6 +593,12 @@ bool InputInterpreter::Read(bool discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
         }
+      } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
+        if (ParseParadiseStylusReport(report.data(), rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(CloneReport(stylus_report_));
+          }
+        }
       }
       break;
     case TouchDeviceType::PARADISEv3:
@@ -563,6 +607,12 @@ bool InputInterpreter::Read(bool discard) {
                                                              rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
+          }
+        }
+      } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
+        if (ParseParadiseStylusReport(report.data(), rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(CloneReport(stylus_report_));
           }
         }
       }
@@ -903,6 +953,41 @@ bool InputInterpreter::ParseParadiseSensorReport(uint8_t* r, size_t len) {
   FXL_VLOG(2) << name()
               << " parsed (sensor=" << static_cast<uint16_t>(sensor_idx_)
               << "): " << *sensor_report_;
+  return true;
+}
+
+bool InputInterpreter::ParseParadiseStylusReport(uint8_t* r, size_t len) {
+  if (len != sizeof(paradise_stylus_t)) {
+    FXL_LOG(INFO) << "paradise wrong stylus report size " << len;
+    return false;
+  }
+
+  auto report = reinterpret_cast<paradise_stylus_t*>(r);
+  stylus_report_->event_time = InputEventTimestampNow();
+
+  stylus_report_->stylus->x = report->x;
+  stylus_report_->stylus->y = report->y;
+  stylus_report_->stylus->pressure = report->pressure;
+
+  stylus_report_->stylus->is_in_contact =
+      paradise_stylus_status_inrange(report->status) &&
+      (paradise_stylus_status_tswitch(report->status) ||
+       paradise_stylus_status_eraser(report->status));
+
+  stylus_report_->stylus->in_range =
+      paradise_stylus_status_inrange(report->status);
+
+  if (paradise_stylus_status_invert(report->status) ||
+      paradise_stylus_status_eraser(report->status)) {
+    stylus_report_->stylus->is_inverted = true;
+  }
+
+  if (paradise_stylus_status_barrel(report->status)) {
+    stylus_report_->stylus->pressed_buttons |=
+        fuchsia::ui::input::kStylusBarrel;
+  }
+  FXL_VLOG(2) << name() << " parsed: " << *stylus_report_;
+
   return true;
 }
 
