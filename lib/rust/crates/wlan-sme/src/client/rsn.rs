@@ -37,7 +37,8 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
 pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
     -> Result<Option<Rsna>, failure::Error>
 {
-    let a_rsne_bytes = match bss.rsn.as_ref() {
+    ensure!(bss.rsn.is_none() == password.is_empty(), "invalid password param for BSS");
+    let a_rsne_bytes = match &bss.rsn {
         None => return Ok(None),
         Some(x) => x
     };
@@ -85,6 +86,11 @@ fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, failure::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
+    use client::test_utils::{make_rsne, rsne_as_bytes};
+    use std::collections::HashSet;
+
+    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     #[test]
     fn test_incompatible_group_data_cipher() {
@@ -158,28 +164,24 @@ mod tests {
         assert_eq!(is_rsn_compatible(&a_rsne), false);
     }
 
-    fn make_cipher(suite_type: u8) -> cipher::Cipher {
-        cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type: suite_type }
+    #[test]
+    fn test_get_rsna_password_for_unprotected_network() {
+        let bss = fake_unprotected_bss_description(b"foo_bss".to_vec());
+        let rsna = get_rsna(&make_device_info(), "somepass".as_bytes(), &bss);
+        assert!(rsna.is_err(), "expect error when password is supplied for unprotected network")
     }
 
-    fn make_akm(suite_type: u8) -> akm::Akm {
-        akm::Akm { oui: Bytes::from(&OUI[..]), suite_type: suite_type }
+    #[test]
+    fn test_get_rsna_no_password_for_protected_network() {
+        let bss = fake_protected_bss_description(b"foo_bss".to_vec());
+        let rsna = get_rsna(&make_device_info(), "".as_bytes(), &bss);
+        assert!(rsna.is_err(), "expect error when no password is supplied for protected network")
     }
 
-    fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
-        let a_rsne = Rsne {
-            version: 1,
-            group_data_cipher_suite: data.map(|t| make_cipher(t)),
-            pairwise_cipher_suites: pairwise.into_iter().map(|t| make_cipher(t)).collect(),
-            akm_suites: akms.into_iter().map(|t| make_akm(t)).collect(),
-            ..Default::default()
-        };
-        a_rsne
-    }
-
-    fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(s_rsne.len());
-        s_rsne.as_bytes(&mut buf);
-        buf
+    fn make_device_info() -> DeviceInfo {
+        DeviceInfo {
+            supported_channels: HashSet::new(),
+            addr: CLIENT_ADDR,
+        }
     }
 }

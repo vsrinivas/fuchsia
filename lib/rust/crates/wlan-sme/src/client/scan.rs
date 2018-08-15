@@ -362,7 +362,7 @@ mod tests {
     use super::*;
 
     use std::collections::HashSet;
-    use client::test_utils::fake_bss_description;
+    use client::test_utils::fake_unprotected_bss_description;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -374,15 +374,15 @@ mod tests {
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_description(b"foo".to_vec()),
+            bss: fake_unprotected_bss_description(b"foo".to_vec()),
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id: txn_id + 100, // mismatching transaction id
-            bss: fake_bss_description(b"bar".to_vec()),
+            bss: fake_unprotected_bss_description(b"bar".to_vec()),
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_description(b"qux".to_vec()),
+            bss: fake_unprotected_bss_description(b"qux".to_vec()),
         });
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -414,7 +414,7 @@ mod tests {
         // Report a scan result
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_description(b"foo".to_vec()),
+            bss: fake_unprotected_bss_description(b"foo".to_vec()),
         });
 
         // Post another command. It should not issue another request to the MLME since
@@ -424,7 +424,7 @@ mod tests {
         // Report another scan result and the end of the scan transaction
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_description(b"bar".to_vec()),
+            bss: fake_unprotected_bss_description(b"bar".to_vec()),
         });
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -542,7 +542,7 @@ mod tests {
         BssDescription {
             bssid,
             rcpi_dbmh,
-            .. fake_bss_description(ssid)
+            .. fake_unprotected_bss_description(ssid)
         }
     }
 

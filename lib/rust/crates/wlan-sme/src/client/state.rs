@@ -486,7 +486,7 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
 mod tests {
     use super::*;
     use futures::channel::mpsc;
-    use client::test_utils::fake_bss_description;
+    use client::test_utils::fake_unprotected_bss_description;
     use client::{UserEvent, UserStream};
     use MlmeStream;
     use std::collections::HashSet;
@@ -762,7 +762,7 @@ mod tests {
     fn bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
         fidl_mlme::BssDescription {
             bssid,
-            .. fake_bss_description(ssid)
+            .. fake_unprotected_bss_description(ssid)
         }
     }
 

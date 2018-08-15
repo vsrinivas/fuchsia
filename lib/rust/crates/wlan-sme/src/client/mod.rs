@@ -10,7 +10,7 @@ mod state;
 #[cfg(test)]
 mod test_utils;
 
-use fidl_mlme::{MlmeEvent, ScanRequest, BssDescription};
+use fidl_mlme::{MlmeEvent, ScanRequest};
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
@@ -162,23 +162,6 @@ impl<T: Tokens> ClientSme<T> {
             self.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
-
-    fn get_connect_command(&self, token: ConnectConfig<T::ConnectToken>, bss: BssDescription)
-        -> Option<ConnectCommand<T::ConnectToken>>
-    {
-        match get_rsna(&self.device_info, &token.password, &bss) {
-            Err(e) => {
-                error!("cannot join BSS {:?}: {:?}", bss.bssid, e);
-                None
-            },
-            Ok(rsna) => Some(
-                ConnectCommand {
-                    bss: Box::new(bss),
-                    token: Some(token.user_token),
-                    rsna
-                })
-        }
-    }
 }
 
 impl<T: Tokens> super::Station for ClientSme<T> {
@@ -194,11 +177,22 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 match result {
                     ScanResult::None => state,
                     ScanResult::ReadyToJoin { token, best_bss } => {
-                        let cmd = self.get_connect_command(token, best_bss);
-                        match cmd {
-                            None => state,
-                            Some(cmd) => {
+                        match get_rsna(&self.device_info, &token.password, &best_bss) {
+                            Ok(rsna) => {
+                                let cmd = ConnectCommand {
+                                    bss: Box::new(best_bss),
+                                    token: Some(token.user_token),
+                                    rsna
+                                };
                                 state.connect(cmd, &self.mlme_sink, &self.user_sink)
+                            },
+                            Err(err) => {
+                                error!("cannot join BSS {:?} {:?}", best_bss.bssid, err);
+                                self.user_sink.send(UserEvent::ConnectFinished {
+                                    token: token.user_token,
+                                    result: ConnectResult::Failed,
+                                });
+                                state
                             }
                         }
                     },
@@ -232,9 +226,11 @@ impl<T: Tokens> super::Station for ClientSme<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::test_utils::fake_bss_description;
+    use super::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
+    use super::UserEvent::ConnectFinished;
     use fidl_mlme;
     use std::collections::HashSet;
+    use std::error::Error;
     use Station;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -259,7 +255,7 @@ mod tests {
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult {
                 txn_id: 1,
-                bss: fake_bss_description(b"foo".to_vec()),
+                bss: fake_unprotected_bss_description(b"foo".to_vec()),
             }
         });
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
@@ -287,6 +283,164 @@ mod tests {
         });
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"bar".to_vec()) },
                    sme.status());
+    }
+
+    #[test]
+    fn connecting_password_supplied_for_protected_network() {
+        let (mut sme, mut mlme_stream, _user_stream) = create_sme();
+        assert_eq!(Status{ connected_to: None, connecting_to: None },
+                   sme.status());
+
+        // Issue a connect command and verify that connecting_to status is changed for upper
+        // layer (but not underlying state machine) and a scan request is sent to MLME.
+        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10);
+        assert_eq!(None,
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        if let Ok(Some(MlmeRequest::Scan(..))) = mlme_stream.try_next() {
+            // expected path; nothing to do
+        } else {
+            panic!("expect scan request to MLME");
+        }
+
+        // Simulate scan end and verify that underlying state machine's status is changed,
+        // and a join request is sent to MLME.
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_protected_bss_description(b"foo".to_vec()),
+            }
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCodes::Success,
+            }
+        });
+        assert_eq!(Some(b"foo".to_vec()),
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        if let Ok(Some(MlmeRequest::Join(..))) = mlme_stream.try_next() {
+            // expected path; nothing to do
+        } else {
+            panic!("expect join request to MLME");
+        }
+    }
+
+    #[test]
+    fn connecting_password_supplied_for_unprotected_network() {
+        let (mut sme, mut mlme_stream, mut user_stream) = create_sme();
+        assert_eq!(Status{ connected_to: None, connecting_to: None },
+                   sme.status());
+
+        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10);
+        assert_eq!(None,
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        // Push a fake scan result into SME. We should not attempt to connect
+        // because a password was supplied for unprotected network. So both the
+        // SME client and underlying state machine should report not connecting
+        // anymore.
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            }
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCodes::Success,
+            }
+        });
+        assert_eq!(None,
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: None },
+                   sme.status());
+
+        // No join request should be sent to MLME
+        loop {
+            match mlme_stream.try_next() {
+                Ok(event) => match event {
+                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request to MLME"),
+                    None => break,
+                    _ => (),
+                }
+                Err(e) => {
+                    assert_eq!(e.description(), "receiver channel is empty");
+                    break;
+                }
+            }
+        }
+
+        // User should get a message that connection failed
+        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
+        if let ConnectFinished { result, .. } = user_event {
+            assert_eq!(result, ConnectResult::Failed);
+        } else {
+            panic!("unexpected user event type in sent message");
+        }
+    }
+
+    #[test]
+    fn connecting_no_password_supplied_for_protected_network() {
+        let (mut sme, mut mlme_stream, mut user_stream) = create_sme();
+        assert_eq!(Status{ connected_to: None, connecting_to: None },
+                   sme.status());
+
+        sme.on_connect_command(b"foo".to_vec(), vec![], 10);
+        assert_eq!(None,
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        // Push a fake scan result into SME. We should not attempt to connect
+        // because no password was supplied for a protected network.
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_protected_bss_description(b"foo".to_vec()),
+            }
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCodes::Success,
+            }
+        });
+        assert_eq!(None,
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: None },
+                   sme.status());
+
+        // No join request should be sent to MLME
+        loop {
+            match mlme_stream.try_next() {
+                Ok(event) => match event {
+                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request sent to MLME"),
+                    None => break,
+                    _ => (),
+                }
+                Err(e) => {
+                    assert_eq!(e.description(), "receiver channel is empty");
+                    break;
+                }
+            }
+        }
+
+        // User should get a message that connection failed
+        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
+        if let ConnectFinished { result, .. } = user_event {
+            assert_eq!(result, ConnectResult::Failed);
+        } else {
+            panic!("unexpected user event type in sent message");
+        }
     }
 
     struct FakeTokens;
