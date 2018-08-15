@@ -44,8 +44,9 @@ combination has no effect, try rebooting the Pixelbook once more.
 4. Enter 'chronos' as the user with a blank password
 5. Enable USB booting by running `sudo crossystem dev_boot_usb=1`
 6. (optional) Default to USB booting by running `sudo crossystem dev_default_boot=usb`.
-7. Reboot by typing `sudo reboot`
-8. On the "OS verification is OFF" screen press Ctrl+U to bypass the timeout and
+7. Plug the USB drive into the Pixelbook.
+8. Reboot by typing `sudo reboot`
+9. On the "OS verification is OFF" screen press Ctrl+U to bypass the timeout and
 boot from USB immediately. (See [Tips and Tricks](#tips-and-tricks) for other
 short circuit options)
 
