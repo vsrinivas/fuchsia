@@ -194,12 +194,7 @@ macro_rules! impl_hash {
         #[allow(deprecated)]
         impl PartialEq for $digest_name {
             fn eq(&self, other: &Self) -> bool {
-                for i in 0..self.0.len() {
-                    if self.0[i] != other.0[i] {
-                        return false;
-                    }
-                }
-                true
+                boringssl::crypto_memcmp(&self.0, &other.0)
             }
         }
         #[allow(deprecated)]

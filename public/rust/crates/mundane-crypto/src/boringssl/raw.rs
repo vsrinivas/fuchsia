@@ -13,9 +13,9 @@
 //! (e.g., `void` functions).
 
 // infallible functions
-pub use boringssl_sys::{CBB_cleanup, CBB_len, CBS_init, CBS_len, EC_GROUP_get_curve_name,
-                        ERR_error_string_n, ERR_get_error, ERR_print_errors_cb, HMAC_CTX_init,
-                        HMAC_size};
+pub use boringssl_sys::{CBB_cleanup, CBB_len, CBS_init, CBS_len, CRYPTO_memcmp,
+                        EC_GROUP_get_curve_name, ERR_error_string_n, ERR_get_error,
+                        ERR_print_errors_cb, HMAC_CTX_init, HMAC_size};
 
 use std::num::NonZeroUsize;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
