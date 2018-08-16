@@ -110,7 +110,8 @@ class TestH264 {
       EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264->ptr, bear_h264->size));
     } else {
       video->core_->InitializeDirectInput();
-      video->ProcessVideoNoParser(bear_h264->ptr, bear_h264->size);
+      EXPECT_EQ(ZX_OK,
+                video->ProcessVideoNoParser(bear_h264->ptr, bear_h264->size));
     }
 
     EXPECT_EQ(std::future_status::ready,
@@ -119,7 +120,8 @@ class TestH264 {
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->ParseVideo(larger_h264->ptr, larger_h264->size));
     } else {
-      video->ProcessVideoNoParser(larger_h264->ptr, larger_h264->size);
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(larger_h264->ptr,
+                                                   larger_h264->size));
     }
 
     EXPECT_EQ(std::future_status::ready,

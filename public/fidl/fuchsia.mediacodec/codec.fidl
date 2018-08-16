@@ -853,6 +853,11 @@ interface Codec {
   // No further messages will arrive from the server regarding the failed
   // stream.  This includes any OnOutputEndOfStream() that the client would
   // have otherwise expected.
+  //
+  // TODO(dustingreen): Add at least an error_message string and _maybe_ a
+  // zx_status_t, though that might tend to encourage mis-use of zx_status_t so
+  // maybe just error_message for quicker debugging on the client side.  Also
+  // plumb from CodecAdapterH264 and similar.
   2: -> OnStreamFailed(uint64 stream_lifetime_ordinal);
 
   // OnInputConstraints()

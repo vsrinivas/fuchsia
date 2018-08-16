@@ -220,7 +220,8 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
     // restore.
     if (!current_instance->input_context()) {
       current_instance->InitializeInputContext();
-      video_->core_->InitializeInputContext(current_instance->input_context());
+      EXPECT_EQ(ZX_OK, video_->core_->InitializeInputContext(
+                           current_instance->input_context()));
     }
     video_->core_->SaveInputContext(current_instance->input_context());
     video_->core_->StopDecoding();
@@ -274,8 +275,7 @@ class TestVP9 {
       video->SetDefaultInstance(std::make_unique<Vp9Decoder>(
           video.get(), Vp9Decoder::InputType::kSingleStream));
     }
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(
-                         use_parser, PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE));
 
     video->InitializeInterrupts();
 
@@ -321,7 +321,7 @@ class TestVP9 {
     auto parser = std::async([&video, use_parser, &test_ivf, &stop_parsing]() {
       auto aml_data = ConvertIvfToAmlV(test_ivf->ptr, test_ivf->size);
       if (use_parser) {
-        video->ParseVideo(aml_data.data(), aml_data.size());
+        EXPECT_EQ(ZX_OK, video->ParseVideo(aml_data.data(), aml_data.size()));
       } else {
         video->core_->InitializeDirectInput();
         uint32_t current_offset = 0;
@@ -426,7 +426,7 @@ class TestVP9 {
       for (auto& data : aml_data) {
         video->pts_manager_->InsertPts(stream_offset,
                                        data.presentation_timestamp);
-        video->ParseVideo(data.data.data(), data.data.size());
+        EXPECT_EQ(ZX_OK, video->ParseVideo(data.data.data(), data.data.size()));
         stream_offset += data.data.size();
       }
     });
@@ -496,12 +496,12 @@ class TestVP9 {
     video->core_->InitializeDirectInput();
     // Only use the first 50 frames to save time.
     for (uint32_t i = 0; i < 50; i++) {
-      video->ProcessVideoNoParser(aml_data[i].data.data(),
-                                  aml_data[i].data.size());
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(aml_data[i].data.data(),
+                                                   aml_data[i].data.size()));
     }
     // Force all frames to be processed.
     uint8_t padding[16384] = {};
-    video->ProcessVideoNoParser(padding, sizeof(padding));
+    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(padding, sizeof(padding)));
     video->core()->StartDecoding();
 
     EXPECT_EQ(std::future_status::ready,
@@ -594,12 +594,12 @@ class TestVP9 {
       video->core_->InitializeDirectInput();
       // Only use the first 50 frames to save time.
       for (uint32_t i = 0; i < 50; i++) {
-        video->ProcessVideoNoParser(aml_data[i].data.data(),
-                                    aml_data[i].data.size());
+        EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(aml_data[i].data.data(),
+                                                     aml_data[i].data.size()));
       }
       buffer->set_padding_size(sizeof(padding));
       // Force all frames to be processed.
-      video->ProcessVideoNoParser(padding, sizeof(padding));
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(padding, sizeof(padding)));
     }
 
     // Normally we'd probably want to always fill the stream buffer when the

@@ -5,11 +5,13 @@
 #include "use_h264_decoder.h"
 
 #include "codec_client.h"
+#include "frame_sink.h"
 #include "util.h"
 
 #include <fbl/auto_call.h>
 #include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 
@@ -26,6 +28,9 @@ constexpr bool kRawVideoWriterEnabled = true;
 // TODO(dustingreen): actually re-use the Codec instance for at least one more
 // stream, even if it's just to decode the same data again.
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
+
+// Scenic ImagePipe doesn't allow image_id 0, so offset by this much.
+constexpr uint32_t kFirstValidImageId = 1;
 
 constexpr uint8_t kLongStartCodeArray[] = {0x00, 0x00, 0x00, 0x01};
 constexpr uint8_t kShortStartCodeArray[] = {0x00, 0x00, 0x01};
@@ -75,20 +80,15 @@ uint8_t GetNalUnitType(const uint8_t* nal_unit) {
   return *next_start & 0xf;
 }
 
-static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
-                                             uint8_t d) {
-  return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
-         (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
-}
-
 }  // namespace
 
-void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
+void use_h264_decoder(async::Loop* main_loop,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       const std::string& input_file,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
-                      std::vector<std::pair<bool, uint64_t>>* timestamps_out) {
+                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+                      FrameSink* frame_sink) {
   VLOGF("use_h264_decoder()\n");
   FXL_DCHECK(!timestamps_out || timestamps_out->empty());
   memset(md_out, 0, SHA256_DIGEST_LENGTH);
@@ -115,7 +115,7 @@ void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
   CodecClient codec_client(&loop);
 
   async::PostTask(
-      codec_factory_dispatcher,
+      main_loop->dispatcher(),
       [&codec_factory,
        codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)\n");
@@ -146,7 +146,7 @@ void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
   std::condition_variable unbind_done_condition;
   bool unbind_done = false;
   async::PostTask(
-      codec_factory_dispatcher,
+      main_loop->dispatcher(),
       [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
         codec_factory.Unbind();
         {  // scope lock
@@ -256,9 +256,11 @@ void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
 
   // Separate thread to process the output.
   //
-  // codec_client outlives the thread.
+  // codec_client outlives the thread (and for separate reasons below, all the
+  // frame_sink activity started by out_thread).
   std::unique_ptr<std::thread> out_thread = std::make_unique<
-      std::thread>([&codec_client, output_file, md_out, &timestamps_out]() {
+      std::thread>([main_loop, &codec_client, output_file, md_out,
+                    &timestamps_out, frame_sink]() {
     // The codec_client lock_ is not held for long durations in here, which is
     // good since we're using this thread to do things like write to an output
     // file.
@@ -290,17 +292,21 @@ void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
       }
 
       const fuchsia::mediacodec::CodecPacket& packet = output->packet();
-      // "packet" will live long enough because ~cleanup runs before ~output.
-      auto cleanup = fbl::MakeAutoCall([&codec_client, &packet] {
-        // Using an auto call for this helps avoid losing track of the
-        // output_buffer.
-        //
-        // If the omx_state_ or omx_state_desired_ isn't correct,
-        // UseOutputBuffer() will fail.  The only way that can happen here is
-        // if the OMX codec transitioned states unilaterally without any set
-        // state command, so if that occurs, exit.
-        codec_client.RecycleOutputPacket(packet.header);
-      });
+      // cleanup can run on any thread, and codec_client.RecycleOutputPacket()
+      // is ok with that.  In addition, cleanup can run after codec_client is
+      // gone, since we don't block return from use_h264_decoder() on Scenic
+      // actually freeing up all previously-queued frames.
+      auto cleanup = fbl::MakeAutoCall(
+          [&codec_client, packet_header = fidl::Clone(packet.header)] {
+            // Using an auto call for this helps avoid losing track of the
+            // output_buffer.
+            //
+            // If the omx_state_ or omx_state_desired_ isn't correct,
+            // UseOutputBuffer() will fail.  The only way that can happen here
+            // is if the OMX codec transitioned states unilaterally without any
+            // set state command, so if that occurs, exit.
+            codec_client.RecycleOutputPacket(std::move(packet_header));
+          });
       std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config =
           output->config();
       // This will remain live long enough because this thread is the only
@@ -389,6 +395,29 @@ void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
         SHA256_Update(&sha256_ctx, uv_src, raw->primary_width_pixels);
         uv_src += raw->primary_line_stride_bytes;
       }
+
+      if (frame_sink) {
+        async::PostTask(
+            main_loop->dispatcher(),
+            [frame_sink,
+             image_id = packet.header.packet_index + kFirstValidImageId,
+             &vmo = buffer.vmo(),
+             vmo_offset = buffer.vmo_offset() + packet.start_offset +
+                          raw->primary_start_offset,
+             config, cleanup = std::move(cleanup)]() mutable {
+              frame_sink->PutFrame(image_id, vmo, vmo_offset, config,
+                                   [cleanup = std::move(cleanup)] {
+                                     // The ~cleanup can run on any thread (the
+                                     // current thread is main_loop's thread),
+                                     // and codec_client is ok with that
+                                     // (because it switches over to |loop|'s
+                                     // thread before sending a Codec message).
+                                     //
+                                     // ~cleanup
+                                   });
+            });
+      }
+      // If we didn't std::move(cleanup) before here, then ~cleanup runs here.
     }
   end_of_output:;
     if (!SHA256_Final(md_out, &sha256_ctx)) {
@@ -414,6 +443,62 @@ void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
   VLOGF("before out_thread->join()...\n");
   out_thread->join();
   VLOGF("after out_thread->join()\n");
+
+  // We wait for frame_sink to return all the frames for these reasons:
+  //   * As of this writing, some noisy-in-the-log things can happen in Scenic
+  //     if we don't.
+  //   * We don't want to cancel display of any frames, because we want to see
+  //     the frames on the screen.
+  //   * We don't want the |cleanup| to run after codec_client is gone since the
+  //     |cleanup| calls codec_client.
+  //   * It's easier to grok if activity started by use_h264_decoder() is done
+  //     by the time use_h264_decoder() returns, given use_h264_decoder()'s role
+  //     as an overall sequencer.
+  if (frame_sink) {
+    // TODO(dustingreen): Make this less hacky - currently we sleep 10 seconds
+    // to give Scenic a chance to display anything.  Despite this, we don't see
+    // many frames displayed - TBD why not (it's not the cost of SW-based
+    // YUV-to-RGB conversion, since removing most of that cost doesn't change
+    // # of frames displayed).
+    FXL_LOG(INFO) << "sleeping 10 seconds...";
+    zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
+    FXL_LOG(INFO) << "done sleeping.";
+
+    std::mutex frames_done_lock;
+    bool frames_done = false;
+    std::condition_variable frames_done_condition;
+    fit::closure on_frames_returned = [&frames_done_lock, &frames_done,
+                                       &frames_done_condition] {
+      {  // scope lock
+        std::lock_guard<std::mutex> lock(frames_done_lock);
+        frames_done = true;
+        // The notify while still under the lock prevents any possibility of
+        // frames_done_condition being gone too soon.
+        frames_done_condition.notify_all();
+        // Don't touch the captures beyond this point.
+      }  // ~lock
+    };
+    async::PostTask(main_loop->dispatcher(),
+                    [frame_sink, on_frames_returned =
+                                     std::move(on_frames_returned)]() mutable {
+                      frame_sink->PutEndOfStreamThenWaitForFramesReturnedAsync(
+                          std::move(on_frames_returned));
+                    });
+    // The just-posted wait will set frames_done using the main_loop_'s thread,
+    // which is not this thread.
+    FXL_LOG(INFO) << "waiting for all frames to be returned from Scenic...";
+    {  // scope lock
+      std::unique_lock<std::mutex> lock(frames_done_lock);
+      while (!frames_done) {
+        frames_done_condition.wait(lock);
+      }
+    }  // ~lock
+    FXL_LOG(INFO) << "all frames have been returned from Scenic";
+    // Now we know that there are zero frames in frame_sink, including zero
+    // frame cleanup(s) in-flight (in the sense of a pending/running cleanup
+    // that's touching codec_client to post any new work.  Work already posted
+    // via codec_client can still be in flight.  See below.)
+  }
 
   // Because CodecClient posted work to the loop which captured the CodecClient
   // as "this", it's important that we ensure that all such work is done trying

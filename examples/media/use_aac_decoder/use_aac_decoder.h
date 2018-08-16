@@ -5,10 +5,11 @@
 #ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_AAC_DECODER_H_
 #define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_AAC_DECODER_H_
 
-#include <openssl/sha.h>
-#include <stdint.h>
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <openssl/sha.h>
+
+#include <stdint.h>
 
 // use_aac_decoder()
 //
@@ -21,6 +22,8 @@
 // output format parameters.  When the same input file is decoded we expect the
 // crc32 to be the same.
 //
+// main_loop - the loop run by main(), codec_factory is bound to
+//     main_loop->dispatcher()
 // codec_factory - codec_factory to take ownership of, use, and close by the
 //     time the function returns.
 // input_file - This is the filename of an input .adts file (input file
@@ -29,7 +32,7 @@
 //     non-empty, output audio data to the specified wav file.  When used as
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
-void use_aac_decoder(async_dispatcher_t* codec_factory_dispatcher,
+void use_aac_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      const std::string& input_adts_file,
                      const std::string& output_wav_file,

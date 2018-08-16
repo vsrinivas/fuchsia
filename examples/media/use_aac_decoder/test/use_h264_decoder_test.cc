@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   std::vector<std::pair<bool, uint64_t>> timestamps;
-  use_h264_decoder(main_loop.dispatcher(), std::move(codec_factory),
-                   kInputFilePath, "", md, &timestamps);
+  use_h264_decoder(&main_loop, std::move(codec_factory), kInputFilePath, "", md,
+                   &timestamps, nullptr);
 
   std::set<uint64_t> expected_timestamps;
   for (uint64_t i = 0; i < 30; i++) {

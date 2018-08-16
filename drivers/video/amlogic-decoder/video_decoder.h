@@ -37,6 +37,7 @@ class CanvasEntry {
 
   ~CanvasEntry() { assert(!valid_); }
 
+  __WARN_UNUSED_RESULT
   uint32_t index() const {
     assert(valid_);
     return index_;
@@ -66,23 +67,24 @@ class VideoDecoder {
                                 std::vector<CodecFrame>*)>;  // frames_out
   class Owner {
    public:
-    virtual DosRegisterIo* dosbus() = 0;
-    virtual zx_handle_t bti() = 0;
-    virtual DeviceType device_type() = 0;
-    virtual FirmwareBlob* firmware_blob() = 0;
-    virtual std::unique_ptr<CanvasEntry> ConfigureCanvas(
+    virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
+    virtual __WARN_UNUSED_RESULT zx_handle_t bti() = 0;
+    virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
+    virtual __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() = 0;
+    virtual __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
         io_buffer_t* io_buffer, uint32_t offset, uint32_t width,
         uint32_t height, uint32_t wrap, uint32_t blockmode) = 0;
     virtual void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) = 0;
-    virtual DecoderCore* core() = 0;
-    virtual zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                                         uint32_t alignement_log2,
-                                         uint32_t flags) = 0;
-    virtual PtsManager* pts_manager() = 0;
-    virtual bool IsDecoderCurrent(VideoDecoder* decoder) = 0;
+    virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
+    virtual __WARN_UNUSED_RESULT zx_status_t
+    AllocateIoBuffer(io_buffer_t* buffer, size_t size, uint32_t alignement_log2,
+                     uint32_t flags) = 0;
+    virtual __WARN_UNUSED_RESULT PtsManager* pts_manager() = 0;
+    virtual __WARN_UNUSED_RESULT bool IsDecoderCurrent(
+        VideoDecoder* decoder) = 0;
   };
 
-  virtual zx_status_t Initialize() = 0;
+  virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual void HandleInterrupt() = 0;
   virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) {}
   virtual void SetInitializeFramesHandler(InitializeFramesHandler handler) {

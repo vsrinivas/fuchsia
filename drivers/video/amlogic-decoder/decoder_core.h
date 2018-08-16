@@ -34,15 +34,16 @@ class DecoderCore {
  public:
   class Owner {
    public:
-    virtual zx_handle_t bti() = 0;
-    virtual MmioRegisters* mmio() = 0;
+    virtual __WARN_UNUSED_RESULT zx_handle_t bti() = 0;
+    virtual __WARN_UNUSED_RESULT MmioRegisters* mmio() = 0;
     virtual void UngateClocks() = 0;
     virtual void GateClocks() = 0;
   };
 
   virtual ~DecoderCore() {}
 
-  virtual zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) = 0;
+  virtual __WARN_UNUSED_RESULT zx_status_t LoadFirmware(const uint8_t* data,
+                                                        uint32_t len) = 0;
   virtual void PowerOn() = 0;
   virtual void PowerOff() = 0;
   virtual void StartDecoding() = 0;
@@ -57,10 +58,11 @@ class DecoderCore {
   virtual void UpdateWritePointer(uint32_t write_pointer) = 0;
   // This is the offset between the start of the stream buffer and the write
   // pointer.
-  virtual uint32_t GetStreamInputOffset() = 0;
-  virtual uint32_t GetReadOffset() = 0;
+  virtual __WARN_UNUSED_RESULT uint32_t GetStreamInputOffset() = 0;
+  virtual __WARN_UNUSED_RESULT uint32_t GetReadOffset() = 0;
 
-  virtual zx_status_t InitializeInputContext(InputContext* context) {
+  virtual __WARN_UNUSED_RESULT zx_status_t
+  InitializeInputContext(InputContext* context) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual void SaveInputContext(InputContext* context) {}

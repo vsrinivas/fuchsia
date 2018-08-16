@@ -8,6 +8,7 @@
 
 namespace images {
 
+// Overall bits per pixel, across all pixel data in the whole image.
 size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
   switch (pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
@@ -16,6 +17,20 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
       return 2u * 8u;
     case fuchsia::images::PixelFormat::NV12:
       return 12;
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
+  return 0;
+}
+
+size_t StrideBytesPerWidthPixel(
+    const fuchsia::images::PixelFormat& pixel_format) {
+  switch (pixel_format) {
+    case fuchsia::images::PixelFormat::BGRA_8:
+      return 4u;
+    case fuchsia::images::PixelFormat::YUY2:
+      return 2u;
+    case fuchsia::images::PixelFormat::NV12:
+      return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
   return 0;

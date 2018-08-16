@@ -36,7 +36,6 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
                         uint64_t memory_offset, ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
-  size_t bits_per_pixel = images::BitsPerPixel(host_image_info.pixel_format);
   size_t pixel_alignment =
       images::MaxSampleAlignment(host_image_info.pixel_format);
 
@@ -65,10 +64,12 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
     return nullptr;
   }
 
-  uint64_t width_bytes = (host_image_info.width * bits_per_pixel + 7) / 8;
+  uint64_t width_bytes =
+      host_image_info.width *
+      images::StrideBytesPerWidthPixel(host_image_info.pixel_format);
   if (host_image_info.stride < width_bytes) {
     error_reporter->ERROR()
-        << "Image::CreateFromMemory(): stride too small for width.";
+        << "Image::CreateFromMemory(): stride too small for width";
     return nullptr;
   }
   if (host_image_info.stride % pixel_alignment != 0) {

@@ -12,6 +12,10 @@ source_set("use_aac_decoder_source_set") {
     "codec_client.h",
     "codec_output.cc",
     "codec_output.h",
+    "frame_sink.cc",
+    "frame_sink.h",
+    "frame_sink_view.cc",
+    "frame_sink_view.h",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
     "use_h264_decoder.cc",
@@ -31,8 +35,9 @@ source_set("use_aac_decoder_source_set") {
   deps = [
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
     "//garnet/lib/media/wav_writer:wav_writer",
-
-    #"//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/public/lib/ui/view_framework:view_provider",
   ]
 }
 

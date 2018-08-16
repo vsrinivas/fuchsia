@@ -329,7 +329,7 @@ void CodecImpl::AddInputBuffer_StreamControl(
   if (IsStopping()) {
     return;
   }
-  // We must check, because __MUST_CHECK_RETURN, and it's worth it for the
+  // We must check, because __WARN_UNUSED_RESULT, and it's worth it for the
   // enforcement and consistency.
   if (!AddBufferCommon(kInputPort, std::move(buffer))) {
     return;

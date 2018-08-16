@@ -37,32 +37,41 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   ~AmlogicVideo();
 
-  zx_status_t InitRegisters(zx_device_t* parent);
-  zx_status_t InitDecoder();
+  __WARN_UNUSED_RESULT zx_status_t InitRegisters(zx_device_t* parent);
+  __WARN_UNUSED_RESULT zx_status_t InitDecoder();
 
   // VideoDecoder::Owner implementation.
-  DosRegisterIo* dosbus() override { return dosbus_.get(); }
-  zx_handle_t bti() override { return bti_.get(); }
-  DeviceType device_type() override { return device_type_; }
-  FirmwareBlob* firmware_blob() override { return firmware_.get(); }
-  std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
-                                               uint32_t offset, uint32_t width,
-                                               uint32_t height, uint32_t wrap,
-                                               uint32_t blockmode) override;
+  __WARN_UNUSED_RESULT DosRegisterIo* dosbus() override {
+    return dosbus_.get();
+  }
+  __WARN_UNUSED_RESULT zx_handle_t bti() override { return bti_.get(); }
+  __WARN_UNUSED_RESULT DeviceType device_type() override {
+    return device_type_;
+  }
+  __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override {
+    return firmware_.get();
+  }
+  __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
+      io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height,
+      uint32_t wrap, uint32_t blockmode) override;
   void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override;
 
-  DecoderCore* core() override { return core_.get(); }
-  zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                               uint32_t alignment_log2,
-                               uint32_t flags) override;
-  PtsManager* pts_manager() override { return pts_manager_.get(); }
-  bool IsDecoderCurrent(VideoDecoder* decoder) override
+  __WARN_UNUSED_RESULT DecoderCore* core() override { return core_.get(); }
+  __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer,
+                                                    size_t size,
+                                                    uint32_t alignment_log2,
+                                                    uint32_t flags) override;
+  __WARN_UNUSED_RESULT PtsManager* pts_manager() override {
+    return pts_manager_.get();
+  }
+  __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
       FXL_NO_THREAD_SAFETY_ANALYSIS {
     assert(decoder);
     return decoder == video_decoder_;
   }
 
   // DecoderCore::Owner implementation.
+  __WARN_UNUSED_RESULT
   MmioRegisters* mmio() override { return registers_.get(); }
   void UngateClocks() override;
   void GateClocks() override;
@@ -74,16 +83,23 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestFrameProvider;
   friend class CodecAdapterH264;
 
-  zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size);
+  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
+                                                        uint32_t size);
 
   void InitializeStreamInput(bool use_parser);
   void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(video_decoder_lock_);
+
+  __WARN_UNUSED_RESULT
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
+  __WARN_UNUSED_RESULT
   zx_status_t InitializeEsParser();
+  __WARN_UNUSED_RESULT
   zx_status_t ParseVideo(void* data, uint32_t len);
+  __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParser(void* data, uint32_t len,
                                    uint32_t* written_out = nullptr);
+  __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParserAtOffset(void* data, uint32_t len,
                                            uint32_t current_offset,
                                            uint32_t* written_out = nullptr);

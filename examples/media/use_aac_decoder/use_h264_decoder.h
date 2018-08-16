@@ -5,10 +5,13 @@
 #ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_H264_DECODER_H_
 #define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_H264_DECODER_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include <openssl/sha.h>
 #include <stdint.h>
 
-#include <fuchsia/mediacodec/cpp/fidl.h>
+class FrameSink;
 
 // use_h264_decoder()
 //
@@ -21,6 +24,8 @@
 // output format parameters. When the same input file is decoded we expect the
 // sha256 to be the same.
 //
+// main_loop - the loop run by main().  The codec_factory is bound to
+//     main_loop->dispatcher().
 // codec_factory - codec_factory to take ownership of, use, and close by the
 //     time the function returns.
 // input_file - This must be set and must be the filename of an input h264
@@ -33,11 +38,14 @@
 //     format details.
 // timestamps_out - out ordered <has_timestamp_ish, timestamp_ish> seen at the
 //     output of the decoder.
-void use_h264_decoder(async_dispatcher_t* codec_factory_dispatcher,
+// frame_sink - if not nullptr, send each frame to this FrameSink, which will
+//     call back when the frame has been released by the sink.
+void use_h264_decoder(async::Loop* main_loop,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       const std::string& input_file,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
-                      std::vector<std::pair<bool, uint64_t>>* timestamps_out);
+                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+                      FrameSink* frame_sink);
 
 #endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_H264_DECODER_H_

@@ -36,6 +36,9 @@ class CodecBuffer {
   uint8_t* base() const { return base_; }
   size_t size_bytes() const { return size_bytes_; }
 
+  const ::zx::vmo& vmo() const { return vmo_; }
+  uint64_t vmo_offset() const { return 0; }
+
  private:
   explicit CodecBuffer(uint32_t buffer_index, size_t size_bytes);
   void SetPhysicallyContiguousRequired(

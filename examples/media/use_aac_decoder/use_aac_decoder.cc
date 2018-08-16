@@ -122,6 +122,8 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 // output format parameters.  When the same input file is decoded we expect the
 // sha256 to be the same.
 //
+// main_loop - the loop run by main(), codec_factory is bound to
+//     main_loop->dispatcher()
 // codec_factory - codec_factory to take ownership of, use, and close by the
 //     time the function returns.  This InterfacePtr would typically be obtained
 //     by calling
@@ -133,7 +135,7 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
 // out_md - SHA256_DIGEST_LENGTH bytes long
-void use_aac_decoder(async_dispatcher_t* codec_factory_dispatcher,
+void use_aac_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      const std::string& input_adts_file,
                      const std::string& output_wav_file, uint8_t* out_md) {
@@ -244,7 +246,7 @@ void use_aac_decoder(async_dispatcher_t* codec_factory_dispatcher,
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(&loop);
   async::PostTask(
-      codec_factory_dispatcher,
+      main_loop->dispatcher(),
       [&codec_factory, create_params = std::move(create_params),
        codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)\n");
@@ -267,7 +269,7 @@ void use_aac_decoder(async_dispatcher_t* codec_factory_dispatcher,
   std::condition_variable unbind_done_condition;
   bool unbind_done = false;
   async::PostTask(
-      codec_factory_dispatcher,
+      main_loop->dispatcher(),
       [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
         codec_factory.Unbind();
         {  // scope lock

@@ -11,8 +11,17 @@
 
 namespace images {
 
-// Returns the number of bits per pixel for the given format.
+// Returns the number of bits per pixel for the given format.  This is the bits
+// per pixel in the overall image across all bytes that contain pixel data.  For
+// example, NV12 is 12 bits per pixel.
 size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format);
+
+// This is the number of stride bytes per pixel of width.  For formats such as
+// NV12 that separate Y and UV data, this is the number of stride bytes of the Y
+// plane.  NV12 has the same stride for the UV data.  formats with a different
+// stride for UV data vs Y data are not handled yet.
+size_t StrideBytesPerWidthPixel(
+    const fuchsia::images::PixelFormat& pixel_format);
 
 // Returns the pixel alignment for the given format.
 //

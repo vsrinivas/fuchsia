@@ -58,6 +58,8 @@ class CodecAdapterH264 : public CodecAdapter {
                                       uint32_t display_height,
                                       std::vector<CodecFrame>* frames_out);
 
+  void OnCoreCodecFailStream();
+
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
 
@@ -106,6 +108,8 @@ class CodecAdapterH264 : public CodecAdapter {
   // start code bytes.
   uint64_t parsed_video_size_ = 0;
   bool is_input_end_of_stream_queued_ = false;
+
+  bool is_stream_failed_ = false;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapterH264);
 };

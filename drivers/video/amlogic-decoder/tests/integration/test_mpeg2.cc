@@ -95,7 +95,7 @@ class TestMpeg2 {
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
     video->core_->InitializeDirectInput();
-    video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len);
+    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len));
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));

@@ -142,6 +142,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     video_->pts_manager_ = std::make_unique<PtsManager>();
     parsed_video_size_ = 0;
     is_input_end_of_stream_queued_ = false;
+    is_stream_failed_ = false;
     video_->core_ = std::make_unique<Vdec1>(video_);
     video_->core()->PowerOn();
   }  // ~lock
@@ -200,7 +201,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     video_->video_decoder_->SetInitializeFramesHandler(
         fit::bind_member(this, &CodecAdapterH264::InitializeFramesHandler));
     video_->video_decoder_->SetErrorHandler(
-        [this] { events_->onCoreCodecFailStream(); });
+        [this] { OnCoreCodecFailStream(); });
   }
 
   {  // scope lock
@@ -568,7 +569,8 @@ void CodecAdapterH264::QueueInputItem(CodecInputItem input_item) {
 CodecInputItem CodecAdapterH264::DequeueInputItem() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    if (is_cancelling_input_processing_ || input_queue_.empty()) {
+    if (is_stream_failed_ || is_cancelling_input_processing_ ||
+        input_queue_.empty()) {
       return CodecInputItem::Invalid();
     }
     CodecInputItem to_ret = std::move(input_queue_.front());
@@ -597,12 +599,19 @@ void CodecAdapterH264::ProcessInput() {
 
     if (item.is_end_of_stream()) {
       video_->pts_manager_->SetEndOfStreamOffset(parsed_video_size_);
-      video_->ParseVideo(reinterpret_cast<void*>(&new_stream_h264[0]),
-                         new_stream_h264_len);
+      if (ZX_OK !=
+          video_->ParseVideo(reinterpret_cast<void*>(&new_stream_h264[0]),
+                             new_stream_h264_len)) {
+        OnCoreCodecFailStream();
+        return;
+      }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
-      video_->ParseVideo(reinterpret_cast<void*>(bytes.get()),
-                         kFlushThroughBytes);
+      if (ZX_OK != video_->ParseVideo(reinterpret_cast<void*>(bytes.get()),
+                                      kFlushThroughBytes)) {
+        OnCoreCodecFailStream();
+        return;
+      }
       continue;
     }
 
@@ -628,7 +637,10 @@ void CodecAdapterH264::ProcessInput() {
     // TODO(dustingreen): The current wait duration within ParseVideo() assumes
     // that free output frames will become free on an ongoing basis, which isn't
     // really what'll happen when video output is paused.
-    video_->ParseVideo(data, len);
+    if (ZX_OK != video_->ParseVideo(data, len)) {
+      OnCoreCodecFailStream();
+      return;
+    }
 
     events_->onCoreCodecInputPacketDone(item.packet());
     // At this point CodecInputItem is holding a packet pointer which may get
@@ -781,4 +793,12 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
   }  // ~lock
 
   return ZX_OK;
+}
+
+void CodecAdapterH264::OnCoreCodecFailStream() {
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    is_stream_failed_ = true;
+  }
+  events_->onCoreCodecFailStream();
 }

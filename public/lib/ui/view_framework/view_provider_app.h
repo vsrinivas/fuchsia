@@ -25,6 +25,8 @@ class ViewProviderApp {
   ~ViewProviderApp();
 
  private:
+  // startup_context_ won't be set if the non-ownership-taking constructor was
+  // used.
   std::unique_ptr<component::StartupContext> startup_context_;
   ViewProviderService service_;
 

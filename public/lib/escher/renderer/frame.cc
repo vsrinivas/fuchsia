@@ -58,7 +58,8 @@ Frame::~Frame() {
   // finished rendering, and because this closure both:
   // - refs the Frame, keeping it alive until the closure completes
   // - sets the state to kReadyToBegin.
-  FXL_DCHECK(state_ == State::kReadyToBegin) << "EndFrame() was not called.";
+  FXL_DCHECK(state_ == State::kReadyToBegin)
+      << "EndFrame() was not called - state_: " << static_cast<int>(state_);
 }
 
 impl::CommandBuffer* Frame::command_buffer() const {

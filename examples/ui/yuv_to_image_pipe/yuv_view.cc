@@ -33,7 +33,7 @@ YuvView::YuvView(async::Loop* loop, component::StartupContext* startup_context,
       node_(session()),
       pixel_format_(pixel_format),
       stride_(static_cast<uint32_t>(
-          (kShapeWidth * images::BitsPerPixel(pixel_format_) + 7) / 8)) {
+          kShapeWidth * images::StrideBytesPerWidthPixel(pixel_format_))) {
   FXL_VLOG(4) << "Creating View";
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();
