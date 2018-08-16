@@ -15,6 +15,8 @@ driver_module("wlan_driver") {
     "binding.c",
     "device.cpp",
     "device.h",
+    "minstrel.cpp",
+    "minstrel.h",
     "driver.cpp",
     "proxy_helpers.h",
   ]

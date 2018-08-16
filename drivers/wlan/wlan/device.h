@@ -5,6 +5,7 @@
 #ifndef GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
 #define GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
 
+#include "minstrel.h"
 #include "proxy_helpers.h"
 
 #include <ddk/driver.h>
@@ -17,7 +18,6 @@
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
-#include <wlan/mlme/minstrel.h>
 #include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
 
@@ -114,6 +114,8 @@ class Device : public DeviceInterface {
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
 
     void SetStatusLocked(uint32_t status);
+    zx_status_t CreateMinstrel();
+    void AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx);
 
     zx_device_t* parent_;
     zx_device_t* zxdev_;
@@ -129,7 +131,7 @@ class Device : public DeviceInterface {
     std::thread work_thread_;
     zx::port port_;
 
-    fbl::unique_ptr<MinstrelManager> minstrel_;
+    fbl::unique_ptr<MinstrelRateSelector> minstrel_;
 
     std::shared_ptr<component::Services> services_;
 

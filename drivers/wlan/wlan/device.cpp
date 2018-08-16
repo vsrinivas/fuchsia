@@ -156,7 +156,8 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
     if ((wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
         !(wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION)) {
-        minstrel_.reset(new MinstrelManager);
+        zx_status_t status = CreateMinstrel();
+        if (ZX_OK == status) { debugmstl("Minstrel Manager created successfully.\n"); }
     }
 
     work_thread_ = std::thread(&Device::MainLoop, this);
@@ -506,6 +507,8 @@ zx_status_t Device::StartHwScan(const wlan_hw_scan_config_t* scan_config) {
 
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
     ZX_DEBUG_ASSERT(assoc_ctx != nullptr);
+    // TODO(NET-1385): Minstrel only supports client mode. Add AP mode support later.
+    AddMinstrelPeer(*assoc_ctx);
     return wlanmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
 }
 
@@ -566,6 +569,8 @@ void Device::MainLoop() {
                 break;
             }
             case to_enum_type(DevicePacket::kReportTxStatus): {
+                auto tx_status = reinterpret_cast<wlan_tx_status_t*>(pkt.user.c8);
+                minstrel_->HandleTxStatusReport(*tx_status);
                 break;
             }
             default:
@@ -578,6 +583,11 @@ void Device::MainLoop() {
             case PortKeyType::kMlme:
                 dispatcher_->HandlePortPacket(pkt.key);
                 break;
+            case PortKeyType::kDevice: {
+                ZX_DEBUG_ASSERT(minstrel_ != nullptr);
+                minstrel_->UpdateStats();
+                break;
+            }
             default:
                 errorf("unknown port key: %" PRIu64 "\n", pkt.key);
                 break;
@@ -742,4 +752,27 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
     return ZX_OK;
 }
 
+zx_status_t Device::CreateMinstrel() {
+    debugfn();
+    fbl::unique_ptr<Timer> timer;
+    ObjectId timer_id;
+    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    timer_id.set_target(to_enum_type(ObjectTarget::kMinstrel));
+    auto status = GetTimer(ToPortKey(PortKeyType::kDevice, timer_id.val()), &timer);
+    if (status != ZX_OK) {
+        errorf("could not create minstrel timer: %d\n", status);
+        return status;
+    }
+    minstrel_.reset(new MinstrelRateSelector(fbl::move(timer)));
+    return ZX_OK;
+}
+
+void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
+    ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.mac_role == WLAN_MAC_ROLE_CLIENT);
+    if (minstrel_ == nullptr) { return; }
+    auto addr = common::MacAddr(assoc_ctx.bssid);
+    HtCapabilities ht_cap;
+    if (assoc_ctx.has_ht_cap) { ht_cap = HtCapabilities::FromDdk(assoc_ctx.ht_cap); }
+    minstrel_->AddPeer(addr, ht_cap);
+}
 }  // namespace wlan

@@ -3187,6 +3187,7 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
 
 static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
     switch (ddk_phy) {
+
     case WLAN_PHY_CCK:
         return PhyMode::kLegacyCck;
     case WLAN_PHY_OFDM:
