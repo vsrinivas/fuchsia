@@ -23,7 +23,6 @@ var archive = flag.Bool("archive", true, "Whether to archive the output")
 var output = flag.String("output", "fuchsia-sdk.tgz", "Name of the archive")
 var outDir = flag.String("out-dir", "", "Output directory")
 var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain libraries in SDK. Typically used when --toolchain is false")
-var qemu = flag.Bool("qemu", true, "Include QEMU binary")
 var verbose = flag.Bool("v", false, "Verbose output")
 var dryRun = flag.Bool("n", false, "Dry run - print what would happen but don't actually do it")
 
@@ -72,8 +71,6 @@ func init() {
 		hostOs = "mac"
 	}
 
-	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
-
 	// ###########################################################################
 	// #                                 PSA                                     #
 	// #                                                                         #
@@ -83,12 +80,6 @@ func init() {
 	// ###########################################################################
 
 	dirs := []dir{
-		// TODO(BLD-246): remove this.
-		{
-			qemu,
-			qemuDir,
-			"qemu",
-		},
 		// TODO(BLD-250): remove these.
 		{
 			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
