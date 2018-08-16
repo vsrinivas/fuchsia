@@ -101,10 +101,10 @@ decltype(nullptr) Parser::Fail() {
             squiggle.resize(line_size);
         }
 
-        std::string error = "found unexpected token in file ";
-        error += token_location.source_file().filename();
-        error += " on line " + line_number;
-        error += " column " + column_number + ":\n";
+        // Many editors and IDEs recognize errors in the form of
+        // filename:linenumber:column: error: descriptive-test-here\n
+        std::string error = token_location.position();
+        error += ": error: found unexpected token\n";
         error += surrounding_line;
         error += squiggle + "\n";
 

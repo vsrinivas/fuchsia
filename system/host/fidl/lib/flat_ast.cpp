@@ -306,7 +306,9 @@ bool Library::Fail(StringView message) {
 }
 
 bool Library::Fail(const SourceLocation& location, StringView message) {
-    auto formatted_message = location.position() + ": " + std::string(message) + "\n";
+    // Many editors and IDEs recognize errors in the form of
+    // filename:linenumber:column: error: descriptive-test-here\n
+    auto formatted_message = location.position() + ": error: " + std::string(message) + "\n";
     error_reporter_->ReportError(std::move(formatted_message));
     return false;
 }
