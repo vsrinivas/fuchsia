@@ -74,6 +74,14 @@ func init() {
 
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
+	// ###########################################################################
+	// #                                 PSA                                     #
+	// #                                                                         #
+	// # Do not add any more content to this script! SDK contents should come    #
+	// # from the build system and not be handpicked out of the output dir.      #
+	// # See BLD-38 for more details.                                            #
+	// ###########################################################################
+
 	dirs := []dir{
 		// TODO(BLD-246): remove this.
 		{
