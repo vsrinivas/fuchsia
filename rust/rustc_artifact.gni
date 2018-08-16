@@ -244,6 +244,7 @@ template("rustc_artifact") {
     copy_target_name = "${target_name}_copy"
     group_deps += [ ":${copy_target_name}" ]
     copy(copy_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
       deps = [
         ":${build_target_name}",
       ]
