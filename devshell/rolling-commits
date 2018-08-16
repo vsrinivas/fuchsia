@@ -98,7 +98,7 @@ def get_commits(layer, revision):
             if commit['commit'] == revision:
                 return
             result.append(commit)
-        get_more(result, start=content['next'])
+        get_more(result, start=data['next'])
     result = []
     get_more(result)
     return result
