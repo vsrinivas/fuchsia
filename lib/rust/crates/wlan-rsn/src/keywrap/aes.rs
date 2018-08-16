@@ -107,7 +107,8 @@ impl Algorithm for NistAes {
                             keysize,
                             key,
                             blockmodes::NoPadding);
-                        let _ = cipher.encrypt(&mut read_buf, &mut write_buf, true);
+                        cipher.encrypt(&mut read_buf, &mut write_buf, true)
+                            .map_err(|e| format_err!("AES keywrap encryption error: {:?}", e))?;
                     }
                     let t = (n * j + i) as u64;
                     BigEndian::write_u64(&mut aes_block, BigEndian::read_u64(&b[..8]) ^ t);
@@ -155,7 +156,8 @@ impl Algorithm for NistAes {
                         keysize,
                         key,
                         blockmodes::NoPadding);
-                    let _ = cipher.decrypt(&mut read_buf, &mut write_buf, true);
+                    cipher.decrypt(&mut read_buf, &mut write_buf, true)
+                        .map_err(|e| format_err!("AES keywrap decryption error: {:?}", e))?;
                 }
 
                 &aes_block[..8].copy_from_slice(&b[..8]);
