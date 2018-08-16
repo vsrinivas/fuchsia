@@ -15,7 +15,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 )
@@ -24,7 +23,6 @@ var archive = flag.Bool("archive", true, "Whether to archive the output")
 var output = flag.String("output", "fuchsia-sdk.tgz", "Name of the archive")
 var outDir = flag.String("out-dir", "", "Output directory")
 var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain libraries in SDK. Typically used when --toolchain is false")
-var sysroot = flag.Bool("sysroot", true, "Include sysroot")
 var qemu = flag.Bool("qemu", true, "Include QEMU binary")
 var verbose = flag.Bool("v", false, "Verbose output")
 var dryRun = flag.Bool("n", false, "Dry run - print what would happen but don't actually do it")
@@ -98,46 +96,9 @@ func init() {
 		},
 	}
 
-	files := []file{
-		// TODO(BLD-245): remove these toolchain libraries.
-		{
-			sysroot,
-			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++.so.2"),
-			"arch/x64/dist/libc++.so.2",
-		},
-		{
-			sysroot,
-			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++.so.2"),
-			"arch/arm64/dist/libc++.so.2",
-		},
-		{
-			sysroot,
-			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++abi.so.1"),
-			"arch/x64/dist/libc++abi.so.1",
-		},
-		{
-			sysroot,
-			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++abi.so.1"),
-			"arch/arm64/dist/libc++abi.so.1",
-		},
-		{
-			sysroot,
-			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libunwind.so.1"),
-			"arch/x64/dist/libunwind.so.1",
-		},
-		{
-			sysroot,
-			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libunwind.so.1"),
-			"arch/arm64/dist/libunwind.so.1",
-		},
-	}
-
 	components = []component{}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
-	}
-	for _, f := range files {
-		components = append(components, component{f.flag, f.src, f.dst, fileType, nil})
 	}
 }
 
