@@ -20,6 +20,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
 #include "garnet/bin/appmgr/appmgr.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -58,6 +59,7 @@ int main(int argc, char* argv[]) {
   // when a request for pa_directory/svc/fuchsia.mediacodec.CodecFactory
   // arrives.
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
+  auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
   zx::channel appmgr_pa_directory_client, appmgr_pa_directory_server;
   zx_status_t zx_result = zx::channel::create(0, &appmgr_pa_directory_client,
                                               &appmgr_pa_directory_server);
@@ -75,6 +77,7 @@ int main(int argc, char* argv[]) {
           main_loop.dispatcher(),
           component::AppmgrArgs{
               .pa_directory_request = appmgr_pa_directory_server.release(),
+              .environment_services = context->incoming_services(),
               .sysmgr_url = "sysmgr",
               .sysmgr_args = std::move(sysmgr_args),
               .run_virtual_console = false,

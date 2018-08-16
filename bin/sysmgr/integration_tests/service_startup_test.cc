@@ -8,6 +8,7 @@
 
 #include "garnet/bin/appmgr/appmgr.h"
 #include "gtest/gtest.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -26,11 +27,16 @@ TEST_F(TestSysmgr, ServiceStartup) {
       "--config={\"services\": { \"test.sysmgr.Interface\": "
       "\"/pkgfs/packages/sysmgr_integration_tests/0/bin/"
       "test_sysmgr_service_startup\" } }");
-  component::AppmgrArgs args{.pa_directory_request = h2.release(),
-                             .sysmgr_url = "sysmgr",
-                             .sysmgr_args = std::move(sysmgr_args),
-                             .run_virtual_console = false,
-                             .retry_sysmgr_crash = false};
+
+  auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
+
+  component::AppmgrArgs args{
+      .pa_directory_request = h2.release(),
+      .environment_services = context->incoming_services(),
+      .sysmgr_url = "sysmgr",
+      .sysmgr_args = std::move(sysmgr_args),
+      .run_virtual_console = false,
+      .retry_sysmgr_crash = false};
   component::Appmgr appmgr(dispatcher(), std::move(args));
 
   zx::channel svc_client, svc_server;

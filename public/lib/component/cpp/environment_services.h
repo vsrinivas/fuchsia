@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
-#define LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
+#ifndef LIB_COMPONENT_CPP_ENVIRONMENT_SERVICES_H_
+#define LIB_COMPONENT_CPP_ENVIRONMENT_SERVICES_H_
 
 #include <lib/zx/channel.h>
 
@@ -11,6 +11,7 @@
 
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_request.h"
+#include "lib/svc/cpp/services.h"
 
 namespace component {
 
@@ -45,14 +46,6 @@ fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
   return interface_ptr;
 }
 
-namespace subtle {
-
-// This returns creates a new channel connected to the application's static
-// environment service provider.
-zx::channel CreateStaticServiceRootHandle();
-
-}  // namespace subtle
-
 }  // namespace component
 
-#endif  // LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
+#endif  // LIB_COMPONENT_CPP_ENVIRONMENT_SERVICES_H_

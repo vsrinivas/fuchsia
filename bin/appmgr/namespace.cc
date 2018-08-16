@@ -45,7 +45,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       Launcher::Name_);
   services_->AddService(
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        component::ConnectToEnvironmentService(
+        realm_->environment_services()->ConnectToService(
             fidl::InterfaceRequest<fuchsia::process::Launcher>(
                 std::move(channel)));
         return ZX_OK;

@@ -37,6 +37,7 @@ namespace component {
 
 struct RealmArgs {
   Realm* parent;
+  const std::shared_ptr<component::Services> environment_services;
   zx::channel host_directory;
   fidl::StringPtr label;
   bool run_virtual_console;
@@ -52,6 +53,10 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const std::string& koid() const { return koid_; }
 
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
+
+  std::shared_ptr<component::Services> environment_services() const {
+    return environment_services_;
+  }
 
   HubInfo HubInfo();
 
@@ -153,6 +158,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   zx::channel svc_channel_server_;
 
   SchemeMap scheme_map_;
+
+  const std::shared_ptr<component::Services> environment_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };

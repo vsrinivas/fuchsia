@@ -6,6 +6,8 @@
 
 #include <lib/fdio/util.h>
 
+#include "lib/component/cpp/startup_context.h"
+
 namespace component {
 
 // static
@@ -18,20 +20,5 @@ void ConnectToEnvironmentService(const std::string& interface_name,
   fdio_service_connect_at(service_root, interface_name.c_str(),
                           channel.release());
 }
-
-namespace subtle {
-
-// static
-zx::channel CreateStaticServiceRootHandle() {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-    return zx::channel();
-  // TODO(abarth): Use kServiceRootPath once that actually works.
-  if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
-    return zx::channel();
-  return h2;
-}
-
-}  // namespace subtle
 
 }  // namespace component

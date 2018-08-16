@@ -105,9 +105,16 @@ class StartupContext {
   mutable std::mutex services_mutex_;
   mutable fuchsia::sys::EnvironmentPtr environment_
       __TA_GUARDED(services_mutex_);
-  mutable fuchsia::sys::LauncherPtr launcher_
-      __TA_GUARDED(services_mutex_);
+  mutable fuchsia::sys::LauncherPtr launcher_ __TA_GUARDED(services_mutex_);
 };
+
+namespace subtle {
+
+// This returns creates a new channel connected to the application's static
+// environment service provider.
+zx::channel CreateStaticServiceRootHandle();
+
+}  // namespace subtle
 
 }  // namespace component
 

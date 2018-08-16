@@ -169,7 +169,8 @@ Realm::Realm(RealmArgs args)
       default_namespace_(
           fxl::MakeRefCounted<Namespace>(nullptr, this, nullptr)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
-      info_vfs_(async_get_default_dispatcher()) {
+      info_vfs_(async_get_default_dispatcher()),
+      environment_services_(args.environment_services) {
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
   zx::unowned<zx::job> parent_job;
@@ -209,8 +210,7 @@ Realm::Realm(RealmArgs args)
     default_namespace_->services()->AddService(
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           root_loader_->AddBinding(
-              fidl::InterfaceRequest<fuchsia::sys::Loader>(
-                  std::move(channel)));
+              fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
           return ZX_OK;
         })),
         fuchsia::sys::Loader::Name_);
@@ -260,7 +260,8 @@ void Realm::CreateNestedJob(
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
         controller_request,
     fidl::StringPtr label) {
-  RealmArgs args{this, std::move(host_directory), label, false};
+  RealmArgs args{this, environment_services_, std::move(host_directory), label,
+                 false};
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
   Realm* child = controller->realm();

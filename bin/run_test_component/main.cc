@@ -12,7 +12,7 @@
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/fxl/files/file.h"
@@ -145,6 +145,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto context = component::StartupContext::CreateFromStartupInfo();
 
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::EnvironmentPtr parent_env;
@@ -170,7 +171,7 @@ int main(int argc, const char** argv) {
         component::testing::CloneFileDescriptor(STDERR_FILENO);
     parent_env->GetLauncher(launcher.NewRequest());
   } else {
-    component::ConnectToEnvironmentService(parent_env.NewRequest());
+    context->ConnectToEnvironmentService(parent_env.NewRequest());
     enclosing_env =
         component::testing::EnclosingEnvironment::Create(kEnv, parent_env);
     for (auto& service : test_metadata.services()) {

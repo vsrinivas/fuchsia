@@ -39,3 +39,18 @@ source_set("cpp") {
     "//zircon/public/lib/zx",
   ]
 }
+
+source_set("environment_services") {
+  visibility = [
+    "//garnet/bin/appmgr:bin",
+    "//garnet/bin/run:bin",
+  ]
+  sources = [
+    "environment_services_helper.cc",
+    "environment_services_helper.h",
+  ]
+
+  public_deps = [
+    ":cpp",
+  ]
+}

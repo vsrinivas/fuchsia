@@ -12,7 +12,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services_helper.h"
 
 using fuchsia::sys::TerminationReason;
 using fxl::StringPrintf;
@@ -63,17 +63,17 @@ int main(int argc, const char** argv) {
     launch_info.arguments.push_back(*argv);
     consume_arg(&argc, &argv);
   }
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto env_services = component::GetEnvironmentServices();
 
   // Connect to the Launcher service through our static environment.
   fuchsia::sys::LauncherSyncPtr launcher;
-  component::ConnectToEnvironmentService(launcher.NewRequest());
+  env_services->ConnectToService(launcher.NewRequest());
 
   if (daemonize) {
     launcher->CreateComponent(std::move(launch_info), {});
     return 0;
   }
-
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);

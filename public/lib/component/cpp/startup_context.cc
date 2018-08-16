@@ -10,7 +10,6 @@
 #include <zircon/processargs.h>
 
 #include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
 namespace component {
@@ -31,8 +30,7 @@ StartupContext::StartupContext(zx::channel service_root,
 StartupContext::~StartupContext() = default;
 
 // static
-std::unique_ptr<StartupContext>
-StartupContext::CreateFromStartupInfo() {
+std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   return std::make_unique<StartupContext>(
       subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
@@ -83,5 +81,20 @@ void StartupContext::ConnectToEnvironmentService(
     const std::string& interface_name, zx::channel channel) {
   incoming_services()->ConnectToService(std::move(channel), interface_name);
 }
+
+namespace subtle {
+
+// static
+zx::channel CreateStaticServiceRootHandle() {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
+  // TODO(abarth): Use kServiceRootPath once that actually works.
+  if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
+    return zx::channel();
+  return h2;
+}
+
+}  // namespace subtle
 
 }  // namespace component
