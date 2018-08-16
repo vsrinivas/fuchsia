@@ -1046,21 +1046,22 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         if (method_info.response != nullptr)
             file_ << ", txn";
         file_ << ");\n";
-        file_ << kIndent << kIndent << "if ("
-              << "status != ZX_OK && "
-              << "status != ZX_ERR_STOP && "
-              << "status != ZX_ERR_NEXT && "
-              << "status != ZX_ERR_ASYNC)\n";
-        file_ << kIndent << kIndent << kIndent << "status = ZX_ERR_INTERNAL;\n";
         file_ << kIndent << kIndent << "break;\n";
         file_ << kIndent << "}\n";
     }
     file_ << kIndent << "default: {\n";
-    file_ << kIndent << kIndent << "status = ZX_ERR_NOT_SUPPORTED;\n";
-    file_ << kIndent << kIndent << "break;\n";
+    file_ << kIndent << kIndent << "return ZX_ERR_NOT_SUPPORTED;\n";
     file_ << kIndent << "}\n";
     file_ << kIndent << "}\n";
-    file_ << kIndent << "return status;\n";
+    file_ << kIndent << "if ("
+          << "status != ZX_OK && "
+          << "status != ZX_ERR_STOP && "
+          << "status != ZX_ERR_NEXT && "
+          << "status != ZX_ERR_ASYNC) {\n";
+    file_ << kIndent << kIndent << "return ZX_ERR_INTERNAL;\n";
+    file_ << kIndent << "} else {\n";
+    file_ << kIndent << kIndent << "return status;\n";
+    file_ << kIndent << "}\n";
     file_ << "}\n\n";
 
     EmitServerDispatchDecl(&file_, named_interface.c_name);
