@@ -29,7 +29,7 @@ impl PtkInitState {
         -> Result<(eapol::KeyFrame, Ptk), failure::Error>
     {
         let anonce = &msg1.get().key_nonce;
-        let snonce = shared.nonce_rdr.next();
+        let snonce = shared.nonce_rdr.next()?;
         let rsne = &shared.cfg.s_rsne;
         let akm = &rsne.akm_suites[0];
         let cipher = &rsne.pairwise_cipher_suites[0];
@@ -239,7 +239,7 @@ impl State {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct SharedState {
     anonce: [u8; 32],
     pmk: Vec<u8>,
@@ -247,6 +247,18 @@ struct SharedState {
     kck: Vec<u8>,
     cfg: fourway::Config,
     nonce_rdr: NonceReader,
+}
+
+impl PartialEq for SharedState {
+    fn eq(&self, other: &SharedState) -> bool {
+        // Exclude nonce generator from comparison. This code will soon change once the nonce
+        // generator moved further up the stack.
+        self.anonce == other.anonce &&
+            self.pmk == other.pmk &&
+            self.kek == other.kek &&
+            self.kck == other.kck &&
+            self.cfg == other.cfg
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -257,7 +269,7 @@ pub struct Supplicant {
 
 impl Supplicant {
     pub fn new(cfg: fourway::Config, pmk: Vec<u8>) -> Result<Self, failure::Error> {
-        let nonce_rdr = NonceReader::new(cfg.s_addr)?;
+        let nonce_rdr = NonceReader::new(&cfg.s_addr[..])?;
         Ok(Supplicant {
             state: Some(State::PtkInit(PtkInitState {})),
             shared: SharedState {
