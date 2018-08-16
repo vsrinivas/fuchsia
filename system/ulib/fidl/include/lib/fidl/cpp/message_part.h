@@ -63,7 +63,7 @@ public:
     // The total amount of storage available for this part of the message.
     //
     // This part of the message might not actually use all of this storage. To
-    // determine how much storage is actually being used, see |capacity()|.
+    // determine how much storage is actually being used, see |actual()|.
     uint32_t capacity() const { return capacity_; }
 
     // The amount of storage that is actually being used for this part of the
