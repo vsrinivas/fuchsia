@@ -802,8 +802,8 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .set_flags = fdio_default_set_flags,
     .recvfrom = zxsio_recvfrom,
     .sendto = zxsio_sendto,
-    .recvmsg = zxsio_recvmsg_stream,
-    .sendmsg = zxsio_sendmsg_stream,
+    .recvmsg = zxsio_recvmsg_dgram,
+    .sendmsg = zxsio_sendmsg_dgram,
     .shutdown = fdio_socket_shutdown,
 };
 
