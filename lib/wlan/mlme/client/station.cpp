@@ -1547,38 +1547,17 @@ zx_status_t Station::NotifyAssocContext() {
     ddk.ext_supported_rates_cnt = esr.size();
     std::copy(esr.begin(), esr.end(), ddk.ext_supported_rates);
 
-    static_assert(sizeof(ddk.ht_cap) + sizeof(ElementHeader) == sizeof(assoc_ctx_.ht_cap),
-                  "Size mismatch between DDK and AssocContext: ht_cap");
-    static_assert(sizeof(ddk.ht_op) + sizeof(ElementHeader) == sizeof(assoc_ctx_.ht_op),
-                  "Size mismatch between DDK and AssocContext: ht_op");
-    static_assert(sizeof(ddk.vht_cap) + sizeof(ElementHeader) == sizeof(assoc_ctx_.vht_cap),
-                  "Size mismatch between DDK and AssocContext: vht_cap");
-    static_assert(sizeof(ddk.vht_op) + sizeof(ElementHeader) == sizeof(assoc_ctx_.vht_op),
-                  "Size mismatch between DDK and AssocContext: vht_op");
-
     ddk.has_ht_cap = assoc_ctx_.has_ht_cap;
-    if (ddk.has_ht_cap) {
-        memcpy(ddk.ht_cap, reinterpret_cast<uint8_t*>(&assoc_ctx_.ht_cap) + sizeof(ElementHeader),
-               sizeof(ddk.ht_cap));
-    }
+    if (ddk.has_ht_cap) { ddk.ht_cap = ToDdk(assoc_ctx_.ht_cap); }
 
     ddk.has_ht_op = assoc_ctx_.has_ht_op;
-    if (ddk.has_ht_op) {
-        memcpy(ddk.ht_op, reinterpret_cast<uint8_t*>(&assoc_ctx_.ht_op) + sizeof(ElementHeader),
-               sizeof(ddk.ht_op));
-    }
+    if (ddk.has_ht_op) { ddk.ht_op = ToDdk(assoc_ctx_.ht_op); }
 
     ddk.has_vht_cap = assoc_ctx_.has_vht_cap;
-    if (ddk.has_vht_cap) {
-        memcpy(ddk.ht_cap, reinterpret_cast<uint8_t*>(&assoc_ctx_.vht_cap) + sizeof(ElementHeader),
-               sizeof(ddk.vht_cap));
-    }
+    if (ddk.has_vht_cap) { ddk.vht_cap = ToDdk(assoc_ctx_.vht_cap); }
 
     ddk.has_vht_op = assoc_ctx_.has_vht_op;
-    if (ddk.has_vht_op) {
-        memcpy(ddk.vht_op, reinterpret_cast<uint8_t*>(&assoc_ctx_.vht_op) + sizeof(ElementHeader),
-               sizeof(ddk.vht_op));
-    }
+    if (ddk.has_vht_op) { ddk.vht_op = ToDdk(assoc_ctx_.vht_op); }
 
     return device_->ConfigureAssoc(&ddk);
 }

@@ -9,6 +9,8 @@
 #include <wlan/common/element_id.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/protocol/info.h>
+
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -973,4 +975,14 @@ static constexpr inline uint8_t MarkRateBasic(uint8_t rate) {
 // The outcoming "Basic rates" follows those specified in AP
 std::vector<uint8_t> IntersectRatesAp(const std::vector<uint8_t>& ap_rates,
                                       const std::vector<uint8_t>& client_rates);
+
+wlan_ht_caps_t ToDdk(const HtCapabilities& src);
+HtCapabilities FromDdk(const wlan_ht_caps_t& src);
+wlan_ht_op_t ToDdk(const HtOperation& src);
+HtOperation FromDdk(const wlan_ht_op_t& src);
+wlan_vht_caps_t ToDdk(const VhtCapabilities& src);
+VhtCapabilities FromDdk(const wlan_vht_caps_t& src);
+wlan_vht_op_t ToDdk(const VhtOperation& src);
+VhtOperation FromDdk(const wlan_vht_op_t& src);
+
 }  // namespace wlan
