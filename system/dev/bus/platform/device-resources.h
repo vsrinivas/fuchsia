@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-bus.h>
+#include <fbl/array.h>
 #include <fbl/vector.h>
 
 #include "proxy-protocol.h"
@@ -57,13 +58,13 @@ private:
     uint32_t index_;
 
     // Platform bus resources copied from the pbus_dev_t struct from the board driver.
-    fbl::Vector<pbus_mmio_t> mmios_;
-    fbl::Vector<pbus_irq_t> irqs_;
-    fbl::Vector<pbus_gpio_t> gpios_;
-    fbl::Vector<pbus_i2c_channel_t> i2c_channels_;
-    fbl::Vector<pbus_clk_t> clks_;
-    fbl::Vector<pbus_bti_t> btis_;
-    fbl::Vector<pbus_metadata_t> metadata_;
+    fbl::Array<pbus_mmio_t> mmios_;
+    fbl::Array<pbus_irq_t> irqs_;
+    fbl::Array<pbus_gpio_t> gpios_;
+    fbl::Array<pbus_i2c_channel_t> i2c_channels_;
+    fbl::Array<pbus_clk_t> clks_;
+    fbl::Array<pbus_bti_t> btis_;
+    fbl::Array<pbus_metadata_t> metadata_;
 
     // Resources for children of this device.
     fbl::Vector<DeviceResources> children_;
