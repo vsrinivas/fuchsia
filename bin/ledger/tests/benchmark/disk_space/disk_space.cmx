@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/ledger_benchmark_disk_space"
+    },
+    "sandbox": {
+        "features": ["persistent-storage", "deprecated-all-services"]
+    }
+}

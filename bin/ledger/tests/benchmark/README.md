@@ -23,7 +23,7 @@ You can also trace the app directly:
 
 ```
 trace record --categories=benchmark,ledger \
-  /pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_put \
+  fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx \
   --entry-count=10 --transaction-size=1 --key-size=100 --value-size=100 \
   --refs=off
 ```

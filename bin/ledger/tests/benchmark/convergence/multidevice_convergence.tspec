@@ -1,6 +1,6 @@
 {
   "test_suite_name": "fuchsia.ledger.local",
-  "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_convergence",
+  "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/convergence.cmx",
   "args": ["--entry-count=3", "--value-size=100", "--device-count=10"],
   "categories": ["benchmark"],
   "duration": 120,
