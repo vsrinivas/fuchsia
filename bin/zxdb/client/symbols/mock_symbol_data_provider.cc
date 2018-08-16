@@ -6,6 +6,8 @@
 
 #include <inttypes.h>
 
+#include <algorithm>
+
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -67,7 +69,7 @@ void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   auto found = mem_.find(address);
-  if (found == mem_.end() || size > found->second.size()) {
+  if (found == mem_.end()) {
     debug_ipc::MessageLoop::Current()->PostTask([callback, address]() {
       callback(Err(fxl::StringPrintf("MockSymbolDataProvider::GetMemoryAsync: "
                                      "Memory not found 0x%" PRIx64,
@@ -75,9 +77,11 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                std::vector<uint8_t>());
     });
   } else {
+    uint32_t size_to_return = std::min(size, static_cast<uint32_t>(found->second.size()));
+
     std::vector<uint8_t> subset;
-    subset.resize(size);
-    memcpy(&subset[0], &found->second[0], size);
+    subset.resize(size_to_return);
+    memcpy(&subset[0], &found->second[0], size_to_return);
     debug_ipc::MessageLoop::Current()->PostTask(
         [callback, subset]() { callback(Err(), subset); });
   }

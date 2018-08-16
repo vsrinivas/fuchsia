@@ -26,6 +26,15 @@ static_library("common") {
   ]
 }
 
+source_set("test_support") {
+  sources = [
+    "test_with_loop.h",
+  ]
+  public_deps = [
+    "//garnet/lib/debug_ipc/helper",
+  ]
+}
+
 source_set("tests") {
   testonly = true
 

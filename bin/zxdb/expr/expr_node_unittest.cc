@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_node.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
@@ -81,16 +82,7 @@ class TestEvalContext : public ExprEvalContext {
   std::map<std::string, ExprValue> values_;
 };
 
-class ExprNodeTest : public testing::Test {
- public:
-  ExprNodeTest() { loop_.Init(); }
-  ~ExprNodeTest() { loop_.Cleanup(); }
-
-  debug_ipc::MessageLoop& loop() { return loop_; }
-
- private:
-  debug_ipc::PlatformMessageLoop loop_;
-};
+class ExprNodeTest : public TestWithLoop {};
 
 }  // namespace
 

@@ -117,8 +117,7 @@ void FormatExprValue(const ExprValue& value, const FormatValueOptions& options,
     return;
   }
 
-  const ModifiedType* modified_type = type->AsModifiedType();
-  if (modified_type) {
+  if (const ModifiedType* modified_type = type->AsModifiedType()) {
     switch (modified_type->tag()) {
       case Symbol::kTagPointerType:
         FormatPointer(value, modified_type, out);

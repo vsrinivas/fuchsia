@@ -63,12 +63,10 @@ class SymbolDataProvider
 
   // Request to retrieve a memory block from the debugged process. On success,
   // the implementation will call the callback with the retrieved data pointer.
-  // The size of the buffer provided the callback will be the same size
-  // requested in the input parameter. The implementation will make the data
-  // valid for the duration of the callback, but it may be destroyed afterward.
   //
-  // On failure (if all or part of the memory is unreadable), the callback will
-  // be issued with a null pointer.
+  // It will read valid memory up to the maximum. It will do short reads if it
+  // encounters invalid memory, so the result may be shorter than requested
+  // or empty (if the first byte is invalid).
   virtual void GetMemoryAsync(uint64_t address, uint32_t size,
                               GetMemoryCallback callback) = 0;
 

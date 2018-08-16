@@ -112,26 +112,28 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
           return;
         }
 
-        // Request succeeded, but the memory's not necessarily valid.
-        if (!dump.AllValid()) {
-          cb(Err(fxl::StringPrintf("Unable to read 0x%" PRIx64, address)),
-             std::vector<uint8_t>());
-          return;
-        }
-
         FXL_DCHECK(dump.address() == address);
         FXL_DCHECK(dump.size() == size);
-        if (dump.blocks().size() == 1) {
-          // Common case: came back as one block.
+        if (dump.blocks().size() == 1 ||
+            (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {
+          // Common case: came back as one block OR it read until an invalid
+          // memory boundary and the second block is invalid.
+          //
+          // In both these cases we can directly return the first data block.
+          // We don't have to check the first block's valid flag since if it's
+          // not valid it will be empty, which is what our API specifies.
           cb(Err(), std::move(dump.blocks()[0].data));
         } else {
           // The debug agent doesn't guarantee that a memory dump will exist in
-          // only one block even if the memory is all valid. Flatten to a
-          // single buffer.
+          // only one block even if the memory is all valid. Flatten all
+          // contiguous valid regions to a single buffer.
           std::vector<uint8_t> flat;
           flat.reserve(dump.size());
-          for (const auto block : dump.blocks())
+          for (const auto block : dump.blocks()) {
+            if (!block.valid)
+              break;
             flat.insert(flat.end(), block.data.begin(), block.data.end());
+          }
           cb(Err(), std::move(flat));
         }
       });

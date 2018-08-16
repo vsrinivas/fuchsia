@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_expr_eval.h"
 
+#include <inttypes.h>
 #include <stdlib.h>
 
 #include <utility>
@@ -504,14 +505,15 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref() {
   uint64_t addr = stack_.back();
   stack_.pop_back();
   data_provider_->GetMemoryAsync(
-      addr, 8, [weak_eval = weak_factory_.GetWeakPtr()](
+      addr, 8, [ addr, weak_eval = weak_factory_.GetWeakPtr() ](
                    const Err& err, std::vector<uint8_t> value) {
         if (!weak_eval) {
           return;
         } else if (err.has_error()) {
           weak_eval->ReportError(err);
         } else if (value.size() != 8) {
-          weak_eval->ReportError("Bad size returned from memory read.");
+          weak_eval->ReportError(
+              fxl::StringPrintf("Can't read memory at 0x%" PRIx64 ".", addr));
         } else {
           // Success reading 8 bytes.
           uint64_t to_push;

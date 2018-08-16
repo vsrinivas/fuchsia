@@ -39,22 +39,37 @@ class SymbolVariableResolver {
   // Does the resolution. If the operation completes synchronously, the
   // callback will be issued reentrantly (from within the call stack of this
   // function).
+  //
+  // If this object is destroyed, the callback will be canceled.
   void ResolveVariable(const SymbolContext& symbol_context, const Variable* var,
                        Callback cb);
 
   // Does the resolution of a variable from a known address in memory. The
   // callback will be issued reentrantly (from within the call stack of this
   // function).
+  //
+  // If this object is destroyed, the callback will be canceled.
   void ResolveFromAddress(uint64_t address, fxl::RefPtr<Type> type,
                           Callback cb);
 
  private:
   // Callback for when the dwarf_eval_ has completed evaluation.
-  void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<Type> type, Callback cb);
+  void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<Type> type);
+
+  // Implements ResolveFromCallback after a callback has already been installed
+  // in this class.
+  void DoResolveFromAddress(uint64_t address, fxl::RefPtr<Type> type);
+
+  // Issuse the callback. The callback could possibly delete |this| so don't
+  // do anything after calling.
+  void OnComplete(const Err& err, ExprValue value);
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
 
   DwarfExprEval dwarf_eval_;
+
+  // Non-null when an operation is in progress.
+  Callback current_callback_;
 
   fxl::WeakPtrFactory<SymbolVariableResolver> weak_factory_;
 };

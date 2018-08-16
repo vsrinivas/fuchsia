@@ -52,16 +52,19 @@ SymbolVariableResolver::~SymbolVariableResolver() = default;
 
 void SymbolVariableResolver::ResolveVariable(
     const SymbolContext& symbol_context, const Variable* var, Callback cb) {
+  FXL_DCHECK(!current_callback_);  // Can't have more than one pending.
+  current_callback_ = std::move(cb);
+
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type(const_cast<Type*>(var->type().Get()->AsType()));
   if (!type) {
-    cb(Err("Missing type information."), ExprValue());
+    OnComplete(Err("Missing type information."), ExprValue());
     return;
   }
 
   uint64_t ip = 0;
   if (!data_provider_->GetRegister(SymbolDataProvider::kRegisterIP, &ip)) {
-    cb(Err("No location available."), ExprValue());
+    OnComplete(Err("No location available."), ExprValue());
     return;
   }
 
@@ -69,44 +72,37 @@ void SymbolVariableResolver::ResolveVariable(
       var->location().EntryForIP(symbol_context, ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
-    cb(Err(ErrType::kOptimizedOut,
-           fxl::StringPrintf("The variable '%s' has been optimized out. ",
-                             var->GetAssignedName().c_str()) +
-               DescribeLocationMissError(symbol_context, ip, var->location())),
-       ExprValue());
+    OnComplete(
+        Err(ErrType::kOptimizedOut,
+            fxl::StringPrintf("The variable '%s' has been optimized out. ",
+                              var->GetAssignedName().c_str()) +
+                DescribeLocationMissError(symbol_context, ip, var->location())),
+        ExprValue());
     return;
   }
 
   // Schedule the expression to be evaluated.
   dwarf_eval_.Eval(data_provider_, loc_entry->expression, [
-    cb, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()
+    type = std::move(type), weak_this = weak_factory_.GetWeakPtr()
   ](DwarfExprEval * eval, const Err& err) {
     if (weak_this)
-      weak_this->OnDwarfEvalComplete(err, std::move(type), std::move(cb));
+      weak_this->OnDwarfEvalComplete(err, std::move(type));
   });
 }
 
 void SymbolVariableResolver::ResolveFromAddress(uint64_t address,
                                                 fxl::RefPtr<Type> type,
                                                 Callback cb) {
-  uint32_t type_size = type->byte_size();
-  data_provider_->GetMemoryAsync(address, type_size, [
-    type = std::move(type), address, cb = std::move(cb)
-  ](const Err& err, std::vector<uint8_t> data) {
-    if (err.has_error())
-      cb(err, ExprValue());
-    else
-      cb(Err(),
-         ExprValue(std::move(type), std::move(data), ExprValueSource(address)));
-  });
+  FXL_DCHECK(!current_callback_);  // Can't have more than one pending.
+  current_callback_ = std::move(cb);
+  DoResolveFromAddress(address, std::move(type));
 }
 
 void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
-                                                 fxl::RefPtr<Type> type,
-                                                 Callback cb) {
+                                                 fxl::RefPtr<Type> type) {
   if (err.has_error()) {
     // Error decoding.
-    cb(err, ExprValue());
+    OnComplete(err, ExprValue());
     return;
   }
 
@@ -116,20 +112,54 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
     // The DWARF expression produced the exact value (it's not in memory).
     uint32_t type_size = type->byte_size();
     if (type_size > sizeof(uint64_t)) {
-      cb(Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
-                               "Please file a bug with a repro case.",
-                               type_size)),
-         ExprValue());
+      OnComplete(
+          Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
+                                "Please file a bug with a repro case.",
+                                type_size)),
+          ExprValue());
       return;
     }
     std::vector<uint8_t> data;
     data.resize(type_size);
     memcpy(&data[0], &result_int, type_size);
-    cb(Err(), ExprValue(std::move(type), std::move(data)));
+    OnComplete(Err(), ExprValue(std::move(type), std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    ResolveFromAddress(result_int, std::move(type), std::move(cb));
+    DoResolveFromAddress(result_int, std::move(type));
   }
+}
+
+void SymbolVariableResolver::DoResolveFromAddress(uint64_t address,
+                                                  fxl::RefPtr<Type> type) {
+  uint32_t type_size = type->byte_size();
+  data_provider_->GetMemoryAsync(address, type_size, [
+    type = std::move(type), address, weak_this = weak_factory_.GetWeakPtr()
+  ](const Err& err, std::vector<uint8_t> data) {
+    if (!weak_this)
+      return;
+    if (err.has_error()) {
+      weak_this->OnComplete(err, ExprValue());
+    } else if (data.size() != type->byte_size()) {
+      // Short read, memory is invalid.
+      weak_this->OnComplete(
+          Err(fxl::StringPrintf("Can't read memory at 0x%" PRIx64 ".",
+                                address)),
+          ExprValue());
+    } else {
+      weak_this->OnComplete(Err(), ExprValue(std::move(type), std::move(data),
+                                             ExprValueSource(address)));
+    }
+  });
+}
+
+void SymbolVariableResolver::OnComplete(const Err& err, ExprValue value) {
+  FXL_DCHECK(current_callback_);
+
+  // Executing the callback could delete |this| so clear the current_callback_
+  // pointer before issuing.
+  Callback cb = std::move(current_callback_);
+
+  cb(err, std::move(value));
 }
 
 }  // namespace zxdb
