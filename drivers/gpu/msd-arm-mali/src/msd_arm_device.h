@@ -5,6 +5,8 @@
 #ifndef MSD_ARM_DEVICE_H
 #define MSD_ARM_DEVICE_H
 
+#include <zircon/compiler.h>
+
 #include <deque>
 #include <list>
 #include <mutex>
@@ -15,7 +17,6 @@
 #include "device_request.h"
 #include "gpu_features.h"
 #include "job_scheduler.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
@@ -186,7 +187,7 @@ private:
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
     std::mutex schedule_mutex_;
-    FXL_GUARDED_BY(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
+    __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<magma::RegisterIo> register_io_;

@@ -5,11 +5,11 @@
 #ifndef ADDRESS_MANAGER_H_
 #define ADDRESS_MANAGER_H_
 
+#include <zircon/compiler.h>
+
 #include <condition_variable>
 #include <mutex>
 #include <vector>
-
-#include "lib/fxl/synchronization/thread_annotations.h"
 
 #include "address_space.h"
 #include "msd_arm_atom.h"
@@ -65,27 +65,27 @@ private:
         HardwareSlot(uint32_t slot) : registers(slot) {}
 
         void FlushMmuRange(magma::RegisterIo* io, uint64_t start, uint64_t length, bool synchronous)
-            FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
+            __TA_REQUIRES(lock);
         // Wait for the MMU to finish processing any existing commands.
-        void WaitForMmuIdle(magma::RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
-        void InvalidateSlot(magma::RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
-        void UnlockMmu(magma::RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
+        void WaitForMmuIdle(magma::RegisterIo* io) __TA_REQUIRES(lock);
+        void InvalidateSlot(magma::RegisterIo* io) __TA_REQUIRES(lock);
+        void UnlockMmu(magma::RegisterIo* io) __TA_REQUIRES(lock);
 
         std::mutex lock;
-        FXL_GUARDED_BY(lock) registers::AsRegisters registers;
+        __TA_GUARDED(lock) registers::AsRegisters registers;
     };
 
     std::shared_ptr<AddressSlotMapping>
     GetMappingForAddressSpaceUnlocked(const AddressSpace* address_space)
-        FXL_EXCLUSIVE_LOCKS_REQUIRED(address_slot_lock_);
+        __TA_REQUIRES(address_slot_lock_);
     std::shared_ptr<AddressSlotMapping> AssignToSlot(std::shared_ptr<MsdArmConnection> connection,
                                                      uint32_t slot)
-        FXL_EXCLUSIVE_LOCKS_REQUIRED(address_slot_lock_);
+        __TA_REQUIRES(address_slot_lock_);
 
     Owner* owner_;
     uint32_t acquire_slot_timeout_seconds_ = 10;
     std::mutex address_slot_lock_;
-    FXL_GUARDED_BY(address_slot_lock_) std::vector<AddressSlot> address_slots_;
+    __TA_GUARDED(address_slot_lock_) std::vector<AddressSlot> address_slots_;
     std::condition_variable address_slot_free_;
 
     // Before a slot is modified, the corresponding lock should be taken.

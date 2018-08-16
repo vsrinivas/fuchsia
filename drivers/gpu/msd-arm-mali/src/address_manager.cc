@@ -140,7 +140,7 @@ void AddressManager::UnlockAddressSpace(AddressSpace* address_space)
 
 // Disable thread safety analysis because it doesn't understand unique_lock.
 std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpace(
-    std::shared_ptr<MsdArmConnection> connection) FXL_NO_THREAD_SAFETY_ANALYSIS
+    std::shared_ptr<MsdArmConnection> connection) __TA_NO_THREAD_SAFETY_ANALYSIS
 {
     std::unique_lock<std::mutex> lock(address_slot_lock_);
     while (true) {

@@ -4,12 +4,13 @@
 
 #include "msd_arm_connection.h"
 
+#include <zircon/compiler.h>
+
 #include <limits>
 #include <vector>
 
 #include "address_space.h"
 #include "gpu_mapping.h"
-#include "lib/fxl/arraysize.h"
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "msd_arm_buffer.h"
@@ -93,7 +94,7 @@ bool MsdArmConnection::ExecuteAtom(
         std::lock_guard<std::mutex> lock(callback_lock_);
 
         MsdArmAtom::DependencyList dependencies;
-        for (size_t i = 0; i < arraysize(atom->dependencies); i++) {
+        for (size_t i = 0; i < countof(atom->dependencies); i++) {
             uint8_t dependency = atom->dependencies[i].atom_number;
             if (dependency) {
                 if (!outstanding_atoms_[dependency]) {
@@ -115,7 +116,7 @@ bool MsdArmConnection::ExecuteAtom(
         }
         msd_atom->set_dependencies(dependencies);
 
-        static_assert(arraysize(outstanding_atoms_) - 1 ==
+        static_assert(countof(outstanding_atoms_) - 1 ==
                           std::numeric_limits<decltype(magma_arm_mali_atom::atom_number)>::max(),
                       "outstanding_atoms_ size is incorrect");
 
@@ -290,7 +291,7 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 
 // CommitMemoryForBuffer or PageInAddress will hold address_lock_ before calling this, but that's
 // impossible to specify for the thread safety analysis.
-bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) FXL_NO_THREAD_SAFETY_ANALYSIS
+bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD_SAFETY_ANALYSIS
 {
     uint64_t access_flags = 0;
     if (!access_flags_from_flags(mapping->flags(),

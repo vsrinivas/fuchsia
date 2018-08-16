@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/arraysize.h"
+#include <zircon/compiler.h>
+
 #include "mock/mock_mmio.h"
 #include "power_manager.h"
 #include "registers.h"
@@ -29,7 +30,7 @@ public:
         registers::CoreReadyState::CoreType actions[] = {
             registers::CoreReadyState::CoreType::kShader, registers::CoreReadyState::CoreType::kL2,
             registers::CoreReadyState::CoreType::kTiler};
-        for (size_t i = 0; i < arraysize(actions); i++) {
+        for (size_t i = 0; i < countof(actions); i++) {
 
             uint32_t offset =
                 static_cast<uint32_t>(actions[i]) +

@@ -4,14 +4,14 @@
 
 #include "msd_arm_device.h"
 
+#include <fbl/string_printf.h>
+
 #include <bitset>
 #include <cinttypes>
 #include <cstdio>
 #include <string>
 
 #include "job_scheduler.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
@@ -635,8 +635,8 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
         {"Ready", registers::CoreReadyState::StatusType::kReady},
         {"Transitioning", registers::CoreReadyState::StatusType::kPowerTransitioning},
         {"Power active", registers::CoreReadyState::StatusType::kPowerActive}};
-    for (size_t i = 0; i < arraysize(core_types); i++) {
-        for (size_t j = 0; j < arraysize(status_types); j++) {
+    for (size_t i = 0; i < countof(core_types); i++) {
+        for (size_t j = 0; j < countof(status_types); j++) {
             uint64_t bitmask = registers::CoreReadyState::ReadBitmask(io, core_types[i].type,
                                                                       status_types[j].type);
             dump_state->power_states.push_back({core_types[i].name, status_types[j].name, bitmask});
@@ -694,27 +694,33 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
 {
     dump_string.append("Core power states\n");
     for (auto& state : dump_state.power_states) {
-        fxl::StringAppendf(&dump_string, "Core type %s state %s bitmap: 0x%lx\n", state.core_type,
-                           state.status_type, state.bitmask);
+        dump_string += fbl::StringPrintf("Core type %s state %s bitmap: 0x%lx\n", state.core_type,
+                                         state.status_type, state.bitmask)
+                           .c_str();
     }
-    fxl::StringAppendf(&dump_string, "Total ms %" PRIu64 " Active ms %" PRIu64 "\n",
-                       dump_state.total_time_ms, dump_state.active_time_ms);
-    fxl::StringAppendf(&dump_string, "Gpu fault status 0x%x, address 0x%lx\n",
-                       dump_state.gpu_fault_status, dump_state.gpu_fault_address);
-    fxl::StringAppendf(&dump_string, "Gpu status 0x%x\n", dump_state.gpu_status);
-    fxl::StringAppendf(&dump_string, "Gpu cycle count %ld, timestamp %ld\n", dump_state.cycle_count,
-                       dump_state.timestamp);
+    dump_string += fbl::StringPrintf("Total ms %" PRIu64 " Active ms %" PRIu64 "\n",
+                                     dump_state.total_time_ms, dump_state.active_time_ms)
+                       .c_str();
+    dump_string += fbl::StringPrintf("Gpu fault status 0x%x, address 0x%lx\n",
+                                     dump_state.gpu_fault_status, dump_state.gpu_fault_address)
+                       .c_str();
+    dump_string += fbl::StringPrintf("Gpu status 0x%x\n", dump_state.gpu_status).c_str();
+    dump_string += fbl::StringPrintf("Gpu cycle count %ld, timestamp %ld\n", dump_state.cycle_count,
+                                     dump_state.timestamp)
+                       .c_str();
     for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
         auto* status = &dump_state.job_slot_status[i];
-        fxl::StringAppendf(&dump_string,
-                           "Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x\n", i,
-                           status->status, status->head, status->tail, status->config);
+        dump_string +=
+            fbl::StringPrintf("Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x\n", i,
+                              status->status, status->head, status->tail, status->config)
+                .c_str();
     }
     for (size_t i = 0; i < dump_state.address_space_status.size(); i++) {
         auto* status = &dump_state.address_space_status[i];
-        fxl::StringAppendf(&dump_string,
-                           "AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n", i,
-                           status->status, status->fault_status, status->fault_address);
+        dump_string +=
+            fbl::StringPrintf("AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n", i,
+                              status->status, status->fault_status, status->fault_address)
+                .c_str();
     }
 }
 

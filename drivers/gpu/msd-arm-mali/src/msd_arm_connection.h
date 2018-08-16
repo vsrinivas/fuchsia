@@ -5,6 +5,8 @@
 #ifndef MSD_ARM_CONNECTION_H
 #define MSD_ARM_CONNECTION_H
 
+#include <zircon/compiler.h>
+
 #include <deque>
 #include <map>
 #include <memory>
@@ -13,7 +15,6 @@
 
 #include "address_space.h"
 #include "gpu_mapping.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "msd_arm_atom.h"
@@ -45,11 +46,11 @@ public:
 
     msd_client_id_t client_id() { return client_id_; }
 
-    AddressSpace* address_space_for_testing() FXL_NO_THREAD_SAFETY_ANALYSIS
+    AddressSpace* address_space_for_testing() __TA_NO_THREAD_SAFETY_ANALYSIS
     {
         return address_space_.get();
     }
-    const AddressSpace* const_address_space() const FXL_NO_THREAD_SAFETY_ANALYSIS
+    const AddressSpace* const_address_space() const __TA_NO_THREAD_SAFETY_ANALYSIS
     {
         return address_space_.get();
     }
@@ -92,9 +93,10 @@ private:
 
     msd_client_id_t client_id_;
     std::mutex address_lock_;
-    FXL_PT_GUARDED_BY(address_lock_) std::unique_ptr<AddressSpace> address_space_;
+    __THREAD_ANNOTATION(__pt_guarded_by__(address_lock_))
+    std::unique_ptr<AddressSpace> address_space_;
     // Map GPU va to a mapping.
-    FXL_GUARDED_BY(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+    __TA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
 
     Owner* owner_;
 

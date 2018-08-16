@@ -56,6 +56,8 @@ source_set("src") {
     defines += [ "MSD_ARM_ENABLE_CACHE_COHERENCY" ]
   }
 
+  # Don't depend on shared libraries besides libzircon.so, libc.c, and
+  # libdriver.so.
   deps = [
     "../include",
     "//garnet/lib/magma/src/magma_util",
@@ -68,6 +70,6 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:port",
     "//garnet/lib/magma/src/magma_util/platform:semaphore",
     "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fbl",
   ]
 }

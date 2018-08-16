@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "helper/platform_device_helper.h"
-#include "lib/fxl/arraysize.h"
 #include "mock/mock_mmio.h"
 #include "msd_arm_device.h"
 #include "registers.h"
