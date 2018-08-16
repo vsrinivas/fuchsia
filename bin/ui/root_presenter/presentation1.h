@@ -213,16 +213,14 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
 
   void OnEvent(fuchsia::ui::input::InputEvent event);
+  void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
   // Checks for whether to send an input event through regular dispatch or
   // accessibility input dispatch.
   void OnAccessibilityEvent(fuchsia::ui::input::InputEvent event);
-
   // Enable or disable accessibility support in this presentation.
   // Event handler for |a11y_toggle_.events().OnAccessibilityToggle|.
   void OnAccessibilityToggle(bool enabled);
-
-  void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
   void PresentScene();
   void Shutdown();

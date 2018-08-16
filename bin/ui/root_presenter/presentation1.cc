@@ -711,6 +711,28 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
+void Presentation1::OnSensorEvent(uint32_t device_id,
+                                  fuchsia::ui::input::InputReport event) {
+  FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
+
+  FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
+  FXL_DCHECK(device_states_by_id_[device_id].first);
+  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor());
+  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
+
+  if (presentation_mode_listener_) {
+    const fuchsia::ui::input::SensorDescriptor* sensor_descriptor =
+        device_states_by_id_[device_id].first->descriptor()->sensor.get();
+    std::pair<bool, fuchsia::ui::policy::PresentationMode> update =
+        presentation_mode_detector_->Update(*sensor_descriptor,
+                                            std::move(event));
+    if (update.first && update.second != presentation_mode_) {
+      presentation_mode_ = update.second;
+      presentation_mode_listener_->OnModeChanged();
+    }
+  }
+}
+
 void Presentation1::OnAccessibilityEvent(fuchsia::ui::input::InputEvent event) {
   // We currently only send over touch events to the a11y dispatch.
   if (accessibility_mode_ && event.is_pointer() &&
@@ -734,28 +756,6 @@ void Presentation1::OnAccessibilityEvent(fuchsia::ui::input::InputEvent event) {
 
 void Presentation1::OnAccessibilityToggle(bool enabled) {
   accessibility_mode_ = enabled;
-}
-
-void Presentation1::OnSensorEvent(uint32_t device_id,
-                                  fuchsia::ui::input::InputReport event) {
-  FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
-
-  FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
-  FXL_DCHECK(device_states_by_id_[device_id].first);
-  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor());
-  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
-
-  if (presentation_mode_listener_) {
-    const fuchsia::ui::input::SensorDescriptor* sensor_descriptor =
-        device_states_by_id_[device_id].first->descriptor()->sensor.get();
-    std::pair<bool, fuchsia::ui::policy::PresentationMode> update =
-        presentation_mode_detector_->Update(*sensor_descriptor,
-                                            std::move(event));
-    if (update.first && update.second != presentation_mode_) {
-      presentation_mode_ = update.second;
-      presentation_mode_listener_->OnModeChanged();
-    }
-  }
 }
 
 void Presentation1::OnChildAttached(
