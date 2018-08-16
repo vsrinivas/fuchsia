@@ -354,9 +354,59 @@ const auto kDisconnectionComplete = common::CreateStaticByteBuffer(
 
 // Test: An incoming connection request should trigger an acceptance and an
 // interrogation to discover capabilities.
+TEST_F(GAP_BrEdrConnectionManagerTest,
+       IncomingConnection_BrokenExtendedPageResponse) {
+  size_t transactions = 0;
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
+                                        async_get_default_dispatcher());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kAcceptConnectionRequest,
+                         {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kRemoteNameRequest,
+      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteVersionInfo,
+      {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
+                                     &kReadRemoteSupportedFeaturesComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteExtended1,
+      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteExtended2,
+      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(6u, transactions);
+
+  // When we deallocate the connection manager next, we should disconnect.
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
+
+  // deallocating the connection manager disables connectivity.
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
+
+  SetConnectionManager(nullptr);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(9u, transactions);
+}
+
+// Test: An incoming connection request should trigger an acceptance and an
+// interrogation to discover capabilities.
 TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnection) {
   size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions]() { transactions++; },
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(
@@ -416,7 +466,7 @@ const auto kReadRemoteSupportedFeaturesCompleteFailed =
 //  - We don't query extended features if we don't receive an answer.
 TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnectionFailedInterrogation) {
   size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions]() { transactions++; },
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(
@@ -473,7 +523,7 @@ const auto kCapabilitiesRequestReplyRsp = common::CreateStaticByteBuffer(
 TEST_F(GAP_BrEdrConnectionManagerTest, CapabilityRequest) {
   size_t transactions = 0;
 
-  test_device()->SetTransactionCallback([&transactions]() { transactions++; },
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(kCapabilitiesRequestReply,
@@ -507,7 +557,7 @@ const auto kConfirmationRequestReplyRsp =
 TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
   size_t transactions = 0;
 
-  test_device()->SetTransactionCallback([&transactions]() { transactions++; },
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(kConfirmationRequestReply,

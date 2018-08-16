@@ -182,6 +182,12 @@ class RemoteDevice final {
     lmp_features_.SetPage(page, features);
   }
 
+  void set_last_page_number(uint8_t page) {
+    lmp_features_.set_last_page_number(page);
+  }
+
+  uint8_t last_page_number() const { return lmp_features_.last_page_number(); }
+
   void set_version(hci::HCIVersion version, uint16_t manufacturer,
                    uint16_t subversion) {
     lmp_version_ = version;

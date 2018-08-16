@@ -300,6 +300,10 @@ void BrEdrConnectionManager::OnConnectionComplete(
           return;
         }
 
+        FXL_VLOG(2) << fxl::StringPrintf(
+            "gap (BR/EDR): interrogation complete for 0x%04x",
+            conn_ptr->handle());
+
         self->connections_.emplace(device->identifier(), std::move(conn_ptr));
         // TODO(NET-406, NET-407): set up the L2CAP signalling channel and
         // start SDP service discovery.

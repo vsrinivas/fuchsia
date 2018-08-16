@@ -23,10 +23,11 @@ namespace hci {
 class LMPFeatureSet {
  public:
   // Creates a feature set with no pages set.
-  LMPFeatureSet() : valid_pages_{false} {}
+  LMPFeatureSet() : valid_pages_{false}, last_page_number_(0) {}
 
-  // The maximum number of pages that we support, including the standard page.
-  constexpr static size_t kMaxPages = 3;
+  // The maximum extended page that we support
+  constexpr static uint8_t kMaxLastPageNumber = 2;
+  constexpr static uint8_t kMaxPages = kMaxLastPageNumber + 1;
 
   // Returns true if |bit| is set in the LMP Features.
   // |page| is the page that this bit resides on.
@@ -47,9 +48,16 @@ class LMPFeatureSet {
     return (page < kMaxPages) && valid_pages_[page];
   }
 
+  inline void set_last_page_number(uint8_t page) {
+    last_page_number_ = page > kMaxLastPageNumber ? kMaxLastPageNumber : page;
+  }
+
+  inline uint8_t last_page_number() const { return last_page_number_; }
+
  private:
   uint64_t features_[kMaxPages];
   bool valid_pages_[kMaxPages];
+  uint8_t last_page_number_;
 };
 
 }  // namespace hci
