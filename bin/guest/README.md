@@ -12,7 +12,7 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set x64 --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\"
+$ fx set x64 --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest --args guest_display=\"framebuffer\"
 $ fx full-build
 $ fx boot
 ```
@@ -20,7 +20,7 @@ $ fx boot
 ## Building for QEMU
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set arm64 --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest
+$ fx set arm64 --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest
 $ fx full-build
 $ fx run
 ```
@@ -36,10 +36,30 @@ Likewise, to launch a Linux guest:
 $ guest launch linux_guest
 ```
 
+## Running on QEMU
+Running a guest on QEMU on x64 requires kvm (i.e. pass `-k` to fx run):
+```
+$ fx run -k
+```
+
+Running a guest on QEMU on arm64 requires either using GICv2 (pass `-G 2`).
+```
+$ fx run -G 2
+```
+
+Or using a more recent version of QEMU (try 2.12.0). Older versions of QEMU do
+not correctly emulate GICv3 when running with multiple guest VCPUs. If you do
+this, then you will need to launch the guest with `gic=3`.
+```
+$ fx run -q /path/to/recent/qemu/aarch64-softmmu
+...
+$ guest launch (linux_guest|zircon_guest) --gic=3
+```
+
 ## Running from Topaz
 To run from Topaz, configure the guest package as follows:
 ```
-$ fx set x64 --packages topaz/packages/topaz,garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest
+$ fx set x64 --packages topaz/packages/topaz,garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest
 ```
 
 After netbooting the guest packages can be launched from the system launcher as
@@ -56,7 +76,7 @@ $ scripts/flash-vim2 -m
 
 Then configure, build, and boot the guest package as follows:
 ```
-$ fx set arm64 --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\" --netboot
+$ fx set arm64 --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest --args guest_display=\"framebuffer\" --netboot
 $ fx full-build
 $ fx boot vim2
 ```
