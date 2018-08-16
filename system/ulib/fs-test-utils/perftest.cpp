@@ -133,7 +133,6 @@ void PrintTestsCasesSummary(size_t test_case_count, const TestStats& stats, zx::
 
 void PrintUsage(char* arg0, FILE* out) {
     fprintf(out, kUsage, arg0);
-    return;
 }
 
 bool HasEnoughSpace(const fbl::String& block_device_path, size_t required_space) {
@@ -187,7 +186,6 @@ void RunTest(const fbl::String& test_case_name, const TestInfo& test, uint32_t s
     }
     PrintTestPassed(test.name, test_start, out);
     stats->passed++;
-    return;
 }
 
 // Runs all tests in the given testcase.
@@ -227,7 +225,6 @@ void RunTestCase(const FixtureOptions& fixture_options,
     }
     fixture.TearDownTestCase();
     PrintTestCaseEnd(test_case.name, test_case.tests.size(), start, out);
-    return;
 }
 
 } // namespace
