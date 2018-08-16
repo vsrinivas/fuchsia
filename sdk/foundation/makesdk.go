@@ -7,7 +7,6 @@ package main
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
 	"flag"
 	"fmt"
@@ -19,7 +18,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 var archive = flag.Bool("archive", true, "Whether to archive the output")
@@ -27,9 +25,6 @@ var output = flag.String("output", "fuchsia-sdk.tgz", "Name of the archive")
 var outDir = flag.String("out-dir", "", "Output directory")
 var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain libraries in SDK. Typically used when --toolchain is false")
 var sysroot = flag.Bool("sysroot", true, "Include sysroot")
-var kernelImg = flag.Bool("kernel-img", true, "Include kernel image")
-var kernelDebugObjs = flag.Bool("kernel-dbg", true, "Include kernel objects with debug symbols")
-var bootdata = flag.Bool("bootdata", true, "Include bootdata")
 var qemu = flag.Bool("qemu", true, "Include QEMU binary")
 var verbose = flag.Bool("v", false, "Verbose output")
 var dryRun = flag.Bool("n", false, "Dry run - print what would happen but don't actually do it")
@@ -79,17 +74,16 @@ func init() {
 		hostOs = "mac"
 	}
 
-	zxBuildDir := "out/build-zircon"
-	x64ZxBuildDir := path.Join(zxBuildDir, "build-x64")
-	armZxBuildDir := path.Join(zxBuildDir, "build-arm64")
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
 	dirs := []dir{
+		// TODO(BLD-246): remove this.
 		{
 			qemu,
 			qemuDir,
 			"qemu",
 		},
+		// TODO(BLD-250): remove these.
 		{
 			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
 			toolchainLibs,
@@ -138,36 +132,7 @@ func init() {
 		},
 	}
 
-	components = []component{
-		{
-			kernelDebugObjs,
-			x64ZxBuildDir,
-			"sysroot/x86_64-fuchsia/debug",
-			customType,
-			copyKernelDebugObjs,
-		},
-		{
-			kernelDebugObjs,
-			x64BuildDir,
-			"sysroot/x86_64-fuchsia/debug",
-			customType,
-			copyIdsTxt,
-		},
-		{
-			kernelDebugObjs,
-			armZxBuildDir,
-			"sysroot/aarch64-fuchsia/debug",
-			customType,
-			copyKernelDebugObjs,
-		},
-		{
-			kernelDebugObjs,
-			armBuildDir,
-			"sysroot/aarch64-fuchsia/debug",
-			customType,
-			copyIdsTxt,
-		},
-	}
+	components = []component{}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
 	}
@@ -195,50 +160,6 @@ func createLayout(manifest, fuchsiaRoot, outDir string) {
 			log.Fatal("generate.py failed with output", string(out), "error", err)
 		}
 	}
-}
-
-func copyKernelDebugObjs(src, dstPrefix string) error {
-	// The kernel debug information lives in many .elf files in the out directory
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && filepath.Ext(path) == ".elf" {
-			if err := copyFile(path, filepath.Join(dstPrefix, path[len(src):])); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func copyIdsTxt(src, dstPrefix string) error {
-	// The ids.txt file has absolute paths but relative paths within the SDK are
-	// more useful to users.
-	srcIds, err := os.Open(filepath.Join(src, "ids.txt"))
-	if err != nil {
-		return fmt.Errorf("could not open ids.txt", err)
-	}
-	defer srcIds.Close()
-	if *dryRun {
-		return nil
-	}
-	dstIds, err := os.Create(filepath.Join(dstPrefix, "ids.txt"))
-	if err != nil {
-		return fmt.Errorf("could not create ids.txt", err)
-	}
-	defer dstIds.Close()
-	scanner := bufio.NewScanner(srcIds)
-	cwd, _ := os.Getwd()
-	absBase := filepath.Join(cwd, src)
-	for scanner.Scan() {
-		s := strings.Split(scanner.Text(), " ")
-		id, absPath := s[0], s[1]
-		relPath, err := filepath.Rel(absBase, absPath)
-		if err != nil {
-			log.Println("could not create relative path from absolute path", absPath, "and base", absBase, "skipping entry")
-		} else {
-			fmt.Fprintln(dstIds, id, relPath)
-		}
-	}
-	return nil
 }
 
 func copyFile(src, dst string) error {
