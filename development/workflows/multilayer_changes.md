@@ -60,10 +60,14 @@ Use the follow steps to land a hard transition:
 1. Land the change in the lower layer (e.g., Zircon) that breaks the interface
    used by the upper layer (e.g., Garnet). At this point, the autoroll bot will
    start failing to update the upper layer.
-3. Land the change to the upper layer that both migrates to the new interface
+1. Land the change to the upper layer that both migrates to the new interface
    and updates the revision of the lower layer used by the upper layer by
    editing the `revision` attribute for the import of the lower layer in the
    `//<layer>/manifest/<layer>` manifest of the upper layer.
+
+Note that to prevent accidental clobbering of the manifest contents, Gerrit is
+configured to not automatically rebase changes that edit a manifest file. You
+must manually rebase before merging so that your submit is a pure fast-forward.
 
 Making a hard transition is more stressful than making a soft transition because
 your change will be preventing other changes in the lower layer from becoming
