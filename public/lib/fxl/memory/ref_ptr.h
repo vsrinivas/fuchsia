@@ -157,6 +157,22 @@ class RefPtr final {
     return *this;
   }
 
+  // Releases any existing reference. We do not have a variant that takes a
+  // pointer to reset to because there would be a temptation to do:
+  //   ptr.reset(new Foo);
+  // which would fail the adoption check (the Foo object would have two refs
+  // and this would assert in debug mode as a result). It seems simpler to
+  // force such usage through the constructor and use assignment which people
+  // are more familiar with.
+  void reset() {
+    // Clear before releasing so the object destructor sees a null value if it
+    // accesses the RefPtr.
+    T* old_ptr = ptr_;
+    ptr_ = nullptr;
+    if (old_ptr)
+      old_ptr->Release();
+  }
+
   void swap(RefPtr<T>& r) {
     T* p = ptr_;
     ptr_ = r.ptr_;

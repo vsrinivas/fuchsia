@@ -590,6 +590,41 @@ TEST(RefCountedTest, PublicCtorAndDtor) {
   EXPECT_FALSE(r1);
 }
 
+// This class saves the value from a RefPtr to a given location in its
+// destructor. It is designed to test the value of a refptr from within the
+// destructor of the object the RefPtr is destroying.
+class SaveValueInDestructor : public RefCountedThreadSafe<SaveValueInDestructor> {
+ public:
+  SaveValueInDestructor() = default;
+  ~SaveValueInDestructor() {
+    *output_ptr_ = save_ref_ptr_->get();
+  }
+
+  // Call after constructing.
+  void SetToSave(RefPtr<SaveValueInDestructor>* to_save,
+                 SaveValueInDestructor** save_here) {
+    save_ref_ptr_ = to_save;
+    output_ptr_ = save_here;
+  }
+
+ private:
+  RefPtr<SaveValueInDestructor>* save_ref_ptr_;
+  SaveValueInDestructor** output_ptr_ = nullptr;
+};
+
+TEST(RefCountedTest, RefPtrRelease) {
+  RefPtr<SaveValueInDestructor> r1 = MakeRefCounted<SaveValueInDestructor>();
+  // Initialize with an arbitrary non-null value so we can tell when it's
+  // assigned to null.
+  SaveValueInDestructor* saved_r1 = reinterpret_cast<SaveValueInDestructor*>(1);
+  r1->SetToSave(&r1, &saved_r1);
+
+  // Calling reset() should delete the value, and it should see its own pointer
+  // being null in the refptr during the call.
+  r1.reset();
+  EXPECT_FALSE(saved_r1);
+}
+
 // TODO(vtl): Add (threaded) stress tests.
 
 }  // namespace

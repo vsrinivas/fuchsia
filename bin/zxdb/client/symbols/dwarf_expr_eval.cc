@@ -65,7 +65,7 @@ void DwarfExprEval::ContinueEval() {
   do {
     // Check for successfully reaching the end of the stream.
     if (!is_complete_ && expr_index_ == expr_.size()) {
-      data_provider_ = fxl::RefPtr<SymbolDataProvider>();
+      data_provider_.reset();
       is_complete_ = true;
       Err err;
       if (stack_.empty()) {
@@ -340,7 +340,7 @@ void DwarfExprEval::ReportError(const std::string& msg) {
 }
 
 void DwarfExprEval::ReportError(const Err& err) {
-  data_provider_ = fxl::RefPtr<SymbolDataProvider>();
+  data_provider_.reset();
   is_complete_ = true;
 
   // The callback may delete |this| but we also want to clear the value to
