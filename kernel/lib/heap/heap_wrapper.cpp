@@ -317,8 +317,6 @@ STATIC_COMMAND_END(heap);
 
 static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
-    notenoughargs:
-        printf("not enough arguments\n");
     usage:
         printf("usage:\n");
         printf("\t%s info\n", argv[0].str);
@@ -329,9 +327,6 @@ static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
             printf("\t%s trace\n", argv[0].str);
             printf("\t%s trim\n", argv[0].str);
             printf("\t%s test\n", argv[0].str);
-            printf("\t%s alloc <size> [alignment]\n", argv[0].str);
-            printf("\t%s realloc <ptr> <size>\n", argv[0].str);
-            printf("\t%s free <address>\n", argv[0].str);
         }
         return -1;
     }
@@ -347,23 +342,6 @@ static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
         printf("heap trace is now %s\n", heap_trace ? "on" : "off");
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trim") == 0) {
         heap_trim();
-    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "alloc") == 0) {
-        if (argc < 3)
-            goto notenoughargs;
-
-        void* ptr = memalign((argc >= 4) ? argv[3].u : 0, argv[2].u);
-        printf("memalign returns %p\n", ptr);
-    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "realloc") == 0) {
-        if (argc < 4)
-            goto notenoughargs;
-
-        void* ptr = realloc(argv[2].p, argv[3].u);
-        printf("realloc returns %p\n", ptr);
-    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "free") == 0) {
-        if (argc < 2)
-            goto notenoughargs;
-
-        free(argv[2].p);
     } else {
         printf("unrecognized command\n");
         goto usage;
