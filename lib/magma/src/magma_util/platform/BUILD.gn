@@ -140,7 +140,7 @@ source_set("futex") {
   allow_circular_includes_from = [ "zircon:futex" ]
 }
 
-source_set("connection") {
+source_set("connection_header") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [
@@ -152,17 +152,21 @@ source_set("connection") {
     ":event",
     ":object",
     ":semaphore",
+    ":thread",
     "$magma_build_root/src/magma_util:common",
     "//garnet/lib/magma/include:magma_abi",
     "//garnet/lib/magma/include:msd_abi",
   ]
+}
 
-  deps = [
-    ":thread",
-    "zircon:connection",
-  ]
+source_set("client_connection") {
+  public_deps = [ ":connection_header" ]
+  deps = [ "zircon:client_connection" ]
+}
 
-  allow_circular_includes_from = [ "zircon:connection" ]
+source_set("connection") {
+  public_deps = [ ":connection_header" ]
+  deps = [ "zircon:connection" ]
 }
 
 source_set("thread_header") {

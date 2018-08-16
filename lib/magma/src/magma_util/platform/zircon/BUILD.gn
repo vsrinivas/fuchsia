@@ -104,6 +104,22 @@ source_set("futex") {
   ]
 }
 
+source_set("client_connection") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_connection_client.cc",
+  ]
+
+  deps = [
+    "..:connection_header",
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/fdio",
+    "$zircon_build_root/public/lib/zx",
+  ]
+}
+
 source_set("connection") {
   configs += [ "..:platform_include_config" ]
 
@@ -112,12 +128,10 @@ source_set("connection") {
   ]
 
   deps = [
-    ":event",
+    "..:connection_header",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/ddk",
-    "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
   ]
 }
