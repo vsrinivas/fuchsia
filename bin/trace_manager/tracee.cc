@@ -27,8 +27,7 @@ Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
   while (offset < len) {
     zx_status_t status = ZX_OK;
     size_t actual = 0;
-    if ((status = socket.write(0u, data + offset, len - offset, &actual)) <
-        0) {
+    if ((status = socket.write(0u, data + offset, len - offset, &actual)) < 0) {
       if (status == ZX_ERR_SHOULD_WAIT) {
         zx_signals_t pending = 0;
         status = socket.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
@@ -69,8 +68,7 @@ fuchsia::tracelink::BufferingMode EngineBufferingModeToTracelinkMode(
   }
 }
 
-uint64_t GetBufferWordsWritten(const uint64_t* buffer,
-                               uint64_t size_in_words) {
+uint64_t GetBufferWordsWritten(const uint64_t* buffer, uint64_t size_in_words) {
   const uint64_t* start = buffer;
   const uint64_t* current = start;
   const uint64_t* end = start + size_in_words;
@@ -382,7 +380,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     auto size = header->nondurable_buffer_size();
     auto offset = header->GetNondurableBufferOffset(buffer_number);
     auto name =
-      buffer_number == 0 ? "nondurable buffer 0" : "nondurable buffer 1";
+        buffer_number == 0 ? "nondurable buffer 0" : "nondurable buffer 1";
     return WriteChunk(socket, offset, size, name);
   };
 
