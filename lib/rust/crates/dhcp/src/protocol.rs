@@ -30,6 +30,7 @@ const OPTIONS_START_IDX: usize = 236;
 const ETHERNET_HTYPE: u8 = 1;
 const ETHERNET_HLEN: u8 = 6;
 const HOPS_DEFAULT: u8 = 0;
+const MAGIC_COOKIE: [u8; 4] = [99, 130, 83, 99];
 
 const UNUSED_CHADDR_BYTES: usize = 10;
 
@@ -154,6 +155,7 @@ impl Message {
 
     fn serialize_options(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
+        bytes.extend_from_slice(&MAGIC_COOKIE);
         for option in &self.options {
             option.serialize_to(&mut bytes);
         }
@@ -369,7 +371,10 @@ fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
 }
 
 fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
-    let mut opt_idx = 0;
+    if buf[0..MAGIC_COOKIE.len()] != MAGIC_COOKIE {
+        return;
+    }
+    let mut opt_idx = MAGIC_COOKIE.len();
     while opt_idx < buf.len()
         && OptionCode::option_code_from_u8(buf[opt_idx]) != Some(OptionCode::End)
     {
@@ -411,14 +416,19 @@ mod tests {
     use super::*;
     use std::net::Ipv4Addr;
 
-    #[test]
-    fn test_serialize_returns_correct_bytes() {
+    fn new_test_msg() -> Message {
         let mut msg = Message::new();
         msg.xid = 42;
         msg.secs = 1024;
         msg.yiaddr = Ipv4Addr::new(192, 168, 1, 1);
         msg.sname = String::from("relay.example.com");
         msg.file = String::from("boot.img");
+        msg
+    }
+
+    #[test]
+    fn test_serialize_returns_correct_bytes() {
+        let mut msg = new_test_msg();
         msg.options.push(ConfigOption {
             code: OptionCode::SubnetMask,
             value: vec![255, 255, 255, 0],
@@ -426,7 +436,7 @@ mod tests {
 
         let bytes = msg.serialize();
 
-        assert_eq!(bytes.len(), 243);
+        assert_eq!(bytes.len(), 247);
         assert_eq!(bytes[0], 1u8);
         assert_eq!(bytes[1], 1u8);
         assert_eq!(bytes[2], 6u8);
@@ -443,6 +453,10 @@ mod tests {
         assert_eq!(bytes[108], 'b' as u8);
         assert_eq!(bytes[115], 'g' as u8);
         assert_eq!(bytes[116], 0u8);
+        assert_eq!(
+            bytes[OPTIONS_START_IDX..OPTIONS_START_IDX + MAGIC_COOKIE.len()],
+            MAGIC_COOKIE
+        );
         assert_eq!(bytes[bytes.len() - 1], 255u8);
     }
 
@@ -472,6 +486,7 @@ mod tests {
         old_len = buf.len();
         unused_bytes = FILE_LEN - b"boot.img".len();
         buf.resize(old_len + unused_bytes, 0u8);
+        buf.extend_from_slice(&MAGIC_COOKIE);
         buf.extend_from_slice(b"\x01\x04\xFF\xFF\xFF\x00");
         buf.extend_from_slice(b"\x00");
         buf.extend_from_slice(b"\x00");
@@ -512,6 +527,43 @@ mod tests {
         };
 
         assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_serialize_then_deserialize_with_single_option_is_equal_to_starting_value() {
+        let mut msg = new_test_msg();
+        msg.options.push(ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: vec![255, 255, 255, 0],
+        });
+
+        assert_eq!(Message::from_buffer(&msg.serialize()).unwrap(), msg);
+    }
+
+    #[test]
+    fn test_serialize_then_deserialize_with_no_options_is_equal_to_starting_value() {
+        let msg = new_test_msg();
+
+        assert_eq!(Message::from_buffer(&msg.serialize()).unwrap(), msg);
+    }
+
+    #[test]
+    fn test_serialize_then_deserialize_with_many_options_is_equal_to_starting_value() {
+        let mut msg = new_test_msg();
+        msg.options.push(ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: vec![255, 255, 255, 0],
+        });
+        msg.options.push(ConfigOption {
+            code: OptionCode::NameServer,
+            value: vec![8, 8, 8, 8],
+        });
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPDISCOVER as u8],
+        });
+
+        assert_eq!(Message::from_buffer(&msg.serialize()).unwrap(), msg);
     }
 
     #[test]
