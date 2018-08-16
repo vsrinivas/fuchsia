@@ -59,7 +59,10 @@ GattRemoteServiceServer::GattRemoteServiceServer(
 
 GattRemoteServiceServer::~GattRemoteServiceServer() {
   for (const auto& iter : notify_handlers_) {
-    service_->DisableNotifications(iter.first, iter.second, NopStatusCallback);
+    if (iter.second != btlib::gatt::kInvalidId) {
+      service_->DisableNotifications(iter.first, iter.second,
+                                     NopStatusCallback);
+    }
   }
 }
 
@@ -153,6 +156,13 @@ void GattRemoteServiceServer::NotifyCharacteristic(
       return;
     }
 
+    if (iter->second == btlib::gatt::kInvalidId) {
+      callback(fidl_helpers::NewFidlError(
+          ErrorCode::IN_PROGRESS,
+          "characteristic notification registration pending"));
+      return;
+    }
+
     service_->DisableNotifications(
         id, iter->second,
         [callback = std::move(callback)](btlib::att::Status status) {
@@ -168,6 +178,9 @@ void GattRemoteServiceServer::NotifyCharacteristic(
                                         "characteristic already notifying"));
     return;
   }
+
+  // Prevent any races and leaks by marking a notification is in progress
+  notify_handlers_[id] = btlib::gatt::kInvalidId;
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto value_cb = [self, id](const ByteBuffer& value) {
@@ -194,8 +207,13 @@ void GattRemoteServiceServer::NotifyCharacteristic(
     }
 
     if (status) {
-      FXL_DCHECK(self->notify_handlers_.count(id) == 0u);
+      FXL_DCHECK(handler_id != btlib::gatt::kInvalidId);
+      FXL_DCHECK(self->notify_handlers_.count(id) == 1u);
+      FXL_DCHECK(self->notify_handlers_[id] == btlib::gatt::kInvalidId);
       self->notify_handlers_[id] = handler_id;
+    } else {
+      // Remove our handle holder.
+      self->notify_handlers_.erase(id);
     }
 
     callback(fidl_helpers::StatusToFidl(status, ""));
