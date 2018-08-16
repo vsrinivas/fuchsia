@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "garnet/examples/media/audio_player/audio_player.h"
-#include "garnet/examples/media/audio_player/audio_player_params.h"
+#include "garnet/examples/mediaplayer/audio_player/audio_player.h"
+#include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {

@@ -10,6 +10,7 @@
         "garnet/packages/examples/fidl",
         "garnet/packages/examples/http",
         "garnet/packages/examples/media",
+        "garnet/packages/examples/mediaplayer",
         "garnet/packages/examples/netconnector",
         "garnet/packages/examples/netstack",
         "garnet/packages/examples/rust",

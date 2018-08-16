@@ -83,8 +83,8 @@ impl App {
 
         let mut player_event_stream = player.take_event_stream();
         if let Some(event) = await!(player_event_stream.try_next())? {
-            let PlayerEvent::OnStatusChanged { status } = event;
-            self.display_status(&status);
+            let PlayerEvent::OnStatusChanged { player_status } = event;
+            self.display_status(&player_status);
             Ok(())
         } else {
             bail!("No media player status change detected")

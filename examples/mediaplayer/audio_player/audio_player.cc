@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/media/audio_player/audio_player.h"
+#include "garnet/examples/mediaplayer/audio_player/audio_player.h"
 
 #include <iomanip>
 
@@ -12,7 +12,7 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
-#include "garnet/examples/media/audio_player/audio_player_params.h"
+#include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
