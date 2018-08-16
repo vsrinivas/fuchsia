@@ -214,7 +214,7 @@ mod tests {
             wlan_service: &fidl_wlan_service::WlanProxy,
             phy: &wlantap::WlantapPhyProxy,
             helper: &mut test_utils::TestHelper) -> fidl_wlan_service::ScanResult {
-        let mut wlanstack_retry = test_utils::RetryWithBackoff::new(1.seconds());
+        let mut wlanstack_retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
             let scan_result = helper.run(exec, 10.seconds(), "receive a scan response",
                |event| {
