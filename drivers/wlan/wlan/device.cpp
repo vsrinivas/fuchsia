@@ -164,8 +164,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
-    if ((wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
-        !(wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION)) {
+    if (ShouldEnableMinstrel()) {
         zx_status_t status = CreateMinstrel(wlanmac_info_.ifc_info.driver_features);
         if (ZX_OK == status) { debugmstl("Minstrel Manager created successfully.\n"); }
     }
@@ -847,6 +846,14 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
     // Add more sanity check here
 
     return ZX_OK;
+}
+
+bool Device::ShouldEnableMinstrel() {
+    // TODO(WLAN-337): Remove iface_role_check and enable for AP role, too
+    const auto& info = wlanmac_info_.ifc_info;
+    return (info.mac_role == WLAN_MAC_ROLE_CLIENT) &&
+           (info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
+           !(info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION);
 }
 
 zx_status_t Device::CreateMinstrel(uint32_t features) {

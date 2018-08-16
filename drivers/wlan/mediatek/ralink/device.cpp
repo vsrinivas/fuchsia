@@ -3439,6 +3439,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     info->mac_role = WLAN_MAC_ROLE_CLIENT;
     info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
+    info->driver_features = WLAN_DRIVER_FEATURE_TX_STATUS_REPORT;
     info->num_bands = 1;
     info->bands[0] = {
         .band_id = WLAN_BAND_2GHZ,
