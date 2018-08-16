@@ -10,6 +10,16 @@ MODULE_TYPE := userlib
 
 MODULE_PACKAGE := static
 
+MODULE_SRCS := \
+    $(LOCAL_DIR)/pdev.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+    system/ulib/fbl \
+
 include make/module.mk
 
 #
