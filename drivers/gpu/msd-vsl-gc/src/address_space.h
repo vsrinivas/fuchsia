@@ -5,6 +5,7 @@
 #ifndef ADDRESS_SPACE_H_
 #define ADDRESS_SPACE_H_
 
+#include "address_space_base.h"
 #include "macros.h"
 #include "platform_buffer.h"
 #include "platform_bus_mapper.h"
@@ -17,10 +18,8 @@
 #endif
 static_assert(PAGE_SHIFT == 12, "Need 4k page");
 
-class AddressSpace {
+class AddressSpace : public AddressSpaceBase {
 public:
-    using gpu_addr_t = uint32_t;
-
     class Owner {
     public:
         virtual magma::PlatformBusMapper* bus_mapper() = 0;
@@ -31,8 +30,8 @@ public:
     AddressSpace(Owner* owner) : owner_(owner) {}
 
     bool Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                uint64_t page_count);
-    bool Clear(gpu_addr_t addr, uint64_t page_count);
+                uint64_t page_count) override;
+    bool Clear(gpu_addr_t addr, uint64_t page_count) override;
 
     uint64_t bus_addr() { return root_->bus_addr(); }
 

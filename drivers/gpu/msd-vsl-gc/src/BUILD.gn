@@ -9,6 +9,10 @@ source_set("src") {
   sources = [
     "address_space.cc",
     "address_space.h",
+    "address_space_base.cc",
+    "address_space_base.h",
+    "gpu_mapping.cc",
+    "gpu_mapping.h",
     "msd_vsl_buffer.cc",
     "msd_vsl_buffer.h",
     "msd_vsl_connection.cc",

@@ -4,8 +4,6 @@
 
 #include "garnet/drivers/gpu/msd-vsl-gc/src/address_space.h"
 #include "mock/mock_bus_mapper.h"
-#include "mock/mock_mmio.h"
-#include "platform_mmio.h"
 #include "gtest/gtest.h"
 
 class TestAddressSpace {
