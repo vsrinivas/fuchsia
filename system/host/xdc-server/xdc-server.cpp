@@ -8,6 +8,7 @@
 #include <xdc-server-utils/packet.h>
 #include <zircon/device/debug.h>
 
+#include <cassert>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -156,6 +157,9 @@ void XdcServer::Run() {
                 if (poll_fds_[i].revents) {
                     std::vector<std::unique_ptr<UsbHandler::Transfer>> completed_reads;
                     update_usb_handler_fds = usb_handler_->HandleEvents(completed_reads);
+
+                    SendQueuedCtrlMsgs();
+
                     for (auto& usb_transfer : completed_reads) {
                         UsbReadComplete(std::move(usb_transfer));
                     }
@@ -180,6 +184,10 @@ void XdcServer::Run() {
                     }
                 }
                 if (delete_client) {
+                    // Notify the host server that the stream is now offline.
+                    if (client->stream_id()) {
+                        NotifyStreamState(client->stream_id(), false /* online */);
+                    }
                     poll_fds_.erase(poll_fds_.begin() + i);
                     --num_sockets;
                     printf("fd %d stream %u disconnected\n", client->fd(), client->stream_id());
@@ -243,6 +251,7 @@ bool XdcServer::RegisterStream(std::shared_ptr<Client> client) {
     } else {
         client->SetStreamId(stream_id);
         printf("registered stream id %u\n", stream_id);
+        NotifyStreamState(stream_id, true /* online */);
         if (dev_stream_ids_.count(stream_id)) {
             client->SetConnected(true);
         }
@@ -320,6 +329,41 @@ void XdcServer::HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len) {
     }
     default:
         fprintf(stderr, "unknown msg opcode: %u\n", msg->opcode);
+    }
+}
+
+void XdcServer::NotifyStreamState(uint32_t stream_id, bool online) {
+    xdc_msg_t msg = {
+        .opcode = XDC_NOTIFY_STREAM_STATE,
+        .notify_stream_state.stream_id = stream_id,
+        .notify_stream_state.online = online
+    };
+    queued_ctrl_msgs_.push_back(msg);
+    SendQueuedCtrlMsgs();
+}
+
+bool XdcServer::SendCtrlMsg(xdc_msg_t& msg) {
+    std::unique_ptr<UsbHandler::Transfer> transfer = usb_handler_->GetWriteTransfer();
+    if (!transfer) {
+        return false;
+    }
+    zx_status_t res = transfer->FillData(DEBUG_STREAM_ID_RESERVED,
+                                         reinterpret_cast<unsigned char*>(&msg), sizeof(msg));
+    assert(res == ZX_OK);  // Should not fail.
+    usb_handler_->QueueWriteTransfer(std::move(transfer));
+    return true;
+}
+
+void XdcServer::SendQueuedCtrlMsgs() {
+    auto msgs_iter = queued_ctrl_msgs_.begin();
+    while (msgs_iter != queued_ctrl_msgs_.end()) {
+        bool sent = SendCtrlMsg(*msgs_iter);
+        if (sent) {
+            msgs_iter = queued_ctrl_msgs_.erase(msgs_iter);
+        } else {
+            // Need to wait.
+            return;
+        }
     }
 }
 

@@ -13,6 +13,12 @@ std::unique_ptr<UsbHandler::Transfer> UsbHandler::Transfer::Create() {
     return transfer;
 }
 
+zx_status_t UsbHandler::Transfer::FillData(uint32_t stream_id, unsigned char* data,
+                                           size_t data_len) {
+    // TODO(jocelyndang): implement this.
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 // static
 std::unique_ptr<UsbHandler> UsbHandler::Create() {
     auto usb_handler = std::make_unique<UsbHandler>(ConstructorTag{});
@@ -33,6 +39,15 @@ void UsbHandler::RequeueRead(std::unique_ptr<Transfer> transfer) {
 }
 
 void UsbHandler::GetFdUpdates(std::map<int, short>& added_fds, std::set<int>& removed_fds) {
+    // TODO(jocelyndang): implement this.
+}
+
+std::unique_ptr<UsbHandler::Transfer> UsbHandler::GetWriteTransfer() {
+    // TODO(jocelyndang): implement this.
+    return nullptr;
+}
+
+void UsbHandler::QueueWriteTransfer(std::unique_ptr<Transfer>) {
     // TODO(jocelyndang): implement this.
 }
 

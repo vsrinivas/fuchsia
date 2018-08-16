@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <xdc-server-utils/packet.h>
+#include <zircon/types.h>
+
 #include <set>
 #include <map>
 #include <vector>
@@ -17,8 +20,18 @@ class UsbHandler {
 public:
     class Transfer {
     public:
+        static constexpr const size_t BUFFER_SIZE = 16 * 1024;
+        static constexpr const size_t HEADER_SIZE = sizeof(xdc_packet_header_t);
+
+        static constexpr const size_t MAX_WRITE_DATA_SIZE = BUFFER_SIZE - HEADER_SIZE;
+
         // Create should be called instead. This is public for make_shared.
         explicit Transfer(ConstructorTag tag) {}
+
+        // Sets the contents of the transfer.
+        // Returns ZX_OK on success, or ZX_ERR_INVALID_ARGS if data_len is larger than
+        // MAX_WRITE_DATA_SIZE.
+        zx_status_t FillData(uint32_t stream_id, unsigned char* data, size_t data_len);
 
         unsigned char* data() const { return data_; }
         int actual_length() const { return actual_length_; }
@@ -62,6 +75,11 @@ public:
     // removed_fds    A set that will be populated with fds to stop monitoring.
     //                The fds will be disjoint from added_fds.
     void GetFdUpdates(std::map<int, short>& added_fds, std::set<int>& removed_fds);
+
+    // Returns a write transfer that can be used with QueueWriteTransfer to write
+    // data to the xdc device. May return a nullptr if no transfers are available.
+    std::unique_ptr<Transfer> GetWriteTransfer();
+    void QueueWriteTransfer(std::unique_ptr<Transfer>);
 
     // Returns whether the given file descriptor is currently valid for the usb handler.
     bool IsValidFd(int fd) const { return fds_.count(fd); }

@@ -67,6 +67,12 @@ private:
     // Parses the control message from the given transfer buffer.
     void HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len);
 
+    // Sends a control message the to the xdc device with whether a stream has gone on / offline.
+    // If the message cannot currently be sent, it is queued to be retried later.
+    void NotifyStreamState(uint32_t stream_id, bool online);
+    bool SendCtrlMsg(xdc_msg_t& msg);
+    void SendQueuedCtrlMsgs();
+
     std::unique_ptr<UsbHandler> usb_handler_;
 
     // Server socket we receive client connections on.
@@ -82,6 +88,8 @@ private:
 
     // Stream ids registered on the xdc device side.
     std::set<uint32_t> dev_stream_ids_;
+
+    std::vector<xdc_msg_t> queued_ctrl_msgs_;
 
     xdc_packet_state_t read_packet_state_;
 };
