@@ -128,7 +128,7 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     // this as "unitless" here for now.  TODO(mseaborn): Add support for
     // data rate units to Catapult.
     return "unitless_biggerIsBetter";
-  } else if (strcmp(input_unit, "bytes") == 0 || strcmp(input_unit, "B") == 0) {
+  } else if (strcmp(input_unit, "bytes") == 0) {
     return "sizeInBytes";
   } else {
     fprintf(stderr, "Units not recognized: %s\n", input_unit);

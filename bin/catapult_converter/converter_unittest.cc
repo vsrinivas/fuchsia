@@ -782,16 +782,10 @@ TEST(CatapultConverter, ConvertBytesUnit) {
   const char* input_str = R"JSON(
 [
     {
-        "label": "ExampleWithBytesLong",
+        "label": "ExampleWithBytes",
         "test_suite": "my_test_suite",
         "samples": [{"values": [200, 6, 100, 110]}],
         "unit": "bytes"
-    },
-    {
-        "label": "ExampleWithBytesShort",
-        "test_suite": "my_test_suite",
-        "samples": [{"values": [200, 6, 100, 110]}],
-        "unit": "B"
     }
 ]
 )JSON";
@@ -837,7 +831,7 @@ TEST(CatapultConverter, ConvertBytesUnit) {
         ]
     },
     {
-        "name": "ExampleWithBytesLong",
+        "name": "ExampleWithBytes",
         "unit": "sizeInBytes",
         "description": "",
         "diagnostics": {
@@ -857,30 +851,6 @@ TEST(CatapultConverter, ConvertBytesUnit) {
             "compared_elsewhere"
         ],
         "guid": "dummy_guid_5",
-        "maxNumSampleValues": 4,
-        "numNans": 0
-    },
-    {
-        "name": "ExampleWithBytesShort",
-        "unit": "sizeInBytes",
-        "description": "",
-        "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            4,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_6",
         "maxNumSampleValues": 4,
         "numNans": 0
     }]
@@ -908,13 +878,6 @@ TEST(CatapultConverter, ConvertBytesUnit) {
   AssertApproxEqual(&output, &output[5]["running"][4], 6);
   AssertApproxEqual(&output, &output[5]["running"][5], 416);
   AssertApproxEqual(&output, &output[5]["running"][6], 6290.666);
-
-  AssertApproxEqual(&output, &output[6]["running"][1], 200);
-  AssertApproxEqual(&output, &output[6]["running"][2], 4.098931);
-  AssertApproxEqual(&output, &output[6]["running"][3], 104);
-  AssertApproxEqual(&output, &output[6]["running"][4], 6);
-  AssertApproxEqual(&output, &output[6]["running"][5], 416);
-  AssertApproxEqual(&output, &output[6]["running"][6], 6290.666);
 
   AssertJsonEqual(output, expected_output);
 }
