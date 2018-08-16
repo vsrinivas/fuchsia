@@ -14,6 +14,12 @@ bool IsIdentifierBody(char c) {
     return isalnum(c) || c == '_';
 }
 
+// IsIdentifierValid disallows identifiers (escaped, and unescaped) from
+// starting or ending with underscore.
+bool IsIdentifierValid(StringView source_data) {
+    return source_data[0] != '_' && source_data[source_data.size() - 1] != '_';
+}
+
 bool IsNumericLiteralBody(char c) {
     switch (c) {
     case '0':
@@ -100,8 +106,11 @@ Token Lexer::LexIdentifier() {
         Consume();
     StringView previous(previous_end_, token_start_ - previous_end_);
     SourceLocation previous_end(previous, source_file_);
+    StringView identifier_data = Reset(Token::Kind::kNotAToken);
+    if (!IsIdentifierValid(identifier_data))
+        return Finish(Token::Kind::kNotAToken);
     return identifier_table_->MakeIdentifier(
-        previous_end, Reset(Token::Kind::kNotAToken), source_file_, /* escaped */ false);
+        previous_end, identifier_data, source_file_, /* escaped */ false);
 }
 
 Token Lexer::LexEscapedIdentifier() {
@@ -112,8 +121,11 @@ Token Lexer::LexEscapedIdentifier() {
         Consume();
     StringView previous(previous_end_, token_start_ - previous_end_);
     SourceLocation previous_end(previous, source_file_);
+    StringView identifier_data = Reset(Token::Kind::kNotAToken);
+    if (!IsIdentifierValid(identifier_data))
+        return Finish(Token::Kind::kNotAToken);
     return identifier_table_->MakeIdentifier(
-        previous_end, Reset(Token::Kind::kNotAToken), source_file_, /* escaped */ true);
+        previous_end, identifier_data, source_file_, /* escaped */ true);
 }
 
 Token Lexer::LexStringLiteral() {
@@ -263,7 +275,6 @@ Token Lexer::Lex() {
     case 'Y':
     case 'z':
     case 'Z':
-    case '_':
         return LexIdentifier();
 
     case '@':
