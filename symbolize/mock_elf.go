@@ -5,6 +5,8 @@
 package symbolize
 
 import (
+	"time"
+
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
@@ -20,4 +22,9 @@ var testBinaries = mockSource{
 // GetBinaries implements Source.
 func (m mockSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 	return []elflib.BinaryFileRef(m), nil
+}
+
+func (m mockSource) getModTime() (*time.Time, error) {
+	out := time.Unix(1, 0)
+	return &out, nil
 }

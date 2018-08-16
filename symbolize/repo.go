@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"fuchsia.googlesource.com/tools/elflib"
 )
@@ -22,6 +23,7 @@ import (
 type BinaryFileSource interface {
 	// Extracts the set of binaries from this source.
 	getBinaries() ([]elflib.BinaryFileRef, error)
+	getModTime() (*time.Time, error)
 }
 
 // idsSource is a BinaryFileSource parsed from ids.txt
@@ -46,15 +48,29 @@ func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 	return elflib.ReadIDsFile(file)
 }
 
+func (i *idsSource) getModTime() (*time.Time, error) {
+	info, err := os.Stat(i.pathToIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := info.ModTime()
+	return &out, nil
+}
+
 type buildInfo struct {
 	filepath string
 	buildID  string
 }
 
+type modTimeSource struct {
+	BinaryFileSource
+	modTime time.Time
+}
+
 // SymbolizerRepo keeps track of build objects and source files used in those build objects.
 type SymbolizerRepo struct {
 	lock    sync.RWMutex
-	sources []BinaryFileSource
+	sources []modTimeSource
 	// TODO (jakehehrlich): give 'builds' a more descriptive name
 	builds map[string]*buildInfo
 }
@@ -74,7 +90,16 @@ func NewRepo() *SymbolizerRepo {
 	}
 }
 
-func (s *SymbolizerRepo) loadSource(source BinaryFileSource) error {
+func (s *SymbolizerRepo) loadSource(sourcePtr *modTimeSource) error {
+	source := *sourcePtr
+	time, err := source.getModTime()
+	if err != nil {
+		return err
+	}
+	if !time.After(source.modTime) {
+		return nil
+	}
+	sourcePtr.modTime = *time
 	bins, err := source.getBinaries()
 	if err != nil {
 		return err
@@ -94,13 +119,13 @@ func (s *SymbolizerRepo) loadSource(source BinaryFileSource) error {
 
 // AddSource adds a source of binaries and all contained binaries.
 func (s *SymbolizerRepo) AddSource(source BinaryFileSource) error {
-	s.sources = append(s.sources, source)
-	return s.loadSource(source)
+	s.sources = append(s.sources, modTimeSource{source, time.Unix(0, 0)})
+	return s.loadSource(&s.sources[len(s.sources)-1])
 }
 
 func (s *SymbolizerRepo) reloadSources() error {
 	for _, source := range s.sources {
-		if err := s.loadSource(source); err != nil {
+		if err := s.loadSource(&source); err != nil {
 			return err
 		}
 	}
