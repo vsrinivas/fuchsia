@@ -46,7 +46,7 @@ static inline void shutdown_early_init_console() {
 static inline void shutdown_early_init_console() {}
 #endif
 
-#if WITH_DEV_PCIE
+#ifdef WITH_DEV_PCIE
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_root.h>
 #include <object/pci_device_dispatcher.h>
@@ -640,7 +640,7 @@ zx_status_t sys_pci_set_irq_mode(zx_handle_t dev_handle,
 #else  // WITH_DEV_PCIE
 zx_status_t sys_pci_init(zx_handle_t, user_in_ptr<const zx_pci_init_arg_t>, uint32_t) {
     shutdown_early_init_console();
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
 }
 
 zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
@@ -674,7 +674,17 @@ zx_status_t sys_pci_reset_device(zx_handle_t) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_get_bar(zx_handle_t, uint32_t, pci_resource_t**, user_out_handle*) {
+zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
+                                   uint32_t index,
+                                   user_out_ptr<zx_pcie_device_info_t> out_info,
+                                   user_out_handle* out_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t sys_pci_get_bar(zx_handle_t dev_handle,
+                            uint32_t bar_num,
+                            user_out_ptr<zx_pci_bar_t> out_bar,
+                            user_out_handle* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

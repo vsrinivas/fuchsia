@@ -45,7 +45,6 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/perf_mon.h>
 #include <assert.h>
-#include <dev/pci_common.h>
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -75,6 +74,11 @@
 #include <trace.h>
 
 #define LOCAL_TRACE 0
+
+// TODO(cja): Sort out headers so the kernel can include these sorts of definitions
+// without needing DDK access
+#define PCI_CONFIG_VENDOR_ID        0x00
+#define PCI_CONFIG_DEVICE_ID        0x02
 
 // There's only a few misc events, and they're non-homogenous,
 // so handle them directly.

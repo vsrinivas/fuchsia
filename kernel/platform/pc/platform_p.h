@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <dev/pcie_platform.h>
 #include <lib/cbuf.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

@@ -5,6 +5,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+ifeq ($(call TOBOOL, $(ENABLE_USER_PCI)), false)
 LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
@@ -27,5 +28,5 @@ MODULE_DEPS += \
     kernel/lib/region-alloc
 
 MODULE_CPPFLAGS += -Wno-invalid-offsetof
-
 include make/module.mk
+endif

@@ -7,8 +7,6 @@
 
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
-#include <dev/pcie_platform.h>
-#include <dev/pci_common.h>
 #include <lib/pow2_range_allocator.h>
 #include <pow2.h>
 #include <string.h>

@@ -66,5 +66,6 @@ MODULE_DEPS := \
     kernel/lib/hypervisor \
     kernel/lib/oom \
     kernel/lib/pretty \
+    kernel/lib/region-alloc \
 
 include make/module.mk

@@ -15,6 +15,9 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/init.cpp \
 	$(LOCAL_DIR)/power.cpp
 
+MODULE_DEPS += \
+	kernel/lib/zxcpp
+
 include make/module.mk
 
 
