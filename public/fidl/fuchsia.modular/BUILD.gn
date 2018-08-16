@@ -37,6 +37,7 @@ fidl("fuchsia.modular") {
     "entity/entity_reference_factory.fidl",
     "entity/entity_resolver.fidl",
     "intent/intent.fidl",
+    "intent/intent_handler.fidl",
     "lifecycle/lifecycle.fidl",
     "module/link_path.fidl",
     "module/module.fidl",

@@ -204,6 +204,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       running_mod_info->module_controller_impl->Connect(
           std::move(module_controller_request_));
     }
+
+    // Since the module is already running send it the new intent.
+    NotifyModuleOfIntent(*running_mod_info);
   }
 
   void Launch(FlowToken /*flow*/) {
@@ -253,6 +256,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         module_context_info, running_mod_info.module_data.get(),
         std::move(module_context_provider_request));
 
+    NotifyModuleOfIntent(running_mod_info);
+
     story_controller_impl_->running_mod_infos_.emplace_back(
         std::move(running_mod_info));
 
@@ -270,6 +275,20 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     ReportModuleLaunchTime(module_data_.module_url,
                            zx_clock_get(ZX_CLOCK_UTC) - start_time_);
+  }
+
+  // Connects to the module's intent handler and sends it the intent from
+  // |module_data_.intent|.
+  void NotifyModuleOfIntent(const RunningModInfo& running_mod_info) {
+    if (!module_data_.intent) {
+      return;
+    }
+    fuchsia::modular::IntentHandlerPtr intent_handler;
+    running_mod_info.module_controller_impl->services().ConnectToService(
+        intent_handler.NewRequest());
+      fuchsia::modular::Intent intent;
+      module_data_.intent->Clone(&intent);
+      intent_handler->HandleIntent(std::move(intent));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
