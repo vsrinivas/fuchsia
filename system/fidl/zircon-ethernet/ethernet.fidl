@@ -13,17 +13,18 @@ const uint32 INFO_FEATURE_WLAN     = 0x00000001;
 const uint32 INFO_FEATURE_SYNTH    = 0x00000002;
 const uint32 INFO_FEATURE_LOOPBACK = 0x00000004;
 
-// eth_info_t
 struct Info {
     uint32 features;
     uint32 mtu;
     MacAddress mac;
 };
 
-// eth_fifos_t
 struct Fifos {
+    // handles for the rx and tx fifo
     handle<fifo> rx;
     handle<fifo> tx;
+
+    // maximum number of items in rx and tx fifo
     uint32 rx_depth;
     uint32 tx_depth;
 };
@@ -34,27 +35,83 @@ const uint32 DEVICE_STATUS_ONLINE = 0x00000001;
 // zircon/device/ethernet.h
 [Layout="Simple"]
 interface Device {
-    1: GetInfo() -> (zx.status status, Info? info);
+    // Obtain information about device
+    1: GetInfo() -> (Info info);
 
+    // Obtain a pair of fifos for queueing tx and rx operations
     2: GetFifos() -> (zx.status status, Fifos? info);
 
+    // Set the IO Buffer that will provide the data buffers for tx and rx operations
     3: SetIOBuffer(handle<vmo> h) -> (zx.status status);
 
+    // Start transferring packets
+    // Start will not succeed (ZX_ERR_BAD_STATE) until the fifos have been
+    // obtained and an io buffer vmo has been registered.
     4: Start() -> (zx.status status);
 
+    // Stop transferring packets
     5: Stop();
 
+    // Start listening to the packets that we're transmitting
+    // as well as the packets we're receiving.
     6: ListenStart() -> (zx.status status);
 
+    // Stop listening to the packets that we're transmitting.
     7: ListenStop();
 
     // `#define DEVICE_NAME_LEN 16`
     8: SetClientName(string:16 name) -> (zx.status status);
 
+    // Obtain the device status bits
+    // When these change, ZX_USER_SIGNAL_0 is asserted on the rx fifo.
+    // When these are read, the signal is deasserted.
     9: GetStatus() -> (uint32 device_status);
 
     10: SetPromiscuousMode(bool enabled) -> (zx.status status);
 
     // TODO(tamird): do we need to support this?
     // 11: ConfigMulticast(eth_multicast_config_t) -> (zx.status status);
+};
+
+// Operation
+//
+// Packets are transmitted by writing data into the io_vmo and writing
+// an FifoEntry referencing that data (offset + length) into the tx fifo.
+// When the driver is done accessing the data, a FifoEntry with the same
+// cookie value (opaque to the driver) will be readable from the tx fifo.
+//
+// Packets are received by writing a FifoEntry referencing an available
+// buffer (offset + length) in the io vmo.  When a packet is received,
+// a FifoEntry with the same cookie value (opaque to the driver) will be
+// readable from the rx fifo.  The offset field will be the same as was
+// sent.  The length field will reflect the actual size of the received
+// packet.  The flags field will indicate success or a specific failure
+// condition.
+//
+// IMPORTANT: The driver *will not* buffer response messages.  It is the
+// client's responsibility to ensure that there is space in the reply side
+// of each fifo for each outstanding tx or rx request.  The fifo sizes
+// are returned along with the fifo handles from GetFifos().
+
+// flags values for request messages
+// - none -
+
+// flags values for response messages
+const uint32 FIFO_RX_OK   = 0x00000001; // packet received okay
+const uint32 FIFO_TX_OK   = 0x00000001; // packet transmitted okay
+const uint32 FIFO_INVALID = 0x00000002; // offset+length not within io_vmo bounds
+const uint32 FIFO_RX_TX   = 0x00000004; // received our own tx packet (when Listen enabled)
+
+struct FifoEntry {
+    // offset from start of io vmo to packet data
+    uint32 offset;
+
+    // length of packet data to tx or rx
+    uint16 length;
+
+    // FIFO_* flags as above
+    uint16 flags;
+
+    // opaque cookie
+    uint64 cookie;
 };

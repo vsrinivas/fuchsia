@@ -873,7 +873,7 @@ static zx_status_t fidl_GetInfo_locked(void* ctx, fidl_txn_t* txn) {
         info.features |= ETH_FEATURE_SYNTH;
     }
     info.mtu = edev->edev0->info.mtu;
-    return REPLY(GetInfo)(txn, ZX_OK, &info);
+    return REPLY(GetInfo)(txn, &info);
 }
 
 static zx_status_t fidl_GetFifos_locked(void* ctx, fidl_txn_t* txn) {
