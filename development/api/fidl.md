@@ -236,7 +236,7 @@ their enclosing type.
  * Use 4 space indents.
  * Never use tabs.
  * Avoid trailing whitespace.
- * Separate top-level declarations with one newline.
+ * Separate declarations for `struct`, `union`, `enum`, and `interface` constructs from other declarations with one newline.
  * End files with exactly one newline character.
 
 ### Comments
