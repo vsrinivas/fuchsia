@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use byteorder::{BigEndian, ByteOrder};
-use crypto::aes::{self, KeySize};
+use crypto::aes::KeySize;
 use crypto::aessafe;
 use crypto::blockmodes::{self, EcbEncryptor, EcbDecryptor, PaddingProcessor};
-use crypto::buffer::{self, WriteBuffer, ReadBuffer};
-use crypto::symmetriccipher::{BlockDecryptor, BlockEncryptor, Decryptor, Encryptor};
+use crypto::buffer;
+use crypto::symmetriccipher::{Decryptor, Encryptor};
 use failure;
 use keywrap::Algorithm;
 use Error;
@@ -107,7 +107,7 @@ impl Algorithm for NistAes {
                             keysize,
                             key,
                             blockmodes::NoPadding);
-                        cipher.encrypt(&mut read_buf, &mut write_buf, true);
+                        let _ = cipher.encrypt(&mut read_buf, &mut write_buf, true);
                     }
                     let t = (n * j + i) as u64;
                     BigEndian::write_u64(&mut aes_block, BigEndian::read_u64(&b[..8]) ^ t);
@@ -155,7 +155,7 @@ impl Algorithm for NistAes {
                         keysize,
                         key,
                         blockmodes::NoPadding);
-                    cipher.decrypt(&mut read_buf, &mut write_buf, true);
+                    let _ = cipher.decrypt(&mut read_buf, &mut write_buf, true);
                 }
 
                 &aes_block[..8].copy_from_slice(&b[..8]);

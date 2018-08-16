@@ -6,9 +6,6 @@ pub mod handshake;
 
 use self::handshake::{fourway::{self, Fourway}, group_key::{self, GroupKey}};
 use akm::Akm;
-use cipher::Cipher;
-use Error;
-use eapol;
 use failure;
 use key::gtk::Gtk;
 use key::ptk::Ptk;

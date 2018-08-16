@@ -4,7 +4,7 @@
 
 use akm::Akm;
 use bytes::Bytes;
-use cipher::{self, Cipher, TKIP, GROUP_CIPHER_SUITE};
+use cipher::{Cipher, TKIP, GROUP_CIPHER_SUITE};
 use eapol;
 use failure;
 use Error;
@@ -134,7 +134,6 @@ impl <'a> VerifiedKeyFrame<'a> {
                 // established.
                 Role::Supplicant => ensure!(ptk_established && gtk_established,
                                             Error::SecureBitNotSetWithKnownPtkGtk),
-                _ => {}
             };
         }
 
@@ -302,8 +301,8 @@ pub type SecAssocResult = Result<Vec<SecAssocUpdate>, failure::Error>;
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use akm::{self, Akm};
-    use cipher::{self, Cipher};
+    use akm;
+    use cipher;
     use rsne::Rsne;
     use suite_selector::OUI;
 

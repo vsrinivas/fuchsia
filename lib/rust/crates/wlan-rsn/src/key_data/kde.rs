@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 use super::Element;
-use bytes::{BufMut, BytesMut};
-use failure;
+use bytes::BufMut;
 use nom::IResult::{Done, Incomplete};
 use nom::{le_u8, IResult, Needed};
-use Error;
 
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;
 const PADDING_DATA_LEN: u8 = 0;
+#[allow(unused)]
 const HDR_LEN: usize = 6;
 const GTK_DATA_TYPE: u8 = 1;
 
@@ -44,6 +43,7 @@ impl Header {
         }
     }
 
+    #[allow(unused)]
     pub fn as_bytes(&self, buf: &mut Vec<u8>) {
         buf.reserve(HDR_LEN);
         buf.put_u8(self.type_);
@@ -54,6 +54,7 @@ impl Header {
 }
 
 // IEEE Std 802.11-2016, 12.7.2, j)
+#[allow(unused)]
 pub enum GtkInfoTx {
     OnlyRx = 0,
     BothRxTx = 1,
@@ -78,6 +79,7 @@ pub struct Gtk {
 }
 
 impl Gtk {
+    #[allow(unused)]
     pub fn new(key_id: u8, tx: GtkInfoTx, gtk: &[u8]) -> Element {
         let mut gtk_info = GtkInfo(0);
         gtk_info.set_key_id(key_id);
@@ -102,6 +104,7 @@ impl Gtk {
         self.gtk.len() + 2
     }
 
+    #[allow(unused)]
     pub fn as_bytes(&self, buf: &mut Vec<u8>) {
         buf.reserve(2 + self.gtk.len());
         buf.put_u8(self.info.value());
@@ -183,7 +186,7 @@ mod tests {
         let kde_hdr = Header::new(0x11, 0x12, &vec![0x13, 0x14, 0x15][..], 0xAC);
         kde_hdr.as_bytes(&mut buf);
 
-        let mut expected: Vec<u8> = vec![0x11, 0x12, 0x13, 0x14, 0x15, 0xAC];
+        let expected: Vec<u8> = vec![0x11, 0x12, 0x13, 0x14, 0x15, 0xAC];
         assert_eq!(&buf[..], &expected[..]);
     }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #![feature(test)]
 #![feature(drain_filter)]
+#![deny(warnings)]
 
 #[macro_use] extern crate bitfield;
 extern crate byteorder;
@@ -31,8 +32,6 @@ pub mod rsne;
 pub mod suite_selector;
 
 use key::exchange::handshake::fourway::MessageNumber;
-use rsna::Role;
-use std::result;
 
 #[derive(Debug, Fail)]
 pub enum Error {

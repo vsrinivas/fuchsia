@@ -4,10 +4,9 @@
 
 use akm::Akm;
 use bytes::Bytes;
-use cipher::Cipher;
 use eapol;
 use failure;
-use key::{exchange::{self, handshake::group_key::supplicant::Supplicant}, ptk::Ptk};
+use key::{exchange::{self, handshake::group_key::supplicant::Supplicant}};
 use rsna::{Role, SecAssocResult, VerifiedKeyFrame};
 
 mod supplicant;

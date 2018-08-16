@@ -4,7 +4,6 @@
 
 use Error;
 use akm::Akm;
-use bytes::Bytes;
 use cipher::Cipher;
 use crypto_utils::prf;
 use failure;
@@ -85,6 +84,7 @@ impl Ptk {
 mod tests {
     use super::*;
     use akm::{Akm, PSK};
+    use bytes::Bytes;
     use cipher::{CCMP_128, Cipher, TKIP};
     use hex::FromHex;
     use suite_selector::{Factory, OUI};

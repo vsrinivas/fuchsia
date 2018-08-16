@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use eapol;
 use failure;
 use key::exchange::handshake::fourway::{Config, FourwayHandshakeFrame};
-use rsna::{SecAssocResult, VerifiedKeyFrame};
+use rsna::SecAssocResult;
 
 #[derive(Debug, PartialEq)]
 pub struct Authenticator {
@@ -19,11 +18,6 @@ impl Authenticator {
             cfg,
             s_nonce: [0u8; 32],
         })
-    }
-
-    pub fn initiate(&self) -> Result<(), failure::Error> {
-        // TODO(hahnr): Send first message of handshake.
-        Ok(())
     }
 
     pub fn on_eapol_key_frame(&self, _frame: FourwayHandshakeFrame) -> SecAssocResult {

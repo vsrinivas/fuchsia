@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use akm::Akm;
 use auth;
-use bytes::Bytes;
-use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use Error;
 use failure;
 use key::exchange::{self, Key, handshake::{fourway::Fourway, group_key::GroupKey}};
 use key::{gtk::Gtk, ptk::Ptk};
 use rsna::{NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame};
-use rsne::Rsne;
 use std::mem;
 
 #[derive(Debug, PartialEq)]
@@ -187,7 +183,7 @@ impl EssSa {
                 // The PTK carries KEK and KCK which is used in the Group Key Handshake, thus,
                 // reset GTKSA whenever the PTK changed.
                 self.gtksa.reset();
-                self.gtksa.initialize(ptk.kck());
+                self.gtksa.initialize(ptk.kck())?;
 
                 if let Ptksa::Initialized(ptksa) = &mut self.ptksa {
                     ptksa.ptk = Some(ptk);
@@ -208,7 +204,6 @@ impl EssSa {
         // PSK allows deriving the PMK without exchanging
         let pmk = match &self.pmksa.method {
             auth::Method::Psk(psk) => Some(psk.compute()),
-            _ => None,
         };
         if let Some(pmk_data) = pmk {
             self.on_key_confirmed(Key::Pmk(pmk_data))?;
@@ -231,7 +226,6 @@ impl EssSa {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let mut updates = match frame {
             eapol::Frame::Key(key_frame) => self.on_eapol_key_frame(&key_frame),
-            _ => return Ok(vec![]),
         }?;
 
         // Process Key updates ourselves to correctly track security associations.
@@ -244,7 +238,9 @@ impl EssSa {
         })
         .for_each(|update| {
             if let SecAssocUpdate::Key(key) = update {
-                self.on_key_confirmed(key.clone());
+                if let Err(e) = self.on_key_confirmed(key.clone()) {
+                    eprintln!("error while processing key: {}", e);
+                };
             }
         });
 
@@ -311,14 +307,7 @@ impl EssSa {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akm::{self, Akm};
-    use bytes::Bytes;
-    use bytes::BytesMut;
-    use cipher::{self, Cipher};
-    use crypto_utils::nonce::NonceReader;
-    use hex::FromHex;
     use rsna::test_util;
-    use suite_selector::OUI;
 
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];

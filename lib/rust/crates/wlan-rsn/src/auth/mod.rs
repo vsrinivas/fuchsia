@@ -5,10 +5,7 @@
 pub mod psk;
 
 use self::psk::Psk;
-use Error;
-use eapol;
 use failure;
-use key::exchange::Key;
 use rsna::{SecAssocResult, VerifiedKeyFrame};
 
 #[derive(Debug, PartialEq)]

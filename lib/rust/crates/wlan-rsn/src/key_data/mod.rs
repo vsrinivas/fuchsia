@@ -4,7 +4,7 @@
 
 pub mod kde;
 
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use failure;
 use nom::IResult::{Done, Incomplete};
 use nom::{IResult, Needed};
@@ -63,6 +63,7 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
 
 // IEEE Std 802.11-2016, 12.7.2 j)
 // Adds padding to a given key data if necessary and truncates all remaining bytes of the buffer.
+#[allow(unused)]
 pub fn add_padding(buf: &mut Vec<u8>) {
     let padding_len = if buf.len() < 16 {
         16 - buf.len()
@@ -236,7 +237,6 @@ mod tests {
                     assert_eq!(hdr.data_type, 1);
                 }
                 Element::Padding => assert_eq!(pos, 6),
-                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
             pos += 1;
         }

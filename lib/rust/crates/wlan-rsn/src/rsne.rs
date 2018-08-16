@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use akm;
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes};
 use cipher;
-use failure::Error;
 use pmkid;
 use suite_selector;
 
@@ -173,10 +172,6 @@ named!(pub from_bytes<&[u8], Rsne>,
            })
     )
 );
-
-#[derive(Debug, Fail)]
-#[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
-struct ErrorBufferTooSmall(usize, usize);
 
 #[cfg(test)]
 mod tests {

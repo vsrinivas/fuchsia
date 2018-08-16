@@ -11,7 +11,6 @@ use key::gtk::Gtk;
 use key::exchange::{Key, handshake::{group_key::{self, Config, GroupKeyHandshakeFrame}}};
 use key_data;
 use rsna::{SecAssocResult, SecAssocUpdate};
-use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {

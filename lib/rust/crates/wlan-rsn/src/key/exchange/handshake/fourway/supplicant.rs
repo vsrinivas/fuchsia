@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use Error;
-use akm::Akm;
 use bytes::Bytes;
-use bytes::BytesMut;
 use crypto_utils::nonce::NonceReader;
 use eapol;
 use failure;
@@ -15,7 +13,7 @@ use key::exchange::handshake::fourway::{self, FourwayHandshakeFrame};
 use key::gtk::Gtk;
 use key::ptk::Ptk;
 use key_data;
-use rsna::{SecAssocResult, SecAssocUpdate, VerifiedKeyFrame};
+use rsna::{SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
 
 #[derive(Debug, Default, PartialEq)]

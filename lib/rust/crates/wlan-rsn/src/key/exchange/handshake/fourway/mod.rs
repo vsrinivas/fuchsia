@@ -9,15 +9,11 @@ use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
 use bytes::Bytes;
 use Error;
-use akm::Akm;
-use bytes::BytesMut;
-use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use failure;
-use key::exchange::{self, Key};
-use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame, NegotiatedRsne};
+use key::exchange;
+use rsna::{Role, SecAssocResult, VerifiedKeyFrame, NegotiatedRsne};
 use rsne::Rsne;
-use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 enum RoleHandler {
@@ -302,9 +298,7 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rsna::test_util;
-    use bytes::Bytes;
 
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
 

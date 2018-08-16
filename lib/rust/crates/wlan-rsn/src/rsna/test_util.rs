@@ -6,7 +6,6 @@ use super::*;
 use akm::{self, Akm};
 use auth;
 use bytes::Bytes;
-use bytes::BytesMut;
 use cipher::{self, Cipher};
 use crypto_utils::nonce::NonceReader;
 use hex::FromHex;
@@ -87,11 +86,6 @@ pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
         .pairwise_cipher_suites
         .get(0)
         .expect("Supplicant's RSNE holds no Pairwise Cipher suite");
-
-    let cipher = Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    };
     let pmk = get_pmk();
     Ptk::new(&pmk[..], &A_ADDR, &S_ADDR, anonce, snonce, &akm, &cipher).expect("error deriving PTK")
 }
