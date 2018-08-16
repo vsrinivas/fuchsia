@@ -42,7 +42,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
 
   FXL_VLOG(1) << "Adding provider " << *bundle;
 
-  tracees_.emplace_back(std::make_unique<Tracee>(bundle));
+  tracees_.emplace_back(std::make_unique<Tracee>(this, bundle));
   fidl::VectorPtr<fidl::StringPtr> categories_clone;
   fidl::Clone(categories_, &categories_clone);
   if (!tracees_.back()->Start(

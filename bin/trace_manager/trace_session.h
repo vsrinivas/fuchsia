@@ -47,6 +47,8 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // connection.
   ~TraceSession();
 
+  const zx::socket& destination() const { return destination_; }
+
   // Invokes |callback| when all providers in this session have acknowledged
   // the start request, or after |timeout| has elapsed.
   void WaitForProvidersToStart(fit::closure callback, zx::duration timeout);

@@ -9,13 +9,19 @@ trace [options] command [command-specific options]
 
   list-categories - list all known categories
   record - starts tracing and records data
-    --[command args]: Run program before starting trace. The program is terminated when tracing ends unless --detach is specified
-    --append-args=[""]: Additional args for the app being traced, appended to those from the spec file, if any
-    --buffer-size=[4]: Maximum size of trace buffer for each provider in megabytes
+    --[command args]: Run program before starting trace.
+        The program is terminated when tracing ends unless --detach is specified
+    --append-args=[""]: Additional args for the app being traced, appended to
+        those from the spec file, if any
+    --buffer-size=[4]: Maximum size of trace buffer for each provider in
+        megabytes
+    --buffering-mode=[oneshot]: Specify buffering mode as one of oneshot,
+        circular, or streaming
     --categories=[""]: Categories that should be enabled for tracing
     --decouple=[false]: Don't stop tracing when the traced program exits
     --detach=[false]: Don't stop the traced program when tracing finished
-    --duration=[10s]: Trace will be active for this long after the session has been started
+    --duration=[10s]: Trace will be active for this long after the session has
+        been started
     --output-file=[/data/trace.json]: Trace data is stored in this file
     --spec-file=[none]: Tracing specification file
 ```

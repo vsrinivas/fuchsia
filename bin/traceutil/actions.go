@@ -13,6 +13,7 @@ const defaultCategories = "app,benchmark,gfx,input,kernel:meta,kernel:sched,ledg
 type captureTraceConfig struct {
 	Categories           string
 	BufferSize           uint // [MB]
+	BufferingMode        string
 	Duration             time.Duration
 	BenchmarkResultsFile string
 	SpecFile             string
@@ -27,6 +28,8 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"Comma separated list of categories to trace. \"all\" for all categories.")
 	f.UintVar(&config.BufferSize, "buffer-size", 0,
 		"Size of trace buffer in MB.")
+	f.StringVar(&config.BufferingMode, "buffering-mode", "oneshot",
+		"Buffering mode (one of: oneshot,circular,streaming.")
 	f.DurationVar(&config.Duration, "duration", 0,
 		"Duration of trace capture (e.g. '10s').  Second resolution.")
 	f.StringVar(&config.SpecFile, "spec-file", "",
@@ -62,6 +65,14 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection) error {
 	if config.BufferSize != 0 {
 		cmd = append(cmd, "--buffer-size="+
 			strconv.FormatUint(uint64(config.BufferSize), 10))
+	}
+	if config.BufferingMode == "oneshot" ||
+		config.BufferingMode == "circular" ||
+		config.BufferingMode == "streaming" {
+		cmd = append(cmd, "--buffering-mode="+config.BufferingMode)
+	} else {
+		return fmt.Errorf("Invalid value for --buffering-mode: %s",
+			config.BufferingMode)
 	}
 	if config.Duration != 0 {
 		cmd = append(cmd, "--duration="+

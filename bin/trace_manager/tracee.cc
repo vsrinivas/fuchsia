@@ -9,6 +9,7 @@
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
 
+#include "garnet/bin/trace_manager/trace_session.h"
 #include "lib/fxl/logging.h"
 
 namespace tracing {
@@ -87,8 +88,11 @@ uint64_t GetBufferWordsWritten(const uint64_t* buffer, uint64_t size_in_words) {
 
 }  // namespace
 
-Tracee::Tracee(TraceProviderBundle* bundle)
-    : bundle_(bundle), wait_(this), weak_ptr_factory_(this) {}
+Tracee::Tracee(const TraceSession* session, const TraceProviderBundle* bundle)
+    : session_(session),
+      bundle_(bundle),
+      wait_(this),
+      weak_ptr_factory_(this) {}
 
 Tracee::~Tracee() {
   if (dispatcher_) {
@@ -245,15 +249,30 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
                          << state_;
       }
       break;
-    case TRACE_PROVIDER_BUFFER_OVERFLOW:
-      if (state_ == State::kStarted || state_ == State::kStopping) {
-        FXL_LOG(WARNING)
-            << *bundle_
-            << ": Records got dropped, probably due to buffer overflow";
+    case TRACE_PROVIDER_SAVE_BUFFER:
+      if (buffering_mode_ != fuchsia::tracelink::BufferingMode::STREAMING) {
+        FXL_LOG(WARNING) << *bundle_
+                         << ": Received TRACE_PROVIDER_SAVE_BUFFER in mode "
+                         << ModeName(buffering_mode_);
+      } else if (state_ == State::kStarted || state_ == State::kStopping) {
+        uint32_t wrapped_count = packet.data32;
+        uint64_t durable_data_end = packet.data64;
+        // Schedule the write with the main async loop.
+        FXL_VLOG(2) << "Buffer save request from " << *bundle_
+                    << ", wrapped_count=" << wrapped_count
+                    << ", durable_data_end=0x" << std::hex << durable_data_end;
+        async::PostTask(dispatcher_,
+                        [weak = weak_ptr_factory_.GetWeakPtr(),
+                         wrapped_count, durable_data_end] {
+          if (weak) {
+            weak->TransferBuffer(weak->session_->destination(),
+                                 wrapped_count, durable_data_end);
+          }
+        });
       } else {
-        FXL_LOG(WARNING)
-            << *bundle_ << ": Received TRACE_PROVIDER_BUFFER_OVERFLOW in state "
-            << state_;
+        FXL_LOG(WARNING) << *bundle_
+                         << ": Received TRACE_PROVIDER_SAVE_BUFFER in state "
+                         << state_;
       }
       break;
     default:
@@ -286,20 +305,21 @@ bool Tracee::VerifyBufferHeader(
   return true;
 }
 
-Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
-                                          size_t vmo_offset, size_t size,
-                                          const char* name) const {
+Tracee::TransferStatus Tracee::DoWriteChunk(const zx::socket& socket,
+                                            uint64_t vmo_offset, uint64_t size,
+                                            const char* name,
+                                            bool by_size) const {
   FXL_VLOG(2) << *bundle_ << ": Writing chunk for " << name << ": vmo offset 0x"
-              << std::hex << vmo_offset << ", size 0x" << std::hex << size;
+              << std::hex << vmo_offset << ", size 0x" << std::hex << size
+              << (by_size ? ", by-size" : ", by-record");
 
   // TODO(dje): Loop on smaller buffer.
-  // Better yet, be able to pass the entire vmo to the socket (still in
-  // three chunks: the writer will need vmo,offset,size parameters).
+  // Better yet, be able to pass the entire vmo to the socket (still need to
+  // support multiple chunks: the writer will need vmo,offset,size parameters).
 
   uint64_t size_in_words = trace::BytesToWords(size);
-  // |size| is always the size of a trace buffer, therefore we know it's a
-  // multiple of 8. For paranoia purposes verify this so we don't risk
-  // overflowing the buffer later.
+  // For paranoia purposes verify size is a multiple of the word size so we
+  // don't risk overflowing the buffer later.
   FXL_DCHECK(trace::WordsToBytes(size_in_words) == size);
   std::vector<uint64_t> buffer(size_in_words);
 
@@ -309,8 +329,13 @@ Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
     return TransferStatus::kCorrupted;
   }
 
-  uint64_t words_written = GetBufferWordsWritten(buffer.data(), size_in_words);
-  uint64_t bytes_written = trace::WordsToBytes(words_written);
+  uint64_t bytes_written;
+  if (!by_size) {
+    uint64_t words_written = GetBufferWordsWritten(buffer.data(), size_in_words);
+    bytes_written = trace::WordsToBytes(words_written);
+  } else {
+    bytes_written = size;
+  }
 
   auto status = WriteBufferToSocket(socket, buffer.data(), bytes_written);
   if (status != TransferStatus::kComplete) {
@@ -319,20 +344,52 @@ Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
   return status;
 }
 
+Tracee::TransferStatus Tracee::WriteChunkByRecords(const zx::socket& socket,
+                                                   uint64_t vmo_offset,
+                                                   uint64_t size,
+                                                   const char* name) const {
+  return DoWriteChunk(socket, vmo_offset, size, name, false);
+}
+
+Tracee::TransferStatus Tracee::WriteChunkBySize(const zx::socket& socket,
+                                                uint64_t vmo_offset,
+                                                uint64_t size,
+                                                const char* name) const {
+  return DoWriteChunk(socket, vmo_offset, size, name, true);
+}
+
+Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
+                                          uint64_t offset, uint64_t last,
+                                          uint64_t end, uint64_t buffer_size,
+                                          const char* name) const {
+  ZX_DEBUG_ASSERT(last <= buffer_size);
+  ZX_DEBUG_ASSERT(end <= buffer_size);
+  ZX_DEBUG_ASSERT(end == 0 || last <= end);
+  offset += last;
+  if (buffering_mode_ == fuchsia::tracelink::BufferingMode::ONESHOT ||
+      // If end is zero then the header wasn't updated when tracing stopped.
+      end == 0) {
+    uint64_t size = buffer_size - last;
+    return WriteChunkByRecords(socket, offset, size, name);
+  } else {
+    uint64_t size = end - last;
+    return WriteChunkBySize(socket, offset, size, name);
+  }
+}
+
 Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   FXL_DCHECK(socket);
   FXL_DCHECK(buffer_vmo_);
 
   auto transfer_status = TransferStatus::kComplete;
 
-  if ((transfer_status = WriteProviderInfoRecord(socket)) !=
+  if ((transfer_status = WriteProviderIdRecord(socket)) !=
       TransferStatus::kComplete) {
     FXL_LOG(ERROR) << *bundle_
                    << ": Failed to write provider info record to trace.";
     return transfer_status;
   }
 
-  // TODO(dje): Need a way to get size of header without getting definition.
   trace::internal::trace_buffer_header header_buffer;
   if (buffer_vmo_.read(&header_buffer, 0, sizeof(header_buffer)) != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_ << ": Failed to read header from buffer_vmo";
@@ -363,9 +420,12 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   }
 
   if (buffering_mode_ != fuchsia::tracelink::BufferingMode::ONESHOT) {
-    auto offset = header->get_durable_buffer_offset();
-    auto size = header->durable_buffer_size();
-    if ((transfer_status = WriteChunk(socket, offset, size, "durable")) !=
+    uint64_t offset = header->get_durable_buffer_offset();
+    uint64_t last = last_durable_data_end_;
+    uint64_t end = header->durable_data_end();
+    uint64_t buffer_size = header->durable_buffer_size();
+    if ((transfer_status = WriteChunk(socket, offset, last, end, buffer_size,
+                                      "durable")) !=
         TransferStatus::kComplete) {
       return transfer_status;
     }
@@ -375,48 +435,194 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   // It's important to process them in chronological order on the off
   // chance that the earlier buffer provides a stringref or threadref
   // referenced by the later buffer.
+  //
+  // We want to handle the case of still capturing whatever records we can if
+  // the process crashes, in which case the header won't be up to date. In
+  // oneshot mode we're covered: We run through the records and see what's
+  // there. In circular and streaming modes after a buffer gets reused we can't
+  // do that. But if the process crashes it may be the last trace records that
+  // are important: we don't want to lose them. As a compromise, if the header
+  // is marked as valid use it. Otherwise run through the buffer to count the
+  // records we see.
 
-  auto write_chunk = [this, &socket, &header](int buffer_number) {
-    auto size = header->nondurable_buffer_size();
-    auto offset = header->GetNondurableBufferOffset(buffer_number);
-    auto name =
-        buffer_number == 0 ? "nondurable buffer 0" : "nondurable buffer 1";
-    return WriteChunk(socket, offset, size, name);
+  auto write_rolling_chunk = [this, &header, &socket](int buffer_number)
+      -> Tracee::TransferStatus {
+    uint64_t offset = header->GetRollingBufferOffset(buffer_number);
+    uint64_t last = 0;
+    uint64_t end = header->rolling_data_end(buffer_number);
+    uint64_t buffer_size = header->rolling_buffer_size();
+    auto name = buffer_number == 0 ? "rolling buffer 0" : "rolling buffer 1";
+    return WriteChunk(socket, offset, last, end, buffer_size, name);
   };
 
   if (header->wrapped_count() > 0) {
     int buffer_number = get_buffer_number(header->wrapped_count() - 1);
-    transfer_status = write_chunk(buffer_number);
+    transfer_status = write_rolling_chunk(buffer_number);
     if (transfer_status != TransferStatus::kComplete) {
       return transfer_status;
     }
   }
   int buffer_number = get_buffer_number(header->wrapped_count());
-  transfer_status = write_chunk(buffer_number);
+  transfer_status = write_rolling_chunk(buffer_number);
   if (transfer_status != TransferStatus::kComplete) {
     return transfer_status;
   }
 
   // Print some stats to assist things like buffer size calculations.
-  if (header->buffering_mode() != TRACE_BUFFERING_MODE_ONESHOT &&
-      // Don't print anything if nothing was written.
-      header->durable_data_end() > kInitRecordSizeBytes) {
+  // Don't print anything if nothing was written.
+  if ((header->buffering_mode() == TRACE_BUFFERING_MODE_ONESHOT &&
+       header->rolling_data_end(0) > kInitRecordSizeBytes) ||
+      ((header->buffering_mode() != TRACE_BUFFERING_MODE_ONESHOT) &&
+       header->durable_data_end() > kInitRecordSizeBytes)) {
     FXL_LOG(INFO) << *bundle_ << " trace stats";
     FXL_LOG(INFO) << "Wrapped count: " << header->wrapped_count();
+    FXL_LOG(INFO) << "# records dropped: " << header->num_records_dropped();
     FXL_LOG(INFO) << "Durable buffer: 0x" << std::hex
                   << header->durable_data_end() << ", size 0x" << std::hex
                   << header->durable_buffer_size();
     FXL_LOG(INFO) << "Non-durable buffer: 0x" << std::hex
-                  << header->nondurable_data_end(0) << ",0x" << std::hex
-                  << header->nondurable_data_end(1) << ", size 0x" << std::hex
-                  << header->nondurable_buffer_size();
+                  << header->rolling_data_end(0) << ",0x" << std::hex
+                  << header->rolling_data_end(1) << ", size 0x" << std::hex
+                  << header->rolling_buffer_size();
   }
 
   return TransferStatus::kComplete;
 }
 
+void Tracee::TransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
+                            uint64_t durable_data_end) {
+  FXL_DCHECK(buffering_mode_ == fuchsia::tracelink::BufferingMode::STREAMING);
+  FXL_DCHECK(socket);
+  FXL_DCHECK(buffer_vmo_);
+
+  if (!DoTransferBuffer(socket, wrapped_count, durable_data_end)) {
+    Stop();
+  }
+
+  last_wrapped_count_ = wrapped_count;
+  last_durable_data_end_ = durable_data_end;
+  NotifyBufferSaved(wrapped_count, durable_data_end);
+}
+
+bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
+                              uint64_t durable_data_end) {
+  if (wrapped_count == 0 && last_wrapped_count_ == 0) {
+    // ok
+  } else if (wrapped_count != last_wrapped_count_ + 1) {
+    FXL_LOG(ERROR) << *bundle_ << ": unexpected wrapped_count from provider: "
+                   << wrapped_count;
+    return false;
+  } else if (durable_data_end < last_durable_data_end_ ||
+             (durable_data_end & 7) != 0) {
+    FXL_LOG(ERROR) << *bundle_
+                   << ": unexpected durable_data_end from provider: "
+                   << durable_data_end;
+    return false;
+  }
+
+  auto transfer_status = TransferStatus::kComplete;
+  int buffer_number = get_buffer_number(wrapped_count);
+
+  if ((transfer_status = WriteProviderIdRecord(socket)) !=
+      TransferStatus::kComplete) {
+    FXL_LOG(ERROR) << *bundle_
+                   << ": Failed to write provider section record to trace.";
+    return false;
+  }
+
+  trace::internal::trace_buffer_header header_buffer;
+  if (buffer_vmo_.read(&header_buffer, 0, sizeof(header_buffer)) != ZX_OK) {
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to read header from buffer_vmo";
+    return false;
+  }
+
+  fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
+  auto error = trace::internal::BufferHeaderReader::Create(
+      &header_buffer, buffer_vmo_size_, &header);
+  if (error != "") {
+    FXL_LOG(ERROR) << *bundle_ << ": header corrupt, " << error.c_str();
+    return false;
+  }
+  if (!VerifyBufferHeader(header.get())) {
+    return false;
+  }
+
+  // Don't use |header.durable_data_end| here, we want the value at the time
+  // the message was sent.
+  if (durable_data_end < kInitRecordSizeBytes ||
+      durable_data_end > header->durable_buffer_size() ||
+      (durable_data_end & 7) != 0 ||
+      durable_data_end < last_durable_data_end_) {
+    FXL_LOG(ERROR) << *bundle_
+                   << ": bad durable_data_end: " << durable_data_end;
+    return false;
+  }
+
+  // However we can use rolling_data_end from the header.
+  // This buffer is no longer being written to until we save it.
+  // [And if it does get written to it'll potentially result in corrupt
+  // data, but that's not our problem; as long as we can't crash, which is
+  // always the rule here.]
+  uint64_t rolling_data_end = header->rolling_data_end(buffer_number);
+
+  // Only transfer what's new in the durable buffer since the last time.
+  uint64_t durable_buffer_offset = header->get_durable_buffer_offset();
+  if (durable_data_end > last_durable_data_end_) {
+    uint64_t size = durable_data_end - last_durable_data_end_;
+    if ((transfer_status =
+             WriteChunkBySize(socket,
+                              durable_buffer_offset + last_durable_data_end_,
+                              size, "durable")) != TransferStatus::kComplete) {
+      return false;
+    }
+  }
+
+  uint64_t buffer_offset = header->GetRollingBufferOffset(buffer_number);
+  auto name =
+      buffer_number == 0 ? "rolling buffer 0" : "rolling buffer 1";
+  if ((transfer_status =
+       WriteChunkBySize(socket, buffer_offset, rolling_data_end,
+                        name)) != TransferStatus::kComplete) {
+    return false;
+  }
+
+  return true;
+}
+
+void Tracee::NotifyBufferSaved(uint32_t wrapped_count,
+                               uint64_t durable_data_end) {
+  FXL_VLOG(2) << "Buffer saved for " << *bundle_
+              << ", wrapped_count=" << wrapped_count
+              << ", durable_data_end=" << durable_data_end;
+  trace_provider_packet_t packet{};
+  packet.request = TRACE_PROVIDER_BUFFER_SAVED;
+  packet.data32 = wrapped_count;
+  packet.data64 = durable_data_end;
+  auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    // The FIFO should never fill. If it does then the provider is sending us
+    // buffer full notifications but not reading our replies. Terminate the
+    // connection.
+    Stop();
+  } else {
+    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
+  }
+}
+
+Tracee::TransferStatus Tracee::WriteProviderIdRecord(
+    const zx::socket& socket) const {
+  if (provider_info_record_written_) {
+    return WriteProviderSectionRecord(socket);
+  } else {
+    auto status = WriteProviderInfoRecord(socket);
+    provider_info_record_written_ = true;
+    return status;
+  }
+}
+
 Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
     const zx::socket& socket) const {
+  FXL_VLOG(2) << *bundle_ << ": writing provider info record";
   std::string label("");  // TODO(ZX-1875): Provide meaningful labels or remove
                           // labels from the trace wire format altogether.
   size_t num_words = 1u + trace::BytesToWords(trace::Pad(label.size()));
@@ -430,6 +636,22 @@ Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
       trace::ProviderInfoMetadataRecordFields::Id::Make(bundle_->id) |
       trace::ProviderInfoMetadataRecordFields::NameLength::Make(label.size());
   memcpy(&record[1], label.c_str(), label.size());
+  return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
+                             trace::WordsToBytes(num_words));
+}
+
+Tracee::TransferStatus Tracee::WriteProviderSectionRecord(
+    const zx::socket& socket) const {
+  FXL_VLOG(2) << *bundle_ << ": writing provider section record";
+  size_t num_words = 1u;
+  std::vector<uint64_t> record(num_words);
+  record[0] =
+      trace::ProviderSectionMetadataRecordFields::Type::Make(
+          trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+      trace::ProviderSectionMetadataRecordFields::RecordSize::Make(num_words) |
+      trace::ProviderSectionMetadataRecordFields::MetadataType::Make(
+          trace::ToUnderlyingType(trace::MetadataType::kProviderSection)) |
+      trace::ProviderSectionMetadataRecordFields::Id::Make(bundle_->id);
   return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words));
 }
@@ -449,6 +671,17 @@ Tracee::TransferStatus Tracee::WriteProviderBufferOverflowEvent(
           trace::ToUnderlyingType(trace::ProviderEventType::kBufferOverflow));
   return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words));
+}
+
+const char* Tracee::ModeName(fuchsia::tracelink::BufferingMode mode) {
+  switch (mode) {
+    case fuchsia::tracelink::BufferingMode::ONESHOT:
+      return "oneshot";
+    case fuchsia::tracelink::BufferingMode::CIRCULAR:
+      return "circular";
+    case fuchsia::tracelink::BufferingMode::STREAMING:
+      return "streaming";
+  }
 }
 
 std::ostream& operator<<(std::ostream& out, Tracee::State state) {
