@@ -48,7 +48,7 @@ of the result's `values`.
 * `nanoseconds`  or `ns`
 * `milliseconds` or `ms`
 * `bytes/second`
-* `bytes` or `B`
+* `bytes`
 
 
 ### Example
