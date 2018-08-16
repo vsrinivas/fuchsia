@@ -36,6 +36,7 @@ namespace ledger {
 // Parameters:
 //   --unique-key-count=<int> the number of unique keys to populate the page
 //   with.
+//   --key-size=<int> size of a key for each entry.
 //   --value-size=<int> the size of values to populate the page with.
 //   --commit-count=<int> the number of commits made to the page.
 //   If this number is smaller than unique-key-count, changes will be bundled
@@ -48,7 +49,7 @@ namespace ledger {
 //   --credentials-path=<file path> Firestore service account credentials
 class BacklogBenchmark : public SyncWatcher {
  public:
-  BacklogBenchmark(async::Loop* loop, size_t unique_key_count,
+  BacklogBenchmark(async::Loop* loop, size_t unique_key_count, size_t key_size,
                    size_t value_size, size_t commit_count,
                    PageDataGenerator::ReferenceStrategy reference_strategy,
                    SyncParams sync_params);
@@ -85,6 +86,7 @@ class BacklogBenchmark : public SyncWatcher {
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   fidl::Binding<SyncWatcher> sync_watcher_binding_;
   const size_t unique_key_count_;
+  const size_t key_size_;
   const size_t value_size_;
   const size_t commit_count_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;

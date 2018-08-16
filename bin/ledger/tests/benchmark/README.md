@@ -89,6 +89,8 @@ page.
       ID.
     * `add_many_pages.tspec`: same as above, but with a bigger number of requests.
     * `get_same_page.tspec`: several connection to the same page
+    * `get_page_id.tspec`: how long does the GetId() call takes on a newly
+      created page?
 * __Put__: How long does it take to write data to a page? And how long before the
   client will receive a [PageWatcher notification] about its own change?
     * `put.tspec`: basic case
@@ -113,6 +115,7 @@ page.
     * `disk_space_empty_ledger.tspec`: empty ledger (with no pages)
     * `disk_space_empty_pages.tspec`: ledger containing only empty pages
     * `disk_space_entries.tspec`: ledger with one page containing some entries
+    * `disk_space_small_keys.tspec`: same, but with small (10 bytes) keys.
     * `disk_space_updates.tspec`: ledger with one page containing only one
       entry, but long commit history
     * `disk_space_one_commit_per_entry.tspec`: ledger with one page containing
@@ -136,6 +139,8 @@ section](README.md#benchmarks-using-sync).
     * `disk_space_synced_entries.tspec`: how much disk space does ledger take on a
     writer and a reader device, when several entries have been written (in one
     commit) on one device and then downloaded on another?
+    * `disk_space_synced_entries_small_keys.tspec`: same, but with small (10
+      bytes) keys.
     * `disk_space_synced_updates.tspec`: how much disk space does ledger take on a
     writer and a reader device, when several commits with updates has been made on
     one device and then downloaded on another?

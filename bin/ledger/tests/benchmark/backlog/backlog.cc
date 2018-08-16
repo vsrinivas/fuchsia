@@ -29,13 +29,13 @@
 namespace {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/backlog";
 constexpr fxl::StringView kUniqueKeyCountFlag = "unique-key-count";
+constexpr fxl::StringView kKeySizeFlag = "key-size";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kCommitCountFlag = "commit-count";
 constexpr fxl::StringView kRefsFlag = "refs";
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
 
-constexpr size_t kKeySize = 100;
 const std::string kUserDirectory = "/backlog_user";
 
 void PrintUsage(const char* executable_name) {
@@ -43,6 +43,7 @@ void PrintUsage(const char* executable_name) {
             << executable_name
             // Comment to make clang format not break formatting.
             << " --" << kUniqueKeyCountFlag << "=<int>"
+            << " --" << kKeySizeFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kCommitCountFlag << "=<int>"
             << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
@@ -54,8 +55,8 @@ void PrintUsage(const char* executable_name) {
 namespace ledger {
 
 BacklogBenchmark::BacklogBenchmark(
-    async::Loop* loop, size_t unique_key_count, size_t value_size,
-    size_t commit_count,
+    async::Loop* loop, size_t unique_key_count, size_t key_size,
+    size_t value_size, size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     SyncParams sync_params)
     : loop_(loop),
@@ -65,6 +66,7 @@ BacklogBenchmark::BacklogBenchmark(
           std::move(sync_params.api_key), std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
       unique_key_count_(unique_key_count),
+      key_size_(key_size),
       value_size_(value_size),
       commit_count_(commit_count),
       reference_strategy_(reference_strategy),
@@ -73,6 +75,7 @@ BacklogBenchmark::BacklogBenchmark(
       reader_tmp_dir_(kStoragePath) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(unique_key_count_ > 0);
+  FXL_DCHECK(key_size_ > 0);
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(commit_count_ > 0);
   cloud_provider_factory_.Init();
@@ -128,7 +131,7 @@ void BacklogBenchmark::Populate() {
   int key_count = std::max(unique_key_count_, commit_count_);
   FXL_LOG(INFO) << "Transaction size: " << transaction_size
                 << ", key count: " << key_count << ".";
-  auto keys = generator_.MakeKeys(key_count, kKeySize, unique_key_count_);
+  auto keys = generator_.MakeKeys(key_count, key_size_, unique_key_count_);
   page_data_generator_.Populate(
       &writer_page_, std::move(keys), value_size_, transaction_size,
       reference_strategy_, Priority::EAGER, [this](Status status) {
@@ -322,6 +325,8 @@ int main(int argc, const char** argv) {
 
   std::string unique_key_count_str;
   size_t unique_key_count;
+  std::string key_size_str;
+  size_t key_size;
   std::string value_size_str;
   size_t value_size;
   std::string commit_count_str;
@@ -332,6 +337,8 @@ int main(int argc, const char** argv) {
                                    &unique_key_count_str) ||
       !fxl::StringToNumberWithError(unique_key_count_str, &unique_key_count) ||
       unique_key_count <= 0 ||
+      !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
+      !fxl::StringToNumberWithError(key_size_str, &key_size) || key_size == 0 ||
       !command_line.GetOptionValue(kValueSizeFlag.ToString(),
                                    &value_size_str) ||
       !fxl::StringToNumberWithError(value_size_str, &value_size) ||
@@ -361,7 +368,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::BacklogBenchmark app(&loop, unique_key_count, value_size,
+  ledger::BacklogBenchmark app(&loop, unique_key_count, key_size, value_size,
                                commit_count, reference_strategy,
                                std::move(sync_params));
   return ledger::RunWithTracing(&loop, [&app] { app.Run(); });

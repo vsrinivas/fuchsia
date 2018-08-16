@@ -160,6 +160,11 @@ package("ledger_benchmarks") {
     },
 
     {
+      path = rebase_path("disk_space/small_keys.tspec")
+      dest = "disk_space_small_keys.tspec"
+    },
+
+    {
       path = rebase_path("disk_space/one_commit_per_entry.tspec")
       dest = "disk_space_one_commit_per_entry.tspec"
     },
@@ -172,6 +177,11 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("backlog/disk_space_synced_entries.tspec")
       dest = "disk_space_synced_entries.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/disk_space_synced_entries_small_keys.tspec")
+      dest = "disk_space_synced_entries_small_keys.tspec"
     },
 
     {

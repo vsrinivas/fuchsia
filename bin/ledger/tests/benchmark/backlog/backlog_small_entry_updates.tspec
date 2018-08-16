@@ -1,8 +1,8 @@
 {
   "test_suite_name": "fuchsia.ledger",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/backlog.cmx",
-  "args": ["--unique-key-count=1", "--value-size=1", "--commit-count=10000",
-           "--refs=off"],
+  "args": ["--unique-key-count=1", "--key-size=100", "--value-size=1",
+           "--commit-count=10000", "--refs=off"],
   "categories": ["benchmark", "ledger"],
   "duration": 180,
   "measure": [
