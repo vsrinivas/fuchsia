@@ -6,6 +6,7 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
+#include "memory_barriers.h"
 #include "pts_manager.h"
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 
@@ -109,6 +110,8 @@ Vp9Decoder::~Vp9Decoder() {
     owner_->core()->StopDecoding();
     owner_->core()->WaitForIdle();
   }
+
+  BarrierBeforeRelease();  // For all working buffers
 }
 
 void Vp9Decoder::UpdateLoopFilterThresholds() {
@@ -199,8 +202,9 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
   zx_status_t status = working_buffers_.AllocateBuffers(owner_);
   if (status != ZX_OK)
     return status;
-
-  return AllocateFrames();
+  status = AllocateFrames();
+  BarrierAfterFlush();  // For all frames and working buffers.
+  return status;
 }
 
 zx_status_t Vp9Decoder::InitializeHardware() {
@@ -587,6 +591,7 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
     }
     io_buffer_cache_flush(&current_frame_->compressed_data, 0,
                           frame_buffer_size);
+    BarrierAfterFlush();
   }
 
   // Enough frames for the maximum possible size of compressed video have to be
@@ -604,6 +609,7 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
     }
     io_buffer_cache_flush(&working_buffers_.frame_map_mmu.buffer(), 0,
                           frame_count * 4);
+    BarrierAfterFlush();
   }
 
   uint32_t buffer_address =
@@ -696,6 +702,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
 
 void Vp9Decoder::PrepareNewFrame() {
   HardwareRenderParams params;
+  BarrierBeforeInvalidate();
   io_buffer_cache_flush_invalidate(&working_buffers_.rpm.buffer(), 0,
                                    sizeof(HardwareRenderParams));
   uint16_t* input_params =
@@ -829,6 +836,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
     }
     io_buffer_cache_flush_invalidate(&new_frame->mv_mpred_buffer, 0,
                                      kLcuCount * kLcuMvBytes);
+
+    BarrierAfterFlush();
   }
 
   if (params->render_size_present) {

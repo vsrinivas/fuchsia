@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include "h264_decoder.h"
+
 #include <zx/vmo.h>
 
 #include "codec_frame.h"
 #include "codec_packet.h"
 #include "firmware_blob.h"
 #include "macros.h"
+#include "memory_barriers.h"
 #include "pts_manager.h"
 
 static const uint32_t kBufferAlignShift = 4 + 12;
@@ -125,6 +127,7 @@ static uint32_t GetMaxDpbSize(uint32_t level_idc, uint32_t width_in_mbs,
 H264Decoder::~H264Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
+  BarrierBeforeRelease();
   io_buffer_release(&reference_mv_buffer_);
   io_buffer_release(&codec_data_);
   io_buffer_release(&sei_data_buffer_);
@@ -248,6 +251,8 @@ zx_status_t H264Decoder::Initialize() {
     kBufferStartAddressOffset = 0x1000000,
   };
 
+  BarrierAfterFlush();  // For codec_data and secondary_firmware_
+
   // This may wrap if the address is less than the buffer start offset.
   uint32_t buffer_offset =
       truncate_to_32(io_buffer_phys(&codec_data_)) - kBufferStartAddressOffset;
@@ -284,6 +289,7 @@ zx_status_t H264Decoder::Initialize() {
   io_buffer_cache_flush(&sei_data_buffer_, 0,
                         io_buffer_size(&sei_data_buffer_, 0));
 
+  BarrierAfterFlush();
   AvScratchI::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&sei_data_buffer_)) -
                  buffer_offset)
@@ -395,6 +401,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     }
     io_buffer_cache_flush(&frame->buffer, 0, io_buffer_size(&frame->buffer, 0));
 
+    BarrierAfterFlush();
+
     frame->uv_plane_offset = width * height;
     frame->stride = width;
     frame->width = width;
@@ -460,6 +468,7 @@ void H264Decoder::TryReturnFrames() {
 }
 
 zx_status_t H264Decoder::InitializeStream() {
+  BarrierBeforeRelease();  // For reference_mv_buffer_
   if (io_buffer_is_valid(&reference_mv_buffer_))
     io_buffer_release(&reference_mv_buffer_);
   auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
@@ -504,6 +513,7 @@ zx_status_t H264Decoder::InitializeStream() {
   io_buffer_cache_flush(&reference_mv_buffer_, 0,
                         io_buffer_size(&reference_mv_buffer_, 0));
 
+  BarrierAfterFlush();
   AvScratch1::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&reference_mv_buffer_)))
       .WriteTo(owner_->dosbus());

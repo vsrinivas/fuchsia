@@ -10,6 +10,7 @@
 
 #include "lib/fxl/logging.h"
 #include "macros.h"
+#include "memory_barriers.h"
 
 zx_status_t HevcDec::LoadFirmware(const uint8_t* data, uint32_t size) {
   HevcMpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
@@ -29,6 +30,7 @@ zx_status_t HevcDec::LoadFirmware(const uint8_t* data, uint32_t size) {
   memcpy(io_buffer_virt(&firmware_buffer), data, std::min(size, kFirmwareSize));
   io_buffer_cache_flush(&firmware_buffer, 0, kFirmwareSize);
 
+  BarrierAfterFlush();
   HevcImemDmaAdr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&firmware_buffer)))
       .WriteTo(mmio()->dosbus);
@@ -42,10 +44,13 @@ zx_status_t HevcDec::LoadFirmware(const uint8_t* data, uint32_t size) {
                 0x8000) == 0;
       })) {
     DECODE_ERROR("Failed to load microcode.");
+
+    BarrierBeforeRelease();
     io_buffer_release(&firmware_buffer);
     return ZX_ERR_TIMED_OUT;
   }
 
+  BarrierBeforeRelease();
   io_buffer_release(&firmware_buffer);
   return ZX_OK;
 }
@@ -270,6 +275,7 @@ zx_status_t HevcDec::InitializeInputContext(InputContext* context) {
     return status;
   }
   io_buffer_cache_flush(&context->buffer, 0, kInputContextSize);
+  BarrierAfterFlush();
   return status;
 }
 

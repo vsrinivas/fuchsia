@@ -8,6 +8,7 @@
 #include <ddk/io-buffer.h>
 #include <zx/handle.h>
 
+#include "memory_barriers.h"
 #include "registers.h"
 
 struct MmioRegisters {
@@ -19,7 +20,10 @@ struct MmioRegisters {
 };
 
 struct InputContext {
-  ~InputContext() { io_buffer_release(&buffer); }
+  ~InputContext() {
+    BarrierBeforeRelease();
+    io_buffer_release(&buffer);
+  }
 
   io_buffer_t buffer = {};
 

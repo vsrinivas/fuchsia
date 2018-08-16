@@ -28,6 +28,7 @@
 #include "device_fidl.h"
 #include "local_codec_factory.h"
 #include "macros.h"
+#include "memory_barriers.h"
 #include "mpeg12_decoder.h"
 #include "pts_manager.h"
 #include "registers.h"
@@ -342,6 +343,8 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   memcpy(io_buffer_virt(&input_file), data, len);
   io_buffer_cache_flush(&input_file, 0, len);
 
+  BarrierAfterFlush();
+
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&input_file)))
       .WriteTo(parser_.get());
@@ -368,6 +371,7 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   if (status != ZX_OK) {
     DECODE_ERROR("Parser timed out\n");
     ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
+    BarrierBeforeRelease();
     // TODO(dustingreen): Evaluate whether it's safe to immediately do this
     // io_buffer_release().  If the ParserFetchCmd write of 0 just above
     // guarantees the HW will immediately stop reading input data from the
@@ -378,6 +382,7 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
     io_buffer_release(&input_file);
     return ZX_ERR_TIMED_OUT;
   }
+  BarrierBeforeRelease();
   io_buffer_release(&input_file);
 
   return ZX_OK;
@@ -429,6 +434,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(void* data, uint32_t len,
     len -= write_length;
     input_offset += write_length;
   }
+  BarrierAfterFlush();
   core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
                             write_offset);
   return ZX_OK;

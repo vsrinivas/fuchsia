@@ -6,6 +6,7 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
+#include "memory_barriers.h"
 
 using MregSeqInfo = AvScratch4;
 using MregPicInfo = AvScratch5;
@@ -35,6 +36,8 @@ using MregFatalError = AvScratchF;
 Mpeg12Decoder::~Mpeg12Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
+
+  BarrierBeforeRelease();
   io_buffer_release(&workspace_buffer_);
   for (auto& frame : video_frames_) {
     owner_->FreeCanvas(std::move(frame.y_canvas));
@@ -104,6 +107,8 @@ zx_status_t Mpeg12Decoder::Initialize() {
     return status;
   }
   io_buffer_cache_flush(&workspace_buffer_, 0, kWorkspaceSize);
+
+  BarrierAfterFlush();
 
   // The first part of the workspace buffer is used for the CC buffer, which
   // stores metadata that was encoded in the stream.
@@ -232,5 +237,6 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     video_frames_.push_back(
         {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
   }
+  BarrierAfterFlush();
   return ZX_OK;
 }
