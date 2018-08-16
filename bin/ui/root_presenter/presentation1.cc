@@ -438,9 +438,20 @@ bool Presentation1::ApplyDisplayModelChangesHelper(bool print_log) {
                 << metrics_height;
   }
 
-  // Apply device pixel ratio.
-  scene_.SetScale(display_metrics_.y_scale_in_px_per_pp(),
-                  display_metrics_.x_scale_in_px_per_pp(), 1.f);
+  // Device pixel scale.
+  {
+    float metrics_scale_x = display_metrics_.x_scale_in_px_per_pp();
+    float metrics_scale_y = display_metrics_.y_scale_in_px_per_pp();
+
+    // Swap metrics on left/right tilt.
+    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+      std::swap(metrics_scale_x, metrics_scale_y);
+    }
+
+    scene_.SetScale(metrics_scale_x, metrics_scale_y, 1.f);
+    FXL_VLOG(2) << "DisplayModel pixel scale: " << metrics_scale_x << ", "
+                << metrics_scale_y;
+  }
 
   // Anchor
   {
@@ -674,12 +685,11 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
         }
       }
 
+      glm::vec2 rotated_point =
+          display_rotater_.RotatePointerCoordinates(this, pointer.x, pointer.y);
       for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
         fuchsia::ui::input::PointerEvent clone;
         fidl::Clone(pointer, &clone);
-
-        glm::vec2 rotated_point =
-            display_rotater_.RotatePointerCoordinates(this, clone.x, clone.y);
         clone.x = rotated_point.x;
         clone.y = rotated_point.y;
 

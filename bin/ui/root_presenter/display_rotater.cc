@@ -74,15 +74,38 @@ bool DisplayRotater::UpdateAnimation(Presentation* p,
 
 glm::vec2 DisplayRotater::RotatePointerCoordinates(Presentation* p, float x,
                                                    float y) {
-  glm::vec4 pointer_coords(x, y, 0.f, 1.f);
+  // TODO(SCN-911): This math is messy and hard to understand. Instead, we
+  // should just walk down the layer and scene graph and apply transformations.
+  // On the other hand, this method is only used when capturing touch events,
+  // which is something we intend to deprecate anyway.
 
-  float width = p->display_info().width_in_px;
-  float height = p->display_info().height_in_px;
+  const float anchor_w = p->actual_display_info().width_in_px / 2;
+  const float anchor_h = p->actual_display_info().height_in_px / 2;
+  const int32_t startup_rotation = p->display_startup_rotation_adjustment();
+  const float current_rotation = p->display_rotation_current();
+  const float rotation = current_rotation - startup_rotation;
+
+  glm::vec4 pointer_coords(x, y, 0.f, 1.f);
   glm::vec4 rotated_coords =
-      glm::translate(glm::vec3(width / 2, height / 2, 0)) *
-      glm::rotate(glm::radians<float>(p->display_rotation_current()),
-                  glm::vec3(0, 0, 1)) *
-      glm::translate(glm::vec3(-width / 2, -height / 2, 0)) * pointer_coords;
+      glm::translate(glm::vec3(anchor_w, anchor_h, 0)) *
+      glm::rotate(glm::radians<float>(rotation), glm::vec3(0, 0, 1)) *
+      glm::translate(glm::vec3(-anchor_w, -anchor_h, 0)) * pointer_coords;
+
+  if (abs(startup_rotation) % 180 == 90) {
+    // If the aspect ratio is flipped, the origin needs to be adjusted too.
+    float adjust_origin = (p->simulated_display_metrics().width_in_px() -
+                           p->simulated_display_metrics().height_in_px()) /
+                          2;
+    rotated_coords =
+        glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) *
+        rotated_coords;
+  }
+
+  FXL_VLOG(2) << "Pointer coordinates rotated [" << rotation << "="
+              << current_rotation << "-" << startup_rotation << "]: ("
+              << pointer_coords.x << ", " << pointer_coords.y << ")->("
+              << rotated_coords.x << ", " << rotated_coords.y << ").";
+
   return glm::vec2(rotated_coords.x, rotated_coords.y);
 }
 

@@ -43,7 +43,8 @@ constexpr float kCursorElevation = 800;
 Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
                              scenic::Session* session,
                              zx::eventpair view_holder_token,
-                             RendererParams renderer_params)
+                             RendererParams renderer_params,
+                             int32_t display_startup_rotation_adjustment)
     : scenic_(scenic),
       session_(session),
       layer_(session_),
@@ -59,6 +60,7 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
       renderer_params_override_(renderer_params),
+      display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       weak_factory_(this) {
   renderer_.SetCamera(camera_);
@@ -109,6 +111,10 @@ void Presentation2::OverrideRendererParams(RendererParams renderer_params,
   if (present_changes) {
     PresentScene();
   }
+
+  FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
+      << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
+      << display_startup_rotation_adjustment_;
 }
 
 Presentation2::~Presentation2() {}
@@ -330,39 +336,91 @@ bool Presentation2::ApplyDisplayModelChangesHelper(bool print_log) {
   display_metrics_ = metrics;
   display_rotation_current_ = display_rotation_desired_;
 
-  view_holder_.SetViewProperties(0.f, 0.f, 0.f, display_metrics_.width_in_pp(),
-                                 display_metrics_.height_in_pp(), 1000.f, 0.f,
-                                 0.f, 0.f, 0.f, 0.f, 0.f);
+  // Layout size
+  {
+    float metrics_width = display_metrics_.width_in_pp();
+    float metrics_height = display_metrics_.height_in_pp();
 
-  // Apply device pixel ratio.
-  scene_.SetScale(display_metrics_.x_scale_in_px_per_pp(),
-                  display_metrics_.y_scale_in_px_per_pp(), 1.f);
+    // Swap metrics on left/right tilt.
+    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+      std::swap(metrics_width, metrics_height);
+    }
 
-  // Apply rotation.
-  float anchor_x = display_metrics_.width_in_pp() / 2;
-  float anchor_y = display_metrics_.height_in_pp() / 2;
+    view_holder_.SetViewProperties(0.f, 0.f, 0.f, metrics_width, metrics_height,
+                                   1000.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    FXL_VLOG(2) << "DisplayModel layout: " << metrics_width << ", "
+                << metrics_height;
+  }
 
-  view_holder_node_.SetAnchor(anchor_x, anchor_y, 0);
+  // Device pixel scale.
+  {
+    float metrics_scale_x = display_metrics_.x_scale_in_px_per_pp();
+    float metrics_scale_y = display_metrics_.y_scale_in_px_per_pp();
 
-  glm::quat display_rotation = glm::quat(
-      glm::vec3(0, 0, glm::radians<float>(display_rotation_current_)));
-  view_holder_node_.SetRotation(display_rotation.x, display_rotation.y,
-                                display_rotation.z, display_rotation.w);
+    // Swap metrics on left/right tilt.
+    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+      std::swap(metrics_scale_x, metrics_scale_y);
+    }
+
+    scene_.SetScale(metrics_scale_x, metrics_scale_y, 1.f);
+    FXL_VLOG(2) << "DisplayModel pixel scale: " << metrics_scale_x << ", "
+                << metrics_scale_y;
+  }
+
+  // Anchor
+  {
+    float anchor_x = display_metrics_.width_in_pp() / 2;
+    float anchor_y = display_metrics_.height_in_pp() / 2;
+
+    // Swap anchors on left/right tilt.
+    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+      std::swap(anchor_x, anchor_y);
+    }
+
+    view_holder_node_.SetAnchor(anchor_x, anchor_y, 0);
+    FXL_VLOG(2) << "DisplayModel anchor: " << anchor_x << ", " << anchor_y;
+  }
+
+  // Rotate
+  {
+    glm::quat display_rotation = glm::quat(
+        glm::vec3(0, 0,
+                  glm::radians<float>(display_rotation_current_ +
+                                      display_startup_rotation_adjustment_)));
+    view_holder_node_.SetRotation(display_rotation.x, display_rotation.y,
+                                  display_rotation.z, display_rotation.w);
+  }
+
+  const DisplayModel::DisplayInfo& display_info =
+      display_model_actual_.display_info();
 
   // Center everything.
-  float left_offset = (display_model_actual_.display_info().width_in_px -
-                       display_metrics_.width_in_px()) /
-                      2;
-  float top_offset = (display_model_actual_.display_info().height_in_px -
-                      display_metrics_.height_in_px()) /
-                     2;
-  view_holder_node_.SetTranslation(
-      left_offset / display_metrics_.x_scale_in_px_per_pp(),
-      top_offset / display_metrics_.y_scale_in_px_per_pp(), 0.f);
+  {
+    float info_w = display_info.width_in_px;
+    float info_h = display_info.height_in_px;
+    float metrics_w = display_metrics_.width_in_px();
+    float metrics_h = display_metrics_.height_in_px();
+    float density_w = display_metrics_.x_scale_in_px_per_pp();
+    float density_h = display_metrics_.y_scale_in_px_per_pp();
 
-  layer_.SetSize(
-      static_cast<float>(display_model_actual_.display_info().width_in_px),
-      static_cast<float>(display_model_actual_.display_info().height_in_px));
+    // Swap metrics on left/right tilt.
+    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+      std::swap(metrics_w, metrics_h);
+      std::swap(density_w, density_h);
+    }
+
+    float left_offset = (info_w - metrics_w) / density_w / 2;
+    float top_offset = (info_h - metrics_h) / density_h / 2;
+
+    view_holder_node_.SetTranslation(left_offset, top_offset, 0.f);
+    FXL_VLOG(2) << "DisplayModel translation: " << left_offset << ", "
+                << top_offset;
+  }
+
+  // Today, a layer needs the display's physical dimensions to render correctly.
+  layer_.SetSize(static_cast<float>(display_info.width_in_px),
+                 static_cast<float>(display_info.height_in_px));
+
   return true;
 }
 
@@ -541,12 +599,12 @@ void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
         }
       }
 
+      glm::vec2 rotated_point =
+          display_rotater_.RotatePointerCoordinates(this, pointer.x, pointer.y);
       for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
         fuchsia::ui::input::PointerEvent clone;
         fidl::Clone(pointer, &clone);
 
-        glm::vec2 rotated_point =
-            display_rotater_.RotatePointerCoordinates(this, clone.x, clone.y);
         clone.x = rotated_point.x;
         clone.y = rotated_point.y;
 

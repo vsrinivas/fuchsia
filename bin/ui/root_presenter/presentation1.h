@@ -111,11 +111,15 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
     return display_rotation_current_;
   }
 
-  const DisplayModel::DisplayInfo& display_info() override {
+  int32_t display_startup_rotation_adjustment() const override {
+    return display_startup_rotation_adjustment_;
+  }
+
+  const DisplayModel::DisplayInfo& actual_display_info() override {
     return display_model_actual_.display_info();
   }
 
-  const DisplayMetrics& display_metrics() const override {
+  const DisplayMetrics& simulated_display_metrics() const override {
     return display_metrics_;
   };
 

@@ -64,8 +64,8 @@ namespace root_presenter {
 class Presentation2 : public Presentation {
  public:
   Presentation2(fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
-                zx::eventpair view_holder_token,
-                RendererParams renderer_params);
+                zx::eventpair view_holder_token, RendererParams renderer_params,
+                int32_t display_startup_rotation_adjustment);
 
   ~Presentation2() override;
 
@@ -94,14 +94,20 @@ class Presentation2 : public Presentation {
   void set_display_rotation_desired(float display_rotation) override {
     display_rotation_desired_ = display_rotation;
   }
+
   float display_rotation_current() const override {
     return display_rotation_current_;
   }
-  const DisplayModel::DisplayInfo& display_info() override {
+
+  int32_t display_startup_rotation_adjustment() const override {
+    return display_startup_rotation_adjustment_;
+  }
+
+  const DisplayModel::DisplayInfo& actual_display_info() override {
     return display_model_actual_.display_info();
   }
 
-  const DisplayMetrics& display_metrics() const override {
+  const DisplayMetrics& simulated_display_metrics() const override {
     return display_metrics_;
   };
 
@@ -240,6 +246,14 @@ class Presentation2 : public Presentation {
   // Expressed in degrees.
   float display_rotation_desired_ = 0.f;
   float display_rotation_current_ = 0.f;
+
+  // At startup, apply a rotation defined in 90 degree increments, just once.
+  // Implies resizing of the presentation to adjust to rotated coordinates.
+  // Valid values are ... -180, -90, 0, 90, 180, ...
+  //
+  // Used when the native display orientation is reported incorrectly.
+  // TODO(SCN-857) - Make this less of a hack.
+  int32_t display_startup_rotation_adjustment_;
 
   ::fuchsia::ui::viewsv1::ViewPtr root_view_;
 

@@ -41,9 +41,10 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   virtual float display_rotation_desired() const = 0;
   virtual void set_display_rotation_desired(float display_rotation) = 0;
   virtual float display_rotation_current() const = 0;
-  virtual const DisplayModel::DisplayInfo& display_info() = 0;
+  virtual int32_t display_startup_rotation_adjustment() const = 0;
+  virtual const DisplayModel::DisplayInfo& actual_display_info() = 0;
 
-  virtual const DisplayMetrics& display_metrics() const = 0;
+  virtual const DisplayMetrics& simulated_display_metrics() const = 0;
 
   virtual scenic::Camera* camera() = 0;
 

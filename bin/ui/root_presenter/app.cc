@@ -82,6 +82,7 @@ void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
                       presentation_request) {
   InitializeServices();
 
+  // Duplication intentional, this copy will go away soon.
   int32_t display_startup_rotation_adjustment = 0;
   {
     std::string rotation_value;
@@ -109,9 +110,20 @@ void App::PresentView(
         presentation_request) {
   InitializeServices();
 
+  int32_t display_startup_rotation_adjustment = 0;
+  {
+    std::string rotation_value;
+    if (files::ReadFileToString("/system/data/root_presenter/display_rotation",
+                                &rotation_value)) {
+      display_startup_rotation_adjustment = atoi(rotation_value.c_str());
+      FXL_LOG(INFO) << "Display rotation adjustment applied: "
+                    << display_startup_rotation_adjustment << " degrees.";
+    }
+  }
+
   auto presentation = std::make_unique<Presentation2>(
       scenic_.get(), session_.get(), std::move(view_holder_token),
-      renderer_params_);
+      renderer_params_, display_startup_rotation_adjustment);
   presentation->PresentView(std::move(presentation_request), GetYieldCallback(),
                             GetShutdownCallback(presentation.get()));
   AddPresentation(std::move(presentation));
