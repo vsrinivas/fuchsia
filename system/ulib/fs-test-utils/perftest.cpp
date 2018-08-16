@@ -155,8 +155,8 @@ bool HasEnoughSpace(const fbl::String& block_device_path, size_t required_space)
     return true;
 }
 
-void RunTest(const fbl::String& test_case_name, const TestInfo& test, uint32_t sample_count,
-             bool skip, Fixture* fixture, perftest::ResultsSet* result_set, TestStats* stats,
+void RunTest(const TestInfo& test, uint32_t sample_count, bool skip,
+             Fixture* fixture, perftest::ResultsSet* result_set, TestStats* stats,
              FILE* out) {
     zx::ticks test_start = zx::ticks::now();
     PrintTestStart(test.name, out);
@@ -173,7 +173,8 @@ void RunTest(const fbl::String& test_case_name, const TestInfo& test, uint32_t s
     };
 
     srand(fixture->options().seed);
-    bool failed = !perftest::RunTest(test_case_name.c_str(), test.name.c_str(), test_wrapper,
+    constexpr char kTestSuite[] = "fuchsia.zircon";
+    bool failed = !perftest::RunTest(kTestSuite, test.name.c_str(), test_wrapper,
                                      sample_count, result_set, &error);
     if (failed) {
         // Log if the error is from the perftest lib.
@@ -213,7 +214,7 @@ void RunTestCase(const FixtureOptions& fixture_options,
         if (actual_sample_count == 0 || performance_test_options.is_unittest) {
             actual_sample_count = performance_test_options.sample_count;
         }
-        RunTest(test_case.name, test, actual_sample_count, skip_tests, &fixture, result_set,
+        RunTest(test, actual_sample_count, skip_tests, &fixture, result_set,
                 global_stats, out);
         if (test_case.teardown) {
             fixture.TearDown();
