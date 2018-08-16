@@ -876,7 +876,7 @@ zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleEthFrame(EthFrame&& frame) {
+zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     debugfn();
 
     // For now, drop outgoing data frames if we are off channel
@@ -891,64 +891,49 @@ zx_status_t Station::HandleEthFrame(EthFrame&& frame) {
     if (!associated) { debugf("dropping eth packet while not associated\n"); }
     if (!bss_setup || !associated) { return ZX_OK; }
 
-    auto eth = frame.hdr();
-    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len();
+    auto eth_hdr = eth_frame.hdr();
+    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + eth_frame.body_len();
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    wlan_tx_info_t txinfo = {
-        // TODO(porce): Determine PHY and CBW based on the association negotiation.
-        .tx_flags = 0x0,
-        .valid_fields =
-            WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
-        .phy = WLAN_PHY_HT,
-        .cbw = CBW20,
-        //.date_rate = 0x0,
-        .mcs = 0x7,
-    };
-
-    auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
     // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
     // the payload
-    wlan_packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = wlan_packet->mut_field<DataFrameHeader>(0);
+    packet->set_peer(Packet::Peer::kWlan);
 
-    bool has_qos_ctrl = IsQosReady();
-    bool has_ht_ctrl = false;
+    bool needs_protection = !bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
+    DataFrame<LlcHeader> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+
     // Set header
-    std::memset(hdr, 0, kDataFrameHdrLenMax);
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_subtype(has_qos_ctrl ? DataSubtype::kQosdata : DataSubtype::kDataSubtype);
-    hdr->fc.set_to_ds(1);
-    hdr->fc.set_from_ds(0);
-    hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
-
-    // Ensure all outgoing data frames are protected when RSNA is established.
-    if (!bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen) {
-        hdr->fc.set_protected_frame(1);
-        txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
-    }
-
-    hdr->addr1 = common::MacAddr(bss_->bssid.data());
-    hdr->addr2 = eth->src;
-    hdr->addr3 = eth->dest;
+    bool has_ht_ctrl = false;
+    std::memset(data_hdr, 0, kDataFrameHdrLenMax);
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(IsQosReady() ? DataSubtype::kQosdata : DataSubtype::kDataSubtype);
+    data_hdr->fc.set_to_ds(1);
+    data_hdr->fc.set_from_ds(0);
+    data_hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
+    data_hdr->addr1 = common::MacAddr(bss_->bssid.data());
+    data_hdr->addr2 = eth_hdr->src;
+    data_hdr->addr3 = eth_hdr->dest;
+    data_hdr->fc.set_protected_frame(needs_protection);
 
     // TODO(porce): Construct addr4 field
 
-    if (IsCbw40TxReady()) {
-        // Ralink appears to setup BlockAck session AND AMPDU handling
-        // TODO(porce): Use a separate sequence number space in that case
-        if (hdr->addr3.IsUcast()) {
-            // 40MHz direction does not matter here.
-            // Radio uses the operational channel setting. This indicates the bandwidth without
-            // direction.
-            txinfo.cbw = CBW40;
-        }
+    // Ralink appears to setup BlockAck session AND AMPDU handling
+    // TODO(porce): Use a separate sequence number space in that case
+    if (IsCbw40TxReady() && data_hdr->addr3.IsUcast()) {
+        // 40MHz direction does not matter here.
+        // Radio uses the operational channel setting. This indicates the bandwidth without
+        // direction.
+        data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
+    } else {
+        data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
     }
 
-    if (hdr->HasQosCtrl()) {  // QoS Control field
-        auto qos_ctrl = hdr->qos_ctrl();
-        qos_ctrl->set_tid(GetTid(frame));
+    if (data_hdr->HasQosCtrl()) {  // QoS Control field
+        auto qos_ctrl = data_hdr->qos_ctrl();
+        qos_ctrl->set_tid(GetTid(eth_frame));
         qos_ctrl->set_eosp(0);
         qos_ctrl->set_ack_policy(ack_policy::kNormalAck);
 
@@ -959,33 +944,32 @@ zx_status_t Station::HandleEthFrame(EthFrame&& frame) {
 
     // TODO(porce): Construct htc_order field
 
-    SetSeqNo(hdr, &seq_);
+    SetSeqNo(data_hdr, &seq_);
 
-    auto llc = wlan_packet->mut_field<LlcHeader>(hdr->len());
-    llc->dsap = kLlcSnapExtension;
-    llc->ssap = kLlcSnapExtension;
-    llc->control = kLlcUnnumberedInformation;
-    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
-    llc->protocol_id = eth->ether_type;
+    auto llc_hdr = data_frame.body();
+    llc_hdr->dsap = kLlcSnapExtension;
+    llc_hdr->ssap = kLlcSnapExtension;
+    llc_hdr->control = kLlcUnnumberedInformation;
+    std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
+    llc_hdr->protocol_id = eth_hdr->ether_type;
+    std::memcpy(llc_hdr->payload, eth_hdr->payload, eth_frame.body_len());
 
-    std::memcpy(llc->payload, eth->payload, frame.body_len());
-
-    auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len();
-    auto status = wlan_packet->set_len(frame_len);
+    size_t actual_body_len = llc_hdr->len() + eth_frame.body_len();
+    auto status = data_frame.set_body_len(actual_body_len);
     if (status != ZX_OK) {
-        errorf("could not set data frame length to %zu: %d\n", frame_len, status);
+        errorf("could not set data frame's body length to %zu: %d\n", actual_body_len, status);
         return status;
     }
 
-    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu frame_len:%zu\n",
-             wlan_packet->len(), hdr->len(), frame.body_len(), frame_len);
-    finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-    finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    finspect("  frame   : %s\n", debug::HexDump(wlan_packet->data(), frame_len).c_str());
+    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu\n",
+             data_frame.len(), data_frame.hdr()->len(), data_frame.body_len());
+    finspect("  wlan hdr: %s\n", debug::Describe(*data_frame.hdr()).c_str());
+    finspect("  llc  hdr: %s\n", debug::Describe(*data_frame.body()).c_str());
 
-    wlan_packet->CopyCtrlFrom(txinfo);
+    packet = data_frame.Take();
+    finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
-    status = device_->SendWlan(std::move(wlan_packet));
+    status = device_->SendWlan(fbl::move(packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
 }
@@ -1137,6 +1121,8 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     hdr->addr3.Set(req.body()->dst_addr.data());
 
     SetSeqNo(hdr, &seq_);
+
+    // TODO(NET-1332): Protect EAPOL frame and configure tx_info.
 
     auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
     llc->dsap = kLlcSnapExtension;

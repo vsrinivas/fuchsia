@@ -251,26 +251,32 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     size_t len() const { return View().len(); }
 
-    zx_status_t FillTxInfo() {
+    zx_status_t FillTxInfo(uint8_t cbw = CBW20, uint16_t phy = WLAN_PHY_OFDM) {
         static_assert(is_mac_hdr<Header>::value, "only MAC frame can carry tx_info");
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
         wlan_tx_info_t txinfo = {
-            // Outgoing management frame
             .tx_flags = 0x0,
-            .valid_fields = WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH,
-            .phy = WLAN_PHY_OFDM,  // Always
-            .cbw = CBW20,          // Use CBW20 always
+            .valid_fields = WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
+            .phy = phy,
+            .cbw = cbw,
         };
 
         // TODO(porce): Implement rate selection.
         auto fc = pkt_->field<FrameControl>(0);
-        switch (fc->subtype()) {
+        switch (fc->type()) {
+        // Outgoing data frames.
+        case FrameType::kData:
+            txinfo.mcs = 0x7;
+            break;
+        // Outgoing management and control frames.
         default:
-            txinfo.valid_fields |= WLAN_TX_INFO_VALID_MCS;
-            // txinfo.data_rate = 12;  // 6 Mbps, one of the basic rates.
             txinfo.mcs = 0x3;  // TODO(NET-645): Choose an optimal MCS
             break;
+        }
+
+        if (fc->protected_frame()) {
+            txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
         }
 
         pkt_->CopyCtrlFrom(txinfo);
