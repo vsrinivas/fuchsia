@@ -15,35 +15,14 @@ constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
 }  // namespace
 
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
-    : loader_vfs_(dispatcher),
-      loader_dir_(fbl::AdoptRef(new fs::PseudoDir())),
-      publish_vfs_(dispatcher),
+    : publish_vfs_(dispatcher),
       publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
       sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
       sysmgr_permanently_failed_(false) {
-  // 1. Serve loader.
-  loader_dir_->AddEntry(
-      fuchsia::sys::Loader::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        root_loader_.AddBinding(
-            fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
-        return ZX_OK;
-      })));
-
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0) {
-    FXL_LOG(FATAL) << "Appmgr unable to create channel.";
-    return;
-  }
-
-  if (loader_vfs_.ServeDirectory(loader_dir_, std::move(h2)) != ZX_OK) {
-    FXL_LOG(FATAL) << "Appmgr unable to serve directory.";
-    return;
-  }
-
-  RealmArgs realm_args{nullptr, std::move(h1), kRootLabel,
+  // 1. Create root realm.
+  RealmArgs realm_args{nullptr, zx::channel(), kRootLabel,
                        args.run_virtual_console};
   root_realm_ = std::make_unique<Realm>(std::move(realm_args));
 

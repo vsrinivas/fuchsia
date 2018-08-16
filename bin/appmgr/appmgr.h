@@ -30,10 +30,6 @@ class Appmgr {
   ~Appmgr();
 
  private:
-  fs::SynchronousVfs loader_vfs_;
-  RootLoader root_loader_;
-  fbl::RefPtr<fs::PseudoDir> loader_dir_;
-
   std::unique_ptr<Realm> root_realm_;
   fs::SynchronousVfs publish_vfs_;
   fbl::RefPtr<fs::PseudoDir> publish_dir_;

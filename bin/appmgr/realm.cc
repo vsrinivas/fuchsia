@@ -203,6 +203,18 @@ Realm::Realm(RealmArgs args)
     return ZX_OK;
   })));
 
+  if (!parent_) {
+    // Set up Loader service for root realm.
+    root_loader_.reset(new RootLoader);
+    default_namespace_->services()->AddService(
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          root_loader_->AddBinding(
+              fidl::InterfaceRequest<fuchsia::sys::Loader>(
+                  std::move(channel)));
+          return ZX_OK;
+        })),
+        fuchsia::sys::Loader::Name_);
+  }
   default_namespace_->services()->set_backing_dir(
       std::move(args.host_directory));
 
