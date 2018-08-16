@@ -12,6 +12,7 @@ extern crate crypto;
 extern crate eapol;
 #[macro_use] extern crate failure;
 extern crate hex;
+extern crate mundane;
 #[macro_use] extern crate nom;
 extern crate num;
 extern crate rand;
