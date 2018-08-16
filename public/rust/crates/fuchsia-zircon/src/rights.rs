@@ -36,5 +36,11 @@ bitflags! {
         const MANAGE_THREAD  = sys::ZX_RIGHT_MANAGE_THREAD;
         const APPLY_PROFILE  = sys::ZX_RIGHT_APPLY_PROFILE;
         const SAME_RIGHTS    = sys::ZX_RIGHT_SAME_RIGHTS;
+
+        const BASIC          = sys::ZX_RIGHT_TRANSFER | sys::ZX_RIGHT_DUPLICATE |
+                               sys::ZX_RIGHT_WAIT | sys::ZX_RIGHT_INSPECT;
+        const IO             = sys::ZX_RIGHT_READ | sys::ZX_RIGHT_WRITE;
+        const PROPERTY       = sys::ZX_RIGHT_GET_PROPERTY | sys::ZX_RIGHT_SET_PROPERTY;
+        const POLICY         = sys::ZX_RIGHT_GET_POLICY | sys::ZX_RIGHT_SET_POLICY;
     }
 }

@@ -198,6 +198,16 @@ pub fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> r
     make_ioctl!(kind, family, number)
 }
 
+pub fn get_vmo_copy_from_file(file: &File) -> Result<zircon::Vmo, zircon::Status> {
+    unsafe {
+        let mut vmo_handle: zircon::sys::zx_handle_t = zircon::sys::ZX_HANDLE_INVALID;
+        match fdio_sys::fdio_get_vmo_copy(file.as_raw_fd(), &mut vmo_handle) {
+            0 => Ok(zircon::Vmo::from(zircon::Handle::from_raw(vmo_handle))),
+            error_code => Err(zircon::Status::from_raw(error_code))
+        }
+    }
+}
+
 pub const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
