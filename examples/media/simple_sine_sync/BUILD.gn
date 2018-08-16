@@ -13,6 +13,7 @@ executable("simple_sine_sync") {
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",
   ]
 }

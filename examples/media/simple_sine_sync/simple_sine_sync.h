@@ -7,12 +7,13 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include "lib/component/cpp/startup_context.h"
 
 namespace examples {
 
 class MediaApp {
  public:
-  MediaApp();
+  MediaApp(std::unique_ptr<component::StartupContext> context);
   ~MediaApp();
 
   void set_verbose(bool verbose) { verbose_ = verbose; }
@@ -43,6 +44,7 @@ class MediaApp {
 
   fuchsia::media::AudioOutSyncPtr audio_renderer_;
 
+  std::unique_ptr<component::StartupContext> context_;
   fzl::VmoMapper payload_buffer_;
   size_t sample_size_;
   size_t payload_size_;

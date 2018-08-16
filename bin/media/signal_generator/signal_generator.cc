@@ -8,8 +8,6 @@
 #include <lib/async/default.h>
 #include <zircon/syscalls.h>
 
-// #include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -164,7 +162,7 @@ bool MediaApp::SetupPayloadCoefficients() {
 void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
   // The Audio interface is needed only long enough to create the renderer(s).
   fuchsia::media::AudioSyncPtr audio;
-  component::ConnectToEnvironmentService(audio.NewRequest());
+  app_context->ConnectToEnvironmentService(audio.NewRequest());
 
   if (set_system_gain_) {
     audio->SetSystemGain(system_gain_db_);

@@ -8,7 +8,7 @@
 #include <math.h>
 #include <zircon/syscalls.h>
 
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -37,7 +37,8 @@ constexpr size_t kNumPacketsToSend =
 
 namespace examples {
 
-MediaApp::MediaApp() {}
+MediaApp::MediaApp(std::unique_ptr<component::StartupContext> context)
+    : context_(std::move(context)) {}
 MediaApp::~MediaApp() {}
 
 // Prepare for playback, compute playback data, supply media packets, start.
@@ -132,7 +133,7 @@ int MediaApp::Run() {
 // Connect to the Audio service and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
   fuchsia::media::AudioSyncPtr audio;
-  component::ConnectToEnvironmentService(audio.NewRequest());
+  context_->ConnectToEnvironmentService(audio.NewRequest());
   return audio->CreateAudioOut(audio_renderer_.NewRequest()) == ZX_OK;
 }
 

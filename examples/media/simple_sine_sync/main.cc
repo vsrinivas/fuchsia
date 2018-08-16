@@ -4,7 +4,10 @@
 
 #include <iostream>
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
@@ -21,8 +24,10 @@ constexpr char kFloatFormatSwitch[] = "float";
 
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
-  examples::MediaApp media_app;
+  // loop is needed by StartupContext.
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  examples::MediaApp media_app(
+      component::StartupContext::CreateFromStartupInfoNotChecked());
 
   if (command_line.HasOption("v") || command_line.HasOption("verbose")) {
     media_app.set_verbose(true);
