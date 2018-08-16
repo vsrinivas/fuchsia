@@ -35,6 +35,9 @@ template("sdk") {
   generation_target_name = "${target_name}_molecule"
   copy_target_name = "${target_name}_copy"
   verification_target_name = "${target_name}_verify"
+  meta_target_name = "${target_name}_meta"
+  archive_manifest_target_name = "${target_name}_archive_manifest"
+  archive_target_name = "${target_name}_archive"
 
   if (!is_fuchsia) {
     assert(false, "SDKs can only target Fuchsia")
@@ -69,6 +72,7 @@ template("sdk") {
 
     category = invoker.category
 
+    # TODO(DX-340): this attribute should not be needed anymore.
     metadata = [
       {
         key = "target-arch"
@@ -133,12 +137,106 @@ template("sdk") {
     ]
   }
 
+  sdk_meta_file = "$target_gen_dir/$sdk_name.sdk_meta.json"
+
+  # Generates a metadata file describing the various parts of the SDK.
+  action(meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    script = "//build/sdk/generate_meta.py"
+
+    inputs = [
+      final_manifest_file,
+    ]
+
+    outputs = [
+      sdk_meta_file,
+    ]
+
+    args = [
+      "--manifest",
+      rebase_path(final_manifest_file),
+      "--meta",
+      rebase_path(sdk_meta_file),
+      "--target-arch",
+      target_triple,
+      "--host-arch",
+      host_triple,
+    ]
+
+    deps = [
+      ":$copy_target_name",
+    ]
+  }
+
+  archive_manifest_file = "$target_gen_dir/$sdk_name.archive_manifest"
+
+  # From the manifest file representing the SDK, generates a list of the files
+  # going into the final archive.
+  action(archive_manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    script = "//build/sdk/generate_archive_manifest.py"
+
+    inputs = [
+      final_manifest_file,
+      sdk_meta_file,
+    ]
+
+    outputs = [
+      archive_manifest_file,
+    ]
+
+    args = [
+      "--manifest",
+      rebase_path(final_manifest_file),
+      "--output",
+      rebase_path(archive_manifest_file),
+      "--meta",
+      rebase_path(sdk_meta_file),
+    ]
+
+    deps = [
+      ":$copy_target_name",
+      ":$meta_target_name",
+    ]
+  }
+
+  final_archive = "$root_out_dir/sdk/$sdk_name.tar.gz"
+
+  # Generates the final archive.
+  compiled_action(archive_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    tool = "//build/tools/tar_maker"
+
+    inputs = [
+      archive_manifest_file,
+    ]
+
+    outputs = [
+      final_archive,
+    ]
+
+    args = [
+      "-manifest",
+      rebase_path(archive_manifest_file),
+      "-output",
+      rebase_path(final_archive),
+    ]
+
+    deps = [
+      ":$archive_manifest_target_name",
+      ":$copy_target_name",
+    ]
+  }
+
   group(main_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     deps = [
+      ":$archive_target_name",
       ":$copy_target_name",
-      ":$generation_target_name",
       ":$verification_target_name",
     ]
   }

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
+
 # Defines an SDK element.
 #
 # Parameters
@@ -104,8 +106,8 @@
 #
 #   schema (required)
 #     Name of the schema for this file, ignoring the extension.
-#     Metadata files are hosted under //build/sdk/atom_schemas.
-#     If the metadata file conforms to //build/sdk/atom_schemas/foo.json, the
+#     Metadata files are hosted under //build/sdk/meta.
+#     If the metadata file conforms to //build/sdk/meta/foo.json, the
 #     present attribute should have a value of "foo".
 #
 # File scopes
@@ -135,11 +137,6 @@ template("sdk_atom") {
   category = invoker.category
 
   assert(defined(invoker.id), "Must define an SDK ID")
-  not_needed(invoker, ["id"])
-
-  if (defined(invoker.meta)) {
-    not_needed(invoker, ["meta"])
-  }
 
   if (defined(invoker.name)) {
     name_args = [
@@ -184,21 +181,26 @@ template("sdk_atom") {
          "At least one of 'files' and 'file_manifest' must be defined")
   file_mappings = []
   file_inputs = []
+  all_files = []
   if (defined(invoker.files)) {
-    foreach(file, invoker.files) {
-      assert(defined(file.source), "File $file does not specify a source.")
-      file_inputs += [ file.source ]
-      source = rebase_path(file.source)
-      destination = ""
-      if (defined(file.dest)) {
-        destination = file.dest
-      }
-      prefix = "internal"
-      if (defined(file.packaged)) {
-        prefix = "packaged"
-      }
-      file_mappings += [ "$prefix:$destination=$source" ]
+    all_files += invoker.files
+  }
+  if (defined(invoker.meta)) {
+    all_files += [ invoker.meta ]
+  }
+  foreach(file, all_files) {
+    assert(defined(file.source), "File $file does not specify a source.")
+    file_inputs += [ file.source ]
+    source = rebase_path(file.source)
+    destination = ""
+    if (defined(file.dest)) {
+      destination = file.dest
     }
+    prefix = "internal"
+    if (defined(file.packaged)) {
+      prefix = "packaged"
+    }
+    file_mappings += [ "$prefix:$destination=$source" ]
   }
 
   source_dir = "."
@@ -212,6 +214,43 @@ template("sdk_atom") {
   }
 
   full_label = get_label_info(":$target_name", "label_with_toolchain")
+
+  if (defined(invoker.meta)) {
+    # Validate the metadata file.
+    meta_target_name = "${target_name}_meta"
+    meta_content = invoker.meta
+
+    compiled_action(meta_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      tool = "//build/tools/json_validator"
+
+      stamp_file = "$target_gen_dir/$target_name.verified"
+      schema_file = "//build/sdk/meta/${meta_content.schema}.json"
+
+      sources = [
+        # This file is imported by all schemas.
+        "//build/sdk/meta/common.json",
+      ]
+
+      inputs = [
+        meta_content.source,
+        schema_file,
+      ]
+
+      outputs = [
+        stamp_file,
+      ]
+
+      args = [
+        rebase_path(schema_file),
+        rebase_path(meta_content.source),
+        rebase_path(stamp_file),
+      ]
+
+      deps = gn_deps
+    }
+  }
 
   # Builds a manifest representing this element.
   action(target_name) {
@@ -227,6 +266,12 @@ template("sdk_atom") {
 
     public_deps = gn_deps
 
+    if (defined(invoker.meta)) {
+      deps = [
+        ":$meta_target_name",
+      ]
+    }
+
     inputs = dep_manifests + file_inputs + [
                # Imported by the action's script.
                "//build/sdk/sdk_common.py",
@@ -237,6 +282,8 @@ template("sdk_atom") {
     ]
 
     args = name_args + [
+             "--id",
+             invoker.id,
              "--domain",
              domain_name,
              "--out",
@@ -254,6 +301,14 @@ template("sdk_atom") {
       args += [
         "--tags-file",
         rebase_path(invoker.tags_file),
+      ]
+    }
+
+    if (defined(invoker.meta)) {
+      meta = invoker.meta
+      args += [
+        "--meta",
+        meta.dest,
       ]
     }
 

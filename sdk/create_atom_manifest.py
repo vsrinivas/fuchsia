@@ -13,6 +13,9 @@ from sdk_common import Atom, AtomId, detect_category_violations, detect_collisio
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--id',
+                        help='The atom\'s identifier',
+                        required=True)
     parser.add_argument('--domain',
                         help='Name of the domain the element belongs to',
                         required=True)
@@ -51,6 +54,10 @@ def main():
     parser.add_argument('--category',
                         help='Publication level',
                         required=True)
+    parser.add_argument('--meta',
+                        help="Path to the atom's metadata file in the SDK",
+                        default='',
+                        required=False)
     args = parser.parse_args()
 
     if args.name:
@@ -120,6 +127,9 @@ def main():
 
     all_atoms.update([Atom({
         'id': id,
+        # TODO(DX-340): rename this to "id" once domain/name are gone.
+        'identifier': args.id,
+        'meta': args.meta,
         'gn-label': args.gn_label,
         'category': args.category,
         'tags': tags,

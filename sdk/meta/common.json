@@ -1,0 +1,24 @@
+{
+  "definitions": {
+    "file": {
+      "description": "Path to a file from the root of the SDK",
+      "type": "string"
+    },
+    "sdk_element": {
+      "description": "Base type for SDK elements",
+      "type": "object",
+      "properties": {
+        "files": {
+          "description": "The list of files pertaining to the element",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/file"
+          }
+        }
+      },
+      "required": [
+        "files"
+      ]
+    }
+  }
+}

@@ -49,6 +49,8 @@ class Atom(object):
     def __init__(self, json):
         self.json = json
         self.id = AtomId(json['id'])
+        self.identifier = json['identifier']
+        self.metadata = json['meta']
         self.label = json['gn-label']
         self.category = json['category']
         self.deps = map(lambda i: AtomId(i), json['deps'])

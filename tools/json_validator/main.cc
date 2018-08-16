@@ -5,6 +5,7 @@
 #include <libgen.h>
 
 #include <fstream>
+#include <map>
 #include <regex>
 #include <string>
 
@@ -52,6 +53,9 @@ class LocalSchemaProvider : public IRemoteSchemaDocumentProvider {
       return nullptr;
     }
     std::string file_name = matches[matches.size() == 2 ? 1 : 2].str();
+    if (documents_[file_name]) {
+      return documents_[file_name].get();
+    }
     Document schema_document;
     std::string file_path = directory_ + "/" + file_name;
     if (!ReadDocument(file_path, &schema_document)) {
@@ -59,7 +63,8 @@ class LocalSchemaProvider : public IRemoteSchemaDocumentProvider {
       has_errors_ = true;
       return nullptr;
     }
-    return new SchemaDocument(schema_document);
+    documents_[file_name] = std::make_unique<SchemaDocument>(schema_document);
+    return documents_[file_name].get();
   }
 
   // Returns true if some schemas could not be resolved.
@@ -69,6 +74,8 @@ class LocalSchemaProvider : public IRemoteSchemaDocumentProvider {
   }
 
  private:
+  // Map of resolved documents.
+  std::map<std::string, std::unique_ptr<SchemaDocument>> documents_;
   // Base directory for schema paths.
   const std::string directory_;
   // Whether some schema references could not be resolved.

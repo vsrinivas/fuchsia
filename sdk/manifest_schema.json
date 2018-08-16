@@ -62,8 +62,17 @@
           "description": "The atom's unique identifier",
           "$ref": "#/definitions/atomId"
         },
+        "identifier": {
+          "description": "The atom's unique identifier",
+          "type": "string",
+          "pattern": "^sdk://([a-z][a-z0-9-_\\.]+)(/([a-z][a-z0-9-_\\.]+))*$"
+        },
         "gn-label": {
           "description": "Label of the GN target which generated the atom",
+          "type": "string"
+        },
+        "meta": {
+          "description": "Path to the atom's metadata file in the SDK",
           "type": "string"
         },
         "category": {
@@ -124,6 +133,7 @@
         "deps",
         "files",
         "id",
+        "identifier",
         "tags",
         "gn-label",
         "package-deps"
