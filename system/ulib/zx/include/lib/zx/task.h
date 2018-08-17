@@ -23,6 +23,7 @@ public:
 
     task(task&& other) : object<T>(other.release()) {}
 
+    // Deprecated: use resume_from_exception or close the suspend token.
     zx_status_t resume(uint32_t options) const {
         return zx_task_resume(object<T>::get(), options);
     }
@@ -42,6 +43,10 @@ public:
         // to strict aliasing.
         return zx_task_suspend_token(
             object<T>::get(), result->reset_and_get_address());
+    }
+
+    zx_status_t resume_from_exception(const object<port>& port, uint32_t options) {
+        return zx_task_resume_from_exception(object<T>::get(), port.get(), options);
     }
 };
 
