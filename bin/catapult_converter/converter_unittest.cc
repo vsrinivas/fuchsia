@@ -21,6 +21,20 @@ void CheckParseResult(rapidjson::ParseResult parse_result) {
                             << " (offset " << parse_result.Offset() << ")";
 }
 
+void TestConverter(const char* json_input_string, rapidjson::Document* output) {
+  rapidjson::Document input;
+  CheckParseResult(input.Parse(json_input_string));
+
+  ConverterArgs args;
+  // Test a timestamp value that does not fit into a 32-bit int type.
+  args.timestamp = 123004005006;
+  args.masters = "example_masters";
+  args.bots = "example_bots";
+  args.log_url = "https://ci.example.com/build/100";
+  args.use_test_guids = true;
+  Convert(&input, output, &args);
+}
+
 // This function checks that the JSON value |actual| is a number that is
 // approximately equal to |expected|.
 //
@@ -221,21 +235,11 @@ TEST(CatapultConverter, Convert) {
 ]
 )JSON";
 
-  rapidjson::Document input;
-  CheckParseResult(input.Parse(input_str));
-
   rapidjson::Document expected_output;
   CheckParseResult(expected_output.Parse(expected_output_str));
 
   rapidjson::Document output;
-  ConverterArgs args;
-  // Test a timestamp value that does not fit into a 32-bit int type.
-  args.timestamp = 123004005006;
-  args.masters = "example_masters";
-  args.bots = "example_bots";
-  args.log_url = "https://ci.example.com/build/100";
-  args.use_test_guids = true;
-  Convert(&input, &output, &args);
+  TestConverter(input_str, &output);
 
   AssertApproxEqual(&output, &output[5]["running"][1], 0.000105);
   AssertApproxEqual(&output, &output[5]["running"][2], -9.180875);
@@ -279,7 +283,7 @@ TEST(CatapultConverter, ConvertNested) {
         "guid": "dummy_guid_0",
         "type": "GenericSet",
         "values": [
-            4321
+            123004005006
         ]
     },
     {
@@ -302,7 +306,7 @@ TEST(CatapultConverter, ConvertNested) {
         "values": [
             [
                 "Build Log",
-                "https://ci.example.com/build/200"
+                "https://ci.example.com/build/100"
             ]
         ]
     },
@@ -364,20 +368,11 @@ TEST(CatapultConverter, ConvertNested) {
 ]
 )JSON";
 
-  rapidjson::Document input;
-  CheckParseResult(input.Parse(input_str));
-
   rapidjson::Document expected_output;
   CheckParseResult(expected_output.Parse(expected_output_str));
 
   rapidjson::Document output;
-  ConverterArgs args;
-  args.timestamp = 4321;
-  args.masters = "example_masters";
-  args.bots = "example_bots";
-  args.log_url = "https://ci.example.com/build/200";
-  args.use_test_guids = true;
-  Convert(&input, &output, &args);
+  TestConverter(input_str, &output);
 
   AssertApproxEqual(&output, &output[5]["running"][1], 0.0002);
   AssertApproxEqual(&output, &output[5]["running"][2], -8.5171);
@@ -420,7 +415,7 @@ TEST(CatapultConverter, ConvertNewSchemaNoSplits) {
         "guid": "dummy_guid_0",
         "type": "GenericSet",
         "values": [
-            4321
+            123004005006
         ]
     },
     {
@@ -505,20 +500,11 @@ TEST(CatapultConverter, ConvertNewSchemaNoSplits) {
 ]
 )JSON";
 
-  rapidjson::Document input;
-  CheckParseResult(input.Parse(input_str));
-
   rapidjson::Document expected_output;
   CheckParseResult(expected_output.Parse(expected_output_str));
 
   rapidjson::Document output;
-  ConverterArgs args;
-  args.timestamp = 4321;
-  args.masters = "example_masters";
-  args.bots = "example_bots";
-  args.log_url = "https://ci.example.com/build/100";
-  args.use_test_guids = true;
-  Convert(&input, &output, &args);
+  TestConverter(input_str, &output);
 
   AssertApproxEqual(&output, &output[5]["running"][1], 0.000105);
   AssertApproxEqual(&output, &output[5]["running"][2], -9.180875);
@@ -556,7 +542,7 @@ TEST(CatapultConverter, ConvertNewSchemaWithSplits) {
         "guid": "dummy_guid_0",
         "type": "GenericSet",
         "values": [
-            4321
+            123004005006
         ]
     },
     {
@@ -641,20 +627,11 @@ TEST(CatapultConverter, ConvertNewSchemaWithSplits) {
 ]
 )JSON";
 
-  rapidjson::Document input;
-  CheckParseResult(input.Parse(input_str));
-
   rapidjson::Document expected_output;
   CheckParseResult(expected_output.Parse(expected_output_str));
 
   rapidjson::Document output;
-  ConverterArgs args;
-  args.timestamp = 4321;
-  args.masters = "example_masters";
-  args.bots = "example_bots";
-  args.log_url = "https://ci.example.com/build/100";
-  args.use_test_guids = true;
-  Convert(&input, &output, &args);
+  TestConverter(input_str, &output);
 
   AssertApproxEqual(&output, &output[5]["running"][1], .000101);
   AssertApproxEqual(&output, &output[5]["running"][2], -9.2003900411230148);
@@ -692,7 +669,7 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
         "guid": "dummy_guid_0",
         "type": "GenericSet",
         "values": [
-            4321
+            123004005006
         ]
     },
     {
@@ -753,20 +730,11 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
 ]
 )JSON";
 
-  rapidjson::Document input;
-  CheckParseResult(input.Parse(input_str));
-
   rapidjson::Document expected_output;
   CheckParseResult(expected_output.Parse(expected_output_str));
 
   rapidjson::Document output;
-  ConverterArgs args;
-  args.timestamp = 4321;
-  args.masters = "example_masters";
-  args.bots = "example_bots";
-  args.log_url = "https://ci.example.com/build/100";
-  args.use_test_guids = true;
-  Convert(&input, &output, &args);
+  TestConverter(input_str, &output);
 
   AssertApproxEqual(&output, &output[5]["running"][1], 99);
   AssertApproxEqual(&output, &output[5]["running"][2], 4.595119);
@@ -856,21 +824,11 @@ TEST(CatapultConverter, ConvertBytesUnit) {
     }]
 )JSON";
 
-  rapidjson::Document input;
-  CheckParseResult(input.Parse(input_str));
-
   rapidjson::Document expected_output;
   CheckParseResult(expected_output.Parse(expected_output_str));
 
   rapidjson::Document output;
-  ConverterArgs args;
-  // Test a timestamp value that does not fit into a 32-bit int type.
-  args.timestamp = 123004005006;
-  args.masters = "example_masters";
-  args.bots = "example_bots";
-  args.log_url = "https://ci.example.com/build/100";
-  args.use_test_guids = true;
-  Convert(&input, &output, &args);
+  TestConverter(input_str, &output);
 
   AssertApproxEqual(&output, &output[5]["running"][1], 200);
   AssertApproxEqual(&output, &output[5]["running"][2], 4.098931);
