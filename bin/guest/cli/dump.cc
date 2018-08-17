@@ -8,8 +8,6 @@
 #include <pretty/hexdump.h>
 #include <iostream>
 
-#include "lib/component/cpp/environment_services.h"
-
 static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   uint64_t vmo_size;
   zx_status_t status = vmo.get_size(&vmo_size);

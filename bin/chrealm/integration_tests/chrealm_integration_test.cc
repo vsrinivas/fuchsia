@@ -21,7 +21,6 @@
 
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/files/file.h"

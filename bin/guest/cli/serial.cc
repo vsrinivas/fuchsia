@@ -12,7 +12,6 @@
 #include <lib/fdio/util.h>
 #include <lib/fit/function.h>
 
-#include "lib/component/cpp/environment_services.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/logging.h"

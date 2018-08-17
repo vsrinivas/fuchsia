@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include "lib/component/cpp/environment_services.h"
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 

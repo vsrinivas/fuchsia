@@ -5,7 +5,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 
-#include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/file.h"

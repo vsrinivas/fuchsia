@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
 namespace guest_runner {

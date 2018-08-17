@@ -13,7 +13,6 @@
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
-#include "lib/component/cpp/environment_services.h"
 
 namespace component {
 

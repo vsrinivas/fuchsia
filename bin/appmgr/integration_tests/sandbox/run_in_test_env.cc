@@ -10,7 +10,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <zircon/syscalls.h>
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -52,8 +52,9 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::EnvironmentPtr parent_env;
-  component::ConnectToEnvironmentService(parent_env.NewRequest());
+  context->ConnectToEnvironmentService(parent_env.NewRequest());
 
   TestServiceImpl test_service;
   TestService2Impl test_service2;

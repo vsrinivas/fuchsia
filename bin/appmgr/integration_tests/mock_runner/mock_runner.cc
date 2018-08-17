@@ -8,7 +8,6 @@
 
 #include <lib/fdio/util.h>
 
-#include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
 namespace component {
@@ -79,7 +78,7 @@ MockRunner::MockRunner()
   mockrunner::MockRunnerPtr mock_runner;
   mock_binding_.Bind(mock_runner.NewRequest());
   mockrunner::MockRunnerRegistryPtr runner_registry_ptr;
-  component::ConnectToEnvironmentService(runner_registry_ptr.NewRequest());
+  context_->ConnectToEnvironmentService(runner_registry_ptr.NewRequest());
   runner_registry_ptr->Register(std::move(mock_runner));
 }
 

@@ -8,7 +8,6 @@
 #include <fs/pseudo-dir.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/launcher_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -55,6 +54,10 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     fuchsia::sys::LauncherPtr launcher;
     real_launcher_.AddBinding(launcher.NewRequest());
     return launcher;
+  }
+
+  const std::shared_ptr<component::Services>& real_services() {
+    return real_services_;
   }
 
   // Creates a new enclosing environment inside current real environment.
@@ -104,6 +107,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   }
 
  private:
+  std::shared_ptr<component::Services> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;
   LauncherImpl real_launcher_;
 };

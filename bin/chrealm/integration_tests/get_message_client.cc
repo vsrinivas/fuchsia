@@ -10,6 +10,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 #include <zx/channel.h>
+
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
@@ -24,11 +25,10 @@ int main(int argc, const char** argv) {
   fuchsia::testing::chrealm::TestServicePtr test_svc;
   startup_context->ConnectToEnvironmentService(test_svc.NewRequest());
 
-  test_svc->GetMessage(
-      [&loop](fidl::StringPtr msg) {
-        printf("%s", msg->c_str());
-        loop.Quit();
-      });
+  test_svc->GetMessage([&loop](fidl::StringPtr msg) {
+    printf("%s", msg->c_str());
+    loop.Quit();
+  });
   loop.Run();
 
   return 0;

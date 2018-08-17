@@ -9,7 +9,6 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/environment_services.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/socket.h>
@@ -39,7 +38,8 @@ class GuestTest : public component::testing::TestWithEnvironment {
 
     enclosing_environment_->ConnectToService(guest_mgr_.NewRequest());
     ASSERT_TRUE(guest_mgr_);
-    guest_mgr_->CreateEnvironment(guest_launch_info.url, guest_env_.NewRequest());
+    guest_mgr_->CreateEnvironment(guest_launch_info.url,
+                                  guest_env_.NewRequest());
     ASSERT_TRUE(guest_env_);
 
     guest_env_->LaunchGuest(std::move(guest_launch_info),
@@ -64,7 +64,7 @@ class GuestTest : public component::testing::TestWithEnvironment {
   std::unique_ptr<component::testing::EnclosingEnvironment>
       enclosing_environment_;
   fuchsia::guest::GuestManagerPtr guest_mgr_;
-  fuchsia::guest::GuestEnvironmentPtr guest_env_  ;
+  fuchsia::guest::GuestEnvironmentPtr guest_env_;
   fuchsia::guest::GuestControllerPtr guest_controller_;
   TestSerial serial_;
 };

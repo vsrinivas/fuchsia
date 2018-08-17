@@ -18,7 +18,6 @@
 #include <lib/fdio/util.h>
 
 #include "garnet/bin/appmgr/util.h"
-#include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"

@@ -22,6 +22,7 @@ action_foreach("generate_schemas") {
 
 source_set("audio_mixer_lib") {
   sources = [
+    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
     "constants.h",
     "gain.cc",
     "gain.h",
@@ -40,7 +41,6 @@ source_set("audio_mixer_lib") {
     "mixer/output_producer.h",
     "mixer/point_sampler.cc",
     "mixer/point_sampler.h",
-    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
   ]
 
   public_deps = [
@@ -142,7 +142,7 @@ test("tests") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",

@@ -8,7 +8,7 @@
 #include <lib/fdio/util.h>
 
 #include "gmock/gmock.h"
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/glob.h"

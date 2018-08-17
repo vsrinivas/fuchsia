@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -23,7 +23,8 @@ namespace test {
 class AudioCoreTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_.NewRequest());
+    environment_services_ = component::GetEnvironmentServices();
+    environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
     audio_.set_error_handler([this]() {
@@ -117,6 +118,8 @@ class AudioCoreTest : public gtest::RealLoopFixture {
 
     EXPECT_FALSE(error_occurred_);
   }
+
+  std::shared_ptr<component::Services> environment_services_;
 
   fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioOutPtr audio_out_;
@@ -345,10 +348,12 @@ TEST_F(AudioCoreTest, SetRoutingPolicy) {
 class AudioCoreSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_.NewRequest());
+    environment_services_ = component::GetEnvironmentServices();
+    environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
   }
 
+  std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioSyncPtr audio_;
   fuchsia::media::AudioOutSyncPtr audio_out_;
   fuchsia::media::AudioInSyncPtr audio_in_;

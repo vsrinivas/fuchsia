@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -19,7 +19,8 @@ namespace test {
 class AudioOutTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_.NewRequest());
+    environment_services_ = component::GetEnvironmentServices();
+    environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
     audio_.set_error_handler([this]() {
@@ -39,6 +40,7 @@ class AudioOutTest : public gtest::RealLoopFixture {
   }
   void TearDown() override { EXPECT_FALSE(error_occurred_); }
 
+  std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioOutPtr audio_out_;
   bool error_occurred_ = false;
@@ -97,13 +99,15 @@ TEST_F(AudioOutTest, SetPcmFormat_Double) {
 class AudioOutSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_.NewRequest());
+    environment_services_ = component::GetEnvironmentServices();
+    environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
     ASSERT_EQ(ZX_OK, audio_->CreateAudioOut(audio_out_.NewRequest()));
     ASSERT_TRUE(audio_out_);
   }
 
+  std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioSyncPtr audio_;
   fuchsia::media::AudioOutSyncPtr audio_out_;
 };

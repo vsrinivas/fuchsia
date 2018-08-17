@@ -4,13 +4,15 @@
 
 #include "lib/component/cpp/testing/test_with_environment.h"
 
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/component/cpp/testing/test_util.h"
 
 namespace component {
 namespace testing {
 
-TestWithEnvironment::TestWithEnvironment() {
-  ConnectToEnvironmentService(real_env_.NewRequest());
+TestWithEnvironment::TestWithEnvironment()
+    : real_services_(component::GetEnvironmentServices()) {
+  real_services_->ConnectToService(real_env_.NewRequest());
   real_env_->GetLauncher(real_launcher_.NewRequest());
 }
 

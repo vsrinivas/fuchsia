@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/guest/cli/serial.h"
-#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/logging.h"
