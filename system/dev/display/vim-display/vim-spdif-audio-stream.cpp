@@ -27,33 +27,6 @@ namespace {
 // but I don't really know for certain.
 constexpr uint32_t AIU_958_BYTES_PER_FRAME = 128;
 
-// Standard CTS values to use when the requested audio frame rate is in the
-// 44.1 KHz family.
-static const struct {
-    uint32_t pclk;
-    uint32_t CTS;
-} STANDARD_44_1_CTS_LUT[] = {
-    { .pclk =  25200, .CTS =  28000 },
-    { .pclk =  27000, .CTS =  30000 },
-    { .pclk =  54000, .CTS =  60000 },
-    { .pclk =  74250, .CTS =  82500 },
-    { .pclk = 148500, .CTS = 165000 },
-};
-
-// Standard CTS values to use when the requested audio frame rate is in the
-// 48k family (or, 32KHz; an honorary member of the 48k family for these
-// purposes).
-static const struct {
-    uint32_t pclk;
-    uint32_t CTS;
-} STANDARD_48_CTS_LUT[] = {
-    { .pclk =  25200, .CTS =  25200 },
-    { .pclk =  27000, .CTS =  27000 },
-    { .pclk =  54000, .CTS =  54000 },
-    { .pclk =  74250, .CTS =  74250 },
-    { .pclk = 148500, .CTS = 148500 },
-};
-
 static const struct {
     uint32_t rate;
     uint32_t N;
@@ -144,33 +117,28 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    ZX_DEBUG_ASSERT(display_ && display_->p);
-    uint32_t CTS = 0;
-    uint32_t pclk = display_->p->timings.pfreq;
-    if ((req.frames_per_second % 44100) == 0) {
-        for (const auto& entry : STANDARD_44_1_CTS_LUT) {
-            if (entry.pclk == pclk) {
-                CTS = pclk;
-                break;
-            }
-        }
-    } else {
-        for (const auto& entry : STANDARD_48_CTS_LUT) {
-            if (entry.pclk == pclk) {
-                CTS = pclk;
-                break;
-            }
-        }
-    }
+    // Given our suggested starting value for N, CTS should be computed as...
+    //
+    // CTS = pixel_clock * N / (128 * audio_frame_rate)
+    //
+    // Since our pixel clock is already expressed in KHz, this becomes
+    // CTS = pkhz * N * 1000 / (128 * audio_frame_rate)
+    //     = pkhz * N * 125  / (16 * audio_frame_rate)
+    //
+    // If our numerator is not divisible by 16 * frame_rate, then we would (in
+    // theory) need to dither the N/CTS values being sent, which is something we
+    // currently do not support.  For now, if this happens, return an error
+    // instead.
+    uint64_t numer = static_cast<uint64_t>(display_->p->timings.pfreq) * N * 125;
+    uint32_t denom = req.frames_per_second << 4;
 
-    if (!CTS) {
-        // TODO(johngro) : Write the code to actually compute the CTS value for
-        // the non-standard clock rate.  For now, we are filtering these out at
-        // a higher level, so there is not too much point in doing so.
-        zxlogf(ERROR, "Failed to find CTS value for pixel clock (%u)\n", pclk);
+    if (numer % denom) {
+        zxlogf(ERROR, "Failed to find CTS value (pclk %u, N %u, frame_rate %u)\n",
+               display_->p->timings.pfreq, N, req.frames_per_second);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    uint32_t CTS = static_cast<uint32_t>(numer / denom);
     uint32_t bits_per_sample;
     switch (req.sample_format) {
     case AUDIO_SAMPLE_FORMAT_16BIT:         bits_per_sample = 16; break;
@@ -180,7 +148,6 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
         zxlogf(ERROR, "Unsupported requested sample format (0x%08x)!\n", req.sample_format);
         return ZX_ERR_NOT_SUPPORTED;
     }
-
 
     // Set up the registers to match our format choice.
     SetMode(req.frames_per_second, req.sample_format);

@@ -113,33 +113,8 @@ void Vim2Audio::OnDisplayAdded(const vim2_display_t* display, uint64_t display_i
         return;
     }
 
-    // Check to make sure that we we are one of the "standard" CEA clock rates.
-    //
-    // TODO(johngro): We really should be able to work with pretty much *any*
-    // pixel clock rate, but for reasons not completely understood, we currently
-    // only seem to work properly with standard clock rates.  If the clock rate
-    // is something unusual (say 71MHz), we start to have trouble where some
-    // displays behave as if they are having trouble recovering the audio clock.
     if (!display->p) {
         zxlogf(WARN, "HDMI parameters are not set up.  Cannot enable audio!\n");
-        return;
-    }
-
-    static const uint32_t STANDARD_PIXEL_CLOCK_RATES[] = {
-        25200, 27000, 54000, 74250, 148500
-    };
-
-    bool found_clock = false;
-    for (auto rate : STANDARD_PIXEL_CLOCK_RATES) {
-        if (rate == display->p->timings.pfreq) {
-            found_clock = true;
-            break;
-        }
-    }
-
-    if (!found_clock) {
-        zxlogf(WARN, "Audio not (currently) supported for non-standard pixel clocks (%u)\n",
-               display->p->timings.pfreq);
         return;
     }
 
