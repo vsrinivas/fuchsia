@@ -162,6 +162,11 @@ class Station {
 
     zx::time deadline_after_bcn_period(size_t bcn_count);
 
+    // Returns the STA's own MAC address.
+    const common::MacAddr& self_addr() const {
+        return device_->GetState()->address();
+    }
+
     bool IsHTReady() const;
     bool IsCbw40RxReady() const;
     bool IsCbw40TxReady() const;

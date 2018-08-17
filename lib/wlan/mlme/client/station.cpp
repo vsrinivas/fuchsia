@@ -279,9 +279,8 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     }
 
     auto hdr = frame.hdr();
-    const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
-    hdr->addr2 = mymac;
+    hdr->addr2 = self_addr();
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
@@ -331,9 +330,8 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
-    hdr->addr2 = mymac;
+    hdr->addr2 = self_addr();
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
@@ -390,9 +388,8 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
     // request.
     auto hdr = frame.hdr();
-    const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
-    hdr->addr2 = mymac;
+    hdr->addr2 = self_addr();
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
@@ -655,8 +652,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
-    const common::MacAddr& mymac = device_->GetState()->address();
-    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", mymac.ToString().c_str(),
+    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", self_addr().ToString().c_str(),
           bss_->ssid->data(), bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
           common::BandStr(GetJoinChan()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
 
@@ -724,9 +720,8 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
-    hdr->addr2 = mymac;
+    hdr->addr2 = self_addr();
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
@@ -1015,28 +1010,44 @@ zx_status_t Station::SendKeepAliveResponse() {
         return ZX_OK;
     }
 
-    const common::MacAddr& mymac = device_->GetState()->address();
-    size_t len = sizeof(DataFrameHeader);
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(kDataFrameHdrLenMax);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), kDataFrameHdrLenMax);
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<DataFrameHeader>(0);
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_subtype(DataSubtype::kNull);
-    hdr->fc.set_to_ds(1);
 
-    common::MacAddr bssid(bss_->bssid.data());
-    hdr->addr1 = bssid;
-    hdr->addr2 = mymac;
-    hdr->addr3 = bssid;
-    SetSeqNo(hdr, &seq_);
+    DataFrame<> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(DataSubtype::kNull);
+    data_hdr->fc.set_to_ds(1);
+    data_hdr->addr1 = bssid_;
+    data_hdr->addr2 = self_addr();
+    data_hdr->addr3 = bssid_;
+    SetSeqNo(data_hdr, &seq_);
 
-    zx_status_t status = SendNonData(std::move(packet));
+    // Ralink appears to setup BlockAck session AND AMPDU handling
+    // TODO(porce): Use a separate sequence number space in that case
+    if (IsCbw40TxReady() && data_hdr->addr3.IsUcast()) {
+        // 40MHz direction does not matter here.
+        // Radio uses the operational channel setting. This indicates the bandwidth without
+        // direction.
+        data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
+    } else {
+        data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
+    }
+
+    // Adjust frame's length before sending it over the air.
+    auto status = data_frame.set_body_len(0);
     if (status != ZX_OK) {
-        errorf("could not send keep alive packet: %d\n", status);
+        errorf("could not adjust keep alive frame's length; hdr len: %zu; %d\n", data_hdr->len(),
+               status);
+        return status;
+    }
+
+    status = device_->SendWlan(data_frame.Take());
+    if (status != ZX_OK) {
+        errorf("could not send keep alive frame: %d\n", status);
         return status;
     }
     return ZX_OK;
@@ -1057,9 +1068,8 @@ zx_status_t Station::SendAddBaRequestFrame() {
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
-    hdr->addr2 = mymac;
+    hdr->addr2 = self_addr();
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
@@ -1214,11 +1224,9 @@ void Station::BackToMainChannel() {
 
 void Station::DumpDataFrame(const DataFrameView<>& frame) {
     // TODO(porce): Should change the API signature to MSDU
-    const common::MacAddr& mymac = device_->GetState()->address();
-
     auto hdr = frame.hdr();
 
-    auto is_ucast_to_self = mymac == hdr->addr1;
+    auto is_ucast_to_self = self_addr() == hdr->addr1;
     auto is_mcast = hdr->addr1.IsBcast();
     auto is_bcast = hdr->addr1.IsMcast();
     auto is_interesting = is_ucast_to_self || is_mcast || is_bcast;
@@ -1246,29 +1254,46 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
         return ZX_OK;
     }
 
-    const common::MacAddr& mymac = device_->GetState()->address();
-    size_t len = sizeof(DataFrameHeader);
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    constexpr size_t max_frame_len = kDataFrameHdrLenMax;
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(max_frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), max_frame_len);
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<DataFrameHeader>(0);
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_subtype(DataSubtype::kNull);
-    hdr->fc.set_pwr_mgmt(ps_mode);
-    hdr->fc.set_to_ds(1);
 
-    common::MacAddr bssid(bss_->bssid.data());
-    hdr->addr1 = bssid;
-    hdr->addr2 = mymac;
-    hdr->addr3 = bssid;
+    DataFrame<> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(DataSubtype::kNull);
+    data_hdr->fc.set_pwr_mgmt(ps_mode);
+    data_hdr->fc.set_to_ds(1);
+    data_hdr->addr1 = bssid_;
+    data_hdr->addr2 = self_addr();
+    data_hdr->addr3 = bssid_;
+    SetSeqNo(data_hdr, &seq_);
 
-    SetSeqNo(hdr, &seq_);
+    // Ralink appears to setup BlockAck session AND AMPDU handling
+    // TODO(porce): Use a separate sequence number space in that case
+    if (IsCbw40TxReady() && data_hdr->addr3.IsUcast()) {
+        // 40MHz direction does not matter here.
+        // Radio uses the operational channel setting. This indicates the bandwidth without
+        // direction.
+        data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
+    } else {
+        data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
+    }
 
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    // Adjust frame's length before sending it over the air.
+    auto status = data_frame.set_body_len(0);
     if (status != ZX_OK) {
-        errorf("could not send power management packet: %d\n", status);
+        errorf("could not adjust power management frame's length; hdr len: %zu; %d\n",
+               data_hdr->len(), status);
+        return status;
+    }
+
+    status = device_->SendWlan(data_frame.Take());
+    if (status != ZX_OK) {
+        errorf("could not send power management frame: %d\n", status);
         return status;
     }
     return ZX_OK;
@@ -1282,7 +1307,6 @@ zx_status_t Station::SendPsPoll() {
         return ZX_OK;
     }
 
-    const common::MacAddr& mymac = device_->GetState()->address();
     size_t len = sizeof(CtrlFrameHdr) + sizeof(PsPollFrame);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -1296,7 +1320,7 @@ zx_status_t Station::SendPsPoll() {
     frame.hdr()->fc.set_subtype(ControlSubtype::kPsPoll);
     frame.body()->aid = aid_;
     frame.body()->bssid = common::MacAddr(bss_->bssid.data());
-    frame.body()->ta = mymac;
+    frame.body()->ta = self_addr();
 
     zx_status_t status = SendNonData(frame.Take());
     if (status != ZX_OK) {
