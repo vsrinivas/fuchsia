@@ -17,6 +17,7 @@
 #include <fbl/unique_fd.h>
 #include <zircon/boot/e820.h>
 
+#include "garnet/bin/guest/vmm/guest_config.h"
 #include "garnet/bin/guest/vmm/kernel.h"
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
@@ -63,11 +64,6 @@ static constexpr uintptr_t kDtbOffset = kRamdiskOffset - PAGE_SIZE;
 static constexpr uintptr_t kDtbOverlayOffset = kDtbOffset - PAGE_SIZE;
 static constexpr uintptr_t kDtbBootParamsOffset =
     kDtbOffset + sizeof(SetupData);
-
-struct MemRange {
-  uint64_t addr;
-  uint64_t size;
-};
 
 // clang-format off
 
@@ -312,10 +308,11 @@ static void device_tree_error_msg(const char* property_name) {
                  << "tree, space must be reserved in the device tree";
 }
 
-static zx_status_t add_memory_entry(void* dtb, int memory_off, MemRange range) {
+static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
+                                    size_t size) {
   uint64_t entry[2];
-  entry[0] = htobe64(range.addr);
-  entry[1] = htobe64(range.size);
+  entry[0] = htobe64(addr);
+  entry[1] = htobe64(size);
   int ret = fdt_appendprop(dtb, memory_off, "reg", entry, sizeof(entry));
   if (ret < 0) {
     device_tree_error_msg("reg");
@@ -425,8 +422,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
     FXL_LOG(ERROR) << "Failed to find \"/memory\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  status = add_memory_entry(dtb, memory_off,
-                            MemRange{.addr = 0, .size = phys_mem.size()});
+  status = add_memory_entry(dtb, memory_off, 0, phys_mem.size());
   if (status != ZX_OK) {
     return status;
   }
@@ -444,19 +440,16 @@ static zx_status_t load_device_tree(const int dtb_fd,
       return ZX_ERR_BAD_STATE;
     }
     // GICD memory map
-    status =
-        add_memory_entry(dtb, gic_off,
-                         MemRange{.addr = machina::kGicv2DistributorPhysBase,
-                                  .size = machina::kGicv2DistributorSize});
+    status = add_memory_entry(dtb, gic_off, machina::kGicv2DistributorPhysBase,
+                              machina::kGicv2DistributorSize);
     if (status != ZX_OK) {
       return status;
     }
     // GICC memory map
-    status =
-        add_memory_entry(dtb, gic_off,
-                         MemRange{.addr = machina::kGicv2DistributorPhysBase +
-                                          machina::kGicv2DistributorSize,
-                                  .size = 0x2000});
+    status = add_memory_entry(
+        dtb, gic_off,
+        machina::kGicv2DistributorPhysBase + machina::kGicv2DistributorSize,
+        0x2000);
     if (status != ZX_OK) {
       return status;
     }
@@ -467,10 +460,8 @@ static zx_status_t load_device_tree(const int dtb_fd,
       return ZX_ERR_BAD_STATE;
     }
     // GICD memory map
-    status =
-        add_memory_entry(dtb, gic_off,
-                         MemRange{.addr = machina::kGicv3DistributorPhysBase,
-                                  .size = machina::kGicv3DistributorSize});
+    status = add_memory_entry(dtb, gic_off, machina::kGicv3DistributorPhysBase,
+                              machina::kGicv3DistributorSize);
     if (status != ZX_OK) {
       return status;
     }
@@ -482,10 +473,8 @@ static zx_status_t load_device_tree(const int dtb_fd,
     // GICR memory map
     uint32_t gicr_size = static_cast<uint32_t>(
         machina::kGicv3RedistributorStride * cfg.num_cpus());
-    status =
-        add_memory_entry(dtb, gic_off,
-                         MemRange{.addr = machina::kGicv3RedistributorPhysBase,
-                                  .size = gicr_size});
+    status = add_memory_entry(dtb, gic_off,
+                              machina::kGicv3RedistributorPhysBase, gicr_size);
     if (status != ZX_OK) {
       return status;
     }
@@ -504,8 +493,11 @@ static std::string linux_cmdline(std::string cmdline) {
 #endif
 }
 
+// NOTE(abdulla): dev_mem is currently unused, but will be used in the future to
+// modify the e820 or DTS memory map.
 zx_status_t setup_linux(const GuestConfig& cfg,
-                        const machina::PhysMem& phys_mem, uintptr_t* guest_ip,
+                        const machina::PhysMem& phys_mem,
+                        const machina::DevMem& dev_mem, uintptr_t* guest_ip,
                         uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);

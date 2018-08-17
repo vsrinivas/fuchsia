@@ -17,25 +17,14 @@
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
+#include "garnet/bin/guest/vmm/guest_config.h"
 #include "garnet/bin/guest/vmm/kernel.h"
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/dev_mem.h"
 #include "garnet/lib/machina/guest.h"
 
 #if __aarch64__
 static constexpr uintptr_t kKernelOffset = 0;
-
-static zbi_mem_range_t mem_config[] = {
-    {
-        .type = ZBI_MEM_RANGE_RAM,
-        .paddr = 0,
-        .length = 0,  // Set to phys_mem.size().
-    },
-    {
-        .type = ZBI_MEM_RANGE_PERIPHERAL,
-        .paddr = 0x800000000,
-        .length = 0x8400000,
-    },
-};
 
 static constexpr zbi_platform_id_t kPlatformId = {
     .vid = 3,  // PDEV_VID_GOOGLE
@@ -120,6 +109,7 @@ static zx_status_t load_bootfs(const int fd, const machina::PhysMem& phys_mem,
 
 static zx_status_t create_zbi(const GuestConfig& cfg,
                               const machina::PhysMem& phys_mem,
+                              const machina::DevMem& dev_mem,
                               const uintptr_t kernel_off, uintptr_t zbi_off) {
   if (ZBI_ALIGN(zbi_off) != zbi_off) {
     FXL_LOG(ERROR) << "ZBI offset has invalid alignment";
@@ -172,9 +162,28 @@ static zx_status_t create_zbi(const GuestConfig& cfg,
     return ZX_ERR_INTERNAL;
   }
   // Memory config.
-  mem_config[0].length = cfg.memory();
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(mem_config),
-                           ZBI_TYPE_MEM_CONFIG, 0, 0, mem_config);
+  std::vector<zbi_mem_range_t> mem_config{
+      {
+          .paddr = 0,
+          .length = cfg.memory(),
+          .type = ZBI_MEM_RANGE_RAM,
+      },
+      {
+          .paddr = 0x800000000,
+          .length = 0x8400000,
+          .type = ZBI_MEM_RANGE_PERIPHERAL,
+      },
+  };
+  for (const auto& range : dev_mem) {
+    mem_config.emplace_back(zbi_mem_range_t{
+        .paddr = range.addr,
+        .length = range.size,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+    });
+  }
+  res = zbi_append_section(container_hdr, zbi_max,
+                           sizeof(zbi_mem_range_t) * mem_config.size(),
+                           ZBI_TYPE_MEM_CONFIG, 0, 0, &mem_config[0]);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -264,7 +273,8 @@ static zx_status_t check_kernel(const machina::PhysMem& phys_mem,
 }
 
 zx_status_t setup_zircon(const GuestConfig& cfg,
-                         const machina::PhysMem& phys_mem, uintptr_t* guest_ip,
+                         const machina::PhysMem& phys_mem,
+                         const machina::DevMem& dev_mem, uintptr_t* guest_ip,
                          uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
@@ -277,7 +287,7 @@ zx_status_t setup_zircon(const GuestConfig& cfg,
   }
 
   // Create the ZBI container.
-  status = create_zbi(cfg, phys_mem, kKernelOffset, kRamdiskOffset);
+  status = create_zbi(cfg, phys_mem, dev_mem, kKernelOffset, kRamdiskOffset);
   if (status != ZX_OK) {
     return status;
   }

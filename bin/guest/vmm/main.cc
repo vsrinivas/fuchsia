@@ -205,46 +205,6 @@ int main(int argc, char** argv) {
   machina::GuestControllerImpl guest_controller(startup_context.get(),
                                                 guest.phys_mem());
 
-#if __x86_64__
-  status = machina::create_page_table(guest.phys_mem());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create page table " << status;
-    return status;
-  }
-
-  machina::AcpiConfig acpi_cfg = {
-      .dsdt_path = kDsdtPath,
-      .mcfg_path = kMcfgPath,
-      .io_apic_addr = machina::kIoApicPhysBase,
-      .num_cpus = cfg.num_cpus(),
-  };
-  status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create ACPI table " << status;
-    return status;
-  }
-#endif  // __x86_64__
-
-  // Setup kernel.
-  uintptr_t guest_ip = 0;
-  uintptr_t boot_ptr = 0;
-  switch (cfg.kernel()) {
-    case Kernel::ZIRCON:
-      status = setup_zircon(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
-      break;
-    case Kernel::LINUX:
-      status = setup_linux(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
-      break;
-    default:
-      FXL_LOG(ERROR) << "Unknown kernel";
-      return ZX_ERR_INVALID_ARGS;
-  }
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path() << " "
-                   << status;
-    return status;
-  }
-
   // Setup UARTs.
   machina::Uart uart[kNumUarts];
   for (size_t i = 0; i < kNumUarts; i++) {
@@ -266,34 +226,6 @@ int main(int argc, char** argv) {
     FXL_LOG(ERROR) << "Failed to create interrupt controller " << status;
     return status;
   }
-
-  auto initialize_vcpu = [boot_ptr, &interrupt_controller](
-                             machina::Guest* guest, uintptr_t guest_ip,
-                             uint64_t id, machina::Vcpu* vcpu) {
-    zx_status_t status = vcpu->Create(guest, guest_ip, id);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VCPU " << status;
-      return status;
-    }
-    // Register VCPU with ID 0.
-    status = interrupt_controller.RegisterVcpu(id, vcpu);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller "
-                     << status;
-      return status;
-    }
-    // Setup initial VCPU state.
-    zx_vcpu_state_t vcpu_state = {};
-#if __aarch64__
-    vcpu_state.x[0] = boot_ptr;
-#elif __x86_64__
-    vcpu_state.rsi = boot_ptr;
-#endif
-    // Begin VCPU execution.
-    return vcpu->Start(&vcpu_state);
-  };
-
-  guest.RegisterVcpuFactory(initialize_vcpu);
 
 #if __aarch64__
   machina::Pl031 pl031;
@@ -494,6 +426,78 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
+
+#if __x86_64__
+  status = machina::create_page_table(guest.phys_mem());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create page table " << status;
+    return status;
+  }
+
+  machina::AcpiConfig acpi_cfg = {
+      .dsdt_path = kDsdtPath,
+      .mcfg_path = kMcfgPath,
+      .io_apic_addr = machina::kIoApicPhysBase,
+      .num_cpus = cfg.num_cpus(),
+  };
+  status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create ACPI table " << status;
+    return status;
+  }
+#endif  // __x86_64__
+
+  // Setup kernel.
+  machina::DevMem dev_mem;
+  uintptr_t guest_ip = 0;
+  uintptr_t boot_ptr = 0;
+  switch (cfg.kernel()) {
+    case Kernel::ZIRCON:
+      status =
+          setup_zircon(cfg, guest.phys_mem(), dev_mem, &guest_ip, &boot_ptr);
+      break;
+    case Kernel::LINUX:
+      status =
+          setup_linux(cfg, guest.phys_mem(), dev_mem, &guest_ip, &boot_ptr);
+      break;
+    default:
+      FXL_LOG(ERROR) << "Unknown kernel";
+      return ZX_ERR_INVALID_ARGS;
+  }
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path() << " "
+                   << status;
+    return status;
+  }
+
+  // Setup VCPUs.
+  auto initialize_vcpu = [boot_ptr, &interrupt_controller](
+                             machina::Guest* guest, uintptr_t guest_ip,
+                             uint64_t id, machina::Vcpu* vcpu) {
+    zx_status_t status = vcpu->Create(guest, guest_ip, id);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create VCPU " << status;
+      return status;
+    }
+    // Register VCPU with interrupt controller.
+    status = interrupt_controller.RegisterVcpu(id, vcpu);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller "
+                     << status;
+      return status;
+    }
+    // Setup initial VCPU state.
+    zx_vcpu_state_t vcpu_state = {};
+#if __aarch64__
+    vcpu_state.x[0] = boot_ptr;
+#elif __x86_64__
+    vcpu_state.rsi = boot_ptr;
+#endif
+    // Begin VCPU execution.
+    return vcpu->Start(&vcpu_state);
+  };
+
+  guest.RegisterVcpuFactory(initialize_vcpu);
 
   // GPU back-ends can take some time to initialize. Wait for them to be
   // created before starting the VCPU so that we can ensure we have the

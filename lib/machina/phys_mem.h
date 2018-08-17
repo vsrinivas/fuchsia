@@ -6,7 +6,6 @@
 #define GARNET_LIB_MACHINA_PHYS_MEM_H_
 
 #include <lib/zx/vmo.h>
-#include <type_traits>
 
 #include "garnet/public/lib/fxl/logging.h"
 

@@ -9,6 +9,7 @@ source_set("machina") {
     "bits.h",
     "block_dispatcher.cc",
     "block_dispatcher.h",
+    "dev_mem.h",
     "framebuffer_scanout.cc",
     "framebuffer_scanout.h",
     "gpu_bitmap.cc",
