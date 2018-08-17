@@ -513,7 +513,7 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref() {
           weak_eval->ReportError(err);
         } else if (value.size() != 8) {
           weak_eval->ReportError(
-              fxl::StringPrintf("Can't read memory at 0x%" PRIx64 ".", addr));
+              fxl::StringPrintf("Invalid pointer 0x%" PRIx64 ".", addr));
         } else {
           // Success reading 8 bytes.
           uint64_t to_push;

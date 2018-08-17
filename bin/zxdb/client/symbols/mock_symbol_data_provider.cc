@@ -70,14 +70,14 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   auto found = mem_.find(address);
   if (found == mem_.end()) {
-    debug_ipc::MessageLoop::Current()->PostTask([callback, address]() {
-      callback(Err(fxl::StringPrintf("MockSymbolDataProvider::GetMemoryAsync: "
-                                     "Memory not found 0x%" PRIx64,
-                                     address)),
-               std::vector<uint8_t>());
+    debug_ipc::MessageLoop::Current()->PostTask([callback]() {
+      // The API states that invalid memory is not an error, it just does a
+      // short read.
+      callback(Err(), std::vector<uint8_t>());
     });
   } else {
-    uint32_t size_to_return = std::min(size, static_cast<uint32_t>(found->second.size()));
+    uint32_t size_to_return =
+        std::min(size, static_cast<uint32_t>(found->second.size()));
 
     std::vector<uint8_t> subset;
     subset.resize(size_to_return);

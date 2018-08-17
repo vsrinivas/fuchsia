@@ -59,9 +59,8 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
     }
   }
 
-  helper->Complete([helper = std::move(helper)](OutputBuffer out) {
-    Console::get()->Output(std::move(out));
-  });
+  helper->Complete(
+      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
 }
 
 }  // namespace

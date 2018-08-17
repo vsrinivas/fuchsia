@@ -112,7 +112,7 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
           return;
         }
 
-        FXL_DCHECK(dump.address() == address);
+        FXL_DCHECK(size == 0 || dump.address() == address);
         FXL_DCHECK(dump.size() == size);
         if (dump.blocks().size() == 1 ||
             (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {

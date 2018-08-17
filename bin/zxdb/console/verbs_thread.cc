@@ -264,7 +264,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
                                    pair.second, options);
     helper->Append(OutputBuffer::WithContents("\n"));
   }
-  helper->Complete([helper = std::move(helper)](OutputBuffer out) {
+  helper->Complete([helper](OutputBuffer out) {
     Console::get()->Output(std::move(out));
   });
   return Err();
@@ -408,19 +408,24 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
   // TODO(brettw) parse options.
   FormatValueOptions options;
 
+  auto data_provider = cmd.frame()->GetSymbolDataProvider();
+
   EvalExpression(expr, cmd.frame()->GetExprEvalContext(),
-                 [options](const Err& err, ExprValue value) {
+                 [options, data_provider](const Err& err, ExprValue value) {
                    OutputBuffer out;
                    // Note that this doesn't use the variant of FormatExprValue
                    // that takes an Err. That will rewrite the error to be in
                    // <>, but when printing we can afford to output multiline
                    // error messages, and the parser will generate such
                    // messages.
-                   if (err.has_error())
+                   if (err.has_error()) {
                      out.OutputErr(err);
-                   else
-                     FormatExprValue(value, options, &out);
-                   Console::get()->Output(std::move(out));
+                   } else {
+                     FormatExprValue(data_provider, value, options,
+                                     [](OutputBuffer out) {
+                                       Console::get()->Output(std::move(out));
+                                     });
+                   }
                  });
 
   return Err();

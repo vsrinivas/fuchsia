@@ -108,7 +108,26 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
 
   uint64_t result_int = dwarf_eval_.GetResult();
 
-  if (dwarf_eval_.GetResultType() == DwarfExprEval::ResultType::kValue) {
+  // The DWARF expression will produce either the address of the value or the
+  // value itself.
+  DwarfExprEval::ResultType result_type = dwarf_eval_.GetResultType();
+  if (type->GetConcreteType()->AsArrayType()) {
+    // Special-case array types. When DWARF tells us the address of an array,
+    // it's telling us the address of the first element. But our "array"
+    // ExprValue are themselves pointers. In this case, just declare DWARF
+    // produced a value result (the value of the pointer we put in the result).
+    if (result_type == DwarfExprEval::ResultType::kPointer) {
+      result_type = DwarfExprEval::ResultType::kValue;
+    } else {
+      // Don't expect the expression to produce a literal array out of thin
+      // air. All of our arrays must be in memory.
+      OnComplete(Err("DWARF expression produced array literal. Please file a "
+                     "bug with a repro."),
+                 ExprValue());
+    }
+  }
+
+  if (result_type == DwarfExprEval::ResultType::kValue) {
     // The DWARF expression produced the exact value (it's not in memory).
     uint32_t type_size = type->byte_size();
     if (type_size > sizeof(uint64_t)) {
@@ -142,8 +161,7 @@ void SymbolVariableResolver::DoResolveFromAddress(uint64_t address,
     } else if (data.size() != type->byte_size()) {
       // Short read, memory is invalid.
       weak_this->OnComplete(
-          Err(fxl::StringPrintf("Can't read memory at 0x%" PRIx64 ".",
-                                address)),
+          Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)),
           ExprValue());
     } else {
       weak_this->OnComplete(Err(), ExprValue(std::move(type), std::move(data),

@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/console/format_value.h"
+#include "garnet/bin/zxdb/client/symbols/array_type.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
+#include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
+#include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "gtest/gtest.h"
@@ -12,6 +15,53 @@
 namespace zxdb {
 
 namespace {
+
+fxl::RefPtr<BaseType> GetCharType() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1,
+                                       "char");
+}
+
+fxl::RefPtr<BaseType> GetInt32Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
+}
+
+fxl::RefPtr<ModifiedType> GetCharPointerType() {
+  return fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+                                           LazySymbol(GetCharType()));
+}
+
+class FormatValueTest : public TestWithLoop {
+ public:
+  FormatValueTest()
+      : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
+
+  MockSymbolDataProvider* provider() { return provider_.get(); }
+
+  // Synchronously calls FormatExprValue, returning the result.
+  std::string SyncFormatValue(const ExprValue& value,
+                              const FormatValueOptions& opts) {
+    bool called = false;
+    std::string output;
+
+    FormatExprValue(provider_, value, opts,
+                    [&called, &output](OutputBuffer out) {
+                      called = true;
+                      output = out.AsString();
+                      debug_ipc::MessageLoop::Current()->QuitNow();
+                    });
+
+    if (called)
+      return output;
+
+    loop().Run();
+
+    EXPECT_TRUE(called);
+    return output;
+  }
+
+ private:
+  fxl::RefPtr<MockSymbolDataProvider> provider_;
+};
 
 // Wrapper around FormatExprValue that returns the output as a string.
 std::string DoFormat(const ExprValue& value,
@@ -23,7 +73,7 @@ std::string DoFormat(const ExprValue& value,
 
 }  // namespace
 
-TEST(FormatValue, Signed) {
+TEST_F(FormatValueTest, Signed) {
   FormatValueOptions opts;
 
   // 8-bit.
@@ -58,7 +108,7 @@ TEST(FormatValue, Signed) {
   EXPECT_EQ("16909060", DoFormat(val_float, opts));
 }
 
-TEST(FormatValue, Unsigned) {
+TEST_F(FormatValueTest, Unsigned) {
   FormatValueOptions opts;
 
   // 8-bit.
@@ -95,7 +145,7 @@ TEST(FormatValue, Unsigned) {
   EXPECT_EQ("0x1020304", DoFormat(val_float, opts));
 }
 
-TEST(FormatValue, Bool) {
+TEST_F(FormatValueTest, Bool) {
   FormatValueOptions opts;
 
   // 8-bit true.
@@ -117,7 +167,7 @@ TEST(FormatValue, Bool) {
   EXPECT_EQ("false", DoFormat(val_false8, opts));
 }
 
-TEST(FormatValue, Char) {
+TEST_F(FormatValueTest, Char) {
   FormatValueOptions opts;
 
   // 8-bit char.
@@ -140,7 +190,7 @@ TEST(FormatValue, Char) {
   EXPECT_EQ("'$'", DoFormat(val_int32, opts));
 }
 
-TEST(FormatValue, Float) {
+TEST_F(FormatValueTest, Float) {
   FormatValueOptions opts;
 
   uint8_t buffer[8];
@@ -162,7 +212,7 @@ TEST(FormatValue, Float) {
   EXPECT_EQ("9.875e+12", DoFormat(val_double, opts));
 }
 
-TEST(FormatValue, Pointer) {
+TEST_F(FormatValueTest, Pointer) {
   FormatValueOptions opts;
 
   auto base_type =
@@ -182,5 +232,130 @@ TEST(FormatValue, Pointer) {
       "Please file a bug.>",
       DoFormat(bad_value, opts));
 }
+
+TEST_F(FormatValueTest, GoodStrings) {
+  FormatValueOptions opts;
+
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(
+      kAddress, {'A', 'B', 'C', 'D', 'E', 'F', '\n', 0x01, 'z', '\\', '"', 0});
+
+  // Little-endian version of the address.
+  std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00};
+
+  // This string is a char* and it should stop printing at the null terminator.
+  auto ptr_type = GetCharPointerType();
+  EXPECT_EQ(R"("ABCDEF\n\x01z\\\"")",
+            SyncFormatValue(ExprValue(ptr_type, address_data), opts));
+
+  // This string points to the same data but is type encoded as char[4].
+  auto array_type =
+      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetCharType()), 4);
+  EXPECT_EQ(R"("ABCD")",
+            SyncFormatValue(ExprValue(array_type, address_data), opts));
+}
+
+TEST_F(FormatValueTest, BadStrings) {
+  FormatValueOptions opts;
+  std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00};
+
+  // Should report invalid pointer.
+  auto ptr_type = GetCharPointerType();
+  ExprValue ptr_value(ptr_type, address_data);
+  EXPECT_EQ("0x1100 <invalid pointer>", SyncFormatValue(ptr_value, opts));
+
+  // A null string should print just the null and not say invalid.
+  ExprValue null_value(ptr_type, std::vector<uint8_t>(sizeof(uint64_t)));
+  EXPECT_EQ("0x0", SyncFormatValue(null_value, opts));
+}
+
+TEST_F(FormatValueTest, TruncatedString) {
+  FormatValueOptions opts;
+
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress, {'A', 'B', 'C', 'D', 'E', 'F'});
+
+  // Little-endian version of kAddress.
+  std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00};
+
+  // This string doesn't end in a null terminator but rather invalid memory.
+  // We should print as much as we have.
+  auto ptr_type = GetCharPointerType();
+  EXPECT_EQ(R"("ABCDEF")",
+            SyncFormatValue(ExprValue(ptr_type, address_data), opts));
+
+  // Should only report the first 4 chars with a ... indicator.
+  opts.max_array_size = 4;  // Truncate past this value.
+  EXPECT_EQ(R"("ABCD"...)",
+            SyncFormatValue(ExprValue(ptr_type, address_data), opts));
+}
+
+TEST_F(FormatValueTest, EmptyAndBadArray) {
+  FormatValueOptions opts;
+
+  // Array of two int32's: [1, 2]
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress,
+                        {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00});
+
+  // Empty array with valid pointer.
+  std::vector<uint8_t> addr_data = {0x00, 0x11, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00};
+  auto empty_array_type =
+      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetInt32Type()), 0);
+  EXPECT_EQ(R"([])",
+            SyncFormatValue(ExprValue(empty_array_type, addr_data), opts));
+
+  // Null array.
+  std::vector<uint8_t> null_addr_data = {0x00, 0x00, 0x00, 0x00,
+                                         0x00, 0x00, 0x00, 0x00};
+  auto array_type =
+      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetInt32Type()), 1);
+  EXPECT_EQ(R"(0x0)",
+            SyncFormatValue(ExprValue(array_type, null_addr_data), opts));
+
+  // Non-null but invalid pointer.
+  std::vector<uint8_t> bad_addr_data = {0x00, 0x00, 0x00, 0xff,
+                                        0x00, 0x00, 0x00, 0x00};
+  EXPECT_EQ(R"(0xff000000 <invalid pointer>)",
+            SyncFormatValue(ExprValue(array_type, bad_addr_data), opts));
+
+  // Array with bad element type.
+  auto corrupt_array_type = fxl::MakeRefCounted<ArrayType>(LazySymbol(), 4);
+  EXPECT_EQ(R"(<bad type information>)",
+            SyncFormatValue(ExprValue(corrupt_array_type, addr_data), opts));
+}
+
+TEST_F(FormatValueTest, TruncatedArray) {
+  FormatValueOptions opts;
+  opts.max_array_size = 2;
+
+  // Array of two int32's: [1, 2]
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress,
+                        {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00});
+
+  // 64-bit pointer to above data.
+  std::vector<uint8_t> addr_data = {0x00, 0x11, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00};
+  auto array_type =
+      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetInt32Type()), 2);
+
+  // This array has exactly the max size, we shouldn't mark it as truncated.
+  EXPECT_EQ(R"([1, 2])",
+            SyncFormatValue(ExprValue(array_type, addr_data), opts));
+
+  // This one is truncated.
+  opts.max_array_size = 1;
+  EXPECT_EQ(R"([1, ...])",
+            SyncFormatValue(ExprValue(array_type, addr_data), opts));
+}
+
+// TODO(brettw) check nested arrays.
+// Pretty sure this ends up being wrong:
+//   int a[2][2] = { ... }
 
 }  // namespace zxdb

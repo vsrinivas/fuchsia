@@ -332,8 +332,7 @@ TEST_F(ExprNodeTest, DereferenceReference) {
   loop().Run();
   EXPECT_TRUE(called);
   EXPECT_TRUE(out_err.has_error());
-  EXPECT_EQ("MockSymbolDataProvider::GetMemoryAsync: Memory not found 0x0",
-            out_err.msg());
+  EXPECT_EQ("Invalid pointer 0x0", out_err.msg());
 }
 
 TEST_F(ExprNodeTest, ArrayAccess) {
