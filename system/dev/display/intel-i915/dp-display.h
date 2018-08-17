@@ -16,10 +16,12 @@ public:
     DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
 private:
-    bool QueryDevice(edid::Edid* edid) final;
-    bool ConfigureDdi() final;
-    bool PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) final;
-    bool PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) final;
+    bool InitDdi(edid::Edid* edid) final;
+    bool DdiModeset(const display_mode_t& mode) final;
+    bool PipeConfigPreamble(const display_mode_t& mode,
+                            registers::Pipe pipe, registers::Trans trans) final;
+    bool PipeConfigEpilogue(const display_mode_t& mode,
+                            registers::Pipe pipe, registers::Trans trans) final;
 
     bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 

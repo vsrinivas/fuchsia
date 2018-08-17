@@ -857,7 +857,7 @@ namespace i915 {
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
         : DisplayDevice(controller, id, ddi) { }
 
-bool DpDisplay::QueryDevice(edid::Edid* edid) {
+bool DpDisplay::InitDdi(edid::Edid* edid) {
     // For eDP displays, assume that the BIOS has enabled panel power, given
     // that we need to rely on it properly configuring panel power anyway. For
     // general DP displays, the default power state is D0, so we don't have to
@@ -957,10 +957,6 @@ bool DpDisplay::QueryDevice(edid::Edid* edid) {
         return false;
     }
 
-    return true;
-}
-
-bool DpDisplay::ConfigureDdi() {
     bool is_edp = controller()->igd_opregion().IsEdp(ddi());
     if (is_edp) {
         auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
@@ -1059,7 +1055,12 @@ bool DpDisplay::ConfigureDdi() {
     return true;
 }
 
-bool DpDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) {
+bool DpDisplay::DdiModeset(const display_mode_t& mode) {
+    return true;
+}
+
+bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode,
+                                   registers::Pipe pipe, registers::Trans trans) {
     registers::TranscoderRegs trans_regs(trans);
 
     // Configure Transcoder Clock Select
@@ -1071,7 +1072,7 @@ bool DpDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans)
 
     // Pixel clock rate: The rate at which pixels are sent, in pixels per
     // second (Hz), divided by 10000.
-    uint32_t pixel_clock_rate = mode().pixel_clock_10khz;
+    uint32_t pixel_clock_rate = mode.pixel_clock_10khz;
 
     // This is the rate at which bits are sent on a single DisplayPort
     // lane, in raw bits per second, divided by 10000.
@@ -1119,7 +1120,8 @@ bool DpDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans)
     return true;
 }
 
-bool DpDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) {
+bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode,
+                                   registers::Pipe pipe, registers::Trans trans) {
     registers::TranscoderRegs trans_regs(trans);
     auto msa_misc = trans_regs.MsaMisc().FromValue(0);
     msa_misc.set_sync_clock(1);
@@ -1132,8 +1134,8 @@ bool DpDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans)
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
     ddi_func.set_bits_per_color(ddi_func.k8bbc); // kPixelFormat
-    ddi_func.set_sync_polarity((!!(mode().flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
-                                | (!!(mode().flags & MODE_FLAG_HSYNC_POSITIVE)));
+    ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
+                                | (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.set_edp_input_select(pipe == registers::PIPE_A ? ddi_func.kPipeA :
@@ -1143,7 +1145,7 @@ bool DpDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans)
 
     auto trans_conf = trans_regs.Conf().FromValue(0);
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(!!(mode().flags & MODE_FLAG_INTERLACED));
+    trans_conf.set_interlaced_mode(!!(mode.flags & MODE_FLAG_INTERLACED));
     trans_conf.WriteTo(mmio_space());
 
     if (controller()->igd_opregion().IsEdp(ddi())) {

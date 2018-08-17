@@ -119,7 +119,7 @@ DisplayDevice::~DisplayDevice() {
         pipe_->Detach();
     }
     if (inited_) {
-        ResetDdi();
+        controller_->ResetDdi(ddi());
     }
     if (display_ref_) {
         fbl::AutoLock lock(&display_ref_->mtx);
@@ -132,17 +132,12 @@ hwreg::RegisterIo* DisplayDevice::mmio_space() const {
     return controller_->mmio_space();
 }
 
-bool DisplayDevice::ResetDdi() {
-    return controller_->ResetDdi(ddi_);
-}
-
 bool DisplayDevice::Init() {
     ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
 
-    if (!QueryDevice(&edid_)) {
+    if (!controller_->ResetDdi(ddi()) || !InitDdi(&edid_)) {
         return false;
     }
-
 
     auto preferred_timing = edid_.begin();
     if (!(preferred_timing != edid_.end())) {
@@ -160,7 +155,7 @@ bool DisplayDevice::Init() {
     info_.v_blanking = preferred_timing->vertical_blanking;
     info_.flags = preferred_timing->flags;
 
-    if (!ResetDdi() || !ConfigureDdi()) {
+    if (!DdiModeset(info_)) {
         return false;
     }
 
@@ -201,7 +196,7 @@ bool DisplayDevice::Init() {
 }
 
 bool DisplayDevice::Resume() {
-    if (!ConfigureDdi()) {
+    if (!DdiModeset(info_)) {
         return false;
     }
     if (pipe_) {
@@ -222,9 +217,9 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
     if (pipe) {
         pipe->AttachToDisplay(id_, controller()->igd_opregion().IsEdp(ddi()));
 
-        PipeConfigPreamble(pipe->pipe(), pipe->transcoder());
+        PipeConfigPreamble(info_, pipe->pipe(), pipe->transcoder());
         pipe->ApplyModeConfig(info_);
-        PipeConfigEpilogue(pipe->pipe(), pipe->transcoder());
+        PipeConfigEpilogue(info_, pipe->pipe(), pipe->transcoder());
     }
     pipe_ = pipe;
     return true;
@@ -235,15 +230,14 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
 
     if (memcmp(&config->mode, &info_, sizeof(display_mode_t)) != 0) {
         pipe_->Reset();
-        ResetDdi();
 
         info_ = config->mode;
 
-        ConfigureDdi();
+        DdiModeset(info_);
 
-        PipeConfigPreamble(pipe_->pipe(), pipe_->transcoder());
+        PipeConfigPreamble(info_, pipe_->pipe(), pipe_->transcoder());
         pipe_->ApplyModeConfig(info_);
-        PipeConfigEpilogue(pipe_->pipe(), pipe_->transcoder());
+        PipeConfigEpilogue(info_, pipe_->pipe(), pipe_->transcoder());
     }
 
     pipe_->ApplyConfiguration(config);

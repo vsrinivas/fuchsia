@@ -65,25 +65,23 @@ public:
     virtual bool CheckDisplayLimits(const display_config_t* config) = 0;
 
 protected:
-    // Queries the DisplayDevice to see if there is a supported display attached. If
-    // there is, then returns true and populates |edid| and |info|.
-    virtual bool QueryDevice(edid::Edid* edid) = 0;
-    // Configures the hardware to display a framebuffer at the preferred resolution.
-    virtual bool ConfigureDdi() = 0;
+    // Attempts to initialize the ddi. If successful, populates |edid|.
+    virtual bool InitDdi(edid::Edid* edid) = 0;
+
+    // Configures the hardware to display content at the given resolution.
+    virtual bool DdiModeset(const display_mode_t& mode) = 0;
 
     // Attaching a pipe to a display or configuring a pipe after display mode change has
     // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
     // and PipeConfigEpilogue are responsible for display-type-specific configuration that
     // must be done before and after the generic configuration.
-    virtual bool PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) = 0;
-    virtual bool PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) = 0;
+    virtual bool PipeConfigPreamble(const display_mode_t& mode,
+                                    registers::Pipe pipe, registers::Trans trans) = 0;
+    virtual bool PipeConfigEpilogue(const display_mode_t& mode,
+                                    registers::Pipe pipe, registers::Trans trans) = 0;
 
     hwreg::RegisterIo* mmio_space() const;
-    const display_mode_t& mode() const { return info_; }
-
 private:
-    bool ResetDdi();
-
     // Borrowed reference to Controller instance
     Controller* controller_;
 

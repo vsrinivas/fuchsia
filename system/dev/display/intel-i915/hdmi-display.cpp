@@ -450,7 +450,7 @@ static bool calculate_params(uint32_t symbol_clock_khz,
 
 namespace i915 {
 
-bool HdmiDisplay::QueryDevice(edid::Edid* edid) {
+bool HdmiDisplay::InitDdi(edid::Edid* edid) {
     // HDMI isn't supported on these DDIs
     if (ddi_to_pin(ddi()) == -1) {
         return false;
@@ -473,9 +473,11 @@ bool HdmiDisplay::QueryDevice(edid::Edid* edid) {
     return true;
 }
 
-bool HdmiDisplay::ConfigureDdi() {
+bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
+    controller()->ResetDdi(ddi());
+
     registers::Dpll dpll = controller()->SelectDpll(false /* is_edp */, true /* is_hdmi */,
-                                                    mode().pixel_clock_10khz);
+                                                    mode.pixel_clock_10khz);
     if (dpll == registers::DPLL_INVALID) {
         return false;
     }
@@ -494,7 +496,7 @@ bool HdmiDisplay::ConfigureDdi() {
         uint8_t p0, p1, p2;
         uint32_t dco_central_freq_khz;
         uint64_t dco_freq_khz;
-        if (!calculate_params(mode().pixel_clock_10khz * 10,
+        if (!calculate_params(mode.pixel_clock_10khz * 10,
                               &dco_freq_khz, &dco_central_freq_khz, &p0, &p1, &p2)) {
             LOG_ERROR("hdmi: failed to calculate clock params\n");
             return false;
@@ -573,7 +575,8 @@ bool HdmiDisplay::ConfigureDdi() {
     return true;
 }
 
-bool HdmiDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) {
+bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode,
+                                     registers::Pipe pipe, registers::Trans trans) {
     registers::TranscoderRegs trans_regs(trans);
 
     // Configure Transcoder Clock Select
@@ -584,7 +587,8 @@ bool HdmiDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans tran
     return true;
 }
 
-bool HdmiDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) {
+bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode,
+                                     registers::Pipe pipe, registers::Trans trans) {
     registers::TranscoderRegs trans_regs(trans);
 
     auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
@@ -592,15 +596,15 @@ bool HdmiDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans tran
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(is_hdmi_display_ ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
     ddi_func.set_bits_per_color(ddi_func.k8bbc);
-    ddi_func.set_sync_polarity((!!(mode().flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
-                                | (!!(mode().flags & MODE_FLAG_HSYNC_POSITIVE)));
+    ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
+                                | (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.WriteTo(mmio_space());
 
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(!!(mode().flags & MODE_FLAG_INTERLACED));
+    trans_conf.set_interlaced_mode(!!(mode.flags & MODE_FLAG_INTERLACED));
     trans_conf.WriteTo(mmio_space());
 
     // Configure voltage swing and related IO settings.
