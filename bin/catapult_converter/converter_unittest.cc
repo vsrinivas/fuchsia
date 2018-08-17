@@ -33,6 +33,14 @@ void TestConverter(const char* json_input_string, rapidjson::Document* output) {
   args.log_url = "https://ci.example.com/build/100";
   args.use_test_guids = true;
   Convert(&input, output, &args);
+
+  // Check that the output serializes successfully as JSON.  The rapidjson
+  // library allows rapidjson::Values to contain invalid JSON, such as NaN
+  // or infinite floating point values, which are not allowed in JSON.
+  rapidjson::StringBuffer buf;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buf);
+  output->Accept(writer);
+  EXPECT_TRUE(writer.IsComplete());
 }
 
 // This function checks that the JSON value |actual| is a number that is
@@ -838,6 +846,50 @@ TEST(CatapultConverter, ConvertBytesUnit) {
   AssertApproxEqual(&output, &output[5]["running"][6], 6290.666);
 
   AssertJsonEqual(output, expected_output);
+}
+
+// Test handling of zero values.  The meanlogs field in the output should
+// be 'null' in this case.
+TEST(CatapultConverter, ZeroValues) {
+  const char* input_str = R"JSON(
+[
+    {
+        "label": "ExampleValues",
+        "test_suite": "my_test_suite",
+        "samples": [{"values": [0]}],
+        "unit": "milliseconds"
+    }
+]
+)JSON";
+
+  rapidjson::Document output;
+  TestConverter(input_str, &output);
+
+  rapidjson::Value null;
+  rapidjson::Value& meanlogs_field = output[5]["running"][2];
+  EXPECT_EQ(meanlogs_field, null);
+}
+
+// Test handling of negative values.  The meanlogs field in the output
+// should be 'null' in this case.
+TEST(CatapultConverter, NegativeValues) {
+  const char* input_str = R"JSON(
+[
+    {
+        "label": "ExampleValues",
+        "test_suite": "my_test_suite",
+        "samples": [{"values": [-1]}],
+        "unit": "milliseconds"
+    }
+]
+)JSON";
+
+  rapidjson::Document output;
+  TestConverter(input_str, &output);
+
+  rapidjson::Value null;
+  rapidjson::Value& meanlogs_field = output[5]["running"][2];
+  EXPECT_EQ(meanlogs_field, null);
 }
 
 class TempFile {

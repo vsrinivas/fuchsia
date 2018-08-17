@@ -45,6 +45,10 @@ void WriteJson(FILE* fp, rapidjson::Document* doc) {
   rapidjson::FileWriteStream output_stream(fp, buffer, sizeof(buffer));
   rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(output_stream);
   doc->Accept(writer);
+  // Check that all the output was serialized successfully as JSON.  This
+  // can fail if the output contained NaN or infinite floating point
+  // values.
+  FXL_CHECK(writer.IsComplete());
 }
 
 // rapidjson's API is rather verbose to use.  This class provides some
@@ -89,14 +93,23 @@ void ComputeStatistics(const std::vector<double>& vals,
   double min = *std::min_element(vals.begin(), vals.end());
   double max = *std::max_element(vals.begin(), vals.end());
   double mean = sum / vals.size();
+  double variance = Variance(vals, mean);
+
   // meanlogs is the mean of the logs of the values, which is useful for
   // calculating the geometric mean of the values.
+  //
+  // If any of the values are zero or negative, meanlogs will be -Infinity
+  // or a NaN, which can't be serialized in JSON format.  In those cases,
+  // we write 'null' in the JSON instead.
   double meanlogs = sum_of_logs / vals.size();
-  double variance = Variance(vals, mean);
+  rapidjson::Value meanlogs_json;
+  if (isfinite(meanlogs))
+    meanlogs_json.SetDouble(meanlogs);
+
   output->SetArray();
   output->PushBack(vals.size(), *alloc);  // "count" entry.
   output->PushBack(max, *alloc);
-  output->PushBack(meanlogs, *alloc);
+  output->PushBack(meanlogs_json, *alloc);
   output->PushBack(mean, *alloc);
   output->PushBack(min, *alloc);
   output->PushBack(sum, *alloc);
