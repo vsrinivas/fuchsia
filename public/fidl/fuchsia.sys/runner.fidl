@@ -17,8 +17,23 @@ struct StartupInfo {
   // The namespace in which to run the component.
   FlatNamespace flat_namespace;
 
+  // Key string value string map of the component's program metadata, obtained
+  // from its component manifest.
+  vector<ProgramMetadata>? program_metadata;
+
   // TODO(abarth): Add more fields to this struct relating to component and
   // environment identity.
+};
+
+// Program information about a component.
+struct ProgramMetadata {
+  // Key for program metadata pair. E.g. "binary" for an ELF binary component,
+  // or "data" for a flutter/dart component.
+  string key;
+
+  // Value for program metadata pair. E.g. "bin/app" for a "binary" key, or
+  // "data/foo" for a flutter/dart component.
+  string value;
 };
 
 // A binary representation of a component.
