@@ -12,6 +12,7 @@ flutter_app(
         "assets/logo.png",
     ],
     package_name = "tests.flutter_app",
+    fuchsia_package_name = "package",
     deps = [
         "@vendor_flutter//:flutter",
     ],

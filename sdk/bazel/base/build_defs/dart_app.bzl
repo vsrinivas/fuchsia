@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":dart.bzl", "compile_kernel_action")
+load(":dart.bzl", "COMMON_COMPILE_KERNEL_ACTION_ATTRS", "compile_kernel_action")
 load(":package_info.bzl", "PackageLocalInfo")
 
 # A Fuchsia Dart application
@@ -15,7 +15,6 @@ load(":package_info.bzl", "PackageLocalInfo")
 #   deps
 #     List of libraries to link to this application.
 
-
 _DART_JIT_RUNNER_CONTENT = """{
     "runner": "dart_jit_runner"
 }
@@ -27,6 +26,7 @@ def _dart_app_impl(context):
     mappings = compile_kernel_action(
         context = context,
         package_name = context.attr.package_name,
+        fuchsia_package_name = context.attr.fuchsia_package_name,
         dart_exec = context.executable._dart,
         kernel_compiler = context.files._kernel_compiler[0],
         sdk_root = context.files._platform_lib[0],
@@ -49,43 +49,13 @@ def _dart_app_impl(context):
 
 dart_app = rule(
     implementation = _dart_app_impl,
-    attrs = {
-        "main": attr.label(
-            doc = "The main script file",
-            mandatory = True,
-            allow_files = True,
-            single_file = True,
-        ),
-        "srcs": attr.label_list(
-            doc = "Additional source files",
-            allow_files = True,
-        ),
-        "package_name": attr.string(
-            doc = "The Dart package name",
-            mandatory = True,
-        ),
-        "deps": attr.label_list(
-            doc = "The list of libraries this app depends on",
-            mandatory = False,
-            providers = ["dart"],
-        ),
-        "_dart": attr.label(
-            default = Label("//tools:dart"),
-            allow_single_file = True,
-            executable = True,
-            cfg = "host",
-        ),
-        "_kernel_compiler": attr.label(
-            default = Label("//tools/dart_prebuilts:kernel_compiler.snapshot"),
-            allow_single_file = True,
-            cfg = "host",
-        ),
+    attrs = dict({
         "_platform_lib": attr.label(
             default = Label("//tools/dart_prebuilts/dart_runner:platform_strong.dill"),
             allow_single_file = True,
             cfg = "host",
         ),
-    },
+    }.items() + COMMON_COMPILE_KERNEL_ACTION_ATTRS.items()),
     outputs = {
         # Kernel snapshot.
         "kernel_snapshot": "%{name}_kernel.dil",

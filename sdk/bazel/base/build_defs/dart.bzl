@@ -13,14 +13,54 @@ load(
     "package_spec_action"
 )
 
-def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
-                          sdk_root, main, srcs, kernel_snapshot_file,
-                          manifest_file, main_dilp_file, dilp_list_file):
+"""Common attributes used by the `compile_kernel_action`."""
+COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
+    "main": attr.label(
+        doc = "The main script file",
+        mandatory = True,
+        allow_files = True,
+        single_file = True,
+    ),
+    "srcs": attr.label_list(
+        doc = "Additional source files",
+        allow_files = True,
+    ),
+    "package_name": attr.string(
+        doc = "The Dart package name",
+        mandatory = True,
+    ),
+    "fuchsia_package_name": attr.string(
+        doc = "The Fuchsia package name embedding this app",
+        mandatory = True,
+    ),
+    "deps": attr.label_list(
+        doc = "The list of libraries this app depends on",
+        mandatory = False,
+        providers = ["dart"],
+    ),
+    "_dart": attr.label(
+        default = Label("//tools:dart"),
+        allow_single_file = True,
+        executable = True,
+        cfg = "host",
+    ),
+    "_kernel_compiler": attr.label(
+        default = Label("//tools/dart_prebuilts:kernel_compiler.snapshot"),
+        allow_single_file = True,
+        cfg = "host",
+    ),
+}
+
+def compile_kernel_action(context, package_name, fuchsia_package_name,
+                          dart_exec, kernel_compiler, sdk_root, main, srcs,
+                          kernel_snapshot_file, manifest_file, main_dilp_file,
+                          dilp_list_file):
     """Creates an action that generates the Dart kernel and its dependencies.
 
     Args:
         context: The rule context.
         package_name: The Dart package name.
+        fuchsia_package_name: The name of the Fuchsia package using this kernel.
         dart_exec: The Dart executable `File`.
         kernel_compiler: The kernel compiler snapshot `File`.
         sdk_root: The Dart SDK root `File` (Dart or Flutter's platform libs).
@@ -61,6 +101,7 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
         build_dir_files = {}
 
     # 3. Declare *.dilp files for all dependencies.
+    data_root = "data/%s/" % fuchsia_package_name
     mappings = {}
     dart_ctxs = collect_dart_context(dart_ctx).values()
     for dc in dart_ctxs:
@@ -70,7 +111,7 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
             continue
         dilp_file = context.actions.declare_file(
             context.label.name + "_kernel.dil-" + dc.package + ".dilp")
-        mappings['data/' + dc.package + ".dilp"] = dilp_file
+        mappings[data_root + dc.package + ".dilp"] = dilp_file
 
     # 4. Create a wrapper script around the kernel compiler.
     #    The kernel compiler only generates .dilp files for libraries that are
@@ -97,6 +138,8 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
         executable = kernel_script,
         arguments = [
             kernel_compiler.path,
+            "--component-name",
+            fuchsia_package_name,
             "--target",
             "dart_runner",
             "--sdk-root",
@@ -124,6 +167,6 @@ def compile_kernel_action(context, package_name, dart_exec, kernel_compiler,
         ] + mappings.values(),
         mnemonic = "DartKernelCompiler",
     )
-    mappings["data/main.dilp"] = main_dilp_file
-    mappings["data/app.dilplist"] = dilp_list_file
+    mappings[data_root + "main.dilp"] = main_dilp_file
+    mappings[data_root + "app.dilplist"] = dilp_list_file
     return mappings

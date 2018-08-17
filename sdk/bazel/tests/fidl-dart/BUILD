@@ -26,6 +26,7 @@ dart_fidl_library(
 dart_app(
     name = "compile",
     package_name = "tests.fidl_dart_compile",
+    fuchsia_package_name = "fidl_dart_package",
     main = "instrument_bindings.dart",
     deps = [
         ":simple",
