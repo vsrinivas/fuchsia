@@ -7,6 +7,9 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
+#define TO_NODE(type, ptr) ((list_node_t*)&ptr->state)
+#define FROM_NODE(type, ptr) ((type*)((char*)(ptr)-offsetof(type, state)))
+
 namespace async {
 
 namespace {
@@ -14,53 +17,40 @@ namespace {
 // The packet key used to signal timer expirations.
 constexpr uint64_t kTimerExpirationKey = 0u;
 
-// Struct to store list node state.
-template <typename T>
-struct Node {
-  T* prev_;
-  T* next_;
-};
+// Convenience functions for task, wait, and list node management.
+inline list_node_t* WaitToNode(async_wait_t* wait) {
+    return TO_NODE(async_wait_t, wait);
+}
 
+inline async_wait_t* NodeToWait(list_node_t* node) {
+    return FROM_NODE(async_wait_t, node);
+}
+
+inline list_node_t* TaskToNode(async_task_t* task) {
+    return TO_NODE(async_task_t, task);
+}
+
+inline async_task_t* NodeToTask(list_node_t* node) {
+    return FROM_NODE(async_task_t, node);
+}
+
+inline void InsertTask(list_node_t* task_list, async_task_t* task) {
+    list_node_t* node;
+    for (node = task_list->prev; node != task_list; node = node->prev) {
+        if (task->deadline >= NodeToTask(node)->deadline) {
+            break;
+        }
+    }
+    list_add_after(node, TaskToNode(task));
+}
 } // namespace
-
-
-template <typename T>
-struct TestLoopDispatcher::ListTraits {
-    static Node<T>& node_state(T& obj) {
-        static_assert(sizeof(Node<T>) <= sizeof(async_state_t), "");
-        auto node = reinterpret_cast<Node<T>*>(&obj.state);
-        return *node;
-    }
-};
-
-template <typename T>
-bool TestLoopDispatcher::DeleteFromList(T* obj, TestLoopDispatcher::List<T>* list) {
-    auto iter = list->find_if([obj] (const T& element) {
-        return obj == &element;
-    });
-    if (iter.IsValid()) {
-        list->erase(iter);
-        return true;
-    }
-    return false;
-}
-
-void TestLoopDispatcher::InsertTask(async_task_t* task,
-                                    TestLoopDispatcher::List<async_task_t>* list) {
-    auto iter = list->begin();
-    for (; iter.IsValid(); ++iter) {
-        if (iter->deadline > task->deadline) { break; }
-    }
-    if (iter.IsValid()) {
-        list->insert(iter, task);
-    } else {
-        list->push_back(task);
-    }
-}
 
 TestLoopDispatcher::TestLoopDispatcher(TimeKeeper* time_keeper)
     : time_keeper_(time_keeper) {
     ZX_DEBUG_ASSERT(time_keeper_);
+    list_initialize(&wait_list_);
+    list_initialize(&task_list_);
+    list_initialize(&due_list_);
     zx_status_t status = zx::port::create(0u, &port_);
     ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
 }
@@ -82,7 +72,7 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
     static_assert(0u == kTimerExpirationKey,
                   "Timer expirations must be signaled with a packet key of 0");
 
-    wait_list_.push_front(wait);
+    list_add_head(&wait_list_, WaitToNode(wait));
     zx_status_t status = zx_object_wait_async(wait->object, port_.get(),
                                               reinterpret_cast<uintptr_t>(wait),
                                               wait->trigger,
@@ -91,7 +81,7 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
     if (status != ZX_OK) {
         // In this rare condition, the wait failed. Since a dispatched handler will
         // never be invoked on the wait object, we remove it ourselves.
-        ZX_DEBUG_ASSERT(DeleteFromList<async_wait_t>(wait, &wait_list_));
+        list_delete(WaitToNode(wait));
     }
     return status;
 }
@@ -99,7 +89,8 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
 zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
 
-    if (!DeleteFromList<async_wait_t>(wait, &wait_list_)) {
+    list_node_t* node = WaitToNode(wait);
+    if (!list_in_list(node)) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -107,20 +98,25 @@ zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     if (due_packet_ && due_packet_->key != kTimerExpirationKey) {
         if (wait == reinterpret_cast<async_wait_t*>(due_packet_->key)) {
             due_packet_.reset();
+            list_delete(node);
             return ZX_OK;
         }
     }
 
-    return port_.cancel(*zx::unowned_handle(wait->object),
-                        reinterpret_cast<uintptr_t>(wait));
+    zx_status_t status = port_.cancel(*zx::unowned_handle(wait->object),
+                                      reinterpret_cast<uintptr_t>(wait));
+    if (status == ZX_OK) {
+        list_delete(node);
+    }
+    return status;
 }
 
 // TODO(ZX-2390): Return ZX_ERR_CANCELED if dispatcher is shutting down.
 zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
     ZX_DEBUG_ASSERT(task);
 
-    InsertTask(task, &task_list_);
-    if (task == &task_list_.front()) {
+    InsertTask(&task_list_, task);
+    if (NodeToTask(list_peek_head(&task_list_)) == task) {
         time_keeper_->RegisterTimer(GetNextTaskDueTime(), this);
     }
     return ZX_OK;
@@ -128,28 +124,29 @@ zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
 
 zx_status_t TestLoopDispatcher::CancelTask(async_task_t* task) {
     ZX_DEBUG_ASSERT(task);
-    if (DeleteFromList<async_task_t>(task, &task_list_) ||
-        DeleteFromList<async_task_t>(task, &due_list_)) {
-        return ZX_OK;
+    list_node_t* node = TaskToNode(task);
+    if (!list_in_list(node)) {
+        return ZX_ERR_NOT_FOUND;
     }
-    return ZX_ERR_NOT_FOUND;
+    list_delete(node);
+    return ZX_OK;
 }
 
 void TestLoopDispatcher::FireTimer() {
     zx_port_packet_t timer_packet{};
     timer_packet.key = kTimerExpirationKey;
     timer_packet.type = ZX_PKT_TYPE_USER;
-    ZX_DEBUG_ASSERT(ZX_OK == port_.queue(&timer_packet));
+    ZX_ASSERT(ZX_OK == port_.queue(&timer_packet));
 }
 
 zx::time TestLoopDispatcher::GetNextTaskDueTime() {
-    if (due_list_.is_empty()) {
-          if (task_list_.is_empty()) {
-              return zx::time::infinite();
-          }
-          return zx::time(task_list_.front().deadline);
+    list_node_t* node = list_is_empty(&due_list_) ?
+                        list_peek_head(&task_list_) :
+                        list_peek_head(&due_list_);
+    if (!node) {
+        return zx::time::infinite();
     }
-    return zx::time(due_list_.front().deadline);
+    return zx::time(NodeToTask(node)->deadline);
 }
 
 
@@ -173,20 +170,23 @@ bool TestLoopDispatcher::HasPendingWork() {
 }
 
 void TestLoopDispatcher::DispatchNextDueTask() {
-    if (due_list_.is_empty()) { return; }
+    // if something is already in the due list, dispatch that.
+    list_node_t* node = list_peek_head(&due_list_);
+    if (node) {
+        list_delete(node);
+        async_task_t* task = NodeToTask(node);
+        task->handler(this, task, ZX_OK);
 
-    async_task_t* task = due_list_.pop_front();
-    task->handler(this, task, ZX_OK);
-
-    // If the due list is now empty and there are still pending tasks,
-    // register a timer for the next due time.
-    if (due_list_.is_empty() && !task_list_.is_empty()) {
-        time_keeper_->RegisterTimer(GetNextTaskDueTime(), this);
+        // If the due list is now empty and there are still pending tasks,
+        // register a timer for the next due time.
+        if (list_is_empty(&due_list_) && !list_is_empty(&task_list_)) {
+            time_keeper_->RegisterTimer(GetNextTaskDueTime(), this);
+        }
     }
 }
 
 bool TestLoopDispatcher::DispatchNextDueMessage() {
-    if (!due_list_.is_empty()) {
+    if (!list_is_empty(&due_list_)) {
         DispatchNextDueTask();
         return true;
     }
@@ -205,31 +205,43 @@ bool TestLoopDispatcher::DispatchNextDueMessage() {
         zx_port_packet_t packet = *due_packet_;
         due_packet_.reset();
         async_wait_t* wait = reinterpret_cast<async_wait_t*>(packet.key);
-        ZX_DEBUG_ASSERT(DeleteFromList<async_wait_t>(wait, &wait_list_));
+        list_delete(WaitToNode(wait));
         wait->handler(this, wait, ZX_OK, &packet.signal);
     }
     return true;
 }
 
 void TestLoopDispatcher::ExtractDueTasks() {
+    list_node_t* node;
+    list_node_t* tail = nullptr;
     zx::time current_time = time_keeper_->Now();
-    while (!task_list_.is_empty() &&
-           task_list_.front().deadline <= current_time.get()) {
-        InsertTask(task_list_.pop_front(), &due_list_);
+    list_for_every(&task_list_, node) {
+        if (NodeToTask(node)->deadline > current_time.get()) { break; }
+        tail = node;
+    }
+    if (tail) {
+        list_node_t* head = task_list_.next;
+        task_list_.next = tail->next;
+        tail->next->prev = &task_list_;
+        due_list_.next = head;
+        head->prev = &due_list_;
+        due_list_.prev = tail;
+        tail->next = &due_list_;
     }
 }
 
 void TestLoopDispatcher::Shutdown() {
-    while (!wait_list_.is_empty()) {
-        async_wait_t* wait = wait_list_.pop_front();
+    list_node_t* node;
+    while ((node = list_remove_head(&wait_list_))) {
+        async_wait_t* wait = NodeToWait(node);
         wait->handler(this, wait, ZX_ERR_CANCELED, nullptr);
     }
-    while (!due_list_.is_empty()) {
-        async_task_t* task = due_list_.pop_front();
+    while ((node = list_remove_head(&due_list_))) {
+        async_task_t* task = NodeToTask(node);
         task->handler(this, task, ZX_ERR_CANCELED);
     }
-    while (!task_list_.is_empty()) {
-        async_task_t* task = task_list_.pop_front();
+    while ((node = list_remove_head(&task_list_))) {
+        async_task_t* task = NodeToTask(node);
         task->handler(this, task, ZX_ERR_CANCELED);
     }
 }

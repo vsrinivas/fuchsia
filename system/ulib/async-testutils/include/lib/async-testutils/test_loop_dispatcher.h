@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-testutils/dispatcher_stub.h>
@@ -14,6 +13,7 @@
 #include <lib/async/wait.h>
 #include <lib/zx/port.h>
 #include <lib/zx/time.h>
+#include <zircon/listnode.h>
 
 namespace async {
 
@@ -47,21 +47,6 @@ public:
     zx::time GetNextTaskDueTime();
 
 private:
-    // Trait implementation for a list of type async_dispatcher_t or
-    // async_wait_t - or any type with an async_state_t member with
-    // the name |state|.
-    template <typename T> struct ListTraits;
-    template <typename T> using List = fbl::DoublyLinkedList<T*, ListTraits<T>>;
-
-    // Provided it is an element, deletes |obj| from |list| and returns true; else,
-    // returns false.
-    template <typename T>
-    static bool DeleteFromList(T* obj, TestLoopDispatcher::List<T>* list);
-
-    // Inserts |task| into a |list| sorted by deadline; insert the task behind all of
-    // those currently in the list with the same deadline.
-    static void InsertTask(async_task_t* task, TestLoopDispatcher::List<async_task_t>* list);
-
     // Moves due tasks from |task_list_| to |due_list_|.
     void ExtractDueTasks();
 
@@ -88,11 +73,11 @@ private:
     fbl::unique_ptr<zx_port_packet_t> due_packet_;
 
     // Pending tasks, earliest deadline first.
-    List<async_task_t> task_list_;
+    list_node_t task_list_;
     // Due tasks, earliest deadlines first.
-    List<async_task_t> due_list_;
+    list_node_t due_list_;
     // Pending waits, most recently added first.
-    List<async_wait_t> wait_list_;
+    list_node_t wait_list_;
 };
 
 } // namespace async
