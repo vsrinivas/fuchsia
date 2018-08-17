@@ -192,9 +192,6 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
                                        zx_koid_t thread_koid) {
   zx::thread thread = ThreadForKoid(process_.get(), thread_koid);
 
-  // The thread will currently be in a suspended state, resume it.
-  thread.resume(ZX_RESUME_EXCEPTION);
-
   FXL_DCHECK(threads_.find(thread_koid) == threads_.end());
   auto added = threads_.emplace(
       thread_koid, std::make_unique<DebuggedThread>(this, std::move(thread),

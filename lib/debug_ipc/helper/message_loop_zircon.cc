@@ -194,9 +194,9 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
   return WatchHandle(this, watch_id);
 }
 
-zx_status_t MessageLoopZircon::ResumeFromException(zx_handle_t thread_handle,
+zx_status_t MessageLoopZircon::ResumeFromException(zx::thread& thread,
                                                    uint32_t options) {
-  return zx_task_resume_from_exception(thread_handle, port_.get(), options);
+  return thread.resume_from_exception(port_, options);
 }
 
 void MessageLoopZircon::RunImpl() {

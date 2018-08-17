@@ -31,7 +31,7 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
       thread_(std::move(thread)),
       koid_(koid) {
   if (starting)
-    thread_.resume(ZX_RESUME_EXCEPTION);
+    debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
 }
 
 DebuggedThread::~DebuggedThread() {}
@@ -285,8 +285,7 @@ void DebuggedThread::ResumeForRunMode() {
     }
     suspend_reason_ = SuspendReason::kNone;
     FXL_DCHECK(!suspend_token_.is_valid());  // Should not exist.
-    debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_.get(),
-                                                                 0);
+    debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.

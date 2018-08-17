@@ -6,6 +6,7 @@
 
 #include <zx/event.h>
 #include <zx/port.h>
+#include <zx/thread.h>
 
 namespace debug_ipc {
 
@@ -46,7 +47,7 @@ class MessageLoopZircon : public MessageLoop {
   // When this class issues an exception notification, the code should call
   // this function to resume the thread from the exception. This is a wrapper
   // for zx_task_resume_from_exception.
-  zx_status_t ResumeFromException(zx_handle_t thread_handle, uint32_t options);
+  zx_status_t ResumeFromException(zx::thread& thread, uint32_t options);
 
  private:
   enum class WatchType { kFdio, kProcessExceptions, kSocket };
