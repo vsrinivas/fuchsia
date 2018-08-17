@@ -116,6 +116,7 @@ DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, registers::Ddi
 DisplayDevice::~DisplayDevice() {
     if (pipe_) {
         pipe_->Reset();
+        pipe_->Detach();
     }
     if (inited_) {
         ResetDdi();
@@ -216,6 +217,7 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
 
     if (pipe_) {
         pipe_->Reset();
+        pipe_->Detach();
     }
     if (pipe) {
         pipe->AttachToDisplay(id_, controller()->igd_opregion().IsEdp(ddi()));

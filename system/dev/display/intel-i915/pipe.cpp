@@ -93,6 +93,9 @@ void Pipe::Resume() {
 void Pipe::Reset() {
     controller_->ResetPipe(pipe_);
     controller_->ResetTrans(transcoder());
+}
+
+void Pipe::Detach() {
     attached_display_ = INVALID_DISPLAY_ID;
 }
 

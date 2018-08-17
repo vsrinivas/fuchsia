@@ -29,13 +29,14 @@ public:
     ~Pipe();
 
     void AttachToDisplay(uint64_t display_id, bool is_edp);
-    void Reset();
+    void Detach();
 
     void ApplyModeConfig(const display_mode_t& mode);
     void ApplyConfiguration(const display_config_t* config);
 
     void Init();
     void Resume();
+    void Reset();
 
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans transcoder() const {
