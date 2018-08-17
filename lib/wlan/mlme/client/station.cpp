@@ -818,34 +818,35 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     // PS-POLL if there are more buffered unicast frames.
     if (data_hdr->fc.more_data() && data_hdr->addr1.IsUcast()) { SendPsPoll(); }
 
-    return HandleLlcFrame(*llc_frame.hdr(), frame.body_len(), data_hdr->addr1, data_hdr->addr3);
+    const auto& src = data_hdr->addr3;
+    const auto& dest = data_hdr->addr1;
+    size_t llc_payload_len = llc_frame.body_len();
+    return HandleLlcFrame(llc_frame, llc_payload_len, src, dest);
 }
 
-zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
-                                    const common::MacAddr& dest, const common::MacAddr& src) {
-    auto llc_payload_len = llc_frame_len - sizeof(LlcHeader);
-
-    finspect("Inbound LLC frame: len %zu\n", llc_frame_len);
-    finspect("  llc hdr: %s\n", debug::Describe(llc_frame).c_str());
-    auto payload = reinterpret_cast<const uint8_t*>(&llc_frame) + sizeof(LlcHeader);
-    finspect("  llc payload: %s\n", debug::HexDump(payload, llc_payload_len).c_str());
+zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_t llc_payload_len,
+                                    const common::MacAddr& src, const common::MacAddr& dest) {
+    finspect("Inbound LLC frame: hdr len %zu, payload len: %zu\n", llc_frame.hdr()->len(),
+             llc_payload_len);
+    finspect("  llc hdr: %s\n", debug::Describe(*llc_frame.hdr()).c_str());
+    finspect("  llc payload: %s\n", debug::HexDump(llc_frame.body()->data, llc_payload_len).c_str());
 
     // Prepare a packet
-    const size_t eth_len = llc_payload_len + sizeof(EthernetII);
-    auto buffer = GetBuffer(eth_len);
+    const size_t eth_frame_len = sizeof(EthernetII) + llc_payload_len;
+    auto buffer = GetBuffer(eth_frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto eth_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
-    eth_packet->set_peer(Packet::Peer::kEthernet);
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), eth_frame_len);
+    packet->set_peer(Packet::Peer::kEthernet);
+    // No need to clear Packet as every byte will be overwritten.
 
-    // Construct an Ethernet frame
-    auto eth = eth_packet->mut_field<EthernetII>(0);
-    eth->dest = dest;
-    eth->src = src;
-    eth->ether_type = llc_frame.protocol_id;
-    std::memcpy(eth->payload, llc_frame.payload, llc_payload_len);
+    EthFrame eth_frame(fbl::move(packet));
+    auto eth_hdr = eth_frame.hdr();
+    eth_hdr->dest = dest;
+    eth_hdr->src = src;
+    eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
+    std::memcpy(eth_frame.body()->data, llc_frame.body()->data, llc_payload_len);
 
-    // Send up
-    zx_status_t status = device_->SendEthernet(std::move(eth_packet));
+    auto status = device_->SendEthernet(eth_frame.Take());
     if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
     return status;
 }
@@ -854,8 +855,6 @@ zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
     // TODO(porce): Define A-MSDU or MSDU signature, and avoid forceful conversion.
     debugfn();
     auto data_amsdu_frame = frame.View();
-    const auto& src = data_amsdu_frame.hdr()->addr3;
-    const auto& dst = data_amsdu_frame.hdr()->addr1;
 
     // Non-DMG stations use basic subframe format only.
     if (data_amsdu_frame.body_len() == 0) { return ZX_OK; }
@@ -864,8 +863,10 @@ zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
     // TODO(porce): The received AMSDU should not be greater than max_amsdu_len, specified in
     // HtCapabilities IE of Association. Warn or discard if violated.
 
+    const auto& src = data_amsdu_frame.hdr()->addr3;
+    const auto& dest = data_amsdu_frame.hdr()->addr1;
     DeaggregateAmsdu(data_amsdu_frame, [&](FrameView<LlcHeader> llc_frame, size_t payload_len) {
-        HandleLlcFrame(*llc_frame.hdr(), llc_frame.hdr()->len() + payload_len, dst, src);
+        HandleLlcFrame(llc_frame, payload_len, src, dest);
     });
 
     return ZX_OK;
