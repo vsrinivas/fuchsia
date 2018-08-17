@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"app/context"
 	"fidl/fuchsia/amber"
@@ -138,23 +139,67 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 	}
 	defer h.Close()
 
-	signals, err := zxwait.Wait(*h.Handle(), zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+	signals, err := zxwait.Wait(*h.Handle(),
+		zx.SignalChannelPeerClosed|zx.SignalChannelReadable|zx.SignalUser0,
 		zx.TimensecInfinite)
 	if err != nil {
 		return fmt.Errorf("fetch: error waiting on result channel: %s", err)
 	}
 
-	buf := make([]byte, 128)
+	// we encountered a failure
+	if signals&zx.SignalUser0 == zx.SignalUser0 {
+		log.Printf("fetch: update service signaled failure getting %q, reading error", p.name)
+
+		// if the channel isn't readable, do a bounded wait to try to get an error message from it
+		if signals&zx.SignalChannelReadable != zx.SignalChannelReadable {
+			signals, err = zxwait.Wait(*h.Handle(),
+				zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+				zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+		}
+
+		// if we can read, try it
+		if err == nil && signals&zx.SignalChannelReadable == zx.SignalChannelReadable {
+			buf := make([]byte, 1024)
+			buf, err = readBytesFromHandle(&h, buf)
+			if err == nil {
+				return fmt.Errorf("fetch: update service failed getting %q: %s", p.name,
+					string(buf))
+			}
+		}
+
+		return fmt.Errorf("fetch: update service failed getting %q: %s", p.name, err)
+	}
+
 	if signals&zx.SignalChannelReadable == zx.SignalChannelReadable {
-		i, _, err := h.Read(buf, []zx.Handle{}, 0)
+		buf := make([]byte, 128)
+		buf, err := readBytesFromHandle(&h, buf)
 		if err != nil {
 			return fmt.Errorf("fetch: error reading channel %s", err)
 		}
-		log.Printf("package %q installed at %q", p.name, string(buf[0:i]))
+		log.Printf("package %q installed at %q", p.name, string(buf))
 	} else {
 		return fmt.Errorf("fetch: reply channel was not readable")
 	}
 	return nil
+}
+
+// readBytesFromHandle attempts to read any available bytes from the channel. A buffer may be
+// passed in to hold the bytes. If the buffer is too small or if the passed buffer is nil, an
+// appropriately sized buffer will be allocated to hold the message. The function makes no attempt
+// to validate the channel it is passed is actually readable.
+func readBytesFromHandle(h *zx.Channel, buf []byte) ([]byte, error) {
+	if buf == nil {
+		buf = make([]byte, 1024)
+	}
+	i, _, err := h.Read(buf, []zx.Handle{}, 0)
+	// possible retry if we need a larger buffer
+	if err != nil {
+		if zxErr, ok := err.(zx.Error); ok && zxErr.Status == zx.ErrBufferTooSmall {
+			buf = make([]byte, i)
+			i, _, err = h.Read(buf, []zx.Handle{}, 0)
+		}
+	}
+	return buf[:i], err
 }
 
 var diskImagerPath = filepath.Join("/boot", "bin", "install-disk-image")
