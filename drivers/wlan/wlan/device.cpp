@@ -21,6 +21,7 @@
 #include <wlan/protocol/ioctl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
@@ -119,6 +120,12 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     status = ValidateWlanMacInfo(wlanmac_info_);
     if (status != ZX_OK) {
         errorf("could not bind wlanmac device with invalid wlanmac info\n");
+        return status;
+    }
+
+    status = wlanmac_proxy_.Start(&wlanmac_ifc_ops, this);
+    if (status != ZX_OK) {
+        errorf("failed to start wlanmac device: %s\n", zx_status_get_string(status));
         return status;
     }
 
@@ -306,13 +313,8 @@ zx_status_t Device::EthmacStart(ethmac_ifc_t* ifc, void* cookie) {
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
-    zx_status_t status = wlanmac_proxy_.Start(&wlanmac_ifc_ops, this);
-    if (status != ZX_OK) {
-        errorf("could not start wlanmac: %d\n", status);
-    } else {
-        ethmac_proxy_.reset(new EthmacIfcProxy(ifc, cookie));
-    }
-    return status;
+    ethmac_proxy_.reset(new EthmacIfcProxy(ifc, cookie));
+    return ZX_OK;
 }
 
 void Device::EthmacStop() {
