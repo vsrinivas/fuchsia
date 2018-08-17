@@ -11,10 +11,10 @@ BUILDTOOLS_ROOT = os.path.join(FUCHSIA_ROOT, "buildtools")
 FLUTTER_ROOT = os.path.join(FUCHSIA_ROOT, "lib", "flutter")
 
 DART_PLATFORM = {
-    "Linux": "linux",
-    "Darwin": "mac",
-    "Windows": "win"
+    "Linux": "linux-x64",
+    "Darwin": "mac-x64",
+    "Windows": "win-x64"
 }[platform.system()]
 
-DART_ROOT = os.path.join(FUCHSIA_ROOT, "third_party", "dart", "tools", "sdks",
-                         DART_PLATFORM, "dart-sdk")
+DART_ROOT = os.path.join(FUCHSIA_ROOT, "topaz", "tools", "prebuilt-dart-sdk",
+                         DART_PLATFORM)
