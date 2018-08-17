@@ -14,7 +14,6 @@ executable("bin") {
     "filesystem.cc",
     "lazy_dir.cc",
     "mmu.cc",
-    "null.cc",
     "ports.cc",
     "pseudo_dir.cc",
     "pthreads.cc",
