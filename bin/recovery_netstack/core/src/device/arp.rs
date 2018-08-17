@@ -7,7 +7,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use crate::ip::{IpAddr, Ipv4Addr};
 use crate::wire::{arp::{ArpPacket, HType, PType},
                   BufferAndRange, SerializationCallback};
 use crate::StackState;

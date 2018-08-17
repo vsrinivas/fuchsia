@@ -6,7 +6,7 @@
 
 use std::fmt::{self, Display, Formatter};
 
-use log::{debug, log, trace};
+use log::{debug, log};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
@@ -114,11 +114,23 @@ impl Display for EtherType {
 }
 
 /// The state associated with an Ethernet device.
-#[derive(Default)]
 pub struct EthernetDeviceState {
+    mac: Mac,
     ipv4_addr: Option<(Ipv4Addr, Subnet<Ipv4Addr>)>,
     ipv6_addr: Option<(Ipv6Addr, Subnet<Ipv6Addr>)>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
+}
+
+impl EthernetDeviceState {
+    /// Construct a new `EthernetDeviceState`.
+    pub fn new(mac: Mac) -> EthernetDeviceState {
+        EthernetDeviceState {
+            mac,
+            ipv4_addr: None,
+            ipv6_addr: None,
+            ipv4_arp: ArpState::default(),
+        }
+    }
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -132,7 +144,7 @@ pub struct EthernetDeviceState {
 /// number of bytes in the body and the post-body padding must not be smaller
 /// than the minimum size passed to the callback.
 ///
-/// For more details on the callback, see the [`::wire::SerializationCallback`]
+/// For more details on the callback, see the [`crate::wire::SerializationCallback`]
 /// documentation.
 ///
 /// # Panics

@@ -9,7 +9,7 @@ use crate::wire::udp::UdpPacket;
 use crate::wire::BufferAndRange;
 use crate::StackState;
 
-use log::{log, trace};
+use log::log;
 
 /// The state associated with the UDP protocol.
 #[derive(Default)]

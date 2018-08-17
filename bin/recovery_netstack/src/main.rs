@@ -25,32 +25,20 @@ use ethernet as eth;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
-#[macro_use]
-mod macros;
+mod eventloop;
 
-// mark all modules as public so that deny(missing_docs) will be more powerful
-pub mod device;
-pub mod error;
-pub mod eventloop;
-pub mod ip;
-#[cfg(test)]
-pub mod testutil;
-pub mod transport;
-pub mod wire;
 
-use crate::device::DeviceLayerState;
 use crate::eventloop::EventLoop;
 use failure::ResultExt;
 use futures::prelude::*;
-use crate::ip::IpLayerState;
-use crate::transport::TransportLayerState;
+use netstack_core;
 
 use std::env;
 use std::fs::File;
 
 const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
 // Hardcoded IPv4 address: if you use something other than a 192.168.1/24, update the subnet below.
-const FIXED_IPADDR: ip::Ipv4Addr = ip::Ipv4Addr::new([192, 168, 1, 39]);
+const FIXED_IPADDR: netstack_core::Ipv4Addr = netstack_core::Ipv4Addr::new([192, 168, 1, 39]);
 
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init()?;
@@ -58,7 +46,7 @@ fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::set_severity(-1);
 
     let event_loop = EventLoop {};
-    let mut state = StackState::default();
+    let mut state = netstack_core::StackState::default();
 
     let vmo = zx::Vmo::create_with_opts(
         zx::VmoOptions::NON_RESIZABLE,
@@ -72,14 +60,14 @@ fn main() -> Result<(), failure::Error> {
         .unwrap_or_else(|| String::from(DEFAULT_ETH));
     let dev = File::open(path)?;
     let client = eth::Client::new(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "recovery-ns")?;
+    let mac = client.info()?.mac;
 
     client.start()?;
-    let eth_id = state
-        .device
-        .add_ethernet_device(device::ethernet::EthernetDeviceState::default());
+    let eth_id = state.add_ethernet_device(netstack_core::Mac::new(mac));
     // Hardcoded subnet: if you update the IPADDR above, update this as well.
-    let fixed_subnet = ip::Subnet::new(ip::Ipv4Addr::new([192, 168, 1, 0]), 24);
-    device::ethernet::set_ip_addr(&mut state, eth_id.id(), FIXED_IPADDR, fixed_subnet);
+    let fixed_subnet =
+        netstack_core::Subnet::new(netstack_core::Ipv4Addr::new([192, 168, 1, 0]), 24);
+    netstack_core::set_ip_addr(&mut state, eth_id, FIXED_IPADDR, fixed_subnet);
 
     let mut buf = [0; 2048];
     let mut events = client.get_stream();
@@ -87,7 +75,7 @@ fn main() -> Result<(), failure::Error> {
         while let Some(evt) = await!(events.try_next())? {
             if let eth::Event::Receive(rx) = evt {
                 let len = rx.read(&mut buf);
-                device::receive_frame(&mut state, eth_id, &mut buf[..len]);
+                netstack_core::receive_frame(&mut state, eth_id, &mut buf[..len]);
             } else {
                 println!("unhandled Ethernet event: {:?}", evt);
             }
@@ -95,15 +83,4 @@ fn main() -> Result<(), failure::Error> {
         Ok(())
     };
     executor.run_singlethreaded(fut)
-}
-
-/// The state associated with the network stack.
-#[allow(missing_docs)]
-#[derive(Default)]
-pub struct StackState {
-    pub transport: TransportLayerState,
-    pub ip: IpLayerState,
-    pub device: DeviceLayerState,
-    #[cfg(test)]
-    pub test_counters: testutil::TestCounters,
 }

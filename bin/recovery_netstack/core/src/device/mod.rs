@@ -12,7 +12,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 
 use log::{debug, log};
 
-use crate::device::ethernet::EthernetDeviceState;
+use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{IpAddr, Subnet};
 use crate::wire::SerializationCallback;
 use crate::StackState;
@@ -80,9 +80,9 @@ pub struct DeviceLayerState {
 
 impl DeviceLayerState {
     /// Add a new ethernet device to the device layer.
-    pub fn add_ethernet_device(&mut self, state: EthernetDeviceState) -> DeviceId {
+    pub fn add_ethernet_device(&mut self, mac: Mac) -> DeviceId {
         let id = self.allocate_id();
-        self.ethernet.insert(id, state);
+        self.ethernet.insert(id, EthernetDeviceState::new(mac));
         debug!("adding Ethernet device with ID {}", id);
         DeviceId::new_ethernet(id)
     }
@@ -105,7 +105,7 @@ impl DeviceLayerState {
 /// number of bytes in the body and the post-body padding must not be smaller
 /// than the minimum size passed to the callback.
 ///
-/// For more details on the callback, see the [`::wire::SerializationCallback`]
+/// For more details on the callback, see the [`crate::wire::SerializationCallback`]
 /// documentation.
 ///
 /// # Panics

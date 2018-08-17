@@ -195,7 +195,7 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 /// size passed to the callback.
 ///
 /// For more details on the callback, see the
-/// [`::wire::AddrSerializationCallback`] documentation.
+/// [`core::wire::AddrSerializationCallback`] documentation.
 ///
 /// # Panics
 ///
@@ -250,7 +250,7 @@ where
 /// post-body padding must not be smaller than the minimum size passed to the
 /// callback.
 ///
-/// For more details on the callback, see the [`::wire::SerializationCallback`]
+/// For more details on the callback, see the [`core::wire::SerializationCallback`]
 /// documentation.
 ///
 /// # Panics
