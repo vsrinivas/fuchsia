@@ -33,14 +33,16 @@ OpenSessionMessage OpenSessionMessage::Create(SharedMemoryManager::DriverMemoryP
     // Param 0 is the trusted app UUID
     current_param->attribute = MessageParam::kAttributeTypeMeta |
                                MessageParam::kAttributeTypeValueInput;
-    trusted_app.ToUint64Pair(&current_param->payload.value.a, &current_param->payload.value.b);
+    trusted_app.ToUint64Pair(&current_param->payload.value.generic.a,
+                             &current_param->payload.value.generic.b);
     current_param++;
 
     // Param 1 is the client app UUID and login
     current_param->attribute = MessageParam::kAttributeTypeMeta |
                                MessageParam::kAttributeTypeValueInput;
-    client_app.ToUint64Pair(&current_param->payload.value.a, &current_param->payload.value.b);
-    current_param->payload.value.c = client_login;
+    client_app.ToUint64Pair(&current_param->payload.value.generic.a,
+                            &current_param->payload.value.generic.b);
+    current_param->payload.value.generic.c = client_login;
     current_param++;
 
     // Copy input params in

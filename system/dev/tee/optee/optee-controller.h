@@ -53,6 +53,10 @@ public:
         return shared_memory_manager_->driver_pool();
     }
 
+    SharedMemoryManager::ClientMemoryPool* client_pool() const {
+        return shared_memory_manager_->client_pool();
+    }
+
 private:
     zx_status_t ValidateApiUid() const;
     zx_status_t ValidateApiRevision() const;

@@ -8,8 +8,10 @@
 
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
+#include <tee-client-api/tee-client-types.h>
 #include <zircon/assert.h>
 
+#include "optee-smc.h"
 #include "shared-memory.h"
 #include "util.h"
 
@@ -67,10 +69,21 @@ struct MessageParam {
         uint64_t shared_memory_reference;
     };
 
-    struct Value {
-        uint64_t a;
-        uint64_t b;
-        uint64_t c;
+    union Value {
+        struct {
+            uint64_t a;
+            uint64_t b;
+            uint64_t c;
+        } generic;
+        TEEC_UUID uuid_big_endian;
+        struct {
+            SharedMemoryType memory_type;
+            uint64_t memory_size;
+        } allocate_memory_specs;
+        struct {
+            SharedMemoryType memory_type;
+            uint64_t memory_id;
+        } free_memory_specs;
     };
 
     uint64_t attribute;
@@ -131,17 +144,23 @@ public:
         kUnregisterSharedMemory = 5,
     };
 
+    enum RpcCommand : uint32_t {
+        kLoadTa = 0,
+        kReplayMemoryBlock = 1,
+        kAccessFileSystem = 2,
+        kGetTime = 3,
+        kWaitQueue = 4,
+        kSuspend = 5,
+        kAllocateMemory = 6,
+        kFreeMemory = 7
+    };
+
     explicit MessageBase(SharedMemoryPtr memory)
         : memory_(fbl::move(memory)) {
         ZX_DEBUG_ASSERT(memory_->size() >= sizeof(MessageHeader));
     }
 
     zx_paddr_t paddr() const { return memory_->paddr(); }
-
-protected:
-    static constexpr size_t CalculateSize(size_t num_params) {
-        return sizeof(MessageHeader) + (sizeof(MessageParam) * num_params);
-    }
 
     MessageHeader* header() const {
         return reinterpret_cast<MessageHeader*>(memory_->vaddr());
@@ -151,6 +170,11 @@ protected:
     MessageParamList params() const {
         return MessageParamList(reinterpret_cast<MessageParam*>(header() + 1),
                                 header()->num_params);
+    }
+
+protected:
+    static constexpr size_t CalculateSize(size_t num_params) {
+        return sizeof(MessageHeader) + (sizeof(MessageParam) * num_params);
     }
 
     SharedMemoryPtr memory_;
@@ -190,9 +214,9 @@ public:
     uint32_t session_id() const { return header()->session_id; }
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
-    using ManagedMessage::params;
 
 protected:
+    using ManagedMessage::header;         // make header() protected
     using ManagedMessage::ManagedMessage; // inherit constructors
 };
 

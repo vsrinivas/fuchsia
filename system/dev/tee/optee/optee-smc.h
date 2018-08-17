@@ -317,8 +317,8 @@ constexpr uint32_t kEnableSharedMemCacheFuncId = CreateFastOpteeFuncId(0x000B);
 //          allocated memory. Value will be 0 if requested size was 0 or if memory allocation
 //          failed.
 // arg3:    Unused.
-// arg4-5:  The upper (arg4) and lower (arg5) 32-bit parts of a 64-bit "cookie" for the allocated
-//          memory. The value of the "cookie" is implementation-defined and is passed from the
+// arg4-5:  The upper (arg4) and lower (arg5) 32-bit parts of a 64-bit identifier for the allocated
+//          memory. The value of the identifier is implementation-defined and is passed from the
 //          secure world via another RPC when the secure world wants to free the allocated memory
 //          region.
 // arg6:    Unused.
@@ -330,8 +330,8 @@ DEFINE_RPC_RESULT_STRUCT(RpcFunctionAllocateMemoryResult, 5,
                          uint32_t, phys_addr_upper32,
                          uint32_t, phys_addr_lower32,
                          uint64_t, __unused3,
-                         uint32_t, mem_cookie_upper32,
-                         uint32_t, mem_cookie_lower32)
+                         uint32_t, mem_id_upper32,
+                         uint32_t, mem_id_lower32)
 
 //
 // Free Memory (0x0002)
@@ -339,8 +339,8 @@ DEFINE_RPC_RESULT_STRUCT(RpcFunctionAllocateMemoryResult, 5,
 // Free shared memory previously allocated.
 //
 // Parameters:
-// arg1-2:  The upper (arg1) and lower (arg2) 32-bit parts of a 64-bit "cookie" for the memory to
-//          be freed. The value of the "cookie" is implementation-defined and determined during
+// arg1-2:  The upper (arg1) and lower (arg2) 32-bit parts of a 64-bit identifier for the memory to
+//          be freed. The value of the identifier is implementation-defined and determined during
 //          allocation.
 // arg3:    Unused.
 //
@@ -349,8 +349,8 @@ DEFINE_RPC_RESULT_STRUCT(RpcFunctionAllocateMemoryResult, 5,
 constexpr uint32_t kRpcFunctionIdFreeMemory = 0x2;
 DEFINE_SMC_RESULT_STRUCT(RpcFunctionFreeMemoryArgs, 3,
                          int32_t, status,
-                         uint32_t, mem_cookie_upper32,
-                         uint32_t, mem_cookie_lower32)
+                         uint32_t, mem_id_upper32,
+                         uint32_t, mem_id_lower32)
 DEFINE_RPC_RESULT_STRUCT(RpcFunctionFreeMemoryResult, 0)
 
 //
@@ -374,8 +374,8 @@ DEFINE_RPC_RESULT_STRUCT(RpcFunctionDeliverIrqResult, 0)
 // Execute a command specified in the provided message.
 //
 // Parameters:
-// arg1-2:  The upper (arg1) and lower (arg2) 32-bit parts of a 64-bit "cookie" for the command
-//          message. The value of the "cookie" is implementation-defined and determined during
+// arg1-2:  The upper (arg1) and lower (arg2) 32-bit parts of a 64-bit identifier for the command
+//          message. The value of the identifier is implementation-defined and determined during
 //          allocation.
 // arg3:    Unused.
 //
@@ -384,8 +384,8 @@ DEFINE_RPC_RESULT_STRUCT(RpcFunctionDeliverIrqResult, 0)
 constexpr uint32_t kRpcFunctionIdExecuteCommand = 0x5;
 DEFINE_SMC_RESULT_STRUCT(RpcFunctionExecuteCommandsArgs, 3,
                          int32_t, status,
-                         uint32_t, msg_mem_cookie_upper32,
-                         uint32_t, msg_mem_cookie_lower32)
+                         uint32_t, msg_mem_id_upper32,
+                         uint32_t, msg_mem_id_lower32)
 DEFINE_RPC_RESULT_STRUCT(RpcFunctionExecuteCommandsResult, 0)
 
 typedef union {
@@ -403,5 +403,20 @@ typedef union {
     RpcFunctionDeliverIrqResult delivery_irq;
     RpcFunctionExecuteCommandsResult execute_command;
 } RpcFunctionResult;
+
+enum SharedMemoryType : uint64_t {
+    // Memory that can be shared with a userspace application
+    kApplication = 0x0,
+
+    // Memory that can only be shared with the "kernel"
+    // "Kernel" means access up to the driver but not the userspace application, but does not
+    // translate strictly to "kernel space only" due to the microkernel nature of Zircon in Fuchsia.
+    kKernel = 0x1,
+
+    // Memory that is shared with "kernel" but can be exported to userspace
+    // "Kernel" means access up to the driver but not the userspace application, but does not
+    // translate strictly to "kernel space only" due to the microkernel nature of Zircon in Fuchsia.
+    kGlobal = 0x2
+};
 
 } // namespace optee

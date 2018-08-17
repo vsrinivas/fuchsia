@@ -297,9 +297,9 @@ void OpteeController::RemoveClient(OpteeClient* client) {
     }
 }
 
-uint32_t OpteeController::CallWithMessage(const ManagedMessage& message, RpcHandler rpc_handler) {
+uint32_t OpteeController::CallWithMessage(const ManagedMessage& message,
+                                          RpcHandler rpc_handler) {
     uint32_t return_value = tee::kSmc32ReturnUnknownFunction;
-
     union {
         zx_smc_parameters_t params;
         RpcFunctionResult rpc_result;
@@ -310,7 +310,6 @@ uint32_t OpteeController::CallWithMessage(const ManagedMessage& message, RpcHand
         static_cast<uint32_t>(message.paddr()));
 
     while (true) {
-
         union {
             zx_smc_result_t raw;
             CallWithArgResult response;
@@ -318,16 +317,15 @@ uint32_t OpteeController::CallWithMessage(const ManagedMessage& message, RpcHand
         } result;
 
         zx_status_t status = zx_smc_call(secure_monitor_, &func_call.params, &result.raw);
-
         if (status != ZX_OK) {
-            zxlogf(ERROR, "optee: Unable to invoke SMC\n");
+            zxlogf(ERROR, "optee: unable to invoke SMC\n");
             return return_value;
         }
 
         if (result.response.status == kReturnEThreadLimit) {
             // TODO(rjascani): This should actually block until a thread is available. For now,
             // just quit.
-            zxlogf(ERROR, "optee: Hit thread limit, need to fix this\n");
+            zxlogf(ERROR, "optee: hit thread limit, need to fix this\n");
             break;
         } else if (optee::IsReturnRpc(result.response.status)) {
             // TODO(godtamit): Remove this when all of RPC is implemented
@@ -349,6 +347,9 @@ uint32_t OpteeController::CallWithMessage(const ManagedMessage& message, RpcHand
             break;
         }
     }
+
+    // TODO(godtamit): Remove after all of RPC is implemented
+    zxlogf(INFO, "optee: CallWithMessage returning %i\n", return_value);
     return return_value;
 }
 } // namespace optee

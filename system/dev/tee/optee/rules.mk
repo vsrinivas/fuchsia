@@ -21,6 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/region-alloc \
+    system/ulib/tee-client-api \
     system/ulib/zx \
     system/ulib/zxcpp \
 

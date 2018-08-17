@@ -20,6 +20,7 @@ MODULE_SRCS = \
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/tee_client_api.h \
+    $(LOCAL_INC)/tee-client-types.h \
 
 MODULE_SO_NAME := tee-client-api
 MODULE_EXPORT := so
