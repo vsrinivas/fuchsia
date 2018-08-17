@@ -8,11 +8,11 @@
 
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
-using namespace fuchsia::camera::driver;
+using namespace fuchsia::camera;
 
 // This is a stand-in for some actual gralloc type service which would allocate
 // the right type of memory for the application and return it as a vmo.
-zx_status_t Gralloc(fuchsia::camera::driver::VideoFormat format,
+zx_status_t Gralloc(fuchsia::camera::VideoFormat format,
                     uint32_t num_buffers,
                     fuchsia::sysmem::BufferCollectionInfo* buffer_collection) {
   // In the future, some special alignment might happen here, or special
@@ -72,7 +72,7 @@ zx_status_t run_camera() {
   }
 
   int frame_counter = 0;
-  fuchsia::camera::driver::StreamPtr stream;
+  fuchsia::camera::StreamPtr stream;
 
    static constexpr uint16_t kNumberOfBuffers = 8;
     fuchsia::sysmem::BufferCollectionInfo buffer_collection;

@@ -81,10 +81,10 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
  public:
   // Interface with the FIDL Camera Driver
   zx_status_t GetFormats(
-      fidl::VectorPtr<fuchsia::camera::driver::VideoFormat>& formats);
+      fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats);
 
   zx_status_t CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-                        fuchsia::camera::driver::FrameRate frame_rate);
+                        fuchsia::camera::FrameRate frame_rate);
 
   zx_status_t StartStreaming();
 

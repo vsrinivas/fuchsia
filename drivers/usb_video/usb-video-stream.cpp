@@ -287,8 +287,8 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  fidl::InterfaceHandle<fuchsia::camera::driver::Control> control_handle;
-  fidl::InterfaceRequest<fuchsia::camera::driver::Control> control_interface =
+  fidl::InterfaceHandle<fuchsia::camera::Control> control_handle;
+  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface =
       control_handle.NewRequest();
 
   if (control_interface.is_valid()) {
@@ -311,7 +311,7 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
 }
 
 zx_status_t UsbVideoStream::GetFormats(
-    fidl::VectorPtr<fuchsia::camera::driver::VideoFormat>& formats) {
+    fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats) {
   fbl::AutoLock lock(&lock_);
   format_list_.FillFormats(formats);
   return ZX_OK;
@@ -319,9 +319,9 @@ zx_status_t UsbVideoStream::GetFormats(
 
 zx_status_t UsbVideoStream::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fuchsia::camera::driver::FrameRate frame_rate) {
+    fuchsia::camera::FrameRate frame_rate) {
   fbl::AutoLock lock(&lock_);
-  fuchsia::camera::driver::VideoFormat video_format;
+  fuchsia::camera::VideoFormat video_format;
   video_format.format = buffer_collection.format.image();
   video_format.rate = frame_rate;
   // Convert from the client's video format proto to the device driver format
@@ -555,13 +555,13 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
     return ZX_OK;
   }
 
-  fuchsia::camera::driver::FrameAvailableEvent event = {};
+  fuchsia::camera::FrameAvailableEvent event = {};
   event.metadata.timestamp = cur_frame_state_.capture_time;
 
   // If we were not even writing to a buffer, return buffer full error:
   if (!buffers_.HasBufferInProgress()) {
     event.frame_status =
-        fuchsia::camera::driver::FrameStatus::ERROR_BUFFER_FULL;
+        fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
     camera_control_->OnFrameAvailable(event);
     return ZX_OK;
   }
@@ -569,7 +569,7 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
   // If we were writing to a buffer (we have to complete it)
   // If we had a writing error:
   if (cur_frame_state_.error) {
-    event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
+    event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;
   }
 
   zx_status_t status = buffers_.BufferCompleted(&event.buffer_id);

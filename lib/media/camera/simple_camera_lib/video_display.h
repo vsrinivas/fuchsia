@@ -19,7 +19,7 @@ namespace simple_camera {
 
 using OnShutdownCallback = fit::function<void()>;
 using OnFrameAvailableCallback =
-    fit::function<zx_status_t(fuchsia::camera::driver::FrameAvailableEvent)>;
+    fit::function<zx_status_t(fuchsia::camera::FrameAvailableEvent)>;
 
 class VideoDisplay {
  public:
@@ -42,7 +42,7 @@ class VideoDisplay {
  private:
   // Called when the driver tells us a new frame is available:
   zx_status_t IncomingBufferFilled(
-      const fuchsia::camera::driver::FrameAvailableEvent& frame);
+      const fuchsia::camera::FrameAvailableEvent& frame);
 
   // Called when a buffer is released by the consumer.
   void BufferReleased(uint32_t buffer_id);
@@ -71,8 +71,8 @@ class VideoDisplay {
 
   class CameraClient {
    public:
-    fuchsia::camera::driver::ControlSyncPtr control_;
-    fuchsia::camera::driver::StreamPtr stream_;
+    fuchsia::camera::ControlSyncPtr control_;
+    fuchsia::camera::StreamPtr stream_;
   };
   std::unique_ptr<CameraClient> camera_client_;
 

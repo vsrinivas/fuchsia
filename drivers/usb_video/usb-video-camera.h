@@ -8,7 +8,7 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/device/ioctl.h>
 
-#include <fuchsia/camera/driver/cpp/fidl.h>
+#include <fuchsia/camera/cpp/fidl.h>
 
 #define CAMERA_IOCTL_GET_CHANNEL \
   IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_CAMERA, 0)

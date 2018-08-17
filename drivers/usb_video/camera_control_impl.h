@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_USB_VIDEO_CAMERA_CONTROL_IMPL_H_
 
 #include <fbl/unique_ptr.h>
-#include <fuchsia/camera/driver/cpp/fidl.h>
+#include <fuchsia/camera/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 
 namespace video {
@@ -17,7 +17,7 @@ class UsbVideoStream;
 
 namespace camera {
 
-class ControlImpl : public fuchsia::camera::driver::Control {
+class ControlImpl : public fuchsia::camera::Control {
  public:
   ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
               fidl::InterfaceRequest<Control> control,
@@ -27,7 +27,7 @@ class ControlImpl : public fuchsia::camera::driver::Control {
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
   void OnFrameAvailable(
-      const fuchsia::camera::driver::FrameAvailableEvent& frame);
+      const fuchsia::camera::FrameAvailableEvent& frame);
 
  private:
   // Get the available format types for this device
@@ -37,14 +37,14 @@ class ControlImpl : public fuchsia::camera::driver::Control {
   // If setting the format is successful, the stream request will be honored.
   void CreateStream(
       fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-      fuchsia::camera::driver::FrameRate frame_rate,
-      fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) override;
+      fuchsia::camera::FrameRate frame_rate,
+      fidl::InterfaceRequest<fuchsia::camera::Stream> stream) override;
 
  private:
-  class StreamImpl : public fuchsia::camera::driver::Stream {
+  class StreamImpl : public fuchsia::camera::Stream {
    public:
     StreamImpl(ControlImpl& owner,
-               fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream);
+               fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
 
     // Starts the streaming of frames.
     void Start() override;
@@ -58,7 +58,7 @@ class ControlImpl : public fuchsia::camera::driver::Control {
     // Sent by the driver to the client when a frame is available for
     // processing, or an error occurred.
     void OnFrameAvailable(
-        const fuchsia::camera::driver::FrameAvailableEvent& frame);
+        const fuchsia::camera::FrameAvailableEvent& frame);
 
    private:
     ControlImpl& owner_;
@@ -67,7 +67,7 @@ class ControlImpl : public fuchsia::camera::driver::Control {
 
   fbl::unique_ptr<StreamImpl> stream_;
 
-  fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats_;
+  fidl::VectorPtr<fuchsia::camera::VideoFormat> formats_;
 
   ControlImpl(const ControlImpl&) = delete;
   ControlImpl& operator=(const ControlImpl&) = delete;

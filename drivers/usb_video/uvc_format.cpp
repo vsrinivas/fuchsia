@@ -39,8 +39,8 @@ UvcPixelFormat guid_to_pixel_format(uint8_t guid[GUID_LENGTH]) {
   return UvcPixelFormat::INVALID;
 }
 
-fuchsia::camera::driver::VideoFormat ToFidl(const UvcFormat& format_in) {
-  fuchsia::camera::driver::VideoFormat ret = {
+fuchsia::camera::VideoFormat ToFidl(const UvcFormat& format_in) {
+  fuchsia::camera::VideoFormat ret = {
       .format.width = format_in.width,
       .format.height = format_in.height,
       .format.layers = 1,
@@ -76,9 +76,9 @@ fuchsia::camera::driver::VideoFormat ToFidl(const UvcFormat& format_in) {
   return ret;
 }
 
-bool Compare(const fuchsia::camera::driver::VideoFormat& vf,
+bool Compare(const fuchsia::camera::VideoFormat& vf,
              const UvcFormat& uf) {
-  fuchsia::camera::driver::VideoFormat uvf = ToFidl(uf);
+  fuchsia::camera::VideoFormat uvf = ToFidl(uf);
 
   bool has_equal_frame_rate =
       (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *

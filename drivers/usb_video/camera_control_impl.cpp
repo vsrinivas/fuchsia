@@ -10,7 +10,7 @@
 namespace camera {
 
 void ControlImpl::OnFrameAvailable(
-    const fuchsia::camera::driver::FrameAvailableEvent& frame) {
+    const fuchsia::camera::FrameAvailableEvent& frame) {
   stream_->OnFrameAvailable(frame);
 }
 
@@ -28,10 +28,10 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
     zx_status_t status = usb_video_stream_->GetFormats(formats_);
     if ((status == ZX_OK) &&
         (formats_->size() >
-         fuchsia::camera::driver::MAX_FORMATS_PER_RESPONSE)) {
-      fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats;
+         fuchsia::camera::MAX_FORMATS_PER_RESPONSE)) {
+      fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
       for (uint32_t i = 0;
-           i < fuchsia::camera::driver::MAX_FORMATS_PER_RESPONSE; i++) {
+           i < fuchsia::camera::MAX_FORMATS_PER_RESPONSE; i++) {
         formats.push_back((*formats_)[i]);
       }
       callback(fbl::move(formats), formats_->size(), ZX_OK);
@@ -41,8 +41,8 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   } else {
     uint32_t formats_to_send =
         std::min(static_cast<uint32_t>(formats_->size() - index),
-                 fuchsia::camera::driver::MAX_FORMATS_PER_RESPONSE);
-    fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats;
+                 fuchsia::camera::MAX_FORMATS_PER_RESPONSE);
+    fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
     if (index < formats_->size()) {
       for (uint32_t i = 0; i < formats_to_send; i++) {
         formats.push_back((*formats_)[index + i]);
@@ -57,8 +57,8 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
 
 void ControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fuchsia::camera::driver::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) {
+    fuchsia::camera::FrameRate frame_rate,
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream) {
   zx_status_t status =
       usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
 
@@ -72,7 +72,7 @@ void ControlImpl::CreateStream(
 }
 
 void ControlImpl::StreamImpl::OnFrameAvailable(
-    const fuchsia::camera::driver::FrameAvailableEvent& frame) {
+    const fuchsia::camera::FrameAvailableEvent& frame) {
   binding_.events().OnFrameAvailable(frame);
 }
 
@@ -102,7 +102,7 @@ void ControlImpl::StreamImpl::ReleaseFrame(uint32_t buffer_index) {
 
 ControlImpl::StreamImpl::StreamImpl(
     ControlImpl& owner,
-    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream)
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
     : owner_(owner), binding_(this, fbl::move(stream)) {
   binding_.set_error_handler(
       [this] { owner_.usb_video_stream_->DeactivateVideoBuffer(); });

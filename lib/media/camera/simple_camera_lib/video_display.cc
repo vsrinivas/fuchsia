@@ -23,8 +23,8 @@ void VideoDisplay::BufferReleased(uint32_t buffer_id) {
 
 // When an incoming buffer is filled, VideoDisplay releases the acquire fence
 zx_status_t VideoDisplay::IncomingBufferFilled(
-    const fuchsia::camera::driver::FrameAvailableEvent& frame) {
-  if (frame.frame_status != fuchsia::camera::driver::FrameStatus::OK) {
+    const fuchsia::camera::FrameAvailableEvent& frame) {
+  if (frame.frame_status != fuchsia::camera::FrameStatus::OK) {
     FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
                    << static_cast<int>(frame.frame_status);
     return ZX_OK;  // no reason to stop the channel...
@@ -56,7 +56,7 @@ zx_status_t VideoDisplay::IncomingBufferFilled(
 
 // This is a stand-in for some actual gralloc type service which would allocate
 // the right type of memory for the application and return it as a vmo.
-zx_status_t Gralloc(fuchsia::camera::driver::VideoFormat format,
+zx_status_t Gralloc(fuchsia::camera::VideoFormat format,
                     uint32_t num_buffers,
                     fuchsia::sysmem::BufferCollectionInfo* buffer_collection) {
   // In the future, some special alignment might happen here, or special
@@ -179,8 +179,8 @@ zx_status_t VideoDisplay::OpenFakeCamera() {
     fidl_dispatch_loop_->StartThread();
   }
 
-  fidl::InterfaceHandle<fuchsia::camera::driver::Control> control_handle;
-  fidl::InterfaceRequest<fuchsia::camera::driver::Control> control_interface =
+  fidl::InterfaceHandle<fuchsia::camera::Control> control_handle;
+  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface =
       control_handle.NewRequest();
 
   if (control_interface.is_valid()) {
@@ -223,7 +223,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
   camera_client_->stream_.events().OnFrameAvailable =
       [video_display =
-           this](fuchsia::camera::driver::FrameAvailableEvent frame) {
+           this](fuchsia::camera::FrameAvailableEvent frame) {
         video_display->IncomingBufferFilled(frame);
       };
 
@@ -243,13 +243,13 @@ zx_status_t VideoDisplay::ConnectToCamera(
   }
 
   // Figure out a format
-  std::vector<fuchsia::camera::driver::VideoFormat> formats;
+  std::vector<fuchsia::camera::VideoFormat> formats;
   {
     zx_status_t driver_status;
     uint32_t total_format_count;
     uint32_t format_index = 0;
     do {
-      fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats_ptr;
+      fidl::VectorPtr<fuchsia::camera::VideoFormat> formats_ptr;
       status = camera_client_->control_->GetFormats(
           format_index, &formats_ptr, &total_format_count, &driver_status);
       if (status != ZX_OK || driver_status != ZX_OK) {
@@ -258,7 +258,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
         DisconnectFromCamera();
         return status;
       }
-      const std::vector<fuchsia::camera::driver::VideoFormat>& call_formats =
+      const std::vector<fuchsia::camera::VideoFormat>& call_formats =
           formats_ptr.get();
       for (auto&& f : call_formats) {
         formats.push_back(f);

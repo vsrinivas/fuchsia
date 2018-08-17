@@ -16,12 +16,12 @@ class Client {
 
   explicit Client(std::unique_ptr<component::StartupContext> context);
 
-  fuchsia::camera::driver::ControlSyncPtr& camera();
+  fuchsia::camera::ControlSyncPtr& camera();
 
   zx_status_t Open(int dev_id);
 
  private:
-  fuchsia::camera::driver::ControlSyncPtr camera_control_;
+  fuchsia::camera::ControlSyncPtr camera_control_;
   std::unique_ptr<component::StartupContext> context_;
 };
 

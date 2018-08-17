@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/usb/usb.h>
 #include <fbl/vector.h>
-#include <fuchsia/camera/driver/cpp/fidl.h>
+#include <fuchsia/camera/cpp/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb-video.h>
 #include <zircon/hw/usb.h>
@@ -59,9 +59,9 @@ struct UvcFormat {
   uint8_t default_frame_index;
 };
 
-fuchsia::camera::driver::VideoFormat ToFidl(const UvcFormat &format_in);
+fuchsia::camera::VideoFormat ToFidl(const UvcFormat &format_in);
 
-bool Compare(const fuchsia::camera::driver::VideoFormat &vf,
+bool Compare(const fuchsia::camera::VideoFormat &vf,
              const UvcFormat &uf);
 
 class UvcFormatList {
@@ -71,7 +71,7 @@ class UvcFormatList {
                                  usb_desc_iter_t *iter);
   uint32_t number_of_formats() { return number_of_formats_; }
 
-  bool MatchFormat(const fuchsia::camera::driver::VideoFormat &requested_format,
+  bool MatchFormat(const fuchsia::camera::VideoFormat &requested_format,
                    uint8_t *format_index, uint8_t *frame_index,
                    uint32_t *default_frame_interval) const {
     for (const auto &format : formats_) {
@@ -86,7 +86,7 @@ class UvcFormatList {
   }
 
   void FillFormats(
-      fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> &formats) const {
+      fidl::VectorPtr<fuchsia::camera::VideoFormat> &formats) const {
     for (auto &format : formats_) {
       formats.push_back(ToFidl(format));
     }

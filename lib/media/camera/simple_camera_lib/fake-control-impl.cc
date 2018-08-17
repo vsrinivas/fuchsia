@@ -46,7 +46,7 @@ void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g,
 }
 
 void FakeControlImpl::OnFrameAvailable(
-    const fuchsia::camera::driver::FrameAvailableEvent& frame) {
+    const fuchsia::camera::FrameAvailableEvent& frame) {
   stream_->OnFrameAvailable(frame);
 }
 
@@ -74,7 +74,7 @@ void FakeControlImpl::PostNextCaptureTask() {
 // writes it, then signals it ready.
 // Then sleeps until next cycle.
 void FakeControlImpl::ProduceFrame() {
-  fuchsia::camera::driver::FrameAvailableEvent event = {};
+  fuchsia::camera::FrameAvailableEvent event = {};
   // For realism, give the frame a timestamp that is kFramesOfDelay frames
   // in the past:
   event.metadata.timestamp =
@@ -89,10 +89,10 @@ void FakeControlImpl::ProduceFrame() {
     if (status == ZX_ERR_NOT_FOUND) {
       FXL_LOG(ERROR) << "no available frames, dropping frame #" << frame_count_;
       event.frame_status =
-          fuchsia::camera::driver::FrameStatus::ERROR_BUFFER_FULL;
+          fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
     } else {
       FXL_LOG(ERROR) << "failed to get new frame, err: " << status;
-      event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
+      event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;
     }
   } else {  // Got a buffer.  Fill it with color:
 
@@ -102,7 +102,7 @@ void FakeControlImpl::ProduceFrame() {
     zx_status_t status = buffers_.BufferCompleted(&event.buffer_id);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "could not release the buffer: " << status;
-      event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
+      event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;
     }
   }
 
@@ -112,9 +112,9 @@ void FakeControlImpl::ProduceFrame() {
 }
 
 void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
-  fidl::VectorPtr<fuchsia::camera::driver::VideoFormat> formats;
+  fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
 
-  fuchsia::camera::driver::VideoFormat format = {
+  fuchsia::camera::VideoFormat format = {
       .format = {.pixel_format = {.type =
                                       fuchsia::sysmem::PixelFormatType::BGRA32},
                  .width = 640,
@@ -130,8 +130,8 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
 
 void FakeControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fuchsia::camera::driver::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) {
+    fuchsia::camera::FrameRate frame_rate,
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream) {
   rate_ = frame_rate;
 
   buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
@@ -140,7 +140,7 @@ void FakeControlImpl::CreateStream(
 }
 
 void FakeControlImpl::FakeStreamImpl::OnFrameAvailable(
-    const fuchsia::camera::driver::FrameAvailableEvent& frame) {
+    const fuchsia::camera::FrameAvailableEvent& frame) {
   binding_.events().OnFrameAvailable(frame);
 }
 
@@ -168,7 +168,7 @@ void FakeControlImpl::FakeStreamImpl::ReleaseFrame(uint32_t buffer_index) {
 
 FakeControlImpl::FakeStreamImpl::FakeStreamImpl(
     FakeControlImpl& owner,
-    fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream)
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
     : owner_(owner), binding_(this, fbl::move(stream)) {
   binding_.set_error_handler([this] {
     // Anything to do here?

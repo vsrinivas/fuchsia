@@ -6,7 +6,7 @@
 #define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_
 
 #include <fbl/unique_ptr.h>
-#include <fuchsia/camera/driver/cpp/fidl.h>
+#include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
@@ -32,7 +32,7 @@ class ColorSource {
   static constexpr uint32_t kMaxFrameColor = 0x600;
 };
 
-class FakeControlImpl : public fuchsia::camera::driver::Control {
+class FakeControlImpl : public fuchsia::camera::Control {
  public:
   FakeControlImpl(fidl::InterfaceRequest<Control> control,
                   async_dispatcher_t* dispatcher,
@@ -41,7 +41,7 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
   void OnFrameAvailable(
-      const fuchsia::camera::driver::FrameAvailableEvent& frame);
+      const fuchsia::camera::FrameAvailableEvent& frame);
 
   void PostNextCaptureTask();
 
@@ -53,15 +53,15 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   // If setting the format is successful, the stream request will be honored.
   void CreateStream(
       fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-      fuchsia::camera::driver::FrameRate frame_rate,
-      fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream) override;
+      fuchsia::camera::FrameRate frame_rate,
+      fidl::InterfaceRequest<fuchsia::camera::Stream> stream) override;
 
  private:
-  class FakeStreamImpl : public fuchsia::camera::driver::Stream {
+  class FakeStreamImpl : public fuchsia::camera::Stream {
    public:
     FakeStreamImpl(
         FakeControlImpl& owner,
-        fidl::InterfaceRequest<fuchsia::camera::driver::Stream> stream);
+        fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
 
     // Starts the streaming of frames.
     void Start() override;
@@ -75,7 +75,7 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
     // Sent by the driver to the client when a frame is available for
     // processing, or an error occurred.
     void OnFrameAvailable(
-        const fuchsia::camera::driver::FrameAvailableEvent& frame);
+        const fuchsia::camera::FrameAvailableEvent& frame);
 
    private:
     FakeControlImpl& owner_;
@@ -97,7 +97,7 @@ class FakeControlImpl : public fuchsia::camera::driver::Control {
   static constexpr uint32_t kMinNumberOfBuffers = 2;
   static constexpr uint32_t kFramesOfDelay = 2;
   ColorSource color_source_;
-  fuchsia::camera::driver::FrameRate rate_;
+  fuchsia::camera::FrameRate rate_;
   uint64_t frame_count_ = 0;
 
   fzl::VmoPool buffers_;

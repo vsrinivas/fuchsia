@@ -15,7 +15,7 @@ Client::Client() : Client(component::StartupContext::CreateFromStartupInfo()) {}
 Client::Client(std::unique_ptr<component::StartupContext> context)
     : context_(std::move(context)) {}
 
-fuchsia::camera::driver::ControlSyncPtr& Client::camera() {
+fuchsia::camera::ControlSyncPtr& Client::camera() {
   return camera_control_;
 }
 
