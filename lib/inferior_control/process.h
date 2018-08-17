@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INFERIOR_CONTROL_PROCESS_H_
+#define GARNET_LIB_INFERIOR_CONTROL_PROCESS_H_
 
 #include <memory>
 #include <string>
@@ -62,7 +63,8 @@ class Process final {
         const zx_exception_context_t& context) = 0;
   };
 
-  explicit Process(Server* server, Delegate* delegate_);
+  explicit Process(Server* server, Delegate* delegate_,
+                   std::shared_ptr<component::Services> services);
   ~Process();
 
   std::string GetName() const;
@@ -238,6 +240,9 @@ class Process final {
   // The delegate that we send life-cycle notifications to.
   Delegate* delegate_;  // weak
 
+  // Handle containing services available to this process.
+  std::shared_ptr<component::Services> services_;
+
   // The argv that this process was initialized with.
   debugger_utils::Argv argv_;
 
@@ -297,3 +302,5 @@ class Process final {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_PROCESS_H_

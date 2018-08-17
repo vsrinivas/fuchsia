@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_
+#define GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_
 
 #include <cstdint>
 #include <string>
@@ -12,6 +13,7 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/svc/cpp/services.h"
 
 #include "gtest/gtest.h"
 
@@ -66,8 +68,11 @@ class TestServer : public Server, public ::testing::Test {
   // exception_port_.Quit() can only be called after a successful call to
   // exception_port_.Run(), so keep track of whether Run() succeeded.
   bool exception_port_started_ = false;
+  std::shared_ptr<component::Services> services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestServer);
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_

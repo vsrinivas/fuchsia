@@ -16,8 +16,10 @@
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/svc/cpp/services.h"
 
 namespace debug_agent {
 namespace {
@@ -27,12 +29,14 @@ namespace {
 // Represents one connection to a client.
 class SocketConnection {
  public:
-  SocketConnection() {}
+  SocketConnection(std::shared_ptr<component::Services> services)
+      : services_(services) {}
   ~SocketConnection() {}
 
   bool Accept(int server_fd);
 
  private:
+  std::shared_ptr<component::Services> services_;
   debug_ipc::BufferedFD buffer_;
 
   std::unique_ptr<debug_agent::DebugAgent> agent_;
@@ -63,7 +67,8 @@ bool SocketConnection::Accept(int server_fd) {
   }
 
   // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
-  agent_ = std::make_unique<debug_agent::DebugAgent>(&buffer_.stream());
+  agent_ =
+      std::make_unique<debug_agent::DebugAgent>(&buffer_.stream(), services_);
   adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(agent_.get(),
                                                              &buffer_.stream());
   buffer_.set_data_available_callback(
@@ -87,7 +92,7 @@ class SocketServer {
   SocketServer();
   ~SocketServer();
 
-  bool Run(int port);
+  bool Run(int port, std::shared_ptr<component::Services> services);
 
  private:
   bool AcceptNextConnection();
@@ -104,7 +109,8 @@ SocketServer::SocketServer() { message_loop_.Init(); }
 
 SocketServer::~SocketServer() { message_loop_.Cleanup(); }
 
-bool SocketServer::Run(int port) {
+bool SocketServer::Run(int port,
+                       std::shared_ptr<component::Services> services) {
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
     fprintf(stderr, "Could not create socket.\n");
@@ -129,7 +135,7 @@ bool SocketServer::Run(int port) {
   while (true) {
     // Wait for one connection.
     printf("Waiting on port %d for zxdb connection...\n", port);
-    connection_ = std::make_unique<SocketConnection>();
+    connection_ = std::make_unique<SocketConnection>(services);
     if (!connection_->Accept(server_socket_.get()))
       return false;
 
@@ -180,8 +186,10 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
+    auto environment_services = component::GetEnvironmentServices();
+
     debug_agent::SocketServer server;
-    if (!server.Run(port))
+    if (!server.Run(port, environment_services))
       return 1;
   } else {
     fprintf(stderr, "ERROR: Port number required.\n\n");

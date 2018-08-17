@@ -25,7 +25,8 @@ namespace {
 constexpr zx_time_t kill_timeout = ZX_MSEC(10 * 1000);
 
 std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
-    zx_handle_t job, const debugger_utils::Argv& argv) {
+    zx_handle_t job, const debugger_utils::Argv& argv,
+    std::shared_ptr<component::Services>& services) {
   FXL_DCHECK(argv.size() > 0);
   zx::job builder_job;
   zx_status_t status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS,
@@ -33,8 +34,8 @@ std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
   if (status != ZX_OK)
     return nullptr;
 
-  auto builder =
-      std::make_unique<process::ProcessBuilder>(std::move(builder_job));
+  auto builder = std::make_unique<process::ProcessBuilder>(
+      std::move(builder_job), services);
 
   builder->AddArgs(argv);
   builder->CloneAll();
@@ -114,9 +115,11 @@ const char* Process::StateName(Process::State state) {
   return "(unknown)";
 }
 
-Process::Process(Server* server, Delegate* delegate)
+Process::Process(Server* server, Delegate* delegate,
+                 std::shared_ptr<component::Services> services)
     : server_(server),
       delegate_(delegate),
+      services_(services),
       memory_(
           std::shared_ptr<debugger_utils::ByteBlock>(new ProcessMemory(this))),
       breakpoints_(this) {
@@ -190,7 +193,7 @@ bool Process::Initialize() {
   FXL_LOG(INFO) << "argv: " << debugger_utils::ArgvToString(argv_);
 
   std::string error_message;
-  builder_ = CreateProcessBuilder(job, argv_);
+  builder_ = CreateProcessBuilder(job, argv_, services_);
 
   if (!builder_) {
     return false;

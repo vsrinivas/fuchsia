@@ -21,6 +21,7 @@
 
 #include "gtest/gtest.h"
 
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -28,7 +29,8 @@
 namespace inferior_control {
 
 TestServer::TestServer()
-    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()) {}
+    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()),
+      services_(component::GetEnvironmentServices()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -56,7 +58,7 @@ bool TestServer::Run() {
 }
 
 bool TestServer::SetupInferior(const std::vector<std::string>& argv) {
-  auto inferior = new Process(this, this);
+  auto inferior = new Process(this, this, services_);
   inferior->set_argv(argv);
   // We take over ownership of |inferior| here.
   set_current_process(inferior);

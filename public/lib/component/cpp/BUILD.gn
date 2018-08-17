@@ -44,6 +44,11 @@ source_set("environment_services") {
   visibility = [
     "//garnet/bin/appmgr:bin",
     "//garnet/bin/run:bin",
+    "//garnet/bin/debugserver:bin",
+    "//garnet/bin/insntrace:bin",
+    "//garnet/bin/debug_agent:bin",
+    "//garnet/drivers/wlan/wlan:wlan_driver",
+    "testing",
   ]
   sources = [
     "environment_services_helper.cc",

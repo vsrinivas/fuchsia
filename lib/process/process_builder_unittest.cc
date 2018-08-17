@@ -4,6 +4,7 @@
 
 #include "garnet/lib/process/process_builder.h"
 #include "gtest/gtest.h"
+#include "lib/component/cpp/environment_services_helper.h"
 
 namespace process {
 namespace {
@@ -11,7 +12,7 @@ namespace {
 static constexpr char kShell[] = "/boot/bin/sh";
 
 TEST(ProcessBuilder, Control) {
-  ProcessBuilder builder;
+  ProcessBuilder builder(component::GetEnvironmentServices());
   ASSERT_EQ(ZX_OK, builder.LoadPath(kShell));
   builder.AddArgs({kShell});
   builder.CloneAll();

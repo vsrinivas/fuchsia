@@ -13,6 +13,7 @@
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/services.h"
 
 namespace debug_agent {
 
@@ -24,7 +25,8 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
   // The stream must outlive this class. It will be used to send data to the
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
-  explicit DebugAgent(debug_ipc::StreamBuffer* stream);
+  explicit DebugAgent(debug_ipc::StreamBuffer* stream,
+                      std::shared_ptr<component::Services> services);
   ~DebugAgent();
 
   debug_ipc::StreamBuffer* stream() { return stream_; }
@@ -85,6 +87,8 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
                                       zx::process zx_proc);
 
   debug_ipc::StreamBuffer* stream_;
+
+  std::shared_ptr<component::Services> services_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 

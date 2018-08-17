@@ -24,7 +24,9 @@
 
 namespace debug_agent {
 
-DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream) : stream_(stream) {}
+DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
+                       std::shared_ptr<component::Services> services)
+    : stream_(stream), services_(services) {}
 
 DebugAgent::~DebugAgent() {}
 
@@ -50,7 +52,7 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
                           debug_ipc::LaunchReply* reply) {
-  Launcher launcher;
+  Launcher launcher(services_);
   reply->status = launcher.Setup(request.argv);
   if (reply->status != ZX_OK)
     return;

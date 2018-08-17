@@ -19,15 +19,18 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "lib/component/cpp/environment_services.h"
+#include "lib/svc/cpp/services.h"
 
 namespace process {
 
-ProcessBuilder::ProcessBuilder() {
-  component::ConnectToEnvironmentService(launcher_.NewRequest());
+ProcessBuilder::ProcessBuilder(std::shared_ptr<component::Services> services)
+    : services_(services) {
+  services_->ConnectToService(launcher_.NewRequest());
 }
 
-ProcessBuilder::ProcessBuilder(zx::job job) : ProcessBuilder() {
+ProcessBuilder::ProcessBuilder(zx::job job,
+                               std::shared_ptr<component::Services> services)
+    : ProcessBuilder(services) {
   launch_info_.job = std::move(job);
 }
 

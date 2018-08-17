@@ -25,15 +25,15 @@ executable("bin") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/lib/inferior_control",
+    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zircon-internal",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 install_host_tools("host_insntrace_print") {
@@ -52,7 +52,9 @@ package("insntrace") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "insntrace"
-      } ]
+  binaries = [
+    {
+      name = "insntrace"
+    },
+  ]
 }

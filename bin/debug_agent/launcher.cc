@@ -10,6 +10,9 @@
 
 namespace debug_agent {
 
+Launcher::Launcher(std::shared_ptr<component::Services> env_services)
+    : builder_(env_services) {}
+
 zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
   zx_status_t status = builder_.LoadPath(argv[0]);
   if (status != ZX_OK)

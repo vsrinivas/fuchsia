@@ -29,8 +29,10 @@ executable("bin") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/lib/inferior_control",
+    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]
@@ -39,9 +41,7 @@ executable("bin") {
     "//zircon/public/lib/fit",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 group("tests") {
@@ -85,9 +85,11 @@ package("debugserver") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "debugserver"
-      } ]
+  binaries = [
+    {
+      name = "debugserver"
+    },
+  ]
 }
 
 package("debugserver_tests") {

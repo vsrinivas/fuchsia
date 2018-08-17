@@ -15,16 +15,16 @@ driver_module("wlan_driver") {
     "binding.c",
     "device.cpp",
     "device.h",
+    "driver.cpp",
     "minstrel.cpp",
     "minstrel.h",
-    "driver.cpp",
     "proxy_helpers.h",
   ]
 
   deps = [
     "//garnet/lib/wlan/mlme",
     "//garnet/lib/wlan/protocol",
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
