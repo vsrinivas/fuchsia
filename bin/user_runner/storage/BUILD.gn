@@ -98,6 +98,7 @@ executable("session_storage_unittest") {
 
   deps = [
     ":session_storage",
+    "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:future",

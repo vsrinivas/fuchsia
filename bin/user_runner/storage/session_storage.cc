@@ -141,25 +141,88 @@ FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
                      std::move(story_options));
 }
 
+namespace {
+class DeleteStoryCall : public Operation<> {
+ public:
+  DeleteStoryCall(fuchsia::ledger::Ledger* const ledger,
+                      fuchsia::ledger::Page* const session_page,
+                      fidl::StringPtr story_name, ResultCall result_call)
+      : Operation("SessionStorage::DeleteStoryCall",
+                  std::move(result_call)),
+        ledger_(ledger),
+        session_page_(session_page),
+        story_name_(story_name) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    operation_queue_.Add(MakeGetStoryDataCall(
+        session_page_, story_name_, [this, flow](auto story_data) {
+          if (!story_data)
+            return;
+          story_data_ = std::move(*story_data);
+          Cont1(flow);
+        }));
+  }
+
+  void Cont1(FlowToken flow) {
+    // Get the story page so we can remove its contents.
+    ledger_->GetPage(
+        std::move(story_data_.story_page_id), story_page_.NewRequest(),
+        [this, flow,
+         story_name = story_data_.story_info.id](fuchsia::ledger::Status status) {
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << "Ledger.GetPage() for story " << story_name << ": "
+                           << fidl::ToUnderlying(status);
+            return;
+          }
+          Cont2(flow);
+        });
+  }
+
+  void Cont2(FlowToken flow) {
+    story_page_->Clear([this, flow, story_name = story_data_.story_info.id](
+                           fuchsia::ledger::Status status) {
+      if (status != fuchsia::ledger::Status::OK) {
+        FXL_LOG(ERROR) << "Page.Clear() for story " << story_name << ": "
+                       << fidl::ToUnderlying(status);
+        return;
+      }
+      Cont3(flow);
+    });
+  }
+
+  void Cont3(FlowToken flow) {
+    // Finally remove the entry in the session page.
+    session_page_->Delete(
+        to_array(StoryNameToLedgerKey(story_data_.story_info.id)),
+        [this, flow](fuchsia::ledger::Status status) {
+          // Deleting a key that doesn't exist is OK, not
+          // KEY_NOT_FOUND.
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
+                           << fidl::ToUnderlying(status);
+          }
+        });
+  }
+
+  fuchsia::ledger::Ledger* const ledger_;      // not owned
+  fuchsia::ledger::Page* const session_page_;  // not owned
+  const fidl::StringPtr story_name_;
+
+  // Intermediate state.
+  OperationQueue operation_queue_;
+  fuchsia::modular::internal::StoryData story_data_;
+  fuchsia::ledger::PagePtr story_page_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
+};
+}  // namespace
+
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   auto ret = Future<>::Create("SessionStorage.DeleteStory.ret");
-  operation_queue_.Add(NewCallbackOperation(
-      "SessionStorage::DeleteStory",
-      [this, story_name](OperationBase* op) {
-        auto deleted = Future<>::Create("SessionStorage.DeleteStory.deleted");
-        page()->Delete(to_array(StoryNameToLedgerKey(story_name)),
-                       [this, deleted](fuchsia::ledger::Status status) {
-                         // Deleting a key that doesn't exist is OK, not
-                         // KEY_NOT_FOUND.
-                         if (status != fuchsia::ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
-                                          << fidl::ToUnderlying(status);
-                         }
-                         deleted->Complete();
-                       });
-        return deleted;
-      },
-      ret->Completer()));
+  operation_queue_.Add(new DeleteStoryCall(ledger_client_->ledger(), page(), story_name,
+                                           ret->Completer()));
   return ret;
 }
 

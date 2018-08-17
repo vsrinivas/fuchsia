@@ -9,6 +9,7 @@
 #include <lib/async/cpp/future.h>
 
 #include "gtest/gtest.h"
+#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
@@ -235,6 +236,59 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
 
   // TODO(thatguy): Verify that the story's page was also deleted.
   // MI4-1002
+}
+
+TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
+  // When we call DeleteStory, we expect the story's page to be completely
+  // emptied.
+  auto storage = CreateStorage("page");
+  auto future_story = storage->CreateStory(
+      "story_name", nullptr /* extra_info */, {} /* options */);
+
+  bool done{false};
+  auto story_page_id = fuchsia::ledger::PageId::New();
+  future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
+    *story_page_id = std::move(page_id);
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+
+  // Add some fake content to the story's page, so that we dan show that
+  // it is deleted when we instruct SessionStorage to delete the story.
+  fuchsia::ledger::PagePtr story_page;
+  ledger_client()->ledger()->GetPage(
+      std::move(story_page_id), story_page.NewRequest(),
+      [&](fuchsia::ledger::Status status) {
+        ASSERT_EQ(fuchsia::ledger::Status::OK, status);
+      });
+  done = false;
+  story_page->Put(to_array("key"), to_array("value"),
+                  [&](fuchsia::ledger::Status status) { done = true; });
+  RunLoopUntil([&] { return done; });
+
+  // Delete the story.
+  done = false;
+  storage->DeleteStory("story_name")->Then([&] { done = true; });
+  RunLoopUntil([&] { return done; });
+
+  // Show that the underlying page is now empty.
+  fuchsia::ledger::PageSnapshotPtr snapshot;
+  story_page->GetSnapshot(snapshot.NewRequest(), to_array("") /* prefix */,
+                          nullptr /* watcher */,
+                          [&](fuchsia::ledger::Status status) {
+                            ASSERT_EQ(fuchsia::ledger::Status::OK, status);
+                          });
+  done = false;
+  snapshot->GetEntries(to_array("") /* key_start */, nullptr /* token */,
+                       [&](fuchsia::ledger::Status status,
+                           fidl::VectorPtr<fuchsia::ledger::Entry> entries,
+                           fuchsia::ledger::TokenPtr next_token) {
+                         ASSERT_EQ(fuchsia::ledger::Status::OK, status);
+                         EXPECT_EQ(nullptr, next_token);
+                         EXPECT_TRUE(entries->empty());
+                         done = true;
+                       });
+  RunLoopUntil([&] { return done; });
 }
 
 TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
