@@ -326,7 +326,7 @@ fuchsia::ledger::Page* LedgerClient::GetPage(
 
   fuchsia::ledger::PagePtr page;
   fuchsia::ledger::PageIdPtr page_id_copy = fuchsia::ledger::PageId::New();
-  ;
+
   page_id_copy->id = page_id.id;
   ledger_->GetPage(std::move(page_id_copy), page.NewRequest(),
                    [context](fuchsia::ledger::Status status) {
