@@ -10,6 +10,10 @@
 #include <cstdio>
 #include <memory>
 
+#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/startup_context.h"
+#include "lib/svc/cpp/services.h"
+
 extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
     std::printf("%s\n", __func__);
 
@@ -19,7 +23,11 @@ extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_INTERNAL;
     }
 
-    auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_proto);
+    auto environment_services = std::make_shared<component::Services>();
+    auto env_service_root = component::subtle::CreateStaticServiceRootHandle();
+    environment_services->Bind(std::move(env_service_root));
+
+    auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_proto, environment_services);
     auto status = wlandev->Bind();
     if (status != ZX_OK) {
         std::printf("wlan: could not bind: %d\n", status);

@@ -29,6 +29,8 @@
 #include <cstring>
 #include <sstream>
 
+#include "lib/svc/cpp/services.h"
+
 namespace wlan {
 
 constexpr uint8_t kTelemetryReportPeriodMinutes = 1;
@@ -285,8 +287,8 @@ wlan_mlme::StatsQueryResponse Dispatcher::GetStatsToFidl() const {
     return stats_response;
 }
 
-void Dispatcher::CreateAndStartTelemetry() {
-    telemetry_.reset(new Telemetry(this));
+void Dispatcher::CreateAndStartTelemetry(std::shared_ptr<component::Services>& services) {
+    telemetry_.reset(new Telemetry(this, services));
     telemetry_->StartWorker(kTelemetryReportPeriodMinutes);
 }
 

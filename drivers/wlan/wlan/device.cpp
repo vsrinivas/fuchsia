@@ -63,8 +63,10 @@ static wlanmac_ifc_t wlanmac_ifc_ops = {
         [](void* cookie, const wlan_tx_status_t* tx_status) {
             DEV(cookie)->WlanmacReportTxStatus(tx_status);
         },
-    .hw_scan_complete = [](void* cookie, const wlan_hw_scan_result_t* result)
-            { DEV(cookie)->WlanmacHwScanComplete(result); },
+    .hw_scan_complete =
+        [](void* cookie, const wlan_hw_scan_result_t* result) {
+            DEV(cookie)->WlanmacHwScanComplete(result);
+        },
 };
 
 static ethmac_protocol_ops_t ethmac_ops = {
@@ -84,8 +86,9 @@ static ethmac_protocol_ops_t ethmac_ops = {
 };
 #undef DEV
 
-Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
-    : parent_(device), wlanmac_proxy_(wlanmac_proto) {
+Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto,
+               std::shared_ptr<component::Services> services)
+    : parent_(device), wlanmac_proxy_(wlanmac_proto), services_(services) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
 }
@@ -144,7 +147,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
-    dispatcher_->CreateAndStartTelemetry();
+    dispatcher_->CreateAndStartTelemetry(services_);
     if ((wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
         !(wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION)) {
         minstrel_.reset(new MinstrelManager);

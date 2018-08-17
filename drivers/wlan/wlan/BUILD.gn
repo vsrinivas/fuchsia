@@ -22,6 +22,8 @@ driver_module("wlan_driver") {
   deps = [
     "//garnet/lib/wlan/mlme",
     "//garnet/lib/wlan/protocol",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",

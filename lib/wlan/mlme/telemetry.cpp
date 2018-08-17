@@ -8,7 +8,7 @@
 #include <wlan/common/logging.h>
 #include <wlan/mlme/dispatcher.h>
 
-#include "lib/component/cpp/environment_services.h"
+#include "lib/svc/cpp/services.h"
 
 namespace wlan {
 
@@ -16,7 +16,8 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 namespace cobalt = ::fuchsia::cobalt;
 
-Telemetry::Telemetry(Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
+Telemetry::Telemetry(Dispatcher* dispatcher, std::shared_ptr<component::Services> services)
+    : dispatcher_(dispatcher), services_(services) {}
 
 Telemetry::~Telemetry() {
     StopWorker();
@@ -42,7 +43,7 @@ void Telemetry::StopWorker() {
 
 void Telemetry::CobaltReporter(std::chrono::minutes report_period) {
     infof("telemetry: thread started\n");
-    encoder_ = ConnectToEnvironmentService();
+    encoder_ = ConnectToService();
 
     while (is_active_) {
         wlan_mlme::StatsQueryResponse stats_response = dispatcher_->GetStatsToFidl();
@@ -59,10 +60,10 @@ void Telemetry::CobaltReporter(std::chrono::minutes report_period) {
     }
 }
 
-cobalt::EncoderSyncPtr Telemetry::ConnectToEnvironmentService() {
+cobalt::EncoderSyncPtr Telemetry::ConnectToService() {
     cobalt::EncoderSyncPtr encoder;
     cobalt::EncoderFactorySyncPtr factory;
-    component::ConnectToEnvironmentService(factory.NewRequest());
+    services_->ConnectToService(factory.NewRequest());
     factory->GetEncoder(kCobaltProjectId, encoder.NewRequest());
     infof("telemetry: connected to Cobalt\n");
     return encoder;

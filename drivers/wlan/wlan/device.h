@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
+#define GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
 
 #include "proxy_helpers.h"
 
@@ -23,6 +24,8 @@
 #include <mutex>
 #include <thread>
 
+#include "lib/svc/cpp/services.h"
+
 typedef struct zx_port_packet zx_port_packet_t;
 
 namespace wlan {
@@ -31,7 +34,8 @@ class Timer;
 
 class Device : public DeviceInterface {
    public:
-    Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto);
+    Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto,
+           std::shared_ptr<component::Services> services);
     ~Device();
 
     zx_status_t Bind();
@@ -127,6 +131,8 @@ class Device : public DeviceInterface {
 
     fbl::unique_ptr<MinstrelManager> minstrel_;
 
+    std::shared_ptr<component::Services> services_;
+
     fbl::unique_ptr<Dispatcher> dispatcher_ __TA_GUARDED(lock_);
 
     bool dead_ __TA_GUARDED(lock_) = false;
@@ -139,3 +145,5 @@ class Device : public DeviceInterface {
 zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info);
 
 }  // namespace wlan
+
+#endif  // GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_

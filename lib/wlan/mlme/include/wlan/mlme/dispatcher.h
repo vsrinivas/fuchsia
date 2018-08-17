@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DISPATCHER_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DISPATCHER_H_
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -15,6 +16,8 @@
 #include <wlan/mlme/telemetry.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
+
+#include "lib/svc/cpp/services.h"
 
 namespace wlan {
 
@@ -34,7 +37,7 @@ class Dispatcher {
     void HwScanComplete(uint8_t result_code);
     void ResetStats();
     ::fuchsia::wlan::mlme::StatsQueryResponse GetStatsToFidl() const;
-    void CreateAndStartTelemetry();
+    void CreateAndStartTelemetry(std::shared_ptr<component::Services>& services);
 
    private:
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
@@ -53,3 +56,5 @@ class Dispatcher {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DISPATCHER_H_

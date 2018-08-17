@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TELEMETRY_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TELEMETRY_H_
 
 #include <thread>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/logging.h>
+
+#include "lib/svc/cpp/services.h"
 
 namespace wlan {
 
@@ -32,7 +35,7 @@ enum CobaltEncodingId : uint32_t {
 
 class Telemetry {
    public:
-    Telemetry(Dispatcher* dispatcher);
+    Telemetry(Dispatcher* dispatcher, std::shared_ptr<component::Services> services);
     ~Telemetry();
 
     void StartWorker(uint8_t report_period_minutes);
@@ -41,7 +44,7 @@ class Telemetry {
    private:
     // Every report_period minutes, the worker Cobalt reporter sends data to Cobalt.
     void CobaltReporter(std::chrono::minutes report_period);
-    ::fuchsia::cobalt::EncoderSyncPtr ConnectToEnvironmentService();
+    ::fuchsia::cobalt::EncoderSyncPtr ConnectToService();
     void ReportDispatcherStats(const ::fuchsia::wlan::stats::DispatcherStats& stats);
     void ReportDispatcherPackets(const uint8_t packet_type_index, const uint64_t packet_count);
     void ReportClientMlmeStats(const ::fuchsia::wlan::stats::ClientMlmeStats& stats);
@@ -49,9 +52,12 @@ class Telemetry {
                          const ::fuchsia::wlan::stats::RssiStats& stats);
 
     Dispatcher* dispatcher_;
+    std::shared_ptr<component::Services> services_;
     ::fuchsia::cobalt::EncoderSyncPtr encoder_;
     std::thread worker_thread_;
     std::atomic<bool> is_active_{false};
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TELEMETRY_H_
