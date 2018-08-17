@@ -119,8 +119,7 @@ static int oom_loop(void* arg) {
 static void start_thread_locked() TA_REQ(oom_mutex) {
     DEBUG_ASSERT(oom_thread == nullptr);
     DEBUG_ASSERT(oom_running == false);
-    thread_t* t = thread_create("oom", oom_loop, nullptr,
-                                HIGH_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t* t = thread_create("oom", oom_loop, nullptr, HIGH_PRIORITY);
     if (t != nullptr) {
         oom_running = true;
         oom_thread = t;

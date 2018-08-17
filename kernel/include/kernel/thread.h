@@ -21,15 +21,6 @@
 
 __BEGIN_CDECLS
 
-// debug-enable runtime checks
-#define THREAD_STACK_BOUNDS_CHECK (LK_DEBUGLEVEL > 2)
-#ifndef THREAD_STACK_PADDING_SIZE
-#define THREAD_STACK_PADDING_SIZE 256
-#endif
-
-#define STACK_DEBUG_BYTE (0x99)
-#define STACK_DEBUG_WORD (0x99999999)
-
 enum thread_state {
     THREAD_INITIAL = 0,
     THREAD_READY,
@@ -54,11 +45,9 @@ typedef void (*thread_tls_callback_t)(void* tls_value);
 
 // clang-format off
 #define THREAD_FLAG_DETACHED                 (1 << 0)
-#define THREAD_FLAG_FREE_STACK               (1 << 1)
-#define THREAD_FLAG_FREE_STRUCT              (1 << 2)
-#define THREAD_FLAG_REAL_TIME                (1 << 3)
-#define THREAD_FLAG_IDLE                     (1 << 4)
-#define THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK (1 << 5)
+#define THREAD_FLAG_FREE_STRUCT              (1 << 1)
+#define THREAD_FLAG_REAL_TIME                (1 << 2)
+#define THREAD_FLAG_IDLE                     (1 << 3)
 
 #define THREAD_SIGNAL_KILL                   (1 << 0)
 #define THREAD_SIGNAL_SUSPEND                (1 << 1)
@@ -161,11 +150,26 @@ typedef struct thread {
     struct arch_thread arch;
 
     // stack stuff
+    //
+    // In general, thread stacks are allocated by thread_create_etc using vm_allocate_kstack.
+    // However, there are exceptions:
+    //   - idle thread for CPU 0 (BSS allocated)
+    //   - bootstrap threads for secondary CPUs (x64 and arm64)
+    //
     void* stack;
+    //
+    // When non-null, stack_mapping and stack_vmar point to resources allocated by
+    // vm_allocate_kstack, which must be freed by vm_free_stacks. Note, they are of type void*
+    // because thread_t is a C struct and we can't store their true types here
+    // (fbl::RefPtr<VmMapping> and fbl::<VmAddressRegion>).
+    void* stack_mapping;
+    void* stack_vmar;
     size_t stack_size;
     vaddr_t stack_top;
 #if __has_feature(safe_stack)
     void* unsafe_stack;
+    void* unsafe_stack_mapping;
+    void* unsafe_stack_vmar;
 #endif
 
     // entry point
@@ -249,8 +253,9 @@ thread_t* thread_create_idle_thread(uint cpu_num);
 void thread_set_name(const char* name);
 void thread_set_priority(thread_t* t, int priority);
 void thread_set_user_callback(thread_t* t, thread_user_callback_t cb);
-thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority, size_t stack_size);
-thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine entry, void* arg, int priority, void* stack, void* unsafe_stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
+thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority);
+thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine entry, void* arg,
+                            int priority, thread_trampoline_routine alt_trampoline);
 void thread_resume(thread_t*);
 zx_status_t thread_suspend(thread_t*);
 void thread_signal_policy_exception(void);

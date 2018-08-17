@@ -779,7 +779,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
             mwd_limit = argv[2].u * 256;
         }
         if (!mwd_running) {
-            thread_t* t = thread_create("mwd", mwd_thread, nullptr, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+            thread_t* t = thread_create("mwd", mwd_thread, nullptr, DEFAULT_PRIORITY);
             if (t) {
                 mwd_running = true;
                 thread_resume(t);
@@ -798,7 +798,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
             hwd_limit = argv[2].u;
         }
         if (!hwd_running) {
-            thread_t* t = thread_create("hwd", hwd_thread, nullptr, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+            thread_t* t = thread_create("hwd", hwd_thread, nullptr, DEFAULT_PRIORITY);
             if (t) {
                 hwd_running = true;
                 thread_resume(t);

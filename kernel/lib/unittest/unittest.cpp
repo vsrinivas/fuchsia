@@ -204,7 +204,7 @@ static bool run_testcase_in_thread(const unittest_testcase_registration_t* testc
     });
     thread_t* t = thread_create("unittest", run_unittest_thread_entry,
                                 const_cast<void*>(static_cast<const void*>(testcase)),
-                                DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+                                DEFAULT_PRIORITY);
     if (!t) {
         unittest_printf("failed to create unittest thread\n");
         return false;

@@ -44,7 +44,10 @@
 #include <printf.h>
 #include <string.h>
 #include <target.h>
+#include <vm/kstack.h>
 #include <vm/vm.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
@@ -113,17 +116,90 @@ static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_
     }
 }
 
+static void free_stack(thread_t* t) {
+    if (t->stack != nullptr) {
+        DEBUG_ASSERT(t->stack_mapping != nullptr);
+        DEBUG_ASSERT(t->stack_vmar != nullptr);
+        t->stack = nullptr;
+        fbl::RefPtr<VmMapping> stack_mapping =
+            fbl::WrapRefPtr(static_cast<VmMapping*>(t->stack_mapping));
+        t->stack_mapping = nullptr;
+        fbl::RefPtr<VmAddressRegion> stack_vmar =
+            fbl::WrapRefPtr(static_cast<VmAddressRegion*>(t->stack_vmar));
+        t->stack_vmar = nullptr;
+        zx_status_t status = vm_free_kstack(&stack_mapping, &stack_vmar);
+        DEBUG_ASSERT(status == ZX_OK);
+    }
+
+#if __has_feature(safe_stack)
+    if (t->unsafe_stack != nullptr) {
+        DEBUG_ASSERT(t->unsafe_stack_mapping != nullptr);
+        DEBUG_ASSERT(t->unsafe_stack_vmar != nullptr);
+        t->unsafe_stack = nullptr;
+        fbl::RefPtr<VmMapping> stack_mapping =
+            fbl::WrapRefPtr(static_cast<VmMapping*>(t->unsafe_stack_mapping));
+        t->unsafe_stack_mapping = nullptr;
+        fbl::RefPtr<VmAddressRegion> stack_vmar =
+            fbl::WrapRefPtr(static_cast<VmAddressRegion*>(t->unsafe_stack_vmar));
+        t->unsafe_stack_vmar = nullptr;
+        zx_status_t status = vm_free_kstack(&stack_mapping, &stack_vmar);
+        DEBUG_ASSERT(status == ZX_OK);
+    }
+#endif
+}
+
+// Allocates a stack (and optional unsafe_stack) and sets its size.
+static zx_status_t create_stack(thread_t* t) {
+    DEBUG_ASSERT(t->stack == nullptr);
+    DEBUG_ASSERT(t->stack_mapping == nullptr);
+    DEBUG_ASSERT(t->stack_vmar == nullptr);
+#if __has_feature(safe_stack)
+    DEBUG_ASSERT(t->unsafe_stack == nullptr);
+    DEBUG_ASSERT(t->unsafe_stack_mapping == nullptr);
+    DEBUG_ASSERT(t->unsafe_stack_vmar == nullptr);
+#endif
+
+    void* stack_top;
+    fbl::RefPtr<VmMapping> mapping;
+    fbl::RefPtr<VmAddressRegion> vmar;
+    zx_status_t status = vm_allocate_kstack(false, &stack_top, &mapping, &vmar);
+    if (status != ZX_OK) {
+        return status;
+    }
+    t->stack_size = mapping->size();
+    t->stack = reinterpret_cast<void*>(mapping->base());
+    // Store raw pointers to the underlying ref-coutned objects because thread_t cannot hold
+    // RefPtr's.
+    t->stack_mapping = mapping.leak_ref();
+    t->stack_vmar = vmar.leak_ref();
+    // Freeing these objects is now free_stack's responsibility.
+
+#if __has_feature(safe_stack)
+    status = vm_allocate_kstack(true, &stack_top, &mapping, &vmar);
+    if (status != ZX_OK) {
+        free_stack(t);
+        return status;
+    }
+    t->stack_size = mapping->size();
+    t->unsafe_stack = reinterpret_cast<void*>(mapping->base());
+    t->unsafe_stack_mapping = mapping.leak_ref();
+    t->unsafe_stack_vmar = vmar.leak_ref();
+#endif
+
+    return ZX_OK;
+}
+
 /**
  * @brief  Create a new thread
  *
  * This function creates a new thread.  The thread is initially suspended, so you
  * need to call thread_resume() to execute it.
  *
+ * @param  t               If not NULL, use the supplied thread_t
  * @param  name            Name of thread
  * @param  entry           Entry point of thread
  * @param  arg             Arbitrary argument passed to entry()
  * @param  priority        Execution priority for the thread.
- * @param  stack_size      Stack size for the thread.
  * @param  alt_trampoline  If not NULL, an alternate trampoline for the thread
  *                         to start on.
  *
@@ -138,7 +214,7 @@ static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_
  *  IDLE_PRIORITY
  *  LOWEST_PRIORITY
  *
- * Stack size is typically set to DEFAULT_STACK_SIZE
+ * Stack size is set to DEFAULT_STACK_SIZE
  *
  * @return  Pointer to thread object, or NULL on failure.
  */
@@ -147,7 +223,6 @@ thread_t* thread_create_etc(
     const char* name,
     thread_start_routine entry, void* arg,
     int priority,
-    void* stack, void* unsafe_stack, size_t stack_size,
     thread_trampoline_routine alt_trampoline) {
     unsigned int flags = 0;
 
@@ -176,49 +251,13 @@ thread_t* thread_create_etc(
 
     sched_init_thread(t, priority);
 
-    // create the stack
-    if (!stack) {
-        if (THREAD_STACK_BOUNDS_CHECK) {
-            stack_size += THREAD_STACK_PADDING_SIZE;
-            flags |= THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK;
+    zx_status_t status = create_stack(t);
+    if (status != ZX_OK) {
+        if (flags & THREAD_FLAG_FREE_STRUCT) {
+            free(t);
         }
-        t->stack = malloc(stack_size);
-        if (!t->stack) {
-            if (flags & THREAD_FLAG_FREE_STRUCT)
-                free(t);
-            return NULL;
-        }
-        flags |= THREAD_FLAG_FREE_STACK;
-        if (THREAD_STACK_BOUNDS_CHECK) {
-            memset(t->stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
-        }
-    } else {
-        t->stack = stack;
+        return nullptr;
     }
-
-#if __has_feature(safe_stack)
-    if (!unsafe_stack) {
-        DEBUG_ASSERT(!stack);
-        DEBUG_ASSERT(flags & THREAD_FLAG_FREE_STACK);
-        t->unsafe_stack = malloc(stack_size);
-        if (!t->unsafe_stack) {
-            free(t->stack);
-            if (flags & THREAD_FLAG_FREE_STRUCT)
-                free(t);
-            return NULL;
-        }
-        if (THREAD_STACK_BOUNDS_CHECK) {
-            memset(t->unsafe_stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
-        }
-    } else {
-        DEBUG_ASSERT(stack);
-        t->unsafe_stack = unsafe_stack;
-    }
-#else
-    DEBUG_ASSERT(!unsafe_stack);
-#endif
-
-    t->stack_size = stack_size;
 
     // save whether or not we need to free the thread struct and/or stack
     t->flags = flags;
@@ -240,21 +279,13 @@ thread_t* thread_create_etc(
     return t;
 }
 
-thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority, size_t stack_size) {
-    return thread_create_etc(NULL, name, entry, arg, priority,
-                             NULL, NULL, stack_size, NULL);
+thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority) {
+    return thread_create_etc(NULL, name, entry, arg, priority, NULL);
 }
 
 static void free_thread_resources(thread_t* t) {
-    // free its stack and the thread structure itself
-    if (t->flags & THREAD_FLAG_FREE_STACK) {
-        if (t->stack)
-            free(t->stack);
-#if __has_feature(safe_stack)
-        if (t->unsafe_stack)
-            free(t->unsafe_stack);
-#endif
-    }
+    // free the stack
+    free_stack(t);
 
     // call the tls callback for each slot as long there is one
     for (uint ix = 0; ix != THREAD_MAX_TLS_ENTRY; ++ix) {
@@ -263,9 +294,11 @@ static void free_thread_resources(thread_t* t) {
         }
     }
 
+    // free the thread structure itself
     t->magic = 0;
-    if (t->flags & THREAD_FLAG_FREE_STRUCT)
+    if (t->flags & THREAD_FLAG_FREE_STRUCT) {
         free(t);
+    }
 }
 
 /**
@@ -515,10 +548,8 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread,
         // remove it from the master thread list
         list_delete(&current_thread->thread_list_node);
 
-        // if we have to do any freeing of either the stack or the thread structure, queue
-        // a dpc to do the cleanup
-        if ((current_thread->flags & THREAD_FLAG_FREE_STACK && current_thread->stack) ||
-            current_thread->flags & THREAD_FLAG_FREE_STRUCT) {
+        // queue a dpc to free the stack and, optionally, the thread structure
+        if (current_thread->stack || (current_thread->flags & THREAD_FLAG_FREE_STRUCT)) {
             free_dpc.func = thread_free_dpc;
             free_dpc.arg = (void*)current_thread;
             zx_status_t status = dpc_queue_thread_locked(&free_dpc);
@@ -1118,9 +1149,7 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
     thread_t* t = thread_create_etc(
         &percpu[cpu_num].idle_thread, name,
         arch_idle_thread_routine, NULL,
-        IDLE_PRIORITY,
-        NULL, NULL, DEFAULT_STACK_SIZE,
-        NULL);
+        IDLE_PRIORITY, NULL);
     if (t == NULL) {
         return t;
     }
@@ -1193,14 +1222,17 @@ void dump_thread(thread_t* t, bool full_dump) {
                 t->priority_boost, t->inherited_priority, t->remaining_time_slice);
         dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n",
                 runtime, runtime / 1000000000);
-        dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
-        dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
+        dprintf(INFO, "\tstack %p, stack_mapping %p, stack_vmar %p, stack_size %zu\n",
+                t->stack, t->stack_mapping, t->stack_vmar, t->stack_size);
+#if __has_feature(safe_stack)
+        dprintf(INFO, "\tunsafe_stack %p, unsafe_stack_mapping %p, unsafe_stack_vmar %p\n",
+                t->unsafe_stack, t->unsafe_stack_mapping, t->unsafe_stack_vmar);
+#endif
+        dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry, t->arg, t->flags,
                 (t->flags & THREAD_FLAG_DETACHED) ? "Dt" : "",
-                (t->flags & THREAD_FLAG_FREE_STACK) ? "Fs" : "",
                 (t->flags & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
                 (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
-                (t->flags & THREAD_FLAG_IDLE) ? "Id" : "",
-                (t->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) ? "Sc" : "");
+                (t->flags & THREAD_FLAG_IDLE) ? "Id" : "");
         dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, mutexes held %d\n",
                 t->blocking_wait_queue, t->blocked_status, t->interruptable, t->mutexes_held);
         dprintf(INFO, "\taspace %p\n", t->aspace);

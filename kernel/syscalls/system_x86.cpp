@@ -171,7 +171,7 @@ zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
         // explanation).
         thread_t* t = thread_create("suspend-thread", suspend_thread,
                                     const_cast<zx_system_powerctl_arg_t*>(arg),
-                                    HIGHEST_PRIORITY, DEFAULT_STACK_SIZE);
+                                    HIGHEST_PRIORITY);
         if (!t) {
             return ZX_ERR_NO_MEMORY;
         }

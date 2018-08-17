@@ -91,12 +91,6 @@ ThreadDispatcher::~ThreadDispatcher() {
         DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n", StateToString(state_), this);
     }
 
-    // free the kernel stack
-    vm_free_kstack(&kstack_mapping_, &kstack_vmar_);
-#if __has_feature(safe_stack)
-    vm_free_kstack(&unsafe_kstack_mapping_, &unsafe_kstack_vmar_);
-#endif
-
     event_destroy(&exception_event_);
 }
 
@@ -117,28 +111,9 @@ zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     memcpy(thread_name, name, len);
     memset(thread_name + len, 0, ZX_MAX_NAME_LEN - len);
 
-    // Map the kernel stack somewhere
-    void* stack_top;
-    auto status = vm_allocate_kstack(false, &stack_top, &kstack_mapping_, &kstack_vmar_);
-    if (status != ZX_OK)
-        return status;
-#if __has_feature(safe_stack)
-    status = vm_allocate_kstack(true, &stack_top,
-                                &unsafe_kstack_mapping_, &unsafe_kstack_vmar_);
-    if (status != ZX_OK)
-        return status;
-#endif
-
     // create an underlying LK thread
     thread_t* lkthread = thread_create_etc(
-        &thread_, thread_name, StartRoutine, this, DEFAULT_PRIORITY,
-        reinterpret_cast<void*>(kstack_mapping_->base()),
-#if __has_feature(safe_stack)
-        reinterpret_cast<void*>(unsafe_kstack_mapping_->base()),
-#else
-        nullptr,
-#endif
-        DEFAULT_STACK_SIZE, nullptr);
+        &thread_, thread_name, StartRoutine, this, DEFAULT_PRIORITY, nullptr);
 
     if (!lkthread) {
         TRACEF("error creating thread\n");

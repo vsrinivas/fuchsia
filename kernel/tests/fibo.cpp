@@ -27,13 +27,13 @@ static int fibo_thread(void* argv) {
 
     char name[32];
     snprintf(name, sizeof(name), "fibo %ld", fibo - 1);
-    t[0] = thread_create(name, &fibo_thread, (void*)(fibo - 1), DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    t[0] = thread_create(name, &fibo_thread, (void*)(fibo - 1), DEFAULT_PRIORITY);
     if (!t[0]) {
         printf("error creating thread for fibo %ld\n", fibo - 1);
         return 0;
     }
     snprintf(name, sizeof(name), "fibo %ld", fibo - 2);
-    t[1] = thread_create(name, &fibo_thread, (void*)(fibo - 2), DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    t[1] = thread_create(name, &fibo_thread, (void*)(fibo - 2), DEFAULT_PRIORITY);
     if (!t[1]) {
         printf("error creating thread for fibo %ld\n", fibo - 2);
         thread_resume(t[0]);
@@ -61,7 +61,7 @@ int fibo(int argc, const cmd_args* argv, uint32_t) {
 
     zx_time_t tim = current_time();
 
-    thread_t* t = thread_create("fibo", &fibo_thread, (void*)(uintptr_t)argv[1].u, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t* t = thread_create("fibo", &fibo_thread, (void*)(uintptr_t)argv[1].u, DEFAULT_PRIORITY);
     thread_resume(t);
 
     int retcode;

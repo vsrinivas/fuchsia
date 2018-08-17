@@ -198,7 +198,7 @@ static int watch_counter(int argc, const cmd_args* argv) {
             list_add_head(&watcher_list, &wc->node);
             if (watcher_thread == nullptr) {
                 watcher_thread = thread_create(
-                    "counter-watcher", watcher_thread_fn, nullptr, LOW_PRIORITY, 4096);
+                    "counter-watcher", watcher_thread_fn, nullptr, LOW_PRIORITY);
                 if (watcher_thread == nullptr) {
                     printf("no memory for watcher thread\n");
                     return 1;

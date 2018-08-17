@@ -281,15 +281,6 @@ private:
     // Used to protect thread name read/writes
     mutable DECLARE_SPINLOCK(ThreadDispatcher) name_lock_;
 
-    // hold a reference to the mapping and vmar used to wrap the mapping of this
-    // thread's kernel stack
-    fbl::RefPtr<VmMapping> kstack_mapping_;
-    fbl::RefPtr<VmAddressRegion> kstack_vmar_;
-#if __has_feature(safe_stack)
-    fbl::RefPtr<VmMapping> unsafe_kstack_mapping_;
-    fbl::RefPtr<VmAddressRegion> unsafe_kstack_vmar_;
-#endif
-
     // Per-thread structure used while waiting in a ChannelDispatcher::Call.
     // Needed to support the requirements of being able to interrupt a Call
     // in order to suspend a thread.

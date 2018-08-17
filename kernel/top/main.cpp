@@ -87,7 +87,7 @@ void lk_main() {
 
     // create a thread to complete system initialization
     dprintf(SPEW, "creating bootstrap completion thread\n");
-    thread_t* t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t* t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY);
     thread_set_cpu_affinity(t, cpu_num_to_mask(0));
     thread_detach(t);
     thread_resume(t);

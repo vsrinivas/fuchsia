@@ -313,7 +313,6 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
         NULL,
         &unplug_done,
         HIGHEST_PRIORITY,
-        NULL, NULL, 4096,
         mp_unplug_trampoline);
     if (t == NULL) {
         return ZX_ERR_NO_MEMORY;

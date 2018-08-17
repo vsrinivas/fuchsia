@@ -442,13 +442,13 @@ static void dlog_init_hook(uint level) {
     DEBUG_ASSERT(dumper_thread == nullptr);
 
     if ((notifier_thread = thread_create("debuglog-notifier", debuglog_notifier, NULL,
-                                         HIGH_PRIORITY - 1, DEFAULT_STACK_SIZE)) != NULL) {
+                                         HIGH_PRIORITY - 1)) != NULL) {
         thread_resume(notifier_thread);
     }
 
     if (platform_serial_enabled() || platform_early_console_enabled()) {
         if ((dumper_thread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
-                                           HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
+                                           HIGH_PRIORITY - 2)) != NULL) {
             thread_resume(dumper_thread);
         }
     }

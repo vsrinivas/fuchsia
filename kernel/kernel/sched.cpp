@@ -861,30 +861,6 @@ void sched_resched_internal(void) {
                          newthread->effec_priority, newthread->base_priority,
                          newthread->priority_boost, newthread->flags);
 
-    // check that the old thread has not blown its stack just before pushing its context
-    if (THREAD_STACK_BOUNDS_CHECK &&
-        unlikely(oldthread->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK)) {
-        static_assert((THREAD_STACK_PADDING_SIZE % sizeof(uint32_t)) == 0, "");
-        uint32_t* s = (uint32_t*)oldthread->stack;
-        for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
-            if (unlikely(s[i] != STACK_DEBUG_WORD)) {
-                // NOTE: will probably blow the stack harder here, but hopefully enough
-                // state exists to at least get some sort of debugging done.
-                panic("stack overrun at %p: thread %p (%s), stack %p\n", &s[i],
-                      oldthread, oldthread->name, oldthread->stack);
-            }
-        }
-#if __has_feature(safe_stack)
-        s = (uint32_t*)oldthread->unsafe_stack;
-        for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
-            if (unlikely(s[i] != STACK_DEBUG_WORD)) {
-                panic("unsafe_stack overrun at %p: thread %p (%s), unsafe_stack %p\n", &s[i],
-                      oldthread, oldthread->name, oldthread->unsafe_stack);
-            }
-        }
-#endif
-    }
-
     // see if we need to swap mmu context
     if (newthread->aspace != oldthread->aspace) {
         vmm_context_switch(oldthread->aspace, newthread->aspace);
