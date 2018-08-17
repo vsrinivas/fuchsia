@@ -1106,33 +1106,38 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
         return ZX_OK;
     }
 
-    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.body()->data->size();
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    size_t llc_payload_len = req.body()->data->size();
+    size_t max_frame_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + llc_payload_len;
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(max_frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), max_frame_len);
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<DataFrameHeader>(0);
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_to_ds(1);
 
-    hdr->addr1.Set(req.body()->dst_addr.data());
-    hdr->addr2.Set(req.body()->src_addr.data());
-    hdr->addr3.Set(req.body()->dst_addr.data());
+    bool needs_protection = !bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
+    DataFrame<LlcHeader> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_to_ds(1);
+    data_hdr->fc.set_protected_frame(needs_protection);
+    data_hdr->addr1.Set(req.body()->dst_addr.data());
+    data_hdr->addr2.Set(req.body()->src_addr.data());
+    data_hdr->addr3.Set(req.body()->dst_addr.data());
+    SetSeqNo(data_hdr, &seq_);
 
-    SetSeqNo(hdr, &seq_);
+    auto llc_hdr = data_frame.body();
+    llc_hdr->dsap = kLlcSnapExtension;
+    llc_hdr->ssap = kLlcSnapExtension;
+    llc_hdr->control = kLlcUnnumberedInformation;
+    std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
+    llc_hdr->protocol_id = htobe16(kEapolProtocolId);
+    std::memcpy(llc_hdr->payload, req.body()->data->data(), llc_payload_len);
 
-    // TODO(NET-1332): Protect EAPOL frame and configure tx_info.
+    // Adjust frame's length before sending it over the air.
+    data_frame.set_body_len(llc_hdr->len() + llc_payload_len);
+    data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
 
-    auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
-    llc->dsap = kLlcSnapExtension;
-    llc->ssap = kLlcSnapExtension;
-    llc->control = kLlcUnnumberedInformation;
-    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
-    llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.body()->data->data(), req.body()->data->size());
-
-    zx_status_t status = SendNonData(std::move(packet));
+    zx_status_t status = device_->SendWlan(data_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
