@@ -504,7 +504,7 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread,
     // create a dpc on the stack to queue up a free.
     // must be put at top scope in this function to force the compiler to keep it from
     // reusing the stack before the function exits
-    dpc_t free_dpc;
+    dpc_t free_dpc = DPC_INITIAL_VALUE;
 
     // enter the dead state
     current_thread->state = THREAD_DEATH;
@@ -521,7 +521,8 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread,
             current_thread->flags & THREAD_FLAG_FREE_STRUCT) {
             free_dpc.func = thread_free_dpc;
             free_dpc.arg = (void*)current_thread;
-            dpc_queue_thread_locked(&free_dpc);
+            zx_status_t status = dpc_queue_thread_locked(&free_dpc);
+            DEBUG_ASSERT(status == ZX_OK);
         }
     } else {
         // signal if anyone is waiting
