@@ -323,7 +323,12 @@ a process, or shared with another process by passing a Handle over a Channel.
 
 #### **Zedboot** ####
 
-TODO(raggi): add definition.
+Zedboot is a recovery image that is used to install and boot a full Fuchsia system.
+Zedboot is actually an instance of the Zircon kernel with a minimal set of drivers
+and services running used to bootstrap a complete Fuchsia system on a target device.
+Upon startup, Zedboot listens on the network for instructions from a bootserver which
+may instruct Zedboot to [install](#paver) a new OS. Upon completing the installation
+Zedboot will reboot into the newly installed system.
 
 #### **Zircon**
 
