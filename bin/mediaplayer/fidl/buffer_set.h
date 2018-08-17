@@ -15,20 +15,58 @@
 
 namespace media_player {
 
+// A mapped VMO used for one or more buffers in a BufferSet.
+// This code is adapted from zircon's VmoMapper.
+class BufferVmo {
+ public:
+  BufferVmo() = default;
+  ~BufferVmo() { Reset(); }
+
+  // Create a new VMO and map it into our address space using the provided map
+  // flags and optional target VMAR.  If requested, return the created VMO
+  // with the requested rights.
+  //
+  // size         : The minimum size, in bytes, of the VMO to create.
+  // map_flags    : The flags to use when mapping the VMO.
+  // vmo_rights   : The rights which should be applied to the VMO which is
+  //                returned by vmo(), or ZX_RIGHT_SAME_RIGHTS to leave the
+  //                default rights.
+  // bti_handle   : Handle to use for zx_vmo_create_contiguous if the vmo must
+  //                be contiguous. Passing an invalid handle indicates that a
+  //                contiguous VMO is not required.
+  zx_status_t CreateAndMap(uint64_t size, uint32_t map_flags,
+                           zx_rights_t vmo_rights,
+                           const zx::handle& bti_handle);
+
+  // Unmap and reset the VMO.
+  void Reset();
+
+  void* start() const { return start_; }
+  uint64_t size() const { return size_; }
+  zx::vmo& vmo() { return vmo_; }
+  const zx::vmo& vmo() const { return vmo_; }
+
+ private:
+  zx::vmo vmo_;
+  void* start_ = nullptr;
+  uint64_t size_ = 0;
+};
+
 // A set of buffers associated with a specific CodecPortBufferSettings and
 // buffer lifetime ordinal.
-//
-// This class uses a single vmo for all the buffers in a set. mediacodec
-// allows each buffer to use its own vmo, a mode which isn't currently
-// supported by this class.
 class BufferSet {
  public:
+  // Creates a buffer set with the specified settings and lifetime ordinal.
+  // |single_vmo| indicates whether the buffers should be allocated from a
+  // single VMO (true) or a VMO per buffer. If |bti_handle| is supplied, the
+  // VMO(s) will be physically contiguous.
   static std::unique_ptr<BufferSet> Create(
       const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-      uint64_t lifetime_ordinal, bool single_vmo);
+      uint64_t lifetime_ordinal, bool single_vmo, const zx::handle& bti_handle);
 
   BufferSet(const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-            uint64_t lifetime_ordinal, bool single_vmo);
+            uint64_t lifetime_ordinal, bool single_vmo,
+            const zx::handle& bti_handle);
 
   ~BufferSet() = default;
 
@@ -78,28 +116,23 @@ class BufferSet {
   void FreeAllBuffersOwnedBy(uint8_t party);
 
  private:
-  struct VmoInfo {
-    fzl::VmoMapper mapper_;
-    zx::vmo vmo_;
-  };
-
-  // Gets the vmo and mapper for the specified index.
-  VmoInfo& buffer_vmo_info(size_t buffer_index) {
+  // Gets the BufferVmo for the specified index.
+  BufferVmo& buffer_vmo(size_t buffer_index) {
     FXL_DCHECK(buffer_index < buffer_count());
-    return vmo_info_by_index_ ? vmo_info_by_index_[buffer_index]
-                              : single_vmo_info_;
+    return buffer_vmos_by_index_ ? buffer_vmos_by_index_[buffer_index]
+                                 : single_buffer_vmo_;
   }
 
-  // Gets the vmo and mapper for the specified index (const version).
-  const VmoInfo& buffer_vmo_info(size_t buffer_index) const {
+  // Gets the BufferVmo for the specified index (const version).
+  const BufferVmo& buffer_vmo(size_t buffer_index) const {
     FXL_DCHECK(buffer_index < buffer_count());
-    return vmo_info_by_index_ ? vmo_info_by_index_[buffer_index]
-                              : single_vmo_info_;
+    return buffer_vmos_by_index_ ? buffer_vmos_by_index_[buffer_index]
+                                 : single_buffer_vmo_;
   }
 
   fuchsia::mediacodec::CodecPortBufferSettings settings_;
-  VmoInfo single_vmo_info_;
-  std::unique_ptr<VmoInfo[]> vmo_info_by_index_;
+  BufferVmo single_buffer_vmo_;
+  std::unique_ptr<BufferVmo[]> buffer_vmos_by_index_;
 
   // |owners_by_index_| indicates who owns each buffer. 0 indicates the buffer
   // is free. Non-zero values refer to owners assigned by the caller.

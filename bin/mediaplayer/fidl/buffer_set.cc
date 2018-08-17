@@ -8,17 +8,72 @@
 
 namespace media_player {
 
+zx_status_t BufferVmo::CreateAndMap(uint64_t size, uint32_t map_flags,
+                                    zx_rights_t vmo_rights,
+                                    const zx::handle& bti_handle) {
+  FXL_DCHECK(size != 0);
+  FXL_DCHECK(start_ == nullptr);
+
+  zx_status_t status;
+  if (bti_handle) {
+    status = zx_vmo_create_contiguous(bti_handle.get(), size, 0,
+                                      vmo_.reset_and_get_address());
+  } else {
+    status = zx::vmo::create(size, 0, &vmo_);
+  }
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx_handle_t vmar_handle = zx::vmar::root_self()->get();
+  uintptr_t tmp;
+  status = zx_vmar_map(vmar_handle, 0, vmo_.get(), 0, size, map_flags, &tmp);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  start_ = reinterpret_cast<void*>(tmp);
+  size_ = size;
+
+  if (vmo_rights != ZX_RIGHT_SAME_RIGHTS) {
+    status = vmo_.replace(vmo_rights, &vmo_);
+    if (status != ZX_OK) {
+      Reset();
+      return status;
+    }
+  }
+
+  return ZX_OK;
+}
+
+void BufferVmo::Reset() {
+  if (start_ != nullptr) {
+    FXL_DCHECK(size_ != 0);
+    zx_handle_t vmar_handle = zx::vmar::root_self()->get();
+    zx_status_t status =
+        zx_vmar_unmap(vmar_handle, reinterpret_cast<uintptr_t>(start_), size_);
+    FXL_DCHECK(status == ZX_OK);
+  }
+
+  vmo_.reset();
+  start_ = nullptr;
+  size_ = 0;
+}
+
 // static
 std::unique_ptr<BufferSet> BufferSet::Create(
     const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-    uint64_t buffer_lifetime_ordinal, bool single_vmo) {
+    uint64_t buffer_lifetime_ordinal, bool single_vmo,
+    const zx::handle& bti_handle) {
   return std::make_unique<BufferSet>(settings, buffer_lifetime_ordinal,
-                                     single_vmo);
+                                     single_vmo, bti_handle);
 }
 
 BufferSet::BufferSet(
     const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-    uint64_t buffer_lifetime_ordinal, bool single_vmo)
+    uint64_t buffer_lifetime_ordinal, bool single_vmo,
+    const zx::handle& bti_handle)
     : settings_(settings),
       owners_by_index_(settings_.packet_count_for_codec +
                        settings_.packet_count_for_client) {
@@ -27,26 +82,26 @@ BufferSet::BufferSet(
 
   if (single_vmo) {
     uint64_t vmo_size = settings_.per_packet_buffer_bytes * buffer_count();
-    zx_status_t status = single_vmo_info_.mapper_.CreateAndMap(
-        vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
-        &single_vmo_info_.vmo_,
+    zx_status_t status = single_buffer_vmo_.CreateAndMap(
+        vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
         ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-            ZX_RIGHT_DUPLICATE);
+            ZX_RIGHT_DUPLICATE,
+        bti_handle);
     if (status != ZX_OK) {
       FXL_LOG(FATAL) << "Failed to create and map vmo, status " << status;
     }
   } else {
     uint64_t vmo_size = settings_.per_packet_buffer_bytes;
-    vmo_info_by_index_ = std::make_unique<VmoInfo[]>(buffer_count());
+    buffer_vmos_by_index_ = std::make_unique<BufferVmo[]>(buffer_count());
 
     for (uint32_t buffer_index = 0; buffer_index << buffer_count();
          ++buffer_index) {
-      VmoInfo& vmo_info = buffer_vmo_info(buffer_index);
-      zx_status_t status = vmo_info.mapper_.CreateAndMap(
-          vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
-          &vmo_info.vmo_,
+      BufferVmo& vmo = buffer_vmo(buffer_index);
+      zx_status_t status = vmo.CreateAndMap(
+          vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
           ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-              ZX_RIGHT_DUPLICATE);
+              ZX_RIGHT_DUPLICATE,
+          bti_handle);
       if (status != ZX_OK) {
         FXL_LOG(FATAL) << "Failed to create and map vmo, status " << status;
       }
@@ -63,12 +118,12 @@ fuchsia::mediacodec::CodecBuffer BufferSet::GetBufferDescriptor(
   buffer.buffer_index = buffer_index;
 
   fuchsia::mediacodec::CodecBufferDataVmo buffer_data_vmo;
-  const VmoInfo& vmo_info = buffer_vmo_info(buffer_index);
+  const BufferVmo& vmo = buffer_vmo(buffer_index);
 
   zx_status_t status =
-      vmo_info.vmo_.duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-                             (writeable ? ZX_RIGHT_WRITE : 0),
-                         &buffer_data_vmo.vmo_handle);
+      vmo.vmo().duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
+                              (writeable ? ZX_RIGHT_WRITE : 0),
+                          &buffer_data_vmo.vmo_handle);
   if (status != ZX_OK) {
     FXL_LOG(FATAL) << "Failed to duplicate vmo, status " << status;
   }
@@ -84,8 +139,8 @@ fuchsia::mediacodec::CodecBuffer BufferSet::GetBufferDescriptor(
 
 void* BufferSet::GetBufferData(uint32_t buffer_index) const {
   FXL_DCHECK(buffer_index < buffer_count());
-  const VmoInfo& vmo_info = buffer_vmo_info(buffer_index);
-  return reinterpret_cast<uint8_t*>(vmo_info.mapper_.start()) +
+  const BufferVmo& vmo = buffer_vmo(buffer_index);
+  return reinterpret_cast<uint8_t*>(vmo.start()) +
          buffer_index * settings_.per_packet_buffer_bytes;
 }
 
@@ -182,11 +237,20 @@ void BufferSetManager::ApplyConstraints(
     }
   }
 
-  // TODO(dalesat): Support is_physically_contiguous_required == true;
-  FXL_DCHECK(!constraints.is_physically_contiguous_required);
+  if (constraints.is_physically_contiguous_required) {
+    if (!constraints.very_temp_kludge_bti_handle) {
+      FXL_LOG(ERROR) << "Contiguous VMOs requested, but no bti handle supplied";
+    }
+  } else {
+    if (constraints.very_temp_kludge_bti_handle) {
+      FXL_LOG(ERROR)
+          << "Contiguous VMOs not requested, but bti handle supplied";
+    }
+  }
 
   current_set_ = BufferSet::Create(constraints.default_settings,
-                                   lifetime_ordinal, single_vmo);
+                                   lifetime_ordinal, single_vmo,
+                                   constraints.very_temp_kludge_bti_handle);
 }
 
 bool BufferSetManager::FreeBuffer(uint64_t lifetime_ordinal, uint32_t index) {
