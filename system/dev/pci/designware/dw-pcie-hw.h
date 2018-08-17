@@ -1,15 +1,27 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-#include <zircon/compiler.h>
+// found in the LICENSE
 
 #pragma once
 
-// clang-format off
-// Please don't touch my columns.
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
+#include <hw/reg.h>
 
-#define APP_LTSSM_ENABLE                      (1 << 7)
+namespace pcie {
+namespace designware {
+
+namespace PortLogic {
+const uint32_t Base = 0x700;
+const uint32_t DebugR1Offset = Base + 0x2c;
+class DebugR1 : public hwreg::RegisterBase<DebugR1, uint32_t> {
+  public:
+    DEF_BIT(4, link_up);
+    DEF_BIT(29, link_in_training);
+    static auto Get() {return hwreg::RegisterAddr<DebugR1>(0); }
+};
+
+} // namespace PortLogic
 
 #define PORT_LINK_CTRL_OFF                    (0x710)
 #define PLC_VENDOR_SPECIFIC_DLLP_REQ          (1 << 0)
@@ -43,32 +55,32 @@
 #define G2_CTRL_SEL_DEEMPHASIS                (1 << 20)
 #define G2_CTRL_GEN1_EI_INFERENCE             (1 << 21)
 
-#define PCIE_CTRL_STS_OFF                     (0x78)
-#define PCIE_CAP_MAX_PAYLOAD_SIZE_CS_MASK     (0x7 << 5)
-
-#define PCIE_TYPE1_STS_CMD_OFF                (0x04)
-#define PCIE_TYPE1_STS_CMD_IO_ENABLE          (1 << 0)
-#define PCIE_TYPE1_STS_CMD_MEM_SPACE_ENABLE   (1 << 1)
-#define PCIE_TYPE1_STS_CMD_BUS_MASTER_ENABLE  (1 << 2)
-
-#define PCIE_CFG_STATUS12                     (0x30)
-    #define PCIE_CFG12_SMLH_UP                (0x01 << 6)
-    #define PCIE_CFG12_RDLH_UP                (0x01 << 16)
-    #define PCIE_CFG12_LTSSM_MASK             (0x1f << 10)
-    #define PCIE_CFG12_LTSSM_UP               (0x11 << 10)
-
-#define PCIE_HEADER_TYPE_MASK                 (0x7f)
-#define PCIE_HEADER_TYPE0                     (0x0)
-#define PCIE_HEADER_TYPE1                     (0x1)
-#define PCIE_HEADER_TYPE1                     (0x1)
-#define PCIE_HEADER_BUS_REG_OFF               (0x18)
+#define PCIE_TLP_TYPE_MEM_RW                  (0x00)
+#define PCIE_TLP_TYPE_MEM_RD_LOCKED           (0x01)
+#define PCIE_TLP_TYPE_IO_RW                   (0x02)
+#define PCIE_TLP_TYPE_CFG0                    (0x04)
+#define PCIE_TLP_TYPE_CFG1                    (0x05)
+#define PCIE_ECAM_SIZE                        (0x1000)
 
 #define PCI_TYPE1_BAR0  (0x10)
 #define PCI_TYPE1_BAR1  (0x14)
 
-typedef struct pci_bus_reg {
-    uint8_t primary_bus;
-    uint8_t secondary_bus;
-    uint8_t subordinate_bus;
-    uint8_t secondary_lat_timer;
-}  __PACKED pci_bus_reg_t;
+const uint32_t kAtuRegionCount = (16);
+const uint32_t kAtuRegionCtrlEnable = (1 << 31);
+const uint32_t kAtuCfgShiftMode = (1 << 28);
+const uint32_t kAtuProgramRetries = (5);
+const uint32_t kAtuWaitEnableTimeoutUs = (10000);
+
+typedef struct atu_ctrl_regs {
+    uint32_t region_ctrl1;
+    uint32_t region_ctrl2;
+    uint32_t unroll_lower_base;
+    uint32_t unroll_upper_base;
+    uint32_t unroll_limit;
+    uint32_t unroll_lower_target;
+    uint32_t unroll_upper_target;
+} __PACKED atu_ctrl_regs_t;
+
+} // namespace designware
+
+} // namespace pcie

@@ -6,28 +6,23 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-pcie-clk.cpp \
-    $(LOCAL_DIR)/aml-pcie-device.cpp \
-    $(LOCAL_DIR)/aml-pcie.cpp \
-    $(LOCAL_DIR)/binding.c \
+    $(LOCAL_DIR)/dw-pcie.cpp
 
 MODULE_STATIC_LIBS := \
-    system/dev/pci/designware \
     system/ulib/ddk \
     system/ulib/fbl \
     system/ulib/hwreg \
     system/ulib/sync \
     system/ulib/zxcpp \
 
-
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/driver \
     system/ulib/zircon \
 
-MODULE_HEADER_DEPS := system/dev/lib/amlogic
+MODULE_PACKAGE := static
 
 include make/module.mk

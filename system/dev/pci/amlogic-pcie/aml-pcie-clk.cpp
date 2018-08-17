@@ -76,7 +76,7 @@ class MesonPLLControl6 : public hwreg::RegisterBase<MesonPLLControl6, uint32_t> 
 };
 
 
-zx_status_t pcie_pll_set_rate(zx_vaddr_t regbase) {
+zx_status_t PllSetRate(zx_vaddr_t regbase) {
     // TODO(gkalsi): This statically configures the PCIe PLL to run at
     //               100mhz. When we write a real clock driver, we want this
     //               value to be configurable.

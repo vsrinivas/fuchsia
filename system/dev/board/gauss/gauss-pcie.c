@@ -9,10 +9,10 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-defs.h>
 
+#include <dev/pci/designware/atu-cfg.h>
 #include <soc/aml-a113/a113-gpio.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-meson/axg-clk.h>
-#include <dev/pci/amlogic-pcie/atu-cfg.h>
 
 #include "gauss.h"
 
@@ -23,10 +23,6 @@ static const pbus_mmio_t dw_pcie_mmios[] = {
         .base = 0xf9800000,
         .length = 0x400000,   // 4MiB
     },
-    {   // phy
-        .base = 0xff644000,
-        .length = 0x2000,     // 8KiB
-    },
     {   // cfg
         .base = 0xff646000,
         .length = 0x2000,     // 8KiB
@@ -34,10 +30,6 @@ static const pbus_mmio_t dw_pcie_mmios[] = {
     {   // reset
         .base = 0xffd01080,
         .length = 0x10,       // 16B
-    },
-    {   // config
-        .base = 0xf9c00000,
-        .length = 0x400000,   // 4MiB
     },
     {   // clock/plls
         .base = 0xff63c000,
@@ -125,6 +117,21 @@ static const pbus_metadata_t iatu_metadata[] = {
     },
 };
 
+static const pbus_bti_t pci_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
+static const pbus_dev_t pcie_dev_children[] = {
+    {
+        // Resources for child-1
+        .btis = pci_btis,
+        .bti_count = countof(pci_btis)
+    },
+};
+
 static const pbus_dev_t pcie_dev = {
     .name = "aml-dw-pcie",
     .vid = PDEV_VID_AMLOGIC,
@@ -140,6 +147,10 @@ static const pbus_dev_t pcie_dev = {
     .irq_count = countof(dw_pcie_irqs),
     .metadata = iatu_metadata,
     .metadata_count = countof(iatu_metadata),
+
+    // Allow this device to publish the Kernel PCI device on the Platform Bus
+    .children = pcie_dev_children,
+    .child_count = countof(pcie_dev_children),
 };
 
 zx_status_t gauss_pcie_init(gauss_bus_t* bus) {

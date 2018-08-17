@@ -19,7 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/gauss-rawnand.c \
 
 MODULE_HEADER_DEPS := \
-    system/dev/pci/amlogic-pcie
+    system/dev/pci/designware
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \
