@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 
 #include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/files/file.h"
 
 namespace root_presenter {
 namespace display_configuration {
@@ -38,6 +39,23 @@ void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px,
 // talks to the display API.
 float LookupPixelDensityForDisplay(uint32_t width_in_px,
                                    uint32_t height_in_px) {
+  {
+    std::string pixel_density;
+    if (files::ReadFileToString(
+            "/system/data/root_presenter/display_pixel_density",
+            &pixel_density)) {
+      auto pixel_density_value = atof(pixel_density.c_str());
+      if (pixel_density_value != 0.0) {
+        FXL_LOG(INFO) << "Display pixel density applied: "
+                      << pixel_density_value << " px/mm.";
+        return pixel_density_value;
+      } else {
+        FXL_LOG(WARNING) << "Invalid display pixel density in configuration: "
+                         << pixel_density << " px/mm.";
+      }
+    }
+  }
+
   // TODO(MZ-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {
@@ -64,6 +82,27 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
     uint32_t width_in_px, uint32_t height_in_px) {
   // TODO(MZ-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
+  {
+    std::string display_usage;
+    if (files::ReadFileToString("/system/data/root_presenter/display_usage",
+                                &display_usage)) {
+      if (display_usage == "handheld") {
+        return fuchsia::ui::policy::DisplayUsage::kHandheld;
+      } else if (display_usage == "close") {
+        return fuchsia::ui::policy::DisplayUsage::kClose;
+      } else if (display_usage == "near") {
+        return fuchsia::ui::policy::DisplayUsage::kNear;
+      } else if (display_usage == "midrange") {
+        return fuchsia::ui::policy::DisplayUsage::kMidrange;
+      } else if (display_usage == "far") {
+        return fuchsia::ui::policy::DisplayUsage::kFar;
+      } else {
+        FXL_LOG(WARNING) << "Invalid display usage in configuration: "
+                         << display_usage << ".";
+      }
+    }
+  }
+
   if (width_in_px == 2160 && height_in_px == 1440) {
     // Assume that the device is an Acer Switch 12 Alpha.
     return fuchsia::ui::policy::DisplayUsage::kClose;
