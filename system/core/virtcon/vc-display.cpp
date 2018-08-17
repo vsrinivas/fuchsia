@@ -337,7 +337,7 @@ static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id,
 
     fuchsia_display_ControllerSetLayerPrimaryPositionRequest layer_pos_msg = {};
     layer_pos_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryPositionOrdinal;
-    layer_pos_msg.layer_id = display->id;
+    layer_pos_msg.layer_id = layer_id;
     layer_pos_msg.transform = fuchsia_display_Transform_IDENTITY;
     layer_pos_msg.src_frame.width = config->width;
     layer_pos_msg.src_frame.height = config->height;
