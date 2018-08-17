@@ -535,6 +535,17 @@ static zx_status_t imx_sdhci_build_dma_desc(imx_sdhci_device_t* dev, sdmmc_req_t
     // cache this for zx_pmt_unpin() later
     req->pmt = pmt;
 
+    if (is_read) {
+        st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                             req->buf_offset, req_len, NULL, 0);
+    } else {
+        st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN,
+                             req->buf_offset, req_len, NULL, 0);
+    }
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "imx-emmc: cache clean failed with error %d\n", st);
+    }
+
     phys_iter_buffer_t buf = {
         .phys = phys,
         .phys_count = pagecount,
