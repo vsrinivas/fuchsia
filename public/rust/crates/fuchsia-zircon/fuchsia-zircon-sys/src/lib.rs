@@ -22,6 +22,7 @@ pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_obj_type_t = i32;
 pub type zx_koid_t = u64;
+pub type zx_object_info_topic_t = u32;
 
 // TODO: combine these macros with the bitflags and assoc consts macros below
 // so that we only have to do one macro invocation.
@@ -499,6 +500,39 @@ impl cmp::PartialEq for zx_guest_packet_t {
 }
 
 impl cmp::Eq for zx_guest_packet_t {}
+
+multiconst!(zx_object_info_topic_t, [
+    ZX_INFO_NONE                       = 0;
+    ZX_INFO_HANDLE_VALID               = 1;
+    ZX_INFO_HANDLE_BASIC               = 2;  // zx_info_handle_basic_t[1]
+    ZX_INFO_PROCESS                    = 3;  // zx_info_process_t[1]
+    ZX_INFO_PROCESS_THREADS            = 4;  // zx_koid_t[n]
+    ZX_INFO_VMAR                       = 7;  // zx_info_vmar_t[1]
+    ZX_INFO_JOB_CHILDREN               = 8;  // zx_koid_t[n]
+    ZX_INFO_JOB_PROCESSES              = 9;  // zx_koid_t[n]
+    ZX_INFO_THREAD                     = 10; // zx_info_thread_t[1]
+    ZX_INFO_THREAD_EXCEPTION_REPORT    = 11; // zx_exception_report_t[1]
+    ZX_INFO_TASK_STATS                 = 12; // zx_info_task_stats_t[1]
+    ZX_INFO_PROCESS_MAPS               = 13; // zx_info_maps_t[n]
+    ZX_INFO_PROCESS_VMOS               = 14; // zx_info_vmo_t[n]
+    ZX_INFO_THREAD_STATS               = 15; // zx_info_thread_stats_t[1]
+    ZX_INFO_CPU_STATS                  = 16; // zx_info_cpu_stats_t[n]
+    ZX_INFO_KMEM_STATS                 = 17; // zx_info_kmem_stats_t[1]
+    ZX_INFO_RESOURCE                   = 18; // zx_info_resource_t[1]
+    ZX_INFO_HANDLE_COUNT               = 19; // zx_info_handle_count_t[1]
+    ZX_INFO_BTI                        = 20; // zx_info_bti_t[1]
+    ZX_INFO_PROCESS_HANDLE_STATS       = 21; // zx_info_process_handle_stats_t[1]
+]);
+
+#[repr(C)]
+#[derive(Copy, Clone, Default)]
+pub struct zx_info_handle_basic_t {
+    pub koid: zx_koid_t,
+    pub rights: zx_rights_t,
+    pub type_: u32,
+    pub related_koid: zx_koid_t,
+    pub props: u32,
+}
 
 #[cfg(target_arch = "x86_64")]
 #[repr(C)]

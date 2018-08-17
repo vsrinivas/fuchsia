@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 executable("font_server") {
   sources = [
@@ -207,5 +208,31 @@ package("fonts") {
               "//garnet/bin/fonts/third_party/robotoslab/RobotoSlab-Thin.ttf")
       dest = "fonts/RobotoSlab-Thin.ttf"
     },
+  ]
+}
+
+rustc_binary("font_provider_test") {
+  testonly = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+  source_root = "tests/font_provider_test.rs"
+}
+
+package("font_provider_tests") {
+  testonly = true
+
+  deps = [ ":font_provider_test" ]
+
+  tests = [
+    { name = "font_provider_test" },
   ]
 }

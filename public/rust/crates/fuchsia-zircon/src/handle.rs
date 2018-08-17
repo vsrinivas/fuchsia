@@ -9,6 +9,10 @@ use fuchsia_zircon_sys as sys;
 use std::marker::PhantomData;
 use std::mem::{self, ManuallyDrop};
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
+pub struct Koid(sys::zx_koid_t);
+
 /// An object representing a Zircon
 /// [handle](https://fuchsia.googlesource.com/zircon/+/master/docs/handles.md).
 ///
@@ -138,6 +142,17 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
                 self.raw_handle(), port.raw_handle(), key, signals.bits(), options as u32)
         };
         ok(status)
+    }
+
+    pub fn get_koid(&self) -> Result<Koid, Status> {
+        let mut info: sys::zx_info_handle_basic_t = Default::default();
+        let status = unsafe {
+            sys::zx_object_get_info(self.raw_handle(), sys::ZX_INFO_HANDLE_BASIC,
+                                    &mut info as *mut sys::zx_info_handle_basic_t as *mut u8,
+                                    mem::size_of::<sys::zx_info_handle_basic_t>(),
+                                    std::ptr::null_mut::<usize>(), std::ptr::null_mut::<usize>())
+        };
+        ok(status).map(|()| Koid(info.koid))
     }
 }
 
