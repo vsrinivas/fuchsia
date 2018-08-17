@@ -243,4 +243,18 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     pipe_->ApplyConfiguration(config);
 }
 
+bool DisplayDevice::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
+    constexpr uint32_t kTries = 3;
+    for (unsigned i = 0; i < kTries; i++) {
+        if ((controller_->Transact(i2c_bus_id(), kDdcSegmentI2cAddress,
+                                   &segment, 1, nullptr, 0) == ZX_OK || segment == 0)
+                && controller_->Transact(i2c_bus_id(),
+                                         kDdcDataI2cAddress, &offset, 1, buf, len) == ZX_OK) {
+            return true;
+        }
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+    }
+    return false;
+}
+
 } // namespace i915

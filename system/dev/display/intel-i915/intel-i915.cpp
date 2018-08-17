@@ -127,6 +127,31 @@ static void gpu_release(void* ctx) {
 
 static zx_protocol_device_t i915_gpu_core_device_proto = {};
 
+static uint32_t get_bus_count(void* ctx) {
+    return static_cast<i915::Controller*>(ctx)->GetBusCount();
+}
+
+static zx_status_t get_max_transfer_size(void* ctx, uint32_t bus_id, size_t* out_size) {
+    return static_cast<i915::Controller*>(ctx)->GetMaxTransferSize(bus_id, out_size);
+}
+
+static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
+    return static_cast<i915::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
+}
+
+static zx_status_t transact(void* ctx, uint32_t bus_id, uint16_t address, const void* write_buf,
+                            size_t write_length, void* read_buf, size_t read_length) {
+    return static_cast<i915::Controller*>(ctx)->Transact(
+            bus_id, address, write_buf, write_length, read_buf, read_length);
+}
+
+static i2c_impl_protocol_ops_t i2c_ops = {
+    .get_bus_count = get_bus_count,
+    .get_max_transfer_size = get_max_transfer_size,
+    .set_bitrate = set_bitrate,
+    .transact = transact,
+};
+
 static int finish_init(void* arg) {
     static_cast<i915::Controller*>(arg)->FinishInit();
     return 0;
@@ -1504,6 +1529,51 @@ void Controller::GpuRelease() {
     }
 }
 
+// I2C methods
+
+uint32_t Controller::GetBusCount() {
+    return registers::kDdiCount * 2;
+}
+
+static constexpr size_t kMaxTxSize = 255;
+zx_status_t Controller::GetMaxTransferSize(uint32_t bus_id, size_t* out_size) {
+    *out_size = kMaxTxSize;
+    return ZX_OK;
+}
+
+zx_status_t Controller::SetBitrate(uint32_t bus_id, uint32_t bitrate) {
+    // no-op for now
+    return ZX_OK;
+}
+
+zx_status_t Controller::Transact(uint32_t bus_id, uint16_t address, const void* write_buf,
+                                 size_t write_length, void* read_buf, size_t read_length) {
+    if (write_length > kMaxTxSize || read_length > kMaxTxSize) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const uint8_t* wb = static_cast<const uint8_t*>(write_buf);
+    uint8_t wl = static_cast<uint8_t>(write_length);
+    uint8_t* rb = static_cast<uint8_t*>(read_buf);
+    uint8_t rl = static_cast<uint8_t>(read_length);
+    if (bus_id < registers::kDdiCount) {
+        return gmbus_i2cs_[bus_id].I2cTransact(address, wb, wl, rb, rl);
+    } else if (bus_id < 2 * registers::kDdiCount) {
+        bus_id -= registers::kDdiCount;
+        return dp_auxs_[bus_id].I2cTransact(address, wb, wl, rb, rl);
+    } else {
+        return ZX_ERR_NOT_FOUND;
+    }
+}
+
+bool Controller::DpcdRead(registers::Ddi ddi, uint32_t addr, uint8_t* buf, size_t size) {
+    return dp_auxs_[ddi].DpcdRead(addr, buf, size);
+}
+
+bool Controller::DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size) {
+    return dp_auxs_[ddi].DpcdWrite(addr, buf, size);
+}
+
 // Ddk methods
 
 void Controller::DdkUnbind() {
@@ -1519,6 +1589,21 @@ void Controller::DdkRelease() {
     if (gpu_released_) {
         delete this;
     }
+}
+
+zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
+    if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
+        auto ops = static_cast<display_controller_protocol_t*>(out);
+        ops->ctx = this;
+        ops->ops = static_cast<display_controller_protocol_ops_t*>(ddk_proto_ops_);
+    } else if (proto_id == ZX_PROTOCOL_I2C_IMPL) {
+        auto ops = static_cast<i2c_impl_protocol_t*>(out);
+        ops->ctx = this;
+        ops->ops = &i2c_ops;
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
 }
 
 zx_status_t Controller::DdkSuspend(uint32_t hint) {
@@ -1681,6 +1766,10 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return ZX_ERR_NO_MEMORY;
     }
     mmio_space_ = fbl::move(mmio_space);
+    for (unsigned i = 0; i < registers::kDdiCount; i++) {
+        gmbus_i2cs_[i].set_mmio_space(mmio_space_.get());
+        dp_auxs_[i].set_mmio_space(mmio_space_.get());
+    }
 
     pp_divisor_val_ = registers::PanelPowerDivisor::Get().ReadFrom(mmio_space_.get()).reg_value();
     pp_off_delay_val_ =

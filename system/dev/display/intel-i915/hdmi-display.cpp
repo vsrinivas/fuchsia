@@ -64,7 +64,7 @@ int ddi_to_pin(registers::Ddi ddi) {
     return -1;
 }
 
-void write_gmbus3(hwreg::RegisterIo* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
+void write_gmbus3(hwreg::RegisterIo* mmio_space, const uint8_t* buf, uint32_t size, uint32_t idx) {
     int cur_byte = 0;
     uint32_t val = 0;
     while (idx < size && cur_byte < 4) {
@@ -82,6 +82,8 @@ void read_gmbus3(hwreg::RegisterIo* mmio_space, uint8_t* buf, uint32_t size, uin
     }
 }
 
+static constexpr uint8_t kDdcSegmentAddress = 0x30;
+static constexpr uint8_t kDdcDataAddress = 0x50;
 static constexpr uint8_t kI2cClockUs = 10; // 100 kHz
 
 // For bit banging i2c over the gpio pins
@@ -163,88 +165,94 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 
 namespace i915 {
 
-HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
-        : DisplayDevice(controller, id, ddi) { }
-
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
 // set by bit-banging the GPIO pins.
-bool HdmiDisplay::SetDdcSegment(uint8_t segment_num) {
+bool GMBusI2c::SetDdcSegment(uint8_t segment_num) {
     // Reset the clock and data lines
-    i2c_scl(mmio_space(), ddi(), 0);
-    i2c_sda(mmio_space(), ddi(), 0);
+    i2c_scl(mmio_space_, ddi_, 0);
+    i2c_sda(mmio_space_, ddi_, 0);
 
-    if (!i2c_scl(mmio_space(), ddi(), 1)) {
+    if (!i2c_scl(mmio_space_, ddi_, 1)) {
         return false;
     }
-    i2c_sda(mmio_space(), ddi(), 1);
+    i2c_sda(mmio_space_, ddi_, 1);
     // Wait for the rest of the cycle
     zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
 
     // Send a start condition
-    i2c_sda(mmio_space(), ddi(), 0);
-    i2c_scl(mmio_space(), ddi(), 0);
+    i2c_sda(mmio_space_, ddi_, 0);
+    i2c_scl(mmio_space_, ddi_, 0);
 
     // Send the segment register index and the segment number
-    uint8_t segment_write_command = kDdcSegmentI2cAddress << 1;
-    if (!i2c_send_byte(mmio_space(), ddi(), segment_write_command)
-            || !i2c_send_byte(mmio_space(), ddi(), segment_num)) {
+    uint8_t segment_write_command = kDdcSegmentAddress << 1;
+    if (!i2c_send_byte(mmio_space_, ddi_, segment_write_command)
+            || !i2c_send_byte(mmio_space_, ddi_, segment_num)) {
         return false;
     }
 
     // Set the data and clock lines high to prepare for the GMBus start
-    i2c_sda(mmio_space(), ddi(), 1);
-    return i2c_scl(mmio_space(), ddi(), 1);
+    i2c_sda(mmio_space_, ddi_, 1);
+    return i2c_scl(mmio_space_, ddi_, 1);
 }
 
-bool HdmiDisplay::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
-    registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
+zx_status_t GMBusI2c::I2cTransact(uint32_t index, const uint8_t* write_buf,
+                                  uint8_t write_length, uint8_t* read_buf, uint8_t read_length) {
+    // The GMBus register is a limited interface to the i2c bus - it doesn't support complex
+    // transactions like setting the E-DDC segment. For now, providing a special-case interface
+    // for reading the E-DDC is good enough.
+    // TODO(ZX-2487): Clean up the multi-call state when the i2c_impl interface gets updated.
+    fbl::AutoLock lock(&lock_);
+    if (index == kDdcSegmentAddress && read_length == 0 && write_length == 1) {
+        registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space_);
+        if (!SetDdcSegment(*write_buf)) {
+            goto fail;
+        }
+    } else if (index == kDdcDataAddress && (read_length || write_length)) {
+        auto gmbus0 = registers::GMBus0::Get().FromValue(0);
+        gmbus0.set_pin_pair_select(ddi_to_pin(ddi_));
+        gmbus0.WriteTo(mmio_space_);
 
-    int retries = 0;
-    int i = 0;
-    while (i < 3) {
-        bool success;
-        if (i == 0) {
-            success = segment == 0 || SetDdcSegment(segment);
-        } else {
-            if (i == 1) {
-                auto gmbus0 = registers::GMBus0::Get().FromValue(0);
-                gmbus0.set_pin_pair_select(ddi_to_pin(ddi()));
-                gmbus0.WriteTo(mmio_space());
-
-                success = GMBusWrite(kDdcDataI2cAddress, &offset, 1);
-            } else {
-                success = GMBusRead(kDdcDataI2cAddress, buf, len);
-            }
-            if (success) {
-                if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space()).wait(), 10)) {
+        if (write_length) {
+            if (GMBusWrite(kDdcDataAddress, write_buf, write_length)) {
+                if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
                     LOG_TRACE("Transition to wait phase timed out\n");
-                    success = false;
+                    goto fail;
                 }
+            } else {
+                goto fail;
             }
         }
-        if (!success) {
-            if (retries++ > 1) {
-                LOG_TRACE("Too many block read failures\n");
-                return false;
+
+        if (read_length) {
+            if (GMBusRead(kDdcDataAddress, read_buf, read_length)) {
+                if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
+                    LOG_TRACE("Transition to wait phase timed out\n");
+                    goto fail;
+                }
+            } else {
+                goto fail;
             }
-            LOG_SPEW("Block read failed at step %d\n", i);
-            i = 0;
-            if (!I2cClearNack()) {
-                LOG_TRACE("Failed to clear nack\n");
-                return false;
-            }
-        } else {
-            i++;
         }
+
+        if (!I2cFinish()) {
+            goto fail;
+        }
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    return I2cFinish() && i == 3;
+    return ZX_OK;
+fail:
+    if (!I2cClearNack()) {
+        LOG_TRACE("Failed to clear nack\n");
+    }
+    return ZX_ERR_IO;
 }
 
-bool HdmiDisplay::GMBusWrite(uint8_t addr, uint8_t* buf, uint8_t size) {
+bool GMBusI2c::GMBusWrite(uint8_t addr, const uint8_t* buf, uint8_t size) {
     unsigned idx = 0;
-    write_gmbus3(mmio_space(), buf, size, idx);
+    write_gmbus3(mmio_space_, buf, size, idx);
     idx += 4;
 
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
@@ -252,28 +260,28 @@ bool HdmiDisplay::GMBusWrite(uint8_t addr, uint8_t* buf, uint8_t size) {
     gmbus1.set_bus_cycle_wait(1);
     gmbus1.set_total_byte_count(size);
     gmbus1.set_slave_register_addr(addr);
-    gmbus1.WriteTo(mmio_space());
+    gmbus1.WriteTo(mmio_space_);
 
     while (idx < size) {
         if (!I2cWaitForHwReady()) {
             return false;
         }
 
-        write_gmbus3(mmio_space(), buf, size, idx);
+        write_gmbus3(mmio_space_, buf, size, idx);
         idx += 4;
     }
     // One more wait to ensure we're ready when we leave the function
     return I2cWaitForHwReady();
 }
 
-bool HdmiDisplay::GMBusRead(uint8_t addr, uint8_t* buf, uint8_t size) {
+bool GMBusI2c::GMBusRead(uint8_t addr, uint8_t* buf, uint8_t size) {
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
     gmbus1.set_sw_ready(1);
     gmbus1.set_bus_cycle_wait(1);
     gmbus1.set_total_byte_count(size);
     gmbus1.set_slave_register_addr(addr);
     gmbus1.set_read_op(1);
-    gmbus1.WriteTo(mmio_space());
+    gmbus1.WriteTo(mmio_space_);
 
     unsigned idx = 0;
     while (idx < size) {
@@ -281,24 +289,24 @@ bool HdmiDisplay::GMBusRead(uint8_t addr, uint8_t* buf, uint8_t size) {
             return false;
         }
 
-        read_gmbus3(mmio_space(), buf, size, idx);
+        read_gmbus3(mmio_space_, buf, size, idx);
         idx += 4;
     }
 
     return true;
 }
 
-bool HdmiDisplay::I2cFinish() {
+bool GMBusI2c::I2cFinish() {
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
     gmbus1.set_bus_cycle_stop(1);
     gmbus1.set_sw_ready(1);
-    gmbus1.WriteTo(mmio_space());
+    gmbus1.WriteTo(mmio_space_);
 
-    bool idle = WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active(), 100);
+    bool idle = WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space_).active(), 100);
 
     auto gmbus0 = registers::GMBus0::Get().FromValue(0);
     gmbus0.set_pin_pair_select(0);
-    gmbus0.WriteTo(mmio_space());
+    gmbus0.WriteTo(mmio_space_);
 
     if (!idle) {
         LOG_TRACE("hdmi: GMBus i2c failed to go idle\n");
@@ -306,9 +314,9 @@ bool HdmiDisplay::I2cFinish() {
     return idle;
 }
 
-bool HdmiDisplay::I2cWaitForHwReady() {
+bool GMBusI2c::I2cWaitForHwReady() {
     auto gmbus2 = registers::GMBus2::Get().FromValue(0);
-    if (!WAIT_ON_MS({ gmbus2.ReadFrom(mmio_space()); gmbus2.nack() || gmbus2.hw_ready(); }, 50)) {
+    if (!WAIT_ON_MS({ gmbus2.ReadFrom(mmio_space_); gmbus2.nack() || gmbus2.hw_ready(); }, 50)) {
         LOG_TRACE("hdmi: GMBus i2c wait for hwready timeout\n");
         return false;
     }
@@ -319,10 +327,10 @@ bool HdmiDisplay::I2cWaitForHwReady() {
     return true;
 }
 
-bool HdmiDisplay::I2cClearNack() {
+bool GMBusI2c::I2cClearNack() {
     I2cFinish();
 
-    if (!WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active(), 10)) {
+    if (!WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space_).active(), 10)) {
         LOG_TRACE("hdmi: GMBus i2c failed to clear active nack\n");
         return false;
     }
@@ -330,15 +338,19 @@ bool HdmiDisplay::I2cClearNack() {
     // Set/clear sw clear int to reset the bus
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
     gmbus1.set_sw_clear_int(1);
-    gmbus1.WriteTo(mmio_space());
+    gmbus1.WriteTo(mmio_space_);
     gmbus1.set_sw_clear_int(0);
-    gmbus1.WriteTo(mmio_space());
+    gmbus1.WriteTo(mmio_space_);
 
     // Reset GMBus0
     auto gmbus0 = registers::GMBus0::Get().FromValue(0);
-    gmbus0.WriteTo(mmio_space());
+    gmbus0.WriteTo(mmio_space_);
 
     return true;
+}
+
+GMBusI2c::GMBusI2c(registers::Ddi ddi) : ddi_(ddi) {
+    ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
 } // namespace i915
@@ -449,6 +461,9 @@ static bool calculate_params(uint32_t symbol_clock_khz,
 } // namespace
 
 namespace i915 {
+
+HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
+        : DisplayDevice(controller, id, ddi) { }
 
 bool HdmiDisplay::InitDdi(edid::Edid* edid) {
     // HDMI isn't supported on these DDIs

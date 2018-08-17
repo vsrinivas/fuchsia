@@ -32,7 +32,7 @@ typedef struct display_ref {
 } display_ref_t;
 
 
-class DisplayDevice {
+class DisplayDevice : protected edid::EdidDdcSource {
 public:
     DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
     virtual ~DisplayDevice();
@@ -81,7 +81,12 @@ protected:
                                     registers::Pipe pipe, registers::Trans trans) = 0;
 
     hwreg::RegisterIo* mmio_space() const;
+
+    virtual uint32_t i2c_bus_id() const = 0;
+
 private:
+    bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len);
+
     // Borrowed reference to Controller instance
     Controller* controller_;
 

@@ -11,7 +11,38 @@ namespace i915 {
 
 class DpAuxMessage;
 
-class DpDisplay : public DisplayDevice, private edid::EdidDdcSource {
+class DpAux {
+public:
+    DpAux(registers::Ddi ddi);
+
+    zx_status_t I2cTransact(uint32_t index, const uint8_t* write_buf, uint8_t write_length,
+                            uint8_t* read_buf, uint8_t read_length);
+
+    bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
+    bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
+
+    void set_mmio_space(hwreg::RegisterIo* mmio_space) {
+        fbl::AutoLock lock(&lock_);
+        mmio_space_ = mmio_space;
+    };
+private:
+    const registers::Ddi ddi_;
+    // The lock protects the registers this class writes to, not the whole register io space.
+    hwreg::RegisterIo* mmio_space_ __TA_GUARDED(lock_);
+    mtx_t lock_;
+
+    zx_status_t DpAuxRead(uint32_t dp_cmd, uint32_t addr,
+                          uint8_t* buf, size_t size) __TA_REQUIRES(lock_);
+    zx_status_t DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
+                               size_t* size_out) __TA_REQUIRES(lock_);
+    zx_status_t DpAuxWrite(uint32_t dp_cmd, uint32_t addr,
+                           const uint8_t* buf, size_t size) __TA_REQUIRES(lock_);
+    zx_status_t SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply) __TA_REQUIRES(lock_);
+    zx_status_t SendDpAuxMsgWithRetry(const DpAuxMessage& request,
+                                      DpAuxMessage* reply) __TA_REQUIRES(lock_);
+};
+
+class DpDisplay : public DisplayDevice {
 public:
     DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
@@ -23,22 +54,15 @@ private:
     bool PipeConfigEpilogue(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;
 
-    bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
-
     bool CheckDisplayLimits(const display_config_t* config) final;
 
-    zx_status_t DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
-    zx_status_t DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
-                               size_t* size_out);
-    zx_status_t DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size);
-    zx_status_t SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply);
-    zx_status_t SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply);
+    uint32_t i2c_bus_id() const final { return ddi() + registers::kDdiCount; }
 
-    bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
-
+    bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdRequestLinkTraining(const dpcd::TrainingPatternSet& tp_set,
                                  const dpcd::TrainingLaneSet lanes[]);
+    bool DpcdUpdateLinkTraining(const dpcd::TrainingLaneSet lanes[]);
     template<uint32_t addr, typename T> bool DpcdReadPairedRegs(
             hwreg::RegisterBase<T, typename T::ValueType>* status);
     bool DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training, dpcd::AdjustRequestLane* adjust);

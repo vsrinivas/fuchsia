@@ -8,6 +8,7 @@
 
 #include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/i2c-impl.h>
 #include <ddktl/protocol/display-controller.h>
 
 #include <fbl/unique_ptr.h>
@@ -16,6 +17,7 @@
 #include <threads.h>
 
 #include "display-device.h"
+#include "dp-display.h"
 #include "gtt.h"
 #include "igd.h"
 #include "interrupts.h"
@@ -26,6 +28,7 @@
 #include "registers-dpll.h"
 #include "registers-pipe.h"
 #include "registers-transcoder.h"
+#include "hdmi-display.h"
 
 namespace i915 {
 
@@ -35,7 +38,8 @@ typedef struct buffer_allocation {
 } buffer_allocation_t;
 
 class Controller;
-using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable, ddk::Resumable>;
+using DeviceType = ddk::Device<Controller, ddk::Unbindable,
+                               ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 class Controller : public DeviceType, public ddk::DisplayControllerProtocol<Controller> {
 public:
@@ -44,14 +48,15 @@ public:
 
     static uint32_t DisplayModeToRefreshRate(const display_mode_t* mode);
 
+    // DDK ops
     void DdkUnbind();
     void DdkRelease();
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     zx_status_t DdkSuspend(uint32_t reason);
     zx_status_t DdkResume(uint32_t reason);
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
-    void FinishInit();
-
+    // display controller protocol ops
     void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
@@ -62,8 +67,7 @@ public:
     uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
-    const fbl::unique_ptr<GttRegion>& GetGttRegion(void* handle);
-
+    // gpu core ops
     zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);
     zx_status_t MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out);
     zx_status_t UnmapPciMmio(uint32_t pci_bar);
@@ -79,6 +83,16 @@ public:
                           uint64_t page_offset, uint64_t page_count);
     void GpuRelease();
 
+    // i2c ops
+    uint32_t GetBusCount();
+    zx_status_t GetMaxTransferSize(uint32_t bus_id, size_t* out_size);
+    zx_status_t SetBitrate(uint32_t bus_id, uint32_t bitrate);
+    zx_status_t Transact(uint32_t bus_id, uint16_t address, const void* write_buf,
+                         size_t write_length, void* read_buf, size_t read_length);
+
+    bool DpcdRead(registers::Ddi ddi, uint32_t addr, uint8_t* buf, size_t size);
+    bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);
+
     pci_protocol_t* pci() { return &pci_; }
     hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
@@ -90,9 +104,12 @@ public:
     void HandleHotplug(registers::Ddi ddi, bool long_pulse);
     void HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp);
 
+    void FinishInit();
     void ResetPipe(registers::Pipe pipe) __TA_NO_THREAD_SAFETY_ANALYSIS;
     bool ResetTrans(registers::Trans trans);
     bool ResetDdi(registers::Ddi ddi);
+
+    const fbl::unique_ptr<GttRegion>& GetGttRegion(void* handle);
 
     registers::Dpll SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate);
 private:
@@ -193,6 +210,16 @@ private:
         bool is_hdmi;
         uint32_t rate;
     } dplls_[registers::kDpllCount] = {};
+
+    GMBusI2c gmbus_i2cs_[registers::kDdiCount] = {
+        GMBusI2c(registers::DDI_A), GMBusI2c(registers::DDI_B), GMBusI2c(registers::DDI_C),
+        GMBusI2c(registers::DDI_D), GMBusI2c(registers::DDI_E),
+    };
+
+    DpAux dp_auxs_[registers::kDdiCount] = {
+        DpAux(registers::DDI_A), DpAux(registers::DDI_B), DpAux(registers::DDI_C),
+        DpAux(registers::DDI_D), DpAux(registers::DDI_E),
+    };
 
     // Plane buffer allocation. If no alloc, start == end == registers::PlaneBufCfg::kBufferCount.
     buffer_allocation_t plane_buffers_[registers::kPipeCount][registers::kImagePlaneCount]

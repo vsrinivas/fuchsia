@@ -254,18 +254,18 @@ public:
 
 };
 
-zx_status_t DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply) {
-    registers::DdiRegs ddi_regs(ddi());
+zx_status_t DpAux::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply) {
+    registers::DdiRegs ddi_regs(ddi_);
     uint32_t data_reg = ddi_regs.DdiAuxData().addr();
 
     // Write the outgoing message to the hardware.
     for (uint32_t offset = 0; offset < request.size; offset += 4) {
         // For some reason intel made these data registers big endian...
         const uint32_t* data = reinterpret_cast<const uint32_t*>(request.data + offset);
-        mmio_space()->Write<uint32_t>(data_reg + offset, htobe32(*data));
+        mmio_space_->Write<uint32_t>(data_reg + offset, htobe32(*data));
     }
 
-    auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space());
+    auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space_);
     status.set_message_size(request.size);
     // Reset R/W Clear bits
     status.set_done(1);
@@ -277,12 +277,12 @@ zx_status_t DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* r
     status.set_interrupt_on_done(1);
     // Send busy starts the transaction
     status.set_send_busy(1);
-    status.WriteTo(mmio_space());
+    status.WriteTo(mmio_space_);
 
     // Poll for the reply message.
     const int kNumTries = 10000;
     for (int tries = 0; tries < kNumTries; ++tries) {
-        auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space());
+        auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space_);
         if (!status.send_busy()) {
             if (status.timeout()) {
                 return ZX_ERR_TIMED_OUT;
@@ -304,7 +304,7 @@ zx_status_t DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* r
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
                 // For some reason intel made these data registers big endian...
                 *reinterpret_cast<uint32_t*>(reply->data + offset) =
-                        be32toh(mmio_space()->Read<uint32_t>(data_reg + offset));
+                        be32toh(mmio_space_->Read<uint32_t>(data_reg + offset));
             }
             return ZX_OK;
         }
@@ -314,7 +314,7 @@ zx_status_t DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* r
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply) {
+zx_status_t DpAux::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply) {
     // If the DisplayPort sink device isn't ready to handle an Aux message,
     // it can return an AUX_DEFER reply, which means we should retry the
     // request. The spec added a requirement for >=7 defer retries in v1.3,
@@ -387,7 +387,7 @@ zx_status_t DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxM
     }
 }
 
-zx_status_t DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size) {
+zx_status_t DpAux::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size) {
     while (size > 0) {
         uint32_t chunk_size = static_cast<uint32_t>(MIN(size, DpAuxMessage::kMaxBodySize));
         size_t bytes_read = 0;
@@ -407,7 +407,7 @@ zx_status_t DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, s
     return ZX_OK;
 }
 
-zx_status_t DpDisplay::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf,
+zx_status_t DpAux::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf,
                                       uint32_t size_in, size_t * size_out) {
     DpAuxMessage msg;
     DpAuxMessage reply;
@@ -428,7 +428,7 @@ zx_status_t DpDisplay::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* b
     return ZX_OK;
 }
 
-zx_status_t DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size) {
+zx_status_t DpAux::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size) {
     // Implement this if it's ever needed
     ZX_ASSERT_MSG(size <= 16, "message too large");
 
@@ -452,16 +452,24 @@ zx_status_t DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t*
     return ZX_OK;
 }
 
-bool DpDisplay::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
-    unsigned tries = 0;
-    static constexpr uint32_t kDdcReadAttempts = 3;
-    while (tries++ < kDdcReadAttempts) {
-        // Ignore failures setting the segment if segment == 0, since it could be the case
-        // that the display doesn't support segments.
-        if ((DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcSegmentI2cAddress, &segment, 1) == ZX_OK
-                    || segment == 0)
-            && DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcDataI2cAddress, &offset, 1) == ZX_OK
-            && DpAuxRead(DP_REQUEST_I2C_READ, kDdcDataI2cAddress, buf, len) == ZX_OK) {
+zx_status_t DpAux::I2cTransact(uint32_t index, const uint8_t* write_buf, uint8_t write_length,
+                               uint8_t* read_buf, uint8_t read_length) {
+    fbl::AutoLock lock(&lock_);
+    zx_status_t status = ZX_OK;
+    if (write_length) {
+        status = DpAuxWrite(DP_REQUEST_I2C_WRITE, index, write_buf, write_length);
+    }
+    if (status == ZX_OK && read_length) {
+        status = DpAuxRead(DP_REQUEST_I2C_READ, index, read_buf, read_length);
+    }
+    return status;
+}
+
+bool DpAux::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {
+    fbl::AutoLock lock(&lock_);
+    constexpr uint32_t kReadAttempts = 3;
+    for (unsigned i = 0; i < kReadAttempts; i++) {
+        if (DpAuxRead(DP_REQUEST_NATIVE_READ, addr, buf, size) == ZX_OK) {
             return true;
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
@@ -469,12 +477,21 @@ bool DpDisplay::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t l
     return false;
 }
 
-bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {
-    return DpAuxRead(DP_REQUEST_NATIVE_READ, addr, buf, size) == ZX_OK;
+bool DpAux::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
+    fbl::AutoLock lock(&lock_);
+    return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size) == ZX_OK;
+}
+
+DpAux::DpAux(registers::Ddi ddi) : ddi_(ddi) {
+    ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
 bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
-    return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size) == ZX_OK;
+    return controller()->DpcdWrite(ddi(), addr, buf, size);
+}
+
+bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {
+    return controller()->DpcdRead(ddi(), addr, buf, size);
 }
 
 // Link training functions
@@ -867,7 +884,6 @@ bool DpDisplay::InitDdi(edid::Edid* edid) {
         LOG_TRACE("dp edid init failed \"%s\"\n", edid_err);
         return false;
     }
-    LOG_INFO("Found %s monitor\n", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
 
     if (!DpcdRead(dpcd::DPCD_CAP_START, dpcd_capabilities_, fbl::count_of(dpcd_capabilities_))) {
         LOG_ERROR("Failed to read dpcd capabilities\n");
@@ -1051,6 +1067,8 @@ bool DpDisplay::InitDdi(edid::Edid* edid) {
         LOG_ERROR("DDI %d: DisplayPort link training failed\n", ddi());
         return false;
     }
+
+    LOG_INFO("Found %s monitor\n", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
 
     return true;
 }
