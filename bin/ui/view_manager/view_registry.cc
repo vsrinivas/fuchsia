@@ -9,7 +9,6 @@
 #include <utility>
 
 #include <fuchsia/accessibility/cpp/fidl.h>
-#include <fuchsia/ui/a11y/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -919,14 +918,6 @@ void ViewRegistry::DeliverEvent(
   FXL_VLOG(1) << "DeliverEvent: view_token=" << view_token
               << ", event=" << event;
 
-  // TODO(SCN-743) Remove this stub code once there is a proper design for A11y
-  // integration with Scenic.
-  if (event.is_pointer() &&
-      event.pointer().type == fuchsia::ui::input::PointerEventType::TOUCH &&
-      event.pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
-    A11yNotifyViewSelected(view_token);
-  }
-
   auto it = input_connections_by_view_token_.find(view_token.value);
   if (it == input_connections_by_view_token_.end()) {
     FXL_VLOG(1)
@@ -1004,22 +995,6 @@ ViewState* ViewRegistry::FindView(uint32_t view_token_value) {
 ViewTreeState* ViewRegistry::FindViewTree(uint32_t view_tree_token_value) {
   auto it = view_trees_by_token_.find(view_tree_token_value);
   return it != view_trees_by_token_.end() ? it->second : nullptr;
-}
-
-void ViewRegistry::A11yNotifyViewSelected(
-    ::fuchsia::ui::viewsv1token::ViewToken view_token) {
-  auto view_elem = views_by_token_.find(view_token.value);
-  if (view_elem != views_by_token_.end()) {
-    fuchsia::sys::ServiceProvider* a11y_provider =
-        view_elem->second->GetServiceProviderIfSupports(
-            fuchsia::ui::a11y::A11yClient::Name_);
-    if (a11y_provider != nullptr) {
-      auto a11y_client =
-          component::ConnectToService<fuchsia::ui::a11y::A11yClient>(
-              a11y_provider);
-      a11y_client->NotifyViewSelected();
-    }
-  }
 }
 
 void ViewRegistry::PerformHitTest(

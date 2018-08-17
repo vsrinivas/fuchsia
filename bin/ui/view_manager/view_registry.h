@@ -234,12 +234,6 @@ class ViewRegistry : public ViewInspector,
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
-  // A11Y CLIENTS
-
-  // Calls a view's accessibility service if it exists.
-  void A11yNotifyViewSelected(
-      ::fuchsia::ui::viewsv1token::ViewToken view_token);
-
   // A11Y VIEW INSPECTOR
 
   // Performs a view hit-test on the view tree corresponding to

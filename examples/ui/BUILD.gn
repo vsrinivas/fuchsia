@@ -15,7 +15,6 @@ group("ui") {
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
-    "shapes_a11y",
     "sketchy",
     "spinning_square",
     "spinning_square_rs",
@@ -171,21 +170,6 @@ package("shapes_view") {
   ]
 }
 
-package("shapes_a11y_view") {
-  deps = [
-    "shapes_a11y",
-  ]
-
-  binary = "shapes_a11y_view"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
-    },
-  ]
-}
-
 package("sketchy_client") {
   deps = [
     "sketchy",
@@ -218,7 +202,7 @@ package("spinning_square_view") {
 
 package("spinning_square_rs_pkg") {
   deps = [
-    "spinning_square_rs"
+    "spinning_square_rs",
   ]
 
   binary = "rust_crates/spinning_square_rs"
