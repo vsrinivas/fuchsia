@@ -550,6 +550,36 @@ void CGenerator::GenerateIntegerDefine(StringView name, types::PrimitiveSubtype 
     file_ << "#define " << name << " " << literal_macro << "(" << value << ")\n";
 }
 
+void CGenerator::GeneratePrimitiveDefine(StringView name, types::PrimitiveSubtype subtype,
+                                         StringView value) {
+    switch (subtype) {
+    case types::PrimitiveSubtype::kInt8:
+    case types::PrimitiveSubtype::kInt16:
+    case types::PrimitiveSubtype::kInt32:
+    case types::PrimitiveSubtype::kInt64:
+    case types::PrimitiveSubtype::kUint8:
+    case types::PrimitiveSubtype::kUint16:
+    case types::PrimitiveSubtype::kUint32:
+    case types::PrimitiveSubtype::kUint64: {
+        std::string literal_macro = NamePrimitiveIntegerCConstantMacro(subtype);
+        file_ << "#define " << name << " " << literal_macro << "(" << value << ")\n";
+        break;
+    }
+    case types::PrimitiveSubtype::kBool:
+    case types::PrimitiveSubtype::kFloat32:
+    case types::PrimitiveSubtype::kFloat64: {
+        file_ << "#define " << name << " " << "(" << value << ")\n";
+        break;
+    }
+    default:
+        abort();
+    }
+}
+
+void CGenerator::GenerateStringDefine(StringView name, StringView value) {
+    file_ << "#define " << name << " " << value << "\n";
+}
+
 void CGenerator::GenerateIntegerTypedef(types::PrimitiveSubtype subtype, StringView name) {
     std::string underlying_type = NamePrimitiveCType(subtype);
     file_ << "typedef " << underlying_type << " " << name << ";\n";
@@ -591,7 +621,7 @@ std::map<const flat::Decl*, CGenerator::NamedConst>
 CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
     std::map<const flat::Decl*, NamedConst> named_consts;
     for (const auto& const_info : const_infos) {
-        named_consts.emplace(const_info.get(), NamedConst{"", *const_info});
+        named_consts.emplace(const_info.get(), NamedConst{NameName(const_info->name, "_", "_"), *const_info});
     }
     return named_consts;
 }
@@ -728,8 +758,27 @@ void CGenerator::ProduceInterfaceExternDeclaration(const NamedInterface& named_i
 }
 
 void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
-    // TODO(TO-702)
-    static_cast<void>(named_const);
+    const flat::Const& ci = named_const.const_info;
+
+    // Some constants are not literals.  Odd.
+    if (ci.value->kind != flat::Constant::Kind::kLiteral) {
+        return;
+    }
+
+    switch (ci.type->kind) {
+    case flat::Type::Kind::kPrimitive:
+        GeneratePrimitiveDefine(named_const.name,
+                                static_cast<flat::PrimitiveType*>(ci.type.get())->subtype,
+                                static_cast<flat::LiteralConstant*>(ci.value.get())->literal->location().data());
+        break;
+    case flat::Type::Kind::kString:
+        GenerateStringDefine(named_const.name,
+                             static_cast<flat::LiteralConstant*>(ci.value.get())->literal->location().data());
+        break;
+    default:
+        abort();
+    }
+
 
     EmitBlank(&file_);
 }

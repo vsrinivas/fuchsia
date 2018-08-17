@@ -93,6 +93,8 @@ private:
 
     void GenerateIntegerDefine(StringView name, types::PrimitiveSubtype subtype, StringView value);
     void GenerateIntegerTypedef(types::PrimitiveSubtype subtype, StringView name);
+    void GeneratePrimitiveDefine(StringView name, types::PrimitiveSubtype subtype, StringView value);
+    void GenerateStringDefine(StringView name, StringView value);
     void GenerateStructTypedef(StringView name);
 
     void GenerateStructDeclaration(StringView name, const std::vector<Member>& members);
