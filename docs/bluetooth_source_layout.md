@@ -32,7 +32,7 @@ garnet/examples/bluetooth/
 garnet/lib/
     bluetooth/                                  # internal API
     rust/crates/fuchsia-bluetooth/              # internal API glue
-garnet/public/fidl/bluetooth.*                  # public API
+garnet/public/fidl/fuschia.bluetooth.*          # public API
 topaz/app/bluetooth_settings/                   # Bluetooth Settings UI
 topaz/bin/bluetooth_settings/                   # Bluetooth Settings UI
 topaz/examples/bluetooth/

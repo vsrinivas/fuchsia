@@ -6,7 +6,12 @@ Bluetooth Host Subsystem (5.0+) supporting a framework for developing Low Energy
 and Traditional profiles.
 
 Source code shortcuts:
-- [Public API](../../public/lib/bluetooth/fidl)
+- Public API: 
+  * [shared](../../public/fidl/fuchsia.bluetooth)
+  * [BR/EDR](../../public/fidl/fuchsia.bluetooth.bredr)
+  * [Control](../../public/fidl/fuchsia.bluetooth.control)
+  * [GATT](../../public/fidl/fuchsia.bluetooth.gatt)
+  * [LE](../../public/fidl/fuchsia.bluetooth.le)
 - [Private API](../../lib/bluetooth/fidl)
 - [Tools](tools/)
 - [Host Library](../../drivers/bluetooth/lib)
@@ -38,7 +43,7 @@ and [`ble_battery_service`](../../examples/bluetooth/ble_battery_service) exampl
 ### Control API
 
 Dual-mode (LE + Classic) GAP operations that are typically exposed to privileged
-clients are performed using the [control.fidl](../../public/fidl/fuchsia.bluetooth.control.fidl)
+clients are performed using the [control.fidl](../../public/fidl/fuchsia.bluetooth.control/control.fidl)
 API. This API is intended for managing local adapters, device discovery & discoverability,
 pairing/bonding, and other settings.
 

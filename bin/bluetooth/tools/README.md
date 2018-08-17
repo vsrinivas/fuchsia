@@ -2,7 +2,7 @@ This directory contains command-line tools for Bluetooth development.
 
 ## bt-hci-tool
 
-`bt-hci-tool` uses the [host HCI library](../drivers/bluetooth/lib/hci) to send
+`bt-hci-tool` uses the [host HCI library](../../../drivers/bluetooth/lib/hci) to send
 HCI commands directly to a bt-hci device (`/dev/class/bt-hci/000` by default)
 
 Currently all bt-hci devices are automatically claimed by the bt-host driver. To
@@ -61,7 +61,7 @@ $ wireshark ./btsnoop.log
 ## bt-cli
 
 `bt-cli` is a command-line interface for the Generic Access Profile (using the
-[control](../../public/fidl/fuchsia.bluetooth.control.fidl) FIDL interfaces).
+[control](../../../public/fidl/fuchsia.bluetooth.control/control.fidl) FIDL interfaces).
 This can be used to query available Bluetooth controllers, to perform dual-mode
 discovery and connection procedures, and to respond to pairing requests.
 
