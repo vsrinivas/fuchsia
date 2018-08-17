@@ -172,7 +172,12 @@ std::string AbsolutePath(const std::string& path) {
       // Path is already absolute.
       return path;
     }
-    return GetCurrentDirectory() + "/" + path;
+    auto current_directory = GetCurrentDirectory();
+    if (current_directory == "/") {
+      // No need to prepend "/" if we are relative to the root directory.
+      current_directory = "";
+    }
+    return current_directory + "/" + path;
   } else {
     // Path is empty.
     return GetCurrentDirectory();

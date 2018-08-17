@@ -133,8 +133,14 @@ TEST(Path, SimplifyPath) {
 TEST(Path, AbsolutePath) {
   EXPECT_EQ("/foo/bar", AbsolutePath("/foo/bar"));
   EXPECT_EQ("/foo/bar/", AbsolutePath("/foo/bar/"));
+  ASSERT_EQ(0, chdir("/tmp"));
   EXPECT_EQ(GetCurrentDirectory() + "/foo", AbsolutePath("foo"));
   EXPECT_EQ(GetCurrentDirectory(), AbsolutePath(""));
+
+  // Test paths from the root directory.
+  ASSERT_EQ(0, chdir("/"));
+  EXPECT_EQ("/foo/bar", AbsolutePath("/foo/bar"));
+  EXPECT_EQ("/foo/bar", AbsolutePath("foo/bar"));
 }
 
 TEST(Path, GetDirectoryName) {
