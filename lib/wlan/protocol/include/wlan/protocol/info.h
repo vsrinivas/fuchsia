@@ -84,7 +84,7 @@ typedef struct wlan_assoc_ctx {
     uint8_t ext_supported_rates[WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN];
 
     // IEEE Std 802.11-2016, 9.4.1.4
-    uint8_t cap_info[2];
+    uint16_t cap_info;
 
     // IEEE Std 802.11-2016, 9.4.2.56, 57
     // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
@@ -124,7 +124,8 @@ enum {
     // TODO: IBSS, PBSS, mesh
 };
 
-// Basic capabilities. IEEE Std 802.11-2016, 9.4.1.4
+// Hardware capabilities.
+// Some bits are inspired from IEEE Std 802.11-2016, 9.4.1.4
 enum {
     WLAN_CAP_SHORT_PREAMBLE = (1 << 0),
     WLAN_CAP_SPECTRUM_MGMT = (1 << 1),
@@ -197,7 +198,7 @@ typedef struct wlan_info {
     uint16_t supported_phys;
     // Bitmask indicating the WLAN_DRIVER_FEATURE_* values supported by the driver and hardware.
     uint32_t driver_features;
-    // Bitmask indicating WLAN_CAP_* capabilities supported by the hardware.
+    // Bitmask indicating WLAN_CAP_* capabilities. Note this differs from IEEE Std 802.11-2016, 9.4.1.4.
     uint32_t caps;
     // Supported bands.
     uint8_t num_bands;
