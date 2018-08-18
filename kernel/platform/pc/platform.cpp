@@ -42,9 +42,8 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/boot/image.h>
 #include <zircon/boot/e820.h>
-#include <zircon/boot/multiboot.h>
+#include <zircon/boot/image.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
@@ -57,7 +56,6 @@ extern "C" {
 
 #define LOCAL_TRACE 0
 
-extern multiboot_info_t* _multiboot_info;
 extern zbi_header_t* _zbi_base;
 
 pc_bootloader_info_t bootloader;
@@ -177,24 +175,6 @@ static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
 extern bool halt_on_panic;
 
 static void platform_save_bootloader_data(void) {
-    if (_multiboot_info != NULL) {
-        multiboot_info_t* mi = (multiboot_info_t*)X86_PHYS_TO_VIRT(_multiboot_info);
-        printf("multiboot: info @ %p flags %#x\n", mi, mi->flags);
-
-        if ((mi->flags & MB_INFO_CMD_LINE) && mi->cmdline) {
-            const char* cmdline = (const char*)X86_PHYS_TO_VIRT(mi->cmdline);
-            printf("multiboot: cmdline @ %p\n", cmdline);
-            cmdline_append(cmdline);
-        }
-        if ((mi->flags & MB_INFO_MODS) && mi->mods_addr) {
-            module_t* mod = (module_t*)X86_PHYS_TO_VIRT(mi->mods_addr);
-            if (mi->mods_count > 0) {
-                printf("multiboot: ramdisk @ %08x..%08x\n", mod->mod_start, mod->mod_end);
-                process_zbi(reinterpret_cast<zbi_header_t*>(X86_PHYS_TO_VIRT(mod->mod_start)),
-                                 mod->mod_start);
-            }
-        }
-    }
     if (_zbi_base != NULL) {
         zbi_header_t* bd = (zbi_header_t*)X86_PHYS_TO_VIRT(_zbi_base);
         process_zbi(bd, (uintptr_t)_zbi_base);

@@ -38,9 +38,6 @@
 
 #define LOCAL_TRACE 0
 
-/* save a pointer to the multiboot information coming in from whoever called us */
-void* _multiboot_info;
-
 /* save a pointer to the bootdata, if present */
 void* _zbi_base;
 

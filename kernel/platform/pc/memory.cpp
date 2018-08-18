@@ -20,17 +20,13 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/vm.h>
-#include <zircon/boot/e820.h>
-#include <zircon/boot/multiboot.h>
 #include <zircon/types.h>
+#include <zircon/boot/e820.h>
 #include <object/resource_dispatcher.h>
 
 #include "platform_p.h"
 
 #define LOCAL_TRACE 0
-
-/* multiboot information passed in, if present */
-extern multiboot_info_t* _multiboot_info;
 
 struct addr_range {
     uint64_t base;
@@ -305,102 +301,6 @@ static zx_status_t efi_range_init(boot_addr_range_t* range, efi_range_seq_t* seq
     }
 }
 
-typedef struct multiboot_range_seq {
-    multiboot_info_t* info;
-    memory_map_t* mmap;
-    int index;
-    int count;
-} multiboot_range_seq_t;
-
-static void multiboot_range_reset(boot_addr_range_t* range) {
-    boot_addr_range_reset(range);
-
-    multiboot_range_seq_t* seq = (multiboot_range_seq_t*)(range->seq);
-    seq->index = -1;
-}
-
-static void multiboot_range_advance(boot_addr_range_t* range) {
-    multiboot_range_seq_t* seq = (multiboot_range_seq_t*)(range->seq);
-
-    if (seq->mmap) {
-        /* memory map based range information */
-        seq->index++;
-
-        if (seq->index == seq->count) {
-            multiboot_range_reset(range);
-            return;
-        }
-
-        memory_map_t* entry = &seq->mmap[seq->index];
-
-        range->base = entry->base_addr_high;
-        range->base <<= 32;
-        range->base |= entry->base_addr_low;
-
-        range->size = entry->length_high;
-        range->size <<= 32;
-        range->size |= entry->length_low;
-
-        range->is_mem = (entry->type == MB_MMAP_TYPE_AVAILABLE) ? 1 : 0;
-
-        range->is_reset = 0;
-    } else {
-        /* scalar info about a single range */
-        if (!range->is_reset) {
-            /* toggle back and forth between reset and valid */
-            multiboot_range_reset(range);
-            return;
-        }
-
-        // mem_lower is memory (KB) available at base=0
-        // mem_upper is memory (KB) available at base=1MB
-        range->base = 1024 * 1024;
-        range->size = seq->info->mem_upper * 1024U;
-        range->is_mem = 1;
-        range->is_reset = 0;
-    }
-}
-
-static zx_status_t multiboot_range_init(boot_addr_range_t* range,
-                                        multiboot_range_seq_t* seq) {
-    LTRACEF("_multiboot_info %p\n", _multiboot_info);
-
-    range->seq = seq;
-    range->advance = &multiboot_range_advance;
-    range->reset = &multiboot_range_reset;
-
-    if (_multiboot_info == NULL) {
-        /* no multiboot info found. */
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    seq->info = (multiboot_info_t*)X86_PHYS_TO_VIRT(_multiboot_info);
-    seq->mmap = NULL;
-    seq->count = 0;
-
-    // if the MMAP flag is set and the address/length seems sane, parse the multiboot
-    // memory map table
-    if ((seq->info->flags & MB_INFO_MMAP) && (seq->info->mmap_addr != 0) && (seq->info->mmap_length > 0)) {
-
-        void* mmap_addr = (void*)X86_PHYS_TO_VIRT(seq->info->mmap_addr);
-
-        /* we've been told the memory map is valid, so set it up */
-        seq->mmap = (memory_map_t*)(uintptr_t)(mmap_addr);
-        seq->count = static_cast<int>(seq->info->mmap_length / sizeof(memory_map_t));
-
-        multiboot_range_reset(range);
-        return ZX_OK;
-    }
-
-    if (seq->info->flags & MB_INFO_MEM_SIZE) {
-        /* no additional setup required for the scalar range */
-        return ZX_OK;
-    }
-
-    /* no memory information in the multiboot info */
-    return ZX_ERR_NO_MEMORY;
-}
-
 static int addr_range_cmp(const void* p1, const void* p2) {
     const struct addr_range* a1 = static_cast<const struct addr_range*>(p1);
     const struct addr_range* a2 = static_cast<const struct addr_range*>(p2);
@@ -434,17 +334,6 @@ static zx_status_t platform_mem_range_init(void) {
         status = mem_arena_init(&range);
         if (status != ZX_OK) {
             printf("MEM: failure while adding e820 memory ranges\n");
-        }
-        return ZX_OK;
-    }
-
-    /* if no ranges were found, try multiboot */
-    multiboot_range_seq_t multiboot_seq;
-    status = multiboot_range_init(&range, &multiboot_seq);
-    if (status == ZX_OK) {
-        status = mem_arena_init(&range);
-        if (status != ZX_OK) {
-            printf("MEM: failure while adding multiboot memory ranges\n");
         }
         return ZX_OK;
     }
@@ -495,13 +384,11 @@ void pc_mem_init(void) {
     boot_addr_range_t range;
     efi_range_seq_t efi_seq;
     e820_range_seq_t e820_seq;
-    multiboot_range_seq_t multiboot_seq;
     bool initialized_bootstrap16 = false;
 
     cached_e820_entry_count = 0;
     if ((efi_range_init(&range, &efi_seq) == ZX_OK) ||
-        (e820_range_init(&range, &e820_seq) == ZX_OK) ||
-        (multiboot_range_init(&range, &multiboot_seq) == ZX_OK)) {
+        (e820_range_init(&range, &e820_seq) == ZX_OK)) {
         for (range.reset(&range),
              range.advance(&range);
              !range.is_reset; range.advance(&range)) {

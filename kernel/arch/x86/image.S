@@ -8,7 +8,6 @@
 #include <asm.h>
 #include <arch/x86/asm.h>
 #include <zircon/boot/image.h>
-#include <zircon/boot/multiboot.h>
 
 
 // This file lays out the final kernel image seen by the boot loader.
@@ -37,10 +36,7 @@
 // .bss, which the kernel needs to zero before it's ready to run the fixup
 // code.  So move_fixups_and_zero_bss (in start.S) copies the fixup code to
 // scratch memory starting at IMAGE_MEMORY_END (i.e., right after the
-// kernel's .bss).  The "end of .bss" address the multiboot header is
-// the only way to reserve some space that the boot loader won't use for
-// something like the kernel command like or the initial RAM disk.  So add
-// the fixup code size.
+// kernel's .bss).  So add the fixup code size.
 //
 // The zbi_kernel_t header records this as a number of bytes after the
 // image, rather than as an address.
@@ -71,18 +67,6 @@ DATA(_zbi_kernel_payload)
     .quad PHYS(IMAGE_ELF_ENTRY)
     .quad boot_bss_end - boot_load_end
 END_DATA(_zbi_kernel_payload)
-
-.balign 8
-DATA(_multiboot_header)
-    .int MULTIBOOT_HEADER_MAGIC
-    .int MULTIBOOT_HEADER_FLAGS
-    .int -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
-    .int PHYS_LOAD_ADDRESS + (_multiboot_header - _zbi_file_header)
-    .int PHYS_LOAD_ADDRESS
-    .int PHYS(boot_load_end)
-    .int PHYS(boot_bss_end)
-    .int PHYS(IMAGE_MULTIBOOT_ENTRY)
-END_DATA(_multiboot_header)
 
 // Pad out to the header size that was allocated in the kernel image layout.
 // This ensures that the kernel image is aligned correctly in memory.
