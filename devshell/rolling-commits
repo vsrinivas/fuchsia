@@ -151,9 +151,10 @@ def get_time_since(timestamp):
     return '%sm' % minutes
 
 
-def print_commits(layer, commits):
+def print_commits(layer, commits, print_all=False):
     """Prints the given commits in a user=pleasing format."""
-    commits = [c for c in commits if filter_commit(c)]
+    commit_filter = (lambda c: c) if print_all else filter_commit
+    commits = filter(commit_filter, commits)
     if commits:
         timestamp = commits[-1]['committer']['time']
         elapsed_time = get_time_since(timestamp)
@@ -180,6 +181,9 @@ For vendor layers, specify the Topaz revision with --topaz-revision.""")
                         default='topaz')
     parser.add_argument('--topaz-revision',
                         help='(vendor only) revision of the Topaz layer')
+    parser.add_argument('--all',
+                        help='Whether to print all commits, including rolls',
+                        action='store_true')
     args = parser.parse_args()
 
     layer = args.layer
@@ -196,7 +200,7 @@ For vendor layers, specify the Topaz revision with --topaz-revision.""")
 
     if layer == 'vendor':
         commits = get_commits('topaz', revision)
-        print_commits('topaz', commits)
+        print_commits('topaz', commits, print_all=args.all)
         layer = 'topaz'
     else:
         revision = 'master'
@@ -209,7 +213,7 @@ For vendor layers, specify the Topaz revision with --topaz-revision.""")
             continue
         for lower_layer, lower_revision in layer_refs:
             commits = get_commits(lower_layer, lower_revision)
-            print_commits(lower_layer, commits)
+            print_commits(lower_layer, commits, print_all=args.all)
         next_layers.extend(layer_refs)
 
     return 0
