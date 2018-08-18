@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Error;
-use akm::Akm;
-use cipher::Cipher;
-use crypto_utils::prf;
-use failure;
+use crate::Error;
+use crate::akm::Akm;
+use crate::cipher::Cipher;
+use crate::crypto_utils::prf;
+use failure::{self, bail, ensure};
 use std::cmp::{max, min};
 
 /// A PTK is derived from a PMK and provides access to the PTK's key-hierarchy which yields a KEK,
@@ -83,11 +83,11 @@ impl Ptk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akm::{Akm, PSK};
+    use crate::akm::{Akm, PSK};
     use bytes::Bytes;
-    use cipher::{CCMP_128, Cipher, TKIP};
+    use crate::cipher::{CCMP_128, Cipher, TKIP};
     use hex::FromHex;
-    use suite_selector::{Factory, OUI};
+    use crate::suite_selector::{Factory, OUI};
 
     struct TestData {
         pmk: Vec<u8>,

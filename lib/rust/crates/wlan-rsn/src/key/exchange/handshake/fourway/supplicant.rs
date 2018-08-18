@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Error;
+use crate::Error;
 use bytes::Bytes;
-use crypto_utils::nonce::NonceReader;
+use crate::crypto_utils::nonce::NonceReader;
 use eapol;
-use failure;
-use integrity;
-use key::exchange::Key;
-use key::exchange::handshake::fourway::{self, FourwayHandshakeFrame};
-use key::gtk::Gtk;
-use key::ptk::Ptk;
-use key_data;
-use rsna::{SecAssocResult, SecAssocUpdate};
-use rsne::Rsne;
+use failure::{self, bail, ensure};
+use crate::integrity;
+use crate::key::exchange::Key;
+use crate::key::exchange::handshake::fourway::{self, FourwayHandshakeFrame};
+use crate::key::gtk::Gtk;
+use crate::key::ptk::Ptk;
+use crate::key_data;
+use crate::rsna::{SecAssocResult, SecAssocUpdate};
+use crate::rsne::Rsne;
 
 #[derive(Debug, Default, PartialEq)]
 struct PtkInitState {}

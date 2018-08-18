@@ -5,11 +5,12 @@
 pub mod kde;
 
 use bytes::BufMut;
-use failure;
+use failure::{self, bail, ensure};
 use nom::IResult::{Done, Incomplete};
 use nom::{IResult, Needed};
-use rsne;
-use Error;
+use nom::{call, error_position, many0, named, take, try_parse};
+use crate::rsne;
+use crate::Error;
 
 #[derive(Debug)]
 pub enum Element {

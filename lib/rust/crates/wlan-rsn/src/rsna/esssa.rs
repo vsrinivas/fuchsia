@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use auth;
+use crate::auth;
 use eapol;
-use Error;
-use failure;
-use key::exchange::{self, Key, handshake::{fourway::Fourway, group_key::GroupKey}};
-use key::{gtk::Gtk, ptk::Ptk};
-use rsna::{NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame};
+use crate::Error;
+use failure::{self, bail};
+use crate::key::exchange::{self, Key, handshake::{fourway::Fourway, group_key::GroupKey}};
+use crate::key::{gtk::Gtk, ptk::Ptk};
+use crate::rsna::{NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame};
 use std::mem;
 
 #[derive(Debug, PartialEq)]
@@ -307,7 +307,7 @@ impl EssSa {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rsna::test_util;
+    use crate::rsna::test_util;
 
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];

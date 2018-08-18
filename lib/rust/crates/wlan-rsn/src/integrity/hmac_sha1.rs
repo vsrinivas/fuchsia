@@ -6,7 +6,7 @@ use crypto::hmac::Hmac;
 use crypto::mac::{Mac, MacResult};
 use crypto::sha1::Sha1;
 use failure;
-use integrity::Algorithm;
+use crate::integrity::Algorithm;
 
 pub struct HmacSha1;
 

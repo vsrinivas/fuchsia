@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use akm::Akm;
+use crate::akm::Akm;
 use bytes::Bytes;
-use cipher::{Cipher, TKIP, GROUP_CIPHER_SUITE};
+use crate::cipher::{Cipher, TKIP, GROUP_CIPHER_SUITE};
 use eapol;
-use failure;
-use Error;
-use rsne::Rsne;
-use key::{gtk::Gtk, ptk::Ptk, exchange::Key};
+use failure::{self, bail, ensure};
+use crate::Error;
+use crate::rsne::Rsne;
+use crate::key::{gtk::Gtk, ptk::Ptk, exchange::Key};
 
 pub mod esssa;
 #[cfg(test)]
@@ -301,10 +301,10 @@ pub type SecAssocResult = Result<Vec<SecAssocUpdate>, failure::Error>;
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use akm;
-    use cipher;
-    use rsne::Rsne;
-    use suite_selector::OUI;
+    use crate::akm;
+    use crate::cipher;
+    use crate::rsne::Rsne;
+    use crate::suite_selector::OUI;
 
     #[test]
     fn test_negotiated_rsne_from_rsne() {

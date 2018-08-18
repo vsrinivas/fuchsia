@@ -1,23 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #![feature(test)]
 #![feature(drain_filter)]
 #![deny(warnings)]
 
-#[macro_use] extern crate bitfield;
-extern crate byteorder;
-extern crate bytes;
-extern crate crypto;
-extern crate eapol;
-#[macro_use] extern crate failure;
-extern crate hex;
-extern crate mundane;
-#[macro_use] extern crate nom;
-extern crate num;
-extern crate rand;
-extern crate test;
-extern crate time;
+use failure::Fail;
 
 pub mod akm;
 pub mod auth;
@@ -32,7 +21,7 @@ pub mod rsna;
 pub mod rsne;
 pub mod suite_selector;
 
-use key::exchange::handshake::fourway::MessageNumber;
+use crate::key::exchange::handshake::fourway::MessageNumber;
 
 #[derive(Debug, Fail)]
 pub enum Error {

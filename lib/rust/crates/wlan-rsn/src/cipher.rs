@@ -1,13 +1,14 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #![allow(dead_code)]
 
-use Error;
+use crate::Error;
 use bytes::Bytes;
-use failure;
+use failure::{self, bail, ensure};
 use std::fmt;
-use suite_selector;
+use crate::suite_selector;
 
 macro_rules! return_none_if_unknown_usage {
     ($e:expr) => {

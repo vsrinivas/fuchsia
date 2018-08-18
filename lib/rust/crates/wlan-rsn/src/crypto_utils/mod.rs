@@ -8,8 +8,8 @@ pub mod nonce;
 #[allow(deprecated)]
 use mundane::insecure::InsecureHmacSha1;
 use mundane::hash::Digest;
-use Error;
-use failure;
+use crate::Error;
+use failure::{self, bail, ensure};
 
 const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 

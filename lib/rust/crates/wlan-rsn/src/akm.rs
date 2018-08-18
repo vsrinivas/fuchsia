@@ -4,14 +4,13 @@
 #![allow(dead_code)]
 
 use bytes::Bytes;
-use crypto_utils;
-use failure;
-use integrity;
-use integrity::hmac_sha1::HmacSha1;
-use keywrap;
+use crate::crypto_utils;
+use failure::{self, bail, ensure};
+use crate::integrity::{self, hmac_sha1::HmacSha1};
+use crate::keywrap;
 use std::fmt;
-use suite_selector;
-use Error;
+use crate::suite_selector;
+use crate::Error;
 
 macro_rules! return_none_if_unknown_algo {
     ($e:expr) => {

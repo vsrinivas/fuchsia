@@ -6,7 +6,7 @@ pub mod psk;
 
 use self::psk::Psk;
 use failure;
-use rsna::{SecAssocResult, VerifiedKeyFrame};
+use crate::rsna::{SecAssocResult, VerifiedKeyFrame};
 
 #[derive(Debug, PartialEq)]
 pub enum Method {

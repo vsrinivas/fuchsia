@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use failure;
-use key::exchange::handshake::fourway::{Config, FourwayHandshakeFrame};
-use rsna::SecAssocResult;
+use crate::key::exchange::handshake::fourway::{Config, FourwayHandshakeFrame};
+use crate::rsna::SecAssocResult;
 
 #[derive(Debug, PartialEq)]
 pub struct Authenticator {

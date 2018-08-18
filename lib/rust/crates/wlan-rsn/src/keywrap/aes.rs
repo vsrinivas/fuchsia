@@ -8,9 +8,9 @@ use crypto::aessafe;
 use crypto::blockmodes::{self, EcbEncryptor, EcbDecryptor, PaddingProcessor};
 use crypto::buffer;
 use crypto::symmetriccipher::{Decryptor, Encryptor};
-use failure;
-use keywrap::Algorithm;
-use Error;
+use failure::{self, bail, ensure, format_err};
+use crate::keywrap::Algorithm;
+use crate::Error;
 
 // Implementation of RFC 3394 - Advanced Encryption Standard (AES) Key Wrap Algorithm
 // RFC 3394, 2.2.3

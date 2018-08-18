@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cipher::Cipher;
-use crypto_utils::prf;
-use Error;
+use crate::cipher::Cipher;
+use crate::crypto_utils::prf;
+use crate::Error;
 use failure;
 
 #[derive(Debug, Clone, PartialEq)]

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use bytes::{BufMut, BytesMut};
-use crypto_utils::prf;
-use failure;
+use crate::crypto_utils::prf;
+use failure::{self, bail};
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
 use std::sync::Mutex;

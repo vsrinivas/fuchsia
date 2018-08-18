@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use bytes::Bytes;
-use integrity;
-use Error;
+use crate::integrity;
+use crate::Error;
 use eapol;
-use failure;
-use key::gtk::Gtk;
-use key::exchange::{Key, handshake::{group_key::{self, Config, GroupKeyHandshakeFrame}}};
-use key_data;
-use rsna::{SecAssocResult, SecAssocUpdate};
+use failure::{self, bail};
+use crate::key::gtk::Gtk;
+use crate::key::exchange::{Key, handshake::{group_key::{self, Config, GroupKeyHandshakeFrame}}};
+use crate::key_data;
+use crate::rsna::{SecAssocResult, SecAssocUpdate};
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {

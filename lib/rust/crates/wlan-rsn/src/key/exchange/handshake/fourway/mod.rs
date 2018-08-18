@@ -8,12 +8,12 @@ mod supplicant;
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
 use bytes::Bytes;
-use Error;
+use crate::Error;
 use eapol;
-use failure;
-use key::exchange;
-use rsna::{Role, SecAssocResult, VerifiedKeyFrame, NegotiatedRsne};
-use rsne::Rsne;
+use failure::{self, bail, ensure};
+use crate::key::exchange;
+use crate::rsna::{Role, SecAssocResult, VerifiedKeyFrame, NegotiatedRsne};
+use crate::rsne::Rsne;
 
 #[derive(Debug, PartialEq)]
 enum RoleHandler {
@@ -298,7 +298,7 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use rsna::test_util;
+    use crate::rsna::test_util;
 
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
 
