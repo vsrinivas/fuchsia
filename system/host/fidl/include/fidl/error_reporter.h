@@ -14,6 +14,7 @@ class ErrorReporter {
 public:
     void ReportError(std::string error);
     void PrintReports();
+    const std::vector<std::string>& errors() const { return errors_; };
 
 private:
     std::vector<std::string> errors_;

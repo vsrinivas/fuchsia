@@ -312,17 +312,9 @@ bool Library::Fail(const SourceLocation& location, StringView message) {
     return false;
 }
 
-Library::Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies,
+Library::Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* all_libraries,
                  ErrorReporter* error_reporter)
-    : dependencies_(dependencies), error_reporter_(error_reporter) {
-    for (const auto& dep : *dependencies_) {
-        const std::unique_ptr<Library>& library = dep.second;
-        const auto& declarations = library->declarations_;
-        declarations_.insert(declarations.begin(), declarations.end());
-        const auto& type_aliases = library->type_aliases_;
-        type_aliases_.insert(type_aliases.begin(), type_aliases.end());
-    }
-}
+    : all_libraries_(all_libraries), error_reporter_(error_reporter) {}
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                         SourceLocation location, Name* name_out) {
@@ -343,16 +335,31 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         library_name.push_back((*iter)->location().data());
     }
 
-    auto iter = dependencies_->find(library_name);
-    if (iter == dependencies_->end()) {
-        std::string message("Could not find library named ");
+    // TODO(pascal): Refactor by introducing a Dependencies object which
+    // supports Add(filename, name, library), Lookup(filename, name), and also
+    // offers an iterator over all depedencies.
+
+    // First, verify that this specific compound identifier within this file
+    // can refer to the library.
+    auto filename = location.source_file().filename();
+    std::vector<StringView> library_name_copy = library_name;
+    const auto name_and_filename = std::make_pair(std::move(library_name_copy), filename);
+    auto iter = dependencies_by_filename_.find(name_and_filename);
+    if (iter == dependencies_by_filename_.end()) {
+        std::string message("Unknown dependent library ");
         message += NameLibrary(library_name);
+        message += ". Did you require it with `using`?";
         const auto& location = components[0]->location();
         return Fail(location, message);
     }
 
-    const std::unique_ptr<Library>& library = iter->second;
-    *name_out = Name(library.get(), decl_name);
+    // Second, retrieve the library by name.
+    auto iter2 = dependencies_.find(library_name);
+    assert(iter2 != dependencies_.end());
+
+    // Resolve the name.
+    *name_out = Name(iter2->second, decl_name);
+
     return true;
 }
 
@@ -504,11 +511,71 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
 }
 
 bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
-    // TODO(FIDL-111): We should require "using" directives for types used by
-    // this library.
-    if (!using_directive->maybe_primitive)
-        return true;
+    if (using_directive->maybe_primitive)
+        return ConsumeTypeAlias(std::move(using_directive));
 
+    std::vector<StringView> library_name;
+    for (const auto& component : using_directive->using_path->components) {
+        library_name.push_back(component->location().data());
+    }
+
+    auto iter = all_libraries_->find(library_name);
+    if (iter == all_libraries_->end()) {
+        std::string message("Could not find library named ");
+        message += NameLibrary(library_name);
+        message += ". Did you include its sources with --files?";
+        const auto& location = using_directive->using_path->components[0]->location();
+        return Fail(location, message);
+    }
+
+    return RegisterDependentLibrary(iter->second.get(), using_directive->maybe_alias, using_directive->location().source_file().filename());
+}
+
+bool Library::RegisterDependentLibrary(Library* library,
+                                       const std::unique_ptr<raw::Identifier>& maybe_alias,
+                                       StringView filename) {
+    // Allow library to be referenced by fully qualified name, or alias if present.
+    if (!InsertDependentLibraryByName(library->name(), library, filename)) {
+      return false;
+    }
+    if (maybe_alias) {
+      std::vector<StringView> alias_name = {maybe_alias->location().data()};
+      if (!InsertDependentLibraryByName(std::move(alias_name), library, filename)) {
+        return false;
+      }
+    }
+
+    // Import declarations, and type aliases of dependent library.
+    const auto& declarations = library->declarations_;
+    declarations_.insert(declarations.begin(), declarations.end());
+    const auto& type_aliases = library->type_aliases_;
+    type_aliases_.insert(type_aliases.begin(), type_aliases.end());
+    return true;
+}
+
+bool Library::InsertDependentLibraryByName(const std::vector<StringView>& library_name,
+                                           Library* library,
+                                           StringView filename) {
+    // We require every dependency to be declared on a per file basis, and
+    // also track library depedencies at the library level. Here, we need
+    // to do double bookkeeping.
+
+    // Record that filename is allowed to depend on library_name.
+    auto insert = dependencies_by_filename_.emplace(library_name, filename);
+    if (!insert.second) {
+        std::string message("Library ");
+        message += NameLibrary(library_name);
+        message += " already imported. Did you require it twice?";
+        return Fail(message);
+    }
+
+    // Record that this library depends on library_name.
+    dependencies_.emplace(library_name, std::move(library));
+    return true;
+}
+
+bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
+    assert(using_directive->maybe_primitive);
     auto location = using_directive->using_path->components[0]->location();
     auto name = Name(this, location);
     auto using_dir = std::make_unique<Using>(std::move(name), MakePrimitiveType(using_directive->maybe_primitive.get()));
@@ -1262,8 +1329,8 @@ bool Library::CompileLibraryName() {
 }
 
 bool Library::Compile() {
-    for (const auto& name_and_library : *dependencies_) {
-        const Library* library = name_and_library.second.get();
+    for (const auto& name_and_library : dependencies_) {
+        const Library* library = name_and_library.second;
         constants_.insert(library->constants_.begin(), library->constants_.end());
     }
 

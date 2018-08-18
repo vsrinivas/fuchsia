@@ -94,6 +94,10 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
 }
 
 decltype(nullptr) Parser::Fail() {
+  return Fail("found unexpected token");
+}
+
+decltype(nullptr) Parser::Fail(StringView message) {
     if (ok_) {
         auto token_location = last_token_.location();
         auto token_data = token_location.data();
@@ -121,7 +125,9 @@ decltype(nullptr) Parser::Fail() {
         // Many editors and IDEs recognize errors in the form of
         // filename:linenumber:column: error: descriptive-test-here\n
         std::string error = token_location.position();
-        error += ": error: found unexpected token\n";
+        error += ": error: ";
+        error += message;
+        error += "\n";
         error += surrounding_line;
         error += squiggle + "\n";
 

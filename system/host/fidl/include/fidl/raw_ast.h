@@ -321,6 +321,8 @@ public:
 
     std::unique_ptr<CompoundIdentifier> using_path;
     std::unique_ptr<Identifier> maybe_alias;
+    // TODO(pascal): We should be more explicit for type aliases such as
+    // `using foo = int8;` and use a special purpose AST element.
     std::unique_ptr<PrimitiveType> maybe_primitive;
 };
 
