@@ -49,6 +49,7 @@ public:
         std::string c_name;
         std::string coded_name;
         const std::vector<flat::Interface::Method::Parameter>& parameters;
+        const TypeShape& typeshape;
     };
 
     struct NamedMethod {

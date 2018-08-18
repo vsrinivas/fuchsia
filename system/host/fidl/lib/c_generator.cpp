@@ -658,7 +658,8 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
                 std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
                 std::string coded_name = NameTable(c_name);
                 named_method.request = std::make_unique<NamedMessage>(NamedMessage{
-                    std::move(c_name), std::move(coded_name), method.maybe_request->parameters});
+                    std::move(c_name), std::move(coded_name),
+                    method.maybe_request->parameters, method.maybe_request->typeshape});
             }
             if (method.maybe_response != nullptr) {
                 if (method.maybe_request == nullptr) {
@@ -667,13 +668,15 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
                     std::string coded_name = NameTable(c_name);
                     named_method.response = std::make_unique<NamedMessage>(
                         NamedMessage{std::move(c_name), std::move(coded_name),
-                                     method.maybe_response->parameters});
+                                     method.maybe_response->parameters,
+                                     method.maybe_response->typeshape});
                 } else {
                     std::string c_name = NameMessage(method_name, types::MessageKind::kResponse);
                     std::string coded_name = NameTable(c_name);
                     named_method.response = std::make_unique<NamedMessage>(
                         NamedMessage{std::move(c_name), std::move(coded_name),
-                                     method.maybe_response->parameters});
+                                     method.maybe_response->parameters,
+                                     method.maybe_response->typeshape});
                 }
             }
             named_interface.methods.push_back(std::move(named_method));
