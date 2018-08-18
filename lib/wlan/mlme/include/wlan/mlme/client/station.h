@@ -173,6 +173,7 @@ class Station {
     bool IsQosReady() const;
     bool IsAmsduRxReady() const;
 
+    CapabilityInfo BuildCapabilityInfo() const;
     zx_status_t BuildMcsSet(SupportedMcsSet* mcs_set) const;
     zx_status_t BuildHtCapabilities(HtCapabilities* htc) const;
     uint8_t GetTid();

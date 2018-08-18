@@ -385,8 +385,6 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     auto status = BuildMgmtFrame(&frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
-    // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
-    // request.
     auto hdr = frame.hdr();
     hdr->addr1 = bssid_;
     hdr->addr2 = self_addr();
@@ -395,8 +393,8 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     frame.FillTxInfo();
 
     auto assoc = frame.body();
-    assoc->cap.set_ess(1);
-    assoc->cap.set_short_preamble(0);  // For robustness. TODO(porce): Enforce Ralink
+
+    assoc->cap = BuildCapabilityInfo();
     assoc->listen_interval = 0;
 
     ElementWriter w(assoc->elements,
@@ -1368,6 +1366,22 @@ bool Station::IsAmsduRxReady() const {
     // setting "A-MSDU Supported" both in ADDBA Request and Response is deemed to be most
     // interoperable way.
     return true;
+}
+
+CapabilityInfo Station::BuildCapabilityInfo() const {
+    auto& ifc_info = device_->GetWlanInfo().ifc_info;
+    CapabilityInfo cap = FromDdk(ifc_info.caps);
+
+    // Override
+    cap.set_ess(0);             // reserved in client role
+    cap.set_ibss(0);            // reserved in client role
+    cap.set_cf_pollable(0);     // not supported
+    cap.set_cf_poll_req(0);     // not supported
+    cap.set_privacy(0);         // reserved in client role
+    cap.set_short_preamble(0);  // Override for Broader interop
+    cap.set_spectrum_mgmt(0);   // not supported
+
+    return cap;
 }
 
 zx_status_t Station::BuildMcsSet(SupportedMcsSet* mcs_set) const {
