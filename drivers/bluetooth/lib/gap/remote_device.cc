@@ -20,9 +20,9 @@ std::string ConnectionStateToString(RemoteDevice::ConnectionState state) {
     case RemoteDevice::ConnectionState::kNotConnected:
       return "not connected";
     case RemoteDevice::ConnectionState::kInitializing:
-      return "initializing";
+      return "connecting";
     case RemoteDevice::ConnectionState::kConnected:
-      return "initialized";
+      return "connected";
     case RemoteDevice::ConnectionState::kBonding:
       return "bonding";
     case RemoteDevice::ConnectionState::kBonded:
@@ -63,9 +63,18 @@ RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
 
 void RemoteDevice::SetLEConnectionState(ConnectionState state) {
   FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
-  FXL_VLOG(1) << "gap: RemoteDevice le_connection_state changed from \""
-              << ConnectionStateToString(le_connection_state_) << "\" to \""
-              << ConnectionStateToString(state) << "\"";
+
+  if (state == le_connection_state_) {
+    bt_log(TRACE, "gap-le", "LE connection state already \"%s\"!",
+           ConnectionStateToString(state).c_str());
+    return;
+  }
+
+  bt_log(TRACE, "gap-le",
+         "peer (%s) LE connection state changed from \"%s\" to \"%s\"",
+         identifier_.c_str(),
+         ConnectionStateToString(le_connection_state_).c_str(),
+         ConnectionStateToString(state).c_str());
 
   le_connection_state_ = state;
   update_expiry_callback_(*this);
@@ -74,9 +83,18 @@ void RemoteDevice::SetLEConnectionState(ConnectionState state) {
 
 void RemoteDevice::SetBREDRConnectionState(ConnectionState state) {
   FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
-  FXL_VLOG(1) << "gap: RemoteDevice bredr_connection_state changed from \""
-              << ConnectionStateToString(bredr_connection_state_) << "\" to \""
-              << ConnectionStateToString(state) << "\"";
+
+  if (state == bredr_connection_state_) {
+    bt_log(TRACE, "gap-bredr", "BR/EDR connection state already \"%s\"",
+           ConnectionStateToString(state).c_str());
+    return;
+  }
+
+  bt_log(TRACE, "gap-bredr",
+         "peer (%s) BR/EDR connection state changed from \"%s\" to \"%s\"",
+         identifier_.c_str(),
+         ConnectionStateToString(bredr_connection_state_).c_str(),
+         ConnectionStateToString(state).c_str());
 
   bredr_connection_state_ = state;
   update_expiry_callback_(*this);
@@ -157,7 +175,7 @@ bool RemoteDevice::TryMakeNonTemporary() {
   if (!connectable() ||
       address().type() == common::DeviceAddress::Type::kLERandom ||
       address().type() == common::DeviceAddress::Type::kLEAnonymous) {
-    FXL_VLOG(1) << "gap: remains temporary: " << ToString();
+    bt_log(TRACE, "gap", "remains temporary: %s", ToString().c_str());
     return false;
   }
 

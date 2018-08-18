@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "lib/fxl/logging.h"
 
@@ -166,7 +167,7 @@ void SignalingChannel::CheckAndDispatchPacket(const SignalingPacket& packet) {
   } else if (!packet.header().id) {
     // "Signaling identifier 0x00 is an illegal identifier and shall never be
     // used in any command" (v5.0, Vol 3, Part A, Section 4).
-    FXL_VLOG(1) << "l2cap: SignalingChannel: illegal sig. ID: 0x00; drop";
+    bt_log(TRACE, "l2cap", "illegal signaling cmd ID: 0x00; reject");
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
   } else if (!HandlePacket(packet)) {

@@ -4,6 +4,7 @@
 
 #include "gatt_client_server.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 
 #include "lib/fxl/functional/auto_call.h"
@@ -78,7 +79,7 @@ void GattClientServer::ListServices(
 void GattClientServer::ConnectToService(
     uint64_t id, ::fidl::InterfaceRequest<RemoteService> service) {
   if (connected_services_.count(id)) {
-    FXL_VLOG(1) << "GattClientServer: service already requested";
+    bt_log(TRACE, "bt-host", "service already requested");
     return;
   }
 
@@ -99,21 +100,21 @@ void GattClientServer::ConnectToService(
         fxl::MakeAutoCall([self, id] { self->connected_services_.erase(id); });
 
     if (!service) {
-      FXL_VLOG(1) << "GattClientServer: Failed to connect to service";
+      bt_log(TRACE, "bt-host", "failed to connect to service");
       return;
     }
 
     // Clean up the server if either the peer device or the FIDL client
     // disconnects.
     auto error_cb = [self, id] {
-      FXL_VLOG(1) << "GattClientServer: service disconnected";
+      bt_log(TRACE, "bt-host", "service disconnected");
       if (self) {
         self->connected_services_.erase(id);
       }
     };
 
     if (!service->AddRemovedHandler(error_cb)) {
-      FXL_VLOG(1) << "GattClientServer: failed to assign closed handler";
+      bt_log(TRACE, "bt-host", "failed to assign closed handler");
       return;
     }
 

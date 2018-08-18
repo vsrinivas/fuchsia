@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 
 #include "lib/fxl/memory/weak_ptr.h"
@@ -91,7 +92,7 @@ bool ValidateService(const Service& service, size_t* out_attr_count) {
   std::unordered_set<IdType> ids;
   for (const auto& chrc_ptr : service.characteristics()) {
     if (ids.count(chrc_ptr->id()) != 0u) {
-      FXL_VLOG(2) << "gatt: server: Repeated ID: " << chrc_ptr->id();
+      bt_log(SPEW, "gatt", "server: repeated ID: %u", chrc_ptr->id());
       return false;
     }
 
@@ -110,7 +111,7 @@ bool ValidateService(const Service& service, size_t* out_attr_count) {
 
     for (const auto& desc_ptr : chrc_ptr->descriptors()) {
       if (ids.count(desc_ptr->id()) != 0u) {
-        FXL_VLOG(2) << "gatt: server: Repeated ID: " << desc_ptr->id();
+        bt_log(SPEW, "gatt", "server: repeated ID: %u", desc_ptr->id());
         return false;
       }
 
@@ -118,8 +119,8 @@ bool ValidateService(const Service& service, size_t* out_attr_count) {
       if (desc_ptr->type() == types::kClientCharacteristicConfig ||
           desc_ptr->type() == types::kCharacteristicExtProperties ||
           desc_ptr->type() == types::kServerCharacteristicConfig) {
-        FXL_VLOG(2) << "gatt: server: Disallowed descriptor type: "
-                    << desc_ptr->type().ToString();
+        bt_log(SPEW, "gatt", "server: disallowed descriptor type: %s",
+               desc_ptr->type().ToString().c_str());
         return false;
       }
 
@@ -512,7 +513,7 @@ IdType LocalServiceManager::RegisterService(ServicePtr service,
   FXL_DCHECK(ccc_callback);
 
   if (services_.find(next_service_id_) != services_.end()) {
-    FXL_VLOG(2) << "gatt: server: Ran out of service IDs";
+    bt_log(SPEW, "gatt", "server: Ran out of service IDs");
     return kInvalidId;
   }
 
@@ -531,8 +532,8 @@ IdType LocalServiceManager::RegisterService(ServicePtr service,
       service->primary() ? types::kPrimaryService : types::kSecondaryService,
       attr_count, service_decl_value);
   if (!grouping) {
-    FXL_VLOG(1)
-        << "gatt: server: Failed to allocate attribute grouping for service";
+    bt_log(TRACE, "gatt",
+           "server: Failed to allocate attribute grouping for service");
     return kInvalidId;
   }
 

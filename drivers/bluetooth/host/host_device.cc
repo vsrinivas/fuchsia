@@ -33,28 +33,28 @@ zx_status_t HostDevice::Bind() {
   zx_status_t status =
       device_get_protocol(parent_, ZX_PROTOCOL_BT_HCI, &hci_proto);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "bt-host: Failed to obtain bt-hci protocol ops: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "bt-host", "failed to obtain bt-hci protocol ops: %s",
+           zx_status_get_string(status));
     return status;
   }
 
   if (!hci_proto.ops) {
-    FXL_LOG(ERROR) << "bt-host: bt-hci device ops required!";
+    bt_log(ERROR, "bt-host", "bt-hci device ops required!");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!hci_proto.ops->open_command_channel) {
-    FXL_LOG(ERROR) << "bt-host: bt-hci op required: open_command_channel";
+    bt_log(ERROR, "bt-host", "bt-hci op required: open_command_channel");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!hci_proto.ops->open_acl_data_channel) {
-    FXL_LOG(ERROR) << "bt-host: bt-hci op required: open_acl_data_channel";
+    bt_log(ERROR, "bt-host", "bt-hci op required: open_acl_data_channel");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!hci_proto.ops->open_snoop_channel) {
-    FXL_LOG(ERROR) << "bt-host: bt-hci op required: open_snoop_channel";
+    bt_log(ERROR, "bt-host", "bt-hci op required: open_snoop_channel");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -73,8 +73,8 @@ zx_status_t HostDevice::Bind() {
 
   status = device_add(parent_, &args, &dev_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "bt-host: Failed to publish device: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "bt-host", "Failed to publish device: %s",
+           zx_status_get_string(status));
     return status;
   }
 
@@ -83,7 +83,7 @@ zx_status_t HostDevice::Bind() {
   // Send the bootstrap message to Host. The Host object can only be accessed on
   // the Host thread.
   async::PostTask(loop_.dispatcher(), [hci_proto, this] {
-    FXL_VLOG(2) << "bt-host: host thread start";
+    bt_log(SPEW, "bt-host", "host thread start");
 
     std::lock_guard<std::mutex> lock(mtx_);
     host_ = fxl::MakeRefCounted<Host>(hci_proto);
@@ -96,14 +96,14 @@ zx_status_t HostDevice::Bind() {
           return;
 
         if (success) {
-          FXL_VLOG(1) << "bt-host: Adapter initialized; make device visible";
+          bt_log(TRACE, "bt-host", "adapter initialized; make device visible");
           host_->gatt_host()->SetRemoteServiceWatcher(
               fit::bind_member(this, &HostDevice::OnRemoteGattServiceAdded));
           device_make_visible(dev_);
           return;
         }
 
-        FXL_LOG(ERROR) << "bt-host: Failed to initialize adapter";
+        bt_log(ERROR, "bt-host", "failed to initialize adapter");
         CleanUp();
       }
 
@@ -116,7 +116,7 @@ zx_status_t HostDevice::Bind() {
 }
 
 void HostDevice::Unbind() {
-  FXL_VLOG(1) << "bt-host: unbind";
+  bt_log(TRACE, "bt-host", "unbind");
 
   std::lock_guard<std::mutex> lock(mtx_);
 
@@ -138,14 +138,14 @@ void HostDevice::Unbind() {
 }
 
 void HostDevice::Release() {
-  FXL_VLOG(1) << "bt-host: release";
+  bt_log(TRACE, "bt-host", "release");
   delete this;
 }
 
 zx_status_t HostDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                               void* out_buf, size_t out_len,
                               size_t* out_actual) {
-  FXL_VLOG(1) << "bt-host: ioctl";
+  bt_log(TRACE, "bt-host", "ioctl");
 
   if (!out_buf)
     return ZX_ERR_INVALID_ARGS;

@@ -4,6 +4,7 @@
 
 #include "low_energy_peripheral_server.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
@@ -108,7 +109,8 @@ void LowEnergyPeripheralServer::StartAdvertising(
       return;
 
     if (!status) {
-      FXL_VLOG(1) << "Failed to start advertising: " << status.ToString();
+      bt_log(TRACE, "bt-host", "failed to start advertising: %s",
+             status.ToString().c_str());
       callback(fidl_helpers::StatusToFidl(status, MessageFromStatus(status)),
                "");
       return;
@@ -151,7 +153,8 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
   // we process this connection then the instance will have been removed.
   auto it = instances_.find(advertisement_id);
   if (it == instances_.end()) {
-    FXL_VLOG(1) << "Connection received from wrong advertising instance";
+    bt_log(TRACE, "bt-host",
+           "connection received from wrong advertising instance");
     return;
   }
 
@@ -160,13 +163,13 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
   auto conn = adapter()->le_connection_manager()->RegisterRemoteInitiatedLink(
       std::move(link));
   if (!conn) {
-    FXL_VLOG(1) << "Incoming connection rejected";
+    bt_log(TRACE, "bt-host", "incoming connection rejected");
     return;
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   conn->set_closed_callback([self, id = advertisement_id] {
-    FXL_VLOG(1) << "Central disconnected";
+    bt_log(TRACE, "bt-host", "central disconnected");
 
     if (!self)
       return;
@@ -185,7 +188,7 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
       adapter()->device_cache().FindDeviceById(conn->device_identifier());
   FXL_DCHECK(device);
 
-  FXL_VLOG(1) << "Central connected";
+  bt_log(TRACE, "bt-host", "central connected");
   RemoteDevicePtr remote_device =
       fidl_helpers::NewLERemoteDevice(std::move(*device));
   FXL_DCHECK(remote_device);

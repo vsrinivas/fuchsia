@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "lib/fxl/logging.h"
@@ -228,7 +229,7 @@ void FakeDevice::WriteScanResponseReport(
 void FakeDevice::OnRxL2CAP(hci::ConnectionHandle conn,
                            const common::ByteBuffer& pdu) {
   if (pdu.size() < sizeof(l2cap::BasicHeader)) {
-    FXL_LOG(WARNING) << "bt-hci (fake): Malformed L2CAP packet!";
+    bt_log(WARN, "fake-hci", "malformed L2CAP packet!");
     return;
   }
 
@@ -238,7 +239,7 @@ void FakeDevice::OnRxL2CAP(hci::ConnectionHandle conn,
 
   auto payload = pdu.view(sizeof(l2cap::BasicHeader));
   if (payload.size() != len) {
-    FXL_LOG(WARNING) << "bt-hci (fake): Malformed L2CAP B-frame header!";
+    bt_log(WARN, "fake-hci", "malformed L2CAP B-frame header!");
     return;
   }
 

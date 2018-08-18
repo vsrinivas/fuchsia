@@ -62,7 +62,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // for unit tests.
   uint16_t mtu() const { return mtu_; }
   void set_mtu(uint16_t value) {
-    FXL_VLOG(1) << "att: Bearer: new MTU: " << value;
+    bt_log(TRACE, "att", "bearer: new MTU %u", value);
     mtu_ = value;
   }
 

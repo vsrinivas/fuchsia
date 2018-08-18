@@ -11,6 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/status.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -112,9 +113,5 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
 
 // Convenience macros to check and log any non-Success status of an event.
 // Evaluate to true if the event status is not success.
-#define BTEV_TEST_LOG(event, severity, msg) \
-  BT_TEST_LOG(event.ToStatus(), severity, msg)
-#define BTEV_TEST_WARN(event, msg) BT_TEST_WARN(event.ToStatus(), msg)
-#define BTEV_TEST_ERR(event, msg) BT_TEST_ERR(event.ToStatus(), msg)
-#define BTEV_TEST_VLOG(event, level, msg) \
-  BT_TEST_VLOG(event.ToStatus(), level, msg)
+#define hci_is_error(event, flag, tag, fmt...) \
+  bt_is_error(event.ToStatus(), flag, tag, fmt)

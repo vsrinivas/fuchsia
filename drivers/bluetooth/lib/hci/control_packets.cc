@@ -124,7 +124,7 @@ bool EventPacket::ToStatusCode(StatusCode* out_code) const {
       // TODO(armansito): Complete this list.
 
     default:
-      FXL_NOTREACHED() << fxl::StringPrintf("Event not implemented! (0x%02x)",
+      FXL_NOTREACHED() << fxl::StringPrintf("Event not implemented! (%#02x)",
                                             event_code());
       break;
   }

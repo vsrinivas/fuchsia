@@ -162,8 +162,8 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
   it->second->callbacks.emplace_back(
       [device_id, self = weak_ptr_factory_.GetWeakPtr()](auto,
                                                          const auto& event) {
-        if (BTEV_TEST_LOG(event, INFO,
-                          "gap (BR/EDR): RemoteNameRequest failed")) {
+        if (hci_is_error(event, WARN, "gap-bredr",
+                         "remote name request failed")) {
           self->Complete(device_id, event.ToStatus());
           return;
         }
@@ -196,7 +196,8 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
         self->MaybeComplete(device_id);
       });
 
-  FXL_VLOG(4) << "gap (BR/EDR): name request " << device->address();
+  bt_log(SPEW, "gap-bredr", "name request %s",
+         device->address().ToString().c_str());
   hci_->command_channel()->SendCommand(
       std::move(packet), dispatcher_, it->second->callbacks.back().callback(),
       hci::kRemoteNameRequestCompleteEventCode);
@@ -217,8 +218,8 @@ void BrEdrInterrogator::ReadRemoteVersionInformation(
   it->second->callbacks.emplace_back([device_id,
                                       self = weak_ptr_factory_.GetWeakPtr()](
                                          auto, const auto& event) {
-    if (BTEV_TEST_LOG(event, INFO,
-                      "gap (BR/EDR): ReadRemoteVersionInfo failed")) {
+    if (hci_is_error(event, WARN, "gap-bredr",
+                     "read remote version info failed")) {
       self->Complete(device_id, event.ToStatus());
       return;
     }
@@ -245,7 +246,7 @@ void BrEdrInterrogator::ReadRemoteVersionInformation(
     self->MaybeComplete(device_id);
   });
 
-  FXL_VLOG(4) << "gap (BR/EDR): asking for version info";
+  bt_log(SPEW, "gap-bredr", "asking for version info");
   hci_->command_channel()->SendCommand(
       std::move(packet), dispatcher_, it->second->callbacks.back().callback(),
       hci::kReadRemoteVersionInfoCompleteEventCode);
@@ -266,8 +267,8 @@ void BrEdrInterrogator::ReadRemoteFeatures(const std::string& device_id,
   it->second->callbacks.emplace_back(
       [device_id, handle, self = weak_ptr_factory_.GetWeakPtr()](
           auto, const auto& event) {
-        if (BTEV_TEST_LOG(event, INFO,
-                          "gap (BR/EDR): ReadRemoteSupportedFeatures failed")) {
+        if (hci_is_error(event, WARN, "gap-bredr",
+                         "read remote supported features failed")) {
           self->Complete(device_id, event.ToStatus());
           return;
         }
@@ -299,7 +300,7 @@ void BrEdrInterrogator::ReadRemoteFeatures(const std::string& device_id,
         self->MaybeComplete(device_id);
       });
 
-  FXL_VLOG(4) << "gap (BR/EDR): asking for supported features";
+  bt_log(SPEW, "gap-bredr", "asking for supported features");
   hci_->command_channel()->SendCommand(
       std::move(packet), dispatcher_, it->second->callbacks.back().callback(),
       hci::kReadRemoteSupportedFeaturesCompleteEventCode);
@@ -321,10 +322,10 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
   FXL_DCHECK(it != pending_.end());
 
   it->second->callbacks.emplace_back(
-      [device_id, page, handle, self = weak_ptr_factory_.GetWeakPtr()](
+      [device_id, handle, page, self = weak_ptr_factory_.GetWeakPtr()](
           auto, const auto& event) {
-        if (BTEV_TEST_LOG(event, INFO,
-                          "gap (BR/EDR): ReadRemoteExtendedFeatures failed")) {
+        if (hci_is_error(event, WARN, "gap-bredr",
+                         "read remote extended features failed")) {
           self->Complete(device_id, event.ToStatus());
           return;
         }
@@ -349,9 +350,9 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
         device->SetFeaturePage(params.page_number,
                                le64toh(params.lmp_features));
         if (params.page_number != page) {
-          FXL_LOG(INFO) << fxl::StringPrintf(
-              "gap (BR/EDR): requested page %d and received page %d, giving up",
-              page, params.page_number);
+          bt_log(INFO, "gap-bredr",
+                 "requested page %u and received page %u, giving up", page,
+                 params.page_number);
           device->set_last_page_number(0);
         } else {
           device->set_last_page_number(params.max_page_number);
@@ -364,7 +365,7 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
         self->MaybeComplete(device_id);
       });
 
-  FXL_VLOG(4) << "gap (BR/EDR): get ext page " << static_cast<unsigned>(page);
+  bt_log(SPEW, "gap-bredr", "get ext page %u", page);
   hci_->command_channel()->SendCommand(
       std::move(packet), dispatcher_, it->second->callbacks.back().callback(),
       hci::kReadRemoteExtendedFeaturesCompleteEventCode);

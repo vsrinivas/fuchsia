@@ -4,7 +4,7 @@
 
 #include "le_signaling_channel.h"
 
-#include "lib/fxl/strings/string_printf.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 #include "channel.h"
 #include "logical_link.h"
@@ -23,13 +23,13 @@ bool LESignalingChannel::SendRequest(CommandCode req_code,
                                      const common::ByteBuffer& payload,
                                      ResponseHandler cb) {
   // TODO(NET-1093): Reuse BrEdrSignalingChannel's implementation.
-  FXL_LOG(WARNING) << "l2cap: LE sig: SendRequest not implemented yet";
+  bt_log(WARN, "l2cap-le", "sig: SendRequest not implemented yet");
   return false;
 }
 
 void LESignalingChannel::ServeRequest(CommandCode req_code,
                                       RequestDelegate cb) {
-  FXL_LOG(WARNING) << "l2cap: LE sig: ServeRequest not implemented yet";
+  bt_log(WARN, "l2cap-le", "sig: ServeRequest not implemented yet");
 }
 
 void LESignalingChannel::OnConnParamUpdateReceived(
@@ -38,8 +38,8 @@ void LESignalingChannel::OnConnParamUpdateReceived(
   // Connection Parameter Update Request packet it shall respond with a Command
   // Reject Packet [...]" (v5.0, Vol 3, Part A, Section 4.20).
   if (role() == hci::Connection::Role::kSlave) {
-    FXL_VLOG(1)
-        << "l2cap: Rejecting Conn. Param. Update request from LE master";
+    bt_log(TRACE, "l2cap-le",
+           "sig: rejecting conn. param. update request from master");
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
     return;
@@ -47,7 +47,7 @@ void LESignalingChannel::OnConnParamUpdateReceived(
 
   if (packet.payload_size() !=
       sizeof(ConnectionParameterUpdateRequestPayload)) {
-    FXL_VLOG(1) << "l2cap: Malformed request received";
+    bt_log(TRACE, "l2cap-le", "sig: malformed request received");
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
     return;
@@ -65,29 +65,29 @@ void LESignalingChannel::OnConnParamUpdateReceived(
       le16toh(payload.slave_latency), le16toh(payload.timeout_multiplier));
 
   if (params.min_interval() > params.max_interval()) {
-    FXL_VLOG(1) << "l2cap: LE conn. min interval larger than max";
+    bt_log(TRACE, "l2cap-le", "sig: conn. min interval larger than max");
     reject = true;
   } else if (params.min_interval() < hci::kLEConnectionIntervalMin) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: LE conn. min. interval outside allowed range: 0x%04x",
-        params.min_interval());
+    bt_log(TRACE, "l2cap-le",
+           "sig: conn. min interval outside allowed range: %#04x",
+           params.min_interval());
     reject = true;
   } else if (params.max_interval() > hci::kLEConnectionIntervalMax) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: LE conn. max. interval outside allowed range: 0x%04x",
-        params.max_interval());
+    bt_log(TRACE, "l2cap-le",
+           "sig: conn. max interval outside allowed range: %#04x",
+           params.max_interval());
     reject = true;
   } else if (params.max_latency() > hci::kLEConnectionLatencyMax) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: LE conn slave latency too big: 0x%04x", params.max_latency());
+    bt_log(TRACE, "l2cap-le", "sig: conn. slave latency too large: %#04x",
+           params.max_latency());
     reject = true;
   } else if (params.supervision_timeout() <
                  hci::kLEConnectionSupervisionTimeoutMin ||
              params.supervision_timeout() >
                  hci::kLEConnectionSupervisionTimeoutMax) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: LE conn supv. timeout outside allowed range: 0x%04x",
-        params.supervision_timeout());
+    bt_log(TRACE, "l2cap-le",
+           "sig: conn supv. timeout outside allowed range: %#04x",
+           params.supervision_timeout());
     reject = true;
   }
 
@@ -112,8 +112,7 @@ void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
   // "[O]nly one command per C-frame shall be sent over [the LE] Fixed Channel"
   // (v5.0, Vol 3, Part A, Section 4).
   if (sdu.length() < sizeof(CommandHeader)) {
-    FXL_VLOG(1)
-        << "l2cap: SignalingChannel: dropped malformed LE signaling packet";
+    bt_log(TRACE, "l2cap-le", "sig: dropped malformed LE signaling packet");
     return;
   }
 
@@ -124,10 +123,9 @@ void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
 
     uint16_t expected_payload_length = le16toh(packet.header().length);
     if (expected_payload_length != data.size() - sizeof(CommandHeader)) {
-      FXL_VLOG(1)
-          << "l2cap: SignalingChannel: packet length mismatch (expected: "
-          << expected_payload_length
-          << ", recv: " << (data.size() - sizeof(CommandHeader)) << "); drop";
+      bt_log(TRACE, "l2cap-le",
+             "sig: packet size mismatch (expected: %zu, recv: %zu); drop",
+             expected_payload_length, data.size() - sizeof(CommandHeader));
       SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                         common::BufferView());
       return;
@@ -146,8 +144,8 @@ bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {
       OnConnParamUpdateReceived(packet);
       return true;
     default:
-      FXL_VLOG(1) << fxl::StringPrintf("l2cap: LE sig: Unsupported code 0x%02x",
-                                       packet.header().code);
+      bt_log(TRACE, "l2cap-le", "sig: unsupported code %#02x",
+             packet.header().code);
       break;
   }
 

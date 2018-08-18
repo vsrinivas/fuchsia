@@ -7,6 +7,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 
 #include "garnet/drivers/bluetooth/host/gatt_host.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
@@ -94,7 +95,7 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
     }
 
     if (!session) {
-      FXL_VLOG(1) << "Failed to start LE discovery session";
+      bt_log(TRACE, "bt-host", "failed to start LE discovery session");
       callback(fidl_helpers::NewFidlError(
           ErrorCode::FAILED, "Failed to start LE discovery session"));
       self->bredr_discovery_session_ = nullptr;
@@ -120,11 +121,11 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
 }
 
 void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
-  FXL_VLOG(1) << "Adapter StartDiscovery()";
+  bt_log(TRACE, "bt-host", "StartDiscovery()");
   FXL_DCHECK(adapter());
 
   if (le_discovery_session_ || requesting_discovery_) {
-    FXL_VLOG(1) << "Discovery already in progress";
+    bt_log(TRACE, "bt-host", "discovery already in progress");
     callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
                                         "Discovery already in progress"));
     return;
@@ -147,7 +148,7 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
         }
 
         if (!status || !session) {
-          FXL_VLOG(1) << "Failed to start BR/EDR discovery session";
+          bt_log(TRACE, "bt-host", "failed to start BR/EDR discovery session");
           callback(fidl_helpers::StatusToFidl(
               status, "Failed to start BR/EDR discovery session"));
           self->requesting_discovery_ = false;
@@ -160,9 +161,9 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
 }
 
 void HostServer::StopDiscovery(StopDiscoveryCallback callback) {
-  FXL_VLOG(1) << "Adapter StopDiscovery()";
+  bt_log(TRACE, "bt-host", "StopDiscovery()");
   if (!le_discovery_session_) {
-    FXL_VLOG(1) << "No active discovery session";
+    bt_log(TRACE, "bt-host", "no active discovery session");
     callback(fidl_helpers::NewFidlError(ErrorCode::BAD_STATE,
                                         "No discovery session in progress"));
     return;
@@ -181,7 +182,8 @@ void HostServer::StopDiscovery(StopDiscoveryCallback callback) {
 
 void HostServer::SetConnectable(bool connectable,
                                 SetConnectableCallback callback) {
-  FXL_VLOG(1) << "Adapter SetConnectable(" << connectable << ")";
+  bt_log(TRACE, "bt-host", "SetConnectable(%s)",
+         connectable ? "true" : "false");
 
   auto bredr_conn_manager = adapter()->bredr_connection_manager();
   if (!bredr_conn_manager) {
@@ -234,7 +236,7 @@ void HostServer::AddBondedDevices(
 
 void HostServer::OnRemoteDeviceBonded(
     const ::btlib::gap::RemoteDevice& remote_device) {
-  FXL_VLOG(1) << "HostServer::OnRemoteDeviceBonded";
+  bt_log(TRACE, "bt-host", "OnRemoteDeviceBonded()");
   BondingData data;
   data.identifier = remote_device.identifier().c_str();
 
@@ -266,7 +268,8 @@ void HostServer::OnRemoteDeviceBonded(
 
 void HostServer::SetDiscoverable(bool discoverable,
                                  SetDiscoverableCallback callback) {
-  FXL_VLOG(1) << "Adapter SetDiscoverable(" << discoverable << ")";
+  bt_log(TRACE, "bt-host", "SetDiscoverable(%s)",
+         discoverable ? "true" : "false");
   // TODO(NET-830): advertise LE here
   if (!discoverable) {
     bredr_discoverable_session_ = nullptr;
@@ -280,7 +283,7 @@ void HostServer::SetDiscoverable(bool discoverable,
     return;
   }
   if (discoverable && requesting_discoverable_) {
-    FXL_VLOG(1) << "Discoverable already being set";
+    bt_log(TRACE, "bt-host", "SetDiscoverable already in progress");
     callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
                                         "SetDiscoverable already in progress"));
     return;
@@ -301,7 +304,7 @@ void HostServer::SetDiscoverable(bool discoverable,
           return;
         }
         if (!status || !session) {
-          FXL_VLOG(1) << "Failed to set discoverable";
+          bt_log(TRACE, "bt-host", "failed to set discoverable");
           callback(
               fidl_helpers::StatusToFidl(status, "Failed to set discoverable"));
           self->requesting_discoverable_ = false;
@@ -346,7 +349,7 @@ void HostServer::SetPairingDelegate(
     if (self) {
       self->adapter()->le_connection_manager()->SetPairingDelegate(
           fxl::WeakPtr<PairingDelegate>());
-      FXL_VLOG(1) << "bt-host: Pairing Delegate disconnected";
+      bt_log(TRACE, "bt-host", "PairingDelegate disconnected");
     }
   });
 }
@@ -357,7 +360,7 @@ void HostServer::RequestProfile(
 }
 
 void HostServer::Close() {
-  FXL_VLOG(1) << "bthost: Closing FIDL handles";
+  bt_log(TRACE, "bt-host", "closing FIDL handles");
 
   // Destroy all bindings.
   servers_.clear();
@@ -365,31 +368,30 @@ void HostServer::Close() {
 }
 
 btlib::sm::IOCapability HostServer::io_capability() const {
-  FXL_VLOG(1) << "bthost: io capability: "
-              << btlib::sm::util::IOCapabilityToString(io_capability_);
+  bt_log(TRACE, "bt-host", "bthost: io capability: %s",
+         btlib::sm::util::IOCapabilityToString(io_capability_).c_str());
   return io_capability_;
 }
 
 void HostServer::CompletePairing(std::string id, btlib::sm::Status status) {
-  FXL_LOG(INFO) << "bthost: Pairing complete for device: " << id
-                << ", status: " << status.ToString();
+  bt_log(INFO, "bt-host", "pairing complete for device: %s, status: %s",
+         id.c_str(), status.ToString().c_str());
 
   // TODO(armansito): implement
 }
 
 void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
-  FXL_LOG(INFO) << "bthost: Pairing request for device: " << id;
+  bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
   // TODO(armansito): Call out to PairingDelegate FIDL interface
   confirm(true);
 }
 
 void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
                                 ConfirmCallback confirm) {
-  FXL_LOG(INFO) << "bthost: Pairing request for device: " << id;
+  bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
+  bt_log(INFO, "bt-host", "enter passkey: %06u", passkey);
 
   // TODO(armansito): Call out to PairingDelegate FIDL interface
-  FXL_LOG(INFO) << fxl::StringPrintf("bthost: Enter passkey: %06u", passkey);
-
   confirm(true);
 }
 
@@ -408,7 +410,7 @@ void HostServer::OnRemoteDeviceUpdated(
     const ::btlib::gap::RemoteDevice& remote_device) {
   auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
   if (!fidl_device) {
-    FXL_VLOG(1) << "Ignoring malformed device update";
+    bt_log(TRACE, "bt-host", "ignoring malformed device update");
     return;
   }
 

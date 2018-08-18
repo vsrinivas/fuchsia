@@ -9,6 +9,7 @@
 #include <lib/async/default.h>
 #include <zircon/status.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -62,12 +63,12 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   auto setup_handler_task = [this] {
     zx_status_t status = channel_wait_.Begin(async_get_default_dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "hci: ACLDataChannel: failed channel setup: "
-                     << zx_status_get_string(status);
+      bt_log(ERROR, "hci", "failed channel setup %s",
+             zx_status_get_string(status));
       channel_wait_.set_object(ZX_HANDLE_INVALID);
       return;
     }
-    FXL_LOG(INFO) << "hci: ACLDataChannel: started I/O handler";
+    bt_log(TRACE, "hci", "started I/O handler");
   };
 
   io_dispatcher_ = transport_->io_dispatcher();
@@ -86,7 +87,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
 
   is_initialized_ = true;
 
-  FXL_LOG(INFO) << "hci: ACLDataChannel: initialized";
+  bt_log(INFO, "hci", "initialized");
 }
 
 void ACLDataChannel::ShutDown() {
@@ -94,14 +95,14 @@ void ACLDataChannel::ShutDown() {
   if (!is_initialized_)
     return;
 
-  FXL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
+  bt_log(INFO, "hci", "shutting down");
 
   auto handler_cleanup_task = [this] {
-    FXL_LOG(INFO) << "hci: ACLDataChannel: canceling I/O handler";
+    bt_log(TRACE, "hci", "removing I/O handler");
     zx_status_t status = channel_wait_.Cancel();
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
-                       << zx_status_get_string(status);
+      bt_log(WARN, "hci", "couldn't cancel wait on channel: %s",
+             zx_status_get_string(status));
     }
   };
 
@@ -131,15 +132,14 @@ void ACLDataChannel::SetDataRxHandler(DataReceivedCallback rx_callback,
 bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet,
                                 Connection::LinkType ll_type) {
   if (!is_initialized_) {
-    FXL_VLOG(1)
-        << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    bt_log(TRACE, "hci", "cannot send packets while uninitialized");
     return false;
   }
 
   FXL_DCHECK(data_packet);
 
   if (data_packet->view().payload_size() > GetBufferMTU(ll_type)) {
-    FXL_LOG(ERROR) << "ACL data packet too large!";
+    bt_log(ERROR, "hci", "ACL data packet too large!");
     return false;
   }
 
@@ -155,20 +155,19 @@ bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet,
 bool ACLDataChannel::SendPackets(common::LinkedList<ACLDataPacket> packets,
                                  Connection::LinkType ll_type) {
   if (!is_initialized_) {
-    FXL_VLOG(1)
-        << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    bt_log(TRACE, "hci", "cannot send packets while uninitialized");
     return false;
   }
 
   if (packets.is_empty()) {
-    FXL_VLOG(1) << "hci: ACLDataChannel: No packets to send!";
+    bt_log(TRACE, "hci", "no packets to send!");
     return false;
   }
 
   // Make sure that all packets are within the MTU.
   for (const auto& packet : packets) {
     if (packet.view().payload_size() > GetBufferMTU(ll_type)) {
-      FXL_LOG(ERROR) << "ACL data packet too large!";
+      bt_log(ERROR, "hci", "ACL data packet too large!");
       return false;
     }
   }
@@ -188,8 +187,8 @@ bool ACLDataChannel::ClearLinkState(hci::ConnectionHandle handle) {
   std::lock_guard<std::mutex> lock(send_mutex_);
   auto iter = pending_links_.find(handle);
   if (iter == pending_links_.end()) {
-    FXL_VLOG(1) << "hci: No pending packets on connection (handle: " << handle
-                << ")";
+    bt_log(TRACE, "hci", "no pending packets on connection (handle: %#04x)",
+           handle);
     return false;
   }
 
@@ -239,8 +238,8 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(
 
     auto iter = pending_links_.find(le16toh(data->connection_handle));
     if (iter == pending_links_.end()) {
-      FXL_LOG(WARNING)
-          << "Controller reported sent packets on unknown connection handle!";
+      bt_log(WARN, "hci",
+             "controller reported sent packets on unknown connection handle!");
       continue;
     }
 
@@ -248,10 +247,12 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(
 
     FXL_DCHECK(iter->second.count);
     if (iter->second.count < comp_packets) {
-      FXL_LOG(WARNING) << fxl::StringPrintf(
-          "Packet tx count mismatch! (handle: 0x%04x, expected: %zu, actual : "
-          "%u)",
-          le16toh(data->connection_handle), iter->second.count, comp_packets);
+      bt_log(WARN, "hci",
+             "packet tx count mismatch! (handle: %#04x, expected: %zu, "
+             "actual : %u)",
+             le16toh(data->connection_handle), iter->second.count,
+             comp_packets);
+
       iter->second.count = 0u;
 
       // On debug builds it's better to assert and crash so that we can catch
@@ -322,9 +323,9 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
     zx_status_t status =
         channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
     if (status < 0) {
-      FXL_LOG(ERROR)
-          << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
-          << zx_status_get_string(status) << ") - dropping packet";
+      bt_log(ERROR, "hci",
+             "failed to send data packet to HCI driver (%s) - dropping packet",
+             zx_status_get_string(status));
       to_send.pop_front();
       continue;
     }
@@ -399,8 +400,7 @@ void ACLDataChannel::OnChannelReady(
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "channel error: %s", zx_status_get_string(status));
     return;
   }
 
@@ -421,7 +421,8 @@ void ACLDataChannel::OnChannelReady(
     // we allocate the largest possible buffer.
     auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
     if (!packet) {
-      FXL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
+      bt_log(ERROR, "hci",
+             "failed to allocate buffer received ACL data packet!");
       return;
     }
     uint32_t read_size;
@@ -430,18 +431,17 @@ void ACLDataChannel::OnChannelReady(
         channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
                       &read_size, nullptr, 0, nullptr);
     if (read_status < 0) {
-      FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: "
-                  << zx_status_get_string(status);
+      bt_log(TRACE, "hci", "failed to read RX bytes: %s",
+             zx_status_get_string(status));
       // Clear the handler so that we stop receiving events from it.
       // TODO(jamuraa): signal failure to the consumer so it can do something.
       return;
     }
 
     if (read_size < sizeof(ACLDataHeader)) {
-      FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed data packet - "
-                     << "expected at least " << sizeof(ACLDataHeader)
-                     << " bytes, "
-                     << "got " << read_size;
+      bt_log(ERROR, "hci",
+             "malformed data packet - expected at least %zu bytes, got %zu",
+             sizeof(ACLDataHeader), read_size);
       // TODO(jamuraa): signal stream error somehow
       continue;
     }
@@ -450,10 +450,10 @@ void ACLDataChannel::OnChannelReady(
     const size_t size_from_header =
         le16toh(packet->view().header().data_total_length);
     if (size_from_header != rx_payload_size) {
-      FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
-                     << "payload size from header (" << size_from_header << ")"
-                     << " does not match received payload size: "
-                     << rx_payload_size;
+      bt_log(ERROR, "hci",
+             "malformed packet - payload size from header (%zu) does not match"
+             " received payload size: %zu",
+             size_from_header, rx_payload_size);
       // TODO(jamuraa): signal stream error somehow
       continue;
     }
@@ -470,8 +470,7 @@ void ACLDataChannel::OnChannelReady(
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "hci: ACLDataChannel: wait error: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "wait error: %s", zx_status_get_string(status));
   }
 }
 

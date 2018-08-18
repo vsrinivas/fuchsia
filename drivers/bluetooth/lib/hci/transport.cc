@@ -45,7 +45,7 @@ bool Transport::Initialize(async_dispatcher_t* dispatcher) {
   // Obtain command channel handle.
   zx::channel channel = hci_device_->GetCommandChannel();
   if (!channel.is_valid()) {
-    FXL_LOG(ERROR) << "hci: Transport: Failed to obtain command channel handle";
+    bt_log(ERROR, "hci", "failed to obtain command channel handle");
     return false;
   }
 
@@ -76,8 +76,7 @@ bool Transport::InitializeACLDataChannel(
   // Obtain ACL data channel handle.
   zx::channel channel = hci_device_->GetACLDataChannel();
   if (!channel.is_valid()) {
-    FXL_LOG(ERROR)
-        << "hci: Transport: Failed to obtain ACL data channel handle";
+    bt_log(ERROR, "hci", "failed to obtain ACL data channel handle");
     return false;
   }
 
@@ -137,12 +136,9 @@ void Transport::ShutDown() {
   // Once |io_loop_| joins above, |io_dispatcher_| may be defunct. However,
   // the channels are allowed to keep posting tasks on it (which will never
   // execute).
-
   io_dispatcher_ = nullptr;
-
   is_initialized_ = false;
-
-  FXL_LOG(INFO) << "hci: Transport I/O loop exited";
+  bt_log(INFO, "hci", "I/O loop exited");
 }
 
 bool Transport::IsInitialized() const {
@@ -157,8 +153,8 @@ void Transport::WatchChannelClosed(const zx::channel& channel,
     wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
     zx_status_t status = wait.Begin(async_get_default_dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "hci: Transport: failed channel setup: "
-                     << zx_status_get_string(status);
+      bt_log(ERROR, "hci", "failed to set up closed handler: %s",
+             zx_status_get_string(status));
       wait.set_object(ZX_HANDLE_INVALID);
     }
   });
@@ -170,12 +166,10 @@ void Transport::OnChannelClosed(
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "hci: Transport: channel error: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "channel error: %s", zx_status_get_string(status));
   } else {
     FXL_DCHECK(signal->observed & ZX_CHANNEL_PEER_CLOSED);
   }
-
   NotifyClosedCallback();
 }
 
@@ -186,9 +180,10 @@ void Transport::NotifyClosedCallback() {
     acl_channel_wait_.Cancel();
   }
 
-  FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
-  if (closed_cb_)
+  bt_log(INFO, "hci", "channel(s) were closed");
+  if (closed_cb_) {
     async::PostTask(closed_cb_dispatcher_, closed_cb_.share());
+  }
 }
 
 }  // namespace hci

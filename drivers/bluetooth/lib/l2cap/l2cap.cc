@@ -4,6 +4,7 @@
 
 #include "l2cap.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
@@ -27,8 +28,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
       // This can only run once during initialization.
       FXL_DCHECK(!chanmgr_);
       chanmgr_ = std::make_unique<ChannelManager>(hci_, dispatcher());
-
-      FXL_VLOG(1) << "l2cap: Initialized";
+      bt_log(TRACE, "l2cap", "initialized");
     });
   }
 
@@ -39,7 +39,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
   // Called on the L2CAP runner as a result of ScheduleCleanUp().
   void CleanUp() {
     AssertOnDispatcherThread();
-    FXL_VLOG(1) << "l2cap: Shutting down";
+    bt_log(TRACE, "l2cap", "shutting down");
     chanmgr_ = nullptr;
   }
 
@@ -90,17 +90,17 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
   void OpenChannel(hci::ConnectionHandle handle, PSM psm,
                    ChannelCallback callback,
                    async_dispatcher_t* dispatcher) override {
-    FXL_LOG(WARNING) << "l2cap: OpenChannel not implemented";
+    bt_log(WARN, "l2cap", "OpenChannel not implemented");
   }
 
   bool RegisterService(PSM psm, ChannelCallback cb,
                        async_dispatcher_t* dispatcher) override {
-    FXL_LOG(WARNING) << "l2cap: RegisterService not implemented";
+    bt_log(WARN, "l2cap", "RegisterService not implemented");
     return false;
   }
 
   void UnregisterService(PSM psm) override {
-    FXL_LOG(WARNING) << "l2cap: UnregisterService not implemented";
+    bt_log(WARN, "l2cap", "UnregisterService not implemented");
   }
 
  private:

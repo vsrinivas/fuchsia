@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "server.h"
+
 #include <lib/async/default.h>
 
-#include "garnet/drivers/bluetooth/lib/sdp/server.h"
-
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "lib/fxl/functional/auto_call.h"
 
@@ -51,11 +52,11 @@ Server::Server()
 
 bool Server::AddConnection(const std::string& peer_id,
                            fbl::RefPtr<l2cap::Channel> channel) {
-  FXL_VLOG(1) << "Add connection: " << peer_id;
+  bt_log(TRACE, "sdp", "add connection: %s", peer_id.c_str());
 
   auto iter = channels_.find(peer_id);
   if (iter != channels_.end()) {
-    FXL_LOG(WARNING) << "sdp: Peer already connected: " << peer_id;
+    bt_log(WARN, "sdp", "peer already connected: %s", peer_id.c_str());
     return false;
   }
 
@@ -73,7 +74,8 @@ bool Server::AddConnection(const std::string& peer_id,
       },
       async_get_default_dispatcher());
   if (!activated) {
-    FXL_LOG(WARNING) << "sdp: Failed to activate channel: " << peer_id;
+    bt_log(WARN, "sdp", "failed to activate channel (peer: %s)",
+           peer_id.c_str());
     return false;
   }
   self->channels_.emplace(peer_id, std::move(channel));
@@ -96,17 +98,17 @@ bool Server::RegisterService(ConstructCallback callback) {
   auto failed_validation = fxl::MakeAutoCall([&] { records_.erase(next); });
   // They are not allowed to change (or remove) the ServiceRecordHandle.
   if (!record->HasAttribute(kServiceRecordHandle)) {
-    FXL_VLOG(4) << "sdp: ServiceRecordHandle was removed";
+    bt_log(SPEW, "sdp", "ServiceRecordHandle was removed");
     return false;
   }
   auto handle = record->GetAttribute(kServiceRecordHandle).Get<uint32_t>();
   if (!handle || !(*handle == next)) {
-    FXL_VLOG(4) << "sdp: ServiceRecordHandle was changed";
+    bt_log(SPEW, "sdp", "ServiceRecordHandle was changed");
     return false;
   }
   // Services must at least have a ServiceClassIDList (5.0, Vol 3, Part B, 5.1)
   if (!record->HasAttribute(kServiceClassIdList)) {
-    FXL_VLOG(4) << "sdp: New record doesn't have a ServiceClass";
+    bt_log(SPEW, "sdp", "new record doesn't have a ServiceClass");
     return false;
   }
   // Class ID list is a data element sequence in which each data element is
@@ -114,7 +116,7 @@ bool Server::RegisterService(ConstructCallback callback) {
   // conforms to. (5.0, Vol 3, Part B, 5.1.2)
   const DataElement& class_id_list = record->GetAttribute(kServiceClassIdList);
   if (class_id_list.type() != DataElement::Type::kSequence) {
-    FXL_VLOG(4) << "sdp: Class ID list isn't a sequence";
+    bt_log(SPEW, "sdp", "class ID list isn't a sequence");
     return false;
   }
   size_t idx;
@@ -122,17 +124,17 @@ bool Server::RegisterService(ConstructCallback callback) {
   for (idx = 0, elem = class_id_list.At(idx); elem != nullptr;
        elem = class_id_list.At(++idx)) {
     if (elem->type() != DataElement::Type::kUuid) {
-      FXL_VLOG(4) << "sdp: Class ID list elements are not all UUIDs";
+      bt_log(SPEW, "sdp", "class ID list elements are not all UUIDs");
       return false;
     }
   }
   if (idx == 0) {
-    FXL_VLOG(4) << "sdp: No elements in the Class ID list (need at least 1)";
+    bt_log(SPEW, "sdp", "no elements in the Class ID list (need at least 1)");
     return false;
   }
   failed_validation.cancel();
-  FXL_VLOG(3) << "sdp: Registered Service " << std::hex << next << " Classes: "
-              << record->GetAttribute(kServiceClassIdList).Describe();
+  bt_log(SPEW, "sdp", "registered service %#08x, classes: %s", next,
+         record->GetAttribute(kServiceClassIdList).Describe().c_str());
   return true;
 }
 
@@ -140,7 +142,7 @@ bool Server::UnregisterService(ServiceHandle handle) {
   if (handle == kSDPHandle || records_.find(handle) == records_.end()) {
     return false;
   }
-  FXL_VLOG(3) << "sdp: Unregistering Service " << handle;
+  bt_log(TRACE, "sdp", "unregistering service (handle: %#08x)", handle);
   records_.erase(handle);
   return true;
 }
@@ -161,7 +163,7 @@ ServiceHandle Server::GetNextHandle() {
   // Safeguard against possibly having to wrap-around and reuse handles.
   while (records_.count(next_handle_)) {
     if (next_handle_ == kLastHandle) {
-      FXL_LOG(WARNING) << "sdp: service handle wrapped to start";
+      bt_log(WARN, "sdp", "service handle wrapped to start");
       next_handle_ = kFirstUnreservedHandle;
     } else {
       next_handle_++;
@@ -180,13 +182,13 @@ void Server::OnChannelClosed(const std::string& peer_id) {
 void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
   uint16_t length = sdu.length();
   if (length < sizeof(Header)) {
-    FXL_VLOG(1) << "sdp: PDU too short, dropping";
+    bt_log(TRACE, "sdp", "PDU too short; dropping");
     return;
   }
 
   auto it = channels_.find(peer_id);
   if (it == channels_.end()) {
-    FXL_VLOG(1) << "sdp: Can't find peer to respond to, dropping";
+    bt_log(TRACE, "sdp", "can't find peer to respond to; dropping");
     return;
   }
   l2cap::SDU::Reader reader(&sdu);

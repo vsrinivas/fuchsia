@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -137,7 +138,7 @@ std::string Connection::ToString() const {
   if (ll_type() == LinkType::kLE) {
     params = ", " + le_params_.ToString();
   }
-  return fxl::StringPrintf("(%s link—handle: 0x%04x, role: %s, address: %s%s)",
+  return fxl::StringPrintf("(%s link - handle: %#04x, role: %s, address: %s%s)",
                            LinkTypeToString(ll_type_).c_str(), handle_,
                            role_ == Role::kMaster ? "master" : "slave",
                            peer_address_.ToString().c_str(), params.c_str());
@@ -212,8 +213,8 @@ void ConnectionImpl::Close(StatusCode reason) {
     FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
     const auto& params = event.view().payload<CommandStatusEventParams>();
     if (params.status != StatusCode::kSuccess) {
-      FXL_LOG(WARNING) << fxl::StringPrintf(
-          "Ignoring failed disconnection status: 0x%02x", params.status);
+      bt_log(WARN, "hci", "ignoring failed disconnection status: %#02x",
+             params.status);
     }
   };
 
@@ -232,24 +233,24 @@ void ConnectionImpl::Close(StatusCode reason) {
 bool ConnectionImpl::StartEncryption() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) {
-    FXL_VLOG(1) << "hci: connection closed; cannot start encryption";
+    bt_log(TRACE, "hci", "connection closed; cannot start encryption");
     return false;
   }
 
   if (ll_type() != LinkType::kLE) {
-    FXL_VLOG(1) << "hci: encrypting BR/EDR links not supported";
+    bt_log(TRACE, "hci", "encrypting BR/EDR links not supported");
 
     // TODO(armansito): Support this.
     return false;
   }
 
   if (role() != Role::kMaster) {
-    FXL_VLOG(1) << "hci: only the master can start encryption";
+    bt_log(TRACE, "hci", "only the master can start encryption");
     return false;
   }
 
   if (!ltk()) {
-    FXL_VLOG(1) << "hci: connection has no LTK; cannot start encryption";
+    bt_log(TRACE, "hci", "connection has no LTK; cannot start encryption");
     return false;
   }
 
@@ -278,13 +279,12 @@ bool ConnectionImpl::LEStartEncryption(const LinkKey& ltk) {
 
     Status status = event.ToStatus();
     if (status) {
-      FXL_VLOG(1) << "hci: Began LE authentication procedure";
+      bt_log(TRACE, "hci-le", "began authentication procedure");
       return;
     }
 
-    FXL_LOG(ERROR) << "hci: Failed to start LE authentication: "
-                   << status.ToString();
-
+    bt_log(ERROR, "hci", "failed to start LE authentication: %s",
+           status.ToString().c_str());
     if (self->encryption_change_callback()) {
       self->encryption_change_callback()(status, false);
     }
@@ -314,12 +314,12 @@ void ConnectionImpl::OnEncryptionChangeEvent(const EventPacket& event) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   if (!encryption_change_callback()) {
-    FXL_VLOG(1) << "hci: encryption changed event ignored";
+    bt_log(TRACE, "hci", "encryption changed event ignored");
     return;
   }
 
   if (event.view().payload_size() != sizeof(EncryptionChangeEventParams)) {
-    FXL_LOG(WARNING) << "hci: malformed encryption change event";
+    bt_log(WARN, "hci", "malformed encryption change event");
     return;
   }
 
@@ -332,15 +332,15 @@ void ConnectionImpl::OnEncryptionChangeEvent(const EventPacket& event) {
   }
 
   if (!is_open()) {
-    FXL_VLOG(1) << "hci: encryption change ignored: connection closed";
+    bt_log(TRACE, "hci", "encryption change ignored: connection closed");
     return;
   }
 
   Status status(params.status);
   bool enabled = params.encryption_enabled != 0;
 
-  FXL_VLOG(1) << "hci: encryption change (enabled: " << std::boolalpha
-              << enabled << ") " << status.ToString();
+  bt_log(TRACE, "hci", "encryption change (%s) %s",
+         enabled ? "enabled" : "disabled", status.ToString().c_str());
 
   // TODO(NET-1042): Tell the data channel to resume data flow.
 
@@ -353,13 +353,13 @@ void ConnectionImpl::OnEncryptionKeyRefreshCompleteEvent(
   FXL_DCHECK(event.event_code() == kEncryptionKeyRefreshCompleteEventCode);
 
   if (!encryption_change_callback()) {
-    FXL_VLOG(1) << "hci: encryption key refresh event ignored";
+    bt_log(TRACE, "hci", "encryption key refresh event ignored");
     return;
   }
 
   if (event.view().payload_size() !=
       sizeof(EncryptionKeyRefreshCompleteEventParams)) {
-    FXL_LOG(WARNING) << "hci: malformed encryption key refresh complete event";
+    bt_log(WARN, "hci", "malformed encryption key refresh complete event");
     return;
   }
 
@@ -373,13 +373,13 @@ void ConnectionImpl::OnEncryptionKeyRefreshCompleteEvent(
   }
 
   if (!is_open()) {
-    FXL_VLOG(1) << "hci: encryption key refresh ignored: connection closed";
+    bt_log(TRACE, "hci", "encryption key refresh ignored: connection closed");
     return;
   }
 
   Status status(params.status);
 
-  FXL_VLOG(1) << "hci: encryption key refresh " << status.ToString();
+  bt_log(TRACE, "hci", "encryption key refresh %s", status.ToString().c_str());
 
   // Report that encryption got disabled on failure status. The accuracy of this
   // isn't that important since the link will be disconnected.
@@ -394,7 +394,7 @@ void ConnectionImpl::OnLELongTermKeyRequestEvent(const EventPacket& event) {
 
   auto* params = event.le_event_params<LELongTermKeyRequestSubeventParams>();
   if (!params) {
-    FXL_LOG(WARNING) << "hci: malformed LE LTK request event";
+    bt_log(WARN, "hci", "malformed LE LTK request event");
     return;
   }
 
@@ -421,7 +421,7 @@ void ConnectionImpl::OnLELongTermKeyRequestEvent(const EventPacket& event) {
     params->connection_handle = htole16(handle);
     params->long_term_key = ltk()->value();
   } else {
-    FXL_VLOG(1) << "hci: LE LTK request rejected";
+    bt_log(TRACE, "hci-le", "LTK request rejected");
 
     cmd = CommandPacket::New(
         kLELongTermKeyRequestNegativeReply,
@@ -433,16 +433,10 @@ void ConnectionImpl::OnLELongTermKeyRequestEvent(const EventPacket& event) {
   }
 
   auto status_cb = [](auto id, const EventPacket& event) {
-    // TODO: use logging macro
-    Status status = event.ToStatus();
-    if (!status) {
-      FXL_VLOG(1) << "hci: failed to reply to LE LTK request: "
-                  << status.ToString();
-    }
+    hci_is_error(event, TRACE, "hci-le", "failed to reply to LTK request");
   };
-
-  hci_->command_channel()->SendCommand(std::move(cmd), async_get_default_dispatcher(),
-                                       std::move(status_cb));
+  hci_->command_channel()->SendCommand(
+      std::move(cmd), async_get_default_dispatcher(), std::move(status_cb));
 }
 
 }  // namespace hci

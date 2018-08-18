@@ -18,7 +18,7 @@ bool MatchUuids(const std::vector<common::UUID>& uuids,
                 const common::BufferView& data,
                 size_t uuid_size) {
   if (data.size() % uuid_size) {
-    FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed service UUIDs list";
+    bt_log(WARN, "gap", "malformed service UUIDs list");
     return false;
   }
 
@@ -79,8 +79,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(
         // The Flags field may be zero or more octets long for potential future
         // extension. We only care about the first octet.
         if (data.size() < kFlagsSizeMin) {
-          FXL_LOG(WARNING)
-              << "gap: DiscoveryFilter: Malformed Flags field received";
+          bt_log(WARN, "gap", "malformed flags field");
           break;
         }
 
@@ -96,8 +95,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(
           break;
 
         if (data.size() != kTxPowerLevelSize) {
-          FXL_LOG(WARNING)
-              << "gap: DiscoveryFilter: Malformed Tx Power Level received";
+          bt_log(WARN, "gap", "malformed tx-power level");
           break;
         }
 
@@ -109,8 +107,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(
 
         int8_t tx_power_lvl = static_cast<int8_t>(*data.data());
         if (tx_power_lvl < rssi) {
-          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level "
-                              "is less than the RSSI";
+          bt_log(WARN, "gap", "reported tx-power level is less than the RSSI");
           break;
         }
 
@@ -134,8 +131,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(
         // The first two octets of the manufacturer specific data field contains
         // the Company Identifier Code.
         if (data.size() < kManufacturerSpecificDataSizeMin) {
-          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed "
-                              "manufacturer-specific data received";
+          bt_log(WARN, "gap", "malformed manufacturer-specific data");
           break;
         }
 

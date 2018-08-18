@@ -34,7 +34,7 @@ std::string GetHostname() {
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
   if (result < 0) {
-    FXL_VLOG(1) << "gap: gethostname failed";
+    bt_log(TRACE, "gap", "gethostname failed");
     return std::string("");
   }
 
@@ -113,8 +113,8 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadLocalVersionInfo),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete,
-                           "gap: read local version info failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap",
+                         "read local version info failed")) {
           return;
         }
         auto params =
@@ -126,8 +126,8 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadLocalSupportedCommands),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete,
-                           "gap: read local supported commmands failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap",
+                         "read local supported commmands failed")) {
           return;
         }
         auto params =
@@ -141,8 +141,8 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadLocalSupportedFeatures),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete,
-                           "gap: read local supported features failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap",
+                         "read local supported features failed")) {
           return;
         }
         auto params =
@@ -155,7 +155,7 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadBDADDR),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete, "gap: read BR_ADDR failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap", "read BR_ADDR failed")) {
           return;
         }
         auto params = cmd_complete.return_params<hci::ReadBDADDRReturnParams>();
@@ -164,8 +164,9 @@ bool Adapter::Initialize(InitializeCallback callback,
 
   init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
     if (!status) {
-      FXL_LOG(ERROR) << "gap: Failed to obtain initial controller information: "
-                     << status.ToString();
+      bt_log(ERROR, "gap",
+             "Failed to obtain initial controller information: %s",
+             status.ToString().c_str());
       CleanUp();
       callback(false);
       return;
@@ -179,7 +180,7 @@ bool Adapter::Initialize(InitializeCallback callback,
 
 void Adapter::ShutDown() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_VLOG(1) << "gap: shutting down";
+  bt_log(TRACE, "gap", "adapter shutting down");
 
   if (IsInitializing()) {
     FXL_DCHECK(!init_seq_runner_->IsReady());
@@ -228,7 +229,7 @@ void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
       std::move(write_name), dispatcher_,
       [this, name = std::move(name), cb = std::move(callback)](
           auto, const hci::EventPacket& event) mutable {
-        if (!BTEV_TEST_WARN(event, "gap: set local name failed")) {
+        if (!hci_is_error(event, WARN, "gap", "set local name failed")) {
           state_.local_name_ = std::move(name);
         }
         cb(event.ToStatus());
@@ -241,7 +242,7 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
 
   // Low Energy MUST be supported. We don't support BR/EDR-only controllers.
   if (!state_.IsLowEnergySupported()) {
-    FXL_LOG(ERROR) << "gap: Bluetooth Low Energy not supported by controller";
+    bt_log(ERROR, "gap", "Bluetooth LE not supported by controller");
     CleanUp();
     callback(false);
     return;
@@ -250,8 +251,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   // Check the HCI version. We officially only support 4.2+ only but for now we
   // just log a warning message if the version is legacy.
   if (state_.hci_version() < hci::HCIVersion::k4_2) {
-    FXL_LOG(WARNING) << "gap: controller is using legacy HCI version: "
-                     << hci::HCIVersionToString(state_.hci_version());
+    bt_log(WARN, "gap", "controller is using legacy HCI version %s",
+           hci::HCIVersionToString(state_.hci_version()).c_str());
   }
 
   FXL_DCHECK(init_seq_runner_->IsReady());
@@ -263,7 +264,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
     init_seq_runner_->QueueCommand(
         hci::CommandPacket::New(hci::kReadBufferSize),
         [this](const hci::EventPacket& cmd_complete) {
-          if (BTEV_TEST_WARN(cmd_complete, "gap: read buffer size failed")) {
+          if (hci_is_error(cmd_complete, WARN, "gap",
+                           "read buffer size failed")) {
             return;
           }
           auto params =
@@ -281,8 +283,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kLEReadLocalSupportedFeatures),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete,
-                           "gap: LE read local supported features failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap",
+                         "LE read local supported features failed")) {
           return;
         }
         auto params =
@@ -295,8 +297,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kLEReadSupportedStates),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete,
-                           "gap: LE read local supported states failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap",
+                         "LE read local supported states failed")) {
           return;
         }
         auto params =
@@ -309,7 +311,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kLEReadBufferSize),
       [this](const hci::EventPacket& cmd_complete) {
-        if (BTEV_TEST_WARN(cmd_complete, "gap: LE read buffer size failed")) {
+        if (hci_is_error(cmd_complete, WARN, "gap",
+                         "LE read buffer size failed")) {
           return;
         }
         auto params =
@@ -331,7 +334,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
         ->mutable_payload<hci::WriteSimplePairingModeCommandParams>()
         ->simple_pairing_mode = hci::GenericEnableParam::kEnable;
     init_seq_runner_->QueueCommand(std::move(write_ssp), [](const auto& event) {
-      BTEV_TEST_WARN(event, "gap: write simple pairing mode failed");
+      // Warn if the command failed
+      hci_is_error(event, WARN, "gap", "write simple pairing mode failed");
     });
   }
 
@@ -353,8 +357,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
 
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [this](const hci::EventPacket& cmd_complete) {
-          if (BTEV_TEST_WARN(cmd_complete,
-                             "gap: read local extended features failed")) {
+          if (hci_is_error(cmd_complete, WARN, "gap",
+                           "read local extended features failed")) {
             return;
           }
           auto params =
@@ -365,18 +369,17 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
         });
   }
 
-  init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
-    if (!status) {
-      FXL_LOG(ERROR)
-          << "gap: Failed to obtain initial controller information (step 2): "
-          << status.ToString();
-      CleanUp();
-      callback(false);
-      return;
-    }
-
-    InitializeStep3(std::move(callback));
-  });
+  init_seq_runner_->RunCommands(
+      [callback = std::move(callback), this](hci::Status status) mutable {
+        if (bt_is_error(
+                status, ERROR, "gap",
+                "failed to obtain initial controller information (step 2)")) {
+          CleanUp();
+          callback(false);
+          return;
+        }
+        InitializeStep3(std::move(callback));
+      });
 }
 
 void Adapter::InitializeStep3(InitializeCallback callback) {
@@ -385,7 +388,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
 
   if (!state_.bredr_data_buffer_info().IsAvailable() &&
       !state_.low_energy_state().data_buffer_info().IsAvailable()) {
-    FXL_LOG(ERROR) << "gap: Both BR/EDR and LE buffers are unavailable";
+    bt_log(ERROR, "gap", "Both BR/EDR and LE buffers are unavailable");
     CleanUp();
     callback(false);
     return;
@@ -396,7 +399,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
   if (!hci_->InitializeACLDataChannel(
           state_.bredr_data_buffer_info(),
           state_.low_energy_state().data_buffer_info())) {
-    FXL_LOG(ERROR) << "gap: Failed to initialize ACLDataChannel (step 3)";
+    bt_log(ERROR, "gap", "Failed to initialize ACLDataChannel (step 3)");
     CleanUp();
     callback(false);
     return;
@@ -415,7 +418,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
         ->event_mask = htole64(event_mask);
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [](const auto& event) {
-          BTEV_TEST_WARN(event, "gap: set event mask failed");
+          hci_is_error(event, WARN, "gap", "set event mask failed");
         });
   }
 
@@ -429,7 +432,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
         ->le_event_mask = htole64(event_mask);
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [](const auto& event) {
-          BTEV_TEST_WARN(event, "gap: LE set event mask failed");
+          hci_is_error(event, WARN, "gap", "LE set event mask failed");
         });
   }
 
@@ -446,7 +449,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     params->simultaneous_le_host = 0x00;  // note: ignored
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [](const auto& event) {
-          BTEV_TEST_WARN(event, "gap: write LE host support failed");
+          hci_is_error(event, WARN, "gap", "write LE host support failed");
         });
   }
 
@@ -465,8 +468,8 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     // HCI_Read_Local_Extended_Features
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [this](const hci::EventPacket& cmd_complete) {
-          if (BTEV_TEST_WARN(cmd_complete,
-                             "gap: read local extended features failed")) {
+          if (hci_is_error(cmd_complete, WARN, "gap",
+                           "read local extended features failed")) {
             return;
           }
           auto params =
@@ -477,18 +480,17 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
         });
   }
 
-  init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
-    if (!status) {
-      FXL_LOG(ERROR)
-          << "gap: Failed to obtain initial controller info (step 3): "
-          << status.ToString();
-      CleanUp();
-      callback(false);
-      return;
-    }
-
-    InitializeStep4(std::move(callback));
-  });
+  init_seq_runner_->RunCommands(
+      [callback = std::move(callback), this](hci::Status status) mutable {
+        if (bt_is_error(
+                status, ERROR, "gap",
+                "failed to obtain initial controller information (step 3)")) {
+          CleanUp();
+          callback(false);
+          return;
+        }
+        InitializeStep4(std::move(callback));
+      });
 }
 
 void Adapter::InitializeStep4(InitializeCallback callback) {
@@ -497,12 +499,11 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
   // Initialize the scan manager based on current feature support.
   if (state_.low_energy_state().IsFeatureSupported(
           hci::LESupportedFeature::kLEExtendedAdvertising)) {
-    FXL_LOG(INFO) << "gap: controller supports extended advertising";
-    FXL_LOG(INFO) << "gap: host doesn't support 5.0 extended features, "
-                     "defaulting to legacy procedures.";
+    bt_log(INFO, "gap", "controller supports extended advertising");
 
     // TODO(armansito): Initialize |hci_le_*| objects here with extended-mode
     // versions.
+    bt_log(WARN, "gap", "5.0 not yet supported; using legacy mode");
   }
 
   // Called by |hci_le_connector_| when a connection was created due to an
@@ -635,7 +636,7 @@ void Adapter::CleanUp() {
 }
 
 void Adapter::OnTransportClosed() {
-  FXL_LOG(INFO) << "gap: HCI transport was closed";
+  bt_log(INFO, "gap", "HCI transport was closed");
   if (transport_closed_cb_)
     transport_closed_cb_();
 }

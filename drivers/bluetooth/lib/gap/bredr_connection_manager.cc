@@ -4,6 +4,7 @@
 
 #include "bredr_connection_manager.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
@@ -21,7 +22,7 @@ void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   auto finish_enable_cb = [enabled, dispatcher, hci, finish_cb = std::move(cb)](
                               auto, const hci::EventPacket& event) mutable {
-    if (BTEV_TEST_WARN(event, "gap (BR/EDR): Read Scan Enable failed")) {
+    if (hci_is_error(event, WARN, "gap-bredr", "read scan enable failed")) {
       finish_cb(event.ToStatus());
       return;
     }
@@ -133,9 +134,8 @@ void BrEdrConnectionManager::SetConnectable(bool connectable,
   WritePageScanSettings(
       hci::kPageScanR1Interval, hci::kPageScanR1Window, use_interlaced_scan_,
       [self, cb = std::move(status_cb)](const auto& status) mutable {
-        if (!status) {
-          FXL_LOG(WARNING) << "gap (BR/EDR): Write Page Scan Settings failed: "
-                           << status.ToString();
+        if (bt_is_error(status, WARN, "gap-bredr",
+                        "Write Page Scan Settings failed")) {
           cb(status);
           return;
         }
@@ -176,16 +176,15 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
   hci_cmd_runner_->QueueCommand(
       std::move(write_activity),
       [self, interval, window](const hci::EventPacket& event) {
-        if (BTEV_TEST_WARN(event,
-                           "gap (BR/EDR): write page scan activity failed")) {
+        if (!self || hci_is_error(event, WARN, "gap-bredr",
+                                  "write page scan activity failed")) {
           return;
         }
-        if (!self) {
-          return;
-        }
+
         self->page_scan_interval_ = interval;
         self->page_scan_window_ = window;
-        FXL_VLOG(2) << "gap (BR/EDR): page scan activity updated";
+
+        bt_log(SPEW, "gap-bredr", "page scan activity updated");
       });
 
   auto write_type = hci::CommandPacket::New(
@@ -198,16 +197,15 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
 
   hci_cmd_runner_->QueueCommand(
       std::move(write_type), [self, interlaced](const hci::EventPacket& event) {
-        if (BTEV_TEST_WARN(event,
-                           "gap (BR/EDR): write page scan type failed")) {
+        if (!self || hci_is_error(event, WARN, "gap-bredr",
+                                  "write page scan type failed")) {
           return;
         }
-        if (!self) {
-          return;
-        }
+
         self->page_scan_type_ = (interlaced ? hci::PageScanType::kInterlacedScan
                                             : hci::PageScanType::kStandardScan);
-        FXL_VLOG(2) << "gap (BR/EDR): page scan type updated";
+
+        bt_log(SPEW, "gap-bredr", "page scan type updated");
       });
 
   hci_cmd_runner_->RunCommands(std::move(cb));
@@ -220,14 +218,16 @@ void BrEdrConnectionManager::OnConnectionRequest(
       event.view().payload<hci::ConnectionRequestEventParams>();
   std::string link_type_str =
       params.link_type == hci::LinkType::kACL ? "ACL" : "(e)SCO";
-  FXL_VLOG(1) << "gap (BR/EDR): " << link_type_str << " conn request from "
-              << params.bd_addr.ToString() << "("
-              << params.class_of_device.ToString() << ")";
+
+  bt_log(TRACE, "gap-bredr", "%s conn request from %s (%s)",
+         link_type_str.c_str(), params.bd_addr.ToString().c_str(),
+         params.class_of_device.ToString().c_str());
+
   if (params.link_type == hci::LinkType::kACL) {
     // Accept the connection, performing a role switch. We receive a
     // Connection Complete event when the connection is complete, and finish
     // the link then.
-    FXL_LOG(INFO) << "gap (BR/EDR): accept incoming connection";
+    bt_log(INFO, "gap-bredr", "accept incoming connection");
 
     auto accept = hci::CommandPacket::New(
         hci::kAcceptConnectionRequest,
@@ -244,7 +244,7 @@ void BrEdrConnectionManager::OnConnectionRequest(
   }
 
   // Reject this connection.
-  FXL_LOG(INFO) << "gap (BR/EDR): reject unsupported connection";
+  bt_log(INFO, "gap-bredr", "reject unsupported connection");
 
   auto reject = hci::CommandPacket::New(
       hci::kRejectConnectionRequest,
@@ -264,11 +264,11 @@ void BrEdrConnectionManager::OnConnectionComplete(
   FXL_DCHECK(event.event_code() == hci::kConnectionCompleteEventCode);
   const auto& params =
       event.view().payload<hci::ConnectionCompleteEventParams>();
-  FXL_VLOG(1) << "gap (BR/EDR): " << params.bd_addr.ToString()
-              << fxl::StringPrintf(
-                     " connection complete (status: 0x%02x handle: 0x%04x)",
-                     params.status, params.connection_handle);
-  if (BTEV_TEST_WARN(event, "gap (BR/EDR):  connection error")) {
+  bt_log(TRACE, "gap-bredr",
+         "%s connection complete (status %#02x, handle: %#04x)",
+         params.bd_addr.ToString().c_str(), params.status,
+         params.connection_handle);
+  if (hci_is_error(event, WARN, "gap-bredr", "connection error")) {
     return;
   }
   common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
@@ -294,15 +294,13 @@ void BrEdrConnectionManager::OnConnectionComplete(
       device->identifier(), std::move(conn_ptr),
       [device, self = weak_ptr_factory_.GetWeakPtr()](auto status,
                                                       auto conn_ptr) {
-        if (BT_TEST_WARN(
-                status,
-                "gap (BR/EDR): interrogate failed, dropping connection")) {
+        if (bt_is_error(status, WARN, "gap-bredr",
+                        "interrogate failed, dropping connection")) {
           return;
         }
 
-        FXL_VLOG(2) << fxl::StringPrintf(
-            "gap (BR/EDR): interrogation complete for 0x%04x",
-            conn_ptr->handle());
+        bt_log(SPEW, "gap-bredr", "interrogation complete for %#04x",
+               conn_ptr->handle());
 
         self->connections_.emplace(device->identifier(), std::move(conn_ptr));
         // TODO(NET-406, NET-407): set up the L2CAP signalling channel and
@@ -317,10 +315,8 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
       event.view().payload<hci::DisconnectionCompleteEventParams>();
 
   hci::ConnectionHandle handle = le16toh(params.connection_handle);
-  if (BTEV_TEST_WARN(
-          event,
-          fxl::StringPrintf(
-              "gap (BR/EDR): HCI disconnection error handle 0x%04x", handle))) {
+  if (hci_is_error(event, WARN, "gap-bredr",
+                   "HCI disconnection error handle %#04x", handle)) {
     return;
   }
 
@@ -329,18 +325,16 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
       [handle](const auto& p) { return (p.second->handle() == handle); });
 
   if (it == connections_.end()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "gap (BR/EDR): disconnect from unknown handle 0x%04x", handle);
+    bt_log(TRACE, "gap-bredr", "disconnect from unknown handle %#04x", handle);
     return;
   }
   std::string device = it->first;
   auto conn = std::move(it->second);
   connections_.erase(it);
 
-  FXL_LOG(INFO) << fxl::StringPrintf(
-      "gap (BR/EDR): %s disconnected - %s, handle: 0x%04x, reason: 0x%02x",
-      device.c_str(), event.ToStatus().ToString().c_str(), handle,
-      params.reason);
+  bt_log(INFO, "gap-bredr",
+         "%s disconnected - %s, handle: %#04x, reason: %#02x", device.c_str(),
+         event.ToStatus().ToString().c_str(), handle, params.reason);
 
   // TODO(NET-406): Inform L2CAP that the connection has been disconnected.
 
@@ -379,8 +373,8 @@ void BrEdrConnectionManager::OnUserConfirmationRequest(
   const auto& params =
       event.view().payload<hci::UserConfirmationRequestEventParams>();
 
-  FXL_LOG(INFO) << "gap (BR/EDR): auto-confirming to " << params.bd_addr << " ("
-                << params.numeric_value << ")";
+  bt_log(INFO, "gap-bredr", "auto-confirming pairing from %s (%lu)",
+         params.bd_addr.ToString().c_str(), params.numeric_value);
 
   // TODO(jamuraa, NET-882): if we are not NoInput/NoOutput then we need to ask
   // the pairing delegate.  This currently will auto accept any pairing

@@ -4,6 +4,7 @@
 
 #include "client.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "lib/fxl/logging.h"
 
@@ -23,9 +24,8 @@ namespace {
 common::MutableByteBufferPtr NewPDU(size_t param_size) {
   auto pdu = common::NewSlabBuffer(sizeof(att::Header) + param_size);
   if (!pdu) {
-    FXL_VLOG(1) << "att: Out of memory";
+    bt_log(TRACE, "att", "out of memory");
   }
-
   return pdu;
 }
 
@@ -40,7 +40,7 @@ bool ProcessDescriptorDiscoveryResponse(
   FXL_DCHECK(out_last_handle);
 
   if (entries.size() % sizeof(EntryType)) {
-    FXL_VLOG(1) << "gatt:: Malformed information data list!";
+    bt_log(TRACE, "gatt", "malformed information data list");
     return false;
   }
 
@@ -54,16 +54,16 @@ bool ProcessDescriptorDiscoveryResponse(
     // Stop and report an error if the server erroneously responds with
     // an attribute outside the requested range.
     if (desc.handle > range_end || desc.handle < range_start) {
-      FXL_VLOG(1) << fxl::StringPrintf(
-          "gatt: Descriptor handle out of range (handle: 0x%04x, "
-          "range: 0x%04x - 0x%04x)",
-          desc.handle, range_start, range_end);
+      bt_log(TRACE, "gatt",
+             "descriptor handle out of range (handle: %#04x, "
+             "range: %#04x - %#04x)",
+             desc.handle, range_start, range_end);
       return false;
     }
 
     // The handles must be strictly increasing.
     if (last_handle != range_end && desc.handle <= last_handle) {
-      FXL_VLOG(1) << "gatt: descriptor handles are not strictly increasing!";
+      bt_log(TRACE, "gatt", "descriptor handles not strictly increasing");
       return false;
     }
 
@@ -94,7 +94,7 @@ class Impl final : public Client {
 
       if (pdu.payload_size() < sizeof(att::NotificationParams)) {
         // Received a malformed notification. Disconnect the link.
-        FXL_VLOG(1) << "gatt: malformed notification/indication PDU";
+        bt_log(TRACE, "gatt", "malformed notification/indication PDU");
         att_->ShutDown();
         return;
       }
@@ -121,7 +121,7 @@ class Impl final : public Client {
             is_ind, handle,
             BufferView(params.value, pdu.payload_size() - sizeof(att::Handle)));
       } else {
-        FXL_VLOG(2) << "gatt: notification/indication dropped without handler";
+        bt_log(SPEW, "gatt", "dropped notification/indication without handler");
       }
     };
 
@@ -182,14 +182,15 @@ class Impl final : public Client {
           // (Vol 3, Part G, 4.3.1)"
           if (status.is_protocol_error() &&
               status.protocol_error() == att::ErrorCode::kRequestNotSupported) {
-            FXL_VLOG(1)
-                << "gatt: Peer does not support MTU exchange: using default";
+            bt_log(TRACE, "gatt",
+                   "peer does not support MTU exchange: using default");
             att_->set_mtu(att::kLEMinMTU);
             mtu_cb(status, att::kLEMinMTU);
             return;
           }
 
-          FXL_VLOG(1) << "gatt: Exchange MTU failed: " << status.ToString();
+          bt_log(TRACE, "gatt", "MTU exchange failed: %s",
+                 status.ToString().c_str());
           mtu_cb(status, 0);
         });
 
@@ -227,7 +228,7 @@ class Impl final : public Client {
 
       if (rsp.payload_size() < sizeof(att::ReadByGroupTypeResponseParams)) {
         // Received malformed response. Disconnect the link.
-        FXL_VLOG(1) << "gatt: Received malformed Read By Group Type response";
+        bt_log(TRACE, "gatt", "received malformed Read By Group Type response");
         att_->ShutDown();
         res_cb(att::Status(HostError::kPacketMalformed));
         return;
@@ -245,7 +246,7 @@ class Impl final : public Client {
           sizeof(att::AttributeGroupDataEntry) + sizeof(att::AttributeType128);
 
       if (entry_length != kAttrDataSize16 && entry_length != kAttrDataSize128) {
-        FXL_VLOG(1) << "gatt: Invalid attribute data length!";
+        bt_log(TRACE, "gatt", "invalid attribute data length");
         att_->ShutDown();
         res_cb(att::Status(HostError::kPacketMalformed));
         return;
@@ -254,7 +255,7 @@ class Impl final : public Client {
       BufferView attr_data_list(rsp_params.attribute_data_list,
                                 rsp.payload_size() - 1);
       if (attr_data_list.size() % entry_length) {
-        FXL_VLOG(1) << "gatt: Malformed attribute data list!";
+        bt_log(TRACE, "gatt", "malformed attribute data list");
         att_->ShutDown();
         res_cb(att::Status(HostError::kPacketMalformed));
         return;
@@ -269,7 +270,7 @@ class Impl final : public Client {
         service.range_end = le16toh(entry.group_end_handle);
 
         if (service.range_end < service.range_start) {
-          FXL_VLOG(1) << "gatt: Received malformed service range values!";
+          bt_log(TRACE, "gatt", "received malformed service range values");
           res_cb(att::Status(HostError::kPacketMalformed));
           return;
         }
@@ -347,7 +348,7 @@ class Impl final : public Client {
           FXL_DCHECK(rsp.opcode() == att::kReadByTypeResponse);
 
           if (rsp.payload_size() < sizeof(att::ReadByTypeResponseParams)) {
-            FXL_VLOG(1) << "gatt: Received malformed Read By Type response";
+            bt_log(TRACE, "gatt", "received malformed Read By Type response");
             att_->ShutDown();
             res_cb(att::Status(HostError::kPacketMalformed));
             return;
@@ -374,7 +375,7 @@ class Impl final : public Client {
 
           if (entry_length != kAttributeDataSize16 &&
               entry_length != kAttributeDataSize128) {
-            FXL_VLOG(1) << "gatt: Invalid attribute data length!";
+            bt_log(TRACE, "gatt", "invalid attribute data length");
             att_->ShutDown();
             res_cb(att::Status(HostError::kPacketMalformed));
             return;
@@ -383,7 +384,7 @@ class Impl final : public Client {
           BufferView attr_data_list(rsp_params.attribute_data_list,
                                     rsp.payload_size() - 1);
           if (attr_data_list.size() % entry_length) {
-            FXL_VLOG(1) << "gatt: Malformed attribute data list!";
+            bt_log(TRACE, "gatt", "malformed attribute data list");
             att_->ShutDown();
             res_cb(att::Status(HostError::kPacketMalformed));
             return;
@@ -402,7 +403,7 @@ class Impl final : public Client {
             // Vol 3, Part G, 3.3: "The Characteristic Value declaration shall
             // exist immediately following the characteristic declaration."
             if (chrc.value_handle != chrc.handle + 1) {
-              FXL_VLOG(1) << "gatt: Characteristic value doesn't follow decl";
+              bt_log(TRACE, "gatt", "characteristic value doesn't follow decl");
               res_cb(att::Status(HostError::kPacketMalformed));
               return;
             }
@@ -410,10 +411,10 @@ class Impl final : public Client {
             // Stop and report an error if the server erroneously responds with
             // an attribute outside the requested range.
             if (chrc.handle > range_end || chrc.handle < range_start) {
-              FXL_VLOG(1) << fxl::StringPrintf(
-                  "gatt: Characteristic handle out of range (handle: 0x%04x, "
-                  "range: 0x%04x - 0x%04x)",
-                  chrc.handle, range_start, range_end);
+              bt_log(TRACE, "gatt",
+                     "characteristic handle out of range (handle: %#04x, "
+                     "range: %#04x - %#04x)",
+                     chrc.handle, range_start, range_end);
               res_cb(att::Status(HostError::kPacketMalformed));
               return;
             }
@@ -421,7 +422,7 @@ class Impl final : public Client {
             // The handles must be strictly increasing. Check this so that a
             // server cannot fool us into sending requests forever.
             if (last_handle != range_end && chrc.handle <= last_handle) {
-              FXL_VLOG(1) << "gatt: Handles are not strictly increasing!";
+              bt_log(TRACE, "gatt", "handles are not strictly increasing");
               res_cb(att::Status(HostError::kPacketMalformed));
               return;
             }
@@ -495,7 +496,7 @@ class Impl final : public Client {
       FXL_DCHECK(rsp.opcode() == att::kFindInformationResponse);
 
       if (rsp.payload_size() < sizeof(att::FindInformationResponseParams)) {
-        FXL_VLOG(1) << "gatt: received malformed \"Find Information\" response";
+        bt_log(TRACE, "gatt", "received malformed Find Information response");
         att_->ShutDown();
         res_cb(att::Status(HostError::kPacketMalformed));
         return;
@@ -517,7 +518,7 @@ class Impl final : public Client {
               range_start, range_end, entries, desc_cb.share(), &last_handle);
           break;
         default:
-          FXL_VLOG(1) << "gatt: invalid information data format";
+          bt_log(TRACE, "gatt", "invalid information data format");
           result = false;
           break;
       }
@@ -573,10 +574,11 @@ class Impl final : public Client {
           callback(att::Status(), rsp.payload_data());
         });
 
-    auto error_cb = BindErrorCallback(
-        [this, callback = callback.share()](att::Status status, att::Handle handle) {
-          FXL_VLOG(1) << "gatt: Read request failed: " << status.ToString()
-                      << ", handle: " << handle;
+    auto error_cb =
+        BindErrorCallback([this, callback = callback.share()](
+                              att::Status status, att::Handle handle) {
+          bt_log(TRACE, "gatt", "read request failed: %s, handle %#04x",
+                 status.ToString().c_str(), handle);
           callback(status, BufferView());
         });
 
@@ -608,8 +610,8 @@ class Impl final : public Client {
     auto error_cb =
         BindErrorCallback([this, callback = callback.share()](
                               att::Status status, att::Handle handle) {
-          FXL_VLOG(1) << "gatt: Read blob request failed: " << status.ToString()
-                      << ", handle: " << handle;
+          bt_log(TRACE, "gatt", "read blob request failed: %s, handle: %#04x",
+                 status.ToString().c_str(), handle);
           callback(status, BufferView());
         });
 
@@ -624,7 +626,7 @@ class Impl final : public Client {
                     StatusCallback callback) override {
     const size_t payload_size = sizeof(att::WriteRequestParams) + value.size();
     if (sizeof(att::OpCode) + payload_size > att_->mtu()) {
-      FXL_VLOG(2) << "gatt: write request payload exceeds MTU";
+      bt_log(SPEW, "gatt", "write request payload exceeds MTU");
       callback(att::Status(HostError::kPacketMalformed));
       return;
     }
@@ -655,10 +657,11 @@ class Impl final : public Client {
       callback(att::Status());
     });
 
-    auto error_cb = BindErrorCallback(
-        [this, callback = callback.share()](att::Status status, att::Handle handle) {
-          FXL_VLOG(1) << "gatt: Write request failed: " << status.ToString()
-                      << ", handle: " << handle;
+    auto error_cb =
+        BindErrorCallback([this, callback = callback.share()](
+                              att::Status status, att::Handle handle) {
+          bt_log(TRACE, "gatt", "write request failed: %s, handle: %#02x",
+                 status.ToString().c_str(), handle);
           callback(status);
         });
 
@@ -671,7 +674,7 @@ class Impl final : public Client {
                             const common::ByteBuffer& value) override {
     const size_t payload_size = sizeof(att::WriteRequestParams) + value.size();
     if (sizeof(att::OpCode) + payload_size > att_->mtu()) {
-      FXL_VLOG(2) << "gatt: write request payload exceeds MTU";
+      bt_log(SPEW, "gatt", "write request payload exceeds MTU");
       return;
     }
 

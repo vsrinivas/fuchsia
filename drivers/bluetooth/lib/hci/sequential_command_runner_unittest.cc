@@ -4,6 +4,7 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
@@ -268,7 +269,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   // canceling a sequence from a CommandCompleteCallback.
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode),
                           [&](const EventPacket& event) {
-                            FXL_VLOG(4) << "test: callback called";
+                            bt_log(SPEW, "hci-test", "callback called");
                             cmd_runner.Cancel();
                             EXPECT_TRUE(cmd_runner.IsReady());
                             EXPECT_FALSE(cmd_runner.HasQueuedCommands());

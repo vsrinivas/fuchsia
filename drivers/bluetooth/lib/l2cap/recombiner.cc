@@ -4,6 +4,7 @@
 
 #include "recombiner.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 
 namespace btlib {
@@ -33,12 +34,12 @@ bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
   } else {
     if (fragment->packet_boundary_flag() !=
         hci::ACLPacketBoundaryFlag::kContinuingFragment) {
-      FXL_VLOG(2) << "Expected continuing fragment!";
+      bt_log(SPEW, "l2cap", "expected continuing fragment!");
       return false;
     }
 
     if (cur_length_ + fragment->view().payload_size() > frame_length_) {
-      FXL_VLOG(2) << "Continuing fragment too long!";
+      bt_log(SPEW, "l2cap", "continuing fragment too long!");
       return false;
     }
   }
@@ -82,7 +83,7 @@ bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {
   if (fragment.packet_boundary_flag() ==
           hci::ACLPacketBoundaryFlag::kContinuingFragment ||
       fragment.view().payload_size() < sizeof(BasicHeader)) {
-    FXL_VLOG(2) << "Bad first fragment";
+    bt_log(SPEW, "l2cap", "bad first fragment");
     return false;
   }
 
@@ -90,7 +91,7 @@ bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {
       le16toh(GetBasicHeader(fragment).length) + sizeof(BasicHeader);
 
   if (fragment.view().payload_size() > frame_length) {
-    FXL_VLOG(2) << "Fragment too long!";
+    bt_log(SPEW, "l2cap", "fragment too long!");
     return false;
   }
 

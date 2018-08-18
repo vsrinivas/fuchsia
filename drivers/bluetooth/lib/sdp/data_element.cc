@@ -9,6 +9,8 @@
 #include <set>
 #include <vector>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
+
 namespace btlib {
 
 using common::MutableByteBuffer;
@@ -481,8 +483,8 @@ size_t DataElement::WriteSize() const {
 
 size_t DataElement::Write(MutableByteBuffer* buffer) const {
   if (buffer->size() < WriteSize()) {
-    FXL_VLOG(4) << "sdp: DataElement: not enough space in buffer ("
-                << buffer->size() << " < " << WriteSize() << ")";
+    bt_log(SPEW, "sdp", "not enough space in buffer (%zu < %zu)",
+           buffer->size(), WriteSize());
     return 0;
   }
 
@@ -653,7 +655,7 @@ std::string DataElement::Describe() const {
       out << "}";
       return out.str();
     default:
-      FXL_VLOG(2) << "Unhandled type in Describe()";
+      bt_log(SPEW, "sdp", "unhandled type in Describe()");
       // Fallthrough to unknown.
   }
 

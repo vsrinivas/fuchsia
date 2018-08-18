@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
@@ -135,7 +136,7 @@ void LowEnergyConnector::CancelInternal(bool timed_out) {
   FXL_DCHECK(request_pending());
 
   if (pending_request_->canceled) {
-    FXL_LOG(WARNING) << "Connection attempt already canceled!";
+    bt_log(WARN, "hci-le", "connection attempt already canceled!");
     return;
   }
 
@@ -149,20 +150,9 @@ void LowEnergyConnector::CancelInternal(bool timed_out) {
 
   request_timeout_task_.Cancel();
 
-  auto self = weak_ptr_factory_.GetWeakPtr();
-  auto complete_cb = [self](auto id, const EventPacket& event) {
-    if (!self) {
-      return;
-    }
-
-    Status status = event.ToStatus();
-    if (!status) {
-      FXL_LOG(WARNING) << "Failed to cancel connection request - status: "
-                       << status.ToString();
-      return;
-    }
+  auto complete_cb = [](auto id, const EventPacket& event) {
+    hci_is_error(event, WARN, "hci-le", "failed to cancel connection request");
   };
-
   auto cancel = CommandPacket::New(kLECreateConnectionCancel);
   hci_->command_channel()->SendCommand(std::move(cancel), dispatcher_,
                                        complete_cb);
@@ -195,9 +185,9 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
       }
       OnCreateConnectionComplete(status, nullptr);
     } else {
-      FXL_LOG(WARNING)
-          << "Unexpected LE Connection Complete event with error received: "
-          << status.ToString();
+      bt_log(WARN, "hci-le",
+             "unexpected connection complete event with error received: %s",
+             status.ToString().c_str());
     }
     return;
   }
@@ -254,7 +244,7 @@ void LowEnergyConnector::OnCreateConnectionComplete(Status status,
 
 void LowEnergyConnector::OnCreateConnectionTimeout() {
   FXL_DCHECK(pending_request_);
-  FXL_LOG(INFO) << "LE Create Connection timed out: canceling request";
+  bt_log(INFO, "hci-le", "create connection timed out: canceling request");
 
   // TODO(armansito): This should cancel the connection attempt only if the
   // connection attempt isn't using the white list.

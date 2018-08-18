@@ -4,7 +4,7 @@
 
 #include "garnet/drivers/bluetooth/lib/l2cap/bredr_signaling_channel.h"
 
-#include "lib/fxl/strings/string_printf.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 #include <zircon/compiler.h>
 
@@ -65,8 +65,7 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
   // "Multiple commands may be sent in a single C-frame over Fixed Channel CID
   // 0x0001 (ACL-U) (v5.0, Vol 3, Part A, Section 4)"
   if (sdu.length() < sizeof(CommandHeader)) {
-    FXL_VLOG(1)
-        << "l2cap: SignalingChannel: dropped malformed ACL signaling packet";
+    bt_log(TRACE, "l2cap-bredr", "sig: dropped malformed ACL signaling packet");
     return;
   }
 
@@ -84,10 +83,9 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
           size_t remaining_sdu_length =
               sdu_data.size() - sdu_offset - sizeof(CommandHeader);
           if (remaining_sdu_length < expected_payload_length) {
-            FXL_VLOG(1) << fxl::StringPrintf(
-                "l2cap: SignalingChannel: expected more bytes in packet (%zu < "
-                "%u); drop",
-                remaining_sdu_length, expected_payload_length);
+            bt_log(TRACE, "l2cap-bredr",
+                   "sig: expected more bytes (%zu < %u); drop",
+                   remaining_sdu_length, expected_payload_length);
             SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                               common::BufferView());
             return;
@@ -101,10 +99,10 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
         }
 
         if (sdu_offset != sdu_data.size()) {
-          FXL_VLOG(1) << "l2cap: SignalingChannel: incomplete packet header "
-                         "(expected: "
-                      << sizeof(CommandHeader)
-                      << ", left: " << sdu_data.size() - sdu_offset << ")";
+          bt_log(TRACE, "l2cap-bredr",
+                 "sig: incomplete packet header "
+                 "(expected: %zu, left: %zu)",
+                 sizeof(CommandHeader), sdu_data.size() - sdu_offset);
         }
       };
 
@@ -126,9 +124,8 @@ bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
     return true;
   }
 
-  FXL_VLOG(1) << fxl::StringPrintf(
-      "l2cap: BR/EDR sig: Ignoring unsupported code %#04x",
-      packet.header().code);
+  bt_log(TRACE, "l2cap-bredr", "sig: ignoring unsupported code %#04x",
+         packet.header().code);
 
   return false;
 }
@@ -151,10 +148,10 @@ CommandId BrEdrSignalingChannel::EnqueueResponse(CommandCode expected_code,
     id = GetNextCommandId();
 
     if (id == initial_id) {
-      FXL_LOG(ERROR) << fxl::StringPrintf(
-          "l2cap: BR/EDR sig: all valid command IDs in use for pending "
-          " requests; can't queue expected response command %#04x",
-          expected_code);
+      bt_log(ERROR, "l2cap-bredr",
+             "sig: all valid command IDs in use for "
+             "pending requests; can't queue expected response command %#04x",
+             expected_code);
       return kInvalidCommandId;
     }
   }
@@ -185,10 +182,8 @@ bool BrEdrSignalingChannel::IsCommandPending(CommandId id) const {
 void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
   auto iter = pending_commands_.find(packet.header().id);
   if (iter == pending_commands_.end()) {
-    FXL_VLOG(2) << fxl::StringPrintf(
-        "l2cap: BR/EDR sig: Ignoring unexpected response, id %#04x",
-        packet.header().id);
-
+    bt_log(SPEW, "l2cap-bredr", "sig: ignoring unexpected response, id %#04x",
+           packet.header().id);
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
     return;
@@ -200,10 +195,9 @@ void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
   } else if (packet.header().code == kCommandRejectCode) {
     status = Status::kReject;
   } else {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "l2cap: BR/EDR sig: Response (id %#04x) has unexpected code %#04x",
-        packet.header().id, packet.header().code);
-
+    bt_log(ERROR, "l2cap-bredr",
+           "sig: response (id %#04x) has unexpected code %#04x",
+           packet.header().id, packet.header().code);
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
     return;

@@ -76,8 +76,8 @@ void LogMessage(const char* file, int line, LogSeverity severity,
     fx_logger_logf(fx_log_get_logger(), LogSeverityToFxLog(severity), tag,
                    "[%s(%d)]: %s", StripPath(file), line, msg.c_str());
   } else {
-    driver_printf(LogSeverityToDdkLog(severity), "[%s - %s(%d)] %s: %s\n", tag,
-                  StripPath(file), line, LogSeverityToString(severity),
+    driver_printf(LogSeverityToDdkLog(severity), "[%s:%s(%d)] %s: %s\n",
+                  LogSeverityToString(severity), StripPath(file), line, tag,
                   msg.c_str());
   }
 }

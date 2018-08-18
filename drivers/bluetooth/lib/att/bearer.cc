@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
@@ -242,7 +243,7 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
   FXL_DCHECK(is_open());
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  FXL_VLOG(1) << "att: Bearer shutting down";
+  bt_log(TRACE, "att", "bearer shutting down");
 
   rx_task_.Cancel();
   chan_closed_cb_.Cancel();
@@ -289,12 +290,12 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
                           ErrorCallback error_callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) {
-    FXL_VLOG(2) << "att: Bearer closed";
+    bt_log(SPEW, "att", "bearer closed; cannot send packet");
     return false;
   }
 
   if (!IsPacketValid(*pdu)) {
-    FXL_VLOG(1) << "att: Packet has bad length!";
+    bt_log(TRACE, "att", "packet has bad length!");
     return false;
   }
 
@@ -307,7 +308,7 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
     case MethodType::kCommand:
     case MethodType::kNotification:
       if (callback || error_callback) {
-        FXL_VLOG(1) << "att: Method not a transaction";
+        bt_log(TRACE, "att", "method not a transaction!");
         return false;
       }
 
@@ -322,13 +323,12 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
       tq = &indication_queue_;
       break;
     default:
-      FXL_VLOG(1) << "att: invalid opcode: "
-                  << static_cast<unsigned>(reader.opcode());
+      bt_log(TRACE, "att", "invalid opcode: %#02x", reader.opcode());
       return false;
   }
 
   if (!callback || !error_callback) {
-    FXL_VLOG(1) << "att: Transaction requires callbacks";
+    bt_log(TRACE, "att", "transaction requires callbacks!");
     return false;
   }
 
@@ -347,8 +347,8 @@ Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
     return kInvalidHandlerId;
 
   if (handlers_.find(opcode) != handlers_.end()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: Can only register one Handler per opcode (0x%02x)", opcode);
+    bt_log(TRACE, "att", "can only register one handler per opcode (%#02x)",
+           opcode);
     return kInvalidHandlerId;
   }
 
@@ -370,7 +370,7 @@ void Bearer::UnregisterHandler(HandlerId id) {
 
   auto iter = handler_id_map_.find(id);
   if (iter == handler_id_map_.end()) {
-    FXL_VLOG(1) << "att: Cannot unregister unknown handler id: " << id;
+    bt_log(TRACE, "att", "cannot unregister unknown handler id: %u", id);
     return;
   }
 
@@ -386,12 +386,12 @@ bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
     return false;
 
   if (!is_open()) {
-    FXL_VLOG(2) << "att: Bearer closed";
+    bt_log(SPEW, "att", "bearer closed; cannot reply");
     return false;
   }
 
   if (!IsPacketValid(*pdu)) {
-    FXL_VLOG(1) << "att: Invalid response PDU";
+    bt_log(TRACE, "att", "invalid response PDU");
     return false;
   }
 
@@ -407,9 +407,8 @@ bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
 
   OpCode pending_opcode = (*pending)->opcode;
   if (pending_opcode != MatchingTransactionCode(reader.opcode())) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: opcode does not match pending (pending: 0x%02x, given: 0x%02x)",
-        pending_opcode, reader.opcode());
+    bt_log(TRACE, "att", "opcodes do not match (pending: %#02x, given: %#02x)",
+           pending_opcode, reader.opcode());
     return false;
   }
 
@@ -430,7 +429,7 @@ bool Bearer::ReplyWithError(TransactionId id,
 
   OpCode pending_opcode = (*pending)->opcode;
   if (pending_opcode == kIndication) {
-    FXL_VLOG(1) << "att: Cannot respond to an indication with error!";
+    bt_log(TRACE, "att", "cannot respond to an indication with error!");
     return false;
   }
 
@@ -481,9 +480,8 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
   FXL_DCHECK(tq);
 
   if (!tq->current()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: received unexpected transaction PDU (opcode: 0x%02x)",
-        packet.opcode());
+    bt_log(TRACE, "att", "received unexpected transaction PDU (opcode: %#02x)",
+           packet.opcode());
     ShutDown();
     return;
   }
@@ -505,7 +503,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
       error_code = payload.error_code;
       attr_in_error = le16toh(payload.attribute_handle);
     } else {
-      FXL_VLOG(2) << "att: Received malformed error response";
+      bt_log(TRACE, "att", "received malformed error response");
 
       // Invalid opcode will fail the opcode comparison below.
       target_opcode = kInvalidOpCode;
@@ -517,8 +515,8 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
   FXL_DCHECK(tq->current()->opcode != kInvalidOpCode);
 
   if (tq->current()->opcode != target_opcode) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: Received bad transaction PDU (opcode: 0x%02x)", packet.opcode());
+    bt_log(TRACE, "att", "received bad transaction PDU (opcode: %#02x)",
+           packet.opcode());
     ShutDown();
     return;
   }
@@ -564,17 +562,16 @@ void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
   FXL_DCHECK(currently_pending);
 
   if (currently_pending->HasValue()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: A transaction is already pending! (opcode: 0x%02x)",
-        packet.opcode());
+    bt_log(TRACE, "att", "A transaction is already pending! (opcode: %#02x)",
+           packet.opcode());
     ShutDown();
     return;
   }
 
   auto iter = handlers_.find(packet.opcode());
   if (iter == handlers_.end()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: No handler registered for opcode 0x%02x", packet.opcode());
+    bt_log(TRACE, "att", "no handler registered for opcode %#02x",
+           packet.opcode());
     SendErrorResponse(packet.opcode(), 0, ErrorCode::kRequestNotSupported);
     return;
   }
@@ -596,7 +593,7 @@ Bearer::RemoteTransaction* Bearer::FindRemoteTransaction(TransactionId id) {
     return &remote_indication_;
   }
 
-  FXL_VLOG(1) << "att: id " << id << " does not match any transaction";
+  bt_log(TRACE, "att", "id %u does not match any transaction", id);
   return nullptr;
 }
 
@@ -605,8 +602,8 @@ void Bearer::HandlePDUWithoutResponse(const PacketReader& packet) {
 
   auto iter = handlers_.find(packet.opcode());
   if (iter == handlers_.end()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "att: Dropping unhandled packet (opcode: 0x%02x)", packet.opcode());
+    bt_log(TRACE, "att", "dropping unhandled packet (opcode: %#02x)",
+           packet.opcode());
     return;
   }
 
@@ -628,13 +625,13 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
 
   // An ATT PDU should at least contain the opcode.
   if (length < sizeof(OpCode)) {
-    FXL_VLOG(1) << "att: PDU too short!";
+    bt_log(TRACE, "att", "PDU too short!");
     ShutDown();
     return;
   }
 
   if (length > mtu_) {
-    FXL_VLOG(1) << "att: PDU exceeds MTU!";
+    bt_log(TRACE, "att", "PDU exceeds MTU!");
     ShutDown();
     return;
   }
@@ -665,8 +662,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         HandlePDUWithoutResponse(packet);
         break;
       default:
-        FXL_VLOG(2) << fxl::StringPrintf("att: Unsupported opcode: 0x%02x",
-                                         packet.opcode());
+        bt_log(TRACE, "att", "Unsupported opcode: %#02x", packet.opcode());
         SendErrorResponse(packet.opcode(), 0, ErrorCode::kRequestNotSupported);
         break;
     }

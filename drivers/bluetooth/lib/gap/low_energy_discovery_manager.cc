@@ -86,7 +86,7 @@ LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
 void LowEnergyDiscoveryManager::StartDiscovery(SessionCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
-  FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: StartDiscovery";
+  bt_log(INFO, "gap-le", "start discovery");
 
   // If a request to start or stop is currently pending then this one will
   // become pending until the HCI request completes (this does NOT include the
@@ -168,8 +168,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
     hci::LowEnergyScanner::ScanStatus status) {
   switch (status) {
     case hci::LowEnergyScanner::ScanStatus::kFailed: {
-      FXL_LOG(ERROR)
-          << "gap: LowEnergyDiscoveryManager: Failed to initiate scan!";
+      bt_log(ERROR, "gap-le", "failed to initiate scan!");
 
       // Clear all sessions.
       auto sessions = std::move(sessions_);
@@ -189,7 +188,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
       break;
     }
     case hci::LowEnergyScanner::ScanStatus::kStarted:
-      FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Started scanning";
+      bt_log(TRACE, "gap-le", "started scanning");
 
       // Create and register all sessions before notifying the clients. We do
       // this so that the reference count is incremented for all new sessions
@@ -213,7 +212,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
     case hci::LowEnergyScanner::ScanStatus::kStopped:
       // TODO(armansito): Revise this logic when we support pausing a scan even
       // with active sessions.
-      FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Stopped scanning";
+      bt_log(TRACE, "gap-le", "stopped scanning");
 
       cached_scan_results_.clear();
 
@@ -225,15 +224,14 @@ void LowEnergyDiscoveryManager::OnScanStatus(
 
       break;
     case hci::LowEnergyScanner::ScanStatus::kComplete:
-      FXL_VLOG(2) << "gap: LowEnergyDiscoveryManager: end of scan period";
+      bt_log(SPEW, "gap-le", "end of scan period");
       cached_scan_results_.clear();
 
       // If |sessions_| is empty this is because sessions were stopped while the
       // scanner was shutting down after the end of the scan period. Restart the
       // scan as long as clients are waiting for it.
       if (!sessions_.empty() || !pending_.empty()) {
-        FXL_VLOG(2)
-            << "gap: LowEnergyDiscoveryManager: continuing periodic scan";
+        bt_log(SPEW, "gap-le", "continuing periodic scan");
         StartScan();
       }
       break;

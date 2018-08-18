@@ -43,9 +43,12 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
 bool RemoteDeviceCache::AddBondedDevice(std::string identifier,
                                         const common::DeviceAddress& address,
                                         const sm::LTK& key) {
-  if (FindDeviceById(identifier) || FindDeviceByAddress(address)) {
-    FXL_VLOG(1) << "RemoteDeviceCache: A device with the same identifier or "
-                   "address is already present in the device cache";
+  bool id_exists = FindDeviceById(identifier);
+  bool addr_exists = FindDeviceByAddress(address);
+  if (id_exists || addr_exists) {
+    bt_log(WARN, "gap", "bonded device with %s %s already in device cache",
+           id_exists ? "identifier" : "address",
+           id_exists ? identifier.c_str() : address.ToString().c_str());
     return false;
   }
   auto* device = new RemoteDevice(
@@ -63,7 +66,7 @@ bool RemoteDeviceCache::AddBondedDevice(std::string identifier,
 }
 
 bool RemoteDeviceCache::StoreLTK(std::string device_id, const sm::LTK& key) {
-  FXL_VLOG(1) << "RemoteDeviceCache: StoreLTK";
+  bt_log(TRACE, "gap", "StoreLTK");
   auto device = FindDeviceById(device_id);
   if (!device)
     return false;
@@ -96,9 +99,11 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
 void RemoteDeviceCache::NotifyDeviceBonded(const RemoteDevice& device) {
   FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
   FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
-  FXL_VLOG(1) << "RemoteDeviceCache: Bonding a device";
-  if (device_bonded_callback_)
+
+  bt_log(INFO, "gap", "peer bonded %s", device.ToString().c_str());
+  if (device_bonded_callback_) {
     device_bonded_callback_(device);
+  }
 }
 
 void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {

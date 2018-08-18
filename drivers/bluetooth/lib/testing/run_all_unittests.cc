@@ -12,7 +12,6 @@
 #include "lib/fsl/syslogger/init.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
 #include "lib/syslog/cpp/logger.h"
 
 BT_DECLARE_FAKE_DRIVER();
@@ -20,14 +19,9 @@ BT_DECLARE_FAKE_DRIVER();
 int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  // Set up log settings for FXL_LOG.
-  // TODO(armansito): Remove this once users of fxl/logging.h have been removed
-  // from the host library.
-  if (!fxl::SetLogSettingsFromCommandLine(cl)) {
-    FXL_LOG(ERROR) << "Failed to parse log settings from command-line";
-    return EXIT_FAILURE;
-  }
-
+  // TODO(armansito): It turns out syslog shouldn't be dynamically linked into
+  // drivers. Switch to using printf directly instead of syslog and parse
+  // command-line args using FXL (which is OK to link into unit tests).
   // Set up syslog to print to stdout.
   syslog::LogSettings syslog_settings = {FX_LOG_INFO, STDOUT_FILENO};
   std::string error = fsl::ParseLoggerSettings(cl, &syslog_settings);

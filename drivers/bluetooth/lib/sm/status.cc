@@ -48,8 +48,8 @@ std::string ErrorToString(sm::ErrorCode ecode) {
 
 // static
 std::string ProtocolErrorTraits<sm::ErrorCode>::ToString(sm::ErrorCode ecode) {
-  return fxl::StringPrintf("%s (SMP 0x%02hhu)", ErrorToString(ecode).c_str(),
-                           ecode);
+  return fxl::StringPrintf("%s (SMP %#02x)", ErrorToString(ecode).c_str(),
+                           static_cast<unsigned int>(ecode));
 }
 
 }  // namespace common

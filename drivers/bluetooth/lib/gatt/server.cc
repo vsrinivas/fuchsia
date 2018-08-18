@@ -111,11 +111,10 @@ void Server::SendNotification(att::Handle handle,
 
   att_->StartTransaction(
       std::move(buffer),
-      [](const auto&) { FXL_VLOG(2) << "Got confirmation!"; },
+      [](const auto&) { bt_log(SPEW, "gatt", "got confirmation!"); },
       [](att::Status status, att::Handle handle) {
-        FXL_VLOG(1) << fxl::StringPrintf(
-            "Indication failed (result %s, handle: 0x%04x)",
-            status.ToString().c_str(), handle);
+        bt_log(TRACE, "gatt", "indication failed (result %s, handle: %#04x)",
+               status.ToString().c_str(), handle);
       });
 }
 

@@ -6,9 +6,10 @@
 
 #include <memory>
 
+#include <ddk/binding.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 using namespace btlib;
 
@@ -124,10 +125,10 @@ zx_status_t GattRemoteServiceDevice::Bind() {
       {BIND_BT_GATT_SVC_UUID128_4, 0, uuid04},
   };
 
-  FXL_VLOG(1) << "bt-gatt-svc binding to UUID16(" << uuid16 << "), UUID128_1("
-              << uuid01 << "), UUID128_2(" << uuid02 << "), UUID128_3("
-              << uuid03 << "), UUID128_4(" << uuid04 << ") peer(" << peer_id_
-              << ")";
+  bt_log(TRACE, "bt-host",
+         "bt-gatt-svc binding to UUID16(%#04x), UUID128(1: %08x, 2: %08x,"
+         " 3: %08x, 4: %08x), peer: %s",
+         uuid16, uuid01, uuid02, uuid03, uuid04, peer_id_.c_str());
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -145,8 +146,9 @@ zx_status_t GattRemoteServiceDevice::Bind() {
 
   if (status != ZX_OK) {
     dev_ = nullptr;
-    FXL_LOG(ERROR) << "bt-host: Failed to publish child gatt device: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "bt-host",
+           "bt-gatt-svc: failed to publish child gatt device: %s",
+           zx_status_get_string(status));
     return status;
   }
 
@@ -156,7 +158,7 @@ zx_status_t GattRemoteServiceDevice::Bind() {
 }
 
 void GattRemoteServiceDevice::Unbind() {
-  FXL_VLOG(1) << "bt-gatt-svc: Unbinding service";
+  bt_log(TRACE, "bt-host", "bt-gatt-svc: unbinding service");
   async::PostTask(loop_.dispatcher(), [this]() { loop_.Shutdown(); });
   loop_.JoinThreads();
 }
@@ -168,7 +170,7 @@ zx_status_t GattRemoteServiceDevice::Connect(void* cookie,
     service_->DiscoverCharacteristics(
         [connect_cb, cookie](att::Status cb_status, const auto& chrcs) {
           auto ddk_chars = std::make_unique<bt_gatt_chr[]>(chrcs.size());
-          unsigned long char_idx = 0;
+          size_t char_idx = 0;
           for (auto& chr : chrcs) {
             ddk_chars[char_idx].id = static_cast<bt_gatt_id_t>(chr.id());
             CopyUUIDBytes(&ddk_chars[char_idx].type, chr.info().type);
@@ -183,7 +185,7 @@ zx_status_t GattRemoteServiceDevice::Connect(void* cookie,
               ddk_chars[char_idx].descriptors =
                   new bt_gatt_descriptor_t[descriptors.size()];
               ddk_chars[char_idx].num_descriptors = descriptors.size();
-              unsigned long desc_idx = 0;
+              size_t desc_idx = 0;
               for (auto& descriptor : descriptors) {
                 ddk_chars[char_idx].descriptors[desc_idx].id =
                     static_cast<bt_gatt_id_t>(descriptor.id());
@@ -199,8 +201,9 @@ zx_status_t GattRemoteServiceDevice::Connect(void* cookie,
             char_idx++;
           }
 
-          FXL_VLOG(1) << "bt-gatt-svc: connecting. discovered " << char_idx
-                      << " characteristics.";
+          bt_log(TRACE, "bt-host",
+                 "bt-gatt-svc: connected; discovered %zu characteristics",
+                 char_idx);
           bt_gatt_status_t status = {.status = ZX_OK};
           connect_cb(cookie, status, ddk_chars.get(), char_idx);
 

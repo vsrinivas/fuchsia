@@ -4,6 +4,7 @@
 
 #include "pdu.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 
 namespace btlib {
@@ -49,8 +50,8 @@ bool PDU::Reader::ReadNext(size_t size, const ReadFunc& func) {
   // dynamically allocate for packets that are large. Fix this once L2CAP slab
   // allocators have been wired up.
   if (size > 1024) {
-    FXL_LOG(WARNING) << "Need to dynamically allocate buffer (size: " << size
-                     << ")";
+    bt_log(WARN, "l2cap", "need to dynamically allocate buffer (size: %zu)",
+           size);
     return false;
   }
 

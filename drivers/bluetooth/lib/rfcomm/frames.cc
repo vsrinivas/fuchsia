@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/drivers/bluetooth/lib/rfcomm/frames.h"
+#include "frames.h"
+
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
+
+#include "rfcomm.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -111,9 +114,9 @@ Frame::Frame(Role role, CommandResponse command_response, DLCI dlci,
 std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
                                     const common::ByteBuffer& buffer) {
   if (buffer.size() < kMinimumFrameSize) {
-    FXL_LOG(WARNING) << "Buffer size of " << buffer.size()
-                     << " is less than minimum frame length "
-                     << kMinimumFrameSize;
+    bt_log(TRACE, "rfcomm",
+           "buffer size of %zu is less than minimum frame size (%zu)",
+           buffer.size(), kMinimumFrameSize);
     return nullptr;
   }
 
@@ -124,9 +127,8 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
   FrameType frame_type = (FrameType)(buffer[kControlIndex] & kControlMask);
 
   if (!IsMultiplexerStarted(role) && !IsMuxStartupFrame(frame_type, dlci)) {
-    FXL_LOG(WARNING) << "rfcomm: Frame type "
-                     << static_cast<unsigned>(frame_type)
-                     << " before mux start";
+    bt_log(TRACE, "rfcomm", "frame type %u before mux start",
+           static_cast<uint8_t>(frame_type));
     return nullptr;
   }
 
@@ -166,7 +168,7 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
   bool two_octet_length = !(buffer[kLengthIndex] & kEAMask);
   if (two_octet_length) {
     if (buffer.size() <= kLengthIndex + 1) {
-      FXL_LOG(WARNING) << "Buffer ended unexpectedly while parsing length";
+      bt_log(WARN, "rfcomm", "buffer ended unexpectedly while parsing length");
       return nullptr;
     }
     length |= buffer[kLengthIndex + 1] << kLengthSecondOctetShift;
@@ -178,7 +180,7 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
   if (has_credit_octet) {
     size_t credit_index = kLengthIndex + (two_octet_length ? 2 : 1);
     if (buffer.size() <= credit_index) {
-      FXL_LOG(WARNING) << "Buffer ended unexpectedly while parsing credits";
+      bt_log(WARN, "rfcomm", "buffer ended unexpectedly while parsing credits");
       return nullptr;
     }
     credits = buffer[credit_index];
@@ -192,14 +194,14 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
   // Check the FCS before we do any allocation or copying.
   size_t fcs_index = header_size + length;
   if (buffer.size() <= fcs_index) {
-    FXL_LOG(WARNING) << "Buffer ended unexpectedly while parsing FCS";
+    bt_log(WARN, "rfcomm", "buffer ended unexpectedly while parsing FCS");
     return nullptr;
   }
   uint8_t fcs = buffer[fcs_index];
   size_t num_octets =
       frame_type == FrameType::kUnnumberedInfoHeaderCheck ? 2 : 3;
   if (!CheckFCS(fcs, buffer.view(0, num_octets))) {
-    FXL_LOG(WARNING) << "FCS check failed";
+    bt_log(WARN, "rfcomm", "FCS check failed");
     return nullptr;
   }
 
@@ -210,7 +212,7 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
       std::unique_ptr<MuxCommand> mux_command =
           MuxCommand::Parse(buffer.view(header_size, length));
       if (!mux_command) {
-        FXL_LOG(WARNING) << "Unable to parse mux command";
+        bt_log(WARN, "rfcomm", "unable to parse mux command");
         return nullptr;
       }
       auto mux_command_frame = std::make_unique<MuxCommandFrame>(
@@ -228,9 +230,9 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
       user_data_frame->set_credits(credits);
       return user_data_frame;
     } else {
-      FXL_LOG(ERROR) << "Parsed DLCI " << static_cast<unsigned>(dlci)
-                     << " is not the multiplexer control channel or a valid"
-                     << " user data channel";
+      bt_log(WARN, "rfcomm",
+             "Parsed DLCI %u is not a valid multiplexer or user data channel",
+             dlci);
       return nullptr;
     }
   } else {

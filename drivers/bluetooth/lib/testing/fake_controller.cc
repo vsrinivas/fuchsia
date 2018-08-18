@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <lib/async/cpp/task.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -387,15 +388,15 @@ void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr,
   async::PostTask(dispatcher(), [addr, role, this] {
     FakeDevice* dev = FindDeviceByAddress(addr);
     if (!dev) {
-      FXL_LOG(WARNING) << "bt-hci (fake): no device found with address: "
-                       << addr.ToString();
+      bt_log(WARN, "fake-hci", "no device found with address: %s",
+             addr.ToString().c_str());
       return;
     }
 
     // TODO(armansito): Don't worry about managing multiple links per device
     // until this supports Bluetooth classic.
     if (dev->connected()) {
-      FXL_LOG(WARNING) << "bt-hci (fake): device already connected";
+      bt_log(WARN, "fake-hci", "device already connected");
       return;
     }
 
@@ -436,13 +437,13 @@ void FakeController::L2CAPConnectionParameterUpdate(
       async::PostTask(dispatcher(), [addr, params, this] {
         FakeDevice* dev = FindDeviceByAddress(addr);
         if (!dev) {
-          FXL_LOG(WARNING) << "bt-hci (fake): no device found with address: "
-                           << addr.ToString();
+          bt_log(WARN, "fake-hci", "no device found with address: %s",
+                 addr.ToString().c_str());
           return;
         }
 
         if (!dev->connected()) {
-          FXL_LOG(WARNING) << "bt-hci (fake): device not connected";
+          bt_log(WARN, "fake-hci", "device not connected");
           return;
         }
 
@@ -467,9 +468,8 @@ void FakeController::Disconnect(const common::DeviceAddress& addr) {
   async::PostTask(dispatcher(), [addr, this] {
     FakeDevice* dev = FindDeviceByAddress(addr);
     if (!dev || !dev->connected()) {
-      FXL_LOG(WARNING)
-          << "bt-hci (fake): no connected device found with address: "
-          << addr.ToString();
+      bt_log(WARN, "fake-hci", "no connected device found with address: %s",
+             addr.ToString().c_str());
       return;
     }
 
@@ -495,10 +495,9 @@ bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
   if (iter == default_status_map_.end())
     return false;
 
-  FXL_LOG(INFO) << fxl::StringPrintf(
-      "hci: bt-hci (fake): Responding with error (command: 0x%04x, status: "
-      "0x%02x",
-      opcode, iter->second);
+  bt_log(INFO, "fake-hci",
+         "responding with error (command: %#04x, status: %#02x)", opcode,
+         iter->second);
 
   hci::SimpleReturnParams params;
   params.status = iter->second;
@@ -621,8 +620,8 @@ void FakeController::OnLECreateConnectionCommandReceived(
   // The procedure was initiated successfully but the device cannot be connected
   // because it either doesn't exist or isn't connectable.
   if (!device || !device->connectable()) {
-    FXL_LOG(INFO)
-        << "Requested fake device cannot be connected; request will time out";
+    bt_log(INFO, "fake-hci",
+           "requested fake device cannot be connected; request will time out");
     return;
   }
 
@@ -1179,7 +1178,7 @@ void FakeController::OnCommandPacketReceived(
 
       RespondWithCommandStatus(opcode, hci::kSuccess);
 
-      FXL_LOG(INFO) << "FakeController: sending inquiry responses..";
+      bt_log(INFO, "fake-hci", "sending inquiry responses..");
       SendInquiryResponses();
 
       // TODO(jamuraa): do this after an appropriate amount of time?
@@ -1220,7 +1219,7 @@ void FakeController::OnCommandPacketReceived(
 void FakeController::OnACLDataPacketReceived(
     const ByteBuffer& acl_data_packet) {
   if (acl_data_packet.size() < sizeof(hci::ACLDataHeader)) {
-    FXL_LOG(WARNING) << "bt-hci (fake): Malformed ACL packet!";
+    bt_log(WARN, "fake-hci", "malformed ACL packet!");
     return;
   }
 
@@ -1228,7 +1227,7 @@ void FakeController::OnACLDataPacketReceived(
   hci::ConnectionHandle handle = le16toh(header.handle_and_flags) & 0x0FFFF;
   FakeDevice* dev = FindDeviceByConnHandle(handle);
   if (!dev) {
-    FXL_LOG(WARNING) << "bt-hci (fake): ACL data received for unknown handle!";
+    bt_log(WARN, "fake-hci", "ACL data received for unknown handle!");
     return;
   }
 

@@ -7,6 +7,7 @@
 #include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/att/packet.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "lib/fxl/logging.h"
 
@@ -27,7 +28,7 @@ FakeGattServer::FakeGattServer(FakeDevice* dev) : dev_(dev) {
 void FakeGattServer::HandlePdu(hci::ConnectionHandle conn,
                                const ByteBuffer& pdu) {
   if (pdu.size() < sizeof(att::OpCode)) {
-    FXL_LOG(WARNING) << "bt-hci (fake): Malformed ATT packet!";
+    bt_log(WARN, "fake-hci", "malformed ATT packet!");
     return;
   }
 
@@ -91,7 +92,7 @@ void FakeGattServer::Send(hci::ConnectionHandle conn, const ByteBuffer& pdu) {
   if (dev_->ctrl()) {
     dev_->ctrl()->SendL2CAPBFrame(conn, l2cap::kATTChannelId, pdu);
   } else {
-    FXL_LOG(WARNING) << "bt-hci (fake): No assigned FakeController!";
+    bt_log(WARN, "fake-hci", "no assigned FakeController!");
   }
 }
 

@@ -4,6 +4,7 @@
 
 #include "remote_characteristic.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
@@ -38,7 +39,7 @@ void NotifyValue(const common::ByteBuffer& value,
     async::PostTask(dispatcher,
                     [callback = std::move(callback), val = std::move(buffer)] { callback(*val); });
   } else {
-    FXL_VLOG(1) << "gatt: out of memory!";
+    bt_log(TRACE, "gatt", "out of memory!");
   }
 }
 
@@ -137,7 +138,8 @@ void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
 
     if (desc.type == types::kClientCharacteristicConfig) {
       if (self->ccc_handle_ != att::kInvalidHandle) {
-        FXL_VLOG(1) << "gatt: characteristic has more than one CCC descriptor!";
+        bt_log(TRACE, "gatt",
+               "characteristic has more than one CCC descriptor!");
         self->discovery_error_ = true;
         return;
       }
@@ -184,7 +186,7 @@ void RemoteCharacteristic::EnableNotifications(
 
   if (!(info().properties & (Property::kNotify | Property::kIndicate)) ||
       ccc_handle_ == att::kInvalidHandle) {
-    FXL_VLOG(2) << "gatt: characteristic does not support notifications";
+    bt_log(TRACE, "gatt", "characteristic does not support notifications");
     ReportNotifyStatus(att::Status(HostError::kNotSupported), kInvalidId,
                        std::move(status_callback), dispatcher);
     return;
@@ -221,7 +223,8 @@ void RemoteCharacteristic::EnableNotifications(
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto ccc_write_cb = [self](att::Status status) {
-    FXL_VLOG(1) << "gatt: CCC write status (enable): " << status.ToString();
+    bt_log(TRACE, "gatt", "CCC write status (enable): %s",
+           status.ToString().c_str());
     if (self) {
       self->ResolvePendingNotifyRequests(status);
     }
@@ -236,7 +239,7 @@ bool RemoteCharacteristic::DisableNotifications(IdType handler_id) {
   FXL_DCHECK(!shut_down_);
 
   if (!notify_handlers_.erase(handler_id)) {
-    FXL_VLOG(2) << "gatt: notify handler not found (id: " << handler_id << ")";
+    bt_log(SPEW, "gatt", "notify handler not found (id: %u)", handler_id);
     return false;
   }
 
@@ -251,7 +254,7 @@ void RemoteCharacteristic::DisableNotificationsInternal() {
   FXL_DCHECK(ccc_handle_ != att::kInvalidHandle);
 
   if (!client_) {
-    FXL_VLOG(2) << "gatt: Client bearer invalid!";
+    bt_log(SPEW, "gatt", "client bearer invalid!");
     return;
   }
 
@@ -260,7 +263,8 @@ void RemoteCharacteristic::DisableNotificationsInternal() {
   ccc_value.SetToZeros();
 
   auto ccc_write_cb = [](att::Status status) {
-    FXL_VLOG(1) << "gatt: CCC write status (disable): " << status.ToString();
+    bt_log(TRACE, "gatt", "CCC write status (disable): %s",
+           status.ToString().c_str());
   };
 
   // We send the request without handling the status as there is no good way to

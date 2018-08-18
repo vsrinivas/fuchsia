@@ -4,6 +4,7 @@
 
 #include "channel_manager.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -41,7 +42,7 @@ void ChannelManager::RegisterACL(
     LinkErrorCallback link_error_cb,
     async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_VLOG(1) << "l2cap: register ACL link (handle: " << handle << ")";
+  bt_log(TRACE, "l2cap", "register ACL link (handle: %#04x)", handle);
 
   auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kACL, role);
   ll->set_error_callback(std::move(link_error_cb), dispatcher);
@@ -54,7 +55,7 @@ void ChannelManager::RegisterLE(
     LinkErrorCallback link_error_cb,
     async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_VLOG(1) << "l2cap: register LE link (handle: " << handle << ")";
+  bt_log(TRACE, "l2cap", "register LE link (handle: %#04x)", handle);
 
   auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kLE, role);
   ll->set_error_callback(std::move(link_error_cb), dispatcher);
@@ -65,12 +66,12 @@ void ChannelManager::RegisterLE(
 void ChannelManager::Unregister(hci::ConnectionHandle handle) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  FXL_VLOG(1) << "l2cap: unregister LE link (handle: " << handle << ")";
+  bt_log(TRACE, "l2cap", "unregister link (handle: %#04x)", handle);
 
   pending_packets_.erase(handle);
   auto count = ll_map_.erase(handle);
   FXL_DCHECK(count) << fxl::StringPrintf(
-      "l2cap: Attempted to remove unknown connection handle: 0x%04x", handle);
+      "l2cap: Attempted to remove unknown connection handle: %#04x", handle);
 }
 
 fbl::RefPtr<Channel> ChannelManager::OpenFixedChannel(
@@ -80,9 +81,9 @@ fbl::RefPtr<Channel> ChannelManager::OpenFixedChannel(
 
   auto iter = ll_map_.find(handle);
   if (iter == ll_map_.end()) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "l2cap: Cannot open fixed channel on unknown connection handle: 0x%04x",
-        handle);
+    bt_log(ERROR, "l2cap",
+           "cannot open fixed channel on unknown connection handle: %#04x",
+           handle);
     return nullptr;
   }
 
@@ -115,9 +116,7 @@ void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
 
   if (pp_iter != pending_packets_.end()) {
     pp_iter->second.push_back(std::move(packet));
-
-    FXL_VLOG(2) << fxl::StringPrintf(
-        "l2cap: Queued rx packet on handle: 0x%04x", handle);
+    bt_log(SPEW, "l2cap", "queued rx packet on handle: %#04x", handle);
     return;
   }
 
@@ -134,7 +133,7 @@ internal::LogicalLink* ChannelManager::RegisterInternal(
   // assume this will succeed.
   auto iter = ll_map_.find(handle);
   FXL_DCHECK(iter == ll_map_.end()) << fxl::StringPrintf(
-      "l2cap: Connection handle re-used! (handle=0x%04x)", handle);
+      "l2cap: Connection handle re-used! (handle=%#04x)", handle);
 
   auto ll = std::make_unique<internal::LogicalLink>(handle, ll_type, role,
                                                     l2cap_dispatcher_, hci_);

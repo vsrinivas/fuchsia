@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/advertising_report_parser.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
@@ -75,9 +76,8 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
   FXL_DCHECK(scan_window < scan_interval);
 
   if (state() != State::kIdle) {
-    FXL_LOG(ERROR)
-        << "gap: LegacyLowEnergyScanner: cannot start scan while in state: "
-        << ScanStateToString(state());
+    bt_log(ERROR, "hci-le", "cannot start scan while in state: %s",
+           ScanStateToString(state()).c_str());
     return false;
   }
 
@@ -122,7 +122,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
 
     if (!status) {
       if (status.error() == common::HostError::kCanceled) {
-        FXL_VLOG(1) << "gap: LegacyLowEnergyScanner: canceled";
+        bt_log(TRACE, "hci-le", "scan canceled");
         return;
       }
 
@@ -131,8 +131,8 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
       FXL_DCHECK(!scan_cb_);
       set_state(State::kIdle);
 
-      FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan: "
-                     << status.ToString();
+      bt_log(ERROR, "hci-le", "failed to start scan: %s",
+             status.ToString().c_str());
       cb(ScanStatus::kFailed);
       return;
     }
@@ -160,9 +160,8 @@ bool LegacyLowEnergyScanner::StopScan() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   if (state() == State::kStopping || state() == State::kIdle) {
-    FXL_VLOG(1)
-        << "gap: LegacyLowEnergyScanner: cannot stop scan while in state: "
-        << ScanStateToString(state());
+    bt_log(TRACE, "hci-le", "cannot stop scan while in state: %s",
+           ScanStateToString(state()).c_str());
     return false;
   }
 
@@ -218,8 +217,8 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
     FXL_DCHECK(state() == State::kStopping);
 
     if (!status) {
-      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: Failed to stop scan: "
-                       << status.ToString();
+      bt_log(WARN, "hci-le", "failed to stop scan: %s",
+             status.ToString().c_str());
       // Something went wrong but there isn't really a meaningful way to
       // recover, so we just fall through and notify the caller with
       // ScanStatus::kFailed instead.
@@ -249,7 +248,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
       case LEAdvertisingEventType::kAdvDirectInd:
         // TODO(armansito): Forward this to a subroutine that can be shared with
         // the LE Directed Advertising eport event handler.
-        FXL_VLOG(2) << "gap: LegacyLowEnergyScanner: ignoring ADV_DIRECT_IND";
+        bt_log(SPEW, "hci-le", "ignoring ADV_DIRECT_IND");
         continue;
       case LEAdvertisingEventType::kAdvInd:
         connectable = true;
@@ -266,8 +265,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
     }
 
     if (report->length_data > kMaxLEAdvertisingDataLength) {
-      FXL_LOG(WARNING)
-          << "gap: LegacyLowEnergyScanner: advertising data too long! Ignoring";
+      bt_log(WARN, "hci-le", "advertising data too long! Ignoring");
       continue;
     }
 
@@ -306,14 +304,12 @@ void LegacyLowEnergyScanner::HandleScanResponse(
 
   auto iter = pending_results_.find(address);
   if (iter == pending_results_.end()) {
-    FXL_VLOG(1)
-        << "gap: LegacyLowEnergyScanner: Dropping unmatched scan response";
+    bt_log(TRACE, "hci-le", "dropping unmatched scan response");
     return;
   }
 
   if (report.length_data > kMaxLEAdvertisingDataLength) {
-    FXL_LOG(WARNING)
-        << "gap: LegacyLowEnergyScanner: scan response too long! Ignoring";
+    bt_log(WARN, "hci-le", "scan response too long! Ignoring");
     return;
   }
   auto& pending = iter->second;

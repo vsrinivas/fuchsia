@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
@@ -39,9 +40,9 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
     FXL_DCHECK(l2cap_);
 
     l2cap_->Initialize();
-    l2cap_->AddACLConnection(kHandle1, hci::Connection::Role::kMaster,
-                             [] { FXL_LOG(WARNING) << "Unimplemented"; },
-                             dispatcher());
+    l2cap_->AddACLConnection(
+        kHandle1, hci::Connection::Role::kMaster,
+        [] { bt_log(WARN, "rfcomm-test", "unimplemented"); }, dispatcher());
     // Any new L2CAP channels (incoming our outgoing) opened by our
     // ChannelManager will be captured and stored in |handle_to_fake_channel_|.
     // Subsequently, all channels will have listeners attached to them, and any

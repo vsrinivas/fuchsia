@@ -4,6 +4,7 @@
 
 #include "channel.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -131,15 +132,15 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(sdu);
 
   if (sdu->size() > tx_mtu()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: SDU size exceeds channel TxMTU (channel-id: 0x%04x)", id());
+    bt_log(TRACE, "l2cap", "SDU size exceeds channel TxMTU (channel-id: %#04x)",
+           id());
     return false;
   }
 
   std::lock_guard<std::mutex> lock(mtx_);
 
   if (!link_) {
-    FXL_LOG(ERROR) << "l2cap: Cannot send SDU on a closed link";
+    bt_log(ERROR, "l2cap", "cannot send SDU on a closed link");
     return false;
   }
 

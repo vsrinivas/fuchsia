@@ -58,8 +58,8 @@ std::string ErrorToString(att::ErrorCode ecode) {
 // static
 std::string ProtocolErrorTraits<att::ErrorCode>::ToString(
     att::ErrorCode ecode) {
-  return fxl::StringPrintf("%s (ATT 0x%02hhu)", ErrorToString(ecode).c_str(),
-                           ecode);
+  return fxl::StringPrintf("%s (ATT %#02x)", ErrorToString(ecode).c_str(),
+                           static_cast<unsigned int>(ecode));
 }
 
 }  // namespace common

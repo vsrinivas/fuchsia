@@ -10,8 +10,9 @@ namespace common {
 // static
 std::string ProtocolErrorTraits<sdp::ErrorCode>::ToString(
     sdp::ErrorCode ecode) {
-  return fxl::StringPrintf("%s (SDP 0x%02hu)",
-                           btlib::sdp::ErrorCodeToString(ecode).c_str(), ecode);
+  return fxl::StringPrintf("%s (SDP %#02x)",
+                           btlib::sdp::ErrorCodeToString(ecode).c_str(),
+                           static_cast<unsigned int>(ecode));
 }
 
 }  // namespace common

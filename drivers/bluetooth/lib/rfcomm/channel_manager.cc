@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "channel_manager.h"
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/channel_manager.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
+
+#include "session.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -23,13 +26,13 @@ std::unique_ptr<ChannelManager> ChannelManager::Create(l2cap::L2CAP* l2cap) {
               auto l2cap_channel) {
             if (cm) {
               if (cm->RegisterL2CAPChannel(l2cap_channel)) {
-                FXL_LOG(INFO)
-                    << "rfcomm: Registered incoming channel with handle "
-                    << l2cap_channel->link_handle();
+                bt_log(TRACE, "rfcomm",
+                       "registered incoming channel with handle %#04x",
+                       l2cap_channel->link_handle());
               } else {
-                FXL_LOG(WARNING)
-                    << "rfcomm: Failed to register incoming channel with"
-                    << " handle " << l2cap_channel->link_handle();
+                bt_log(WARN, "rfcomm",
+                       "failed to register incoming channel with handle %#04x",
+                       l2cap_channel->link_handle());
               }
             }
           },
@@ -45,14 +48,16 @@ bool ChannelManager::RegisterL2CAPChannel(
   auto handle = l2cap_channel->link_handle();
 
   if (handle_to_session_.find(handle) != handle_to_session_.end()) {
-    FXL_LOG(WARNING) << "Handle " << handle << " already registered";
+    bt_log(WARN, "rfcomm",
+           "L2CAP channel for link (handle: %#04x) already registered", handle);
     return false;
   }
 
   auto session = Session::Create(
       l2cap_channel, fit::bind_member(this, &ChannelManager::ChannelOpened));
   if (!session) {
-    FXL_LOG(ERROR) << "Couldn't start a session on the given L2CAP channel";
+    bt_log(ERROR, "rfcomm",
+           "could not start session on the given L2CAP channel");
     return false;
   }
   handle_to_session_[handle] = std::move(session);
@@ -74,17 +79,16 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
         [this, handle, server_channel, dispatcher,
          cb = std::move(channel_opened_cb)](auto l2cap_channel) mutable {
           if (!l2cap_channel) {
-            FXL_LOG(ERROR) << "rfcomm: Failed to open L2CAP channel with"
-                           << " handle " << handle;
+            bt_log(ERROR, "rfcomm",
+                   "failed to open L2CAP channel with handle %#04x", handle);
             async::PostTask(dispatcher, [cb_ = std::move(cb)] {
               cb_(nullptr, kInvalidServerChannel);
             });
             return;
           }
 
-          FXL_LOG(INFO) << "rfcomm: opened L2CAP session with handle "
-                        << handle;
-
+          bt_log(INFO, "rfcomm", "opened L2CAP session with handle %#04x",
+                 handle);
           FXL_DCHECK(handle_to_session_.find(handle) ==
                      handle_to_session_.end());
           handle_to_session_.emplace(

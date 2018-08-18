@@ -37,7 +37,6 @@ class GenericAttributeService final {
                           SendIndicationCallback send_indication_callback);
   ~GenericAttributeService();
 
-
  private:
   void Register();
 

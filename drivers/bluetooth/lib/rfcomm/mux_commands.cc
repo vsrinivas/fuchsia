@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "mux_commands.h"
+
 #include <cstring>
 
-#include "garnet/drivers/bluetooth/lib/rfcomm/mux_commands.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -189,21 +191,21 @@ std::unique_ptr<MuxCommand> MuxCommand::Parse(
   // allows the length field to be of any size, but here we're limiting it to
   // fitting in size_t.
   if (7 * num_length_octets > 8 * sizeof(size_t)) {
-    FXL_LOG(WARNING)
-        << "Encoded length is larger than the max value of size_t.";
+    bt_log(WARN, "rfcomm", "encoded length is larger than allowed");
     return nullptr;
   }
 
   // Check that the buffer is actually at least as big as the command which it
   // contains. Command is 1 control octet, multiple length octets, and payload.
   if (buffer.size() < 1 + num_length_octets + length) {
-    FXL_LOG(WARNING) << "Buffer is shorter than the command it contains";
+    bt_log(WARN, "rfcomm", "buffer is shorter than the command it contains");
     return nullptr;
   }
 
   if (!CommandLengthValid(MuxCommandType(type), length)) {
-    FXL_LOG(ERROR) << "Unexpected length " << length << " for multiplexer"
-                   << " command of type " << unsigned(type);
+    bt_log(ERROR, "rfcomm",
+           "unexpected length %zu for multiplexer command of type %u", length,
+           static_cast<unsigned>(type));
     return nullptr;
   }
 
@@ -234,8 +236,8 @@ std::unique_ptr<MuxCommand> MuxCommand::Parse(
       return RemoteLineStatusCommand::Parse(command_response, buffer);
 
     default:
-      FXL_LOG(WARNING) << "Unrecognized multiplexer command type: "
-                       << unsigned(type);
+      bt_log(WARN, "rfcomm", "unrecognized multiplexer command type: %u",
+             static_cast<unsigned>(type));
   }
 
   return std::unique_ptr<MuxCommand>(nullptr);

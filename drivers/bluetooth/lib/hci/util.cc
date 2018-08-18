@@ -4,6 +4,7 @@
 
 #include "util.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 
 namespace btlib {
@@ -130,9 +131,8 @@ bool DeviceAddressFromAdvReport(const LEAdvertisingReportData& report,
       type = DeviceAddress::Type::kLERandom;
       break;
     default:
-      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanManager: Invalid address "
-                          "type in advertising report: "
-                       << static_cast<int>(report.address_type);
+      bt_log(WARN, "hci", "invalid address type in advertising report: %#02x",
+             static_cast<uint8_t>(report.address_type));
       return false;
   }
 

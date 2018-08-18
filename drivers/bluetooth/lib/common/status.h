@@ -2,13 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_STATUS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_STATUS_H_
+
+#include <stdarg.h>
 
 #include <cstdint>
 #include <string>
 
-#include "lib/fxl/logging.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/strings/string_printf.h"
+
+// TODO(armansito): Included for FXL_DCHECK. Replace with a DDK assert.
+#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace common {
@@ -107,14 +113,27 @@ class Status {
             .c_str());
   }
 
-  bool LogIfError(fxl::LogSeverity severity, const char* file, int line,
-                  std::string msg) {
-    if (!is_success()) {
-      FXL_LAZY_STREAM(fxl::LogMessage(severity, file, line, nullptr).stream(),
-                      fxl::ShouldCreateLogMessage(severity))
-          << msg << ": " << ToString();
+  // Helper that returns true if this status represents an error and prints a
+  // message containing a string representation of the status.
+  bool TestForErrorAndLog(LogSeverity severity, const char* tag,
+                          const char* file, int line,
+                          const std::string& msg) const {
+    bool is_error = !is_success();
+    if (is_error && IsLogLevelEnabled(severity)) {
+      LogMessage(file, line, severity, tag, "%s: %s", msg.c_str(),
+                 ToString().c_str());
     }
-    return !is_success();
+    return is_error;
+  }
+
+  bool TestForErrorAndLogF(LogSeverity severity, const char* tag,
+                           const char* file, int line, const char* fmt,
+                           ...) const {
+    va_list args;
+    va_start(args, fmt);
+    std::string msg = fxl::StringVPrintf(fmt, args);
+    va_end(args);
+    return TestForErrorAndLog(severity, tag, file, line, msg);
   }
 
  private:
@@ -125,23 +144,18 @@ class Status {
 }  // namespace common
 }  // namespace btlib
 
-// Macros to check and log any non-Success status of an event.
+// Macro to check and log any non-Success status of an event.
 // Use these like:
-// if (BT_TEST_ERR(status, WARNING, "gap: failed set event mask")) {
-//   // cleanup or callback with error, or don't, I'm a coment, not a cop.
+// if (bt_is_error(status, WARN, "gap", "failed to set event mask")) {
+//   ...
 //   return;
 // }
-// or
-// BT_TEST_WARN(status, "gap (BR/EDR): failed set page scan");
 //
-// It will log with the string prepended to the stringified status if it
-// is not success.
-//
-// Evaluates to true if the event status is not success.
+// It will log with the string prepended to the stringified status if status is
+// a failure. Evaluates to true if the status indicates failure.
 
-#define BT_TEST_LOG(status, severity, msg) \
-  (status.LogIfError(fxl::LOG_##severity, __FILE__, __LINE__, msg))
-#define BT_TEST_ERR(status, msg) BT_TEST_LOG(status, ERROR, msg)
-#define BT_TEST_WARN(status, msg) BT_TEST_LOG(status, WARNING, msg)
-#define BT_TEST_VLOG(status, level, msg) \
-  (status.LogIfError(-level, __FILE__, __LINE__, msg))
+#define bt_is_error(status, flag, tag, fmt...)                         \
+  (status.TestForErrorAndLogF(::btlib::common::LogSeverity::flag, tag, \
+                              __FILE__, __LINE__, fmt))
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_STATUS_H_

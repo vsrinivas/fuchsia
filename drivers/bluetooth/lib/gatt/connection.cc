@@ -5,6 +5,7 @@
 #include "connection.h"
 
 #include "garnet/drivers/bluetooth/lib/att/database.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 #include "client.h"
 #include "server.h"
@@ -33,13 +34,11 @@ Connection::Connection(const std::string& peer_id,
 void Connection::Initialize() {
   FXL_DCHECK(remote_service_manager_);
   remote_service_manager_->Initialize([att = att_](att::Status status) {
-    if (status) {
-      FXL_VLOG(1) << "gatt: Primary service discovery complete";
-    } else {
-      FXL_VLOG(1) << "gatt: Client setup failed - " << status.ToString();
-
+    if (bt_is_error(status, ERROR, "gatt", "client setup failed")) {
       // Signal a link error.
       att->ShutDown();
+    } else {
+      bt_log(TRACE, "gatt", "primary service discovery complete");
     }
   });
 }

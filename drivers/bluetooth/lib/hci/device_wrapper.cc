@@ -8,6 +8,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 
 namespace btlib {
@@ -23,11 +24,10 @@ zx::channel IoctlDeviceWrapper::GetCommandChannel() {
   ssize_t status = ioctl_bt_hci_get_command_channel(
       device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
-    FXL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "Failed to obtain command channel handle: %s",
+           zx_status_get_string(status));
     FXL_DCHECK(!channel.is_valid());
   }
-
   return channel;
 }
 
@@ -36,11 +36,10 @@ zx::channel IoctlDeviceWrapper::GetACLDataChannel() {
   ssize_t status = ioctl_bt_hci_get_acl_data_channel(
       device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
-    FXL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "Failed to obtain ACL data channel handle: %s",
+           zx_status_get_string(status));
     FXL_DCHECK(!channel.is_valid());
   }
-
   return channel;
 }
 
@@ -54,10 +53,9 @@ zx::channel DdkDeviceWrapper::GetCommandChannel() {
   zx_status_t status =
       bt_hci_open_command_channel(&hci_proto_, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "Failed to obtain command channel handle: %s",
+           zx_status_get_string(status));
   }
-
   return channel;
 }
 
@@ -66,10 +64,9 @@ zx::channel DdkDeviceWrapper::GetACLDataChannel() {
   zx_status_t status = bt_hci_open_acl_data_channel(
       &hci_proto_, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "Failed to obtain ACL data channel handle: %s",
+           zx_status_get_string(status));
   }
-
   return channel;
 }
 

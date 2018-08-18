@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <zircon/status.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
 #include "lib/fxl/strings/string_printf.h"
@@ -25,7 +26,7 @@ namespace {
 common::MutableByteBufferPtr NewPDU(size_t param_size) {
   auto pdu = common::NewSlabBuffer(sizeof(Header) + param_size);
   if (!pdu) {
-    FXL_VLOG(1) << "att: Out of memory";
+    bt_log(TRACE, "sm", "out of memory");
   }
 
   return pdu;
@@ -47,8 +48,7 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
       weak_ptr_factory_(this) {
   FXL_DCHECK(chan_);
   FXL_DCHECK(listener_);
-  FXL_DCHECK(async_get_default_dispatcher())
-      << "sm: Default dispatcher required!";
+  FXL_DCHECK(async_get_default_dispatcher()) << "Default dispatcher required!";
 
   if (chan_->link_type() == hci::Connection::LinkType::kLE) {
     FXL_DCHECK(chan_->id() == l2cap::kLESMPChannelId);
@@ -57,7 +57,7 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
     FXL_DCHECK(chan_->id() == l2cap::kSMPChannelId);
     mtu_ = kBREDRMTU;
   } else {
-    FXL_NOTREACHED() << "sm: Unsupported link type!";
+    FXL_NOTREACHED() << "Unsupported link type!";
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
@@ -79,12 +79,12 @@ bool Bearer::InitiateFeatureExchange() {
   // TODO(armansito): It should be possible to re-initiate pairing with
   // different parameters even when it's in progress.
   if (pairing_started() || feature_exchange_pending_) {
-    FXL_VLOG(1) << "sm: Feature exchange already pending!";
+    bt_log(TRACE, "sm", "feature exchange already pending!");
     return false;
   }
 
   if (role_ == hci::Connection::Role::kSlave) {
-    FXL_VLOG(1) << "sm: Slave cannot initiate a feature exchange!";
+    bt_log(TRACE, "sm", "slave cannot initiate a feature exchange!");
     return false;
   }
 
@@ -116,7 +116,7 @@ bool Bearer::InitiateFeatureExchange() {
 
 bool Bearer::SendConfirmValue(const common::UInt128& confirm) {
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Not pairing!";
+    bt_log(TRACE, "sm", "not pairing!");
     return false;
   }
 
@@ -127,7 +127,7 @@ bool Bearer::SendConfirmValue(const common::UInt128& confirm) {
 
   auto pdu = NewPDU(sizeof(PairingConfirmValue));
   if (!pdu) {
-    FXL_LOG(ERROR) << "sm: Out of memory!";
+    bt_log(ERROR, "sm", "out of memory!");
     Abort(ErrorCode::kUnspecifiedReason);
     return false;
   }
@@ -141,7 +141,7 @@ bool Bearer::SendConfirmValue(const common::UInt128& confirm) {
 
 bool Bearer::SendRandomValue(const common::UInt128& random) {
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Not pairing!";
+    bt_log(TRACE, "sm", "not pairing!");
     return false;
   }
 
@@ -152,7 +152,7 @@ bool Bearer::SendRandomValue(const common::UInt128& random) {
 
   auto pdu = NewPDU(sizeof(PairingRandomValue));
   if (!pdu) {
-    FXL_LOG(ERROR) << "sm: Out of memory!";
+    bt_log(ERROR, "sm", "out of memory!");
     Abort(ErrorCode::kUnspecifiedReason);
     return false;
   }
@@ -166,7 +166,7 @@ bool Bearer::SendRandomValue(const common::UInt128& random) {
 
 bool Bearer::SendEncryptionKey(const hci::LinkKey& link_key) {
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Not pairing!";
+    bt_log(TRACE, "sm", "not pairing!");
     return false;
   }
 
@@ -178,7 +178,7 @@ bool Bearer::SendEncryptionKey(const hci::LinkKey& link_key) {
   auto enc_info_pdu = NewPDU(sizeof(EncryptionInformationParams));
   auto master_id_pdu = NewPDU(sizeof(MasterIdentificationParams));
   if (!enc_info_pdu || !master_id_pdu) {
-    FXL_LOG(ERROR) << "sm: Out of memory!";
+    bt_log(ERROR, "sm", "out of memory!");
     Abort(ErrorCode::kUnspecifiedReason);
     return false;
   }
@@ -206,8 +206,8 @@ void Bearer::StopTimer() {
   if (timeout_task_.is_pending()) {
     zx_status_t status = timeout_task_.Cancel();
     if (status != ZX_OK) {
-      FXL_VLOG(2) << "smp: Failed to stop timer: "
-                  << zx_status_get_string(status);
+      bt_log(SPEW, "sm", "smp: failed to stop timer: %s",
+             zx_status_get_string(status));
     }
   }
 }
@@ -215,11 +215,11 @@ void Bearer::StopTimer() {
 void Bearer::Abort(ErrorCode ecode) {
   // TODO(armansito): Check the states of other procedures once we have them.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Pairing not started! Nothing to abort.";
+    bt_log(TRACE, "sm", "pairing not started! nothing to abort");
     return;
   }
 
-  FXL_LOG(ERROR) << "sm: Abort pairing";
+  bt_log(ERROR, "sm", "abort pairing");
 
   StopTimer();
   SendPairingFailed(ecode);
@@ -227,7 +227,7 @@ void Bearer::Abort(ErrorCode ecode) {
 }
 
 void Bearer::OnFailure(Status status) {
-  FXL_LOG(ERROR) << "sm: Pairing failed: " << status.ToString();
+  bt_log(ERROR, "sm", "pairing failed: %s", status.ToString().c_str());
 
   // TODO(armansito): Clear other procedure states here.
   feature_exchange_pending_ = false;
@@ -237,7 +237,7 @@ void Bearer::OnFailure(Status status) {
 
 void Bearer::OnPairingTimeout() {
   // Pairing is no longer allowed on this bearer. Disconnect the link.
-  FXL_LOG(ERROR) << "sm: Pairing timed out! Disconnecting link.";
+  bt_log(ERROR, "sm", "pairing timed out! disconnecting link");
   chan_->SignalLinkError();
 
   OnFailure(Status(HostError::kTimedOut));
@@ -255,8 +255,7 @@ ErrorCode Bearer::ResolveFeatures(bool local_initiator,
   uint8_t enc_key_size =
       std::min(preq.max_encryption_key_size, pres.max_encryption_key_size);
   if (enc_key_size < kMinEncryptionKeySize) {
-    FXL_VLOG(1) << "sm: Encryption key size too small! (" << enc_key_size
-                << ")";
+    bt_log(TRACE, "sm", "encryption key size too small! (%u)", enc_key_size);
     return ErrorCode::kEncryptionKeySize;
   }
 
@@ -342,7 +341,7 @@ void Bearer::BuildPairingParameters(PairingRequestParams* params,
 
 void Bearer::OnPairingFailed(const PacketReader& reader) {
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Received \"Pairing Failed\" while not pairing!";
+    bt_log(TRACE, "sm", "received \"Pairing Failed\" while not pairing!");
     return;
   }
 
@@ -351,7 +350,7 @@ void Bearer::OnPairingFailed(const PacketReader& reader) {
   if (reader.payload_size() == sizeof(ErrorCode)) {
     status = Status(reader.payload<ErrorCode>());
   } else {
-    FXL_VLOG(1) << "sm: Malformed \"Pairing Failed\" payload";
+    bt_log(TRACE, "sm", "malformed \"Pairing Failed\" payload");
   }
 
   StopTimer();
@@ -360,14 +359,14 @@ void Bearer::OnPairingFailed(const PacketReader& reader) {
 
 void Bearer::OnPairingRequest(const PacketReader& reader) {
   if (reader.payload_size() != sizeof(PairingRequestParams)) {
-    FXL_VLOG(1) << "sm: Malformed \"Pairing Request\" payload";
+    bt_log(TRACE, "sm", "malformed \"Pairing Request\" payload");
     SendPairingFailed(ErrorCode::kInvalidParameters);
     return;
   }
 
   // Reject the command if we are the master.
   if (role_ == hci::Connection::Role::kMaster) {
-    FXL_VLOG(1) << "sm: Rejecting \"Pairing Request\" from slave";
+    bt_log(TRACE, "sm", "rejecting \"Pairing Request\" from slave");
     SendPairingFailed(ErrorCode::kCommandNotSupported);
     return;
   }
@@ -379,7 +378,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
   const auto& req_params = reader.payload<PairingRequestParams>();
   auto pdu = NewPDU(sizeof(PairingResponseParams));
   if (!pdu) {
-    FXL_LOG(ERROR) << "sm: Out of memory!";
+    bt_log(ERROR, "sm", "out of memory!");
     SendPairingFailed(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -411,7 +410,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
                                     *rsp_params, &features);
   feature_exchange_pending_ = false;
   if (ecode != ErrorCode::kNoError) {
-    FXL_VLOG(1) << "sm: Rejecting pairing features";
+    bt_log(TRACE, "sm", "rejecting pairing features");
     Abort(ecode);
     return;
   }
@@ -432,7 +431,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
 
 void Bearer::OnPairingResponse(const PacketReader& reader) {
   if (reader.payload_size() != sizeof(PairingResponseParams)) {
-    FXL_VLOG(1) << "sm: Malformed \"Pairing Response\" payload";
+    bt_log(TRACE, "sm", "malformed \"Pairing Response\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -444,7 +443,7 @@ void Bearer::OnPairingResponse(const PacketReader& reader) {
   }
 
   if (!feature_exchange_pending_) {
-    FXL_VLOG(1) << "sm: Ignoring unexpected \"Pairing Response\" packet";
+    bt_log(TRACE, "sm", "ignoring unexpected \"Pairing Response\" packet");
     return;
   }
 
@@ -468,19 +467,19 @@ void Bearer::OnPairingResponse(const PacketReader& reader) {
 void Bearer::OnPairingConfirm(const PacketReader& reader) {
   // Ignore the command if not pairing.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Dropped unexpected \"confirm value\"";
+    bt_log(TRACE, "sm", "dropped unexpected \"confirm value\"");
     return;
   }
 
   // Only allowed on the LE transport.
   if (chan_->link_type() != hci::Connection::LinkType::kLE) {
-    FXL_VLOG(1) << "sm: \"Confirm value\" over BR/EDR not supported!";
+    bt_log(TRACE, "sm", "\"Confirm value\" over BR/EDR not supported!");
     Abort(ErrorCode::kCommandNotSupported);
     return;
   }
 
   if (reader.payload_size() != sizeof(PairingConfirmValue)) {
-    FXL_VLOG(1) << "sm: Malformed \"Pairing Confirm\" payload";
+    bt_log(TRACE, "sm", "malformed \"Pairing Confirm\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -492,19 +491,19 @@ void Bearer::OnPairingConfirm(const PacketReader& reader) {
 void Bearer::OnPairingRandom(const PacketReader& reader) {
   // Ignore the command if not pairing.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Dropped unexpected \"random value\"";
+    bt_log(TRACE, "sm", "dropped unexpected \"random value\"");
     return;
   }
 
   // Only allowed on the LE transport.
   if (chan_->link_type() != hci::Connection::LinkType::kLE) {
-    FXL_VLOG(1) << "sm: \"Random value\" over BR/EDR not supported!";
+    bt_log(TRACE, "sm", "\"Random value\" over BR/EDR not supported!");
     Abort(ErrorCode::kCommandNotSupported);
     return;
   }
 
   if (reader.payload_size() != sizeof(PairingRandomValue)) {
-    FXL_VLOG(1) << "sm: Malformed \"Pairing Randomm\" payload";
+    bt_log(TRACE, "sm", "malformed \"Pairing Random\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -516,19 +515,20 @@ void Bearer::OnPairingRandom(const PacketReader& reader) {
 void Bearer::OnEncryptionInformation(const PacketReader& reader) {
   // Ignore the command if not pairing.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Dropped unexpected \"Encryption Information\"";
+    bt_log(TRACE, "sm", "dropped unexpected \"Encryption Information\"");
     return;
   }
 
   // Only allowed on the LE transport.
   if (chan_->link_type() != hci::Connection::LinkType::kLE) {
-    FXL_VLOG(1) << "sm: \"Encryption Information\" over BR/EDR not supported!";
+    bt_log(TRACE, "sm",
+           "\"Encryption Information\" over BR/EDR not supported!");
     Abort(ErrorCode::kCommandNotSupported);
     return;
   }
 
   if (reader.payload_size() != sizeof(EncryptionInformationParams)) {
-    FXL_VLOG(1) << "sm: Malformed \"Encryption Information\" payload";
+    bt_log(TRACE, "sm", "malformed \"Encryption Information\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -540,19 +540,19 @@ void Bearer::OnEncryptionInformation(const PacketReader& reader) {
 void Bearer::OnMasterIdentification(const PacketReader& reader) {
   // Ignore the command if not pairing.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Dropped unexpected \"Master Identification\"";
+    bt_log(TRACE, "sm", "dropped unexpected \"Master Identification\"");
     return;
   }
 
   // Only allowed on the LE transport.
   if (chan_->link_type() != hci::Connection::LinkType::kLE) {
-    FXL_VLOG(1) << "sm: \"Master Identification\" over BR/EDR not supported!";
+    bt_log(TRACE, "sm", "\"Master Identification\" over BR/EDR not supported!");
     Abort(ErrorCode::kCommandNotSupported);
     return;
   }
 
   if (reader.payload_size() != sizeof(MasterIdentificationParams)) {
-    FXL_VLOG(1) << "sm: Malformed \"Master Identification\" payload";
+    bt_log(TRACE, "sm", "malformed \"Master Identification\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -565,12 +565,12 @@ void Bearer::OnMasterIdentification(const PacketReader& reader) {
 void Bearer::OnIdentityInformation(const PacketReader& reader) {
   // Ignore the command if not pairing.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Dropped unexpected \"Identity Information\"";
+    bt_log(TRACE, "sm", "dropped unexpected \"Identity Information\"");
     return;
   }
 
   if (reader.payload_size() != sizeof(IRK)) {
-    FXL_VLOG(1) << "sm: Malformed \"Identity Information\" payload";
+    bt_log(TRACE, "sm", "malformed \"Identity Information\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -582,12 +582,12 @@ void Bearer::OnIdentityInformation(const PacketReader& reader) {
 void Bearer::OnIdentityAddressInformation(const PacketReader& reader) {
   // Ignore the command if not pairing.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Dropped unexpected \"Identity Address Information\"";
+    bt_log(TRACE, "sm", "dropped unexpected \"Identity Address Information\"");
     return;
   }
 
   if (reader.payload_size() != sizeof(IdentityAddressInformationParams)) {
-    FXL_VLOG(1) << "sm: Malformed \"Identity Address Information\" payload";
+    bt_log(TRACE, "sm", "malformed \"Identity Address Information\" payload");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -609,7 +609,7 @@ void Bearer::SendPairingFailed(ErrorCode ecode) {
 }
 
 void Bearer::OnChannelClosed() {
-  FXL_VLOG(1) << "sm: Channel closed";
+  bt_log(TRACE, "sm", "channel closed");
 
   if (pairing_started()) {
     OnFailure(Status(HostError::kLinkDisconnected));
@@ -619,13 +619,13 @@ void Bearer::OnChannelClosed() {
 void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
   uint8_t length = sdu.length();
   if (length < sizeof(Code)) {
-    FXL_VLOG(1) << "sm: PDU too short!";
+    bt_log(TRACE, "sm", "PDU too short!");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
 
   if (length > mtu_) {
-    FXL_VLOG(1) << "sm: PDU exceeds MTU!";
+    bt_log(TRACE, "sm", "PDU exceeds MTU!");
     Abort(ErrorCode::kInvalidParameters);
     return;
   }
@@ -667,12 +667,10 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
       case kSecurityRequest:
         // TODO(NET-1292): Handle this properly. We special case it so that it
         // gets ignored instead of falling through to the error case.
-        FXL_LOG(WARNING) << "sm: \"Security Request\" not handled";
+        bt_log(WARN, "sm", "\"Security Request\" not handled");
         break;
       default:
-        FXL_VLOG(2) << fxl::StringPrintf("sm: Unsupported command: 0x%02x",
-                                         reader.code());
-
+        bt_log(SPEW, "sm", "unsupported command: %#02x", reader.code());
         auto ecode = ErrorCode::kCommandNotSupported;
         if (pairing_started()) {
           Abort(ecode);

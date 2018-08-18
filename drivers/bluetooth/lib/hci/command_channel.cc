@@ -9,6 +9,7 @@
 #include <lib/async/default.h>
 #include <zircon/status.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/auto_call.h"
@@ -59,8 +60,8 @@ CommandChannel::TransactionData::~TransactionData() {
     return;
   }
 
-  FXL_VLOG(1) << "hci: CommandChannel: Sending kUnspecifiedError for"
-              << " unfinished Transaction " << id_;
+  bt_log(TRACE, "hci",
+         "sending kUnspecifiedError for unfinished transaction %zu", id_);
   auto event = EventPacket::New(sizeof(CommandStatusEventParams));
   auto* header = event->mutable_view()->mutable_header();
   auto* params =
@@ -127,12 +128,12 @@ void CommandChannel::Initialize() {
   auto setup_handler_task = [this] {
     zx_status_t status = channel_wait_.Begin(async_get_default_dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "hci: CommandChannel: failed channel setup: "
-                     << zx_status_get_string(status);
+      bt_log(ERROR, "hci", "failed channel setup: %s",
+             zx_status_get_string(status));
       channel_wait_.set_object(ZX_HANDLE_INVALID);
       return;
     }
-    FXL_LOG(INFO) << "hci: CommandChannel: started I/O handler";
+    bt_log(TRACE, "hci", "started I/O handler");
   };
 
   io_dispatcher_ = transport_->io_dispatcher();
@@ -143,7 +144,7 @@ void CommandChannel::Initialize() {
 
   is_initialized_ = true;
 
-  FXL_LOG(INFO) << "hci: CommandChannel: initialized";
+  bt_log(INFO, "hci", "initialized");
 }
 
 void CommandChannel::ShutDown() {
@@ -151,14 +152,14 @@ void CommandChannel::ShutDown() {
   if (!is_initialized_)
     return;
 
-  FXL_LOG(INFO) << "hci: CommandChannel: shutting down";
+  bt_log(INFO, "hci", "shutting down");
 
   common::RunTaskSync([this] { ShutDownInternal(); }, io_dispatcher_);
   io_dispatcher_ = nullptr;
 }
 
 void CommandChannel::ShutDownInternal() {
-  FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
+  bt_log(TRACE, "hci", "removing I/O handler");
 
   // Prevent new command packets from being queued.
   is_initialized_ = false;
@@ -166,8 +167,8 @@ void CommandChannel::ShutDownInternal() {
   // Stop listening for HCI events.
   zx_status_t status = channel_wait_.Cancel();
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
-                     << zx_status_get_string(status);
+    bt_log(WARN, "hci", "could not cancel wait on channel: %s",
+           zx_status_get_string(status));
   }
 
   // Drop all queued commands and event handlers. Pending HCI commands will be
@@ -192,8 +193,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
     CommandCallback callback,
     const EventCode complete_event_code) {
   if (!is_initialized_) {
-    FXL_VLOG(1)
-        << "hci: CommandChannel: can't send commands while uninitialized";
+    bt_log(TRACE, "hci", "can't send commands while uninitialized");
     return 0u;
   }
 
@@ -210,8 +210,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
     // registered for the completion event.
     if (it != event_code_handlers_.end() &&
         async_cmd_handlers_.count(complete_event_code) == 0) {
-      FXL_VLOG(1)
-          << "hci: CommandChannel: event handler already handling this event";
+      bt_log(TRACE, "hci", "event handler already handling this event");
       return 0u;
     }
   }
@@ -254,9 +253,9 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
   auto it = async_cmd_handlers_.find(event_code);
   if (it != async_cmd_handlers_.end()) {
-    FXL_LOG(ERROR) << "hci: async event handler " << it->second
-                   << " already registered for event code: "
-                   << fxl::StringPrintf("0x%02x", event_code);
+    bt_log(ERROR, "hci",
+           "async event handler %zu already registered for event code %#02x",
+           it->second, event_code);
     return 0u;
   }
 
@@ -320,7 +319,7 @@ void CommandChannel::TrySendQueuedCommands() {
   FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
 
   if (allowed_command_packets_ == 0) {
-    FXL_VLOG(2) << "hci: CommandChannel: controller queue full, waiting.";
+    bt_log(SPEW, "hci", "controller queue full, waiting");
     return;
   }
 
@@ -359,8 +358,8 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
   if (status < 0) {
     // TODO(armansito): We should notify the |status_callback| of the pending
     // command with a special error code in this case.
-    FXL_LOG(ERROR) << "hci: CommandChannel: Failed to send command: "
-                   << zx_status_get_string(status);
+    bt_log(ERROR, "hci", "failed to send command: %s",
+           zx_status_get_string(status));
     return;
   }
   allowed_command_packets_--;
@@ -369,8 +368,7 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
 
   transaction->Start(
       [this, id = cmd.data->id()] {
-        FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
-                       << " timed out, shutting down.";
+        bt_log(ERROR, "hci", "command %zu timed out, shutting down", id);
         ShutDownInternal();
         // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
       },
@@ -390,8 +388,7 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
   // We already have a handler for this transaction, or another transaction
   // is already waiting and it will be queued.
   if (event_code_handlers_.count(data->complete_event_code())) {
-    FXL_VLOG(3) << "hci: CommandChannel: async command " << data->id()
-                << ": a handler already exists.";
+    bt_log(SPEW, "hci", "async command %zu: already has handler", data->id());
     return;
   }
 
@@ -402,8 +399,7 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
   data->set_handler_id(id);
   async_cmd_handlers_[data->complete_event_code()] = id;
   event_code_handlers_.emplace(data->complete_event_code(), id);
-  FXL_VLOG(3) << "hci: CommandChannel: async command " << data->id()
-              << " assigned handler " << id;
+  bt_log(SPEW, "hci", "async command %zu assigned handler %zu", data->id(), id);
 }
 
 CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
@@ -423,8 +419,8 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
   data.dispatcher = dispatcher;
   data.is_le_meta_subevent = is_le_meta;
 
-  FXL_VLOG(3) << "hci: CommandChannel: adding event handler " << id
-              << " for event code " << fxl::StringPrintf("0x%02x", event_code);
+  bt_log(SPEW, "hci", "adding event handler %zu for event code %#02x", id,
+         event_code);
   FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
   event_handler_id_map_[id] = std::move(data);
 
@@ -450,8 +446,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     allowed_command_packets_ = params.num_hci_command_packets;
     async_failed = params.status != StatusCode::kSuccess;
   }
-  FXL_VLOG(4) << "hci: CommandChannel: allowed packets update: "
-              << allowed_command_packets_;
+  bt_log(SPEW, "hci", "allowed packets update: %zu", allowed_command_packets_);
 
   if (matching_opcode == 0) {
     return;
@@ -460,8 +455,8 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
   auto it = pending_transactions_.find(matching_opcode);
   if (it == pending_transactions_.end()) {
-    FXL_LOG(ERROR) << "hci: CommandChannel: update for unexpected opcode: "
-                   << matching_opcode;
+    bt_log(ERROR, "hci", "update for unexpected opcode: %#04x",
+           matching_opcode);
     return;
   }
 
@@ -480,8 +475,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   // TODO(NET-770): Do not allow asynchronous commands to finish with Command
   // Complete.
   if (event_code == kCommandCompleteEventCode) {
-    FXL_LOG(WARNING)
-        << "hci: CommandChannel: async command received CommandComplete";
+    bt_log(WARN, "hci", "async command received CommandComplete");
     async_failed = true;
   }
 
@@ -510,9 +504,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
 
     auto range = event_handlers->equal_range(event_code);
     if (range.first == event_handlers->end()) {
-      FXL_VLOG(1) << "hci: CommandChannel: Event "
-                  << fxl::StringPrintf("0x%02x", event_code)
-                  << " received with no handler";
+      bt_log(TRACE, "hci", "event %#02x received with no handler", event_code);
       return;
     }
 
@@ -521,9 +513,8 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       EventCallback callback;
       async_dispatcher_t* dispatcher;
       EventHandlerId event_id = iter->second;
-      FXL_VLOG(5) << "hci: CommandChannel: notifying handler (id " << event_id
-                  << ") for event code "
-                  << fxl::StringPrintf("0x%02x", event_code);
+      bt_log(SPEW, "hci", "notifying handler (id %zu) for event code %#02x",
+             event_id, event_code);
       auto handler_iter = event_handler_id_map_.find(event_id);
       FXL_DCHECK(handler_iter != event_handler_id_map_.end());
 
@@ -571,8 +562,7 @@ void CommandChannel::OnChannelReady(
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   if (status != ZX_OK) {
-    FXL_VLOG(1) << "hci: CommandChannel: channel error: "
-                << zx_status_get_string(status);
+    bt_log(TRACE, "hci", "channel error: %s", zx_status_get_string(status));
     return;
   }
 
@@ -586,7 +576,7 @@ void CommandChannel::OnChannelReady(
     uint32_t read_size;
     auto packet = EventPacket::New(slab_allocators::kLargeControlPayloadSize);
     if (!packet) {
-      FXL_LOG(ERROR) << "Failed to allocate event packet!";
+      bt_log(ERROR, "hci", "failed to allocate event packet!");
       return;
     }
     auto packet_bytes = packet->mutable_view()->mutable_data();
@@ -594,18 +584,17 @@ void CommandChannel::OnChannelReady(
         channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
                       &read_size, nullptr, 0, nullptr);
     if (read_status < 0) {
-      FXL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
-                  << zx_status_get_string(read_status);
+      bt_log(TRACE, "hci", "Failed to read event bytes: %s",
+             zx_status_get_string(read_status));
       // Clear the handler so that we stop receiving events from it.
       // TODO(jamuraa): signal upper layers that we can't read the channel.
       return;
     }
 
     if (read_size < sizeof(EventHeader)) {
-      FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                     << "expected at least " << sizeof(EventHeader)
-                     << " bytes, "
-                     << "got " << read_size;
+      bt_log(ERROR, "hci",
+             "malformed data packet - expected at least %zu bytes, got %zu",
+             sizeof(EventHeader), read_size);
       // TODO(armansito): Should this be fatal? Ignore for now.
       continue;
     }
@@ -615,10 +604,10 @@ void CommandChannel::OnChannelReady(
     const size_t size_from_header =
         packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {
-      FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                     << "payload size from header (" << size_from_header << ")"
-                     << " does not match received payload size: "
-                     << rx_payload_size;
+      bt_log(ERROR, "hci",
+             "malformed packet - payload size from header (%zu) does not match"
+             " received payload size: %zu",
+             size_from_header, rx_payload_size);
       continue;
     }
 
@@ -635,8 +624,7 @@ void CommandChannel::OnChannelReady(
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FXL_VLOG(1) << "hci: CommandChannel: wait error: "
-                << zx_status_get_string(status);
+    bt_log(TRACE, "hci", "wait error: %s", zx_status_get_string(status));
   }
 }
 

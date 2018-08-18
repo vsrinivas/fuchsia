@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 
 namespace btlib {
@@ -136,9 +137,9 @@ bool BrEdrCommandHandler::SendConnectionRequest(uint16_t psm,
     }
 
     if (rsp_payload.size() != sizeof(ConnectionResponsePayload)) {
-      FXL_VLOG(1)
-          << "l2cap: BR/EDR cmd: ignoring malformed Connection Response, size "
-          << rsp_payload.size();
+      bt_log(TRACE, "l2cap-bredr",
+             "cmd: ignoring malformed Connection Response, size %zu",
+             rsp_payload.size());
       return false;
     }
 
@@ -173,9 +174,9 @@ bool BrEdrCommandHandler::SendConfigurationRequest(
     }
 
     if (rsp_payload.size() < sizeof(ConfigurationResponsePayload)) {
-      FXL_VLOG(1) << "l2cap: BR/EDR cmd: ignoring malformed Configuration "
-                     "Response, size "
-                  << rsp_payload.size();
+      bt_log(TRACE, "l2cap-bredr",
+             "cmd: ignore malformed Configuration Response, size %zu",
+             rsp_payload.size());
       return false;
     }
 
@@ -216,9 +217,9 @@ bool BrEdrCommandHandler::SendDisconnectionRequest(
     }
 
     if (rsp_payload.size() != sizeof(DisconnectionResponsePayload)) {
-      FXL_VLOG(1) << "l2cap: BR/EDR cmd: ignoring malformed Disconnection "
-                     "Response, size "
-                  << rsp_payload.size();
+      bt_log(TRACE, "l2cap-bredr",
+             "cmd ignoring malformed Disconnection Response, size %zu",
+             rsp_payload.size());
       return false;
     }
 
@@ -238,13 +239,13 @@ bool BrEdrCommandHandler::SendDisconnectionRequest(
 bool BrEdrCommandHandler::SendInformationRequest(
     InformationType type, InformationResponseCallback cb) {
   // TODO(NET-1135): Implement requesting remote features and fixed channels
-  FXL_LOG(ERROR) << "l2cap: BR/EDR cmd: Information Request not sent";
+  bt_log(ERROR, "l2cap-bredr", "cmd: Information Request not sent");
   return false;
 }
 
 void BrEdrCommandHandler::ServeConnectionRequest(ConnectionRequestCallback cb) {
   // TODO(NET-1135): Serve inbound channels
-  FXL_LOG(ERROR) << "l2cap: BR/EDR cmd: Connection Request not handled";
+  bt_log(ERROR, "l2cap-bredr", "cmd: Connection Request not handled");
 }
 
 void BrEdrCommandHandler::ServeConfigurationRequest(
@@ -253,9 +254,9 @@ void BrEdrCommandHandler::ServeConfigurationRequest(
                            const ByteBuffer& request_payload,
                            SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() < sizeof(ConfigurationRequestPayload)) {
-      FXL_VLOG(1) << "l2cap: BR/EDR cmd: rejecting malformed Configuration "
-                     "Request, size "
-                  << request_payload.size();
+      bt_log(TRACE, "l2cap-bredr",
+             "cmd: rejecting malformed Configuration Request, size %zu",
+             request_payload.size());
       sig_responder->RejectNotUnderstood();
       return;
     }
@@ -279,9 +280,9 @@ void BrEdrCommandHandler::ServeDisconnectionRequest(
                            const ByteBuffer& request_payload,
                            SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() != sizeof(DisconnectionRequestPayload)) {
-      FXL_VLOG(1) << "l2cap: BR/EDR cmd: rejecting malformed Disconnection "
-                     "Request, size "
-                  << request_payload.size();
+      bt_log(TRACE, "l2cap-bredr",
+             "cmd: rejecting malformed Disconnection Request, size %zu",
+             request_payload.size());
       sig_responder->RejectNotUnderstood();
       return;
     }
@@ -302,9 +303,9 @@ void BrEdrCommandHandler::ServeInformationRequest(
                          const ByteBuffer& request_payload,
                          SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() != sizeof(InformationRequestPayload)) {
-      FXL_VLOG(1)
-          << "l2cap: BR/EDR cmd: rejecting malformed Information Request, size "
-          << request_payload.size();
+      bt_log(TRACE, "l2cap-bredr",
+             "cmd: rejecting malformed Information Request, size %zu",
+             request_payload.size());
       sig_responder->RejectNotUnderstood();
       return;
     }
@@ -325,9 +326,10 @@ bool BrEdrCommandHandler::ParseReject(
   rsp->reject_reason_ = static_cast<RejectReason>(letoh16(rej_payload.reason));
   if (rsp->reject_reason() == RejectReason::kInvalidCID) {
     if (rej_payload_buf.size() - sizeof(CommandRejectPayload) < 4) {
-      FXL_LOG(ERROR) << "l2cap: BR/EDR cmd: ignoring malformed Command Reject "
-                        "Invalid Channel ID, size "
-                     << rej_payload_buf.size();
+      bt_log(ERROR, "l2cap-bredr",
+             "cmd: ignoring malformed Command Reject Invalid "
+             "Channel ID, size ",
+             rej_payload_buf.size());
       return false;
     }
 

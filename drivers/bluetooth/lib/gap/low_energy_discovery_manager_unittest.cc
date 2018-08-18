@@ -83,8 +83,8 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
 
   // Called by FakeController when the scan state changes.
   void OnScanStateChanged(bool enabled) {
-    FXL_VLOG(1) << "test: FakeController scan state: "
-                << (enabled ? "enabled" : "disabled");
+    bt_log(TRACE, "gap-test", "FakeController scan state: %s",
+           enabled ? "enabled" : "disabled");
     scan_enabled_ = enabled;
     scan_states_.push_back(enabled);
 

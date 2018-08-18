@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fxl/logging.h"
 
 namespace btlib {
@@ -185,7 +186,7 @@ AttributeGrouping* Database::NewGrouping(const common::UUID& group_type,
     }
 
     if (pos == groupings_.end()) {
-      FXL_VLOG(1) << "att: Attribute database is out of space!";
+      bt_log(TRACE, "att", "attribute database is out of space!");
       return nullptr;
     }
 

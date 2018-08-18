@@ -4,6 +4,8 @@
 
 #include "low_energy_central_server.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -47,17 +49,17 @@ void LowEnergyCentralServer::GetPeripheral(::fidl::StringPtr identifier,
 
 void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
                                        StartScanCallback callback) {
-  FXL_VLOG(1) << "Low Energy Central StartScan()";
+  bt_log(TRACE, "bt-host", "StartScan()");
 
   if (requesting_scan_) {
-    FXL_VLOG(1) << "Scan request already in progress";
+    bt_log(TRACE, "bt-host", "scan request already in progress");
     callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
                                         "Scan request in progress"));
     return;
   }
 
   if (filter && !fidl_helpers::IsScanFilterValid(*filter)) {
-    FXL_VLOG(1) << "Invalid scan filter given";
+    bt_log(TRACE, "bt-host", "invalid scan filter given");
     callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
                                         "ScanFilter contains an invalid UUID"));
     return;
@@ -81,7 +83,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
         self->requesting_scan_ = false;
 
         if (!session) {
-          FXL_VLOG(1) << "Failed to start discovery session";
+          bt_log(TRACE, "bt-host", "failed to start discovery session");
           callback(fidl_helpers::NewFidlError(
               ErrorCode::FAILED, "Failed to start discovery session"));
           return;
@@ -110,10 +112,10 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
 }
 
 void LowEnergyCentralServer::StopScan() {
-  FXL_VLOG(1) << "Low Energy Central StopScan()";
+  bt_log(TRACE, "bt-host", "StopScan()");
 
   if (!scan_session_) {
-    FXL_VLOG(1) << "No active discovery session; nothing to do";
+    bt_log(TRACE, "bt-host", "no active discovery session; nothing to do");
     return;
   }
 
@@ -125,7 +127,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     ::fidl::StringPtr identifier,
     ::fidl::InterfaceRequest<Client> client_request,
     ConnectPeripheralCallback callback) {
-  FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
+  bt_log(TRACE, "bt-host", "ConnectPeripheral()");
 
   auto iter = connections_.find(identifier);
   if (iter != connections_.end()) {
@@ -148,7 +150,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
 
     auto iter = self->connections_.find(peer_id);
     if (iter == self->connections_.end()) {
-      FXL_VLOG(1) << "Connect request canceled";
+      bt_log(TRACE, "bt-host", "connect request canceled");
       auto error = fidl_helpers::NewFidlError(ErrorCode::FAILED,
                                               "Connect request canceled");
       callback(std::move(error));
@@ -157,11 +159,9 @@ void LowEnergyCentralServer::ConnectPeripheral(
 
     if (!status) {
       FXL_DCHECK(!conn_ref);
-      auto msg = fxl::StringPrintf("Failed to connect to device (id: %s)",
-                                   peer_id.c_str());
-      FXL_VLOG(1) << msg;
-
-      callback(fidl_helpers::StatusToFidl(status, std::move(msg)));
+      bt_log(TRACE, "bt-host", "failed to connect to connect to device (id %s)",
+             peer_id.c_str());
+      callback(fidl_helpers::StatusToFidl(status, "failed to connect"));
       return;
     }
 
@@ -174,8 +174,9 @@ void LowEnergyCentralServer::ConnectPeripheral(
       // ConnectPeripheral are called in quick succession). In this case we
       // don't claim |conn_ref| since we already have a reference for this
       // peripheral.
-      FXL_VLOG(2) << "Dropping extra connection ref due to previously canceled "
-                     "connection attempt";
+      bt_log(SPEW, "bt-host",
+             "dropping extra connection ref due to previously canceled "
+             "connection attempt");
     }
 
     uintptr_t token = reinterpret_cast<GattHost::Token>(self.get());
@@ -194,10 +195,10 @@ void LowEnergyCentralServer::ConnectPeripheral(
 
   if (!adapter()->le_connection_manager()->Connect(identifier.get(),
                                                    std::move(conn_cb))) {
-    auto msg = fxl::StringPrintf("Cannot connect to unknown device id: %s",
-                                 identifier.get().c_str());
-    FXL_VLOG(1) << msg;
-    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND, msg));
+    bt_log(TRACE, "bt-host", "cannot connect to unknown device (id: %s)",
+           identifier.get().c_str());
+    callback(
+        fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND, "unknown device ID"));
     return;
   }
 
@@ -208,10 +209,10 @@ void LowEnergyCentralServer::DisconnectPeripheral(
     ::fidl::StringPtr identifier, DisconnectPeripheralCallback callback) {
   auto iter = connections_.find(identifier.get());
   if (iter == connections_.end()) {
-    auto msg = fxl::StringPrintf("Client not connected to device (id: %s)",
-                                 identifier.get().c_str());
-    FXL_VLOG(1) << msg;
-    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND, msg));
+    bt_log(TRACE, "bt-host", "client not connected to device (id: %s)",
+           identifier.get().c_str());
+    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND,
+                                        "device not connected"));
     return;
   }
 
@@ -220,7 +221,7 @@ void LowEnergyCentralServer::DisconnectPeripheral(
   connections_.erase(iter);
 
   if (was_pending) {
-    FXL_VLOG(1) << "Canceling ConnectPeripheral";
+    bt_log(TRACE, "bt-host", "canceling connection request");
   } else {
     const std::string& peer_id = identifier.get();
     gatt_host_->UnbindGattClient(reinterpret_cast<uintptr_t>(this));
@@ -234,7 +235,7 @@ void LowEnergyCentralServer::OnScanResult(
     const ::btlib::gap::RemoteDevice& remote_device) {
   auto fidl_device = fidl_helpers::NewLERemoteDevice(remote_device);
   if (!fidl_device) {
-    FXL_VLOG(1) << "Ignoring malformed scan result";
+    bt_log(TRACE, "bt-host", "ignoring malformed scan result");
     return;
   }
 

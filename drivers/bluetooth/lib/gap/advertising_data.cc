@@ -9,11 +9,12 @@
 #include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/utf_codecs.h"
 #include "lib/fxl/type_converter.h"
-#include "lib/fidl/cpp/vector.h"
 
 // A partial fxl::TypeConverter template specialization for copying the
 // contents of a type that derives from common::ByteBuffer into a
@@ -48,7 +49,7 @@ bool ParseUuids(const common::BufferView& data,
              (uuid_size == k128BitUuidElemSize));
 
   if (data.size() % uuid_size) {
-    FXL_LOG(WARNING) << "Malformed service UUIDs list";
+    bt_log(WARN, "gap-le", "malformed service UUIDs list");
     return false;
   }
 
@@ -170,7 +171,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
     switch (type) {
       case DataType::kTxPowerLevel: {
         if (field.size() != kTxPowerLevelSize) {
-          FXL_LOG(WARNING) << "Received malformed Tx Power Level";
+          bt_log(WARN, "gap-le", "received malformed Tx Power Level");
           return false;
         }
 
@@ -202,7 +203,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
       }
       case DataType::kManufacturerSpecificData: {
         if (field.size() < kManufacturerSpecificDataSizeMin) {
-          FXL_LOG(WARNING) << "Manufacturer specific data too small";
+          bt_log(WARN, "gap-le", "manufacturer specific data too small");
           return false;
         }
 
@@ -231,7 +232,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
         // device appearance, as it can be obtained either from advertising data
         // or via GATT.
         if (field.size() != kAppearanceSize) {
-          FXL_LOG(WARNING) << "Received malformed Appearance";
+          bt_log(WARN, "gap-le", "received malformed Appearance");
           return false;
         }
 
@@ -247,8 +248,8 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
         break;
       }
       default:
-        FXL_VLOG(1) << fxl::StringPrintf(
-            "Ignored Advertising Field (Type 0x%02hhx)", type);
+        bt_log(TRACE, "gap-le", "ignored advertising field (type %#02hhx)",
+               type);
         break;
     }
   }
@@ -322,7 +323,7 @@ void AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
     if (StringToUuid(it.uuid.get(), &servdata_uuid)) {
       out_ad->SetServiceData(servdata_uuid, servdata_view);
     } else {
-      FXL_LOG(WARNING) << "FIDL Service Data has malformed UUID";
+      bt_log(WARN, "gap-le", "FIDL Service Data has malformed UUID");
     }
   }
 
@@ -495,7 +496,7 @@ size_t AdvertisingData::CalculateBlockSize() const {
         break;
       }
       default: {
-        FXL_LOG(WARNING) << "Unknown UUID size";
+        bt_log(WARN, "gap-le", "unknown UUID size");
         break;
       }
     }

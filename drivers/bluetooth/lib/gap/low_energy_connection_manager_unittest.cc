@@ -112,9 +112,10 @@ class LowEnergyConnectionManagerTest : public TestingBase {
   void OnConnectionStateChanged(const common::DeviceAddress& address,
                                 bool connected,
                                 bool canceled) {
-    FXL_VLOG(3) << "OnConnectionStateChanged: " << address << " is "
-                << (connected ? "connected " : "")
-                << (canceled ? "canceled " : "");
+    bt_log(SPEW, "gap-test",
+           "OnConnectionStateChanged: %s connected: %s, canceled %s",
+           address.ToString().c_str(), connected ? "true" : "false",
+           canceled ? "true" : "false");
     if (canceled) {
       canceled_devices_.insert(address);
     } else if (connected) {

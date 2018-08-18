@@ -47,6 +47,7 @@ inline constexpr bool IsMultiplexerStarted(Role role) {
 // DLCIs are 6 bits. See RFCOMM 5.4. Any DLCI value will be truncated to the
 // least significant 6 bits.
 using DLCI = uint8_t;
+
 // DLCI 0 is internally used by RFCOMM as the multiplexer control channel, over
 // which the two multiplexers communicate. DLCIs 2-61 correspond to user data
 // channels, which can be used by applications.

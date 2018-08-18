@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
@@ -141,10 +142,8 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
         status = Status(HostError::kFailed);
       }
 
-      if (!status) {
-        FXL_VLOG(1) << "gatt: characteristic discovery failed "
-                    << status.ToString();
-
+      if (bt_is_error(status, TRACE, "gatt",
+                      "characteristic discovery failed")) {
         self->characteristics_.clear();
       }
 
@@ -188,7 +187,7 @@ void RemoteService::ReadCharacteristic(IdType id,
     }
 
     if (!(chrc->info().properties & Property::kRead)) {
-      FXL_VLOG(1) << "gatt: Characteristic does not support \"read\"";
+      bt_log(TRACE, "gatt", "characteristic does not support \"read\"");
       ReportValue(att::Status(HostError::kNotSupported), BufferView(), std::move(cb), dispatcher);
       return;
     }
@@ -218,7 +217,7 @@ void RemoteService::ReadLongCharacteristic(IdType id, uint16_t offset,
         }
 
         if (!(chrc->info().properties & Property::kRead)) {
-          FXL_VLOG(1) << "gatt: Characteristic does not support \"read\"";
+          bt_log(TRACE, "gatt", "characteristic does not support \"read\"");
           ReportValue(att::Status(HostError::kNotSupported), BufferView(),
                       std::move(cb), dispatcher);
           return;
@@ -227,7 +226,7 @@ void RemoteService::ReadLongCharacteristic(IdType id, uint16_t offset,
         FXL_DCHECK(chrc);
 
         if (max_bytes == 0) {
-          FXL_VLOG(2) << "gatt: Invalid value for |max_bytes|: 0";
+          bt_log(SPEW, "gatt", "invalid value for |max_bytes|: 0");
           ReportValue(att::Status(HostError::kInvalidParameters), BufferView(),
                       std::move(cb), dispatcher);
           return;
@@ -264,7 +263,7 @@ void RemoteService::WriteCharacteristic(IdType id,
 
     // TODO(armansito): Use the "long write" procedure when supported.
     if (!(chrc->info().properties & Property::kWrite)) {
-      FXL_VLOG(1) << "gatt: Characteristic does not support \"write\"";
+      bt_log(TRACE, "gatt", "characteristic does not support \"write\"");
       ReportStatus(Status(HostError::kNotSupported), std::move(cb), dispatcher);
       return;
     }
@@ -291,8 +290,8 @@ void RemoteService::WriteCharacteristicWithoutResponse(
     FXL_DCHECK(chrc);
 
     if (!(chrc->info().properties & Property::kWriteWithoutResponse)) {
-      FXL_VLOG(1)
-          << "gatt: Characteristic does not support \"write without response\"";
+      bt_log(TRACE, "gatt",
+             "characteristic does not support \"write without response\"");
       return;
     }
 
@@ -370,7 +369,8 @@ void RemoteService::StartDescriptorDiscovery() {
       // Fall through and notify clients below.
     } else {
       FXL_DCHECK(!self->HasCharacteristics());
-      FXL_VLOG(1) << "gatt: descriptor discovery failed " << status.ToString();
+      bt_log(TRACE, "gatt", "descriptor discovery failed %s",
+             status.ToString().c_str());
       self->characteristics_.clear();
 
       // Fall through and notify the clients below.

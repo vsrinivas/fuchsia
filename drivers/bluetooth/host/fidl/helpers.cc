@@ -8,6 +8,7 @@
 
 #include <endian.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
@@ -246,7 +247,7 @@ bool PopulateDiscoveryFilter(const ble::ScanFilter& fidl_filter,
     for (const auto& uuid_str : *fidl_filter.service_uuids) {
       ::btlib::common::UUID uuid;
       if (!::btlib::common::StringToUuid(uuid_str, &uuid)) {
-        FXL_VLOG(1) << "Invalid parameters given to scan filter";
+        bt_log(TRACE, "bt-host", "invalid parameters given to scan filter");
         return false;
       }
       uuids.push_back(uuid);

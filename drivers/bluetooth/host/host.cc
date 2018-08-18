@@ -4,6 +4,7 @@
 
 #include "host.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
@@ -24,9 +25,9 @@ bool Host::Initialize(InitCallback callback) {
   if (!hci)
     return false;
 
-  FXL_VLOG(1) << "bt-host: initializing HCI";
+  bt_log(TRACE, "bt-host", "initializing HCI");
   if (!hci->Initialize()) {
-    FXL_LOG(ERROR) << "bt-host: failed to initialize HCI transport";
+    bt_log(ERROR, "bt-host", "failed to initialize HCI transport");
     return false;
   }
 
@@ -49,7 +50,7 @@ bool Host::Initialize(InitCallback callback) {
   // profile after initial setup in GAP (which sets up ACL data).
   auto gap_init_callback = [l2cap = l2cap_, gatt_host = gatt_host_,
                             callback = std::move(callback)](bool success) {
-    FXL_VLOG(1) << "bt-host: GAP initialized";
+    bt_log(TRACE, "bt-host", "GAP initialized");
 
     if (success) {
       l2cap->Initialize();
@@ -59,15 +60,15 @@ bool Host::Initialize(InitCallback callback) {
     callback(success);
   };
 
-  FXL_VLOG(1) << "bt-host: initializing GAP";
+  bt_log(TRACE, "bt-host", "initializing GAP");
   return gap_->Initialize(std::move(gap_init_callback), [] {
-    FXL_VLOG(1) << "bt-host: HCI transport has closed";
+    bt_log(TRACE, "bt-host", "bt-host: HCI transport has closed");
   });
 }
 
 void Host::ShutDown() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_VLOG(1) << "bt-host: shutting down";
+  bt_log(TRACE, "bt-host", "shutting down");
 
   // Closes all FIDL channels owned by |host_server_|.
   host_server_ = nullptr;
@@ -84,7 +85,7 @@ void Host::ShutDown() {
 void Host::BindHostInterface(zx::channel channel) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (host_server_) {
-    FXL_LOG(WARNING) << "bt-host: Host interface channel already open!";
+    bt_log(WARN, "bt-host", "Host interface channel already open!");
     return;
   }
 
@@ -95,7 +96,7 @@ void Host::BindHostInterface(zx::channel channel) {
                                               gap_->AsWeakPtr(), gatt_host_);
   host_server_->set_error_handler([this] {
     FXL_DCHECK(host_server_);
-    FXL_VLOG(1) << "bt-host: Host interface disconnected";
+    bt_log(TRACE, "bt-host", "Host interface disconnected");
     host_server_ = nullptr;
   });
 }

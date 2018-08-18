@@ -4,6 +4,7 @@
 
 #include "logical_link.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -87,16 +88,14 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "l2cap: Cannot open fixed channel with id 0x%04x", id);
+    bt_log(ERROR, "l2cap", "cannot open fixed channel with id %#04x", id);
     return nullptr;
   }
 
   auto iter = channels_.find(id);
   if (iter != channels_.end()) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "l2cap: Channel is already open! (id: 0x%04x, handle: 0x%04x)", id,
-        handle_);
+    bt_log(ERROR, "l2cap",
+           "channel is already open! (id: %#04x, handle: %#04x)", id, handle_);
     return nullptr;
   }
 
@@ -122,9 +121,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   FXL_DCHECK(packet);
 
   if (!recombiner_.AddFragment(std::move(packet))) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: ACL data packet rejected (handle: 0x%04x)", handle_);
-
+    bt_log(TRACE, "l2cap", "ACL data packet rejected (handle: %#04x)", handle_);
     // TODO(armansito): This indicates that this connection is not reliable.
     // This needs to notify the channels of this state.
     return;
@@ -165,9 +162,8 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   if (pp_iter != pending_pdus_.end()) {
     pp_iter->second.emplace_back(std::move(pdu));
 
-    FXL_VLOG(2) << fxl::StringPrintf(
-        "l2cap: PDU buffered (channel: 0x%04x, ll: 0x%04x)", channel_id,
-        handle_);
+    bt_log(SPEW, "l2cap", "PDU buffered (channel: %#04x, ll: %#04x)",
+           channel_id, handle_);
     return;
   }
 

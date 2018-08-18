@@ -4,6 +4,8 @@
 
 #include "pairing_state.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
+
 #include "util.h"
 
 namespace btlib {
@@ -139,7 +141,7 @@ void PairingState::UpdateSecurity(SecurityLevel level,
                                   PairingCallback callback) {
   // If pairing is in progress then we queue the request.
   if (legacy_state_) {
-    FXL_VLOG(2) << "sm: LE legacy pairing in progress; request queued";
+    bt_log(SPEW, "sm", "LE legacy pairing in progress; request queued");
     FXL_DCHECK(le_smp_->pairing_started());
     request_queue_.emplace(level, std::move(callback));
     return;
@@ -172,7 +174,7 @@ void PairingState::AbortLegacyPairing(ErrorCode error_code) {
 
 void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
   FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
-  FXL_DCHECK(!legacy_state_) << "Already pairing!";
+  FXL_DCHECK(!legacy_state_) << "already pairing!";
 
   if (level == SecurityLevel::kAuthenticated) {
     le_smp_->set_mitm_required(true);
@@ -186,7 +188,7 @@ void PairingState::Abort() {
   if (!le_smp_->pairing_started())
     return;
 
-  FXL_VLOG(1) << "sm: Abort pairing";
+  bt_log(TRACE, "sm", "abort pairing");
   if (legacy_state_) {
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
   }
@@ -216,13 +218,13 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
 
     auto* state = self->legacy_state_.get();
     if (!state || id != state->id) {
-      FXL_VLOG(1) << "sm: Ignoring TK callback for expired pairing: (id = "
-                  << id << ")";
+      bt_log(TRACE, "sm", "ignoring TK callback for expired pairing: (id = %u)",
+             id);
       return;
     }
 
     if (!success) {
-      FXL_VLOG(1) << "sm: TK delegate responded with error; aborting";
+      bt_log(TRACE, "sm", "TK delegate responded with error; aborting");
       if (state->features->method == PairingMethod::kPasskeyEntryInput) {
         self->AbortLegacyPairing(ErrorCode::kPasskeyEntryFailed);
       } else {
@@ -306,7 +308,7 @@ void PairingState::EndLegacyPairingPhase2() {
 
   if (legacy_state_->features->initiator) {
     FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
-    FXL_VLOG(1) << "sm: Waiting to receive keys from the slave.";
+    bt_log(TRACE, "sm", "waiting to receive keys from the slave");
   } else {
     FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
 
@@ -338,7 +340,7 @@ void PairingState::CompleteLegacyPairing() {
     identity_addr = legacy_state_->identity_address;
   }
 
-  FXL_VLOG(1) << "sm: Legacy pairing complete";
+  bt_log(TRACE, "sm", "LE legacy pairing complete");
   legacy_state_ = nullptr;
 
   // TODO(armansito): Report CSRK when we support it.
@@ -375,7 +377,7 @@ void PairingState::CompleteLegacyPairing() {
 }
 
 void PairingState::OnPairingFailed(Status status) {
-  FXL_LOG(ERROR) << "sm: LE Pairing failed: " << status.ToString();
+  bt_log(ERROR, "sm", "LE pairing failed: %s", status.ToString().c_str());
 
   // TODO(NET-1201): implement "waiting interval" to prevent repeated attempts
   // as described in Vol 3, Part H, 2.3.6.
@@ -399,7 +401,7 @@ void PairingState::OnPairingFailed(Status status) {
 void PairingState::OnFeatureExchange(const PairingFeatures& features,
                                      const ByteBuffer& preq,
                                      const ByteBuffer& pres) {
-  FXL_VLOG(2) << "sm: Obtained LE Pairing features";
+  bt_log(SPEW, "sm", "obtained LE Pairing features");
 
   if (!features.initiator) {
     if (legacy_state_) {
@@ -423,7 +425,7 @@ void PairingState::OnPairingConfirm(const UInt128& confirm) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
-    FXL_VLOG(1) << "sm: Ignoring confirm value received while not pairing";
+    bt_log(TRACE, "sm", "ignoring confirm value received while not pairing");
     return;
   }
 
@@ -433,16 +435,16 @@ void PairingState::OnPairingConfirm(const UInt128& confirm) {
   // Reject pairing if neither of these is true.
   if (!legacy_state_->InPhase2() &&
       (!legacy_state_->WaitingForTK() || legacy_state_->features->initiator)) {
-    FXL_LOG(ERROR)
-        << "sm: Abort pairing due to confirm value received outside phase 2";
+    bt_log(ERROR, "sm",
+           "abort pairing due to confirm value received outside phase 2");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
-  // Abort pairing if we received a second confirm value from the peer. The
+  // abort pairing if we received a second confirm value from the peer. The
   // specification defines a certain order for the phase 2 commands.
   if (legacy_state_->has_peer_confirm) {
-    FXL_LOG(ERROR) << "sm: Already received confirm value! Aborting";
+    bt_log(ERROR, "sm", "already received confirm value! aborting");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -450,8 +452,8 @@ void PairingState::OnPairingConfirm(const UInt128& confirm) {
   // The confirm value shouldn't be sent after the random value. (See Vol 3,
   // Part H, 2.3.5.5 and Appendix C.2.1.1 for the specific order of events.
   if (legacy_state_->has_peer_rand) {
-    FXL_LOG(ERROR)
-        << "sm: \"Pairing Confirm\" expected before \"Pairing Random\"";
+    bt_log(ERROR, "sm",
+           "\"Pairing Confirm\" expected before \"Pairing Random\"");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -481,13 +483,13 @@ void PairingState::OnPairingRandom(const UInt128& random) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
-    FXL_VLOG(1) << "sm: Ignoring confirm value received while not pairing";
+    bt_log(TRACE, "sm", "ignoring confirm value received while not pairing");
     return;
   }
 
   if (!legacy_state_->InPhase2()) {
-    FXL_LOG(ERROR)
-        << "sm: Abort pairing due to confirm value received outside phase 2";
+    bt_log(ERROR, "sm",
+           "abort pairing due to confirm value received outside phase 2");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -496,10 +498,10 @@ void PairingState::OnPairingRandom(const UInt128& random) {
   // InPhase2() above).
   FXL_DCHECK(legacy_state_->has_tk);
 
-  // Abort pairing if we received a second random value from the peer. The
+  // abort pairing if we received a second random value from the peer. The
   // specification defines a certain order for the phase 2 commands.
   if (legacy_state_->has_peer_rand) {
-    FXL_LOG(ERROR) << "sm: Already received random value! Aborting";
+    bt_log(ERROR, "sm", "already received random value! aborting");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -507,7 +509,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
   // The random value shouldn't be sent before the confirm value. (See Vol 3,
   // Part H, 2.3.5.5 and Appendix C.2.1.1 for the specific order of events.
   if (!legacy_state_->has_peer_confirm) {
-    FXL_LOG(ERROR) << "sm: \"Pairing Rand\" expected after \"Pairing Confirm\"";
+    bt_log(ERROR, "sm", "\"Pairing Rand\" expected after \"Pairing Confirm\"");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -518,7 +520,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
 
     // The master distributes both values before the slave sends Srandom.
     if (!legacy_state_->sent_local_rand || !legacy_state_->sent_local_confirm) {
-      FXL_LOG(ERROR) << "sm: \"Pairing Random\" received in wrong order!";
+      bt_log(ERROR, "sm", "\"Pairing Random\" received in wrong order!");
       AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
       return;
     }
@@ -530,7 +532,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
 
     // We need to send Sconfirm before the master sends Mrand.
     if (!legacy_state_->sent_local_confirm) {
-      FXL_LOG(ERROR) << "sm: \"Pairing Random\" received in wrong order!";
+      bt_log(ERROR, "sm", "\"Pairing Random\" received in wrong order!");
       AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
       return;
     }
@@ -547,8 +549,8 @@ void PairingState::OnPairingRandom(const UInt128& random) {
   util::C1(legacy_state_->tk, legacy_state_->peer_rand, legacy_state_->preq,
            legacy_state_->pres, *ia, *ra, &peer_confirm);
   if (peer_confirm != legacy_state_->peer_confirm) {
-    FXL_LOG(ERROR) << "sm: " << (legacy_state_->features->initiator ? "S" : "M")
-                   << "confirm value does not match!";
+    bt_log(ERROR, "sm", "%sconfirm value does not match!",
+           legacy_state_->features->initiator ? "S" : "M");
     AbortLegacyPairing(ErrorCode::kConfirmValueFailed);
     return;
   }
@@ -574,7 +576,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
   if (legacy_state_->features->initiator) {
     // Initiate link layer encryption with STK.
     if (!le_link_->StartEncryption()) {
-      FXL_LOG(ERROR) << "sm: Failed to start encryption";
+      bt_log(ERROR, "sm", "failed to start encryption");
       AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     }
   } else {
@@ -587,27 +589,27 @@ void PairingState::OnPairingRandom(const UInt128& random) {
 
 void PairingState::OnLongTermKey(const common::UInt128& ltk) {
   if (!legacy_state_) {
-    FXL_VLOG(1) << "sm: Ignoring LTK received while not in legacy pairing";
+    bt_log(TRACE, "sm", "ignoring LTK received while not in legacy pairing");
     return;
   }
 
   if (!legacy_state_->InPhase3()) {
     // The link MUST be encrypted with the STK for the transfer of the LTK to be
     // secure.
-    FXL_LOG(ERROR) << "sm: Abort pairing due to LTK received outside phase 3";
+    bt_log(ERROR, "sm", "abort pairing due to LTK received outside phase 3");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   if (!legacy_state_->ShouldReceiveLTK()) {
-    FXL_LOG(ERROR) << "sm: Received unexpected LTK";
+    bt_log(ERROR, "sm", "received unexpected LTK");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
-  // Abort pairing if we received a second LTK from the peer.
+  // abort pairing if we received a second LTK from the peer.
   if (legacy_state_->has_ltk) {
-    FXL_LOG(ERROR) << "sm: Already received LTK! Aborting";
+    bt_log(ERROR, "sm", "already received LTK! aborting");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -621,16 +623,16 @@ void PairingState::OnLongTermKey(const common::UInt128& ltk) {
 
 void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
   if (!legacy_state_) {
-    FXL_VLOG(1)
-        << "sm: Ignoring ediv/rand received while not in legacy pairing";
+    bt_log(TRACE, "sm",
+           "ignoring ediv/rand received while not in legacy pairing");
     return;
   }
 
   if (!legacy_state_->InPhase3()) {
     // The link MUST be encrypted with the STK for the transfer of the LTK to be
     // secure.
-    FXL_LOG(ERROR)
-        << "sm: Abort pairing due to ediv/rand received outside phase 3";
+    bt_log(ERROR, "sm",
+           "abort pairing due to ediv/rand received outside phase 3");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -638,20 +640,20 @@ void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
   FXL_DCHECK(legacy_state_->stk_encrypted);
 
   if (!legacy_state_->ShouldReceiveLTK()) {
-    FXL_LOG(ERROR) << "sm: Received unexpected ediv/rand";
+    bt_log(ERROR, "sm", "received unexpected ediv/rand");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   // EDIV and Rand must be sent AFTER the LTK (Vol 3, Part H, 3.6.1).
   if (!legacy_state_->has_ltk) {
-    FXL_LOG(ERROR) << "sm: Received EDIV and Rand before LTK!";
+    bt_log(ERROR, "sm", "received EDIV and Rand before LTK!");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   if (legacy_state_->obtained_remote_keys & KeyDistGen::kEncKey) {
-    FXL_LOG(ERROR) << "sm: Already received EDIV and Rand!";
+    bt_log(ERROR, "sm", "already received EDIV and Rand!");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -667,27 +669,27 @@ void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
 
 void PairingState::OnIdentityResolvingKey(const common::UInt128& irk) {
   if (!legacy_state_) {
-    FXL_VLOG(1) << "sm: Ignoring IRK received while not in legacy pairing!";
+    bt_log(TRACE, "sm", "ignoring IRK received while not in legacy pairing!");
     return;
   }
 
   if (!legacy_state_->InPhase3()) {
     // The link must be encrypted with the STK for the transfer of the IRK to be
     // secure.
-    FXL_LOG(ERROR) << "sm: Abort pairing due to IRK received outside phase 3";
+    bt_log(ERROR, "sm", "abort pairing due to IRK received outside phase 3");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   if (!legacy_state_->ShouldReceiveIdentity()) {
-    FXL_LOG(ERROR) << "sm: Received unexpected IRK";
+    bt_log(ERROR, "sm", "received unexpected IRK");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   // Abort if we receive an IRK more than once.
   if (legacy_state_->has_irk) {
-    FXL_LOG(ERROR) << "sm: Already received IRK! Aborting;";
+    bt_log(ERROR, "sm", "already received IRK! aborting");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -702,35 +704,35 @@ void PairingState::OnIdentityResolvingKey(const common::UInt128& irk) {
 void PairingState::OnIdentityAddress(
     const common::DeviceAddress& identity_address) {
   if (!legacy_state_) {
-    FXL_VLOG(1)
-        << "sm: Ignoring identity address received while not in legacy pairing";
+    bt_log(TRACE, "sm",
+           "ignoring identity address received while not in legacy pairing");
     return;
   }
 
   if (!legacy_state_->InPhase3()) {
     // The link must be encrypted with the STK for the transfer of the address
     // to be secure.
-    FXL_LOG(ERROR)
-        << "sm: Abort pairing due to identity address received outside phase 3";
+    bt_log(ERROR, "sm",
+           "abort pairing due to identity address received outside phase 3");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   if (!legacy_state_->ShouldReceiveIdentity()) {
-    FXL_LOG(ERROR) << "sm: Received unexpected identity address";
+    bt_log(ERROR, "sm", "received unexpected identity address");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   // The identity address must be sent after the IRK (Vol 3, Part H, 3.6.1).
   if (!legacy_state_->has_irk) {
-    FXL_LOG(ERROR) << "sm: Received identity address before the IRK!";
+    bt_log(ERROR, "sm", "received identity address before the IRK!");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
 
   if (legacy_state_->obtained_remote_keys & KeyDistGen::kIdKey) {
-    FXL_LOG(ERROR) << "sm: Already received identity information!";
+    bt_log(ERROR, "sm", "already received identity information!");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -747,12 +749,12 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
-    FXL_VLOG(2) << "sm: Ignoring encryption change while not pairing";
+    bt_log(SPEW, "sm", "ignoring encryption change while not pairing");
     return;
   }
 
   if (!status || !enabled) {
-    FXL_LOG(ERROR) << "sm: Failed to encrypt link";
+    bt_log(ERROR, "sm", "failed to encrypt link");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
@@ -760,7 +762,7 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
   FXL_DCHECK(le_smp_->pairing_started());
 
   if (legacy_state_->InPhase2()) {
-    FXL_VLOG(1) << "sm: Link encrypted with STK";
+    bt_log(TRACE, "sm", "link encrypted with STK");
     EndLegacyPairingPhase2();
     return;
   }
@@ -769,7 +771,7 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
   // procedure.
   if (legacy_state_->RequestedKeysObtained() &&
       legacy_state_->WaitingForEncryptionWithLTK()) {
-    FXL_VLOG(1) << "sm: Link encrypted with LTK";
+    bt_log(TRACE, "sm", "link encrypted with LTK");
     legacy_state_->ltk_encrypted = true;
     CompleteLegacyPairing();
   }
@@ -782,7 +784,7 @@ void PairingState::OnExpectedKeyReceived() {
 
   if (!legacy_state_->RequestedKeysObtained()) {
     FXL_DCHECK(legacy_state_->InPhase3());
-    FXL_VLOG(1) << "sm: More keys pending";
+    bt_log(TRACE, "sm", "more keys pending");
     return;
   }
 
@@ -798,7 +800,7 @@ void PairingState::OnExpectedKeyReceived() {
 
   le_link_->set_link_key(*legacy_state_->ltk);
   if (!le_link_->StartEncryption()) {
-    FXL_LOG(ERROR) << "sm: Failed to start encryption";
+    bt_log(ERROR, "sm", "failed to start encryption");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
   }
 }

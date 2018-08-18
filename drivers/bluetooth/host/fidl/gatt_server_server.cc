@@ -4,6 +4,7 @@
 
 #include "gatt_server_server.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gatt/connection.h"
@@ -203,9 +204,9 @@ GattServerServer::~GattServerServer() {
 
 void GattServerServer::RemoveService(uint64_t id) {
   if (services_.erase(id)) {
-    FXL_VLOG(1) << "GattServerServer: service removed (id: " << id << ")";
+    bt_log(TRACE, "bt-host", "service removed (id: %u)", id);
   } else {
-    FXL_VLOG(1) << "GattServerServer: service id not found: " << id;
+    bt_log(TRACE, "bt-host", "service id not found: %u", id);
   }
 }
 
@@ -300,7 +301,7 @@ void GattServerServer::PublishService(
     // This will be called if either the delegate or the service connection
     // closes.
     auto connection_error_cb = [self, id] {
-      FXL_VLOG(1) << "Removing GATT service (id: " << id << ")";
+      bt_log(TRACE, "bt-host", "removing GATT service (id: %u)", id);
       if (self)
         self->RemoveService(id);
     };
