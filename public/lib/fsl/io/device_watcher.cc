@@ -104,7 +104,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
         return;
       }
       msg += namelen;
-      size -= namelen;
+      size -= namelen + 2;
     }
     wait->Begin(dispatcher);  // ignore errors
     return;
