@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use failure::Fail;
+use serde_derive::{Deserialize, Serialize};
 use serde_json;
-use std::fmt::{self, Display, Formatter};
 use std::fs;
 use std::io;
 use std::net::Ipv4Addr;

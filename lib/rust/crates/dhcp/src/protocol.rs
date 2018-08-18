@@ -11,9 +11,10 @@ pub const CLIENT_PORT: u16 = 68;
 const MAC_ADDR_LEN: usize = 6;
 
 const OP_IDX: usize = 0;
-const HTYPE_IDX: usize = 1;
-const HLEN_IDX: usize = 2;
-const HOPS_IDX: usize = 3;
+// currently unused
+//const HTYPE_IDX: usize = 1;
+//const HLEN_IDX: usize = 2;
+//const HOPS_IDX: usize = 3;
 const XID_IDX: usize = 4;
 const SECS_IDX: usize = 8;
 const FLAGS_IDX: usize = 10;
@@ -582,7 +583,7 @@ mod tests {
         let buf = vec![72, 2, 1, 2];
         let result = ConfigOption::from_buffer(&buf);
         match result {
-            Some(opt) => assert!(false), // test failure
+            Some(_) => assert!(false), // test failure
             None => assert!(true),       // test success
         }
     }
@@ -592,7 +593,7 @@ mod tests {
         let buf = vec![1, 6, 255, 255, 255, 0];
         let result = ConfigOption::from_buffer(&buf);
         match result {
-            Some(opt) => assert!(false), // test failure
+            Some(_) => assert!(false), // test failure
             None => assert!(true),       // test success
         }
     }

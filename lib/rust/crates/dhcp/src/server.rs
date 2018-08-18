@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use byteorder::{BigEndian, ByteOrder};
-use configuration::ServerConfig;
-use protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
+use crate::configuration::ServerConfig;
+use crate::protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
-use zx;
+use fuchsia_zircon as zx;
 
 /// A minimal DHCP server.
 ///
@@ -209,15 +209,17 @@ struct CachedConfig {
     expiration: zx::Time,
 }
 
-impl CachedConfig {
-    fn new() -> Self {
+impl Default for CachedConfig {
+    fn default() -> Self {
         CachedConfig {
             client_addr: Ipv4Addr::new(0, 0, 0, 0),
             options: vec![],
             expiration: zx::Time::INFINITE,
         }
     }
+}
 
+impl CachedConfig {
     fn expired(&self) -> bool {
         self.expiration <= zx::Time::get(zx::ClockId::UTC)
     }
@@ -488,7 +490,7 @@ fn apply_subnet_mask_to(prefix_len: u8, ip_addr: Ipv4Addr) -> Ipv4Addr {
 mod tests {
 
     use super::*;
-    use protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
+    use crate::protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
     use std::net::Ipv4Addr;
 
     fn new_test_server() -> Server {
@@ -712,7 +714,7 @@ mod tests {
         let disc = new_test_discover();
         let mac_addr = disc.chaddr;
         let mut server = new_test_server();
-        let got = server.dispatch(disc).unwrap();
+        let _ = server.dispatch(disc).unwrap();
 
         assert_eq!(server.pool.available_addrs.len(), 0);
         assert_eq!(server.pool.allocated_addrs.len(), 1);
@@ -725,7 +727,7 @@ mod tests {
     fn test_dispatch_with_discover_client_binding_returns_bound_addr() {
         let disc = new_test_discover();
         let mut server = new_test_server();
-        let mut client_config = CachedConfig::new();
+        let mut client_config = CachedConfig::default();
         let client_addr = Ipv4Addr::new(192, 168, 1, 42);
         client_config.client_addr = client_addr;
         server.pool.allocated_addrs.insert(client_addr);
@@ -743,7 +745,7 @@ mod tests {
     fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
         let disc = new_test_discover();
         let mut server = new_test_server();
-        let mut client_config = CachedConfig::new();
+        let mut client_config = CachedConfig::default();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
         client_config.expiration = zx::Time::from_nanos(0);
         server.cache.insert(disc.chaddr, client_config);
@@ -764,7 +766,7 @@ mod tests {
     fn test_dispatch_with_discover_unavailable_expired_client_binding_returns_new_addr() {
         let disc = new_test_discover();
         let mut server = new_test_server();
-        let mut client_config = CachedConfig::new();
+        let mut client_config = CachedConfig::default();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
         client_config.expiration = zx::Time::from_nanos(0);
         server.cache.insert(disc.chaddr, client_config);
