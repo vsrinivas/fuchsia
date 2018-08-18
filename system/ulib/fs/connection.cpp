@@ -338,6 +338,13 @@ zx_status_t Connection::HandleMessageThunk(fidl_msg_t* msg, fidl_txn_t* txn, voi
     return connection->HandleMessage(msg, txn);
 }
 
+// Flags which can be modified by SetFlags.
+constexpr uint32_t kSettableStatusFlags = ZX_FS_FLAG_APPEND;
+
+// All flags which indicate state of the
+// connection (excluding rights).
+constexpr uint32_t kStatusFlags = kSettableStatusFlags | ZX_FS_FLAG_VNODE_REF_ONLY;
+
 zx_status_t Connection::ObjectClone(uint32_t flags, zx_handle_t object) {
     zx::channel channel(object);
 
@@ -348,7 +355,7 @@ zx_status_t Connection::ObjectClone(uint32_t flags, zx_handle_t object) {
     // from the cloned file descriptor; allow de-scoping.
     // Currently, this is difficult, since the remote IO interface
     // to clone does not specify a reduced set of rights.
-    open_flags |= (flags_ & ZX_FS_RIGHTS);
+    open_flags |= (flags_ & (ZX_FS_RIGHTS | kStatusFlags));
 
     fbl::RefPtr<Vnode> vn(vnode_);
     zx_status_t status = ZX_OK;
@@ -710,16 +717,13 @@ zx_status_t Connection::FileTruncate(uint64_t length, fidl_txn_t* txn) {
     return fuchsia_io_FileTruncate_reply(txn, status);
 }
 
-// Flags which can be modified by SetFlags
-constexpr uint32_t kStatusFlags = ZX_FS_FLAG_APPEND;
-
 zx_status_t Connection::FileGetFlags(fidl_txn_t* txn) {
-    uint32_t flags = flags_ & (kStatusFlags | ZX_FS_RIGHTS | ZX_FS_FLAG_VNODE_REF_ONLY);
+    uint32_t flags = flags_ & (kStatusFlags | ZX_FS_RIGHTS);
     return fuchsia_io_FileGetFlags_reply(txn, ZX_OK, flags);
 }
 
 zx_status_t Connection::FileSetFlags(uint32_t flags, fidl_txn_t* txn) {
-    flags_ = (flags_ & ~kStatusFlags) | (flags & kStatusFlags);
+    flags_ = (flags_ & ~kSettableStatusFlags) | (flags & kSettableStatusFlags);
     return fuchsia_io_FileSetFlags_reply(txn, ZX_OK);
 }
 

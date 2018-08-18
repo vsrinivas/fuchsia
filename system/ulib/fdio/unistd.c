@@ -1181,15 +1181,16 @@ int fcntl(int fd, int cmd, ...) {
         GET_INT_ARG(n);
 
         zx_status_t r;
-        if ((n | O_NONBLOCK) == O_NONBLOCK) {
-            // NONBLOCK is local, so we can avoid the rpc for it
-            // which is good in situations where the remote doesn't
-            // support FCNTL but it's still valid to set non-blocking
+        uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
+        r = io->ops->set_flags(io, flags);
+
+        // Some remotes don't support setting flags; we
+        // can adjust their local flags anyway if NONBLOCK
+        // is the only bit being toggled.
+        if (r == ZX_ERR_NOT_SUPPORTED && ((n | O_NONBLOCK) == O_NONBLOCK)) {
             r = ZX_OK;
-        } else {
-            uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
-            r = io->ops->set_flags(io, flags);
         }
+
         if (r != ZX_OK) {
             n = STATUS(r);
         } else {
