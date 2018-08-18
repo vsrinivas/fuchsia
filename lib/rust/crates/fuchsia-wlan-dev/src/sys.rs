@@ -4,11 +4,11 @@
 
 #![deny(warnings)]
 
-use fdio::{fdio_sys, ioctl_raw};
+use fdio::{fdio_sys, ioctl_raw, make_ioctl};
 use std::fs::File;
 use std::os::raw;
 use std::os::unix::io::AsRawFd;
-use zx::{self, HandleBased};
+use fuchsia_zircon::{self as zx, HandleBased};
 
 pub fn connect_wlanphy_device(device: &File) -> Result<zx::Channel, zx::Status> {
     let (local, remote) = zx::Channel::create()?;

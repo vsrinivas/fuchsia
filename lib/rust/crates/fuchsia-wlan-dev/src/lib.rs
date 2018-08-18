@@ -7,11 +7,9 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate fdio;
-extern crate fidl_fuchsia_wlan_device as wlan;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
+use fidl_fuchsia_wlan_device as wlan;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 
 use std::fmt;
 use std::fs::{File, OpenOptions};
@@ -44,13 +42,13 @@ impl Device {
 /// Connects to a `Device` that represents a wlan phy.
 pub fn connect_wlan_phy(dev: &Device) -> Result<wlan::PhyProxy, zx::Status> {
     let chan = sys::connect_wlanphy_device(&dev.node)?;
-    Ok(wlan::PhyProxy::new(async::Channel::from_channel(chan)?))
+    Ok(wlan::PhyProxy::new(fasync::Channel::from_channel(chan)?))
 }
 
 /// Connects to a `Device` that represents a wlan iface.
-pub fn connect_wlan_iface(dev: &Device) -> Result<async::Channel, zx::Status> {
+pub fn connect_wlan_iface(dev: &Device) -> Result<fasync::Channel, zx::Status> {
     let chan = sys::connect_wlaniface_device(&dev.node)?;
-    Ok(async::Channel::from_channel(chan)?)
+    Ok(fasync::Channel::from_channel(chan)?)
 }
 
 impl fmt::Debug for Device {
