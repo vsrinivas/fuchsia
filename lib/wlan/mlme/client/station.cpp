@@ -877,9 +877,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     // For now, drop outgoing data frames if we are off channel
     // TODO(NET-1294)
-    if (!chan_sched_->OnChannel()) {
-        return ZX_OK;
-    }
+    if (!chan_sched_->OnChannel()) { return ZX_OK; }
 
     // Drop Ethernet frames when not associated.
     auto bss_setup = (bssid() != nullptr);
@@ -957,8 +955,8 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
         return status;
     }
 
-    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu\n",
-             data_frame.len(), data_frame.hdr()->len(), data_frame.body_len());
+    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu\n", data_frame.len(),
+             data_frame.hdr()->len(), data_frame.body_len());
     finspect("  wlan hdr: %s\n", debug::Describe(*data_frame.hdr()).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*data_frame.body()).c_str());
 
@@ -1211,16 +1209,12 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
 
 void Station::PreSwitchOffChannel() {
     debugfn();
-    if (state_ == WlanState::kAssociated) {
-        SetPowerManagementMode(true);
-    }
+    if (state_ == WlanState::kAssociated) { SetPowerManagementMode(true); }
 }
 
 void Station::BackToMainChannel() {
     debugfn();
-    if (state_ == WlanState::kAssociated) {
-        SetPowerManagementMode(false);
-    }
+    if (state_ == WlanState::kAssociated) { SetPowerManagementMode(false); }
 }
 
 void Station::DumpDataFrame(const DataFrameView<>& frame) {
