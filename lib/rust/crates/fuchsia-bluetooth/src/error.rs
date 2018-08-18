@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use failure::Fail;
 use fidl_fuchsia_bluetooth as bt;
 
 /// Error type that can be constructed from a Bluetooth FIDL Error or from on its own.

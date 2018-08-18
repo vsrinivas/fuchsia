@@ -5,7 +5,7 @@
 #![deny(warnings)]
 #![allow(missing_docs)]
 
-use failure::Error;
+use failure::{format_err, Error};
 use rand::{self, Rng};
 use std;
 use std::ffi::{CString, OsStr, OsString};
@@ -15,8 +15,8 @@ use std::os::raw;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
-use fdio::{fdio_sys, ioctl};
-use zircon::{self, Handle};
+use fdio::{fdio_sys, ioctl, make_ioctl};
+use fuchsia_zircon::{self as zircon, Handle};
 
 pub const DEV_TEST: &str = "/dev/test/test";
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";

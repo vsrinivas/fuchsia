@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fdio::{fdio_sys, ioctl};
+use fdio::{fdio_sys, ioctl, make_ioctl};
 use std;
 use std::fs::File;
 use std::mem;
 use std::os::raw;
-use zircon::{self, Handle};
+use fuchsia_zircon::{self as zircon, Handle};
 
 /// Opens a Host Fidl interface on a bt-host device using an Ioctl
 pub fn open_host_channel(device: &File) -> Result<zircon::Handle, Error> {
