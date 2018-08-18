@@ -2,26 +2,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
-go_test("compatibility_test_bin") {
-  gopackage = "fidl/compatibility_test"
+go_binary("compatibility_test_server_go_bin") {
+  gopackage = "compatibility_test"
 
-  output_name = "fidl_compatibility_test"
+  output_name = "compatibility_test_server_go"
 
-  deps = [ "compatibility_test_lib" ]
+  deps = [
+    ":lib"
+  ]
 }
 
-go_library("compatibility_test_lib") {
-  name = "fidl/compatibility_test"
+# The go_binary GN rule requires us to declare a go_library that creates the
+# gopackage, even if the library doesn't have any sources.
+go_library("lib") {
+  name = "compatibility_test"
+  deps = [
+    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service($go_toolchain)",
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/svc/go/src/svc",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+  ]
 }
 
-package("compatibility_test") {
+package("fidl_compatibility_test_server_go") {
   testonly = true
-  package_name = "fidl_compatibility_test"
-
-  deps = [":compatibility_test_bin"]
-  tests = [{ name = "fidl_compatibility_test" }]
+  deps = [
+    ":compatibility_test_server_go_bin",
+  ]
+  binary = "compatibility_test_server_go"
+  meta = [ {
+    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+    dest = "legacy_flat_exported_dir"
+  } ]
 }
