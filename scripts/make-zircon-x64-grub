@@ -21,16 +21,16 @@ if ! which xorriso grub-mkrescue &> /dev/null; then
   exit
 fi
 
+trap 'rm -rf "$TEMP"' EXIT HUP INT TERM
 TEMP="$(mktemp -d)"
+
 mkdir -p "$TEMP/boot/grub"
-cp "$PROJECT_DIR/zircon.bin" "$TEMP/boot/zircon.bin"
-cp "$BOOTDATA" "$TEMP/boot/ramdisk.bin"
-cat > "$TEMP/boot/grub/grub.cfg" << EOF
+cp "$PROJECT_DIR/multiboot.bin" "$PROJECT_DIR/zircon.zbi" "$TEMP/boot/"
+cat > "$TEMP/boot/grub/grub.cfg" << \EOF
 set timeout=0
 menuentry "Zircon" {
-  multiboot /boot/zircon.bin
-  module /boot/ramdisk.bin
+  multiboot /boot/multiboot.bin
+  module /boot/initrd.bin
 }
 EOF
 grub-mkrescue -o "$PROJECT_DIR/zircon.iso" "$TEMP"
-rm -rf "$TEMP"

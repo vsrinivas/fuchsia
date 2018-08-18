@@ -9,14 +9,6 @@ PLATFORM_BOARD_NAME := qemu
 
 include kernel/target/arm64/boot-shim/rules.mk
 
-# qemu needs a shimmed kernel
-QEMU_ZIRCON := $(BUILDDIR)/qemu-zircon.bin
+# qemu needs a trampoline shim.
 QEMU_BOOT_SHIM := $(BUILDDIR)/qemu-boot-shim.bin
-
-# prepend shim to kernel image
-$(QEMU_ZIRCON): $(QEMU_BOOT_SHIM) $(KERNEL_ZBI)
-	$(call BUILDECHO,generating $@)
-	$(NOECHO)cat $(QEMU_BOOT_SHIM) $(KERNEL_ZBI) > $@
-
-GENERATED += $(QEMU_ZIRCON)
-EXTRA_BUILDDEPS += $(QEMU_ZIRCON)
+EXTRA_BUILDDEPS += $(QEMU_BOOT_SHIM)

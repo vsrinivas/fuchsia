@@ -210,16 +210,3 @@ GENERATED += $(ZIRCON_BOOTIMAGE)
 .PHONY: image
 image: $(ZIRCON_BOOTIMAGE)
 kernel: image
-
-# TODO(mcgrathr): Remove these when all consumers of the build
-# only expect the new kernel.zbi and/or zircon.zbi names.
-.PHONY: legacy
-kernel: legacy
-legacy: $(BUILDDIR)/zircon.bin $(BUILDDIR)/bootdata.bin
-$(BUILDDIR)/zircon.bin: $(KERNEL_ZBI)
-	$(call BUILDECHO,compat kernel name $@)
-	$(NOECHO)ln -f $< $@
-# This has an extra copy of the kernel that won't be used at runtime.
-$(BUILDDIR)/bootdata.bin: $(ZIRCON_BOOTIMAGE)
-	$(call BUILDECHO,compat initrd name $@)
-	$(NOECHO)ln -f $< $@
