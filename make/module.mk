@@ -243,25 +243,13 @@ USER_MANIFEST_LINES += \
                 $(foreach file,$(MODULE_FIRMWARE),\
                           $(notdir $(file))=$(FIRMWARE_SRC_DIR)/$(file)))
 
-# generate an input linker script for all kernel and user modules
-ifeq (,$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
-MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
-$(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
-	@$(MKDIR)
-	$(call BUILDECHO,linking $@)
-	$(NOECHO)echo "INPUT($^)" > $@
-
-# track the module object for make clean
-GENERATED += $(MODULE_OBJECT)
-endif
-
 ifeq ($(MODULE_TYPE),)
 # modules with no type are kernel modules
 ifneq ($(MODULE_LIBS)$(MODULE_STATIC_LIBS)$(MODULE_FIDL_LIBS),)
 $(error $(MODULE) kernel modules may not use MODULE_LIBS, MODULE_STATIC_LIBS, or MODULE_FIDL_LIBS)
 endif
 # make the rest of the build depend on our output
-ALLMODULE_OBJS := $(ALLMODULE_OBJS) $(MODULE_OBJECT)
+ALLMODULE_OBJS += $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 else
 # otherwise they are some named module flavor
 include make/module-$(patsubst %-static,%,$(MODULE_TYPE)).mk
@@ -290,7 +278,6 @@ MODULE_LDFLAGS :=
 MODULE_SRCDEPS :=
 MODULE_EXTRA_OBJS :=
 MODULE_CONFIG :=
-MODULE_OBJECT :=
 MODULE_TYPE :=
 MODULE_NAME :=
 MODULE_EXPORT :=

@@ -361,8 +361,8 @@ EXTRA_CLEANDEPS :=
 # build ids
 EXTRA_IDFILES :=
 
-# any objects you put here get linked with the final image
-EXTRA_OBJS :=
+# All kernel modules contribute to this list.
+ALLMODULE_OBJS :=
 
 # userspace apps to build and include in initfs
 ALLUSER_APPS :=

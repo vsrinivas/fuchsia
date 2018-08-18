@@ -27,8 +27,7 @@ $(DEFSYM_SCRIPT): FORCE
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
 GENERATED += $(DEFSYM_SCRIPT)
 
-$(KERNEL_ELF): kernel/kernel.ld $(DEFSYM_SCRIPT) \
-	       $(ALLMODULE_OBJS) $(EXTRA_OBJS)
+$(KERNEL_ELF): kernel/kernel.ld $(DEFSYM_SCRIPT) $(ALLMODULE_OBJS)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) -T $^ -o $@
 # enable/disable the size output based on a combination of ENABLE_BUILD_LISTFILES
