@@ -575,7 +575,7 @@ include make/recurse.mk
 
 define link-toolchain-file-cmd
 $(call BUILDECHO,generating $@)
-$(NOECHO)ln -f -L $< $@
+$(NOECHO)ln -n -f -L $< $@ 2> /dev/null || cp -f $< $@
 endef
 define toolchain-id-files
 $(foreach lib,$(TOOLCHAIN_SOLIBS),
