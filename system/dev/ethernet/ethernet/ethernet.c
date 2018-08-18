@@ -892,10 +892,10 @@ static zx_status_t fidl_Start_locked(void* ctx, fidl_txn_t* txn) {
     return REPLY(Start)(txn, eth_start_locked(edev));
 }
 
-static zx_status_t fidl_Stop_locked(void* ctx) {
+static zx_status_t fidl_Stop_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
     eth_stop_locked(edev);
-    return ZX_OK;
+    return REPLY(Stop)(txn);
 }
 
 static zx_status_t fidl_ListenStart_locked(void* ctx, fidl_txn_t* txn) {
@@ -903,10 +903,10 @@ static zx_status_t fidl_ListenStart_locked(void* ctx, fidl_txn_t* txn) {
     return REPLY(ListenStart)(txn, eth_tx_listen_locked(edev, true));
 }
 
-static zx_status_t fidl_ListenStop_locked(void* ctx) {
+static zx_status_t fidl_ListenStop_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
     eth_tx_listen_locked(edev, false);
-    return ZX_OK;
+    return REPLY(ListenStop)(txn);
 }
 
 static zx_status_t fidl_SetClientName_locked(void* ctx, const char* buf, size_t len,

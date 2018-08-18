@@ -50,14 +50,14 @@ interface Device {
     4: Start() -> (zx.status status);
 
     // Stop transferring packets
-    5: Stop();
+    5: Stop() -> ();
 
     // Start listening to the packets that we're transmitting
     // as well as the packets we're receiving.
     6: ListenStart() -> (zx.status status);
 
     // Stop listening to the packets that we're transmitting.
-    7: ListenStop();
+    7: ListenStop() -> ();
 
     // `#define DEVICE_NAME_LEN 16`
     8: SetClientName(string:16 name) -> (zx.status status);
