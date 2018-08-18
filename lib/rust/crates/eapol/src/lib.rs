@@ -1,20 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #![feature(test)]
 #![deny(warnings)]
 
-#[macro_use]
-extern crate bitfield;
-extern crate byteorder;
-extern crate bytes;
-extern crate failure;
-#[macro_use]
-extern crate nom;
-extern crate test;
-
+use bitfield::{bitfield, bitfield_debug, bitfield_fields, bitfield_struct};
 use bytes::{BufMut, Bytes};
-use nom::{be_u16, be_u64, be_u8};
+use nom::{be_u16, be_u64, be_u8, call, do_parse, eof, error_position, map, named_args, take, verify};
 use std::convert::AsMut;
 
 pub trait FrameReceiver {
