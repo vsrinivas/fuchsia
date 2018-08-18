@@ -10,6 +10,7 @@ enum {
     NAND_CLASS_PARTMAP = 1,   // NAND device contains multiple partitions.
     NAND_CLASS_FTL = 2,       // NAND device is a FTL partition.
     NAND_CLASS_BBS = 3,       // NAND device is a bad block skip partition.
+    NAND_CLASS_DUMMY = 4      // Test or otherwise unknown device.
 };
 
 // nand_info_t is used to retrieve various parameters describing the geometry of
