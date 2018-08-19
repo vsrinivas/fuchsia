@@ -6,7 +6,6 @@
 
 #include <ddktl/device.h>
 #include <ddk/protocol/canvas.h>
-#include <ddk/protocol/scpi.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/protocol/platform-bus.h>
 #include <ddktl/protocol/platform-device.h>
@@ -100,13 +99,6 @@ private:
     zx_status_t RpcCanvasConfig(const DeviceResources* dr, zx_handle_t vmo, size_t offset,
                                 canvas_info_t* info, uint8_t* canvas_idx);
     zx_status_t RpcCanvasFree(const DeviceResources* dr, uint8_t canvas_idx);
-    zx_status_t RpcScpiGetSensor(const DeviceResources* dr, char* name, uint32_t *sensor_id);
-    zx_status_t RpcScpiGetSensorValue(const DeviceResources* dr, uint32_t sensor_id,
-                                      uint32_t* sensor_value);
-    zx_status_t RpcScpiGetDvfsInfo(const DeviceResources* dr, uint8_t power_domain,
-                                   scpi_opp_t* opps);
-    zx_status_t RpcScpiGetDvfsIdx(const DeviceResources* dr, uint8_t power_domain, uint16_t* idx);
-    zx_status_t RpcScpiSetDvfsIdx(const DeviceResources* dr, uint8_t power_domain, uint16_t idx);
     zx_status_t RpcI2cTransact(const DeviceResources* dr, uint32_t txid, rpc_i2c_req_t* req,
                                uint8_t* data, zx_handle_t channel);
     zx_status_t RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,

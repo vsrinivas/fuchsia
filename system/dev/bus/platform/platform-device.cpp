@@ -386,46 +386,6 @@ zx_status_t PlatformDevice::RpcCanvasFree(const DeviceResources* dr, uint8_t can
     return bus_->canvas()->Free(canvas_idx);
 }
 
-zx_status_t PlatformDevice::RpcScpiGetSensor(const DeviceResources* dr, char* name,
-                                             uint32_t *sensor_id) {
-    if (bus_->scpi() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->scpi()->GetSensor(name, sensor_id);
-}
-
-zx_status_t PlatformDevice::RpcScpiGetSensorValue(const DeviceResources* dr, uint32_t sensor_id,
-                                                  uint32_t* sensor_value) {
-    if (bus_->scpi() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->scpi()->GetSensorValue(sensor_id, sensor_value);
-}
-
-zx_status_t PlatformDevice::RpcScpiGetDvfsInfo(const DeviceResources* dr, uint8_t power_domain,
-                                               scpi_opp_t* opps) {
-    if (bus_->scpi() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->scpi()->GetDvfsInfo(power_domain, opps);
-}
-
-zx_status_t PlatformDevice::RpcScpiGetDvfsIdx(const DeviceResources* dr, uint8_t power_domain,
-                                              uint16_t* idx) {
-    if (bus_->scpi() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->scpi()->GetDvfsIdx(power_domain, idx);
-}
-
-zx_status_t PlatformDevice::RpcScpiSetDvfsIdx(const DeviceResources* dr, uint8_t power_domain,
-                                              uint16_t idx) {
-    if (bus_->scpi() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->scpi()->SetDvfsIdx(power_domain, idx);
-}
-
 zx_status_t PlatformDevice::RpcI2cTransact(const DeviceResources* dr, uint32_t txid,
                                            rpc_i2c_req_t* req, uint8_t* data, zx_handle_t channel) {
     if (bus_->i2c_impl() == nullptr) {
@@ -601,37 +561,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         case GPIO_SET_POLARITY:
             status = RpcGpioSetPolarity(dr, req->index, req->polarity);
-            break;
-        default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_SCPI: {
-        auto req = reinterpret_cast<rpc_scpi_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-        auto resp = reinterpret_cast<rpc_scpi_rsp_t*>(&resp_buf);
-        resp_len = sizeof(*resp);
-
-        switch (req_header->op) {
-        case SCPI_GET_SENSOR:
-            status = RpcScpiGetSensor(dr, req->name, &resp->sensor_id);
-            break;
-        case SCPI_GET_SENSOR_VALUE:
-            status = RpcScpiGetSensorValue(dr, req->sensor_id, &resp->sensor_value);
-            break;
-        case SCPI_GET_DVFS_INFO:
-            status = RpcScpiGetDvfsInfo(dr, req->power_domain, &resp->opps);
-            break;
-        case SCPI_GET_DVFS_IDX:
-            status = RpcScpiGetDvfsIdx(dr, req->power_domain, &resp->dvfs_idx);
-            break;
-        case SCPI_SET_DVFS_IDX:
-            status = RpcScpiSetDvfsIdx(dr, req->power_domain, req->idx);
             break;
         default:
             zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);

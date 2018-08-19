@@ -7,7 +7,6 @@
 #include <ddk/protocol/canvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/scpi.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
 namespace platform_bus {
@@ -143,31 +142,6 @@ typedef struct {
     rpc_req_header_t header;
     uint32_t index;
 } rpc_clk_req_t;
-
-// ZX_PROTOCOL_SCPI proxy support.
-enum {
-    SCPI_GET_SENSOR,
-    SCPI_GET_SENSOR_VALUE,
-    SCPI_GET_DVFS_INFO,
-    SCPI_GET_DVFS_IDX,
-    SCPI_SET_DVFS_IDX,
-};
-
-typedef struct {
-    rpc_req_header_t header;
-    uint8_t power_domain;
-    uint16_t idx;
-    uint32_t sensor_id;
-    char name[20];
-} rpc_scpi_req_t;
-
-typedef struct {
-    rpc_rsp_header_t header;
-    uint32_t sensor_value;
-    uint16_t dvfs_idx;
-    uint32_t sensor_id;
-    scpi_opp_t opps;
-} rpc_scpi_rsp_t;
 
 // ZX_PROTOCOL_CANVAS proxy support.
 enum {

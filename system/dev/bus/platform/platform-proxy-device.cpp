@@ -125,78 +125,6 @@ zx_status_t ProxyDevice::GpioWrite(uint32_t index, uint8_t value) {
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ProxyDevice::ScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_value) {
-    rpc_scpi_req_t req = {};
-    rpc_scpi_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_SCPI;
-    req.header.op = SCPI_GET_SENSOR_VALUE;
-    req.sensor_id = sensor_id;
-
-    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
-    if (status == ZX_OK) {
-        *sensor_value = resp.sensor_value;
-    }
-    return status;
-}
-
-zx_status_t ProxyDevice::ScpiGetSensor(const char* name, uint32_t* sensor_id) {
-    rpc_scpi_req_t req = {};
-    rpc_scpi_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_SCPI;
-    req.header.op = SCPI_GET_SENSOR;
-    uint32_t max_len = sizeof(req.name);
-    size_t len = strnlen(name, max_len);
-    if (len >= max_len) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(&req.name, name, len + 1);
-
-    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
-    if (status == ZX_OK) {
-        *sensor_id = resp.sensor_id;
-    }
-    return status;
-}
-
-zx_status_t ProxyDevice::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* opps) {
-    rpc_scpi_req_t req = {};
-    rpc_scpi_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_SCPI;
-    req.header.op = SCPI_GET_DVFS_INFO;
-    req.power_domain = power_domain;
-
-    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
-    if (status == ZX_OK) {
-        memcpy(opps, &resp.opps, sizeof(scpi_opp_t));
-    }
-    return status;
-}
-
-zx_status_t ProxyDevice::ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
-    rpc_scpi_req_t req = {};
-    rpc_scpi_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_SCPI;
-    req.header.op = SCPI_GET_DVFS_IDX;
-    req.power_domain = power_domain;
-
-    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
-    if (status == ZX_OK) {
-        *idx = resp.dvfs_idx;
-    }
-    return status;
-}
-
-zx_status_t ProxyDevice::ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
-    rpc_scpi_req_t req = {};
-    rpc_scpi_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_SCPI;
-    req.header.op = SCPI_SET_DVFS_IDX;
-    req.power_domain = power_domain;
-    req.idx = idx;
-
-    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
 zx_status_t ProxyDevice::CanvasConfig(zx_handle_t vmo, size_t offset, canvas_info_t* info,
                                       uint8_t* canvas_idx) {
     rpc_canvas_req_t req = {};
@@ -610,10 +538,6 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     }
     case ZX_PROTOCOL_CLK: {
         proto->ops = &clk_proto_ops_;
-        break;
-    }
-    case ZX_PROTOCOL_SCPI: {
-        proto->ops = &scpi_proto_ops_;
         break;
     }
     case ZX_PROTOCOL_CANVAS: {

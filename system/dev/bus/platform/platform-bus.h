@@ -13,9 +13,7 @@
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c-impl.h>
 #include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/mailbox.h>
 #include <ddktl/protocol/platform-bus.h>
-#include <ddktl/protocol/scpi.h>
 #include <ddktl/protocol/usb-mode-switch.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
@@ -73,7 +71,6 @@ public:
     inline ddk::ClkProtocolProxy* clk() const { return clk_.get(); }
     inline ddk::GpioProtocolProxy* gpio() const { return gpio_.get(); }
     inline ddk::I2cImplProtocolProxy* i2c_impl() const { return i2c_impl_.get(); }
-    inline ddk::ScpiProtocolProxy* scpi() const { return scpi_.get(); }
     inline ddk::UmsProtocolProxy* ums() const { return ums_.get(); }
     inline const uint8_t* metadata() const { return metadata_.get(); }
     inline size_t metadata_size() const { return metadata_.size(); }
@@ -98,8 +95,6 @@ private:
     fbl::unique_ptr<ddk::GpioProtocolProxy> gpio_;
     fbl::unique_ptr<ddk::IommuProtocolProxy> iommu_;
     fbl::unique_ptr<ddk::I2cImplProtocolProxy> i2c_impl_;
-    fbl::unique_ptr<ddk::ScpiProtocolProxy> scpi_;
-    fbl::unique_ptr<ddk::MailboxProtocolProxy> mailbox_;
     fbl::unique_ptr<ddk::UmsProtocolProxy> ums_;
 
     // Completion used by WaitProtocol().

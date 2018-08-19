@@ -82,21 +82,6 @@ zx_status_t PlatformBus::SetProtocol(uint32_t proto_id, void* protocol) {
         }
         break;
     }
-    case ZX_PROTOCOL_MAILBOX: {
-        mailbox_.reset(new (&ac) ddk::MailboxProtocolProxy(
-                                                    static_cast<mailbox_protocol_t*>(protocol)));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_SCPI: {
-        scpi_.reset(new (&ac) ddk::ScpiProtocolProxy(static_cast<scpi_protocol_t*>(protocol)));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        break;
-    }
     case ZX_PROTOCOL_CANVAS: {
         canvas_.reset(new (&ac) ddk::CanvasProtocolProxy(
                                                     static_cast<canvas_protocol_t*>(protocol)));
@@ -220,18 +205,6 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* protocol) {
             auto proto = static_cast<iommu_protocol_t*>(protocol);
             proto->ctx = this;
             proto->ops = &iommu_proto_ops_;
-            return ZX_OK;
-        }
-        break;
-    case ZX_PROTOCOL_MAILBOX:
-        if (mailbox_ != nullptr) {
-            mailbox_->GetProto(static_cast<mailbox_protocol_t*>(protocol));
-            return ZX_OK;
-        }
-        break;
-    case ZX_PROTOCOL_SCPI:
-        if (scpi_ != nullptr) {
-            scpi_->GetProto(static_cast<scpi_protocol_t*>(protocol));
             return ZX_OK;
         }
         break;
