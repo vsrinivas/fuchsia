@@ -443,6 +443,10 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
 
     // proxy devices are created through this handshake process
     if (ctx && (ctx->rpc != ZX_HANDLE_INVALID)) {
+        if (dev->flags & DEV_FLAG_INVISIBLE) {
+            printf("devhost: driver attempted to create invisible device in create()\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
         dev->rpc = ctx->rpc;
