@@ -46,7 +46,7 @@ typedef struct {
     uint32_t    type;   // metadata type (matches zbi_header_t.type for bootloader metadata)
     uint32_t    extra;  // matches zbi_header_t.extra for bootloader metadata
     const void* data;   // pointer to metadata (set to NULL for bootloader metadata)
-    size_t      len;    // metadata length in bytes (set to zero for bootloader metadata)
+    uint32_t    len;    // metadata length in bytes (set to zero for bootloader metadata)
 } pbus_metadata_t;
 
 typedef struct pbus_dev pbus_dev_t;

@@ -86,6 +86,8 @@ private:
     zx_status_t RpcGetBti(const DeviceResources* dr, uint32_t index, zx_handle_t* out_handle,
                           uint32_t* out_handle_count);
     zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
+    zx_status_t RpcGetMetadata(const DeviceResources* dr, uint32_t index, uint32_t* out_type,
+                               uint8_t* buf, uint32_t buf_size, uint32_t* actual);
     zx_status_t RpcUmsSetMode(const DeviceResources* dr, usb_mode_t mode);
     zx_status_t RpcGpioConfig(const DeviceResources* dr, uint32_t index, uint32_t flags);
     zx_status_t RpcGpioSetAltFunction(const DeviceResources* dr, uint32_t index, uint64_t function);
@@ -112,7 +114,8 @@ private:
     zx_status_t RpcClkEnable(const DeviceResources* dr, uint32_t index);
     zx_status_t RpcClkDisable(const DeviceResources* dr, uint32_t index);
 
-    zx_status_t AddMetaData(const pbus_metadata_t& pbm);
+    zx_status_t GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
+                               uint32_t* out_size);
 
     PlatformBus* bus_;
     char name_[ZX_DEVICE_NAME_MAX + 1];
