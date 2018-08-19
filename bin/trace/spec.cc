@@ -263,7 +263,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
 
   Spec result;
   rapidjson::Document document;
-  document.Parse(json.c_str(), json.size());
+  document.Parse<rapidjson::kParseCommentsFlag>(json.c_str(), json.size());
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
