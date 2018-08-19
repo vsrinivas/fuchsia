@@ -28,7 +28,6 @@ typedef struct {
 typedef struct {
     zx_device_t*                        zxdev;
     platform_device_protocol_t          pdev;
-    mailbox_protocol_t                  mailbox;
 
     io_buffer_t                         mmio_mailbox;
     io_buffer_t                         mmio_mailbox_payload;

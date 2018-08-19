@@ -288,6 +288,7 @@ static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
     if (!scpi) {
         return ZX_ERR_NO_MEMORY;
     }
+    mtx_init(&scpi->lock, mtx_plain);
 
     status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &scpi->pdev);
     if (status != ZX_OK) {
@@ -300,30 +301,28 @@ static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_THERMAL},
+    };
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "aml-scpi",
         .ctx = scpi,
         .ops = &aml_scpi_device_protocol,
-        .flags = DEVICE_ADD_NON_BINDABLE,
+        .proto_id = ZX_PROTOCOL_SCPI,
+        .proto_ops = &scpi_ops,
+        .props = props,
+        .prop_count = countof(props),
     };
 
-    status = device_add(parent, &args, NULL);
+    status = pdev_device_add(&scpi->pdev, 0, &args, NULL);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    scpi->scpi.ops = &scpi_ops;
-    scpi->scpi.ctx = scpi;
-
-    mtx_init(&scpi->lock, mtx_plain);
-    platform_bus_protocol_t pbus;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
-        SCPI_ERROR("ZX_PROTOCOL_PLATFORM_BUS not available %d \n", status);
-        goto fail;
-    }
-
-    pbus_set_protocol(&pbus, ZX_PROTOCOL_SCPI, &scpi->scpi);
     return ZX_OK;
 fail:
     aml_scpi_release(scpi);

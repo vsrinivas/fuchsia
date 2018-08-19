@@ -342,6 +342,12 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    thermal->device = calloc(1, sizeof(thermal_device_info_t));
+    if (!thermal->device) {
+        status = ZX_ERR_NO_MEMORY;
+        goto fail;
+    }
+
     status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &thermal->pdev);
     if (status != ZX_OK) {
         THERMAL_ERROR("Could not get parent protocol\n");
@@ -361,19 +367,13 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Populate board specific information
-    thermal_device_info_t* dev_config = calloc(1, sizeof(thermal_device_info_t));
-    if (!dev_config) {
-        return ZX_ERR_NO_MEMORY;
-    }
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE,
-                                 dev_config, sizeof(thermal_device_info_t), &actual);
+    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, thermal->device,
+                                 sizeof(*thermal->device), &actual);
     if (status != ZX_OK || actual != sizeof(thermal_device_info_t)) {
         THERMAL_ERROR("Could not get metadata\n");
         goto fail;
     }
-
-    thermal->device = dev_config;
 
     status = aml_thermal_init(thermal);
     if (status != ZX_OK) {
@@ -398,8 +398,11 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
                           thermal, "aml_thermal_notify_thread");
 
     return ZX_OK;
+
 fail:
-    aml_thermal_release(thermal);
+    zx_handle_close(thermal->port);
+    free(thermal->device);
+    free(thermal);
     return status;
 }
 

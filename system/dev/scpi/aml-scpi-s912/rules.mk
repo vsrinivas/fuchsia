@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)
+MODULE := $(LOCAL_DIR).mailbox
 
 MODULE_TYPE := driver
 
@@ -17,7 +17,7 @@ MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR).proxy
+MODULE := $(LOCAL_DIR).scpi
 
 MODULE_TYPE := driver
 

@@ -12,6 +12,47 @@
 #include <soc/aml-common/aml-thermal.h>
 #include "vim.h"
 
+static const pbus_mmio_t mailbox_mmios[] = {
+    // Mailbox
+    {
+        .base = S912_HIU_MAILBOX_BASE,
+        .length = S912_HIU_MAILBOX_LENGTH,
+    },
+    // Mailbox Payload
+    {
+        .base = S912_MAILBOX_PAYLOAD_BASE,
+        .length = S912_MAILBOX_PAYLOAD_LENGTH,
+    },
+};
+
+// IRQ for Mailbox
+static const pbus_irq_t mailbox_irqs[] = {
+    {
+        .irq = S912_MBOX_IRQ_RECEIV0,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    },
+    {
+        .irq = S912_MBOX_IRQ_RECEIV1,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    },
+    {
+        .irq = S912_MBOX_IRQ_RECEIV2,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    },
+    {
+        .irq = S912_MBOX_IRQ_SEND3,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    },
+    {
+        .irq = S912_MBOX_IRQ_SEND4,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    },
+    {
+        .irq = S912_MBOX_IRQ_SEND5,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    },
+};
+
 static const pbus_gpio_t fanctl_gpios[] = {
     {
         .gpio = S912_GPIODV(14),
@@ -138,26 +179,45 @@ static const pbus_metadata_t vim_thermal_metadata[] = {
     }
 };
 
-static const pbus_dev_t thermal_dev = {
-    .name = "vim-thermal",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_AMLOGIC_THERMAL,
-    .gpios = fanctl_gpios,
-    .gpio_count = countof(fanctl_gpios),
-    .metadata = vim_thermal_metadata,
-    .metadata_count = countof(vim_thermal_metadata),
+static const pbus_dev_t scpi_children[] = {
+    {
+        .name = "vim-thermal",
+        .vid = PDEV_VID_AMLOGIC,
+        .pid = PDEV_PID_GENERIC,
+        .did = PDEV_DID_AMLOGIC_THERMAL,
+        .gpios = fanctl_gpios,
+        .gpio_count = countof(fanctl_gpios),
+        .metadata = vim_thermal_metadata,
+        .metadata_count = countof(vim_thermal_metadata),
+    },
+};
+
+static const pbus_dev_t mailbox_children[] = {
+    {
+        .name = "scpi",
+        .vid = PDEV_VID_KHADAS,
+        .pid = PDEV_PID_VIM2,
+        .did = PDEV_DID_AMLOGIC_SCPI,
+        .children = scpi_children,
+        .child_count = countof(scpi_children),
+    },
+};
+
+static const pbus_dev_t mailbox_dev = {
+    .name = "mailbox",
+    .vid = PDEV_VID_KHADAS,
+    .pid = PDEV_PID_VIM2,
+    .did = PDEV_DID_AMLOGIC_MAILBOX,
+    .mmios = mailbox_mmios,
+    .mmio_count = countof(mailbox_mmios),
+    .irqs = mailbox_irqs,
+    .irq_count = countof(mailbox_irqs),
+    .children = mailbox_children,
+    .child_count = countof(mailbox_children),
 };
 
 zx_status_t vim2_thermal_init(vim_bus_t* bus) {
-
-    zx_status_t status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_SCPI);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "vim2_thermal_init: pbus_wait_protocol failed: %d\n", status);
-        return status;
-    }
-
-    status = pbus_device_add(&bus->pbus, &thermal_dev, 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &mailbox_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim2_thermal_init: pbus_device_add failed: %d\n", status);
         return status;
