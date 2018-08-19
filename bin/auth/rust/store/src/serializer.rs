@@ -6,9 +6,10 @@ extern crate base64;
 extern crate serde;
 extern crate serde_json;
 
-use super::{AuthDbError, CredentialValue};
+use crate::{AuthDbError, CredentialValue};
 
 use failure::Error;
+use log::{log, warn};
 use serde::ser::SerializeStruct;
 use serde_json::Value;
 use std::io::{Read, Write};
@@ -155,8 +156,8 @@ impl Serializer for JsonSerializer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::CredentialKey;
     use super::*;
+    use crate::CredentialKey;
     use std::io::Cursor;
     use std::str;
 
@@ -171,38 +172,36 @@ mod tests {
     }
 
     #[test]
-    fn test_json_serialize_deserialize_zero_items() {
+    fn test_json_serialize_deserialize_zero_items() -> Result<()> {
         let input = vec![];
 
         let mut serialized = Vec::<u8>::new();
-        JsonSerializer
-            .serialize(&mut serialized, input.iter())
-            .unwrap();
+        JsonSerializer.serialize(&mut serialized, input.iter())?;
         assert_eq!(str::from_utf8(&serialized).unwrap(), "[]");
 
-        let deserialized = JsonSerializer.deserialize(Cursor::new(serialized)).unwrap();
+        let deserialized = JsonSerializer.deserialize(Cursor::new(serialized))?;
         assert_eq!(deserialized, input);
+        Ok(())
     }
 
     #[test]
-    fn test_json_serialize_deserialize_one_item() {
+    fn test_json_serialize_deserialize_one_item() -> Result<()> {
         let input = vec![build_test_creds("1")];
 
         let mut serialized = Vec::<u8>::new();
-        JsonSerializer
-            .serialize(&mut serialized, input.iter())
-            .unwrap();
+        JsonSerializer.serialize(&mut serialized, input.iter())?;
         assert_eq!(
             str::from_utf8(&serialized).unwrap(),
             "[{\"identity_provider\":\"test\",\"id\":\"aWQx\",\"refresh_token\":\"cmVmMQ\"}]"
         );
 
-        let deserialized = JsonSerializer.deserialize(Cursor::new(serialized)).unwrap();
+        let deserialized = JsonSerializer.deserialize(Cursor::new(serialized))?;
         assert_eq!(deserialized, input);
+        Ok(())
     }
 
     #[test]
-    fn test_json_serialize_deserialize_multiple_items() {
+    fn test_json_serialize_deserialize_multiple_items() -> Result<()> {
         let input = vec![
             build_test_creds("1"),
             build_test_creds("2"),
@@ -210,12 +209,11 @@ mod tests {
         ];
 
         let mut serialized = Vec::<u8>::new();
-        JsonSerializer
-            .serialize(&mut serialized, input.iter())
-            .unwrap();
+        JsonSerializer.serialize(&mut serialized, input.iter())?;
 
-        let deserialized = JsonSerializer.deserialize(Cursor::new(serialized)).unwrap();
+        let deserialized = JsonSerializer.deserialize(Cursor::new(serialized))?;
         assert_eq!(deserialized, input);
+        Ok(())
     }
 
     #[test]

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate tempdir;
+use crate::serializer::{JsonSerializer, Serializer};
+use crate::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 
-use super::serializer::{JsonSerializer, Serializer};
-use super::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
-
+use log::{log, warn};
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -133,8 +132,8 @@ impl<S: Serializer> AuthDb for AuthDbFile<S> {
 
 #[cfg(test)]
 mod test {
-    use self::tempdir::TempDir;
     use super::*;
+    use tempdir::TempDir;
 
     struct TempLocation {
         // A fresh temp directory that will be deleted when this object is dropped.
@@ -158,17 +157,17 @@ mod test {
     }
 
     #[test]
-    fn test_write_and_get() {
+    fn test_write_and_get() -> Result<()> {
         let temp_location = create_temp_location();
         let cred_1 = build_test_creds("user1", "iuhaiedwufh");
         let cred_2 = build_test_creds("user2", "feouihefiuh");
 
         {
             // Load a database and insert one credential.
-            let mut db = AuthDbFile::new(&temp_location.path).unwrap();
-            db.add_credential(cred_1.clone()).unwrap();
+            let mut db = AuthDbFile::new(&temp_location.path)?;
+            db.add_credential(cred_1.clone())?;
             assert_eq!(
-                db.get_refresh_token(&cred_1.credential_key).unwrap(),
+                db.get_refresh_token(&cred_1.credential_key)?,
                 &cred_1.refresh_token
             );
             assert_match!(
@@ -179,29 +178,30 @@ mod test {
 
         {
             // Load a second database from the same file and verify contents are retained.
-            let mut db = AuthDbFile::new(&temp_location.path).unwrap();
+            let mut db = AuthDbFile::new(&temp_location.path)?;
             assert_eq!(
-                db.get_refresh_token(&cred_1.credential_key).unwrap(),
+                db.get_refresh_token(&cred_1.credential_key)?,
                 &cred_1.refresh_token
             );
-            db.add_credential(cred_2.clone()).unwrap();
+            db.add_credential(cred_2.clone())?;
             assert_eq!(
-                db.get_refresh_token(&cred_2.credential_key).unwrap(),
+                db.get_refresh_token(&cred_2.credential_key)?,
                 &cred_2.refresh_token
             );
             assert_eq!(db.get_all_credentials().unwrap(), vec![&cred_1, &cred_2]);
         }
+        Ok(())
     }
 
     #[test]
-    fn test_delete() {
+    fn test_delete() -> Result<()> {
         let temp_location = create_temp_location();
         let cred_1 = build_test_creds("user1", "iuhaiedwufh");
 
         {
             // Load a database and insert one credential.
-            let mut db = AuthDbFile::new(&temp_location.path).unwrap();
-            db.add_credential(cred_1.clone()).unwrap();
+            let mut db = AuthDbFile::new(&temp_location.path)?;
+            db.add_credential(cred_1.clone())?;
             // Check the credential can be deleted only once.
             assert!(db.delete_credential(&cred_1.credential_key).is_ok());
             assert_match!(
@@ -213,7 +213,8 @@ mod test {
         {
             // Loading the database again should work even though we deleted all the
             // entries.
-            AuthDbFile::new(&temp_location.path).unwrap();
+            AuthDbFile::new(&temp_location.path)?;
         }
+        Ok(())
     }
 }

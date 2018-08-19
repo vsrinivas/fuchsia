@@ -3,18 +3,11 @@
 // found in the LICENSE file.
 
 #[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate log;
-extern crate serde;
-extern crate serde_json;
-
-#[macro_use]
 mod macros;
 pub mod file;
 mod serializer;
 
-use failure::Error;
+use failure::{format_err, Error, Fail};
 use std::result;
 
 pub type Result<T> = result::Result<T, AuthDbError>;
@@ -31,7 +24,10 @@ pub enum AuthDbError {
     SerializationError,
     /// A lower level failure occured while reading and deserialization the
     /// data.
-    #[fail(display = "unexpected IO error accessing the database: {}", _0)]
+    #[fail(
+        display = "unexpected IO error accessing the database: {}",
+        _0
+    )]
     IoError(#[cause] std::io::Error),
     /// The existing contents of the DB are not valid. This could be caused by
     /// a change in file format or by data corruption.
@@ -82,9 +78,7 @@ pub struct CredentialValue {
 impl CredentialValue {
     /// Create a new CredentialValue, or returns an Error if any input is empty.
     pub fn new(
-        identity_provider: String,
-        id: String,
-        refresh_token: String,
+        identity_provider: String, id: String, refresh_token: String,
     ) -> result::Result<CredentialValue, Error> {
         if refresh_token.is_empty() {
             Err(format_err!("refresh_token cannot be empty"))

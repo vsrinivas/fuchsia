@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use]
-extern crate failure;
-extern crate fidl_fuchsia_auth;
-
-use failure::Error;
+use failure::{format_err, Error, Fail};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -114,7 +110,8 @@ impl TokenSet {
     /// Returns true iff this set contains at least one valid OAuth or Firebase
     /// token.
     fn is_valid(&self) -> bool {
-        !self.id_token_map.is_empty() || !self.access_token_map.is_empty()
+        !self.id_token_map.is_empty()
+            || !self.access_token_map.is_empty()
             || !self.firebase_token_map.is_empty()
     }
 
@@ -175,9 +172,7 @@ impl TokenCache {
     /// not expired. This will cause any expired tokens on the same key to
     /// be purged from the underlying cache.
     pub fn get_id_token(
-        &mut self,
-        cache_key: &CacheKey,
-        audience: &str,
+        &mut self, cache_key: &CacheKey, audience: &str,
     ) -> Option<Arc<OAuthToken>> {
         self.get_token_set(cache_key)
             .and_then(|ts| ts.id_token_map.get(audience).map(|t| t.clone()))
@@ -187,9 +182,7 @@ impl TokenCache {
     /// if present and not expired. This will cause any expired tokens on
     /// the same key to be purged from the underlying cache.
     pub fn get_access_token<T: Deref<Target = str>>(
-        &mut self,
-        cache_key: &CacheKey,
-        scopes: &[T],
+        &mut self, cache_key: &CacheKey, scopes: &[T],
     ) -> Option<Arc<OAuthToken>> {
         self.get_token_set(cache_key).and_then(|ts| {
             ts.access_token_map
@@ -198,13 +191,11 @@ impl TokenCache {
         })
     }
 
-    /// Returns a Firebase token for the specified `cache_key` and `firebase_api_key`, if present and
-    /// not expired. This will cause any expired tokens on the same key to
+    /// Returns a Firebase token for the specified `cache_key` and `firebase_api_key`, if present
+    /// and not expired. This will cause any expired tokens on the same key to
     /// be purged from the underlying cache.
     pub fn get_firebase_token(
-        &mut self,
-        cache_key: &CacheKey,
-        firebase_api_key: &str,
+        &mut self, cache_key: &CacheKey, firebase_api_key: &str,
     ) -> Option<Arc<FirebaseAuthToken>> {
         self.get_token_set(cache_key).and_then(|ts| {
             ts.firebase_token_map
@@ -231,19 +222,18 @@ impl TokenCache {
         self.map.get(cache_key)
     }
 
-    /// Adds an OAuth ID token to the cache, replacing any existing token for the same `cache_key` and `audience`.
+    /// Adds an OAuth ID token to the cache, replacing any existing token for the same `cache_key`
+    /// and `audience`.
     pub fn put_id_token(&mut self, cache_key: CacheKey, audience: String, token: Arc<OAuthToken>) {
         self.put_token(cache_key, |ts| {
             ts.id_token_map.insert(audience, token);
         });
     }
 
-    /// Adds an OAuth Access token to the cache, replacing any existing token for the same `cache_key` and `scopes`.
+    /// Adds an OAuth Access token to the cache, replacing any existing token for the same
+    /// `cache_key` and `scopes`.
     pub fn put_access_token<T: Deref<Target = str>>(
-        &mut self,
-        cache_key: CacheKey,
-        scopes: &[T],
-        token: Arc<OAuthToken>,
+        &mut self, cache_key: CacheKey, scopes: &[T], token: Arc<OAuthToken>,
     ) {
         self.put_token(cache_key, |ts| {
             ts.access_token_map
@@ -254,10 +244,7 @@ impl TokenCache {
     /// Adds a Firebase token to the cache, replacing any existing token for
     /// the same `cache_key` and `firebase_api_key`.
     pub fn put_firebase_token(
-        &mut self,
-        cache_key: CacheKey,
-        firebase_api_key: String,
-        token: Arc<FirebaseAuthToken>,
+        &mut self, cache_key: CacheKey, firebase_api_key: String, token: Arc<FirebaseAuthToken>,
     ) {
         self.put_token(cache_key, |ts| {
             ts.firebase_token_map.insert(firebase_api_key, token);
@@ -360,8 +347,7 @@ mod tests {
     }
 
     fn build_test_firebase_token(
-        time_until_expiry: Duration,
-        suffix: &str,
+        time_until_expiry: Duration, suffix: &str,
     ) -> Arc<FirebaseAuthToken> {
         Arc::new(FirebaseAuthToken {
             expiry_time: Instant::now() + time_until_expiry,
@@ -405,7 +391,10 @@ mod tests {
         let time_after_conversion = Instant::now();
 
         assert_eq!(&native_type.id_token, TEST_FIREBASE_ID_TOKEN);
-        assert_eq!(native_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
+        assert_eq!(
+            native_type.local_id,
+            Some(TEST_FIREBASE_LOCAL_ID.to_string())
+        );
         assert_eq!(native_type.email, Some(TEST_EMAIL.to_string()));
         assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
         assert!(native_type.expiry_time <= time_after_conversion + LONG_EXPIRY);
@@ -428,7 +417,10 @@ mod tests {
         assert_eq!(fidl_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
         assert_eq!(fidl_type.email, Some(TEST_EMAIL.to_string()));
         assert!(fidl_type.expires_in <= LONG_EXPIRY.as_secs());
-        assert!(fidl_type.expires_in >= (LONG_EXPIRY.as_secs() - elapsed_time_during_conversion.as_secs()) - 1);
+        assert!(
+            fidl_type.expires_in
+                >= (LONG_EXPIRY.as_secs() - elapsed_time_during_conversion.as_secs()) - 1
+        );
     }
 
     #[test]
@@ -604,14 +596,20 @@ mod tests {
         );
         let firebase_token_2 = build_test_firebase_token(ALREADY_EXPIRED, "2");
         let firebase_api_key_2 = TEST_API_KEY.to_string() + "2";
-        token_cache.put_firebase_token(key.clone(), firebase_api_key_2.clone(),
-         firebase_token_2.clone());
+        token_cache.put_firebase_token(
+            key.clone(),
+            firebase_api_key_2.clone(),
+            firebase_token_2.clone(),
+        );
 
         // Verify only the not expired token is accessible.
         assert_eq!(
             token_cache.get_firebase_token(&key, &firebase_api_key_1),
             Some(firebase_token_1)
         );
-        assert_eq!(token_cache.get_firebase_token(&key, &firebase_api_key_2), None);
+        assert_eq!(
+            token_cache.get_firebase_token(&key, &firebase_api_key_2),
+            None
+        );
     }
 }
