@@ -116,6 +116,7 @@ type iostate struct {
 	listenLoopClosing chan struct{} // tell the listen loop to close
 	listenLoopDone    chan struct{} // report that the listen loops has closed
 	dgramLoopClosing  chan struct{} // tell the dgram loop to close
+	connectClosing    chan struct{} // tell the connect attempt to close
 }
 
 // loopSocketWrite connects libc write to the network stack for TCP sockets.
@@ -1121,8 +1122,16 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	msg.Datalen = 0
 
 	if e == tcpip.ErrConnectStarted {
+		// Note that this channel needs a buffer. Otherwise sender
+		// might block.
+		ios.connectClosing = make(chan struct{}, 1)
 		go func() {
-			<-notifyCh
+			select {
+			case <-notifyCh:
+			case <-ios.connectClosing:
+				ios.wq.EventUnregister(&waitEntry)
+				return
+			}
 			ios.wq.EventUnregister(&waitEntry)
 			e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
 			if e != nil {
@@ -1165,6 +1174,9 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 	// Signal that we're about to close. This tells the various message loops to finish
 	// processing, and let us know when they're done.
 	err := ios.dataHandle.Handle().Signal(0, LOCAL_SIGNAL_CLOSING)
+	if ios.connectClosing != nil {
+		ios.connectClosing <- struct{}{}
+	}
 	if ios.listenLoopClosing != nil {
 		ios.listenLoopClosing <- struct{}{}
 	}
