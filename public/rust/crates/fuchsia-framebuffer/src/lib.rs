@@ -12,7 +12,7 @@ extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate shared_buffer;
 
-use display::{ControllerEvent, ControllerProxy, ImageConfig};
+use display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
 use failure::Error;
 use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
 use fdio::make_ioctl;
@@ -154,11 +154,30 @@ impl Frame {
         framebuffer: &FrameBuffer, executor: &mut async::Executor, image_vmo: Vmo,
     ) -> Result<u64, Error> {
         let pixel_format: u32 = framebuffer.config.format.into();
+        let plane = ImagePlane{
+            byte_offset: 0,
+            bytes_per_row: framebuffer.config.linear_stride_bytes() as u32
+        };
         let mut image_config = ImageConfig {
             width: framebuffer.config.width,
             height: framebuffer.config.height,
             pixel_format: pixel_format as u32,
             type_: 0,
+            planes: [
+                plane,
+                ImagePlane {
+                    byte_offset: 0,
+                    bytes_per_row: 0,
+                },
+                ImagePlane {
+                    byte_offset: 0,
+                    bytes_per_row: 0,
+                },
+                ImagePlane {
+                    byte_offset: 0,
+                    bytes_per_row: 0,
+                },
+            ],
         };
 
         let image_id: Rc<RefCell<Option<u64>>> = Rc::new(RefCell::new(None));
@@ -380,11 +399,30 @@ impl FrameBuffer {
         let layer_id = layer_id.replace(None);
         if let Some(id) = layer_id {
             let pixel_format: u32 = config.format.into();
+            let plane = ImagePlane {
+                byte_offset: 0,
+                bytes_per_row: config.linear_stride_bytes() as u32,
+            };
             let mut image_config = ImageConfig {
                 width: config.width,
                 height: config.height,
                 pixel_format: pixel_format as u32,
                 type_: 0,
+                planes: [
+                    plane,
+                    ImagePlane {
+                        byte_offset: 0,
+                        bytes_per_row: 0,
+                    },
+                    ImagePlane {
+                        byte_offset: 0,
+                        bytes_per_row: 0,
+                    },
+                    ImagePlane {
+                        byte_offset: 0,
+                        bytes_per_row: 0,
+                    },
+                ],
             };
             proxy.set_layer_primary_config(id, &mut image_config)?;
 
