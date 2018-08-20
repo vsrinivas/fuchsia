@@ -26,6 +26,21 @@ static zx_protocol_device_t qemu_test_device_protocol = {
     .release = qemu_test_release,
 };
 
+static zx_status_t qemu_test_bti(platform_device_protocol_t* pdev) {
+    zx_status_t status;
+    zx_handle_t bti;
+
+    status = pdev_get_bti(pdev, 0, &bti);
+
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to get bti, st = %d\n", DRIVER_NAME, status);
+    }
+
+    zx_handle_close(bti);
+
+    return status;
+}
+
 static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
     platform_device_protocol_t pdev;
     zx_status_t status;
@@ -50,6 +65,11 @@ static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
                mmio.size);
     }
     io_buffer_release(&mmio);
+
+    status = qemu_test_bti(&pdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: bti test failed, st = %d\n", DRIVER_NAME, status);
+    }
 
     qemu_test_t* child_2 = calloc(1, sizeof(qemu_test_t));
     if (!child_2) {

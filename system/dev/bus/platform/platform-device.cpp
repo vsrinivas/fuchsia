@@ -230,10 +230,18 @@ zx_status_t PlatformDevice::RpcGetInterrupt(const DeviceResources* dr, uint32_t 
 
 zx_status_t PlatformDevice::RpcGetBti(const DeviceResources* dr, uint32_t index,
                                       zx_handle_t* out_handle, uint32_t* out_handle_count) {
-    zx_status_t status = GetBti(index, out_handle);
+    if (index >= dr->bti_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    const pbus_bti_t& bti = dr->bti(index);
+
+    zx_status_t status = bus_->GetBti(bti.iommu_index, bti.bti_id, out_handle);
+
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
+
     return status;
 }
 

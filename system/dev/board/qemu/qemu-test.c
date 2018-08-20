@@ -50,6 +50,13 @@ static const pbus_mmio_t child_3_mmios[] = {
     },
 };
 
+static const pbus_bti_t child_1_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0xBEEF,
+    },
+};
+
 static const pbus_dev_t child_1_kids[] = {
     {
         // Resources for child-2
@@ -68,6 +75,8 @@ static const pbus_dev_t parent_kids[] = {
         // Resources for child-1
         .mmios = child_1_mmios,
         .mmio_count = countof(child_1_mmios),
+        .btis = child_1_btis,
+        .bti_count = countof(child_1_btis),
         .children = child_1_kids,
         .child_count = countof(child_1_kids),
     },
