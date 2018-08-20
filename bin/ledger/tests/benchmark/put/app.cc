@@ -12,7 +12,8 @@
 #include "peridot/bin/ledger/tests/benchmark/put/put.h"
 
 namespace {
-
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
 constexpr fxl::StringView kKeySizeFlag = "key-size";
@@ -24,9 +25,9 @@ constexpr fxl::StringView kSeedFlag = "seed";
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kTransactionSizeFlag << "=<int>"
@@ -69,13 +70,13 @@ int main(int argc, const char** argv) {
       transaction_size < 0 ||
       !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
       !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 
   std::string ref_strategy_str;
   if (!command_line.GetOptionValue(kRefsFlag.ToString(), &ref_strategy_str)) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
   ledger::PageDataGenerator::ReferenceStrategy ref_strategy;
@@ -86,7 +87,7 @@ int main(int argc, const char** argv) {
   } else {
     std::cerr << "Unknown option " << ref_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 
@@ -94,7 +95,7 @@ int main(int argc, const char** argv) {
   std::string seed_str;
   if (command_line.GetOptionValue(kSeedFlag.ToString(), &seed_str)) {
     if (!fxl::StringToNumberWithError(seed_str, &seed)) {
-      PrintUsage(argv[0]);
+      PrintUsage();
       return -1;
     }
   } else {

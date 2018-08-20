@@ -25,6 +25,8 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/sync.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
 constexpr fxl::StringView kChangeCountFlag = "change-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
@@ -36,9 +38,9 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 
 constexpr size_t kKeySize = 100;
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kChangeCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
@@ -226,7 +228,7 @@ int main(int argc, const char** argv) {
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
       !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 
@@ -239,7 +241,7 @@ int main(int argc, const char** argv) {
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 

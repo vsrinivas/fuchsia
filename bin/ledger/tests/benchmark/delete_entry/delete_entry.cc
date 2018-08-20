@@ -24,15 +24,17 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/delete_entry.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/delete_entry";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
 constexpr fxl::StringView kKeySizeFlag = "key-size";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kTransactionSizeFlag << "=<int>"
@@ -200,7 +202,7 @@ int main(int argc, const char** argv) {
                                    &value_size_str) ||
       !fxl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size == 0) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 

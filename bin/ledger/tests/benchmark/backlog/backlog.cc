@@ -27,6 +27,8 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/backlog.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/backlog";
 constexpr fxl::StringView kUniqueKeyCountFlag = "unique-key-count";
 constexpr fxl::StringView kKeySizeFlag = "key-size";
@@ -38,9 +40,9 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 
 const std::string kUserDirectory = "/backlog_user";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kUniqueKeyCountFlag << "=<int>"
             << " --" << kKeySizeFlag << "=<int>"
@@ -350,7 +352,7 @@ int main(int argc, const char** argv) {
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
       !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 
@@ -363,7 +365,7 @@ int main(int argc, const char** argv) {
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 

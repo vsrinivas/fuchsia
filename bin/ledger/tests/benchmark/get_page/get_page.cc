@@ -21,13 +21,15 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_page";
 constexpr fxl::StringView kPageCountFlag = "requests-count";
 constexpr fxl::StringView kReuseFlag = "reuse";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kPageCountFlag << "=<int>"
             << " [--" << kReuseFlag << "]" << std::endl;
@@ -123,7 +125,7 @@ int main(int argc, const char** argv) {
                                    &requests_count_str) ||
       !fxl::StringToNumberWithError(requests_count_str, &requests_count) ||
       requests_count == 0) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return EXIT_FAILURE;
   }
   bool reuse = command_line.HasOption(kReuseFlag);

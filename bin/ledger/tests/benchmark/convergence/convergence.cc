@@ -25,14 +25,16 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/convergence.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/convergence";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kDeviceCountFlag = "device-count";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
@@ -207,7 +209,7 @@ int main(int argc, const char** argv) {
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
       !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 

@@ -24,6 +24,8 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/disk_space.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/disk_space";
 constexpr fxl::StringView kPageCountFlag = "page-count";
 constexpr fxl::StringView kUniqueKeyCountFlag = "unique-key-count";
@@ -31,9 +33,9 @@ constexpr fxl::StringView kCommitCountFlag = "commit-count";
 constexpr fxl::StringView kKeySizeFlag = "key-size";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kPageCountFlag << "=<int>"
             << " --" << kUniqueKeyCountFlag << "=<int>"
@@ -169,7 +171,7 @@ int main(int argc, const char** argv) {
                                    &value_size_str) ||
       !fxl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size == 0) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 

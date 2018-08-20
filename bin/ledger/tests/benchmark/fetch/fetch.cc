@@ -25,6 +25,8 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/fetch.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/fetch";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
@@ -34,9 +36,9 @@ constexpr size_t kKeySize = 100;
 
 const std::string kUserDirectory = "/fetch-user";
 
-void PrintUsage(const char* executable_name) {
+void PrintUsage() {
   std::cout << "Usage: trace record "
-            << executable_name
+            << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
@@ -272,7 +274,7 @@ int main(int argc, const char** argv) {
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
       !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
-    PrintUsage(argv[0]);
+    PrintUsage();
     return -1;
   }
 
