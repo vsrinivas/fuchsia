@@ -2977,13 +2977,14 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
                    ethaddr_str, arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
+    arvif->is_up = false;
 
     ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
     if (ret != ZX_OK) {
         ath10k_err("Failed to take vdev %i down: %s\n", arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
-    arvif->is_up = false;
+    arvif->is_started = false;
 
     return ZX_OK;
 }
@@ -2993,6 +2994,20 @@ zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
     zx_status_t ret = ZX_OK;
 
     mtx_lock(&ar->conf_mutex);
+    if (arvif->is_started && arvif->is_up) {
+        ret = ath10k_mac_bss_disassoc(ar);
+        if (ret != ZX_OK) {
+            ath10k_warn("failed to disassociate vdev %i: %s\n",
+                        arvif->vdev_id, zx_status_get_string(ret));
+        }
+        ret = ath10k_vdev_restart(arvif, &ar->rx_channel);
+        if (ret != ZX_OK) {
+            ath10k_warn("failed to restart vdev %i: %s\n",
+                        arvif->vdev_id, zx_status_get_string(ret));
+        } else {
+            arvif->is_started = true;
+        }
+    }
     memcpy(&arvif->bssid, config->bssid, ETH_ALEN);
     mtx_unlock(&ar->conf_mutex);
     return ret;
@@ -3022,8 +3037,10 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
         struct ieee80211_frame_header* frame_hdr;
         struct ieee80211_assoc_resp* assoc_resp;
 
-        ZX_DEBUG_ASSERT(arvif->is_started);
-        ZX_DEBUG_ASSERT(!arvif->is_up);
+        if (!arvif->is_started || arvif->is_up) {
+            // Ignore frame
+            goto done;
+        }
 
         void* frame_ptr = ath10k_msg_buf_get_payload(buf) + buf->rx.frame_offset;
         frame_hdr = frame_ptr;
