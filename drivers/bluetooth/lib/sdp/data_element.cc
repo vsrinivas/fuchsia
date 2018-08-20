@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace btlib {
 
@@ -591,72 +592,38 @@ const DataElement* DataElement::At(size_t idx) const {
   return &aggregate_[idx];
 }
 
-std::ostream& operator<<(std::ostream& stream, const DataElement::Size& sz) {
-  switch (sz) {
-    case DataElement::Size::kOneByte:
-      stream << "1";
-      return stream;
-    case DataElement::Size::kTwoBytes:
-      stream << "2";
-      return stream;
-    case DataElement::Size::kFourBytes:
-      stream << "4";
-      return stream;
-    case DataElement::Size::kEightBytes:
-      stream << "8";
-      return stream;
-    case DataElement::Size::kSixteenBytes:
-      stream << "16";
-      return stream;
-    case DataElement::Size::kNextOne:
-      stream << "1+";
-      return stream;
-    case DataElement::Size::kNextTwo:
-      stream << "2+";
-      return stream;
-    case DataElement::Size::kNextFour:
-      stream << "4+";
-      return stream;
-  }
-}
-
 std::string DataElement::Describe() const {
-  std::ostringstream out;
   switch (type_) {
     case Type::kNull:
-      out << "Null";
-      return out.str();
+      return std::string("Null");
     case Type::kBoolean:
-      out << "Boolean(" << (int_value_ != 0) << ")";
-      return out.str();
+      return fxl::StringPrintf("Boolean(%s)", int_value_ ? "true" : "false");
     case Type::kUnsignedInt:
-      out << "UnsignedInt:" << size_ << "(" << uint_value_ << ")";
-      return out.str();
+      return fxl::StringPrintf("UnsignedInt:%zu(%lu)", WriteSize() - 1,
+                               uint_value_);
     case Type::kSignedInt:
-      out << "SignedInt:" << size_ << "(" << int_value_ << ")";
-      return out.str();
+      return fxl::StringPrintf("SignedInt:%zu(%ld)", WriteSize() - 1,
+                               int_value_);
     case Type::kUuid:
-      out << "UUID(" << uuid_.ToString() << ")";
-      return out.str();
+      return fxl::StringPrintf("UUID(%s)", uuid_.ToString().c_str());
     case Type::kString:
-      out << "String(" << string_ << ")";
-      return out.str();
-    case Type::kSequence:
-      out << "Sequence { ";
+      return fxl::StringPrintf("String(%s)", string_.c_str());
+    case Type::kSequence: {
+      std::string str;
       for (const auto &it : aggregate_) {
-        out << it.Describe() << " ";
+        str += it.Describe() + " ";
       }
-      out << "}";
-      return out.str();
-    case Type::kAlternative:
-      out << "Alternatives { ";
+      return fxl::StringPrintf("Sequence { %s}", str.c_str());
+    }
+    case Type::kAlternative: {
+      std::string str;
       for (const auto &it : aggregate_) {
-        out << it.Describe() << " ";
+        str += it.Describe() + " ";
       }
-      out << "}";
-      return out.str();
+      return fxl::StringPrintf("Alternatives { %s}", str.c_str());
+    }
     default:
-      bt_log(SPEW, "sdp", "unhandled type in Describe()");
+      bt_log(SPEW, "sdp", "unhandled type (%d) in Describe()", type_);
       // Fallthrough to unknown.
   }
 

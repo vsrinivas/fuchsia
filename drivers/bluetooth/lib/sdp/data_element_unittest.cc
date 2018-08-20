@@ -246,6 +246,27 @@ TEST_F(SDP_DataElementTest, ReadSequence) {
   EXPECT_EQ(2u, *it->Get<uint32_t>());
 }
 
+TEST_F(SDP_DataElementTest, Describe) {
+  EXPECT_EQ("Null", DataElement().Describe());
+  EXPECT_EQ("Boolean(true)", DataElement(true).Describe());
+  EXPECT_EQ("UnsignedInt:1(27)",
+            DataElement(static_cast<uint8_t>(27)).Describe());
+  EXPECT_EQ("SignedInt:4(-54321)",
+            DataElement(static_cast<int32_t>(-54321)).Describe());
+  EXPECT_EQ("UUID(00000100-0000-1000-8000-00805f9b34fb)",
+            DataElement(protocol::kL2CAP).Describe());
+  EXPECT_EQ("String(fuchsia💖)",
+            DataElement(std::string("fuchsia💖")).Describe());
+  std::vector<DataElement> strings{DataElement(std::string("hello")),
+                                   DataElement(std::string("sapphire🔷"))};
+  EXPECT_EQ("Sequence { String(hello) String(sapphire🔷) }",
+            DataElement(strings).Describe());
+  DataElement alts;
+  alts.SetAlternative(strings);
+  EXPECT_EQ("Alternatives { String(hello) String(sapphire🔷) }",
+            alts.Describe());
+}
+
 }  // namespace
 }  // namespace sdp
 }  // namespace btlib
