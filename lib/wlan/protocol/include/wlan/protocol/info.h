@@ -42,12 +42,22 @@ enum {
 
 // PHY values may be used in a bitfield (e.g., device capabilities) or as a value (e.g., rx or tx
 // info).
-enum {
+enum PHY {
     WLAN_PHY_DSSS = (1 << 0),
     WLAN_PHY_CCK = (1 << 1),
+    WLAN_PHY_ERP = (1 << 2),
     WLAN_PHY_OFDM = (1 << 2),
     WLAN_PHY_HT = (1 << 3),
     WLAN_PHY_VHT = (1 << 4),
+};
+
+// Guard Interval
+enum GI {
+    WLAN_GI_800NS = (1 << 0),  // all 802.11 phy
+    WLAN_GI_400NS = (1 << 1),  // 802.11n/ac
+    WLAN_GI_200NS = (1 << 2),  // 802.11n/ac
+    WLAN_GI_3200NS = (1 << 3), // 802.11ax
+    WLAN_GI_1600NS = (1 << 4), // 802.11ax
 };
 
 enum {

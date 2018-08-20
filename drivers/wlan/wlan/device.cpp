@@ -770,9 +770,6 @@ zx_status_t Device::CreateMinstrel() {
 void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.mac_role == WLAN_MAC_ROLE_CLIENT);
     if (minstrel_ == nullptr) { return; }
-    auto addr = common::MacAddr(assoc_ctx.bssid);
-    HtCapabilities ht_cap;
-    if (assoc_ctx.has_ht_cap) { ht_cap = HtCapabilities::FromDdk(assoc_ctx.ht_cap); }
-    minstrel_->AddPeer(addr, ht_cap);
+    minstrel_->AddPeer(assoc_ctx);
 }
 }  // namespace wlan

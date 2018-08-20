@@ -507,6 +507,8 @@ class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
     constexpr explicit SupportedMcsRxMcsHead(uint64_t val) : common::BitField<uint64_t>(val) {}
     constexpr SupportedMcsRxMcsHead() = default;
 
+    bool Support(uint8_t mcs_index) const { return 1 == (1 & (bitmask() >> mcs_index)); }
+
     // HT-MCS table in IEEE Std 802.11-2016, Annex B.4.17.2
     // VHT-MCS tables in IEEE Std 802.11-2016, 21.5
     WLAN_BIT_FIELD(bitmask, 0, 64);

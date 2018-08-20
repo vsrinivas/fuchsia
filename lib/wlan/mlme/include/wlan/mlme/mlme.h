@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MLME_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MLME_H_
 
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/common/bitfield.h>
@@ -59,3 +60,5 @@ class Mlme {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MLME_H_

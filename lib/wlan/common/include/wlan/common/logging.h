@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_LOGGING_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_LOGGING_H_
 
 #include <cstdint>
 #include <cstdio>
@@ -78,3 +79,5 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 #define MAC_ADDR_ARGS(a) ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_LOGGING_H_
