@@ -18,10 +18,11 @@ OpenSessionMessage OpenSessionMessage::Create(SharedMemoryManager::DriverMemoryP
     const size_t num_params = params.size() + kNumFixedOpenSessionParams;
     ZX_DEBUG_ASSERT(num_params <= fbl::numeric_limits<uint32_t>::max());
 
-    OpenSessionMessage message;
-
     // Allocate from pool
-    pool->Allocate(CalculateSize(num_params), &message.memory_);
+    OpenSessionMessage::SharedMemoryPtr memory;
+    pool->Allocate(CalculateSize(num_params), &memory);
+
+    OpenSessionMessage message(fbl::move(memory));
 
     message.header()->command = Command::kOpenSession;
     message.header()->cancel_id = cancel_id;

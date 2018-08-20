@@ -113,8 +113,15 @@ private:
     size_t count_;
 };
 
-class Message {
+template <typename PtrType>
+class MessageBase {
+    static_assert(fbl::is_same<PtrType, SharedMemory*>::value ||
+                      fbl::is_same<PtrType, fbl::unique_ptr<SharedMemory>>::value,
+                  "Template type of MessageBase must be a pointer (raw or smart) to SharedMemory!");
+
 public:
+    using SharedMemoryPtr = PtrType;
+
     enum Command : uint32_t {
         kOpenSession = 0,
         kInvokeCommand = 1,
@@ -123,6 +130,11 @@ public:
         kRegisterSharedMemory = 4,
         kUnregisterSharedMemory = 5,
     };
+
+    explicit MessageBase(SharedMemoryPtr memory)
+        : memory_(fbl::move(memory)) {
+        ZX_DEBUG_ASSERT(memory_->size() >= sizeof(MessageHeader));
+    }
 
     zx_paddr_t paddr() const { return memory_->paddr(); }
 
@@ -141,13 +153,31 @@ protected:
                                 header()->num_params);
     }
 
-    fbl::unique_ptr<SharedMemory> memory_;
+    SharedMemoryPtr memory_;
 };
+
+// UnmanagedMessage
+//
+// An OP-TEE message, where the lifetime of the underlying message memory is unmanaged.
+// This is useful for cases where the driver has already tracked the underlying message memory and
+// just needs to interpret the memory as a Message. This typically occurs when the secure world
+// repurposes a chunk of previously allocated memory as a Message for tasks like RPC.
+using UnmanagedMessage = MessageBase<SharedMemory*>;
+
+// ManagedMessage
+//
+// An OP-TEE message, where the lifetime of the underlying message memory is owned and managed by
+// a unique_ptr.
+// This is useful for cases where the lifetime of the message memory should be coupled with the
+// lifetime of the Message, which typically occurs when allocating memory for a new Message to pass
+// into the secure world.
+
+using ManagedMessage = MessageBase<fbl::unique_ptr<SharedMemory>>;
 
 // OpenSessionMessage
 //
 // This OP-TEE message is used to start a session between a client app and trusted app.
-class OpenSessionMessage : public Message {
+class OpenSessionMessage : public ManagedMessage {
 public:
     static OpenSessionMessage Create(SharedMemoryManager::DriverMemoryPool* pool,
                                      const UuidView& trusted_app,
@@ -160,7 +190,10 @@ public:
     uint32_t session_id() const { return header()->session_id; }
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
-    using Message::params;
+    using ManagedMessage::params;
+
+protected:
+    using ManagedMessage::ManagedMessage; // inherit constructors
 };
 
 } // namespace optee
