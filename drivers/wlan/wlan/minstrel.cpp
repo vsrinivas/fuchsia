@@ -5,6 +5,7 @@
 #include "minstrel.h"
 
 #include <wlan/mlme/debug.h>
+#include <wlan/protocol/mac.h>
 
 #include <random>
 
@@ -41,6 +42,7 @@ std::unordered_map<tx_vec_idx_t, zx::duration> GetSupportedErp(
         tx_vec_idx_t tx_vector_idx;
         status = tx_vector.ToIdx(&tx_vector_idx);
         zx::duration perfect_tx_time = TxTimeErp(rate);
+        ZX_DEBUG_ASSERT(perfect_tx_time.to_nsecs() != 0);
         tx_vec_to_add.emplace(tx_vector_idx, TxTimeErp(rate));
         debugmstl("%s, tx_time %lu nsec\n", debug::Describe(tx_vector).c_str(),
                   perfect_tx_time.to_nsecs());
@@ -121,6 +123,7 @@ std::unordered_map<tx_vec_idx_t, zx::duration> GetSupportedHt(
         zx_status_t status = tx_vector.ToIdx(&tx_vector_idx);
         ZX_DEBUG_ASSERT(status == ZX_OK);
         zx::duration perfect_tx_time = TxTimeHt(cbw, gi, mcs_idx);
+        ZX_DEBUG_ASSERT(perfect_tx_time.to_nsecs() != 0);
         debugmstl("%s, tx_time %lu nsec\n", debug::Describe(tx_vector).c_str(),
                   perfect_tx_time.to_nsecs());
         tx_vec_to_add.emplace(tx_vector_idx, perfect_tx_time);
@@ -249,13 +252,63 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
     for (auto entry : tx_status.tx_status_entry) {
         if (entry.tx_vector_idx == kInvalidTxVectorIdx) { break; }
         last_idx = entry.tx_vector_idx;
-        (*tx_stats_map)[last_idx].attempts += entry.attempts;
+        (*tx_stats_map)[last_idx].attempts_cur += entry.attempts;
     }
     if (tx_status.success && last_idx != kInvalidTxVectorIdx) {
-        (*tx_stats_map)[last_idx].success++;
+        (*tx_stats_map)[last_idx].success_cur++;
     }
 
     outdated_peers_.emplace(peer_addr);
+}
+
+void UpdateStatsPeer(Peer* peer) {
+    // Default to the lowest rate supported.
+    peer->max_tp = peer->tx_stats_map.cbegin()->first;
+    peer->max_probability = peer->max_tp;
+    auto* sm = &peer->tx_stats_map;
+    for (auto& tx_stats : peer->tx_stats_map) {
+        tx_vec_idx_t tx_idx = tx_stats.first;
+        auto tsp = &tx_stats.second;
+        if (tsp->attempts_cur != 0) {
+            debugmstl("%s\n", debug::Describe(*tsp).c_str());
+            float prob = 1.0 * tsp->success_cur / tsp->attempts_cur;
+            if (tsp->attempts_total == 0) {
+                tsp->probability = prob;
+            } else {
+                tsp->probability = tsp->probability * kMinstrelExpWeight +
+                                            prob * (1 - kMinstrelExpWeight);
+            }
+            tsp->cur_tp = 1e9 / tsp->perfect_tx_time.to_nsecs() * tsp->probability;
+
+            if (tsp->attempts_total + tsp->attempts_cur < tsp->attempts_total) {  // overflow
+                tsp->attempts_total = 0;
+                tsp->success_total = 0;
+            } else {
+                tsp->attempts_total += tsp->attempts_cur;
+                tsp->success_total += tsp->success_cur;
+            }
+            tsp->attempts_cur = 0;
+            tsp->success_cur = 0;
+        }
+
+        const float tp = tsp->cur_tp;
+        const float probability = tsp->probability;
+
+        auto& incumbent = (*sm)[peer->max_tp];
+        if ((tp > incumbent.cur_tp) ||
+            ((tp == incumbent.cur_tp) && (probability > incumbent.probability))) {
+            peer->max_tp = tx_idx;
+        }
+
+        incumbent = (*sm)[peer->max_probability];
+
+        // if probability is high enough, compare throughput instead.
+        if (((probability >= kMinstrelProbabilityThreshold) && (tp > incumbent.cur_tp)) ||
+            (probability > incumbent.probability)) {
+            peer->max_probability = tx_idx;
+        }
+    }
+    debugmstl("max_tp: %hu, max_prob: %hu\n", peer->max_tp, peer->max_probability);
 }
 
 void MinstrelRateSelector::HandleTimeout() {
@@ -274,7 +327,7 @@ void MinstrelRateSelector::UpdateStats() {
         ZX_DEBUG_ASSERT(peer != nullptr);
         debugmstl("%s has update.\n", peer_addr.ToString().c_str());
 
-    	// TODO(eyw): Loop through all tx_stats and pick the best combination for next update period
+        UpdateStatsPeer(peer);
     }
     outdated_peers_.clear();
 }
@@ -284,4 +337,34 @@ Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) {
     if (iter != peer_map_.end()) { return &(iter->second); }
     return nullptr;
 }
+
+namespace debug {
+// This macro requires char buf[] and size_t offset variable defintions
+// in each function.
+#define BUFFER(args...)                                                   \
+    do {                                                                  \
+        offset += snprintf(buf + offset, sizeof(buf) - offset, " " args); \
+        if (offset >= sizeof(buf)) {                                      \
+            snprintf(buf + sizeof(buf) - 12, 12, " ..(trunc)");           \
+            offset = sizeof(buf);                                         \
+        }                                                                 \
+    } while (false)
+
+std::string Describe(const TxStats& tx_stats) {
+    char buf[128];
+    size_t offset = 0;
+
+    BUFFER("%s", Describe(tx_stats.tx_vector_idx).c_str());
+    BUFFER("succ_c: %zu", tx_stats.success_cur);
+    BUFFER("att_c: %zu", tx_stats.attempts_cur);
+    BUFFER("succ_t: %zu", tx_stats.success_total);
+    BUFFER("att_t: %zu", tx_stats.attempts_total);
+    BUFFER("prob: %f", tx_stats.probability);
+    BUFFER("tp: %f", tx_stats.cur_tp);
+
+    return std::string(buf, buf + offset);
+}
+#undef BUFFER
+}  // namespace debug
+
 }  // namespace wlan

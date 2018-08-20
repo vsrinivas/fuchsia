@@ -23,13 +23,19 @@ namespace wlan {
 
 static constexpr uint16_t kMinstrelFrameLength = 1400;  // bytes
 static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
+static constexpr float kMinstrelExpWeight = 0.75;  // Used to calculate moving average throughput
+static constexpr float kMinstrelProbabilityThreshold =
+    0.8;  // If probability is past this level, only consider throughput
 
 struct TxStats {
     tx_vec_idx_t tx_vector_idx;
     zx::duration perfect_tx_time;
-    size_t success = 0;       // successful transmissions since last update.
-    size_t attempts = 0;      // total transmission attempts since last update.
-    float probability = 1.0;  // Moving Average Probability of success.
+    size_t success_cur = 0;   // successful transmissions since last update.
+    size_t attempts_cur = 0;  // transmission attempts since last update.
+    float probability = kMinstrelProbabilityThreshold;  // Moving Average Probability of success.
+    float cur_tp = 0.0;                                 // Expected average throughput.
+    size_t success_total = 0;                           // cumulative succcess counts.
+    size_t attempts_total = 0;                          // cumulative attempts.
 };
 
 struct Peer {
@@ -37,8 +43,11 @@ struct Peer {
     bool is_ht = false;
     bool is_vht = false;
 
-    std::unordered_map<tx_vec_idx_t, TxStats>
-        tx_stats_map;  // 1:1 mapping to tx_params_list, constantly updated.
+    std::unordered_map<tx_vec_idx_t, TxStats> tx_stats_map;
+
+    // Index of the optimal tx vector
+    tx_vec_idx_t max_tp = 0;           // optimality based on expected throughput.
+    tx_vec_idx_t max_probability = 0;  // optimality based on success probability.
 };
 
 class MinstrelRateSelector {
@@ -61,6 +70,11 @@ class MinstrelRateSelector {
     TimerManager timer_mgr_;
     TimedEvent next_update_event_;
 };
+
+namespace debug {
+std::string Describe(const TxStats& tx_stats);
+}  // namespace debug
+
 }  // namespace wlan
 
 #endif  // GARNET_DRIVERS_WLAN_WLAN_MINSTREL_H_
