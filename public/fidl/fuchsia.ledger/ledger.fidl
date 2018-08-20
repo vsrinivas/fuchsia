@@ -125,13 +125,13 @@ interface Page {
   6: Delete(vector<uint8>:256 key) -> (Status @status);
 
   // Page level operations.
+
   // Deletes all entries in the page.
   // Outside of a transaction, this operation is equivalent to deleting every
   // key currently present on the page in a single transaction.
   // In a transaction, this operation is equivalent to deleting every key
   // present in the page before the transaction, as well as any new key added
   // since the transaction started.
-  // TODO(qsr): This method is currently unimplemented.
   7: Clear() -> (Status @status);
 
   // References.
