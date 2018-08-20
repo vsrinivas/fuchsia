@@ -19,7 +19,7 @@
 namespace modular {
 namespace testing {
 
-// LedgerRepoistoryForTesting spins up a ledger instance and acquires a ledger
+// LedgerRepositoryForTesting spins up a ledger instance and acquires a ledger
 // repository meant to be used for testing, particularly in gtest unittests.
 class LedgerRepositoryForTesting {
  public:
