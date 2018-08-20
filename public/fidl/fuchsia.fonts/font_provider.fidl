@@ -24,10 +24,29 @@ struct Request {
     uint32 width = 5;
 
     Slant slant = UPRIGHT;
+
+    // BCP47 language tags in order of preference. See
+    // https://tools.ietf.org/html/bcp47 .
+    vector<string:35>:8 language;
+
+    // Codepoint for the character that must be present in the returned font or 0.
+    // Caller that specify this field are expected to extract character set from
+    // the result and cache it in order to avoid calling the API more than
+    // necessary.
+    uint32 character;
 };
 
 struct Response {
     fuchsia.mem.Buffer buffer;
+
+    // Buffer identifier for the buffer. Responses with the same buffer_id are
+    // guaranteed to contain the same data in the buffer. Clients may use this
+    // value to detect if they already have the font cached in parsed form.
+    uint32 buffer_id;
+
+    // Font index within `buffer`. Used for font formats that may contain more
+    // than one font per file, e.g. TTC (TrueType Collection).
+    uint32 font_index;
 };
 
 [Discoverable]

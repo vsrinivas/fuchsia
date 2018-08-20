@@ -15,10 +15,9 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon::HandleBased;
 use futures::prelude::*;
 use futures::{future, Future, FutureExt};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
-use std::io::Seek;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
@@ -30,44 +29,70 @@ fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
     })
 }
 
-struct Font {
-    asset: String,
-    slant: fonts::Slant,
-    weight: u32,
+struct Asset {
+    path: PathBuf,
     buffer: RwLock<Option<mem::Buffer>>,
 }
 
-fn load_asset_to_vmo(path: &str) -> Result<mem::Buffer, Error> {
+struct AssetCollection {
+    assets_map: BTreeMap<PathBuf, u32>,
+    assets: Vec<Asset>,
+}
+
+fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
     let mut file = File::open(path)?;
     let vmo = fdio::get_vmo_copy_from_file(&file)?;
-
-    // TODO(US-527): seek() is used to get file size instead of
-    // file.metadata().len() because libc::stat() is currently broken on arm64.
-    let size = file.seek(std::io::SeekFrom::End(0))?;
-
+    let size = file.metadata()?.len();
     Ok(mem::Buffer { vmo, size })
 }
 
-impl Font {
-    fn get_font_data(&self) -> Result<mem::Buffer, Error> {
-        let cache_clone = self
-            .buffer
-            .read()
-            .unwrap()
-            .as_ref()
-            .map(|b| clone_buffer(b));
-        let buffer = match cache_clone {
-            Some(buffer) => buffer?,
-            None => {
-                let buf = load_asset_to_vmo(self.asset.as_str())?;
-                let buf_clone = clone_buffer(&buf)?;
-                *self.buffer.write().unwrap() = Some(buf);
-                buf_clone
-            }
-        };
-
-        Ok(buffer)
+impl AssetCollection {
+    fn new() -> AssetCollection {
+        AssetCollection {
+            assets_map: BTreeMap::new(),
+            assets: vec![],
+        }
     }
+
+    fn add_or_get_asset_id(&mut self, path: PathBuf) -> u32 {
+        if let Some(id) = self.assets_map.get(&path) {
+            return *id;
+        }
+
+        let id = self.assets.len() as u32;
+        self.assets.push(Asset {
+            path: path.clone(),
+            buffer: RwLock::new(None),
+        });
+        self.assets_map.insert(path, id);
+        id
+    }
+
+    fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
+        assert!(id < self.assets.len() as u32);
+
+        let asset = &self.assets[id as usize];
+
+        if let Some(cached) = asset.buffer.read().unwrap().as_ref() {
+            return clone_buffer(cached);
+        }
+
+        let buf = load_asset_to_vmo(&asset.path)?;
+        let buf_clone = clone_buffer(&buf)?;
+        *asset.buffer.write().unwrap() = Some(buf);
+        Ok(buf_clone)
+    }
+}
+
+pub type LanguageSet = BTreeSet<String>;
+
+struct Font {
+    asset_id: u32,
+    font_index: u32,
+    slant: fonts::Slant,
+    weight: u32,
+    width: u32,
+    language: LanguageSet,
 }
 
 struct FontFamily {
@@ -79,24 +104,35 @@ fn abs_diff(a: u32, b: u32) -> u32 {
     a.max(b) - a.min(b)
 }
 
+// TODO(US-409): Implement a better font-matching algorithm which:
+//   - follows CSS3 font style matching rules,
+//   - prioritizes fonts according to the language order in the request,
+//   - allows partial language match,
+//   - takes into account character specified in the request.
 fn compute_font_request_score(font: &Font, request: &fonts::Request) -> u32 {
+    let language_matches = request
+        .language
+        .iter()
+        .find(|lang| font.language.contains(*lang)).is_some();
+    let language_score = 2000 * (!language_matches) as u32;
+
     let slant_score = (font.slant != request.slant) as u32 * 1000;
     let weight_score = abs_diff(request.weight, font.weight);
-    slant_score + weight_score
+    language_score + slant_score + weight_score
 }
 
 impl FontFamily {
-    fn find_best_match(&self, request: &fonts::Request) -> Result<mem::Buffer, Error> {
+    fn find_best_match<'a>(&'a self, request: &fonts::Request) -> &'a Font {
         self.fonts
             .iter()
             .min_by_key(|f| compute_font_request_score(f, request))
             .unwrap()
-            .get_font_data()
     }
 }
 
 struct FontCollection {
     fallback_family: String,
+    assets: AssetCollection,
     families: BTreeMap<String, FontFamily>,
 }
 
@@ -105,6 +141,7 @@ impl FontCollection {
         let mut result = FontCollection {
             fallback_family: String::new(),
             families: BTreeMap::new(),
+            assets: AssetCollection::new(),
         };
         result.add_from_manifest(manifest)?;
         if result.fallback_family == "" {
@@ -130,11 +167,14 @@ impl FontCollection {
                 });
 
             for font in family_manifest.fonts.drain(..) {
+                let asset_id = self.assets.add_or_get_asset_id(font.asset);
                 family.fonts.push(Font {
-                    asset: font.asset,
-                    slant: font.slant,
+                    asset_id,
+                    font_index: font.index,
                     weight: font.weight,
-                    buffer: RwLock::new(None),
+                    width: font.width,
+                    slant: font.slant,
+                    language: font.language.iter().map(|x| x.clone()).collect(),
                 });
             }
         }
@@ -157,11 +197,18 @@ impl FontCollection {
         self.families.get(&self.fallback_family).unwrap()
     }
 
-    fn find_best_match(&self, request: &fonts::Request) -> Result<mem::Buffer, Error> {
-        self.families
+    fn find_best_match(&self, request: &fonts::Request) -> Result<fonts::Response, Error> {
+        let family = self
+            .families
             .get(&request.family)
-            .unwrap_or_else(|| self.get_fallback_family())
-            .find_best_match(request)
+            .unwrap_or_else(|| self.get_fallback_family());
+        let font = family.find_best_match(request);
+
+        Ok(fonts::Response {
+            buffer: self.assets.get_asset(font.asset_id)?,
+            buffer_id: font.asset_id,
+            font_index: font.font_index,
+        })
     }
 }
 
@@ -169,13 +216,14 @@ const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
 const VENDOR_FONT_MANIFEST_PATH: &str = "/system/data/vendor/fonts/manifest.json";
 
 fn load_fonts() -> Result<FontCollection, Error> {
-    let mut collection = FontsManifest::load_from_file(FONT_MANIFEST_PATH)
-        .and_then(|manifest| FontCollection::from_manifest(manifest))
-        .context(format!("Failed to load {}", FONT_MANIFEST_PATH))?;
-    if Path::new(VENDOR_FONT_MANIFEST_PATH).exists() {
-        FontsManifest::load_from_file(VENDOR_FONT_MANIFEST_PATH)
-            .and_then(|manifest| collection.add_from_manifest(manifest))
-            .context(format!("Failed to load {}", VENDOR_FONT_MANIFEST_PATH))?;
+    let main_font_manifest_path = Path::new(FONT_MANIFEST_PATH);
+    let mut collection = FontsManifest::load_from_file(main_font_manifest_path)
+        .and_then(|manifest| FontCollection::from_manifest(manifest))?;
+
+    let vendor_font_manifest_path = Path::new(VENDOR_FONT_MANIFEST_PATH);
+    if vendor_font_manifest_path.exists() {
+        FontsManifest::load_from_file(vendor_font_manifest_path)
+            .and_then(|manifest| collection.add_from_manifest(manifest))?;
     }
     Ok(collection)
 }
@@ -198,8 +246,7 @@ impl FontService {
                 // TODO(sergeyu): Currently the service returns an empty response when
                 // it fails to load a font. This matches behavior of the old
                 // FontProvider implementation, but it isn't the right thing to do.
-                let buf = self.font_collection.find_best_match(&request).ok();
-                let mut response = buf.map(|buffer| fonts::Response { buffer });
+                let mut response = self.font_collection.find_best_match(&request).ok();
                 future::ready(responder.send(response.as_mut().map(OutOfLine)))
             }
         }
