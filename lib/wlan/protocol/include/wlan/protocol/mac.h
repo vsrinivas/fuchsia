@@ -153,7 +153,7 @@ typedef struct wlan_key_config {
 
 typedef struct wlan_tx_packet {
     // Leading bytes of the packet to transmit. Any 802.11 frame headers must be in the packet_head.
-    ethmac_netbuf_t* packet_head;
+    ethmac_netbuf_t packet_head;
     // Trailing bytes of the packet to transmit. May be NULL if all bytes to be transmitted are in
     // the packet_head. Typically used to transport ethernet frames from a higher layer.
     ethmac_netbuf_t* packet_tail;

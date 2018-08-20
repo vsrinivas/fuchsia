@@ -33,21 +33,19 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
     return ZX_OK;
 }
 
-zx_status_t Packet::AsWlanTxPacket(wlan_tx_packet_t* tx_pkt) {
+wlan_tx_packet_t Packet::AsWlanTxPacket() {
     ZX_DEBUG_ASSERT(len() <= fbl::numeric_limits<uint16_t>::max());
-    ethmac_netbuf_t netbuf = {
-        .data = mut_data(),
-        .len = static_cast<uint16_t>(len()),
-    };
-    *tx_pkt = {.packet_head = &netbuf};
+    wlan_tx_packet_t tx_pkt = {};
+    tx_pkt.packet_head.data = mut_data();
+    tx_pkt.packet_head.len = static_cast<uint16_t>(len());
     if (has_ext_data()) {
-        tx_pkt->packet_tail = ext_data();
-        tx_pkt->tail_offset = ext_offset();
+        tx_pkt.packet_tail = ext_data();
+        tx_pkt.tail_offset = ext_offset();
     }
     if (has_ctrl_data<wlan_tx_info_t>()) {
-        std::memcpy(&tx_pkt->info, ctrl_data<wlan_tx_info_t>(), sizeof(tx_pkt->info));
+        std::memcpy(&tx_pkt.info, ctrl_data<wlan_tx_info_t>(), sizeof(tx_pkt.info));
     }
-    return ZX_OK;
+    return tx_pkt;
 }
 
 void LogAllocationFail(const char* str) {

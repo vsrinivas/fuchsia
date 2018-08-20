@@ -421,14 +421,8 @@ zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
 zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
     ZX_DEBUG_ASSERT(packet->len() <= fbl::numeric_limits<uint16_t>::max());
 
-    wlan_tx_packet_t tx_pkt;
-    auto status = packet->AsWlanTxPacket(&tx_pkt);
-    if (status != ZX_OK) {
-        errorf("could not convert packet to wlan_tx_packet when sending wlan frame: %d\n", status);
-        return status;
-    }
-
-    status = wlanmac_proxy_.QueueTx(0u, &tx_pkt);
+    wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
+    auto status = wlanmac_proxy_.QueueTx(0u, &tx_pkt);
     // TODO(tkilbourn): remove this once we implement WlanmacCompleteTx and allow wlanmac drivers to
     // complete transmits asynchronously.
     ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
@@ -499,12 +493,7 @@ zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
     ZX_DEBUG_ASSERT(beacon.get() != nullptr);
     if (beacon.get() == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
-    wlan_tx_packet_t tx_packet;
-    auto status = beacon->AsWlanTxPacket(&tx_packet);
-    if (status != ZX_OK) {
-        errorf("error turning Beacon into wlan_tx_packet: %d\n", status);
-        return status;
-    }
+    wlan_tx_packet_t tx_packet = beacon->AsWlanTxPacket();
     return wlanmac_proxy_.ConfigureBeacon(0u, &tx_packet);
 }
 

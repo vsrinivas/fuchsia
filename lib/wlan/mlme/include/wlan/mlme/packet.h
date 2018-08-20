@@ -200,7 +200,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 
     zx_status_t CopyFrom(const void* src, size_t len, size_t offset);
 
-    zx_status_t AsWlanTxPacket(wlan_tx_packet_t* tx_pkt);
+    wlan_tx_packet_t AsWlanTxPacket();
 
     bool has_ext_data() const { return ext_data_ != nullptr; }
     void set_ext_data(ethmac_netbuf_t* netbuf, uint16_t offset) {

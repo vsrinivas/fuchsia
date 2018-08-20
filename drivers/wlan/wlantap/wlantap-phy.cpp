@@ -68,8 +68,8 @@ struct EventSender {
         ConvertTxInfo(pkt->info, &tx_args_.packet.info);
         auto& data = tx_args_.packet.data;
         data->clear();
-        auto head = static_cast<const uint8_t*>(pkt->packet_head->data);
-        std::copy_n(head, pkt->packet_head->len, std::back_inserter(*data));
+        auto head = static_cast<const uint8_t*>(pkt->packet_head.data);
+        std::copy_n(head, pkt->packet_head.len, std::back_inserter(*data));
         if (pkt->packet_tail != nullptr) {
             auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data);
             std::copy_n(tail + pkt->tail_offset, pkt->packet_tail->len - pkt->tail_offset,
