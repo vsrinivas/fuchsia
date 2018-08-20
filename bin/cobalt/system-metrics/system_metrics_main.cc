@@ -77,7 +77,7 @@ class SystemMetricsApp {
         tick_interval_(tick_interval_minutes) {}
 
   // Main is invoked to initialize the app and start the metric gathering loop.
-  void Main();
+  void Main(async::Loop* loop);
 
  private:
   void ConnectToEnvironmentService();
@@ -191,12 +191,12 @@ fuchsia::cobalt::Status SystemMetricsApp::LogMemoryUsage(
   return fuchsia::cobalt::Status::OK;
 }
 
-void SystemMetricsApp::Main() {
+void SystemMetricsApp::Main(async::Loop* loop) {
   ConnectToEnvironmentService();
   // We keep gathering metrics until this process is terminated.
   for (;;) {
     GatherMetrics();
-    std::this_thread::sleep_for(tick_interval_);
+    loop->Run(zx::clock::get_monotonic() + zx::min(tick_interval_.count()));
   }
 }
 
@@ -224,6 +224,6 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   SystemMetricsApp app(kIntervalMinutes);
-  app.Main();
+  app.Main(&loop);
   return 0;
 }
