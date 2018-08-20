@@ -54,7 +54,7 @@ TEST_F(SetKindOfProtoStoryOptionCommandRunnerTest, Execute) {
 
   // Verify it was written.
   done = false;
-  session_storage_->GetStoryDataById(story_id_)->Then(
+  session_storage_->GetStoryData(story_id_)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
         EXPECT_TRUE(data->story_options.kind_of_proto_story);
         done = true;
@@ -78,7 +78,7 @@ TEST_F(SetKindOfProtoStoryOptionCommandRunnerTest, Execute) {
 
   // Verify second value.
   done = false;
-  session_storage_->GetStoryDataById(story_id_)->Then(
+  session_storage_->GetStoryData(story_id_)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
         EXPECT_FALSE(data->story_options.kind_of_proto_story);
         done = true;

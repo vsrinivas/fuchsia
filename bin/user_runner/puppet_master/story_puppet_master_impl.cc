@@ -31,7 +31,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 
  private:
   void Run() override {
-    session_storage_->GetStoryDataByName(story_name_)
+    session_storage_->GetStoryData(story_name_)
         ->WeakThen(GetWeakPtr(),
                    [this](fuchsia::modular::internal::StoryDataPtr data) {
                      if (data) {

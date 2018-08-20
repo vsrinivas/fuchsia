@@ -47,8 +47,9 @@ void PuppetMasterImpl::Duplicate(
 
 void PuppetMasterImpl::DeleteStory(fidl::StringPtr story_name,
                                    DeleteStoryCallback done) {
-  session_storage_->DeleteStoryByName(story_name)
-      ->Then([done = std::move(done)] { done(); });
+  session_storage_->DeleteStory(story_name)->Then([done = std::move(done)] {
+    done();
+  });
 }
 
 }  // namespace modular

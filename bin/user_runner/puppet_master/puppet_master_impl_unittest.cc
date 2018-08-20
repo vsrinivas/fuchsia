@@ -247,7 +247,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
   // Options are not set until execute that triggers the creation of a story.
   bool done{};
-  storage_->GetStoryDataByName("foo")->Then(
+  storage_->GetStoryData("foo")->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
         EXPECT_EQ(nullptr, data);
         done = true;
@@ -264,7 +264,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
   // Options should have been set.
   done = false;
-  storage_->GetStoryDataByName("foo")->Then(
+  storage_->GetStoryData("foo")->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
         EXPECT_TRUE(data->story_options.kind_of_proto_story);
         done = true;
@@ -292,7 +292,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
   // Options should have changed.
   done = false;
-  storage_->GetStoryDataByName("foo")->Then(
+  storage_->GetStoryData("foo")->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
         EXPECT_TRUE(data->story_options.kind_of_proto_story);
         done = true;
@@ -316,7 +316,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   RunLoopUntil([&] { return done; });
 
   done = false;
-  storage_->GetStoryDataById(story_id)->Then(
+  storage_->GetStoryData(story_id)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr story_data) {
         EXPECT_EQ(story_data, nullptr);
         done = true;

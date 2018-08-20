@@ -143,7 +143,7 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
     if (already_deleted_) {
       Teardown(flow);
     } else {
-      session_storage_->DeleteStoryById(story_id_)->WeakThen(
+      session_storage_->DeleteStory(story_id_)->WeakThen(
           GetWeakPtr(), [this, flow] { Teardown(flow); });
     }
   }
@@ -214,7 +214,7 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
       return;
     }
 
-    session_storage_->GetStoryDataById(story_id_)->Then(
+    session_storage_->GetStoryData(story_id_)->Then(
         [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
           if (!story_data) {
             return;
@@ -513,7 +513,7 @@ void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
   auto done =
       on_run
           ->AsyncMap([this, story_id] {
-            return session_storage_->GetStoryDataById(story_id);
+            return session_storage_->GetStoryData(story_id);
           })
           ->Map([](fuchsia::modular::internal::StoryDataPtr story_data)
                     -> fuchsia::modular::StoryInfoPtr {
@@ -539,7 +539,7 @@ void StoryProviderImpl::NotifyStoryStateChange(
       Future<>::Create("StoryProviderImpl.NotifyStoryStateChange.on_run");
   auto done = on_run
                   ->AsyncMap([this, story_id] {
-                    return session_storage_->GetStoryDataById(story_id);
+                    return session_storage_->GetStoryData(story_id);
                   })
                   ->Then([this, story_id, story_state, story_visibility_state](
                              fuchsia::modular::internal::StoryDataPtr data) {
@@ -612,7 +612,7 @@ void StoryProviderImpl::SetKindOfProtoStoryOption(
   auto done =
       on_run
           ->AsyncMap([this, story_id, is_kind_of_proto_story] {
-            return session_storage_->GetStoryDataById(story_id);
+            return session_storage_->GetStoryData(story_id);
           })
           ->AsyncMap([this, story_id, is_kind_of_proto_story](
                          fuchsia::modular::internal::StoryDataPtr data) {

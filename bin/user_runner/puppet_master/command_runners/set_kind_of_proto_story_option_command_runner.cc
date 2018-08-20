@@ -22,7 +22,7 @@ class SetKindOfProtoStoryOptionCall
   void Run() override {
     FlowToken flow{this, &result_};
     result_.status = fuchsia::modular::ExecuteStatus::OK;
-    session_storage_->GetStoryDataById(story_id_)->Then(
+    session_storage_->GetStoryData(story_id_)->Then(
         [this, flow](fuchsia::modular::internal::StoryDataPtr data) {
           if (data->story_options.kind_of_proto_story == value_) {
             // Finish early since there's nothing to update.
