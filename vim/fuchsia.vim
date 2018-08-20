@@ -52,9 +52,9 @@ if jiri_manifest != ""
       set filetype=dart
     endif
 
-    " Treat files in a packages directory (or subdirectory) without a filetype
-    " that don't have an extension as JSON files.
-    if &filetype == "" && full_path =~ "/packages/" && extension == ""
+    " Treat files in a packages or products directory (or subdirectory) without
+    " a filetype that don't have an extension as JSON files.
+    if &filetype == "" && full_path =~ "/\\(packages\\|products\\)/" && extension == ""
       set filetype=json sw=4
     endif
 
