@@ -11,4 +11,15 @@ StructClass::~StructClass() = default;
 
 const StructClass* StructClass::AsStructClass() const { return this; }
 
+const char* StructClass::GetStructOrClassString() const {
+  switch (tag()) {
+    case kTagStructureType:
+      return "struct";
+    case kTagClassType:
+      return "class";
+    default:
+      return "unknown";
+  }
+}
+
 }  // namespace zxdb

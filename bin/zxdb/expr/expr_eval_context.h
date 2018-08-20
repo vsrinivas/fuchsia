@@ -12,6 +12,7 @@ namespace zxdb {
 
 class Err;
 class ExprValue;
+class SymbolDataProvider;
 class SymbolVariableResolver;
 
 // Interface used by expression evaluation to communicate with the outside
@@ -34,13 +35,7 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // memory for this context.
   virtual SymbolVariableResolver& GetVariableResolver() = 0;
 
-  // Dereferences the given value, calling the callback with the result.
-  //
-  // TODO(brettw) move this code to the DereferenceExprNode and use the
-  // variable resolver from the above getter.
-  virtual void Dereference(
-      const ExprValue& value,
-      std::function<void(const Err& err, ExprValue value)> cb) = 0;
+  virtual fxl::RefPtr<SymbolDataProvider> GetDataProvider() = 0;
 };
 
 }  // namespace zxdb

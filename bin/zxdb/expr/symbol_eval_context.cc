@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/resolve_pointer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -74,40 +75,8 @@ SymbolVariableResolver& SymbolEvalContext::GetVariableResolver() {
   return resolver_;
 }
 
-void SymbolEvalContext::Dereference(
-    const ExprValue& value,
-    std::function<void(const Err& err, ExprValue value)> cb) {
-  if (!value.type()) {
-    cb(Err("Can not dereference null type."), ExprValue());
-    return;
-  }
-
-  // Validate type is a pointer.
-  const ModifiedType* modifier_type =
-      value.type()->GetConcreteType()->AsModifiedType();
-  if (!modifier_type || modifier_type->tag() != Symbol::kTagPointerType) {
-    cb(Err(fxl::StringPrintf("Can not dereference type of '%s'.",
-                             value.type()->GetFullName().c_str())),
-       ExprValue());
-    return;
-  }
-
-  // Compute the type the result of the expression will be.
-  const Type* dest_type = modifier_type->modified().Get()->AsType();
-  if (!dest_type) {
-    cb(Err("No underlying type for pointer dereference."), ExprValue());
-    return;
-  }
-
-  // The resolver will convert the address to a value.
-  Err err = value.EnsureSizeIs(sizeof(uint64_t));
-  if (err.has_error()) {
-    cb(err, ExprValue());
-  } else {
-    resolver_.ResolveFromAddress(
-        value.GetAs<uint64_t>(),
-        fxl::RefPtr<Type>(const_cast<Type*>(dest_type)), std::move(cb));
-  }
+fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
+  return data_provider_;
 }
 
 bool SymbolEvalContext::SearchVariableVector(

@@ -6,6 +6,7 @@
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/symbol_context.h"
+#include "garnet/bin/zxdb/client/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/client/symbols/variable_test_support.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -164,8 +165,7 @@ TEST_F(SymbolVariableResolverTest, IntOnStack) {
   constexpr int32_t kValue = 0x12345678;
 
   constexpr uint8_t kOffset = 8;
-  auto type =
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
+  auto type = MakeInt32Type();
   auto var =
       MakeUint64VariableForTest("i", 0, 0, {llvm::dwarf::DW_OP_fbreg, kOffset});
   var->set_type(LazySymbol(type));

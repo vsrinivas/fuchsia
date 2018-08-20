@@ -36,9 +36,7 @@ class SymbolEvalContext : public ExprEvalContext {
   // ExprEvalContext implementation.
   void GetVariable(const std::string& name, Callback cb) override;
   SymbolVariableResolver& GetVariableResolver() override;
-  void Dereference(
-      const ExprValue& value,
-      std::function<void(const Err& err, ExprValue value)> cb) override;
+  fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
 
  private:
   // Searches the given vector of values for one with the given name. If found,

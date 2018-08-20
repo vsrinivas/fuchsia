@@ -16,11 +16,15 @@ class StructClass final : public Type {
   // Symbol overrides.
   const StructClass* AsStructClass() const;
 
-  // Data members.
+  // Data members. These should be of Value types.
   const std::vector<LazySymbol>& data_members() const { return data_members_; }
   void set_data_members(std::vector<LazySymbol> d) {
     data_members_ = std::move(d);
   }
+
+  // Returns a pointer to either "struct" or "class" depending on the type of
+  // this object. This is useful for error messages.
+  const char* GetStructOrClassString() const;
 
   // Currently we don't have any notion of member functions because there's
   // no need. That could be added here if necessary (generally the symbols

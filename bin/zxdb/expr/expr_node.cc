@@ -11,9 +11,12 @@
 #include "garnet/bin/zxdb/client/symbols/array_type.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/resolve_member.h"
+#include "garnet/bin/zxdb/expr/resolve_pointer.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -200,14 +203,11 @@ void ArrayAccessExprNode::DoAccess(fxl::RefPtr<ExprEvalContext> context,
   uint64_t array_base = left.GetAs<uint64_t>();
   uint32_t elt_size = inner_type->GetConcreteType()->byte_size();
 
-  context->GetVariableResolver().ResolveFromAddress(
+  ResolvePointer(
+      context->GetDataProvider(),
       array_base + elt_size * offset,
       fxl::RefPtr<Type>(const_cast<Type*>(inner_type)),
-      [ context = std::move(context), cb = std::move(cb) ](const Err& err,
-                                                           ExprValue value) {
-        (void)context;  // This keeps it in scope for ResolveFromAddress().
-        cb(err, value);
-      });
+      std::move(cb));
 }
 
 void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
@@ -220,15 +220,7 @@ void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
   expr_->Eval(context, [ context, cb = std::move(cb) ](const Err& err,
                                                        ExprValue value) {
-    // Note that we need to capture the context in the lambda
-    // even though we don't use it to keep a ref to it throughout
-    // this call. Otherwise it could be destroyed and the callback
-    // will never be executed.
-    context->Dereference(value, [ context, cb = std::move(cb) ](
-                                    const Err& err, ExprValue value) {
-      (void)context;
-      cb(err, std::move(value));
-    });
+    ResolvePointer(context->GetDataProvider(), value, std::move(cb));
   });
 }
 
@@ -258,7 +250,25 @@ void IntegerExprNode::Print(std::ostream& out, int indent) const {
 
 void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
-  cb(Err("Unimplemented"), ExprValue());
+  bool is_arrow = accessor_.type() == ExprToken::kArrow;
+  left_->Eval(context, [
+    context, is_arrow, member_value = member_.value(), cb = std::move(cb)
+  ](const Err& err, ExprValue base) {
+    if (!is_arrow) {
+      // "." operator.
+      ExprValue result;
+      Err err = ResolveMember(base, member_value, &result);
+      cb(err, std::move(result));
+      return;
+    }
+
+    // Everything else should be a -> operator.
+    ResolveMemberByPointer(
+        context, base, member_value,
+        [cb = std::move(cb)](const Err& err, ExprValue result) {
+          cb(err, std::move(result));
+        });
+  });
 }
 
 void MemberAccessExprNode::Print(std::ostream& out, int indent) const {

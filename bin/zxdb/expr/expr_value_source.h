@@ -29,6 +29,14 @@ class ExprValueSource {
   // Valid when type_ == kAddress.
   uint64_t address() const { return address_; }
 
+  // Returns a new ExprValueSource pointing to the given offset inside of this
+  // one. If this one is not in memory, the returned one will be the same.
+  ExprValueSource GetOffsetInto(uint32_t offset) const {
+    if (type_ == Type::kMemory)
+      return ExprValueSource(address_ + offset);
+    return ExprValueSource();
+  }
+
  private:
   Type type_ = Type::kTemporary;
   uint64_t address_ = 0;

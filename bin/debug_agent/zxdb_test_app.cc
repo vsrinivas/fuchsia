@@ -27,6 +27,18 @@ struct Foo {
   int bar;
 };
 
+struct NestedInner {
+  int data[256] = {0};
+  char asdf = 'c';
+};
+
+struct NestedOuter {
+  int a = 42;
+  const char* c = "Some string";
+  NestedInner bar;
+  char b = 'a';
+};
+
 // This function is helpful to test handling of duplicate functions on the
 // stack for e.g. "finish".
 __attribute__((noinline)) void RecursiveCall(int times) {
@@ -48,6 +60,9 @@ void PrintHello() {
   volatile int* pz = &z;
   *pz = 45;
   (void)c;  // Prevent unused variable warning.
+
+  volatile NestedOuter outer;
+  (void)outer;
 }
 
 void DoFoo(Foo* f) {

@@ -13,7 +13,7 @@ namespace zxdb {
 
 // A variable is a value that can exist on the stack or in memory (it has a
 // DWARF "location"). This includes "variable" and "formal parameter" types.
-// Not to be confused with data members which are located via an offset from
+// Not to be confused with DataMembers which are located via an offset from
 // their containing struct or class.
 class Variable : public Value {
  public:

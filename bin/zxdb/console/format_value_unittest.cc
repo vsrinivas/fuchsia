@@ -7,6 +7,8 @@
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
+#include "garnet/bin/zxdb/client/symbols/struct_class.h"
+#include "garnet/bin/zxdb/client/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
@@ -357,5 +359,27 @@ TEST_F(FormatValueTest, TruncatedArray) {
 // TODO(brettw) check nested arrays.
 // Pretty sure this ends up being wrong:
 //   int a[2][2] = { ... }
+
+TEST_F(FormatValueTest, Structs) {
+  FormatValueOptions opts;
+  opts.num_format = FormatValueOptions::NumFormat::kHex;
+
+  auto int32_type = MakeInt32Type();
+
+  // Struct with two values, and a pair of two of those structs.
+  auto foo = MakeStruct2Members("Foo", int32_type, "a", int32_type, "b");
+  auto pair = MakeStruct2Members("Pair", foo, "first", foo, "second");
+
+  ExprValue pair_value(pair, {0x11, 0x00, 0x11, 0x00, 0x22, 0x00, 0x22, 0x00,
+                              0x33, 0x00, 0x33, 0x00, 0x44, 0x00, 0x44, 0x00});
+
+  OutputBuffer out;
+  FormatExprValue(pair_value, opts, &out);
+
+  EXPECT_EQ(
+      "{first = {a = 0x110011, b = 0x220022}, second = {a = 0x330033, b = "
+      "0x440044}}",
+      out.AsString());
+}
 
 }  // namespace zxdb

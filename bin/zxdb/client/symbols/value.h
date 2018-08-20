@@ -10,8 +10,9 @@
 
 namespace zxdb {
 
-// A value is the base class for data with names: parameters, variables, and
-// struct/class data members.
+// A value is the base class for data with names: Variable objects (for stack
+// vars and function parameters), and DataMember objects (for struct/class
+// members).
 class Value : public Symbol {
  public:
   // Don't construct by itself, used as a base class for Variable and

@@ -7,8 +7,11 @@
 
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
+#include "garnet/bin/zxdb/client/symbols/data_member.h"
 #include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
+#include "garnet/bin/zxdb/client/symbols/struct_class.h"
+#include "garnet/bin/zxdb/client/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
@@ -72,9 +75,9 @@ class TestEvalContext : public ExprEvalContext {
       cb(Err(), found->second);
   }
   SymbolVariableResolver& GetVariableResolver() override { return resolver_; }
-  void Dereference(
-      const ExprValue& value,
-      std::function<void(const Err& err, ExprValue value)> cb) override {}
+  fxl::RefPtr<SymbolDataProvider> GetDataProvider() override {
+    return data_provider_;
+  }
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
@@ -393,6 +396,78 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   EXPECT_EQ(uint32_type.get(), out_value.type());
   EXPECT_EQ(kExpectedValue, out_value.GetAs<uint32_t>());
   EXPECT_EQ(kExpectedAddr, out_value.source().address());
+}
+
+// This is more of an integration smoke test for "." and "->". The details are
+// tested in resolve_member_unittest.cc.
+TEST_F(ExprNodeTest, MemberAccess) {
+  auto context = fxl::MakeRefCounted<TestEvalContext>();
+
+  // Define a class.
+  auto int32_type = MakeInt32Type();
+  auto sc = MakeStruct2Members("Foo", int32_type, "a", int32_type, "b");
+
+  // Set up a call to do "." synchronously.
+  auto struct_node = fxl::MakeRefCounted<TestExprNode>(
+      true, ExprValue(sc, {0x78, 0x56, 0x34, 0x12}));
+  auto access_node = fxl::MakeRefCounted<MemberAccessExprNode>(
+      struct_node, ExprToken(ExprToken::Type::kDot, ".", 0),
+      ExprToken(ExprToken::Type::kName, "a", 0));
+
+  // Do the call.
+  bool called = false;
+  Err out_err;
+  ExprValue out_value;
+  access_node->Eval(context, [&called, &out_err, &out_value](const Err& err,
+                                                             ExprValue value) {
+    called = true;
+    out_err = err;
+    out_value = value;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+
+  // Should have run synchronsly.
+  EXPECT_TRUE(called);
+  EXPECT_FALSE(out_err.has_error());
+  EXPECT_EQ(0x12345678, out_value.GetAs<int32_t>());
+
+  // Test indirection: "foo->a".
+  auto foo_ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+                                                        LazySymbol(sc));
+  // Add memory in two chunks since the mock data provider can only respond
+  // with the addresses it's given.
+  constexpr uint64_t kAddress = 0x1000;
+  context->data_provider()->AddMemory(kAddress, {0x44, 0x33, 0x22, 0x11});
+  context->data_provider()->AddMemory(kAddress + 4, {0x88, 0x77, 0x66, 0x55});
+
+  // Make this one evaluate the left-hand-size asynchronosly. This value
+  // references kAddress (little-endian).
+  auto struct_ptr_node = fxl::MakeRefCounted<TestExprNode>(
+      false, ExprValue(foo_ptr_type,
+                       {0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}));
+  auto access_ptr_node = fxl::MakeRefCounted<MemberAccessExprNode>(
+      struct_ptr_node, ExprToken(ExprToken::Type::kArrow, "->", 0),
+      ExprToken(ExprToken::Type::kName, "b", 0));
+
+  // Do the call.
+  called = false;
+  out_err = Err();
+  out_value = ExprValue();
+  access_ptr_node->Eval(context, [&called, &out_err, &out_value](
+                                     const Err& err, ExprValue value) {
+    called = true;
+    out_err = err;
+    out_value = value;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+
+  // Should have run asynchronsly.
+  EXPECT_FALSE(called);
+  loop().Run();
+  EXPECT_TRUE(called);
+  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
+  EXPECT_EQ(sizeof(int32_t), out_value.data().size());
+  EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
 }
 
 }  // namespace zxdb

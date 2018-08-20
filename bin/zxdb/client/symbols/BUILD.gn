@@ -36,6 +36,7 @@ static_library("symbols") {
     "symbol_factory.h",
     "symbol_utils.h",
     "type.h",
+    "type_utils.h",
     "value.h",
     "variable.h",
     "variable_location.h",
@@ -77,6 +78,7 @@ static_library("symbols") {
     "symbol.cc",
     "symbol_utils.cc",
     "type.cc",
+    "type_utils.cc",
     "value.cc",
     "variable.cc",
     "variable_location.cc",
@@ -106,6 +108,8 @@ static_library("test_support") {
     "mock_process_symbols.h",
     "mock_symbol_data_provider.cc",
     "mock_symbol_data_provider.h",
+    "type_test_support.cc",
+    "type_test_support.h",
     "variable_test_support.cc",
     "variable_test_support.h",
   ]
@@ -132,6 +136,7 @@ source_set("tests") {
     "symbol_utils_unittest.cc",
     "system_symbols_unittest.cc",
     "test_symbol_module.cc",
+    "type_utils_unittest.cc",
   ]
 
   deps = [

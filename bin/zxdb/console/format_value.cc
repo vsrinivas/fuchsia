@@ -9,12 +9,15 @@
 
 #include "garnet/bin/zxdb/client/symbols/array_type.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
+#include "garnet/bin/zxdb/client/symbols/data_member.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
+#include "garnet/bin/zxdb/client/symbols/struct_class.h"
 #include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_array.h"
+#include "garnet/bin/zxdb/expr/resolve_member.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -321,6 +324,40 @@ bool ShouldFormatAsString(const Type* type, const Type** array_value_type,
   return false;
 }
 
+// GDB format:
+//   {a = 1, b = 2, sub_struct = {foo = 1, bar = 2}}
+//
+// LLDB format:
+//   {
+//     a = 1
+//     b = 2
+//     sub_struct = {
+//       foo = 1
+//       bar = 2
+//     }
+//   }
+void FormatStructClass(const StructClass* sc, const ExprValue& value,
+                       const FormatValueOptions& options, OutputBuffer* out) {
+  out->Append("{");
+  for (size_t i = 0; i < sc->data_members().size(); i++) {
+    const DataMember* member = sc->data_members()[i].Get()->AsDataMember();
+    if (!member)
+      continue;
+
+    if (i > 0)
+      out->Append(", ");
+
+    out->Append(Syntax::kVariable, member->GetAssignedName());
+    out->Append(" = ");
+
+    ExprValue member_value;
+    Err err = ResolveMember(value, member, &member_value);
+    // TODO(brettw) This needs to be the async version to handle strings, etc.
+    FormatExprValue(err, member_value, options, out);
+  }
+  out->Append("}");
+}
+
 }  // namespace
 
 void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
@@ -374,6 +411,11 @@ void FormatExprValue(const ExprValue& value, const FormatValueOptions& options,
         break;
         // TODO(brettw) need to handle various reference types here.
     }
+    return;
+  }
+
+  if (const StructClass* sc = type->AsStructClass()) {
+    FormatStructClass(sc, value, options, out);
     return;
   }
 

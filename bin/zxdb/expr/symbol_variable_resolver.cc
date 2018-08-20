@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/client/symbols/type.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/resolve_pointer.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -90,14 +91,6 @@ void SymbolVariableResolver::ResolveVariable(
   });
 }
 
-void SymbolVariableResolver::ResolveFromAddress(uint64_t address,
-                                                fxl::RefPtr<Type> type,
-                                                Callback cb) {
-  FXL_DCHECK(!current_callback_);  // Can't have more than one pending.
-  current_callback_ = std::move(cb);
-  DoResolveFromAddress(address, std::move(type));
-}
-
 void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
                                                  fxl::RefPtr<Type> type) {
   if (err.has_error()) {
@@ -150,24 +143,12 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
 
 void SymbolVariableResolver::DoResolveFromAddress(uint64_t address,
                                                   fxl::RefPtr<Type> type) {
-  uint32_t type_size = type->byte_size();
-  data_provider_->GetMemoryAsync(address, type_size, [
-    type = std::move(type), address, weak_this = weak_factory_.GetWeakPtr()
-  ](const Err& err, std::vector<uint8_t> data) {
-    if (!weak_this)
-      return;
-    if (err.has_error()) {
-      weak_this->OnComplete(err, ExprValue());
-    } else if (data.size() != type->byte_size()) {
-      // Short read, memory is invalid.
-      weak_this->OnComplete(
-          Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)),
-          ExprValue());
-    } else {
-      weak_this->OnComplete(Err(), ExprValue(std::move(type), std::move(data),
-                                             ExprValueSource(address)));
-    }
-  });
+  ResolvePointer(data_provider_, address, type,
+                 [weak_this = weak_factory_.GetWeakPtr()](const Err& err,
+                                                          ExprValue value) {
+                   if (weak_this)
+                     weak_this->OnComplete(err, std::move(value));
+                 });
 }
 
 void SymbolVariableResolver::OnComplete(const Err& err, ExprValue value) {

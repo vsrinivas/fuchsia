@@ -44,14 +44,6 @@ class SymbolVariableResolver {
   void ResolveVariable(const SymbolContext& symbol_context, const Variable* var,
                        Callback cb);
 
-  // Does the resolution of a variable from a known address in memory. The
-  // callback will be issued reentrantly (from within the call stack of this
-  // function).
-  //
-  // If this object is destroyed, the callback will be canceled.
-  void ResolveFromAddress(uint64_t address, fxl::RefPtr<Type> type,
-                          Callback cb);
-
  private:
   // Callback for when the dwarf_eval_ has completed evaluation.
   void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<Type> type);
