@@ -17,7 +17,6 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <lib/heap.h>
-#include <lib/debuglog.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <string.h>
@@ -40,9 +39,6 @@ static void call_constructors() {
 
 // called from arch code
 void lk_main() {
-    // serial prints to console based on compile time switch
-    dlog_bypass_init_early();
-
     // get us into some sort of thread context
     thread_init_early();
 

@@ -82,15 +82,7 @@ of kernel freezes) you can enable ``ENABLE_KERNEL_LL_DEBUG`` in your ``local.mk`
 
 ```
 EXTERNAL_KERNEL_DEFINES := ENABLE_KERNEL_LL_DEBUG=1
-
 ```
-
-There is also a kernel cmdline parameter kernel.bypass-debuglog, which can be set
-to true to force output to the console instead of buffering it. The reason we have
-both a compile switch and a cmdline parameter is to facilitate prints in the kernel
-before cmdline is parsed to be forced to go to the console. The compile switch setting
-overrides the cmdline parameter (if both are present). Note that both the compile switch
-and the cmdline parameter have the side effect of disabling irq driven uart Tx.
 
 More information on ``local.mk`` can be found via ``make help``
 

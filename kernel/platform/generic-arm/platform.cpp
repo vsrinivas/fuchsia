@@ -346,9 +346,6 @@ void platform_early_init(void) {
     // walk the zbi structure and process all the items
     process_zbi(zbi);
 
-    // is the cmdline option to bypass dlog set ?
-    dlog_bypass_init();
-
     // bring up kernel drivers after we have mapped our peripheral ranges
     pdev_init(zbi);
 

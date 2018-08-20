@@ -110,15 +110,6 @@ only "9x16" (the default) and "18x32" (a double-size font) are supported.
 This option (disabled by default) allows the system to use a hardware IOMMU
 if present.
 
-## kernel.bypass-debuglog=\<bool>
-
-When enabled, forces output to the console instead of buffering it. The reason
-we have both a compile switch and a cmdline parameter is to facilitate prints
-in the kernel before cmdline is parsed to be forced to go to the console.
-The compile switch setting overrides the cmdline parameter (if both are present).
-Note that both the compile switch and the cmdline parameter have the side effect
-of disabling irq driven uart Tx.
-
 ## kernel.entropy-mixin=\<hex>
 
 Provides entropy to be mixed into the kernel's CPRNG.
