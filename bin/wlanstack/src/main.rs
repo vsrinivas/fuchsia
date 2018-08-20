@@ -4,7 +4,7 @@
 
 //! System service for wireless networking
 
-#![feature(futures_api, arbitrary_self_types, pin)]
+#![feature(async_await, await_macro, futures_api, arbitrary_self_types, pin)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
@@ -76,8 +76,8 @@ fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    let phy_server = device::serve_phys(phys.clone())?
-        .and_then(|()| future::ready(Err(format_err!("Phy server exited unexpectedly"))));
+    let phy_server = device::serve_phys(phys.clone())
+        .map_ok(|x| x.into_any());
     let iface_server = device::serve_ifaces(ifaces.clone())?
         .and_then(|()| future::ready(Err(format_err!("Iface server exited unexpectedly"))));
     let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?

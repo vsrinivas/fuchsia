@@ -5,6 +5,7 @@
 use futures::prelude::*;
 use futures::task;
 use futures::stream::{Fuse, Stream, StreamExt};
+use Never;
 use std::marker::Unpin;
 use std::mem::PinMut;
 
@@ -79,6 +80,39 @@ pub trait GroupAvailableExt: Stream {
 
 impl<T> GroupAvailableExt for T where T: Stream + ?Sized {}
 
+/// Similar to FuturesUnordered, but doesn't terminate when the there are no futures.
+/// Also, it is a Future rather than a Stream to make it easier to use with select! macro
+pub struct ConcurrentTasks<T> {
+    tasks: stream::FuturesUnordered<T>
+}
+
+impl<T> ConcurrentTasks<T> where T: Future {
+    unsafe_pinned!(tasks: stream::FuturesUnordered<T>);
+
+    pub fn new() -> Self {
+        ConcurrentTasks {
+            tasks: stream::FuturesUnordered::new(),
+        }
+    }
+
+    pub fn add(&mut self, task: T) {
+        self.tasks.push(task);
+    }
+}
+
+impl<T, E> Future for ConcurrentTasks<T>
+    where T: Future<Output = Result<(), E>>
+{
+    type Output = Result<Never, E>;
+
+    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+        match self.tasks().poll_next(cx) {
+            Poll::Ready(Some(Err(e))) => Poll::Ready(Err(e)),
+            _ => Poll::Pending,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use async;
@@ -86,8 +120,10 @@ mod tests {
     use Never;
     use futures::prelude::*;
     use futures::stream;
-    use super::GroupAvailableExt;
+    use super::*;
     use futures::channel::mpsc;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn empty() {
@@ -136,5 +172,31 @@ mod tests {
 
         let res = exec.run_singlethreaded(s.try_next());
         assert_eq!(Err(-30i32), res);
+    }
+
+    #[test]
+    fn concurrent_tasks() {
+        let mut exec = async::Executor::new().expect("Failed to create an executor");
+
+        let mut tasks = ConcurrentTasks::new();
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
+
+        let count = Arc::new(AtomicUsize::new(0));
+        tasks.add(simple_future(Some(Arc::clone(&count))));
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
+        assert_eq!(1, count.load(Ordering::SeqCst));
+
+        tasks.add(simple_future(None));
+        assert_eq!(Poll::Ready(Err(-20)), exec.run_until_stalled(&mut tasks));
+    }
+
+    async fn simple_future(res: Option<Arc<AtomicUsize>>) -> Result<(), i32> {
+        match res {
+            None => Err(-20),
+            Some(x) => {
+                x.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            },
+        }
     }
 }

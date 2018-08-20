@@ -6,8 +6,10 @@ use async::{TimeoutExt, temp::TempStreamExt};
 use device_watch::{self, NewIfaceDevice};
 use failure::{Error, Fail};
 use fidl_mlme::{self, DeviceQueryConfirm, MlmeEventStream};
+use future_util::ConcurrentTasks;
 use futures::prelude::*;
 use futures::{stream, channel::mpsc};
+use Never;
 use station;
 use stats_scheduler::{self, StatsScheduler};
 use std::collections::HashSet;
@@ -42,16 +44,23 @@ pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
 const SERVE_LIMIT: usize = 1000;
 
-pub fn serve_phys(phys: Arc<PhyMap>)
-    -> Result<impl Future<Output = Result<(), Error>>, Error>
-{
-    Ok(device_watch::watch_phy_devices()?
-        .err_into()
-        .chain(stream::once(
-            future::ready(Err(format_err!("phy watcher stream unexpectedly finished")))))
-        .try_for_each_concurrent(
-            SERVE_LIMIT,
-            move |new_phy| serve_phy(phys.clone(), new_phy)))
+pub async fn serve_phys(phys: Arc<PhyMap>) -> Result<Never, Error> {
+    let mut new_phys = device_watch::watch_phy_devices()?;
+    let mut active_phys = ConcurrentTasks::new();
+    loop {
+        let mut new_phy = new_phys.next();
+        select! {
+            new_phy => match new_phy {
+                None => bail!("new phy stream unexpectedly finished"),
+                Some(Err(e)) => bail!("new phy stream returned an error: {}", e),
+                Some(Ok(new_phy)) => {
+                    let fut = serve_phy(Arc::clone(&phys), new_phy);
+                    active_phys.add(fut);
+                }
+            },
+            active_phys => active_phys?.into_any(),
+        }
+    }
 }
 
 fn serve_phy(phys: Arc<PhyMap>,
