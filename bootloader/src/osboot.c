@@ -381,8 +381,11 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // to avoid other allocations getting in the way.
     // The kernel itself is about 1MB, but we leave generous space
     // for its BSS afterwards.
+    //
+    // Previously we requested 32MB but that caused issues. When the kernel
+    // becomes relocatable this won't be an problem. See ZX-2368.
     kernel_zone_base = 0x100000;
-    kernel_zone_size = 32 * 1024 * 1024;
+    kernel_zone_size = 6 * 1024 * 1024;
 
     if (gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                           BYTES_TO_PAGES(kernel_zone_size), &kernel_zone_base)) {
@@ -415,7 +418,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     printf("\n\n");
     print_cmdline();
 
-    // First look for a self-contained zirconboot image
+    // First look for a self-contained zircon boot image
     size_t zedboot_size = 0;
     void* zedboot_kernel = NULL;
 
