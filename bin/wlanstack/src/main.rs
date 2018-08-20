@@ -10,6 +10,7 @@
 
 #[macro_use] extern crate failure;
 extern crate fidl;
+extern crate fidl_fuchsia_cobalt as cobalt;
 extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fidl_fuchsia_wlan_device as wlan;
 extern crate fidl_fuchsia_wlan_device_service as wlan_service;
@@ -37,6 +38,7 @@ mod logger;
 mod service;
 mod station;
 mod stats_scheduler;
+mod telemetry;
 mod watchable_map;
 mod watcher_service;
 
@@ -80,11 +82,12 @@ fn main() -> Result<(), Error> {
         .map_ok(|x| x.into_any());
     let iface_server = device::serve_ifaces(ifaces.clone())
         .map_ok(|x| x.into_any());
+    let telemetry_server = telemetry::report_telemetry_periodically(ifaces.clone()).map(Ok);
     let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?
         .map_ok(Never::into_any);
 
-    exec.run_singlethreaded(services_server.try_join3(phy_server, iface_server))
-        .map(|((), (), ())| ())
+    exec.run_singlethreaded(services_server.try_join4(phy_server, iface_server, telemetry_server))
+        .map(|((), (), (), ())| ())
 }
 
 fn serve_fidl(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,

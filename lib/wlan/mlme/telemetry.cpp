@@ -49,7 +49,6 @@ void Telemetry::CobaltReporter(std::chrono::minutes report_period) {
         wlan_mlme::StatsQueryResponse stats_response = dispatcher_->GetStatsToFidl();
         dispatcher_->ResetStats();
 
-        ReportDispatcherStats(stats_response.stats.dispatcher_stats);
         if (stats_response.stats.mlme_stats) {
             ReportClientMlmeStats(stats_response.stats.mlme_stats->client_mlme_stats());
         }
