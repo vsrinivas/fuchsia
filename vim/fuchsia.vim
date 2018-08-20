@@ -27,7 +27,7 @@ if jiri_manifest != ""
   " equal to "cpp".)
   filetype plugin indent on
 
-  function FuchsiaBuffer()
+  function! FuchsiaBuffer()
     let full_path = expand("%:p")
     let extension = expand("%:e")
 
@@ -70,7 +70,7 @@ if jiri_manifest != ""
 
   " This may be called twice because autocmds arrive in different orders on
   " different platforms.
-  function FuchsiaCppBuffer()
+  function! FuchsiaCppBuffer()
     if exists('g:loaded_youcompleteme')
       " Replace the normal go to tag key with YCM when editing C/CPP.
       nnoremap <C-]> :YcmCompleter GoTo<cr>
