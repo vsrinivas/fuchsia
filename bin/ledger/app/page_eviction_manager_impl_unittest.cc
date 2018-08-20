@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -80,8 +81,8 @@ TEST_F(PageEvictionManagerTest, NoEvictionWithoutPages) {
 
 TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
   fxl::StringView ledger_name = "ledger";
-  storage::PageIdView page1 = std::string(kPageIdSize, '1');
-  storage::PageIdView page2 = std::string(kPageIdSize, '2');
+  storage::PageIdView page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageIdView page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
 
   delegate_.closed_and_synced = PageClosedAndSynced::YES;
 
@@ -104,8 +105,8 @@ TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
 
 TEST_F(PageEvictionManagerTest, DontEvictUnsyncedPages) {
   std::string ledger_name = "ledger";
-  storage::PageId page1 = std::string(kPageIdSize, '1');
-  storage::PageId page2 = std::string(kPageIdSize, '2');
+  storage::PageId page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
 
   delegate_.closed_and_synced = PageClosedAndSynced::NO;
 
@@ -128,7 +129,7 @@ TEST_F(PageEvictionManagerTest, DontEvictUnsyncedPages) {
 
 TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
 
   delegate_.closed_and_synced = PageClosedAndSynced::YES;
 
@@ -160,7 +161,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
 
 TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
 
   delegate_.closed_and_synced = PageClosedAndSynced::YES;
 
@@ -190,7 +191,7 @@ TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
 
 TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
 
   delegate_.closed_and_synced = PageClosedAndSynced::YES;
 
@@ -213,7 +214,7 @@ TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
 
 TEST_F(PageEvictionManagerTest, IsEmpty) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
   bool on_empty_called = false;
 
   page_eviction_manager_.set_on_empty([&] { on_empty_called = true; });

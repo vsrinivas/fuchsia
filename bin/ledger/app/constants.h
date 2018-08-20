@@ -11,13 +11,10 @@
 
 namespace ledger {
 
-// The size of a page id array.
-constexpr size_t kPageIdSize = 16;
-
 // The maximum key size.
 constexpr size_t kMaxKeySize = 256;
 
-// The root id. The array size must be equal to |kPageIdSize|.
+// The root Page ID.
 extern const fxl::StringView kRootPageId;
 
 // Filename under which the server id used to sync a given user is stored within

@@ -29,8 +29,11 @@ enum Status : int32 {
   UNKNOWN_ERROR = -1;
 };
 
+// Size in bytes of Page IDs.
+const uint32 kPageIdSize = 16;
+
 struct PageId {
-  array<uint8>:16 id;
+  array<uint8>:kPageIdSize id;
 };
 
 [Discoverable]

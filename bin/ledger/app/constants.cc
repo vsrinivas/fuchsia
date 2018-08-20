@@ -6,13 +6,16 @@
 
 #include <string>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
+
 namespace ledger {
 
 namespace {
-const char kNullPageId[kPageIdSize] = {};
+const char kNullPageId[::fuchsia::ledger::kPageIdSize] = {};
 }  // namespace
 
 // The zero-initialized root id.
-constexpr fxl::StringView kRootPageId(kNullPageId, kPageIdSize);
+constexpr fxl::StringView kRootPageId(kNullPageId,
+                                      ::fuchsia::ledger::kPageIdSize);
 
 }  // namespace ledger

@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
@@ -22,8 +23,9 @@ namespace ledger {
 
 namespace {
 
-void GenerateRandomId(::fidl::Array<uint8_t, kPageIdSize>* id) {
-  zx_cprng_draw(id->mutable_data(), kPageIdSize);
+void GenerateRandomId(
+    ::fidl::Array<uint8_t, ::fuchsia::ledger::kPageIdSize>* id) {
+  zx_cprng_draw(id->mutable_data(), ::fuchsia::ledger::kPageIdSize);
 }
 
 }  // namespace

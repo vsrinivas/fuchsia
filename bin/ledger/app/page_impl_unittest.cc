@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -60,7 +61,7 @@ class PageImplTest : public TestWithEnvironment {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    page_id1_ = storage::PageId(kPageIdSize, 'a');
+    page_id1_ = storage::PageId(::fuchsia::ledger::kPageIdSize, 'a');
     auto fake_storage =
         std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
@@ -47,7 +48,7 @@ TEST_F(PageUsageDbTest, Init) { EXPECT_EQ(Status::OK, db_.Init()); }
 TEST_F(PageUsageDbTest, GetPagesEmpty) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
-    std::string page_id(kPageIdSize, 'p');
+    std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
     EXPECT_EQ(Status::OK, db_.Init());
     std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>> pages;
@@ -61,7 +62,7 @@ TEST_F(PageUsageDbTest, GetPagesEmpty) {
 TEST_F(PageUsageDbTest, MarkPageOpened) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
-    std::string page_id(kPageIdSize, 'p');
+    std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
     EXPECT_EQ(Status::OK, db_.Init());
     // Open the same page.
@@ -86,7 +87,7 @@ TEST_F(PageUsageDbTest, MarkPageOpened) {
 TEST_F(PageUsageDbTest, MarkPageOpenedAndClosed) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
-    std::string page_id(kPageIdSize, 'p');
+    std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
     EXPECT_EQ(Status::OK, db_.Init());
     // Open and close the same page.
@@ -115,7 +116,7 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
     int N = 5;
     std::string page_ids[N];
     for (int i = 0; i < N; ++i) {
-      page_ids[i] = RandomString(kPageIdSize);
+      page_ids[i] = RandomString(::fuchsia::ledger::kPageIdSize);
     }
 
     EXPECT_EQ(Status::OK, db_.Init());
