@@ -8,9 +8,10 @@ use std::collections::HashMap;
 
 use rand::{SeedableRng, XorShiftRng};
 
-use crate::{Context, EventDispatcher};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
+use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
+use crate::{Context, EventDispatcher};
 
 /// Create a new deterministic RNG from a seed.
 pub fn new_rng(mut seed: u64) -> impl SeedableRng<[u32; 4]> {
@@ -69,8 +70,13 @@ pub fn set_logger_for_test() {
     log::set_max_level(log::LevelFilter::Trace);
 }
 
+#[derive(Default)]
 pub struct DummyEventDispatcher;
 
+impl UdpEventDispatcher for DummyEventDispatcher {
+    type UdpConn = ();
+    type UdpListener = ();
+}
 impl TransportLayerEventDispatcher for DummyEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for DummyEventDispatcher {

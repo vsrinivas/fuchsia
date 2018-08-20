@@ -15,7 +15,7 @@ use failure::ResultExt;
 use futures::prelude::*;
 
 use netstack_core::{receive_frame, set_ip_addr, Context, DeviceId, DeviceLayerEventDispatcher,
-                    EventDispatcher, Ipv4Addr, Mac, StackState, Subnet,
+                    EventDispatcher, UdpEventDispatcher, Ipv4Addr, Mac, StackState, Subnet,
                     TransportLayerEventDispatcher};
 
 /// The event loop.
@@ -92,6 +92,13 @@ struct EventLoopInner {
     eth_client: eth::Client,
 }
 
+impl EventDispatcher for EventLoopInner {
+    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, _duration: (), _f: F) {
+        // TODO(joshlf)
+    }
+}
+
+
 impl DeviceLayerEventDispatcher for EventLoopInner {
     fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {
         // TODO(joshlf): Handle more than one device
@@ -99,9 +106,10 @@ impl DeviceLayerEventDispatcher for EventLoopInner {
         self.eth_client.send(&frame);
     }
 }
-impl TransportLayerEventDispatcher for EventLoopInner {}
-impl EventDispatcher for EventLoopInner {
-    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, _duration: (), _f: F) {
-        // TODO(joshlf)
-    }
+
+impl UdpEventDispatcher for EventLoopInner {
+    type UdpConn = ();
+    type UdpListener = ();
 }
+
+impl TransportLayerEventDispatcher for EventLoopInner {}

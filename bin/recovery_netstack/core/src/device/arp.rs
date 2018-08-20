@@ -178,7 +178,10 @@ pub fn receive_arp_packet<
             );
         }
         if addressed_to_me && packet.operation() == ArpOp::Request {
-            log_unimplemented!((), "device::arp::receive_arp_frame: Handling ARP requests not implemented");
+            log_unimplemented!(
+                (),
+                "device::arp::receive_arp_frame: Handling ARP requests not implemented"
+            );
         }
     } else {
         // TODO(joshlf): Do something else here?

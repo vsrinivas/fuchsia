@@ -72,8 +72,7 @@ impl Display for DeviceProtocol {
 pub struct DeviceLayerState {
     // Invariant: even though each protocol has its own hash map, IDs (used as
     // keys in the hash maps) are unique across all hash maps. This is
-    // guaranteed by allocating IDs sequentially, and never re-using an ID
-    // (which is a requirement of the FIDL API anyway).
+    // guaranteed by allocating IDs sequentially, and never re-using an ID.
     next_id: u64,
     ethernet: HashMap<u64, EthernetDeviceState>,
 }

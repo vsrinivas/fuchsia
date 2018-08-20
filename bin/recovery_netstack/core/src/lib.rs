@@ -6,6 +6,7 @@
 
 #![feature(async_await, await_macro)]
 #![feature(const_fn)]
+#![feature(iterator_find_map)]
 #![feature(never_type)]
 #![feature(nll)]
 #![feature(specialization)]
@@ -35,6 +36,7 @@ mod wire;
 pub use crate::device::{ethernet::Mac, receive_frame, set_ip_addr, DeviceId,
                         DeviceLayerEventDispatcher};
 pub use crate::ip::{Ipv4Addr, Subnet};
+pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
 use crate::device::DeviceLayerState;
@@ -42,16 +44,27 @@ use crate::ip::IpLayerState;
 use crate::transport::TransportLayerState;
 
 /// The state associated with the network stack.
-#[derive(Default)]
-pub struct StackState {
-    transport: TransportLayerState,
+pub struct StackState<D: EventDispatcher> {
+    transport: TransportLayerState<D>,
     ip: IpLayerState,
     device: DeviceLayerState,
     #[cfg(test)]
     test_counters: testutil::TestCounters,
 }
 
-impl StackState {
+impl<D: EventDispatcher> Default for StackState<D> {
+    fn default() -> StackState<D> {
+        StackState {
+            transport: TransportLayerState::default(),
+            ip: IpLayerState::default(),
+            device: DeviceLayerState::default(),
+            #[cfg(test)]
+            test_counters: testutil::TestCounters::default(),
+        }
+    }
+}
+
+impl<D: EventDispatcher> StackState<D> {
     /// Add a new ethernet device to the device layer.
     pub fn add_ethernet_device(&mut self, mac: Mac) -> DeviceId {
         self.device.add_ethernet_device(mac)
@@ -64,24 +77,33 @@ impl StackState {
 /// dispatcher which can be used to emit events and schedule timeouts. A mutable
 /// reference to a `Context` is passed to every function in the netstack.
 pub struct Context<D: EventDispatcher> {
-    state: StackState,
+    state: StackState<D>,
     dispatcher: D,
 }
 
 impl<D: EventDispatcher> Context<D> {
     /// Construct a new `Context`.
-    pub fn new(state: StackState, dispatcher: D) -> Context<D> {
+    pub fn new(state: StackState<D>, dispatcher: D) -> Context<D> {
         Context { state, dispatcher }
     }
 
     /// Get the stack state.
-    pub fn state(&mut self) -> &mut StackState {
+    pub fn state(&mut self) -> &mut StackState<D> {
         &mut self.state
     }
 
     /// Get the dispatcher.
     pub fn dispatcher(&mut self) -> &mut D {
         &mut self.dispatcher
+    }
+
+    /// Get the stack state and the dispatcher.
+    ///
+    /// This is useful when a mutable reference to both are required at the same
+    /// time, which isn't possible when using the `state` or `dispatcher`
+    /// methods.
+    pub fn state_and_dispatcher(&mut self) -> (&mut StackState<D>, &mut D) {
+        (&mut self.state, &mut self.dispatcher)
     }
 }
 

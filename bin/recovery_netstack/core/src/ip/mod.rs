@@ -132,6 +132,19 @@ pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
     }
 }
 
+/// Get the local address of the interface that will be used to route to a
+/// remote address.
+///
+/// `local_address_for_remote` looks up the route to `remote`. If one is found,
+/// it returns the IP address of the interface specified by the route, or `None`
+/// if the interface has no IP address.
+pub fn local_address_for_remote<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, remote: A,
+) -> Option<A> {
+    let route = lookup_route(&ctx.state().ip, remote)?;
+    crate::device::get_ip_addr(ctx, route.device).map(|(addr, _)| addr)
+}
+
 // Should we deliver this packet locally?
 // deliver returns true if:
 // - dst_ip is equal to the address set on the device
@@ -187,6 +200,14 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
     A::get_table(state).lookup(dst_ip)
 }
 
+/// Is this one of our local addresses?
+///
+/// `is_local_addr` returns whether `addr` is the address associated with one of
+/// our local interfaces.
+pub fn is_local_addr<D: EventDispatcher, A: IpAddr>(ctx: &mut Context<D>, addr: A) -> bool {
+    log_unimplemented!(false, "ip::is_local_addr: not implemented")
+}
+
 /// Send an IP packet to a remote host.
 ///
 /// `send_ip_packet` accepts a destination IP address, a protocol, and a
@@ -227,7 +248,7 @@ pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
     } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
         let (src_ip, _) = crate::device::get_ip_addr(ctx, dest.device)
             .expect("IP device route set for device without IP address");
-        send_ip_packet_from(
+        send_ip_packet_from_device(
             ctx,
             dest.device,
             src_ip,
@@ -244,11 +265,48 @@ pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
     }
 }
 
+/// Send an IP packet to a remote host from a specific source address.
+///
+/// `send_ip_packet_from` accepts a source and destination IP address and a
+/// callback. It invokes the callback with the number of prefix bytes required
+/// by all encapsulating headers, and the minimum size of the body plus padding.
+/// The callback is expected to return a byte buffer and a range which
+/// corresponds to the desired body to the encapsulated. The portion of the
+/// buffer beyond the end of the body range will be treated as padding. The
+/// total number of bytes in the body and the post-body padding must not be
+/// smaller than the minimum size passed to the callback.
+///
+/// /// For more details on the callback, see the
+/// [`crate::wire::SerializationCallback`] documentation.
+///
+/// `send_ip_packet_from` computes a route to the destination with the
+/// restriction that the packet must originate from the source address, and must
+/// eagress over the interface associated with that source address. If this
+/// restriction cannot be met, a "no route to host" error is returned.
+///
+/// # Panics
+///
+/// `send_ip_packet_from` panics if the buffer returned from `get_buffer` does
+/// not have sufficient space preceding the body for all encapsulating headers
+/// or does not have enough body plus padding bytes to satisfy the requirement
+/// passed to the callback.
+pub fn send_ip_packet_from<D: EventDispatcher, A, B, F>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, get_buffer: F,
+) where
+    A: IpAddr,
+    B: AsRef<[u8]> + AsMut<[u8]>,
+    F: SerializationCallback<B>,
+{
+    // TODO(joshlf): Figure out how to compute a route with the restrictions
+    // mentioned in the doc comment.
+    log_unimplemented!((), "ip::send_ip_packet_from: not implemented");
+}
+
 /// Send an IP packet to a remote host over a specific device.
 ///
-/// `send_ip_packet_from` accepts a device, a source and destination IP address,
-/// a next hop IP address, and a callback. It invokes the callback with the
-/// number of prefix bytes required by all encapsulating headers, and the
+/// `send_ip_packet_from_device` accepts a device, a source and destination IP
+/// address, a next hop IP address, and a callback. It invokes the callback with
+/// the number of prefix bytes required by all encapsulating headers, and the
 /// minimum size of the body plus padding. The callback is expected to return a
 /// byte buffer and a range which corresponds to the desired body to be
 /// encapsulated. The portion of the buffer beyond the end of the body range
@@ -261,15 +319,15 @@ pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
 ///
 /// # Panics
 ///
-/// `send_ip_packet_from` panics if the buffer returned from `get_buffer` does
-/// not have sufficient space preceding the body for all encapsulating headers
-/// or does not have enough body plus padding bytes to satisfy the requirement
-/// passed to the callback.
+/// `send_ip_packet_from_device` panics if the buffer returned from `get_buffer`
+/// does not have sufficient space preceding the body for all encapsulating
+/// headers or does not have enough body plus padding bytes to satisfy the
+/// requirement passed to the callback.
 ///
-/// Since `send_ip_packet_from` specifies a physical device, it cannot send to
-/// or from a loopback IP address. If either `src_ip` or `dst_ip` are in the
-/// loopback subnet, `send_ip_packet_from` will panic.
-pub fn send_ip_packet_from<D: EventDispatcher, A, B, F>(
+/// Since `send_ip_packet_from_device` specifies a physical device, it cannot
+/// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
+/// the loopback subnet, `send_ip_packet_from_device` will panic.
+pub fn send_ip_packet_from_device<D: EventDispatcher, A, B, F>(
     ctx: &mut Context<D>, device: DeviceId, src_ip: A, dst_ip: A, next_hop: A, proto: IpProto,
     get_buffer: F,
 ) where
