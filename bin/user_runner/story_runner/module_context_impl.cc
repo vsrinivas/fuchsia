@@ -117,7 +117,9 @@ void ModuleContextImpl::RequestFocus() {
   story_controller_impl_->RequestStoryFocus();
 }
 
-void ModuleContextImpl::Active() { story_controller_impl_->Active(); }
+// DEPRECATED.
+// TODO(alexmin): Remove once mods stop calling this API.
+void ModuleContextImpl::Active() {}
 
 void ModuleContextImpl::Done() {
   story_controller_impl_->HandleModuleDone(module_data_->module_path);
@@ -126,6 +128,13 @@ void ModuleContextImpl::Done() {
 void ModuleContextImpl::RequestStoryVisibilityState(
     fuchsia::modular::StoryVisibilityState visibility_state) {
   story_controller_impl_->HandleStoryVisibilityStateRequest(visibility_state);
+}
+
+void ModuleContextImpl::StartOngoingActivity(
+    fuchsia::modular::OngoingActivityType ongoing_activity_type,
+    fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request) {
+  story_controller_impl_->StartOngoingActivity(ongoing_activity_type,
+                                               std::move(request));
 }
 
 }  // namespace modular

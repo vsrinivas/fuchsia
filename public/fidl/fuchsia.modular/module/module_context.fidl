@@ -74,13 +74,15 @@ interface ModuleContext {
   // shell and user shell to honor that request.
   10: RequestFocus();
 
-  // EXPERIMENTAL. Declares that activity is ongoing in this module. This
-  // information is forwarded to the user shell (cf.
-  // StoryProvider.WatchActivity() and StoryProviderWatcher), which may use it
-  // and the frequency at which it receives these calls to determine to keep the
-  // story of this module in focus. The module should call this method regularly
-  // while activity is ongoing. Once the activity ceases, the module should just
-  // not issue calls anymore. See StoryProviderWatcher for more motivation.
+  // DEPRECATED in favor of using StartOngoingActivity().
+  //
+  // Declares that activity is ongoing in this module. This information is
+  // forwarded to the user shell (cf. StoryProvider.WatchActivity()
+  // and StoryProviderWatcher), which may use it and the frequency at which it
+  // receives these calls to determine to keep the story of this module in
+  // focus. The module should call this method regularly while activity is
+  // ongoing. Once the activity ceases, the module should just not issue calls
+  // anymore. See StoryProviderWatcher for more motivation.
   11: Active();
 
   // When a module calls |Done()| the framework will stop the module. If there are
@@ -100,10 +102,33 @@ interface ModuleContext {
   // assumptions about the story visibility state. Also, this differs from other
   // UI states such as focus state, which is persisted across reboots.
   13: RequestStoryVisibilityState(StoryVisibilityState visibility_state);
+
+  // Declares that activity of the given |type| is ongoing in this module.
+  // This information is forwarded to the user shell
+  // (cf. StoryProvider.WatchActivity() and StoryActivityWatcher).
+  //
+  // Modules should close |request| when the ongoing activity has stopped, and
+  // this will also signal to the user shell that the ongoing activity has
+  // stopped. Modules must request a connection per ongoing activity; a single
+  // connection may not be re-used for multiple ongoing activities.
+  14: StartOngoingActivity(OngoingActivityType type,
+                           request<OngoingActivity> @request);
 };
 
 // Communicates the status of an Intent to a Module.
 enum StartModuleStatus {
   SUCCESS = 0;
   NO_MODULES_FOUND = 1;
+};
+
+// This interface defines the protocol over which a Module can communicate about
+// an ongoing activity to the framework. It is provided to Modules via
+// ModuleContext.StartOngoingActivity().
+interface OngoingActivity {
+};
+
+enum OngoingActivityType {
+  UNSPECIFIED = 0;
+  VIDEO = 1;
+  AUDIO = 2;
 };

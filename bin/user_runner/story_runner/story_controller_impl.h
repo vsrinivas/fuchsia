@@ -30,6 +30,7 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
+#include "peridot/bin/user_runner/story_runner/ongoing_activity_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -82,6 +83,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // Called by StoryProviderImpl.
   fuchsia::modular::StoryVisibilityState GetStoryVisibilityState() const;
 
+  // Called by StoryProviderImpl.
+  //
+  // Returns a list of the ongoing activities in this story.
+  fidl::VectorPtr<fuchsia::modular::OngoingActivityType> GetOngoingActivities();
+
   void Sync(const std::function<void()>& done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
@@ -100,7 +106,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // storage. It is the caller's responsibility to delete |controller|.
   void ReleaseModule(ModuleControllerImpl* module_controller_impl);
 
-  // Called by ModuleContextImpl.
+  // Called by ModuleContextImpl and StoryProviderImpl.
   fidl::StringPtr GetStoryId() const;
 
   // Called by ModuleContextImpl.
@@ -152,9 +158,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
       fidl::StringPtr module_name, fuchsia::modular::Intent intent,
       fuchsia::modular::SurfaceRelationPtr surface_relation) override;
 
-  // Called by ModuleContextImpl.
-  void Active();
-
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.Done|.
   void HandleModuleDone(const fidl::VectorPtr<fidl::StringPtr>& module_path);
@@ -162,6 +165,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // Called by ModuleContextImpl.
   void HandleStoryVisibilityStateRequest(
       const fuchsia::modular::StoryVisibilityState visibility_state);
+
+  // Called by ModuleContextImpl.
+  void StartOngoingActivity(
+      const fuchsia::modular::OngoingActivityType ongoing_activity_type,
+      fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request);
 
  private:
   // |StoryController|
@@ -313,6 +321,12 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // The second ingredient of a story: Links. They connect Modules.
   fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> link_impls_;
+
+  // This is the source of truth on which activities are currently ongoing in
+  // the story's modules.
+  fidl::BindingSet<fuchsia::modular::OngoingActivity,
+                   std::unique_ptr<OngoingActivityImpl>>
+      ongoing_activities_;
 
   // A collection of services, scoped to this Story, for use by intelligent
   // Modules.

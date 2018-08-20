@@ -99,6 +99,12 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   void RequestStoryVisibilityState(
       fuchsia::modular::StoryVisibilityState visibility_state) override;
 
+  // |fuchsia::modular::ModuleContext|
+  void StartOngoingActivity(
+      fuchsia::modular::OngoingActivityType ongoing_activity_type,
+      fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request)
+      override;
+
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
   const fuchsia::modular::ModuleData* const module_data_;

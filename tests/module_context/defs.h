@@ -21,8 +21,14 @@ constexpr char kFirstModuleName[] = "first";
 constexpr char kSecondModuleName[] = "second";
 
 // The signal the modules wait for before calling done.
-constexpr char kFirstModuleCallDone[] = "first";
-constexpr char kSecondModuleCallDone[] = "second";
+constexpr char kFirstModuleCallDone[] = "first_done";
+constexpr char kSecondModuleCallDone[] = "second_done";
+
+// The signal the modules wait for before starting/stopping ongoing activity.
+constexpr char kFirstModuleCallStartActivity[] = "first_activity_start";
+constexpr char kSecondModuleCallStartActivity[] = "second_activity_start";
+constexpr char kFirstModuleCallStopActivity[] = "first_activity_stop";
+constexpr char kSecondModuleCallStopActivity[] = "second_activity_stop";
 
 // The signal the modules send when they have been terminated.
 constexpr char kFirstModuleTerminated[] = "first terminated";

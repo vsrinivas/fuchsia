@@ -194,34 +194,6 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
 };
 
-// A simple story activity watcher implementation.
-class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
- public:
-  StoryActivityWatcherImpl() : binding_(this), cont_([](fidl::StringPtr) {}) {}
-  ~StoryActivityWatcherImpl() override = default;
-
-  void Watch(fuchsia::modular::StoryProviderPtr* const story_provider) {
-    (*story_provider)->WatchActivity(binding_.NewBinding());
-  }
-
-  void Continue(std::function<void(fidl::StringPtr)> cont) {
-    cont_ = std::move(cont);
-  }
-
-  void Reset() { binding_.Unbind(); }
-
- private:
-  // |fuchsia::modular::StoryActivityWatcher|
-  void OnStoryActivity(fidl::StringPtr story_id) override {
-    cont_(std::move(story_id));
-  }
-
-  fidl::Binding<fuchsia::modular::StoryActivityWatcher> binding_;
-  std::function<void(fidl::StringPtr)> cont_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoryActivityWatcherImpl);
-};
-
 // Cf. README.md for what this test does and how.
 class TestApp
     : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
@@ -255,7 +227,6 @@ class TestApp
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_state_watcher_.Watch(&story_provider_);
-    story_activity_watcher_.Watch(&story_provider_);
 
     TestStoryProvider_GetStoryInfo_Null();
   }
@@ -335,18 +306,7 @@ class TestApp
   }
 
   TestPoint story1_run_{"Story1 Run"};
-  TestPoint story1_active_{"Story1 Active"};
-
   void TestStory1_Run() {
-    story_activity_watcher_.Continue([this](fidl::StringPtr story_id) {
-      if (story_id == story_info_.id) {
-        story1_active_.Pass();
-      }
-
-      story_activity_watcher_.Reset();
-      TestStory1_Stop();
-    });
-
     story_modules_watcher_.Watch(&story_controller_);
     story_links_watcher_.Watch(&story_controller_);
 
@@ -354,6 +314,7 @@ class TestApp
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
     story1_run_.Pass();
+    TestStory1_Stop();
   }
 
   TestPoint story1_stop_{"Story1 Stop"};
@@ -556,7 +517,6 @@ class TestApp
   }
 
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
-  StoryActivityWatcherImpl story_activity_watcher_;
   StoryModulesWatcherImpl story_modules_watcher_;
   StoryLinksWatcherImpl story_links_watcher_;
 

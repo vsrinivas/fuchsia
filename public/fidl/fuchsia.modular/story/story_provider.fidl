@@ -56,8 +56,9 @@ interface StoryProvider {
   // Registers a watcher for changes in the story collection.
   8: Watch(StoryProviderWatcher watcher);
 
-  // EXPERIMENTAL. Registers a watcher for ongoing story activity. See
-  // StoryActivityWatcher for motivations.
+  // Registers a watcher for ongoing story activity. Upon registration,
+  // StoryActivityWatcher.OnStoryActivity() will be called to update clients
+  // with the initial data. See StoryActivityWatcher for motivations.
   9: WatchActivity(StoryActivityWatcher watcher);
 
   // Creates a duplicate connection to this StoryProvider.
@@ -131,39 +132,16 @@ interface StoryProviderWatcher {
   2: OnDelete(string story_id);
 };
 
-// EXPERIMENTAL. Implemented by clients of StoryProvider in order to give them
-// an idea about ongoing activity in stories. The details about how modules
-// express this information are open for modification. A few guiding observations:
+// Implemented by clients of StoryProvider in order to inform them about ongoing
+// activities in stories. |activities| is the entire list of ongoing activities
+// (represented by its type) within the story by the given |story_id|. If
+// |activities| is empty, it means that there is no ongoing activity within the
+// story.
 //
-// * We express ongoing activity as an activity instead of as a state. This
-//   makes it more likely that the expression is honest and correct, even though
-//   it doesn't in itself prevent abuse or mistakes.
-//
-// * We don't currently have information about how long the activity will be
-//   ongoing. This makes some sense, because "ongoingness" happens at a human
-//   time scale. It makes no sense for a module to define an activity that takes
-//   a milliscond to be "ongoing", ot to declare an activity that takes a day as
-//   "ongoing". An activity is ongoing for something around a second, and
-//   therefore a client can reasonably expect something to be inactive only
-//   after waiting for about a second. This mamkes sense too, because the client
-//   can use this information only when its own user is not active in the first
-//   place, and to it has to apply a timeout anyway. (Canonical example is to
-//   show an idle screen. This makes sense only when all stories are idle, but
-//   also only when the user is idle.)
-//
-// * We could establish more concrete policy as to when a module is to be
-//   considered active in the framework, but we don't know yet what the right
-//   policy is. Right now the policy that emerges is that the module should not
-//   lie (since we do not prescribe how a user shell uses the information, there
-//   is no clear incentive for lying), which is a good start.
-//
-// * One obvious extension is to let modules tell the expected duration of the
-//   ongoing activity, but processing this requires to maintain state per story,
-//   and the current user shell doesn't need this information. It just resets
-//   its own screen saver timeout whenever it sees activity from any story at
-//   all, or from the focused story.
+// Clients can expect this event whenever there is a newly started/stopped
+// ongoing activity, as well as when the client first registers for updates
+// via StoryProvider.WatchActivity().
 interface StoryActivityWatcher {
-  // Called to notify that a module in the given story issued a
-  // ModuleContext.Active() call.
-  1: OnStoryActivity(string story_id);
+  1: OnStoryActivityChange(string story_id,
+                           vector<OngoingActivityType> activities);
 };

@@ -396,7 +396,13 @@ void StoryProviderImpl::Watch(
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::WatchActivity(
     fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) {
-  activity_watchers_.AddInterfacePtr(watcher.Bind());
+  auto watcher_ptr = watcher.Bind();
+  for (const auto& item : story_controller_impls_) {
+    const auto& container = item.second;
+    watcher_ptr->OnStoryActivityChange(container.impl->GetStoryId(),
+                                       container.impl->GetOngoingActivities());
+  }
+  activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -558,6 +564,14 @@ void StoryProviderImpl::NotifyStoryStateChange(
       "StoryProviderImpl::NotifyStoryStateChange", on_run, done, callback));
 }
 
+void StoryProviderImpl::NotifyStoryActivityChange(
+    fidl::StringPtr story_id,
+    fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities) {
+  for (const auto& i : activity_watchers_.ptrs()) {
+    (*i)->OnStoryActivityChange(story_id, std::move(ongoing_activities));
+  }
+}
+
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetController(
     fidl::StringPtr story_id,
@@ -716,12 +730,6 @@ void StoryProviderImpl::WatchVisualState(
     fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
   presentation_provider_->WatchVisualState(std::move(story_id),
                                            std::move(watcher));
-}
-
-void StoryProviderImpl::Active(const fidl::StringPtr& story_id) {
-  for (const auto& i : activity_watchers_.ptrs()) {
-    (*i)->OnStoryActivity(story_id);
-  }
 }
 
 }  // namespace modular

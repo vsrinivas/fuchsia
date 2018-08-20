@@ -53,7 +53,22 @@ class TestApp {
       document.Parse(value_string.c_str());
       module_name_ = document.GetString();
 
-      Await(module_name_, [this, module_context] { module_context->Done(); });
+      // These are defined explicitly in defs.h. We reconstruct them here for
+      // convenience since we can parameterize them on |module_name_|.
+      std::string module_done_signal = module_name_ + "_done";
+      std::string module_activity_start_signal =
+          module_name_ + "_activity_start";
+      std::string module_activity_stop_signal = module_name_ + "_activity_stop";
+
+      Await(module_done_signal,
+            [this, module_context] { module_context->Done(); });
+      Await(module_activity_start_signal, [this, module_context] {
+        module_context->StartOngoingActivity(
+            fuchsia::modular::OngoingActivityType::VIDEO,
+            ongoing_activity_.NewRequest());
+      });
+      Await(module_activity_stop_signal,
+            [this, module_context] { ongoing_activity_.Unbind(); });
     });
   }
 
@@ -71,6 +86,7 @@ class TestApp {
  private:
   fuchsia::modular::LinkPtr link_;
   std::string module_name_ = "";
+  fuchsia::modular::OngoingActivityPtr ongoing_activity_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

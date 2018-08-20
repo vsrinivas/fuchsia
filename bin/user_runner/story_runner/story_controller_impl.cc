@@ -39,6 +39,7 @@
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/module_context_impl.h"
 #include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
@@ -522,6 +523,10 @@ class StoryControllerImpl::StopCall : public Operation<> {
           // Clear the remaining links and connections in case there are some
           // left. At this point, no DisposeLink() calls can arrive anymore.
           story_controller_impl_->link_impls_.CloseAll();
+
+          // There should be no ongoing activities since all the modules have
+          // been destroyed at this point.
+          FXL_DCHECK(story_controller_impl_->ongoing_activities_.size() == 0);
 
           // If this StopCall is part of a DeleteCall, then we don't notify
           // watchers story state changes; the pertinent state change will be
@@ -1201,6 +1206,17 @@ StoryControllerImpl::GetStoryVisibilityState() const {
   return visibility_state_;
 }
 
+fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
+StoryControllerImpl::GetOngoingActivities() {
+  fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities;
+  ongoing_activities.resize(0);
+  for (auto& entry : ongoing_activities_.bindings()) {
+    ongoing_activities.push_back(entry->impl()->GetType());
+  }
+
+  return ongoing_activities;
+}
+
 void StoryControllerImpl::Sync(const std::function<void()>& done) {
   operation_queue_.Add(new SyncCall(done));
 }
@@ -1622,8 +1638,6 @@ void StoryControllerImpl::WatchVisualState(
   story_provider_impl_->WatchVisualState(story_id_, std::move(watcher));
 }
 
-void StoryControllerImpl::Active() { story_provider_impl_->Active(story_id_); }
-
 void StoryControllerImpl::HandleModuleDone(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   operation_queue_.Add(
@@ -1658,6 +1672,31 @@ void StoryControllerImpl::InitStoryEnvironment() {
 
 void StoryControllerImpl::DestroyStoryEnvironment() {
   story_environment_.reset();
+}
+
+void StoryControllerImpl::StartOngoingActivity(
+    const fuchsia::modular::OngoingActivityType ongoing_activity_type,
+    fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request) {
+  // Newly created/destroyed ongoing activities should be dispatched to the
+  // story provider.
+  auto dispatch_to_story_provider = [this] {
+    story_provider_impl_->NotifyStoryActivityChange(story_id_,
+                                                    GetOngoingActivities());
+  };
+
+  // When a connection is closed on the client-side, the OngoingActivityImpl is
+  // destroyed after it is removed from the binding set, so we dispatch to the
+  // story provider in the destructor of OngoingActivityImpl.
+  ongoing_activities_.AddBinding(
+      std::make_unique<OngoingActivityImpl>(
+          ongoing_activity_type,
+          /* on_destroy= */ dispatch_to_story_provider),
+      std::move(request));
+
+  // Conversely, when a connection is created, the OngoingActivityImpl is
+  // initialized before added to the binding set, so we need to dispatch after
+  // bind.
+  dispatch_to_story_provider();
 }
 
 }  // namespace modular

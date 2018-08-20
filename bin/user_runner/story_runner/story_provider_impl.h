@@ -26,8 +26,8 @@
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/fidl/environment.h"
+#include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -114,7 +114,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fuchsia::modular::StoryVisibilityState story_visibility_state);
 
   // Called by StoryControllerImpl.
-  void Active(const fidl::StringPtr& story_id);
+  void NotifyStoryActivityChange(
+      fidl::StringPtr story_id,
+      fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
+          ongoing_activities);
 
   // Called by StoryControllerImpl. Sends request to fuchsia::modular::UserShell
   // through PresentationProvider.
