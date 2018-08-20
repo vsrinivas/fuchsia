@@ -12,12 +12,10 @@ sdk_source_set("cpp") {
   sdk_name = "fidl_cpp"
 
   sources = [
-    "array.h",
     "binding.h",
     "binding_set.h",
     "clone.cc",
     "clone.h",
-    "comparison.h",
     "enum.h",
     "interface_ptr.h",
     "interface_ptr_set.h",
@@ -65,8 +63,10 @@ sdk_source_set("cpp_sync") {
   sdk_name = "fidl_cpp_sync"
 
   sources = [
+    "array.h",
     "coding_traits.cc",
     "coding_traits.h",
+    "comparison.h",
     "decoder.cc",
     "decoder.h",
     "encoder.cc",
