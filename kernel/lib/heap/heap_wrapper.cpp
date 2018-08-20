@@ -137,7 +137,7 @@ void heap_trim() {
 }
 
 void* malloc(size_t size) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     LTRACEF("size %zu\n", size);
 
@@ -156,7 +156,7 @@ void* malloc(size_t size) {
 }
 
 void* malloc_debug_caller_(size_t size, void* caller) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     LTRACEF("size %zu\n", size);
 
@@ -175,7 +175,7 @@ void* malloc_debug_caller_(size_t size, void* caller) {
 }
 
 void* memalign(size_t boundary, size_t size) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     LTRACEF("boundary %zu, size %zu\n", boundary, size);
 
@@ -194,7 +194,7 @@ void* memalign(size_t boundary, size_t size) {
 }
 
 void* calloc(size_t count, size_t size) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     LTRACEF("count %zu, size %zu\n", count, size);
 
@@ -213,7 +213,7 @@ void* calloc(size_t count, size_t size) {
 }
 
 void* realloc(void* ptr, size_t size) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     LTRACEF("ptr %p, size %zu\n", ptr, size);
 
@@ -232,7 +232,7 @@ void* realloc(void* ptr, size_t size) {
 }
 
 void free(void* ptr) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     LTRACEF("ptr %p\n", ptr);
     if (unlikely(heap_trace)) {

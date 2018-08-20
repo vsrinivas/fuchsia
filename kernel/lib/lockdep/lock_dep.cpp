@@ -187,7 +187,7 @@ void SystemCircularLockDependencyDetected(LockClassState* connected_set_root) {
 ThreadLockState* SystemGetThreadLockState() {
     ThreadLockState* state;
 
-    if (arch_in_int_handler())
+    if (arch_blocking_disallowed())
         state = ToThreadLockState(&get_local_percpu()->lock_state);
     else
         state = ToThreadLockState(&get_current_thread()->lock_state);

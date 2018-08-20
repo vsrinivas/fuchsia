@@ -44,7 +44,7 @@ void mutex_init(mutex_t* m) {
  */
 void mutex_destroy(mutex_t* m) {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
 #if LK_DEBUGLEVEL > 0
     if (unlikely(mutex_val(m) != 0)) {
@@ -65,7 +65,7 @@ void mutex_destroy(mutex_t* m) {
  */
 void mutex_acquire(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     thread_t* ct = get_current_thread();
     uintptr_t oldval;
@@ -213,7 +213,7 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
 
 void mutex_release(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     // default release will reschedule if any threads are woken up and acquire the thread lock
     mutex_release_internal(m, true, false);
@@ -221,7 +221,7 @@ void mutex_release(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {
 
 void mutex_release_thread_locked(mutex_t* m, bool reschedule) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 

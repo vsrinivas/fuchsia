@@ -37,8 +37,8 @@ struct arm64_percpu {
     // cpu number
     uint32_t cpu_num;
 
-    // is the cpu currently inside an interrupt handler
-    uint32_t in_irq;
+    // Whether blocking is disallowed.  See arch_blocking_disallowed().
+    uint32_t blocking_disallowed;
 } __CPU_ALIGN;
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);

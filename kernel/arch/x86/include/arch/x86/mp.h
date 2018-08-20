@@ -15,7 +15,6 @@
 //      ZX_TLS_STACK_GUARD_OFFSET      0x10
 //      ZX_TLS_UNSAFE_SP_OFFSET        0x18
 #define PERCPU_SAVED_USER_SP_OFFSET    0x20
-#define PERCPU_IN_IRQ_OFFSET           0x28
 #define PERCPU_GPF_RETURN_OFFSET       0x40
 #define PERCPU_CPU_NUM_OFFSET          0x48
 #define PERCPU_DEFAULT_TSS_OFFSET      0x50
@@ -54,8 +53,8 @@ struct x86_percpu {
     /* temporarily saved during a syscall */
     uintptr_t saved_user_sp;
 
-    /* are we currently in an irq handler */
-    uint32_t in_irq;
+    /* Whether blocking is disallowed.  See arch_blocking_disallowed(). */
+    uint32_t blocking_disallowed;
 
     /* Memory for IPI-free rescheduling of idle CPUs with monitor/mwait. */
     volatile uint8_t* monitor;
@@ -81,7 +80,6 @@ static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_TH
 static_assert(__offsetof(struct x86_percpu, stack_guard) == ZX_TLS_STACK_GUARD_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, kernel_unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
-static_assert(__offsetof(struct x86_percpu, in_irq) == PERCPU_IN_IRQ_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, gpf_return_target) == PERCPU_GPF_RETURN_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, cpu_num) == PERCPU_CPU_NUM_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");

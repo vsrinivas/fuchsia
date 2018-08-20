@@ -65,19 +65,19 @@ void arch_zero_page(void *);
 /* give the specific arch a chance to override some routines */
 #include <arch/arch_ops.h>
 
-/* The arch_in_int_handler() flag is used to check that in-kernel interrupt
+/* The arch_blocking_disallowed() flag is used to check that in-kernel interrupt
  * handlers do not do any blocking operations.  This is a per-CPU flag.
  * Various blocking operations, such as mutex_acquire(), contain assertions
- * that arch_in_int_handler() is false.
+ * that arch_blocking_disallowed() is false.
  *
- * arch_in_int_handler() should only be true when interrupts are
+ * arch_blocking_disallowed() should only be true when interrupts are
  * disabled. */
-static inline bool arch_in_int_handler(void) {
-    return READ_PERCPU_FIELD32(in_irq);
+static inline bool arch_blocking_disallowed(void) {
+    return READ_PERCPU_FIELD32(blocking_disallowed);
 }
 
-static inline void arch_set_in_int_handler(bool value) {
-    WRITE_PERCPU_FIELD32(in_irq, value);
+static inline void arch_set_blocking_disallowed(bool value) {
+    WRITE_PERCPU_FIELD32(blocking_disallowed, value);
 }
 
 __END_CDECLS

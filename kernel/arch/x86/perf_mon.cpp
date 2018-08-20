@@ -1927,7 +1927,7 @@ void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSI
     // TODO(dje): We may want this anyway. If we want to be able to handle
     // page faults inside this handler we'll need to turn interrupts back
     // on. At the moment we can't do this as we don't handle recursive PMIs.
-    arch_set_in_int_handler(false);
+    arch_set_blocking_disallowed(false);
     arch_enable_ints();
 #endif
 
@@ -1935,7 +1935,7 @@ void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSI
 
 #if 0
     arch_disable_ints();
-    arch_set_in_int_handler(true);
+    arch_set_blocking_disallowed(true);
 #endif
 
     // This is done here instead of in the caller so that we have full control

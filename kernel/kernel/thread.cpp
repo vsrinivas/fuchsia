@@ -774,7 +774,7 @@ void thread_yield(void) {
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
@@ -793,7 +793,7 @@ void thread_preempt(void) {
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     if (!thread_is_idle(current_thread)) {
         // only track when a meaningful preempt happens
@@ -817,7 +817,7 @@ void thread_reschedule(void) {
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
@@ -900,7 +900,7 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
     DEBUG_ASSERT(!thread_is_idle(current_thread));
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     // Skip all of the work if the deadline has already passed.
     if (deadline <= now) {

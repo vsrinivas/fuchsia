@@ -21,7 +21,7 @@ static void timer_callback_func(timer_t* timer, zx_time_t now, void* arg) {
     // Timer callbacks should be called in interrupt context with
     // preempt_disable set.
     ASSERT(arch_ints_disabled());
-    ASSERT(arch_in_int_handler());
+    ASSERT(arch_blocking_disallowed());
     thread_t* thread = get_current_thread();
     ASSERT(thread_preempt_disable_count() > 0);
 

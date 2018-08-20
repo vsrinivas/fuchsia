@@ -70,7 +70,7 @@ static zx_status_t event_wait_worker(event_t* e, zx_time_t deadline,
     zx_status_t ret = ZX_OK;
 
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 

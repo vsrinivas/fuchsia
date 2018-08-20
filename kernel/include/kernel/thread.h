@@ -412,7 +412,7 @@ static inline void thread_preempt_disable(void) {
 // thread_preempt_reenable() decrements the preempt_disable counter.  See
 // thread_preempt_disable().
 static inline void thread_preempt_reenable(void) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
     DEBUG_ASSERT(thread_preempt_disable_count() > 0);
 
     thread_t* current_thread = get_current_thread();
@@ -461,7 +461,7 @@ static inline void thread_resched_disable(void) {
 // thread_resched_reenable() decrements the preempt_disable counter.  See
 // thread_resched_disable().
 static inline void thread_resched_reenable(void) {
-    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(!arch_blocking_disallowed());
     DEBUG_ASSERT(thread_resched_disable_count() > 0);
 
     thread_t* current_thread = get_current_thread();
@@ -484,7 +484,7 @@ static inline void thread_resched_reenable(void) {
 // except that it does not need to be called with thread_lock held.
 static inline void thread_preempt_set_pending(void) {
     DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(arch_in_int_handler());
+    DEBUG_ASSERT(arch_blocking_disallowed());
     thread_t* current_thread = get_current_thread();
     DEBUG_ASSERT(thread_preempt_disable_count() > 0);
 

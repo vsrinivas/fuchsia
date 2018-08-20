@@ -16,7 +16,7 @@ typedef struct int_handler_saved_state {
 // blocking are disabled.  This must be matched by a later call to
 // int_handler_finish().
 static inline void int_handler_start(int_handler_saved_state_t* state) {
-    arch_set_in_int_handler(true);
+    arch_set_blocking_disallowed(true);
     thread_t* current_thread = get_current_thread();
     // Save the value of preempt_pending for restoring later.
     state->old_preempt_pending = current_thread->preempt_pending;
@@ -47,6 +47,6 @@ static inline bool int_handler_finish(int_handler_saved_state_t* state) {
         // resched_disable is non-zero.
         current_thread->preempt_pending = state->old_preempt_pending;
     }
-    arch_set_in_int_handler(false);
+    arch_set_blocking_disallowed(false);
     return do_preempt;
 }
