@@ -48,7 +48,7 @@ enum ath10k_pci_reset_mode {
 };
 
 // Linux module paramters
-static unsigned int ath10k_pci_irq_mode = ATH10K_PCI_IRQ_AUTO;
+static unsigned int ath10k_pci_irq_mode = ATH10K_PCI_IRQ_LEGACY;
 static unsigned int ath10k_pci_reset_mode = ATH10K_PCI_RESET_AUTO;
 
 /* how long wait to wait for target to initialise, in ms */
