@@ -469,6 +469,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         break;
     default:
         zxlogf(ERROR, "aml_gpio_bind: unsupported SOC PID %u\n", info.pid);
+        status = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
 
