@@ -4,11 +4,11 @@
 
 #include "platform-i2c.h"
 
-#include <stdlib.h>
-#include <threads.h>
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <stdlib.h>
+#include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 
@@ -40,7 +40,7 @@ zx_status_t PlatformI2cBus::Start() {
 }
 
 void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* data,
-                                 size_t data_length) {
+                              size_t data_length) {
     struct {
         rpc_i2c_rsp_t i2c;
         uint8_t data[I2C_MAX_TRANSFER_SIZE] = {};
@@ -85,7 +85,7 @@ int PlatformI2cBus::I2cThread() {
         while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
             mutex_.Release();
 
-            auto status = i2c_.Transact(bus_id_, txn->address,  txn->write_buffer,
+            auto status = i2c_.Transact(bus_id_, txn->address, txn->write_buffer,
                                         txn->write_length, read_buffer.get(), txn->read_length);
             size_t actual = (status == ZX_OK ? txn->read_length : 0);
             Complete(txn, status, read_buffer.get(), actual);
@@ -98,8 +98,8 @@ int PlatformI2cBus::I2cThread() {
     return 0;
 }
 
- zx_status_t PlatformI2cBus::Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address,
-                                      const void* write_buf, zx_handle_t channel_handle) {
+zx_status_t PlatformI2cBus::Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address,
+                                     const void* write_buf, zx_handle_t channel_handle) {
     const size_t write_length = req->write_length;
     const size_t read_length = req->read_length;
     if (write_length > max_transfer_ || read_length > max_transfer_) {

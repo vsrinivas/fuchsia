@@ -4,14 +4,14 @@
 
 #include "platform-device.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
 #include <fbl/function.h>
@@ -26,7 +26,7 @@ zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, 
                                    fbl::unique_ptr<platform_bus::PlatformDevice>* out) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<platform_bus::PlatformDevice> dev(new (&ac)
-                                            platform_bus::PlatformDevice(parent, bus, flags, pdev));
+                                          platform_bus::PlatformDevice(parent, bus, flags, pdev));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -61,7 +61,6 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
 
     return ZX_OK;
 }
-
 
 zx_status_t PlatformDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
                                     size_t* out_size, zx_paddr_t* out_paddr,
@@ -178,7 +177,7 @@ zx_status_t PlatformDevice::DeviceAdd(uint32_t index, device_add_args_t* args, z
 // Create a resource and pass it back to the proxy along with necessary metadata
 // to create/map the VMO in the driver process.
 zx_status_t PlatformDevice::RpcGetMmio(const DeviceResources* dr, uint32_t index, zx_paddr_t* out_paddr,
-                                       size_t *out_length, zx_handle_t* out_handle,
+                                       size_t* out_length, zx_handle_t* out_handle,
                                        uint32_t* out_handle_count) {
     if (index >= dr->mmio_count()) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -187,7 +186,7 @@ zx_status_t PlatformDevice::RpcGetMmio(const DeviceResources* dr, uint32_t index
     const pbus_mmio_t& mmio = dr->mmio(index);
     zx_handle_t handle;
     char rsrc_name[ZX_MAX_NAME_LEN];
-    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", name_, index);
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
     zx_status_t status = zx_resource_create(bus_->GetResource(), ZX_RSRC_KIND_MMIO, mmio.base,
                                             mmio.length, rsrc_name, sizeof(rsrc_name), &handle);
     if (status != ZX_OK) {
@@ -215,7 +214,7 @@ zx_status_t PlatformDevice::RpcGetInterrupt(const DeviceResources* dr, uint32_t 
     const pbus_irq_t& irq = dr->irq(index);
     uint32_t options = ZX_RSRC_KIND_IRQ | ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
-    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", name_, index);
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
     zx_status_t status = zx_resource_create(bus_->GetResource(), options, irq.irq, 1, rsrc_name,
                                             sizeof(rsrc_name), &handle);
     if (status != ZX_OK) {
@@ -522,7 +521,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         resp_len = sizeof(*resp_header);
 
         switch (req_header->op) {
-            case UMS_SET_MODE:
+        case UMS_SET_MODE:
             status = RpcUmsSetMode(dr, req->usb_mode);
             break;
         default:
@@ -630,7 +629,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         switch (req_header->op) {
         case CANVAS_CONFIG:
             status = RpcCanvasConfig(dr, in_handle, req->offset, &req->info,
-                                          &resp->idx);
+                                     &resp->idx);
             break;
         case CANVAS_FREE:
             status = RpcCanvasFree(dr, req->idx);
@@ -713,7 +712,6 @@ zx_status_t PlatformDevice::Start() {
         flags |= DEVICE_ADD_MUST_ISOLATE;
     }
 
-// FIXME do this for child devices somehow
     const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
     size_t metadata_count = dr->metadata_count();
     if (metadata_count > 0) {

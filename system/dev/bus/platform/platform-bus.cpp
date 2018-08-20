@@ -42,7 +42,7 @@ zx_status_t PlatformBus::SetProtocol(uint32_t proto_id, void* protocol) {
     switch (proto_id) {
     case ZX_PROTOCOL_USB_MODE_SWITCH: {
         ums_.reset(new (&ac) ddk::UmsProtocolProxy(
-                                    static_cast<usb_mode_switch_protocol_t*>(protocol)));
+            static_cast<usb_mode_switch_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -60,7 +60,7 @@ zx_status_t PlatformBus::SetProtocol(uint32_t proto_id, void* protocol) {
         auto status = I2cInit(proto);
         if (status != ZX_OK) {
             return status;
-         }
+        }
 
         i2c_impl_.reset(new (&ac) ddk::I2cImplProtocolProxy(proto));
         if (!ac.check()) {
@@ -84,7 +84,7 @@ zx_status_t PlatformBus::SetProtocol(uint32_t proto_id, void* protocol) {
     }
     case ZX_PROTOCOL_CANVAS: {
         canvas_.reset(new (&ac) ddk::CanvasProtocolProxy(
-                                                    static_cast<canvas_protocol_t*>(protocol)));
+            static_cast<canvas_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -311,7 +311,7 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
     }
 
     if (!got_platform_id) {
-         zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
+        zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
         return ZX_ERR_INTERNAL;
     }
 
@@ -401,7 +401,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::vmo z
 }
 
 PlatformBus::PlatformBus(zx_device_t* parent)
-        : PlatformBusType(parent) {
+    : PlatformBusType(parent) {
     sync_completion_reset(&proto_completion_);
 }
 
@@ -414,7 +414,7 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
     // Set up a dummy IOMMU protocol to use in the case where our board driver does not
     // set a real one.
     zx_iommu_desc_dummy_t desc;
-    status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,  &desc, sizeof(desc),
+    status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                              iommu_handle_.reset_and_get_address());
     if (status != ZX_OK) {
         return status;

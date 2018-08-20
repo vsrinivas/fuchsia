@@ -17,7 +17,6 @@ static constexpr size_t PROXY_MAX_TRANSFER_SIZE = 4096;
 // Device ID for a top level platform device (that is, an immediate child of the platform bus).
 static constexpr uint32_t ROOT_DEVICE_ID = 0;
 
-
 // Header for RPC requests.
 typedef struct {
     zx_txid_t txid;
@@ -64,7 +63,7 @@ typedef struct {
 
 // Maximum metadata size that can be returned via PDEV_DEVICE_GET_METADATA.
 static constexpr uint32_t PROXY_MAX_METADATA_SIZE =
-                        (PROXY_MAX_TRANSFER_SIZE - sizeof(rpc_pdev_rsp_t));
+    (PROXY_MAX_TRANSFER_SIZE - sizeof(rpc_pdev_rsp_t));
 
 typedef struct {
     rpc_pdev_rsp_t pdev;

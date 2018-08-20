@@ -14,9 +14,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/clk.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/clk.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
@@ -65,7 +65,7 @@ zx_status_t ProxyDevice::GpioSetAltFunction(uint32_t index, uint64_t function) {
 }
 
 zx_status_t ProxyDevice::GpioGetInterrupt(uint32_t index, uint32_t flags,
-                                            zx_handle_t* out_handle) {
+                                          zx_handle_t* out_handle) {
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.protocol = ZX_PROTOCOL_GPIO;
@@ -269,7 +269,7 @@ zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** o
 
     status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s %s: setting cache policy failed %d\n", name_, __FUNCTION__,status);
+        zxlogf(ERROR, "%s %s: setting cache policy failed %d\n", name_, __FUNCTION__, status);
         goto fail;
     }
 
@@ -286,7 +286,7 @@ zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** o
     if (out_paddr) {
         *out_paddr = mmio->base;
     }
-    *out_vaddr = (void *)(virt + (mmio->base - vmo_base));
+    *out_vaddr = reinterpret_cast<void*>(virt + (mmio->base - vmo_base));
     *out_handle = vmo_handle;
     return ZX_OK;
 
@@ -323,7 +323,7 @@ zx_status_t ProxyDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
     req.index = index;
 
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp), nullptr,
-                      0, out_handle, 1, nullptr);
+                       0, out_handle, 1, nullptr);
 }
 
 zx_status_t ProxyDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
@@ -375,7 +375,7 @@ zx_status_t ProxyDevice::Create(zx_device_t* parent, uint32_t device_id,
                                 fbl::RefPtr<PlatformProxy> proxy, device_add_args_t* args) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<platform_bus::ProxyDevice> dev(new (&ac)
-                                            platform_bus::ProxyDevice(parent, device_id, proxy));
+                                               platform_bus::ProxyDevice(parent, device_id, proxy));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -456,7 +456,7 @@ zx_status_t ProxyDevice::Init(device_add_args_t* args) {
     if (args == nullptr) {
         // Code path for root ProxyDevice.
         return DdkAdd(name_);
-   }
+    }
 
     // Code path for child ProxyDevices.
     ctx_ = args->ctx;
@@ -469,12 +469,12 @@ zx_status_t ProxyDevice::Init(device_add_args_t* args) {
     }
 
     status = DdkAdd(args->name, args->flags | DEVICE_ADD_INVISIBLE, args->props,
-                         args->prop_count);
+                    args->prop_count);
     if (status != ZX_OK) {
         return status;
     }
     // Remove ourselves from the devmgr if something goes wrong.
-    auto cleanup = fbl::MakeAutoCall([this]() { DdkRemove(); } );
+    auto cleanup = fbl::MakeAutoCall([this]() { DdkRemove(); });
 
     for (uint32_t i = 0; i < info.metadata_count; i++) {
         rpc_pdev_req_t req = {};
@@ -497,7 +497,7 @@ zx_status_t ProxyDevice::Init(device_add_args_t* args) {
 
     cleanup.cancel();
     // Make ourselves visible after all metadata has been added successfully.
-    DdkMakeVisible(); 
+    DdkMakeVisible();
     return ZX_OK;
 }
 
@@ -559,7 +559,7 @@ zx_status_t ProxyDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ProxyDevice::DdkOpenAt(zx_device_t** dev_out,  const char* path, uint32_t flags) {
+zx_status_t ProxyDevice::DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
     if (device_ops_ && device_ops_->open_at) {
         return device_ops_->open_at(ctx_, dev_out, path, flags);
     }

@@ -38,7 +38,7 @@ public:
     // For child devices, these call through to the device protocol passed via pdev_device_add().
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-    zx_status_t DdkOpenAt(zx_device_t** dev_out,  const char* path, uint32_t flags);
+    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags);
     zx_status_t DdkClose(uint32_t flags);
     void DdkUnbind();
     void DdkRelease();

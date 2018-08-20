@@ -20,6 +20,7 @@ public:
 
     zx_status_t Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address, const void* write_buf,
                          zx_handle_t channel_handle);
+
 private:
     // struct representing an I2C transaction.
     struct I2cTxn {

@@ -8,10 +8,14 @@ namespace {
 
 template <typename T>
 bool CopyResources(size_t in_count, const T* in_list, fbl::Array<T>* out) {
-    if (!in_count) return true;
+    if (!in_count) {
+        return true;
+    }
     fbl::AllocChecker ac;
     out->reset(new (&ac) T[in_count], in_count);
-    if (!ac.check()) return false;
+    if (!ac.check()) {
+        return false;
+    }
     memcpy(out->begin(), in_list, in_count * sizeof(T));
     return true;
 }

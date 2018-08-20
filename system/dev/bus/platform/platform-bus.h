@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <threads.h>
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/canvas.h>
@@ -22,6 +20,8 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
+#include <stdint.h>
+#include <threads.h>
 #include <zircon/types.h>
 
 #include "platform-device.h"

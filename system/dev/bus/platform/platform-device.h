@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <ddktl/device.h>
 #include <ddk/protocol/canvas.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <ddktl/device.h>
 #include <ddktl/protocol/platform-bus.h>
 #include <ddktl/protocol/platform-device.h>
 #include <fbl/unique_ptr.h>
@@ -78,7 +78,7 @@ private:
 
     // Handlers for RPCs from PlatformProxy.
     zx_status_t RpcGetMmio(const DeviceResources* dr, uint32_t index, zx_paddr_t* out_paddr,
-                           size_t *out_length, zx_handle_t* out_handle, uint32_t* out_handle_count);
+                           size_t* out_length, zx_handle_t* out_handle, uint32_t* out_handle_count);
     zx_status_t RpcGetInterrupt(const DeviceResources* dr, uint32_t index, uint32_t* out_irq,
                                 uint32_t* out_mode, zx_handle_t* out_handle,
                                 uint32_t* out_handle_count);

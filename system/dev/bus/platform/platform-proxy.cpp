@@ -14,9 +14,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/clk.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/clk.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
 #include "platform-proxy-device.h"
