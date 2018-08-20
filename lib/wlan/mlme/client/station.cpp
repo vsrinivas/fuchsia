@@ -1675,7 +1675,7 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
 AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan) {
     AssocContext assoc_ctx{};
 
-    assoc_ctx.cap = *reinterpret_cast<const CapabilityInfo*>(&ifc_info.caps);
+    assoc_ctx.cap = FromDdk(ifc_info.caps);
 
     auto band_info = FindBand(ifc_info, common::Is5Ghz(join_chan));
 

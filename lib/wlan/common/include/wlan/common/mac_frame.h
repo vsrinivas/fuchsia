@@ -782,5 +782,6 @@ struct EapolHdr {
 } __PACKED;
 
 CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs);
+CapabilityInfo FromDdk(uint32_t ddk_caps);
 
 }  // namespace wlan
