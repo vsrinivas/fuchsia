@@ -87,6 +87,7 @@ class ViewInspector {
   virtual void HasFocus(::fuchsia::ui::viewsv1token::ViewToken view_token,
                         HasFocusCallback callback) = 0;
 
+  // TODO(TEXT-22): remove
   // Retrieve the SoftKeyboardContainer that is the closest to the ViewToken
   // in the associated ViewTree
   virtual void GetSoftKeyboardContainer(

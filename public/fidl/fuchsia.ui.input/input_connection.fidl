@@ -26,6 +26,8 @@ interface InputConnection {
                          TextInputState initial_state,
                          InputMethodEditorClient client,
                          request<InputMethodEditor> editor);
+  3: ShowKeyboard();
+  4: HideKeyboard();
 };
 
 // An interface applications may implement to receive events from an

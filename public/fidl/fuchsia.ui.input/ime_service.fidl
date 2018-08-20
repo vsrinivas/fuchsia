@@ -12,8 +12,19 @@ interface ImeService {
                          TextInputState initial_state,
                          InputMethodEditorClient client,
                          request<InputMethodEditor> editor);
+  2: ShowKeyboard();
+  3: HideKeyboard();
+  4: InjectInput(InputEvent event);
 };
 
+// Onscreen keyboard containers connect to this to know when a keyboard
+// should be shown or hidden.
+[Discoverable]
+interface ImeVisibilityService {
+  1: -> OnKeyboardVisibilityChanged(bool visible);
+};
+
+// TODO(TEXT-22): remove
 // This is the service a view should expose when it can show and hide a
 // software keyboard.
 //

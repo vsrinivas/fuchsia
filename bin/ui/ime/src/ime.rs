@@ -6,6 +6,9 @@ use futures::future;
 use futures::prelude::*;
 use std::char;
 use std::ops::Range;
+use std::sync::{Arc, Mutex};
+
+use ime_service::ImeService;
 
 // TODO(lard): move constants into common, centralized location?
 const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
@@ -13,52 +16,61 @@ const HID_USAGE_KEY_RIGHT: u32 = 0x4f;
 const HID_USAGE_KEY_LEFT: u32 = 0x50;
 const HID_USAGE_KEY_ENTER: u32 = 0x28;
 
-pub struct IME<I: 'static + uii::InputMethodEditorClientProxyInterface> {
+pub struct IME {
     state: uii::TextInputState,
-    client: I,
+    client: Box<uii::InputMethodEditorClientProxyInterface>,
     keyboard_type: uii::KeyboardType,
     action: uii::InputMethodAction,
+    ime_service: ImeService,
 }
 
-impl<I: 'static + uii::InputMethodEditorClientProxyInterface> IME<I> {
-    pub fn new(
+impl IME {
+    pub fn new<I: 'static + uii::InputMethodEditorClientProxyInterface>(
         keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
-        initial_state: uii::TextInputState, client: I,
-    ) -> IME<I> {
+        initial_state: uii::TextInputState, client: I, ime_service: ImeService,
+    ) -> IME {
         IME {
             state: initial_state,
-            client: client,
+            client: Box::new(client),
             keyboard_type: keyboard_type,
             action: action,
+            ime_service: ime_service,
         }
     }
 
-    pub fn bind(mut self, edit_stream: uii::InputMethodEditorRequestStream) {
+    pub fn bind(mut self, edit_stream: uii::InputMethodEditorRequestStream) -> Arc<Mutex<Self>> {
+        let self_mutex = Arc::new(Mutex::new(self));
+        let self_mutex_clone = self_mutex.clone();
         let stream_complete = edit_stream
             .try_for_each(move |edit_request| {
-                self.handle(edit_request);
+                Self::handle_request(self_mutex_clone.clone(), edit_request);
                 future::ready(Ok(()))
-            })
-            .unwrap_or_else(|e| eprintln!("error running ime server: {:?}", e));
+            }).unwrap_or_else(|e| eprintln!("error running ime server: {:?}", e));
         async::spawn(stream_complete);
+        self_mutex
     }
 
-    pub fn handle(&mut self, edit_request: ImeReq) {
+    pub fn handle_request(self_mutex: Arc<Mutex<Self>>, edit_request: ImeReq) {
         match edit_request {
             ImeReq::SetKeyboardType { keyboard_type, .. } => {
-                self.keyboard_type = keyboard_type;
+                let mut this = self_mutex.lock().unwrap();
+                this.keyboard_type = keyboard_type;
             }
             ImeReq::SetState { state, .. } => {
-                self.set_state(state);
+                let mut this = self_mutex.lock().unwrap();
+                this.set_state(state);
             }
             ImeReq::InjectInput { event, .. } => {
-                self.inject_input(event);
+                let mut this = self_mutex.lock().unwrap();
+                this.inject_input(event);
             }
             ImeReq::Show { .. } => {
-                // noop
+                // noop, call this method on ImeService instead
+                // TODO(TEXT-19): remove this later once we patch PlatformView
             }
             ImeReq::Hide { .. } => {
-                // noop
+                // noop, call this method on ImeService instead
+                // TODO(TEXT-19): remove this later once we patch PlatformView
             }
         };
     }
@@ -73,8 +85,7 @@ impl<I: 'static + uii::InputMethodEditorClientProxyInterface> IME<I> {
             .did_update_state(
                 &mut self.state,
                 Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
-            )
-            .expect("IME service failed when attempting to notify IMEClient of updated state");
+            ).expect("IME service failed when attempting to notify IMEClient of updated state");
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist
@@ -87,7 +98,7 @@ impl<I: 'static + uii::InputMethodEditorClientProxyInterface> IME<I> {
         (start..end)
     }
 
-    fn inject_input(&mut self, event: uii::InputEvent) {
+    pub fn inject_input(&mut self, event: uii::InputEvent) {
         let keyboard_event = match event {
             uii::InputEvent::Keyboard(e) => e,
             _ => return,
@@ -243,7 +254,7 @@ mod test {
     fn set_up(
         text: &str, base: i64, extent: i64,
     ) -> (
-        IME<MockImeClient>,
+        IME,
         Receiver<uii::TextInputState>,
         Receiver<uii::InputMethodAction>,
     ) {
@@ -257,17 +268,16 @@ mod test {
             uii::InputMethodAction::Search,
             state,
             client,
+            ImeService::new(),
         );
         (ime, statechan, actionchan)
     }
 
     fn simulate_keypress<K: Into<u32> + Copy>(
-        ime: &mut IME<MockImeClient>, key: K, hid_key: bool, shift_pressed: bool,
+        ime: &mut IME, key: K, hid_key: bool, shift_pressed: bool,
     ) {
-        let hid_usage =
-            if hid_key { key.into() } else { 0 };
-        let code_point =
-            if hid_key { 0 } else { key.into() };
+        let hid_usage = if hid_key { key.into() } else { 0 };
+        let code_point = if hid_key { 0 } else { key.into() };
         ime.inject_input(uii::InputEvent::Keyboard(uii::KeyboardEvent {
             event_time: 0,
             device_id: 0,
@@ -336,6 +346,7 @@ mod test {
             uii::InputMethodAction::Search,
             default_state(),
             client,
+            ImeService::new(),
         );
         assert_eq!(true, statechan.try_recv().is_err());
         assert_eq!(true, actionchan.try_recv().is_err());

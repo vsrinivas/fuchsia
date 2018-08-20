@@ -42,6 +42,9 @@ interface InputMethodEditor {
   1: SetKeyboardType(KeyboardType keyboard_type);
   2: SetState(TextInputState state);
   3: InjectInput(InputEvent event);
+
+  // TODO(TEXT-19): remove these in a later change, after PlatformView has been
+  // switched over to open/close on the input_connection_ instead.
   4: Show();
   5: Hide();
 };

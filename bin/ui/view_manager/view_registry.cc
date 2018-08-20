@@ -826,6 +826,7 @@ fuchsia::sys::ServiceProvider* ViewRegistry::FindViewServiceProvider(
   return provider;
 }
 
+// TODO(TEXT-22): remove
 void ViewRegistry::GetSoftKeyboardContainer(
     ::fuchsia::ui::viewsv1token::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer>

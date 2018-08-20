@@ -50,6 +50,8 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
       fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
       fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor)
       override;
+  void ShowKeyboard() override;
+  void HideKeyboard() override;
 
   // |fuchsia::ui::input::InputMethodEditor|
   void SetState(fuchsia::ui::input::TextInputState state) override;
@@ -89,7 +91,7 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
   fidl::Binding<fuchsia::ui::input::InputMethodEditorClient> client_binding_;
   fuchsia::ui::input::InputMethodEditorPtr editor_;
 
-  fuchsia::ui::input::SoftKeyboardContainerPtr container_;
+  fuchsia::ui::input::SoftKeyboardContainerPtr container_; // TODO(TEXT-22): remove
   fuchsia::ui::input::ImeServicePtr ime_service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);

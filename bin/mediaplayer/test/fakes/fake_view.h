@@ -66,6 +66,10 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
       fidl::InterfaceRequest<::fuchsia::ui::input::InputMethodEditor> editor)
       override;
 
+  void ShowKeyboard() override;
+
+  void HideKeyboard() override;
+
  private:
   class Owner : public ::fuchsia::ui::viewsv1token::ViewOwner {
    public:
