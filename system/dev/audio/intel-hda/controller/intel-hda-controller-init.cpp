@@ -145,7 +145,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
         return ZX_ERR_BAD_STATE;
     }
 
-    ZX_DEBUG_ASSERT(!irq_.is_valid());
+    ZX_DEBUG_ASSERT(irq_ != nullptr);
     ZX_DEBUG_ASSERT(mapped_regs_.start() == nullptr);
     ZX_DEBUG_ASSERT(pci_.ops == nullptr);
 
@@ -234,6 +234,10 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
 zx_status_t IntelHDAController::SetupPCIInterrupts() {
     ZX_DEBUG_ASSERT(pci_dev_ != nullptr);
 
+    // Make absolutely sure that IRQs are disabled at the controller level
+    // before proceeding.
+    REG_WR(&regs()->intctl, 0u);
+
     // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
     // that fails, fall back on legacy IRQs.
     zx_status_t res = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_MSI, 1);
@@ -247,10 +251,26 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
         }
     }
 
-    ZX_DEBUG_ASSERT(!irq_.is_valid());
-    res = pci_map_interrupt(&pci_, 0, irq_.reset_and_get_address());
+    // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
+    zx::interrupt irq;
+    res = pci_map_interrupt(&pci_, 0, irq.reset_and_get_address());
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to map IRQ! (res %d)\n", res);
+        return res;
+    }
+
+    ZX_DEBUG_ASSERT(irq_ != nullptr);
+    auto irq_handler = [controller = fbl::WrapRefPtr(this)]
+                       (const dispatcher::Interrupt* irq, zx_time_t timestamp) -> zx_status_t {
+                           OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
+                           LOG_EX(SPEW, *controller, "Hard IRQ (ts = %lu)\n", timestamp);
+                           return controller->HandleIrq();
+                       };
+
+    res = irq_->Activate(default_domain_, fbl::move(irq), fbl::move(irq_handler));
+
+    if (res != ZX_OK) {
+        LOG(ERROR, "Failed to activate IRQ dispatcher! (res %d)\n", res);
         return res;
     }
 
@@ -516,14 +536,52 @@ void IntelHDAController::ProbeAudioDSP() {
 }
 
 zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
-    default_domain_ = dispatcher::ExecutionDomain::Create();
-    if (default_domain_ == nullptr)
+    // TODO(johngro): see ZX-940; remove this priority boost when we can, and
+    // when there is a better way of handling real time requirements.
+    //
+    // Right now, the interrupt handler runs in the same execution domain as all
+    // of the other event sources managed by the HDA controller.  If it is
+    // configured to run and send DMA ring buffer notifications to the higher
+    // level, the IRQ needs to be running at a boosted priority in order to have
+    // a chance of meeting its real time deadlines.
+    //
+    // There is currently no terribly good way to control this dynamically, or
+    // to apply this priority only to the interrupt event source and not others.
+    // If it ever becomes a serious issue that the channel event handlers in
+    // this system are running at boosted priority, we can come back here and
+    // split the IRQ handler to run its own dedicated exeuction domain instead
+    // of using the default domain.
+    default_domain_ = dispatcher::ExecutionDomain::Create(24 /* HIGH_PRIORITY in LK */);
+    if (default_domain_ == nullptr) {
         return ZX_ERR_NO_MEMORY;
+    }
+
+    irq_ = dispatcher::Interrupt::Create();
+    if (irq_ == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    irq_wakeup_event_ = dispatcher::WakeupEvent::Create();
+    if (irq_wakeup_event_ == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     zx_status_t res;
-    res = SetupPCIDevice(pci_dev);
-    if (res != ZX_OK)
+    res = irq_wakeup_event_->Activate(
+        default_domain_,
+        [controller = fbl::WrapRefPtr(this)](const dispatcher::WakeupEvent* evt) -> zx_status_t {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
+            LOG_EX(SPEW, *controller, "SW IRQ Wakeup\n");
+            return controller->HandleIrq();
+        });
+    if (res != ZX_OK) {
         return res;
+    }
+
+    res = SetupPCIDevice(pci_dev);
+    if (res != ZX_OK) {
+        return res;
+    }
 
     // Check our hardware version
     uint8_t major, minor;
@@ -555,55 +613,8 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     if (res != ZX_OK)
         return res;
 
-    // Start the IRQ thread.
-    // TODO(johngro) : Fix this; C11 does not support thrd_create_with_name but MUSL does.
-    int c11_res;
-#if 0
-    c11_res = thrd_create_with_name(
-            &irq_thread_,
-            [](void* ctx) -> int { return static_cast<IntelHDAController*>(ctx)->IRQThread(); },
-            this,
-            dev_name());
-#else
-    c11_res = thrd_create(
-            &irq_thread_,
-            [](void* ctx) -> int { return static_cast<IntelHDAController*>(ctx)->IRQThread(); },
-            this);
-#endif
-
-    if (c11_res < 0) {
-        LOG(ERROR, "Failed create IRQ thread! (res = %d)\n", c11_res);
-        SetState(State::SHUT_DOWN);
-        return ZX_ERR_INTERNAL;
-    }
-
-    irq_thread_started_ = true;
-
-    // Publish our device.  If something goes wrong, shut down our IRQ thread
-    // immediately.  Otherwise, transition to the OPERATING state and signal the
-    // IRQ thread so it can begin to look for (and publish) codecs.
-    //
-    // TODO(johngro): We are making an assumption here about the threading
-    // behavior of the device driver framework.  In particular, we are assuming
-    // that Unbind will never be called after the device has been published, but
-    // before Bind has unbound all the way up to the framework.  If this *can*
-    // happen, then we have a race condition which would proceed as follows.
-    //
-    // 1) Device is published (device_add below)
-    // 2) Before SetState (below) Unbind is called, which triggers a transition
-    //    to SHUTTING_DOWN and wakes up the IRQ thread..
-    // 3) Before the IRQ thread wakes up and exits, the SetState (below)
-    //    transitions to OPERATING.
-    // 4) The IRQ thread is now operating, but should be shut down.
-    //
-    // At some point, we need to verify the threading assumptions being made
-    // here.  If they are not valid, this needs to be revisited and hardened.
-
-    // Put an unmanaged reference to ourselves in the device node we are about
-    // to publish.  Only perform an manual AddRef if we succeed in publishing
-    // our device.
-
-    // Generate a device name and initialize our device structure
+    // Generate a device name, initialize our device structure, and attempt to
+    // publish our device.
     char dev_name[ZX_DEVICE_NAME_MAX] = { 0 };
     snprintf(dev_name, sizeof(dev_name), "intel-hda-%03u", id());
 
@@ -614,11 +625,45 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     args.ops = &CONTROLLER_DEVICE_THUNKS;
     args.proto_id = ZX_PROTOCOL_IHDA;
 
+    // Manually add a reference to this object.  If we succeeded in publishing,
+    // the DDK will be holding an unmanaged reference to us in our device's ctx
+    // pointer.  We will re-claim the reference when the DDK eventually calls
+    // our Release hook.
+    this->AddRef();
+
     res = device_add(pci_dev_, &args, &dev_node_);
-    if (res == ZX_OK) {
-        this->AddRef();
+    if (res != ZX_OK) {
+        // We failed to publish our device.  Release the manual reference we
+        // just added.
+        __UNUSED bool should_destruct;
+        should_destruct = this->Release();
+        ZX_DEBUG_ASSERT(!should_destruct);
+    } else {
+        // Flag the fact that we have entered the operating state.
         SetState(State::OPERATING);
-        WakeupIRQThread();
+
+        // Make sure that interrupts are completely disabled before proceeding.
+        // If we have a unmasked, pending IRQ, we need to make sure that it
+        // generates and interrupt once we have finished this interrupt
+        // configuration.
+        REG_WR(&regs()->intctl, 0u);
+
+        // Clear our STATESTS shadow, setup the WAKEEN register to wake us
+        // up if there is any change to the codec enumeration status.  This will
+        // kick off the process of codec enumeration.
+        REG_SET_BITS(&regs()->wakeen, HDA_REG_STATESTS_MASK);
+
+        // Allow unsolicited codec responses
+        REG_SET_BITS(&regs()->gctl, HDA_REG_GCTL_UNSOL);
+
+        // Compute the set of interrupts we may be interested in during
+        // operation, then enable those interrupts.
+        uint32_t interesting_irqs = HDA_REG_INTCTL_GIE | HDA_REG_INTCTL_CIE;
+        for (uint32_t i = 0; i < countof(all_streams_); ++i) {
+            if (all_streams_[i] != nullptr)
+                interesting_irqs |= HDA_REG_INTCTL_SIE(i);
+        }
+        REG_WR(&regs()->intctl, interesting_irqs);
 
         // Probe for the Audio DSP. This is done after adding the HDA controller
         // device because the Audio DSP will be added a child to the HDA
@@ -638,8 +683,9 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
 zx_status_t IntelHDAController::Init(zx_device_t* pci_dev) {
     zx_status_t res = InitInternal(pci_dev);
 
-    if (res != ZX_OK)
+    if (res != ZX_OK) {
         DeviceShutdown();
+    }
 
     return res;
 }

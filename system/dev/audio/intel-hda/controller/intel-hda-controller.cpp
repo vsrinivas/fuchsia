@@ -173,24 +173,35 @@ void IntelHDAController::ReleaseStreamTagLocked(bool input, uint8_t tag) {
     tag_pool = static_cast<uint16_t>((tag_pool | (1u << tag)));
 }
 
-void IntelHDAController::ShutdownIRQThread() {
-    if (irq_thread_started_) {
-        SetState(State::SHUTTING_DOWN);
-        WakeupIRQThread();
-        thrd_join(irq_thread_, NULL);
-        ZX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
-        irq_thread_started_ = false;
-    }
-}
-
 void IntelHDAController::DeviceShutdown() {
-    // Make sure we have closed all of the event sources (eg. channels clients
-    // are using to talk to us) and that we have synchronized with any dispatch
-    // callbacks in flight.
+    // Make sure we have closed all of the event sources (eg. IRQs, wakeup
+    // events, channels clients are using to talk to us, etc..) and that we have
+    // synchronized with any dispatch callbacks in flight.
     default_domain_->Deactivate();
 
-    // If the IRQ thread is running, make sure we shut it down too.
-    ShutdownIRQThread();
+    // Disable all interrupts and place the device into reset on our way out.
+    if (regs() != nullptr) {
+        REG_WR(&regs()->intctl, 0u);
+        REG_CLR_BITS(&regs()->gctl, HDA_REG_GCTL_HWINIT);
+    }
+
+    // Shutdown and clean up all of our codecs.
+    for (auto& codec_ptr : codecs_) {
+        if (codec_ptr != nullptr) {
+            codec_ptr->Shutdown();
+            codec_ptr.reset();
+        }
+    }
+
+    // Any CORB jobs we may have had in progress may be discarded.
+    {
+        fbl::AutoLock corb_lock(&corb_lock_);
+        in_flight_corb_jobs_.clear();
+        pending_corb_jobs_.clear();
+    }
+
+    // Done.  Clearly mark that we are now shut down.
+    SetState(State::SHUT_DOWN);
 }
 
 void IntelHDAController::DeviceRelease() {

@@ -17,35 +17,16 @@
 namespace audio {
 namespace intel_hda {
 
-void IntelHDAController::WakeupIRQThread() {
-    ZX_DEBUG_ASSERT(irq_.is_valid());
-    __UNUSED zx_status_t res;
-
-    // TODO(johngro@): Adopt the new interrupt syscalls
-    // to bind an interrupt to a port. zx_interrupt_trigger()
-    // would not be supporting signalling a physical interrupt
-    // Currently there is a WA added to allow this
-    LOG(SPEW, "Waking up IRQ thread\n");
-    res = irq_.trigger(0, zx::time(0));
-    ZX_DEBUG_ASSERT(res == ZX_OK);
+void IntelHDAController::WakeupIrqHandler() {
+    LOG(SPEW, "Waking up IRQ handler\n");
+    ZX_DEBUG_ASSERT(irq_wakeup_event_ != nullptr);
+    irq_wakeup_event_->Signal();
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
     ZX_DEBUG_ASSERT(id < countof(codecs_));
     fbl::AutoLock codec_lock(&codec_lock_);
     return codecs_[id];
-}
-
-void IntelHDAController::WaitForIrqOrWakeup() {
-    // TODO(johngro) : Fix this.  The IRQ API has changed out from under us, and
-    // we cannot currently wait with a timeout.
-
-    LOG(SPEW, "IRQ thread waiting on IRQ\n");
-    irq_.wait(nullptr);
-    LOG(SPEW, "IRQ thread woke up\n");
-
-    // Disable IRQs at the device level
-    REG_WR(&regs()->intctl, 0u);
 }
 
 void IntelHDAController::SnapshotRIRB() {
@@ -353,83 +334,36 @@ void IntelHDAController::ProcessControllerIRQ() {
     }
 }
 
-int IntelHDAController::IRQThread() {
-    // TODO(johngro) : Raise our thread priority here.
-
-    // Compute the set of interrupts we may be interested in during operation.
-    uint32_t interesting_irqs = HDA_REG_INTCTL_GIE | HDA_REG_INTCTL_CIE;
-    for (uint32_t i = 0; i < countof(all_streams_); ++i) {
-        if (all_streams_[i] != nullptr)
-            interesting_irqs |= HDA_REG_INTCTL_SIE(i);
+zx_status_t IntelHDAController::HandleIrq() {
+    if (GetState() != State::OPERATING) {
+        LOG(WARN, "IRQ Handler shutting down due to invalid state (%u)!\n",
+            static_cast<uint32_t>(GetState()));
+        return ZX_ERR_BAD_STATE;
     }
 
-    // Wait until we have been published and given the go-ahead to operate
-    while (GetState() == State::STARTING)
-        WaitForIrqOrWakeup();
+    // Take a snapshot of any pending responses ASAP in order to minimize
+    // the chance of an RIRB overflow.  We will process the responses which
+    // we snapshot-ed in a short while after we are done handling other
+    // important IRQ tasks.
+    SnapshotRIRB();
 
-    // Clear our STATESTS shadow, setup the WAKEEN register to wake us
-    // up if there is any change to the codec enumeration status.
-    REG_SET_BITS(&regs()->wakeen, HDA_REG_STATESTS_MASK);
+    // Fetch the interrupt status word and dispatch as appropriate
+    uint32_t intsts = REG_RD(&regs()->intsts);
 
-    // Allow unsolicited codec responses
-    REG_SET_BITS(&regs()->gctl, HDA_REG_GCTL_UNSOL);
+    if (intsts & HDA_REG_INTCTL_SIE_MASK)
+        ProcessStreamIRQ(intsts & HDA_REG_INTCTL_SIE_MASK);
 
-    while (GetState() != State::SHUTTING_DOWN) {
-        // Enable interrupts at the top level and wait for there to be Great
-        // Things to do.
-        REG_WR(&regs()->intctl, interesting_irqs);
-        WaitForIrqOrWakeup();
-        if (GetState() == State::SHUTTING_DOWN)
-            break;
+    if (intsts & HDA_REG_INTCTL_CIE)
+        ProcessControllerIRQ();
 
-        // Take a snapshot of any pending responses ASAP in order to minimize
-        // the chance of an RIRB overflow.  We will process the responses which
-        // we snapshot-ed in a short while after we are done handling other
-        // important IRQ tasks.
-        SnapshotRIRB();
-
-        uint32_t intsts = REG_RD(&regs()->intsts);
-
-        if (intsts & HDA_REG_INTCTL_SIE_MASK)
-            ProcessStreamIRQ(intsts & HDA_REG_INTCTL_SIE_MASK);
-
-        if (intsts & HDA_REG_INTCTL_CIE)
-            ProcessControllerIRQ();
-
-        if (dsp_ != nullptr) {
-            dsp_->ProcessIRQ();
-        }
-
-        ProcessRIRB();
-        ProcessCORB();
+    if (dsp_ != nullptr) {
+        dsp_->ProcessIRQ();
     }
 
-    LOG(TRACE, "IRQ thread exiting!\n");
+    ProcessRIRB();
+    ProcessCORB();
 
-    // Disable all interrupts and place the device into reset on our way out.
-    REG_WR(&regs()->intctl, 0u);
-    REG_CLR_BITS(&regs()->gctl, HDA_REG_GCTL_HWINIT);
-
-    // Tell all the codecs to begin the process of shutting down.  Then wait for
-    // them to finish.
-    for (auto& codec_ptr : codecs_)
-        codec_ptr->BeginShutdown();
-
-    for (auto& codec_ptr : codecs_) {
-        codec_ptr->FinishShutdown();
-        codec_ptr.reset();
-    }
-
-    // Any CORB jobs we may have had in progress may be discarded.
-    {
-        fbl::AutoLock corb_lock(&corb_lock_);
-        in_flight_corb_jobs_.clear();
-        pending_corb_jobs_.clear();
-    }
-
-    // Done.  Clearly mark that we are now shut down.
-    SetState(State::SHUT_DOWN);
-    return 0;
+    return ZX_OK;
 }
 
 }  // namespace intel_hda

@@ -20,6 +20,8 @@
 #include <lib/zx/interrupt.h>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <dispatcher-pool/dispatcher-interrupt.h>
+#include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/intel-hda-proto.h>
@@ -78,14 +80,10 @@ private:
         return &reinterpret_cast<hda_all_registers_t*>(mapped_regs_.start())->regs;
     }
 
-    int  IRQThread();
-    void WakeupIRQThread();
-    void ShutdownIRQThread();
-
     // Internal stream bookkeeping.
     void    ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& stream) TA_REQ (stream_pool_lock_);
-    uint8_t AllocateStreamTagLocked(bool input)                       TA_REQ (stream_pool_lock_);
-    void    ReleaseStreamTagLocked (bool input, uint8_t tag_num)      TA_REQ (stream_pool_lock_);
+    uint8_t AllocateStreamTagLocked(bool input)                      TA_REQ (stream_pool_lock_);
+    void    ReleaseStreamTagLocked (bool input, uint8_t tag_num)     TA_REQ (stream_pool_lock_);
 
     // Device interface implementation
     void        DeviceShutdown();
@@ -113,8 +111,6 @@ private:
     zx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
     void        ProbeAudioDSP();
 
-    void WaitForIrqOrWakeup();
-
     zx_status_t ResetCORBRdPtrLocked() TA_REQ(corb_lock_);
 
     void SnapshotRIRB() TA_EXCL(corb_lock_, rirb_lock_);
@@ -127,6 +123,8 @@ private:
 
     void ProcessStreamIRQ(uint32_t intsts);
     void ProcessControllerIRQ();
+    zx_status_t HandleIrq() TA_REQ(default_domain_->token());
+    void WakeupIrqHandler();
 
     // Thunk for interacting with client channels
     zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
@@ -136,10 +134,10 @@ private:
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
-    // IRQ thread and state machine.
-    fbl::atomic<StateStorage> state_;
-    thrd_t                    irq_thread_;
-    bool                      irq_thread_started_ = false;
+    // State machine and IRQ related events.
+    fbl::atomic<StateStorage>            state_;
+    fbl::RefPtr<dispatcher::Interrupt>   irq_;
+    fbl::RefPtr<dispatcher::WakeupEvent> irq_wakeup_event_;
 
     // Log prefix storage
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
@@ -154,9 +152,8 @@ private:
     const uint32_t id_;
     zx_device_t* dev_node_ = nullptr;
 
-    // PCI Registers and IRQ
-    zx::interrupt       irq_;
-    fzl::VmoMapper      mapped_regs_;
+    // PCI Registers
+    fzl::VmoMapper mapped_regs_;
 
     // A handle to the Bus Transaction Initiator for this PCI device.  Used to
     // grant access to specific regions of physical mememory to the controller

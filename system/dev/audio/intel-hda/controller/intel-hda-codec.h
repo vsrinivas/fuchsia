@@ -50,12 +50,14 @@ public:
     void ProcessUnsolicitedResponse(const CodecResponse& resp);
     void ProcessWakeupEvt();
 
-    // TODO (johngro) : figure out shutdown... Currently, this is called from
-    // the controller's irq thread and expected to execute synchronously, which
-    // does not allow codec drivers any opportunity to perform a graceful
-    // shutdown.
-    void BeginShutdown();
-    void FinishShutdown();
+    // TODO (johngro) : figure out shutdown... Currently, this expected to
+    // execute synchronously, which does not allow codec drivers any opportunity
+    // to perform a graceful shutdown.
+    //
+    // OTOH - If our driver is being unloaded by the device manager, in theory,
+    // it should have already unloaded all of the codecs, giving them a chances
+    // to quiesce their hardware in the process.
+    void Shutdown();
 
     uint8_t id()  const { return codec_id_; }
     State state() const { return state_; }

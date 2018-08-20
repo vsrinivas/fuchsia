@@ -205,7 +205,7 @@ void IntelHDACodec::ProcessWakeupEvt() {
     LOG(WARN, "Wakeup event received - Don't know how to handle this yet!\n");
 }
 
-void IntelHDACodec::BeginShutdown() {
+void IntelHDACodec::Shutdown() {
     // Close all existing connections and synchronize with any client threads
     // who are currently processing requests.
     state_ = State::SHUTTING_DOWN;
@@ -221,11 +221,6 @@ void IntelHDACodec::BeginShutdown() {
     while (!streams.is_empty())
         controller_.ReturnStream(streams.pop_front());
 
-    state_ = State::SHUT_DOWN;
-}
-
-void IntelHDACodec::FinishShutdown() {
-    ZX_DEBUG_ASSERT(state_ == State::SHUTTING_DOWN);
     state_ = State::SHUT_DOWN;
 }
 
