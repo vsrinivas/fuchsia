@@ -7,8 +7,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"runtime/trace"
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/archive"
@@ -44,7 +46,9 @@ Dev Only:
     install - install a single .far representation of the package
 `
 
-func main() {
+var tracePath = flag.String("trace", "", "write runtime trace to `file`")
+
+func doMain() int {
 	cfg := build.NewConfig()
 	cfg.InitFlags(flag.CommandLine)
 
@@ -55,6 +59,25 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if *tracePath != "" {
+		tracef, err := os.Create(*tracePath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer func() {
+			if err := tracef.Sync(); err != nil {
+				log.Fatal(err)
+			}
+			if err := tracef.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+		if err := trace.Start(tracef); err != nil {
+			log.Fatal(err)
+		}
+		defer trace.Stop()
+	}
 
 	var err error
 	switch flag.Arg(0) {
@@ -96,15 +119,18 @@ func main() {
 
 	default:
 		flag.Usage()
-		os.Exit(1)
+		return 1
 	}
 
 	if err != nil {
-		die(err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return 1
 	}
+
+	return 0
 }
 
-func die(err error) {
-	fmt.Fprintf(os.Stderr, "%s\n", err)
-	os.Exit(1)
+func main() {
+	// we want to use defer in main, but os.Exit doesn't run defers, so...
+	os.Exit(doMain())
 }
