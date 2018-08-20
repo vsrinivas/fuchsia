@@ -102,4 +102,4 @@ typedef enum gxl_clk_gate_idx {
 
     // NB: This must be the last entry
     CLK_GXL_COUNT,
-} axg_clk_gate_idx_t;
+} gxl_clk_gate_idx_t;

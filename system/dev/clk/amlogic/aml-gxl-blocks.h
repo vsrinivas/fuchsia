@@ -2,29 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hw/reg.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <threads.h>
+#pragma once
 
-#include <zircon/assert.h>
-#include <zircon/threads.h>
-
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/protocol/clk.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
-
-#include <dev/clk/meson-lib/meson.h>
+#include "aml-clk-blocks.h"
 #include <soc/aml-meson/gxl-clk.h>
 
-#define GXL_HHI_GCLK_MPEG0 0x50
-#define GXL_HHI_GCLK_MPEG1 0x51
-#define GXL_HHI_GCLK_MPEG2 0x52
-#define GXL_HHI_GCLK_OTHER 0x54
+#define GXL_HHI_GCLK_MPEG0 (0x50 << 2)
+#define GXL_HHI_GCLK_MPEG1 (0x51 << 2)
+#define GXL_HHI_GCLK_MPEG2 (0x52 << 2)
+#define GXL_HHI_GCLK_OTHER (0x54 << 2)
 
 static meson_clk_gate_t gxl_clk_gates[] = {
     // MPEG0 Domain Clocks
@@ -129,19 +115,3 @@ static_assert(CLK_GXL_COUNT == countof(gxl_clk_gates),
               "gxl_clk_gates[] and gxl_clk_gate_idx count mismatch");
 
 static const char meson_gxl_clk_name[] = "meson-gxl-clk";
-
-static zx_status_t meson_gxl_clk_bind(void* ctx, zx_device_t* parent) {
-    return meson_clk_init(meson_gxl_clk_name, gxl_clk_gates,
-                          countof(gxl_clk_gates), parent);
-}
-
-static zx_driver_ops_t meson_gxl_clk_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = meson_gxl_clk_bind,
-};
-
-ZIRCON_DRIVER_BEGIN(meson_gxl_clk, meson_gxl_clk_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GXL_CLK),
-ZIRCON_DRIVER_END(meson_gxl_clk)

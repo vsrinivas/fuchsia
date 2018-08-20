@@ -6,8 +6,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform-defs.h>
 #include <soc/aml-a113/a113-hw.h>
 
 #include "gauss.h"
@@ -16,7 +16,7 @@ static const pbus_mmio_t clk_mmios[] = {
     {
         .base = AXG_HIU_BASE_PHYS,
         .length = PAGE_SIZE,
-    }
+    },
 };
 
 static const pbus_dev_t clk_dev = {

@@ -9,12 +9,17 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/meson-gxl-clk.c \
+    $(LOCAL_DIR)/aml-clk.cpp \
+    $(LOCAL_DIR)/aml-clk.c \
 
 MODULE_STATIC_LIBS := \
-    system/dev/clk/meson-lib \
     system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/zxcpp \
+    system/ulib/fbl \
     system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/hwreg \
 
 MODULE_LIBS := \
     system/ulib/driver \
