@@ -42,7 +42,7 @@ enum Capability {
   SHORT_PREAMBLE = 0;
   SPECTRUM_MGMT = 1;
   SHORT_SLOT_TIME = 2;
-  RADIO_MGMT = 3;
+  RADIO_MSMT = 3;
 };
 
 struct HtCapabilities {

@@ -93,8 +93,8 @@ uint32_t ConvertCaps(const ::fidl::VectorPtr<wlan_device::Capability>& caps) {
         case wlan_device::Capability::SHORT_SLOT_TIME:
             ret |= WLAN_CAP_SHORT_SLOT_TIME;
             break;
-        case wlan_device::Capability::RADIO_MGMT:
-            ret |= WLAN_CAP_RADIO_MGMT;
+        case wlan_device::Capability::RADIO_MSMT:
+            ret |= WLAN_CAP_RADIO_MSMT;
             break;
         }
     }

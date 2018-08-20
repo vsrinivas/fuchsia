@@ -92,7 +92,7 @@ enum {
     WLAN_CAP_SHORT_PREAMBLE = (1 << 0),
     WLAN_CAP_SPECTRUM_MGMT = (1 << 1),
     WLAN_CAP_SHORT_SLOT_TIME = (1 << 2),
-    WLAN_CAP_RADIO_MGMT = (1 << 3),
+    WLAN_CAP_RADIO_MSMT = (1 << 3),
 };
 
 // HT capabilities. IEEE Std 802.11-2016, 9.4.2.56

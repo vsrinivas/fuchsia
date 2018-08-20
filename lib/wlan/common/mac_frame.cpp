@@ -315,7 +315,7 @@ CapabilityInfo FromDdk(uint32_t ddk_caps) {
     cap.set_short_preamble(ddk_caps & WLAN_CAP_SHORT_PREAMBLE);
     cap.set_spectrum_mgmt(ddk_caps & WLAN_CAP_SPECTRUM_MGMT);
     cap.set_short_slot_time(ddk_caps & WLAN_CAP_SHORT_SLOT_TIME);
-    cap.set_radio_msmt(ddk_caps & WLAN_CAP_RADIO_MGMT);
+    cap.set_radio_msmt(ddk_caps & WLAN_CAP_RADIO_MSMT);
     return cap;
 }
 

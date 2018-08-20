@@ -146,8 +146,8 @@ static void ConvertPhyCaps(::fidl::VectorPtr<wlan_device::Capability>* Capabilit
     if (phy_caps_mask & WLAN_CAP_SHORT_SLOT_TIME) {
         Capabilities->push_back(wlan_device::Capability::SHORT_SLOT_TIME);
     }
-    if (phy_caps_mask & WLAN_CAP_RADIO_MGMT) {
-        Capabilities->push_back(wlan_device::Capability::RADIO_MGMT);
+    if (phy_caps_mask & WLAN_CAP_RADIO_MSMT) {
+        Capabilities->push_back(wlan_device::Capability::RADIO_MSMT);
     }
 }
 
