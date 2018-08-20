@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <set>
 #include <utility>
 
 #include <lib/callback/trace_callback.h>
@@ -737,13 +738,11 @@ void PageStorageImpl::RemoveJournal(const JournalId& journal_id,
       });
 }
 
-void PageStorageImpl::NotifyWatchers() {
-  while (!commits_to_send_.empty()) {
-    auto to_send = std::move(commits_to_send_.front());
-    for (CommitWatcher* watcher : watchers_) {
-      watcher->OnNewCommits(to_send.second, to_send.first);
-    }
-    commits_to_send_.pop();
+void PageStorageImpl::NotifyWatchersOfNewCommits(
+    const std::vector<std::unique_ptr<const Commit>>& new_commits,
+    ChangeSource source) {
+  for (CommitWatcher* watcher : watchers_) {
+    watcher->OnNewCommits(new_commits, source);
   }
 }
 
@@ -1437,11 +1436,7 @@ Status PageStorageImpl::SynchronousAddCommits(
 
   s = batch->Execute(handler);
 
-  // TODO(nellyv): we can probably remove commits_to_send_ and send
-  // commits_to_send directly to NotifyWatchers(). See LE-320.
-  FXL_DCHECK(commits_to_send_.empty());
-  commits_to_send_.emplace(source, std::move(commits_to_send));
-  NotifyWatchers();
+  NotifyWatchersOfNewCommits(commits_to_send, source);
 
   return s;
 }

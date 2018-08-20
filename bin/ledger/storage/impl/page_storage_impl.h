@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 
-#include <queue>
-#include <set>
 #include <vector>
 
 #include <lib/async/dispatcher.h>
@@ -183,8 +181,11 @@ class PageStorageImpl : public PageStorage {
                                    size_t size,
                                    fit::function<void(Status)> callback);
 
-  // Notifies the registered watchers with the |commits| in commit_to_send_.
-  void NotifyWatchers();
+  // Notifies the registered watchers of |new_commits|.
+  void NotifyWatchersOfNewCommits(
+
+      const std::vector<std::unique_ptr<const Commit>>& new_commits,
+      ChangeSource source);
 
   // Synchronous versions of API methods using coroutines.
   FXL_WARN_UNUSED_RESULT Status
@@ -242,9 +243,6 @@ class PageStorageImpl : public PageStorage {
   std::vector<CommitWatcher*> watchers_;
   callback::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
-  std::queue<
-      std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
-      commits_to_send_;
   bool page_is_online_ = false;
   std::unique_ptr<ObjectIdentifier> empty_node_id_ = nullptr;
 
