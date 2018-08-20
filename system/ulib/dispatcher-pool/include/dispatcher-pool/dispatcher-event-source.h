@@ -71,6 +71,24 @@ protected:
     zx_status_t WaitOnPortLocked() __TA_REQUIRES(obj_lock_);
     zx_status_t CancelPendingLocked() __TA_REQUIRES(obj_lock_);
 
+    // DoPortWaitLocked and DoPortCancelLocked allow for a small amount of
+    // customization required to properly handle interrupt objects when used
+    // with ports.
+    //
+    // In specific, interrupt objects are not waited upon using a call to
+    // zx_async_wait(handle, port, ...).  Instead, they become bound to the port
+    // (once, using zx_interrupt_bind) and then need to re-armed each time they
+    // are fired and need to be waited on again (using zx_interrupt_ack).  In
+    // addition, wait operations cannot be canceled using zx_port_cancel.
+    // Instead, once bound and acked, the only way to cancel a pending wait
+    // operation is to destroy the the interrupt using zx_interrupt_destroy.
+    //
+    // See dispatcher::Interrupt for the customized behavior; this is the
+    // implementaiton of the default behavior which just defers the operation
+    // over to the thread-pool (which owns the port object itself)
+    virtual zx_status_t DoPortWaitLocked() __TA_REQUIRES(obj_lock_);
+    virtual zx_status_t DoPortCancelLocked() __TA_REQUIRES(obj_lock_);
+
     // Transition to the dispatching state and return true if...
     //
     // 1) We are currently in the DispatchPending state.

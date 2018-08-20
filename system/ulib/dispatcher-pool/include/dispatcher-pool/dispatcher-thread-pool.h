@@ -36,6 +36,7 @@ public:
                            zx_signals_t signals,
                            uint32_t options);
     zx_status_t CancelWaitOnPort(const zx::handle& handle, uint64_t key);
+    zx_status_t BindIrqToPort(const zx::handle& irq_handle, uint64_t key);
 
     uint32_t GetKey() const { return priority_; }
 

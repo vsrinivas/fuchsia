@@ -89,12 +89,8 @@ zx_status_t EventSource::WaitOnPortLocked() {
     // process of dying, and the wait should be denied.
     if (!is_active())
         return ZX_ERR_BAD_STATE;
-    ZX_DEBUG_ASSERT(thread_pool_ != nullptr);
 
-    zx_status_t res = thread_pool_->WaitOnPort(handle_,
-                                               reinterpret_cast<uint64_t>(this),
-                                               process_signal_mask(),
-                                               ZX_WAIT_ASYNC_ONCE);
+    zx_status_t res = DoPortWaitLocked();
 
     // If the wait async succeeded, then we now have a pending wait operation,
     // and the kernel is now holding an unmanaged reference to us.  Flag the
@@ -127,9 +123,7 @@ zx_status_t EventSource::CancelPendingLocked() {
         // dispatched on another thread.  Do not transition to Idle, or release
         // the kernel reference.
         if (dispatch_state() == DispatchState::WaitingOnPort) {
-            ZX_DEBUG_ASSERT(thread_pool_ != nullptr);
-            zx_status_t res =
-                thread_pool_->CancelWaitOnPort(handle_, reinterpret_cast<uint64_t>(this));
+            zx_status_t res = DoPortCancelLocked();
 
             if (res == ZX_OK) {
                 __UNUSED bool should_destruct;
@@ -145,6 +139,19 @@ zx_status_t EventSource::CancelPendingLocked() {
     }
 
     return (dispatch_state() == DispatchState::Idle) ? ZX_OK : ZX_ERR_BAD_STATE;
+}
+
+zx_status_t EventSource::DoPortWaitLocked() {
+    ZX_DEBUG_ASSERT(thread_pool_ != nullptr);
+    return thread_pool_->WaitOnPort(handle_,
+                                    reinterpret_cast<uint64_t>(this),
+                                    process_signal_mask(),
+                                    ZX_WAIT_ASYNC_ONCE);
+}
+
+zx_status_t EventSource::DoPortCancelLocked() {
+    ZX_DEBUG_ASSERT(thread_pool_ != nullptr);
+    return thread_pool_->CancelWaitOnPort(handle_, reinterpret_cast<uint64_t>(this));
 }
 
 bool EventSource::BeginDispatching() {
@@ -179,7 +186,9 @@ fbl::RefPtr<ExecutionDomain> EventSource::ScheduleDispatch(
     fbl::AutoLock obj_lock(&obj_lock_);
 
     ZX_DEBUG_ASSERT(dispatch_state() == DispatchState::WaitingOnPort);
-    ZX_DEBUG_ASSERT(pkt.signal.observed & process_signal_mask());
+
+    ZX_DEBUG_ASSERT((pkt.type == ZX_PKT_TYPE_INTERRUPT) ||
+                    (pkt.signal.observed & process_signal_mask()));
 
     if (domain_ == nullptr) {
         dispatch_state_ = DispatchState::Idle;
