@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "garnet/packages/products/network_installer"
-  ],
-  "preinstall": [
+    "monolith": [
+        "garnet/packages/products/network_installer"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }

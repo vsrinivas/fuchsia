@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "garnet/packages/products/sshd"
-  ],
-  "preinstall": [
+    "monolith": [
+        "garnet/packages/products/sshd"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }

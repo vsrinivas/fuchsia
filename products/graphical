@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "garnet/packages/products/graphical"
-  ],
-  "preinstall": [
+    "monolith": [
+        "garnet/packages/products/graphical"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }

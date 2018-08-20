@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "garnet/packages/products/devtools"
-  ],
-  "preinstall": [
+    "monolith": [
+        "garnet/packages/products/devtools"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }

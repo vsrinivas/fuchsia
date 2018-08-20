@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "garnet/packages/products/network_wifi"
-  ],
-  "preinstall": [
+    "monolith": [
+        "garnet/packages/products/network_wifi"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }

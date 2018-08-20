@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "garnet/packages/kitchen_sink"
-  ],
-  "preinstall": [
+    "monolith": [
+        "garnet/packages/kitchen_sink"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }
