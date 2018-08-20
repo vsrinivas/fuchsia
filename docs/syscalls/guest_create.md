@@ -35,8 +35,9 @@ The following rights will be set on the handle *guest_handle* by default:
 
 **ZX_RIGHT_DUPLICATE** — *guest_handle* may be duplicated.
 
-**ZX_RIGHT_WRITE** - A trap to be may be set using **guest_set_trap**(), or a
-VCPU to be created using **vcpu_create**().
+**ZX_RIGHT_WRITE** — A trap to be may be set using **guest_set_trap**().
+
+**ZX_RIGHT_MANAGE_PROCESS** — A VCPU may be created using **vcpu_create**().
 
 See [vmar_create](vmar_create.md) for the set of rights applied to
 *vmar_handle*.

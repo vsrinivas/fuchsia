@@ -29,7 +29,8 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_ha
 
     fbl::RefPtr<Dispatcher> guest_dispatcher, vmar_dispatcher;
     zx_rights_t guest_rights, vmar_rights;
-    status = GuestDispatcher::Create(&guest_dispatcher, &guest_rights, &vmar_dispatcher, &vmar_rights);
+    status =
+        GuestDispatcher::Create(&guest_dispatcher, &guest_rights, &vmar_dispatcher, &vmar_rights);
     if (status != ZX_OK)
         return status;
 
@@ -65,7 +66,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<GuestDispatcher> guest;
-    zx_status_t status = up->GetDispatcherWithRights(guest_handle, ZX_RIGHT_WRITE, &guest);
+    zx_status_t status = up->GetDispatcherWithRights(guest_handle, ZX_RIGHT_MANAGE_PROCESS, &guest);
     if (status != ZX_OK)
         return status;
 

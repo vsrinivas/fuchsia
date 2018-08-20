@@ -55,8 +55,8 @@ returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *guest* does not have the *ZX_RIGHT_WRITE* right, or
-*apic_vmo* does not have the *ZX_RIGHT_READ* and *ZX_RIGHT_WRITE* rights.
+**ZX_ERR_ACCESS_DENIED** *guest* does not have the *ZX_RIGHT_MANAGE_PROCESS*
+right.
 
 **ZX_ERR_BAD_HANDLE** *guest* is an invalid handle.
 
