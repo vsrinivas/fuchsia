@@ -4,6 +4,8 @@
 
 library fuchsia.io;
 
+using zx;
+
 // Interfaces which may be returned by ObjectInfo, an object
 // returned when calling Open or Describe:
 

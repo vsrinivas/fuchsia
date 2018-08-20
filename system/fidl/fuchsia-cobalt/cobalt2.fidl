@@ -4,6 +4,8 @@
 
 library fuchsia.cobalt;
 
+using fuchsia.mem;
+
 // Cobalt is the Fuchsia service used to log, collect and analyze metrics.
 // The two main pillars of Cobalt are protecting user privacy and providing
 // high-quality, aggregate metrics to serve system and component software

@@ -4,6 +4,8 @@
 
 library fidl.examples.simple;
 
+using zx;
+
 struct Point {
     int32 x;
     int32 y;

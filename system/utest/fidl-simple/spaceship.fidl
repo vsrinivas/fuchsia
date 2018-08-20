@@ -4,6 +4,8 @@
 
 library fidl.test.spaceship;
 
+using zx;
+
 [Layout="Simple"]
 interface AstrometricsListener {
     1: OnNova();

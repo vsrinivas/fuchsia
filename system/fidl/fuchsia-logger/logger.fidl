@@ -4,6 +4,8 @@
 
 library fuchsia.logger;
 
+using zx;
+
 enum LogLevelFilter: int8 {
   NONE = -1;
   INFO = 0;

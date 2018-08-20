@@ -4,6 +4,8 @@
 
 library fuchsia.display;
 
+using zx;
+
 // Invalid id for displays, images, and events.
 const uint64 invalidId = 0;
 

@@ -4,6 +4,8 @@
 
 library fuchsia.process;
 
+using zx;
+
 // TODO: Add when Zircon's build supports library dependencies.
 // using io;
 

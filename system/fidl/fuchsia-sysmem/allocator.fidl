@@ -4,6 +4,8 @@
 
 library fuchsia.sysmem;
 
+using zx;
+
 // Allocates system memory buffers.
 [Discoverable, Layout="Simple"]
 interface Allocator {

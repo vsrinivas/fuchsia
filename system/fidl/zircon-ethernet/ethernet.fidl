@@ -4,6 +4,8 @@
 
 library zircon.ethernet;
 
+using zx;
+
 struct MacAddress {
     array<uint8>:6 octets;
 };

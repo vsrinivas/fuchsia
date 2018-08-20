@@ -4,6 +4,8 @@
 
 library fuchsia.cobalt;
 
+using fuchsia.mem;
+
 // Cobalt is the service used in Fuchsia to report metrics. This file contains
 // interfaces that allow clients to report metric Observations to Cobalt.
 

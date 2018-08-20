@@ -4,6 +4,8 @@
 
 library fuchsia.ldsvc;
 
+using zx;
+
 // See //zircon/docs/program_loading.md for a more complete
 // description of this and related process bootsrapping protocols, and
 // for specifics about the default global loader service's

@@ -4,6 +4,8 @@
 
 library fidl.examples.ordinals;
 
+using zx;
+
 interface Foo {
     1: SomeMethod();
     2: SomeMethodWithAResponse() -> ();

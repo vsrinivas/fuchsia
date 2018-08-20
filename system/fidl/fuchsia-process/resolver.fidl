@@ -4,6 +4,8 @@
 
 library fuchsia.process;
 
+using zx;
+
 [Discoverable, Layout="Simple"]
 interface Resolver {
     // Resolves the given |name| to an |executable| and an shared library loader.
