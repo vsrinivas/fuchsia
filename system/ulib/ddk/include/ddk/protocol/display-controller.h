@@ -65,6 +65,12 @@ typedef struct display_info {
 // The image is linear and VMO backed.
 #define IMAGE_TYPE_SIMPLE 0
 
+// as structure containing information about each plane of an image.
+typedef struct image_plane {
+    uint32_t byte_offset;
+    uint32_t bytes_per_row;
+} image_plane_t;
+
 // a structure containing information about an image
 typedef struct image {
     // the width and height of the image in pixels
@@ -78,6 +84,8 @@ typedef struct image {
     // IMAGE_FORMAT_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
     // of the value through some mechanism outside the scope of this API.
     uint32_t type;
+
+    image_plane_t planes[4];
 
     // A driver-defined handle to the image. Each handle must be unique.
     void* handle;

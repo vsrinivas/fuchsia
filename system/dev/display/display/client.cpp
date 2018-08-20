@@ -102,6 +102,7 @@ static void populate_image(const fuchsia_display_ImageConfig& image, image_t* im
             offsetof(fuchsia_display_ImageConfig, height), "Struct mismatch");
     static_assert(offsetof(image_t, pixel_format) ==
             offsetof(fuchsia_display_ImageConfig, pixel_format), "Struct mismatch");
+    static_assert(sizeof(image_plane_t) == sizeof(fuchsia_display_ImagePlane), "Struct mismatch");
     static_assert(offsetof(image_t, type) ==
             offsetof(fuchsia_display_ImageConfig, type), "Struct mismatch");
     memcpy(image_out, &image, sizeof(fuchsia_display_ImageConfig));

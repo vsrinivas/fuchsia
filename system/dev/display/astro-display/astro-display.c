@@ -212,10 +212,17 @@ static void astro_check_configuration(void* ctx,
         frame_t frame = {
             .x_pos = 0, .y_pos = 0, .width = display->width, .height = display->height,
         };
+        uint32_t bytes_per_row = astro_compute_linear_stride(display,
+                                                             layer->image.width,
+                                                             layer->image.pixel_format)
+                * ZX_PIXEL_FORMAT_BYTES(layer->image.pixel_format);
         success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
                 && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
                 && layer->image.width == display->width
                 && layer->image.height == display->height
+                && layer->image.planes[0].byte_offset == 0
+                && (layer->image.planes[0].bytes_per_row == bytes_per_row ||
+                    layer->image.planes[0].bytes_per_row == 0)
                 && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
                 && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0
                 && display_configs[0]->cc_flags == 0
