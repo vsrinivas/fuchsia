@@ -56,7 +56,7 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
                             *(uintptr_t*)(txn->virt), txn->virt);
     }
 
-    bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
+    //bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
     bool dma_supported = sdmmc_use_dma(dev);
     void *buf = use_dma ? NULL : txn->virt;
     zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
@@ -82,11 +82,13 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
 
     while (rem_blocks > 0) {
         uint32_t num_blocks = 1;
-        uint32_t max_host_blocks = (dev->host_info.max_transfer_size) / (func_blk_size);
-        if (mbs) {
+        //TODO (ravoorir) : Re-enable multi block support after fixing the
+        //multi block failures.
+        /*if (mbs) {
+            uint32_t max_host_blocks = (dev->host_info.max_transfer_size) / (func_blk_size);
             // multiblock is supported, determine max number of blocks per cmd
             num_blocks = MIN(MIN(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
-        }
+        }*/
         st = sdio_io_rw_extended(dev, txn->write, fn_idx, addr, txn->incr, num_blocks,
                                  func_blk_size, use_dma, buf, dma_vmo,
                                  buf_offset + data_processed);
