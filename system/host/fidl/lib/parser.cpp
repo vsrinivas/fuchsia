@@ -75,6 +75,20 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
     return true;
 }
 
+std::string MakeSquiggle(const std::string& surrounding_line, int column) {
+    std::string squiggle;
+    for (int i = 0; i < column - 1; i++) {
+        switch (surrounding_line[i]) {
+        case '\t':
+            squiggle += "\t";
+        default:
+            squiggle += " ";
+        }
+    }
+    squiggle += "^";
+    return squiggle;
+}
+
 decltype(nullptr) Parser::Fail() {
     if (ok_) {
         auto token_location = last_token_.location();
@@ -85,8 +99,7 @@ decltype(nullptr) Parser::Fail() {
         auto line_number = std::to_string(position.line);
         auto column_number = std::to_string(position.column);
 
-        std::string squiggle(position.column, ' ');
-        squiggle += "^";
+        std::string squiggle = MakeSquiggle(surrounding_line, position.column);
         size_t squiggle_size = token_data.size();
         if (squiggle_size != 0u) {
             --squiggle_size;
