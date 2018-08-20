@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "peridot/packages/products/test_modular"
-  ],
-  "preinstall": [
+    "monolith": [
+        "peridot/packages/products/test_modular"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
+    ],
+    "available": [
 
-  ]
+    ]
 }

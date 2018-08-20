@@ -1,11 +1,11 @@
 {
-  "monolith": [
-    "peridot/packages/default"
-  ],
-  "preinstall": [
+    "monolith": [
+        "peridot/packages/default"
+    ],
+    "preinstall": [
 
-  ],
-  "available": [
-    "peridot/packages/all"
-  ]
+    ],
+    "available": [
+        "peridot/packages/all"
+    ]
 }
