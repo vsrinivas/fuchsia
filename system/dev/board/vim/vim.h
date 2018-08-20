@@ -71,3 +71,6 @@ zx_status_t vim_rtc_init(vim_bus_t* bus);
 
 // vim-canvas.c
 zx_status_t vim2_canvas_init(vim_bus_t* bus);
+
+// vim-clk.c
+zx_status_t vim_clk_init(vim_bus_t* bus);
