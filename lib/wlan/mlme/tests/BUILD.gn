@@ -12,6 +12,7 @@ group("tests") {
     ":mac_tests",
     ":scanner_tests",
     ":service_tests",
+    ":timer_manager_tests",
   ]
 }
 
@@ -121,6 +122,26 @@ executable("service_tests") {
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
 }
 
+executable("timer_manager_tests") {
+  output_name = "wlan_timer_manager_unittest"
+
+  testonly = true
+
+  sources = [
+    "timer_manager_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
 executable("common_tests") {
   output_name = "wlan_common_unittest"
 
@@ -173,6 +194,10 @@ package("wlan_tests") {
 
     {
       name = "wlan_service_unittest"
+    },
+
+    {
+      name = "wlan_timer_manager_unittest"
     },
 
     {

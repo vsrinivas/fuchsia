@@ -38,6 +38,7 @@ source_set("mlme") {
     "include/wlan/mlme/service.h",
     "include/wlan/mlme/telemetry.h",
     "include/wlan/mlme/timer.h",
+    "include/wlan/mlme/timer_manager.h",
     "include/wlan/mlme/wlan.h",
   ]
 
@@ -63,6 +64,7 @@ source_set("mlme") {
     "service.cpp",
     "telemetry.cpp",
     "timer.cpp",
+    "timer_manager.cpp",
   ]
 
   public_deps = [
