@@ -1,165 +1,127 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "blobfs-bench.h"
 
-#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
-#include <float.h>
-#include <math.h>
+#include <stdint.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
+#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <fbl/new.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
+#include <fbl/function.h>
+#include <fbl/string.h>
+#include <fbl/string_buffer.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fs-management/mount.h>
+#include <fs-test-utils/fixture.h>
+#include <fs-test-utils/perftest.h>
+#include <perftest/perftest.h>
 #include <unittest/unittest.h>
-#include <zircon/device/rtc.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-
-using digest::Digest;
-using digest::MerkleTree;
-
-#define RUN_FOR_ALL_ORDER(test_type, blob_size, blob_count)           \
-    RUN_TEST_PERFORMANCE(                                             \
-        (test_type<blob_size, blob_count, TraversalOrder::kDefault>)) \
-    RUN_TEST_PERFORMANCE(                                             \
-        (test_type<blob_size, blob_count, TraversalOrder::kReverse>)) \
-    RUN_TEST_PERFORMANCE(                                             \
-        (test_type<blob_size, blob_count, TraversalOrder::kRandom>))  \
-    RUN_TEST_PERFORMANCE(                                             \
-        (test_type<blob_size, blob_count, TraversalOrder::kFirst>))   \
-    RUN_TEST_PERFORMANCE(                                             \
-        (test_type<blob_size, blob_count, TraversalOrder::kLast>))
 
 namespace {
 
-// Maximum number of paths_ to look up when TraversalOrder is LAST or FIRST.
-constexpr size_t kEndCount = 100;
+using digest::Digest;
+using digest::MerkleTree;
+using fs_test_utils::Fixture;
+using fs_test_utils::FixtureOptions;
+using fs_test_utils::PerformanceTestOptions;
+using fs_test_utils::TestCaseInfo;
+using fs_test_utils::TestInfo;
 
-// Maximum length for test name.
-constexpr size_t kTestNameMaxLength = 20;
+// Supported read orders for this benchmark.
+enum class ReadOrder {
+    // Blobs are read in the order they were written
+    kSequentialForward,
+    // Blobs are read in the inverse order they were written
+    kSequentialReverse,
+    // Blobs are read in a random order
+    kRandom,
+};
 
-// Maximum length for test order_.
-constexpr size_t kTestOrderMaxLength = 10;
+// An in-memory representation of a blob.
+struct BlobInfo {
+    // Path to the generated blob.
+    fbl::StringBuffer<fs_test_utils::kPathSize> path;
 
-// Path to mounted Blobfs File System.
-constexpr char kMountPath[] = "/tmp/blobbench";
+    fbl::unique_ptr<char[]> merkle;
+    size_t size_merkle;
 
-// Output file path.
-constexpr char kOutputPath[] = "/tmp/benchmark.csv";
+    fbl::unique_ptr<char[]> data;
+    size_t size_data;
+};
 
-// Shortcut to for TestName::kCount
-constexpr int kNameCount = static_cast<int>(TestName::kCount);
+// Describes the parameters of the test case.
+struct BlobfsInfo {
+    // Total number of blobs in blobfs.
+    ssize_t blob_count;
 
-// Byte conversions
-constexpr size_t kKb = (1 << 10);
-constexpr size_t kMb = (1 << 20);
+    // Size in bytes of each blob in BlobFs.
+    size_t blob_size;
 
-static char start_time[50];
+    // Path to every blob in Blobfs
+    fbl::Vector<fbl::StringBuffer<fs_test_utils::kPathSize>> paths;
 
-bool StartBlobfsBenchmark(size_t blob_size, size_t blob_count,
-                                 TraversalOrder order_) {
-    int mountfd = open(kMountPath, O_RDONLY);
-    ASSERT_GT(
-        mountfd, 0,
-        "Failed to open - expected mounted blobfs partition at /tmp/blobbench");
+    // Order in which to read the blobs from blobfs.
+    fbl::Vector<uint64_t> path_index;
+};
 
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t r = ioctl_vfs_query_fs(mountfd, info, sizeof(buf) - 1);
-    ASSERT_EQ(close(mountfd), 0, "Failed to close mount point");
-
-    ASSERT_GT(r, (ssize_t)sizeof(vfs_query_info_t), "Failed to query fs");
-    buf[r] = '\0';
-    const char* name =
-        reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
-    ASSERT_FALSE(strcmp(name, "blobfs"), "Found non-blobfs partition");
-    ASSERT_GT(info->total_bytes - info->used_bytes, blob_size * blob_count,
-              "Not enough free space on disk to run this test");
-    ASSERT_GT(info->total_nodes - info->used_nodes, blob_count,
-              "Not enough free space on disk to run this test");
-
-    DIR* dir = opendir(kMountPath);
-    ASSERT_TRUE(readdir(dir) == nullptr, "Expected empty blobfs partition");
-    closedir(dir);
-    return true;
-}
-
-bool EndBlobfsBenchmark() {
-    DIR* dir = opendir(kMountPath);
-    struct dirent* de;
-    ASSERT_NONNULL(dir);
-
-    while ((de = readdir(dir)) != nullptr) {
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", kMountPath, de->d_name);
-        ASSERT_EQ(unlink(path), 0, "Failed to unlink");
+// Helper for streaming operations (such as read, write) which may need to be
+// repeated multiple times.
+template <typename T, typename U> inline int StreamAll(T func, int fd, U* buf, size_t max) {
+    size_t n = 0;
+    while (n != max) {
+        ssize_t d = func(fd, &buf[n], max - n);
+        if (d < 0) {
+            return -1;
+        }
+        n += d;
     }
-
-    ASSERT_EQ(closedir(dir), 0);
-    return true;
-}
-
-template <size_t BlobSize, size_t BlobCount, TraversalOrder Order>
-bool RunBasicBlobBenchmark() {
-    BEGIN_TEST;
-    ASSERT_TRUE(StartBlobfsBenchmark(BlobSize, BlobCount, Order));
-    TestData data(BlobSize, BlobCount, Order);
-    bool success = data.RunTests();
-    ASSERT_TRUE(EndBlobfsBenchmark()); // clean up
-    ASSERT_TRUE(success);
-    END_TEST;
-}
-
-// Returns a path to a kMountPath/0.......0.
-static void GetNegativeLookupPath(char* path) {
-    sprintf(path, "%s/", kMountPath);
-    memset(path + strlen(path), '0', 2 * Digest::kLength);
-    path[strlen(path)] = '\0';
-    return;
-}
-
-// Sets start_time to current time reported by rtc
-// Returns 0 on success, -1 otherwise
-int GetStartTime() {
-    int rtc_fd = open("/dev/sys/acpi/rtc/rtc", O_RDONLY);
-    if (rtc_fd < 0) {
-        return -1;
-    }
-
-    rtc_t rtc;
-    ssize_t n = ioctl_rtc_get(rtc_fd, &rtc);
-    if (n < (ssize_t)sizeof(rtc_t)) {
-        sprintf(start_time, "???");
-        return -1;
-    }
-    sprintf(start_time,
-            "%04d-%02d-%02dT%02d:%02d:%02d",
-            rtc.year,
-            rtc.month,
-            rtc.day,
-            rtc.hours,
-            rtc.minutes,
-            rtc.seconds);
     return 0;
 }
 
-// Creates, writes, reads (to verify) and operates on a blob.
-// Returns the result of the post-processing 'func' (true == success).
-bool GenerateBlob(fbl::unique_ptr<BlobInfo>* out, size_t blob_size) {
+// Get a readable name for a given number of bytes.
+fbl::String GetNameForSize(size_t size_in_bytes) {
+    static const char* const kUnits[] = {"bytes", "Kbytes", "Mbytes", "Gbytes"};
+    size_t current_unit = 0;
+    size_t current_size = size_in_bytes;
+    size_t size;
+    while (current_unit < countof(kUnits) && current_size >= (1u << (10 * (current_unit + 1)))) {
+        current_size = current_size / (1 << 10 * current_unit);
+        ++current_unit;
+    }
+
+    size = (size_in_bytes >> (10 * current_unit));
+    return fbl::StringPrintf("%lu%s", size, kUnits[current_unit]);
+}
+
+fbl::String GetNameForOrder(ReadOrder order) {
+    switch (order) {
+    case ReadOrder::kSequentialForward:
+        return "Sequential";
+    case ReadOrder::kSequentialReverse:
+        return "Reverse";
+    case ReadOrder::kRandom:
+        return "Random";
+    }
+
+    return "";
+}
+
+// Creates a an in memory blob.
+bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
+              fbl::unique_ptr<BlobInfo>* out) {
+    BEGIN_HELPER;
     // Generate a Blob of random data
     fbl::AllocChecker ac;
     fbl::unique_ptr<BlobInfo> info(new (&ac) BlobInfo);
     EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[blob_size]);
     EXPECT_EQ(ac.check(), true);
-    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     for (size_t i = 0; i < blob_size; i++) {
-        info->data[i] = (char)rand_r(&seed);
+        info->data[i] = (char)rand_r(seed);
     }
     info->size_data = blob_size;
 
@@ -175,10 +137,10 @@ bool GenerateBlob(fbl::unique_ptr<BlobInfo>* out, size_t blob_size) {
     ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
                                  info->size_merkle, &digest),
               ZX_OK, "Couldn't create Merkle Tree");
-    strcpy(info->path, kMountPath);
-    size_t prefix_len = strlen(info->path);
-    info->path[prefix_len++] = '/';
-    digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
+    fbl::StringBuffer<sizeof(info->path)> path;
+    path.AppendPrintf("%s/", fs_path.c_str());
+    digest.ToString(path.data() + path.size(), path.capacity() - path.size());
+    strcpy(info->path.data(), path.c_str());
 
     // Sanity-check the merkle tree
     ASSERT_EQ(MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0],
@@ -186,408 +148,239 @@ bool GenerateBlob(fbl::unique_ptr<BlobInfo>* out, size_t blob_size) {
               ZX_OK, "Failed to validate Merkle Tree");
 
     *out = fbl::move(info);
-    return true;
+    END_HELPER;
 }
 
-// Helper for streaming operations (such as read, write) which may need to be
-// repeated multiple times.
-template <typename T, typename U>
-inline int StreamAll(T func, int fd, U* buf, size_t max) {
-    size_t n = 0;
-    while (n != max) {
-        ssize_t d = func(fd, &buf[n], max - n);
-        if (d < 0) {
-            return -1;
-        }
-        n += d;
-    }
-    return 0;
+// Returns a path within the fs such that it is a valid blobpath.
+// The generated path is 'root_path/0....0'.
+fbl::String GetNegativeLookupPath(const fbl::String& fs_path) {
+    fbl::String negative_path =
+        fbl::StringPrintf("%s/%*d", fs_path.c_str(), static_cast<int>(2 * Digest::kLength), 0);
+    return negative_path;
 }
 
-} // namespace
+class BlobfsTest {
+public:
+    BlobfsTest(BlobfsInfo&& info) : info_(fbl::move(info)) {}
 
-TestData::TestData(size_t blob_size, size_t blob_count, TraversalOrder order_)
-    : blob_size_(blob_size), blob_count_(blob_count), order_(order_) {
-    indices_ = new size_t[blob_count_];
+    // Measure how much time each of the operations in the Fs takes, for a known size.
+    // First we add as many blobs as we need to, and then, we proceed to execute each operation.
+    bool ApiTest(perftest::RepeatState* state, Fixture* fixture) {
+        BEGIN_HELPER;
 
-    paths_ = new char*[blob_count_];
-    for (size_t i = 0; i < blob_count; i++) {
-        paths_[i] = new char[PATH_MAX];
-    }
+        // How many blobs do we need to add.
+        fbl::unique_ptr<BlobInfo> new_blob;
 
-    samples_ = new zx_time_t*[kNameCount];
-    for (int i = 0; i < static_cast<int>(TestName::kCount); i++) {
-        samples_[i] = new zx_time_t[GetMaxCount()];
-    }
-
-    GenerateOrder();
-}
-
-TestData::~TestData() {
-    for (int i = 0; i < kNameCount; i++) {
-        delete[] samples_[i];
-    }
-
-    for (size_t i = 0; i < blob_count_; i++) {
-        delete[] paths_[i];
-    }
-
-    delete[] indices_;
-    delete[] samples_;
-    delete[] paths_;
-}
-
-bool TestData::RunTests() {
-    ASSERT_TRUE(CreateBlobs());
-    ASSERT_TRUE(ReadBlobs());
-    ASSERT_TRUE(UnlinkBlobs());
-    ASSERT_TRUE(Sync());
-    return true;
-}
-
-void TestData::GenerateOrder() {
-    size_t max = blob_count_ - 1;
-
-    if (order_ == TraversalOrder::kRandom) {
-        memset(indices_, 0, sizeof(size_t) * blob_count_);
-        srand(static_cast<unsigned>(zx_ticks_get()));
-    }
-
-    while (true) {
-        switch (order_) {
-        case TraversalOrder::kLast:
-        case TraversalOrder::kReverse: {
-            indices_[max] = blob_count_ - max - 1;
-            break;
+        for (int64_t curr = 0; curr < info_.blob_count; ++curr) {
+            MakeBlob(fixture->fs_path(), info_.blob_size, fixture->mutable_seed(), &new_blob);
+            fbl::unique_fd fd(open(new_blob->path.c_str(), O_CREAT | O_RDWR));
+            ASSERT_TRUE(fd);
+            ASSERT_EQ(ftruncate(fd.get(), info_.blob_size), 0, strerror(errno));
+            ASSERT_EQ(StreamAll(write, fd.get(), new_blob->data.get(), new_blob->size_data), 0,
+                      strerror(errno));
+            info_.paths.push_back(new_blob->path);
+            info_.path_index.push_back(curr);
+            new_blob.reset();
         }
-        case TraversalOrder::kRandom: {
-            if (max == 0) {
-                break;
-            }
-
-            size_t index = rand() % max;
-            size_t selected = indices_[index]; // random number we selected
-            size_t swap = indices_[max];       // start randomizing at end of array
-
-            if (selected == 0 && index != 0) {
-                selected = index; // set value if it has not already been set
-            }
-
-            if (swap == 0) {
-                swap = max; // set value if it has not already been set
-            }
-
-            indices_[index] = swap;
-            indices_[max] = selected;
-            break;
-        }
-        default: {
-            indices_[max] = max;
-            break;
-        }
-        }
-
-        if (max == 0) {
-            break;
-        }
-        max--;
-    }
-}
-
-size_t TestData::GetMaxCount() {
-    if (order_ == TraversalOrder::kFirst || order_ == TraversalOrder::kLast) {
-        return kEndCount;
-    }
-
-    return blob_count_;
-}
-
-void TestData::GetNameStr(TestName name, char* name_str) {
-    switch (name) {
-    case TestName::kCreate:
-        strcpy(name_str, "create");
-        break;
-    case TestName::kTruncate:
-        strcpy(name_str, "truncate");
-        break;
-    case TestName::kWrite:
-        strcpy(name_str, "write");
-        break;
-    case TestName::kOpen:
-        strcpy(name_str, "open");
-        break;
-    case TestName::kRead:
-        strcpy(name_str, "read");
-        break;
-    case TestName::kClose:
-        strcpy(name_str, "close");
-        break;
-    case TestName::kUnlink:
-        strcpy(name_str, "unlink");
-        break;
-    case TestName::kNegativeLookup:
-        strcpy(name_str, "negative-lookup");
-        break;
-    default:
-        strcpy(name_str, "unknown");
-        break;
-    }
-}
-
-void TestData::GetOrderStr(char* order_str) {
-    switch (order_) {
-    case TraversalOrder::kReverse:
-        strcpy(order_str, "reverse");
-        break;
-    case TraversalOrder::kRandom:
-        strcpy(order_str, "random");
-        break;
-    case TraversalOrder::kFirst:
-        strcpy(order_str, "first");
-        break;
-    case TraversalOrder::kLast:
-        strcpy(order_str, "last");
-        break;
-    default:
-        strcpy(order_str, "default");
-        break;
-    }
-}
-
-void TestData::PrintOrder() {
-    for (size_t i = 0; i < blob_count_; i++) {
-        printf("Index %lu: %lu\n", i, indices_[i]);
-    }
-}
-
-inline void TestData::SampleEnd(zx_time_t start, TestName name, size_t index) {
-    zx_time_t now = zx_ticks_get();
-    samples_[static_cast<int>(name)][index] = now - start;
-}
-
-bool TestData::ReportTest(TestName name) {
-    zx_time_t ticks_per_msec = zx_ticks_per_second() / 1000;
-
-    double min = DBL_MAX;
-    double max = 0;
-    double avg = 0;
-    double stddev = 0;
-    zx_time_t total = 0;
-
-    size_t sample_count = GetMaxCount();
-    double samples_ms[sample_count];
-    zx_time_t* test_samples = samples_[static_cast<int>(name)];
-
-    for (size_t i = 0; i < sample_count; i++) {
-        samples_ms[i] = static_cast<double>(test_samples[i]) /
-                        static_cast<double>(ticks_per_msec);
-        avg += samples_ms[i];
-        total += test_samples[i];
-
-        if (samples_ms[i] < min) {
-            min = samples_ms[i];
-        }
-
-        if (samples_ms[i] > max) {
-            max = samples_ms[i];
-        }
-    }
-
-    avg /= static_cast<double>(sample_count);
-    total /= ticks_per_msec;
-
-    for (size_t i = 0; i < sample_count; i++) {
-        stddev += pow((static_cast<double>(samples_ms[i]) - avg), 2);
-    }
-
-    stddev /= static_cast<double>(sample_count);
-    stddev = sqrt(stddev);
-    double outlier = avg + (stddev * 3);
-    size_t outlier_count = 0;
-
-    for (size_t i = 0; i < sample_count; i++) {
-        if (samples_ms[i] > outlier) {
-            outlier_count++;
-        }
-    }
-
-    char test_name[kTestNameMaxLength];
-    char test_order_[kTestOrderMaxLength];
-    GetNameStr(name, test_name);
-    GetOrderStr(test_order_);
-    printf(
-        "\nBenchmark %*s: [%10lu] msec,"
-        " average: [%8.2f] msec, min: [%8.2f] msec,"
-        " max: [%8.2f] msec - %lu outliers (above [%8.2f] msec)",
-        static_cast<int>(kTestNameMaxLength), test_name, total, avg, min, max,
-        outlier_count, outlier);
-
-    FILE* results = fopen(kOutputPath, "a");
-
-    ASSERT_NONNULL(results, "Failed to open results file");
-
-    fprintf(results, "%lu,%lu,%s,%s,%s,%f,%f,%f,%f,%f,%lu\n", blob_size_,
-            blob_count_, start_time, test_name, test_order_, avg, min, max,
-            stddev, outlier, outlier_count);
-    fclose(results);
-
-    test_name[0] = '\0';
-    return true;
-}
-
-bool TestData::CreateBlobs() {
-    size_t sample_index = 0;
-
-    for (size_t i = 0; i < blob_count_; i++) {
-        bool record =
-            (order_ != TraversalOrder::kFirst && order_ != TraversalOrder::kLast);
-        record |= (order_ == TraversalOrder::kFirst && i < kEndCount);
-        record |= (order_ == TraversalOrder::kLast &&
-                   i >= static_cast<int>(TraversalOrder::kLast) - kEndCount);
-
-        fbl::unique_ptr<BlobInfo> info;
-        ASSERT_TRUE(GenerateBlob(&info, blob_size_));
-        strcpy(paths_[i], info->path);
-
-        // create
-        zx_time_t start = zx_ticks_get();
-        int fd = open(info->path, O_CREAT | O_RDWR);
-        if (record) {
-            SampleEnd(start, TestName::kCreate, sample_index);
-        }
-
-        ASSERT_GT(fd, 0, "Failed to create blob");
-
-        // truncate
-        start = zx_ticks_get();
-        ASSERT_EQ(ftruncate(fd, blob_size_), 0, "Failed to truncate blob");
-        if (record) {
-            SampleEnd(start, TestName::kTruncate, sample_index);
-        }
-
-        // write
-        start = zx_ticks_get();
-        ASSERT_EQ(StreamAll(write, fd, info->data.get(), blob_size_), 0,
-                  "Failed to write Data");
-        if (record) {
-            SampleEnd(start, TestName::kWrite, sample_index);
-        }
-
-        ASSERT_EQ(close(fd), 0, "Failed to close blob");
-
-        if (record) {
-            sample_index++;
-        }
-    }
-
-    ASSERT_TRUE(ReportTest(TestName::kCreate));
-    ASSERT_TRUE(ReportTest(TestName::kTruncate));
-    ASSERT_TRUE(ReportTest(TestName::kWrite));
-
-    return true;
-}
-
-bool TestData::ReadBlobs() {
-    char negative_lookup_path[PATH_MAX];
-    GetNegativeLookupPath(negative_lookup_path);
-    for (size_t i = 0; i < GetMaxCount(); i++) {
-        size_t index = indices_[i];
-        const char* path = paths_[index];
-
-        // open
-        zx_time_t start = zx_ticks_get();
-        int fd = open(path, O_RDONLY);
-        SampleEnd(start, TestName::kOpen, i);
-        ASSERT_GT(fd, 0, "Failed to open blob");
 
         fbl::AllocChecker ac;
-        fbl::unique_ptr<char[]> buf(new (&ac) char[blob_size_]);
-        EXPECT_EQ(ac.check(), true);
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+        fbl::unique_ptr<char[]> buffer(new (&ac) char[info_.blob_size]);
+        ASSERT_TRUE(ac.check());
 
-        // read
-        start = zx_ticks_get();
-        bool success = StreamAll(read, fd, &buf[0], blob_size_);
-        SampleEnd(start, TestName::kRead, i);
+        state->DeclareStep("generate_blob");
+        state->DeclareStep("create");
+        state->DeclareStep("truncate");
+        state->DeclareStep("write");
+        state->DeclareStep("close");
+        state->DeclareStep("open");
+        state->DeclareStep("read");
+        state->DeclareStep("unlink");
+        state->DeclareStep("close");
 
-        // close
-        start = zx_ticks_get();
-        ASSERT_EQ(close(fd), 0, "Failed to close blob");
-        SampleEnd(start, TestName::kClose, i);
+        // At this specific state, measure how much time in average it takes to perform each of the
+        // operations declared.
+        while (state->KeepRunning()) {
+            MakeBlob(fixture->fs_path(), info_.blob_size, fixture->mutable_seed(), &new_blob);
+            state->NextStep();
 
-        // negative_lookup
-        start = zx_ticks_get();
-        ASSERT_LT(open(negative_lookup_path, O_RDONLY), 0, "Did not expect entry to exist.");
-        SampleEnd(start, TestName::kNegativeLookup, i);
+            fbl::unique_fd fd(open(new_blob->path.c_str(), O_CREAT | O_RDWR));
+            ASSERT_TRUE(fd);
+            state->NextStep();
 
-        ASSERT_EQ(success, 0, "Failed to read data");
+            ASSERT_EQ(ftruncate(fd.get(), info_.blob_size), 0);
+            state->NextStep();
+
+            ASSERT_EQ(StreamAll(write, fd.get(), new_blob->data.get(), info_.blob_size), 0,
+                      "Failed to write Data");
+            // Force pending writes to be sent to the underlying device.
+            ASSERT_EQ(fsync(fd.get()), 0);
+            state->NextStep();
+
+            ASSERT_EQ(close(fd.release()), 0);
+            state->NextStep();
+
+            fd.reset(open(new_blob->path.c_str(), O_RDONLY));
+            ASSERT_TRUE(fd);
+            state->NextStep();
+
+            ASSERT_EQ(StreamAll(read, fd.get(), &buffer[0], info_.blob_size), 0);
+            ASSERT_EQ(memcmp(buffer.get(), new_blob->data.get(), new_blob->size_data), 0);
+            state->NextStep();
+
+            unlink(new_blob->path.c_str());
+            ASSERT_EQ(fsync(fd.get()), 0);
+
+            state->NextStep();
+            ASSERT_EQ(close(fd.release()), 0);
+        }
+        END_HELPER;
     }
 
-    ASSERT_TRUE(ReportTest(TestName::kOpen));
-    ASSERT_TRUE(ReportTest(TestName::kRead));
-    ASSERT_TRUE(ReportTest(TestName::kClose));
-    ASSERT_TRUE(ReportTest(TestName::kNegativeLookup));
-    return true;
-}
+    // After doing the API test, we use the written blobs to measure, lookup, negative-lookup
+    // read
+    bool ReadTest(ReadOrder order, perftest::RepeatState* state, Fixture* fixture) {
+        BEGIN_HELPER;
+        state->DeclareStep("lookup");
+        state->DeclareStep("read");
+        state->DeclareStep("negative_lookup");
+        ASSERT_EQ(info_.path_index.size(), info_.paths.size());
+        ASSERT_GT(info_.path_index.size(), 0);
+        SortPathsByOrder(order, fixture->mutable_seed());
 
-bool TestData::UnlinkBlobs() {
-    for (size_t i = 0; i < GetMaxCount(); i++) {
-        size_t index = indices_[i];
-        const char* path = paths_[index];
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<char[]> buffer(new (&ac) char[info_.blob_size]);
+        ASSERT_TRUE(ac.check());
 
-        // unlink
-        zx_time_t start = zx_ticks_get();
-        ASSERT_EQ(unlink(path), 0, "Failed to unlink");
-        SampleEnd(start, TestName::kUnlink, i);
+        uint64_t current = 0;
+        fbl::String negative_path = GetNegativeLookupPath(fixture->fs_path());
+
+        while (state->KeepRunning()) {
+            size_t path_index = info_.path_index[current % info_.paths.size()];
+            fbl::unique_fd fd(open(info_.paths[path_index].c_str(), O_RDONLY));
+            ASSERT_TRUE(fd);
+            state->NextStep();
+            ASSERT_EQ(StreamAll(read, fd.get(), &buffer[0], info_.blob_size), 0);
+            state->NextStep();
+            fbl::unique_fd no_fd(open(negative_path.c_str(), O_RDONLY));
+            ASSERT_FALSE(no_fd);
+            ++current;
+        }
+        END_HELPER;
     }
 
-    ASSERT_TRUE(ReportTest(TestName::kUnlink));
-    return true;
+private:
+    void SortPathsByOrder(ReadOrder order, unsigned int* seed) {
+        switch (order) {
+        case ReadOrder::kSequentialForward:
+            for (uint64_t curr = 0; curr < info_.paths.size(); ++curr) {
+                info_.path_index[curr] = curr;
+            }
+            break;
+
+        case ReadOrder::kSequentialReverse:
+            for (uint64_t curr = 0; curr < info_.paths.size(); ++curr) {
+                info_.path_index[curr] = info_.paths.size() - curr - 1;
+            }
+            break;
+
+        case ReadOrder::kRandom:
+            int64_t swaps = info_.paths.size();
+            while (swaps > 0) {
+                size_t src = rand_r(seed) % info_.paths.size();
+                size_t target = rand_r(seed) % info_.paths.size();
+                info_.path_index[src] = info_.path_index[target];
+                info_.path_index[target] = info_.path_index[src];
+                --swaps;
+            }
+            break;
+        }
+    };
+
+    BlobfsInfo info_;
+};
+
+bool RunBenchmark(int argc, char** argv) {
+    FixtureOptions f_opts = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    PerformanceTestOptions p_opts;
+    // 30 Samples for each operation at each stage.
+    constexpr uint32_t kSampleCount = 100;
+    const size_t blob_sizes[] = {
+        128,         // 128 b
+        128 * 1024,  // 128 Kb
+        1024 * 1024, // 1 MB
+    };
+    const size_t blob_counts[] = {
+        10,
+        100,
+        1000,
+        10000,
+    };
+    const ReadOrder orders[] = {
+        ReadOrder::kSequentialForward,
+        ReadOrder::kSequentialReverse,
+        ReadOrder::kRandom,
+    };
+
+    if (!fs_test_utils::ParseCommandLineArgs(argc, argv, &f_opts, &p_opts)) {
+        return false;
+    }
+
+    fbl::Vector<TestCaseInfo> testcases;
+    fbl::Vector<BlobfsTest> blobfs_tests;
+    size_t test_index = 0;
+    for (auto blob_size : blob_sizes) {
+        for (auto blob_count : blob_counts) {
+            BlobfsInfo fs_info;
+            fs_info.blob_count = (p_opts.is_unittest) ? 1 : blob_count;
+            fs_info.blob_size = blob_size;
+            blobfs_tests.push_back(fbl::move(fs_info));
+            TestCaseInfo testcase;
+            testcase.teardown = false;
+            testcase.sample_count = kSampleCount;
+
+            fbl::String size = GetNameForSize(blob_size);
+
+            TestInfo api_test;
+            api_test.name =
+                fbl::StringPrintf("%s/%s/%luBlobs/Api", disk_format_string_[f_opts.fs_type],
+                                  size.c_str(), blob_count);
+            // There should be enough space for each blob, the merkle tree nodes, and the inodes.
+            api_test.required_disk_space =
+                blob_count * (blob_size + 2 * MerkleTree::kNodeSize + blobfs::kBlobfsInodeSize);
+            api_test.test_fn = [test_index, &blobfs_tests](perftest::RepeatState* state,
+                                                           fs_test_utils::Fixture* fixture) {
+                return blobfs_tests[test_index].ApiTest(state, fixture);
+            };
+            testcase.tests.push_back(fbl::move(api_test));
+
+            if (blob_count > 0) {
+                for (auto order : orders) {
+                    TestInfo read_test;
+                    read_test.name = fbl::StringPrintf(
+                        "%s/%s/%luBlobs/Read%s", disk_format_string_[f_opts.fs_type], size.c_str(),
+                        blob_count, GetNameForOrder(order).c_str());
+                    read_test.test_fn = [test_index, order,
+                                         &blobfs_tests](perftest::RepeatState* state,
+                                                        fs_test_utils::Fixture* fixture) {
+                        return blobfs_tests[test_index].ReadTest(order, state, fixture);
+                    };
+                    read_test.required_disk_space =
+                        blob_count *
+                        (blob_size + 2 * MerkleTree::kNodeSize + blobfs::kBlobfsInodeSize);
+                    testcase.tests.push_back(fbl::move(read_test));
+                }
+            }
+            testcases.push_back(fbl::move(testcase));
+            ++test_index;
+        }
+    }
+
+    return fs_test_utils::RunTestCases(f_opts, p_opts, testcases);
 }
-
-bool TestData::Sync() {
-    int fd = open(kMountPath, O_DIRECTORY | O_RDONLY);
-    ASSERT_GE(fd, 0);
-    ASSERT_EQ(syncfs(fd), 0);
-    ASSERT_EQ(close(fd), 0);
-    return true;
-}
-
-namespace {
-
-BEGIN_TEST_CASE(blobfs_benchmarks)
-
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 128, 500);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 128, 1000);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 128, 10000);
-
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 512, 500);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 512, 1000);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 512, 10000);
-
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, kKb, 500);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, kKb, 1000);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, kKb, 10000);
-
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 128 * kKb, 500);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 128 * kKb, 1000);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 128 * kKb, 10000);
-
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 512 * kKb, 500);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 512 * kKb, 1000);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, 512 * kKb, 10000);
-
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, kMb, 500);
-RUN_FOR_ALL_ORDER(RunBasicBlobBenchmark, kMb, 1000);
-
-END_TEST_CASE(blobfs_benchmarks)
 
 } // namespace
 
 int main(int argc, char** argv) {
-    if (GetStartTime() != 0) {
-        printf("Unable to get start time for test\n");
-    }
-
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return fs_test_utils::RunWithMemFs(
+        [argc, argv]() { return RunBenchmark(argc, argv) ? 0 : -1; });
 }
