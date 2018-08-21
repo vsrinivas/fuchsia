@@ -218,6 +218,12 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     char* inbuf = NULL;
     char* outbuf = NULL;
 
+    transport_state ts = {
+        .socket = -1,
+        .connected = false,
+        .previous_timeout_ms = 0,
+        .target_addr = {0}
+    };
     tftp_session* session = NULL;
     size_t session_data_sz = tftp_sizeof_session();
 
@@ -236,7 +242,6 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     tftp_file_interface file_ifc = {file_open_read, NULL, file_read, NULL, file_close};
     tftp_session_set_file_interface(session, &file_ifc);
 
-    transport_state ts;
     if (transport_init(&ts, INITIAL_CONNECTION_TIMEOUT, addr) < 0) {
         goto done;
     }
@@ -272,6 +277,9 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     }
 
 done:
+    if (ts.socket >= 0) {
+        close(ts.socket);
+    }
     if (session_data) {
         free(session_data);
     }
