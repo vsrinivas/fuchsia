@@ -123,14 +123,30 @@ template("go_build") {
     ]
   }
 
+  # Allow host binaries to be published in SDKs.
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
-      !is_fuchsia) {
+      !is_fuchsia && (!defined(invoker.test) || !invoker.test)) {
+    meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
+    meta_data = {
+      type = "host_tool"
+      files = [
+        "tools/$output_name",
+      ]
+    }
+    write_file(meta_file, meta_data, "json")
+
     sdk_atom("${target_name}_sdk") {
       domain = "exe"
       name = output_name
       id = "sdk://tools/$output_name"
 
       category = invoker.sdk_category
+
+      meta = {
+        source = meta_file
+        dest = "tools/$output_name-meta.json"
+        schema = "host_tool"
+      }
 
       tags = [ "arch:host" ]
 
