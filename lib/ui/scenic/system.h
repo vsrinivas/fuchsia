@@ -81,6 +81,7 @@ class System {
   }
 
  protected:
+  // TODO(SCN-906): Remove/refactor this under-used deferred-init logic.
   bool initialized_ = true;
 
   // Marks this system as initialized and invokes callback if it's set.

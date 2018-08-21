@@ -66,7 +66,15 @@ void Session::ReleaseResource(uint32_t resource_id) {
 }
 
 void Session::Enqueue(fuchsia::ui::gfx::Command command) {
-  commands_.push_back(NewCommand(std::move(command)));
+  Enqueue(NewCommand(std::move(command)));
+}
+
+void Session::Enqueue(fuchsia::ui::input::Command command) {
+  Enqueue(NewCommand(std::move(command)));
+}
+
+void Session::Enqueue(fuchsia::ui::scenic::Command command) {
+  commands_.push_back(std::move(command));
   if (commands_->size() >= kCommandsPerMessage)
     Flush();
 }

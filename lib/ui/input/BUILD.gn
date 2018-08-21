@@ -9,10 +9,11 @@ source_set("input") {
   ]
 
   deps = [
+    "//garnet/lib/ui/gfx",
+    "//garnet/lib/ui/scenic",
     "//garnet/public/lib/fxl",
   ]
 
   public_deps = [
-    "//garnet/lib/ui/scenic",
   ]
 }

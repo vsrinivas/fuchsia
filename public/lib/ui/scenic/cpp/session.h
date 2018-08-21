@@ -7,6 +7,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -84,7 +85,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Enqueues an operation.
   // The session will queue operations locally to batch submission of operations
   // until |Flush()| or |Present()| is called.
+  void Enqueue(fuchsia::ui::scenic::Command command);
   void Enqueue(fuchsia::ui::gfx::Command command);
+  void Enqueue(fuchsia::ui::input::Command command);
 
   // Registers an acquire fence to be submitted during the subsequent call to
   // |Present()|.

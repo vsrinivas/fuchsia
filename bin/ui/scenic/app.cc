@@ -25,13 +25,13 @@ namespace scenic {
 App::App(component::StartupContext* app_context, fit::closure quit_callback)
     : scenic_(std::make_unique<Scenic>(app_context, std::move(quit_callback))) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto scenic = scenic_->RegisterSystem<scenic::gfx::GfxSystem>();
-  FXL_DCHECK(scenic);
+  auto gfx = scenic_->RegisterSystem<scenic::gfx::GfxSystem>();
+  FXL_DCHECK(gfx);
 #endif
 
 #ifdef SCENIC_ENABLE_SKETCHY_SUBSYSTEM
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto sketchy = scenic_->RegisterSystem<SketchySystem>(scenic);
+  auto sketchy = scenic_->RegisterSystem<SketchySystem>(gfx);
   FXL_DCHECK(sketchy);
 #else
 #error SketchySystem requires gfx::GfxSystem.
@@ -40,8 +40,10 @@ App::App(component::StartupContext* app_context, fit::closure quit_callback)
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto input = scenic_->RegisterSystem<scenic::input::InputSystem>(scenic);
-  FXL_DCHECK(input);
+  gfx->AddInitClosure([this, gfx]() {
+    auto input = scenic_->RegisterSystem<scenic::input::InputSystem>(gfx);
+    FXL_DCHECK(input);
+  });
 #else
 #error InputSystem requires gfx::GfxSystem.
 #endif

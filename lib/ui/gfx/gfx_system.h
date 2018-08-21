@@ -32,6 +32,9 @@ class GfxSystem : public TempSystemDelegate {
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback)
       override;
 
+  // TODO(SCN-906): Remove this in favor of unified initialization.
+  void AddInitClosure(fit::closure closure);
+
  protected:
   // Protected so test classes can expose.
   std::unique_ptr<Engine> engine_;

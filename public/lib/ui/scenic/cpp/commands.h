@@ -18,8 +18,11 @@ constexpr float kOnesFloat3[3] = {1.f, 1.f, 1.f};
 // A quaterion that has no rotation.
 constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
-// Helper function for wrapping Scenic ops as Mozart commands.
+// Helper function for wrapping a GFX command as a Scenic command.
 fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::gfx::Command command);
+
+// Helper function for wrapping an input command as a Scenic command.
+fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::input::Command command);
 
 // Resource creation.
 fuchsia::ui::gfx::Command NewCreateMemoryCmd(

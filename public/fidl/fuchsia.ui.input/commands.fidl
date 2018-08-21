@@ -6,14 +6,17 @@ library fuchsia.ui.input;
 
 // Commands for conveying input events to a |Session|.
 union Command {
-  SendKeyboardInput send_keyboard_input;
-  SendPointerInput send_pointer_input;
+  // Structs defined in input_events.fidl.
+  SendKeyboardInputCmd send_keyboard_input;
+  SendPointerInputCmd send_pointer_input;
 };
 
-struct SendKeyboardInput {
-  KeyboardEvent event;
+struct SendKeyboardInputCmd {
+  uint32 compositor_id;
+  KeyboardEvent keyboard_event;  // Defined in input_events.fidl
 };
 
-struct SendPointerInput {
-  PointerEvent event;
+struct SendPointerInputCmd {
+  uint32 compositor_id;
+  PointerEvent pointer_event;  // Defined in input_events.fidl
 };

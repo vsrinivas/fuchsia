@@ -18,14 +18,27 @@ class InputSystem : public System {
  public:
   static constexpr TypeId kTypeId = kInput;
 
-  explicit InputSystem(SystemContext context,
-                       bool initialized_after_construction);
+  explicit InputSystem(SystemContext context, gfx::GfxSystem* scenic);
   virtual ~InputSystem();
 
   virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
  private:
+  gfx::GfxSystem* const gfx_system_;
+};
+
+class InputCommandDispatcher : public CommandDispatcher {
+ public:
+  InputCommandDispatcher(CommandDispatcherContext context,
+                         gfx::GfxSystem* scenic_system);
+  ~InputCommandDispatcher() override;
+
+  // |CommandDispatcher|
+  void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
+
+ private:
+  gfx::GfxSystem* const gfx_system_;
 };
 
 }  // namespace input

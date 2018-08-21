@@ -271,5 +271,9 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   return false;
 }
 
+void GfxSystem::AddInitClosure(fit::closure closure) {
+  run_after_initialized_.push_back(std::move(closure));
+}
+
 }  // namespace gfx
 }  // namespace scenic

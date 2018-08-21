@@ -16,6 +16,12 @@ fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::gfx::Command command) {
   return scenic_command;
 }
 
+fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::input::Command command) {
+  fuchsia::ui::scenic::Command scenic_command;
+  scenic_command.set_input(std::move(command));
+  return scenic_command;
+}
+
 // Helper function for all resource creation functions.
 fuchsia::ui::gfx::Command NewCreateResourceCmd(
     uint32_t id, fuchsia::ui::gfx::ResourceArgs resource) {
