@@ -583,6 +583,15 @@ pub struct {{ $interface.Name }}ControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+impl Deref for {{ $interface.Name }}ControlHandle {
+        type Target = ::std::sync::Arc<fidl::ServeInner>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+
 impl {{ $interface.Name }}ControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
