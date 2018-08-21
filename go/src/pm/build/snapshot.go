@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"regexp"
+	"strings"
 )
 
 // Snapshot contains metadata from one or more packages
@@ -26,6 +28,33 @@ type BlobInfo struct {
 type Package struct {
 	Files map[string]MerkleRoot `json:"files"`
 	Tags  []string              `json:"tags,omitempty"`
+}
+
+// String equality with basic wildcard support. "*" can match any number of
+// characters. All other characters in each glob are matched literally. A
+// string matches globs if it matches any glob.
+func compileGlobs(globs []string) *regexp.Regexp {
+	parts := []string{}
+	for _, glob := range globs {
+		globParts := []string{}
+		for _, part := range strings.Split(glob, "*") {
+			globParts = append(globParts, regexp.QuoteMeta(part))
+		}
+		parts = append(parts, strings.Join(globParts, ".*"))
+	}
+
+	s := fmt.Sprintf("^(%s)$", strings.Join(parts, "|"))
+
+	return regexp.MustCompile(s)
+}
+
+func anyMatchRegexp(tags []string, re *regexp.Regexp) bool {
+	for _, tag := range tags {
+		if re.MatchString(tag) {
+			return true
+		}
+	}
+	return false
 }
 
 // LoadSnapshot reads and verifies a JSON formatted Snapshot from the provided
@@ -78,6 +107,33 @@ func (s *Snapshot) Verify() error {
 	}
 
 	return nil
+}
+
+// Filter produces a subset of the Snapshot based on a series of include and
+// exclude filters. In order for a package to be included in the result, its tags
+// (including the package name itself) must match at least one include filter
+// and must not match any exclude filters. Include and exclude filters may
+// contain wildcard characters ("*"), which will match 0 or more characters.
+func (s *Snapshot) Filter(include []string, exclude []string) Snapshot {
+	res := Snapshot{
+		Packages: map[string]Package{},
+		Blobs:    map[MerkleRoot]BlobInfo{},
+	}
+
+	includeGlobs := compileGlobs(include)
+	excludeGlobs := compileGlobs(exclude)
+
+	for name, pkg := range s.Packages {
+		tags := append(pkg.Tags, name)
+		if anyMatchRegexp(tags, includeGlobs) && !anyMatchRegexp(tags, excludeGlobs) {
+			res.Packages[name] = pkg
+			for _, merkle := range pkg.Files {
+				res.Blobs[merkle] = s.Blobs[merkle]
+			}
+		}
+	}
+
+	return res
 }
 
 // Size determines the storage required for all blobs in the snapshot (not

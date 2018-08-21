@@ -26,6 +26,10 @@ type deltaConfig struct {
 	targetPath string
 	outputPath string
 
+	// filtering options
+	includeTags []string
+	excludeTags []string
+
 	// stdout display options (ignored if outputPath is specified)
 	summary           bool
 	packages          bool
@@ -34,6 +38,18 @@ type deltaConfig struct {
 	blobCount         uint
 	detailed          bool
 	showSectionHeader bool
+}
+
+// Implement flag.Value interface for flags that can be specified more than once
+type stringSlice []string
+
+func (s *stringSlice) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
+func (s *stringSlice) String() string {
+	return fmt.Sprintf("%v", []string(*s))
 }
 
 func countTrueValues(bools ...bool) int {
@@ -58,6 +74,8 @@ func parseConfig(args []string) (*deltaConfig, error) {
 	fs.BoolVar(&c.blobs, "blobs", false, "Show per-blob statistics")
 	fs.UintVar(&c.packageCount, "package_count", 0, "Show up to N packages with largest updates (implies --packages)")
 	fs.UintVar(&c.blobCount, "blob_count", 0, "Show up to N blobs with largest updates (implies --blobs)")
+	fs.Var((*stringSlice)(&c.includeTags), "include", "Include a tag in the analysis (default is to include all tags)")
+	fs.Var((*stringSlice)(&c.excludeTags), "exclude", "Exclude a tag from the analysis (default is to exclude no tags)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), usage, filepath.Base(os.Args[0]))
@@ -100,6 +118,10 @@ func parseConfig(args []string) (*deltaConfig, error) {
 	// Show section headers if more than one section will be shown
 	c.showSectionHeader = countTrueValues(c.summary, c.packages, c.blobs) > 1
 
+	if len(c.includeTags) == 0 {
+		c.includeTags = append(c.includeTags, "*")
+	}
+
 	return &c, nil
 }
 
@@ -119,6 +141,9 @@ func Run(cfg *build.Config, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	source = source.Filter(config.includeTags, config.excludeTags)
+	target = target.Filter(config.includeTags, config.excludeTags)
 
 	delta := build.DeltaSnapshots(source, target)
 
