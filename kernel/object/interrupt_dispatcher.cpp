@@ -133,6 +133,10 @@ void InterruptDispatcher::InterruptHandler() {
 }
 
 zx_status_t InterruptDispatcher::Destroy() {
+    // Using AutoReschedDisable is necessary for correctness to prevent
+    // context-switching to the woken thread while holding spinlock_.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
     Guard<SpinLock, IrqSave> guard{&spinlock_};
 
     MaskInterrupt();
@@ -177,6 +181,10 @@ zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatche
 }
 
 zx_status_t InterruptDispatcher::Ack() {
+    // Using AutoReschedDisable is necessary for correctness to prevent
+    // context-switching to the woken thread while holding spinlock_.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
     Guard<SpinLock, IrqSave> guard{&spinlock_};
     if (port_dispatcher_ == nullptr) {
         return ZX_ERR_BAD_STATE;
