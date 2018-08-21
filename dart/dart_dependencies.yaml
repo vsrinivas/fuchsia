@@ -4,4 +4,4 @@
 
 name: dart_build
 dependencies:
-  analysis_server_lib: 0.1.2+1
+  analysis_server_lib: ^0.1.4
