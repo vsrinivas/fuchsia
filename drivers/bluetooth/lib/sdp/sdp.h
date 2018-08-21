@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SDP_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SDP_H_
 
 #include <list>
 #include <map>
@@ -292,3 +293,5 @@ constexpr AttributeId kSDP_ServiceDatabaseState = 0x0201;
 
 }  // namespace sdp
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SDP_H_

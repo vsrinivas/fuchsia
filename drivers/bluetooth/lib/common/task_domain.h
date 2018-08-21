@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TASK_DOMAIN_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TASK_DOMAIN_H_
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -188,3 +189,5 @@ class TaskDomain {
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TASK_DOMAIN_H_

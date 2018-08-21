@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SDP_STATUS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SDP_STATUS_H_
 
 #include "garnet/drivers/bluetooth/lib/common/status.h"
 #include "garnet/drivers/bluetooth/lib/sdp/sdp.h"
@@ -42,3 +43,5 @@ class Status : public common::Status<ErrorCode> {
 
 }  // namespace sdp
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SDP_STATUS_H_

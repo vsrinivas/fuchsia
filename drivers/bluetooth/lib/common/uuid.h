@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_UUID_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_UUID_H_
 
 #include <string>
 #include <unordered_set>
@@ -232,3 +233,5 @@ struct hash<::btlib::common::UUID> {
 };
 
 }  // namespace std
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_UUID_H_

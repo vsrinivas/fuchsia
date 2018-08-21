@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GATT_CLIENT_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_CLIENT_H_
 
 #include <lib/fit/function.h>
 
@@ -129,3 +130,5 @@ class Client {
 
 }  // namespace gatt
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GATT_CLIENT_H_

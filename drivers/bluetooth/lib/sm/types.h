@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_
 
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
@@ -107,3 +108,5 @@ class Key final {
 
 }  // namespace sm
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_

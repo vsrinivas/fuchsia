@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_DEFAULTS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_DEFAULTS_H_
 
 #include <cstdint>
 
@@ -32,3 +33,5 @@ constexpr uint16_t kLESupervisionTimeout = 0x002A;
 }  // namespace defaults
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_DEFAULTS_H_

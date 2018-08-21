@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_ATT_ATTRIBUTE_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_ATT_ATTRIBUTE_H_
 
 #include <memory>
 #include <vector>
@@ -256,3 +257,5 @@ class AttributeGrouping final {
 
 }  // namespace att
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_ATT_ATTRIBUTE_H_

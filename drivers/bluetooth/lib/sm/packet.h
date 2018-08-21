@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SM_PACKET_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SM_PACKET_H_
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
@@ -27,3 +28,5 @@ class PacketWriter : public common::MutablePacketView<Header> {
 
 }  // namespace sm
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SM_PACKET_H_

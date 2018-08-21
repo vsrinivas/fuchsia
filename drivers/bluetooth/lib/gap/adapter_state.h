@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GAP_ADAPTER_STATE_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GAP_ADAPTER_STATE_H_
 
 #include <cstdint>
 
@@ -112,3 +113,5 @@ class AdapterState final {
 
 }  // namespace gap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GAP_ADAPTER_STATE_H_

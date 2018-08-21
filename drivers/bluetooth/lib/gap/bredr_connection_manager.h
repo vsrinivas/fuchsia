@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GAP_BREDR_CONNECTION_MANAGER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GAP_BREDR_CONNECTION_MANAGER_H_
 
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -118,3 +119,5 @@ class BrEdrConnectionManager {
 
 }  // namespace gap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GAP_BREDR_CONNECTION_MANAGER_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GATT_GATT_DEFS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_GATT_DEFS_H_
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
@@ -116,3 +117,5 @@ struct DescriptorData {
 
 }  // namespace gatt
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GATT_GATT_DEFS_H_

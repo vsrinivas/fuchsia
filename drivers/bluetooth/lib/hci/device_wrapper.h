@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_DEVICE_WRAPPER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_DEVICE_WRAPPER_H_
 
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -91,3 +92,5 @@ class DummyDeviceWrapper : public DeviceWrapper {
 
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_DEVICE_WRAPPER_H_

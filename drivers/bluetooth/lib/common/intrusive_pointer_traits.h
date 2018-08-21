@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_INTRUSIVE_POINTER_TRAITS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_INTRUSIVE_POINTER_TRAITS_H_
 
 #include "lib/fxl/logging.h"
 
@@ -61,3 +62,5 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
 
 }  // namespace internal
 }  // namespace fbl
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_INTRUSIVE_POINTER_TRAITS_H_

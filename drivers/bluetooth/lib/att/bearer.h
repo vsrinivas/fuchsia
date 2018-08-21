@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_ATT_BEARER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_ATT_BEARER_H_
 
 #include <map>
 #include <memory>
@@ -316,3 +317,5 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
 }  // namespace att
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_ATT_BEARER_H_

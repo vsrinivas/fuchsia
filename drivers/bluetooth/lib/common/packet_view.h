@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_PACKET_VIEW_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_PACKET_VIEW_H_
 
 #include <cstdint>
 
@@ -172,3 +173,5 @@ class MutablePacketView : public PacketView<HeaderType> {
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_PACKET_VIEW_H_

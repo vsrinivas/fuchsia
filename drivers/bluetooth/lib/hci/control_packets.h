@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_CONTROL_PACKETS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_CONTROL_PACKETS_H_
 
 #include <memory>
 
@@ -115,3 +116,5 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
 // Evaluate to true if the event status is not success.
 #define hci_is_error(event, flag, tag, fmt...) \
   bt_is_error(event.ToStatus(), flag, tag, fmt)
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_CONTROL_PACKETS_H_

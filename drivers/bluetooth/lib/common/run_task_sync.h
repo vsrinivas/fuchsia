@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_RUN_TASK_SYNC_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_RUN_TASK_SYNC_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
@@ -21,3 +22,5 @@ void RunTaskSync(fit::closure callback, async_dispatcher_t* dispatcher);
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_RUN_TASK_SYNC_H_

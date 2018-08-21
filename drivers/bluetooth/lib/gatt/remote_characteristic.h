@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GATT_REMOTE_CHARACTERISTIC_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_REMOTE_CHARACTERISTIC_H_
 
 #include <queue>
 #include <unordered_map>
@@ -181,3 +182,5 @@ class RemoteCharacteristic final {
 
 }  // namespace gatt
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GATT_REMOTE_CHARACTERISTIC_H_

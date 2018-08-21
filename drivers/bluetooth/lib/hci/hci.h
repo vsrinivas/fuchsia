@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_HCI_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_HCI_H_
 
 #include <array>
 #include <cstdint>
@@ -3299,3 +3300,5 @@ constexpr OpCode VendorOpCode(const uint8_t ocf) {
 
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_HCI_H_

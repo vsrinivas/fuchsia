@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_DEVICE_ADDRESS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_DEVICE_ADDRESS_H_
 
 #include <array>
 #include <initializer_list>
@@ -145,3 +146,5 @@ ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddressBytes& db);
 ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddress& d);
 
 }  // namespace std
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_DEVICE_ADDRESS_H_

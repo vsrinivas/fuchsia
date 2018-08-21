@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SERVICE_RECORD_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SERVICE_RECORD_H_
 
 #include <unordered_map>
 #include <unordered_set>
@@ -109,3 +110,5 @@ class ServiceRecord {
 
 }  // namespace sdp
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SDP_SERVICE_RECORD_H_

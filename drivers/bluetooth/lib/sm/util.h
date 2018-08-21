@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SM_UTIL_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SM_UTIL_H_
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
@@ -69,3 +70,5 @@ void S1(const common::UInt128& tk, const common::UInt128& r1,
 }  // namespace util
 }  // namespace sm
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SM_UTIL_H_

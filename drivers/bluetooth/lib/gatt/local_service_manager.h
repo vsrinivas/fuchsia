@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GATT_LOCAL_SERVICE_MANAGER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_LOCAL_SERVICE_MANAGER_H_
 
 #include <unordered_map>
 
@@ -129,3 +130,5 @@ class LocalServiceManager final {
 
 }  // namespace gatt
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GATT_LOCAL_SERVICE_MANAGER_H_

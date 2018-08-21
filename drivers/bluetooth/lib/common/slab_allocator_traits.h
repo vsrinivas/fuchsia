@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_SLAB_ALLOCATOR_TRAITS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_SLAB_ALLOCATOR_TRAITS_H_
 
 #include <memory>
 
@@ -43,3 +44,5 @@ struct SlabAllocatorPtrTraits<std::unique_ptr<T>> {
 
 }  // namespace internal
 }  // namespace fbl
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_SLAB_ALLOCATOR_TRAITS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_FAKE_CONNECTION_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_FAKE_CONNECTION_H_
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 
@@ -38,3 +39,5 @@ class FakeConnection final : public Connection {
 }  // namespace testing
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_FAKE_CONNECTION_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_BYTE_BUFFER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_BYTE_BUFFER_H_
 
 #include <array>
 #include <cstdint>
@@ -311,3 +312,5 @@ class MutableBufferView final : public MutableByteBuffer {
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_BYTE_BUFFER_H_

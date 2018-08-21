@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_ATT_DATABASE_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_ATT_DATABASE_H_
 
 #include <list>
 #include <memory>
@@ -154,3 +155,5 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
 
 }  // namespace att
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_ATT_DATABASE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_UINT128_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_UINT128_H_
 
 #include <array>
 #include <cstdint>
@@ -18,3 +19,5 @@ static_assert(sizeof(UInt128) == 16, "UInt128 must take up exactly 16 bytes");
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_UINT128_H_

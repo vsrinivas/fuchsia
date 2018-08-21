@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GATT_SERVER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_SERVER_H_
 
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
@@ -109,3 +110,5 @@ class Server final {
 
 }  // namespace gatt
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GATT_SERVER_H_

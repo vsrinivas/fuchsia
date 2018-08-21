@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FRAGMENTER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FRAGMENTER_H_
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -63,3 +64,5 @@ class Fragmenter final {
 
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FRAGMENTER_H_

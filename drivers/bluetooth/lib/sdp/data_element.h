@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SDP_DATA_ELEMENT_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_SDP_DATA_ELEMENT_H_
 
 #include <vector>
 
@@ -154,3 +155,5 @@ class DataElement {
 
 }  // namespace sdp
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_SDP_DATA_ELEMENT_H_

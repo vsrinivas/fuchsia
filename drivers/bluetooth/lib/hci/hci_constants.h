@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_HCI_CONSTANTS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_HCI_CONSTANTS_H_
 
 // clang-format off
 
@@ -1343,3 +1344,5 @@ using PacketTypeType = uint16_t;
 
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_HCI_CONSTANTS_H_

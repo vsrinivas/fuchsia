@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_GATT_FAKE_LAYER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_FAKE_LAYER_H_
 
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 
@@ -56,3 +57,5 @@ class FakeLayer final : public GATT {
 }  // namespace testing
 }  // namespace gatt
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_GATT_FAKE_LAYER_H_

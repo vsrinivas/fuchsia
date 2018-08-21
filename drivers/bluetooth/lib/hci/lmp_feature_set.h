@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_LMP_FEATURE_SET_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_LMP_FEATURE_SET_H_
 
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
@@ -62,3 +63,5 @@ class LMPFeatureSet {
 
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_LMP_FEATURE_SET_H_

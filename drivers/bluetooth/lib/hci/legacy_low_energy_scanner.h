@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_LEGACY_LOW_ENERGY_SCANNER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_LEGACY_LOW_ENERGY_SCANNER_H_
 
 #include <memory>
 #include <unordered_map>
@@ -95,3 +96,5 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
 
 }  // namespace hci
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_HCI_LEGACY_LOW_ENERGY_SCANNER_H_

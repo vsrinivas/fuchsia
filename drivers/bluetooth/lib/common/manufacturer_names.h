@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_MANUFACTURER_NAMES_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_MANUFACTURER_NAMES_H_
 
 #include <cstdint>
 #include <string>
@@ -17,3 +18,5 @@ std::string GetManufacturerName(uint16_t manufacturer_id);
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_MANUFACTURER_NAMES_H_
