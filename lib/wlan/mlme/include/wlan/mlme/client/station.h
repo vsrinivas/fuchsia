@@ -171,7 +171,7 @@ class Station {
     bool IsQosReady() const;
     bool IsAmsduRxReady() const;
 
-    CapabilityInfo BuildCapabilityInfo() const;
+    CapabilityInfo OverrideCapability(CapabilityInfo cap) const;
     zx_status_t OverrideHtCapability(HtCapabilities* htc) const;
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);

@@ -394,7 +394,10 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     auto assoc = frame.body();
 
-    assoc->cap = BuildCapabilityInfo();
+    auto ifc_info = device_->GetWlanInfo().ifc_info;
+    auto client_capability = ToAssocContext(ifc_info, join_chan_);
+
+    assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
 
     ElementWriter w(assoc->elements,
@@ -429,9 +432,6 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
             return ZX_ERR_IO;
         }
     }
-
-    auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client_capability = ToAssocContext(ifc_info, join_chan_);
 
     if (IsHTReady()) {
         auto ht_cap = client_capability.ht_cap;
@@ -1376,11 +1376,8 @@ bool Station::IsAmsduRxReady() const {
     return true;
 }
 
-CapabilityInfo Station::BuildCapabilityInfo() const {
-    auto& ifc_info = device_->GetWlanInfo().ifc_info;
-    CapabilityInfo cap = FromDdk(ifc_info.caps);
-
-    // Override
+CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
+    // parameter is of 2 bytes
     cap.set_ess(1);             // reserved in client role. 1 for better interop.
     cap.set_ibss(0);            // reserved in client role
     cap.set_cf_pollable(0);     // not supported
@@ -1388,7 +1385,6 @@ CapabilityInfo Station::BuildCapabilityInfo() const {
     cap.set_privacy(0);         // reserved in client role
     cap.set_short_preamble(0);  // Override for Broader interop
     cap.set_spectrum_mgmt(0);   // not supported
-
     return cap;
 }
 
