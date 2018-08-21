@@ -1309,123 +1309,101 @@ Status PageStorageImpl::SynchronousAddCommits(
 
   std::map<CommitId, int64_t> heads_to_add;
 
-  // If commits arrive out of order, some commits might be skipped. Continue
-  // trying adding commits as long as at least one commit is added on each
-  // iteration.
-  bool commits_were_out_of_order = false;
-  bool continue_trying = true;
-  while (continue_trying && !commits.empty()) {
-    continue_trying = false;
-    std::vector<std::unique_ptr<const Commit>> remaining_commits;
-
-    for (auto& commit : commits) {
-      // We need to check if we are adding an already present remote commit here
-      // because we might both download and locally commit the same commit at
-      // roughly the same time. As commit writing is asynchronous, the previous
-      // check in AddCommitsFromSync may have not matched any commit, while a
-      // commit got added in between.
-      Status s = ContainsCommit(handler, commit->GetId());
-      if (s == Status::OK) {
-        if (source == ChangeSource::CLOUD) {
-          s = SynchronousMarkCommitSyncedInBatch(handler, batch.get(),
-                                                 commit->GetId());
-          if (s != Status::OK) {
-            return s;
-          }
-        }
-        // The commit is already here. We can safely skip it.
-        continue;
-      }
-      if (s != Status::NOT_FOUND) {
-        return s;
-      }
-      // Now, we know we are adding a new commit.
-
-      // Commits should arrive in order. Check that the parents are either
-      // present in PageDb or in the list of already processed commits.
-      // If the commit arrive out of order, print an error, but skip it
-      // temporarly so that the Ledger can recover if all the needed commits
-      // are received in a single batch.
-      for (const CommitIdView& parent_id : commit->GetParentIds()) {
-        if (added_commits.count(&parent_id) == 0) {
-          s = ContainsCommit(handler, parent_id);
-          if (s != Status::OK) {
-            FXL_LOG(ERROR) << "Failed to find parent commit \""
-                           << ToHex(parent_id) << "\" of commit \""
-                           << convert::ToHex(commit->GetId())
-                           << "\". Temporarily skipping in case the commits "
-                              "are out of order.";
-            if (s == Status::NOT_FOUND) {
-              remaining_commits.push_back(std::move(commit));
-              commit.reset();
-              break;
-            }
-            return Status::INTERNAL_IO_ERROR;
-          }
-        }
-        // Remove the parent from the list of heads.
-        if (!heads_to_add.erase(parent_id.ToString())) {
-          // parent_id was not added in the batch: remove it from heads in Db.
-          s = batch->RemoveHead(handler, parent_id);
-          if (s != Status::OK) {
-            return s;
-          }
-        }
-      }
-
-      // The commit could not be added. Skip it.
-      if (!commit) {
-        continue;
-      }
-
-      continue_trying = true;
-
-      s = batch->AddCommitStorageBytes(handler, commit->GetId(),
-                                       commit->GetStorageBytes());
-      if (s != Status::OK) {
-        return s;
-      }
-
-      if (source != ChangeSource::CLOUD) {
-        s = batch->MarkCommitIdUnsynced(handler, commit->GetId(),
-                                        commit->GetGeneration());
+  int orphaned_commits = 0;
+  for (auto& commit : commits) {
+    // We need to check if we are adding an already present remote commit here
+    // because we might both download and locally commit the same commit at
+    // roughly the same time. As commit writing is asynchronous, the previous
+    // check in AddCommitsFromSync may have not matched any commit, while a
+    // commit got added in between.
+    Status s = ContainsCommit(handler, commit->GetId());
+    if (s == Status::OK) {
+      if (source == ChangeSource::CLOUD) {
+        s = SynchronousMarkCommitSyncedInBatch(handler, batch.get(),
+                                               commit->GetId());
         if (s != Status::OK) {
           return s;
         }
       }
+      // The commit is already here. We can safely skip it.
+      continue;
+    }
+    if (s != Status::NOT_FOUND) {
+      return s;
+    }
+    // Now, we know we are adding a new commit.
 
-      // Update heads_to_add.
-      heads_to_add[commit->GetId()] = commit->GetTimestamp();
-
-      added_commits.insert(&commit->GetId());
-      commits_to_send.push_back(std::move(commit));
+    // Commits should arrive in order. Check that the parents are either
+    // present in PageDb or in the list of already processed commits.
+    // If the commit arrive out of order, print an error, but skip it
+    // temporarly so that the Ledger can recover if all the needed commits
+    // are received in a single batch.
+    for (const CommitIdView& parent_id : commit->GetParentIds()) {
+      if (added_commits.find(&parent_id) == added_commits.end()) {
+        s = ContainsCommit(handler, parent_id);
+        if (s != Status::OK) {
+          FXL_LOG(ERROR) << "Failed to find parent commit \""
+                         << ToHex(parent_id) << "\" of commit \""
+                         << convert::ToHex(commit->GetId()) << "\".";
+          if (s == Status::NOT_FOUND) {
+            orphaned_commits++;
+            commit.reset();
+            break;
+          }
+          return Status::INTERNAL_IO_ERROR;
+        }
+      }
+      // Remove the parent from the list of heads.
+      if (!heads_to_add.erase(parent_id.ToString())) {
+        // parent_id was not added in the batch: remove it from heads in Db.
+        s = batch->RemoveHead(handler, parent_id);
+        if (s != Status::OK) {
+          return s;
+        }
+      }
     }
 
-    if (!remaining_commits.empty()) {
-      // If |remaining_commits| is not empty, some commits were out of order.
-      commits_were_out_of_order = true;
+    // The commit could not be added. Skip it.
+    if (!commit) {
+      continue;
     }
-    // Update heads in Db.
-    for (const auto& head_timestamp : heads_to_add) {
-      Status s =
-          batch->AddHead(handler, head_timestamp.first, head_timestamp.second);
+
+    s = batch->AddCommitStorageBytes(handler, commit->GetId(),
+                                     commit->GetStorageBytes());
+    if (s != Status::OK) {
+      return s;
+    }
+
+    if (source != ChangeSource::CLOUD) {
+      s = batch->MarkCommitIdUnsynced(handler, commit->GetId(),
+                                      commit->GetGeneration());
       if (s != Status::OK) {
         return s;
       }
     }
-    std::swap(commits, remaining_commits);
+
+    // Update heads_to_add.
+    heads_to_add[commit->GetId()] = commit->GetTimestamp();
+
+    added_commits.insert(&commit->GetId());
+    commits_to_send.push_back(std::move(commit));
   }
 
-  if (commits_were_out_of_order) {
-    ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
-  }
-  if (!commits.empty()) {
-    FXL_DCHECK(commits_were_out_of_order);
+  if (orphaned_commits > 0) {
     ledger::ReportEvent(
         ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
-    FXL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
+    FXL_LOG(ERROR) << "Failed adding commits. Found " << orphaned_commits
                    << " orphaned commits.";
     return Status::ILLEGAL_STATE;
+  }
+
+  // Update heads in Db.
+  for (const auto& head_timestamp : heads_to_add) {
+    Status s =
+        batch->AddHead(handler, head_timestamp.first, head_timestamp.second);
+    if (s != Status::OK) {
+      return s;
+    }
   }
 
   // If adding local commits, mark all new pieces as local.

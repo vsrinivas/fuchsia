@@ -656,7 +656,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   EXPECT_EQ(Status::ILLEGAL_STATE, status);
 }
 
-TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
+TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
   std::unique_ptr<const btree::TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
   ObjectIdentifier root_identifier = node->GetIdentifier();
@@ -683,7 +683,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(Status::ILLEGAL_STATE, status);
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
