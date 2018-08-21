@@ -6,6 +6,29 @@ library fuchsia.camera;
 
 const uint32 MAX_FORMATS_PER_RESPONSE = 16;
 
+// A coarse set of capabilities.  This struct is used in the camera description
+// to help filter out cameras which will not have the needed capabilities.
+// This set of declarations would be the bitfield: CameraOutputCapabilities.
+const uint32 CAMERA_OUTPUT_UNKNOWN = 0;
+const uint32 CAMERA_OUTPUT_STILL_IMAGE = 0x01;
+const uint32 CAMERA_OUTPUT_BURST = 0x02;
+const uint32 CAMERA_OUTPUT_STREAM = 0x04;
+const uint32 CAMERA_OUTPUT_HDR = 0x08;
+const uint32 CAMERA_OUTPUT_DEPTH = 0x10;
+const uint32 CAMERA_OUTPUT_STEREO = 0x20;
+
+// Identifying information about the device.
+struct DeviceInfo {
+  uint64 camera_id;  // Currently populated by the camera manager
+  uint16 vendor_id;
+  string vendor_name;
+  uint16 product_id;
+  string product_name;
+  string serial_number;
+  uint32 output_capabilities;  // CameraOutputCapabilities
+  // TODO(CAM-12): Add CameraPose, when we can actually use it.
+};
+
 // Status to be set when a frame is signalled available.
 enum FrameStatus {
   OK = 0;
@@ -60,6 +83,8 @@ interface Control {
   // If setting the format is successful, the stream request will be honored.
   2: CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
                   FrameRate rate, request<Stream> stream);
+
+  3: GetDeviceInfo() -> (DeviceInfo device_info);
 };
 
 interface Stream {

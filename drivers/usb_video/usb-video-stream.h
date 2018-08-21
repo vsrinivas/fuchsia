@@ -41,7 +41,8 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
                             usb_video_vc_header_desc* control_header,
                             usb_video_vs_input_header_desc* input_header,
                             UvcFormatList format_list,
-                            fbl::Vector<UsbVideoStreamingSetting>* settings);
+                            fbl::Vector<UsbVideoStreamingSetting>* settings,
+                            UsbDeviceInfo device_info);
 
   // DDK device implementation
   void DdkUnbind();
@@ -59,7 +60,8 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
 
   UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                  UvcFormatList format_list,
-                 fbl::Vector<UsbVideoStreamingSetting>* settings);
+                 fbl::Vector<UsbVideoStreamingSetting>* settings,
+                 UsbDeviceInfo device_info);
 
   zx_status_t Bind(const char* devname, usb_interface_descriptor_t* intf,
                    usb_video_vc_header_desc* control_header,
@@ -82,6 +84,9 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   // Interface with the FIDL Camera Driver
   zx_status_t GetFormats(
       fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats);
+
+  // Get the vendor and product information for this device.
+  const UsbDeviceInfo& GetDeviceInfo() { return device_info_; }
 
   zx_status_t CreateStream(
       fuchsia::sysmem::BufferCollectionInfo buffer_collection,
@@ -206,6 +211,9 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
 
   fzl::VmoPool buffers_;
+
+  // The vendor and product information for this device.
+  UsbDeviceInfo device_info_;
 };
 
 }  // namespace usb

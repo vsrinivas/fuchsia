@@ -32,6 +32,9 @@ class ControlImpl : public fuchsia::camera::Control {
   // Get the available format types for this device
   void GetFormats(uint32_t index, GetFormatsCallback callback) override;
 
+  // Get the vendor and product information for this device
+  void GetDeviceInfo(GetDeviceInfoCallback callback) override;
+
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
   void CreateStream(

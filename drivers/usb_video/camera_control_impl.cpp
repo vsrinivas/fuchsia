@@ -53,6 +53,23 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   }
 }
 
+void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
+  // This is just a conversion from the format internal to the device driver
+  // to the FIDL DeviceInfo struct.
+  const auto& usb_device_info = usb_video_stream_->GetDeviceInfo();
+  fuchsia::camera::DeviceInfo camera_device_info;
+  camera_device_info.vendor_name = usb_device_info.manufacturer;
+  camera_device_info.vendor_id = usb_device_info.vendor_id;
+  camera_device_info.product_name = usb_device_info.product_name;
+  camera_device_info.product_id = usb_device_info.product_id;
+  camera_device_info.serial_number = usb_device_info.serial_number;
+
+  // TODO(CAM-11): add more capabilities based on usb description
+  camera_device_info.output_capabilities =
+      fuchsia::camera::CAMERA_OUTPUT_STREAM;
+  callback(std::move(camera_device_info));
+}
+
 void ControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::FrameRate frame_rate,

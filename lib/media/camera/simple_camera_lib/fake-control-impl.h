@@ -55,6 +55,9 @@ class FakeControlImpl : public fuchsia::camera::Control {
       fuchsia::camera::FrameRate frame_rate,
       fidl::InterfaceRequest<fuchsia::camera::Stream> stream) override;
 
+  // Get the vendor and product information about the device.
+  void GetDeviceInfo(GetDeviceInfoCallback callback) override;
+
   class FakeStreamImpl : public fuchsia::camera::Stream {
    public:
     FakeStreamImpl(FakeControlImpl& owner,

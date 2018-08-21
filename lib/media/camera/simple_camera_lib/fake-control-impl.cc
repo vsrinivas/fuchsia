@@ -9,6 +9,9 @@
 
 namespace simple_camera {
 
+const char* kFakeVendorName = "Fake Vendor Inc.";
+const char* kFakeProductName = "Fake Product";
+
 void ColorSource::FillARGB(void* start, size_t buffer_size) {
   if (!start) {
     FXL_LOG(ERROR) << "Must pass a valid buffer pointer";
@@ -125,6 +128,15 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
 
   formats.push_back(format);
   callback(fbl::move(formats), 1, ZX_OK);
+}
+
+void FakeControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
+  fuchsia::camera::DeviceInfo camera_device_info;
+  camera_device_info.vendor_name = kFakeVendorName;
+  camera_device_info.product_name = kFakeProductName;
+  camera_device_info.output_capabilities =
+      fuchsia::camera::CAMERA_OUTPUT_STREAM;
+  callback(std::move(camera_device_info));
 }
 
 void FakeControlImpl::CreateStream(

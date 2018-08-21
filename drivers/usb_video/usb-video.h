@@ -30,6 +30,16 @@ struct UsbVideoStreamingSetting {
   int ep_type;
 };
 
+// Information about the vendor and product that can be gleaned from the USB
+// descriptor.
+struct UsbDeviceInfo {
+  uint16_t vendor_id;
+  uint16_t product_id;
+  std::string manufacturer;
+  std::string product_name;
+  std::string serial_number;
+};
+
 inline uint32_t setting_bandwidth(const UsbVideoStreamingSetting& setting) {
   return setting.max_packet_size * setting.transactions_per_microframe;
 }

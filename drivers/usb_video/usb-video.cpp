@@ -18,6 +18,56 @@
 #include "garnet/drivers/usb_video/uvc_format.h"
 
 namespace {
+// The biggest size we are allowing USB descriptor strings to be.
+// Technically, the bLength field for strings is one byte, so the
+// max size for any string should be 255.
+static constexpr size_t kUsbDescriptorStringSize = 512;
+
+// Extract strings from the device description.
+// Strings in the usb device description are represented as indices
+// into the 'strings' section at the end.  This function unpacks a specific
+// string, given its index.
+std::string FetchString(const usb_protocol_t& usb_proto,
+                        uint8_t description_index) {
+  uint8_t str_buf[kUsbDescriptorStringSize];
+  size_t buflen = sizeof(str_buf);
+  uint16_t language_id;
+  zx_status_t res = usb_get_string_descriptor(&usb_proto, description_index,
+                                              &language_id, str_buf, &buflen);
+  if (res != ZX_OK) {
+    return std::string();
+  }
+
+  buflen = std::min(buflen, sizeof(str_buf));
+  return std::string(reinterpret_cast<char*>(str_buf), buflen);
+}
+
+// Extract vendor and product information from the USB device description.
+video::usb::UsbDeviceInfo GetDeviceInfo(const usb_protocol_t& usb_proto) {
+  usb_device_descriptor_t usb_dev_desc;
+  video::usb::UsbDeviceInfo device_info;
+  // Fetch our top level device descriptor, so we know stuff like the values
+  // of our VID/PID.
+  usb_get_device_descriptor(&usb_proto, &usb_dev_desc);
+  device_info.vendor_id = usb_dev_desc.idVendor;
+  device_info.product_id = usb_dev_desc.idProduct;
+  // Attempt to fetch the string descriptors for our manufacturer name,
+  // product name, and serial number.
+  if (usb_dev_desc.iManufacturer) {
+    device_info.manufacturer =
+        FetchString(usb_proto, usb_dev_desc.iManufacturer);
+  }
+
+  if (usb_dev_desc.iProduct) {
+    device_info.product_name = FetchString(usb_proto, usb_dev_desc.iProduct);
+  }
+
+  if (usb_dev_desc.iSerialNumber) {
+    device_info.serial_number =
+        FetchString(usb_proto, usb_dev_desc.iSerialNumber);
+  }
+  return device_info;
+}
 
 zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
                                         void** cookie) {
@@ -26,6 +76,10 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
   if (status != ZX_OK) {
     return status;
   }
+
+  // Grab the device information, so we can use it when creating the
+  // UsbVideoStream.
+  auto device_info = GetDeviceInfo(usb);
 
   usb_desc_iter_t iter;
   status = usb_desc_iter_init(&usb, &iter);
@@ -76,7 +130,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
               if (formats.Size() > 0) {
                 status = video::usb::UsbVideoStream::Create(
                     device, &usb, video_source_index++, intf, control_header,
-                    input_header, std::move(formats), &streaming_settings);
+                    input_header, std::move(formats), &streaming_settings,
+                    std::move(device_info));
                 if (status != ZX_OK) {
                   zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
                   goto error_return;
@@ -232,7 +287,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
   if (formats.Size() > 0) {
     status = video::usb::UsbVideoStream::Create(
         device, &usb, video_source_index++, intf, control_header, input_header,
-        std::move(formats), &streaming_settings);
+        std::move(formats), &streaming_settings, std::move(device_info));
     if (status != ZX_OK) {
       zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
     }

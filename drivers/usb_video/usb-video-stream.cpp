@@ -35,11 +35,14 @@ fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
 
 UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                                UvcFormatList format_list,
-                               fbl::Vector<UsbVideoStreamingSetting>* settings)
+                               fbl::Vector<UsbVideoStreamingSetting>* settings,
+                               UsbDeviceInfo device_info)
     : UsbVideoStreamBase(parent),
       usb_(*usb),
-      format_list_(fbl::move(format_list)),
-      streaming_settings_(fbl::move(*settings)) {
+      format_list_(std::move(format_list)),
+      // TODO(CAM-13): Cleanup passing of settings
+      streaming_settings_(std::move(*settings)),
+      device_info_(std::move(device_info)) {
   if (fidl_dispatch_loop_ == nullptr) {
     fidl_dispatch_loop_ =
         fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
@@ -62,14 +65,15 @@ zx_status_t UsbVideoStream::Create(
     zx_device_t* device, usb_protocol_t* usb, int index,
     usb_interface_descriptor_t* intf, usb_video_vc_header_desc* control_header,
     usb_video_vs_input_header_desc* input_header, UvcFormatList format_list,
-    fbl::Vector<UsbVideoStreamingSetting>* settings) {
+    fbl::Vector<UsbVideoStreamingSetting>* settings,
+    UsbDeviceInfo device_info) {
   if (!usb || !intf || !control_header || !input_header || !settings ||
       settings->size() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto dev = fbl::unique_ptr<UsbVideoStream>(
-      new UsbVideoStream(device, usb, std::move(format_list), settings));
+  auto dev = fbl::unique_ptr<UsbVideoStream>(new UsbVideoStream(
+      device, usb, std::move(format_list), settings, std::move(device_info)));
 
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "usb-video-source-%d", index);
