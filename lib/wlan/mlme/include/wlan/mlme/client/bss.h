@@ -36,7 +36,7 @@ class Bss : public fbl::RefCounted<Bss> {
     std::string ToString() const;
 
     // TODO(porce): Move these out of Bss class.
-    std::string SupportedRatesToString() const;
+    std::string RatesToString(const std::vector<uint8_t>& rates) const;
 
     ::fuchsia::wlan::mlme::BSSDescription ToFidl() const;
 
@@ -72,7 +72,8 @@ class Bss : public fbl::RefCounted<Bss> {
     ::fuchsia::wlan::mlme::BSSDescription bss_desc_;
 
     // TODO(porce): Unify into FIDL data structure
-    std::vector<uint8_t> supported_rates_{0};
+    std::vector<uint8_t> supported_rates_{};
+    std::vector<uint8_t> ext_supp_rates_{};
 
     // Conditionally present. See IEEE Std 802.11-2016, 9.3.3.3 Table 9-27
     bool has_dsss_param_set_chan_ = false;

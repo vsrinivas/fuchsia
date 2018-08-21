@@ -183,7 +183,23 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 supported_rates_.push_back(ie->rates[idx]);
             }
             ZX_DEBUG_ASSERT(supported_rates_.size() <= SupportedRatesElement::kMaxLen);
-            debugbcn("%s Supported rates: %s\n", dbgmsghdr, SupportedRatesToString().c_str());
+            debugbcn("%s Supported rates: %s\n", dbgmsghdr,
+                     RatesToString(supported_rates_).c_str());
+            break;
+        }
+        case element_id::kExtSuppRates: {
+            auto ie = reader.read<ExtendedSupportedRatesElement>();
+            if (ie == nullptr) {
+                debugbcn("%s Failed to parse\n", dbgmsghdr);
+                return ZX_ERR_INTERNAL;
+            }
+
+            if (!ext_supp_rates_.empty()) { ext_supp_rates_.clear(); }
+            for (uint8_t idx = 0; idx < ie->hdr.len; idx++) {
+                ext_supp_rates_.push_back(ie->rates[idx]);
+            }
+            ZX_DEBUG_ASSERT(ext_supp_rates_.size() <= ExtendedSupportedRatesElement::kMaxLen);
+            debugbcn("%s Ext supp rates: %s\n", dbgmsghdr, RatesToString(ext_supp_rates_).c_str());
             break;
         }
         case element_id::kDsssParamSet: {
@@ -542,11 +558,11 @@ wlan_mlme::BSSDescription Bss::ToFidl() const {
     return fidl;
 }
 
-std::string Bss::SupportedRatesToString() const {
+std::string Bss::RatesToString(const std::vector<uint8_t>& rates) const {
     constexpr uint8_t kBasicRateMask = 0x80;
     char buf[128];
     char* ptr = buf;
-    for (auto const& rate : supported_rates_) {
+    for (auto const& rate : rates) {
         // Rates are printed as Mbps, a preceding * indicates a basic rate
         ptr += std::snprintf(ptr, 8, "%s%.1f ", (rate & kBasicRateMask) ? "" : "*",
                              (rate & (kBasicRateMask - 1)) / 2.0);
