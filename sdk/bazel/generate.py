@@ -295,13 +295,12 @@ class BazelBuilder(Builder):
             return
         if self.is_overlay:
             return
-        files = atom.files
-        if len(files) != 1:
-            raise Exception('Error: executable with multiple files: %s.'
-                            % atom.id)
-        file = files[0]
-        destination = self.make_dir(self.dest('tools', file.destination))
-        shutil.copy2(file.source, destination)
+        for file in atom.files:
+            extension = os.path.splitext(file.destination)[1][1:]
+            if extension == 'json':
+                continue
+            destination = self.make_dir(self.dest('tools', file.destination))
+            shutil.copy2(file.source, destination)
 
 
     def install_fidl_atom(self, atom):

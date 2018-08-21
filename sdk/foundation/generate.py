@@ -50,7 +50,7 @@ class CppBuilder(Builder):
         for file in atom.files:
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
-            if extension == 'so' or extension == "a" or extension == "o":
+            if extension == 'so' or extension == 'a' or extension == 'o':
                 dest = os.path.join(self.output, 'arch',
                                     self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
@@ -102,14 +102,13 @@ class CppBuilder(Builder):
             return
         if self.is_overlay:
             return
-        files = atom.files
-        if len(files) != 1:
-            raise Exception('Error: executable with multiple files: %s.'
-                            % atom.id)
-        file = files[0]
-        destination = os.path.join(self.output, 'tools', file.destination)
-        self.make_dir(destination)
-        shutil.copy2(file.source, destination)
+        for file in atom.files:
+            extension = os.path.splitext(file.destination)[1][1:]
+            if extension == 'json':
+                continue
+            destination = os.path.join(self.output, 'tools', file.destination)
+            self.make_dir(destination)
+            shutil.copy2(file.source, destination)
 
 
     def install_fidl_atom(self, atom):
