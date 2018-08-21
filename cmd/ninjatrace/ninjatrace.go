@@ -25,7 +25,7 @@ import (
 
 var (
 	filename   = flag.String("filename", ".ninja_log", "filename of .ninja_log")
-	traceJSON  = flag.String("trace_json", "trace.json", "output filename of trace.json")
+	traceJSON  = flag.String("trace-json", "trace.json", "output filename of trace.json")
 	cpuprofile = flag.String("cpuprofile", "", "file to write cpu profile")
 )
 
