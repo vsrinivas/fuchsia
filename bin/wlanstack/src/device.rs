@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async::{TimeoutExt, temp::TempStreamExt};
+use async::Timer;
 use device_watch::{self, NewIfaceDevice};
-use failure::{Error, Fail};
+use failure::{Error, ResultExt};
 use fidl_mlme::{self, DeviceQueryConfirm, MlmeEventStream};
 use future_util::ConcurrentTasks;
 use futures::prelude::*;
-use futures::{stream, channel::mpsc};
+use futures::channel::mpsc;
 use Never;
 use station;
 use stats_scheduler::{self, StatsScheduler};
@@ -42,8 +42,6 @@ pub struct IfaceDevice {
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
 pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
-const SERVE_LIMIT: usize = 1000;
-
 pub async fn serve_phys(phys: Arc<PhyMap>) -> Result<Never, Error> {
     let mut new_phys = device_watch::watch_phy_devices()?;
     let mut active_phys = ConcurrentTasks::new();
@@ -54,19 +52,16 @@ pub async fn serve_phys(phys: Arc<PhyMap>) -> Result<Never, Error> {
                 None => bail!("new phy stream unexpectedly finished"),
                 Some(Err(e)) => bail!("new phy stream returned an error: {}", e),
                 Some(Ok(new_phy)) => {
-                    let fut = serve_phy(Arc::clone(&phys), new_phy);
+                    let fut = serve_phy(&phys, new_phy);
                     active_phys.add(fut);
                 }
             },
-            active_phys => active_phys?.into_any(),
+            active_phys => active_phys.into_any(),
         }
     }
 }
 
-fn serve_phy(phys: Arc<PhyMap>,
-             new_phy: device_watch::NewPhyDevice)
-    -> impl Future<Output = Result<(), Error>>
-{
+async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
     info!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
     let id = new_phy.id;
     let event_stream = new_phy.proxy.take_event_stream();
@@ -74,101 +69,105 @@ fn serve_phy(phys: Arc<PhyMap>,
         proxy: new_phy.proxy,
         device: new_phy.device,
     });
-    event_stream
-        .map_ok(|_| ())
-        .try_collect::<()>()
-        .map(move |r| {
-            info!("phy removed: {}", id);
-            phys.remove(&id);
-            r.map(|_| ()).map_err(|e| e.into())
-        })
+    let r = await!(event_stream.map_ok(|_| ()).try_collect::<()>());
+    phys.remove(&id);
+    if let Err(e) = r {
+        error!("error reading from the FIDL channel of phy #{}: {}", id, e);
+    }
+    info!("phy removed: #{}", id);
 }
 
-pub fn serve_ifaces(ifaces: Arc<IfaceMap>)
-    -> Result<impl Future<Output = Result<(), Error>>, Error>
-{
-    Ok(device_watch::watch_iface_devices()?
-        .err_into()
-        .chain(stream::once(
-            future::ready(Err(format_err!("iface watcher stream unexpectedly finished")))))
-        .try_for_each_concurrent(SERVE_LIMIT, move |new_iface| {
-            let ifaces = ifaces.clone();
-            query_iface(new_iface)
-                .and_then(move |(new_iface, event_stream, query_resp)|
-                    serve_iface(ifaces, new_iface, event_stream, query_resp))
-                .unwrap_or_else(|e| error!("{}", e))
-                .map(Ok)
-        }))
+pub async fn serve_ifaces(ifaces: Arc<IfaceMap>) -> Result<Never, Error> {
+    let mut new_ifaces = device_watch::watch_iface_devices()?;
+    let mut active_ifaces = ConcurrentTasks::new();
+    loop {
+        let mut new_iface = new_ifaces.next();
+        select! {
+            new_iface => match new_iface {
+                None => bail!("new iface stream unexpectedly finished"),
+                Some(Err(e)) => bail!("new iface stream returned an error: {}", e),
+                Some(Ok(new_iface)) => {
+                    let fut = query_and_serve_iface(new_iface, &ifaces);
+                    active_ifaces.add(fut);
+                }
+            },
+            active_ifaces => active_ifaces.into_any(),
+        }
+    }
 }
 
-fn query_iface(new_iface: NewIfaceDevice)
-    -> impl Future<Output = Result<(NewIfaceDevice, MlmeEventStream, DeviceQueryConfirm), Error>>
+async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap) {
+    let NewIfaceDevice { id, device, proxy } = new_iface;
+    let mut event_stream = proxy.take_event_stream();
+    let query_resp = match await!(query_iface(proxy.clone(), &mut event_stream)) {
+        Ok(x) => x,
+        Err(e) => {
+            error!("Failed to query new iface '{}': {}", device.path().display(), e);
+            return;
+        }
+    };
+    let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
+    let (sme, sme_fut) = match create_sme(proxy, event_stream, query_resp, stats_reqs) {
+        Ok(x) => x,
+        Err(e) => {
+            error!("Failed to create SME for new iface '{}': {}",
+                   device.path().display(), e);
+            return;
+        }
+    };
+
+    info!("new iface #{}: {}", id, device.path().to_string_lossy());
+    ifaces.insert(id, IfaceDevice {
+        sme_server: sme,
+        stats_sched,
+        device,
+    });
+
+    let r = await!(sme_fut);
+    if let Err(e) = r {
+        error!("Error serving station for iface #{}: {}", id, e);
+    }
+    ifaces.remove(&id);
+    info!("iface removed: {}", id);
+}
+
+async fn query_iface(proxy: fidl_mlme::MlmeProxy, event_stream: &mut MlmeEventStream)
+    -> Result<DeviceQueryConfirm, Error>
 {
     let query_req = &mut fidl_mlme::DeviceQueryRequest{
         foo: 0,
     };
-    let event_stream = new_iface.proxy.take_event_stream();
-    future::ready(new_iface.proxy.device_query_req(query_req))
-        .map_err(|e| e.context("Failed to add new iface"))
-        .err_into::<Error>()
-        .and_then(move |()|
-            event_stream
-                .try_filter_map(|event| future::ready(Ok(match event {
-                    fidl_mlme::MlmeEvent::DeviceQueryConf { resp } => Some(resp),
-                    other => {
-                        warn!("Unexpected message from MLME while waiting for \
-                               device query response: {:?}", other);
-                        None
-                    }
-                })))
-                .try_into_future()
-                .err_into::<Error>()
-        )
-        .on_timeout(5.seconds().after_now(), || Err(format_err!("timed out")))
-        .then(|r| future::ready(match r {
-            Ok((Some(query_resp), stream)) => {
-                let event_stream = stream.into_inner();
-                Ok((new_iface, event_stream, query_resp))
-            },
-            Ok((None, _)) =>
-                Err(format_err!("New iface '{}' closed the channel before returning query response",
-                        new_iface.device.path().display())),
-            Err(e) => Err(e.context(format!("Failed to query new iface '{}'",
-                                    new_iface.device.path().display())).into()),
-        }))
+    proxy.device_query_req(query_req)
+        .context("failed to send request to device")?;
+    let query_conf = wait_for_query_conf(event_stream);
+    pin_mut!(query_conf);
+    let mut timeout = Timer::new(5.seconds().after_now());
+    select! {
+        query_conf => query_conf,
+        timeout => bail!("query request timed out"),
+    }
 }
 
-fn serve_iface(ifaces: Arc<IfaceMap>,
-               new_iface: NewIfaceDevice,
-               event_stream: MlmeEventStream,
-               query_resp: DeviceQueryConfirm)
-    -> impl Future<Output = Result<(), Error>>
+async fn wait_for_query_conf(event_stream: &mut MlmeEventStream)
+    -> Result<DeviceQueryConfirm, Error>
 {
-    let NewIfaceDevice{ id, proxy, device } = new_iface;
-    let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
-    let ifaces_two = ifaces.clone();
-    future::ready(serve_sme(proxy, event_stream, query_resp, stats_requests))
-        .and_then(move |(sme_server, fut)| {
-            info!("new iface #{}: {}", id, device.path().to_string_lossy());
-            ifaces.insert(id, IfaceDevice {
-                sme_server,
-                stats_sched,
-                device,
-            });
-            fut
-        })
-        .map_err(move |e| e.context(format!("Error serving station for iface #{}", id)).into())
-        .map(move |r| {
-            info!("iface removed: {}", id);
-            ifaces_two.remove(&id);
-            r
-        })
+    while let Some(event) = await!(event_stream.next()) {
+        match event {
+            Ok(fidl_mlme::MlmeEvent::DeviceQueryConf { resp }) => return Ok(resp),
+            Ok(other) => {
+                warn!("Unexpected message from MLME while waiting for \
+                               device query response: {:?}", other);
+            },
+            Err(e) => bail!("error reading from FIDL channel: {}", e),
+        }
+    }
+    return Err(format_err!("device closed the channel before returning query response"));
 }
 
-fn serve_sme<S>(proxy: fidl_mlme::MlmeProxy,
-                event_stream: fidl_mlme::MlmeEventStream,
-                query_resp: DeviceQueryConfirm,
-                stats_requests: S)
+fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
+                 event_stream: fidl_mlme::MlmeEventStream,
+                 query_resp: DeviceQueryConfirm,
+                 stats_requests: S)
     -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
     where S: Stream<Item = stats_scheduler::StatsRequest>
 {

@@ -100,15 +100,15 @@ impl<T> ConcurrentTasks<T> where T: Future {
     }
 }
 
-impl<T, E> Future for ConcurrentTasks<T>
-    where T: Future<Output = Result<(), E>>
-{
-    type Output = Result<Never, E>;
+impl<T> Future for ConcurrentTasks<T> where T: Future<Output = ()> {
+    type Output = Never;
 
     fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
-        match self.tasks().poll_next(cx) {
-            Poll::Ready(Some(Err(e))) => Poll::Ready(Err(e)),
-            _ => Poll::Pending,
+        loop {
+            match self.tasks().poll_next(cx) {
+                Poll::Ready(Some(())) => {},
+                Poll::Pending | Poll::Ready(None) => return Poll::Pending,
+            }
         }
     }
 }
@@ -181,22 +181,17 @@ mod tests {
         let mut tasks = ConcurrentTasks::new();
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
 
-        let count = Arc::new(AtomicUsize::new(0));
-        tasks.add(simple_future(Some(Arc::clone(&count))));
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
-        assert_eq!(1, count.load(Ordering::SeqCst));
+        let count_one = Arc::new(AtomicUsize::new(0));
+        tasks.add(simple_future(Arc::clone(&count_one)));
+        let count_two = Arc::new(AtomicUsize::new(0));
+        tasks.add(simple_future(Arc::clone(&count_two)));
 
-        tasks.add(simple_future(None));
-        assert_eq!(Poll::Ready(Err(-20)), exec.run_until_stalled(&mut tasks));
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
+        assert_eq!(1, count_one.load(Ordering::SeqCst));
+        assert_eq!(1, count_two.load(Ordering::SeqCst));
     }
 
-    async fn simple_future(res: Option<Arc<AtomicUsize>>) -> Result<(), i32> {
-        match res {
-            None => Err(-20),
-            Some(x) => {
-                x.fetch_add(1, Ordering::SeqCst);
-                Ok(())
-            },
-        }
+    async fn simple_future(res: Arc<AtomicUsize>) {
+        res.fetch_add(1, Ordering::SeqCst);
     }
 }

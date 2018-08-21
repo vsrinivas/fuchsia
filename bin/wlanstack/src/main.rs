@@ -78,8 +78,8 @@ fn main() -> Result<(), Error> {
 
     let phy_server = device::serve_phys(phys.clone())
         .map_ok(|x| x.into_any());
-    let iface_server = device::serve_ifaces(ifaces.clone())?
-        .and_then(|()| future::ready(Err(format_err!("Iface server exited unexpectedly"))));
+    let iface_server = device::serve_ifaces(ifaces.clone())
+        .map_ok(|x| x.into_any());
     let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?
         .map_ok(Never::into_any);
 
