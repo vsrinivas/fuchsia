@@ -261,7 +261,6 @@ func jsonFloat(num float64) float64 {
 }
 
 func main() {
-
 	// Argument handling.
 	verbosePtr := flag.Bool("v", false, "verbose mode")
 	flag.Parse()
@@ -369,5 +368,6 @@ func main() {
 		log.Fatalf("failed to write results to %s: %v", outputFilename, err)
 	}
 
-	fmt.Printf("\n\nWrote benchmark values to file '%s'.\n", outputFilename)
+	//TODO(US-528): Uncomment when this Printf no longer causes a crash.
+	//fmt.Printf("\n\nWrote benchmark values to file '%s'.\n", outputFilename)
 }

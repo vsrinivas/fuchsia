@@ -27,7 +27,9 @@ set_renderer_params --render_continuously $RENDERER_PARAMS
 echo "== $BENCHMARK_LABEL: Tracing..."
 echo $TRACE_FILE
 $CMD &
-trace record --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
+# Only trace 'gfx' events which reduces trace size and prevents trace buffer overflow.
+# TODO(ZX-1107): Overflow might be fixed with continuous tracing.
+trace record --categories=gfx --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
 
 echo "== $BENCHMARK_LABEL: Processing trace..."
 /pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace $BENCHMARK_LABEL $TRACE_FILE $OUT_FILE

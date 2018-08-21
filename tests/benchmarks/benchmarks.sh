@@ -30,7 +30,19 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks \
     -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
-# TODO(SCN-910): Re-add Scenic benchmarks.
+if `run vulkan_is_supported`; then
+  # Scenic performance tests.
+  SCENIC_BENCHMARK="/pkgfs/packages/scenic_benchmarks/0/data/scenic_benchmark.sh"
+
+  # hello_scenic
+  runbench_exec "${OUT_DIR}/hello_scenic_benchmark.json" \
+      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
+      "${OUT_DIR}/hello_scenic_benchmark.json" \
+      fuchsia.scenic.hello_scenic \
+      "run hello_scenic"
+else
+  echo "Vulkan not supported; Scenic tests skipped."
+fi
 
 # Test storage performance.
 # TODO(ZX-2466): Enable these tests for ARM64 hardware bots once they exist
