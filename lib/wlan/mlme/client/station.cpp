@@ -1674,8 +1674,12 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
 
     for (uint8_t rate : band_info->basic_rates) {
         if (rate == 0) { break; }  // basic_rates has fixed-length and is "null-terminated".
-        // Not using ext_supported_rates because this assoc_ctx is temporary
-        assoc_ctx.supported_rates.push_back(rate);
+        // SupportedRates Element can hold only 8 rates.
+        if (assoc_ctx.supported_rates.size() < SupportedRatesElement::kMaxLen) {
+            assoc_ctx.supported_rates.push_back(rate);
+        } else {
+            assoc_ctx.ext_supported_rates.push_back(rate);
+        }
     }
 
     if (ifc_info.supported_phys & WLAN_PHY_HT) {
@@ -1699,14 +1703,13 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
 
 void SetAssocCtxSuppRates(const AssocContext& ap, const AssocContext& client,
                           std::vector<uint8_t>* supp_rates, std::vector<uint8_t>* ext_rates) {
-    auto cbegin1 = ap.supported_rates.cbegin();
-    auto cend1 = ap.supported_rates.cend();
-    auto cbegin2 = ap.ext_supported_rates.cbegin();
-    auto cend2 = ap.ext_supported_rates.cend();
-    std::vector<uint8_t> ap_rates;
-    std::set_union(cbegin1, cend1, cbegin2, cend2, std::back_inserter(ap_rates));
+    auto ap_rates(ap.supported_rates);
+    ap_rates.insert(ap_rates.end(), ap.ext_supported_rates.cbegin(), ap.ext_supported_rates.cend());
+    auto client_rates(client.supported_rates);
+    client_rates.insert(client_rates.end(), client.ext_supported_rates.cbegin(),
+                        client.ext_supported_rates.cend());
 
-    *supp_rates = IntersectRatesAp(ap_rates, client.supported_rates);
+    *supp_rates = IntersectRatesAp(ap_rates, client_rates);
 
     // SupportedRates Element can hold at most 8 rates. The rest go to ExtSupportedRates
     if (supp_rates->size() > SupportedRatesElement::kMaxLen) {

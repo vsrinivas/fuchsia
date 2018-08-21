@@ -487,12 +487,10 @@ static constexpr inline bool CompareLegacyRates(uint8_t lhs, uint8_t rhs) {
 
 std::vector<uint8_t> IntersectRatesAp(const std::vector<uint8_t>& ap_rates,
                                       const std::vector<uint8_t>& client_rates) {
-    std::vector<uint8_t> first(ap_rates);
-    std::vector<uint8_t> second(client_rates);
-
+    auto first(ap_rates);
+    auto second(client_rates);
     std::sort(first.begin(), first.end(), CompareLegacyRates);
     std::sort(second.begin(), second.end(), CompareLegacyRates);
-
     std::vector<uint8_t> result;
     // C++11 Standard 25.4.5.3 - set_intersection ALWAYS takes elements from the first vector.
     std::set_intersection(first.cbegin(), first.cend(), second.cbegin(), second.cend(),
