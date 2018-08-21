@@ -23,6 +23,7 @@ ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
 ENABLE_BUILD_LISTFILES := $(call TOBOOL,$(ENABLE_BUILD_LISTFILES))
 ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
+ENABLE_INSTALL_SAMPLES ?= false
 ENABLE_DDK_DEPRECATIONS ?= false
 ENABLE_NEW_BOOTDATA := true
 ENABLE_LOCK_DEP ?= false
@@ -413,7 +414,11 @@ USER_MANIFEST_LINES :=
 # The contents of this are derived from BOOTFS_DEBUG_MODULES.
 USER_MANIFEST_DEBUG_INPUTS :=
 # Filter on manifest lines by {group} prefix.
-USER_MANIFEST_GROUPS := !sample,ddk-sample
+ifeq ($(call TOBOOL,$(ENABLE_INSTALL_SAMPLES)),true)
+USER_MANIFEST_GROUPS :=
+else
+USER_MANIFEST_GROUPS := --groups=!sample,ddk-sample
+endif
 
 # Directory in the bootfs where MODULE_FIRMWARE files go.
 FIRMWARE_INSTALL_DIR := lib/firmware
