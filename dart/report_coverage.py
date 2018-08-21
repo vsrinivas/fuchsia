@@ -89,33 +89,54 @@ def OutDir(args):
   return None
 
 
-def RunTest(test_path):
-  is_dart_test = False  # This is super hacky.
-  test_directory = None
-  test_lines = open(test_path, 'r').readlines()
-  for test_line in test_lines:
-    test_line_parts = test_line.strip().split()
-    if not test_line_parts:
-      continue
-    if test_line_parts[0].endswith('dart-tools/fuchsia_tester'):
-      is_dart_test = True
-    elif test_line_parts[0].startswith('--test-directory='):
-      test_directory = test_line_parts[0].split('=')[1]
-  if not is_dart_test:
-    return None
-  if not test_directory:
-    raise ValueError('Failed to find --test-directory arg in %s' % test_path)
-  coverage_data_handle, coverage_data_path = tempfile.mkstemp()
-  os.close(coverage_data_handle)
-  exit_code = subprocess.call((
-      test_path, '--coverage', '--coverage-path=%s' % coverage_data_path),
-      stdout=DEV_NULL, stderr=DEV_NULL)
-  if not os.stat(coverage_data_path).st_size:
-    print('%s produced no coverage data' % os.path.basename(test_path),
-          file=sys.stderr)
-    return None
-  return TestResult(
-      exit_code, coverage_data_path, os.path.dirname(test_directory))
+class TestRunner(object):
+
+  def __init__(self, out_dir):
+    self.out_dir = out_dir
+
+  def RunTest(self, test_path):
+    # This whole function super hacky. Assumes implementation details which are
+    # not meant to be public.
+
+    # test_path actually refers to a script that executes multiple other tests.
+    # The other tests that get executed go into this list.
+    leaf_test_paths = []
+    test_lines = open(test_path, 'r').readlines()
+    for test_line in test_lines:
+      test_line_parts = test_line.strip().split()
+      if not test_line_parts:
+        continue
+      if os.path.join(self.out_dir, 'dartlang', 'gen') in test_line_parts[0]:
+        leaf_test_dir = os.path.dirname(test_line_parts[0])
+        leaf_test_paths = glob.glob(os.path.join(leaf_test_dir, '*_test_dart'))
+    results = [self._RunLeafTest(p) for p in leaf_test_paths]
+    return [result for result in results if result] # filter None
+
+  def _RunLeafTest(self, test_path):
+    test_lines = open(test_path, 'r').readlines()
+    for test_line in test_lines:
+      test_line_parts = test_line.strip().split()
+      if not test_line_parts:
+        continue
+      if test_line_parts[0].endswith('dart-tools/fuchsia_tester'):
+        is_dart_test = True
+      elif test_line_parts[0].startswith('--test-directory='):
+        test_directory = test_line_parts[0].split('=')[1]
+    if not is_dart_test:
+      return None
+    if not test_directory:
+      raise ValueError('Failed to find --test-directory arg in %s' % test_path)
+    coverage_data_handle, coverage_data_path = tempfile.mkstemp()
+    os.close(coverage_data_handle)
+    exit_code = subprocess.call((
+        test_path, '--coverage', '--coverage-path=%s' % coverage_data_path),
+        stdout=DEV_NULL, stderr=DEV_NULL)
+    if not os.stat(coverage_data_path).st_size:
+      print('%s produced no coverage data' % os.path.basename(test_path),
+            file=sys.stderr)
+      return None
+    return TestResult(
+        exit_code, coverage_data_path, os.path.dirname(test_directory))
 
 
 def MakeRelativePathsAbsolute(test_result):
@@ -154,8 +175,12 @@ def main():
   test_paths = [tp for tp in test_paths
                 if os.path.basename(tp) not in TEST_BLACKLIST]
   thread_pool = ThreadPool()
-  results = thread_pool.map(RunTest, test_paths)
-  results = [result for result in results if result] # filter None
+  test_runner = TestRunner(out_dir)
+  results_lists = thread_pool.map(test_runner.RunTest, test_paths)
+  # flatten
+  results = [result for sublist in results_lists for result in sublist]
+  if not results:
+    sys.exit('Found no dart tests that produced coverage data')
   for result in results:
     if result.exit_code:
       sys.exit('%s failed' % test_path)
