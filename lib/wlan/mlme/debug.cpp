@@ -313,8 +313,8 @@ std::string Describe(const Packet& p) {
 std::string Describe(const AmsduSubframeHeader& hdr) {
     char buf[128];
     size_t offset = 0;
-    BUFFER("[da] %s [sa] %s [msdu_len] %u", hdr.da.ToString().c_str(),
-           hdr.sa.ToString().c_str(), hdr.msdu_len());
+    BUFFER("[da] %s [sa] %s [msdu_len] %u", hdr.da.ToString().c_str(), hdr.sa.ToString().c_str(),
+           hdr.msdu_len());
     return std::string(buf);
 }
 
@@ -371,6 +371,7 @@ std::string Describe(const HtCapabilityInfo& hci) {
     BUFFER("sgi20:%u", hci.short_gi_20());
     BUFFER("sgi40:%u", hci.short_gi_40());
     BUFFER("tx_stbc:%u", hci.tx_stbc());
+    BUFFER("rx_stbc:%u", hci.rx_stbc());
     BUFFER("delayed_back:%u", hci.delayed_block_ack());
     BUFFER("max_amsdu_len:%u", hci.max_amsdu_len());
     BUFFER("dsss40:%u", hci.dsss_in_40());
