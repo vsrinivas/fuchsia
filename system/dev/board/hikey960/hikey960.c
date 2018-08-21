@@ -79,12 +79,12 @@ static int hikey960_start_thread(void* arg) {
     if (status != ZX_OK) {
         goto fail;
     }
-    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &hikey->gpio);
+    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &hikey->gpio);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &usb_mode_switch);
+    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &usb_mode_switch);
     if (status != ZX_OK) {
         goto fail;
     }

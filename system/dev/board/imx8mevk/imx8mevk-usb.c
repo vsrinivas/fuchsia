@@ -190,11 +190,11 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     }
     zx_handle_close(bti);
 
-    if ((status = pbus_device_add(&bus->pbus, &usb1_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &usb1_dev)) != ZX_OK) {
         zxlogf(ERROR, "imx_usb_init could not add usb1_dev: %d\n", status);
         return status;
     }
-    if ((status = pbus_device_add(&bus->pbus, &usb2_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &usb2_dev)) != ZX_OK) {
         zxlogf(ERROR, "imx_usb_init could not add usb2_dev: %d\n", status);
         return status;
     }

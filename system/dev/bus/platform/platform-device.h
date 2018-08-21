@@ -43,7 +43,7 @@ public:
     // Creates a new PlatformDevice instance.
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
     static zx_status_t Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
-                              uint32_t flags, fbl::unique_ptr<platform_bus::PlatformDevice>* out);
+                              fbl::unique_ptr<platform_bus::PlatformDevice>* out);
 
     inline uint32_t vid() const { return vid_; }
     inline uint32_t pid() const { return pid_; }
@@ -68,12 +68,11 @@ public:
     zx_status_t GetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info);
 
     // Starts the underlying devmgr device.
-    zx_status_t Start();
+    zx_status_t Start(uint32_t device_add_flags);
 
 private:
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
-    explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, uint32_t flags,
-                            const pbus_dev_t* pdev);
+    explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev);
     zx_status_t Init(const pbus_dev_t* pdev);
 
     // Handlers for RPCs from PlatformProxy.
@@ -111,7 +110,6 @@ private:
 
     PlatformBus* bus_;
     char name_[ZX_DEVICE_NAME_MAX + 1];
-    const uint32_t flags_;
     const uint32_t vid_;
     const uint32_t pid_;
     const uint32_t did_;

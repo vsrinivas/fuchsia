@@ -491,7 +491,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     gpio->gpio_interrupt->irq_status = 0;
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    pbus_set_protocol(&pbus, ZX_PROTOCOL_GPIO, &gpio->gpio);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO, &gpio->gpio);
     gpio->gpio_interrupt->irq_info = calloc(gpio->gpio_interrupt->irq_count,
                                      sizeof(uint8_t));
     if (!gpio->gpio_interrupt->irq_info) {

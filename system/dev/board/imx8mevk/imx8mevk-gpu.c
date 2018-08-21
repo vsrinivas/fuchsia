@@ -225,7 +225,7 @@ zx_status_t imx_gpu_init(imx8mevk_bus_t* bus) {
         return status;
     }
 
-    status = pbus_device_add(&bus->pbus, &dev, 0);
+    status = pbus_device_add(&bus->pbus, &dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "pbus_device_add failed: %d\n", status);
         return status;

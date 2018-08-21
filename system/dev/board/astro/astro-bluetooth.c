@@ -123,7 +123,7 @@ zx_status_t aml_bluetooth_init(aml_bus_t* bus) {
     usleep(100 * 1000);
 
     // Bind UART for Bluetooth HCI
-    status = pbus_device_add(&bus->pbus, &bt_uart_dev, 0);
+    status = pbus_device_add(&bus->pbus, &bt_uart_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_uart_init: pbus_device_add failed: %d\n", status);
         return status;

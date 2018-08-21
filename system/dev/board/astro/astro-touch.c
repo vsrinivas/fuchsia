@@ -59,7 +59,7 @@ zx_status_t astro_touch_init(aml_bus_t* bus) {
         zxlogf(INFO, "Innolux/Goodix screen not supported at this time\n");
         return ZX_OK;
     } else {
-        zx_status_t status = pbus_device_add(&bus->pbus, &ft3x27_touch_dev, 0);
+        zx_status_t status = pbus_device_add(&bus->pbus, &ft3x27_touch_dev);
         if (status != ZX_OK) {
             zxlogf(ERROR, "astro_touch_init(ft3x27): pbus_device_add failed: %d\n", status);
             return status;

@@ -81,15 +81,9 @@ static pbus_dev_t gpio_dev = {
 };
 
 zx_status_t aml_gpio_init(aml_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &gpio_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO, &gpio_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_gpio_init: pbus_device_add failed: %d\n", status);
-        return status;
-    }
-
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_GPIO);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_gpio_init: pbus_wait_protocol failed: %d\n", status);
+        zxlogf(ERROR, "aml_gpio_init: pbus_protocol_device_add failed: %d\n", status);
         return status;
     }
 

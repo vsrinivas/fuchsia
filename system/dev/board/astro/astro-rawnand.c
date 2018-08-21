@@ -113,7 +113,7 @@ zx_status_t aml_raw_nand_init(aml_bus_t* bus) {
     if (status != ZX_OK)
         return status;
 
-    status = pbus_device_add(&bus->pbus, &raw_nand_dev, 0);
+    status = pbus_device_add(&bus->pbus, &raw_nand_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_device_add failed: %d\n",
                __func__, status);

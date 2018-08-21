@@ -9,12 +9,12 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_set_protocol, SetProtocol,
-        zx_status_t (C::*)(uint32_t proto_id, void* protocol));
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_wait_protocol, WaitProtocol,
-        zx_status_t (C::*)(uint32_t proto_id));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_device_add, DeviceAdd,
-        zx_status_t (C::*)(const pbus_dev_t* dev, uint32_t flags));
+        zx_status_t (C::*)(const pbus_dev_t* dev));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_protocol_device_add, ProtocolDeviceAdd,
+        zx_status_t (C::*)(uint32_t proto_id, const pbus_dev_t* dev));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_register_protocol, RegisterProtocol,
+        zx_status_t (C::*)(uint32_t proto_id, void* protocol));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_get_board_name, GetBoardName,
         const char* (C::*)());
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_set_board_info, SetBoardInfo,
@@ -22,15 +22,15 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_set_board_info, SetBoardInfo,
 
 template <typename D>
 constexpr void CheckPlatformBusProtocolSubclass() {
-    static_assert(internal::has_pbus_set_protocol<D>::value,
-                  "PlatformBusProtocol subclasses must implement "
-                  "SetProtocol(uint32_t proto_id, void* protocol)");
-    static_assert(internal::has_pbus_wait_protocol<D>::value,
-                  "PlatformBusProtocol subclasses must implement "
-                  "WaitProtocol(uint32_t proto_id)");
     static_assert(internal::has_pbus_device_add<D>::value,
                   "PlatformBusProtocol subclasses must implement "
-                  "DeviceAdd(const pbus_dev_t* dev, uint32_t flags)");
+                  "DeviceAdd(const pbus_dev_t* dev)");
+    static_assert(internal::has_pbus_protocol_device_add<D>::value,
+                  "PlatformBusProtocol subclasses must implement "
+                  "ProtocolAdd(uint32_t proto_id, const pbus_dev_t* dev)");
+    static_assert(internal::has_pbus_register_protocol<D>::value,
+                  "PlatformBusProtocol subclasses must implement "
+                  "RegisterProtocol(uint32_t proto_id, void* protocol)");
     static_assert(internal::has_pbus_get_board_name<D>::value,
                   "PlatformBusProtocol subclasses must implement "
                   "GetBoardName()");

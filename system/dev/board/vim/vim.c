@@ -108,7 +108,7 @@ static int vim_start_thread(void* arg) {
     }
 
     // TODO(rjascani): Remove this when not needed for testing any longer
-    if ((status = pbus_device_add(&bus->pbus, &tee_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &tee_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d\n", status);
         goto fail;
     }

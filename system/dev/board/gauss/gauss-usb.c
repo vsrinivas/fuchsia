@@ -99,7 +99,7 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
     writel(temp, addr + USB_R5_OFFSET);
 
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &xhci_dev)) != ZX_OK) {
         zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d\n", status);
         return status;
     }

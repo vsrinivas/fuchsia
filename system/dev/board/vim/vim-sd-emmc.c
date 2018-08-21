@@ -123,7 +123,7 @@ zx_status_t vim_sd_emmc_init(vim_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S912_EMMC_CMD, S912_EMMC_CMD_FN);
     gpio_set_alt_function(&bus->gpio, S912_EMMC_DS, S912_EMMC_DS_FN);
 
-    if ((status = pbus_device_add(&bus->pbus, &emmc_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_sd_emmc_init could not add emmc_dev: %d\n", status);
         return status;
     }

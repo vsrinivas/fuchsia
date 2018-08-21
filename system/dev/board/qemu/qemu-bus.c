@@ -148,12 +148,12 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
         .bti_count = countof(pci_btis),
     };
 
-    status = pbus_device_add(&bus->pbus, &pci_dev, 0);
+    status = pbus_device_add(&bus->pbus, &pci_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "qemu_bus_bind could not add pci_dev: %d\n", status);
     }
 
-    status = pbus_device_add(&bus->pbus, &pl031_dev, 0);
+    status = pbus_device_add(&bus->pbus, &pl031_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "qemu_bus_bind could not add pl031: %d\n", status);
     }

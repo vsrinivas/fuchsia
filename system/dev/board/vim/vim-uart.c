@@ -176,7 +176,7 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     gpio_write(&bus->gpio, BT_EN, 1);
 
     // Bind UART for Bluetooth HCI
-    status = pbus_device_add(&bus->pbus, &bt_uart_dev, 0);
+    status = pbus_device_add(&bus->pbus, &bt_uart_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_device_add failed: %d\n", status);
         return status;
@@ -184,7 +184,7 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
 
 #if UART_TEST
     // Bind UART for 40-pin header
-    status = pbus_device_add(&bus->pbus, &header_uart_dev, 0);
+    status = pbus_device_add(&bus->pbus, &header_uart_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_device_add failed: %d\n", status);
         return status;

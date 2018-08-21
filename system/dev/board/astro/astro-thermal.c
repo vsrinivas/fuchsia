@@ -216,7 +216,7 @@ zx_status_t aml_thermal_init(aml_bus_t* bus) {
         return status;
     }
 
-    status = pbus_device_add(&bus->pbus, &thermal_dev, 0);
+    status = pbus_device_add(&bus->pbus, &thermal_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_thermal_init: pbus_device_add failed: %d\n", status);
         return status;

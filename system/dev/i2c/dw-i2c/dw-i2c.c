@@ -491,7 +491,7 @@ static zx_status_t dw_i2c_bind(void* ctx, zx_device_t* parent) {
 
     i2c->i2c.ops = &i2c_ops;
     i2c->i2c.ctx = i2c;
-    pbus_set_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c->i2c);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c->i2c);
 
     return ZX_OK;
 

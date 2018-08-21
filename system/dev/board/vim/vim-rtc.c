@@ -29,7 +29,7 @@ static pbus_dev_t pcf8563_rtc_dev = {
 
 zx_status_t vim_rtc_init(vim_bus_t* bus) {
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &pcf8563_rtc_dev, 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &pcf8563_rtc_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s(pcf8563): pbus_device_add failed: %d\n", __FUNCTION__, status);
     }

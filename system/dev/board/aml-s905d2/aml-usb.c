@@ -65,5 +65,5 @@ zx_status_t aml_usb_init(aml_bus_t* bus) {
         return status;
     }
 
-    return pbus_device_add(&bus->pbus, &xhci_dev, 0);
+    return pbus_device_add(&bus->pbus, &xhci_dev);
 }

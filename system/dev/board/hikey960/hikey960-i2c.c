@@ -53,15 +53,9 @@ static const pbus_dev_t i2c_dev = {
 };
 
 zx_status_t hikey960_i2c_init(hikey960_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "hikey960_i2c_init: pbus_device_add failed: %d\n", status);
-        return status;
-    }
-
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_I2C_IMPL);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "hikey960_i2c_init: pbus_wait_protocol failed: %d\n", status);
+        zxlogf(ERROR, "hikey960_i2c_init: pbus_protocol_device_add failed: %d\n", status);
         return status;
     }
 

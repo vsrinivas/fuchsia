@@ -78,15 +78,9 @@ zx_status_t aml_i2c_init(aml_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
     gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_init: pbus_device_add failed: %d\n", status);
-        return status;
-    }
-
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_I2C_IMPL);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_init: pbus_wait_protocol failed: %d\n", status);
+        zxlogf(ERROR, "aml_i2c_init: pbus_protocol_device_add failed: %d\n", status);
         return status;
     }
 

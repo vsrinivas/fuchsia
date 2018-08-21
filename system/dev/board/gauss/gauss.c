@@ -179,7 +179,7 @@ static int gauss_start_thread(void* arg) {
         goto fail;
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &led_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &led_dev)) != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init could not add i2c_led_dev: %d\n", status);
         goto fail;
     }

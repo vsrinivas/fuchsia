@@ -38,7 +38,7 @@ static pbus_dev_t tcs3400_light_dev = {
 
 zx_status_t ams_light_init(aml_bus_t* bus) {
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &tcs3400_light_dev, 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &tcs3400_light_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ams_light_init(tcs-3400): pbus_device_add failed: %d\n", status);
         return status;

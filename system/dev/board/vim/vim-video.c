@@ -79,7 +79,7 @@ static const pbus_dev_t video_dev = {
 
 zx_status_t vim_video_init(vim_bus_t* bus) {
     zx_status_t status;
-    if ((status = pbus_device_add(&bus->pbus, &video_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &video_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_video_init: pbus_device_add() failed for video: %d\n", status);
         return status;
     }

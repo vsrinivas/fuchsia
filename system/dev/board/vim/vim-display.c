@@ -94,7 +94,7 @@ zx_status_t vim_display_init(vim_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S912_SPDIF_H4, S912_SPDIF_H4_OUT_FN);
 #endif
 
-    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &display_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_display_init: pbus_device_add() failed for display: %d\n", status);
         return status;
     }

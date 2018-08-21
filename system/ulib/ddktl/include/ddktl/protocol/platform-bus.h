@@ -34,9 +34,9 @@
 //     PlatformBusDevice(zx_device_t* parent)
 //       : PlatformBusDeviceType("my-platform-bus", parent) {}
 //
-//    zx_status_t SetProtocol(uint32_t proto_id, void* protocol);
-//    zx_status_t WaitProtocol(uint32_t proto_id);
-//    zx_status_t DeviceAdd(const pbus_dev_t* dev, uint32_t flags);
+//    zx_status_t DeviceAdd(const pbus_dev_t* dev);
+//    zx_status_t ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
+//    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol);
 //    const char* GetBoardName();
 //    zx_status_t SetBoardInfo(const pbus_board_info_t* info);
 //     ...
@@ -49,9 +49,9 @@ class PlatformBusProtocol : public internal::base_protocol {
 public:
     PlatformBusProtocol() {
         internal::CheckPlatformBusProtocolSubclass<D>();
-        pbus_proto_ops_.set_protocol = SetProtocol;
-        pbus_proto_ops_.wait_protocol = WaitProtocol;
         pbus_proto_ops_.device_add = DeviceAdd;
+        pbus_proto_ops_.protocol_device_add = ProtocolDeviceAdd;
+        pbus_proto_ops_.register_protocol = RegisterProtocol;
         pbus_proto_ops_.get_board_name = GetBoardName;
         pbus_proto_ops_.set_board_info = SetBoardInfo;
 
@@ -65,16 +65,16 @@ protected:
     platform_bus_protocol_ops_t pbus_proto_ops_ = {};
 
 private:
-    static zx_status_t SetProtocol(void* ctx, uint32_t proto_id, void* protocol) {
-        return static_cast<D*>(ctx)->SetProtocol(proto_id, protocol);
+    static zx_status_t DeviceAdd(void* ctx, const pbus_dev_t* dev) {
+        return static_cast<D*>(ctx)->DeviceAdd(dev);
     }
 
-    static zx_status_t WaitProtocol(void* ctx, uint32_t proto_id) {
-        return static_cast<D*>(ctx)->WaitProtocol(proto_id);
+    static zx_status_t ProtocolDeviceAdd(void* ctx, uint32_t proto_id, const pbus_dev_t* dev) {
+        return static_cast<D*>(ctx)->ProtocolDeviceAdd(proto_id, dev);
     }
 
-    static zx_status_t DeviceAdd(void* ctx, const pbus_dev_t* dev, uint32_t flags) {
-        return static_cast<D*>(ctx)->DeviceAdd(dev, flags);
+    static zx_status_t RegisterProtocol(void* ctx, uint32_t proto_id, void* protocol) {
+        return static_cast<D*>(ctx)->RegisterProtocol(proto_id, protocol);
     }
 
     static const char* GetBoardName(void* ctx) {
@@ -92,16 +92,16 @@ public:
     PlatformBusProtocolProxy(platform_bus_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t SetProtocol(uint32_t proto_id, void* protocol) {
-        return ops_->set_protocol(ctx_, proto_id, protocol);
+    zx_status_t DeviceAdd(const pbus_dev_t* dev) {
+        return ops_->device_add(ctx_, dev);
     }
 
-    zx_status_t WaitProtocol(uint32_t proto_id) {
-        return ops_->wait_protocol(ctx_, proto_id);
+    zx_status_t ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
+        return ops_->protocol_device_add(ctx_, proto_id, dev);
     }
 
-    zx_status_t DeviceAdd(const pbus_dev_t* dev, uint32_t flags) {
-        return ops_->device_add(ctx_, dev, flags);
+    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol) {
+        return ops_->register_protocol(ctx_, proto_id, protocol);
     }
 
     const char* GetBoardName() {

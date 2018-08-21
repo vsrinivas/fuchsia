@@ -148,12 +148,12 @@ static int imx8mevk_start_thread(void* arg) {
         goto fail;
     }
 
-    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
+    status = pbus_register_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &display_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s could not add display_dev: %d\n", __FUNCTION__, status);
         goto fail;
     }

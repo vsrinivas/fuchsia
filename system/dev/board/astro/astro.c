@@ -90,7 +90,7 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &rtc_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &rtc_dev)) != ZX_OK) {
         zxlogf(ERROR, "aml_start_thread could not add rtc_dev: %d\n", status);
         goto fail;
     }

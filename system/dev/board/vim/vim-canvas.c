@@ -35,9 +35,9 @@ static const pbus_dev_t canvas_dev = {
 };
 
 zx_status_t vim2_canvas_init(vim_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &canvas_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_CANVAS, &canvas_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim2_canvas_init: pbus_device_add Canvas failed: %d\n", status);
+        zxlogf(ERROR, "vim2_canvas_init: pbus_protocol_device_add Canvas failed: %d\n", status);
         return status;
     }
     return ZX_OK;

@@ -143,7 +143,7 @@ static const pbus_dev_t pcie_dev = {
 };
 
 zx_status_t gauss_pcie_init(gauss_bus_t* bus) {
-    zx_status_t st = pbus_device_add(&bus->pbus, &pcie_dev, 0);
+    zx_status_t st = pbus_device_add(&bus->pbus, &pcie_dev);
     if (st != ZX_OK) {
         zxlogf(ERROR, "gauss_clk_init: pbus_device_add failed, st = %d\n", st);
         return st;

@@ -100,15 +100,9 @@ static pbus_dev_t gpio_dev = {
 };
 
 zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &gpio_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO, &gpio_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_device_add failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_GPIO);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_wait_protocol failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pbus_protocol_device_add failed %d\n", __FUNCTION__, status);
         return status;
     }
 
@@ -138,7 +132,7 @@ zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus) {
         .gpios = gpio_test_gpios,
         .gpio_count = countof(gpio_test_gpios),
     };
-    if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __FUNCTION__, status);
         return status;
     }

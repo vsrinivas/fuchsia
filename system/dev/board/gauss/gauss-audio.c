@@ -110,13 +110,13 @@ zx_status_t gauss_audio_init(gauss_bus_t* bus) {
     zx_status_t status;
 
     // Add audio in and out devices.
-    if ((status = pbus_device_add(&bus->pbus, &gauss_audio_in_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &gauss_audio_in_dev)) != ZX_OK) {
         zxlogf(ERROR, "a113_audio_init could not add gauss_audio_in_dev: %d\n", status);
         return status;
     }
 
     printf("Adding the tdm device\n");
-    if ((status = pbus_device_add(&bus->pbus, &gauss_tdm_audio_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &gauss_tdm_audio_dev)) != ZX_OK) {
         zxlogf(ERROR, "a113_audio_init could not add gauss_tdm_audio_dev: %d\n", status);
     }
 

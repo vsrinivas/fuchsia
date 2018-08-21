@@ -102,7 +102,7 @@ zx_status_t vim_eth_init(vim_bus_t* bus) {
     //Set reset line to output
     gpio_config(&bus->gpio, S912_GPIOZ(14), GPIO_DIR_OUT);
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &eth_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_device_add(&bus->pbus, &eth_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_eth_init: pbus_device_add failed: %d\n", status);
     }

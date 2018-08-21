@@ -94,5 +94,5 @@ const pbus_dev_t test_dev = {
 };
 
 zx_status_t qemu_test_init(platform_bus_protocol_t* pbus) {
-    return pbus_device_add(pbus, &test_dev, 0);
+    return pbus_device_add(pbus, &test_dev);
 }

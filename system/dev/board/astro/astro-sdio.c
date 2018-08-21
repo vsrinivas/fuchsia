@@ -88,7 +88,7 @@ zx_status_t aml_sdio_init(aml_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CLK, S905D2_WIFI_SDIO_CLK_FN);
     gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CMD, S905D2_WIFI_SDIO_CMD_FN);
     gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_WAKE_HOST, S905D2_WIFI_SDIO_WAKE_HOST_FN);
-    if ((status = pbus_device_add(&bus->pbus, &sdio_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &sdio_dev)) != ZX_OK) {
         zxlogf(ERROR, "aml_sdio_init could not add sdio_dev: %d\n", status);
         return status;
     }

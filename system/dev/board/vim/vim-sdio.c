@@ -85,7 +85,7 @@ zx_status_t vim_sdio_init(vim_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
     gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
-    if ((status = pbus_device_add(&bus->pbus, &sdio_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &sdio_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_sdio_init could not add sdio_dev: %d\n", status);
         return status;
     }

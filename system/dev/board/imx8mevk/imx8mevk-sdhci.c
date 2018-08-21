@@ -81,7 +81,7 @@ static pbus_dev_t sdhci_dev = {
 };
 
 zx_status_t imx8m_sdhci_init(imx8mevk_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &sdhci_dev, 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &sdhci_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_device_add failed %d\n", __FUNCTION__, status);
         return status;

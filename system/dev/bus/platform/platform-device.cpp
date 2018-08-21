@@ -22,11 +22,10 @@
 namespace platform_bus {
 
 zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
-                                   uint32_t flags,
                                    fbl::unique_ptr<platform_bus::PlatformDevice>* out) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<platform_bus::PlatformDevice> dev(new (&ac)
-                                          platform_bus::PlatformDevice(parent, bus, flags, pdev));
+                                          platform_bus::PlatformDevice(parent, bus, pdev));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -38,9 +37,8 @@ zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, 
     return ZX_OK;
 }
 
-PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, uint32_t flags,
-                               const pbus_dev_t* pdev)
-    : PlatformDeviceType(parent), bus_(bus), flags_(flags), vid_(pdev->vid), pid_(pdev->pid),
+PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev)
+    : PlatformDeviceType(parent), bus_(bus), vid_(pdev->vid), pid_(pdev->pid),
       did_(pdev->did), resource_tree_(ROOT_DEVICE_ID) {
     strlcpy(name_, pdev->name, sizeof(name_));
 }
@@ -699,7 +697,7 @@ zx_status_t PlatformDevice::GetZbiMetadata(uint32_t type, uint32_t extra, const 
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t PlatformDevice::Start() {
+zx_status_t PlatformDevice::Start(uint32_t device_add_flags) {
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, vid_},
         {BIND_PLATFORM_DEV_PID, 0, pid_},
@@ -714,19 +712,15 @@ zx_status_t PlatformDevice::Start() {
     }
     char argstr[64];
     snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
-    uint32_t flags = 0;
-    if (!(flags_ & PDEV_ADD_PBUS_DEVHOST)) {
-        flags |= DEVICE_ADD_MUST_ISOLATE;
-    }
 
     const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
     size_t metadata_count = dr->metadata_count();
     if (metadata_count > 0) {
         // Keep device invisible until after we add its metadata.
-        flags |= DEVICE_ADD_INVISIBLE;
+        device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
 
-    auto status = DdkAdd(namestr, flags, props, countof(props), argstr);
+    auto status = DdkAdd(namestr, device_add_flags, props, countof(props), argstr);
     if (status != ZX_OK) {
         return status;
     }

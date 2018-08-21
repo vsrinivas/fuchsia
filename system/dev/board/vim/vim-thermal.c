@@ -217,7 +217,7 @@ static const pbus_dev_t mailbox_dev = {
 };
 
 zx_status_t vim2_thermal_init(vim_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &mailbox_dev, 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &mailbox_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim2_thermal_init: pbus_device_add failed: %d\n", status);
         return status;

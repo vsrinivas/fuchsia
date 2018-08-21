@@ -103,7 +103,7 @@ zx_status_t vim_usb_init(vim_bus_t* bus) {
     io_buffer_release(&usb_phy);
     zx_handle_close(bti);
 
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &xhci_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init could not add xhci_dev: %d\n", status);
         return status;
     }

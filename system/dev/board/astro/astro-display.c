@@ -110,7 +110,7 @@ static pbus_dev_t display_dev = {
 };
 
 zx_status_t aml_display_init(aml_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &display_dev, 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &display_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Could not add display dev: %d\n", __FUNCTION__, status);
         return status;

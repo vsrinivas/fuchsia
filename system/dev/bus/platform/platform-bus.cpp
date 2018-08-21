@@ -32,7 +32,7 @@ zx_status_t PlatformBus::GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle
     return zx_bti_create(iommu_handle_.get(), 0, bti_id, out_handle);
 }
 
-zx_status_t PlatformBus::SetProtocol(uint32_t proto_id, void* protocol) {
+zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
     if (!protocol) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -100,7 +100,74 @@ zx_status_t PlatformBus::SetProtocol(uint32_t proto_id, void* protocol) {
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::WaitProtocol(uint32_t proto_id) {
+zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev) {
+    if (!pdev->name) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_device_t* parent_dev;
+    if (pdev->vid == PDEV_VID_GENERIC && pdev->pid == PDEV_PID_GENERIC &&
+        pdev->did == PDEV_DID_KPCI) {
+        // Add PCI root at top level.
+        parent_dev = parent();
+    } else {
+        parent_dev = zxdev();
+    }
+
+    fbl::unique_ptr<platform_bus::PlatformDevice> dev;
+    auto status = PlatformDevice::Create(pdev, parent_dev, this, &dev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    size_t index = devices_.size();
+    fbl::AllocChecker ac;
+    devices_.push_back(fbl::move(dev), &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // Platform devices run in their own devhosts.
+    return devices_[index]->Start(DEVICE_ADD_MUST_ISOLATE);
+}
+
+zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_CANVAS:
+    case ZX_PROTOCOL_CLK:
+    case ZX_PROTOCOL_GPIO:
+    case ZX_PROTOCOL_I2C_IMPL:
+    case ZX_PROTOCOL_USB_MODE_SWITCH:
+        break;
+    default:
+        zxlogf(ERROR, "%s: unsupported protocol %08x\n", __func__, proto_id);
+        return ZX_ERR_NOT_SUPPORTED;    
+    }
+    
+    if (!pdev->name) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::unique_ptr<platform_bus::PlatformDevice> dev;
+    auto status = PlatformDevice::Create(pdev, zxdev(), this, &dev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    size_t index = devices_.size();
+    fbl::AllocChecker ac;
+    devices_.push_back(fbl::move(dev), &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // Protocol devices run in our devhost.
+    status = devices_[index]->Start(0);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Wait for protocol implementation driver to register its protocol.
     platform_bus_protocol_t dummy;
 
     mutex_.Acquire();
@@ -116,39 +183,6 @@ zx_status_t PlatformBus::WaitProtocol(uint32_t proto_id) {
     }
     mutex_.Release();
     return ZX_OK;
-}
-
-zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev, uint32_t flags) {
-    if (flags & ~(PDEV_ADD_PBUS_DEVHOST)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (!pdev->name) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx_device_t* parent_dev;
-    if (pdev->vid == PDEV_VID_GENERIC && pdev->pid == PDEV_PID_GENERIC &&
-        pdev->did == PDEV_DID_KPCI) {
-        // Add PCI root at top level.
-        parent_dev = parent();
-    } else {
-        parent_dev = zxdev();
-    }
-
-    fbl::unique_ptr<platform_bus::PlatformDevice> dev;
-    auto status = PlatformDevice::Create(pdev, parent_dev, this, flags, &dev);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    size_t index = devices_.size();
-    fbl::AllocChecker ac;
-    devices_.push_back(fbl::move(dev), &ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    return devices_[index]->Start();
 }
 
 const char* PlatformBus::GetBoardName() {

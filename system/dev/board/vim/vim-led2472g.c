@@ -28,7 +28,7 @@ static const pbus_dev_t led2472g_dev = {
 
 zx_status_t vim_led2472g_init(vim_bus_t* bus) {
     zx_status_t status;
-    if ((status = pbus_device_add(&bus->pbus, &led2472g_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &led2472g_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_led2472g_init: pbus_device_add() failed for led2472g: %d\n", status);
         return status;
     }

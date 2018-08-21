@@ -27,16 +27,11 @@ static const pbus_dev_t clk_dev = {
 };
 
 zx_status_t aml_clk_init(aml_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &clk_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_CLK, &clk_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_clk_init: pbus_device_add failed, st = %d\n", status);
+        zxlogf(ERROR, "aml_clk_init: pbus_protocol_device_add failed, st = %d\n", status);
         return status;
     }
 
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_CLK);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_clk_init: pbus_wait_protocol failed, st = %d\n", status);
-        return status;
-    }
     return ZX_OK;
 }

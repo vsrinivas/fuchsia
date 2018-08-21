@@ -64,7 +64,7 @@ zx_status_t aml_mali_init(platform_bus_protocol_t* pbus, uint32_t bti_index) {
     mali_btis[0].iommu_index = 0;
     mali_btis[0].bti_id      = bti_index;
 
-    zx_status_t status = pbus_device_add(pbus, &mali_dev, 0);
+    zx_status_t status = pbus_device_add(pbus, &mali_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init: pbus_device_add failed: %d\n", status);
         return status;
