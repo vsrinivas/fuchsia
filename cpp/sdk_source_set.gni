@@ -1,8 +1,8 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_library.gni")
+import("//build/sdk/sdk_atom.gni")
 
 # A source set that can be exported to an SDK.
 #
@@ -22,11 +22,101 @@ import("//build/cpp/sdk_library.gni")
 #     If set, path to the base directory of the sources.
 #     This is useful if the sources are generated and therefore not hosted
 #     directly under the directory where the GN rules are declared.
+#
+#   include_base (optional)
+#     Path to the root directory for includes.
+#     Defaults to "include".
 
 template("sdk_source_set") {
-  sdk_library(target_name) {
-    forward_variables_from(invoker, "*")
+  assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.sdk_name), "Must define an SDK name")
 
-    type = "source_set"
+  main_target_name = target_name
+  sdk_target_name = "${target_name}_sdk"
+
+  source_set(main_target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "category",
+                             "include_base",
+                             "sdk_name",
+                             "source_dir",
+                           ])
+
+    if (defined(visibility)) {
+      visibility += [ ":$sdk_target_name" ]
+    }
+  }
+
+  sdk_atom(sdk_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "source_dir",
+                             "testonly",
+                           ])
+
+    domain = "cpp"
+    name = invoker.sdk_name
+    id = "sdk://pkg/${invoker.sdk_name}"
+    category = invoker.category
+
+    tags = [ "type:sources" ]
+
+    headers = []
+    sources = []
+    source_headers_are_public = true
+    if (defined(invoker.public)) {
+      source_headers_are_public = false
+      headers += invoker.public
+    }
+    if (defined(invoker.sources)) {
+      foreach(source_file, invoker.sources) {
+        extension = get_path_info(source_file, "extension")
+        if (extension == "h" && source_headers_are_public) {
+          headers += [ source_file ]
+        } else {
+          sources += [ source_file ]
+        }
+      }
+    }
+
+    files = []
+    foreach(source_file, sources) {
+      files += [
+        {
+          source = source_file
+        },
+      ]
+    }
+    foreach(header_file, headers) {
+      include_base = "include"
+      if (defined(invoker.include_base)) {
+        include_base = invoker.include_base
+      }
+      destination = rebase_path(header_file, include_base)
+      files += [
+        {
+          source = header_file
+          dest = "include/$destination"
+        },
+      ]
+    }
+
+    deps = []
+    if (defined(invoker.public_deps)) {
+      foreach(dep, invoker.public_deps) {
+        full_label = get_label_info(dep, "label_no_toolchain")
+        deps += [ "${full_label}_sdk" ]
+      }
+    }
+
+    non_sdk_deps = [ ":$main_target_name" ]
+
+    # Explicitly add non-public dependencies, in case some of the source files
+    # are generated.
+    if (defined(invoker.deps)) {
+      non_sdk_deps += invoker.deps
+    }
   }
 }
