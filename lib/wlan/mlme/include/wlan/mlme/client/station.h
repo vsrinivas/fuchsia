@@ -163,9 +163,7 @@ class Station {
     zx::time deadline_after_bcn_period(size_t bcn_count);
 
     // Returns the STA's own MAC address.
-    const common::MacAddr& self_addr() const {
-        return device_->GetState()->address();
-    }
+    const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
 
     bool IsHTReady() const;
     bool IsCbw40RxReady() const;
@@ -174,8 +172,7 @@ class Station {
     bool IsAmsduRxReady() const;
 
     CapabilityInfo BuildCapabilityInfo() const;
-    zx_status_t BuildMcsSet(SupportedMcsSet* mcs_set) const;
-    zx_status_t BuildHtCapabilities(HtCapabilities* htc) const;
+    zx_status_t OverrideHtCapability(HtCapabilities* htc) const;
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
     zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);

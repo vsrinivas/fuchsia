@@ -430,18 +430,24 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
     }
 
+    auto ifc_info = device_->GetWlanInfo().ifc_info;
+    auto client_capability = ToAssocContext(ifc_info, join_chan_);
+
     if (IsHTReady()) {
-        HtCapabilities htc{};
-        zx_status_t status = BuildHtCapabilities(&htc);
+        auto ht_cap = client_capability.ht_cap;
+        debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
+
+        zx_status_t status = OverrideHtCapability(&ht_cap);
         if (status != ZX_OK) {
             errorf("could not build HtCapabilities. status %d\n", status);
             service::SendAssocConfirm(device_,
                                       wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
             return ZX_ERR_IO;
         }
+        debugf("HT cap(after overriding): %s\n", debug::Describe(ht_cap).c_str());
 
-        if (!w.write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
-                                     htc.txbf_cap, htc.asel_cap)) {
+        if (!w.write<HtCapabilities>(ht_cap.ht_cap_info, ht_cap.ampdu_params, ht_cap.mcs_set,
+                                     ht_cap.ht_ext_cap, ht_cap.txbf_cap, ht_cap.asel_cap)) {
             errorf("could not write HtCapabilities\n");
             service::SendAssocConfirm(device_,
                                       wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -650,9 +656,10 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
-    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", self_addr().ToString().c_str(),
-          bss_->ssid->data(), bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
-          common::BandStr(GetJoinChan()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
+    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
+          self_addr().ToString().c_str(), bss_->ssid->data(), bssid.ToString().c_str(),
+          common::ChanStr(GetJoinChan()).c_str(), common::BandStr(GetJoinChan()).c_str(),
+          IsHTReady() ? "802.11n HT" : "802.11g/a");
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
@@ -827,7 +834,8 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     finspect("Inbound LLC frame: hdr len %zu, payload len: %zu\n", llc_frame.hdr()->len(),
              llc_payload_len);
     finspect("  llc hdr: %s\n", debug::Describe(*llc_frame.hdr()).c_str());
-    finspect("  llc payload: %s\n", debug::HexDump(llc_frame.body()->data, llc_payload_len).c_str());
+    finspect("  llc payload: %s\n",
+             debug::HexDump(llc_frame.body()->data, llc_payload_len).c_str());
 
     // Prepare a packet
     const size_t eth_frame_len = sizeof(EthernetII) + llc_payload_len;
@@ -1384,101 +1392,19 @@ CapabilityInfo Station::BuildCapabilityInfo() const {
     return cap;
 }
 
-zx_status_t Station::BuildMcsSet(SupportedMcsSet* mcs_set) const {
-    //  Retrieve client wlanphy capability
-    const wlan_info_t& ifc_info = device_->GetWlanInfo().ifc_info;
-    auto is_5ghz = common::Is5Ghz(join_chan_);
-
-    auto bi = FindBand(ifc_info, is_5ghz);
-    if (bi == nullptr) {
-        errorf("failed to find band info from wlan info for band %s\n",
-               is_5ghz ? "5 GHz" : "2 GHz");
-        return ZX_ERR_INTERNAL;
-    }
-
-    *mcs_set = *reinterpret_cast<const SupportedMcsSet*>(&bi->ht_caps.supported_mcs_set);
-    return ZX_OK;
-}
-
-zx_status_t Station::BuildHtCapabilities(HtCapabilities* htc) const {
+zx_status_t Station::OverrideHtCapability(HtCapabilities* ht_cap) const {
     // TODO(porce): Determine which value to use for each field
     // (a) client radio capabilities, as reported by device driver
     // (b) intersection of (a) and radio configurations
     // (c) intersection of (b) and BSS capabilities
     // (d) intersection of (c) and radio configuration
 
-    ZX_DEBUG_ASSERT(htc != nullptr);
-    if (htc == nullptr) { return ZX_ERR_INVALID_ARGS; }
+    ZX_DEBUG_ASSERT(ht_cap != nullptr);
+    if (ht_cap == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
-    // Static cooking for Proof-of-Concept
-    HtCapabilityInfo& hci = htc->ht_cap_info;
-
-    hci.set_ldpc_coding_cap(0);  // Ralink RT5370 is incapable of LDPC.
-
-    if (IsCbw40RxReady()) {
-        hci.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
-    } else {
-        hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY);
-    }
-
-    hci.set_sm_power_save(HtCapabilityInfo::DISABLED);
-    hci.set_greenfield(0);
-    hci.set_short_gi_20(1);
-    hci.set_short_gi_40(1);
-    hci.set_tx_stbc(0);  // No plan to support STBC Tx
-    hci.set_rx_stbc(1);  // one stream.
-    hci.set_delayed_block_ack(0);
-
-    // TODO(NET-599): Reflect the chipset capability and USB read size in negotiation
-    hci.set_max_amsdu_len(HtCapabilityInfo::OCTETS_3839);
-    hci.set_dsss_in_40(0);
-    hci.set_intolerant_40(0);
-    hci.set_lsig_txop_protect(0);
-
-    AmpduParams& ampdu = htc->ampdu_params;
-    ampdu.set_exponent(3);                                // 65535 bytes
-    ampdu.set_min_start_spacing(AmpduParams::FOUR_USEC);  // Aruba
-    // ampdu.set_min_start_spacing(AmpduParams::EIGHT_USEC);  // TP-Link
-    // ampdu.set_min_start_spacing(AmpduParams::SIXTEEN_USEC);
-
-    zx_status_t status = BuildMcsSet(&htc->mcs_set);
-    if (status != ZX_OK) { return status; }
-
-    HtExtCapabilities& hec = htc->ht_ext_cap;
-    hec.set_pco(0);
-    hec.set_pco_transition(HtExtCapabilities::PCO_RESERVED);
-    hec.set_mcs_feedback(HtExtCapabilities::MCS_NOFEEDBACK);
-    hec.set_htc_ht_support(0);
-    hec.set_rd_responder(0);
-
-    TxBfCapability& txbf = htc->txbf_cap;
-    txbf.set_implicit_rx(0);
-    txbf.set_rx_stag_sounding(0);
-    txbf.set_tx_stag_sounding(0);
-    txbf.set_rx_ndp(0);
-    txbf.set_tx_ndp(0);
-    txbf.set_implicit(0);
-    txbf.set_calibration(TxBfCapability::CALIBRATION_NONE);
-    txbf.set_csi(0);
-    txbf.set_noncomp_steering(0);
-    txbf.set_comp_steering(0);
-    txbf.set_csi_feedback(TxBfCapability::FEEDBACK_NONE);
-    txbf.set_noncomp_feedback(TxBfCapability::FEEDBACK_NONE);
-    txbf.set_comp_feedback(TxBfCapability::FEEDBACK_NONE);
-    txbf.set_min_grouping(TxBfCapability::MIN_GROUP_ONE);
-    txbf.set_csi_antennas_human(1);           // 1 antenna
-    txbf.set_noncomp_steering_ants_human(1);  // 1 antenna
-    txbf.set_comp_steering_ants_human(1);     // 1 antenna
-    txbf.set_csi_rows_human(1);               // 1 antenna
-    txbf.set_chan_estimation_human(1);        // # space-time stream
-
-    AselCapability& asel = htc->asel_cap;
-    asel.set_asel(0);
-    asel.set_csi_feedback_tx_asel(0);
-    asel.set_explicit_csi_feedback(0);
-    asel.set_antenna_idx_feedback(0);
-    asel.set_rx_asel(0);
-    asel.set_tx_sounding_ppdu(0);
+    HtCapabilityInfo& hci = ht_cap->ht_cap_info;
+    // TODO(NET-1351): Check the configuration to suppress the bandwidth to CBW20.
+    if (!IsCbw40RxReady()) { hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY); }
 
     return ZX_OK;
 }
