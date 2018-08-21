@@ -51,11 +51,24 @@ interface Provider {
 
 // The service which trace providers use to register themselves with
 // the tracing system.
-[Discoverable]
+// Note that one property of this interface is that once registration is made
+// the provider can drop this connection.
+[Discoverable, Layout="Simple"]
 interface Registry {
     // Registers the trace provider.
+    // Note: Registration is asynchronous, it's only at some point after this
+    // returns that the provider is actually registered.
     // To unregister, simply close the TraceProvider pipe.
     1: RegisterTraceProvider(Provider provider);
+
+    // Registers the trace provider synchronously. The call doesn't return
+    // until the provider is registered.
+    // On return |s| is ZX_OK if registration was successful.
+    // |started| is true if tracing has already started, which is a hint to
+    // the provider to wait for the Start() message before continuing if it
+    // wishes to not drop trace records before Start() is received.
+    // To unregister, simply close the TraceProvider pipe.
+    2: RegisterTraceProviderSynchronously(Provider provider, zx.koid pid, string:100 name) -> (zx.status s, bool started);
 };
 
 // The trace buffering mode.

@@ -9,7 +9,9 @@
 #include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <trace-engine/types.h>
 #include <trace-provider/provider.h>
@@ -22,8 +24,11 @@ namespace internal {
 
 class TraceProviderImpl final : public trace_provider_t {
 public:
-    TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel);
+    TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel,
+                      zx::event start_event);
     ~TraceProviderImpl();
+
+    zx_status_t WaitForTracingStarted(zx::duration timeout);
 
 private:
     class Connection final {
@@ -50,10 +55,12 @@ private:
     void Start(trace_buffering_mode_t buffering_mode, zx::vmo buffer,
                zx::fifo fifo, fbl::Vector<fbl::String> enabled_categories);
     void Stop();
+    void OnClose();
 
     async_dispatcher_t* const dispatcher_;
     Connection connection_;
     bool running_ = false;
+    zx::event start_event_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(TraceProviderImpl);
 };

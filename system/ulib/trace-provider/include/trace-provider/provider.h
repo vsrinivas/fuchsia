@@ -87,17 +87,55 @@ typedef struct trace_provider trace_provider_t;
 // probably need to pass some extra parameters to the trace provider then.
 trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher);
 
+// Same as trace_provider_create except does not return until the provider is
+// registered with the trace manager.
+// |name| is the name of the provider, used for diagnostic purposes.
+// On return, if !NULL, |*out_already_started| is true if the trace manager has
+// already started tracing, which is a hint to the provider to wait for the
+// Start() message before continuing if it wishes to not drop trace records
+// before Start() is received.
+trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispatcher,
+                                                      const char* name,
+                                                      bool* out_already_started);
+
+// Wait for tracing to start.
+// Returns ZX_OK on success, ZX_ERR_CANCELED if it times out.
+// This must be called on a thread other than the provider's dispatcher thread.
+zx_status_t trace_provider_wait_tracing_started(trace_provider_t* provider,
+                                                zx_duration_t timeout);
+
 // Destroys the trace provider.
 void trace_provider_destroy(trace_provider_t* provider);
 
 __END_CDECLS
 
 #ifdef __cplusplus
+
+#include <fbl/unique_ptr.h>
+#include <lib/zx/time.h>
+
 namespace trace {
 
 // Convenience RAII wrapper for creating and destroying a trace provider.
 class TraceProvider {
 public:
+    // Create a trace provider synchronously, and return an indicator of
+    // whether tracing has started already.
+    // This is done with a factory function because it's more complex than
+    // the basic constructor.
+    static bool CreateSynchronously(
+            async_dispatcher_t* dispatcher,
+            const char* name,
+            fbl::unique_ptr<TraceProvider>* out_provider,
+            bool* out_already_started) {
+        auto provider = trace_provider_create_synchronously(
+            dispatcher, name, out_already_started);
+        if (!provider)
+            return false;
+        *out_provider = fbl::unique_ptr<TraceProvider>(new TraceProvider(provider));
+        return true;
+    }
+
     // Creates a trace provider.
     TraceProvider(async_dispatcher_t* dispatcher)
         : provider_(trace_provider_create(dispatcher)) {}
@@ -108,14 +146,27 @@ public:
             trace_provider_destroy(provider_);
     }
 
+    zx_status_t WaitTracingStarted(zx::duration timeout) {
+        if (provider_) {
+            return trace_provider_wait_tracing_started(provider_,
+                                                       timeout.get());
+        } else {
+            return ZX_ERR_BAD_STATE;
+        }
+    }
+
     // Returns true if the trace provider was created successfully.
-    zx_status_t is_valid() const {
+    bool is_valid() const {
         return provider_ != nullptr;
     }
 
 private:
-    trace_provider_t* provider_;
+    TraceProvider(trace_provider_t* provider)
+        : provider_(provider) {}
+
+    trace_provider_t* const provider_;
 };
 
 } // namespace trace
+
 #endif // __cplusplus
