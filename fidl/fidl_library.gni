@@ -20,9 +20,7 @@ template("fidl_library") {
       current_toolchain == fidl_toolchain,
       "This template can only be used in the FIDL toolchain $fidl_toolchain.")
 
-  if (!defined(invoker.sources)) {
-    assert(false, "A FIDL library requires some sources.")
-  }
+  assert(defined(invoker.sources), "A FIDL library requires some sources.")
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -184,6 +182,28 @@ template("fidl_library") {
       library_name = invoker.name
     }
 
+    all_files = []
+
+    meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
+    meta_data = {
+      type = "fidl_library"
+      name = library_name
+      sources = []
+    }
+    foreach(source, invoker.sources) {
+      file_name = get_path_info(source, "file")
+      destination = "fidl/$library_name/$file_name"
+      meta_data.sources += [ destination ]
+      all_files += [
+        {
+          source = rebase_path(source)
+          dest = file_name
+        },
+      ]
+    }
+    meta_data.files = meta_data.sources
+    write_file(meta_file, meta_data, "json")
+
     sdk_atom("${target_name}_sdk") {
       domain = "fidl"
       name = library_name
@@ -191,19 +211,15 @@ template("fidl_library") {
 
       category = invoker.sdk_category
 
+      meta = {
+        source = meta_file
+        dest = "fidl/$library_name/meta.json"
+        schema = "fidl_library"
+      }
+
       tags = [ "name:$library_name" ]
 
-      files = []
-      foreach(source, invoker.sources) {
-        # TODO(pylaligand): remove this temporary workaround.
-        destination = get_path_info(source, "file")
-        files += [
-          {
-            source = rebase_path(source)
-            dest = destination
-          },
-        ]
-      }
+      files = all_files
 
       deps = []
       foreach(dep, all_deps) {
