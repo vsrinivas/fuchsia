@@ -20,6 +20,7 @@ using koid = uint64;
 using vaddr = uint64;
 using paddr = uint64;
 using paddr32 = uint32;
+using gpaddr = uint64;
 using off = uint64;
 )FIDL";
 
