@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_HELPERS_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_HELPERS_H_
 
 #include <fuchsia/bluetooth/control/cpp/fidl.h>
 #include <fuchsia/bluetooth/cpp/fidl.h>
@@ -99,3 +100,5 @@ struct fxl::TypeConverter<fidl::VectorPtr<uint8_t>,
   static fidl::VectorPtr<uint8_t> Convert(
       const ::btlib::common::ByteBuffer& from);
 };
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_HELPERS_H_

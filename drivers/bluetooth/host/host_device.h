@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_HOST_DEVICE_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_HOST_DEVICE_H_
 
 #include <mutex>
 
@@ -82,3 +83,5 @@ class HostDevice final {
 };
 
 }  // namespace bthost
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_HOST_DEVICE_H_

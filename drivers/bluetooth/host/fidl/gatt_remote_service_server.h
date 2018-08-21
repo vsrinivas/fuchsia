@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_GATT_REMOTE_SERVICE_SERVER_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_GATT_REMOTE_SERVICE_SERVER_H_
 
 #include <unordered_map>
 
@@ -55,3 +56,5 @@ class GattRemoteServiceServer
 };
 
 }  // namespace bthost
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_GATT_REMOTE_SERVICE_SERVER_H_

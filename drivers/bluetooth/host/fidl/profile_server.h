@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_PROFILE_SERVER_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_PROFILE_SERVER_H_
 
 #include <fuchsia/bluetooth/bredr/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
@@ -39,3 +40,5 @@ class ProfileServer
 };
 
 }  // namespace bthost
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_PROFILE_SERVER_H_

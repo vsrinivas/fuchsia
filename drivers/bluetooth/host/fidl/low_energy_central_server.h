@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_LOW_ENERGY_CENTRAL_SERVER_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_LOW_ENERGY_CENTRAL_SERVER_H_
 
 #include <memory>
 #include <unordered_map>
@@ -78,3 +79,5 @@ class LowEnergyCentralServer
 };
 
 }  // namespace bthost
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_LOW_ENERGY_CENTRAL_SERVER_H_

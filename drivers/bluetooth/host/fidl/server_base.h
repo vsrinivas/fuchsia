@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_SERVER_BASE_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_SERVER_BASE_H_
 
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
@@ -114,3 +115,5 @@ class GattServerBase : public ServerBase<Interface> {
 };
 
 }  // namespace bthost
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_SERVER_BASE_H_

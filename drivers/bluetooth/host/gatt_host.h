@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_GATT_HOST_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_GATT_HOST_H_
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -117,3 +118,5 @@ class GattHost final : public fbl::RefCounted<GattHost>,
 };
 
 }  // namespace bthost
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_GATT_HOST_H_

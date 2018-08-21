@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_HOST_GATT_REMOTE_SERVICE_DEVICE_H_
+#define GARNET_DRIVERS_BLUETOOTH_HOST_GATT_REMOTE_SERVICE_DEVICE_H_
 
 #include <zircon/types.h>
 
@@ -121,3 +122,4 @@ class GattRemoteServiceDevice final {
 };
 
 }  // namespace bthost
+#endif  // GARNET_DRIVERS_BLUETOOTH_HOST_GATT_REMOTE_SERVICE_DEVICE_H_
