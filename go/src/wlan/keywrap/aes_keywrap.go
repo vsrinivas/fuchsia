@@ -66,7 +66,7 @@ func Wrap(key, plaintext []byte) (r []byte, err error) {
 // RFC 3394, 2.2.2 - uses index based unwrapping
 func Unwrap(key, ciphertext []byte) (r []byte, err error) {
 	n := len(ciphertext)/8 - 1
-	if len(ciphertext)%8 != 0 || n < 2{
+	if len(ciphertext)%8 != 0 || n < 2 {
 		err = ErrInvalidTextLength
 		return
 	}
