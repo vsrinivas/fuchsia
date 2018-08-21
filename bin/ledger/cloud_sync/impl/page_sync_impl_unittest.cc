@@ -86,7 +86,7 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
         std::move(page_cloud_ptr_),
         std::make_unique<TestBackoff>(&download_backoff_get_next_calls_),
         std::make_unique<TestBackoff>(&upload_backoff_get_next_calls_),
-        [this] { error_callback_calls_++; }, std::move(watcher));
+        std::move(watcher));
   }
   ~PageSyncImplTest() override {}
 
@@ -110,7 +110,6 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
   int upload_backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
-  int error_callback_calls_ = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageSyncImplTest);
@@ -316,6 +315,9 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
 TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   bool called;
   page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  int error_callback_calls = 0;
+  page_sync_->SetOnUnrecoverableError(
+      [&error_callback_calls] { error_callback_calls++; });
   StartPageSync();
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -324,13 +326,13 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   storage_.should_fail_add_commit_from_sync = true;
-  EXPECT_EQ(0, error_callback_calls_);
+  EXPECT_EQ(0, error_callback_calls);
   page_cloud_.set_watcher->OnNewCommits(std::move(commits), MakeToken("42"),
                                         [] {});
 
   RunLoopUntilIdle();
   EXPECT_FALSE(page_cloud_.set_watcher.is_bound());
-  EXPECT_EQ(1, error_callback_calls_);
+  EXPECT_EQ(1, error_callback_calls);
 }
 
 // Verifies that the on idle callback is called when there is no download in
@@ -422,6 +424,19 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   // No additional calls.
   EXPECT_EQ(1u, page_cloud_.add_commits_calls);
   EXPECT_TRUE(page_sync_->IsIdle());
+}
+
+TEST_F(PageSyncImplTest, UnrecoverableError) {
+  int on_error_calls = 0;
+  page_sync_->SetOnUnrecoverableError([&on_error_calls] { on_error_calls++; });
+  // Complete the initial sync.
+  StartPageSync();
+  RunLoopUntilIdle();
+  EXPECT_EQ(0, on_error_calls);
+
+  page_cloud_.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, on_error_calls);
 }
 
 }  // namespace

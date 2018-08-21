@@ -25,13 +25,11 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
                            cloud_provider::PageCloudPtr page_cloud,
                            std::unique_ptr<backoff::Backoff> download_backoff,
                            std::unique_ptr<backoff::Backoff> upload_backoff,
-                           fit::closure on_error,
                            std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : storage_(storage),
       sync_client_(sync_client),
       encryption_service_(encryption_service),
       page_cloud_(std::move(page_cloud)),
-      on_error_(std::move(on_error)),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
       task_runner_(dispatcher) {
@@ -45,9 +43,11 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
   page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_,
                                               encryption_service_, &page_cloud_,
                                               this, std::move(upload_backoff));
-  page_cloud_.set_error_handler([] {
-    FXL_LOG(ERROR) << "Page cloud disconnected unexpectedly.";
-    // TODO(ppi): we should probably shut down page download and upload.
+  page_cloud_.set_error_handler([this] {
+    if (on_unrecoverable_error_ && !error_callback_already_called_) {
+      error_callback_already_called_ = true;
+      on_unrecoverable_error_();
+    }
   });
 }
 
@@ -103,14 +103,19 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
   }
 }
 
+void PageSyncImpl::SetOnUnrecoverableError(
+    fit::closure on_unrecoverable_error) {
+  on_unrecoverable_error_ = std::move(on_unrecoverable_error);
+}
+
 void PageSyncImpl::HandleError() {
   if (error_callback_already_called_) {
     return;
   }
 
-  if (on_error_) {
+  if (on_unrecoverable_error_) {
     error_callback_already_called_ = true;
-    on_error_();
+    on_unrecoverable_error_();
   }
 }
 

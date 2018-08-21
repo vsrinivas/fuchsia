@@ -20,6 +20,7 @@ class PageSyncEmptyImpl : public PageSync {
   void SetOnBacklogDownloaded(
       fit::closure on_backlog_downloaded_callback) override;
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
+  void SetOnUnrecoverableError(fit::closure on_error) override;
 };
 
 }  // namespace cloud_sync

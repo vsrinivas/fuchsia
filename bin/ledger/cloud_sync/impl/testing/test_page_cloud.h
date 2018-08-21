@@ -32,6 +32,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
   ~TestPageCloud() override;
 
   void RunPendingCallbacks();
+  void Unbind() { binding_.Unbind(); }
 
   cloud_provider::Status status_to_return = cloud_provider::Status::OK;
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;

@@ -75,6 +75,12 @@ void UserSyncImpl::OnNetworkError() {
 
 void UserSyncImpl::Start() {
   FXL_DCHECK(!started_);
+  if (!user_config_.cloud_provider) {
+    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                     << "the cloud fingerprint";
+    return;
+  }
 
   user_config_.cloud_provider->GetDeviceSet(
       device_set_.NewRequest(), [this](auto status) {
@@ -91,7 +97,12 @@ void UserSyncImpl::Start() {
 }
 
 void UserSyncImpl::CheckCloudNotErased() {
-  FXL_DCHECK(device_set_);
+  if (!device_set_) {
+    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                     << "the cloud fingerprint";
+    return;
+  }
 
   ledger::DetachedPath fingerprint_path = GetFingerprintPath();
   if (!files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path())) {
@@ -112,6 +123,13 @@ void UserSyncImpl::CheckCloudNotErased() {
 }
 
 void UserSyncImpl::CreateFingerprint() {
+  if (!device_set_) {
+    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                     << "the cloud fingerprint";
+    return;
+  }
+
   // Generate the fingerprint.
   char fingerprint_array[kFingerprintSize];
   zx_cprng_draw(fingerprint_array, kFingerprintSize);
@@ -163,6 +181,13 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
 }
 
 void UserSyncImpl::SetCloudErasedWatcher() {
+  if (!device_set_) {
+    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                     << "the cloud fingerprint";
+    return;
+  }
+
   cloud_provider::DeviceSetWatcherPtr watcher;
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();

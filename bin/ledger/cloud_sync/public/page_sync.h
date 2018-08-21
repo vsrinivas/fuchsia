@@ -48,6 +48,11 @@ class PageSync {
   // Sets a watcher for the synchronization state of this page.
   virtual void SetSyncWatcher(SyncStateWatcher* watcher) = 0;
 
+  // Sets a callback that will be called at most once, before or after Start(),
+  // when PageSync hits an error it cannot recover from. The class can be
+  // deleted after that.
+  virtual void SetOnUnrecoverableError(fit::closure on_unrecoverable_error) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageSync);
 };

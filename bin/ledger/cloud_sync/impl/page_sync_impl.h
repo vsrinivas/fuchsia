@@ -51,8 +51,8 @@ namespace cloud_sync {
 // signal to trigger retries.
 //
 // Unrecoverable errors (such as internal errors accessing the storage) cause
-// the page sync to stop, in which case the client is notified using the given
-// error callback.
+// the page sync to stop, in which case the client is notified using the error
+// callback set via SetOnUnrecoverableError().
 class PageSyncImpl : public PageSync,
                      public PageDownload::Delegate,
                      public PageUpload::Delegate {
@@ -63,7 +63,6 @@ class PageSyncImpl : public PageSync,
                cloud_provider::PageCloudPtr page_cloud,
                std::unique_ptr<backoff::Backoff> download_backoff,
                std::unique_ptr<backoff::Backoff> upload_backoff,
-               fit::closure on_error,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
   ~PageSyncImpl() override;
 
@@ -86,6 +85,8 @@ class PageSyncImpl : public PageSync,
   void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) override;
 
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
+
+  void SetOnUnrecoverableError(fit::closure on_unrecoverable_error) override;
 
  private:
   void HandleError();
@@ -111,6 +112,7 @@ class PageSyncImpl : public PageSync,
 
   fit::closure on_idle_;
   fit::closure on_backlog_downloaded_;
+  fit::closure on_unrecoverable_error_;
   // Ensures that each instance is started only once.
   bool started_ = false;
   // Set to true on unrecoverable error. This indicates that PageSyncImpl is in

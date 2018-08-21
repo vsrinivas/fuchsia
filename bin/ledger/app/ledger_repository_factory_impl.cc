@@ -257,14 +257,10 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   }
 
   auto cloud_provider_ptr = cloud_provider.Bind();
-  cloud_provider_ptr.set_error_handler(
-      [this, name = repository_information.name] {
-        FXL_LOG(ERROR) << "Lost connection to the cloud provider, "
-                       << "shutting down the repository.";
-        auto find_repository = repositories_.find(name);
-        FXL_DCHECK(find_repository != repositories_.end());
-        repositories_.erase(find_repository);
-      });
+  cloud_provider_ptr.set_error_handler([name = repository_information.name] {
+    FXL_LOG(ERROR) << "Lost connection to the cloud provider, cloud sync will "
+                      "no longer work.";
+  });
 
   cloud_sync::UserConfig user_config;
   user_config.user_directory = repository_information.content_path;

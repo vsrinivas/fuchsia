@@ -19,14 +19,13 @@ LedgerSyncImpl::~LedgerSyncImpl() {}
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
-    storage::PageSyncClient* page_sync_client, fit::closure error_callback) {
+    storage::PageSyncClient* page_sync_client) {
   auto combined_sync =
       std::make_unique<PageSyncImpl>(page_storage, page_sync_client);
 
   if (cloud_sync_) {
     auto cloud_page_sync = cloud_sync_->CreatePageSync(
-        page_storage, combined_sync->CreateCloudSyncClient(),
-        std::move(error_callback));
+        page_storage, combined_sync->CreateCloudSyncClient());
     combined_sync->SetCloudSync(std::move(cloud_page_sync));
   }
 

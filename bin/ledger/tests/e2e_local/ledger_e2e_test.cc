@@ -302,7 +302,12 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   EXPECT_FALSE(ledger_shut_down);
 }
 
-TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
+// Verifies that Ledger instance continues to work even if the cloud provider
+// goes away (for example, because it crashes).
+//
+// In the future, we need to also be able to reconnect/request a new cloud
+// provider, see LE-567.
+TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   Init({});
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback(
@@ -311,7 +316,8 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  ledger_internal::LedgerRepositoryPtr ledger_repository;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
+      ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
@@ -322,15 +328,90 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
-  bool repo_disconnected = false;
-  ledger_repository.set_error_handler(
-      [&repo_disconnected] { repo_disconnected = true; });
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
+  ASSERT_EQ(ledger::Status::OK, status);
 
+  // Close the cloud provider channel.
   cloud_provider_binding.Unbind();
 
-  RunLoopUntil([&repo_disconnected] { return repo_disconnected; });
+  // Write and read some data to verify that Ledger still works.
+  fidl::SynchronousInterfacePtr<ledger::Page> page;
+  status = ledger::Status::INTERNAL_ERROR;
+  ledger_->GetPage(nullptr, page.NewRequest(), &status);
+  ASSERT_EQ(ledger::Status::OK, status);
+  status = ledger::Status::INTERNAL_ERROR;
+  page->Put(TestArray(), TestArray(), &status);
+  EXPECT_EQ(ledger::Status::OK, status);
+  fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
+  status = ledger::Status::INTERNAL_ERROR;
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                    nullptr, &status);
+  EXPECT_EQ(ledger::Status::OK, status);
+  fuchsia::mem::BufferPtr value;
+  status = ledger::Status::INTERNAL_ERROR;
+  snapshot->Get(TestArray(), &status, &value);
+  ASSERT_EQ(ledger::Status::OK, status);
+  std::string value_as_string;
+  EXPECT_TRUE(fsl::StringFromVmo(*value, &value_as_string));
+  EXPECT_TRUE(Equals(TestArray(), value_as_string));
 
-  // Verify that the Ledger app didn't crash.
+  // Verify that the Ledger app didn't crash or shut down.
+  EXPECT_TRUE(ledger_repository);
+  EXPECT_FALSE(ledger_app_shut_down);
+}
+
+TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
+  Init({});
+  bool ledger_app_shut_down = false;
+  RegisterShutdownCallback(
+      [&ledger_app_shut_down] { ledger_app_shut_down = true; });
+  ledger::Status status;
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+
+  cloud_provider::CloudProviderPtr cloud_provider_ptr;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
+      ledger_repository;
+  ledger::FakeCloudProvider cloud_provider;
+  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+      &cloud_provider, cloud_provider_ptr.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
+      callback::Capture(QuitLoopClosure(), &status));
+  RunLoop();
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  // Write some data.
+  fidl::SynchronousInterfacePtr<ledger::Page> page;
+  status = ledger::Status::INTERNAL_ERROR;
+  ledger_->GetPage(nullptr, page.NewRequest(), &status);
+  ASSERT_EQ(ledger::Status::OK, status);
+  status = ledger::Status::INTERNAL_ERROR;
+  page->Put(TestArray(), TestArray(), &status);
+  EXPECT_EQ(ledger::Status::OK, status);
+
+  // Close the cloud provider channel.
+  cloud_provider_binding.Unbind();
+
+  // Read the data back.
+  fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
+  status = ledger::Status::INTERNAL_ERROR;
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                    nullptr, &status);
+  EXPECT_EQ(ledger::Status::OK, status);
+  fuchsia::mem::BufferPtr value;
+  status = ledger::Status::INTERNAL_ERROR;
+  snapshot->Get(TestArray(), &status, &value);
+  ASSERT_EQ(ledger::Status::OK, status);
+  std::string value_as_string;
+  EXPECT_TRUE(fsl::StringFromVmo(*value, &value_as_string));
+  EXPECT_TRUE(Equals(TestArray(), value_as_string));
+
+  // Verify that the Ledger app didn't crash or shut down.
+  EXPECT_TRUE(ledger_repository);
   EXPECT_FALSE(ledger_app_shut_down);
 }
 

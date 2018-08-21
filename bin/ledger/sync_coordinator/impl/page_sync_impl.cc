@@ -128,6 +128,19 @@ storage::PageSyncClient* PageSyncImpl::CreateCloudSyncClient() {
 void PageSyncImpl::SetCloudSync(
     std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
   FXL_DCHECK(cloud_sync_);
+  if (!cloud_sync) {
+    // Cloud sync failed to produce an initialized |cloud_sync| instance - e.g.
+    // because cloud provider is disconnected. Unset the entire cloud sync
+    // holder to disable the cloud sync logic.
+    cloud_sync_.reset();
+    return;
+  }
+
+  cloud_sync->SetOnUnrecoverableError([this] {
+    FXL_LOG(WARNING) << "Shutting down page cloud sync.";
+    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    cloud_sync_.reset();
+  });
   cloud_sync_->SetCloudSync(std::move(cloud_sync));
 }
 

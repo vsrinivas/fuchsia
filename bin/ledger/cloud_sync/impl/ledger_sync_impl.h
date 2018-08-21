@@ -31,8 +31,7 @@ class LedgerSyncImpl : public LedgerSync {
 
   std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
-      storage::PageSyncClient* page_sync_client,
-      fit::closure error_callback) override;
+      storage::PageSyncClient* page_sync_client) override;
 
   // Enables upload. Has no effect if this method has already been called.
   void EnableUpload();

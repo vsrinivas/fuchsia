@@ -36,8 +36,14 @@ LedgerSyncImpl::~LedgerSyncImpl() {
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
-    storage::PageSyncClient* page_sync_client, fit::closure error_callback) {
+    storage::PageSyncClient* page_sync_client) {
   FXL_DCHECK(page_storage);
+  if (!user_config_->cloud_provider) {
+    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    FXL_LOG(WARNING) << "Skipped initializing the cloud sync. "
+                     << "Cloud provider is disconnected.";
+    return nullptr;
+  }
 
   cloud_provider::PageCloudPtr page_cloud;
   user_config_->cloud_provider->GetPageCloud(
@@ -53,8 +59,7 @@ std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->dispatcher(), page_storage, page_sync_client,
       encryption_service_, std::move(page_cloud), environment_->MakeBackoff(),
-      environment_->MakeBackoff(), std::move(error_callback),
-      aggregator_.GetNewStateWatcher());
+      environment_->MakeBackoff(), aggregator_.GetNewStateWatcher());
   if (upload_enabled_) {
     page_sync->EnableUpload();
   }

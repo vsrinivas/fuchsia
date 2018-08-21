@@ -29,4 +29,8 @@ void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) {
   FXL_NOTIMPLEMENTED();
 }
 
+void PageSyncEmptyImpl::SetOnUnrecoverableError(fit::closure /*on_error*/) {
+  FXL_NOTIMPLEMENTED();
+}
+
 }  // namespace cloud_sync

@@ -175,8 +175,7 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
 
   std::unique_ptr<sync_coordinator::PageSync> CreatePageSync(
       storage::PageStorage* /*page_storage*/,
-      storage::PageSyncClient* /*page_sync_client*/,
-      fit::closure /*error_callback*/) override {
+      storage::PageSyncClient* /*page_sync_client*/) override {
     called = true;
     return nullptr;
   }
