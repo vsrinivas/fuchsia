@@ -64,6 +64,13 @@ private:
     void SetBacklightState(bool power, uint8_t brightness) override;
     void GetBacklightState(bool* power, uint8_t* brightness) override;
 
+    uint8_t dpcd_capability(uint16_t addr) {
+        return dpcd_capabilities_[addr - dpcd::DPCD_CAP_START];
+    }
+    uint8_t dpcd_edp_capability(uint16_t addr) {
+        return dpcd_edp_capabilities_[addr - dpcd::DPCD_EDP_CAP_START];
+    }
+
     uint8_t dp_lane_count_;
     uint32_t dp_link_rate_mhz_;
     uint8_t dp_link_rate_idx_plus1_;

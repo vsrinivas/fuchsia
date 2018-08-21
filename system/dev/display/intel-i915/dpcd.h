@@ -18,6 +18,7 @@ enum {
     DPCD_DOWN_STREAM_PORT_PRESENT = 0x5,
     DPCD_DOWN_STREAM_PORT_COUNT = 0x7,
     DPCD_EDP_CONFIG = 0xd,
+    DPCD_TRAINING_AUX_RD_INTERVAL = 0xe,
     DPCD_SUPPORTED_LINK_RATE_START = 0x10,
     DPCD_SUPPORTED_LINK_RATE_END = 0x1f,
     DPCD_LINK_BW_SET = 0x100,
@@ -234,6 +235,30 @@ public:
     DEF_BIT(1, post_lt_adj_req_in_progress);
     DEF_BIT(6, downstream_port_status_changed);
     DEF_BIT(7, link_status_updated);
+};
+
+// DPCD registers:: TRAINING_AUX_RD_INTERVAL
+class TrainingAuxRdInterval : public hwreg::RegisterBase<TrainingAuxRdInterval, uint8_t, hwreg::EnablePrinter> {
+public:
+    DEF_FIELD(6, 0, interval);
+    DEF_BIT(7, extended_receiver_capabilitiy_field_present);
+
+    uint32_t clock_recovery_delay_us(uint8_t revision) {
+        if (revision >= 0x14 || interval() == 0) {
+            return 100;
+        }
+        return channel_eq_delay_us();
+    }
+
+    uint32_t channel_eq_delay_us() {
+        switch (interval()) {
+        case 0: return 400;
+        case 1: return 4000;
+        case 2: return 8000;
+        case 3: return 12000;
+        case 4: default: return 16000;
+        }
+    }
 };
 
 } // dpcd

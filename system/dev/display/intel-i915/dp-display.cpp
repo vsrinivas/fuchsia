@@ -681,14 +681,15 @@ bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     dpcd::LaneStatus lane_status[dp_lane_count_];
 
     int poll_count = 0;
+    dpcd::TrainingAuxRdInterval delay;
+    delay.set_reg_value(dpcd_capability(dpcd::DPCD_TRAINING_AUX_RD_INTERVAL));
     for (;;) {
         if (!DpcdRequestLinkTraining(*tp_set, lanes)) {
             return false;
         }
 
-        // Wait 100us before polling the registers for the result of the
-        // first training step, as specified by the DisplayPort spec.
-        zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+        zx_nanosleep(zx_deadline_after(ZX_USEC(
+                delay.clock_recovery_delay_us(dpcd_capability(dpcd::DPCD_REV)))));
 
         // Did the sink device receive the signal successfully?
         if (!DpcdReadPairedRegs<dpcd::DPCD_LANE0_1_STATUS, dpcd::LaneStatus>(lane_status)) {
@@ -737,15 +738,15 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 
     tp_set->set_training_pattern_set(tp_set->kTrainingPattern2);
     int poll_count = 0;
+    dpcd::TrainingAuxRdInterval delay;
+    delay.set_reg_value(dpcd_capability(dpcd::DPCD_TRAINING_AUX_RD_INTERVAL));
     for (;;) {
         // lane0_training and lane1_training can change in the loop
         if (!DpcdRequestLinkTraining(*tp_set, lanes)) {
             return false;
         }
 
-        // Allow 400us for the second training step, as specified by the
-        // DisplayPort spec.
-        zx_nanosleep(zx_deadline_after(ZX_USEC(400)));
+        zx_nanosleep(zx_deadline_after(ZX_USEC(delay.channel_eq_delay_us())));
 
         // Did the sink device receive the signal successfully?
         if (!DpcdReadPairedRegs<dpcd::DPCD_LANE0_1_STATUS, dpcd::LaneStatus>(lane_status)) {
@@ -874,12 +875,10 @@ bool DpDisplay::QueryDevice(edid::Edid* edid) {
     }
 
     dpcd::DownStreamPortPresent dsp;
-    dsp.set_reg_value(dpcd_capabilities_[
-            dpcd::DPCD_DOWN_STREAM_PORT_PRESENT - dpcd::DPCD_CAP_START]);
+    dsp.set_reg_value(dpcd_capability(dpcd::DPCD_DOWN_STREAM_PORT_PRESENT));
     if (dsp.is_branch()) {
         dpcd::DownStreamPortCount count;
-        count.set_reg_value(dpcd_capabilities_[
-                dpcd::DPCD_DOWN_STREAM_PORT_COUNT - dpcd::DPCD_CAP_START]);
+        count.set_reg_value(dpcd_capability(dpcd::DPCD_DOWN_STREAM_PORT_COUNT));
         LOG_SPEW("Found branch with %d ports\n", count.count());
 
         dpcd::SinkCount sink_count;
@@ -896,7 +895,7 @@ bool DpDisplay::QueryDevice(edid::Edid* edid) {
 
     if (controller()->igd_opregion().IsEdp(ddi())) {
         dpcd::EdpConfigCap edp_caps;
-        edp_caps.set_reg_value(dpcd_capabilities_[dpcd::DPCD_EDP_CONFIG]);
+        edp_caps.set_reg_value(dpcd_capability(dpcd::DPCD_EDP_CONFIG));
 
         if (edp_caps.dpcd_display_ctrl_capable() &&
                 !DpcdRead(dpcd::DPCD_EDP_CAP_START, dpcd_edp_capabilities_,
@@ -907,7 +906,7 @@ bool DpDisplay::QueryDevice(edid::Edid* edid) {
     }
 
     dpcd::LaneCount max_lc;
-    max_lc.set_reg_value(dpcd_capabilities_[dpcd::DPCD_MAX_LANE_COUNT - dpcd::DPCD_CAP_START]);
+    max_lc.set_reg_value(dpcd_capability(dpcd::DPCD_MAX_LANE_COUNT));
     dp_lane_count_ = max_lc.lane_count_set();
     if ((ddi() == registers::DDI_A || ddi() == registers::DDI_E) && dp_lane_count_ == 4
             && !registers::DdiRegs(registers::DDI_A).DdiBufControl().ReadFrom(mmio_space())
@@ -917,7 +916,7 @@ bool DpDisplay::QueryDevice(edid::Edid* edid) {
     dp_enhanced_framing_enabled_ = max_lc.enhanced_frame_enabled();
 
     dpcd::LinkBw max_link_bw;
-    max_link_bw.set_reg_value(dpcd_capabilities_[dpcd::DPCD_MAX_LINK_RATE - dpcd::DPCD_CAP_START]);
+    max_link_bw.set_reg_value(dpcd_capability(dpcd::DPCD_MAX_LINK_RATE));
     dp_link_rate_idx_plus1_ = 0;
     dp_link_rate_mhz_ = 0;
     switch (max_link_bw.link_bw()) {
@@ -984,7 +983,7 @@ bool DpDisplay::ConfigureDdi() {
         }
     }
 
-    if (dpcd_capabilities_[dpcd::DPCD_REV - dpcd::DPCD_CAP_START] >= 0x11) {
+    if (dpcd_capability(dpcd::DPCD_REV) >= 0x11) {
         // If the device is in a low power state, the first write can fail. It should be ready
         // within 1ms, but try a few extra times to be safe.
         dpcd::SetPower set_pwr;
@@ -1152,11 +1151,9 @@ bool DpDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans)
         dpcd::EdpGeneralCap1 general_cap;
         dpcd::EdpBacklightCap backlight_cap;
 
-        config_cap.set_reg_value(dpcd_capabilities_[dpcd::DPCD_EDP_CONFIG]);
-        general_cap.set_reg_value(dpcd_edp_capabilities_[
-                dpcd::DPCD_EDP_GENERAL_CAP1 - dpcd::DPCD_EDP_CAP_START]);
-        backlight_cap.set_reg_value(dpcd_edp_capabilities_[
-                dpcd::DPCD_EDP_BACKLIGHT_CAP - dpcd::DPCD_EDP_CAP_START]);
+        config_cap.set_reg_value(dpcd_capability(dpcd::DPCD_EDP_CONFIG));
+        general_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_GENERAL_CAP1));
+        backlight_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_BACKLIGHT_CAP));
 
         backlight_aux_power_ = config_cap.dpcd_display_ctrl_capable()
                 && general_cap.tcon_backlight_adjustment_cap()
