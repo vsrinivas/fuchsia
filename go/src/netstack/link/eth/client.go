@@ -51,8 +51,9 @@ import (
 	"syscall/zx/zxwait"
 	"unsafe"
 
-	"netstack/trace"
 	nsfidl "fidl/fuchsia/netstack"
+
+	"netstack/trace"
 )
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
@@ -275,8 +276,11 @@ func (c *Client) AllocForSend() Buffer {
 	if c.txInFlight == c.txDepth {
 		return nil
 	}
-	c.txInFlight++
-	return c.arena.alloc(c)
+	buf := c.arena.alloc(c)
+	if buf != nil {
+		c.txInFlight++
+	}
+	return buf
 }
 
 // Send sends a Buffer to the ethernet driver.
