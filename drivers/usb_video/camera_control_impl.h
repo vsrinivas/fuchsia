@@ -26,8 +26,7 @@ class ControlImpl : public fuchsia::camera::Control {
 
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
-  void OnFrameAvailable(
-      const fuchsia::camera::FrameAvailableEvent& frame);
+  void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
 
  private:
   // Get the available format types for this device
@@ -57,8 +56,7 @@ class ControlImpl : public fuchsia::camera::Control {
 
     // Sent by the driver to the client when a frame is available for
     // processing, or an error occurred.
-    void OnFrameAvailable(
-        const fuchsia::camera::FrameAvailableEvent& frame);
+    void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
 
    private:
     ControlImpl& owner_;

@@ -560,8 +560,7 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
 
   // If we were not even writing to a buffer, return buffer full error:
   if (!buffers_.HasBufferInProgress()) {
-    event.frame_status =
-        fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
+    event.frame_status = fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
     camera_control_->OnFrameAvailable(event);
     return ZX_OK;
   }

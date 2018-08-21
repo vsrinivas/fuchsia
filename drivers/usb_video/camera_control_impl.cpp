@@ -27,11 +27,9 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   if (index == 0) {
     zx_status_t status = usb_video_stream_->GetFormats(formats_);
     if ((status == ZX_OK) &&
-        (formats_->size() >
-         fuchsia::camera::MAX_FORMATS_PER_RESPONSE)) {
+        (formats_->size() > fuchsia::camera::MAX_FORMATS_PER_RESPONSE)) {
       fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
-      for (uint32_t i = 0;
-           i < fuchsia::camera::MAX_FORMATS_PER_RESPONSE; i++) {
+      for (uint32_t i = 0; i < fuchsia::camera::MAX_FORMATS_PER_RESPONSE; i++) {
         formats.push_back((*formats_)[i]);
       }
       callback(fbl::move(formats), formats_->size(), ZX_OK);
@@ -101,8 +99,7 @@ void ControlImpl::StreamImpl::ReleaseFrame(uint32_t buffer_index) {
 }
 
 ControlImpl::StreamImpl::StreamImpl(
-    ControlImpl& owner,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
+    ControlImpl& owner, fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
     : owner_(owner), binding_(this, fbl::move(stream)) {
   binding_.set_error_handler(
       [this] { owner_.usb_video_stream_->DeactivateVideoBuffer(); });

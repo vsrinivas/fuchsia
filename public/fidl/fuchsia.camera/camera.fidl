@@ -50,14 +50,16 @@ struct VideoFormat {
 [Discoverable]
 interface Control {
   // Get the available format types for this device
-  // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple GetFormats
-  //       need to be issued until total_format_count are received
-  1: GetFormats(uint32 index) -> (vector<VideoFormat> formats, uint32 total_format_count, zx.status status);
+  // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+  // GetFormats need to be issued until total_format_count are received
+  1: GetFormats(uint32 index)
+          ->(vector<VideoFormat> formats, uint32 total_format_count,
+             zx.status status);
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
   2: CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
-                FrameRate rate, request<Stream> stream);
+                  FrameRate rate, request<Stream> stream);
 };
 
 interface Stream {

@@ -88,8 +88,7 @@ void FakeControlImpl::ProduceFrame() {
   if (status != ZX_OK) {
     if (status == ZX_ERR_NOT_FOUND) {
       FXL_LOG(ERROR) << "no available frames, dropping frame #" << frame_count_;
-      event.frame_status =
-          fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
+      event.frame_status = fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
     } else {
       FXL_LOG(ERROR) << "failed to get new frame, err: " << status;
       event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;

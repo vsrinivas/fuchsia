@@ -11,8 +11,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/media/timeline/timeline_function.h>
 #include <lib/fzl/vmo-pool.h>
+#include <lib/media/timeline/timeline_function.h>
 
 namespace simple_camera {
 
@@ -40,8 +40,7 @@ class FakeControlImpl : public fuchsia::camera::Control {
 
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
-  void OnFrameAvailable(
-      const fuchsia::camera::FrameAvailableEvent& frame);
+  void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
 
   void PostNextCaptureTask();
 
@@ -56,12 +55,10 @@ class FakeControlImpl : public fuchsia::camera::Control {
       fuchsia::camera::FrameRate frame_rate,
       fidl::InterfaceRequest<fuchsia::camera::Stream> stream) override;
 
- private:
   class FakeStreamImpl : public fuchsia::camera::Stream {
    public:
-    FakeStreamImpl(
-        FakeControlImpl& owner,
-        fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
+    FakeStreamImpl(FakeControlImpl& owner,
+                   fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
 
     // Starts the streaming of frames.
     void Start() override;
@@ -74,8 +71,7 @@ class FakeControlImpl : public fuchsia::camera::Control {
 
     // Sent by the driver to the client when a frame is available for
     // processing, or an error occurred.
-    void OnFrameAvailable(
-        const fuchsia::camera::FrameAvailableEvent& frame);
+    void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
 
    private:
     FakeControlImpl& owner_;

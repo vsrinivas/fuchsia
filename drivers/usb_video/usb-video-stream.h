@@ -16,10 +16,10 @@
 #include <lib/zx/vmo.h>
 
 #include <lib/fzl/vmo-pool.h>
+#include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video-camera.h"
 #include "garnet/drivers/usb_video/usb-video.h"
 #include "garnet/drivers/usb_video/uvc_format.h"
-#include "garnet/drivers/usb_video/camera_control_impl.h"
 
 namespace video {
 namespace usb {
@@ -83,8 +83,9 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   zx_status_t GetFormats(
       fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats);
 
-  zx_status_t CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-                        fuchsia::camera::FrameRate frame_rate);
+  zx_status_t CreateStream(
+      fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+      fuchsia::camera::FrameRate frame_rate);
 
   zx_status_t StartStreaming();
 
