@@ -159,7 +159,14 @@ public:
         initialize_null_target();
     }
 
-    template <typename Callable>
+    function(Result (*target)(Args...)) {
+        initialize_target(target);
+    }
+
+    // For functors, we need to capture the raw type but also restrict on the existence of an
+    // appropriate operator () to resolve overloads and implicit casts properly.
+    template <typename Callable,
+              typename = decltype(std::declval<Callable>()(std::declval<Args>()...))>
     function(Callable target) {
         initialize_target(std::move(target));
     }

@@ -543,6 +543,20 @@ bool implicit_construction() {
     END_TEST;
 }
 
+int arg_count(fit::closure) {
+    return 0;
+}
+int arg_count(fit::function<void(int)>) {
+    return 1;
+}
+
+bool overload_resolution() {
+    BEGIN_TEST;
+    EXPECT_EQ(0, arg_count([] {}));
+    EXPECT_EQ(1, arg_count([](int) {}));
+    END_TEST;
+}
+
 bool sharing() {
     BEGIN_TEST;
 
@@ -793,6 +807,7 @@ RUN_TEST(sized_function_size_bounds);
 RUN_TEST(inline_function_size_bounds);
 RUN_TEST(move_only_argument_and_result);
 RUN_TEST(implicit_construction);
+RUN_TEST(overload_resolution);
 RUN_TEST(sharing)
 RUN_TEST(bind_member);
 RUN_TEST(null_check);
