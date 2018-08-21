@@ -6,13 +6,14 @@
 
 #include <fs/pseudo-file.h>
 
+#include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "garnet/public/lib/escher/util/check_vulkan_support.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/escher/escher_process_init.h"
 #include "lib/escher/fs/hack_filesystem.h"
+#include "lib/escher/util/check_vulkan_support.h"
 #include "public/lib/syslog/cpp/logger.h"
 
 namespace scenic {
@@ -269,6 +270,14 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   FX_CHECK(!fatal);
 
   return false;
+}
+
+Compositor* GfxSystem::GetCompositor(scenic::ResourceId compositor_id) const {
+  return engine_->GetCompositor(compositor_id);
+}
+
+gfx::Session* GfxSystem::GetSession(SessionId session_id) const {
+  return engine_->session_manager()->FindSession(session_id)->session();
 }
 
 void GfxSystem::AddInitClosure(fit::closure closure) {

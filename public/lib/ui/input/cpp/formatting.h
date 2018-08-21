@@ -69,6 +69,13 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::TextInputState& value);
 
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::Command& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::SendKeyboardInputCmd& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::SendPointerInputCmd& value);
+
 }  // namespace input
 }  // namespace ui
 }  // namespace fuchsia

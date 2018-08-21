@@ -181,6 +181,15 @@ Compositor* Engine::GetFirstCompositor() const {
   return compositors_.empty() ? nullptr : *compositors_.begin();
 }
 
+Compositor* Engine::GetCompositor(scenic::ResourceId compositor_id) const {
+  for (Compositor* compositor : compositors_) {
+    if (compositor->id() == compositor_id) {
+      return compositor;
+    }
+  }
+  return nullptr;
+}
+
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
 

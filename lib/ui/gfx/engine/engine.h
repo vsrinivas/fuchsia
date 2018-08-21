@@ -22,6 +22,7 @@
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 #include "garnet/lib/ui/gfx/engine/session_manager.h"
 #include "garnet/lib/ui/gfx/engine/update_scheduler.h"
+#include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
@@ -103,6 +104,9 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   // Returns the first compositor in the current compositors, or nullptr if no
   // compositor exists.
   Compositor* GetFirstCompositor() const;
+
+  // Returns the compositor requested, or nullptr if it does not exist.
+  Compositor* GetCompositor(scenic::ResourceId compositor_id) const;
 
   // Dumps the contents of all scene graphs.
   std::string DumpScenes() const;

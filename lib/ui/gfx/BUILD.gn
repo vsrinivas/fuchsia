@@ -62,6 +62,7 @@ source_set("gfx") {
     "engine/update_scheduler.h",
     "gfx_system.cc",
     "gfx_system.h",
+    "id.h",
     "resources/buffer.cc",
     "resources/buffer.h",
     "resources/camera.cc",

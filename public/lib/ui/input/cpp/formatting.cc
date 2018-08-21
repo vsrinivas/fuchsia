@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
 #include "lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {
@@ -390,6 +391,31 @@ std::ostream& operator<<(std::ostream& os,
   os << ", selection=" << value.selection;
   os << ", composing=" << value.composing;
   return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::Command& value) {
+  using fuchsia::ui::input::Command;
+  switch (value.Which()) {
+    case Command::Tag::kSendKeyboardInput:
+      return os << value.send_keyboard_input();
+    case Command::Tag::kSendPointerInput:
+      return os << value.send_pointer_input();
+    case Command::Tag::Invalid:
+      return os << "Invalid";
+  }
+}
+
+std::ostream& operator<<(
+    std::ostream& os, const fuchsia::ui::input::SendKeyboardInputCmd& value) {
+  return os << "{SendKeyboardInputCmd: compositor_id=" << value.compositor_id
+            << ", keyboard_event=" << value.keyboard_event << "}";
+}
+
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::SendPointerInputCmd& value) {
+  return os << "{SendPointerInputCmd: compositor_id=" << value.compositor_id
+            << ", pointer_event=" << value.pointer_event << "}";
 }
 
 }  // namespace input

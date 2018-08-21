@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/scenic/system.h"
 
 namespace scenic {

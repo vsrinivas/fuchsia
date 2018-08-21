@@ -21,6 +21,9 @@
     "fuchsia.ui.input/InputReport",
     "fuchsia.ui.input/TextSelection",
     "fuchsia.ui.input/TextRange",
-    "fuchsia.ui.input/TextInputState"
+    "fuchsia.ui.input/TextInputState",
+    "fuchsia.ui.input/Command",
+    "fuchsia.ui.input/SendKeyboardInputCmd",
+    "fuchsia.ui.input/SendPointerInputCmd"
   ]
 }
