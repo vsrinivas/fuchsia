@@ -454,7 +454,7 @@ struct MgmtFrameHeader {
 struct Beacon {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kBeacon; }
 
-    bool Validate(size_t len);
+    bool Validate(size_t len) const;
 
     // 9.4.1.10
     uint64_t timestamp;
@@ -472,7 +472,7 @@ struct Beacon {
 struct ProbeRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
 
-    bool Validate(size_t len);
+    bool Validate(size_t len) const;
 
     size_t hdr_len() { return 0; }
     uint8_t elements[];
@@ -484,7 +484,7 @@ struct ProbeRequest {
 struct ProbeResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
 
-    bool Validate(size_t len);
+    bool Validate(size_t len) const;
 
     // 9.4.1.10
     uint64_t timestamp;
@@ -546,7 +546,7 @@ struct Deauthentication {
 struct AssociationRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationRequest; }
 
-    bool Validate(size_t len);
+    bool Validate(size_t len) const;
 
     // 9.4.1.4
     CapabilityInfo cap;
@@ -564,7 +564,7 @@ constexpr uint16_t kAidMask = (1 << 11) - 1;
 struct AssociationResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
 
-    bool Validate(size_t len);
+    bool Validate(size_t len) const;
 
     // 9.4.1.4
     CapabilityInfo cap;

@@ -17,12 +17,35 @@
 #include <unordered_set>
 
 namespace wlan {
+
+static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D};
+
 namespace {
 
 // TODO(hahnr): Support for failing various device calls.
 struct MockDevice : public DeviceInterface {
    public:
-    MockDevice() { state = fbl::AdoptRef(new DeviceState); }
+    MockDevice() {
+        state = fbl::AdoptRef(new DeviceState);
+        common::MacAddr addr(kClientAddress);
+        state->set_address(addr);
+
+        auto info = &wlanmac_info.ifc_info;
+        memcpy(info->mac_addr, kClientAddress, 6);
+        info->driver_features = 0;
+        info->mac_role = WLAN_MAC_ROLE_CLIENT;
+        info->num_bands = 1;
+        info->bands[0] = {
+            .basic_rates = {12, 24, 48, 54, 96, 108},
+            .supported_channels =
+                {
+                    .base_freq = 2407,
+                    .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
+                },
+            .vht_supported = false,
+        };
+        state->set_channel(wlan_channel_t{.cbw = CBW20, .primary = 1});
+    }
 
     // DeviceInterface implementation.
 

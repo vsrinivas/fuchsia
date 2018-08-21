@@ -40,6 +40,18 @@ zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(uint8_t* buf, size_t
     return ZX_OK;
 }
 
+size_t TrafficIndicationMap::BitmapLen() const {
+    return 1 + (N2() - N1());
+}
+
+uint8_t TrafficIndicationMap::BitmapOffset() const {
+    return static_cast<uint8_t>(N1() / 2);
+}
+
+const uint8_t* TrafficIndicationMap::BitmapData() const {
+    return static_cast<const uint8_t*>(aid_bitmap_.StorageUnsafe()->GetData());
+}
+
 bool TrafficIndicationMap::HasDozingClients() const {
     bool empty = aid_bitmap_.Scan(1, aid_bitmap_.size(), false, nullptr);
     return !empty;

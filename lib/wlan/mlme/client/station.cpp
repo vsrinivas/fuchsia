@@ -475,7 +475,8 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return status;
     }
 
-    // TODO(tkilbourn): get the assoc timeout from somewhere
+    // TODO(NET-500): Add association timeout to MLME-ASSOCIATE.request just like
+    // JOIN and AUTHENTICATE requests do.
     assoc_timeout_ = deadline_after_bcn_period(kAssocBcnCountTimeout);
     status = timer_->SetTimer(assoc_timeout_);
     if (status != ZX_OK) {

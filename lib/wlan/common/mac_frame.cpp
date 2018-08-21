@@ -258,31 +258,31 @@ bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, El
 }
 }  // namespace
 
-bool Beacon::Validate(size_t len) {
+bool Beacon::Validate(size_t len) const {
     ElementReader reader(elements, len);
     constexpr size_t kValidIdSize = fbl::count_of(kValidBeaconIds);
     return ValidateElements(len, kValidBeaconIds, kValidIdSize, &reader);
 }
 
-bool ProbeRequest::Validate(size_t len) {
+bool ProbeRequest::Validate(size_t len) const {
     ElementReader reader(elements, len);
     constexpr size_t kValidIdSize = fbl::count_of(kValidProbeRequestIds);
     return ValidateElements(len, kValidProbeRequestIds, kValidIdSize, &reader);
 }
 
-bool ProbeResponse::Validate(size_t len) {
+bool ProbeResponse::Validate(size_t len) const {
     ElementReader reader(elements, len);
     constexpr size_t kValidIdSize = fbl::count_of(kValidProbeResponseIds);
     return ValidateElements(len, kValidProbeResponseIds, kValidIdSize, &reader);
 }
 
-bool AssociationRequest::Validate(size_t len) {
+bool AssociationRequest::Validate(size_t len) const {
     ElementReader reader(elements, len);
     constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationRequestIds);
     return ValidateElements(len, kValidAssociationRequestIds, kValidIdSize, &reader);
 }
 
-bool AssociationResponse::Validate(size_t len) {
+bool AssociationResponse::Validate(size_t len) const {
     ElementReader reader(elements, len);
     constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationResponseIds);
     return ValidateElements(len, kValidAssociationResponseIds, kValidIdSize, &reader);

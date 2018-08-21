@@ -7,6 +7,7 @@ import("//build/package.gni")
 group("tests") {
   testonly = true
   public_deps = [
+    ":client_tests",
     ":common_tests",
     ":dispatcher_tests",
     ":mac_tests",
@@ -21,6 +22,8 @@ source_set("test_main") {
 
   sources = [
     "mock_device.h",
+    "test_bss.h",
+    "test_bss.cpp",
     "test_data.h",
     "test_data.cpp",
     "test_main.cpp",
@@ -35,6 +38,25 @@ source_set("test_main") {
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+executable("client_tests") {
+  output_name = "wlan_client_unittest"
+
+  testonly = true
+
+  sources = [
+    "client_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 executable("mac_tests") {
@@ -180,6 +202,10 @@ package("wlan_tests") {
   ]
 
   tests = [
+    {
+      name = "wlan_client_unittest"
+    },
+
     {
       name = "wlan_mac_unittest"
     },

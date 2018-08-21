@@ -147,9 +147,9 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
 // The MSB in a rate indicates "basic rate" and is ignored during comparison.
 // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
 struct SupportedRate : public common::BitField<uint8_t> {
-    SupportedRate() = default;
-    explicit SupportedRate(uint8_t val) : common::BitField<uint8_t>(val) {}
-    explicit SupportedRate(uint8_t val, bool is_basic) : common::BitField<uint8_t>(val) {
+    constexpr SupportedRate() = default;
+    constexpr explicit SupportedRate(uint8_t val) : common::BitField<uint8_t>(val) {}
+    constexpr explicit SupportedRate(uint8_t val, bool is_basic) : common::BitField<uint8_t>(val) {
         set_is_basic(static_cast<uint8_t>(is_basic));
     }
 

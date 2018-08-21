@@ -62,6 +62,7 @@ class ScannerTest : public ::testing::Test {
       : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
         scanner_(&mock_dev_, &chan_sched_)
     {
+        mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = CBW20});
         SetupMessages();
     }
 
@@ -95,7 +96,7 @@ class ScannerTest : public ::testing::Test {
 };
 
 TEST_F(ScannerTest, Start) {
-    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
+    EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
     EXPECT_FALSE(scanner_.IsRunning());
 
     EXPECT_EQ(ZX_OK, Start());
@@ -108,11 +109,11 @@ TEST_F(ScannerTest, Start_InvalidChannelTimes) {
     req_->min_channel_time = 2;
     req_->max_channel_time = 1;
 
-    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
+    EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, Start());
     EXPECT_FALSE(scanner_.IsRunning());
-    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
+    EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
@@ -123,11 +124,11 @@ TEST_F(ScannerTest, Start_NoChannels) {
     SetupMessages();
     req_->channel_list.resize(0);
 
-    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
+    EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, Start());
     EXPECT_FALSE(scanner_.IsRunning());
-    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
+    EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
@@ -154,7 +155,7 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
     req_->max_channel_time = 10;
     req_->channel_list.push_back(2);
 
-    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
+    EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 
     ASSERT_EQ(ZX_OK, Start());
     ASSERT_EQ(1u, scanner_.ScanChannel().primary);
