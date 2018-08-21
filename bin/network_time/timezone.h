@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-namespace time_zone {
+namespace time_server {
 
 class Timezone {
  public:
@@ -22,4 +22,4 @@ class Timezone {
   std::string server_config_file_;
 };
 
-}  // namespace time_zone
+}  // namespace time_server

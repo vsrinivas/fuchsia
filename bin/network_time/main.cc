@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  time_zone::Timezone service("/pkg/data/roughtime-servers.json");
+  time_server::Timezone service("/pkg/data/roughtime-servers.json");
   service.Run();
 
   return 0;

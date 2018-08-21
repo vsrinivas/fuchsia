@@ -16,7 +16,7 @@
 #include "garnet/bin/network_time/time_server_config.h"
 #include "lib/syslog/cpp/logger.h"
 
-namespace time_zone {
+namespace time_server {
 
 bool Timezone::Run() {
   FX_LOGS(INFO) << "started";
@@ -27,6 +27,7 @@ bool Timezone::Run() {
 bool Timezone::UpdateSystemTime(uint8_t tries) {
   TimeServerConfig config;
   if (!config.Parse(server_config_file_)) {
+    FX_LOGS(ERROR) << "Failed to parse config file";
     return false;
   }
 
@@ -91,4 +92,4 @@ bool Timezone::UpdateSystemTime(uint8_t tries) {
   return true;
 }
 
-}  // namespace time_zone
+}  // namespace time_server

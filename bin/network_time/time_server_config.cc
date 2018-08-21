@@ -20,7 +20,7 @@
 
 #define MULTILINE(...) #__VA_ARGS__
 
-namespace time_zone {
+namespace time_server {
 
 const char* config_schema = MULTILINE({
   "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -38,7 +38,8 @@ const char* config_schema = MULTILINE({
             "type" : "array"
           },
           "name" : {"type" : "string"},
-          "publicKey" : {"maxLength" : 64, "minLength" : 64, "type" : "string"}
+          "publicKey" :
+              {"maxLength" : 64, "minLength" : 64, "type" : "string"}
         },
         "required" : [ "publicKey", "addresses", "name" ],
         "type" : "object"
@@ -141,4 +142,4 @@ bool TimeServerConfig::Parse(std::string config_file) {
   return true;
 }
 
-}  // namespace time_zone
+}  // namespace time_server

@@ -11,7 +11,7 @@
 #include <string>
 #include <utility>
 
-namespace time_zone {
+namespace time_server {
 
 enum Status {
   OK,
@@ -45,4 +45,4 @@ class RoughTimeServer {
   uint8_t public_key_[ED25519_PUBLIC_KEY_LEN];
 };
 
-}  // namespace time_zone
+}  // namespace time_server

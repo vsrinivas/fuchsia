@@ -9,7 +9,7 @@
 
 #include "garnet/bin/network_time/roughtime_server.h"
 
-namespace time_zone {
+namespace time_server {
 
 class TimeServerConfig {
  public:
@@ -20,4 +20,4 @@ class TimeServerConfig {
   std::vector<RoughTimeServer> server_list_;
 };
 
-}  // namespace time_zone
+}  // namespace time_server

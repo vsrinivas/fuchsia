@@ -21,7 +21,7 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/syslog/cpp/logger.h"
 
-namespace time_zone {
+namespace time_server {
 
 bool RoughTimeServer::IsValid() const { return valid_; }
 
@@ -144,4 +144,4 @@ Status RoughTimeServer::GetTimeFromServer(
   return OK;
 }
 
-}  // namespace time_zone
+}  // namespace time_server

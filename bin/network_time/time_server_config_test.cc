@@ -30,7 +30,7 @@ class TempFile {
 
 }  // namespace
 
-namespace time_zone {
+namespace time_server {
 
 const char* invalid_configs[INVALID_CONFIGS] = {
     MULTILINE({
@@ -147,4 +147,4 @@ TEST(TimeServerConfigTest, HandlesMultipleServerNAddressesInput) {
   ASSERT_EQ(server_list.size(), 3u);
 }
 
-}  // namespace time_zone
+}  // namespace time_server

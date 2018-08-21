@@ -1,0 +1,13 @@
+{
+  "servers": [
+    {
+      "name": "Google",
+      "publicKey": "7ad3da688c5c04c635a14786a70bcf30224cc25455371bf9d4a2bfb64b682534",
+      "addresses": [
+        {
+          "address": "roughtime.sandbox.google.com:2002"
+        }
+      ]
+    }
+  ]
+}
