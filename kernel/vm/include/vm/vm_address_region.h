@@ -228,6 +228,11 @@ public:
     // the range, Unmap() will fail.
     virtual zx_status_t Unmap(vaddr_t base, size_t size);
 
+    // Same as Unmap, but allows for subregions that are partially in the range.
+    // Additionally, sub-VMARs that are completely within the range will not be
+    // destroyed.
+    zx_status_t UnmapAllowPartial(vaddr_t base, size_t size);
+
     // Change protections on a subset of the region of memory in the containing
     // address space.  If the requested range overlaps with a subregion,
     // Protect() will fail.
@@ -235,6 +240,7 @@ public:
 
     const char* name() const { return name_; }
     bool is_mapping() const override { return false; }
+    bool has_parent() const;
 
     void Dump(uint depth, bool verbose) const override;
     zx_status_t PageFault(vaddr_t va, uint pf_flags) override;
@@ -294,9 +300,17 @@ private:
                                    uint arch_mmu_flags,
                                    fbl::RefPtr<VmAddressRegionOrMapping>* out);
 
+    // Find the child of this VMAR that contains |base|, or if that doesn't
+    // exist, the first child that contains an address greater than |base|.
+    ChildList::iterator UpperBoundInternalLocked(vaddr_t base);
+
     // Implementation for Unmap() and OverwriteVmMapping() that does not hold
-    // the aspace lock.
-    zx_status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions);
+    // the aspace lock. If |can_destroy_regions| is true, then this may destroy
+    // VMARs that it completely covers. If |allow_partial_vmar| is true, then
+    // this can handle the situation where only part of the VMAR is contained
+    // within the region and will not destroy any VMARs.
+    zx_status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions,
+                                    bool allow_partial_vmar);
 
     // internal utilities for interacting with the children list
 

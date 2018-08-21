@@ -26,9 +26,13 @@ static constexpr uint kGuestMmuFlags =
 
 namespace {
 
-// Locate a VMO for a given vaddr.
-struct AspaceVmoLocator final : public VmEnumerator {
-    explicit AspaceVmoLocator(vaddr_t address) : addr(address) {}
+// Locate a VMO at given |address|.
+struct VmoLocator final : public VmEnumerator {
+    const vaddr_t addr;
+    fbl::RefPtr<VmObject> vmo;
+    vaddr_t base = 0;
+
+    explicit VmoLocator(vaddr_t address) : addr(address) {}
 
     bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) final {
         if (addr < map->base() || addr >= (map->base() + map->size())) {
@@ -39,10 +43,6 @@ struct AspaceVmoLocator final : public VmEnumerator {
         base = map->base();
         return false;
     }
-
-    fbl::RefPtr<VmObject> vmo = nullptr;
-    vaddr_t base = 0;
-    const vaddr_t addr;
 };
 
 } // namespace
@@ -114,25 +114,26 @@ zx_status_t GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_
 }
 
 zx_status_t GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
-    zx_status_t status = RootVmar()->Unmap(guest_paddr, len);
-    if (status == ZX_ERR_INVALID_ARGS) {
-        return ZX_OK;
-    }
-    return status;
+    return RootVmar()->UnmapAllowPartial(guest_paddr, len);
 }
 
 zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr) {
-    // Locate the VMO for the guest physical address (if present).
-    AspaceVmoLocator vmo_locator(guest_paddr);
-    guest_aspace_->EnumerateChildren(&vmo_locator);
-    fbl::RefPtr<VmObject> vmo = vmo_locator.vmo;
-    if (!vmo) {
+    // Narrow down the region that may contain the page.
+    fbl::RefPtr<VmAddressRegionOrMapping> region = RootVmar()->FindRegion(guest_paddr);
+    if (!region) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    // Iterate through the region to locate the VMO for the guest physical address.
+    VmoLocator vmo_locator(guest_paddr);
+    region->aspace()->EnumerateChildren(&vmo_locator);
+    if (!vmo_locator.vmo) {
         return ZX_ERR_NOT_FOUND;
     }
 
     // Lookup the physical address of this page in the VMO.
     zx_gpaddr_t offset = guest_paddr - vmo_locator.base;
-    return vmo->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
+    return vmo_locator.vmo->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
 }
 
 zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr, uint flags) {

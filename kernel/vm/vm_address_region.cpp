@@ -292,7 +292,8 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = UnmapInternalLocked(base, size, false /* can_destroy_regions */);
+    zx_status_t status = UnmapInternalLocked(base, size, false /* can_destroy_regions */,
+                                             false /* allow_partial_vmar */);
     if (status != ZX_OK) {
         return status;
     }
@@ -371,7 +372,7 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t 
         return nullptr;
     }
 
-    return fbl::RefPtr<VmAddressRegionOrMapping>(&*itr);
+    return itr.CopyPointer();
 }
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
@@ -563,6 +564,11 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
     return true;
 }
 
+bool VmAddressRegion::has_parent() const {
+    Guard<fbl::Mutex> guard{aspace_->lock()};
+    return parent_ != nullptr;
+}
+
 void VmAddressRegion::Dump(uint depth, bool verbose) const {
     canary_.Assert();
     for (uint i = 0; i < depth; ++i) {
@@ -596,10 +602,43 @@ zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
         return ZX_ERR_BAD_STATE;
     }
 
-    return UnmapInternalLocked(base, size, true /* can_destroy_regions */);
+    return UnmapInternalLocked(base, size, true /* can_destroy_regions */,
+                               false /* allow_partial_vmar */);
 }
 
-zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions) {
+zx_status_t VmAddressRegion::UnmapAllowPartial(vaddr_t base, size_t size) {
+    canary_.Assert();
+
+    size = ROUNDUP(size, PAGE_SIZE);
+    if (size == 0 || !IS_PAGE_ALIGNED(base)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    Guard<fbl::Mutex> guard{aspace_->lock()};
+    if (state_ != LifeCycleState::ALIVE) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return UnmapInternalLocked(base, size, true /* can_destroy_regions */,
+                               true /* allow_partial_vmar */);
+}
+
+VmAddressRegion::ChildList::iterator VmAddressRegion::UpperBoundInternalLocked(vaddr_t base) {
+    // Find the first region with a base greater than *base*.  If a region
+    // exists for *base*, it will be immediately before it.
+    auto itr = --subregions_.upper_bound(base);
+    if (!itr.IsValid()) {
+        itr = subregions_.begin();
+    } else if (base >= itr->base() + itr->size()) {
+        // If *base* isn't in this region, ignore it.
+        ++itr;
+    }
+    return itr;
+}
+
+zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
+                                                 bool can_destroy_regions,
+                                                 bool allow_partial_vmar) {
     DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     if (!is_in_range(base, size)) {
@@ -620,61 +659,93 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool
 #endif
 
     const vaddr_t end_addr = base + size;
-    const auto end = subregions_.lower_bound(end_addr);
+    auto end = subregions_.lower_bound(end_addr);
+    auto begin = UpperBoundInternalLocked(base);
 
-    // Find the first region with a base greater than *base*.  If a region
-    // exists for *base*, it will be immediately before it.
-    auto begin = --subregions_.upper_bound(base);
-    if (!begin.IsValid()) {
-        begin = subregions_.begin();
-    } else if (base >= begin->base() + begin->size()) {
-        // If *base* isn't in this region, ignore it.
-        ++begin;
-    }
-
-    // Check if we're partially spanning a subregion, or aren't allowed to
-    // destroy regions and are spanning a region, and bail if we are.
-    for (auto itr = begin; itr != end; ++itr) {
-        const vaddr_t itr_end = itr->base() + itr->size();
-        if (!itr->is_mapping() && (!can_destroy_regions ||
-                                   itr->base() < base || itr_end > end_addr)) {
-            return ZX_ERR_INVALID_ARGS;
+    if (!allow_partial_vmar) {
+        // Check if we're partially spanning a subregion, or aren't allowed to
+        // destroy regions and are spanning a region, and bail if we are.
+        for (auto itr = begin; itr != end; ++itr) {
+            const vaddr_t itr_end = itr->base() + itr->size();
+            if (!itr->is_mapping() && (!can_destroy_regions ||
+                                       itr->base() < base || itr_end > end_addr)) {
+                return ZX_ERR_INVALID_ARGS;
+            }
         }
     }
 
+    VmAddressRegion* const top = this;
+    bool at_top = true;
     for (auto itr = begin; itr != end;) {
         // Create a copy of the iterator, in case we destroy this element
         auto curr = itr++;
+        VmAddressRegion* up = curr->parent_;
 
-        const vaddr_t curr_end = curr->base() + curr->size();
         if (curr->is_mapping()) {
+            const vaddr_t curr_end = curr->base() + curr->size();
             const vaddr_t unmap_base = fbl::max(curr->base(), base);
             const vaddr_t unmap_end = fbl::min(curr_end, end_addr);
             const size_t unmap_size = unmap_end - unmap_base;
 
-            // If we're unmapping the entire region, just call Destroy
             if (unmap_base == curr->base() && unmap_size == curr->size()) {
-                __UNUSED zx_status_t status = curr->as_vm_mapping()->DestroyLocked();
+                // If we're unmapping the entire region, just call Destroy
+                __UNUSED zx_status_t status = curr->DestroyLocked();
                 DEBUG_ASSERT(status == ZX_OK);
-                continue;
-            }
-
-            // VmMapping::Unmap should only fail if it needs to allocate, which only
-            // happens if it is unmapping from the middle of a region.  That can only
-            // happen if there is only one region being operated on here, so we
-            // can just forward along the error without having to rollback.
-            // TODO(teisenbe): Technically arch_mmu_unmap() itself can also
-            // fail.  We need to rework the system so that is no longer
-            // possible.
-            zx_status_t status = curr->as_vm_mapping()->UnmapLocked(unmap_base, unmap_size);
-            DEBUG_ASSERT(status == ZX_OK || curr == begin);
-            if (status != ZX_OK) {
-                return status;
+            } else {
+                // VmMapping::Unmap should only fail if it needs to allocate,
+                // which only happens if it is unmapping from the middle of a
+                // region.  That can only happen if there is only one region
+                // being operated on here, so we can just forward along the
+                // error without having to rollback.
+                //
+                // TODO(teisenbe): Technically arch_mmu_unmap() itself can also
+                // fail.  We need to rework the system so that is no longer
+                // possible.
+                zx_status_t status = curr->as_vm_mapping()->UnmapLocked(unmap_base, unmap_size);
+                DEBUG_ASSERT(status == ZX_OK || curr == begin);
+                if (status != ZX_OK) {
+                    return status;
+                }
             }
         } else {
-            DEBUG_ASSERT(curr->base() >= base && curr_end <= end_addr);
-            __UNUSED zx_status_t status = curr->DestroyLocked();
-            DEBUG_ASSERT(status == ZX_OK);
+            vaddr_t unmap_base;
+            size_t unmap_size;
+            __UNUSED bool intersects = GetIntersect(base, size, curr->base(), curr->size(),
+                                                    &unmap_base, &unmap_size);
+            DEBUG_ASSERT(intersects);
+            if (allow_partial_vmar) {
+                // If partial VMARs are allowed, we descend into sub-VMARs.
+                fbl::RefPtr<VmAddressRegion> vmar = curr->as_vm_address_region();
+                if (!vmar->subregions_.is_empty()) {
+                    begin = vmar->UpperBoundInternalLocked(base);
+                    end = vmar->subregions_.lower_bound(end_addr);
+                    itr = begin;
+                    at_top = false;
+                }
+            } else if (unmap_base == curr->base() && unmap_size == curr->size()) {
+                __UNUSED zx_status_t status = curr->DestroyLocked();
+                DEBUG_ASSERT(status == ZX_OK);
+            }
+        }
+
+        if (allow_partial_vmar && !at_top && itr == end) {
+            // If partial VMARs are allowed, and we have reached the end of a
+            // sub-VMAR range, we should ascend and continue processing.
+            do {
+                begin = up->subregions_.upper_bound(curr->base());
+                if (begin.IsValid()) {
+                    break;
+                }
+                at_top = up == top;
+                up = up->parent_;
+            } while (!at_top);
+            if (!begin.IsValid()) {
+                // If we have reached the end, after ascending all the way up,
+                // break out of the loop.
+                break;
+            }
+            end = up->subregions_.lower_bound(end_addr);
+            itr = begin;
         }
     }
 
