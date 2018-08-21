@@ -132,7 +132,7 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(sdu);
 
   if (sdu->size() > tx_mtu()) {
-    bt_log(TRACE, "l2cap", "SDU size exceeds channel TxMTU (channel-id: %#04x)",
+    bt_log(TRACE, "l2cap", "SDU size exceeds channel TxMTU (channel-id: %#.4x)",
            id());
     return false;
   }

@@ -250,7 +250,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   // Called when a new remote GATT service is discovered.
   void OnServiceAdded(const std::string& peer_id,
                       fbl::RefPtr<RemoteService> svc) {
-    bt_log(TRACE, "gatt", "service added (peer_id: %s, handle: %#04x, uuid: %s",
+    bt_log(TRACE, "gatt", "service added (peer_id: %s, handle: %#.4x, uuid: %s",
            peer_id.c_str(), svc->handle(), svc->uuid().ToString().c_str());
     for (auto& handler : remote_service_callbacks_) {
       handler.Notify(peer_id, svc);

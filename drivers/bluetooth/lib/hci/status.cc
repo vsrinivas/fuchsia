@@ -12,7 +12,7 @@ namespace common {
 // static
 std::string ProtocolErrorTraits<hci::StatusCode>::ToString(
     hci::StatusCode ecode) {
-  return fxl::StringPrintf("%s (HCI %#02x)", StatusCodeToString(ecode).c_str(),
+  return fxl::StringPrintf("%s (HCI %#.2x)", StatusCodeToString(ecode).c_str(),
                            static_cast<unsigned int>(ecode));
 }
 

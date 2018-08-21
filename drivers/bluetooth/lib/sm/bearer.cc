@@ -670,7 +670,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         bt_log(WARN, "sm", "\"Security Request\" not handled");
         break;
       default:
-        bt_log(SPEW, "sm", "unsupported command: %#02x", reader.code());
+        bt_log(SPEW, "sm", "unsupported command: %#.2x", reader.code());
         auto ecode = ErrorCode::kCommandNotSupported;
         if (pairing_started()) {
           Abort(ecode);

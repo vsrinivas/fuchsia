@@ -27,11 +27,11 @@ std::unique_ptr<ChannelManager> ChannelManager::Create(l2cap::L2CAP* l2cap) {
             if (cm) {
               if (cm->RegisterL2CAPChannel(l2cap_channel)) {
                 bt_log(TRACE, "rfcomm",
-                       "registered incoming channel with handle %#04x",
+                       "registered incoming channel with handle %#.4x",
                        l2cap_channel->link_handle());
               } else {
                 bt_log(WARN, "rfcomm",
-                       "failed to register incoming channel with handle %#04x",
+                       "failed to register incoming channel with handle %#.4x",
                        l2cap_channel->link_handle());
               }
             }
@@ -49,7 +49,7 @@ bool ChannelManager::RegisterL2CAPChannel(
 
   if (handle_to_session_.find(handle) != handle_to_session_.end()) {
     bt_log(WARN, "rfcomm",
-           "L2CAP channel for link (handle: %#04x) already registered", handle);
+           "L2CAP channel for link (handle: %#.4x) already registered", handle);
     return false;
   }
 
@@ -80,14 +80,14 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
          cb = std::move(channel_opened_cb)](auto l2cap_channel) mutable {
           if (!l2cap_channel) {
             bt_log(ERROR, "rfcomm",
-                   "failed to open L2CAP channel with handle %#04x", handle);
+                   "failed to open L2CAP channel with handle %#.4x", handle);
             async::PostTask(dispatcher, [cb_ = std::move(cb)] {
               cb_(nullptr, kInvalidServerChannel);
             });
             return;
           }
 
-          bt_log(INFO, "rfcomm", "opened L2CAP session with handle %#04x",
+          bt_log(INFO, "rfcomm", "opened L2CAP session with handle %#.4x",
                  handle);
           FXL_DCHECK(handle_to_session_.find(handle) ==
                      handle_to_session_.end());

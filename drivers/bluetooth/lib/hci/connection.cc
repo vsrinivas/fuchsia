@@ -138,7 +138,7 @@ std::string Connection::ToString() const {
   if (ll_type() == LinkType::kLE) {
     params = ", " + le_params_.ToString();
   }
-  return fxl::StringPrintf("(%s link - handle: %#04x, role: %s, address: %s%s)",
+  return fxl::StringPrintf("(%s link - handle: %#.4x, role: %s, address: %s%s)",
                            LinkTypeToString(ll_type_).c_str(), handle_,
                            role_ == Role::kMaster ? "master" : "slave",
                            peer_address_.ToString().c_str(), params.c_str());
@@ -213,7 +213,7 @@ void ConnectionImpl::Close(StatusCode reason) {
     FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
     const auto& params = event.view().payload<CommandStatusEventParams>();
     if (params.status != StatusCode::kSuccess) {
-      bt_log(WARN, "hci", "ignoring failed disconnection status: %#02x",
+      bt_log(WARN, "hci", "ignoring failed disconnection status: %#.2x",
              params.status);
     }
   };

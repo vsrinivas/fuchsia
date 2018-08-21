@@ -496,7 +496,7 @@ bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
     return false;
 
   bt_log(INFO, "fake-hci",
-         "responding with error (command: %#04x, status: %#02x)", opcode,
+         "responding with error (command: %#.4x, status: %#.2x)", opcode,
          iter->second);
 
   hci::SimpleReturnParams params;

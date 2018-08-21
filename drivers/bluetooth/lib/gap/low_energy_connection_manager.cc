@@ -65,7 +65,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
     refs_.insert(conn_ref.get());
 
-    bt_log(TRACE, "gap-le", "added ref (handle %#04x, count: %lu)", handle(),
+    bt_log(TRACE, "gap-le", "added ref (handle %#.4x, count: %lu)", handle(),
            ref_count());
 
     return conn_ref;
@@ -76,7 +76,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
     __UNUSED size_t res = refs_.erase(ref);
     FXL_DCHECK(res == 1u) << "DropRef called with wrong connection reference";
-    bt_log(TRACE, "gap-le", "dropped ref (handle: %#04x, count: %lu)", handle(),
+    bt_log(TRACE, "gap-le", "dropped ref (handle: %#.4x, count: %lu)", handle(),
            ref_count());
   }
 
@@ -765,13 +765,13 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
   if (params.status != hci::StatusCode::kSuccess) {
     bt_log(TRACE, "gap-le",
            "HCI connection event received with error (status: \"%s\", handle: "
-           "%#04x",
+           "%#.4x",
            hci::StatusCodeToString(params.status).c_str(), handle);
     return;
   }
 
   bt_log(INFO, "gap-le",
-         "link disconnected - status: \"%s\", handle: %#04x, reason: %#02x",
+         "link disconnected - status: \"%s\", handle: %#.4x, reason: %#.2x",
          hci::StatusCodeToString(params.status).c_str(), handle, params.reason);
 
   if (test_disconn_cb_)
@@ -781,7 +781,7 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
   // connections list.
   auto iter = FindConnection(handle);
   if (iter == connections_.end()) {
-    bt_log(TRACE, "gap-le", "unknown connection handle: %#04x", handle);
+    bt_log(TRACE, "gap-le", "unknown connection handle: %#.4x", handle);
     return;
   }
 
@@ -810,7 +810,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
   if (payload->status != hci::StatusCode::kSuccess) {
     bt_log(WARN, "gap-le",
            "HCI LE Connection Update Complete event with with"
-           " error (status: %#02x, handle: %#04x)",
+           " error (status: %#.2x, handle: %#.4x)",
            payload->status, handle);
     return;
   }
@@ -818,7 +818,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
   auto iter = FindConnection(handle);
   if (iter == connections_.end()) {
     bt_log(TRACE, "gap-le",
-           "conn. parameters received for unknown link (handle: %#04x)",
+           "conn. parameters received for unknown link (handle: %#.4x)",
            handle);
     return;
   }
@@ -826,7 +826,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
   const auto& conn = *iter->second;
   FXL_DCHECK(conn.handle() == handle);
 
-  bt_log(INFO, "gap-le", "conn. parameters updated (id: %s, handle: %#04x)",
+  bt_log(INFO, "gap-le", "conn. parameters updated (id: %s, handle: %#.4x)",
          conn.id().c_str(), handle);
   hci::LEConnectionParameters params(le16toh(payload->conn_interval),
                                      le16toh(payload->conn_latency),
@@ -848,7 +848,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
 void LowEnergyConnectionManager::OnNewLEConnectionParams(
     const std::string& device_identifier, hci::ConnectionHandle handle,
     const hci::LEPreferredConnectionParameters& params) {
-  bt_log(TRACE, "gap-le", "conn. parameters received (handle: %#04x)", handle);
+  bt_log(TRACE, "gap-le", "conn. parameters received (handle: %#.4x)", handle);
 
   RemoteDevice* peer = device_cache_->FindDeviceById(device_identifier);
   if (!peer) {
@@ -870,7 +870,7 @@ void LowEnergyConnectionManager::OnNewLEConnectionParams(
 void LowEnergyConnectionManager::UpdateConnectionParams(
     hci::ConnectionHandle handle,
     const hci::LEPreferredConnectionParameters& params) {
-  bt_log(TRACE, "gap-le", "updating conn. parameters (handle: %#04x)", handle);
+  bt_log(TRACE, "gap-le", "updating conn. parameters (handle: %#.4x)", handle);
   auto command = hci::CommandPacket::New(
       hci::kLEConnectionUpdate, sizeof(hci::LEConnectionUpdateCommandParams));
   auto event_params =

@@ -133,7 +133,7 @@ bool Server::RegisterService(ConstructCallback callback) {
     return false;
   }
   failed_validation.cancel();
-  bt_log(SPEW, "sdp", "registered service %#08x, classes: %s", next,
+  bt_log(SPEW, "sdp", "registered service %#.8x, classes: %s", next,
          record->GetAttribute(kServiceClassIdList).Describe().c_str());
   return true;
 }
@@ -142,7 +142,7 @@ bool Server::UnregisterService(ServiceHandle handle) {
   if (handle == kSDPHandle || records_.find(handle) == records_.end()) {
     return false;
   }
-  bt_log(TRACE, "sdp", "unregistering service (handle: %#08x)", handle);
+  bt_log(TRACE, "sdp", "unregistering service (handle: %#.8x)", handle);
   records_.erase(handle);
   return true;
 }

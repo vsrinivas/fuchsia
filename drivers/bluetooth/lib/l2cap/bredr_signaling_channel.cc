@@ -124,7 +124,7 @@ bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
     return true;
   }
 
-  bt_log(TRACE, "l2cap-bredr", "sig: ignoring unsupported code %#04x",
+  bt_log(TRACE, "l2cap-bredr", "sig: ignoring unsupported code %#.2x",
          packet.header().code);
 
   return false;
@@ -150,7 +150,7 @@ CommandId BrEdrSignalingChannel::EnqueueResponse(CommandCode expected_code,
     if (id == initial_id) {
       bt_log(ERROR, "l2cap-bredr",
              "sig: all valid command IDs in use for "
-             "pending requests; can't queue expected response command %#04x",
+             "pending requests; can't queue expected response command %#.2x",
              expected_code);
       return kInvalidCommandId;
     }
@@ -182,7 +182,7 @@ bool BrEdrSignalingChannel::IsCommandPending(CommandId id) const {
 void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
   auto iter = pending_commands_.find(packet.header().id);
   if (iter == pending_commands_.end()) {
-    bt_log(SPEW, "l2cap-bredr", "sig: ignoring unexpected response, id %#04x",
+    bt_log(SPEW, "l2cap-bredr", "sig: ignoring unexpected response, id %#.2x",
            packet.header().id);
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
@@ -196,7 +196,7 @@ void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
     status = Status::kReject;
   } else {
     bt_log(ERROR, "l2cap-bredr",
-           "sig: response (id %#04x) has unexpected code %#04x",
+           "sig: response (id %#.2x) has unexpected code %#.2x",
            packet.header().id, packet.header().code);
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());

@@ -131,7 +131,7 @@ bool DeviceAddressFromAdvReport(const LEAdvertisingReportData& report,
       type = DeviceAddress::Type::kLERandom;
       break;
     default:
-      bt_log(WARN, "hci", "invalid address type in advertising report: %#02x",
+      bt_log(WARN, "hci", "invalid address type in advertising report: %#.2x",
              static_cast<uint8_t>(report.address_type));
       return false;
   }

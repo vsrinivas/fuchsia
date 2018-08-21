@@ -254,7 +254,7 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
   auto it = async_cmd_handlers_.find(event_code);
   if (it != async_cmd_handlers_.end()) {
     bt_log(ERROR, "hci",
-           "async event handler %zu already registered for event code %#02x",
+           "async event handler %zu already registered for event code %#.2x",
            it->second, event_code);
     return 0u;
   }
@@ -419,7 +419,7 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
   data.dispatcher = dispatcher;
   data.is_le_meta_subevent = is_le_meta;
 
-  bt_log(SPEW, "hci", "adding event handler %zu for event code %#02x", id,
+  bt_log(SPEW, "hci", "adding event handler %zu for event code %#.2x", id,
          event_code);
   FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
   event_handler_id_map_[id] = std::move(data);
@@ -455,7 +455,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
   auto it = pending_transactions_.find(matching_opcode);
   if (it == pending_transactions_.end()) {
-    bt_log(ERROR, "hci", "update for unexpected opcode: %#04x",
+    bt_log(ERROR, "hci", "update for unexpected opcode: %#.4x",
            matching_opcode);
     return;
   }
@@ -504,7 +504,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
 
     auto range = event_handlers->equal_range(event_code);
     if (range.first == event_handlers->end()) {
-      bt_log(TRACE, "hci", "event %#02x received with no handler", event_code);
+      bt_log(TRACE, "hci", "event %#.2x received with no handler", event_code);
       return;
     }
 
@@ -513,7 +513,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       EventCallback callback;
       async_dispatcher_t* dispatcher;
       EventHandlerId event_id = iter->second;
-      bt_log(SPEW, "hci", "notifying handler (id %zu) for event code %#02x",
+      bt_log(SPEW, "hci", "notifying handler (id %zu) for event code %#.2x",
              event_id, event_code);
       auto handler_iter = event_handler_id_map_.find(event_id);
       FXL_DCHECK(handler_iter != event_handler_id_map_.end());

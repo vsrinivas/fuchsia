@@ -30,8 +30,8 @@ class Expecter : public SignalingChannel::Responder {
   void RejectInvalidChannelId(ChannelId local_cid,
                               ChannelId remote_cid) override {
     FAIL() << fxl::StringPrintf(
-        "Unexpected local rejection, \"Invalid Channel ID\" local: %#06x "
-        "remote: %#06x",
+        "Unexpected local rejection, \"Invalid Channel ID\" local: %#.4x "
+        "remote: %#.4x",
         local_cid, remote_cid);
   }
 

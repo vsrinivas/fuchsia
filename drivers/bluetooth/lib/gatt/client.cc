@@ -55,8 +55,8 @@ bool ProcessDescriptorDiscoveryResponse(
     // an attribute outside the requested range.
     if (desc.handle > range_end || desc.handle < range_start) {
       bt_log(TRACE, "gatt",
-             "descriptor handle out of range (handle: %#04x, "
-             "range: %#04x - %#04x)",
+             "descriptor handle out of range (handle: %#.4x, "
+             "range: %#.4x - %#.4x)",
              desc.handle, range_start, range_end);
       return false;
     }
@@ -412,8 +412,8 @@ class Impl final : public Client {
             // an attribute outside the requested range.
             if (chrc.handle > range_end || chrc.handle < range_start) {
               bt_log(TRACE, "gatt",
-                     "characteristic handle out of range (handle: %#04x, "
-                     "range: %#04x - %#04x)",
+                     "characteristic handle out of range (handle: %#.4x, "
+                     "range: %#.4x - %#.4x)",
                      chrc.handle, range_start, range_end);
               res_cb(att::Status(HostError::kPacketMalformed));
               return;
@@ -577,7 +577,7 @@ class Impl final : public Client {
     auto error_cb =
         BindErrorCallback([this, callback = callback.share()](
                               att::Status status, att::Handle handle) {
-          bt_log(TRACE, "gatt", "read request failed: %s, handle %#04x",
+          bt_log(TRACE, "gatt", "read request failed: %s, handle %#.4x",
                  status.ToString().c_str(), handle);
           callback(status, BufferView());
         });
@@ -610,7 +610,7 @@ class Impl final : public Client {
     auto error_cb =
         BindErrorCallback([this, callback = callback.share()](
                               att::Status status, att::Handle handle) {
-          bt_log(TRACE, "gatt", "read blob request failed: %s, handle: %#04x",
+          bt_log(TRACE, "gatt", "read blob request failed: %s, handle: %#.4x",
                  status.ToString().c_str(), handle);
           callback(status, BufferView());
         });
@@ -660,7 +660,7 @@ class Impl final : public Client {
     auto error_cb =
         BindErrorCallback([this, callback = callback.share()](
                               att::Status status, att::Handle handle) {
-          bt_log(TRACE, "gatt", "write request failed: %s, handle: %#02x",
+          bt_log(TRACE, "gatt", "write request failed: %s, handle: %#.2x",
                  status.ToString().c_str(), handle);
           callback(status);
         });

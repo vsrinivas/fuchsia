@@ -69,16 +69,16 @@ void LESignalingChannel::OnConnParamUpdateReceived(
     reject = true;
   } else if (params.min_interval() < hci::kLEConnectionIntervalMin) {
     bt_log(TRACE, "l2cap-le",
-           "sig: conn. min interval outside allowed range: %#04x",
+           "sig: conn. min interval outside allowed range: %#.4x",
            params.min_interval());
     reject = true;
   } else if (params.max_interval() > hci::kLEConnectionIntervalMax) {
     bt_log(TRACE, "l2cap-le",
-           "sig: conn. max interval outside allowed range: %#04x",
+           "sig: conn. max interval outside allowed range: %#.4x",
            params.max_interval());
     reject = true;
   } else if (params.max_latency() > hci::kLEConnectionLatencyMax) {
-    bt_log(TRACE, "l2cap-le", "sig: conn. slave latency too large: %#04x",
+    bt_log(TRACE, "l2cap-le", "sig: conn. slave latency too large: %#.4x",
            params.max_latency());
     reject = true;
   } else if (params.supervision_timeout() <
@@ -86,7 +86,7 @@ void LESignalingChannel::OnConnParamUpdateReceived(
              params.supervision_timeout() >
                  hci::kLEConnectionSupervisionTimeoutMax) {
     bt_log(TRACE, "l2cap-le",
-           "sig: conn supv. timeout outside allowed range: %#04x",
+           "sig: conn supv. timeout outside allowed range: %#.4x",
            params.supervision_timeout());
     reject = true;
   }
@@ -144,7 +144,7 @@ bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {
       OnConnParamUpdateReceived(packet);
       return true;
     default:
-      bt_log(TRACE, "l2cap-le", "sig: unsupported code %#02x",
+      bt_log(TRACE, "l2cap-le", "sig: unsupported code %#.2x",
              packet.header().code);
       break;
   }

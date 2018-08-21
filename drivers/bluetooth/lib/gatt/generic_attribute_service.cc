@@ -114,7 +114,7 @@ void GenericAttributeService::OnServiceChanged(IdType service_id,
   for (const auto& peer_id : subscribed_peers_) {
     bt_log(SPEW, "gatt",
            "service: indicating peer %s of service(s) changed "
-           "(start: %#04x, end: %#04x)",
+           "(start: %#.4x, end: %#.4x)",
            peer_id.c_str(), start, end);
     send_indication_callback_(peer_id, svc_changed_handle_, value);
   }

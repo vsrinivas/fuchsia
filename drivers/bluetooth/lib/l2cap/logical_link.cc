@@ -88,14 +88,14 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
-    bt_log(ERROR, "l2cap", "cannot open fixed channel with id %#04x", id);
+    bt_log(ERROR, "l2cap", "cannot open fixed channel with id %#.4x", id);
     return nullptr;
   }
 
   auto iter = channels_.find(id);
   if (iter != channels_.end()) {
     bt_log(ERROR, "l2cap",
-           "channel is already open! (id: %#04x, handle: %#04x)", id, handle_);
+           "channel is already open! (id: %#.4x, handle: %#.4x)", id, handle_);
     return nullptr;
   }
 
@@ -121,7 +121,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   FXL_DCHECK(packet);
 
   if (!recombiner_.AddFragment(std::move(packet))) {
-    bt_log(TRACE, "l2cap", "ACL data packet rejected (handle: %#04x)", handle_);
+    bt_log(TRACE, "l2cap", "ACL data packet rejected (handle: %#.4x)", handle_);
     // TODO(armansito): This indicates that this connection is not reliable.
     // This needs to notify the channels of this state.
     return;
@@ -162,7 +162,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   if (pp_iter != pending_pdus_.end()) {
     pp_iter->second.emplace_back(std::move(pdu));
 
-    bt_log(SPEW, "l2cap", "PDU buffered (channel: %#04x, ll: %#04x)",
+    bt_log(SPEW, "l2cap", "PDU buffered (channel: %#.4x, ll: %#.4x)",
            channel_id, handle_);
     return;
   }

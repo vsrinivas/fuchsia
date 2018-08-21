@@ -113,7 +113,7 @@ void Server::SendNotification(att::Handle handle,
       std::move(buffer),
       [](const auto&) { bt_log(SPEW, "gatt", "got confirmation!"); },
       [](att::Status status, att::Handle handle) {
-        bt_log(TRACE, "gatt", "indication failed (result %s, handle: %#04x)",
+        bt_log(TRACE, "gatt", "indication failed (result %s, handle: %#.4x)",
                status.ToString().c_str(), handle);
       });
 }

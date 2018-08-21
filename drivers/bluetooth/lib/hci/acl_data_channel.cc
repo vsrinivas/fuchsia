@@ -187,7 +187,7 @@ bool ACLDataChannel::ClearLinkState(hci::ConnectionHandle handle) {
   std::lock_guard<std::mutex> lock(send_mutex_);
   auto iter = pending_links_.find(handle);
   if (iter == pending_links_.end()) {
-    bt_log(TRACE, "hci", "no pending packets on connection (handle: %#04x)",
+    bt_log(TRACE, "hci", "no pending packets on connection (handle: %#.4x)",
            handle);
     return false;
   }
@@ -248,7 +248,7 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(
     FXL_DCHECK(iter->second.count);
     if (iter->second.count < comp_packets) {
       bt_log(WARN, "hci",
-             "packet tx count mismatch! (handle: %#04x, expected: %zu, "
+             "packet tx count mismatch! (handle: %#.4x, expected: %zu, "
              "actual : %u)",
              le16toh(data->connection_handle), iter->second.count,
              comp_packets);

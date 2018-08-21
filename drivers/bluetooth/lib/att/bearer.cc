@@ -323,7 +323,7 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
       tq = &indication_queue_;
       break;
     default:
-      bt_log(TRACE, "att", "invalid opcode: %#02x", reader.opcode());
+      bt_log(TRACE, "att", "invalid opcode: %#.2x", reader.opcode());
       return false;
   }
 
@@ -347,7 +347,7 @@ Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
     return kInvalidHandlerId;
 
   if (handlers_.find(opcode) != handlers_.end()) {
-    bt_log(TRACE, "att", "can only register one handler per opcode (%#02x)",
+    bt_log(TRACE, "att", "can only register one handler per opcode (%#.2x)",
            opcode);
     return kInvalidHandlerId;
   }
@@ -407,7 +407,7 @@ bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
 
   OpCode pending_opcode = (*pending)->opcode;
   if (pending_opcode != MatchingTransactionCode(reader.opcode())) {
-    bt_log(TRACE, "att", "opcodes do not match (pending: %#02x, given: %#02x)",
+    bt_log(TRACE, "att", "opcodes do not match (pending: %#.2x, given: %#.2x)",
            pending_opcode, reader.opcode());
     return false;
   }
@@ -480,7 +480,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
   FXL_DCHECK(tq);
 
   if (!tq->current()) {
-    bt_log(TRACE, "att", "received unexpected transaction PDU (opcode: %#02x)",
+    bt_log(TRACE, "att", "received unexpected transaction PDU (opcode: %#.2x)",
            packet.opcode());
     ShutDown();
     return;
@@ -515,7 +515,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
   FXL_DCHECK(tq->current()->opcode != kInvalidOpCode);
 
   if (tq->current()->opcode != target_opcode) {
-    bt_log(TRACE, "att", "received bad transaction PDU (opcode: %#02x)",
+    bt_log(TRACE, "att", "received bad transaction PDU (opcode: %#.2x)",
            packet.opcode());
     ShutDown();
     return;
@@ -562,7 +562,7 @@ void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
   FXL_DCHECK(currently_pending);
 
   if (currently_pending->HasValue()) {
-    bt_log(TRACE, "att", "A transaction is already pending! (opcode: %#02x)",
+    bt_log(TRACE, "att", "A transaction is already pending! (opcode: %#.2x)",
            packet.opcode());
     ShutDown();
     return;
@@ -570,7 +570,7 @@ void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
 
   auto iter = handlers_.find(packet.opcode());
   if (iter == handlers_.end()) {
-    bt_log(TRACE, "att", "no handler registered for opcode %#02x",
+    bt_log(TRACE, "att", "no handler registered for opcode %#.2x",
            packet.opcode());
     SendErrorResponse(packet.opcode(), 0, ErrorCode::kRequestNotSupported);
     return;
@@ -602,7 +602,7 @@ void Bearer::HandlePDUWithoutResponse(const PacketReader& packet) {
 
   auto iter = handlers_.find(packet.opcode());
   if (iter == handlers_.end()) {
-    bt_log(TRACE, "att", "dropping unhandled packet (opcode: %#02x)",
+    bt_log(TRACE, "att", "dropping unhandled packet (opcode: %#.2x)",
            packet.opcode());
     return;
   }
@@ -662,7 +662,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         HandlePDUWithoutResponse(packet);
         break;
       default:
-        bt_log(TRACE, "att", "Unsupported opcode: %#02x", packet.opcode());
+        bt_log(TRACE, "att", "Unsupported opcode: %#.2x", packet.opcode());
         SendErrorResponse(packet.opcode(), 0, ErrorCode::kRequestNotSupported);
         break;
     }

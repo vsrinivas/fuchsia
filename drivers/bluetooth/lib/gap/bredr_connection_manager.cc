@@ -265,7 +265,7 @@ void BrEdrConnectionManager::OnConnectionComplete(
   const auto& params =
       event.view().payload<hci::ConnectionCompleteEventParams>();
   bt_log(TRACE, "gap-bredr",
-         "%s connection complete (status %#02x, handle: %#04x)",
+         "%s connection complete (status %#.2x, handle: %#.4x)",
          params.bd_addr.ToString().c_str(), params.status,
          params.connection_handle);
   if (hci_is_error(event, WARN, "gap-bredr", "connection error")) {
@@ -299,7 +299,7 @@ void BrEdrConnectionManager::OnConnectionComplete(
           return;
         }
 
-        bt_log(SPEW, "gap-bredr", "interrogation complete for %#04x",
+        bt_log(SPEW, "gap-bredr", "interrogation complete for %#.4x",
                conn_ptr->handle());
 
         self->connections_.emplace(device->identifier(), std::move(conn_ptr));
@@ -316,7 +316,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
 
   hci::ConnectionHandle handle = le16toh(params.connection_handle);
   if (hci_is_error(event, WARN, "gap-bredr",
-                   "HCI disconnection error handle %#04x", handle)) {
+                   "HCI disconnection error handle %#.4x", handle)) {
     return;
   }
 
@@ -325,7 +325,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
       [handle](const auto& p) { return (p.second->handle() == handle); });
 
   if (it == connections_.end()) {
-    bt_log(TRACE, "gap-bredr", "disconnect from unknown handle %#04x", handle);
+    bt_log(TRACE, "gap-bredr", "disconnect from unknown handle %#.4x", handle);
     return;
   }
   std::string device = it->first;
@@ -333,7 +333,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
   connections_.erase(it);
 
   bt_log(INFO, "gap-bredr",
-         "%s disconnected - %s, handle: %#04x, reason: %#02x", device.c_str(),
+         "%s disconnected - %s, handle: %#.4x, reason: %#.2x", device.c_str(),
          event.ToStatus().ToString().c_str(), handle, params.reason);
 
   // TODO(NET-406): Inform L2CAP that the connection has been disconnected.
