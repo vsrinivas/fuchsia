@@ -115,7 +115,6 @@ private:
     const uint32_t vid_;
     const uint32_t pid_;
     const uint32_t did_;
-    const serial_port_info_t serial_port_info_;
 
     // Tree of platform bus resources for this device and its children.
     DeviceResources resource_tree_;

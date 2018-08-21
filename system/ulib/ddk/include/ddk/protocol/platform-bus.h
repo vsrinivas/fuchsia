@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <ddk/protocol/serial.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -55,7 +55,6 @@ struct pbus_dev {
     uint32_t vid;   // BIND_PLATFORM_DEV_VID
     uint32_t pid;   // BIND_PLATFORM_DEV_PID
     uint32_t did;   // BIND_PLATFORM_DEV_DID
-    serial_port_info_t serial_port_info;
     const pbus_mmio_t* mmios;
     uint32_t mmio_count;
     const pbus_irq_t* irqs;

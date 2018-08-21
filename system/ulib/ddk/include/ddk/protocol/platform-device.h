@@ -6,7 +6,6 @@
 
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/serial.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -20,7 +19,6 @@ typedef struct {
     uint32_t vid;
     uint32_t pid;
     uint32_t did;
-    serial_port_info_t serial_port_info;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;

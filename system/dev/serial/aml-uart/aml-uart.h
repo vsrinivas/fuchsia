@@ -7,6 +7,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/serial-impl.h>
+#include <ddk/protocol/serial.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/serial-impl.h>
 
@@ -49,8 +50,8 @@ private:
     using Callback = fbl::Function<void(uint32_t)>;
 
     explicit AmlUart(zx_device_t* parent, const platform_device_protocol_t& pdev,
-                     const pdev_device_info_t& info, io_buffer_t mmio)
-        : DeviceType(parent), pdev_(pdev), serial_port_info_(info.serial_port_info), mmio_(mmio) {}
+                     const serial_port_info_t& serial_port_info, io_buffer_t mmio)
+        : DeviceType(parent), pdev_(pdev), serial_port_info_(serial_port_info), mmio_(mmio) {}
 
     // Reads the current state from the status register and calls notify_cb if it has changed.
     uint32_t ReadStateAndNotify();

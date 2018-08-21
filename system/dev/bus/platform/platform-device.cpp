@@ -41,7 +41,7 @@ zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, 
 PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, uint32_t flags,
                                const pbus_dev_t* pdev)
     : PlatformDeviceType(parent), bus_(bus), flags_(flags), vid_(pdev->vid), pid_(pdev->pid),
-      did_(pdev->did), serial_port_info_(pdev->serial_port_info), resource_tree_(ROOT_DEVICE_ID) {
+      did_(pdev->did), resource_tree_(ROOT_DEVICE_ID) {
     strlcpy(name_, pdev->name, sizeof(name_));
 }
 
@@ -149,7 +149,6 @@ zx_status_t PlatformDevice::GetDeviceInfo(const DeviceResources* dr, pdev_device
     out_info->vid = vid_;
     out_info->pid = pid_;
     out_info->did = did_;
-    memcpy(&out_info->serial_port_info, &serial_port_info_, sizeof(out_info->serial_port_info));
     out_info->mmio_count = static_cast<uint32_t>(dr->mmio_count());
     out_info->irq_count = static_cast<uint32_t>(dr->irq_count());
     out_info->gpio_count = static_cast<uint32_t>(dr->gpio_count());

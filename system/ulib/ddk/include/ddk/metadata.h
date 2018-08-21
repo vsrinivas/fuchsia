@@ -26,6 +26,10 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 // type: usb_mode_t
 #define DEVICE_METADATA_USB_MODE            0x4D425355 // USBM
 
+// Serial port info
+// type: serial_port_info_t
+#define DEVICE_METADATA_SERIAL_PORT_INFO    0x4D524553 // SERM
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

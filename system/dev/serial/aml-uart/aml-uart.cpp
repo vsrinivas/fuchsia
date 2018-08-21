@@ -11,6 +11,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddktl/device.h>
 #include <hw/reg.h>
@@ -35,11 +36,17 @@ zx_status_t AmlUart::Create(zx_device_t* parent) {
         return status;
     }
 
-    pdev_device_info_t info;
-    status = pdev_get_device_info(&pdev, &info);
+    serial_port_info_t info;
+    size_t actual;
+    status = device_get_metadata(parent, DEVICE_METADATA_SERIAL_PORT_INFO, &info, sizeof(info),
+                                 &actual);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_get_device_info failed\n", __func__);
+        zxlogf(ERROR, "%s: device_get_metadata failed %d\n", __func__, status);
         return status;
+    }
+    if (actual < sizeof(info)) {
+        zxlogf(ERROR, "%s: serial_port_info_t metadata too small\n", __func__);
+        return ZX_ERR_INTERNAL;
     }
 
     io_buffer_t mmio;

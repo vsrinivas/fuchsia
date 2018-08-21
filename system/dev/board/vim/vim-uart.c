@@ -5,9 +5,11 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
+#include <ddk/protocol/serial.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -39,20 +41,31 @@ static const pbus_irq_t bt_uart_irqs[] = {
     },
 };
 
+static const serial_port_info_t bt_uart_serial_info = {
+    .serial_class = SERIAL_CLASS_BLUETOOTH_HCI,
+    .serial_vid = PDEV_VID_BROADCOM,
+    .serial_pid = PDEV_PID_BCM4356,
+};
+
+static const pbus_metadata_t bt_uart_metadata[] = {
+    {
+        .type = DEVICE_METADATA_SERIAL_PORT_INFO,
+        .data = &bt_uart_serial_info,
+        .len = sizeof(bt_uart_serial_info),
+    },
+};
+
 static pbus_dev_t bt_uart_dev = {
     .name = "bt-uart",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_UART,
-    .serial_port_info = {
-        .serial_class = SERIAL_CLASS_BLUETOOTH_HCI,
-        .serial_vid = PDEV_VID_BROADCOM,
-        .serial_pid = PDEV_PID_BCM4356,
-    },
     .mmios = bt_uart_mmios,
     .mmio_count = countof(bt_uart_mmios),
     .irqs = bt_uart_irqs,
     .irq_count = countof(bt_uart_irqs),
+    .metadata = bt_uart_metadata,
+    .metadata_count = countof(bt_uart_metadata),
 };
 
 #if UART_TEST
@@ -72,18 +85,29 @@ static const pbus_irq_t header_uart_irqs[] = {
     },
 };
 
+static const serial_port_info_t header_serial_info = {
+    .serial_class = SERIAL_CLASS_GENERIC,
+};
+
+static const pbus_metadata_t header_metadata[] = {
+    {
+        .type = DEVICE_METADATA_SERIAL_PORT_INFO,
+        .data = &header_serial_info,
+        .len = sizeof(header_serial_info),
+    },
+};
+
 static pbus_dev_t header_uart_dev = {
     .name = "header-uart",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_UART,
-    .serial_port_info = {
-        .serial_class = SERIAL_CLASS_GENERIC,
-    },
     .mmios = header_uart_mmios,
     .mmio_count = countof(header_uart_mmios),
     .irqs = header_uart_irqs,
     .irq_count = countof(header_uart_irqs),
+    .metadata = header_metadata,
+    .metadata_count = countof(header_metadata),
 };
 #endif
 
