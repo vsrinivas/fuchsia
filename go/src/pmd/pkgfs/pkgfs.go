@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"syscall"
 	"syscall/zx"
@@ -166,6 +167,9 @@ func (f *Filesystem) Serve(c zx.Channel) error {
 	f.mountInfo.serveChannel = c
 
 	// TODO(raggi): serve has no quit/shutdown path.
+	for i := runtime.NumCPU(); i > 1; i-- {
+		go vfs.Serve()
+	}
 	vfs.Serve()
 	return nil
 }
