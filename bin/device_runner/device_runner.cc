@@ -61,6 +61,8 @@ class Settings {
     no_minfs = command_line.HasOption("no_minfs");
     test = command_line.HasOption("test");
     enable_presenter = command_line.HasOption("enable_presenter");
+    enable_garnet_token_manager =
+        command_line.HasOption("enable_garnet_token_manager");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -104,6 +106,7 @@ class Settings {
       --no_minfs
       --test
       --enable_presenter
+      --enable_garnet_token_manager
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "userpicker_device_shell".
@@ -134,6 +137,7 @@ class Settings {
   bool no_minfs;
   bool test;
   bool enable_presenter;
+  bool enable_garnet_token_manager;
 
  private:
   void ParseShellArgs(const std::string& value,
