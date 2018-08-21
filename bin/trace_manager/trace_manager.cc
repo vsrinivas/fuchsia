@@ -78,6 +78,8 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
     session_->AddProvider(&bundle);
   }
 
+  trace_running_ = true;
+
   session_->WaitForProvidersToStart(
       std::move(start_callback), zx::msec(options.start_timeout_milliseconds));
 }
@@ -85,6 +87,7 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
 void TraceManager::StopTracing() {
   if (!session_)
     return;
+  trace_running_ = false;
 
   FXL_LOG(INFO) << "Stopping trace";
   session_->Stop(
@@ -104,11 +107,13 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
   callback(std::move(known_categories));
 }
 
-void TraceManager::RegisterTraceProvider(
-    fidl::InterfaceHandle<fuchsia::tracelink::Provider> handle) {
+void TraceManager::RegisterTraceProviderWorker(
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+    uint64_t pid, fidl::StringPtr name) {
   auto it = providers_.emplace(
       providers_.end(),
-      TraceProviderBundle{handle.Bind(), next_provider_id_++});
+      TraceProviderBundle{provider.Bind(), next_provider_id_++, pid,
+          name.get()});
 
   it->provider.set_error_handler([this, it]() {
     if (session_)
@@ -118,6 +123,20 @@ void TraceManager::RegisterTraceProvider(
 
   if (session_)
     session_->AddProvider(&(*it));
+}
+
+void TraceManager::RegisterTraceProvider(
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider) {
+  RegisterTraceProviderWorker(std::move(provider), ZX_KOID_INVALID,
+                              fidl::StringPtr(""));
+}
+
+void TraceManager::RegisterTraceProviderSynchronously(
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+    uint64_t pid, fidl::StringPtr name,
+    RegisterTraceProviderSynchronouslyCallback callback) {
+  RegisterTraceProviderWorker(std::move(provider), pid, std::move(name));
+  callback(ZX_OK, trace_running_);
 }
 
 void TraceManager::LaunchConfiguredProviders() {

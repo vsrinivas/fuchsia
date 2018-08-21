@@ -9,7 +9,9 @@
 namespace tracing {
 
 std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle) {
-  return out << "#" << bundle.id;
+  // The pid and name should be present, so we don't try to get fancy with
+  // the formatting if it turns out they're not.
+  return out << "#" << bundle.id << " {" << bundle.pid << ":" << bundle.name << "}";
 }
 
 }  // namespace tracing

@@ -16,6 +16,8 @@ namespace tracing {
 struct TraceProviderBundle {
   fuchsia::tracelink::ProviderPtr provider;
   uint32_t id;
+  zx_koid_t pid;
+  const std::string name;
 };
 
 std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle);

@@ -12,13 +12,14 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/strings/string_number_conversions.h>
-
 #include <trace-provider/provider.h>
 #include <trace/event.h>
+#include <zircon/status.h>
 
 static constexpr int kDefaultCount = 1;
-static constexpr int kDefaultDelaySeconds = 2;
+static constexpr int kDefaultDelaySeconds = 0;
 static constexpr int kDefaultDurationSeconds = 10;
+static constexpr int kWaitStartTimeoutSeconds = 60;
 
 static const char* prog_name;
 
@@ -29,7 +30,6 @@ static void PrintHelp(FILE* f) {
   fprintf(f, "  --count=COUNT      Specify number of records per iteration\n");
   fprintf(f, "                     The default is %d.\n", kDefaultCount);
   fprintf(f, "  --delay=SECONDS    Delay SECONDS before starting\n");
-  fprintf(f, "                     This is useful until TO-650 is fixed.\n");
   fprintf(f, "                     The default is %d.\n", kDefaultDelaySeconds);
   fprintf(f, "  --duration=SECONDS Specify time to run, in seconds\n");
   fprintf(f, "                     The default is %d.\n",
@@ -114,7 +114,25 @@ int main(int argc, char** argv) {
   // This is in anticipation of double-buffering support.
   async::Loop provider_loop(&kAsyncLoopConfigNoAttachToThread);
   provider_loop.StartThread("TraceProvider");
-  trace::TraceProvider provider(provider_loop.dispatcher());
+  fbl::unique_ptr<trace::TraceProvider> provider;
+  bool already_started;
+  if (!trace::TraceProvider::CreateSynchronously(
+      provider_loop.dispatcher(), "trace_stress", &provider,
+      &already_started)) {
+    FXL_LOG(ERROR) << "Trace provider registration failed";
+    return EXIT_FAILURE;
+  }
+  if (already_started) {
+    FXL_LOG(INFO) << "Tracing already started, waiting for our Start request";
+    auto status = provider->WaitTracingStarted(
+        zx::duration{zx::sec(kWaitStartTimeoutSeconds)});
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Error waiting for tracing to start: "
+                       << zx_status_get_string(status);
+    } else {
+      FXL_LOG(INFO) << "Start request received";
+    }
+  }
 
   if (delay > 0) {
     FXL_LOG(INFO) << "Trace stressor delaying " << delay << " seconds ...";

@@ -35,8 +35,15 @@ class TraceManager : public fuchsia::tracelink::Registry,
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
 
   // |TraceRegistry| implementation.
+  void RegisterTraceProviderWorker(
+      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+      uint64_t pid, fidl::StringPtr name);
   void RegisterTraceProvider(
       fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider) override;
+  void RegisterTraceProviderSynchronously(
+      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+      uint64_t pid, fidl::StringPtr name,
+      RegisterTraceProviderSynchronouslyCallback callback) override;
 
   void FinalizeTracing();
   void LaunchConfiguredProviders();
@@ -47,6 +54,8 @@ class TraceManager : public fuchsia::tracelink::Registry,
   uint32_t next_provider_id_ = 1u;
   fxl::RefPtr<TraceSession> session_;
   std::list<TraceProviderBundle> providers_;
+  // True if tracing has been started, and is not (yet) being stopped.
+  bool trace_running_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
 };
