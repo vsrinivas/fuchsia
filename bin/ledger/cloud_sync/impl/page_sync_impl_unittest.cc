@@ -26,6 +26,7 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/testing/test_backoff.h"
 
 namespace cloud_sync {
 namespace {
@@ -39,23 +40,6 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
   token->opaque_id = convert::ToArray(token_id);
   return token;
 }
-
-// Dummy implementation of a backoff policy, which always returns zero backoff
-// time.
-class TestBackoff : public backoff::Backoff {
- public:
-  explicit TestBackoff(int* get_next_count) : get_next_count_(get_next_count) {}
-  ~TestBackoff() override {}
-
-  zx::duration GetNext() override {
-    (*get_next_count_)++;
-    return zx::msec(50);
-  }
-
-  void Reset() override {}
-
-  int* get_next_count_;
-};
 
 class TestSyncStateWatcher : public SyncStateWatcher {
  public:
@@ -84,8 +68,8 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
     page_sync_ = std::make_unique<PageSyncImpl>(
         dispatcher(), &storage_, &storage_, &encryption_service_,
         std::move(page_cloud_ptr_),
-        std::make_unique<TestBackoff>(&download_backoff_get_next_calls_),
-        std::make_unique<TestBackoff>(&upload_backoff_get_next_calls_),
+        std::make_unique<ledger::TestBackoff>(&download_backoff_get_next_calls_, zx::msec(50)),
+        std::make_unique<ledger::TestBackoff>(&upload_backoff_get_next_calls_, zx::msec(50)),
         std::move(watcher));
   }
   ~PageSyncImplTest() override {}

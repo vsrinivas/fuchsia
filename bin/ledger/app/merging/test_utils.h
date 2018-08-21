@@ -22,19 +22,6 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
-// Dummy implementation of a backoff policy, which always returns zero backoff
-// time..
-class TestBackoff : public backoff::Backoff {
- public:
-  explicit TestBackoff(int* get_next_count);
-  ~TestBackoff() override;
-
-  zx::duration GetNext() override;
-
-  void Reset() override;
-
-  int* get_next_count_;
-};
 
 class TestWithPageStorage : public TestWithEnvironment {
  public:

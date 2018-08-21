@@ -16,17 +16,6 @@
 #include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace ledger {
-TestBackoff::TestBackoff(int* get_next_count)
-    : get_next_count_(get_next_count) {}
-TestBackoff::~TestBackoff() {}
-
-zx::duration TestBackoff::GetNext() {
-  FXL_DCHECK(get_next_count_);
-  (*get_next_count_)++;
-  return zx::sec(0);
-}
-
-void TestBackoff::Reset() {}
 
 TestWithPageStorage::TestWithPageStorage()
     : encryption_service_(dispatcher()) {}
