@@ -18,12 +18,6 @@ struct Proposal {
   // This name is namespaced to the agent that submitted the proposal.
   string? story_name;
 
-  // The story ID this proposal applies to. A null story_id will create a new
-  // story.
-  // TODO(miguelfrde): remove.
-  // DEPRECATED
-  string? story_id;
-
   // If set to true, this proposal will only show up when |story_id| is in the
   // foreground.
   bool story_affinity;

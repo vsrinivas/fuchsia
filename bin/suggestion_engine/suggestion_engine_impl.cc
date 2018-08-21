@@ -59,13 +59,7 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 void SuggestionEngineImpl::AddNextProposal(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
   if (!proposal.story_name) {
-    // TODO(MI4-1272): deprecate all external use cases of proposal.story_id.
-    // Suggestion Engine should be 100% free of them.
-    if (proposal.story_id) {
-      proposal.story_name = proposal.story_id;
-    } else {
-      proposal.story_name = fxl::GenerateUUID();
-    }
+    proposal.story_name = fxl::GenerateUUID();
   }
   if (proposal.wants_rich_suggestion &&
       ComponentCanUseRichSuggestions(source->component_url())) {
