@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/disabled/ledger_e2e_sync"
+    },
+    "sandbox": {
+        "features": ["deprecated-all-services"]
+    }
+}

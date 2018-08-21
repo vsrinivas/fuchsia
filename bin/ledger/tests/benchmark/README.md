@@ -60,15 +60,17 @@ Benchmarks under `sync` and `convergence` use smaller number of entries and
 smaller value size.
 
 ### Benchmarks using sync
+
 Some benchmarks exercise cloud synchronization using `cloud_provider_firestore`.
 
-To run these, [configure] a Firestore instance, obtain a credentials file for a
-service account managing it and copy it over to the device. Then, run the
-selected benchmark as follows:
+To run these, follow the [cloud sync set-up instructions] to set up a Firestore instance,
+configure the build environment and obtain the sync parameters needed below.
+
+Then, run the selected benchmark as follows:
 
 ```sh
 trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec \
-  --append-args=--server-id=<instance id>,--credentials-path=<credentials file path>,--api-key=<api key>
+  --append-args=--server-id=<instance id>,--api-key=<api key>
 ```
 
 ### A note regarding benchmark apps
@@ -159,6 +161,6 @@ section](README.md#benchmarks-using-sync).
       operations)
 
 [trace-based benchmarks]: https://fuchsia.googlesource.com/garnet/+/master/docs/benchmarking.md
-[configure]: /bin/cloud_provider_firestore/docs/configuration.md
+[cloud sync set-up instructions]: /docs/ledger/testing.md#cloud-sync
 [lazy value]: /docs/ledger/api_guide.md#lazy-values
 [PageWatcher notification]: /docs/ledger/api_guide.md#watch

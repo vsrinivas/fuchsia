@@ -3,6 +3,6 @@
         "binary": "bin/ledger_benchmark_fetch"
     },
     "sandbox": {
-        "features": ["persistent-storage", "deprecated-all-services", "system-temp"]
+        "features": ["persistent-storage", "deprecated-all-services"]
     }
 }

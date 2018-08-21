@@ -2,15 +2,42 @@
 
 This document describes different test types used in Ledger.
 
+*** note
+All of the tests run on a Fuchsia device (real or emulated). For the tests below
+we indicate the commands to trigger the execution from the host machine, but the
+execution itself happens on the target.
+***
+
 [TOC]
 
-Ledger has the following types of tests.
+## Configuration
+
+### Cloud sync
 
 *** note
-All of these tests run on a Fuchsia device. For the tests below we indicate the
-commands to trigger the execution from the host machine, but the execution
-itself happens on the target.
+You can skip this section if you only need to run tests which do not exercise
+real cloud sync servers, such as unit tests or integration tests.
 ***
+
+Some of the tests (end-to-end sync tests, cloud provider validation tests)
+exercise cloud synchronization against a real server. In order to run them, you
+need to set up a test instance and set the credentials to access it in the
+execution environment.
+
+First, ensure you have an instance of the server configured and take note of the
+configuration params (credentials file, server ID and API key) - in order to
+obtain those, follow the [server configuration] instructions.
+
+Then, put the sync credentials file whenever you like, and set the full path to
+it in the GN variable:
+
+```sh
+fx set x64 --args ledger_sync_credentials_file=\"/full/path/to/sync_credentials.json\"
+```
+
+After rebuilding, the credentials file will be automatically embedded in the
+relevant sync test binaries. You will still need to pass the remaining
+parameters (server ID and API key) as command line parameters.
 
 ## Unit tests
 
@@ -23,8 +50,11 @@ Unit tests are regular [Google Test] tests, although most of them use our own
 timeout, ensuring that a failing test does not hang forever.
 
 All unit tests in the Ledger tree are built into a single `ledger_unittests`
-binary. You can run it from the host using the `fx run-test` command, which
-rebuilds the test package and pushes the new binary to device each time:
+binary. The binary is self-contained: it contains both the tests and the Ledger
+logic under test linked into a single Google Test binary.
+
+You can run it from the host using the `fx run-test` command, which
+rebuilds the tests and pushes the new binary to the device each time:
 
 ```sh
 fx run-test ledger_unittests
@@ -54,7 +84,7 @@ path to the binary in the `ledger_tests` package:
 `/pkgfs/packages/ledger_tests/0/test/ledger_integration_tests`.
 
 *** aside
-Some of the tntegration tests emulate multiple Ledger instances synchronizing
+Some of the integration tests emulate multiple Ledger instances synchronizing
 data with each other. Through advanced build magic and [testing abstractions],
 these are run both as integration tests (against fake in-memory implementation
 of the cloud provider interface), and as end-to-end synchronization tests
@@ -85,20 +115,30 @@ path to the binary in the `ledger_tests` package:
 
 ### Synchronization tests
 
-Synchronization end-to-end tests create multiple local Ledger instances
-configured to synchronize using a cloud provider representing the same virtual
-user, therefore emulating multiple devices synchronizing their Ledger data
+*** note
+Those tests exercise cloud sync against a real server. Follow the
+[instructions](#cloud-sync) to set up server access.
+***
 
-Synchronization end-to-end tests require configuration to work against a real
-server instance, see [server configuration]. After obtaining configuration
-parameters, the tests can be run from host as follows:
+Synchronization end-to-end tests create multiple local Ledger instances
+configured to synchronize using a cloud provider backed by a real server. The
+cloud provider instances are set up to represent the same virtual user,
+therefore emulating multiple devices synchronizing their Ledger data through the
+real server.
+
+You can run the tests from the host as follows:
 
 ```sh
-fx shell "/pkgfs/packages/ledger_tests/0/test/disabled/ledger_e2e_sync \
+fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/e2e_sync.cmx \
   --server-id=<server-id> \
-  --credentials-path=<credentials-file> \
   --api-key=<api-key>
 ```
+
+## See also
+
+ - [benchmarks] contains performance tests for Ledger
+ - [Firestore cloud provider] has its own suite of tests, including unit tests
+   and end-to-end validation tests
 
 [Google Test]: https://github.com/google/googletest
 [TestLoopFixture]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/gtest/test_loop_fixture.h
@@ -109,3 +149,5 @@ fx shell "/pkgfs/packages/ledger_tests/0/test/disabled/ledger_e2e_sync \
 [/bin/ledger/tests/e2e_sync]: /bin/ledger/tests/e2e_sync
 [server configuration]: /bin/cloud_provider_firestore/docs/configuration.md
 [testing abstractions]: /bin/ledger/testing/ledger_app_instance_factory.h
+[benchmarks]: /bin/ledger/tests/benchmark/README.md
+[Firestore cloud provider]: /bin/cloud_provider_firestore/README.md

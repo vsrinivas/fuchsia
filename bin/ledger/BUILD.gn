@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//peridot/bin/ledger/testing/sync_params.gni")
 
 visibility = [ "//peridot/*" ]
 
@@ -49,6 +50,18 @@ package("ledger_tests") {
     "//peridot/public/lib/cloud_provider/validation",
   ]
 
+  meta = [
+    {
+      path = rebase_path(
+              "//peridot/bin/cloud_provider_firestore/validation/validation_firestore.cmx")
+      dest = "validation_firestore.cmx"
+    },
+    {
+      path = rebase_path("tests/e2e_sync/e2e_sync.cmx")
+      dest = "e2e_sync.cmx"
+    },
+  ]
+
   tests = [
     {
       name = "cloud_provider_firestore_unittests"
@@ -57,14 +70,16 @@ package("ledger_tests") {
       name = "cloud_provider_validation_tests"
 
       # This test needs additional configuration and should not run by default.
-      # Marking it as disabled puts the binary in /system/test/disabled/.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
       disabled = true
     },
     {
       name = "launch_validation_tests_firestore"
 
       # This test needs additional configuration and should not run by default.
-      # Marking it as disabled puts the binary in /system/test/disabled/.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
       disabled = true
     },
     {
@@ -83,10 +98,21 @@ package("ledger_tests") {
       name = "ledger_e2e_sync"
 
       # This test needs additional configuration and should not run by default.
-      # Marking it as disabled puts the binary in /system/test/disabled/.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
       disabled = true
     },
   ]
+
+  resources = []
+  if (ledger_sync_credentials_file != "") {
+    resources += [
+      {
+        path = ledger_sync_credentials_file
+        dest = "sync_credentials.json"
+      },
+    ]
+  }
 }
 
 config("ledger_config") {

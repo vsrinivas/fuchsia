@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//peridot/bin/ledger/testing/sync_params.gni")
 
 visibility = [ "//peridot/bin/ledger/*" ]
 
@@ -279,4 +280,13 @@ package("ledger_benchmarks") {
       dest = "delete_big_entry.tspec"
     },
   ]
+
+  if (ledger_sync_credentials_file != "") {
+    resources += [
+      {
+        path = ledger_sync_credentials_file
+        dest = "sync_credentials.json"
+      },
+    ]
+  }
 }

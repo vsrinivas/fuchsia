@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/disabled/launch_validation_tests_firestore"
+    },
+    "sandbox": {
+        "features": ["deprecated-all-services"]
+    }
+}
