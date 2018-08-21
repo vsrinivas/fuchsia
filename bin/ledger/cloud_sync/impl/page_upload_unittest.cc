@@ -28,6 +28,9 @@
 namespace cloud_sync {
 namespace {
 
+constexpr zx::duration kBackoffInterval = zx::msec(10);
+constexpr zx::duration kHalfBackoffInterval = zx::msec(5);
+
 // Creates a dummy continuation token.
 std::unique_ptr<cloud_provider::Token> MakeToken(
     convert::ExtendedStringView token_id) {
@@ -45,6 +48,7 @@ class PageUploadTest : public gtest::TestLoopFixture,
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(dispatcher()) {
     auto test_backoff = std::make_unique<backoff::TestBackoff>();
+    test_backoff->backoff_to_return = kBackoffInterval;
     backoff_ = test_backoff.get();
     page_upload_ = std::make_unique<PageUpload>(
         &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
@@ -333,9 +337,8 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 }
 
-// Verifies that failing uploads are retried. In production the retries are
-// delayed, here we set the delays to 0.
-TEST_F(PageUploadTest, DISABLED_RetryUpload) {
+// Verifies that failing uploads are retried.
+TEST_F(PageUploadTest, RetryUpload) {
   page_upload_->StartOrRestartUpload();
   bool upload_is_idle = false;
   SetOnNewStateCallback(
@@ -349,23 +352,15 @@ TEST_F(PageUploadTest, DISABLED_RetryUpload) {
   storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(),
                                   storage::ChangeSource::LOCAL);
+  RunLoopFor(kHalfBackoffInterval);
+  EXPECT_GE(backoff_->get_next_count, 0);
+  RunLoopFor(kBackoffInterval);
+  EXPECT_GE(backoff_->get_next_count, 1);
+  RunLoopFor(kBackoffInterval);
+  EXPECT_GE(backoff_->get_next_count, 2);
 
-  // TODO(LE-494): update this case and the following logic to be more
-  // TestLoop-friendly.
-#if 0
-  // Test cloud provider logs every commit, even if it reports that upload
-  // failed for each. Here we loop through at least five attempts to upload the
-  // commit.
-  EXPECT_TRUE(RunLoopUntil([this] {
-    return page_cloud_.add_commits_calls >= 5u &&
-           // We need to wait for the callback to be executed on the PageSync
-           // side.
-           backoff_->get_next_count >= 5;
-  }));
-#endif
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
-  EXPECT_GE(backoff_->get_next_count, 5);
 }
 
 // Verifies that the idle status is returned when there is no pending upload
@@ -476,7 +471,9 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   // unsynced commits to return).
   storage_.unsynced_commits_to_return.clear();
 
-  RunLoopUntilIdle();
+  RunLoopFor(kHalfBackoffInterval);
+  ASSERT_FALSE(upload_is_idle);
+  RunLoopFor(kBackoffInterval);
   ASSERT_TRUE(upload_is_idle);
 
   // Verify that no calls were made to attempt to upload the commit.
