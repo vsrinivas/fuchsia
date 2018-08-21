@@ -145,10 +145,9 @@ namespace {
 class DeleteStoryCall : public Operation<> {
  public:
   DeleteStoryCall(fuchsia::ledger::Ledger* const ledger,
-                      fuchsia::ledger::Page* const session_page,
-                      fidl::StringPtr story_name, ResultCall result_call)
-      : Operation("SessionStorage::DeleteStoryCall",
-                  std::move(result_call)),
+                  fuchsia::ledger::Page* const session_page,
+                  fidl::StringPtr story_name, ResultCall result_call)
+      : Operation("SessionStorage::DeleteStoryCall", std::move(result_call)),
         ledger_(ledger),
         session_page_(session_page),
         story_name_(story_name) {}
@@ -169,11 +168,11 @@ class DeleteStoryCall : public Operation<> {
     // Get the story page so we can remove its contents.
     ledger_->GetPage(
         std::move(story_data_.story_page_id), story_page_.NewRequest(),
-        [this, flow,
-         story_name = story_data_.story_info.id](fuchsia::ledger::Status status) {
+        [this, flow, story_name = story_data_.story_info.id](
+            fuchsia::ledger::Status status) {
           if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "Ledger.GetPage() for story " << story_name << ": "
-                           << fidl::ToUnderlying(status);
+            FXL_LOG(ERROR) << "Ledger.GetPage() for story " << story_name
+                           << ": " << fidl::ToUnderlying(status);
             return;
           }
           Cont2(flow);
@@ -221,8 +220,8 @@ class DeleteStoryCall : public Operation<> {
 
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   auto ret = Future<>::Create("SessionStorage.DeleteStory.ret");
-  operation_queue_.Add(new DeleteStoryCall(ledger_client_->ledger(), page(), story_name,
-                                           ret->Completer()));
+  operation_queue_.Add(new DeleteStoryCall(ledger_client_->ledger(), page(),
+                                           story_name, ret->Completer()));
   return ret;
 }
 
@@ -313,9 +312,9 @@ SessionStorage::GetAllStoryData() {
 FuturePtr<> SessionStorage::UpdateStoryOptions(
     fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options) {
   auto ret = Future<>::Create("SessionStorage.SetOptions.ret");
-  auto mutate =
-      fxl::MakeCopyable([story_options = std::move(story_options)](
-                            fuchsia::modular::internal::StoryData* story_data) {
+  auto mutate = fxl::MakeCopyable(
+      [story_options = std::move(story_options)](
+          fuchsia::modular::internal::StoryData* story_data) mutable {
         if (story_data->story_options != story_options) {
           story_data->story_options = std::move(story_options);
           return true;

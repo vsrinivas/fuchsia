@@ -633,7 +633,8 @@ void StoryProviderImpl::SetKindOfProtoStoryOption(
             fuchsia::modular::StoryOptions new_options;
             data->story_options.Clone(&new_options);
             new_options.kind_of_proto_story = is_kind_of_proto_story;
-            return session_storage_->UpdateStoryOptions(story_id, new_options);
+            return session_storage_->UpdateStoryOptions(story_id,
+                                                        std::move(new_options));
           });
   operation_queue_.Add(WrapFutureAsOperation(
       "StoryProviderImpl::UpdateStoryOptions", on_run, done, callback));
