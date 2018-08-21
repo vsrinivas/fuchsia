@@ -14,6 +14,9 @@
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/sm/util.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "helpers.h"
 #include "low_energy_central_server.h"
@@ -375,14 +378,21 @@ btlib::sm::IOCapability HostServer::io_capability() const {
 void HostServer::CompletePairing(std::string id, btlib::sm::Status status) {
   bt_log(INFO, "bt-host", "pairing complete for device: %s, status: %s",
          id.c_str(), status.ToString().c_str());
-
-  // TODO(armansito): implement
+  pairing_delegate_->OnPairingComplete(std::move(id), fidl_helpers::StatusToFidl(status));
 }
 
 void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
   bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
-  // TODO(armansito): Call out to PairingDelegate FIDL interface
-  confirm(true);
+  auto found_device = adapter()->remote_device_cache()->FindDeviceById(id);
+  ZX_DEBUG_ASSERT(found_device);
+  auto device = fidl_helpers::NewRemoteDevice(*found_device);
+  ZX_DEBUG_ASSERT(device);
+
+  pairing_delegate_->OnPairingRequest(
+      std::move(*device), fuchsia::bluetooth::control::PairingMethod::CONSENT,
+      nullptr,
+      [confirm = std::move(confirm)](
+          const bool success, const std::string passkey) { confirm(success); });
 }
 
 void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
@@ -390,14 +400,41 @@ void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
   bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
   bt_log(INFO, "bt-host", "enter passkey: %06u", passkey);
 
-  // TODO(armansito): Call out to PairingDelegate FIDL interface
-  confirm(true);
+  auto device = fidl_helpers::NewRemoteDevice(
+      *adapter()->remote_device_cache()->FindDeviceById(id));
+  ZX_DEBUG_ASSERT(device);
+
+  pairing_delegate_->OnPairingRequest(
+      std::move(*device),
+      fuchsia::bluetooth::control::PairingMethod::PASSKEY_DISPLAY,
+      fxl::StringPrintf("%06u", passkey),
+      [confirm = std::move(confirm)](
+          const bool success, const std::string passkey) { confirm(success); });
 }
 
 void HostServer::RequestPasskey(std::string id,
                                 PasskeyResponseCallback respond) {
-  // TODO(armansito): Call out to PairingDelegate FIDL interface
-  respond(-1);
+  auto device = fidl_helpers::NewRemoteDevice(
+      *adapter()->remote_device_cache()->FindDeviceById(id));
+  ZX_DEBUG_ASSERT(device);
+
+  pairing_delegate_->OnPairingRequest(
+      std::move(*device),
+      fuchsia::bluetooth::control::PairingMethod::PASSKEY_ENTRY, nullptr,
+      [respond = std::move(respond)](const bool success,
+                                     const std::string passkey) {
+        if (!success) {
+          respond(-1);
+        } else {
+          uint32_t response;
+          if (!fxl::StringToNumberWithError<uint32_t>(passkey, &response)) {
+            bt_log(ERROR, "bt-host", "Unrecognized integer in string: %s", passkey.c_str());
+            respond(-1);
+          } else {
+            respond(response);
+          }
+        }
+      });
 }
 
 void HostServer::OnConnectionError(Server* server) {
