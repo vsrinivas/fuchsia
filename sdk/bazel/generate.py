@@ -311,6 +311,9 @@ class BazelBuilder(Builder):
         data = model.FidlLibrary(name, atom.tags['name'])
         base = self.dest('fidl', name)
         for file in atom.files:
+            extension = os.path.splitext(file.destination)[1][1:]
+            if extension == 'json':
+                continue
             dest = self.make_dir(os.path.join(base, file.destination))
             shutil.copy2(file.source, dest)
             data.srcs.append(file.destination)
