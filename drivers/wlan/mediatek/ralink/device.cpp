@@ -3419,27 +3419,12 @@ zx_status_t Device::Query(wlan_info_t* info) {
     info->num_bands = 1;
     info->bands[0] = {
         .desc = "2.4 GHz",
-        // TODO(tkilbourn): verify these
-        // (*) represents a property to verify later
+        // These hard-coded values are experimentally proven to work,
+        // but does not necessarily reflect the true capabilities of the chipset.
         .ht_caps =
             {
-                // - No LDPC
-                // - Both 20 and 40 MHz operation
-                // - static SM power save mode
-                // - HT greenfield
-                // - short guard interval for 20 MHz
-                // - short guard interval for 40 MHz
-                // - Tx with STBC
-                // - Rx with STBC for one spatial stream
-                // - no delayed Block Ack (*)
-                // - Max A-MSDU is 3839 (*)
-                // - Does not use DSSS/CCK in 40 MHz (*)
-                // - Not 40MHz intolerant
-                // - No L-SIG TXOP protection (*)
-                .ht_capability_info = 0x01fe,
-                // - Max A-MPDU length 8191 (*)
-                // - No restriction on MPDU start spacing (*)
-                .ampdu_params = 0x00,
+                .ht_capability_info = 0x016e,
+                .ampdu_params = 0x17,
                 .supported_mcs_set =
                     {
                         // Rx MCS bitmask
@@ -3481,6 +3466,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
                 .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
             },
     };
+
     if (rt_type_ == RT5592) {
         info->num_bands = 2;
         // Add MCS 8-15 to band 0
@@ -3490,8 +3476,8 @@ zx_status_t Device::Query(wlan_info_t* info) {
             // See above for descriptions of these capabilities
             .ht_caps =
                 {
-                    .ht_capability_info = 0x01fe,
-                    .ampdu_params = 0x00,
+                    .ht_capability_info = 0x016e,
+                    .ampdu_params = 0x17,
                     .supported_mcs_set =
                         {
                             // Rx MCS bitmask
@@ -3534,6 +3520,11 @@ zx_status_t Device::Query(wlan_info_t* info) {
                 },
         };
     }
+
+    debugf("ralink: HT capabilities for band[0]: %s\n",
+           wlan::debug::Describe(info->bands[0].ht_caps).c_str());
+    debugf("ralink: HT capabilities for band[1]: %s\n",
+           wlan::debug::Describe(info->bands[1].ht_caps).c_str());
 
     return ZX_OK;
 }

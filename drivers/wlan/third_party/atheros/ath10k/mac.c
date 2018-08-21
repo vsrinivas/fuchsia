@@ -102,9 +102,10 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
         .name = "2.4 GHz",
+        // These hard-coded values are experimentally proven to work.
         // FIXME: NET-817
-        .ht_caps = { .ht_capability_info = 0x01fe,
-                     .ampdu_params = 0x00,
+        .ht_caps = { .ht_capability_info = 0x016e,
+                     .ampdu_params = 0x17,
                      .supported_mcs_set = { 0xff, 0x00, 0x00, 0x00,
                                             0x01, 0x00, 0x00, 0x00,
                                             0x00, 0x00, 0x00, 0x00,
@@ -121,9 +122,10 @@ static const struct ath10k_band ath10k_supported_bands[] = {
 
     {
         .name = "5 GHz",
+        // These hard-coded values are experimentally proven to work.
         // FIXME: NET-817
-        .ht_caps = { .ht_capability_info = 0x01fe,
-                     .ampdu_params = 0x00,
+        .ht_caps = { .ht_capability_info = 0x016e,
+                     .ampdu_params = 0x17,
                      .supported_mcs_set = { 0xff, 0xff, 0x00, 0x00,
                                             0x01, 0x00, 0x00, 0x00,
                                             0x00, 0x00, 0x00, 0x00,
