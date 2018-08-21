@@ -6,6 +6,7 @@
     "garnet/packages/tools/tiles",
     "garnet/packages/prod/run",
     "garnet/packages/prod/pm",
+    "garnet/packages/prod/tracing",
     "garnet/packages/products/graphical"
   ]
 }
