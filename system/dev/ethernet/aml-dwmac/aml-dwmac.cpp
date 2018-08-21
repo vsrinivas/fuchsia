@@ -99,7 +99,7 @@ zx_status_t AmlDWMacDevice::InitPdev() {
     }
 
     gpio_config(&gpio_, PHY_RESET, GPIO_DIR_OUT);
-    gpio_write(&gpio_, PHY_RESET, 0);
+    ResetPhy();
 
     // Map amlogic peripheral control registers
     status = pdev_map_mmio_buffer(&pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
