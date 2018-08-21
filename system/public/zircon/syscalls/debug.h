@@ -71,6 +71,14 @@ typedef struct zx_thread_state_vector_regs {
     uint32_t mxcsr;
 } zx_thread_state_vector_regs_t;
 
+// Value for ZX_THREAD_STATE_DEBUG_REGS on x64 platforms.
+typedef struct zx_thread_state_debug_regs {
+  uint64_t dr[4];
+  // DR4 and D5 are not used.
+  uint64_t dr6_status;
+  uint64_t dr7_control;
+} zx_thread_state_debug_regs_t;
+
 #elif defined(__aarch64__)
 
 // Value for ZX_THREAD_STATE_GENERAL_REGS on ARM64 platforms.
@@ -99,6 +107,31 @@ typedef struct zx_thread_state_vector_regs {
     } v[32];
 } zx_thread_state_vector_regs_t;
 
+// ARMv8-A provides 2 to 16 hardware breakpoint registers.
+// The number is obtained by the BRPs field in the EDDFR register.
+#define AARCH64_MAX_HW_BREAKPOINTS 16
+// ARMv8-A provides 2 to 16 watchpoint breakpoint registers.
+// The number is obtained by the WRPs field in the EDDFR register.
+#define AARCH64_MAX_HW_WATCHPOINTS 16
+
+// Value for XZ_THREAD_STATE_DEBUG_REGS for ARM64 platforms.
+typedef struct zx_thread_state_debug_regs {
+  struct {
+    uint64_t dbgbvr;      //  HW Breakpoint Value register.
+    uint32_t dbgbcr;      //  HW Breakpoint Control register.
+  } hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
+  // Number of HW Breakpoints in the platform.
+  // Will be set on read and ignored on write.
+  uint8_t hw_bps_count;
+  struct {
+    uint64_t dbgwvr;      // HW Watchpoint Value register.
+    uint32_t dbgwcr;      // HW Watchpoint Control register.
+  } hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
+  // Number of HW Watchpoints in the platform.
+  // Will be set on read and ignored on write.
+  uint8_t hw_wps_count;
+} zx_thread_state_debug_regs_t;
+
 #endif
 
 // Value for ZX_THREAD_STATE_SINGLE_STEP. The value can be 0 (not single-stepping), or 1
@@ -115,8 +148,9 @@ typedef uint32_t zx_thread_state_topic_t;
 #define ZX_THREAD_STATE_FP_REGS       ((uint32_t)1) // zx_thread_state_fp_regs_t value.
 #define ZX_THREAD_STATE_VECTOR_REGS   ((uint32_t)2) // zx_thread_state_vector_regs_t value.
 #define ZX_THREAD_STATE_SINGLE_STEP   ((uint32_t)4) // zx_thread_state_single_step_t value.
-#define ZX_THREAD_X86_REGISTER_FS     ((uint32_t)5) // zx_thread_x86_register_fs_t value.
-#define ZX_THREAD_X86_REGISTER_GS     ((uint32_t)6) // zx_thread_x86_register_gs_t value.
+#define ZX_THREAD_STATE_DEBUG_REGS    ((uint32_t)5) // zx_thread_state_debug_regs_t value.
+#define ZX_THREAD_X86_REGISTER_FS     ((uint32_t)6) // zx_thread_x86_register_fs_t value.
+#define ZX_THREAD_X86_REGISTER_GS     ((uint32_t)7) // zx_thread_x86_register_gs_t value.
 
 __END_CDECLS
 
