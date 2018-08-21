@@ -9,6 +9,58 @@ import (
 	"io"
 )
 
+// BacktracePresenter intercepts backtrace elements on their own line and
+// presents them in text. Inlines are output as separate lines.
+// A PostProcessor is taken as an input to synchronously compose another
+// PostProcessor
+type BacktracePresenter struct {
+	out  io.Writer
+	next PostProcessor
+}
+
+// NewBacktracePresenter constructs a BacktracePresenter.
+func NewBacktracePresenter(out io.Writer, next PostProcessor) *BacktracePresenter {
+	return &BacktracePresenter{
+		out:  out,
+		next: next,
+	}
+}
+
+func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInfo) {
+	for i, _ := range info.locs {
+		i = len(info.locs) - i - 1
+		loc := info.locs[i]
+		fmt.Fprintf(out, "%s    ", hdr.Present())
+		var frameStr string
+		if i == 0 {
+			frameStr = fmt.Sprintf("#%d", frame)
+		} else {
+			frameStr = fmt.Sprintf("#%d.%d", frame, i)
+		}
+		fmt.Fprintf(out, "%-5s", frameStr)
+		fmt.Fprintf(out, " %#016x", info.addr)
+		if !loc.function.IsEmpty() {
+			fmt.Fprintf(out, " in %v", loc.function)
+		}
+		modRelAddr := info.addr - info.seg.Vaddr + info.seg.ModRelAddr
+		if !loc.file.IsEmpty() {
+			fmt.Fprintf(out, " %s:%d", loc.file, loc.line)
+		}
+		fmt.Fprintf(out, " <%s>+%#x\n", info.mod.Name, modRelAddr)
+	}
+}
+
+func (b *BacktracePresenter) Process(line OutputLine, out chan<- OutputLine) {
+	if len(line.line) == 1 {
+		if bt, ok := line.line[0].(*BacktraceElement); ok {
+			printBacktrace(b.out, line.header, bt.num, bt.info)
+			// Don't process a backtrace we've already output.
+			return
+		}
+	}
+	b.next.Process(line, out)
+}
+
 // FilterContextElements filters out lines that only contain contextual
 // elements and colors.
 type FilterContextElements struct {
@@ -103,13 +155,8 @@ func (b *BasicPresenter) printSrcLoc(loc SourceLocation, info addressInfo) {
 }
 
 func (b *BasicPresenter) Process(res OutputLine, out chan<- OutputLine) {
-	// TODO (jakehehrlich): Make the header interface have a ToString method and use
-	// that instead
-	if hdr, ok := res.header.(logHeader); ok {
-		fmt.Fprintf(b.output, "[%.3f] %05d.%05d> ", hdr.time, hdr.process, hdr.thread)
-	}
-	if hdr, ok := res.header.(sysLogHeader); ok {
-		fmt.Fprintf(b.output, "[%012.6f][%d][%d][%s] ", hdr.time, hdr.process, hdr.thread, hdr.tags)
+	if res.header != nil {
+		fmt.Fprintf(b.output, "%s ", res.header.Present())
 	}
 	for _, token := range res.line {
 		switch node := token.(type) {

@@ -195,7 +195,7 @@ func ExampleDemux() {
 		}},
 	})
 
-	// mock ids.txt:q
+	// mock ids.txt
 	repo := NewRepo()
 	repo.AddSource(testBinaries)
 
@@ -221,6 +221,56 @@ func ExampleDemux() {
 	//[131.200] 01234.05678> keep {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
 	//[131.301] 01234.05678> {{{module:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1:libcrypto.so:2}}} keep
 	//[131.604] 01234.05678> Error at atan2 at atan2.c:49
+}
+
+func ExampleNewBacktracePresenter() {
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
+			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
+			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+		}},
+		{"testdata/libcrypto.elf", map[uint64][]SourceLocation{
+			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
+			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
+			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
+		}},
+	})
+
+	// mock ids.txt
+	repo := NewRepo()
+	repo.AddSource(testBinaries)
+
+	// make a demuxer
+	demuxer := NewDemuxer(repo, symbo)
+
+	// define a little message that will need to be parsed
+	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
+		"[131.301] 1234.5678> {{{module:2:libcrypto.so:elf:12ef5c50b3ed3599c07c02d4509311be}}}\n" +
+		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
+		"[131.503] 1234.5678> {{{mmap:0x23456000:0x83c80:load:2:rx:0x80000}}}\n" +
+		"[131.604] 1234.5678> Backtrace:\n" +
+		"[131.604] 1234.5678> {{{bt:0:0x12388680}}}\n" +
+		"[131.604] 1234.5678> {{{bt:1:0x23457000}}}\n" +
+		"[131.604] 1234.5678> {{{bt:2:0x123879c0}}}\n"
+
+	// start sending InputLines to the demuxer
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	// start the demuxer which will cause filters to send output lines to 'out'
+	out := demuxer.Start(ctx, in)
+
+	Consume(ComposePostProcessors(ctx, out,
+		&FilterContextElements{},
+		NewBacktracePresenter(os.Stdout, NewBasicPresenter(os.Stdout, false))))
+
+	//Output:
+	//[131.604] 01234.05678> Backtrace:
+	//[131.604] 01234.05678>    #0    0x0000000012388680 in pow pow.c:23 <libc.so>+0x43680
+	//[131.604] 01234.05678>    #1    0x0000000023457000 in mod_exp rsa.c:101 <libcrypto.so>+0x81000
+	//[131.604] 01234.05678>    #2.1  0x00000000123879c0 in __DOUBLE_FLOAT math.h:51 <libc.so>+0x429c0
+	//[131.604] 01234.05678>    #2    0x00000000123879c0 in atan2 atan2.c:49 <libc.so>+0x429c0
 }
 
 func ExampleBadAddr() {

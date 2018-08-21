@@ -21,12 +21,18 @@ type Process uint64
 
 type DummySource struct{}
 
-type lineHeader interface{}
+type LineHeader interface {
+	Present() string
+}
 
 type logHeader struct {
 	time    float64
 	process uint64
 	thread  uint64
+}
+
+func (l logHeader) Present() string {
+	return fmt.Sprintf("[%.3f] %05d.%05d>", l.time, l.process, l.thread)
 }
 
 type sysLogHeader struct {
@@ -36,9 +42,13 @@ type sysLogHeader struct {
 	tags    string
 }
 
+func (s sysLogHeader) Present() string {
+	return fmt.Sprintf("[%012.6f][%d][%d][%s]", s.time, s.process, s.thread, s.tags)
+}
+
 type LogLine struct {
 	lineno uint64
-	header lineHeader
+	header LineHeader
 	source LineSource
 }
 

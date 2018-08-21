@@ -114,7 +114,7 @@ func main() {
 		tap,
 		&symbolize.FilterContextElements{},
 		&symbolize.OptimizeColor{},
-		presenter)
+		symbolize.NewBacktracePresenter(os.Stdout, presenter))
 	symbolize.Consume(trash)
 
 	// Once the pipeline has finished output all triggers
