@@ -8,9 +8,9 @@ extern crate serde_json;
 
 use crate::{AuthDbError, CredentialValue};
 
-use failure::Error;
+use failure::{format_err, Error};
 use log::{log, warn};
-use serde::ser::SerializeStruct;
+use serde_derive::Serialize;
 use serde_json::Value;
 use std::io::{Read, Write};
 use std::result;
@@ -39,6 +39,15 @@ pub trait Serializer {
     fn deserialize<R: Read>(&self, reader: R) -> Result<Vec<CredentialValue>>;
 }
 
+#[derive(Serialize)]
+struct StoredCredentialValue<'a> {
+    auth_provider_type: &'a str,
+    user_profile_id: String,
+    refresh_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    private_key: Option<String>,
+}
+
 // Note: We provide a custom Serde serialization for CredentialValue so we can
 // choose the specific fields that we wish to base64 encode, and to reduce the
 // risk of inconsistencies with the manual deserialization.
@@ -47,18 +56,15 @@ impl serde::ser::Serialize for CredentialValue {
     where
         S: serde::ser::Serializer,
     {
-        let mut state =
-            serializer.serialize_struct("CredentialValue", 3 /* Number of fields */)?;
-        state.serialize_field("identity_provider", &self.credential_key.identity_provider)?;
-        state.serialize_field(
-            "id",
-            &base64::encode_config(&self.credential_key.id, CHARSET),
-        )?;
-        state.serialize_field(
-            "refresh_token",
-            &base64::encode_config(&self.refresh_token, CHARSET),
-        )?;
-        state.end()
+        StoredCredentialValue {
+            auth_provider_type: &self.credential_key.auth_provider_type,
+            user_profile_id: base64::encode_config(&self.credential_key.user_profile_id, CHARSET),
+            refresh_token: base64::encode_config(&self.refresh_token, CHARSET),
+            private_key: self
+                .private_key
+                .as_ref()
+                .map(|key| base64::encode_config(key, CHARSET)),
+        }.serialize(serializer)
     }
 }
 
@@ -66,45 +72,16 @@ impl serde::ser::Serialize for CredentialValue {
 pub struct JsonSerializer;
 
 impl JsonSerializer {
-    /// Returns a string field from the supplied json object, or logs and
-    /// returns an empty string if this is not possible.
-    fn entry_to_str<'a>(object: &'a Value, field_name: &'static str) -> &'a str {
-        match object.get(field_name) {
-            Some(Value::String(s)) => s,
-            _ => {
-                warn!("Invalid credential: {} not found", field_name);
-                ""
-            }
-        }
-    }
-
-    /// Returns the base64 decoded contents of a string field from the supplied
-    /// json object, or logs and returns an empty string if this is not
-    /// possible.
-    fn base64_entry_to_str(object: &Value, field_name: &'static str) -> String {
-        let encoded_string = Self::entry_to_str(object, field_name);
-        let decoded_bytes: Vec<u8> =
-            base64::decode_config(encoded_string, CHARSET).unwrap_or_else(|_| {
-                warn!("Invalid credential: {} invalid base64", field_name);
-                vec![]
-            });
-        let decoded_string = String::from_utf8(decoded_bytes).unwrap_or_else(|_| {
-            warn!("Invalid credential: {} invalid UTF-8", field_name);
-            "".to_string()
-        });
-        decoded_string
-    }
-
     /// Constructs a new CredentialValue from the supplied json object.
     fn build_credential_value(json: &Value) -> result::Result<CredentialValue, Error> {
-        // For now we need only to handle one serialized form so we just pass all the
-        // expected keys to the constructor, relying on it to return an error if
-        // anything was missing. In the future we may need to be more selective to
-        // handle e.g. different IdP formats.
         CredentialValue::new(
-            Self::entry_to_str(&json, "identity_provider").to_string(),
-            Self::base64_entry_to_str(&json, "id"),
-            Self::base64_entry_to_str(&json, "refresh_token"),
+            entry_to_str(&json, "auth_provider_type")?.to_string(),
+            base64_entry_to_str(&json, "user_profile_id")?,
+            base64_entry_to_str(&json, "refresh_token")?,
+            match &json.get("private_key") {
+                Some(Value::String(_)) => Some(base64_entry_to_bytes(&json, "private_key")?),
+                _ => None,
+            },
         )
     }
 }
@@ -154,6 +131,33 @@ impl Serializer for JsonSerializer {
     }
 }
 
+/// Returns a string field from the supplied json object, or a descriptive error if this is not
+/// possible.
+fn entry_to_str<'a>(object: &'a Value, field_name: &'static str) -> result::Result<&'a str, Error> {
+    match object.get(field_name) {
+        Some(Value::String(s)) => Ok(s),
+        _ => Err(format_err!("Invalid credential: {} not found", field_name)),
+    }
+}
+
+/// Returns the base64 decoded contents of a string field from the supplied json object, or a
+/// descriptive error if this is not possible.
+fn base64_entry_to_bytes(
+    object: &Value, field_name: &'static str,
+) -> result::Result<Vec<u8>, Error> {
+    let encoded_string = entry_to_str(object, field_name)?;
+    base64::decode_config(encoded_string, CHARSET)
+        .map_err(|_| format_err!("Invalid credential: {} invalid base64", field_name))
+}
+
+/// Returns the base64 decoded contents of a string field from the supplied json object, or a
+/// descriptive error if this is not possible.
+fn base64_entry_to_str(object: &Value, field_name: &'static str) -> result::Result<String, Error> {
+    let decoded_bytes = base64_entry_to_bytes(object, field_name)?;
+    String::from_utf8(decoded_bytes)
+        .map_err(|_| format_err!("Invalid credential: {} invalid UTF-8", field_name))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,10 +168,11 @@ mod tests {
     fn build_test_creds(suffix: &str) -> CredentialValue {
         CredentialValue {
             credential_key: CredentialKey {
-                identity_provider: "test".to_string(),
-                id: "id".to_string() + suffix,
+                auth_provider_type: "test".to_string(),
+                user_profile_id: "id".to_string() + suffix,
             },
             refresh_token: "ref".to_string() + suffix,
+            private_key: None,
         }
     }
 
@@ -192,7 +197,8 @@ mod tests {
         JsonSerializer.serialize(&mut serialized, input.iter())?;
         assert_eq!(
             str::from_utf8(&serialized).unwrap(),
-            "[{\"identity_provider\":\"test\",\"id\":\"aWQx\",\"refresh_token\":\"cmVmMQ\"}]"
+            "[{\"auth_provider_type\":\"test\",\"user_profile_id\":\"aWQx\",\"refresh_token\":\
+             \"cmVmMQ\"}]"
         );
 
         let deserialized = JsonSerializer.deserialize(Cursor::new(serialized))?;
@@ -202,11 +208,13 @@ mod tests {
 
     #[test]
     fn test_json_serialize_deserialize_multiple_items() -> Result<()> {
-        let input = vec![
+        let mut input = vec![
             build_test_creds("1"),
             build_test_creds("2"),
             build_test_creds("3"),
         ];
+        // Include a mix of bound and unbound test credentials.
+        input[1].private_key = Some(vec![7, 6, 5, 4, 3, 2, 1]);
 
         let mut serialized = Vec::<u8>::new();
         JsonSerializer.serialize(&mut serialized, input.iter())?;
@@ -218,15 +226,15 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_bad_root() {
-        let content =
-            "{\"identity_provider\":\"test\",\"id\":\"aWQx\",\"refresh_token\":\"cmVmMQ\"}";
+        let content = "{\"auth_provider_type\":\"test\",\"user_profile_id\":\"aWQx\",\
+                       \"refresh_token\":\"cmVmMQ\"}";
         let deserialized = JsonSerializer.deserialize(content.as_bytes());
         assert_match!(deserialized, Err(AuthDbError::SerializationError));
     }
 
     #[test]
     fn test_json_deserialize_missing_field() {
-        let content = "[{\"identity_provider\":\"test\",\"refresh_token\":\"cmVmMQ\"}]";
+        let content = "[{\"auth_provider_type\":\"test\",\"refresh_token\":\"cmVmMQ\"}]";
         let deserialized = JsonSerializer.deserialize(content.as_bytes());
         match deserialized {
             Err(AuthDbError::DbInvalid) => {}
@@ -237,8 +245,8 @@ mod tests {
 
     #[test]
     fn test_json_deserialize_invalid_base64() {
-        let content =
-            "[{\"identity_provider\":\"test\",\"id\":\"a$$x\",\"refresh_token\":\"cmVmMQ\"}]";
+        let content = "[{\"auth_provider_type\":\"test\",\"user_profile_id\":\"a$$x\",\
+                       \"refresh_token\":\"cmVmMQ\"}]";
         let deserialized = JsonSerializer.deserialize(content.as_bytes());
         assert_match!(deserialized, Err(AuthDbError::DbInvalid));
     }

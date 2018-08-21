@@ -142,11 +142,12 @@ mod test {
         path: PathBuf,
     }
 
-    fn build_test_creds(id: &str, refresh_token: &str) -> CredentialValue {
+    fn build_test_creds(user_profile_id: &str, refresh_token: &str) -> CredentialValue {
         CredentialValue::new(
             "test".to_string(),
-            id.to_string(),
+            user_profile_id.to_string(),
             refresh_token.to_string(),
+            None /* do not include a private key*/,
         ).unwrap()
     }
 

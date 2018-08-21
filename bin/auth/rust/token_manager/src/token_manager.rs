@@ -199,6 +199,7 @@ impl TokenManager {
                                 auth_provider_type,
                                 user_profile_info.id.clone(),
                                 credential,
+                                None,
                             ).map_err(|_| Status::AuthProviderServerError);
                             let db_value = match db_value {
                                 Ok(db) => db,
