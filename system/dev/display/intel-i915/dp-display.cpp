@@ -1095,7 +1095,7 @@ bool DpDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans)
     uint32_t data_n;
     CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
 
-    if (pixel_clock_rate > link_symbol_rate || pixel_bit_rate > total_link_bit_rate) {
+    if (pixel_bit_rate > total_link_bit_rate) {
         LOG_ERROR("Insufficient link rate for resolution\n");
         return false;
     }
