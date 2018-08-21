@@ -8,40 +8,15 @@
 #include <string.h>
 
 #include <fbl/unique_ptr.h>
+#include <lib/fxl/logging.h>
 #include <virtio/virtio_ring.h>
 
 #include "garnet/lib/machina/virtio_device.h"
-#include "lib/fxl/logging.h"
-
-// Convert guest-physical addresses to usable virtual addresses.
-#define guest_paddr_to_host_vaddr(device, guest_paddr) \
-  (static_cast<zx_vaddr_t>(((device)->phys_mem().addr()) + (guest_paddr)))
 
 namespace machina {
 
 VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
-}
-
-static bool validate_queue_range(VirtioDevice* device, zx_vaddr_t addr,
-                                 size_t size) {
-  uintptr_t mem_addr = device->phys_mem().addr();
-  size_t mem_size = device->phys_mem().size();
-  zx_vaddr_t range_end = addr + size;
-  zx_vaddr_t mem_end = mem_addr + mem_size;
-
-  return addr >= mem_addr && range_end <= mem_end;
-}
-
-template <typename T>
-static void queue_set_segment_addr(VirtioQueue* queue, uint64_t guest_paddr,
-                                   size_t size, T** ptr) {
-  VirtioDevice* device = queue->device();
-  zx_vaddr_t host_vaddr = guest_paddr_to_host_vaddr(device, guest_paddr);
-
-  *ptr = validate_queue_range(device, host_vaddr, size)
-             ? reinterpret_cast<T*>(host_vaddr)
-             : nullptr;
 }
 
 uint16_t VirtioQueue::size() const {
@@ -68,7 +43,7 @@ void VirtioQueue::set_desc_addr(uint64_t desc_paddr) {
   fbl::AutoLock lock(&mutex_);
   ring_.addr.desc = desc_paddr;
   uintptr_t desc_size = ring_.size * sizeof(ring_.desc[0]);
-  queue_set_segment_addr(this, desc_paddr, desc_size, &ring_.desc);
+  ring_.desc = device_->phys_mem().as<vring_desc>(desc_paddr, desc_size);
 }
 
 uint64_t VirtioQueue::desc_addr() const {
@@ -78,15 +53,15 @@ uint64_t VirtioQueue::desc_addr() const {
 
 void VirtioQueue::set_avail_addr(uint64_t avail_paddr) {
   fbl::AutoLock lock(&mutex_);
+  const PhysMem& phys_mem = device_->phys_mem();
+
   ring_.addr.avail = avail_paddr;
   uintptr_t avail_size =
       sizeof(*ring_.avail) + (ring_.size * sizeof(ring_.avail->ring[0]));
-  queue_set_segment_addr(this, avail_paddr, avail_size, &ring_.avail);
+  ring_.avail = phys_mem.as<vring_avail>(avail_paddr, avail_size);
 
   uintptr_t used_event_paddr = avail_paddr + avail_size;
-  uintptr_t used_event_size = sizeof(*ring_.used_event);
-  queue_set_segment_addr(this, used_event_paddr, used_event_size,
-                         &ring_.used_event);
+  ring_.used_event = phys_mem.as<uint16_t>(used_event_paddr);
 }
 
 uint64_t VirtioQueue::avail_addr() const {
@@ -96,15 +71,15 @@ uint64_t VirtioQueue::avail_addr() const {
 
 void VirtioQueue::set_used_addr(uint64_t used_paddr) {
   fbl::AutoLock lock(&mutex_);
+  const PhysMem& phys_mem = device_->phys_mem();
+
   ring_.addr.used = used_paddr;
   uintptr_t used_size =
       sizeof(*ring_.used) + (ring_.size * sizeof(ring_.used->ring[0]));
-  queue_set_segment_addr(this, used_paddr, used_size, &ring_.used);
+  ring_.used = phys_mem.as<vring_used>(used_paddr, used_size);
 
   uintptr_t avail_event_paddr = used_paddr + used_size;
-  uintptr_t avail_event_size = sizeof(*ring_.avail_event);
-  queue_set_segment_addr(this, avail_event_paddr, avail_event_size,
-                         &ring_.avail_event);
+  ring_.avail_event = phys_mem.as<uint16_t>(avail_event_paddr);
 }
 
 uint64_t VirtioQueue::used_addr() const {
@@ -166,7 +141,7 @@ void VirtioQueue::Wait(uint16_t* index) {
 
 struct poll_task_args_t {
   VirtioQueue* queue;
-  VirtioQueue::QueuePollFn handler;
+  VirtioQueue::PollFn handler;
   std::string name;
 };
 
@@ -199,7 +174,7 @@ static int virtio_queue_poll_task(void* ctx) {
   return result;
 }
 
-zx_status_t VirtioQueue::Poll(QueuePollFn handler, std::string name) {
+zx_status_t VirtioQueue::Poll(PollFn handler, std::string name) {
   auto args = new poll_task_args_t{this, std::move(handler), std::move(name)};
 
   thrd_t thread;
@@ -221,7 +196,7 @@ zx_status_t VirtioQueue::Poll(QueuePollFn handler, std::string name) {
 }
 
 zx_status_t VirtioQueue::PollAsync(async_dispatcher_t* dispatcher,
-                                   async::Wait* wait, QueuePollFn handler) {
+                                   async::Wait* wait, PollFn handler) {
   wait->set_object(event_.get());
   wait->set_trigger(SIGNAL_QUEUE_AVAIL);
   wait->set_handler([this, handler = std::move(handler)](
@@ -234,7 +209,7 @@ zx_status_t VirtioQueue::PollAsync(async_dispatcher_t* dispatcher,
 
 void VirtioQueue::InvokeAsyncHandler(async_dispatcher_t* dispatcher,
                                      async::Wait* wait, zx_status_t status,
-                                     const QueuePollFn& handler) {
+                                     const PollFn& handler) {
   if (status != ZX_OK) {
     return;
   }
@@ -266,8 +241,7 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, virtio_desc_t* out) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  out->addr =
-      reinterpret_cast<void*>(guest_paddr_to_host_vaddr(device_, desc.addr));
+  out->addr = device_->phys_mem().as<void>(desc.addr, desc.len);
   out->len = desc.len;
   out->has_next = desc.flags & VRING_DESC_F_NEXT;
   out->writable = desc.flags & VRING_DESC_F_WRITE;
@@ -323,8 +297,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::HandleDescriptor(virtio_queue_fn_t handler,
-                                          void* ctx) {
+zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
   uint16_t head;
   uint32_t used_len = 0;
   uintptr_t mem_addr = device()->phys_mem().addr();

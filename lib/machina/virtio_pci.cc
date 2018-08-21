@@ -507,8 +507,9 @@ zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint64_t notify_queue = offset / kVirtioPciNotifyCfgMultiplier;
-  return device_->Kick(static_cast<uint16_t>(notify_queue));
+  auto notify_queue =
+      static_cast<uint16_t>(offset / kVirtioPciNotifyCfgMultiplier);
+  return device_->Kick(notify_queue);
 }
 
 }  // namespace machina
