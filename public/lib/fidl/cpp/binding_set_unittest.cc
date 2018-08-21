@@ -165,10 +165,9 @@ TEST(BindingSet, EmptyHandlerOnManualClose) {
   EXPECT_EQ(1u, binding_set.size());
   EXPECT_EQ(0, empty_count);
 
-  // Remove the binding manually by finding it in the set.
-  auto found = binding_set.bindings().begin();
-  ASSERT_NE(found, binding_set.bindings().end());
-  binding_set.CloseAndCheckForEmpty(found);
+  // Unbind and wait until the binding has been removed from the binding set.
+  ptr.Unbind();
+  loop.RunUntilIdle();
   EXPECT_EQ(0u, binding_set.size());
   EXPECT_EQ(1, empty_count);
 
@@ -182,6 +181,30 @@ TEST(BindingSet, EmptyHandlerOnManualClose) {
   loop.RunUntilIdle();
   EXPECT_EQ(0u, binding_set.size());
   EXPECT_EQ(1, empty_count);
+}
+
+TEST(BindingSet, BindingDestroyedAfterRemovalFromSet) {
+  fidl::test::AsyncLoopForTest loop;
+
+  BindingSet<fidl::test::frobinator::Frobinator,
+             std::unique_ptr<test::FrobinatorImpl>>
+      binding_set;
+  auto check_binding_set_empty_on_destroy = [&binding_set] {
+    EXPECT_TRUE(binding_set.bindings().empty());
+  };
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+
+  // Add the binding.
+  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(
+                             check_binding_set_empty_on_destroy),
+                         ptr.NewRequest());
+  EXPECT_EQ(1u, binding_set.size());
+
+  // Unbind and wait until the binding has been removed from the binding set.
+  ptr.Unbind();
+  loop.RunUntilIdle();
+  EXPECT_TRUE(binding_set.bindings().empty());
 }
 
 }  // namespace

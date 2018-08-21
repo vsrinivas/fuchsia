@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 
 #include <fidl/test/frobinator/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include <string>
 #include <vector>
@@ -15,11 +16,12 @@ namespace test {
 
 class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
  public:
-  FrobinatorImpl();
+  FrobinatorImpl(fit::closure on_destroy = [] {});
   ~FrobinatorImpl();
 
   std::vector<std::string> frobs;
   std::vector<std::string> grobs;
+  fit::closure on_destroy_;
 
   void Frob(StringPtr value) override;
   void Grob(StringPtr value, GrobCallback callback) override;

@@ -32,7 +32,6 @@ class BindingSet {
   using StorageType = std::vector<std::unique_ptr<Binding>>;
 
   using iterator = typename StorageType::iterator;
-  using const_iterator = typename StorageType::const_iterator;
 
   BindingSet() = default;
 
@@ -99,15 +98,6 @@ class BindingSet {
   // Closes all the channels associated with this |BindingSet|.
   void CloseAll() { bindings_.clear(); }
 
-  // Close a binding at the given iterator. The iterator must be valid and
-  // dereferenceable.
-  void CloseAndCheckForEmpty(const_iterator iterator) {
-    (*iterator)->set_error_handler(nullptr);
-    bindings_.erase(iterator);
-    if (bindings_.empty() && empty_set_handler_)
-      empty_set_handler_();
-  }
-
   // The number of bindings in this |BindingSet|.
   size_t size() const { return bindings_.size(); }
 
@@ -133,7 +123,17 @@ class BindingSet {
                              return b.get() == binding;
                            });
     ZX_DEBUG_ASSERT(it != bindings_.end());
-    CloseAndCheckForEmpty(it);
+
+    {
+      // Move ownership of binding out of storage, such that the binding is
+      // destroyed AFTER it is removed from the bindings.
+      auto binding_local = std::move(*it);
+      binding_local->set_error_handler(nullptr);
+      bindings_.erase(it);
+    }
+
+    if (bindings_.empty() && empty_set_handler_)
+      empty_set_handler_();
   }
 
   StorageType bindings_;
