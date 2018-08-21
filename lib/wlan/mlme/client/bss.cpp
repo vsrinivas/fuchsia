@@ -544,11 +544,11 @@ wlan_mlme::BSSDescription Bss::ToFidl() const {
 
 std::string Bss::SupportedRatesToString() const {
     constexpr uint8_t kBasicRateMask = 0x80;
-    char buf[SupportedRatesElement::kMaxLen * 6 + 1];
+    char buf[128];
     char* ptr = buf;
     for (auto const& rate : supported_rates_) {
         // Rates are printed as Mbps, a preceding * indicates a basic rate
-        ptr += std::snprintf(ptr, 6, "%s%.1f ", (rate & kBasicRateMask) ? "" : "*",
+        ptr += std::snprintf(ptr, 8, "%s%.1f ", (rate & kBasicRateMask) ? "" : "*",
                              (rate & (kBasicRateMask - 1)) / 2.0);
     }
 
