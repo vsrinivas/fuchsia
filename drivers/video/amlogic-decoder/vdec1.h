@@ -33,6 +33,7 @@ class Vdec1 : public DecoderCore {
   void InitializeDirectInput() override;
   void UpdateWritePointer(uint32_t write_pointer) override;
   uint32_t GetStreamInputOffset() override;
+  uint32_t GetReadOffset() override;
 
  private:
   MmioRegisters* mmio() const { return owner_->mmio(); }

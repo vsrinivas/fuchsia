@@ -274,9 +274,8 @@ class TestVP9 {
       video->SetDefaultInstance(std::make_unique<Vp9Decoder>(
           video.get(), Vp9Decoder::InputType::kSingleStream));
     }
-    EXPECT_EQ(ZX_OK,
-              video->InitializeStreamBuffer(
-                  use_parser, use_parser ? PAGE_SIZE : 1024 * PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(
+                         use_parser, PAGE_SIZE));
 
     video->InitializeInterrupts();
 
@@ -316,15 +315,28 @@ class TestVP9 {
     auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
     ASSERT_NE(nullptr, test_ivf);
 
+    std::atomic<bool> stop_parsing(false);
     // Put on a separate thread because it needs video decoding to progress in
     // order to finish.
-    auto parser = std::async([&video, use_parser, &test_ivf]() {
+    auto parser = std::async([&video, use_parser, &test_ivf, &stop_parsing]() {
       auto aml_data = ConvertIvfToAmlV(test_ivf->ptr, test_ivf->size);
       if (use_parser) {
         video->ParseVideo(aml_data.data(), aml_data.size());
       } else {
         video->core_->InitializeDirectInput();
-        video->ProcessVideoNoParser(aml_data.data(), aml_data.size());
+        uint32_t current_offset = 0;
+        uint8_t* data = aml_data.data();
+        while (!stop_parsing) {
+          uint32_t processed_data;
+          EXPECT_EQ(ZX_OK,
+                    video->ProcessVideoNoParser(
+                        data + current_offset, aml_data.size() - current_offset,
+                        &processed_data));
+          current_offset += processed_data;
+          if (current_offset == aml_data.size())
+            break;
+          zx_nanosleep(zx_deadline_after(ZX_MSEC(15)));
+        }
       }
     });
 
@@ -339,6 +351,8 @@ class TestVP9 {
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+
+    stop_parsing = true;
 
     EXPECT_EQ(std::future_status::ready,
               parser.wait_for(std::chrono::seconds(1)));

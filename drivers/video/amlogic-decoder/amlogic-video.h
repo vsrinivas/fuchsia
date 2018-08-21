@@ -82,9 +82,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
   zx_status_t InitializeEsParser();
   zx_status_t ParseVideo(void* data, uint32_t len);
-  zx_status_t ProcessVideoNoParser(void* data, uint32_t len);
+  zx_status_t ProcessVideoNoParser(void* data, uint32_t len,
+                                   uint32_t* written_out = nullptr);
   zx_status_t ProcessVideoNoParserAtOffset(void* data, uint32_t len,
-                                           uint32_t current_offset);
+                                           uint32_t current_offset,
+                                           uint32_t* written_out = nullptr);
   void InitializeInterrupts();
 
   zx_device_t* parent_ = nullptr;

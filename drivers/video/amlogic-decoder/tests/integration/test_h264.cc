@@ -147,7 +147,7 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
     }
-    status = video->InitializeStreamBuffer(true, PAGE_SIZE);
+    status = video->InitializeStreamBuffer(false, PAGE_SIZE);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> wait_valid;
@@ -173,9 +173,22 @@ class TestH264 {
           });
     }
 
-    EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-    auto as = std::async([&video, &bear_h264]() {
-      EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264->ptr, bear_h264->size));
+    std::atomic<bool> stop_parsing(false);
+    video->core_->InitializeDirectInput();
+    auto as = std::async([&video, &bear_h264, &stop_parsing]() {
+      uint32_t current_offset = 0;
+      uint8_t* data = bear_h264->ptr;
+      while (!stop_parsing) {
+        uint32_t processed_data;
+        EXPECT_EQ(ZX_OK,
+                  video->ProcessVideoNoParser(data + current_offset,
+                                              bear_h264->size - current_offset,
+                                              &processed_data));
+        current_offset += processed_data;
+        if (current_offset == bear_h264->size)
+          break;
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(15)));
+      }
     });
 
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
@@ -190,6 +203,7 @@ class TestH264 {
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
+    stop_parsing = true;
     as.wait();
     video.reset();
   }

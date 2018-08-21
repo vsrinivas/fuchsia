@@ -54,6 +54,7 @@ class DecoderCore {
   // This is the offset between the start of the stream buffer and the write
   // pointer.
   virtual uint32_t GetStreamInputOffset() = 0;
+  virtual uint32_t GetReadOffset() = 0;
 
   virtual zx_status_t InitializeInputContext(InputContext* context) {
     return ZX_ERR_NOT_SUPPORTED;

@@ -32,6 +32,7 @@ class HevcDec : public DecoderCore {
   void InitializeDirectInput() override;
   void UpdateWritePointer(uint32_t write_pointer) override;
   uint32_t GetStreamInputOffset() override;
+  uint32_t GetReadOffset() override;
   zx_status_t InitializeInputContext(InputContext* context) override;
   void SaveInputContext(InputContext* context) override;
   void RestoreInputContext(InputContext* context) override;

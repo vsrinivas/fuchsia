@@ -383,23 +383,54 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len) {
-  return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset());
+zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len,
+                                               uint32_t* written_out) {
+  return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(),
+                                      written_out);
 }
 
-zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(
-    void* data, uint32_t len, uint32_t current_offset) {
-  if (len + current_offset > io_buffer_size(stream_buffer_->buffer(), 0)) {
-    DECODE_ERROR("Video too large\n");
-    return ZX_ERR_OUT_OF_RANGE;
+zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(void* data, uint32_t len,
+                                                       uint32_t write_offset,
+                                                       uint32_t* written_out) {
+  uint32_t read_offset = core_->GetReadOffset();
+  uint32_t available_space;
+  if (read_offset > write_offset) {
+    available_space = read_offset - write_offset;
+  } else {
+    available_space = io_buffer_size(stream_buffer_->buffer(), 0) -
+                      write_offset + read_offset;
   }
-  memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) +
-             current_offset,
-         data, len);
-  io_buffer_cache_flush(stream_buffer_->buffer(), current_offset, len);
-  stream_buffer_->set_data_size(current_offset + len);
+  // Subtract 8 to ensure the read pointer doesn't become equal to the write
+  // pointer, as that means the buffer is empty.
+  available_space = available_space > 8 ? available_space - 8 : 0;
+  if (!written_out) {
+    if (len > available_space) {
+      DECODE_ERROR("Video too large\n");
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+  } else {
+    len = std::min(len, available_space);
+    *written_out = len;
+  }
+
+  stream_buffer_->set_data_size(stream_buffer_->data_size() + len);
+  uint32_t input_offset = 0;
+  while (len > 0) {
+    uint32_t write_length = len;
+    if (write_offset + len > io_buffer_size(stream_buffer_->buffer(), 0))
+      write_length = io_buffer_size(stream_buffer_->buffer(), 0) - write_offset;
+    memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) +
+               write_offset,
+           static_cast<uint8_t*>(data) + input_offset, write_length);
+    io_buffer_cache_flush(stream_buffer_->buffer(), write_offset, write_length);
+    write_offset += write_length;
+    if (write_offset == io_buffer_size(stream_buffer_->buffer(), 0))
+      write_offset = 0;
+    len -= write_length;
+    input_offset += write_length;
+  }
   core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
-                            current_offset + len);
+                            write_offset);
   return ZX_OK;
 }
 

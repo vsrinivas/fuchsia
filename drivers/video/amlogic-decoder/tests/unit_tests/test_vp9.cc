@@ -25,6 +25,7 @@ class FakeDecoderCore : public DecoderCore {
   void InitializeDirectInput() override {}
   void UpdateWritePointer(uint32_t write_pointer) override {}
   uint32_t GetStreamInputOffset() override { return 0; }
+  uint32_t GetReadOffset() override { return 0; }
 };
 
 class FakeOwner : public VideoDecoder::Owner {

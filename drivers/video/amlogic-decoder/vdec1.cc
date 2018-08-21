@@ -273,3 +273,12 @@ uint32_t Vdec1::GetStreamInputOffset() {
   assert(write_ptr >= buffer_start);
   return write_ptr - buffer_start;
 }
+
+uint32_t Vdec1::GetReadOffset() {
+  uint32_t read_ptr =
+      VldMemVififoRP::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t buffer_start =
+      VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  assert(read_ptr >= buffer_start);
+  return read_ptr - buffer_start;
+}

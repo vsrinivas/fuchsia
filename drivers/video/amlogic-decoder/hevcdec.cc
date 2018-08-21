@@ -251,6 +251,15 @@ uint32_t HevcDec::GetStreamInputOffset() {
   return write_ptr - buffer_start;
 }
 
+uint32_t HevcDec::GetReadOffset() {
+  uint32_t read_ptr =
+      HevcStreamRdPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t buffer_start =
+      HevcStreamStartAddr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  assert(read_ptr >= buffer_start);
+  return read_ptr - buffer_start;
+}
+
 zx_status_t HevcDec::InitializeInputContext(InputContext* context) {
   constexpr uint32_t kInputContextSize = 4096;
   zx_status_t status =
