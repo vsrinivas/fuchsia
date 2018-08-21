@@ -59,6 +59,15 @@ constexpr uint8_t kI8042StatusOutputFull        = 1 << 0;
 constexpr uint8_t kI8042CommandTest             = 0xaa;
 constexpr uint8_t kI8042DataTestResponse        = 0x55;
 
+// I8237 DMA Controller relative port mappings.
+// See Intel Series 7 Platform Host Controller Hub, Table 13-2.
+constexpr uint16_t kI8237DmaPage0               = 0x7;
+
+// See Intel Series 7 Platform Host Controller Hub, Section 5.4.1.9:
+// If the [IO port] is not claimed by any peripheral (and subsequently aborted),
+// the PCH returns a value of all 1s (FFh) to the processor.
+constexpr uint8_t kPortRemoved                  = 0xff;
+
 // clang-format on
 
 namespace machina {
@@ -330,6 +339,24 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
   return ZX_OK;
 }
 
+zx_status_t I8237Handler::Init(Guest* guest) {
+  return guest->CreateMapping(TrapType::PIO_SYNC, kI8237Base + kI8237DmaPage0,
+                              1, kI8237DmaPage0, this);
+}
+
+zx_status_t I8237Handler::Read(uint64_t port, IoValue* value) const {
+  if (port != kI8237DmaPage0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  value->access_size = 1;
+  value->u8 = kPortRemoved;
+  return ZX_OK;
+}
+
+zx_status_t I8237Handler::Write(uint64_t addr, const IoValue& value) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 // Processor Interface Registers
 //
 // See Intel Series 7 Platform Host Controller Hub, Section 13.7:
@@ -388,6 +415,10 @@ zx_status_t IoPort::Init(Guest* guest) {
     return status;
   }
   status = i8042_.Init(guest);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = i8237_.Init(guest);
   if (status != ZX_OK) {
     return status;
   }

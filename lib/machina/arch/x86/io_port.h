@@ -70,6 +70,14 @@ class I8042Handler : public IoHandler {
   uint8_t command_ __TA_GUARDED(mutex_) = 0;
 };
 
+class I8237Handler : public IoHandler {
+ public:
+  zx_status_t Init(Guest* guest);
+
+  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Write(uint64_t addr, const IoValue& value) override;
+};
+
 class ProcessorInterfaceHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
@@ -92,6 +100,7 @@ class IoPort {
   Pm1Handler pm1_;
   CmosHandler cmos_;
   I8042Handler i8042_;
+  I8237Handler i8237_;
   ProcessorInterfaceHandler proc_iface_;
 };
 

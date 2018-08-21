@@ -97,6 +97,10 @@ static constexpr uint64_t kCmosSize                         = 0x2;
 // I8042 ports.
 static constexpr uint64_t kI8042Base                        = 0x60;
 
+// I8237 DMA Controller ports.
+// See Intel Series 7 Platform Host Controller Hub, Table 13-2.
+static constexpr uint64_t kI8237Base                        = 0x80;
+
 // Power states as defined in the DSDT.
 //
 // We only implement a transition from S0 to S5 to trigger guest termination.
