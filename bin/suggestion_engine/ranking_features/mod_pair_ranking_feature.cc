@@ -52,10 +52,6 @@ double ModPairRankingFeature::ComputeFeatureInternal(
   for (auto& action : *suggestion.prototype->proposal.on_selected) {
     fidl::StringPtr module_url;
     switch (action.Which()) {
-      case fuchsia::modular::Action::Tag::kCreateStory: {
-        module_url = action.create_story().intent.handler;
-        break;
-      }
       case fuchsia::modular::Action::Tag::kAddModule: {
         module_url = action.add_module().intent.handler;
         break;

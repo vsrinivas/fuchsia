@@ -474,11 +474,13 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
       fuchsia::modular::Proposal proposal;
       proposal.id = entry.binary;
 
-      fuchsia::modular::CreateStory create_story;
-      create_story.intent.handler = entry.binary;
+      fuchsia::modular::AddModule add_module;
+      add_module.intent.handler = entry.binary;
+      add_module.module_name = "root";
+      add_module.surface_parent_module_path.resize(0);
 
       fuchsia::modular::Action action;
-      action.set_create_story(std::move(create_story));
+      action.set_add_module(std::move(add_module));
       proposal.on_selected.push_back(std::move(action));
 
       proposal.display.headline =

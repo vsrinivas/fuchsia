@@ -402,11 +402,6 @@ fuchsia::modular::StoryCommand SuggestionEngineImpl::ActionToStoryCommand(
     const fuchsia::modular::Action& action) {
   fuchsia::modular::StoryCommand command;
   switch (action.Which()) {
-    case fuchsia::modular::Action::Tag::kCreateStory: {
-      FXL_LOG(WARNING) << "CreateStory action is deprecated. Use AddModule "
-                       << "with a story_name in the Proposal.";
-      break;
-    }
     case fuchsia::modular::Action::Tag::kFocusStory: {
       fuchsia::modular::SetFocusState set_focus_state;
       set_focus_state.focused = true;
@@ -467,7 +462,6 @@ void SuggestionEngineImpl::PerformDeprecatedActions(
         PerformCustomAction(&action);
         break;
       }
-      case fuchsia::modular::Action::Tag::kCreateStory:
       case fuchsia::modular::Action::Tag::kFocusStory:
       case fuchsia::modular::Action::Tag::kFocusModule:
       case fuchsia::modular::Action::Tag::kAddModule:

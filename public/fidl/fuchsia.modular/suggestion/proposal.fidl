@@ -65,17 +65,6 @@ union Action {
   SetLinkValueAction set_link_value_action;
   CustomAction custom_action;
   QueryAction query_action;
-
-  // DEPRECATED
-  // Instead, use the story_name field in Proposal and AddModule instead.
-  CreateStory create_story;
-};
-
-// DEPRECATED
-// Creates a new story with the specified module
-struct CreateStory {
-  // The intent used to add the first module to the created story.
-  Intent intent;
 };
 
 // Brings an existing story into focus.

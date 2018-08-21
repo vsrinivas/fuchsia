@@ -61,31 +61,6 @@ void AddValueToContextUpdate(
   context_update.push_back(std::move(value));
 }
 
-TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
-  fuchsia::modular::Intent intent;
-  intent.handler = "mod3";
-
-  fuchsia::modular::CreateStory create_story;
-  create_story.intent = std::move(intent);
-
-  fuchsia::modular::Action action;
-  action.set_create_story(std::move(create_story));
-
-  fuchsia::modular::Proposal proposal;
-  proposal.on_selected.push_back(std::move(action));
-  SuggestionPrototype prototype;
-  prototype.proposal = std::move(proposal);
-  RankedSuggestion suggestion;
-  suggestion.prototype = &prototype;
-
-  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
-  AddValueToContextUpdate(context_update, "mod1");
-  AddValueToContextUpdate(context_update, "mod2");
-  mod_pair_feature.UpdateContext(context_update);
-  double value = mod_pair_feature.ComputeFeature(query, suggestion);
-  EXPECT_EQ(value, 1.0);
-}
-
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
   fuchsia::modular::Intent intent;
   intent.handler = "mod4";
