@@ -90,6 +90,22 @@ else
   IFNAME="qemu"
 fi
 
+# QEMU looks for its own files in its current directory before looking in its
+# data directory (.../share/qemu/).  So a file in the current directory that
+# happens to match one of those internal files' names will be used instead of
+# the proper file and make things go awry.  There's no way to tell QEMU not to
+# look in the current directory first.  So to make it safe to have files by any
+# name in the current directory, we cd to / before running QEMU (on the more
+# reasonable presumption that / won't contain any files by those names).  Hence,
+# we have to convert any relative file names we're passing to QEMU to absolute.
+abspath() {
+  local path="$1"
+  case "$path" in
+      /*) echo "$path";;
+      *) echo "`pwd`/$path";;
+  esac
+}
+
 while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
     case $FLAG in
         A) ASAN=1;;
@@ -98,7 +114,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
         c) CMDLINE+="$OPTARG ";;
         C) CLANG=1;;
         d) DISK=1;;
-        D) DISKFILE=$OPTARG;;
+        D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
         G) GIC=$OPTARG;;
         I) IFNAME=$OPTARG;;
@@ -112,11 +128,11 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
         q) QEMUDIR=${OPTARG}/;;
         r) RELEASE=1;;
         s) SMP=$OPTARG;;
-        t) QEMU_KERNEL=$OPTARG;;
-        u) UPSCRIPT=$OPTARG;;
+        t) QEMU_KERNEL="$(abspath "$OPTARG")";;
+        u) UPSCRIPT="$(abspath "$OPTARG")";;
         V) VIRTIO=1;;
-        x) DEPRECATED_INITRD=$OPTARG;;
-        z) QEMU_INITRD=$OPTARG;;
+        x) DEPRECATED_INITRD="$(abspath "$OPTARG")";;
+        z) QEMU_INITRD="$(abspath "$OPTARG")";;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -124,10 +140,10 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
             ;;
         -)
             case $OPTARG in
-            ahci=*) AHCI+=(${OPTARG#*=});;
+            ahci=*) AHCI+=("$(abspath "${OPTARG#*=}")");;
             audio) AUDIO=none;;
             audio=*) AUDIO=${OPTARG#*=};;
-            wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
+            wavfile=*) AUDIO_WAVFILE="$(abspath "${OPTARG#*=}")";;
             build-debug) BUILD_DEBUG=1;;
             debugger) DEBUGGER=1;;
             disktype=*) DISKTYPE=${OPTARG#*=};;
@@ -211,13 +227,13 @@ if [[ -n "$QEMU_INITRD" ]]; then
         exit 2
     fi
 elif [[ -z "$DEPRECATED_INITRD" ]]; then
-    QEMU_INITRD="$BUILDDIR/zircon.zbi"
+    QEMU_INITRD="$(abspath "$BUILDDIR/zircon.zbi")"
 fi
 
 if [[ -n "$QEMU_INITRD" && -z "$QEMU_KERNEL" ]]; then
     case $ARCH in
-    arm64) QEMU_KERNEL="$BUILDDIR/qemu-boot-shim.bin" ;;
-    x64) QEMU_KERNEL="$BUILDDIR/multiboot.bin" ;;
+    arm64) QEMU_KERNEL="$(abspath "$BUILDDIR/qemu-boot-shim.bin")" ;;
+    x64) QEMU_KERNEL="$(abspath "$BUILDDIR/multiboot.bin")" ;;
     *)
         echo >&2 "No QEMU trampoline for $ARCH"
         exit 2
@@ -419,8 +435,8 @@ case $ARCH in
 esac
 
 if [[ -n "$DEPRECATED_INITRD" ]]; then
-    QEMU_KERNEL="$DEPRECATED_KERNEL"
-    QEMU_INITRD="$DEPRECATED_INITRD"
+    QEMU_KERNEL="$(abspath "$DEPRECATED_KERNEL")"
+    QEMU_INITRD="$(abspath "$DEPRECATED_INITRD")"
 fi
 
 # Propagate our TERM environment variable as a kernel command line
@@ -441,6 +457,7 @@ CMDLINE="`echo "$CMDLINE" | sed 's/,/,,/g'`"
 
 # run qemu
 echo CMDLINE: $CMDLINE
+cd /
 set -x
 exec $QEMU -kernel "$QEMU_KERNEL" -initrd "$QEMU_INITRD" \
      	   $ARGS -append "$CMDLINE" "$@"
