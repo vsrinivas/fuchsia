@@ -174,6 +174,16 @@ struct ClientCompositionOp {
 // while the virtcon client is obtained by opening a 'virtcon' child of the
 // device.
 //
+// A display configuration can be seperated into two parts: the layer layout and
+// the layer contents. The layout includes all parts of a configuration other
+// than the image handles. The active configuration is composed of the most
+// recently applied layout and an active image from each layer - see
+// SetLayerImage for details on how the active image is defined. Note the
+// requirement that each layer has an active image. Whenever a new active
+// configuration is available, it is immediately given to the hardware. This
+// allows the layout and each layer's contents to advance independently when
+// possible.
+//
 // Performing illegal actions on the interface will result in the interface
 // being closed.
 interface Controller {
@@ -258,8 +268,8 @@ interface Controller {
   // config (no src_frame cropping, the identity transform, positioned in the
   // top-left corner of the composed output, and no scaling).
   //
-  // See the documentation on SetLayerImage for details on the synchronization
-  // behaviors of this method.
+  // See the documentation on SetLayerImage for details on how this method
+  // affects the layer's contents.
   //
   // It is illegal to pass an invalid layer id.
   11: SetLayerPrimaryConfig(uint64 layer_id, ImageConfig image_config);
@@ -295,8 +305,8 @@ interface Controller {
   // Configures the layer as a cursor layer with the given config. The
   // default position is (0, 0).
   //
-  // See the documentation on SetLayerImage for details on the synchronization
-  // behaviors of this method.
+  // See the documentation on SetLayerImage for details on how this method
+  // affects the layer's contents.
   //
   // It is illegal to call this on an invalid layer.
   14: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
@@ -325,20 +335,18 @@ interface Controller {
   // If signal_event_id is valid, then the driver will signal the event with
   // ZX_EVENT_SIGNALED when the image is no longer being presented.
   //
-  // Each image layer acts as a seperate queue of images. Whenever a new
-  // image becomes ready, it will immediately be presented. When this happens,
-  // any older images which haven't become ready will be dropped, and their
-  // signal events will be fired as soon as their wait events are signaled.
-  // The driver does not attempt to synchronzie with vsync. If multiple images
-  // become ready within one vsync period, then only the last image will
-  // actually be displayed.
+  // A layer's active image is the most recently applied image which either has
+  // no wait event or whose wait event has been signaled. Whenever a new image
+  // becomes active, any older images which never became active are dropped, and
+  // their signal events will be fired as soon as their wait events are
+  // signaled. The driver also does not have any concept like 'target vsync',
+  // meaning that if multiple images become active within one vsync period, then
+  // only the last image will actually be displayed.
   //
-  // The driver will wait until every image layer has an image that is ready
-  // before applying a configuration. The driver will retain images from older
-  // configurations and use them to immedately apply new configurations, without
-  // waiting for the new images to be ready. Setting a layer's ImageConfig with
-  // SetLayerPrimaryConfig or SetLayerCursorConfig resets that layer's images.
-  // This occurs even if the new ImageConfig matches the old ImageConfig.
+  // By default, the driver retains an active image until a new image becomes
+  // active. However, setting a layer's ImageConfig with SetLayerPrimaryConfig
+  // or SetLayerCursorConfig reset the layer's active and pending images, even
+  // if the new ImageConfig matches the old ImageConfig.
   //
   // An image cannot be used for multiple layers simultaneously, nor can an
   // image be given back to the display controller while it is still in use.
