@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_ARM64_PL031_H_
 #define GARNET_LIB_MACHINA_ARCH_ARM64_PL031_H_
 
-#include <fbl/mutex.h>
+#include <mutex>
 
 #include "garnet/lib/machina/io.h"
 

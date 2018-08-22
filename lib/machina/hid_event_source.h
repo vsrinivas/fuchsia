@@ -11,6 +11,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <hid/hid.h>
+#include <zircon/types.h>
 
 #include "garnet/lib/machina/input_dispatcher.h"
 
@@ -58,7 +59,7 @@ class HidEventSource {
   zx_status_t AddInputDevice(int dirfd, int event, const char* fn);
 
   InputDispatcher* input_dispatcher_;
-  fbl::Mutex mutex_;
+  std::mutex mutex_;
   fbl::SinglyLinkedList<fbl::unique_ptr<HidInputDevice>> devices_
       __TA_GUARDED(mutex_);
 };

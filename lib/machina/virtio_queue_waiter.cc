@@ -20,7 +20,7 @@ VirtioQueueWaiter::~VirtioQueueWaiter() { Cancel(); }
 zx_status_t VirtioQueueWaiter::Begin() {
   zx_status_t status = ZX_OK;
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   if (!pending_) {
     status = wait_.Begin(dispatcher_);
     if (status == ZX_OK) {
@@ -31,7 +31,7 @@ zx_status_t VirtioQueueWaiter::Begin() {
 }
 
 void VirtioQueueWaiter::Cancel() {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   if (pending_) {
     wait_.Cancel();
     pending_ = false;
@@ -43,7 +43,7 @@ void VirtioQueueWaiter::WaitHandler(async_dispatcher_t* dispatcher,
                                     const zx_packet_signal_t* signal) {
   uint16_t index = 0;
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!pending_) {
       return;
     }

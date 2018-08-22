@@ -5,10 +5,10 @@
 #ifndef GARNET_LIB_MACHINA_INPUT_DISPATCHER_H_
 #define GARNET_LIB_MACHINA_INPUT_DISPATCHER_H_
 
-#include <threads.h>
+#include <condition_variable>
+#include <mutex>
 
 #include <fbl/array.h>
-#include <fbl/mutex.h>
 
 namespace machina {
 
@@ -69,7 +69,7 @@ class InputEventQueue {
   void PostEvent(const InputEvent& event, bool flush = false);
 
   // Blocks until an InputEvent is available.
-  InputEvent Wait();
+  InputEvent Wait() __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   size_t size() const;
 
@@ -77,8 +77,8 @@ class InputEventQueue {
   void WriteEventToRingLocked(const InputEvent&) __TA_REQUIRES(mutex_);
   void DropOldestLocked() __TA_REQUIRES(mutex_);
 
-  mutable fbl::Mutex mutex_;
-  cnd_t signal_;
+  std::condition_variable cv_;
+  mutable std::mutex mutex_;
   fbl::Array<InputEvent> pending_ __TA_GUARDED(mutex_);
   size_t index_ __TA_GUARDED(mutex_) = 0;
   size_t size_ __TA_GUARDED(mutex_) = 0;

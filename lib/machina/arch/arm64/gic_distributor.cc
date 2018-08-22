@@ -4,8 +4,6 @@
 
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
 
-#include <fbl/auto_lock.h>
-
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
@@ -176,7 +174,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = 0;
       return ZX_OK;
     case GicdRegister::ISENABLE0... GicdRegister::ISENABLE31: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       const uint8_t* enable =
           &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE0)];
       value->u32 = *reinterpret_cast<const uint32_t*>(enable);
@@ -190,7 +188,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     case GicdRegister::ITARGETS8... GicdRegister::ITARGETS63: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       if (affinity_routing_) {
         value->u32 = 0;
         return ZX_OK;
@@ -202,7 +200,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     case GicdRegister::IROUTE32... GicdRegister::IROUTE1019: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       if (!affinity_routing_) {
         value->u32 = 0;
         return ZX_OK;
@@ -227,7 +225,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = pidr2_arch_rev(kGicv3Revision);
       return ZX_OK;
     case GicdRegister::CTL: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       value->u32 = kGicdCtlr;
       if (gic_version_ == GicVersion::V3 && affinity_routing_) {
         value->u32 |= kGicdCtlrARENSMask;
@@ -254,7 +252,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       return ZX_ERR_INVALID_ARGS;
     }
     case GicdRegister::ITARGETS8... GicdRegister::ITARGETS63: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       if (affinity_routing_) {
         return ZX_OK;
       }
@@ -282,21 +280,21 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       return TargetInterrupt(sgi.vector, cpu_mask);
     }
     case GicdRegister::ISENABLE0... GicdRegister::ISENABLE31: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       uint8_t* enable =
           &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE0)];
       *reinterpret_cast<uint32_t*>(enable) |= value.u32;
       return ZX_OK;
     }
     case GicdRegister::ICENABLE0... GicdRegister::ICENABLE31: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       uint8_t* enable =
           &enabled_[addr - static_cast<uint64_t>(GicdRegister::ICENABLE0)];
       *reinterpret_cast<uint32_t*>(enable) &= ~value.u32;
       return ZX_OK;
     }
     case GicdRegister::CTL: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       if (gic_version_ == GicVersion::V3 &&
           (value.u32 & kGicdCtlrARENSMask) > 0) {
         // Affinity routing is being enabled.
@@ -316,7 +314,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
     case GicdRegister::IROUTE32... GicdRegister::IROUTE1019: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       if (!affinity_routing_) {
         return ZX_OK;
       }
@@ -363,7 +361,7 @@ zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_num, Vcpu* vcpu) {
 zx_status_t GicDistributor::Interrupt(uint32_t global_irq) {
   uint8_t cpu_mask;
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     if (gic_version_ == GicVersion::V3 && affinity_routing_) {
       if (global_irq < kNumSgisAndPpis || global_irq >= kNumInterrupts) {
         return ZX_ERR_INVALID_ARGS;
@@ -386,7 +384,7 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
     return ZX_ERR_INVALID_ARGS;
   }
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     bool is_enabled =
         enabled_[global_irq / CHAR_BIT] & (1u << global_irq % CHAR_BIT);
     if (!is_enabled) {

@@ -6,8 +6,6 @@
 
 #include <stdio.h>
 
-#include <fbl/auto_lock.h>
-
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
@@ -38,7 +36,7 @@ zx_status_t Pl011::Init(Guest* guest, uint64_t addr) {
 zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
   switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       value->u16 = control_;
     }
       return ZX_OK;
@@ -55,7 +53,7 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
 zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
   switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       control_ = value.u16;
     }
       return ZX_OK;
@@ -77,7 +75,7 @@ zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
 
 void Pl011::Print(uint8_t ch) {
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     tx_buffer_[tx_offset_++] = ch;
     if (tx_offset_ < kBufferSize && ch != '\r') {
       return;

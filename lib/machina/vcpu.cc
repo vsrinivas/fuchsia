@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
 #include <trace/event.h>
 #include <zircon/process.h>
@@ -139,8 +138,9 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, uint64_t id) {
     return ZX_ERR_INTERNAL;
   }
 
-  fbl::AutoLock lock(&mutex_);
-  WaitForStateChangeLocked(State::UNINITIALIZED);
+  WaitUntilStateNotEqualTo(State::UNINITIALIZED);
+
+  std::lock_guard<std::mutex> lock(mutex_);
   if (state_ != State::WAITING_TO_START) {
     return ZX_ERR_BAD_STATE;
   }
@@ -154,7 +154,7 @@ Vcpu* Vcpu::GetCurrent() {
 
 zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     if (state_ != State::UNINITIALIZED) {
       return ZX_ERR_BAD_STATE;
     }
@@ -167,14 +167,17 @@ zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
     }
 
     SetStateLocked(State::WAITING_TO_START);
-    WaitForStateChangeLocked(State::WAITING_TO_START);
+  }
+  WaitUntilStateNotEqualTo(State::WAITING_TO_START);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (state_ != State::STARTING) {
       return ZX_ERR_BAD_STATE;
     }
 
     if (initial_vcpu_state_ != nullptr) {
-      status = vcpu_.write_state(ZX_VCPU_STATE, initial_vcpu_state_,
-                                 sizeof(*initial_vcpu_state_));
+      zx_status_t status = vcpu_.write_state(ZX_VCPU_STATE, initial_vcpu_state_,
+                                             sizeof(*initial_vcpu_state_));
       if (status != ZX_OK) {
         SetStateLocked(State::ERROR_FAILED_TO_START);
         return status;
@@ -189,17 +192,18 @@ zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
 
 void Vcpu::SetStateLocked(State new_state) {
   state_ = new_state;
-  cnd_signal(&state_cnd_);
+  cv_.notify_one();
 }
 
-void Vcpu::WaitForStateChangeLocked(State initial_state) {
+void Vcpu::WaitUntilStateNotEqualTo(State initial_state) {
+  std::unique_lock<std::mutex> lock(mutex_);
   while (state_ == initial_state) {
-    cnd_wait(&state_cnd_, mutex_.GetInternal());
+    cv_.wait(lock);
   }
 }
 
 void Vcpu::SetState(State new_state) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   SetStateLocked(new_state);
 }
 
@@ -232,16 +236,21 @@ zx_status_t Vcpu::Loop() {
 }
 
 zx_status_t Vcpu::Start(zx_vcpu_state_t* initial_vcpu_state) {
-  fbl::AutoLock lock(&mutex_);
-  if (state_ != State::WAITING_TO_START) {
-    return ZX_ERR_BAD_STATE;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (state_ != State::WAITING_TO_START) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    // Place the VCPU in the |STARTING| state which will cause the VCPU to
+    // write the initial state and begin VCPU execution.
+    initial_vcpu_state_ = initial_vcpu_state;
+    SetStateLocked(State::STARTING);
   }
 
-  // Place the VCPU in the |STARTING| state which will cause the VCPU to
-  // write the initial state and begin VCPU execution.
-  initial_vcpu_state_ = initial_vcpu_state;
-  SetStateLocked(State::STARTING);
-  WaitForStateChangeLocked(State::STARTING);
+  WaitUntilStateNotEqualTo(State::STARTING);
+
+  std::lock_guard<std::mutex> lock(mutex_);
   if (state_ != State::STARTED) {
     return ZX_ERR_BAD_STATE;
   }

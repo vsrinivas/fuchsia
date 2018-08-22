@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_BALLOON_H_
 #define GARNET_LIB_MACHINA_VIRTIO_BALLOON_H_
 
-#include <fbl/mutex.h>
+#include <mutex>
+
 #include <lib/fit/function.h>
 #include <virtio/balloon.h>
 #include <virtio/virtio_ids.h>
@@ -86,7 +87,7 @@ class VirtioBalloon
     // the result has finished.
     //
     // Also guards access to other members of this structure.
-    fbl::Mutex mutex;
+    std::mutex mutex;
   } stats_;
 };
 

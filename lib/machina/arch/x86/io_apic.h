@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_
 
-#include <fbl/mutex.h>
+#include <mutex>
+
 #include <zircon/compiler.h>
 
 #include "garnet/lib/machina/io.h"
@@ -45,7 +46,7 @@ class IoApic : public IoHandler {
  private:
   static constexpr size_t kMaxVcpus = 16u;
 
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
   // IO register-select register.
   uint32_t select_ __TA_GUARDED(mutex_) = 0;
   // IO APIC identification register.

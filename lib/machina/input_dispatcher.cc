@@ -4,8 +4,6 @@
 
 #include "garnet/lib/machina/input_dispatcher.h"
 
-#include <fbl/auto_lock.h>
-
 namespace machina {
 
 static constexpr InputEvent kBarrierEvent = {
@@ -13,28 +11,28 @@ static constexpr InputEvent kBarrierEvent = {
 };
 
 InputEventQueue::InputEventQueue(size_t queue_depth)
-    : pending_(new InputEvent[queue_depth], queue_depth) {
-  cnd_init(&signal_);
-}
+    : pending_(new InputEvent[queue_depth], queue_depth) {}
 
 size_t InputEventQueue::size() const {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return size_;
 }
 
 void InputEventQueue::PostEvent(const InputEvent& event, bool flush) {
-  fbl::AutoLock lock(&mutex_);
-  WriteEventToRingLocked(event);
-  if (flush) {
-    WriteEventToRingLocked(kBarrierEvent);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    WriteEventToRingLocked(event);
+    if (flush) {
+      WriteEventToRingLocked(kBarrierEvent);
+    }
   }
-  cnd_signal(&signal_);
+  cv_.notify_one();
 }
 
 InputEvent InputEventQueue::Wait() {
-  fbl::AutoLock lock(&mutex_);
+  std::unique_lock<std::mutex> lock(mutex_);
   while (size_ == 0) {
-    cnd_wait(&signal_, mutex_.GetInternal());
+    cv_.wait(lock);
   }
   InputEvent result = pending_[index_];
   DropOldestLocked();

@@ -6,9 +6,8 @@
 #define GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 
 #include <limits.h>
+#include <mutex>
 #include <vector>
-
-#include <fbl/mutex.h>
 
 #include "garnet/lib/machina/io.h"
 
@@ -57,7 +56,7 @@ class GicDistributor : public IoHandler {
   GicVersion gic_version_ = GicVersion::V2;
   Vcpu* vcpus_[kMaxVcpus] = {};
   uint8_t num_vcpus_ = 0;
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
   bool affinity_routing_ __TA_GUARDED(mutex_) = false;
   std::vector<std::unique_ptr<GicRedistributor>> __TA_GUARDED(mutex_)
       redistributors_;

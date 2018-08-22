@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/volatile_write_block_dispatcher.h"
 
-#include <fbl/auto_lock.h>
 #include <lib/zx/vmar.h>
 
 #include "garnet/lib/machina/bits.h"
@@ -70,7 +69,7 @@ zx_status_t VolatileWriteBlockDispatcher::Read(off_t disk_offset, void* buf,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   uint8_t* dest = static_cast<uint8_t*>(buf);
   while (size > 0) {
     size_t block = disk_offset / kBlockSize;
@@ -111,7 +110,7 @@ zx_status_t VolatileWriteBlockDispatcher::Write(off_t disk_offset,
   size_t block = disk_offset / kBlockSize;
   size_t num_blocks = size / kBlockSize;
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   zx_status_t status = bitmap_.Set(block, block + num_blocks);
   if (status != ZX_OK) {
     return status;

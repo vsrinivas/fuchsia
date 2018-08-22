@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/virtio_balloon.h"
 
-#include <fbl/auto_lock.h>
 #include <zircon/syscalls.h>
 
 namespace machina {
@@ -130,7 +129,7 @@ zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
   // stats.mutex needs to be held during the entire time the guest is
   // processing the buffer since we need to make sure no other threads
   // can grab the returned stats buffer before we process it.
-  fbl::AutoLock lock(&stats_.mutex);
+  std::lock_guard<std::mutex> lock(stats_.mutex);
 
   // We need an initial buffer we can return to return to the device to
   // request stats from the device. This should be immediately available in
@@ -168,7 +167,7 @@ zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
 
 zx_status_t VirtioBalloon::UpdateNumPages(uint32_t num_pages) {
   {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     config_.num_pages = num_pages;
   }
 
@@ -178,7 +177,7 @@ zx_status_t VirtioBalloon::UpdateNumPages(uint32_t num_pages) {
 }
 
 uint32_t VirtioBalloon::num_pages() {
-  fbl::AutoLock lock(&config_mutex_);
+  std::lock_guard<std::mutex> lock(config_mutex_);
   return config_.num_pages;
 }
 

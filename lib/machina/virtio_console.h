@@ -5,11 +5,12 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 
+#include <array>
+
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
 #include <virtio/console.h>
 #include <virtio/virtio_ids.h>
-#include <array>
 
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"
@@ -41,7 +42,7 @@ class VirtioConsole
  private:
   class Port;
 
-  fbl::Mutex mutex_;
+  std::mutex mutex_;
   std::array<std::unique_ptr<Port>, kVirtioConsoleMaxNumPorts> ports_
       __TA_GUARDED(mutex_);
 };

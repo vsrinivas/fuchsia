@@ -10,7 +10,6 @@
 
 #include <block-client/client.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
@@ -40,7 +39,7 @@ zx_status_t VirtioBlock::SetDispatcher(
 
   dispatcher_ = std::move(dispatcher);
   {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     config_.capacity = dispatcher_->size() / kSectorSize;
   }
   if (dispatcher_->read_only()) {

@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_PCI_H_
 #define GARNET_LIB_MACHINA_PCI_H_
 
-#include <fbl/mutex.h>
+#include <mutex>
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -165,7 +166,7 @@ class PciDevice {
   const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index,
                                   uint32_t* cap_base) const;
 
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
 
   // Static attributes for this device.
   const Attributes attrs_;
@@ -245,7 +246,7 @@ class PciBus {
   PciDevice& root_complex() { return root_complex_; }
 
  private:
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
 
   Guest* guest_;
   PciEcamHandler ecam_handler_;

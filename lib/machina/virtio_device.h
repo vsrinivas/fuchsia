@@ -6,9 +6,8 @@
 #define GARNET_LIB_MACHINA_VIRTIO_DEVICE_H_
 
 #include <atomic>
+#include <mutex>
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
 #include <virtio/virtio.h>
@@ -65,7 +64,7 @@ class VirtioDevice {
 
   // Sets the given flags in the ISR register.
   void add_isr_flags(uint8_t flags) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     isr_status_ |= flags;
   }
 
@@ -75,17 +74,17 @@ class VirtioDevice {
   // may not correspond to the set of feature flags that have been negotiated
   // at runtime. For negotiated features, see |has_enabled_features|.
   void add_device_features(uint32_t features) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     features_ |= features;
   }
   bool has_device_features(uint32_t features) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return (features_ & features) == features;
   }
 
   // Returns true if the set of features have been negotiated to be enabled.
   bool has_enabled_features(uint32_t features) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return (features_ & driver_features_ & features) == features;
   }
 
@@ -103,7 +102,7 @@ class VirtioDevice {
   // accessor methods are defined.
   friend class VirtioPci;
 
-  fbl::Mutex mutex_;
+  std::mutex mutex_;
 
   // Device feature bits.
   //
@@ -163,7 +162,7 @@ class VirtioDeviceBase : public VirtioDevice {
   }
 
   zx_status_t ReadConfig(uint64_t addr, IoValue* value) override {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     switch (value->access_size) {
       case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(&config_);
@@ -186,7 +185,7 @@ class VirtioDeviceBase : public VirtioDevice {
   }
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     switch (value.access_size) {
       case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(&config_);
@@ -245,7 +244,7 @@ class VirtioDeviceBase : public VirtioDevice {
 
  protected:
   // Mutex for accessing device configuration fields.
-  mutable fbl::Mutex config_mutex_;
+  mutable std::mutex config_mutex_;
   ConfigType config_ __TA_GUARDED(config_mutex_) = {};
 
  private:

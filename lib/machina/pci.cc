@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 
-#include <fbl/auto_lock.h>
 #include <hw/pci.h>
 #include <zircon/assert.h>
 
@@ -167,12 +166,12 @@ zx_status_t PciBus::Init() {
 }
 
 uint32_t PciBus::config_addr() {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return config_addr_;
 }
 
 void PciBus::set_config_addr(uint32_t addr) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   config_addr_ = addr;
 }
 
@@ -270,7 +269,7 @@ zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) const {
       uint64_t bit_offset = (port - kPciConfigAddrPortBase) * 8;
       uint32_t mask = bit_mask<uint32_t>(value->access_size * 8);
 
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       uint32_t addr = config_addr_ >> bit_offset;
       value->u32 = addr & mask;
       return ZX_OK;
@@ -279,7 +278,7 @@ zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) const {
       uint32_t addr;
       uint64_t reg;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         addr = config_addr_;
         if (!is_addr_valid(pci_type1_bus(addr), pci_type1_device(addr),
                            pci_type1_function(addr))) {
@@ -306,7 +305,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
       uint32_t bit_size = value.access_size * 8;
       uint32_t mask = bit_mask<uint32_t>(bit_size);
 
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       // Clear out the bits we'll be modifying.
       config_addr_ = clear_bits(config_addr_, bit_size, bit_offset);
       // Set the bits of the address.
@@ -317,7 +316,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
       uint32_t addr;
       uint64_t reg;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         addr = config_addr_;
 
         if (!is_addr_valid(pci_type1_bus(addr), pci_type1_device(addr),
@@ -337,7 +336,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
 
 zx_status_t PciBus::Interrupt(PciDevice& device) {
   {
-    fbl::AutoLock lock(&device.mutex_);
+    std::lock_guard<std::mutex> lock(device.mutex_);
     if (!pci_irq_enabled(device.command_)) {
       device.pending_irq_ = true;
       return ZX_OK;
@@ -434,7 +433,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |   status    |    command   |
     //  ----------------------------
     case PCI_CONFIG_COMMAND: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       *value = command_;
 
       uint16_t status = PCI_STATUS_INTERRUPT;
@@ -471,7 +470,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
         return pci_read_unimplemented_register(value);
       }
 
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       const PciBar* bar = &bar_[bar_num];
       if (!high_word) {
         *value = bar->addr | bar->aspace();
@@ -544,7 +543,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
 
       bool fire_pending_irq = false;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         command_ = value.u16;
         // If we have a pending IRQ and this write will enable interrupts for
         // this device, we'll inject that pending IRQ now.
@@ -571,7 +570,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
         return pci_write_unimplemented_register();
       }
 
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       PciBar* bar = &bar_[bar_num];
       auto addr = reinterpret_cast<uint32_t*>(&bar->addr);
       // We zero bits in the BAR in order to set the size.

@@ -63,7 +63,7 @@ class Guest {
   // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
   static constexpr size_t kMaxVcpus = 16u;
 
-  fbl::Mutex mutex_;
+  std::mutex mutex_;
 
   zx::guest guest_;
   zx::vmar vmar_;

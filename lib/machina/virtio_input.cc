@@ -11,7 +11,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 
 #include "garnet/lib/machina/bits.h"
 #include "lib/fxl/logging.h"
@@ -200,7 +199,7 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
 
   //  A write to select or subselect modifies the contents of the config.u
   //  field.
-  fbl::AutoLock lock(&config_mutex_);
+  std::lock_guard<std::mutex> lock(config_mutex_);
   switch (config_.select) {
     case VIRTIO_INPUT_CFG_ID_NAME: {
       size_t len = strlen(device_name_);
@@ -236,7 +235,7 @@ zx_status_t VirtioKeyboard::WriteConfig(uint64_t addr, const IoValue& value) {
   if (status != ZX_OK) {
     return status;
   }
-  fbl::AutoLock lock(&config_mutex_);
+  std::lock_guard<std::mutex> lock(config_mutex_);
   if (config_.select != VIRTIO_INPUT_CFG_EV_BITS) {
     return ZX_OK;
   }
@@ -278,7 +277,7 @@ zx_status_t VirtioRelativePointer::WriteConfig(uint64_t addr,
   if (status != ZX_OK) {
     return status;
   }
-  fbl::AutoLock lock(&config_mutex_);
+  std::lock_guard<std::mutex> lock(config_mutex_);
   if (config_.select != VIRTIO_INPUT_CFG_EV_BITS) {
     return ZX_OK;
   }
@@ -307,7 +306,7 @@ zx_status_t VirtioAbsolutePointer::WriteConfig(uint64_t addr,
   if (status != ZX_OK) {
     return status;
   }
-  fbl::AutoLock lock(&config_mutex_);
+  std::lock_guard<std::mutex> lock(config_mutex_);
   if (config_.select == VIRTIO_INPUT_CFG_EV_BITS) {
     if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
       SetConfigBit(kButtonMousePrimaryCode, &config_);

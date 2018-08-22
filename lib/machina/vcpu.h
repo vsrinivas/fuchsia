@@ -6,8 +6,9 @@
 #define GARNET_LIB_MACHINA_VCPU_H_
 
 #include <threads.h>
+#include <condition_variable>
+#include <mutex>
 
-#include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
@@ -22,19 +23,11 @@ class Guest;
 
 class Vcpu {
  public:
-  Vcpu() { cnd_init(&state_cnd_); }
-  ~Vcpu() { cnd_destroy(&state_cnd_); }
-
   // Create a new VCPU for a given guest.
   //
   // Upon successful completion the VCPU will be in the state
   // |WAITING_TO_START|.
   zx_status_t Create(Guest* guest, zx_vaddr_t entry, uint64_t id);
-
-  // TODO(alexlegg): Remove this once the above is used in Garnet.
-  zx_status_t Create(Guest* guest, zx_vaddr_t entry) {
-    return Create(guest, entry, 0);
-  }
 
   static Vcpu* GetCurrent();
 
@@ -99,7 +92,8 @@ class Vcpu {
   void SetStateLocked(State new_state) __TA_REQUIRES(mutex_);
 
   // Block until |state_| != |initial_state|.
-  void WaitForStateChangeLocked(State initial_state) __TA_REQUIRES(mutex_);
+  void WaitUntilStateNotEqualTo(State initial_state)
+      __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // Guest packet handlers
   zx_status_t HandlePacket(const zx_port_packet_t& packet);
@@ -117,8 +111,8 @@ class Vcpu {
   thrd_t thread_;
   zx::vcpu vcpu_;
   State state_ __TA_GUARDED(mutex_) = State::UNINITIALIZED;
-  cnd_t state_cnd_;
-  fbl::Mutex mutex_;
+  std::condition_variable cv_;
+  std::mutex mutex_;
   zx_vcpu_state_t* initial_vcpu_state_ __TA_GUARDED(mutex_);
 };
 

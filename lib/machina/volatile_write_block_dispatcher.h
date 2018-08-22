@@ -7,9 +7,9 @@
 
 #include <inttypes.h>
 #include <sys/types.h>
+#include <mutex>
 
 #include <bitmap/rle-bitmap.h>
-#include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
 
@@ -38,7 +38,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
   bool ValidateBlockParams(off_t disk_offset, size_t size);
 
   static constexpr size_t kBlockSize = 512;
-  fbl::Mutex mutex_;
+  std::mutex mutex_;
   fbl::unique_ptr<BlockDispatcher> dispatcher_;
 
   bitmap::RleBitmap bitmap_ __TA_GUARDED(mutex_);

@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 
-#include <fbl/auto_lock.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
@@ -103,20 +102,20 @@ static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
 zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
   switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u32 = device_->driver_features_sel_;
       value->access_size = 4;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u32 = device_->features_sel_;
       value->access_size = 4;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES: {
       // We currently only support a single feature word.
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u32 =
           device_->driver_features_sel_ > 0 ? 0 : device_->driver_features_;
       value->access_size = 4;
@@ -133,7 +132,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       //
       // This is the only feature supported beyond the first feature word so
       // we just special case it here.
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->access_size = 4;
       if (device_->features_sel_ == 1) {
         value->u32 = 1;
@@ -144,19 +143,19 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES: {
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u16 = device_->num_queues_;
       value->access_size = 2;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_STATUS: {
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u8 = device_->status_;
       value->access_size = 1;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SEL: {
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u16 = device_->queue_sel_;
       value->access_size = 2;
       return ZX_OK;
@@ -193,7 +192,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF: {
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       if (device_->queue_sel_ >= device_->num_queues_) {
         return ZX_ERR_BAD_STATE;
       }
@@ -219,7 +218,7 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
     case kVirtioPciCommonCfgBase ... kVirtioPciCommonCfgTop:
       return CommonCfgRead(addr - kVirtioPciCommonCfgBase, value);
     case kVirtioPciIsrCfgBase ... kVirtioPciIsrCfgTop:
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       value->u8 = device_->isr_status_;
       value->access_size = 1;
 
@@ -256,7 +255,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
 
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       device_->features_sel_ = value.u32;
       return ZX_OK;
     }
@@ -266,7 +265,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
 
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       device_->driver_features_sel_ = value.u32;
       return ZX_OK;
     }
@@ -275,7 +274,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
 
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       if (device_->driver_features_sel_ == 0) {
         device_->driver_features_ = value.u32;
       }
@@ -287,7 +286,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       }
 
       {
-        fbl::AutoLock lock(&device_->mutex_);
+        std::lock_guard<std::mutex> lock(device_->mutex_);
         device_->status_ = value.u8;
       }
       if (value.u8 & VIRTIO_STATUS_DRIVER_OK) {
@@ -303,7 +302,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
         return ZX_ERR_OUT_OF_RANGE;
       }
 
-      fbl::AutoLock lock(&device_->mutex_);
+      std::lock_guard<std::mutex> lock(device_->mutex_);
       device_->queue_sel_ = value.u16;
       return ZX_OK;
     }
@@ -457,7 +456,7 @@ static constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
 }
 
 VirtioQueue* VirtioPci::selected_queue() const {
-  fbl::AutoLock lock(&device_->mutex_);
+  std::lock_guard<std::mutex> lock(device_->mutex_);
   if (device_->queue_sel_ >= device_->num_queues_) {
     return nullptr;
   }

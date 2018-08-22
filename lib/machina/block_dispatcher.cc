@@ -10,7 +10,6 @@
 
 #include <block-client/client.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/watcher.h>
@@ -37,7 +36,7 @@ class FdioBlockDispatcher : public BlockDispatcher {
       : BlockDispatcher(size, read_only), fd_(fd) {}
 
   zx_status_t Flush() override {
-    fbl::AutoLock lock(&file_mutex_);
+    std::lock_guard<std::mutex> lock(file_mutex_);
     return fsync(fd_) == 0 ? ZX_OK : ZX_ERR_IO;
   }
 
@@ -45,7 +44,7 @@ class FdioBlockDispatcher : public BlockDispatcher {
     TRACE_DURATION("machina", "io_block_read", "offset", disk_offset, "buf",
                    buf, "size", size);
 
-    fbl::AutoLock lock(&file_mutex_);
+    std::lock_guard<std::mutex> lock(file_mutex_);
 
     off_t off = lseek(fd_, disk_offset, SEEK_SET);
     if (off < 0) {
@@ -63,7 +62,7 @@ class FdioBlockDispatcher : public BlockDispatcher {
     TRACE_DURATION("machina", "io_block_write", "offset", disk_offset, "buf",
                    buf, "size", size);
 
-    fbl::AutoLock lock(&file_mutex_);
+    std::lock_guard<std::mutex> lock(file_mutex_);
 
     off_t off = lseek(fd_, disk_offset, SEEK_SET);
     if (off < 0) {
@@ -83,7 +82,7 @@ class FdioBlockDispatcher : public BlockDispatcher {
   }
 
  private:
-  fbl::Mutex file_mutex_;
+  std::mutex file_mutex_;
   int fd_;
 };
 

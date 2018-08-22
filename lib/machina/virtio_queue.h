@@ -5,10 +5,9 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
 
+#include <mutex>
 #include <string>
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -82,7 +81,7 @@ class VirtioQueue {
   using RingUpdateFunc = fit::function<T(virtio_queue_t*)>;
   template <typename T>
   T UpdateRing(RingUpdateFunc<T> func) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return func(&ring_);
   }
 
@@ -226,7 +225,7 @@ class VirtioQueue {
   void InvokeAsyncHandler(async_dispatcher_t* dispatcher, async::Wait* wait,
                           zx_status_t status, const PollFn& handler);
 
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
   VirtioDevice* device_;
   virtio_queue_t ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;

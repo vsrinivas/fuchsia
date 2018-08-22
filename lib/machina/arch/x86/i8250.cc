@@ -6,8 +6,6 @@
 
 #include <stdio.h>
 
-#include <fbl/auto_lock.h>
-
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
@@ -44,14 +42,14 @@ zx_status_t I8250::Read(uint64_t addr, IoValue* io) const {
     case I8250Register::INTERRUPT_ENABLE:
       io->access_size = 1;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         io->u8 = interrupt_enable_;
       }
       return ZX_OK;
     case I8250Register::LINE_CONTROL:
       io->access_size = 1;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         io->u8 = line_control_;
       }
       return ZX_OK;
@@ -84,7 +82,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         interrupt_enable_ = io.u8;
       }
       return ZX_OK;
@@ -93,7 +91,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         line_control_ = io.u8;
       }
       return ZX_OK;

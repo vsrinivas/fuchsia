@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <fbl/auto_lock.h>
-
 #include "lib/fxl/logging.h"
 
 #define QUEUE_SIZE 128u
@@ -30,7 +28,7 @@ VirtioDevice::~VirtioDevice() = default;
 zx_status_t VirtioDevice::NotifyGuest() {
   bool interrupt = false;
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     interrupt = isr_status_ > 0;
   }
 

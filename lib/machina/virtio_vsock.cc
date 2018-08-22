@@ -72,7 +72,7 @@ zx_status_t VirtioVsock::Connection::Accept() {
 //                         |CREDIT_REQUEST|
 //                          -------------
 void VirtioVsock::Connection::UpdateOp(uint16_t new_op) {
-  fbl::AutoLock lock(&op_update_mutex_);
+  std::lock_guard<std::mutex> lock(op_update_mutex_);
 
   if (new_op == op_) {
     return;
@@ -496,14 +496,14 @@ VirtioVsock::VirtioVsock(component::StartupContext* context,
 }
 
 uint32_t VirtioVsock::guest_cid() const {
-  fbl::AutoLock lock(&config_mutex_);
+  std::lock_guard<std::mutex> lock(config_mutex_);
   return config_.guest_cid;
 }
 
 bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port,
                                 uint32_t dst_port) const {
   ConnectionKey key{src_cid, src_port, dst_port};
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return connections_.find(key) != connections_.end();
 }
 
@@ -512,7 +512,7 @@ void VirtioVsock::SetContextId(
     fidl::InterfaceHandle<fuchsia::guest::HostVsockConnector> connector,
     fidl::InterfaceRequest<fuchsia::guest::GuestVsockAcceptor> acceptor) {
   {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     config_.guest_cid = cid;
   }
   acceptor_bindings_.AddBinding(this, std::move(acceptor));
@@ -550,7 +550,7 @@ void VirtioVsock::Accept(
   ConnectionKey key{src_cid, src_port, port};
   auto conn = create_connection(std::move(handle), dispatcher_,
                                 std::move(callback), [this, key] {
-                                  fbl::AutoLock lock(&mutex_);
+                                  std::lock_guard<std::mutex> lock(mutex_);
                                   WaitOnQueueLocked(key);
                                 });
   if (!conn) {
@@ -567,7 +567,7 @@ void VirtioVsock::Accept(
     return;
   }
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   AddConnectionLocked(key, std::move(conn));
 }
 
@@ -575,7 +575,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
                                   zx::handle handle) {
   auto new_conn =
       create_connection(std::move(handle), dispatcher_, nullptr, [this, key] {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         WaitOnQueueLocked(key);
       });
   if (!new_conn) {
@@ -584,7 +584,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
   Connection* conn = new_conn.get();
 
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     zx_status_t add_status = AddConnectionLocked(key, std::move(new_conn));
     if (add_status != ZX_OK) {
       return;
@@ -700,7 +700,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
 
   bool index_valid = true;
   virtio_desc_t desc;
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   for (auto i = readable_.begin(), end = readable_.end(); i != end;
        i = readable_.erase(i)) {
     Connection* conn = GetConnectionLocked(*i);
@@ -815,7 +815,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
   }
 
   virtio_desc_t desc;
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   do {
     auto free_desc =
         fbl::MakeAutoCall([this, index]() { tx_queue()->Return(index, 0); });

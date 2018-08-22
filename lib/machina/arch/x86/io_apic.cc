@@ -6,7 +6,6 @@
 
 #include <string.h>
 
-#include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -63,7 +62,7 @@ zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
   if (global_irq >= kNumRedirects) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   redirect_[global_irq] = redirect;
   return ZX_OK;
 }
@@ -75,7 +74,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
 
   RedirectEntry entry;
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     entry = redirect_[global_irq];
   }
 
@@ -126,14 +125,14 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
 zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
   switch (addr) {
     case IO_APIC_IOREGSEL: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       value->u32 = select_;
       return ZX_OK;
     }
     case IO_APIC_IOWIN: {
       uint32_t select_register;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         select_register = select_;
       }
       return ReadRegister(select_register, value);
@@ -150,14 +149,14 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       if (value.u32 > UINT8_MAX) {
         return ZX_ERR_INVALID_ARGS;
       }
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       select_ = value.u32;
       return ZX_OK;
     }
     case IO_APIC_IOWIN: {
       uint32_t select_register;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         select_register = select_;
       }
       return WriteRegister(select_register, value);
@@ -172,7 +171,7 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register,
                                  IoValue* value) const {
   switch (select_register) {
     case IO_APIC_REGISTER_ID: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       value->u32 = id_;
       return ZX_OK;
     }
@@ -189,7 +188,7 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register,
       value->u32 = 0;
       return ZX_OK;
     case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
       const RedirectEntry& entry = redirect_[redirect_offset / 2];
       uint32_t redirect_register =
@@ -208,12 +207,12 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register,
                                   const IoValue& value) {
   switch (select_register) {
     case IO_APIC_REGISTER_ID: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       id_ = value.u32;
       return ZX_OK;
     }
     case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
       RedirectEntry& entry = redirect_[redirect_offset / 2];
       uint32_t* redirect_register =

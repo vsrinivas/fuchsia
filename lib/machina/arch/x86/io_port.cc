@@ -6,8 +6,6 @@
 
 #include <time.h>
 
-#include <fbl/auto_lock.h>
-
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
@@ -113,7 +111,7 @@ zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
       break;
     case kPm1EnablePortOffset: {
       value->access_size = 2;
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       value->u16 = enable_;
       break;
     }
@@ -134,7 +132,7 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
       if (value.access_size != 2) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       enable_ = value.u16;
       break;
     }
@@ -168,7 +166,7 @@ zx_status_t CmosHandler::Read(uint64_t addr, IoValue* value) const {
       value->access_size = 1;
       uint8_t cmos_index;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         cmos_index = index_;
       }
       return ReadCmosRegister(cmos_index, &value->u8);
@@ -183,7 +181,7 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
     case kCmosDataPort: {
       uint8_t cmos_index;
       {
-        fbl::AutoLock lock(&mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         cmos_index = index_;
       }
       return WriteCmosRegister(cmos_index, value.u8);
@@ -192,7 +190,7 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
       if (value.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       index_ = value.u8;
       return ZX_OK;
     }
@@ -301,7 +299,7 @@ zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) const {
   switch (port) {
     case kI8042DataPort: {
       value->access_size = 1;
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       value->u8 = command_ == kI8042CommandTest ? kI8042DataTestResponse : 0;
       break;
     }
@@ -322,7 +320,7 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
       if (value.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       command_ = value.u8;
       break;
     }

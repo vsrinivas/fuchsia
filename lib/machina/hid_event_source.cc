@@ -8,13 +8,11 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
 #include <hid/hid.h>
 #include <lib/fdio/watcher.h>
 #include <zircon/compiler.h>
 #include <zircon/device/input.h>
-#include <zircon/types.h>
 
 #include "lib/fxl/logging.h"
 
@@ -163,7 +161,7 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd, int event,
   FXL_LOG(INFO) << "Polling device " << kInputDirPath << "/" << fn
                 << " for key events";
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   devices_.push_front(std::move(keyboard));
   return ZX_OK;
 }

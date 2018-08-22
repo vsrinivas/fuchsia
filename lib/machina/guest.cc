@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <zircon/device/sysinfo.h>
@@ -112,7 +111,7 @@ void Guest::RegisterVcpuFactory(VcpuFactory factory) {
 }
 
 zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   if (id >= kMaxVcpus) {
     return ZX_ERR_INVALID_ARGS;
   }

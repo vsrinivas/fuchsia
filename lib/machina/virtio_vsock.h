@@ -116,7 +116,7 @@ class VirtioVsock
   Stream<&VirtioVsock::Demux> tx_stream_;
 
   // TODO(PD-117): Evaluate granularity of locking.
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
   ConnectionMap connections_ __TA_GUARDED(mutex_);
   ConnectionSet readable_ __TA_GUARDED(mutex_);
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
@@ -136,7 +136,7 @@ class VirtioVsock::Connection {
 
   uint32_t flags() const { return flags_; }
   uint16_t op() const {
-    fbl::AutoLock lock(&op_update_mutex_);
+    std::lock_guard<std::mutex> lock(op_update_mutex_);
     return op_;
   }
 
@@ -169,7 +169,7 @@ class VirtioVsock::Connection {
   uint32_t peer_buf_alloc_ = 0;
   uint32_t peer_fwd_cnt_ = 0;
   uint16_t op_ __TA_GUARDED(op_update_mutex_) = VIRTIO_VSOCK_OP_REQUEST;
-  mutable fbl::Mutex op_update_mutex_;
+  mutable std::mutex op_update_mutex_;
 
   async_dispatcher_t* dispatcher_;
   async::Wait rx_wait_;

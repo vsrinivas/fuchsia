@@ -4,12 +4,11 @@
 
 #include "garnet/lib/machina/virtio_console.h"
 
-#include <virtio/virtio_ids.h>
-
 #include <fcntl.h>
 #include <string.h>
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+#include <virtio/virtio_ids.h>
 
 namespace machina {
 
@@ -147,7 +146,7 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
                              async_dispatcher_t* dispatcher, zx::socket socket)
     : VirtioDeviceBase(phys_mem) {
   {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     config_.max_nr_ports = kVirtioConsoleMaxNumPorts;
   }
   ports_[0] =
@@ -157,7 +156,7 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
 VirtioConsole::~VirtioConsole() = default;
 
 zx_status_t VirtioConsole::Start() {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return ports_[0]->Start();
 }
 

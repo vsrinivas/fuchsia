@@ -20,39 +20,39 @@ VirtioQueue::VirtioQueue() {
 }
 
 uint16_t VirtioQueue::size() const {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return ring_.size;
 }
 
 void VirtioQueue::set_size(uint16_t size) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   ring_.size = size;
 }
 
 uint16_t VirtioQueue::avail_event_num() {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return avail_event_num_;
 }
 
 void VirtioQueue::set_avail_event_num(uint16_t num) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   avail_event_num_ = num;
 }
 
 void VirtioQueue::set_desc_addr(uint64_t desc_paddr) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   ring_.addr.desc = desc_paddr;
   uintptr_t desc_size = ring_.size * sizeof(ring_.desc[0]);
   ring_.desc = device_->phys_mem().as<vring_desc>(desc_paddr, desc_size);
 }
 
 uint64_t VirtioQueue::desc_addr() const {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return ring_.addr.desc;
 }
 
 void VirtioQueue::set_avail_addr(uint64_t avail_paddr) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   const PhysMem& phys_mem = device_->phys_mem();
 
   ring_.addr.avail = avail_paddr;
@@ -65,12 +65,12 @@ void VirtioQueue::set_avail_addr(uint64_t avail_paddr) {
 }
 
 uint64_t VirtioQueue::avail_addr() const {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return ring_.addr.avail;
 }
 
 void VirtioQueue::set_used_addr(uint64_t used_paddr) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   const PhysMem& phys_mem = device_->phys_mem();
 
   ring_.addr.used = used_paddr;
@@ -83,12 +83,12 @@ void VirtioQueue::set_used_addr(uint64_t used_paddr) {
 }
 
 uint64_t VirtioQueue::used_addr() const {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return ring_.addr.used;
 }
 
 zx_status_t VirtioQueue::Signal() {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   if (HasAvailLocked()) {
     return event_.signal(0, SIGNAL_QUEUE_AVAIL);
   }
@@ -116,7 +116,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 }
 
 zx_status_t VirtioQueue::NextAvail(uint16_t* index) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return NextAvailLocked(index);
 }
 
@@ -232,7 +232,7 @@ void VirtioQueue::InvokeAsyncHandler(async_dispatcher_t* dispatcher,
 }
 
 zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, virtio_desc_t* out) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   auto& desc = ring_.desc[desc_index];
   size_t mem_size = device_->phys_mem().size();
 
@@ -255,7 +255,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
   bool use_event_index =
       device_->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX);
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     volatile struct vring_used_elem* used =
         &ring_.used->ring[RingIndexLocked(ring_.used->idx)];
 
@@ -319,7 +319,7 @@ zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
       return ZX_ERR_OUT_OF_RANGE;
     }
     {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       desc = &ring_.desc[desc_index];
     }
 
@@ -336,7 +336,7 @@ zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
   if (status != ZX_OK) {
     return status;
   }
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return HasAvailLocked() ? ZX_ERR_NEXT : ZX_OK;
 }
 

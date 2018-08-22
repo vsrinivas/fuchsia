@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_
 #define GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_
 
-#include <fbl/mutex.h>
+#include <mutex>
+
 #include <fbl/unique_ptr.h>
 #include <virtio/block.h>
 #include <virtio/virtio_ids.h>

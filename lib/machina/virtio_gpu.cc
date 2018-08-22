@@ -40,7 +40,7 @@ zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
   }
 
   {
-    fbl::AutoLock lock(&config_mutex_);
+    std::lock_guard<std::mutex> lock(config_mutex_);
     FXL_DCHECK(config_.num_scanouts == 0);
     config_.num_scanouts = 1;
   }

@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_I8250_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_I8250_H_
 
-#include <fbl/mutex.h>
+#include <mutex>
 
 #include "garnet/lib/machina/io.h"
 
@@ -24,7 +24,7 @@ class I8250 : public IoHandler {
 
  private:
   static constexpr size_t kBufferSize = 128;
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
 
   uint8_t tx_buffer_[kBufferSize] = {};
   uint16_t tx_offset_ = 0;
