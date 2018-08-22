@@ -87,7 +87,14 @@
           ]
         },
         "files": {
-          "description": "The files making up the atom",
+          "description": "The files making up the atom, relative to the atom root -- OBSOLETE, will be replaced by 'new-files' soon",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/atomFile"
+          }
+        },
+        "new-files": {
+          "description": "Paths to files making up the atom, relative to the SDK root",
           "type": "array",
           "items": {
             "$ref": "#/definitions/atomFile"

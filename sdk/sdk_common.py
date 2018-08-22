@@ -56,6 +56,7 @@ class Atom(object):
         self.deps = map(lambda i: AtomId(i), json['deps'])
         self.package_deps = map(lambda i: AtomId(i), json['package-deps'])
         self.files = [File(f) for f in json['files']]
+        self.new_files = [File(f) for f in json['new-files']]
         self.tags = json['tags']
 
     def __str__(self):

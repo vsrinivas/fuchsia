@@ -38,7 +38,14 @@ def main():
                         nargs='*')
     parser.add_argument('--files',
                         help='A source=destination mapping',
-                        nargs='*')
+                        nargs='+')
+    # TODO(DX-340): merge new-files and files. The former is needed to
+    # transition to destination paths relative to the SDK root as opposed to
+    # the atom root.
+    parser.add_argument('--new-files',
+                        help='Same as files, but new',
+                        nargs="*",
+                        default=[])
     parser.add_argument('--tags',
                         help='List of tags for the included elements',
                         nargs='*')
@@ -98,6 +105,17 @@ def main():
         })
         has_packaged_files = has_packaged_files or is_packaged
 
+    new_files = []
+    for mapping in args.new_files:
+        destination, source = mapping.split('=', 1)
+        new_files.append({
+            'source': source,
+            'destination': destination,
+            # TODO(DX-340): remove this attribute as the presence of atom
+            # metadata in SDKs makes it obsolete.
+            'packaged': False,
+        })
+
     id = {
         'domain': args.domain,
         'name': name,
@@ -128,6 +146,7 @@ def main():
         'deps': map(lambda i: i.json, sorted(list(deps))),
         'package-deps': map(lambda i: i.json, sorted(list(all_package_deps))),
         'files': files,
+        'new-files':new_files,
     })])
     if detect_collisions(all_atoms):
         print('Name collisions detected!')

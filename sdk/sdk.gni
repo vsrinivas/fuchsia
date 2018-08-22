@@ -183,6 +183,8 @@ template("sdk") {
 
     script = "//build/sdk/generate_archive_manifest.py"
 
+    sources = [ "//build/sdk/sdk_common.py" ]
+
     inputs = [
       final_manifest_file,
       sdk_meta_file,

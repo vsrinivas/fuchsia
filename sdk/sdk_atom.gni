@@ -49,7 +49,15 @@ import("//build/compiled_action.gni")
 #
 #   files
 #     List of scopes describing the contents of this element.
+#     See the "File scopes" section for how to describe files - note that for
+#     this attribute, "dest" must be specified relatively to the element's root
+#     in the SDK, not to the SDK root.
+#     This is a legacy attribute which will soon be replaced with new_files.
+#
+#   new_files (optional)
+#     List of scopes describing the contents of this element.
 #     See the "File scopes" section for how to describe files.
+#     TODO(DX-340): rename to "files"
 #
 #   source_dir (optional)
 #     If set, path to the base directory of the sources.
@@ -108,7 +116,7 @@ import("//build/compiled_action.gni")
 #     This path may be absolute or relative to the target's directory.
 #
 #   dest (optional)
-#     Destination path of the file relative to the element's base directory in
+#     Destination path of the file relative to the SDK root.
 #     the SDK.
 #     This attribute is required unless "source" points to a file located under
 #     the target's source directory, in which case the relative path of that
@@ -185,6 +193,28 @@ template("sdk_atom") {
       prefix = "packaged"
     }
     file_mappings += [ "$prefix:$destination=$source" ]
+  }
+
+  new_file_mappings = []
+  if (defined(invoker.new_files)) {
+    foreach(file, invoker.new_files) {
+      assert(defined(file.source), "File $file does not specify a source.")
+      assert(defined(file.dest), "File $file does not specify a destination.")
+      file_inputs += [ file.source ]
+      source = rebase_path(file.source)
+      new_file_mappings += [ "${file.dest}=${source}" ]
+    }
+  }
+  if (defined(invoker.meta)) {
+    meta = invoker.meta
+    # TODO(DX-340): remove this temporary attribute.
+    if (defined(meta.new_dest)) {
+      dest = meta.new_dest
+    } else {
+      dest = meta.dest
+    }
+    source = rebase_path(meta.source)
+    new_file_mappings += [ "${dest}=${source}" ]
   }
 
   source_dir = "."
@@ -298,7 +328,8 @@ template("sdk_atom") {
              category,
              "--deps",
            ] + dep_manifests + [ "--package-deps" ] + package_dep_manifests +
-           [ "--files" ] + file_mappings + [ "--tags" ] + tags
+           [ "--files" ] + file_mappings + [ "--tags" ] + tags +
+           [ "--new-files" ] + new_file_mappings
     if (defined(invoker.tags_file)) {
       args += [
         "--tags-file",
@@ -307,7 +338,6 @@ template("sdk_atom") {
     }
 
     if (defined(invoker.meta)) {
-      meta = invoker.meta
       args += [
         "--meta",
         meta.dest,

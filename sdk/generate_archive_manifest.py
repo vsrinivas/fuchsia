@@ -38,12 +38,16 @@ def main():
         all_files[dest] = src
 
     for atom in [Atom(a) for a in manifest['atoms']]:
+        if atom.new_files:
+            for file in atom.new_files:
+                add(file.destination, file.source)
         # TODO(DX-340): remove this once destination paths are made relative to
         # the SDK root.
-        parsed_id = urlparse(atom.identifier)
-        base = parsed_id.netloc + parsed_id.path
-        for file in atom.files:
-            add(os.path.join(base, file.destination), file.source)
+        else:
+            parsed_id = urlparse(atom.identifier)
+            base = parsed_id.netloc + parsed_id.path
+            for file in atom.files:
+                add(os.path.join(base, file.destination), file.source)
     add('meta/manifest.json', args.meta)
 
     with open(args.output, 'w') as output_file:

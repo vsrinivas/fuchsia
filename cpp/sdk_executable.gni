@@ -30,11 +30,12 @@ template("sdk_executable") {
   }
 
   if (!is_fuchsia) {
+    file_base = "tools/$output_name"
     meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
     meta_data = {
       type = "host_tool"
       files = [
-        "tools/$output_name",
+        file_base,
       ]
     }
     write_file(meta_file, meta_data, "json")
@@ -48,8 +49,9 @@ template("sdk_executable") {
 
       meta = {
         source = meta_file
-        dest = "tools/$output_name-meta.json"
+        dest = "$file_base-meta.json"
         schema = "host_tool"
+        new_dest = "$file_base-meta.json"
       }
 
       tags = [ "arch:host" ]
@@ -59,6 +61,13 @@ template("sdk_executable") {
           source = "$root_out_dir/$output_name"
           dest = output_name
         },
+      ]
+
+      new_files = [
+        {
+          source = "$root_out_dir/$output_name"
+          dest = file_base
+        }
       ]
 
       non_sdk_deps = [ ":$main_target_name" ]
