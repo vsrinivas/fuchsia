@@ -1,5 +1,7 @@
 # Trace-based benchmarking
 
+* Updated: 2018 Aug 23
+
 This document describes how to use trace-based benchmarking to measure and track
 performance of Fuchsia apps.
 
@@ -185,38 +187,17 @@ format.
 ### Export
 
 If you prefer a machine-friendly format, pass the path to the output file to
-`trace record` as `--benchmark-results-file=<file>`.
-
-The resulting file has the following format:
-
-```{json}
-    [
-      {
-        "label": "put",
-        "unit": "ms",
-        "samples": [
-          {
-            "label": "samples 0 to 0",
-             values: [2.74]
-          },
-          {
-            "label: "samples 1 to 9",
-            values: [1.01, 1.12, 0.91, 1, 1.03, 0.97, 1.03, 1.07, 1.15]
-          }
-        ]
-      },
-      <more results>
-    ]
-```
-
-This format is formally defined by
-[//zircon/system/ulib/perftest/performance-results-schema.json](
-https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest/performance-results-schema.json).
+`trace record` as `--benchmark-results-file=<file>`.  See the [results schema]
+for the format of the resulting file.
 
 ### Dashboard upload
 
-Dashboard upload integration and infra support is WIP as of March, 2018.
+Dashboard upload integration and infra support is WIP as of March, 2018.  See
+the [dashboard user guide] and the instructions for [automating benchmarks].
 
+[automating benchmarks]: running_on_ci.md
+[dashboard user guide]: catapult_user_guide.md
 [examples/benchmark]: https://fuchsia.googlesource.com/garnet/+/master/examples/benchmark/
+[results schema]: results_schema.md
 [tracing]: https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md
 
