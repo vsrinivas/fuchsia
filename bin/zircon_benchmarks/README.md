@@ -21,8 +21,7 @@ There are two ways to run zircon_benchmarks:
   For this, run
   `/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks -p
   --out=output.json`.  The result data will be written to
-  `output.json`.  This uses the JSON output format described in the
-  [Benchmarking](../../docs/benchmarking.md#export) guide.
+  `output.json` using our [perf test result schema].
 
   See Zircon's perftest library for details of the other command line
   options.
@@ -34,3 +33,5 @@ There are two ways to run zircon_benchmarks:
 
   For this, run
   `/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks`.
+
+[perf test result schema]: https://fuchsia.googlesource.com/docs/+/master/development/benchmarking/results_schema.md

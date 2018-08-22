@@ -2,12 +2,10 @@
 # Catapult performance results converter
 
 This directory contains the `catapult_converter` command line tool
-which takes results from performance tests (in Fuchsia's [JSON perf
-test result format](../../docs/benchmarking.md#export)) and converts
-them to the [Catapult
-Dashboard](https://github.com/catapult-project/catapult)'s [JSON
-"HistogramSet"
-format](https://github.com/catapult-project/catapult/blob/master/docs/histogram-set-json-format.md).
+which takes perf test results in [our format] and converts them to the
+[Catapult Dashboard](https://github.com/catapult-project/catapult)'s
+[JSON "HistogramSet" format](
+https://github.com/catapult-project/catapult/blob/master/docs/histogram-set-json-format.md).
 
 ## Parameters
 
@@ -45,3 +43,5 @@ the dashboard:
 
 For more information on Catapult's format, see [How to Write
 Metrics](https://github.com/catapult-project/catapult/blob/master/docs/how-to-write-metrics.md).
+
+[our format]: https://fuchsia.googlesource.com/docs/+/master/development/benchmarking/results_schema.md
