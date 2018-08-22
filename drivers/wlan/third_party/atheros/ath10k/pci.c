@@ -2491,7 +2491,13 @@ static int ath10k_pci_interrupt_handler(void* arg) {
             ath10k_warn("target is no longer present\n");
             break;
         }
+        if (ar_pci->oper_irq_mode == ATH10K_PCI_IRQ_LEGACY) {
+            ath10k_pci_disable_and_clear_legacy_irq(ar);
+        }
         ath10k_pci_interrupt_poll(ar);
+        if (ar_pci->oper_irq_mode == ATH10K_PCI_IRQ_LEGACY) {
+            ath10k_pci_enable_legacy_irq(ar);
+        }
     }
 
     ath10k_err("ISR exiting with status %s\n", zx_status_get_string(status));
