@@ -408,21 +408,16 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
-    // TODO(tkilbourn): determine these rates based on hardware and the AP
-    std::vector<SupportedRate> rates = {SupportedRate::basic(2),  SupportedRate::basic(4),
-                                        SupportedRate::basic(11), SupportedRate::basic(22),
-                                        SupportedRate(12),        SupportedRate(18),
-                                        SupportedRate(24),        SupportedRate(36)};
 
-    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+    auto supp_rates = client_capability.supported_rates;
+    if (!w.write<SupportedRatesElement>(std::move(supp_rates))) {
         errorf("could not write supported rates\n");
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
 
-    std::vector<SupportedRate> ext_rates = {SupportedRate(48), SupportedRate(72), SupportedRate(96),
-                                            SupportedRate(108)};
+    auto ext_rates = client_capability.ext_supported_rates;
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("could not write extended supported rates\n");
         service::SendAssocConfirm(device_,
@@ -1403,7 +1398,7 @@ zx_status_t Station::OverrideHtCapability(HtCapabilities* ht_cap) const {
     if (ht_cap == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
     HtCapabilityInfo& hci = ht_cap->ht_cap_info;
-    // TODO(NET-1351): Check the configuration to suppress the bandwidth to CBW20.
+    // TODO(NET-1321): Check the configuration to suppress the bandwidth to CBW20.
     if (!IsCbw40RxReady()) { hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY); }
 
     return ZX_OK;
@@ -1628,7 +1623,8 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
 }
 
 void SetAssocCtxSuppRates(const AssocContext& ap, const AssocContext& client,
-                          std::vector<SupportedRate>* supp_rates, std::vector<SupportedRate>* ext_rates) {
+                          std::vector<SupportedRate>* supp_rates,
+                          std::vector<SupportedRate>* ext_rates) {
     auto ap_rates(ap.supported_rates);
     ap_rates.insert(ap_rates.end(), ap.ext_supported_rates.cbegin(), ap.ext_supported_rates.cend());
     auto client_rates(client.supported_rates);
