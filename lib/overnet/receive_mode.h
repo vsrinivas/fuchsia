@@ -28,6 +28,8 @@ class ReceiveMode {
   // *successfully*), Completed must be called exactly once.
   virtual void Completed(uint64_t seq, const Status& status) = 0;
   // Close the receive mode: all pending things finish
+  // The only way a receive mode can close is via a call to this method.
+  // (i.e. a ReceiveMode cannot self close.)
   virtual void Close(const Status& status) = 0;
 };
 

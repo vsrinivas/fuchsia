@@ -68,13 +68,16 @@ class RouterEndpoint final {
 
   class Stream final : public DatagramStream {
    public:
-    Stream(NewStream introduction);
+    Stream(NewStream introduction, TraceSink trace_sink);
   };
 
   using SendOp = Stream::SendOp;
   using ReceiveOp = Stream::ReceiveOp;
 
-  explicit RouterEndpoint(Timer* timer, NodeId node_id, bool allow_threading);
+  explicit RouterEndpoint(Timer* timer, TraceSink trace_sink, NodeId node_id,
+                          bool allow_threading);
+  ~RouterEndpoint();
+  void Close(Callback<void> done);
 
   void RegisterPeer(NodeId peer);
 

@@ -17,18 +17,17 @@ class PacketProtocolFuzzer {
 
   bool BeginSend(uint8_t sender_idx, Slice data) {
     return packet_protocol(sender_idx).Then([this, data](PacketProtocol* pp) {
-      pp->Send([this, data](uint64_t desire_prefix, uint64_t max_len) {
-        return PacketProtocol::SendData{
-            data, StatusCallback::Ignored(), [this](const Status& status) {
-              if (done_)
-                return;
-              if (!status.is_ok() && status.code() != StatusCode::CANCELLED) {
-                std::cerr << "Expected each send to be ok or cancelled, got: "
-                          << status << "\n";
-                abort();
-              }
-            }};
-      });
+      pp->Send(
+          [data](auto arg) { return data; },
+          [this](const Status& status) {
+            if (done_)
+              return;
+            if (!status.is_ok() && status.code() != StatusCode::CANCELLED) {
+              std::cerr << "Expected each send to be ok or cancelled, got: "
+                        << status << "\n";
+              abort();
+            }
+          });
       return true;
     });
   }
@@ -40,15 +39,20 @@ class PacketProtocolFuzzer {
         });
     if (!send)
       return false;
-    send->done(Status(static_cast<StatusCode>(status)));
-    auto process_status =
-        status == 0 ? (*packet_protocol(3 - sender_idx))
-                          ->Process(timer_.Now(), send->seq, send->data)
-                    : Nothing;
-    if (process_status.is_error()) {
-      std::cerr << "Expected Processs() to return ok, got: " << process_status
-                << "\n";
-      abort();
+    if (status == 0) {
+      auto now = timer_.Now();
+      auto when = now;
+      auto slice = send->data(
+          LazySliceArgs{0, std::numeric_limits<uint32_t>::max(), false, &when});
+      timer_.At(when, [=, seq = send->seq] {
+        auto process_status = (*packet_protocol(3 - sender_idx))
+                                  ->Process(timer_.Now(), seq, slice);
+        if (process_status.status.is_error()) {
+          std::cerr << "Expected Process() to return ok, got: "
+                    << process_status.status.AsStatus() << "\n";
+          abort();
+        }
+      });
     }
     return true;
   }
@@ -56,19 +60,18 @@ class PacketProtocolFuzzer {
   bool StepTime(uint64_t microseconds) { return timer_.Step(microseconds); }
 
  private:
-  static const uint64_t kMSS = 1500;
+  enum { kMSS = 1500 };
 
-  class Sender : public PacketProtocol::PacketSender {
+  class Sender final : public PacketProtocol::PacketSender {
    public:
-    void SendPacket(SeqNum seq, Slice data, StatusCallback done) {
-      pending_sends_.emplace(
-          next_send_id_++, PendingSend{seq, std::move(data), std::move(done)});
+    void SendPacket(SeqNum seq, LazySlice data, Callback<void> done) override {
+      pending_sends_.emplace(next_send_id_++,
+                             PendingSend{seq, std::move(data)});
     }
 
     struct PendingSend {
       SeqNum seq;
-      Slice data;
-      StatusCallback done;
+      LazySlice data;
     };
 
     Optional<PendingSend> CompleteSend(uint64_t send_idx, uint8_t status) {
@@ -99,9 +102,9 @@ class PacketProtocolFuzzer {
   Optional<PacketProtocol*> packet_protocol(uint8_t idx) {
     switch (idx) {
       case 1:
-        return &pp1_;
+        return pp1_.get();
       case 2:
-        return &pp2_;
+        return pp2_.get();
       default:
         return Nothing;
     }
@@ -111,8 +114,10 @@ class PacketProtocolFuzzer {
   TestTimer timer_;
   Sender sender1_;
   Sender sender2_;
-  PacketProtocol pp1_{&timer_, &sender1_, kMSS};
-  PacketProtocol pp2_{&timer_, &sender2_, kMSS};
-};
+  ClosedPtr<PacketProtocol> pp1_ =
+      MakeClosedPtr<PacketProtocol>(&timer_, &sender1_, TraceSink(), kMSS);
+  ClosedPtr<PacketProtocol> pp2_ =
+      MakeClosedPtr<PacketProtocol>(&timer_, &sender2_, TraceSink(), kMSS);
+};  // namespace overnet
 
 }  // namespace overnet

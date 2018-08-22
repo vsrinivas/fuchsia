@@ -16,6 +16,8 @@
 
 namespace overnet {
 
+struct MessageWithPayload;
+
 // Routing headers are passed over links between nodes in a (potentially)
 // non-private way. They should expose a minimal amount of information to route
 // a message to the correct destination.
@@ -40,12 +42,12 @@ class RoutableMessage {
     friend class RoutableMessage;
 
    public:
-    Destination(NodeId dst, StreamId stream_id, Optional<SeqNum> seq)
+    Destination(NodeId dst, StreamId stream_id, SeqNum seq)
         : dst_(dst), stream_id_(stream_id), seq_(seq) {}
 
     NodeId dst() const { return dst_; }
     StreamId stream_id() const { return stream_id_; }
-    const Optional<SeqNum>& seq() const { return seq_; }
+    SeqNum seq() const { return seq_; }
 
     friend bool operator==(const Destination& a, const Destination& b) {
       return std::tie(a.dst_, a.stream_id_, a.seq_) ==
@@ -55,7 +57,7 @@ class RoutableMessage {
    private:
     NodeId dst_;
     StreamId stream_id_;
-    Optional<SeqNum> seq_;
+    SeqNum seq_;
   };
 
   // Since these objects are potentially expensive to copy, we disable the
@@ -65,63 +67,61 @@ class RoutableMessage {
 
   // Move construction
   RoutableMessage(RoutableMessage&& other)
-      : src_(other.src_),
-        is_control_(other.is_control_),
-        dsts_(std::move(other.dsts_)),
-        payload_(std::move(other.payload_)) {}
+      : src_(other.src_), dsts_(std::move(other.dsts_)) {}
 
   // Payload message header constructor
-  explicit RoutableMessage(NodeId src, bool is_control, Slice payload)
-      : src_(src), is_control_(is_control), payload_(std::move(payload)) {}
+  explicit RoutableMessage(NodeId src) : src_(src) {}
 
-  static StatusOr<RoutableMessage> Parse(Slice source, NodeId reader,
-                                         NodeId writer);
-  Slice Write(NodeId writer, NodeId target) const;
+  static StatusOr<MessageWithPayload> Parse(Slice source, NodeId reader,
+                                            NodeId writer);
+  Slice Write(NodeId writer, NodeId target, Slice payload) const;
 
   RoutableMessage& AddDestination(NodeId peer, StreamId stream, SeqNum seq) {
-    assert(!is_control());
     dsts_.emplace_back(peer, stream, seq);
     return *this;
   }
 
-  RoutableMessage& AddDestination(NodeId peer, StreamId stream) {
-    assert(is_control());
-    dsts_.emplace_back(peer, stream, Nothing);
-    return *this;
-  }
+  Optional<size_t> MaxPayloadLength(NodeId writer, NodeId target,
+                                    size_t remaining_space) const;
 
   NodeId src() const { return src_; }
-  const Slice& payload() const { return payload_; }
-  Slice* mutable_payload() { return &payload_; }
-  bool is_control() const { return is_control_; }
 
   // Return a new RoutableMessage with a different set of destinations (but
   // otherwise equal)
   RoutableMessage WithDestinations(std::vector<Destination> dsts) const {
-    return RoutableMessage(src_, is_control_, std::move(dsts),
-                           std::move(payload_));
+    return RoutableMessage(src_, std::move(dsts));
   }
 
   const std::vector<Destination>& destinations() const { return dsts_; }
 
   friend bool operator==(const RoutableMessage& a, const RoutableMessage& b) {
-    return std::tie(a.src_, a.is_control_, a.payload_, a.dsts_) ==
-           std::tie(b.src_, b.is_control_, b.payload_, b.dsts_);
+    return std::tie(a.src_, a.dsts_) == std::tie(b.src_, b.dsts_);
   }
 
  private:
-  RoutableMessage(NodeId src, bool is_control, std::vector<Destination> dsts,
-                  Slice payload)
-      : src_(src),
-        is_control_(is_control),
-        dsts_(std::move(dsts)),
-        payload_(std::move(payload)) {}
+  RoutableMessage(NodeId src, std::vector<Destination> dsts)
+      : src_(src), dsts_(std::move(dsts)) {}
 
   NodeId src_;
-  bool is_control_;
   // TODO(ctiller): small vector optimization
   std::vector<Destination> dsts_;
-  Slice payload_;
+
+  struct HeaderInfo {
+    // TODO(ctiller): small vector optimization
+    std::vector<uint8_t> stream_id_len;
+    uint64_t flags;
+    uint8_t flags_length;
+    bool is_local;
+  };
+
+  size_t HeaderLength(NodeId writer, NodeId target, HeaderInfo* hinf) const;
+};
+
+struct MessageWithPayload {
+  MessageWithPayload(RoutableMessage message, Slice payload)
+      : message(std::move(message)), payload(std::move(payload)) {}
+  RoutableMessage message;
+  Slice payload;
 };
 
 std::ostream& operator<<(std::ostream& out, const RoutableMessage& h);

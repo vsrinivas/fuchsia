@@ -11,6 +11,8 @@
 #include "callback.h"
 #include "optional.h"
 
+#include <iostream>
+
 namespace overnet {
 
 // Number of microseconds per millisecond.
@@ -146,6 +148,42 @@ inline constexpr TimeStamp operator+(TimeStamp a, TimeDelta b) {
   return TimeStamp::AfterEpoch(a.after_epoch() + b);
 }
 
+inline constexpr TimeDelta operator*(int multiplier, TimeDelta x) {
+  if (multiplier == 0)
+    return TimeDelta::Zero();
+  bool neg = false;
+  if (multiplier < 0) {
+    neg = true;
+    multiplier = -multiplier;
+  }
+  TimeDelta r = x;
+  for (int i = 1; i < multiplier; i++) {
+    r = r + x;
+  }
+  if (neg) {
+    return -r;
+  } else {
+    return r;
+  }
+}
+
+inline constexpr TimeDelta operator/(TimeDelta x, int divisor) {
+  if (divisor == 0) {
+    if (x.as_us() < 0) {
+      return TimeDelta::NegativeInf();
+    } else {
+      return TimeDelta::PositiveInf();
+    }
+  }
+  if (x == TimeDelta::NegativeInf()) {
+    return TimeDelta::NegativeInf();
+  }
+  if (x == TimeDelta::PositiveInf()) {
+    return TimeDelta::PositiveInf();
+  }
+  return TimeDelta::FromMicroseconds(x.as_us() / divisor);
+}
+
 inline constexpr bool operator>(TimeStamp a, TimeStamp b) {
   return a.after_epoch() > b.after_epoch();
 }
@@ -180,6 +218,7 @@ class Timer {
 
   template <class F>
   void At(TimeStamp t, F f);
+  void At(TimeStamp t, StatusCallback cb);
 
  protected:
   template <class T>
@@ -211,6 +250,10 @@ class Timeout {
   }
 
   ~Timeout() {
+#ifndef NDEBUG
+    assert(!destroyed_);
+    destroyed_ = true;
+#endif
     if (!cb_.empty())
       Cancel();
     assert(cb_.empty());
@@ -221,6 +264,9 @@ class Timeout {
   }
 
  private:
+#ifndef NDEBUG
+  bool destroyed_ = false;
+#endif
   Timer* const timer_;
   StatusCallback cb_;
   typename std::aligned_storage<kMaxTimerStorage>::type storage_;
@@ -236,32 +282,18 @@ T* Timer::TimeoutStorage(Timeout* timeout) {
 inline void Timer::FireTimeout(Timeout* timeout, Status status) {
   if (timeout->cb_.empty())
     return;
-  timeout->cb_(status);
+  auto cb = std::move(timeout->cb_);
+  cb(status);
 }
 
 template <class F>
 void Timer::At(TimeStamp t, F f) {
-  struct CB {
-    CB(F f) : fn(std::move(f)) {}
-    Optional<Timeout> timeout;
-    F fn;
-    bool done = false;
-    bool initialized = false;
-  };
-  auto* cb = new CB(std::move(f));
-  cb->timeout.Reset(this, t, [cb](const Status& status) {
-    if (status.is_ok()) {
-      cb->fn();
-    }
-    cb->done = true;
-    if (cb->done && cb->initialized) {
-      delete cb;
-    }
-  });
-  cb->initialized = true;
-  if (cb->done && cb->initialized) {
-    delete cb;
-  }
+  At(t, StatusCallback(ALLOCATED_CALLBACK,
+                       [f = std::move(f)](const Status& status) mutable {
+                         if (status.is_ok()) {
+                           f();
+                         }
+                       }));
 }
 
 }  // namespace overnet

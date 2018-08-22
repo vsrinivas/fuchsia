@@ -58,17 +58,7 @@ class LinearizerFuzzer {
       }
     }
     linearizer_.Push(
-        Chunk{offset, end_of_message, Slice::FromCopiedBuffer(data, length)},
-        StatusCallback(ALLOCATED_CALLBACK, [this, resource_exhausted](
-                                               const Status& status) {
-          if (resource_exhausted) {
-            assert(status.code() == StatusCode::RESOURCE_EXHAUSTED);
-          } else if (is_closed_) {
-            assert(status.code() == closed_status_);
-          } else {
-            assert(status.is_ok());
-          }
-        }));
+        Chunk{offset, end_of_message, Slice::FromCopiedBuffer(data, length)});
   }
 
   void Pull() {
@@ -118,7 +108,7 @@ class LinearizerFuzzer {
   StatusCode closed_status_;
   bool waiting_for_pull_ = false;
 
-  Linearizer linearizer_{kBuffer};
+  Linearizer linearizer_{kBuffer, TraceSink()};
 };
 
 }  // namespace linearizer_fuzzer

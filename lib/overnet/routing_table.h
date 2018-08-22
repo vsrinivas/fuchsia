@@ -15,6 +15,7 @@
 #include "node_id.h"
 #include "optional.h"
 #include "timer.h"
+#include "trace.h"
 
 #include <iostream>
 
@@ -68,11 +69,13 @@ class LinkMetrics {
   Bandwidth bw_used() const { return bw_used_; }
   TimeDelta rtt() const { return rtt_; }
   LinkMedia media() const { return media_; }
+  uint32_t mss() const { return mss_; }
 
   void set_bw_link(Bandwidth x) { bw_link_ = x; }
   void set_bw_used(Bandwidth x) { bw_used_ = x; }
   void set_rtt(TimeDelta x) { rtt_ = x; }
   void set_media(LinkMedia x) { media_ = x; }
+  void set_mss(uint32_t x) { mss_ = x; }
 
  private:
   NodeId from_;
@@ -83,6 +86,7 @@ class LinkMetrics {
   Bandwidth bw_used_{Bandwidth::Zero()};
   TimeDelta rtt_{TimeDelta::PositiveInf()};
   LinkMedia media_{LinkMedia::Unknown};
+  uint32_t mss_{std::numeric_limits<uint32_t>::max()};
 };
 
 std::ostream& operator<<(std::ostream& out, const LinkMetrics& m);
@@ -113,15 +117,25 @@ std::ostream& operator<<(std::ostream& out, const LinkMetrics& m);
 
 class RoutingTable {
  public:
-  RoutingTable(NodeId root_node, Timer* timer, bool allow_threading)
+  RoutingTable(NodeId root_node, Timer* timer, TraceSink trace_sink,
+               bool allow_threading)
       : root_node_(root_node),
         timer_(timer),
+        trace_sink_(trace_sink),
         allow_threading_(allow_threading) {}
   ~RoutingTable();
 
   static constexpr TimeDelta EntryExpiry() { return TimeDelta::FromMinutes(5); }
 
-  using SelectedLinks = std::unordered_map<NodeId, uint64_t>;
+  struct SelectedLink {
+    uint64_t link_id;
+    uint32_t route_mss;
+
+    bool operator==(SelectedLink other) const {
+      return link_id == other.link_id && route_mss == other.route_mss;
+    }
+  };
+  using SelectedLinks = std::unordered_map<NodeId, SelectedLink>;
 
   void Update(std::vector<NodeMetrics> node_metrics,
               std::vector<LinkMetrics> link_metrics, bool flush_old_nodes);
@@ -150,6 +164,7 @@ class RoutingTable {
  private:
   const NodeId root_node_;
   Timer* const timer_;
+  const TraceSink trace_sink_;
 
   struct Metrics {
     std::vector<NodeMetrics> node_metrics;
@@ -197,6 +212,7 @@ class RoutingTable {
     TimeDelta best_rtt{TimeDelta::Zero()};
     Node* best_from;
     Link* best_link;
+    uint32_t mss;
     bool queued = false;
     InternalListNode<Node> path_finding_node;
   };

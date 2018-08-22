@@ -25,9 +25,28 @@ void ReadAllAndParse(Source<Slice>* src, StatusOrCallback<T> ready) {
 }
 }  // namespace
 
-RouterEndpoint::RouterEndpoint(Timer* timer, NodeId node_id,
-                               bool allow_threading)
-    : router_(timer, node_id, allow_threading) {}
+RouterEndpoint::RouterEndpoint(Timer* timer, TraceSink trace_sink,
+                               NodeId node_id, bool allow_threading)
+    : router_(timer, trace_sink, node_id, allow_threading) {}
+
+RouterEndpoint::~RouterEndpoint() { assert(connection_streams_.empty()); }
+
+void RouterEndpoint::Close(Callback<void> done) {
+  if (connection_streams_.empty()) {
+    router_.Close(std::move(done));
+    return;
+  }
+  auto it = connection_streams_.begin();
+  OVERNET_TRACE(INFO, router_.trace_sink()) << "Closing peer " << it->first;
+  Callback<void> after_close(ALLOCATED_CALLBACK,
+                             [this, it, done = std::move(done)]() mutable {
+                               OVERNET_TRACE(INFO, router_.trace_sink())
+                                   << "Closed peer " << it->first;
+                               connection_streams_.erase(it);
+                               Close(std::move(done));
+                             });
+  it->second.Close(Status::Ok(), std::move(after_close));
+}
 
 void RouterEndpoint::RegisterPeer(NodeId peer) {
   assert(peer != router_.node_id());
@@ -38,15 +57,22 @@ void RouterEndpoint::RegisterPeer(NodeId peer) {
                               std::forward_as_tuple(this, peer));
 }
 
-RouterEndpoint::Stream::Stream(NewStream introduction)
-    : DatagramStream(&introduction.creator_->router_, introduction.peer_,
-                     introduction.reliability_and_ordering_,
+RouterEndpoint::Stream::Stream(NewStream introduction, TraceSink trace_sink)
+    : DatagramStream(&introduction.creator_->router_, trace_sink,
+                     introduction.peer_, introduction.reliability_and_ordering_,
                      introduction.stream_id_) {}
 
 RouterEndpoint::ConnectionStream::ConnectionStream(RouterEndpoint* endpoint,
                                                    NodeId peer)
-    : DatagramStream(&endpoint->router_, peer,
-                     ReliabilityAndOrdering::ReliableUnordered, StreamId(0)),
+    : DatagramStream(
+          &endpoint->router_,
+          endpoint->router_.trace_sink().Decorate(
+              [this, peer](const std::string& msg) {
+                std::ostringstream out;
+                out << "Con[" << this << ";peer=" << peer << "] " << msg;
+                return out.str();
+              }),
+          peer, ReliabilityAndOrdering::ReliableUnordered, StreamId(0)),
       endpoint_(endpoint),
       next_stream_id_(peer < endpoint->node_id() ? 2 : 1) {
   BeginRead();
@@ -67,14 +93,18 @@ void RouterEndpoint::ConnectionStream::BeginRead() {
         assert(fork_read_state_ == ForkReadState::Reading);
         if (read_status.is_error()) {
           fork_read_state_ = ForkReadState::Stopped;
-          Close(read_status.AsStatus());
+          Close(read_status.AsStatus(), Callback<void>::Ignored());
+          return;
+        } else if (read_status->size() == 0) {
+          fork_read_state_ = ForkReadState::Stopped;
+          Close(Status::Ok(), Callback<void>::Ignored());
           return;
         }
         auto fork_frame_status = ForkFrame::Parse(
             Slice::Join(read_status->begin(), read_status->end()));
         if (fork_frame_status.is_error()) {
           fork_read_state_ = ForkReadState::Stopped;
-          Close(fork_frame_status.AsStatus());
+          Close(fork_frame_status.AsStatus(), Callback<void>::Ignored());
           return;
         }
         fork_frame_.Init(std::move(*fork_frame_status));
@@ -107,9 +137,8 @@ StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::Fork(
 
   // TODO(ctiller): Don't allocate.
   auto* send_op = new SendOp(this, payload.length());
-  send_op->Push(payload, StatusCallback([send_op](const Status& status) {
-                  send_op->Close(status, [send_op]() { delete send_op; });
-                }));
+  send_op->Push(payload);
+  send_op->Close(Status::Ok(), [send_op]() { delete send_op; });
   return NewStream{endpoint_, peer(), reliability_and_ordering, id};
 }
 

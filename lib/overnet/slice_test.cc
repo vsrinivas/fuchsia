@@ -138,7 +138,7 @@ TEST(Slice, Big_WithPrefix) {
 TEST(Slice, Ostream) {
   std::ostringstream out;
   out << Slice::FromStaticString("ABC") << 100;
-  EXPECT_EQ(out.str(), "[41 42 43]100");
+  EXPECT_EQ(out.str(), "[41 42 43 \"ABC\"]100");
 }
 
 }  // namespace overnet

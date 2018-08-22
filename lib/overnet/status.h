@@ -189,6 +189,7 @@ class Status final {
 
   static const Status& Ok() { return Static<>::Ok; }
   static const Status& Cancelled() { return Static<>::Cancelled; }
+  static const Status& Unavailable() { return Static<>::Unavailable; }
 
   const Status& OrCancelled() const {
     if (is_ok())
@@ -222,6 +223,7 @@ class Status final {
   struct Static {
     static const Status Ok;
     static const Status Cancelled;
+    static const Status Unavailable;
   };
 
   union {
@@ -234,6 +236,8 @@ template <int I>
 const Status Status::Static<I>::Ok{StatusCode::OK};
 template <int I>
 const Status Status::Static<I>::Cancelled{StatusCode::CANCELLED};
+template <int I>
+const Status Status::Static<I>::Unavailable{StatusCode::UNAVAILABLE};
 
 inline std::ostream& operator<<(std::ostream& out, const Status& status) {
   out << StatusCodeString(status.code());

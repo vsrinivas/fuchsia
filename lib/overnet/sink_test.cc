@@ -20,14 +20,7 @@ namespace sink_test {
 
 class MockCallbacks {
  public:
-  MOCK_METHOD1(PushDone, void(const Status&));
   MOCK_METHOD1(PullDone, void(const StatusOr<int>&));
-
-  StatusCallback NewPush() {
-    return StatusCallback(ALLOCATED_CALLBACK, [this](const Status& status) {
-      this->PushDone(status);
-    });
-  }
 
   StatusOrCallback<int> NewPull() {
     return StatusOrCallback<int>(
@@ -38,16 +31,11 @@ class MockCallbacks {
 
 class MockSink : public Sink<int> {
  public:
+  MOCK_METHOD1(Push, void(int item));
   MOCK_METHOD2(Closed, void(const Status&, std::function<void()> quiesced));
-  MOCK_METHOD2(Pushed, void(int item, std::function<void(const Status&)> done));
   // Since gmock has a hard time with move-only types, we provide this override
-  // directly, and use Pushed as the mock method (which takes a function that
+  // directly, and use Closed as the mock method (which takes a function that
   // wraps done).
-  void Push(int item, StatusCallback done) override {
-    auto done_ptr = std::make_shared<StatusCallback>(std::move(done));
-    this->Pushed(item,
-                 [done_ptr](const Status& status) { (*done_ptr)(status); });
-  }
   void Close(const Status& status, Callback<void> done) override {
     auto done_ptr = std::make_shared<Callback<void>>(std::move(done));
     this->Closed(status, [done_ptr]() { (*done_ptr)(); });
@@ -72,27 +60,13 @@ class MockSource : public Source<int> {
 };
 
 TEST(Sink, PushManyHappy) {
-  StrictMock<MockCallbacks> cb;
   StrictMock<MockSink> sink;
 
   int to_push[] = {1, 2, 3};
-  EXPECT_CALL(sink, Pushed(1, _)).WillOnce(InvokeArgument<1>(Status::Ok()));
-  EXPECT_CALL(sink, Pushed(2, _)).WillOnce(InvokeArgument<1>(Status::Ok()));
-  EXPECT_CALL(sink, Pushed(3, _)).WillOnce(InvokeArgument<1>(Status::Ok()));
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
-  sink.PushMany(to_push, sizeof(to_push) / sizeof(*to_push), cb.NewPush());
-}
-
-TEST(Sink, PushManyFail) {
-  StrictMock<MockCallbacks> cb;
-  StrictMock<MockSink> sink;
-
-  int to_push[] = {1, 2, 3};
-  EXPECT_CALL(sink, Pushed(1, _)).WillOnce(InvokeArgument<1>(Status::Ok()));
-  EXPECT_CALL(sink, Pushed(2, _))
-      .WillOnce(InvokeArgument<1>(Status::Cancelled()));
-  EXPECT_CALL(cb, PushDone(Property(&Status::code, StatusCode::CANCELLED)));
-  sink.PushMany(to_push, sizeof(to_push) / sizeof(*to_push), cb.NewPush());
+  EXPECT_CALL(sink, Push(1));
+  EXPECT_CALL(sink, Push(2));
+  EXPECT_CALL(sink, Push(3));
+  sink.PushMany(to_push, sizeof(to_push) / sizeof(*to_push));
 }
 
 TEST(Source, PullAllHappy) {

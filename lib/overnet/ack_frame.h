@@ -59,7 +59,7 @@ class AckFrame {
 
   void AddNack(uint64_t seq) {
     assert(ack_to_seq_ > 0);
-    assert(seq < ack_to_seq_);
+    assert(seq <= ack_to_seq_);
     if (!nack_seqs_.empty()) {
       assert(seq < nack_seqs_.back());
     }

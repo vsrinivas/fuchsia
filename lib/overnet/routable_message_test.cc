@@ -50,24 +50,19 @@ TEST(BaseTypes, StreamId) {
   EXPECT_EQ((BinVec{2}), EncodeVarint(two));
 }
 
-TEST(BaseTypes, SeqNum) {
-  SeqNum seq_1_1(1, 1);
-  EXPECT_EQ(1ull, seq_1_1.Reconstruct(1));
-  EXPECT_EQ((BinVec{1}), Encode(seq_1_1));
-}
-
-static void RoundTrip(const RoutableMessage& rh, NodeId sender,
-                      NodeId receiver) {
-  auto enc = rh.Write(sender, receiver);
+static void RoundTrip(const RoutableMessage& rh, NodeId sender, NodeId receiver,
+                      Slice payload) {
+  auto enc = rh.Write(sender, receiver, payload);
   auto prs_status = RoutableMessage::Parse(enc, receiver, sender);
   EXPECT_TRUE(prs_status.is_ok()) << prs_status.AsStatus();
-  EXPECT_EQ(rh, *prs_status.get());
+  EXPECT_EQ(rh, prs_status->message);
+  EXPECT_EQ(payload, prs_status->payload);
 }
 
 TEST(RoutableMessage, PayloadWrite1) {
-  auto rh = std::move(
-      RoutableMessage(NodeId(1), false, Slice::FromContainer({1, 2, 3}))
-          .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
+  auto rh = std::move(RoutableMessage(NodeId(1)).AddDestination(
+      NodeId(2), StreamId(1), SeqNum(1, 10)));
+  auto body = Slice::FromContainer({1, 2, 3});
   // encode locally
   EXPECT_EQ(Slice::FromContainer({// flags
                                   0,
@@ -80,14 +75,14 @@ TEST(RoutableMessage, PayloadWrite1) {
                                   // }
                                   // payload
                                   1, 2, 3}),
-            rh.Write(NodeId(1), NodeId(2)));
-  RoundTrip(rh, NodeId(1), NodeId(2));
+            rh.Write(NodeId(1), NodeId(2), body));
+  RoundTrip(rh, NodeId(1), NodeId(2), body);
 }
 
 TEST(RoutableMessage, PayloadWrite2) {
-  auto rh = std::move(
-      RoutableMessage(NodeId(1), false, Slice::FromContainer({1, 2, 3}))
-          .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
+  auto rh = std::move(RoutableMessage(NodeId(1)).AddDestination(
+      NodeId(2), StreamId(1), SeqNum(1, 10)));
+  auto body = Slice::FromContainer({1, 2, 3});
   // encode along a different route
   EXPECT_EQ(Slice::FromContainer({// flags
                                   (1 << 4),
@@ -104,15 +99,16 @@ TEST(RoutableMessage, PayloadWrite2) {
                                   // }
                                   // payload
                                   1, 2, 3}),
-            rh.Write(NodeId(4), NodeId(2)));
-  RoundTrip(rh, NodeId(4), NodeId(2));
+            rh.Write(NodeId(4), NodeId(2), body));
+  RoundTrip(rh, NodeId(4), NodeId(2), body);
 }
 
 TEST(RoutableMessage, PayloadWrite3) {
-  auto rh = std::move(
-      RoutableMessage(NodeId(1), false, Slice::FromContainer({7, 8, 9}))
-          .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10))
-          .AddDestination(NodeId(3), StreamId(42), SeqNum(7, 10)));
+  auto rh =
+      std::move(RoutableMessage(NodeId(1))
+                    .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10))
+                    .AddDestination(NodeId(3), StreamId(42), SeqNum(7, 10)));
+  auto body = Slice::FromContainer({7, 8, 9});
   EXPECT_EQ(Slice::FromContainer({// flags
                                   (2 << 4),
                                   // src
@@ -135,26 +131,8 @@ TEST(RoutableMessage, PayloadWrite3) {
                                   // }
                                   // payload
                                   7, 8, 9}),
-            rh.Write(NodeId(1), NodeId(2)));
-  RoundTrip(rh, NodeId(1), NodeId(2));
-}
-
-TEST(RoutableMessage, ControlWrite) {
-  auto rh =
-      std::move(RoutableMessage(NodeId(1), true, Slice::FromContainer({1}))
-                    .AddDestination(NodeId(2), StreamId(1)));
-  // encode locally
-  EXPECT_EQ(Slice::FromContainer({// flags
-                                  (1 << 0),
-                                  // dests {
-                                  // [0] =
-                                  //   stream_id
-                                  1,
-                                  // }
-                                  // payload
-                                  1}),
-            rh.Write(NodeId(1), NodeId(2)));
-  RoundTrip(rh, NodeId(1), NodeId(2));
+            rh.Write(NodeId(1), NodeId(2), body));
+  RoundTrip(rh, NodeId(1), NodeId(2), body);
 }
 
 }  // namespace routing_header_test

@@ -9,6 +9,7 @@
 #include "callback.h"
 #include "optional.h"
 #include "timer.h"
+#include "trace.h"
 #include "windowed_filter.h"
 
 namespace overnet {
@@ -36,10 +37,12 @@ class BBR {
 
   static constexpr uint32_t kMaxMSS = 1024 * 1024;
 
-  BBR(Timer* timer, uint32_t mss, Optional<TimeDelta> srtt);
+  BBR(Timer* timer, TraceSink trace_sink, uint32_t mss,
+      Optional<TimeDelta> srtt);
 
-  void RequestTransmit(OutgoingPacket packet,
-                       StatusOrCallback<SentPacket> transmit);
+  void RequestTransmit(StatusCallback ready);
+  void CancelRequestTransmit();
+  SentPacket ScheduleTransmit(TimeStamp* send_time, OutgoingPacket packet);
   void OnAck(const Ack& ack);
 
   uint64_t mss() const { return mss_; }
@@ -58,13 +61,13 @@ class BBR {
     reporter->Put("now", timer_->Now())
         .Put("state", StateString(state_))
         .Put("recovery", RecoveryString(recovery_))
-        .Put("bottlneck_bandwidth",
+        .Put("bottleneck_bandwidth",
              bottleneck_bandwidth_filter_.best_estimate())
-        .Put("bottlneck_bandwidth_2",
+        .Put("bottleneck_bandwidth_2",
              bottleneck_bandwidth_filter_.second_best_estimate())
-        .Put("bottlneck_bandwidth_3",
+        .Put("bottleneck_bandwidth_3",
              bottleneck_bandwidth_filter_.third_best_estimate())
-        .Put("cwnd", cwnd_)
+        .Put("cwnd", cwnd_bytes_)
         .Put("rtprop", rtprop_)
         .Put("rtprop_stamp", rtprop_stamp_)
         .Put("last_send_time", last_send_time_)
@@ -81,12 +84,13 @@ class BBR {
         .Put("full_bw_count", full_bw_count_)
         .Put("cycle_index", cycle_index_)
         .Put("packets_in_flight", packets_in_flight_)
+        .Put("bytes_in_flight", bytes_in_flight_)
         .Put("round_count", round_count_)
         .Put("delivered_bytes", delivered_bytes_)
         .Put("delivered_seq", delivered_seq_)
         .Put("delivered_time", delivered_time_)
-        .Put("target_cwnd", target_cwnd_)
-        .Put("prior_cwnd", prior_cwnd_)
+        .Put("target_cwnd", target_cwnd_bytes_)
+        .Put("prior_cwnd", prior_cwnd_bytes_)
         .Put("last_sent_packet", last_sent_packet_)
         .Put("exit_recovery_at_seq", exit_recovery_at_seq_)
         .Put("app_limited_seq", app_limited_seq_)
@@ -153,7 +157,7 @@ class BBR {
 
   void UpdateRound(const Ack& ack);
   void UpdateTargetCwnd() {
-    target_cwnd_ = std::max(uint64_t(3), Inflight(cwnd_gain_) / mss_);
+    target_cwnd_bytes_ = std::max(uint64_t(3 * mss_), Inflight(cwnd_gain_));
   }
 
   void ModulateCwndForRecovery(const Ack& ack);
@@ -175,15 +179,24 @@ class BBR {
   void SaveCwnd();
   void RestoreCwnd();
 
-  void ScheduleQueuedPacket();
+  void QueuedPacketReady();
 
   constexpr static Gain HighGain() { return Gain{2885, 1000}; }
   constexpr static Gain UnitGain() { return Gain{1, 1}; }
 
+  template <class F>
+  void SetCwndBytes(uint64_t new_value, F explain) {
+    if (cwnd_bytes_ != new_value) {
+      cwnd_bytes_ = new_value;
+      explain();
+    }
+  }
+
   static constexpr int kProbeBWGainCycleLength = 8;
   static const Gain kProbeBWGainCycle[kProbeBWGainCycleLength];
 
-  Timer* timer_;
+  Timer* const timer_;
+  const TraceSink trace_sink_;
   TimeDelta rtprop_;
   TimeStamp rtprop_stamp_;
   TimeStamp last_send_time_ = TimeStamp::Epoch();
@@ -224,15 +237,7 @@ class BBR {
     return "<<unknown>>";
   }
 
-  struct QueuedPacket {
-    QueuedPacket(OutgoingPacket p, StatusOrCallback<SentPacket> c)
-        : packet(p), transmit(std::move(c)) {}
-    OutgoingPacket packet;
-    StatusOrCallback<SentPacket> transmit;
-    Optional<Timeout> timeout;
-  };
-
-  Optional<QueuedPacket> queued_packet_;
+  Optional<StatusCallback> queued_packet_;
 
   const uint32_t mss_;
   WindowedFilter<uint64_t, Bandwidth, MaxFilter> bottleneck_bandwidth_filter_{
@@ -241,7 +246,7 @@ class BBR {
   Gain cwnd_gain_ = HighGain();
   State state_ = State::Startup;
   Recovery recovery_ = Recovery::None;
-  uint64_t cwnd_ = 3;
+  uint64_t cwnd_bytes_ = 3 * mss_;
   Optional<Bandwidth> pacing_rate_;
   uint64_t next_round_delivered_bytes_ = 0;
   bool round_start_ = false;
@@ -254,12 +259,13 @@ class BBR {
   uint8_t full_bw_count_ = 0;
   uint8_t cycle_index_;
   uint64_t packets_in_flight_ = 0;
+  uint64_t bytes_in_flight_ = 0;
   uint64_t round_count_ = 0;
   uint64_t delivered_bytes_ = 0;
   uint64_t delivered_seq_ = 0;
   TimeStamp delivered_time_ = TimeStamp::Epoch();
-  uint64_t target_cwnd_;
-  uint64_t prior_cwnd_;
+  uint64_t target_cwnd_bytes_;
+  uint64_t prior_cwnd_bytes_;
   uint64_t last_sent_packet_ = 0;
   uint64_t exit_recovery_at_seq_ = 0;
   uint64_t app_limited_seq_ = 0;

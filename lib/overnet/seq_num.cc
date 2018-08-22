@@ -65,20 +65,28 @@ fail:
 
 uint64_t SeqNum::Reconstruct(uint64_t window_base) const {
   uint8_t width = (rep_[0] >> 6) + 1;
-  uint64_t result = window_base;
+  uint8_t pn_nbits = 6 + (width - 1) * 8;
+  uint64_t pn_win = 1ull << pn_nbits;
+  uint64_t pn_hwin = pn_win / 2;
+  uint64_t pn_mask = pn_win - 1;
+  uint64_t expected = window_base + 1;
+
+  uint64_t result = expected & ~pn_mask;
   switch (width) {
     case 4:
-      result &= ~(0xffull << 22);
       result |= static_cast<uint64_t>(rep_[3]) << 22;
     case 3:
-      result &= ~(0xffull << 14);
       result |= static_cast<uint64_t>(rep_[2]) << 14;
     case 2:
-      result &= ~(0xffull << 6);
       result |= static_cast<uint64_t>(rep_[1]) << 6;
     case 1:
-      result &= ~(0x3full);
       result |= rep_[0] & 0x3f;
+  }
+  if (expected >= pn_hwin && result <= expected - pn_hwin) {
+    return result + pn_win;
+  }
+  if (result > expected + pn_hwin && result > pn_win) {
+    return result - pn_win;
   }
   return result;
 }

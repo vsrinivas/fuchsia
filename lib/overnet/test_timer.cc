@@ -32,21 +32,26 @@ bool TestTimer::Step(uint64_t microseconds) {
     return false;
   }
   now_ = new_now;
+  bool ticked = false;
   while (!pending_timeouts_.empty() &&
          pending_timeouts_.begin()->first <= now_) {
+    ticked = true;
     auto it = pending_timeouts_.begin();
     auto* timeout = it->second;
     pending_timeouts_.erase(it);
     FireTimeout(timeout, Status::Ok());
   }
-  return true;
+  return ticked;
 }
 
-bool TestTimer::StepUntilNextEvent() {
+bool TestTimer::StepUntilNextEvent(Optional<TimeDelta> max_step) {
   if (pending_timeouts_.empty())
     return false;
-  Step(pending_timeouts_.begin()->first - now_);
-  return true;
+  int64_t step = pending_timeouts_.begin()->first - now_;
+  if (max_step.has_value() && step > max_step->as_us()) {
+    step = max_step->as_us();
+  }
+  return Step(step);
 }
 
 void TestTimer::InitTimeout(Timeout* timeout, TimeStamp when) {

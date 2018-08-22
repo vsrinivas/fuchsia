@@ -222,6 +222,14 @@ class Slice final {
     return WithInitializerAndPrefix(length, 0, std::forward<F>(initializer));
   }
 
+  static Slice RepeatedChar(size_t count, char c) {
+    return WithInitializer(count, [count, c](uint8_t* p) {
+      for (size_t i = 0; i < count; i++) {
+        p[i] = static_cast<uint8_t>(c);
+      }
+    });
+  }
+
   // Given an object that conforms to the Writer interface (has size_t
   // wire_length() and Write(uint8_t* out)), create a slice containing the
   // serialized object
@@ -316,6 +324,7 @@ class Slice final {
       return nullptr;
     assert(data->general.begin - hdr->bytes >= 0);
     if (static_cast<size_t>(data->general.begin - hdr->bytes) >= length) {
+      hdr->refs++;
       *new_slice_data =
           Data(hdr, data->general.begin - length, data->general.end);
       return const_cast<uint8_t*>(new_slice_data->general.begin);

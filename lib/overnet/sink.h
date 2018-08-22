@@ -17,10 +17,8 @@ class Sink {
  public:
   virtual ~Sink() {}
   virtual void Close(const Status& status, Callback<void> quiesced) = 0;
-  virtual void Push(T item, StatusCallback sent) = 0;
-  // Default implementation of multi-push.
-  // Derived types are encouraged but not required to replace this.
-  virtual void PushMany(T* items, size_t count, StatusCallback sent);
+  virtual void Push(T item) = 0;
+  void PushMany(T* items, size_t count);
 };
 
 template <class T>
@@ -36,48 +34,10 @@ class Source {
 };
 
 template <class T>
-void Sink<T>::PushMany(T* items, size_t count, StatusCallback done) {
-  class Pusher {
-   public:
-    Pusher(Sink* sink, T* items, size_t count, StatusCallback done)
-        : sink_(sink), done_(std::move(done)) {
-      items_.reserve(count);
-      for (size_t i = 0; i < count; i++) {
-        items_.emplace_back(std::move(items[i]));
-      }
-      it_ = items_.begin();
-      Next();
-    }
-
-   private:
-    void Next() {
-      auto push = it_;
-      ++it_;
-      if (it_ == items_.end()) {
-        sink_->Push(std::move(*push), std::move(done_));
-        delete this;
-      } else {
-        sink_->Push(std::move(*push), StatusCallback([this](Status&& status) {
-                      if (status.is_ok()) {
-                        Next();
-                      } else {
-                        done_(std::forward<Status>(status));
-                        delete this;
-                      }
-                    }));
-      }
-    }
-
-    Sink* const sink_;
-    std::vector<T> items_;
-    typename std::vector<T>::iterator it_;
-    StatusCallback done_;
-  };
-  if (count == 0) {
-    done(Status::Ok());
-    return;
+void Sink<T>::PushMany(T* items, size_t count) {
+  for (size_t i = 0; i < count; i++) {
+    Push(items[i]);
   }
-  new Pusher(this, items, count, std::move(done));
 }
 
 template <class T>

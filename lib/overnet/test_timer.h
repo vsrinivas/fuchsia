@@ -5,6 +5,7 @@
 #pragma once
 
 #include <map>
+#include "optional.h"
 #include "timer.h"
 
 namespace overnet {
@@ -16,7 +17,7 @@ class TestTimer final : public Timer {
   ~TestTimer();
   virtual TimeStamp Now() override;
   bool Step(uint64_t microseconds);
-  bool StepUntilNextEvent();
+  bool StepUntilNextEvent(Optional<TimeDelta> max_step = Nothing);
 
  private:
   virtual void InitTimeout(Timeout* timeout, TimeStamp when) override;

@@ -20,11 +20,18 @@ class PacketNub {
   static constexpr size_t kHelloSize = 256;
   static constexpr uint64_t kAnnounceResendMillis = 1000;
 
-  PacketNub(Timer* timer, NodeId node) : timer_(timer), local_node_(node) {}
+  PacketNub(Timer* timer, TraceSink trace_sink, NodeId node)
+      : timer_(timer),
+        trace_sink_(trace_sink.Decorate([this](const std::string& msg) {
+          std::ostringstream out;
+          out << "Nub[" << this << "] " << msg;
+          return out.str();
+        })),
+        local_node_(node) {}
 
   virtual void SendTo(Address dest, Slice slice) = 0;
   virtual Router* GetRouter() = 0;
-  virtual void Publish(std::unique_ptr<overnet::Link> link) = 0;
+  virtual void Publish(LinkPtr<> link) = 0;
 
   void Process(TimeStamp received, Address src, Slice slice) {
     // Extract node id and op from slice... this code must be identical with
@@ -34,51 +41,54 @@ class PacketNub {
     const uint8_t* const end = slice.end();
 
     if (p == end) {
-      std::cout << "Short packet received (no op code)\n";
+      OVERNET_TRACE(INFO, trace_sink_) << "Short packet received (no op code)";
       return;
     }
     const PacketOp op = static_cast<PacketOp>(*p++);
 
     while (true) {
-      Link& link = links_[src];
+      Link* link = link_for(src);
       uint64_t node_id;
-      std::cerr << "PACKETNUB " << src << " OP:" << static_cast<int>(op)
-                << " STATE:" << static_cast<int>(link.state) << "\n";
-      switch (OpState(op, link.state)) {
+      OVERNET_TRACE(DEBUG, link->trace_sink) << " op=" << static_cast<int>(op);
+      switch (OpState(op, link->state)) {
         case OpState(PacketOp::Connected, LinkState::AckingHello):
-          if (!link.SetState(LinkState::Connected)) {
+          if (!link->SetState(LinkState::Connected)) {
             links_.erase(src);
             return;
           }
           BecomePublished(src);
           continue;
         case OpState(PacketOp::Connected, LinkState::SemiConnected):
-          if (!link.SetState(LinkState::Connected)) {
+          if (!link->SetState(LinkState::Connected)) {
             links_.erase(src);
             return;
           }
           continue;
         case OpState(PacketOp::Connected, LinkState::Connected):
-          if (p == end && link.node_id && *link.node_id < local_node_) {
+          if (p == end && link->node_id && *link->node_id < local_node_) {
             // Empty connected packets get reflected to fully advance state
             // machine in the case of connecting when applications are idle.
             SendTo(src, std::move(slice));
           } else {
-            link.link->Process(received, std::move(slice));
+            link->link->Process(received, std::move(slice));
           }
           return;
         case OpState(PacketOp::CallMeMaybe, LinkState::Initial):
           if (end - begin != kCallMeMaybeSize) {
-            std::cout << "Received a mis-sized CallMeMaybe packet\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Received a mis-sized CallMeMaybe packet";
           } else if (!ParseLE64(&p, end, &node_id)) {
-            std::cout << "Failed to parse node id from CallMeMaybe packet\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Failed to parse node id from CallMeMaybe packet";
           } else if (!AllZeros(p, end)) {
-            std::cout << "CallMeMaybe padding should be all zeros\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "CallMeMaybe padding should be all zeros";
           } else if (NodeId(node_id) == local_node_) {
-            std::cout << "CallMeMaybe received for local node\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "CallMeMaybe received for local node";
           } else if (NodeId(node_id) < local_node_) {
-            std::cout
-                << "CallMeMaybe received from a smaller numbered node id\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "CallMeMaybe received from a smaller numbered node id";
           } else {
             StartHello(src, NodeId(node_id));
           }
@@ -86,22 +96,28 @@ class PacketNub {
         case OpState(PacketOp::Hello, LinkState::Initial):
         case OpState(PacketOp::Hello, LinkState::Announcing):
           if (end - begin != kHelloSize) {
-            std::cout << "Received a mis-sized Hello packet\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Received a mis-sized Hello packet";
           } else if (!ParseLE64(&p, end, &node_id)) {
-            std::cout << "Failed to parse node id from Hello packet\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Failed to parse node id from Hello packet";
           } else if (!AllZeros(p, end)) {
-            std::cout << "Hello padding should be all zeros\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Hello padding should be all zeros";
           } else if (local_node_ < NodeId(node_id)) {
-            std::cout << "Hello received from a larger numbered node id\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Hello received from a larger numbered node id";
           } else if (NodeId(node_id) == local_node_) {
-            std::cout << "Hello received for local node\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Hello received for local node";
           } else {
             StartHelloAck(src, NodeId(node_id));
           }
           return;
         case OpState(PacketOp::HelloAck, LinkState::SayingHello):
           if (end != p) {
-            std::cout << "Received a mis-sized HelloAck packet\n";
+            OVERNET_TRACE(INFO, link->trace_sink)
+                << "Received a mis-sized HelloAck packet";
           } else {
             // Must BecomePublished *AFTER* the state change, else the link
             // could be dropped immediately during publishing forcing an
@@ -111,19 +127,20 @@ class PacketNub {
           }
           return;
         default:
-          std::cout << "Received packet op " << static_cast<int>(op)
-                    << " on link state " << static_cast<int>(link.state)
-                    << ": ignoring.\n";
+          OVERNET_TRACE(INFO, link->trace_sink)
+              << "Received packet op " << static_cast<int>(op)
+              << " on link state " << static_cast<int>(link->state)
+              << ": ignoring.";
           return;
       }
     }
   }
 
   void Initiate(Address peer, NodeId node) {
-    Link& link = links_[peer];
-    std::cout << "Initiate: state=" << static_cast<int>(link.state) << "\n";
+    Link* link = link_for(peer);
+    OVERNET_TRACE(DEBUG, link->trace_sink) << "Initiate";
     assert(node != local_node_);
-    if (link.state == LinkState::Initial) {
+    if (link->state == LinkState::Initial) {
       if (node < local_node_) {
         // To avoid duplicating links, we insist that lower indexed nodes
         // initiate the connection.
@@ -138,7 +155,14 @@ class PacketNub {
   class NubLink final : public PacketLink {
    public:
     NubLink(PacketNub* nub, Address address, NodeId peer)
-        : PacketLink(nub->GetRouter(), peer, kMSS),
+        : PacketLink(
+              nub->GetRouter(),
+              nub->trace_sink_.Decorate([address](const std::string& message) {
+                std::ostringstream out;
+                out << "addr:" << address << " " << message;
+                return out.str();
+              }),
+              peer, kMSS),
           nub_(nub),
           address_(address) {}
 
@@ -182,17 +206,27 @@ class PacketNub {
   };
 
   struct Link {
+    explicit Link(Address addr, TraceSink trace_sink)
+        : trace_sink(
+              trace_sink.Decorate([this, addr](const std::string& message) {
+                std::ostringstream out;
+                out << "Link[" << this << ";addr=" << addr
+                    << ";node=" << node_id << ";st=" << static_cast<int>(state)
+                    << "] " << message;
+                return out.str();
+              })) {}
     ~Link() { assert(link == nullptr); }
 
     LinkState state = LinkState::Initial;
     Optional<NodeId> node_id;
     NubLink* link = nullptr;
-    int ticks;
+    int ticks = -1;
     Optional<Timeout> next_timeout;
+    const TraceSink trace_sink;
 
     Optional<int> SetState(LinkState st) {
-      std::cerr << "LINK " << this << " state " << static_cast<int>(state)
-                << " --> " << static_cast<int>(st) << "\n";
+      OVERNET_TRACE(DEBUG, trace_sink)
+          << "SetState to " << static_cast<int>(st);
       next_timeout.Reset();
       if (state != st) {
         state = st;
@@ -209,8 +243,7 @@ class PacketNub {
       if (node) {
         if (node_id) {
           if (*node_id != *node) {
-            std::cout << "Node id changed from " << *node_id << " to " << *node
-                      << "\n";
+            OVERNET_TRACE(DEBUG, trace_sink) << "Node id changed to " << *node;
             return Nothing;
           }
         } else {
@@ -239,19 +272,30 @@ class PacketNub {
                initial_millis, millis)(rng_));
   }
 
+  Link* link_for(Address address) {
+    auto it = links_.find(address);
+    if (it != links_.end())
+      return &it->second;
+    return &links_
+                .emplace(std::piecewise_construct,
+                         std::forward_as_tuple(address),
+                         std::forward_as_tuple(address, trace_sink_))
+                .first->second;
+  }
+
   template <class F>
   void StartSimpleState(Address address, Optional<NodeId> node, LinkState state,
                         size_t packet_size, F packet_writer) {
-    Link& link = links_[address];
+    Link* link = link_for(address);
     const Optional<int> ticks_or_nothing =
-        link.SetStateAndMaybeNode(state, node);
+        link->SetStateAndMaybeNode(state, node);
     if (!ticks_or_nothing) {
       links_.erase(address);
       return;
     }
     const int ticks = *ticks_or_nothing;
     SendTo(address, Slice::WithInitializer(packet_size, packet_writer));
-    link.next_timeout.Reset(
+    link->next_timeout.Reset(
         timer_, BackoffForTicks(kAnnounceResendMillis, ticks),
         StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
           if (status.is_error())
@@ -291,14 +335,15 @@ class PacketNub {
   }
 
   void BecomePublished(Address address) {
-    Link& link = links_[address];
-    assert(link.link == nullptr);
-    assert(link.node_id);
-    link.link = new NubLink(this, address, *link.node_id);
-    Publish(std::unique_ptr<overnet::Link>(link.link));
+    Link* link = link_for(address);
+    assert(link->link == nullptr);
+    assert(link->node_id);
+    link->link = new NubLink(this, address, *link->node_id);
+    Publish(LinkPtr<>(link->link));
   }
 
   Timer* const timer_;
+  const TraceSink trace_sink_;
   const NodeId local_node_;
   std::unordered_map<Address, Link, HashAddress, EqAddress> links_;
   std::mt19937_64 rng_;

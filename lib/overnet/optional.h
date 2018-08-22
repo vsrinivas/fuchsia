@@ -80,14 +80,32 @@ class Optional {
     Swap(&other);
     return *this;
   }
-  T* operator->() { return storage_.get(); }
-  const T* operator->() const { return storage_.get(); }
-  T& operator*() { return *storage_.get(); }
-  const T& operator*() const { return *storage_.get(); }
+  T* operator->() {
+    assert(set_);
+    return storage_.get();
+  }
+  const T* operator->() const {
+    assert(set_);
+    return storage_.get();
+  }
+  T& operator*() {
+    assert(set_);
+    return *storage_.get();
+  }
+  const T& operator*() const {
+    assert(set_);
+    return *storage_.get();
+  }
   operator bool() const { return set_; }
   bool has_value() const { return set_; }
-  T& value() { return *storage_.get(); }
-  const T& value() const { return *storage_.get(); }
+  T& value() {
+    assert(set_);
+    return *storage_.get();
+  }
+  const T& value() const {
+    assert(set_);
+    return *storage_.get();
+  }
   T* get() { return set_ ? storage_.get() : nullptr; }
   const T* get() const { return set_ ? storage_.get() : nullptr; }
 

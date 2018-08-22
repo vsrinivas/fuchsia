@@ -114,10 +114,11 @@ void RoutingTable::ApplyChanges(TimeStamp now, const Metrics& changes,
     }
   }
   for (const auto& m : changes.link_metrics) {
-    auto report_drop = [&m](const char* why) {
-      std::cerr << "Drop link info: from=" << m.from() << " to=" << m.to()
-                << " label=" << m.link_label() << " version=" << m.version()
-                << ": " << why << std::endl;
+    auto report_drop = [this, &m](const char* why) {
+      OVERNET_TRACE(INFO, trace_sink_)
+          << "Drop link info: from=" << m.from() << " to=" << m.to()
+          << " label=" << m.link_label() << " version=" << m.version() << ": "
+          << why << std::endl;
     };
     // Cannot add a link if the relevant nodes are unknown.
     auto from_node = node_metrics_.find(m.from());
@@ -183,6 +184,7 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
   ++path_finding_run_;
   node_it->second.last_path_finding_run = path_finding_run_;
   node_it->second.best_rtt = TimeDelta::Zero();
+  node_it->second.mss = std::numeric_limits<uint32_t>::max();
   InternalList<Node, &Node::path_finding_node> todo;
 
   auto enqueue = [&todo](Node* node) {
@@ -210,6 +212,7 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
         dst->best_rtt = rtt;
         dst->best_from = src;
         dst->best_link = link;
+        dst->mss = std::min(src->mss, link->metrics.mss());
         enqueue(dst);
       }
     }
@@ -231,7 +234,8 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     }
     Link* link = n->best_link;
     assert(link->metrics.from() == root_node_);
-    selected_links[node_it->first] = link->metrics.link_label();
+    selected_links[node_it->first] =
+        SelectedLink{link->metrics.link_label(), n->mss};
   }
 
   return selected_links;

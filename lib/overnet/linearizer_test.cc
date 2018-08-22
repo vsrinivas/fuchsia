@@ -18,13 +18,7 @@ namespace linearizer_test {
 
 class MockCallbacks {
  public:
-  MOCK_METHOD1(PushDone, void(const Status&));
   MOCK_METHOD1(PullDone, void(const StatusOr<Optional<Slice>>&));
-
-  StatusCallback NewPush() {
-    return StatusCallback(
-        [this](const Status& status) { this->PushDone(status); });
-  }
 
   StatusOrCallback<Optional<Slice>> NewPull() {
     return StatusOrCallback<Optional<Slice>>(
@@ -34,15 +28,14 @@ class MockCallbacks {
   }
 };
 
-TEST(Linearizer, NoOp) { Linearizer(1024); }
+TEST(Linearizer, NoOp) { Linearizer(1024, TraceSink()); }
 
 TEST(Linearizer, Push0_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
   // Push at offset 0 then a Pull should complete immediately
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
@@ -51,32 +44,29 @@ TEST(Linearizer, Push0_Pull0) {
 
 TEST(Linearizer, Pull0_Push0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
   // Push at offset 0 then a Pull should complete immediately
   linearizer.Pull(cb.NewPull());
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
 }
 
 TEST(Linearizer, Push0_Push1_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
@@ -85,19 +75,17 @@ TEST(Linearizer, Push0_Push1_Pull0_Pull1) {
 
 TEST(Linearizer, Push1_Push0_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
@@ -106,19 +94,17 @@ TEST(Linearizer, Push1_Push0_Pull0_Pull1) {
 
 TEST(Linearizer, Push0_Pull0_Push1_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
@@ -127,19 +113,17 @@ TEST(Linearizer, Push0_Pull0_Push1_Pull1) {
 
 TEST(Linearizer, Push1_Pull0_Push0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
   linearizer.Pull(cb.NewPull());
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
@@ -148,19 +132,17 @@ TEST(Linearizer, Push1_Pull0_Push0_Pull1) {
 
 TEST(Linearizer, Pull0_Push1_Push0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
   linearizer.Pull(cb.NewPull());
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
@@ -169,15 +151,13 @@ TEST(Linearizer, Pull0_Push1_Push0_Pull1) {
 
 TEST(Linearizer, Push0_Push0_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
@@ -186,12 +166,10 @@ TEST(Linearizer, Push0_Push0_Pull0) {
 
 TEST(Linearizer, Push0_PushBad0_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
-
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, false))).Times(2);
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("b")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("b")});
   Mock::VerifyAndClearExpectations(&cb);
 
   EXPECT_CALL(cb, PullDone(Property(&StatusOr<Optional<Slice>>::is_ok, false)));
@@ -200,19 +178,17 @@ TEST(Linearizer, Push0_PushBad0_Pull0) {
 
 TEST(Linearizer, Push1_Push01_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}, cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
@@ -221,15 +197,13 @@ TEST(Linearizer, Push1_Push01_Pull0_Pull1) {
 
 TEST(Linearizer, Push01_Push1_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("ab"))))));
@@ -238,19 +212,17 @@ TEST(Linearizer, Push01_Push1_Pull0_Pull1) {
 
 TEST(Linearizer, Push12_Push01_Pull0_Pull1_Pull2) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("bc")}, cb.NewPush());
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}, cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("bc")});
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("bc"))))));
@@ -259,19 +231,17 @@ TEST(Linearizer, Push12_Push01_Pull0_Pull1_Pull2) {
 
 TEST(Linearizer, Push01_Push12_Pull0_Pull1_Pull2) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}, cb.NewPush());
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("bc")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")});
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("bc")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("ab"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("c"))))));
@@ -280,21 +250,19 @@ TEST(Linearizer, Push01_Push12_Pull0_Pull1_Pull2) {
 
 TEST(Linearizer, Push_Close) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")});
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, false)));
   linearizer.Close(Status::Ok());
 }
 
 TEST(Linearizer, Push1_Push012_Pull0_Pull1_Pull2) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("abc")},
-                  cb.NewPush());
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("abc")});
 
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
@@ -302,14 +270,12 @@ TEST(Linearizer, Push1_Push012_Pull0_Pull1_Pull2) {
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("c"))))));
@@ -318,16 +284,12 @@ TEST(Linearizer, Push1_Push012_Pull0_Pull1_Pull2) {
 
 TEST(Linearizer, Push012_Push1_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  Linearizer linearizer(128, TraceSink());
 
-  linearizer.Push(Chunk{0, false, Slice::FromStaticString("abc")},
-                  cb.NewPush());
-
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
-  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}, cb.NewPush());
+  linearizer.Push(Chunk{0, false, Slice::FromStaticString("abc")});
+  linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")});
   Mock::VerifyAndClearExpectations(&cb);
 
-  EXPECT_CALL(cb, PushDone(Property(&Status::is_ok, true)));
   EXPECT_CALL(
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("abc"))))));

@@ -51,6 +51,31 @@ class FuchsiaTimer final : public overnet::Timer {
   }
 };
 
+class FuchsiaLog final : public overnet::TraceSinkInterface {
+ public:
+  void Done() override {}
+  void Trace(overnet::TraceOutput output) override {
+    auto severity = [sev = output.severity] {
+      switch (sev) {
+        case overnet::Severity::DEBUG:
+          return fxl::LOG_INFO;
+        case overnet::Severity::INFO:
+          return fxl::LOG_INFO;
+        case overnet::Severity::WARNING:
+          return fxl::LOG_WARNING;
+        case overnet::Severity::ERROR:
+          return fxl::LOG_ERROR;
+      }
+    }();
+    fxl::LogMessage(severity, output.file, output.line, nullptr).stream()
+        << output.message;
+  }
+};
+
+static FuchsiaLog fuchsia_log;
+static overnet::TraceSink fuchsia_trace_sink(overnet::Severity::INFO,
+                                             &fuchsia_log);
+
 overnet::NodeId GenerateNodeId() {
   uint64_t out;
   zx_cprng_draw(&out, sizeof(out));
@@ -88,8 +113,9 @@ class OvernetApp final : public fuchsia::overnet::Overnet {
   FuchsiaTimer timer_;
   std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<fuchsia::overnet::Overnet> bindings_;
-  overnet::RouterEndpoint endpoint_{&timer_, GenerateNodeId(), true};
-  UdpNub udp_nub_{&endpoint_};
+  overnet::RouterEndpoint endpoint_{&timer_, fuchsia_trace_sink,
+                                    GenerateNodeId(), true};
+  UdpNub udp_nub_{&endpoint_, fuchsia_trace_sink};
   std::unique_ptr<MdnsAdvertisement> mdns_advert_;
 };
 

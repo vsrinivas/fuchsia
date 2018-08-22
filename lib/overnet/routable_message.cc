@@ -8,9 +8,9 @@ namespace overnet {
 
 static const uint64_t kMaxDestCount = 128;
 static const uint64_t kDestCountFlagsShift = 4;
-static const uint64_t kControlFlag = 0x01;
 
-Slice RoutableMessage::Write(NodeId writer, NodeId target) const {
+size_t RoutableMessage::HeaderLength(NodeId writer, NodeId target,
+                                     HeaderInfo* hinf) const {
   // Measure the size of the serialized message, consisting of:
   //   flags: varint64
   //   source: NodeId if !local
@@ -20,13 +20,16 @@ Slice RoutableMessage::Write(NodeId writer, NodeId target) const {
   //   stream: StreamId
   //   sequence: SeqNum if !control
   size_t header_length = 0;
-  std::vector<uint8_t> stream_id_len;
   const bool is_local =
       (src_ == writer && dsts_.size() == 1 && dsts_[0].dst() == target);
   const uint64_t dst_count = is_local ? 0 : dsts_.size();
-  const uint64_t flags =
-      (dst_count << kDestCountFlagsShift) | (is_control() ? kControlFlag : 0);
+  const uint64_t flags = (dst_count << kDestCountFlagsShift);
   const auto flags_length = varint::WireSizeFor(flags);
+  if (hinf != nullptr) {
+    hinf->is_local = is_local;
+    hinf->flags = flags;
+    hinf->flags_length = flags_length;
+  }
   header_length += flags_length;
   if (!is_local)
     header_length += src_.wire_length();
@@ -34,53 +37,66 @@ Slice RoutableMessage::Write(NodeId writer, NodeId target) const {
     if (!is_local)
       header_length += dst.dst_.wire_length();
     auto dst_stream_id_len = dst.stream_id().wire_length();
-    stream_id_len.push_back(dst_stream_id_len);
-    header_length += dst_stream_id_len;
-    if (!is_control())
-      header_length += dst.seq()->wire_length();
-  }
-
-  // Serialize the message.
-  return payload_.WithPrefix(header_length, [&](uint8_t* data) {
-    uint8_t* p = data;
-    p = varint::Write(flags, flags_length, p);
-    if (!is_local)
-      p = src_.Write(p);
-    for (size_t i = 0; i < dsts_.size(); i++) {
-      if (!is_local)
-        p = dsts_[i].dst().Write(p);
-      p = dsts_[i].stream_id().Write(stream_id_len[i], p);
-      if (!is_control())
-        p = dsts_[i].seq()->Write(p);
+    if (hinf != nullptr) {
+      hinf->stream_id_len.push_back(dst_stream_id_len);
     }
-    assert(p == data + header_length);
-  });
+    header_length += dst_stream_id_len;
+    header_length += dst.seq().wire_length();
+  }
+  return header_length;
 }
 
-StatusOr<RoutableMessage> RoutableMessage::Parse(Slice data, NodeId reader,
-                                                 NodeId writer) {
+Optional<size_t> RoutableMessage::MaxPayloadLength(
+    NodeId writer, NodeId target, size_t remaining_space) const {
+  auto hlen = HeaderLength(writer, target, nullptr);
+  if (hlen + 1 > remaining_space) {
+    return Nothing;
+  }
+  return varint::MaximumLengthWithPrefix(remaining_space - hlen);
+}
+
+Slice RoutableMessage::Write(NodeId writer, NodeId target,
+                             Slice payload) const {
+  HeaderInfo hinf;
+  // Serialize the message.
+  return payload.WithPrefix(
+      HeaderLength(writer, target, &hinf), [this, &hinf](uint8_t* data) {
+        uint8_t* p = data;
+        p = varint::Write(hinf.flags, hinf.flags_length, p);
+        if (!hinf.is_local)
+          p = src_.Write(p);
+        for (size_t i = 0; i < dsts_.size(); i++) {
+          if (!hinf.is_local)
+            p = dsts_[i].dst().Write(p);
+          p = dsts_[i].stream_id().Write(hinf.stream_id_len[i], p);
+          p = dsts_[i].seq().Write(p);
+        }
+      });
+}
+
+StatusOr<MessageWithPayload> RoutableMessage::Parse(Slice data, NodeId reader,
+                                                    NodeId writer) {
   uint64_t flags;
   const uint8_t* bytes = data.begin();
   const uint8_t* end = data.end();
   if (!varint::Read(&bytes, end, &flags)) {
-    return StatusOr<RoutableMessage>(StatusCode::INVALID_ARGUMENT,
-                                     "Failed to parse routing flags");
+    return StatusOr<MessageWithPayload>(StatusCode::INVALID_ARGUMENT,
+                                        "Failed to parse routing flags");
   }
   uint64_t dst_count = flags >> kDestCountFlagsShift;
-  const bool is_control = (flags & kControlFlag) != 0;
   const bool is_local = dst_count == 0;
   if (is_local)
     dst_count++;
   if (dst_count > kMaxDestCount) {
-    return StatusOr<RoutableMessage>(
+    return StatusOr<MessageWithPayload>(
         StatusCode::INVALID_ARGUMENT,
         "Destination count too high in routing header");
   }
   uint64_t src;
   if (!is_local) {
     if (!ParseLE64(&bytes, end, &src)) {
-      return StatusOr<RoutableMessage>(StatusCode::INVALID_ARGUMENT,
-                                       "Failed to parse source node");
+      return StatusOr<MessageWithPayload>(StatusCode::INVALID_ARGUMENT,
+                                          "Failed to parse source node");
     }
   } else {
     src = writer.get();
@@ -91,31 +107,27 @@ StatusOr<RoutableMessage> RoutableMessage::Parse(Slice data, NodeId reader,
     uint64_t dst;
     if (!is_local) {
       if (!ParseLE64(&bytes, end, &dst)) {
-        return StatusOr<RoutableMessage>(StatusCode::INVALID_ARGUMENT,
-                                         "Failed to parse destination node");
+        return StatusOr<MessageWithPayload>(StatusCode::INVALID_ARGUMENT,
+                                            "Failed to parse destination node");
       }
     } else {
       dst = reader.get();
     }
     uint64_t stream_id;
     if (!varint::Read(&bytes, end, &stream_id)) {
-      return StatusOr<RoutableMessage>(
+      return StatusOr<MessageWithPayload>(
           StatusCode::INVALID_ARGUMENT,
           "Failed to parse stream id from routing header");
     }
-    if (!is_control) {
-      auto seq_num = SeqNum::Parse(&bytes, end);
-      if (seq_num.is_error()) {
-        return StatusOr<RoutableMessage>(seq_num.AsStatus());
-      }
-      destinations.emplace_back(NodeId(dst), StreamId(stream_id),
-                                *seq_num.get());
-    } else {
-      destinations.emplace_back(NodeId(dst), StreamId(stream_id), Nothing);
+    auto seq_num = SeqNum::Parse(&bytes, end);
+    if (seq_num.is_error()) {
+      return StatusOr<MessageWithPayload>(seq_num.AsStatus());
     }
+    destinations.emplace_back(NodeId(dst), StreamId(stream_id), *seq_num.get());
   }
-  return RoutableMessage(NodeId(src), is_control, std::move(destinations),
-                         data.FromPointer(bytes));
+  return MessageWithPayload{
+      RoutableMessage(NodeId(src), std::move(destinations)),
+      data.FromPointer(bytes)};
 }
 
 std::ostream& operator<<(std::ostream& out, const RoutableMessage& h) {
@@ -127,7 +139,7 @@ std::ostream& operator<<(std::ostream& out, const RoutableMessage& h) {
     out << "[" << (i++) << "] dst:" << dst.dst()
         << " stream_id:" << dst.stream_id() << " seq:" << dst.seq();
   }
-  return out << "}, payload=" << h.payload() << "}";
+  return out << "}}";
 }
 
 }  // namespace overnet

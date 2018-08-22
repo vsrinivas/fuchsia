@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "test_timer.h"
+#include "trace_cout.h"
 
 using testing::AllOf;
 using testing::Ge;
@@ -17,6 +18,8 @@ using testing::Le;
 
 namespace overnet {
 namespace bbr_test {
+
+static constexpr bool kTraceOutput = false;
 
 // Toggle to true to generate CSV files for each simulation run
 enum class CsvOutput {
@@ -91,8 +94,9 @@ class BandwidthGate {
 class Simulator {
  public:
   Simulator(uint32_t mss, Optional<TimeDelta> srtt)
-      : bbr_(&timer_, mss, srtt),
-        outgoing_meter_(TimeDelta::FromMilliseconds(100)) {}
+      : bbr_(&timer_, kTraceOutput ? TraceCout(&timer_) : TraceSink(), mss,
+             srtt),
+        outgoing_meter_(TimeDelta::FromSeconds(5)) {}
 
   void SetBottleneckBandwidth(Bandwidth bandwidth) {
     bottleneck_.SetBandwidth(bandwidth);
@@ -143,14 +147,22 @@ class Simulator {
   template <class F>
   void SendPacket(int packet_size, F then) {
     bbr_.RequestTransmit(
-        BBR::OutgoingPacket{next_seq_++, uint64_t(packet_size)},
-        StatusOrCallback<BBR::SentPacket>(
-            ALLOCATED_CALLBACK, [=](const StatusOr<BBR::SentPacket>& status) {
-              if (status.is_ok()) {
-                then();
-                SimulatePacket(*status.get());
-              }
-            }));
+        StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
+          if (status.is_ok()) {
+            TimeStamp now = timer_.Now();
+            TimeStamp send_time = now;
+            auto sent_packet = bbr_.ScheduleTransmit(
+                &send_time,
+                BBR::OutgoingPacket{next_seq_++, uint64_t(packet_size)});
+            timer_.At(send_time, StatusCallback(ALLOCATED_CALLBACK,
+                                                [=](const Status& status2) {
+                                                  if (status2.is_ok()) {
+                                                    then();
+                                                    SimulatePacket(sent_packet);
+                                                  }
+                                                }));
+          }
+        }));
   }
 
   void SimulatePacket(BBR::SentPacket pkt) {
@@ -325,7 +337,7 @@ TEST_P(SimulationTest, SimulationSucceeds) {
 std::vector<SimulationArgs> GenerateArguments() {
   std::vector<SimulationArgs> args;
   for (auto bottleneck_bw : {1, 10, 100, 1000, 10000}) {
-    for (auto rtt : {1, 10, 100, 1000}) {
+    for (auto rtt : {1, 3, 10, 30, 100, 300, 1000}) {
       for (auto generate_traffic : {1, 10, 100, 1000, 10000}) {
         const auto expect_bw = std::min(bottleneck_bw, generate_traffic);
         const uint64_t mss = 1500;
@@ -335,7 +347,7 @@ std::vector<SimulationArgs> GenerateArguments() {
             mss,
             Nothing,
             {ContinuousTraffic(
-                 TimeDelta::Zero(), TimeDelta::FromSeconds(100),
+                 TimeDelta::Zero(), TimeDelta::FromSeconds(1000),
                  Bandwidth::FromKilobitsPerSecond(generate_traffic),
                  std::max(
                      uint64_t(1),
@@ -343,7 +355,7 @@ std::vector<SimulationArgs> GenerateArguments() {
                                        .BytesSentForTime(
                                            TimeDelta::FromMilliseconds(100))))),
              MeasureBandwidth(
-                 TimeDelta::FromSeconds(90),
+                 TimeDelta::FromSeconds(900),
                  Bandwidth::FromBitsPerSecond(expect_bw * 500),
                  Bandwidth::FromBitsPerSecond(expect_bw * 2000))}});
       }

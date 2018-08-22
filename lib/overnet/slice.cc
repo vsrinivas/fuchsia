@@ -18,6 +18,18 @@ std::ostream& operator<<(std::ostream& out, const Slice& slice) {
          << static_cast<unsigned>(b);
     first = false;
   }
+  if (!first)
+    temp << ' ';
+  temp << '"';
+  for (auto b : slice) {
+    const auto c = static_cast<char>(b);
+    if (isprint(c)) {
+      temp << c;
+    } else {
+      temp << '.';
+    }
+  }
+  temp << '"';
   return out << '[' << temp.str() << ']';
 }
 

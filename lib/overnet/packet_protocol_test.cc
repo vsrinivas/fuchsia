@@ -4,10 +4,12 @@
 
 #include "packet_protocol.h"
 #include <memory>
+#include "closed_ptr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "packet_protocol_fuzzer_helpers.h"
 #include "test_timer.h"
+#include "trace_cout.h"
 
 using testing::_;
 using testing::Mock;
@@ -17,28 +19,22 @@ using testing::SaveArg;
 using testing::StrictMock;
 
 namespace overnet {
+namespace packet_protocol_test {
 
 // Some default MSS for tests
 static const uint64_t kMSS = 1500;
 
-typedef std::function<void(const Status&)> StatusFunc;
-
 class MockPacketSender : public PacketProtocol::PacketSender {
  public:
-  MOCK_METHOD3(SendPacketMock, void(SeqNum, Slice, StatusFunc));
+  MockPacketSender(Timer* timer) : timer_(timer) {}
 
-  void SendPacket(SeqNum seq, Slice slice, StatusCallback cb) override {
-    SendPacketMock(seq, slice,
-                   [cb = std::make_shared<StatusCallback>(std::move(cb))](
-                       const Status& status) { (*cb)(status); });
-  }
+  MOCK_METHOD2(SendPacketMock, void(SeqNum, Slice));
 
-  MOCK_METHOD1(SentCallback, void(const Status&));
-
-  StatusCallback NewSentCallback() {
-    return StatusCallback(ALLOCATED_CALLBACK, [this](const Status& status) {
-      this->SentCallback(status);
-    });
+  void SendPacket(SeqNum seq, LazySlice slice, Callback<void> done) override {
+    TimeStamp now = timer_->Now();
+    TimeStamp when = now;
+    SendPacketMock(seq, slice(LazySliceArgs{0, kMSS, false, &when}));
+    EXPECT_GE(when, now);
   }
 
   MOCK_METHOD1(SendCallback, void(const Status&));
@@ -48,48 +44,48 @@ class MockPacketSender : public PacketProtocol::PacketSender {
         ALLOCATED_CALLBACK,
         [this](const Status& status) { this->SendCallback(status); });
   }
+
+ private:
+  Timer* const timer_;
 };
 
 TEST(PacketProtocol, NoOp) {
-  StrictMock<MockPacketSender> ps;
   TestTimer timer;
-  PacketProtocol packet_protocol(&timer, &ps, kMSS);
+  StrictMock<MockPacketSender> ps(&timer);
+  MakeClosedPtr<PacketProtocol>(&timer, &ps, TraceCout(&timer), kMSS);
 }
 
 TEST(PacketProtocol, SendOnePacket) {
-  StrictMock<MockPacketSender> ps;
   TestTimer timer;
-  PacketProtocol packet_protocol(&timer, &ps, kMSS);
+  StrictMock<MockPacketSender> ps(&timer);
+  auto packet_protocol =
+      MakeClosedPtr<PacketProtocol>(&timer, &ps, TraceCout(&timer), kMSS);
 
   // Send some dummy data: we expect to see a packet emitted immediately
-  StatusFunc done_cb;
   EXPECT_CALL(ps,
               SendPacketMock(Property(&SeqNum::ReconstructFromZero_TestOnly, 1),
-                             Slice::FromContainer({0, 1, 2, 3, 4, 5}), _))
-      .WillOnce(SaveArg<2>(&done_cb));
+                             Slice::FromContainer({0, 1, 2, 3, 4, 5})));
 
-  packet_protocol.Send([&](uint64_t desire_prefix, uint64_t max_len) {
-    EXPECT_LT(desire_prefix, kMSS);
-    EXPECT_LE(max_len, kMSS);
-    EXPECT_GT(max_len, uint64_t(0));
-    return PacketProtocol::SendData{Slice::FromContainer({1, 2, 3, 4, 5}),
-                                    ps.NewSentCallback(), ps.NewSendCallback()};
-  });
-  Mock::VerifyAndClearExpectations(&ps);
-
-  // Signal the packet is sent.
-  EXPECT_CALL(ps, SentCallback(Property(&Status::is_ok, true)));
-  done_cb(Status::Ok());
+  packet_protocol->Send(
+      [](auto arg) {
+        EXPECT_LT(arg.desired_prefix, kMSS);
+        EXPECT_LE(arg.max_length, kMSS);
+        EXPECT_GT(arg.max_length, uint64_t(0));
+        return Slice::FromContainer({1, 2, 3, 4, 5});
+      },
+      ps.NewSendCallback());
   Mock::VerifyAndClearExpectations(&ps);
 
   // Build a fake ack packet.
   Slice ack = Slice::FromWritable(AckFrame(1, 1));
   ack = ack.WithPrefix(1, [len = ack.length()](uint8_t* p) { *p = len; });
+
   // Calling Process on it should succeed and trigger the completion callback
   // for the send.
   EXPECT_CALL(ps, SendCallback(Property(&Status::is_ok, true)));
-  EXPECT_THAT(packet_protocol.Process(TimeStamp::Epoch(), SeqNum(1, 1), ack),
-              Pointee(Slice()));
+  EXPECT_THAT(
+      packet_protocol->Process(TimeStamp::Epoch(), SeqNum(1, 1), ack).status,
+      Pointee(Slice()));
 }
 
 // Exposed some bugs in the fuzzer, and a bug whereby empty ack frames caused a
@@ -3843,4 +3839,5 @@ TEST(PacketProtocolFuzzed, _9bfa77589cb379397dafc6661fee887af34c03de) {
   }
 }
 
+}  // namespace packet_protocol_test
 }  // namespace overnet

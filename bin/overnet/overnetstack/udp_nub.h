@@ -82,8 +82,10 @@ using UdpNubBase = overnet::PacketNub<UdpAddr, 1500, HashUdpAddr, EqUdpAddr>;
 
 class UdpNub final : public UdpNubBase {
  public:
-  explicit UdpNub(overnet::RouterEndpoint* endpoint)
-      : UdpNubBase(endpoint->router()->timer(), endpoint->node_id()),
+  explicit UdpNub(overnet::RouterEndpoint* endpoint,
+                  overnet::TraceSink trace_sink)
+      : UdpNubBase(endpoint->router()->timer(), trace_sink,
+                   endpoint->node_id()),
         endpoint_(endpoint),
         timer_(endpoint->router()->timer()) {}
 
@@ -129,8 +131,8 @@ class UdpNub final : public UdpNubBase {
 
   overnet::Router* GetRouter() override { return endpoint_->router(); }
 
-  void Publish(std::unique_ptr<overnet::Link> link) override {
-    overnet ::NodeId node = link->GetLinkMetrics().to();
+  void Publish(overnet::LinkPtr<> link) override {
+    overnet::NodeId node = link->GetLinkMetrics().to();
     std::cout << "NewLink: " << node << "\n";
     endpoint_->RegisterPeer(node);
     endpoint_->router()->RegisterLink(std::move(link));

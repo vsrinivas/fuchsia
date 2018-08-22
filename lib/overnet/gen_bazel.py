@@ -211,7 +211,7 @@ with open('BUILD.bazel', 'w') as o:
                 print >>o, ')'
             if bundle.rule == 'executable':
                 if bundle.values.get('testonly', False):
-                    print >>o, 'cc_test('
+                    print >>o, 'cc_test(shard_count=50,'
                 else:
                     print >>o, 'cc_binary('
                 print >>o, '  name="%s",' % bundle.name

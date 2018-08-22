@@ -64,6 +64,10 @@ inline bool operator==(Bandwidth a, Bandwidth b) {
   return a.bits_per_second() == b.bits_per_second();
 }
 
+inline bool operator!=(Bandwidth a, Bandwidth b) {
+  return a.bits_per_second() != b.bits_per_second();
+}
+
 inline std::ostream& operator<<(std::ostream& out, Bandwidth b) {
   uint64_t bits_per_second = b.bits_per_second();
   if (bits_per_second < 1000) {

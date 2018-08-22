@@ -17,8 +17,19 @@ const BBR::Gain BBR::kProbeBWGainCycle[kProbeBWGainCycleLength] = {
     UnitGain(), UnitGain(), UnitGain(), UnitGain(),
 };
 
-BBR::BBR(Timer* timer, uint32_t mss, Optional<TimeDelta> srtt)
+static uint64_t SumBytes(const std::vector<BBR::SentPacket>& v) {
+  uint64_t sum = 0;
+  for (const auto& p : v) {
+    sum += p.outgoing.size;
+  }
+  return sum;
+}
+
+BBR::BBR(Timer* timer, TraceSink trace_sink, uint32_t mss,
+         Optional<TimeDelta> srtt)
     : timer_(timer),
+      trace_sink_(trace_sink.Decorate(
+          [](const std::string& message) { return "BBR " + message; })),
       rtprop_(srtt.ValueOr(TimeDelta::PositiveInf())),
       rtprop_stamp_(timer->Now()),
       mss_(mss) {
@@ -26,7 +37,7 @@ BBR::BBR(Timer* timer, uint32_t mss, Optional<TimeDelta> srtt)
   ValidateState();
 }
 
-void BBR::ValidateState() { assert(cwnd_ != 0); }
+void BBR::ValidateState() { assert(cwnd_bytes_ != 0); }
 
 void BBR::EnterStartup() {
   state_ = State::Startup;
@@ -158,41 +169,87 @@ void BBR::OnAck(const Ack& ack) {
   ValidateState();
   const auto now = timer_->Now();
   prior_inflight_ = Inflight(UnitGain());
+  OVERNET_TRACE(DEBUG, trace_sink_)
+      << "ack " << ack.acked_packets.size() << " nack "
+      << ack.nacked_packets.size()
+      << " packets_in_flight=" << packets_in_flight_
+      << " bytes_in_flight=" << bytes_in_flight_;
   assert(packets_in_flight_ >=
          ack.acked_packets.size() + ack.nacked_packets.size());
   packets_in_flight_ -= ack.acked_packets.size();
   packets_in_flight_ -= ack.nacked_packets.size();
+  assert(bytes_in_flight_ >=
+         SumBytes(ack.acked_packets) + SumBytes(ack.nacked_packets));
+  bytes_in_flight_ -= SumBytes(ack.acked_packets);
+  bytes_in_flight_ -= SumBytes(ack.nacked_packets);
   UpdateModelAndState(now, ack);
   UpdateControlParameters(ack);
-  if (packets_in_flight_ < cwnd_ && queued_packet_) {
-    ScheduleQueuedPacket();
+  OVERNET_TRACE(DEBUG, trace_sink_)
+      << "end-ack packets_in_flight=" << packets_in_flight_
+      << " bytes_in_flight=" << bytes_in_flight_ << " cwnd=" << cwnd_bytes_;
+  if (bytes_in_flight_ < cwnd_bytes_ && queued_packet_) {
+    QueuedPacketReady();
   }
   ValidateState();
 }
 
-void BBR::RequestTransmit(OutgoingPacket packet,
-                          StatusOrCallback<SentPacket> transmit) {
+void BBR::RequestTransmit(StatusCallback ready) {
   ValidateState();
   if (queued_packet_)
     return;
-  assert(packet.sequence > last_sent_packet_);
-  last_sent_packet_ = packet.sequence;
-  queued_packet_.Reset(packet, std::move(transmit));
-  queued_packet_paused_ = packets_in_flight_ >= cwnd_;
-  if (queued_packet_paused_)
-    return;
-  ScheduleQueuedPacket();
+  OVERNET_TRACE(DEBUG, trace_sink_)
+      << "RequestTransmit: packets_in_flight=" << packets_in_flight_
+      << " bytes_in_flight=" << bytes_in_flight_ << " cwnd=" << cwnd_bytes_;
+  queued_packet_.Reset(std::move(ready));
+  queued_packet_paused_ = bytes_in_flight_ >= cwnd_bytes_;
+  if (!queued_packet_paused_) {
+    QueuedPacketReady();
+  }
   ValidateState();
 }
 
-void BBR::ScheduleQueuedPacket() {
+void BBR::QueuedPacketReady() {
+  assert(queued_packet_);
+  HandleRestartFromIdle();
+  packets_in_flight_++;
+  // We reserve away one packet's worth of sending here, and clear it
+  // later in ScheduleTransmit once we know the actual packet length.
+  // This prevents accidental floods of messages getting queued in lower
+  // layers.
+  bytes_in_flight_ += mss_;
+  queued_packet_.Take()(Status::Ok());
+}
+
+void BBR::CancelRequestTransmit() {
   ValidateState();
-  if (queued_packet_->timeout)
-    return;
+  queued_packet_.Reset();
+  ValidateState();
+}
+
+BBR::SentPacket BBR::ScheduleTransmit(TimeStamp* overall_send_time,
+                                      OutgoingPacket packet) {
+  assert(overall_send_time != nullptr);
+
+  ValidateState();
+
+  // Subtract out the reserved mss packet length that we applied in
+  // QueuedPacketReady first.
+  assert(bytes_in_flight_ >= mss_);
+  bytes_in_flight_ -= mss_;
+  bytes_in_flight_ += packet.size;
+
+  assert(packet.sequence > last_sent_packet_);
+  last_sent_packet_ = packet.sequence;
 
   const auto now = timer_->Now();
-  TimeStamp send_time = last_send_time_ + PacingRate().SendTimeForBytes(
-                                              queued_packet_->packet.size);
+  TimeStamp send_time =
+      last_send_time_ + PacingRate().SendTimeForBytes(packet.size);
+  OVERNET_TRACE(DEBUG, trace_sink_)
+      << "ScheduleTransmit bytes_in_flight=" << bytes_in_flight_
+      << " mss=" << mss_ << " packet_size=" << packet.size << " now=" << now
+      << " pacing_rate=" << PacingRate()
+      << " last_send_time=" << last_send_time_
+      << " initial_send_time=" << send_time;
   if (send_time < now) {
     send_time = now;
   } else if (queued_packet_paused_) {
@@ -200,24 +257,17 @@ void BBR::ScheduleQueuedPacket() {
         delivered_seq_ + std::max(packets_in_flight_, uint64_t(1));
   }
   std::swap(last_send_time_, send_time);
-  queued_packet_->timeout.Reset(
-      timer_, std::max(now, send_time), [this](const Status& status) {
-        if (status.is_ok()) {
-          SentPacket p{queued_packet_->packet,
-                       delivered_bytes_,
-                       recovery_ == Recovery::Fast,
-                       app_limited_seq_ != 0,
-                       timer_->Now(),
-                       delivered_time_};
-          HandleRestartFromIdle();
-          packets_in_flight_++;
-          auto transmit = std::move(queued_packet_->transmit);
-          queued_packet_.Reset();
-          ValidateState();
-          transmit(p);
-        }
-      });
-}  // namespace overnet
+  *overall_send_time = std::max(send_time, *overall_send_time);
+
+  ValidateState();
+
+  return SentPacket{packet,
+                    delivered_bytes_,
+                    recovery_ == Recovery::Fast,
+                    app_limited_seq_ != 0,
+                    now,
+                    delivered_time_};
+}
 
 void BBR::UpdateModelAndState(TimeStamp now, const Ack& ack) {
   const RateSample rs = SampleBandwidth(now, ack);
@@ -312,11 +362,29 @@ void BBR::SetCwnd(const Ack& ack) {
   }
   if (!packet_conservation_) {
     if (filled_pipe_) {
-      cwnd_ = std::min(cwnd_ + ack.acked_packets.size(), target_cwnd_);
-    } else if (cwnd_ < target_cwnd_ || delivered_bytes_ < 3 * mss_) {
-      cwnd_ = cwnd_ + ack.acked_packets.size();
+      SetCwndBytes(
+          std::min(cwnd_bytes_ + SumBytes(ack.acked_packets),
+                   target_cwnd_bytes_),
+          [this] {
+            OVERNET_TRACE(DEBUG, trace_sink_)
+                << "SetCwnd, no packet conservation, filled pipe; target_cwnd="
+                << target_cwnd_bytes_ << " new=" << cwnd_bytes_;
+          });
+    } else if (cwnd_bytes_ < target_cwnd_bytes_ ||
+               SumBytes(ack.acked_packets) < 3 * mss_) {
+      SetCwndBytes(cwnd_bytes_ + SumBytes(ack.acked_packets), [this]() {
+        OVERNET_TRACE(DEBUG, trace_sink_)
+            << "SetCwnd, no packet conservation, unfilled pipe; target_cwnd="
+            << target_cwnd_bytes_ << " delivered_bytes=" << delivered_bytes_
+            << " mss=" << mss_ << " new=" << cwnd_bytes_;
+      });
     }
-    cwnd_ = std::max(cwnd_, kMinPipeCwndSegments);
+    SetCwndBytes(std::max(target_cwnd_bytes_, kMinPipeCwndSegments * mss_),
+                 [this] {
+                   OVERNET_TRACE(DEBUG, trace_sink_)
+                       << "SetCwnd, adjust for kMinPipeCwndSegments"
+                       << " new=" << cwnd_bytes_;
+                 });
   }
   if (state_ == State::ProbeRTT) {
     ModulateCwndForProbeRTT();
@@ -326,36 +394,58 @@ void BBR::SetCwnd(const Ack& ack) {
 void BBR::ModulateCwndForRecovery(const Ack& ack) {
   if (ack.nacked_packets.size() > 0) {
     exit_recovery_at_seq_ = last_sent_packet_;
-    if (cwnd_ > ack.nacked_packets.size() + 1) {
-      cwnd_ -= ack.nacked_packets.size();
+    auto nacked_bytes = SumBytes(ack.nacked_packets);
+    if (cwnd_bytes_ > nacked_bytes + mss_) {
+      SetCwndBytes(cwnd_bytes_ - nacked_bytes, [this] {
+        OVERNET_TRACE(DEBUG, trace_sink_)
+            << "ModulateCwndForRecovery new=" << cwnd_bytes_;
+      });
     } else {
-      cwnd_ = 1;
+      SetCwndBytes(mss_, [this] {
+        OVERNET_TRACE(DEBUG, trace_sink_)
+            << "ModulateCwndForRecovery new=" << cwnd_bytes_;
+      });
     }
-  } else {
+  } else if (ack.acked_packets.size() > 0 &&
+             ack.acked_packets.back().outgoing.sequence >=
+                 exit_recovery_at_seq_) {
     packet_conservation_ = false;
     RestoreCwnd();
     recovery_ = Recovery::None;
   }
-  if (packet_conservation_) {
-    // Reset packet conservation after one Fast recovery RTT
-    for (const auto& p : ack.acked_packets) {
-      if (p.in_fast_recovery) {
-        packet_conservation_ = false;
+  if (ack.nacked_packets.size() == 0) {
+    if (packet_conservation_) {
+      // Reset packet conservation after one Fast recovery RTT
+      for (const auto& p : ack.acked_packets) {
+        if (p.in_fast_recovery) {
+          packet_conservation_ = false;
+        }
       }
     }
+  } else {
+    packet_conservation_ = true;
   }
   if (packet_conservation_) {
-    cwnd_ = std::max(cwnd_, packets_in_flight_ + ack.acked_packets.size());
+    SetCwndBytes(
+        std::max(cwnd_bytes_, bytes_in_flight_ + SumBytes(ack.acked_packets)),
+        [this] {
+          OVERNET_TRACE(DEBUG, trace_sink_)
+              << "ModulateCwndForRecovery packet_conservation new="
+              << cwnd_bytes_;
+        });
   }
 }
 
 void BBR::ModulateCwndForProbeRTT() {
-  cwnd_ = std::min(cwnd_, kMinPipeCwndSegments);
+  SetCwndBytes(std::min(cwnd_bytes_, kMinPipeCwndSegments * mss_), [this] {
+    OVERNET_TRACE(DEBUG, trace_sink_) << "ModulateCwndForProbeRTT";
+  });
 }
 
 void BBR::SetPacingRateWithGain(Gain gain) {
   auto rate = gain * bottleneck_bandwidth_filter_.best_estimate();
-  if (filled_pipe_ || !pacing_rate_ || rate > *pacing_rate_) {
+  if (rate != Bandwidth::Zero() &&
+      (filled_pipe_ || !pacing_rate_ || rate > *pacing_rate_)) {
     pacing_rate_ = rate;
   }
 }
@@ -363,7 +453,12 @@ void BBR::SetPacingRateWithGain(Gain gain) {
 void BBR::SetFastRecovery(const Ack& ack) {
   assert(recovery_ == Recovery::None);
   SaveCwnd();
-  cwnd_ = packets_in_flight_ + std::max(ack.acked_packets.size(), 1ul);
+  SetCwndBytes(
+      bytes_in_flight_ + std::max(SumBytes(ack.acked_packets), uint64_t(mss_)),
+      [this] {
+        OVERNET_TRACE(DEBUG, trace_sink_)
+            << "SetFastRecovery new=" << cwnd_bytes_;
+      });
   packet_conservation_ = true;
   recovery_ = Recovery::Fast;
   exit_recovery_at_seq_ = last_sent_packet_;
@@ -399,12 +494,16 @@ uint64_t BBR::Inflight(Gain gain) const {
 
 void BBR::SaveCwnd() {
   if (recovery_ == Recovery::None && state_ != State::ProbeRTT) {
-    prior_cwnd_ = cwnd_;
+    prior_cwnd_bytes_ = cwnd_bytes_;
   } else {
-    prior_cwnd_ = std::max(prior_cwnd_, cwnd_);
+    prior_cwnd_bytes_ = std::max(prior_cwnd_bytes_, cwnd_bytes_);
   }
 }
 
-void BBR::RestoreCwnd() { cwnd_ = std::max(cwnd_, prior_cwnd_); }
+void BBR::RestoreCwnd() {
+  SetCwndBytes(std::max(cwnd_bytes_, prior_cwnd_bytes_), [this] {
+    OVERNET_TRACE(DEBUG, trace_sink_) << "RestoreCwnd new=" << cwnd_bytes_;
+  });
+}
 
 }  // namespace overnet

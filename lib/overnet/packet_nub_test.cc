@@ -6,6 +6,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "test_timer.h"
+#include "trace_cout.h"
 
 using testing::_;
 using testing::InvokeWithoutArgs;
@@ -21,13 +22,14 @@ using FakeAddress = uint32_t;
 class MockPacketNub : public PacketNub<FakeAddress, 1024> {
  public:
   MockPacketNub(Timer* timer, NodeId node)
-      : PacketNub<FakeAddress, 1024>(timer, node), router_(timer, node, true) {}
+      : PacketNub<FakeAddress, 1024>(timer, TraceCout(timer), node),
+        router_(timer, TraceCout(timer), node, true) {}
 
   MOCK_METHOD2(SendTo, void(FakeAddress, Slice));
-  MOCK_METHOD1(PublishMock, void(std::shared_ptr<overnet::Link>));
+  MOCK_METHOD1(PublishMock, void(std::shared_ptr<LinkPtr<>>));
 
-  void Publish(std::unique_ptr<overnet::Link> link) override final {
-    PublishMock(std::shared_ptr<overnet::Link>(link.release()));
+  void Publish(LinkPtr<> link) override final {
+    PublishMock(std::make_shared<LinkPtr<>>(std::move(link)));
   }
 
   Router* GetRouter() override final { return &router_; }
@@ -177,14 +179,14 @@ TEST(PacketNub, ProcessHandshakeFromAnnounceAndVerifyLink) {
 
   EXPECT_CALL(nub,
               SendTo(123, Slice::FromContainer({0}) /* Connected packet */));
-  std::shared_ptr<Link> link;
+  std::shared_ptr<LinkPtr<>> link;
   EXPECT_CALL(nub, PublishMock(_)).WillOnce(SaveArg<0>(&link));
   nub.Process(timer.Now(), 123,
               Slice::FromContainer({3}) /* HelloAck packet */);
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
-  EXPECT_EQ(NodeId(1), link->GetLinkMetrics().from());
-  EXPECT_EQ(NodeId(2), link->GetLinkMetrics().to());
+  EXPECT_EQ(NodeId(1), (*link)->GetLinkMetrics().from());
+  EXPECT_EQ(NodeId(2), (*link)->GetLinkMetrics().to());
 }
 
 TEST(PacketNub, ProcessHandshakeFromHelloAndVerifyLink) {
@@ -204,7 +206,7 @@ TEST(PacketNub, ProcessHandshakeFromHelloAndVerifyLink) {
               }));
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
-  std::shared_ptr<Link> link;
+  std::shared_ptr<LinkPtr<>> link;
   EXPECT_CALL(nub, PublishMock(_)).WillOnce(SaveArg<0>(&link));
   EXPECT_CALL(nub,
               SendTo(123, Slice::FromContainer({0}) /* Connected packet */));
@@ -212,8 +214,8 @@ TEST(PacketNub, ProcessHandshakeFromHelloAndVerifyLink) {
               Slice::FromContainer({0}) /* Connected packet */);
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
-  EXPECT_EQ(NodeId(2), link->GetLinkMetrics().from());
-  EXPECT_EQ(NodeId(1), link->GetLinkMetrics().to());
+  EXPECT_EQ(NodeId(2), (*link)->GetLinkMetrics().from());
+  EXPECT_EQ(NodeId(1), (*link)->GetLinkMetrics().to());
 }
 
 }  // namespace packet_nub_test
