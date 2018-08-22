@@ -12,7 +12,7 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set S{ARCH} --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\"
+$ fx set S{ARCH} --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\"
 $ fx full-build
 $ fx boot
 ```
@@ -59,7 +59,7 @@ $ guest launch (linux_guest|zircon_guest) --gic=3
 ## Running from Topaz
 To run from Topaz, configure the guest package as follows:
 ```
-$ fx set ${ARCH} --packages topaz/packages/topaz,garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/zircon_guest
+$ fx set ${ARCH} --packages topaz/packages/topaz,garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest
 ```
 
 After netbooting the guest packages can be launched from the system launcher as

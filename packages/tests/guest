@@ -1,6 +1,7 @@
 {
     "imports": [
-        "garnet/packages/experimental/zircon_guest"
+        "garnet/packages/experimental/zircon_guest",
+        "garnet/packages/experimental/linux_guest"
     ],
     "packages": [
         "//garnet/bin/guest/integration_test:guest_integration_tests",
