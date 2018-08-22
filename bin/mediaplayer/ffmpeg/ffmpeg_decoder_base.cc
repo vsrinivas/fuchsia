@@ -6,12 +6,53 @@
 
 #include <lib/async/cpp/task.h>
 #include <trace/event.h>
-
 #include "garnet/bin/mediaplayer/ffmpeg/av_codec_context.h"
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fxl/logging.h"
+extern "C" {
+#include "libavutil/buffer_internal.h"
+}
 
 namespace media_player {
+namespace {
+
+// Creates an opaque reference to an object from an |fbl::RefPtr|. The original
+// pointer is 'copied' in the sense that a refcount is added for the new opaque
+// reference.
+template <typename T>
+void* CopyRefPtrToOpaque(fbl::RefPtr<T> t) {
+  FXL_DCHECK(t);
+
+  // Increment the refcount to account for the opaque reference we're returning.
+  t->AddRef();
+  return t.get();
+}
+
+// Copies an opaque reference created with |CopyRefPtrToOpaque| to create a
+// new |fbl::RefPtr|. The opaque reference is 'copied' in the sense that a
+// refcount is added for the new |fbl::RefPtr|.
+template <typename T>
+fbl::RefPtr<T> CopyOpaqueRefPtr(void* opaque) {
+  T* t_raw_ptr = reinterpret_cast<T*>(opaque);
+
+  // Increment the refcount to account for the |fbl::RefPtr| we're about to
+  // create. |MakeRefPtrNoAdopt| doesn't increment the refcount.
+  t_raw_ptr->AddRef();
+  return fbl::internal::MakeRefPtrNoAdopt(t_raw_ptr);
+}
+
+// Releases an opaque reference created with |CopyRefPtrToOpaque|. |opaque| is
+// passed by value, so the caller must be careful not to use |opaque| as an
+// opaque RefPtr after calling this function.
+template <typename T>
+void ReleaseOpaqueRefPtr(void* opaque) {
+  // |MakeRefPtrNoAdopt| doesn't increment the refcount. When the |fbl::RefPtr|
+  // we've created here is dropped, the refcount in decremented, and the |T|
+  // may be deleted/recycled.
+  fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<T*>(opaque));
+}
+
+}  // namespace
 
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)),
@@ -53,7 +94,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
       // This packet isn't end-of-stream, but it has size zero. The underlying
       // decoder interprets an empty input packet as end-of-stream, so we
       // we refrain from decoding this packet and return true to indicate we're
-      // done with it..
+      // done with it.
       //
       // The underlying decoder gets its end-of-stream indication in one of
       // two ways:
@@ -86,7 +127,15 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
   switch (result) {
     case 0:
       // Succeeded, frame produced. We're not done with the input packet.
-      *output = CreateOutputPacket(*av_frame_ptr_, allocator());
+      //
+      // We use |CopyOpaqueRefPtr| here to create a real |fbl:RefPtr| to the
+      // |PayloadBuffer| attached to the frame's |AVBuffer| in |CreateAVBuffer|.
+      *output = CreateOutputPacket(*av_frame_ptr_,
+                                   CopyOpaqueRefPtr<PayloadBuffer>(
+                                       av_frame_ptr_->buf[0]->buffer->opaque),
+                                   allocator());
+
+      // Release the frame returned by |avcodec_receive_frame|.
       av_frame_unref(av_frame_ptr_.get());
       return false;
 
@@ -158,6 +207,18 @@ int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
 
 void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
 
+AVBufferRef* FfmpegDecoderBase::CreateAVBuffer(
+    fbl::RefPtr<PayloadBuffer> payload_buffer) {
+  FXL_DCHECK(payload_buffer);
+  FXL_DCHECK(payload_buffer->size() <=
+             static_cast<uint64_t>(std::numeric_limits<int>::max()));
+  return av_buffer_create(reinterpret_cast<uint8_t*>(payload_buffer->data()),
+                          static_cast<int>(payload_buffer->size()),
+                          ReleaseBufferForAvFrame,
+                          CopyRefPtrToOpaque(payload_buffer),
+                          /* flags */ 0);
+}
+
 // static
 int FfmpegDecoderBase::AllocateBufferForAvFrame(
     AVCodecContext* av_codec_context, AVFrame* av_frame, int flags) {
@@ -180,19 +241,13 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
 void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
   FXL_DCHECK(opaque);
   FXL_DCHECK(buffer);
-  PayloadAllocator* allocator = reinterpret_cast<PayloadAllocator*>(opaque);
-  allocator->ReleasePayloadBuffer(buffer);
+  FXL_DCHECK(buffer == CopyOpaqueRefPtr<PayloadBuffer>(opaque)->data());
+
+  ReleaseOpaqueRefPtr<PayloadBuffer>(opaque);
 }
 
 PacketPtr FfmpegDecoderBase::CreateEndOfStreamPacket() {
   return Packet::CreateEndOfStream(next_pts_, pts_rate_);
-}
-
-FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
-  FXL_DCHECK(owner_);
-  owner_->PostTaskToWorkerThread([av_buffer_ref = av_buffer_ref_]() mutable {
-    av_buffer_unref(&av_buffer_ref);
-  });
 }
 
 void FfmpegDecoderBase::Dump(std::ostream& os) const {

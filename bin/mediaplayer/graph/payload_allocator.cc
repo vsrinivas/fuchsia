@@ -6,7 +6,6 @@
 
 #include <cstdlib>
 #include <memory>
-
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -21,20 +20,21 @@ class DefaultAllocator : public PayloadAllocator,
   ~DefaultAllocator() {}
 
   // PayloadAllocator implementation.
-  void* AllocatePayloadBuffer(size_t size) override;
-
-  void ReleasePayloadBuffer(void* buffer) override;
+  fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(uint64_t size) override;
 };
 
-void* DefaultAllocator::AllocatePayloadBuffer(size_t size) {
+fbl::RefPtr<PayloadBuffer> DefaultAllocator::AllocatePayloadBuffer(
+    uint64_t size) {
   FXL_DCHECK(size > 0);
   // |std::aligned_alloc| requires the size to the aligned.
-  return std::aligned_alloc(kByteAlignment, AlignUp(size));
-}
-
-void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
-  FXL_DCHECK(buffer);
-  std::free(buffer);
+  return PayloadBuffer::Create(size,
+                               std::aligned_alloc(PayloadBuffer::kByteAlignment,
+                                                  PayloadBuffer::AlignUp(size)),
+                               [](PayloadBuffer* payload_buffer) {
+                                 FXL_DCHECK(payload_buffer);
+                                 std::free(payload_buffer->data());
+                                 // The |PayloadBuffer| deletes itself.
+                               });
 }
 
 }  // namespace

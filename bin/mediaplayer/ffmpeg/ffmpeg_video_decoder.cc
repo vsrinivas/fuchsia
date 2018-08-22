@@ -84,14 +84,6 @@ int FfmpegVideoDecoder::BuildAVFrame(
       std::max(visible_size.height(),
                static_cast<uint32_t>(av_codec_context.coded_height)));
 
-  uint8_t* buffer = static_cast<uint8_t*>(
-      allocator->AllocatePayloadBuffer(frame_layout_.buffer_size()));
-
-  // Check that the allocator has met the common alignment requirements and
-  // that those requirements are good enough for the decoder.
-  FXL_DCHECK(PayloadAllocator::IsAligned(buffer));
-  FXL_DCHECK(PayloadAllocator::kByteAlignment >= kFrameBufferAlign);
-
   // TODO(dalesat): For investigation purposes only...remove one day.
   if (first_frame_) {
     first_frame_ = false;
@@ -114,20 +106,29 @@ int FfmpegVideoDecoder::BuildAVFrame(
     coded_size_ = coded_size;
   }
 
-  if (buffer == nullptr) {
-    FXL_LOG(ERROR) << "failed to allocate buffer of size "
+  fbl::RefPtr<PayloadBuffer> payload_buffer =
+      allocator->AllocatePayloadBuffer(frame_layout_.buffer_size());
+
+  if (!payload_buffer) {
+    FXL_LOG(ERROR) << "failed to allocate payload buffer of size "
                    << frame_layout_.buffer_size();
     return -1;
   }
 
+  // Check that the allocator has met the common alignment requirements and
+  // that those requirements are good enough for the decoder.
+  FXL_DCHECK(PayloadBuffer::IsAligned(payload_buffer->data()));
+  FXL_DCHECK(PayloadBuffer::kByteAlignment >= kFrameBufferAlign);
+
   // Decoders require a zeroed buffer.
-  std::memset(buffer, 0, frame_layout_.buffer_size());
+  std::memset(payload_buffer->data(), 0, frame_layout_.buffer_size());
 
   FXL_DCHECK(frame_layout_.line_stride().size() ==
              frame_layout_.plane_offset().size());
 
   for (size_t plane = 0; plane < frame_layout_.plane_offset().size(); ++plane) {
-    av_frame->data[plane] = buffer + frame_layout_.plane_offset()[plane];
+    av_frame->data[plane] = reinterpret_cast<uint8_t*>(payload_buffer->data()) +
+                            frame_layout_.plane_offset()[plane];
     av_frame->linesize[plane] = frame_layout_.line_stride()[plane];
   }
 
@@ -138,24 +139,25 @@ int FfmpegVideoDecoder::BuildAVFrame(
   av_frame->format = av_codec_context.pix_fmt;
   av_frame->reordered_opaque = av_codec_context.reordered_opaque;
 
-  FXL_DCHECK(av_frame->data[0] == buffer);
-  av_frame->buf[0] =
-      CreateAVBuffer(buffer, frame_layout_.buffer_size(), allocator);
+  FXL_DCHECK(av_frame->data[0] == payload_buffer->data());
+  av_frame->buf[0] = CreateAVBuffer(std::move(payload_buffer));
 
   return 0;
 }
 
 PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
-    const AVFrame& av_frame,
+    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
     const std::shared_ptr<PayloadAllocator>& allocator) {
+  FXL_DCHECK(av_frame.buf[0]);
+  FXL_DCHECK(payload_buffer);
   FXL_DCHECK(allocator);
 
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);
 
-  PacketPtr packet = DecoderPacket::Create(
-      av_frame.reordered_opaque, pts_rate(), av_frame.key_frame,
-      av_buffer_ref(av_frame.buf[0]), this);
+  PacketPtr packet =
+      Packet::Create(av_frame.reordered_opaque, pts_rate(), av_frame.key_frame,
+                     false, std::move(payload_buffer));
 
   if (revised_stream_type_) {
     packet->SetRevisedStreamType(std::move(revised_stream_type_));

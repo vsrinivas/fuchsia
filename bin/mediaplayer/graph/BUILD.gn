@@ -17,6 +17,8 @@ source_set("graph") {
     "packet.h",
     "payload_allocator.cc",
     "payload_allocator.h",
+    "payload_buffer.cc",
+    "payload_buffer.h",
     "refs.cc",
     "refs.h",
     "result.h",
@@ -46,6 +48,7 @@ source_set("graph") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/async",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
 

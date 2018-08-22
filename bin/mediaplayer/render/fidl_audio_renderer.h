@@ -63,10 +63,8 @@ class FidlAudioRenderer
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
                            gain_control_request) override;
 
-  // PayloadAllocator implementation:
-  void* AllocatePayloadBuffer(size_t size) override;
-
-  void ReleasePayloadBuffer(void* buffer) override;
+  // PayloadAllocator implementation.
+  fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(uint64_t size) override;
 
  protected:
   // Renderer overrides.

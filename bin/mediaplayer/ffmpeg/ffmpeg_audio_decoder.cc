@@ -74,8 +74,8 @@ int FfmpegAudioDecoder::BuildAVFrame(
     return buffer_size;
   }
 
-  uint8_t* buffer = static_cast<uint8_t*>(
-      allocator_to_use->AllocatePayloadBuffer(buffer_size));
+  fbl::RefPtr<PayloadBuffer> buffer =
+      allocator_to_use->AllocatePayloadBuffer(buffer_size);
   if (!buffer) {
     // TODO(dalesat): Renderer VMO is full. What can we do about this?
     FXL_LOG(FATAL) << "Ran out of memory for decoded audio.";
@@ -83,19 +83,19 @@ int FfmpegAudioDecoder::BuildAVFrame(
 
   // Check that the allocator has met the common alignment requirements and
   // that those requirements are good enough for the decoder.
-  FXL_DCHECK(PayloadAllocator::IsAligned(buffer));
-  FXL_DCHECK(PayloadAllocator::kByteAlignment >= kChannelAlign);
+  FXL_DCHECK(PayloadBuffer::IsAligned(buffer->data()));
+  FXL_DCHECK(PayloadBuffer::kByteAlignment >= kChannelAlign);
 
   if (!av_sample_fmt_is_planar(av_sample_format)) {
     // Samples are interleaved. There's just one buffer.
-    av_frame->data[0] = buffer;
+    av_frame->data[0] = reinterpret_cast<uint8_t*>(buffer->data());
   } else {
     // Samples are not interleaved. There's one buffer per channel.
     int channels = av_codec_context.channels;
     int bytes_per_channel = buffer_size / channels;
-    uint8_t* channel_buffer = buffer;
+    uint8_t* channel_buffer = reinterpret_cast<uint8_t*>(buffer->data());
 
-    FXL_DCHECK(buffer != nullptr || bytes_per_channel == 0);
+    FXL_DCHECK(buffer || bytes_per_channel == 0);
 
     if (channels <= AV_NUM_DATA_POINTERS) {
       // The buffer pointers will fit in av_frame->data.
@@ -126,15 +126,16 @@ int FfmpegAudioDecoder::BuildAVFrame(
     }
   }
 
-  av_frame->buf[0] = CreateAVBuffer(buffer, static_cast<size_t>(buffer_size),
-                                    allocator_to_use);
+  av_frame->buf[0] = CreateAVBuffer(std::move(buffer));
 
   return 0;
 }
 
 PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
-    const AVFrame& av_frame,
+    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
     const std::shared_ptr<PayloadAllocator>& allocator) {
+  FXL_DCHECK(av_frame.buf[0]);
+  FXL_DCHECK(payload_buffer);
   FXL_DCHECK(allocator);
 
   // We infer the PTS for a packet based on the assumption that the decoder
@@ -146,34 +147,36 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
   set_next_pts(pts + av_frame.nb_samples);
 
   if (lpcm_util_) {
-    // We need to interleave. The non-interleaved frames are in a buffer that
-    // was allocated from the default allocator. That buffer will get released
-    // later in ReleaseBufferForAvFrame. We need a new buffer for the
-    // interleaved frames, which we get from the provided allocator.
+    // We need to interleave. The non-interleaved frames are in
+    // |payload_buffer|, which was allocated from the default allocator. That
+    // buffer will get released later in ReleaseBufferForAvFrame. We need a new
+    // buffer for the interleaved frames, which we get from the provided
+    // allocator.
     FXL_DCHECK(stream_type_);
     FXL_DCHECK(stream_type_->audio());
+
     uint64_t payload_size =
         stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
-    void* payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
-    if (!payload_buffer) {
+    auto new_payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
+    if (!new_payload_buffer) {
       // TODO(dalesat): Renderer VMO is full. What can we do about this?
       FXL_LOG(FATAL) << "Ran out of memory for decoded, interleaved audio.";
     }
 
-    lpcm_util_->Interleave(av_frame.buf[0]->data, av_frame.buf[0]->size,
-                           payload_buffer, av_frame.nb_samples);
+    lpcm_util_->Interleave(payload_buffer->data(), payload_buffer->size(),
+                           new_payload_buffer->data(), av_frame.nb_samples);
 
-    return Packet::Create(
-        pts, pts_rate(),
-        false,  // Not a keyframe
-        false,  // The base class is responsible for end-of-stream.
-        payload_size, payload_buffer, allocator);
-  } else {
-    // We don't need to interleave. The interleaved frames are in a buffer that
-    // was allocated from the correct allocator.
-    return DecoderPacket::Create(pts, pts_rate(), false,
-                                 av_buffer_ref(av_frame.buf[0]), this);
+    // |new_payload_buffer| is the buffer we want to attach to the |Packet|.
+    // This assignment drops the reference to the original |payload_buffer|, so
+    // it will be recycled once the |AVBuffer| is released.
+    payload_buffer = std::move(new_payload_buffer);
   }
+
+  return Packet::Create(
+      pts, pts_rate(),
+      false,  // Not a keyframe
+      false,  // Not end-of-stream. The base class handles end-of-stream.
+      std::move(payload_buffer));
 }
 
 const char* FfmpegAudioDecoder::label() const { return "audio_decoder"; }

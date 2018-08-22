@@ -9,16 +9,29 @@
 
 namespace media_player {
 
+// static
+PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
+                         bool keyframe, bool end_of_stream,
+                         fbl::RefPtr<PayloadBuffer> payload_buffer) {
+  return std::make_shared<Packet>(pts, pts_rate, keyframe, end_of_stream,
+                                  std::move(payload_buffer));
+}
+
+// static
+PacketPtr Packet::CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate) {
+  return std::make_shared<Packet>(pts, pts_rate,
+                                  false,     // keyframe
+                                  true,      // end_of_stream
+                                  nullptr);  // payload_buffer
+}
+
 Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-               bool end_of_stream, size_t size, void* payload)
+               bool end_of_stream, fbl::RefPtr<PayloadBuffer> payload_buffer)
     : pts_(pts),
       pts_rate_(pts_rate),
       keyframe_(keyframe),
       end_of_stream_(end_of_stream),
-      size_(size),
-      payload_(payload) {
-  FXL_DCHECK((size == 0) == (payload == nullptr));
-}
+      payload_buffer_(std::move(payload_buffer)) {}
 
 Packet::~Packet() {}
 
@@ -43,55 +56,6 @@ void Packet::SetPtsRate(media::TimelineRate pts_rate) {
 
   pts_ = GetPts(pts_rate);
   pts_rate_ = pts_rate;
-}
-
-class PacketImpl : public Packet {
- public:
-  PacketImpl(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-             bool end_of_stream, size_t size, void* payload,
-             std::shared_ptr<PayloadAllocator> allocator)
-      : Packet(pts, pts_rate, keyframe, end_of_stream, size, payload),
-        allocator_(allocator) {}
-
-  ~PacketImpl() override {
-    // In the default implementation, payload() will be nullptr if and only if
-    // allocator_ is nullptr.
-    if (payload()) {
-      FXL_DCHECK(allocator_);
-      allocator_->ReleasePayloadBuffer(payload());
-    }
-  };
-
- private:
-  std::shared_ptr<PayloadAllocator> allocator_;
-};
-
-// static
-PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
-                         bool keyframe, bool end_of_stream, size_t size,
-                         void* payload,
-                         std::shared_ptr<PayloadAllocator> allocator) {
-  FXL_DCHECK(payload == nullptr || allocator != nullptr);
-  return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
-                                      size, payload, allocator);
-}
-
-// static
-PacketPtr Packet::CreateNoAllocator(int64_t pts, media::TimelineRate pts_rate,
-                                    bool keyframe, bool end_of_stream,
-                                    size_t size, void* payload) {
-  return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
-                                      size, payload, nullptr);
-}
-
-// static
-PacketPtr Packet::CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate) {
-  return std::make_shared<PacketImpl>(pts, pts_rate,
-                                      false,     // keyframe
-                                      true,      // end_of_stream
-                                      0,         // size
-                                      nullptr,   // payload
-                                      nullptr);  // allocator
 }
 
 }  // namespace media_player

@@ -28,7 +28,7 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
                    const std::shared_ptr<PayloadAllocator>& allocator) override;
 
   PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame,
+      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
       const std::shared_ptr<PayloadAllocator>& allocator) override;
 
   const char* label() const override;

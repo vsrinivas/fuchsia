@@ -84,13 +84,9 @@ void FakeView::GetInputMethodEditor(
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeView::ShowKeyboard() {
-  FXL_NOTIMPLEMENTED();
-}
+void FakeView::ShowKeyboard() { FXL_NOTIMPLEMENTED(); }
 
-void FakeView::HideKeyboard() {
-  FXL_NOTIMPLEMENTED();
-}
+void FakeView::HideKeyboard() { FXL_NOTIMPLEMENTED(); }
 
 FakeView::Owner::Owner() : binding_(this) {}
 

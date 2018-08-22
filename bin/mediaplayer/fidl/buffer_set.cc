@@ -28,7 +28,8 @@ zx_status_t BufferVmo::CreateAndMap(uint64_t size, uint32_t map_flags,
 
   zx_handle_t vmar_handle = zx::vmar::root_self()->get();
   uintptr_t tmp;
-  status = zx_vmar_map_old(vmar_handle, 0, vmo_.get(), 0, size, map_flags, &tmp);
+  status =
+      zx_vmar_map_old(vmar_handle, 0, vmo_.get(), 0, size, map_flags, &tmp);
   if (status != ZX_OK) {
     return status;
   }
@@ -248,9 +249,9 @@ void BufferSetManager::ApplyConstraints(
     }
   }
 
-  current_set_ = BufferSet::Create(constraints.default_settings,
-                                   lifetime_ordinal, single_vmo,
-                                   constraints.very_temp_kludge_bti_handle);
+  current_set_ =
+      BufferSet::Create(constraints.default_settings, lifetime_ordinal,
+                        single_vmo, constraints.very_temp_kludge_bti_handle);
 }
 
 bool BufferSetManager::FreeBuffer(uint64_t lifetime_ordinal, uint32_t index) {

@@ -89,30 +89,6 @@ class FfmpegDemuxImpl : public FfmpegDemux {
     media::TimelineRate pts_rate_;
   };
 
-  // Specialized packet implementation.
-  class DemuxPacket : public Packet {
-   public:
-    static PacketPtr Create(ffmpeg::AvPacketPtr av_packet,
-                            media::TimelineRate pts_rate) {
-      return std::make_shared<DemuxPacket>(std::move(av_packet), pts_rate);
-    }
-
-    AVPacket& av_packet() { return *av_packet_; }
-
-    DemuxPacket(ffmpeg::AvPacketPtr av_packet, media::TimelineRate pts_rate)
-        : Packet(
-              (av_packet->pts == AV_NOPTS_VALUE) ? kUnknownPts : av_packet->pts,
-              pts_rate, av_packet->flags & AV_PKT_FLAG_KEY, false,
-              static_cast<size_t>(av_packet->size),
-              av_packet->size == 0 ? nullptr : av_packet->data),
-          av_packet_(std::move(av_packet)) {
-      FXL_DCHECK(av_packet_->size >= 0);
-    }
-
-   private:
-    ffmpeg::AvPacketPtr av_packet_;
-  };
-
   // Runs in the ffmpeg thread doing the real work.
   void Worker();
 
@@ -389,8 +365,27 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   FXL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
   FXL_DCHECK(av_packet->side_data_elems == 0);
 
-  return DemuxPacket::Create(std::move(av_packet),
-                             streams_[*stream_index_out]->pts_rate());
+  int64_t pts =
+      (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kUnknownPts : av_packet->pts;
+  bool keyframe = av_packet->flags & AV_PKT_FLAG_KEY;
+
+  fbl::RefPtr<PayloadBuffer> payload_buffer;
+  if (av_packet->size != 0) {
+    // The recycler used here just holds a captured reference to the |AVPacket|
+    // so the memory underlying the |AVPacket| and the |PayloadBuffer| is not
+    // deleted/recycled. This doesn't prevent the demux from generating more
+    // |AVPackets|.
+    payload_buffer = PayloadBuffer::Create(
+        av_packet->size, av_packet->data,
+        [av_packet = std::move(av_packet)](PayloadBuffer* payload_buffer) {
+          // The deallocation happens when |av_packet|
+          // goes out of scope. The |PayloadBuffer|
+          // object deletes itself.
+        });
+  }
+
+  return Packet::Create(pts, streams_[*stream_index_out]->pts_rate(), keyframe,
+                        false, std::move(payload_buffer));
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {

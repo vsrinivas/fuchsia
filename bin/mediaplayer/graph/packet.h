@@ -7,7 +7,6 @@
 
 #include <limits>
 #include <memory>
-
 #include "garnet/bin/mediaplayer/graph/payload_allocator.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "lib/fxl/logging.h"
@@ -20,32 +19,25 @@ class Packet;
 // Shared pointer for packets.
 typedef std::shared_ptr<Packet> PacketPtr;
 
-// Media packet abstract base class. Subclasses may be defined as needed.
-// |Packet::Create|, |Packet::CreateNoAllocator| and |Packet::CreateEndOfStream|
-// use an implementation with no special behavior.
+// Stream packet (access unit) possibly bearing a slice of stream content
+// (payload).
 // TODO(dalesat): Revisit this definition:
-// 1) We probably need an extensible way to add metadata to packets.
-// 2) The relationship to the allocator could be clearer.
+// 1) Remove pts_rate().
+// 2) Remove end_of_stream().
 class Packet {
  public:
   static const int64_t kUnknownPts = std::numeric_limits<int64_t>::min();
 
-  // Creates a packet. If size is 0, payload must be nullptr and vice-versa.
-  // If payload is not nullptr, an allocator must be provided.
+  // Creates a packet.
   static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
-                          bool keyframe, bool end_of_stream, size_t size,
-                          void* payload,
-                          std::shared_ptr<PayloadAllocator> allocator);
-
-  // Creates a packet. If size is 0, payload must be nullptr and vice-versa.
-  // No allocator is provided, and the payload will not be released when the
-  // packet is released.
-  static PacketPtr CreateNoAllocator(int64_t pts, media::TimelineRate pts_rate,
-                                     bool keyframe, bool end_of_stream,
-                                     size_t size, void* payload);
+                          bool keyframe, bool end_of_stream,
+                          fbl::RefPtr<PayloadBuffer> load_buffer);
 
   // Creates an end-of-stream packet with no payload.
   static PacketPtr CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate);
+
+  Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+         bool end_of_stream, fbl::RefPtr<PayloadBuffer> load_buffer);
 
   virtual ~Packet();
 
@@ -65,11 +57,18 @@ class Packet {
   // Indicates whether this is the last packet in the stream.
   bool end_of_stream() const { return end_of_stream_; }
 
-  // Size in bytes of the packet payload.
-  size_t size() const { return size_; }
+  // Returns the size in bytes of the packet payload or 0 if the packet has no
+  // payload.
+  size_t size() const { return payload_buffer_ ? payload_buffer_->size() : 0; }
 
-  // Pointer to the packet payload or nullptr if size() is zero.
-  void* payload() const { return payload_; }
+  // Returns a pointer to the packet payload or nullptr if there is no payload
+  // or the payload isn't mapped into process local memory.
+  void* payload() const {
+    return payload_buffer_ ? payload_buffer_->data() : nullptr;
+  }
+
+  // Returns a raw pointer to the packet's payload buffer.
+  PayloadBuffer* payload_buffer() { return payload_buffer_.get(); }
 
   // Retrieves the PTS using the specified PTS tick rate. Use this method to
   // obtain the PTS at a specific tick rate once, possibly at the cost of a
@@ -96,17 +95,12 @@ class Packet {
   // returns 0. Specialized implementations are free to do otherwise.
   virtual uint64_t GetLabel();
 
- protected:
-  Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-         bool end_of_stream, size_t size, void* payload);
-
  private:
   int64_t pts_;
   media::TimelineRate pts_rate_;
   bool keyframe_;
   bool end_of_stream_;
-  size_t size_;
-  void* payload_;
+  fbl::RefPtr<PayloadBuffer> payload_buffer_;
   std::unique_ptr<StreamType> revised_stream_type_;
 };
 

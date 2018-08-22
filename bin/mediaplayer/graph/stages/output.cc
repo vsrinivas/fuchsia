@@ -37,7 +37,7 @@ void Output::SupplyPacket(PacketPtr packet) const {
   if (copy_allocator_ != nullptr) {
     // Need to copy the packet due to an allocation conflict.
     size_t size = packet->size();
-    void* buffer;
+    fbl::RefPtr<PayloadBuffer> buffer;
 
     if (size == 0) {
       buffer = nullptr;
@@ -47,12 +47,13 @@ void Output::SupplyPacket(PacketPtr packet) const {
         FXL_LOG(WARNING) << "allocator starved copying output";
         return;
       }
-      memcpy(buffer, packet->payload(), size);
+
+      memcpy(buffer->data(), packet->payload(), size);
     }
 
     packet =
         Packet::Create(packet->pts(), packet->pts_rate(), packet->keyframe(),
-                       packet->end_of_stream(), size, buffer, copy_allocator_);
+                       packet->end_of_stream(), std::move(buffer));
   }
 
   mate_->PutPacket(std::move(packet));

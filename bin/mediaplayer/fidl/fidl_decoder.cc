@@ -373,23 +373,30 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
   FXL_DCHECK(buffer_lifetime_ordinal == current_set.lifetime_ordinal());
   current_set.TransferBuffer(buffer_index, kOther);
 
-  void* payload = reinterpret_cast<void*>(
+  void* data = reinterpret_cast<void*>(
       reinterpret_cast<uint8_t*>(
           current_set.GetBufferData(packet.header.packet_index)) +
       packet.start_offset);
 
   next_pts_ = static_cast<int64_t>(packet.timestamp_ish);
 
-  auto decoder_packet = DecoderPacket::Create(
-      next_pts_, pts_rate_, static_cast<size_t>(packet.valid_length_bytes),
-      payload, packet.header.buffer_lifetime_ordinal,
-      packet.header.packet_index, this);
+  auto payload_buffer = PayloadBuffer::Create(
+      packet.valid_length_bytes, data,
+      [this, buffer_lifetime_ordinal = packet.header.buffer_lifetime_ordinal,
+       buffer_index =
+           packet.header.packet_index](PayloadBuffer* payload_buffer) {
+        RecycleOutputPacket(buffer_lifetime_ordinal, buffer_index);
+        // The |PayloadBuffer| deletes itself.
+      });
+
+  auto output_packet = Packet::Create(next_pts_, pts_rate_, true, false,
+                                      std::move(payload_buffer));
 
   if (revised_stream_type_) {
-    decoder_packet->SetRevisedStreamType(std::move(revised_stream_type_));
+    output_packet->SetRevisedStreamType(std::move(revised_stream_type_));
   }
 
-  stage()->PutOutputPacket(std::move(decoder_packet));
+  stage()->PutOutputPacket(std::move(output_packet));
 }
 
 void FidlDecoder::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
@@ -433,10 +440,6 @@ void FidlDecoder::HandlePossibleOutputStreamTypeChange(
     const StreamType& old_type, const StreamType& new_type) {
   // TODO(dalesat): Actually compare the types.
   revised_stream_type_ = new_type.Clone();
-}
-
-FidlDecoder::DecoderPacket::~DecoderPacket() {
-  owner_->RecycleOutputPacket(buffer_lifetime_ordinal_, buffer_index_);
 }
 
 }  // namespace media_player

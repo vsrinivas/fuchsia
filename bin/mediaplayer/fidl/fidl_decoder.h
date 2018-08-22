@@ -53,36 +53,6 @@ class FidlDecoder : public Decoder {
   std::unique_ptr<StreamType> output_stream_type() const override;
 
  private:
-  class DecoderPacket : public Packet {
-   public:
-    static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
-                            size_t size, void* payload,
-                            uint64_t buffer_lifetime_ordinal,
-                            uint32_t buffer_index, FidlDecoder* owner) {
-      return std::make_shared<DecoderPacket>(pts, pts_rate, size, payload,
-                                             buffer_lifetime_ordinal,
-                                             buffer_index, owner);
-    }
-
-    ~DecoderPacket() override;
-
-    DecoderPacket(int64_t pts, media::TimelineRate pts_rate, size_t size,
-                  void* payload, uint64_t buffer_lifetime_ordinal,
-                  uint32_t buffer_index, FidlDecoder* owner)
-        : Packet(pts, pts_rate, true, false, size, payload),
-          buffer_lifetime_ordinal_(buffer_lifetime_ordinal),
-          buffer_index_(buffer_index),
-          owner_(owner) {
-      FXL_DCHECK(size > 0);
-      FXL_DCHECK(payload);
-    }
-
-   private:
-    uint64_t buffer_lifetime_ordinal_;
-    uint32_t buffer_index_;
-    FidlDecoder* owner_;
-  };
-
   // Notifies that the decoder is viable. This method does nothing after the
   // first time it or |InitFailed| is called.
   void InitSucceeded();

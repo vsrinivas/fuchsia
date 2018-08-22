@@ -33,31 +33,6 @@ class FfmpegDecoderBase : public SoftwareDecoder {
   void Dump(std::ostream& os) const override;
 
  protected:
-  class DecoderPacket : public Packet {
-   public:
-    static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
-                            bool keyframe, AVBufferRef* av_buffer_ref,
-                            FfmpegDecoderBase* owner) {
-      return std::make_shared<DecoderPacket>(pts, pts_rate, keyframe,
-                                             av_buffer_ref, owner);
-    }
-
-    ~DecoderPacket() override;
-
-    DecoderPacket(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-                  AVBufferRef* av_buffer_ref, FfmpegDecoderBase* owner)
-        : Packet(pts, pts_rate, keyframe, false,
-                 static_cast<size_t>(av_buffer_ref->size), av_buffer_ref->data),
-          av_buffer_ref_(av_buffer_ref),
-          owner_(owner) {
-      FXL_DCHECK(av_buffer_ref->size >= 0);
-    }
-
-   private:
-    AVBufferRef* av_buffer_ref_;
-    FfmpegDecoderBase* owner_;
-  };
-
   // SoftwareDecoder overrides.
   void Flush() override;
 
@@ -77,7 +52,7 @@ class FfmpegDecoderBase : public SoftwareDecoder {
 
   // Creates a Packet from av_frame.
   virtual PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame,
+      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
       const std::shared_ptr<PayloadAllocator>& allocator) = 0;
 
   // The ffmpeg codec context.
@@ -96,16 +71,10 @@ class FfmpegDecoderBase : public SoftwareDecoder {
   // Gets the PTS rate value.
   void set_pts_rate(media::TimelineRate value) { pts_rate_ = value; }
 
-  // Creates an AVBuffer.
-  AVBufferRef* CreateAVBuffer(
-      uint8_t* payload_buffer, size_t payload_buffer_size,
-      const std::shared_ptr<PayloadAllocator>& allocator) {
-    FXL_DCHECK(payload_buffer_size <=
-               static_cast<size_t>(std::numeric_limits<int>::max()));
-    return av_buffer_create(
-        payload_buffer, static_cast<int>(payload_buffer_size),
-        ReleaseBufferForAvFrame, allocator.get(), /* flags */ 0);
-  }
+  // Creates an AVBuffer from a |PayloadBuffer|. The |AVBuffer| referenced by
+  // the returned |AVBufferRef| references the |payload_buffer|, so the
+  // |AVBuffer| won't outlive the |PayloadBuffer|.
+  AVBufferRef* CreateAVBuffer(fbl::RefPtr<PayloadBuffer> payload_buffer);
 
  private:
   // Callback used by the ffmpeg decoder to acquire a buffer.
