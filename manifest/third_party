@@ -279,7 +279,7 @@
              path="third_party/rust-mirrors/rustyline"
              remote="https://fuchsia.googlesource.com/third_party/rust-mirrors/rustyline"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="3b94c073fadb64e35a9ba6e7fe6b622b0c357771"/>
+             revision="e8637c254e1f5b643dace774ceec268bcee1cb14"/>
     <project name="third_party/sbase"
              path="third_party/sbase"
              remote="https://fuchsia.googlesource.com/third_party/sbase"
