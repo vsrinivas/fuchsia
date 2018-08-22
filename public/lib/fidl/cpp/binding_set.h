@@ -96,7 +96,14 @@ class BindingSet {
   // Removes all the bindings from the set.
   //
   // Closes all the channels associated with this |BindingSet|.
-  void CloseAll() { bindings_.clear(); }
+  // Bindings are destroyed AFTER it is removed from the bindings set. An
+  // example of when this is useful is if an error handler on a binding has
+  // some behavior where it needs to read from the binding set; the set would
+  // then properly reflect that the binding is not present in the set.
+  void CloseAll() {
+    auto bindings_local = std::move(bindings_);
+    bindings_.clear();
+  }
 
   // The number of bindings in this |BindingSet|.
   size_t size() const { return bindings_.size(); }

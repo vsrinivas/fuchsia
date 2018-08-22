@@ -207,5 +207,28 @@ TEST(BindingSet, BindingDestroyedAfterRemovalFromSet) {
   EXPECT_TRUE(binding_set.bindings().empty());
 }
 
+TEST(BindingSet, BindingDestroyedAfterCloseAll) {
+  fidl::test::AsyncLoopForTest loop;
+
+  BindingSet<fidl::test::frobinator::Frobinator,
+             std::unique_ptr<test::FrobinatorImpl>>
+      binding_set;
+  auto check_binding_set_empty_on_destroy = [&binding_set] {
+    EXPECT_TRUE(binding_set.bindings().empty());
+  };
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+
+  // Add the binding.
+  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(
+                             check_binding_set_empty_on_destroy),
+                         ptr.NewRequest());
+  EXPECT_EQ(1u, binding_set.size());
+
+  binding_set.CloseAll();
+  loop.RunUntilIdle();
+  EXPECT_TRUE(binding_set.bindings().empty());
+}
+
 }  // namespace
 }  // namespace fidl
