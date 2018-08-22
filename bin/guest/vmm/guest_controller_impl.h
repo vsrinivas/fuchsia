@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
-#define GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
+#ifndef GARNET_BIN_GUEST_VMM_GUEST_CONTROLLER_IMPL_H_
+#define GARNET_BIN_GUEST_VMM_GUEST_CONTROLLER_IMPL_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
@@ -12,14 +12,12 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
-namespace machina {
-
-// Provides an implementation of the |fuchsi::guest::GuestController| interface.
-// This exposes some guest services over FIDL.
+// Provides an implementation of the |fuchsia::guest::GuestController|
+// interface. This exposes some guest services over FIDL.
 class GuestControllerImpl : public fuchsia::guest::GuestController {
  public:
-  GuestControllerImpl(component::StartupContext* startup_context,
-                      const PhysMem& phys_mem);
+  GuestControllerImpl(component::StartupContext* context,
+                      const machina::PhysMem& phys_mem);
 
   void set_view_provider(::fuchsia::ui::viewsv1::ViewProvider* view_provider) {
     view_provider_ = view_provider;
@@ -46,6 +44,4 @@ class GuestControllerImpl : public fuchsia::guest::GuestController {
   ::fuchsia::ui::viewsv1::ViewProvider* view_provider_;
 };
 
-}  // namespace machina
-
-#endif  // GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
+#endif  // GARNET_BIN_GUEST_VMM_GUEST_CONTROLLER_IMPL_H_

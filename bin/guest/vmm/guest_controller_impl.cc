@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/guest_controller_impl.h"
+#include "garnet/bin/guest/vmm/guest_controller_impl.h"
 
 #include "lib/fxl/logging.h"
 
@@ -17,15 +17,13 @@ static T duplicate(const T& handle, zx_rights_t rights) {
   return handle_out;
 }
 
-namespace machina {
-
-GuestControllerImpl::GuestControllerImpl(
-    component::StartupContext* startup_context, const PhysMem& phys_mem)
+GuestControllerImpl::GuestControllerImpl(component::StartupContext* context,
+                                         const machina::PhysMem& phys_mem)
     : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 
-  startup_context->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void GuestControllerImpl::GetPhysicalMemory(
@@ -46,5 +44,3 @@ void GuestControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
   }
   callback(view_provider_bindings_.AddBinding(view_provider_));
 }
-
-}  // namespace machina

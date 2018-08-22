@@ -23,13 +23,13 @@
 #include <zircon/syscalls/hypervisor.h>
 
 #include "garnet/bin/guest/vmm/guest_config.h"
+#include "garnet/bin/guest/vmm/guest_controller_impl.h"
 #include "garnet/bin/guest/vmm/guest_view.h"
 #include "garnet/bin/guest/vmm/linux.h"
 #include "garnet/bin/guest/vmm/zircon.h"
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/guest.h"
-#include "garnet/lib/machina/guest_controller_impl.h"
 #include "garnet/lib/machina/hid_event_source.h"
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/interrupt_controller.h"
@@ -156,7 +156,7 @@ static zx_status_t setup_zircon_framebuffer(
 static zx_status_t setup_scenic_framebuffer(
     component::StartupContext* startup_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
-    machina::GuestControllerImpl* guest_controller,
+    GuestControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
   zx_status_t status =
@@ -202,8 +202,7 @@ int main(int argc, char** argv) {
   }
 
   // Instantiate the controller service.
-  machina::GuestControllerImpl guest_controller(startup_context.get(),
-                                                guest.phys_mem());
+  GuestControllerImpl guest_controller(startup_context.get(), guest.phys_mem());
 
   // Setup UARTs.
   machina::Uart uart[kNumUarts];
