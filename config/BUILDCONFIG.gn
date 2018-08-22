@@ -333,6 +333,10 @@ declare_args() {
     },
 
     {
+      configs = [ "//build/config/profile" ]
+    },
+
+    {
       configs = [ "//build/config/scudo" ]
     },
 
