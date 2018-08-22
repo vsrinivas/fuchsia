@@ -1483,16 +1483,16 @@ zx_status_t Station::NotifyAssocContext() {
     std::copy(esr.begin(), esr.end(), ddk.ext_supported_rates);
 
     ddk.has_ht_cap = assoc_ctx_.has_ht_cap;
-    if (ddk.has_ht_cap) { ddk.ht_cap = ToDdk(assoc_ctx_.ht_cap); }
+    if (ddk.has_ht_cap) { ddk.ht_cap = assoc_ctx_.ht_cap.ToDdk(); }
 
     ddk.has_ht_op = assoc_ctx_.has_ht_op;
-    if (ddk.has_ht_op) { ddk.ht_op = ToDdk(assoc_ctx_.ht_op); }
+    if (ddk.has_ht_op) { ddk.ht_op = assoc_ctx_.ht_op.ToDdk(); }
 
     ddk.has_vht_cap = assoc_ctx_.has_vht_cap;
-    if (ddk.has_vht_cap) { ddk.vht_cap = ToDdk(assoc_ctx_.vht_cap); }
+    if (ddk.has_vht_cap) { ddk.vht_cap = assoc_ctx_.vht_cap.ToDdk(); }
 
     ddk.has_vht_op = assoc_ctx_.has_vht_op;
-    if (ddk.has_vht_op) { ddk.vht_op = ToDdk(assoc_ctx_.vht_op); }
+    if (ddk.has_vht_op) { ddk.vht_op = assoc_ctx_.vht_op.ToDdk(); }
 
     return device_->ConfigureAssoc(&ddk);
 }
@@ -1589,7 +1589,7 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
 AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan) {
     AssocContext assoc_ctx{};
 
-    assoc_ctx.cap = FromDdk(ifc_info.caps);
+    assoc_ctx.cap = CapabilityInfo::FromDdk(ifc_info.caps);
 
     auto band_info = FindBand(ifc_info, common::Is5Ghz(join_chan));
 

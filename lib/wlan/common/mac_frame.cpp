@@ -310,13 +310,4 @@ CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo&
     return cap_info;
 }
 
-CapabilityInfo FromDdk(uint32_t ddk_caps) {
-    CapabilityInfo cap{};
-    cap.set_short_preamble(ddk_caps & WLAN_CAP_SHORT_PREAMBLE);
-    cap.set_spectrum_mgmt(ddk_caps & WLAN_CAP_SPECTRUM_MGMT);
-    cap.set_short_slot_time(ddk_caps & WLAN_CAP_SHORT_SLOT_TIME);
-    cap.set_radio_msmt(ddk_caps & WLAN_CAP_RADIO_MSMT);
-    return cap;
-}
-
 }  // namespace wlan

@@ -145,7 +145,7 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
 
 // IEEE 802.11-2016 9.4.2.3.
 // The MSB in a rate indicates "basic rate" and is ignored during comparison.
-    // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
+// Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
 struct SupportedRate : public common::BitField<uint8_t> {
     SupportedRate() = default;
     explicit SupportedRate(uint8_t val) : common::BitField<uint8_t>(val) {}
@@ -714,6 +714,34 @@ struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabiliti
     TxBfCapability txbf_cap;
     AselCapability asel_cap;
 
+    static HtCapabilities FromDdk(const wlan_ht_caps_t& ddk) {
+        HtCapabilities dst{};
+        dst.hdr.id = element_id::kHtCapabilities;
+        dst.hdr.len = HtCapabilities::kMaxLen;  // same as kMinLen
+        dst.ht_cap_info.set_val(ddk.ht_capability_info);
+        dst.ampdu_params.set_val(ddk.ampdu_params);
+        dst.mcs_set.rx_mcs_head.set_val(ddk.mcs_set.rx_mcs_head);
+        dst.mcs_set.rx_mcs_tail.set_val(ddk.mcs_set.rx_mcs_tail);
+        dst.mcs_set.tx_mcs.set_val(ddk.mcs_set.tx_mcs);
+        dst.ht_ext_cap.set_val(ddk.ht_ext_capabilities);
+        dst.txbf_cap.set_val(ddk.tx_beamforming_capabilities);
+        dst.asel_cap.set_val(ddk.asel_capabilities);
+        return dst;
+    }
+
+    wlan_ht_caps_t ToDdk() const {
+        wlan_ht_caps_t ddk{};
+        ddk.ht_capability_info = ht_cap_info.val();
+        ddk.ampdu_params = ampdu_params.val();
+        ddk.mcs_set.rx_mcs_head = mcs_set.rx_mcs_head.val();
+        ddk.mcs_set.rx_mcs_tail = mcs_set.rx_mcs_tail.val();
+        ddk.mcs_set.tx_mcs = mcs_set.tx_mcs.val();
+        ddk.ht_ext_capabilities = ht_ext_cap.val();
+        ddk.tx_beamforming_capabilities = txbf_cap.val();
+        ddk.asel_capabilities = asel_cap.val();
+        return ddk;
+    }
+
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.57
@@ -789,6 +817,31 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
     HtOpInfoHead head;
     HtOpInfoTail tail;
     SupportedMcsSet basic_mcs_set;
+
+    static HtOperation FromDdk(const wlan_ht_op_t& ddk) {
+        HtOperation dst{};
+        dst.hdr.id = element_id::kHtOperation;
+        dst.hdr.id = HtOperation::kMaxLen;  // same as kMinLen
+        dst.primary_chan = ddk.primary_chan;
+        dst.head.set_val(ddk.head);
+        dst.tail.set_val(ddk.tail);
+        dst.basic_mcs_set.rx_mcs_head.set_val(ddk.basic_mcs_set.rx_mcs_head);
+        dst.basic_mcs_set.rx_mcs_tail.set_val(ddk.basic_mcs_set.rx_mcs_tail);
+        dst.basic_mcs_set.tx_mcs.set_val(ddk.basic_mcs_set.tx_mcs);
+        return dst;
+    }
+
+    wlan_ht_op_t ToDdk() const {
+        wlan_ht_op_t ddk{};
+        ddk.primary_chan = primary_chan;
+        ddk.head = head.val();
+        ddk.tail = tail.val();
+        ddk.basic_mcs_set.rx_mcs_head = basic_mcs_set.rx_mcs_head.val();
+        ddk.basic_mcs_set.rx_mcs_tail = basic_mcs_set.rx_mcs_tail.val();
+        ddk.basic_mcs_set.tx_mcs = basic_mcs_set.tx_mcs.val();
+        return ddk;
+    }
+
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.126
@@ -923,6 +976,22 @@ struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabil
     VhtCapabilitiesInfo vht_cap_info;
     VhtMcsNss vht_mcs_nss;
 
+    static VhtCapabilities FromDdk(const wlan_vht_caps_t& ddk) {
+        VhtCapabilities dst{};
+        dst.hdr.id = element_id::kVhtCapabilities;
+        dst.hdr.len = VhtCapabilities::kMaxLen;  // same as kMinLen
+        dst.vht_cap_info.set_val(ddk.vht_capability_info);
+        dst.vht_mcs_nss.set_val(ddk.supported_vht_mcs_and_nss_set);
+        return dst;
+    }
+
+    wlan_vht_caps_t ToDdk() const {
+        wlan_vht_caps_t ddk{};
+        ddk.vht_capability_info = vht_cap_info.val();
+        ddk.supported_vht_mcs_and_nss_set = vht_mcs_nss.val();
+        return ddk;
+    }
+
 } __PACKED;
 
 // IEEE Std 802.11-2016, Figure 9-562
@@ -982,6 +1051,24 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
         // 4 - 255 reserved
     };
 
+    static VhtOperation FromDdk(const wlan_vht_op_t& ddk) {
+        VhtOperation dst{};
+        dst.vht_cbw = ddk.vht_cbw;
+        dst.center_freq_seg0 = ddk.center_freq_seg0;
+        dst.center_freq_seg1 = ddk.center_freq_seg1;
+        dst.basic_mcs.set_val(ddk.basic_mcs);
+        return dst;
+    }
+
+    wlan_vht_op_t ToDdk() const {
+        wlan_vht_op_t dst{};
+        dst.vht_cbw = vht_cbw;
+        dst.center_freq_seg0 = center_freq_seg0;
+        dst.center_freq_seg1 = center_freq_seg1;
+        dst.basic_mcs = basic_mcs.val();
+        return dst;
+    }
+
 } __PACKED;
 
 SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs);
@@ -992,14 +1079,5 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 // The outcoming "Basic rates" follows those specified in AP
 std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
                                             const std::vector<SupportedRate>& client_rates);
-
-wlan_ht_caps_t ToDdk(const HtCapabilities& src);
-HtCapabilities FromDdk(const wlan_ht_caps_t& src);
-wlan_ht_op_t ToDdk(const HtOperation& src);
-HtOperation FromDdk(const wlan_ht_op_t& src);
-wlan_vht_caps_t ToDdk(const VhtCapabilities& src);
-VhtCapabilities FromDdk(const wlan_vht_caps_t& src);
-wlan_vht_op_t ToDdk(const VhtOperation& src);
-VhtOperation FromDdk(const wlan_vht_op_t& src);
 
 }  // namespace wlan

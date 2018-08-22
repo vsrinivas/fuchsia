@@ -162,13 +162,26 @@ class CapabilityInfo : public common::BitField<uint16_t> {
     WLAN_BIT_FIELD(cf_poll_req, 3, 1);
     WLAN_BIT_FIELD(privacy, 4, 1);
     WLAN_BIT_FIELD(short_preamble, 5, 1);
+    // bit 6-7 reserved
     WLAN_BIT_FIELD(spectrum_mgmt, 8, 1);
     WLAN_BIT_FIELD(qos, 9, 1);
     WLAN_BIT_FIELD(short_slot_time, 10, 1);
     WLAN_BIT_FIELD(apsd, 11, 1);
     WLAN_BIT_FIELD(radio_msmt, 12, 1);
+    // bit 13 reserved
     WLAN_BIT_FIELD(delayed_block_ack, 14, 1);
     WLAN_BIT_FIELD(immediate_block_ack, 15, 1);
+
+    static CapabilityInfo FromDdk(uint32_t ddk_caps) {
+        CapabilityInfo cap{};
+#define BITFLAG_TO_BIT(x, y) ((x & y) > 0 ? 1 : 0)
+        cap.set_short_preamble(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_SHORT_PREAMBLE));
+        cap.set_spectrum_mgmt(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_SPECTRUM_MGMT));
+        cap.set_short_slot_time(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_SHORT_SLOT_TIME));
+        cap.set_radio_msmt(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_RADIO_MSMT));
+#undef BITFLAG_TO_BIT
+        return cap;
+    }
 };
 
 // TODO: Replace native ReasonCode with FIDL ReasonCode
@@ -782,6 +795,5 @@ struct EapolHdr {
 } __PACKED;
 
 CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs);
-CapabilityInfo FromDdk(uint32_t ddk_caps);
 
 }  // namespace wlan

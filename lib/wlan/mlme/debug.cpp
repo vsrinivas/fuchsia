@@ -460,7 +460,7 @@ std::string Describe(const HtCapabilities& ht_cap) {
 }
 
 std::string Describe(const wlan_ht_caps& ht_caps) {
-    return Describe(FromDdk(ht_caps));
+    return Describe(HtCapabilities::FromDdk(ht_caps));
 }
 
 std::string Describe(const wlan_chan_list& wl) {

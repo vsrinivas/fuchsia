@@ -4,10 +4,10 @@
 
 #include "test_data.h"
 
+#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
-#include <wlan/mlme/client/station.h>
 
 #include <gtest/gtest.h>
 
@@ -560,6 +560,29 @@ TEST(Frame, DeaggregateAmsdu) {
     ASSERT_EQ(llc_frames[0].second, static_cast<size_t>(108));
     ASSERT_EQ(llc_frames[1].first.body()->data[3], static_cast<uint8_t>(0x5e));
     ASSERT_EQ(llc_frames[1].second, static_cast<size_t>(94));
+}
+
+TEST(Frame, DdkConversion) {
+    // DDK uint32_t to class CapabilityInfo
+    uint32_t ddk_caps = 0;
+    auto ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
+    EXPECT_EQ(0, ieee_caps.val());
+
+    ddk_caps |= WLAN_CAP_SHORT_PREAMBLE;
+    ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
+    EXPECT_EQ(1, ieee_caps.short_preamble());
+    EXPECT_EQ(0, ieee_caps.spectrum_mgmt());
+    EXPECT_EQ(0, ieee_caps.short_slot_time());
+    EXPECT_EQ(0, ieee_caps.radio_msmt());
+    EXPECT_EQ(0x0020, ieee_caps.val());
+
+    ddk_caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
+    ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
+    EXPECT_EQ(1, ieee_caps.short_preamble());
+    EXPECT_EQ(0, ieee_caps.spectrum_mgmt());
+    EXPECT_EQ(1, ieee_caps.short_slot_time());
+    EXPECT_EQ(0, ieee_caps.radio_msmt());
+    EXPECT_EQ(0x420, ieee_caps.val());
 }
 
 }  // namespace

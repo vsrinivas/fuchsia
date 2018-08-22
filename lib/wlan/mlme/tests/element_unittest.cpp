@@ -475,6 +475,102 @@ TEST_F(Elements, VhtOperation) {
     EXPECT_EQ(element->basic_mcs.ss8(), VhtMcsNss::VHT_MCS_0_TO_9);
 }
 
+TEST(HtCapabilities, DdkConversion) {
+    wlan_ht_caps_t ddk{
+        .ht_capability_info = 0x016e,
+        .ampdu_params = 0x17,
+        .mcs_set.rx_mcs_head = 0x00000001000000ff,
+        .mcs_set.rx_mcs_tail = 0x01000000,
+        .mcs_set.tx_mcs = 0x00000000,
+        .ht_ext_capabilities = 0x1234,
+        .tx_beamforming_capabilities = 0x12345678,
+        .asel_capabilities = 0xff,
+    };
+
+    auto ieee = HtCapabilities::FromDdk(ddk);
+    EXPECT_EQ(0x016eU, ieee.ht_cap_info.val());
+    EXPECT_EQ(0x17U, ieee.ampdu_params.val());
+    EXPECT_EQ(0x00000001000000ffU, ieee.mcs_set.rx_mcs_head.val());
+    EXPECT_EQ(0x01000000U, ieee.mcs_set.rx_mcs_tail.val());
+    EXPECT_EQ(0x00000000U, ieee.mcs_set.tx_mcs.val());
+    EXPECT_EQ(0x1234U, ieee.ht_ext_cap.val());
+    EXPECT_EQ(0x12345678U, ieee.txbf_cap.val());
+    EXPECT_EQ(0xffU, ieee.asel_cap.val());
+
+    auto ddk2 = ieee.ToDdk();
+    EXPECT_EQ(ddk.ht_capability_info, ddk2.ht_capability_info);
+    EXPECT_EQ(ddk.ampdu_params, ddk2.ampdu_params);
+    EXPECT_EQ(ddk.mcs_set.rx_mcs_head, ddk2.mcs_set.rx_mcs_head);
+    EXPECT_EQ(ddk.mcs_set.rx_mcs_tail, ddk2.mcs_set.rx_mcs_tail);
+    EXPECT_EQ(ddk.mcs_set.tx_mcs, ddk2.mcs_set.tx_mcs);
+    EXPECT_EQ(ddk.ht_ext_capabilities, ddk2.ht_ext_capabilities);
+    EXPECT_EQ(ddk.tx_beamforming_capabilities, ddk2.tx_beamforming_capabilities);
+    EXPECT_EQ(ddk.asel_capabilities, ddk2.asel_capabilities);
+}
+
+TEST(HtOperation, DdkConversion) {
+    wlan_ht_op ddk{
+        .primary_chan = 123,
+        .head = 0x01020304,
+        .tail = 0x05,
+        .basic_mcs_set.rx_mcs_head = 0x00000001000000ff,
+        .basic_mcs_set.rx_mcs_tail = 0x01000000,
+        .basic_mcs_set.tx_mcs = 0x00000000,
+    };
+
+    auto ieee = HtOperation::FromDdk(ddk);
+    EXPECT_EQ(123U, ieee.primary_chan);
+    EXPECT_EQ(0x01020304U, ieee.head.val());
+    EXPECT_EQ(0x05U, ieee.tail.val());
+    EXPECT_EQ(0x00000001000000ffU, ieee.basic_mcs_set.rx_mcs_head.val());
+    EXPECT_EQ(0x01000000U, ieee.basic_mcs_set.rx_mcs_tail.val());
+    EXPECT_EQ(0x00000000U, ieee.basic_mcs_set.tx_mcs.val());
+
+    auto ddk2 = ieee.ToDdk();
+    EXPECT_EQ(ddk.primary_chan, ddk2.primary_chan);
+    EXPECT_EQ(ddk.head, ddk2.head);
+    EXPECT_EQ(ddk.tail, ddk2.tail);
+    EXPECT_EQ(ddk.basic_mcs_set.rx_mcs_head, ddk2.basic_mcs_set.rx_mcs_head);
+    EXPECT_EQ(ddk.basic_mcs_set.rx_mcs_tail, ddk2.basic_mcs_set.rx_mcs_tail);
+    EXPECT_EQ(ddk.basic_mcs_set.tx_mcs, ddk2.basic_mcs_set.tx_mcs);
+}
+
+TEST(VhtCapabilities, DdkConversion) {
+    wlan_vht_caps ddk{
+        .vht_capability_info = 0xaabbccdd,
+        .supported_vht_mcs_and_nss_set = 0x0011223344556677,
+    };
+
+    auto ieee = VhtCapabilities::FromDdk(ddk);
+    EXPECT_EQ(0xaabbccddU, ieee.vht_cap_info.val());
+    EXPECT_EQ(0x0011223344556677U, ieee.vht_mcs_nss.val());
+
+    auto ddk2 = ieee.ToDdk();
+    EXPECT_EQ(ddk.vht_capability_info, ddk2.vht_capability_info);
+    EXPECT_EQ(ddk.supported_vht_mcs_and_nss_set, ddk2.supported_vht_mcs_and_nss_set);
+}
+
+TEST(VhtOperation, DdkConversion) {
+    wlan_vht_op ddk{
+        .vht_cbw = 0x01,
+        .center_freq_seg0 = 42,
+        .center_freq_seg1 = 106,
+        .basic_mcs = 0x1122,
+    };
+
+    auto ieee = VhtOperation::FromDdk(ddk);
+    EXPECT_EQ(0x01U, ieee.vht_cbw);
+    EXPECT_EQ(42U, ieee.center_freq_seg0);
+    EXPECT_EQ(106U, ieee.center_freq_seg1);
+    EXPECT_EQ(0x1122U, ieee.basic_mcs.val());
+
+    auto ddk2 = ieee.ToDdk();
+    EXPECT_EQ(ddk.vht_cbw, ddk2.vht_cbw);
+    EXPECT_EQ(ddk.center_freq_seg0, ddk2.center_freq_seg0);
+    EXPECT_EQ(ddk.center_freq_seg1, ddk2.center_freq_seg1);
+    EXPECT_EQ(ddk.basic_mcs, ddk2.basic_mcs);
+}
+
 TEST(SupportedRate, Create) {
     SupportedRate rate = {};
     ASSERT_EQ(rate.rate(), 0);
@@ -569,5 +665,6 @@ TEST(Intersector, IntersectRates) {
         EXPECT_EQ(vec.want, got);
     }
 }
+
 }  // namespace
 }  // namespace wlan
