@@ -31,6 +31,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/perftest \
     system/ulib/sync \
     system/ulib/trace \
+    system/ulib/trace-provider \
     system/ulib/zx \
     system/ulib/zxcpp \
 
