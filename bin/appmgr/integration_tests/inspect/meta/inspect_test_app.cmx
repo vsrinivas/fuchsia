@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/inspect_test_app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
