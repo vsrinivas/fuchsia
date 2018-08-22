@@ -1381,7 +1381,7 @@ CapabilityInfo Station::BuildCapabilityInfo() const {
     CapabilityInfo cap = FromDdk(ifc_info.caps);
 
     // Override
-    cap.set_ess(0);             // reserved in client role
+    cap.set_ess(1);             // reserved in client role. 1 for better interop.
     cap.set_ibss(0);            // reserved in client role
     cap.set_cf_pollable(0);     // not supported
     cap.set_cf_poll_req(0);     // not supported
