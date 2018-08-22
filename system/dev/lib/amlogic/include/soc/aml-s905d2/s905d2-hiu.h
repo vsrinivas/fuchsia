@@ -55,6 +55,14 @@
 #define HHI_MPLL_CNTL7              (0xa5 << 2)
 #define HHI_MPLL_CNTL8              (0xa6 << 2)
 
+#define HHI_FIX_PLL_CNTL0           (0xa8 << 2)
+#define HHI_FIX_PLL_CNTL1           (0xa9 << 2)
+#define HHI_FIX_PLL_CNTL2           (0xaa << 2)
+#define HHI_FIX_PLL_CNTL3           (0xab << 2)
+#define HHI_FIX_PLL_CNTL4           (0xac << 2)
+#define HHI_FIX_PLL_CNTL5           (0xad << 2)
+#define HHI_FIX_PLL_CNTL6           (0xae << 2)
+
 #define HHI_SYS_PLL_CNTL0           (0xbd << 2)
 #define HHI_SYS_PLL_CNTL1           (0xbe << 2)
 #define HHI_SYS_PLL_CNTL2           (0xbf << 2)
@@ -70,7 +78,7 @@
 #define HHI_PLL_CNTL0_M        (0xff << HHI_PLL_CNTL0_M_SHIFT)
 #define HHI_PLL_CNTL0_N_SHIFT  (10)
 #define HHI_PLL_CNTL0_N        (0x1f << HHI_PLL_CNTL0_N_SHIFT)
-#define HHI_PLL_CNTL0_OD_SHIFT (17)
+#define HHI_PLL_CNTL0_OD_SHIFT (16)
 #define HHI_PLL_CNTL0_OD       (0x3  << HHI_PLL_CNTL0_OD_SHIFT)
 
 typedef enum {

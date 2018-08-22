@@ -111,9 +111,7 @@ zx_status_t s905d2_pll_set_rate(aml_pll_dev_t *pll_dev, uint64_t freq) {
 
     hiu_clk_set_reg(pll_dev->hiu, offs, ctl0);
 
-    //TODO(hollande) - writing the frac value, even when 0 (which is initial value) causes
-    //          the clock to become unstable.  Follow up with amlogic
-    //hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL1, s905d2_hiu_pll_rates[rate_idx].frac);
+    hiu_clk_set_reg(pll_dev->hiu, offs + 4, pll_rate->frac);
 
     return ZX_OK;
 }
