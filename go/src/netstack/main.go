@@ -7,17 +7,17 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"syscall/zx/fidl"
 
 	"app/context"
-
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/link/eth"
 	"netstack/watcher"
 
 	"fidl/fuchsia/devicesettings"
-
-	"syscall/zx/fidl"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -26,9 +26,6 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
-
-	"net/http"
-	_ "net/http/pprof"
 )
 
 // TODO(tkilbourn): change the default to false after tracking down NET-1077

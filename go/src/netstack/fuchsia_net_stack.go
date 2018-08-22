@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"syscall/zx"
 
 	"app/context"
 	"netstack/fidlconv"
 	"netstack/link/eth"
-	"syscall/zx"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
-	"fidl/fuchsia/netstack"
+	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -43,13 +43,13 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	features := []stack.InterfaceFeature{}
-	if ifs.nic.Features&netstack.InterfaceFeatureWlan != 0 {
+	if ifs.nic.Features&ethernet.InfoFeatureWlan != 0 {
 		features = append(features, stack.InterfaceFeatureWlan)
 	}
-	if ifs.nic.Features&netstack.InterfaceFeatureSynth != 0 {
+	if ifs.nic.Features&ethernet.InfoFeatureSynth != 0 {
 		features = append(features, stack.InterfaceFeatureSynthetic)
 	}
-	if ifs.nic.Features&netstack.InterfaceFeatureLoopback != 0 {
+	if ifs.nic.Features&ethernet.InfoFeatureLoopback != 0 {
 		features = append(features, stack.InterfaceFeatureLoopback)
 	}
 

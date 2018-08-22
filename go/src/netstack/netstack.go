@@ -13,14 +13,14 @@ import (
 	"strings"
 	"sync"
 
-	"fidl/fuchsia/devicesettings"
-	nsfidl "fidl/fuchsia/netstack"
-
 	"netstack/dns"
 	"netstack/filter"
 	"netstack/link/eth"
 	"netstack/link/stats"
 	"netstack/netiface"
+
+	"fidl/fuchsia/devicesettings"
+	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
@@ -276,7 +276,7 @@ func (ifs *ifState) onEthRestart() {
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 	// TODO(NET-298): remove special case for WLAN after fix for multiple DHCP clients
 	// is enabled
-	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&nsfidl.InterfaceFeatureWlan != 0)
+	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&ethernet.InfoFeatureWlan != 0)
 }
 
 func (ifs *ifState) onEthStop() {
@@ -367,7 +367,7 @@ func (ns *Netstack) addLoopback() error {
 		ID:       nicid,
 		Addr:     header.IPv4Loopback,
 		Netmask:  tcpip.AddressMask(strings.Repeat("\xff", 4)),
-		Features: nsfidl.InterfaceFeatureLoopback,
+		Features: ethernet.InfoFeatureLoopback,
 		Routes: []tcpip.Route{
 			{
 				Destination: header.IPv4Loopback,
@@ -428,7 +428,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	// TODO(stijlist): initialize bridge context.Context & cancelFunc
 	b, err := ns.stack.Bridge(nics)
 	if err != nil {
-		return fmt.Errorf("%s", err)
+		return errors.New(err.String())
 	}
 
 	for _, nicid := range nics {
@@ -436,7 +436,9 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 		if !ok {
 			panic("NIC known by netstack not in interface table")
 		}
-		nic.eth.SetPromiscuousMode(true)
+		if err := nic.eth.SetPromiscuousMode(true); err != nil {
+			return err
+		}
 	}
 
 	b.Enable()
@@ -517,7 +519,7 @@ func (ns *Netstack) addEth(path string) error {
 
 	// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
 	// in third_party/netstack.
-	if client.Features&nsfidl.InterfaceFeatureWlan != 0 {
+	if client.Features&ethernet.InfoFeatureWlan != 0 {
 		// WLAN: Upon 802.1X port open, the state change will ensue, which
 		// will invoke the DHCP Client.
 		return nil
@@ -532,9 +534,9 @@ func (ns *Netstack) addEth(path string) error {
 }
 
 func setNICName(nic *netiface.NIC) {
-	if nic.Features&nsfidl.InterfaceFeatureLoopback != 0 {
+	if nic.Features&ethernet.InfoFeatureLoopback != 0 {
 		nic.Name = "lo"
-	} else if nic.Features&nsfidl.InterfaceFeatureWlan != 0 {
+	} else if nic.Features&ethernet.InfoFeatureWlan != 0 {
 		nic.Name = fmt.Sprintf("wlan%d", nic.ID)
 	} else {
 		nic.Name = fmt.Sprintf("en%d", nic.ID)

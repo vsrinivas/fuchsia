@@ -9,18 +9,19 @@ import (
 	"net"
 	"os"
 
-	"github.com/google/netstack/tcpip"
-
 	"app/context"
 
 	"fidl/fuchsia/netstack"
-	wlan_service "fidl/fuchsia/wlan/service"
+	"fidl/fuchsia/wlan/service"
+	"fidl/zircon/ethernet"
+
+	"github.com/google/netstack/tcpip"
 )
 
 type netstackClientApp struct {
 	ctx      *context.Context
 	netstack *netstack.NetstackInterface
-	wlan     *wlan_service.WlanInterface
+	wlan     *service.WlanInterface
 }
 
 func (a *netstackClientApp) printAll() {
@@ -192,7 +193,7 @@ func (a *netstackClientApp) wlanStatus() string {
 	res, err := a.wlan.Status()
 	if err != nil {
 		return fmt.Sprintf("failed to query (error: %v)", err)
-	} else if res.Error.Code != wlan_service.ErrCodeOk {
+	} else if res.Error.Code != service.ErrCodeOk {
 		return fmt.Sprintf("failed to query (err: code(%v) desc(%v)", res.Error.Code, res.Error.Description)
 	} else {
 		status := wlanStateToStr(res.State)
@@ -209,21 +210,21 @@ func (a *netstackClientApp) wlanStatus() string {
 	}
 }
 
-func wlanStateToStr(state wlan_service.State) string {
+func wlanStateToStr(state service.State) string {
 	switch state {
-	case wlan_service.StateBss:
+	case service.StateBss:
 		return "starting-bss"
-	case wlan_service.StateQuerying:
+	case service.StateQuerying:
 		return "querying"
-	case wlan_service.StateScanning:
+	case service.StateScanning:
 		return "scanning"
-	case wlan_service.StateJoining:
+	case service.StateJoining:
 		return "joining"
-	case wlan_service.StateAuthenticating:
+	case service.StateAuthenticating:
 		return "authenticating"
-	case wlan_service.StateAssociating:
+	case service.StateAssociating:
 		return "associating"
-	case wlan_service.StateAssociated:
+	case service.StateAssociated:
 		return "associated"
 	default:
 		return "unknown"
@@ -292,7 +293,7 @@ func validateCidr(cidr string) (address netstack.NetAddress, prefixLength uint8)
 }
 
 func isWLAN(features uint32) bool {
-	return features&uint32(netstack.InterfaceFeatureWlan) != 0
+	return features&ethernet.InfoFeatureWlan != 0
 }
 
 // bytesToString returns a human-friendly display of the given byte count.
@@ -342,7 +343,7 @@ func main() {
 	defer a.netstack.Close()
 	a.ctx.ConnectToEnvService(req)
 
-	reqWlan, pxyWlan, errWlan := wlan_service.NewWlanInterfaceRequest()
+	reqWlan, pxyWlan, errWlan := service.NewWlanInterfaceRequest()
 	if errWlan == nil {
 		a.wlan = pxyWlan
 		defer a.wlan.Close()

@@ -9,12 +9,12 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"syscall/zx"
 
 	"app/context"
 	"netstack/connectivity"
 	"netstack/fidlconv"
 	"netstack/link/eth"
-	"syscall/zx"
 
 	"fidl/fuchsia/netstack"
 

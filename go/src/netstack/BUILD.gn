@@ -105,6 +105,7 @@ go_library("netstack_lib") {
     "//garnet/public/lib/component/go/src/app",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)",
+    "//zircon/public/fidl/zircon-ethernet($go_toolchain)",
   ]
 }
 
@@ -112,30 +113,42 @@ go_binary("netstack_bin") {
   output_name = "netstack"
 
   gopackage = "netstack"
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":netstack_lib",
+  ]
 }
 
 go_test("netstack_connectivity_test") {
   gopackage = "netstack/connectivity"
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":netstack_lib",
+  ]
 }
 
 go_test("netstack_fidlconv_test") {
   gopackage = "netstack/fidlconv"
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":netstack_lib",
+  ]
 }
 
 go_test("netstack_filter_test") {
   gopackage = "netstack/filter"
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":netstack_lib",
+  ]
 }
 
 go_test("netstack_link_eth_test") {
   gopackage = "netstack/link/eth"
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":netstack_lib",
+  ]
 }
 
 go_test("netstack_netiface_test") {
   gopackage = "netstack/netiface"
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":netstack_lib",
+  ]
 }

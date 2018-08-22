@@ -10,24 +10,23 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-  "//garnet/public/lib/fidl/rust/fidl",
-  "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
-  "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-  "//garnet/public/rust/crates/fuchsia-app",
-  "//garnet/public/rust/crates/fuchsia-async",
-  "//garnet/public/rust/crates/fuchsia-zircon",
-  "//third_party/rust-crates/rustc_deps:failure",
-  "//third_party/rust-crates/rustc_deps:futures-preview",
-  "//third_party/rust-crates/rustc_deps:serde",
-  "//third_party/rust-crates/rustc_deps:serde_derive",
-  "//third_party/rust-crates/rustc_deps:serde_json",
+    "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
+    "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",
   ]
 
   name = "netcfg"
 }
 
 package("netcfg") {
-
   deps = [
     ":bin",
   ]
@@ -43,8 +42,8 @@ package("netcfg") {
 
   resources = [
     {
-        path = rebase_path("config/default.json")
-        dest = "default.json"
+      path = rebase_path("config/default.json")
+      dest = "default.json"
     },
   ]
 }

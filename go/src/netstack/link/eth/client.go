@@ -51,9 +51,9 @@ import (
 	"syscall/zx/zxwait"
 	"unsafe"
 
-	nsfidl "fidl/fuchsia/netstack"
-
 	"netstack/trace"
+
+	"fidl/zircon/ethernet"
 )
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
@@ -118,7 +118,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 	if err != nil {
 		return nil, err
 	}
-	if info.Features&nsfidl.InterfaceFeatureSynth != 0 {
+	if info.Features&ethernet.InfoFeatureSynth != 0 {
 		return nil, fmt.Errorf("eth: ignoring synthetic device")
 	}
 

@@ -8,7 +8,7 @@ fidl("fuchsia.netstack") {
   sdk_category = "partner"
 
   sources = [
-    "netstack.fidl",
     "net_address.fidl",
+    "netstack.fidl",
   ]
 }

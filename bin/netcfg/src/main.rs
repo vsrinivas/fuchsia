@@ -4,14 +4,17 @@
 
 #![deny(warnings)]
 
-use fuchsia_async::temp::TempFutureExt;
-use failure::{Error, ResultExt};
-use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
-use fidl_fuchsia_netstack::{NetstackMarker, NetAddress, Ipv4Address, Ipv6Address, NetAddressFamily, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
-use serde_derive::Deserialize;
 use std::fs;
 use std::net::IpAddr;
+
+use failure::{Error, ResultExt};
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
+use serde_derive::Deserialize;
+
+use fuchsia_async::temp::TempFutureExt;
+use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
+use fidl_fuchsia_netstack::{NetstackMarker, NetAddress, Ipv4Address, Ipv6Address, NetAddressFamily, NetInterface, NetstackEvent};
+use fidl_zircon_ethernet::{INFO_FEATURE_SYNTH, INFO_FEATURE_LOOPBACK};
 
 mod device_id;
 
@@ -29,7 +32,7 @@ struct DnsConfig {
 }
 
 fn is_physical(n: &NetInterface) -> bool {
-    (n.features & (INTERFACE_FEATURE_SYNTH | INTERFACE_FEATURE_LOOPBACK)) == 0
+    (n.features & (INFO_FEATURE_SYNTH | INFO_FEATURE_LOOPBACK)) == 0
 }
 
 fn derive_device_name(interfaces: Vec<NetInterface>) -> Option<String> {

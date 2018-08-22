@@ -29,10 +29,10 @@ struct NetTrafficStats {
   // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
 
   uint64 pkts_total;
-  uint64 pkts_echo_req;	    // request
-  uint64 pkts_echo_rep;	    // reply
+  uint64 pkts_echo_req;     // request
+  uint64 pkts_echo_rep;     // reply
   uint64 pkts_echo_req_v6;  // request
-  uint64 pkts_echo_rep_v6;	// reply
+  uint64 pkts_echo_rep_v6;  // reply
 
   uint64 bytes_total;
 };
@@ -99,18 +99,8 @@ struct NetInterface {
 };
 
 // Flags for NetInterface.flags.
-const uint32 NetInterfaceFlagUp = 0x1;  // Set if the interface is up.
+const uint32 NetInterfaceFlagUp   = 0x01; // Set if the interface is up.
 const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
-
-// Features for Netinterface.features.
-// LINT.IfChange
-const uint32 interfaceFeatureWlan = 0x01;
-const uint32 interfaceFeatureSynth = 0x02;
-const uint32 interfaceFeatureLoopback = 0x04;
-// LINT.ThenChange(
-//   //zircon/system/public/zircon/device/ethernet.h,
-//   //garnet/go/src/netstack/link/eth/ioctl.go
-// )
 
 struct RouteTableEntry {
   NetAddress destination;
