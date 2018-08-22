@@ -180,7 +180,7 @@ bool test_log_fallback(void) {
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
 
     int pipefd[2];
-    EXPECT_EQ(pipe2(pipefd, O_NONBLOCK), 0, "");
+    EXPECT_EQ(pipe2(pipefd, O_NONBLOCK), 0);
     fbl::unique_fd fd_to_close1(pipefd[0]);
     fbl::unique_fd fd_to_close2(pipefd[1]);
     fx_logger_activate_fallback(fx_log_get_logger(), pipefd[0]);
@@ -189,7 +189,7 @@ bool test_log_fallback(void) {
 
     char buf[256];
     size_t n = read(pipefd[1], buf, sizeof(buf));
-    EXPECT_GT(n, 0u, "");
+    EXPECT_GT(n, 0u);
     buf[n] = 0;
     EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"), buf);
     END_TEST;

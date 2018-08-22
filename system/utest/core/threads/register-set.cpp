@@ -168,8 +168,8 @@ bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
     // Only check the first 16 registers (guaranteed to work).
     for (int reg = 0; reg < 16; reg++) {
         // Only check the low 128 bits (guaranteed to work).
-        EXPECT_EQ(regs1.zmm[reg].v[0], regs2.zmm[reg].v[0], "");
-        EXPECT_EQ(regs1.zmm[reg].v[1], regs2.zmm[reg].v[1], "");
+        EXPECT_EQ(regs1.zmm[reg].v[0], regs2.zmm[reg].v[0]);
+        EXPECT_EQ(regs1.zmm[reg].v[1], regs2.zmm[reg].v[1]);
     }
 #elif defined(__aarch64__)
     for (int i = 0; i < 32; i++) {

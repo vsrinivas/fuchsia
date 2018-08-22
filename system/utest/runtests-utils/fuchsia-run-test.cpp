@@ -220,8 +220,8 @@ bool RunAllTestsPublishData() {
     EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
     fclose(output_file);
 
-    EXPECT_NONNULL(strstr(buf, expected_output_buf.c_str()), "");
-    EXPECT_NONNULL(strstr(buf, expected_data_sink_buf.c_str()), "");
+    EXPECT_NONNULL(strstr(buf, expected_output_buf.c_str()));
+    EXPECT_NONNULL(strstr(buf, expected_data_sink_buf.c_str()));
 
     END_TEST;
 }

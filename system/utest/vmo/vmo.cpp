@@ -1543,7 +1543,7 @@ bool vmo_resize_hazard() {
             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr_rw), "map");
 
     auto int_arr = reinterpret_cast<int*>(ptr_rw);
-    EXPECT_EQ(int_arr[1], 0, "");
+    EXPECT_EQ(int_arr[1], 0);
 
     EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, 0u));
 
@@ -1574,7 +1574,7 @@ bool vmo_clone_resize_clone_hazard() {
             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr_rw), "map");
 
     auto int_arr = reinterpret_cast<int*>(ptr_rw);
-    EXPECT_EQ(int_arr[1], 0, "");
+    EXPECT_EQ(int_arr[1], 0);
 
     EXPECT_EQ(ZX_OK, zx_vmo_set_size(clone_vmo, 0u));
 
@@ -1605,7 +1605,7 @@ bool vmo_clone_resize_parent_ok() {
             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr_rw), "map");
 
     auto int_arr = reinterpret_cast<int*>(ptr_rw);
-    EXPECT_EQ(int_arr[1], 0, "");
+    EXPECT_EQ(int_arr[1], 0);
 
     EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, 0u));
 

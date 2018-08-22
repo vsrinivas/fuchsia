@@ -131,8 +131,8 @@ static bool recv_msg(zx_handle_t channel, Message* msg) {
 
 static bool recv_specific_msg(zx_handle_t channel, MessageType expected_type) {
     Message msg;
-    ASSERT_TRUE(recv_msg(channel, &msg), "");
-    ASSERT_EQ(msg.type, expected_type, "");
+    ASSERT_TRUE(recv_msg(channel, &msg));
+    ASSERT_EQ(msg.type, expected_type);
     return true;
 }
 
@@ -441,9 +441,9 @@ static void start_test_child(zx_handle_t job, const char* arg,
 static bool get_child_thread(zx_handle_t channel, zx_handle_t* thread) {
     send_msg(channel, MSG_THREAD_HANDLE_REQUEST);
     Message msg;
-    ASSERT_TRUE(recv_msg(channel, &msg), "");
-    EXPECT_EQ(msg.type, MSG_THREAD_HANDLE_RESPONSE, "");
-    EXPECT_EQ(msg.num_handles, 1u, "");
+    ASSERT_TRUE(recv_msg(channel, &msg));
+    EXPECT_EQ(msg.type, MSG_THREAD_HANDLE_RESPONSE);
+    EXPECT_EQ(msg.num_handles, 1u);
     *thread = msg.handles[0];
     return true;
 }
@@ -474,7 +474,7 @@ static bool sleeping_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     send_msg(channel, MSG_SLEEP_TEST);
 
@@ -495,7 +495,7 @@ static bool futex_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     send_msg_with_handles(channel, MSG_FUTEX_TEST, nullptr, 0);
 
@@ -513,10 +513,10 @@ static bool port_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     zx_handle_t port;
-    ASSERT_EQ(zx_port_create(0, &port), ZX_OK, "");
+    ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
     zx_handle_t port_dupe = tu_handle_duplicate(port);
 
     send_msg_with_handles(channel, MSG_PORT_TEST, &port_dupe, 1);
@@ -524,11 +524,11 @@ static bool port_test() {
     wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_PORT);
 
     // Wake the child up.
-    EXPECT_EQ(zx_port_queue(port, &port_test_packet), ZX_OK, "");
+    EXPECT_EQ(zx_port_queue(port, &port_test_packet), ZX_OK);
 
     // The child sends a pass/fail message back as extra verification that
     // things went correctly on that side.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
     tu_handle_close(port);
     terminate_process(child);
@@ -543,10 +543,10 @@ static bool channel_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     zx_handle_t our_channel, their_channel;
-    ASSERT_EQ(zx_channel_create(0, &our_channel, &their_channel), ZX_OK, "");
+    ASSERT_EQ(zx_channel_create(0, &our_channel, &their_channel), ZX_OK);
 
     send_msg_with_handles(channel, MSG_CHANNEL_TEST, &their_channel, 1);
 
@@ -557,7 +557,7 @@ static bool channel_test() {
 
     // The child sends a pass/fail message back as extra verification that
     // things went correctly on that side.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
     terminate_process(child);
 
@@ -571,16 +571,16 @@ static bool wait_one_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     zx_handle_t h[2];
-    ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK, "");
+    ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK);
 
     send_msg_with_handles(channel, MSG_WAIT_ONE_TEST, &h[1], 1);
 
     // Don't continue until we see MSG_PROCEED, that tells us the child has
     // received the message and isn't in a wait_one/wait_many syscall.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED));
 
     wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
@@ -589,7 +589,7 @@ static bool wait_one_test() {
 
     // The child sends a pass/fail message back as extra verification that
     // things went correctly on that side.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
     terminate_process(child);
 
@@ -603,19 +603,19 @@ static bool wait_many_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     uint32_t num_handles = NUM_WAIT_MANY_HANDLES;
     zx_handle_t h[2][num_handles];
     for (uint32_t i = 0; i < num_handles; ++i) {
-        ASSERT_EQ(zx_eventpair_create(0, &h[0][i], &h[1][i]), ZX_OK, "");
+        ASSERT_EQ(zx_eventpair_create(0, &h[0][i], &h[1][i]), ZX_OK);
     }
 
     send_msg_with_handles(channel, MSG_WAIT_MANY_TEST, &h[1][0], num_handles);
 
     // Don't continue until we see MSG_PROCEED, that tells us the child has
     // received the message and isn't in a wait_one/wait_many syscall.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED));
 
     wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
 
@@ -626,7 +626,7 @@ static bool wait_many_test() {
 
     // The child sends a pass/fail message back as extra verification that
     // things went correctly on that side.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
     terminate_process(child);
 
@@ -640,14 +640,14 @@ static bool interrupt_test() {
     zx_handle_t child, channel;
     start_test_child(zx_job_default(), test_child_name, &child, &channel);
     zx_handle_t thread;
-    ASSERT_TRUE(get_child_thread(channel, &thread), "");
+    ASSERT_TRUE(get_child_thread(channel, &thread));
 
     zx_handle_t resource;
-    ASSERT_EQ(get_root_resource(&resource), ZX_OK, "");
+    ASSERT_EQ(get_root_resource(&resource), ZX_OK);
 
     zx_handle_t interrupt;
     ASSERT_EQ(zx_interrupt_create(resource, 0, ZX_INTERRUPT_VIRTUAL, &interrupt),
-              ZX_OK, "");
+              ZX_OK);
     zx_handle_t interrupt_dupe = tu_handle_duplicate(interrupt);
 
     send_msg_with_handles(channel, MSG_INTERRUPT_TEST, &interrupt_dupe, 1);
@@ -655,11 +655,11 @@ static bool interrupt_test() {
     wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_INTERRUPT);
 
     // Wake the child up.
-    EXPECT_EQ(zx_interrupt_trigger(interrupt, 0, interrupt_signaled_timestamp), ZX_OK, "");
+    EXPECT_EQ(zx_interrupt_trigger(interrupt, 0, interrupt_signaled_timestamp), ZX_OK);
 
     // The child sends a pass/fail message back as extra verification that
     // things went correctly on that side.
-    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS), "");
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
     tu_handle_close(interrupt);
     terminate_process(child);

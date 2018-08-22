@@ -315,8 +315,8 @@ void resize_rootc_from_state(TestState* test, gpt_partition_t* rootc,
 // the fvm partition will be created as the 13th partition
 bool create_test_layout_with_fvm(TestState* test) {
     BEGIN_HELPER;
-    ASSERT_TRUE(create_test_layout(test), "");
-    ASSERT_TRUE(add_fvm_part(test, test->Device()->partitions[0]), "");
+    ASSERT_TRUE(create_test_layout(test));
+    ASSERT_TRUE(add_fvm_part(test, test->Device()->partitions[0]));
     END_HELPER;
 }
 

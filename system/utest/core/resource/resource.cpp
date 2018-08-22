@@ -55,7 +55,7 @@ static bool probe_address_space(void) {
         }
 
         // If ZX_OK wasn't returned, then we should see ZX_ERR_NOT_FOUND and nothing else.
-        ASSERT_EQ(ZX_ERR_NOT_FOUND, status, "");
+        ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
     }
 
     END_TEST;
@@ -73,13 +73,13 @@ static bool test_basic_actions(void) {
     // Create a root and verify the fields are still zero, but the name matches.
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_ROOT, 0, 0,
                                    root_name, sizeof(root_name), &new_root),
-              ZX_OK, "");
-    ASSERT_EQ(new_root.get_info(ZX_INFO_RESOURCE, &info, sizeof(info), NULL, NULL), ZX_OK, "");
-    EXPECT_EQ(info.kind, ZX_RSRC_KIND_ROOT, "");
-    EXPECT_EQ(info.base, 0u, "");
-    EXPECT_EQ(info.size, 0u, "");
-    EXPECT_EQ(info.flags, 0u, "");
-    EXPECT_EQ(0, strncmp(root_name, info.name, ZX_MAX_NAME_LEN), "");
+              ZX_OK);
+    ASSERT_EQ(new_root.get_info(ZX_INFO_RESOURCE, &info, sizeof(info), NULL, NULL), ZX_OK);
+    EXPECT_EQ(info.kind, ZX_RSRC_KIND_ROOT);
+    EXPECT_EQ(info.base, 0u);
+    EXPECT_EQ(info.size, 0u);
+    EXPECT_EQ(info.flags, 0u);
+    EXPECT_EQ(0, strncmp(root_name, info.name, ZX_MAX_NAME_LEN));
 
     // Check that a resource is created with all the parameters passed to the syscall, and use
     // the new root resource created for good measure.
@@ -89,13 +89,13 @@ static bool test_basic_actions(void) {
     char mmio_name[] = "test_resource_name";
     ASSERT_EQ(zx::resource::create(new_root, kind | flags, mmio_test_base, mmio_test_size,
                                        mmio_name, sizeof(mmio_name), &mmio),
-              ZX_OK, "");
-    ASSERT_EQ(mmio.get_info(ZX_INFO_RESOURCE, &info, sizeof(info), NULL, NULL), ZX_OK, "");
-    EXPECT_EQ(info.kind, kind, "");
-    EXPECT_EQ(info.flags, flags, "");
-    EXPECT_EQ(info.base, mmio_test_base, "");
-    EXPECT_EQ(info.size, mmio_test_size, "");
-    EXPECT_EQ(0, strncmp(info.name, mmio_name, ZX_MAX_NAME_LEN), "");
+              ZX_OK);
+    ASSERT_EQ(mmio.get_info(ZX_INFO_RESOURCE, &info, sizeof(info), NULL, NULL), ZX_OK);
+    EXPECT_EQ(info.kind, kind);
+    EXPECT_EQ(info.flags, flags);
+    EXPECT_EQ(info.base, mmio_test_base);
+    EXPECT_EQ(info.size, mmio_test_size);
+    EXPECT_EQ(0, strncmp(info.name, mmio_name, ZX_MAX_NAME_LEN));
 
     END_TEST;
 }
@@ -108,33 +108,33 @@ static bool test_invalid_args(void) {
     // test privilege inversion by seeing if an MMIO resource can other resources.
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
                                    mmio_test_size, NULL, 0, &temp),
-              ZX_OK, "");
+              ZX_OK);
     EXPECT_EQ(zx::resource::create(temp, ZX_RSRC_KIND_ROOT, 0, 0, NULL, 0, &fail_hnd),
-              ZX_ERR_ACCESS_DENIED, "");
+              ZX_ERR_ACCESS_DENIED);
     EXPECT_EQ(zx::resource::create(temp, ZX_RSRC_KIND_MMIO, mmio_test_base, mmio_test_size, NULL,
                                    0, &fail_hnd),
-              ZX_ERR_ACCESS_DENIED, "");
+              ZX_ERR_ACCESS_DENIED);
 
     // test invalid kind
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_COUNT, mmio_test_base,
                                mmio_test_size, NULL, 0, &temp),
-              ZX_ERR_INVALID_ARGS, "");
+              ZX_ERR_INVALID_ARGS);
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_COUNT + 1,
                                    mmio_test_base, mmio_test_size, NULL, 0, &temp),
-              ZX_ERR_INVALID_ARGS, "");
+              ZX_ERR_INVALID_ARGS);
 
     // test invalid base
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, UINT64_MAX, 1024,
                                    NULL, 0, &temp),
-              ZX_ERR_INVALID_ARGS, "");
+              ZX_ERR_INVALID_ARGS);
     // test invalid size
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, 1024, UINT64_MAX,
                                    NULL, 0, &temp),
-              ZX_ERR_INVALID_ARGS, "");
+              ZX_ERR_INVALID_ARGS);
     // test invalid options
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | 0xFF0000, mmio_test_base,
                                mmio_test_size, NULL, 0, &temp),
-              ZX_ERR_INVALID_ARGS, "");
+              ZX_ERR_INVALID_ARGS);
 
     END_TEST;
 }
@@ -146,10 +146,10 @@ static bool test_exclusive_shared(void) {
     zx::resource mmio_1, mmio_2;
 	EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                     mmio_test_base, mmio_test_size, NULL, 0, &mmio_1),
-              ZX_OK, "");
+              ZX_OK);
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
                                mmio_test_size, NULL, 0, &mmio_2),
-              ZX_ERR_NOT_FOUND, "");
+              ZX_ERR_NOT_FOUND);
     END_TEST;
 }
 
@@ -160,10 +160,10 @@ static bool test_shared_exclusive(void) {
     zx::resource mmio_1, mmio_2;
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
                                mmio_test_size, NULL, 0, &mmio_1),
-              ZX_OK, "");
+              ZX_OK);
     EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                    mmio_test_base, mmio_test_size, NULL, 0, &mmio_2),
-              ZX_ERR_NOT_FOUND, "");
+              ZX_ERR_NOT_FOUND);
     END_TEST;
 }
 
@@ -174,10 +174,10 @@ static bool test_vmo_creation(void) {
     zx::vmo vmo;
     ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
                 mmio_test_size, NULL, 0, &mmio),
-            ZX_OK, "");
+            ZX_OK);
     EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE,
                                      vmo.reset_and_get_address()),
-            ZX_OK, "");
+            ZX_OK);
     END_TEST;
 }
 
@@ -189,10 +189,10 @@ static bool test_vmo_creation_smaller(void) {
     zx::vmo vmo;
     ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
                                PAGE_SIZE/2, NULL, 0, &mmio),
-              ZX_OK, "");
+              ZX_OK);
     EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE,
                                      vmo.reset_and_get_address()),
-              ZX_OK, "");
+              ZX_OK);
     END_TEST;
 }
 
@@ -204,10 +204,10 @@ static bool test_vmo_creation_unaligned(void) {
     zx::vmo vmo;
     ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO,
                                    mmio_test_base + 0x7800, 0x2000, NULL, 0, &mmio),
-              ZX_OK, "");
+              ZX_OK);
     EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base + 0x7000, 0x2000,
                                      vmo.reset_and_get_address()),
-              ZX_OK, "");
+              ZX_OK);
     END_TEST;
 }
 
@@ -262,8 +262,8 @@ static bool test_ioports(void) {
     char io_name[] = "ports!";
     ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_IOPORT, io_base,
                                    io_size, io_name, sizeof(io_name), &io),
-              ZX_OK, "");
-    EXPECT_EQ(zx_ioports_request(io.get(), io_base, io_size), ZX_OK, "");
+              ZX_OK);
+    EXPECT_EQ(zx_ioports_request(io.get(), io_base, io_size), ZX_OK);
 
     END_TEST;
 }

@@ -477,24 +477,24 @@ bool test_streaming_mode() {
     trace_buffer_header header;
     fixture_snapshot_buffer_header(&header);
 
-    EXPECT_EQ(header.version, 0, "");
-    EXPECT_EQ(header.buffering_mode, TRACE_BUFFERING_MODE_STREAMING, "");
-    EXPECT_EQ(header.reserved1, 0, "");
-    EXPECT_EQ(header.wrapped_count, 1, "");
-    EXPECT_EQ(header.total_size, kBufferSize, "");
-    EXPECT_NE(header.durable_buffer_size, 0, "");
-    EXPECT_NE(header.rolling_buffer_size, 0, "");
+    EXPECT_EQ(header.version, 0);
+    EXPECT_EQ(header.buffering_mode, TRACE_BUFFERING_MODE_STREAMING);
+    EXPECT_EQ(header.reserved1, 0);
+    EXPECT_EQ(header.wrapped_count, 1);
+    EXPECT_EQ(header.total_size, kBufferSize);
+    EXPECT_NE(header.durable_buffer_size, 0);
+    EXPECT_NE(header.rolling_buffer_size, 0);
     EXPECT_EQ(sizeof(header) + header.durable_buffer_size + 
-              2 * header.rolling_buffer_size, kBufferSize, "");
-    EXPECT_NE(header.durable_data_end, 0, "");
-    EXPECT_LE(header.durable_data_end, header.durable_buffer_size, "");
-    EXPECT_NE(header.rolling_data_end[0], 0, "");
-    EXPECT_LE(header.rolling_data_end[0], header.rolling_buffer_size, "");
-    EXPECT_NE(header.rolling_data_end[1], 0, "");
-    EXPECT_LE(header.rolling_data_end[1], header.rolling_buffer_size, "");
+              2 * header.rolling_buffer_size, kBufferSize);
+    EXPECT_NE(header.durable_data_end, 0);
+    EXPECT_LE(header.durable_data_end, header.durable_buffer_size);
+    EXPECT_NE(header.rolling_data_end[0], 0);
+    EXPECT_LE(header.rolling_data_end[0], header.rolling_buffer_size);
+    EXPECT_NE(header.rolling_data_end[1], 0);
+    EXPECT_LE(header.rolling_data_end[1], header.rolling_buffer_size);
     // All the records are the same size, so each buffer should end up at
     // the same place.
-    EXPECT_EQ(header.rolling_data_end[0], header.rolling_data_end[1], "");
+    EXPECT_EQ(header.rolling_data_end[0], header.rolling_data_end[1]);
 
     // Try to fill the buffer with a different kind of record.
     // These should all be dropped.
@@ -512,7 +512,7 @@ bool test_streaming_mode() {
         auto context = trace::TraceProlongedContext::Acquire();
         trace_context_snapshot_buffer_header(context.get(), &header);
     }
-    EXPECT_EQ(header.wrapped_count, 1, "");
+    EXPECT_EQ(header.wrapped_count, 1);
 
     // Buffer zero is older.
     trace_engine_mark_buffer_saved(0, 0);
@@ -521,9 +521,9 @@ bool test_streaming_mode() {
         auto context = trace::TraceProlongedContext::Acquire();
         trace_context_snapshot_buffer_header(context.get(), &header);
     }
-    EXPECT_EQ(header.rolling_data_end[0], 0, "");
+    EXPECT_EQ(header.rolling_data_end[0], 0);
     // The wrapped count shouldn't be updated until the next record is written.
-    EXPECT_EQ(header.wrapped_count, 1, "");
+    EXPECT_EQ(header.wrapped_count, 1);
 
     // Fill the buffer with a different kind of record.
 
@@ -539,9 +539,9 @@ bool test_streaming_mode() {
         auto context = trace::TraceProlongedContext::Acquire();
         trace_context_snapshot_buffer_header(context.get(), &header);
     }
-    EXPECT_EQ(header.wrapped_count, 2, "");
-    EXPECT_NE(header.rolling_data_end[0], 0, "");
-    EXPECT_EQ(header.rolling_data_end[0], header.rolling_data_end[1], "");
+    EXPECT_EQ(header.wrapped_count, 2);
+    EXPECT_NE(header.rolling_data_end[0], 0);
+    EXPECT_EQ(header.rolling_data_end[0], header.rolling_data_end[1]);
 
     // One buffer should now have the first kind of record, and the other
     // should have the new kind of record. And the newer records should be
