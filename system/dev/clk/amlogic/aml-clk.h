@@ -14,13 +14,15 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
+#include <zircon/device/clk.h>
 #include <zircon/thread_annotations.h>
 
 namespace amlogic_clock {
 
 class AmlClock;
 using DeviceType = ddk::Device<AmlClock,
-                               ddk::Unbindable>;
+                               ddk::Unbindable,
+                               ddk::Ioctlable>;
 
 class AmlClock : public DeviceType,
                  public ddk::ClkProtocol<AmlClock> {
@@ -29,15 +31,22 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
     AmlClock(zx_device_t* device)
         : DeviceType(device){};
+    // Performs the object initialization.
     static zx_status_t Create(zx_device_t* device);
 
-    // Protocol Ops.
+    // CLK protocol implementation.
     zx_status_t ClkEnable(uint32_t clk);
     zx_status_t ClkDisable(uint32_t clk);
 
-    // Ddk Hooks.
+    // CLK IOCTL implementation.
+    zx_status_t ClkMeasure(uint32_t clk, clk_freq_info_t* info);
+
+    // Device protocol implementation.
     void DdkUnbind();
     void DdkRelease();
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf,
+                         size_t in_len, void* out_buf,
+                         size_t out_len, size_t* out_actual);
 
     void ShutDown();
 
@@ -46,16 +55,31 @@ private:
     zx_status_t ClkToggle(uint32_t clk, const bool enable);
     // Initialize platform device.
     zx_status_t InitPdev(zx_device_t* parent);
+    // Clock measure helper API.
+    zx_status_t ClkMeasureUtil(uint32_t clk, uint32_t* clk_freq);
+    // MMIO helper APIs.
+    zx_status_t InitHiuRegs(pdev_device_info_t* info);
+    zx_status_t InitMsrRegs(pdev_device_info_t* info);
     // Platform device protocol.
     platform_device_protocol_t pdev_;
     // Clock protocol.
     clk_protocol_t clk_;
+    // IO MMIO
     io_buffer_t hiu_mmio_;
+    io_buffer_t msr_mmio_;
     fbl::unique_ptr<hwreg::RegisterIo> hiu_regs_;
+    fbl::unique_ptr<hwreg::RegisterIo> msr_regs_;
     // Protects clock gate registers.
     fbl::Mutex lock_;
     // Clock gates.
     fbl::Array<meson_clk_gate_t> gates_;
+    // Clock Table
+    fbl::Array<const char* const> clk_table_;
+    // MSR_CLK offsets/
+    meson_clk_msr_t clk_msr_offsets_;
+    // Booleans for feature support
+    bool clk_gates_ = true;
+    bool clk_msr_ = true;
 };
 
 } // namespace amlogic_clock

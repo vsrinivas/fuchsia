@@ -80,6 +80,7 @@
 #define IOCTL_FAMILY_TEE            0x3C
 #define IOCTL_FAMILY_SKIP_BLOCK     0x3D
 #define IOCTL_FAMILY_USB_TEST       0x3E
+#define IOCTL_FAMILY_CLK            0x3F
 
 // IOCTL constructor
 // --K-FFNN

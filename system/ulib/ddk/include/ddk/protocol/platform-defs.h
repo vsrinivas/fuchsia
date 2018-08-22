@@ -86,6 +86,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_AMLOGIC_VIDEO      12
 #define PDEV_DID_AMLOGIC_RAW_NAND   13
 #define PDEV_DID_AMLOGIC_CANVAS     14
+#define PDEV_DID_AMLOGIC_G12A_CLK   15
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6

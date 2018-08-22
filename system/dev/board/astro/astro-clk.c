@@ -11,9 +11,15 @@
 #include "astro.h"
 
 static const pbus_mmio_t clk_mmios[] = {
+    // CLK Registers
     {
         .base = S905D2_HIU_BASE,
         .length = S905D2_HIU_LENGTH,
+    },
+    // CLK MSR block
+    {
+        .base = S905D2_MSR_CLK_BASE,
+        .length = S905D2_MSR_CLK_LENGTH,
     },
 };
 
@@ -21,7 +27,7 @@ static const pbus_dev_t clk_dev = {
     .name = "astro-clk",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
-    .did = PDEV_DID_AMLOGIC_AXG_CLK,
+    .did = PDEV_DID_AMLOGIC_G12A_CLK,
     .mmios = clk_mmios,
     .mmio_count = countof(clk_mmios),
 };
