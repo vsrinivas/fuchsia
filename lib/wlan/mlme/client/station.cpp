@@ -15,7 +15,6 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
-#include <wlan/mlme/timer.h>
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
 
@@ -35,22 +34,20 @@ static constexpr size_t kAssocBcnCountTimeout = 20;
 static constexpr size_t kSignalReportBcnCountTimeout = 10;
 static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
 
-Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer,
-                 ChannelScheduler* chan_sched)
-    : device_(device), timer_(std::move(timer)), chan_sched_(chan_sched) {
-    (void)assoc_timeout_;
+Station::Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched)
+    : device_(device), timer_mgr_(std::move(timer_mgr)), chan_sched_(chan_sched) {
     bssid_.Reset();
 }
 
 void Station::Reset() {
     debugfn();
 
-    timer_->CancelTimer();
     state_ = WlanState::kUnjoined;
     bss_.reset();
-    join_timeout_ = zx::time();
-    auth_timeout_ = zx::time();
-    last_seen_ = zx::time();
+    join_timeout_.Cancel();
+    auth_timeout_.Cancel();
+    assoc_timeout_.Cancel();
+    signal_report_timeout_.Cancel();
     bssid_.Reset();
 }
 zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
@@ -222,13 +219,13 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     chan_sched_->EnsureOnChannel(zx::deadline_after(kOnChannelTimeAfterSend));
 
     join_chan_ = chan;
-    join_timeout_ = deadline_after_bcn_period(req.body()->join_failure_timeout);
-
-    status = timer_->SetTimer(join_timeout_);
+    zx::time deadline = deadline_after_bcn_period(req.body()->join_failure_timeout);
+    status = timer_mgr_.Schedule(deadline, &join_timeout_);
     if (status != ZX_OK) {
-        errorf("could not set join timer: %d\n", status);
+        errorf("could not set join timeout event: %d\n", status);
         Reset();
         service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+        return status;
     }
 
     // TODO(hahnr): Update when other BSS types are supported.
@@ -239,7 +236,7 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     bssid_.CopyTo(cfg.bssid);
     device_->ConfigureBss(&cfg);
     return status;
-}  // namespace wlan
+}
 
 zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req) {
     debugfn();
@@ -299,10 +296,10 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
         return status;
     }
 
-    auth_timeout_ = deadline_after_bcn_period(req.body()->auth_failure_timeout);
-    status = timer_->SetTimer(auth_timeout_);
+    zx::time deadline = deadline_after_bcn_period(req.body()->auth_failure_timeout);
+    status = timer_mgr_.Schedule(deadline, &auth_timeout_);
     if (status != ZX_OK) {
-        errorf("could not set auth timer: %d\n", status);
+        errorf("could not set auth timeout event: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
         service::SendAuthConfirm(device_, bssid_,
                                  wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
@@ -477,10 +474,10 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     // TODO(NET-500): Add association timeout to MLME-ASSOCIATE.request just like
     // JOIN and AUTHENTICATE requests do.
-    assoc_timeout_ = deadline_after_bcn_period(kAssocBcnCountTimeout);
-    status = timer_->SetTimer(assoc_timeout_);
+    zx::time deadline = deadline_after_bcn_period(kAssocBcnCountTimeout);
+    status = timer_mgr_.Schedule(deadline, &assoc_timeout_);
     if (status != ZX_OK) {
-        errorf("could not set auth timer: %d\n", status);
+        errorf("could not set auth timedout event: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -495,7 +492,8 @@ bool Station::ShouldDropMgmtFrame(const MgmtFrameView<>& frame) {
     return bssid() == nullptr || *bssid() != frame.hdr()->addr3;
 }
 
-// TODO(hahnr): Support ProbeResponses.
+// TODO(NET-500): Using a single method for joining and associated state is not ideal.
+// The logic should be split up and decided on a higher level based on the current state.
 zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
@@ -506,10 +504,9 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
-    last_seen_ = timer_->Now();
-    if (join_timeout_ > zx::time()) {
-        join_timeout_ = zx::time();
-        timer_->CancelTimer();
+    if (join_timeout_.IsActive()) {
+        join_timeout_.Cancel();
+
         state_ = WlanState::kUnauthenticated;
         debugjoin("joined %s\n", bss_->ssid->data());
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
@@ -543,6 +540,11 @@ done_iter:
     return ZX_OK;
 }
 
+// TODO(NET-500): If the sequence number or algorithm is wrong, the client is not immediately
+// sending an MLME-AUTHENTICATION.confirm message but instead will wait until the authentication
+// times out. However, because it's very unlikely that the AP will send another authentication
+// notification with correctly configured information we can instead always immediately send the
+// confirmation and don't have to wait for the timeout to happen.
 zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     debugfn();
 
@@ -569,18 +571,17 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
 
     if (auth->status_code != status_code::kSuccess) {
         errorf("authentication failed (status code=%u)\n", auth->status_code);
+        auth_timeout_.Cancel();
         // TODO(tkilbourn): is this the right result code?
         service::SendAuthConfirm(device_, bssid_,
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
-        auth_timeout_ = zx::time();
         return ZX_ERR_BAD_STATE;
     }
 
+    auth_timeout_.Cancel();
     common::MacAddr bssid(bss_->bssid.data());
     debugjoin("authenticated to %s\n", MACSTR(bssid));
     state_ = WlanState::kAuthenticated;
-    auth_timeout_ = zx::time();
-    timer_->CancelTimer();
     service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::SUCCESS);
     return ZX_OK;
 }
@@ -614,6 +615,9 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         return ZX_OK;
     }
 
+    // Receive association response, cancel association timeout.
+    assoc_timeout_.Cancel();
+
     auto assoc = frame.body();
     if (assoc->status_code != status_code::kSuccess) {
         errorf("association failed (status code=%u)\n", assoc->status_code);
@@ -634,17 +638,16 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     // TODO(porce): Move into |assoc_ctx_|
     common::MacAddr bssid(bss_->bssid.data());
     state_ = WlanState::kAssociated;
-    assoc_timeout_ = zx::time();
     aid_ = assoc->aid & kAidMask;
-    timer_->CancelTimer();
 
     // Spread the good news upward
     service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::SUCCESS, aid_);
     // Spread the good news downward
     NotifyAssocContext();
 
-    signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
-    timer_->SetTimer(signal_report_timeout_);
+    // Initiate RSSI reporting to Wlanstack.
+    zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
+    timer_mgr_.Schedule(deadline, &signal_report_timeout_);
     avg_rssi_dbm_.reset();
     avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
     service::SendSignalReportIndication(device_, common::dBm(frame.View().rx_info()->rssi_dbm));
@@ -685,9 +688,7 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
-
-    signal_report_timeout_ = zx::time();
-    timer_->CancelTimer();
+    signal_report_timeout_.Cancel();
 
     return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
 }
@@ -976,34 +977,34 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
 zx_status_t Station::HandleTimeout() {
     debugfn();
-    zx::time now = timer_->Now();
-    if (join_timeout_ > zx::time() && now > join_timeout_) {
+    zx::time now = timer_mgr_.HandleTimeout();
+
+    if (join_timeout_.Triggered(now)) {
         debugjoin("join timed out; resetting\n");
-
+        join_timeout_.Cancel();
         Reset();
-        return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-    }
-
-    if (auth_timeout_ > zx::time() && now >= auth_timeout_) {
+        service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+    } else if (auth_timeout_.Triggered(now)) {
         debugjoin("auth timed out; moving back to joining\n");
-        auth_timeout_ = zx::time();
-        return service::SendAuthConfirm(device_, bssid_,
-                                        wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
-    }
-
-    if (assoc_timeout_ > zx::time() && now >= assoc_timeout_) {
+        auth_timeout_.Cancel();
+        service::SendAuthConfirm(device_, bssid_,
+                                 wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+    } else if (assoc_timeout_.Triggered(now)) {
         debugjoin("assoc timed out; moving back to authenticated\n");
-        assoc_timeout_ = zx::time();
+        assoc_timeout_.Cancel();
         // TODO(tkilbourn): need a better error code for this
-        return service::SendAssocConfirm(device_,
-                                         wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+        service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
     }
 
-    if (signal_report_timeout_ > zx::time() && now > signal_report_timeout_ &&
-        state_ == WlanState::kAssociated) {
-        signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
-        timer_->SetTimer(signal_report_timeout_);
-        service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
+    if (signal_report_timeout_.Triggered(now)) {
+        signal_report_timeout_.Cancel();
+
+        if (state_ == WlanState::kAssociated) {
+            service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
+
+            zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
+            timer_mgr_.Schedule(deadline, &signal_report_timeout_);
+        }
     }
 
     return ZX_OK;
@@ -1333,7 +1334,7 @@ zx_status_t Station::SendPsPoll() {
 
 zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
     ZX_DEBUG_ASSERT(bss_ != nullptr);
-    return timer_->Now() + WLAN_TU(bss_->beacon_period * bcn_count);
+    return timer_mgr_.Now() + WLAN_TU(bss_->beacon_period * bcn_count);
 }
 
 bool Station::IsHTReady() const {

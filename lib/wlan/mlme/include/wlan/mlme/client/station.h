@@ -10,6 +10,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
+#include <wlan/mlme/timer_manager.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
@@ -28,7 +29,6 @@ namespace wlan {
 namespace wlan_mlme = wlan_mlme;
 
 class Packet;
-class Timer;
 
 // Information defined only within a context of association
 // Beware the subtle interpretation of each field: they are designed to
@@ -66,7 +66,7 @@ struct AssocContext {
 
 class Station {
    public:
-    Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer, ChannelScheduler* chan_sched);
+    Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched);
 
     enum class WlanState {
         // State 0
@@ -121,7 +121,6 @@ class Station {
     void PreSwitchOffChannel();
     void BackToMainChannel();
 
-    const Timer& timer() const { return *timer_; }
     ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
     void ResetStats();
 
@@ -179,18 +178,17 @@ class Station {
     zx_status_t NotifyAssocContext();
 
     DeviceInterface* device_;
-    fbl::unique_ptr<Timer> timer_;
+    TimerManager timer_mgr_;
     ChannelScheduler* chan_sched_;
     wlan_mlme::BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
     Sequence seq_;
 
     WlanState state_ = WlanState::kUnjoined;
-    zx::time join_timeout_;
-    zx::time auth_timeout_;
-    zx::time assoc_timeout_;
-    zx::time signal_report_timeout_;
-    zx::time last_seen_;
+    TimedEvent join_timeout_;
+    TimedEvent auth_timeout_;
+    TimedEvent assoc_timeout_;
+    TimedEvent signal_report_timeout_;
     uint16_t aid_ = 0;
     common::MovingAverageDbm<20> avg_rssi_dbm_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;

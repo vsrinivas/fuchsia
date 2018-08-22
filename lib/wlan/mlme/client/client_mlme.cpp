@@ -13,6 +13,7 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
+#include <wlan/mlme/timer_manager.h>
 #include <wlan/mlme/wlan.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -115,7 +116,7 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
         return status;
     }
 
-    sta_.reset(new Station(device_, std::move(timer), chan_sched_.get()));
+    sta_.reset(new Station(device_, TimerManager(std::move(timer)), chan_sched_.get()));
     return ZX_OK;
 }
 
