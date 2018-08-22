@@ -62,20 +62,14 @@ template("dart_fuchsia_test") {
   dart_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
   generated_test_main = "$dart_gen_dir/${target_name}__test_main.dart"
 
-  test_helper = "//build/dart/fuchsia_test_helper.dart"
-
   action(generated_test_main_target) {
     script = "//build/dart/gen_fuchsia_test_main.py"
-    inputs = [
-      test_helper,
-    ]
     outputs = [
       generated_test_main,
     ]
     args = [
       "--out=" + rebase_path(generated_test_main),
       "--source-dir=" + rebase_path(test_source_dir),
-      "--helper=" + rebase_path(test_helper),
     ]
   }
 
@@ -112,13 +106,11 @@ template("dart_fuchsia_test") {
     }
 
     deps = [
-      "//third_party/dart-pkg/pub/test",
-      "//topaz/public/dart/fuchsia",
+      "//topaz/lib/fuchsia_test_helper",
     ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-
 
     non_dart_deps = [ ":$generated_test_main_target($target_toolchain)" ]
     if (!test_package_only) {
@@ -135,10 +127,6 @@ template("dart_fuchsia_test") {
     if (defined(invoker.sources)) {
       sources = invoker.sources
     }
-    sources += [
-      generated_test_main,
-      test_helper,
-    ]
     meta = []
     if (defined(invoker.meta)) {
       meta = invoker.meta

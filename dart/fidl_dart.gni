@@ -104,8 +104,8 @@ template("fidl_dart") {
     package_name = "fidl_" + string_replace(library_name, ".", "_")
 
     sources = [
-      bindings_file,
-      async_bindings_file,
+      rebase_path(bindings_file, bindings_dir),
+      rebase_path(async_bindings_file, bindings_dir),
     ]
 
     deps = [

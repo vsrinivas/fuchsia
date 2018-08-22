@@ -19,9 +19,6 @@ def main():
     parser.add_argument('--source-dir',
                         help='Path to test sources',
                         required=True)
-    parser.add_argument("--helper",
-                        help="Path to fuchsia_test_helper.dart",
-                        required=True)
     args = parser.parse_args()
 
     out_dir = os.path.dirname(args.out)
@@ -38,8 +35,8 @@ def main():
     // ignore_for_file: directives_ordering
 
     import 'dart:async';
-    import '%s';
-    ''' % os.path.relpath(args.helper, out_dir))
+    import 'package:fuchsia_test_helper/fuchsia_test_helper.dart';
+    ''')
 
     for i, path in enumerate(test_files):
         outfile.write("import '%s' as test_%d;\n" % (path, i))

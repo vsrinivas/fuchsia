@@ -39,9 +39,6 @@ def main():
     parser.add_argument('--files',
                         help='A source=destination mapping',
                         nargs='*')
-    parser.add_argument('--file-manifest',
-                        help='A file containing source=destination mappings',
-                        required=False)
     parser.add_argument('--tags',
                         help='List of tags for the included elements',
                         nargs='*')
@@ -76,12 +73,7 @@ def main():
     files = []
     has_packaged_files = False
     base = os.path.realpath(args.base)
-    mappings = args.files
-    if args.file_manifest:
-        with open(args.file_manifest, 'r') as manifest_file:
-            additional_mappings = [l.strip() for l in manifest_file.readlines()]
-            mappings.extend(additional_mappings)
-    for mapping in mappings:
+    for mapping in args.files:
         mode, pair = mapping.split(':', 1)
         is_packaged = (mode == 'packaged')
         destination, source = pair.split('=', 1)

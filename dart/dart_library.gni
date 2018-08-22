@@ -20,8 +20,8 @@ declare_args() {
 # Parameters
 #
 #   sources
-#     The list of public sources in this library, i.e. Dart files in lib/ but
-#     not in lib/src/. These sources must be within source_dir.
+#     The list of all sources in this library.
+#     These sources must be within source_dir.
 #
 #   package_root (optional)
 #     Path to the directory hosting the library.
@@ -61,6 +61,9 @@ declare_args() {
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
+#
+#   extra_sources (optional)
+#     Additional sources to consider for analysis.
 #
 # Example of usage:
 #
@@ -110,12 +113,27 @@ if (current_toolchain == dart_toolchain) {
       source_dir = "$package_root/${invoker.source_dir}"
     }
 
+    assert(defined(invoker.sources), "Sources must be defined")
+    source_file = "$target_gen_dir/$target_name.sources"
+    rebased_sources = []
+    foreach(source, invoker.sources) {
+      rebased_source_dir = rebase_path(source_dir)
+      rebased_sources += [ "$rebased_source_dir/$source" ]
+    }
+    if (defined(invoker.extra_sources)) {
+      foreach(source, invoker.extra_sources) {
+        rebased_sources += [ rebase_path(source) ]
+      }
+    }
+    write_file(source_file, rebased_sources, "list lines")
+
     # Dependencies of the umbrella group for the targets in this file.
     group_deps = []
 
     dot_packages_target_name = "${target_name}_dot_packages"
     group_deps += [ ":$dot_packages_target_name" ]
 
+    # Creates a .packages file listing dependencies of this library.
     action(dot_packages_target_name) {
       script = "//build/dart/gen_dot_packages.py"
 
@@ -167,53 +185,6 @@ if (current_toolchain == dart_toolchain) {
       }
     }
 
-    source_target_name = "${target_name}_identify_sources"
-    group_deps += [ ":$source_target_name" ]
-    source_file = "$target_gen_dir/$target_name.sources"
-
-    assert(defined(invoker.sources), "Public sources must be defined")
-
-    action(source_target_name) {
-      script = "//build/dart/identify_sources.py"
-
-      inputs = [
-        gen_snapshot,
-      ]
-
-      outputs = [
-        source_file,
-      ]
-
-      depfile = "$target_gen_dir/$target_name.d"
-
-      args = [
-               "--gen-snapshot",
-               rebase_path(gen_snapshot),
-               "--sources",
-             ] + rebase_path(invoker.sources, "", source_dir) +
-             [
-               "--packages",
-               rebase_path(dot_packages_file),
-               "--source-dir",
-               rebase_path(source_dir),
-               "--output",
-               rebase_path(source_file),
-               "--depfile",
-               rebase_path(depfile),
-               "--depname",
-               rebase_path(source_file, root_build_dir),
-               "--url-mapping",
-               "dart:zircon," + rebase_path(zircon_sdk_ext_lib),
-               "dart:fuchsia," + rebase_path(fuchsia_sdk_ext_lib),
-               "dart:mozart.internal," + rebase_path(mozart_dart_sdk_ext_lib),
-               "dart:ui," + rebase_path(dart_ui_path),
-             ]
-
-      deps = gen_snapshot_deps + [
-        ":$dot_packages_target_name",
-      ]
-    }
-
     with_analysis =
         !defined(invoker.disable_analysis) || !invoker.disable_analysis
     if (with_analysis) {
@@ -224,12 +195,13 @@ if (current_toolchain == dart_toolchain) {
 
       dart_analyzer_binary = "$dart_sdk/bin/dartanalyzer"
 
+      # Creates a script which can be used to manually perform analysis.
+      # TODO(BLD-256): remove this target.
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 
         deps = dart_sdk_deps + [
           ":$dot_packages_target_name",
-          ":$source_target_name",
         ]
 
         inputs = [
@@ -275,6 +247,7 @@ if (current_toolchain == dart_toolchain) {
       group_deps += [ ":$analysis_target_name" ]
 
       if (use_analysis_server) {
+        # Runs analysis on the sources.
         action(analysis_target_name) {
           runner_label = "//build/dart/analyzer($host_toolchain)"
           runner_out_dir = get_label_info(runner_label, "root_out_dir")
@@ -330,6 +303,7 @@ if (current_toolchain == dart_toolchain) {
           ]
         }
       } else {  # Use the analyzer CLI.
+        # Runs analysis on the sources.
         action(analysis_target_name) {
           script = "//build/dart/run_analysis.py"
 
@@ -369,7 +343,6 @@ if (current_toolchain == dart_toolchain) {
 
           deps = dart_sdk_deps + [
             ":$dot_packages_target_name",
-            ":$source_target_name",
           ]
         }
       }
@@ -434,32 +407,14 @@ if (current_toolchain == dart_toolchain) {
                ] + third_party_specs
       }
 
-      # List all the sources which will be included in the package.
-      sdk_sources_target_name = "${target_name}_sdk_sources"
-      sdk_sources_file = "$target_gen_dir/${target_name}_sdk_sources.txt"
-
-      action(sdk_sources_target_name) {
-        script = "//build/dart/sdk/list_sources.py"
-
-        inputs = [
-          source_file,
-        ]
-
-        outputs = [
-          sdk_sources_file,
-        ]
-
-        args = [
-          "--out",
-          rebase_path(sdk_sources_file),
-          "--source-list",
-          rebase_path(source_file),
-          "--source-dir",
-          rebase_path(source_dir),
-        ]
-
-        deps = [
-          ":$source_target_name",
+      sdk_sources = []
+      foreach(source, rebased_sources) {
+        relative_source = rebase_path(source, source_dir)
+        sdk_sources += [
+          {
+            source = source
+            dest = "lib/$relative_source"
+          }
         ]
       }
 
@@ -478,11 +433,13 @@ if (current_toolchain == dart_toolchain) {
         deps = sdk_deps
 
         non_sdk_deps = [
-          ":$sdk_sources_target_name",
           ":$third_party_spec_target_name",
         ]
+        if (defined(invoker.non_dart_deps)) {
+          non_sdk_deps += invoker.non_dart_deps
+        }
 
-        file_manifest = sdk_sources_file
+        files = sdk_sources
       }
     }
   }
