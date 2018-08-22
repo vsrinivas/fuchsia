@@ -134,8 +134,9 @@ class TestApp {
             return;
           }
           CreateTestDriverComponent(test_driver_url);
-          test_driver_component_controller_->Wait(
-              [this](int64_t return_code) {
+          test_driver_component_controller_.events().OnTerminated =
+              [this](int64_t return_code,
+                     fuchsia::sys::TerminationReason reason) {
                 FXL_LOG(INFO)
                     << "TestDriverModule test driver returned with code : "
                     << return_code;
@@ -145,7 +146,7 @@ class TestApp {
                   test_driver_completed_.Pass();
                 }
                 Signal(modular::testing::kTestShutdown);
-              });
+              };
         });
   }
 

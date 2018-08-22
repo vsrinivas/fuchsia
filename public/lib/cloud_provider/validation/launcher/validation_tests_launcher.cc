@@ -42,8 +42,10 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
   startup_context_->launcher()->CreateComponent(
       std::move(launch_info), validation_tests_controller_.NewRequest());
 
-  validation_tests_controller_->Wait(
-      [this](int32_t return_code) { callback_(return_code); });
+  validation_tests_controller_.events().OnTerminated =
+      [this](int32_t return_code, fuchsia::sys::TerminationReason reason) {
+        callback_(return_code);
+      };
   validation_tests_controller_.set_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to validation tests binary.";
     callback_(-1);
