@@ -34,4 +34,4 @@ run $CMD &
 trace record --categories=gfx --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
 
 echo "== $BENCHMARK_LABEL: Processing trace..."
-/pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace $BENCHMARK_LABEL $TRACE_FILE $OUT_FILE
+/pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace -test_suite_name="${BENCHMARK_LABEL}" -benchmarks_out_filename="${OUT_FILE}" "${TRACE_FILE}"

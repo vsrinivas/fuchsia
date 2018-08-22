@@ -59,4 +59,4 @@ echo "Tracing..."
 (set -x; fx shell trace record --buffer-size=8 --duration=10 --output-file=/tmp/trace-$OUT.json)
 (set -x; fx scp [$(fx netaddr --fuchsia)]:/tmp/trace-$OUT.json trace-$OUT.json)
 (set -x; fx shell rm /tmp/trace-$OUT.json)
-(set -x; go run $FUCHSIA_DIR/garnet/bin/ui/tests/performance/process_scenic_trace.go $OUT trace-$OUT.json benchmarks-$OUT.json)
+(set -x; go run $FUCHSIA_DIR/garnet/bin/ui/tests/performance/process_scenic_trace.go -test_suite_name="${OUT}" -benchmarks_out_filename="benchmarks-${OUT}.json" "trace-${OUT}.json")
