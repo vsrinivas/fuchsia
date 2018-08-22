@@ -136,7 +136,8 @@ TEST(ElementWriter, Insert) {
     EXPECT_TRUE(w.write<SsidElement>("test"));
     EXPECT_EQ(6u, w.size());
 
-    std::vector<uint8_t> rates = {1, 2, 3, 4};
+    std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3),
+                                        SupportedRate(4)};
     EXPECT_TRUE(w.write<SupportedRatesElement>(std::move(rates)));
     EXPECT_EQ(12u, w.size());
 
@@ -174,7 +175,7 @@ TEST_F(Elements, SsidTooLong) {
 }
 
 TEST_F(Elements, SupportedRates) {
-    std::vector<uint8_t> rates = {1, 2, 3};
+    std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3)};
     EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
     EXPECT_EQ(sizeof(SupportedRatesElement) + rates.size(), actual_);
 
@@ -187,7 +188,9 @@ TEST_F(Elements, SupportedRates) {
 }
 
 TEST_F(Elements, SupportedRatesTooLong) {
-    std::vector<uint8_t> rates = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3),
+                                        SupportedRate(4), SupportedRate(5), SupportedRate(6),
+                                        SupportedRate(7), SupportedRate(8), SupportedRate(9)};
     ASSERT_GT(rates.size(), SupportedRatesElement::kMaxLen);
     EXPECT_FALSE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
 }
@@ -472,28 +475,93 @@ TEST_F(Elements, VhtOperation) {
     EXPECT_EQ(element->basic_mcs.ss8(), VhtMcsNss::VHT_MCS_0_TO_9);
 }
 
+TEST(SupportedRate, Create) {
+    SupportedRate rate = {};
+    ASSERT_EQ(rate.rate(), 0);
+    ASSERT_EQ(rate.is_basic(), 0);
+
+    // Create a rate with basic bit set.
+    rate = SupportedRate(0x89);
+    ASSERT_EQ(rate.rate(), 0x09);
+    ASSERT_EQ(rate.is_basic(), 1);
+
+    // Create a rate with basic bit set but explicitly override basic setting.
+    rate = SupportedRate(0x89, false);
+    ASSERT_EQ(rate.rate(), 0x09);
+    ASSERT_EQ(rate.is_basic(), 0);
+
+    // Create a rate with explicitly setting basic bit.
+    rate = SupportedRate::basic(0x09);
+    ASSERT_EQ(rate.rate(), 0x09);
+    ASSERT_EQ(rate.is_basic(), 1);
+}
+
+TEST(SupportedRate, ToUint8) {
+    SupportedRate rate = {};
+    ASSERT_EQ(static_cast<uint8_t>(rate), 0);
+
+    rate = SupportedRate(0x89);
+    ASSERT_EQ(static_cast<uint8_t>(rate), 0x89);
+
+    rate = SupportedRate::basic(0x09);
+    ASSERT_EQ(static_cast<uint8_t>(rate), 0x89);
+}
+
+TEST(SupportedRate, Compare) {
+    // Ignore basic bit when comparing rates.
+    SupportedRate rate1(0x09);
+    SupportedRate rate2(0x89);
+    ASSERT_TRUE(rate1 == rate2);
+    ASSERT_FALSE(rate1 != rate2);
+    ASSERT_FALSE(rate1 < rate2);
+    ASSERT_FALSE(rate1 > rate2);
+
+    // Test smaller.
+    rate1 = SupportedRate(0x08);
+    rate2 = SupportedRate(0x89);
+    ASSERT_FALSE(rate1 == rate2);
+    ASSERT_TRUE(rate1 != rate2);
+    ASSERT_TRUE(rate1 < rate2);
+    ASSERT_FALSE(rate1 > rate2);
+
+    // Test larger.
+    rate1 = SupportedRate(0x0A);
+    rate2 = SupportedRate(0x89);
+    ASSERT_FALSE(rate1 == rate2);
+    ASSERT_TRUE(rate1 != rate2);
+    ASSERT_FALSE(rate1 < rate2);
+    ASSERT_TRUE(rate1 > rate2);
+}
+
 struct RateVector {
-    std::vector<uint8_t> ap;
-    std::vector<uint8_t> client;
-    std::vector<uint8_t> want;
+    std::vector<SupportedRate> ap;
+    std::vector<SupportedRate> client;
+    std::vector<SupportedRate> want;
 };
 
 TEST(Intersector, IntersectRates) {
     // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
-    // A basic rate's MSB = 1: MarkRateBasic(12) = 12 + 128 = 140
     std::vector<RateVector> list = {
         {{}, {}, {}},
-        {{12}, {12}, {12}},
-        {{MarkRateBasic(12)}, {12}, {MarkRateBasic(12)}},
-        {{12}, {MarkRateBasic(12)}, {12}},
-        {{MarkRateBasic(12)}, {}, {}},
-        {{}, {MarkRateBasic(12)}, {}},
-        {{12}, {}, {}},
-        {{}, {12}, {}},
-        {{MarkRateBasic(12), 24}, {MarkRateBasic(24), 12}, {MarkRateBasic(12), 24}},
-        {{24, MarkRateBasic(12)}, {12, MarkRateBasic(24)}, {MarkRateBasic(12), 24}},
-        {{72, MarkRateBasic(108), MarkRateBasic(96)}, {96}, {MarkRateBasic(96)}},
-        {{72, MarkRateBasic(108), MarkRateBasic(96)}, {MarkRateBasic(72)}, {72}},
+        {{SupportedRate(12)}, {SupportedRate(12)}, {SupportedRate(12)}},
+        {{SupportedRate::basic(12)}, {SupportedRate(12)}, {SupportedRate::basic(12)}},
+        {{SupportedRate(12)}, {SupportedRate::basic(12)}, {SupportedRate(12)}},
+        {{SupportedRate::basic(12)}, {}, {}},
+        {{}, {SupportedRate::basic(12)}, {}},
+        {{SupportedRate(12)}, {}, {}},
+        {{}, {SupportedRate(12)}, {}},
+        {{SupportedRate::basic(12), SupportedRate(24)},
+         {SupportedRate::basic(24), SupportedRate(12)},
+         {SupportedRate::basic(12), SupportedRate(24)}},
+        {{SupportedRate(24), SupportedRate::basic(12)},
+         {SupportedRate(12), SupportedRate::basic(24)},
+         {SupportedRate::basic(12), SupportedRate(24)}},
+        {{SupportedRate(72), SupportedRate::basic(108), SupportedRate::basic(96)},
+         {SupportedRate(96)},
+         {SupportedRate::basic(96)}},
+        {{SupportedRate(72), SupportedRate::basic(108), SupportedRate::basic(96)},
+         {SupportedRate::basic(72)},
+         {SupportedRate(72)}},
     };
 
     for (auto vec : list) {

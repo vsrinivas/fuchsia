@@ -51,6 +51,7 @@ std::string Describe(const wlan_band_info& bi);
 std::string Describe(const wlanmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);
 std::string Describe(const AssocContext& assoc_ctx);
+std::string Describe(const std::vector<SupportedRate> rates);
 
 }  // namespace debug
 }  // namespace wlan

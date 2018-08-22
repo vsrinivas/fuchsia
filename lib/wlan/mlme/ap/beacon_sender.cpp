@@ -241,8 +241,9 @@ zx_status_t BeaconSender::WriteSsid(ElementWriter* w) {
 }
 
 zx_status_t BeaconSender::WriteSupportedRates(ElementWriter* w) {
-    // Rates (in Mbps): 6(B), 9, 12(B), 18, 24(B), 36, 48, 54
-    std::vector<uint8_t> rates = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c};
+    std::vector<SupportedRate> rates = {
+        SupportedRate::basic(12), SupportedRate(18), SupportedRate::basic(24), SupportedRate(36),
+        SupportedRate::basic(48), SupportedRate(72), SupportedRate(96),        SupportedRate(108)};
     if (!w->write<SupportedRatesElement>(std::move(rates))) {
         errorf("[bcn-sender] [%s] could not write supported rates\n",
                bss_->bssid().ToString().c_str());
@@ -314,8 +315,8 @@ zx_status_t BeaconSender::WriteCountry(ElementWriter* w) {
 }
 
 zx_status_t BeaconSender::WriteExtendedSupportedRates(ElementWriter* w) {
-    // Rates (in Mbps): 24, 36, 48, 54
-    std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
+    std::vector<SupportedRate> ext_rates = {SupportedRate(48), SupportedRate(72), SupportedRate(96),
+                                            SupportedRate(108)};
     if (!w->write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("[bcn-sender] [%s] could not write extended supported rates\n",
                bss_->bssid().ToString().c_str());

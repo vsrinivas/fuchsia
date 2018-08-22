@@ -525,11 +525,21 @@ std::string Describe(const AssocContext& assoc_ctx) {
     BUFFER("bssid:[%s]", assoc_ctx.bssid.ToString().c_str());
     BUFFER("aid:%u", assoc_ctx.aid);
     BUFFER("cap:[%s]", Describe(assoc_ctx.cap).c_str());
-    BUFFER("supp_rates:[%s]", DescribeVector(assoc_ctx.supported_rates).c_str());
-    BUFFER("ext_supp_rates:[%s]", DescribeVector(assoc_ctx.ext_supported_rates).c_str());
+    BUFFER("supp_rates:[%s]", Describe(assoc_ctx.supported_rates).c_str());
+    BUFFER("ext_supp_rates:[%s]", Describe(assoc_ctx.ext_supported_rates).c_str());
 
     // TODO(NET-1278): Show HT / VHT capabilities
 
+    return std::string(buf);
+}
+
+std::string Describe(const std::vector<SupportedRate> rates) {
+    char buf[1024];
+    size_t offset = 0;
+    buf[0] = 0;
+    for (auto const& rate : rates) {
+        BUFFER("%s%u", rate.is_basic() ? "*" : "", rate.rate());
+    }
     return std::string(buf);
 }
 

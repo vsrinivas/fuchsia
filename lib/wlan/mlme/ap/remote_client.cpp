@@ -680,8 +680,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     // Write elements.
     ElementWriter w(assoc->elements, body_payload_len);
 
-    // Rates (in Mbps): 6(B), 9, 12(B), 18, 24(B), 36, 48, 54
-    std::vector<uint8_t> rates = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c};
+    std::vector<SupportedRate> rates = {
+        SupportedRate::basic(12), SupportedRate(18), SupportedRate::basic(24), SupportedRate(36),
+        SupportedRate::basic(48), SupportedRate(72), SupportedRate(96),        SupportedRate(108)};
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("[client] [%s] could not write supported rates\n", addr_.ToString().c_str());
         return ZX_ERR_IO;

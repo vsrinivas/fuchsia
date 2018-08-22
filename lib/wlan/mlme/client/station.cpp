@@ -409,7 +409,10 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return ZX_ERR_IO;
     }
     // TODO(tkilbourn): determine these rates based on hardware and the AP
-    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
+    std::vector<SupportedRate> rates = {SupportedRate::basic(2),  SupportedRate::basic(4),
+                                        SupportedRate::basic(11), SupportedRate::basic(22),
+                                        SupportedRate(12),        SupportedRate(18),
+                                        SupportedRate(24),        SupportedRate(36)};
 
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
@@ -418,7 +421,8 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return ZX_ERR_IO;
     }
 
-    std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
+    std::vector<SupportedRate> ext_rates = {SupportedRate(48), SupportedRate(72), SupportedRate(96),
+                                            SupportedRate(108)};
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("could not write extended supported rates\n");
         service::SendAssocConfirm(device_,
@@ -1475,12 +1479,12 @@ zx_status_t Station::NotifyAssocContext() {
 
     auto& sr = assoc_ctx_.supported_rates;
     ZX_DEBUG_ASSERT(sr.size() <= WLAN_MAC_SUPPORTED_RATES_MAX_LEN);
-    ddk.supported_rates_cnt = sr.size();
+    ddk.supported_rates_cnt = static_cast<uint8_t>(sr.size());
     std::copy(sr.begin(), sr.end(), ddk.supported_rates);
 
     auto& esr = assoc_ctx_.ext_supported_rates;
     ZX_DEBUG_ASSERT(esr.size() <= WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
-    ddk.ext_supported_rates_cnt = esr.size();
+    ddk.ext_supported_rates_cnt = static_cast<uint8_t>(esr.size());
     std::copy(esr.begin(), esr.end(), ddk.ext_supported_rates);
 
     ddk.has_ht_cap = assoc_ctx_.has_ht_cap;
@@ -1598,9 +1602,9 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
         if (rate == 0) { break; }  // basic_rates has fixed-length and is "null-terminated".
         // SupportedRates Element can hold only 8 rates.
         if (assoc_ctx.supported_rates.size() < SupportedRatesElement::kMaxLen) {
-            assoc_ctx.supported_rates.push_back(rate);
+            assoc_ctx.supported_rates.emplace_back(rate);
         } else {
-            assoc_ctx.ext_supported_rates.push_back(rate);
+            assoc_ctx.ext_supported_rates.emplace_back(rate);
         }
     }
 
@@ -1624,7 +1628,7 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
 }
 
 void SetAssocCtxSuppRates(const AssocContext& ap, const AssocContext& client,
-                          std::vector<uint8_t>* supp_rates, std::vector<uint8_t>* ext_rates) {
+                          std::vector<SupportedRate>* supp_rates, std::vector<SupportedRate>* ext_rates) {
     auto ap_rates(ap.supported_rates);
     ap_rates.insert(ap_rates.end(), ap.ext_supported_rates.cbegin(), ap.ext_supported_rates.cend());
     auto client_rates(client.supported_rates);

@@ -143,14 +143,37 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
     char ssid[];
 } __PACKED;
 
+// IEEE 802.11-2016 9.4.2.3.
+// The MSB in a rate indicates "basic rate" and is ignored during comparison.
+    // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
+struct SupportedRate : public common::BitField<uint8_t> {
+    SupportedRate() = default;
+    explicit SupportedRate(uint8_t val) : common::BitField<uint8_t>(val) {}
+    explicit SupportedRate(uint8_t val, bool is_basic) : common::BitField<uint8_t>(val) {
+        set_is_basic(static_cast<uint8_t>(is_basic));
+    }
+
+    static SupportedRate basic(uint8_t rate) { return SupportedRate(rate, true); }
+
+    WLAN_BIT_FIELD(rate, 0, 6);
+    WLAN_BIT_FIELD(is_basic, 7, 1);
+
+    operator uint8_t() const { return val(); }
+    bool operator==(const SupportedRate& other) const { return rate() == other.rate(); }
+    bool operator!=(const SupportedRate& other) const { return !this->operator==(other); }
+    bool operator<(const SupportedRate& other) const { return rate() < other.rate(); }
+    bool operator>(const SupportedRate& other) const { return rate() > other.rate(); }
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.2.3
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
-    static bool Create(void* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
+    static bool Create(void* buf, size_t len, size_t* actual,
+                       const std::vector<SupportedRate>& rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 8;
 
     ElementHeader hdr;
-    uint8_t rates[];
+    SupportedRate rates[];
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.4
@@ -248,12 +271,13 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
 // IEEE Std 802.11-2016, 9.4.2.13
 struct ExtendedSupportedRatesElement
     : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
-    static bool Create(void* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
+    static bool Create(void* buf, size_t len, size_t* actual,
+                       const std::vector<SupportedRate>& rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 255;
 
     ElementHeader hdr;
-    uint8_t rates[];
+    SupportedRate rates[];
 } __PACKED;
 
 const uint16_t kEapolProtocolId = 0x888E;
@@ -964,17 +988,10 @@ SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& 
 HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& rhs);
 VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilities& rhs);
 
-// IEEE 802.11-2016 9.4.2.3.
-// The MSB in a rate indicates "basic rate" and is ignored during comparison.
-static constexpr inline uint8_t MarkRateBasic(uint8_t rate) {
-    constexpr uint8_t kBasicRateBit = 0b10000000;
-    return rate | kBasicRateBit;
-}
-
 // Find common legacy rates between AP and client.
 // The outcoming "Basic rates" follows those specified in AP
-std::vector<uint8_t> IntersectRatesAp(const std::vector<uint8_t>& ap_rates,
-                                      const std::vector<uint8_t>& client_rates);
+std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
+                                            const std::vector<SupportedRate>& client_rates);
 
 wlan_ht_caps_t ToDdk(const HtCapabilities& src);
 HtCapabilities FromDdk(const wlan_ht_caps_t& src);

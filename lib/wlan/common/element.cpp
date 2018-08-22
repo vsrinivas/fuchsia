@@ -53,7 +53,7 @@ bool SsidElement::Create(void* buf, size_t len, size_t* actual, const char* ssid
 const size_t SupportedRatesElement::kMaxLen;
 
 bool SupportedRatesElement::Create(void* buf, size_t len, size_t* actual,
-                                   const std::vector<uint8_t>& rates) {
+                                   const std::vector<SupportedRate>& rates) {
     if (rates.size() > kMaxLen) return false;
     size_t elem_size = sizeof(SupportedRatesElement) + rates.size();
     if (elem_size > len) return false;
@@ -161,7 +161,7 @@ bool CountryElement::Create(void* buf, size_t len, size_t* actual, const uint8_t
 const size_t ExtendedSupportedRatesElement::kMaxLen;
 
 bool ExtendedSupportedRatesElement::Create(void* buf, size_t len, size_t* actual,
-                                           const std::vector<uint8_t>& rates) {
+                                           const std::vector<SupportedRate>& rates) {
     if (rates.size() > kMaxLen) return false;
     size_t elem_size = sizeof(ExtendedSupportedRatesElement) + rates.size();
     if (elem_size > len) return false;
@@ -478,23 +478,18 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 #undef SET_BITFIELD_MIN
 #undef SET_BITFIELD_MAX
 
-// Compare two legacy rates that follows IEEE 802.11-2016 9.4.2.3
-static constexpr inline bool CompareLegacyRates(uint8_t lhs, uint8_t rhs) {
-    // Legacy rate uses bit 7 to indicate "basic rate", the other 7 represent rate in 0.5Mbps
-    constexpr uint8_t kLegacyRateBitmask = 0b01111111;
-    return (lhs & kLegacyRateBitmask) < (rhs & kLegacyRateBitmask);
-}
+std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
+                                      const std::vector<SupportedRate>& client_rates) {
+    std::vector<SupportedRate> first(ap_rates);
+    std::vector<SupportedRate> second(client_rates);
 
-std::vector<uint8_t> IntersectRatesAp(const std::vector<uint8_t>& ap_rates,
-                                      const std::vector<uint8_t>& client_rates) {
-    auto first(ap_rates);
-    auto second(client_rates);
-    std::sort(first.begin(), first.end(), CompareLegacyRates);
-    std::sort(second.begin(), second.end(), CompareLegacyRates);
-    std::vector<uint8_t> result;
+    std::sort(first.begin(), first.end());
+    std::sort(second.begin(), second.end());
+
+    std::vector<SupportedRate> result;
     // C++11 Standard 25.4.5.3 - set_intersection ALWAYS takes elements from the first vector.
     std::set_intersection(first.cbegin(), first.cend(), second.cbegin(), second.cend(),
-                          std::back_inserter(result), CompareLegacyRates);
+                          std::back_inserter(result));
     return result;
 }
 
