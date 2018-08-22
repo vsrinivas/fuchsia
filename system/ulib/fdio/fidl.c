@@ -40,7 +40,7 @@ static zx_status_t txn_null_reply(fidl_txn_t* reply, const fidl_msg_t* msg) {
 }
 
 static zx_status_t handle_rpc_close(zxfidl_cb_t cb, void* cookie) {
-    fuchsia_io_ObjectCloseRequest request;
+    fuchsia_io_NodeCloseRequest request;
     memset(&request, 0, sizeof(request));
     request.hdr.ordinal = ZXFIDL_CLOSE;
     fidl_msg_t msg = {
@@ -111,7 +111,7 @@ zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
 
 // Always consumes cnxn.
 zx_status_t fidl_clone_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags) {
-    return fuchsia_io_ObjectClone(srv, flags, cnxn);
+    return fuchsia_io_NodeClone(srv, flags, cnxn);
 }
 
 // Always consumes cnxn.
@@ -122,7 +122,7 @@ zx_status_t fidl_open_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags,
 
 zx_status_t fidl_close(zxrio_t* rio) {
     zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_ObjectClose(zxrio_handle(rio), &status)) != ZX_OK) {
+    if ((io_status = fuchsia_io_NodeClose(zxrio_handle(rio), &status)) != ZX_OK) {
         return io_status;
     }
     return status;

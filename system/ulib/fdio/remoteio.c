@@ -394,25 +394,25 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
         return r;
     }
 
-    // Confirm that the objects "zxrio_describe_t" and "fuchsia_io_ObjectOnOpenEvent"
+    // Confirm that the objects "zxrio_describe_t" and "fuchsia_io_NodeOnOpenEvent"
     // are aligned enough to be compatible.
     //
-    // This is somewhat complicated by the fact that the "fuchsia_io_ObjectOnOpenEvent"
-    // object has an optional "fuchsia_io_ObjectInfo" secondary which exists immediately
+    // This is somewhat complicated by the fact that the "fuchsia_io_NodeOnOpenEvent"
+    // object has an optional "fuchsia_io_NodeInfo" secondary which exists immediately
     // following the struct.
     static_assert(__builtin_offsetof(zxrio_describe_t, extra) ==
-                  FIDL_ALIGN(sizeof(fuchsia_io_ObjectOnOpenEvent)),
+                  FIDL_ALIGN(sizeof(fuchsia_io_NodeOnOpenEvent)),
                   "RIO Description message doesn't align with FIDL response secondary");
-    static_assert(sizeof(zxrio_object_info_t) == sizeof(fuchsia_io_ObjectInfo),
+    static_assert(sizeof(zxrio_object_info_t) == sizeof(fuchsia_io_NodeInfo),
                   "RIO Object Info doesn't align with FIDL object info");
     static_assert(__builtin_offsetof(zxrio_object_info_t, file.e) ==
-                  __builtin_offsetof(fuchsia_io_ObjectInfo, file.event), "Unaligned File");
+                  __builtin_offsetof(fuchsia_io_NodeInfo, file.event), "Unaligned File");
     static_assert(__builtin_offsetof(zxrio_object_info_t, pipe.s) ==
-                  __builtin_offsetof(fuchsia_io_ObjectInfo, pipe.socket), "Unaligned Pipe");
+                  __builtin_offsetof(fuchsia_io_NodeInfo, pipe.socket), "Unaligned Pipe");
     static_assert(__builtin_offsetof(zxrio_object_info_t, vmofile.v) ==
-                  __builtin_offsetof(fuchsia_io_ObjectInfo, vmofile.vmo), "Unaligned Vmofile");
+                  __builtin_offsetof(fuchsia_io_NodeInfo, vmofile.vmo), "Unaligned Vmofile");
     static_assert(__builtin_offsetof(zxrio_object_info_t, device.e) ==
-                  __builtin_offsetof(fuchsia_io_ObjectInfo, device.event), "Unaligned Device");
+                  __builtin_offsetof(fuchsia_io_NodeInfo, device.event), "Unaligned Device");
 
     return zxrio_decode_describe_handle(info, extra_handle);
 }

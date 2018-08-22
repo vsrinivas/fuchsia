@@ -6,7 +6,7 @@ library fuchsia.io;
 
 using zx;
 
-// Interfaces which may be returned by ObjectInfo, an object
+// Interfaces which may be returned by NodeInfo, an object
 // returned when calling Open or Describe:
 
 // The default protocol, interface information must be acquired via ListInterfaces.
@@ -43,7 +43,7 @@ struct Device {
 
 // Describes how the connection to the Object should be handled, as well as
 // how to interpret the optional handle.
-union ObjectInfo {
+union NodeInfo {
     Service service;
     FileObject file;
     DirectoryObject directory;
@@ -74,17 +74,17 @@ const uint32 kOpenFlagNoRemote = 0x00200000;
 // Open a reference to the object, not the object itself.
 const uint32 kOpenFlagNodeReference = 0x00400000;
 // Requests that an "OnOpen" event is sent, with
-// a non-null ObjectInfo (if the open is successful).
+// a non-null NodeInfo (if the open is successful).
 // Implies "kOpenFlagStatus".
 const uint32 kOpenFlagDescribe = 0x00800000;
 // Requests that an "OnOpen" event is sent.
 const uint32 kOpenFlagStatus = 0x01000000;
 
-// Object defines the minimal interface for entities which can be accessed in a filesystem.
-[Layout = "Simple"]
-interface Object {
+// Node defines the minimal interface for entities which can be accessed in a filesystem.
+[Layout="Simple"]
+interface Node {
     // May be used to create another connection to the same remote object.
-    0x80000001: Clone(uint32 flags, request<Object> object);
+    0x80000001: Clone(uint32 flags, request<Node> object);
 
     // Terminates connection with object.
     0x80000002: Close() -> (zx.status s);
@@ -94,7 +94,7 @@ interface Object {
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
-    0x80000006: Describe() -> (ObjectInfo info);
+    0x80000006: Describe() -> (NodeInfo info);
 
     // An event produced eagerly by a fidl server if requested
     // by open flags.
@@ -104,7 +104,19 @@ interface Object {
     // to open, |info| contains descriptive information about
     // the object (the same as would be returned by |Describe|),
     // otherwise it is null.
-    0x80000007: -> OnOpen(zx.status s, ObjectInfo? info);
+    0x80000007: -> OnOpen(zx.status s, NodeInfo? info);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    0x81000001: Sync() -> (zx.status s);
+
+    // Acquire information about the node.
+    0x81000002: GetAttr() -> (zx.status s, NodeAttributes attributes);
+
+    // Update information about the node.
+    0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
+
+    0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf in)
+        -> (zx.status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
 };
 
 // Bits reserved for posix protections. Native fuchsia filesystems
@@ -143,28 +155,12 @@ struct NodeAttributes {
 const uint64 kMaxIoctlHandles = 2;
 const uint64 kMaxBuf = 8192;
 const uint64 kMaxPath = 4096;
+const uint64 kMaxFileName = 255;
 
 // The fields of 'attributes' which are used to update the Node are indicated
 // by the 'flags' argument.
 const uint32 kNodeAttributeFlagCreationTime = 0x00000001;
 const uint32 kNodeAttributeFlagModificationTime = 0x00000002;
-
-// Node defines a filesystem object, which implements a minimal set of functionality
-// to be compatible with posix filesystem operations.
-[Layout = "Simple"]
-interface Node : Object {
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    0x81000001: Sync() -> (zx.status s);
-
-    // Acquire information about the node.
-    0x81000002: GetAttr() -> (zx.status s, NodeAttributes attributes);
-
-    // Update information about the node.
-    0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
-
-    0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf in)
-                    -> (zx.status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
-};
 
 // Update the Seek offset.
 enum SeekOrigin : uint32 {
@@ -234,7 +230,7 @@ const uint32 kDirentTypeService = 16;
 [Layout = "Simple"]
 interface Directory : Node {
     // Open a new object relative to this directory object.
-    0x83000001: Open(uint32 flags, uint32 mode, string:kMaxPath path, request<Object> object);
+    0x83000001: Open(uint32 flags, uint32 mode, string:kMaxPath path, request<Node> object);
 
     // Remove an object relative to this directory object.
     0x83000002: Unlink(string:kMaxPath path) -> (zx.status s);

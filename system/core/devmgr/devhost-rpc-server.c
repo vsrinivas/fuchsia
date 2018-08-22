@@ -262,40 +262,33 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
     }
 }
 
-static zx_status_t fidl_object_clone(void* ctx, uint32_t flags, zx_handle_t object) {
+static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object) {
     devhost_iostate_t* ios = ctx;
     flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
     devhost_get_handles(object, ios->dev, NULL, flags);
     return ZX_OK;
 }
 
-static zx_status_t fidl_object_close(void* ctx, fidl_txn_t* txn) {
+static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
     devhost_iostate_t* ios = ctx;
     device_close(ios->dev, ios->flags);
     // The ios released its reference to this device by calling
     // device_close() Put an invalid pointer in its dev field to ensure any
     // use-after-release attempts explode.
     ios->dev = (void*) 0xdead;
-    fuchsia_io_ObjectClose_reply(txn, ZX_OK);
+    fuchsia_io_NodeClose_reply(txn, ZX_OK);
     return ERR_DISPATCHER_DONE;
 }
 
-static zx_status_t fidl_object_bind(void* ctx, const char* name, size_t namelen) {
+static zx_status_t fidl_node_bind(void* ctx, const char* name, size_t namelen) {
     fprintf(stderr, "devhost: Object Bind not yet implemented\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t fidl_object_describe(void* ctx, fidl_txn_t* txn) {
+static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     fprintf(stderr, "devhost: Object Describe not yet implemented\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
-
-static const fuchsia_io_Object_ops_t kObjectOps = {
-    .Clone = fidl_object_clone,
-    .Close = fidl_object_close,
-    .Bind = fidl_object_bind,
-    .Describe = fidl_object_describe,
-};
 
 static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        const char* path_data, size_t path_size,
@@ -587,6 +580,10 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
 }
 
 static const fuchsia_io_Node_ops_t kNodeOps = {
+    .Clone = fidl_node_clone,
+    .Close = fidl_node_close,
+    .Bind = fidl_node_bind,
+    .Describe = fidl_node_describe,
     .Sync = fidl_node_sync,
     .GetAttr = fidl_node_getattr,
     .SetAttr = fidl_node_setattr,
@@ -595,11 +592,8 @@ static const fuchsia_io_Node_ops_t kNodeOps = {
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
     fidl_message_header_t* hdr = (fidl_message_header_t*) msg->bytes;
-    if (hdr->ordinal >= fuchsia_io_ObjectCloneOrdinal &&
-        hdr->ordinal <= fuchsia_io_ObjectOnOpenOrdinal) {
-        return fuchsia_io_Object_dispatch(cookie, txn, msg, &kObjectOps);
-    } else if (hdr->ordinal >= fuchsia_io_NodeSyncOrdinal &&
-               hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
+    if (hdr->ordinal >= fuchsia_io_NodeCloneOrdinal &&
+        hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
         return fuchsia_io_Node_dispatch(cookie, txn, msg, &kNodeOps);
     } else if (hdr->ordinal >= fuchsia_io_FileReadOrdinal &&
                hdr->ordinal <= fuchsia_io_FileGetVmoAtOrdinal) {

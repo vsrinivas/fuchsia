@@ -647,8 +647,8 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
     zx_status_t r;
     switch (hdr->ordinal) {
     case ZXFIDL_CLONE: {
-        DECODE_REQUEST(msg, ObjectClone);
-        DEFINE_REQUEST(msg, ObjectClone);
+        DECODE_REQUEST(msg, NodeClone);
+        DEFINE_REQUEST(msg, NodeClone);
         zx_handle_t h = request->object;
         uint32_t flags = request->flags;
         char path[PATH_MAX];

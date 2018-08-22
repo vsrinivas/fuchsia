@@ -64,13 +64,11 @@ public:
     // Must be called at most once in the lifetime of the connection.
     zx_status_t Serve();
 
-    // Object Operations.
-    zx_status_t ObjectClone(uint32_t flags, zx_handle_t object);
-    zx_status_t ObjectClose(fidl_txn_t* txn);
-    zx_status_t ObjectBind(const char* interface_name_data, size_t interface_name_size);
-    zx_status_t ObjectDescribe(fidl_txn_t* txn);
-
     // Node Operations.
+    zx_status_t NodeClone(uint32_t flags, zx_handle_t object);
+    zx_status_t NodeClose(fidl_txn_t* txn);
+    zx_status_t NodeBind(const char* interface_name_data, size_t interface_name_size);
+    zx_status_t NodeDescribe(fidl_txn_t* txn);
     zx_status_t NodeSync(fidl_txn_t* txn);
     zx_status_t NodeGetAttr(fidl_txn_t* txn);
     zx_status_t NodeSetAttr(uint32_t flags,

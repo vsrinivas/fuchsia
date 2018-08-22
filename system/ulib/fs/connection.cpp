@@ -142,28 +142,20 @@ zx_status_t Method ## Op(void* ctx, Args... args) {                       \
     return (connection->Connection::Method)(fbl::forward<Args>(args)...); \
 }
 
-ZXFIDL_OPERATION(ObjectClone)
-ZXFIDL_OPERATION(ObjectClose)
-ZXFIDL_OPERATION(ObjectBind)
-ZXFIDL_OPERATION(ObjectDescribe)
-
-const fuchsia_io_Object_ops kObjectOps = {
-    .Clone = ObjectCloneOp,
-    .Close = ObjectCloseOp,
-    .Bind = ObjectBindOp,
-    .Describe = ObjectDescribeOp,
-};
-
+ZXFIDL_OPERATION(NodeClone)
+ZXFIDL_OPERATION(NodeClose)
+ZXFIDL_OPERATION(NodeBind)
+ZXFIDL_OPERATION(NodeDescribe)
 ZXFIDL_OPERATION(NodeSync)
 ZXFIDL_OPERATION(NodeGetAttr)
 ZXFIDL_OPERATION(NodeSetAttr)
 ZXFIDL_OPERATION(NodeIoctl)
 
 const fuchsia_io_Node_ops kNodeOps = {
-    .Clone = ObjectCloneOp,
-    .Close = ObjectCloseOp,
-    .Bind = ObjectBindOp,
-    .Describe = ObjectDescribeOp,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Bind = NodeBindOp,
+    .Describe = NodeDescribeOp,
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
@@ -182,10 +174,10 @@ ZXFIDL_OPERATION(FileGetVmo)
 ZXFIDL_OPERATION(FileGetVmoAt)
 
 const fuchsia_io_File_ops kFileOps = {
-    .Clone = ObjectCloneOp,
-    .Close = ObjectCloseOp,
-    .Bind = ObjectBindOp,
-    .Describe = ObjectDescribeOp,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Bind = NodeBindOp,
+    .Describe = NodeDescribeOp,
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
@@ -211,10 +203,10 @@ ZXFIDL_OPERATION(DirectoryRename)
 ZXFIDL_OPERATION(DirectoryLink)
 
 const fuchsia_io_Directory_ops kDirectoryOps {
-    .Clone = ObjectCloneOp,
-    .Close = ObjectCloseOp,
-    .Bind = ObjectBindOp,
-    .Describe = ObjectDescribeOp,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Bind = NodeBindOp,
+    .Describe = NodeDescribeOp,
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
@@ -345,7 +337,7 @@ constexpr uint32_t kSettableStatusFlags = ZX_FS_FLAG_APPEND;
 // connection (excluding rights).
 constexpr uint32_t kStatusFlags = kSettableStatusFlags | ZX_FS_FLAG_VNODE_REF_ONLY;
 
-zx_status_t Connection::ObjectClone(uint32_t flags, zx_handle_t object) {
+zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
     zx::channel channel(object);
 
     bool describe;
@@ -380,24 +372,24 @@ zx_status_t Connection::ObjectClone(uint32_t flags, zx_handle_t object) {
     return ZX_OK;
 }
 
-zx_status_t Connection::ObjectClose(fidl_txn_t* txn) {
+zx_status_t Connection::NodeClose(fidl_txn_t* txn) {
     zx_status_t status;
     if (IsPathOnly(flags_)) {
         status = ZX_OK;
     } else {
         status = vnode_->Close();
     }
-    fuchsia_io_ObjectClose_reply(txn, status);
+    fuchsia_io_NodeClose_reply(txn, status);
 
     return ERR_DISPATCHER_DONE;
 }
 
-zx_status_t Connection::ObjectBind(const char* interface_name_data, size_t interface_name_size) {
+zx_status_t Connection::NodeBind(const char* interface_name_data, size_t interface_name_size) {
     fprintf(stderr, "ObjectBind not yet implemented\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Connection::ObjectDescribe(fidl_txn_t* txn) {
+zx_status_t Connection::NodeDescribe(fidl_txn_t* txn) {
     fprintf(stderr, "ObjectDescribe not yet implemented\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -836,11 +828,8 @@ zx_status_t Connection::DirectoryLink(const char* src_data, size_t src_size,
 
 zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-    if (hdr->ordinal >= fuchsia_io_ObjectCloneOrdinal &&
-        hdr->ordinal <= fuchsia_io_ObjectOnOpenOrdinal) {
-        return fuchsia_io_Object_dispatch(this, txn, msg, &kObjectOps);
-    } else if (hdr->ordinal >= fuchsia_io_NodeSyncOrdinal &&
-               hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
+    if (hdr->ordinal >= fuchsia_io_NodeCloneOrdinal &&
+        hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
         return fuchsia_io_Node_dispatch(this, txn, msg, &kNodeOps);
     } else if (hdr->ordinal >= fuchsia_io_FileReadOrdinal &&
                hdr->ordinal <= fuchsia_io_FileGetVmoAtOrdinal) {
