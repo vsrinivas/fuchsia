@@ -267,6 +267,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
     fidl::VectorPtr<fidl::StringPtr> module_path;
     fuchsia::modular::ModuleManifestPtr module_manifest;
     fuchsia::modular::SurfaceRelationPtr surface_relation;
+    fuchsia::modular::ModuleSource module_source;
     fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
   };
   std::map<fidl::StringPtr, PendingView> pending_views_;

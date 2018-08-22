@@ -437,7 +437,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     story_controller_impl_->pending_views_.emplace(
         PathString(module_data_.module_path),
         PendingView{module_data_.module_path.Clone(), std::move(manifest_clone),
-                    std::move(surface_relation_clone), std::move(view_owner_)});
+                    std::move(surface_relation_clone), module_data_.module_source,
+                    std::move(view_owner_)});
   }
 
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
@@ -446,7 +447,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     story_controller_impl_->story_shell_->AddView(
         std::move(view_owner_), view_id, anchor_view_id,
         std::move(module_data_.surface_relation),
-        std::move(module_data_.module_manifest));
+        std::move(module_data_.module_manifest),
+        std::move(module_data_.module_source));
 
     story_controller_impl_->connected_views_.emplace(view_id);
     story_controller_impl_->ProcessPendingViews();
@@ -1370,7 +1372,8 @@ void StoryControllerImpl::ProcessPendingViews() {
     const auto view_id = PathString(kv.second.module_path);
     story_shell_->AddView(std::move(kv.second.view_owner), view_id,
                           anchor_view_id, std::move(kv.second.surface_relation),
-                          std::move(kv.second.module_manifest));
+                          std::move(kv.second.module_manifest),
+                          std::move(kv.second.module_source));
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);

@@ -52,9 +52,10 @@ class DevStoryShellApp
   // |fuchsia::modular::StoryShell|
   void AddView(
       fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::StringPtr /*view_id*/, fidl::StringPtr /*parent_id*/,
-      fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
-      fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
+      fidl::StringPtr /*view_id*/, fidl::StringPtr /* parent_id */,
+      fuchsia::modular::SurfaceRelationPtr /* surface_relation */,
+      fuchsia::modular::ModuleManifestPtr /* module_manifest */,
+      fuchsia::modular::ModuleSource /* module_source */) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
     } else {

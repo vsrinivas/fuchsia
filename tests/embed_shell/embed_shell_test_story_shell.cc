@@ -49,8 +49,9 @@ class TestApp
   void AddView(
       fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::StringPtr view_id, fidl::StringPtr anchor_id,
-      fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
-      fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
+      fuchsia::modular::SurfaceRelationPtr /* surface_relation */,
+      fuchsia::modular::ModuleManifestPtr /* module_manifest */,
+      fuchsia::modular::ModuleSource /* module_source */) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       add_view_.Pass();
       modular::testing::GetStore()->Put("story_shell_done", "1", [] {});

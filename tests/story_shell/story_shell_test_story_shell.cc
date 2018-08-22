@@ -53,7 +53,8 @@ class TestApp
       fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::StringPtr view_id, fidl::StringPtr anchor_id,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
-      fuchsia::modular::ModuleManifestPtr module_manifest) override {
+      fuchsia::modular::ModuleManifestPtr module_manifest,
+      fuchsia::modular::ModuleSource /* module_source */) override {
     FXL_LOG(INFO) << "AddView " << view_id << " " << anchor_id << " "
                   << (module_manifest ? module_manifest->composition_pattern
                                       : " NO MANIFEST");
