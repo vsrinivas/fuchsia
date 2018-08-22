@@ -386,7 +386,7 @@ static zx_status_t import_image(zx_handle_t handle, uint32_t width,
     status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup);
     ZX_ASSERT(status == ZX_OK);
 
-    fuchsia_display_ControllerImportVmoImageRequest import_msg;
+    fuchsia_display_ControllerImportVmoImageRequest import_msg = {};
     import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
     import_msg.hdr.txid = txid++;
     import_msg.image_config.height = height;
@@ -497,7 +497,7 @@ static zx_status_t set_display_layers(uint64_t display_id, uint64_t layer_id,
 
 static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width,
                                     uint32_t height, zx_pixel_format_t format) {
-    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
+    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg = {};
     layer_cfg_msg.hdr.ordinal =
         fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
     layer_cfg_msg.layer_id = layer_id;

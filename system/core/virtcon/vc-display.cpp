@@ -262,7 +262,7 @@ static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_display_ImageConfig* conf
         return status;
     }
 
-    fuchsia_display_ControllerImportVmoImageRequest import_msg;
+    fuchsia_display_ControllerImportVmoImageRequest import_msg = {};
     import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
     import_msg.image_config = *config;
     import_msg.vmo = FIDL_HANDLE_PRESENT;

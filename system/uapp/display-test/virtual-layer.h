@@ -133,6 +133,7 @@ public:
     void SetScaling(bool enable) {
         scaling_ = enable;
     }
+    void SetImageFormat(uint32_t image_format) { image_format_ = image_format; }
 
     bool Init(zx_handle_t channel) override;
     void StepLayout(int32_t frame_num) override;

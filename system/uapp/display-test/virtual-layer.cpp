@@ -139,14 +139,7 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
         fuchsia_display_ControllerSetLayerPrimaryConfigRequest config;
         config.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
         config.layer_id = layer->id;
-        config.image_config.height = image_height_;
-        config.image_config.width = image_width_;
-        config.image_config.pixel_format = image_format_;
-#if !USE_INTEL_Y_TILING
-        config.image_config.type = IMAGE_TYPE_SIMPLE;
-#else
-        config.image_config.type = 2; // IMAGE_TYPE_Y_LEGACY
-#endif
+        images_[0]->GetConfig(&config.image_config);
 
         if (zx_channel_write(dc_handle, 0, &config, sizeof(config), nullptr, 0) != ZX_OK) {
             printf("Setting layer config failed\n");

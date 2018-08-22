@@ -50,7 +50,8 @@ typedef struct vim2_display {
     // vsync but before the interrupt is handled.
     bool                                current_image_valid;
     uint8_t                             current_image;
-    uint8_t                             canvas_entries[NUM_CANVAS_ENTRIES / 8];
+    bool                                vd1_image_valid;
+    uint32_t                            vd1_image;
 
     io_buffer_t                         mmio_preset;
     io_buffer_t                         mmio_hdmitx;
@@ -85,6 +86,10 @@ typedef struct vim2_display {
     void*                               dc_cb_ctx;
     list_node_t                         imported_images;
 } vim2_display_t;
+
+void disable_vd(vim2_display_t* display, uint32_t vd_index);
+void configure_vd(vim2_display_t* display, uint32_t vd_index);
+void flip_vd(vim2_display_t* display, uint32_t vd_index, uint32_t index);
 
 void disable_osd2(vim2_display_t* display);
 zx_status_t configure_osd2(vim2_display_t* display);

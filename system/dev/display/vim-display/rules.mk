@@ -12,11 +12,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim-display.cpp \
     $(LOCAL_DIR)/hdmitx.cpp \
     $(LOCAL_DIR)/hdmitx_clk.cpp \
-    $(LOCAL_DIR)/osd2.cpp \
+    $(LOCAL_DIR)/vpp.cpp \
     $(LOCAL_DIR)/edid.cpp \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync \
     system/ulib/fbl \
+    system/ulib/hwreg \
     system/ulib/zxcpp \
 
 

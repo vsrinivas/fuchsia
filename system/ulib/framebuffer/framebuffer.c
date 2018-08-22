@@ -41,7 +41,7 @@ static bool in_single_buffer_mode;
 
 static zx_status_t set_layer_config(int32_t layer_id, uint32_t width, uint32_t height,
                                     zx_pixel_format_t format, int32_t type) {
-    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
+    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg = {};
     layer_cfg_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
     layer_cfg_msg.layer_id = layer_id;
     layer_cfg_msg.image_config.width = width;
@@ -316,7 +316,7 @@ zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out)
         type_set = true;
     }
 
-    fuchsia_display_ControllerImportVmoImageRequest import_msg;
+    fuchsia_display_ControllerImportVmoImageRequest import_msg = {};
     import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
     import_msg.hdr.txid = txid++;
     import_msg.image_config.height = height;

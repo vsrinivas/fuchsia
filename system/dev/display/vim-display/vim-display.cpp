@@ -33,7 +33,8 @@ static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB
 
 typedef struct image_info {
     zx_handle_t pmt;
-    uint8_t canvas_idx;
+    zx_pixel_format_t format;
+    uint8_t canvas_idx[2];
 
     list_node_t node;
 } image_info_t;
@@ -90,35 +91,90 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
     }
 
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
-    zx_status_t status = ZX_OK;
     fbl::AutoLock lock(&display->image_lock);
 
-    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != display->format) {
+    if (image->type != IMAGE_TYPE_SIMPLE)
+        return ZX_ERR_INVALID_ARGS;
+
+    import_info->format = image->pixel_format;
+    uint32_t stride = vim_compute_linear_stride(display, image->width, image->pixel_format);
+
+    if (image->pixel_format == ZX_PIXEL_FORMAT_RGB_x888) {
+        zx_status_t status = ZX_OK;
+        canvas_info_t info;
+        info.height = image->height;
+        info.stride_bytes = image->planes[0].bytes_per_row;
+        if (info.stride_bytes == 0) {
+            info.stride_bytes = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
+        }
+        info.wrap = 0;
+        info.blkmode = 0;
+        info.endianness = 0;
+
+        zx_handle_t dup_vmo;
+        status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = canvas_config(&display->canvas, dup_vmo, offset + image->planes[0].byte_offset,
+                               &info, &import_info->canvas_idx[0]);
+        if (status != ZX_OK) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+        image->handle = (void*)(uint64_t)import_info->canvas_idx[0];
+    } else if (image->pixel_format == ZX_PIXEL_FORMAT_NV12) {
+        if (image->height % 2 != 0) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        zx_status_t status = ZX_OK;
+        canvas_info_t info;
+        info.height = image->height;
+        info.stride_bytes = image->planes[0].bytes_per_row;
+        if (info.stride_bytes == 0) {
+            info.stride_bytes = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
+        }
+        info.wrap = 0;
+        info.blkmode = 0;
+        // Do 64-bit endianness conversion.
+        info.endianness = 7;
+
+        zx_handle_t dup_vmo;
+        status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = canvas_config(&display->canvas, dup_vmo, offset + image->planes[0].byte_offset,
+                               &info, &import_info->canvas_idx[0]);
+        if (status != ZX_OK) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+
+        status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+        if (status != ZX_OK) {
+            canvas_free(&display->canvas, import_info->canvas_idx[0]);
+            return status;
+        }
+
+        info.height /= 2;
+        info.stride_bytes = image->planes[1].bytes_per_row;
+        if (info.stride_bytes == 0)
+            info.stride_bytes = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
+
+        status = canvas_config(&display->canvas, dup_vmo, offset + image->planes[1].byte_offset,
+                               &info, &import_info->canvas_idx[1]);
+        if (status != ZX_OK) {
+            canvas_free(&display->canvas, import_info->canvas_idx[0]);
+            return ZX_ERR_NO_RESOURCES;
+        }
+        // The handle used by hardware is VVUUYY, so the UV plane is included twice.
+        image->handle = (void*)(((uint64_t)import_info->canvas_idx[1] << 16) |
+                                (import_info->canvas_idx[1] << 8) | import_info->canvas_idx[0]);
+    } else {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    uint32_t stride = vim_compute_linear_stride(display, image->width, image->pixel_format);
-
-    canvas_info_t info;
-    info.height         = image->height;
-    info.stride_bytes   = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-    info.wrap           = 0;
-    info.blkmode        = 0;
-    info.endianness     = 0;
-
-    zx_handle_t dup_vmo;
-    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = canvas_config(&display->canvas, dup_vmo, offset,
-                           &info, &import_info->canvas_idx);
-    if (status != ZX_OK) {
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    image->handle = (void*) (uint64_t) import_info->canvas_idx;
     list_add_head(&display->imported_images, &import_info.release()->node);
 
     return ZX_OK;
@@ -129,8 +185,10 @@ static void vim_release_image(void* ctx, image_t* image) {
     mtx_lock(&display->image_lock);
 
     image_info_t* info;
+    uint32_t canvas_idx0 = (uint64_t)image->handle & 0xff;
+    uint32_t canvas_idx1 = ((uint64_t)image->handle >> 8) & 0xff;
     list_for_every_entry(&display->imported_images, info, image_info_t, node) {
-        if ((void*) (uint64_t) info->canvas_idx == image->handle) {
+        if (info->canvas_idx[0] == canvas_idx0 && info->canvas_idx[1] == canvas_idx1) {
             list_delete(&info->node);
             break;
         }
@@ -139,7 +197,9 @@ static void vim_release_image(void* ctx, image_t* image) {
     mtx_unlock(&display->image_lock);
 
     if (info) {
-        canvas_free(&display->canvas, info->canvas_idx);
+        canvas_free(&display->canvas, info->canvas_idx[0]);
+        if (info->format == ZX_PIXEL_FORMAT_NV12)
+            canvas_free(&display->canvas, info->canvas_idx[1]);
         free(info);
     }
 }
@@ -215,7 +275,6 @@ static void vim_apply_configuration(void* ctx,
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
     mtx_lock(&display->display_lock);
 
-    uint8_t addr;
     if (display_count == 1 && display_configs[0]->layer_count) {
         // The only way a checked configuration could now be invalid is if display was
         // unplugged. If that's the case, then the upper layers will give a new configuration
@@ -224,9 +283,19 @@ static void vim_apply_configuration(void* ctx,
             mtx_unlock(&display->display_lock);
             return;
         }
-        addr = (uint8_t) (uint64_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
-        flip_osd2(display, addr);
+        if (display_configs[0]->layers[0]->cfg.primary.image.pixel_format == ZX_PIXEL_FORMAT_NV12) {
+            uint32_t addr =
+                (uint32_t)(uint64_t)display_configs[0]->layers[0]->cfg.primary.image.handle;
+            flip_vd(display, 0, addr);
+            disable_osd2(display);
+        } else {
+            uint8_t addr;
+            addr = (uint8_t)(uint64_t)display_configs[0]->layers[0]->cfg.primary.image.handle;
+            flip_osd2(display, addr);
+            disable_vd(display, 0);
+        }
     } else {
+        disable_vd(display, 0);
         disable_osd2(display);
     }
 
@@ -253,6 +322,7 @@ static void display_release(void* ctx) {
 
     if (display) {
         disable_osd2(display);
+        disable_vd(display, 0);
         bool wait_for_vsync_shutdown = false;
         if (display->vsync_interrupt != ZX_HANDLE_INVALID) {
             zx_interrupt_trigger(display->vsync_interrupt, 0, 0);
@@ -345,8 +415,8 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
         return status;
     }
 
-    /* OSD2 setup */
     configure_osd2(display);
+    configure_vd(display, 0);
 
     return ZX_OK;
 }
@@ -422,12 +492,18 @@ static int vsync_thread(void *arg)
 
         uint64_t display_id = display->display_id;
         bool attached = display->display_attached;
-        void* live = (void*) (uint64_t) display->current_image;
-        bool current_image_valid = display->current_image_valid;
+        void* live[2] = {};
+        uint32_t current_image_count = 0;
+        if (display->current_image_valid) {
+            live[current_image_count++] = (void*)(uint64_t)display->current_image;
+        }
+        if (display->vd1_image_valid) {
+            live[current_image_count++] = (void*)(uint64_t)display->vd1_image;
+        }
 
         if (display->dc_cb && attached) {
-            display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id, timestamp,
-                                             &live, current_image_valid);
+            display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id, timestamp, live,
+                                             current_image_count);
         }
         mtx_unlock(&display->display_lock);
     }
