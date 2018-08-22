@@ -104,7 +104,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 
   // If we have event indices enabled, update the avail-event to notify us
   // when we have sufficient descriptors available.
-  if (device()->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX) &&
+  if (device_->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX) &&
       ring_.avail_event) {
     *ring_.avail_event = ring_.index + avail_event_num_ - 1;
   }
@@ -253,7 +253,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
                                 InterruptAction action) {
   bool needs_interrupt = false;
   bool use_event_index =
-      device()->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX);
+      device_->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX);
   {
     fbl::AutoLock lock(&mutex_);
     volatile struct vring_used_elem* used =
@@ -289,9 +289,9 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
   if (needs_interrupt) {
     // Set the queue bit in the device ISR so that the driver knows to check
     // the queues on the next interrupt.
-    device()->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
+    device_->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
     if (action == InterruptAction::SEND_INTERRUPT) {
-      return device()->NotifyGuest();
+      return device_->NotifyGuest();
     }
   }
   return ZX_OK;
@@ -300,8 +300,6 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
 zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
   uint16_t head;
   uint32_t used_len = 0;
-  uintptr_t mem_addr = device()->phys_mem().addr();
-  size_t mem_size = device()->phys_mem().size();
 
   // Get the next descriptor from the available ring. If none are available
   // we can just no-op.
@@ -325,12 +323,7 @@ zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
       desc = &ring_.desc[desc_index];
     }
 
-    const uint64_t end = desc->addr + desc->len;
-    if (end < desc->addr || end > mem_size) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    void* addr = reinterpret_cast<void*>(mem_addr + desc->addr);
+    void* addr = device_->phys_mem().as<void>(desc->addr, desc->len);
     status = handler(addr, desc->len, desc->flags, &used_len, ctx);
     if (status != ZX_OK) {
       return status;
