@@ -6,6 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("mxruntime-sys") {
   name = "mxruntime_sys"
+  edition = "2015"
   deps = [
     "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   ]

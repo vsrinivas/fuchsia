@@ -7,6 +7,8 @@ import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "dhcpd"
+  edition = "2015"
+
   deps = [
     "//garnet/lib/rust/crates/dhcp",
     "//garnet/public/rust/crates/fuchsia-async",

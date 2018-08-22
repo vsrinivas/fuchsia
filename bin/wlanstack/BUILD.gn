@@ -8,6 +8,7 @@ import("//build/package.gni")
 rustc_binary("bin") {
   name = "wlanstack2"
   with_unit_tests = true
+  edition = "2015"
   # with_lto = "fat"
 
   deps = [

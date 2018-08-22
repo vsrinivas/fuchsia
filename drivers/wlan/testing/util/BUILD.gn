@@ -6,6 +6,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("util") {
   name = "wlan_test_util"
+  edition = "2015"
 
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",

@@ -6,6 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-vfs") {
   with_unit_tests = true
+  edition = "2015"
   deps = [
     "//garnet/public/rust/crates/fdio:fdio-rustc",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",

@@ -13,6 +13,7 @@ group("integration") {
 
 # integration tests
 rustc_binary("bt_lifecycle_integration_test") {
+  edition = "2015"
   deps = [
     "//garnet/lib/bluetooth/fidl:bluetooth_host-rustc",
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
