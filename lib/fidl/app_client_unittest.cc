@@ -44,8 +44,6 @@ class TestComponentController : fuchsia::sys::ComponentController {
 
   void Detach() override {}
 
-  void Wait(WaitCallback callback) override {}
-
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
 
   bool killed_{};

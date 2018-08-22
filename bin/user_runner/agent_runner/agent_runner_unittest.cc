@@ -105,8 +105,6 @@ class MyDummyAgent : fuchsia::modular::Agent,
   void Kill() override { ++counts["Kill"]; }
   // |ComponentController|
   void Detach() override { ++counts["Detach"]; }
-  // |ComponentController|
-  void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |fuchsia::modular::Agent|
   void Connect(

@@ -147,8 +147,6 @@ class MyEntityProvider : AgentImpl::Delegate,
   void Kill() override { ++counts["Kill"]; }
   // |ComponentController|
   void Detach() override { ++counts["Detach"]; }
-  // |ComponentController|
-  void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |AgentImpl::Delegate|
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
