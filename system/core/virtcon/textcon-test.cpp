@@ -10,6 +10,16 @@
 #include "textcon.h"
 #include "vc.h"
 
+// This is needed to satisfy a reference from vc_handle_device_control_keys
+// in vc-input.cpp but the code path to that reference is dead in this test.
+void vc_toggle_framebuffer() {
+    __builtin_trap();
+}
+
+// This is needed to satisfy a reference from handle_key_press in vc-input.cpp
+// but the code path to that reference is dead in this test.
+bool g_vc_owns_display = false;
+
 namespace {
 
 void invalidate_callback(void* cookie, int x, int y, int w, int h) {
