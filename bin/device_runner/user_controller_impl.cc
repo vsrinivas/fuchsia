@@ -23,6 +23,7 @@ UserControllerImpl::UserControllerImpl(
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
@@ -59,8 +60,8 @@ UserControllerImpl::UserControllerImpl(
   user_runner_app_->services().ConnectToService(user_runner_.NewRequest());
   user_runner_->Initialize(
       std::move(account), std::move(user_shell), std::move(story_shell),
-      std::move(token_provider_factory), user_context_binding_.NewBinding(),
-      std::move(view_owner_request));
+      std::move(token_provider_factory), std::move(token_manager),
+      user_context_binding_.NewBinding(), std::move(view_owner_request));
 }
 
 // |fuchsia::modular::UserController|

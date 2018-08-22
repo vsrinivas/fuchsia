@@ -12,6 +12,7 @@ fidl("fuchsia.modular.internal") {
     "user_runner.fidl",
   ]
   deps = [
+    "//garnet/public/fidl/fuchsia.auth",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }

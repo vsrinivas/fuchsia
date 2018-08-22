@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
+#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -44,6 +45,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
       fuchsia::modular::auth::AccountPtr account,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,

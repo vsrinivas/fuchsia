@@ -69,6 +69,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
       fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
           user_context,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
@@ -83,6 +84,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
       fuchsia::modular::auth::AccountPtr account,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
       fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
           user_context);
   void InitializeLedger();
@@ -178,6 +180,8 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   fidl::Binding<fuchsia::modular::UserShellContext> user_shell_context_binding_;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
+  // TODO(ukode): token_manager_ is currently null, until it is implemented.
+  fuchsia::auth::TokenManagerPtr token_manager_;
   fuchsia::modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firestore::FactoryPtr cloud_provider_factory_;

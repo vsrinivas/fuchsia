@@ -26,6 +26,7 @@ executable_package("device_runner") {
 
   deps = [
     ":lib",
+    "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
@@ -80,6 +81,7 @@ source_set("lib") {
 
   deps = [
     ":users",
+    "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",

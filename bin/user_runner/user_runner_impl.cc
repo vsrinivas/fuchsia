@@ -204,11 +204,12 @@ void UserRunnerImpl::Initialize(
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
-                 std::move(user_context));
+                 std::move(token_manager), std::move(user_context));
   InitializeLedger();
   InitializeLedgerDashboard();
   InitializeDeviceMap();
@@ -224,10 +225,14 @@ void UserRunnerImpl::InitializeUser(
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
         user_context) {
   token_provider_factory_ = token_provider_factory.Bind();
   AtEnd(Reset(&token_provider_factory_));
+
+  token_manager_ = token_manager.Bind();
+  AtEnd(Reset(&token_manager_));
 
   user_context_ = user_context.Bind();
   AtEnd(Reset(&user_context_));

@@ -4,6 +4,7 @@
 
 library fuchsia.modular.internal;
 
+using fuchsia.auth;
 using fuchsia.modular;
 using fuchsia.modular.auth;
 using fuchsia.ui.policy;
@@ -20,6 +21,7 @@ interface UserRunner {
                fuchsia.modular.AppConfig user_shell,
                fuchsia.modular.AppConfig story_shell,
                fuchsia.modular.auth.TokenProviderFactory token_provider_factory,
+               fuchsia.auth.TokenManager token_manager,
                UserContext user_context,
                request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
 

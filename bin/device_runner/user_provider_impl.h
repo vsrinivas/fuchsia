@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
+#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
@@ -59,6 +60,7 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
                    const fuchsia::modular::AppConfig& default_user_shell,
                    const fuchsia::modular::AppConfig& story_shell,
                    fuchsia::modular::auth::AccountProvider* account_provider,
+                   fuchsia::auth::TokenManagerFactory* token_manager_factory,
                    Delegate* const delegate);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
@@ -85,6 +87,13 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
   void RemoveUser(fidl::StringPtr account_id,
                   RemoveUserCallback callback) override;
 
+  // Add user using the Token Manager Factory interface |fuchsia.auth|.
+  void AddUserV2(fuchsia::modular::auth::IdentityProvider identity_provider,
+                 AddUserCallback callback);
+
+  // Remove user using the Token Manager Factory interface |fuchsia.auth|.
+  void RemoveUserV2(fidl::StringPtr account_id, RemoveUserCallback callback);
+
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
@@ -100,6 +109,8 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
   const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
   fuchsia::modular::auth::AccountProvider* const
       account_provider_;  // Neither owned nor copied.
+  fuchsia::auth::TokenManagerFactory* const
+      token_manager_factory_;  // Neither owned nor copied.
 
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;

@@ -8,6 +8,7 @@
 #include <string>
 
 #include <fs/pseudo-file.h>
+#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -319,6 +320,45 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     return did_stop;
   }
 
+  FuturePtr<> StopAccountProvider() {
+    if (!account_provider_) {
+      FXL_DLOG(INFO) << "StopAccountProvider() called when already stopped";
+
+      return Future<>::CreateCompleted("StopAccountProvider::Completed");
+    }
+
+    auto did_stop = Future<>::Create("StopAccountProvider");
+
+    account_provider_->Teardown(kBasicTimeout, [did_stop, this] {
+      FXL_DLOG(INFO) << "- fuchsia::modular::auth::AccountProvider down";
+
+      account_provider_.release();
+      did_stop->Complete();
+    });
+
+    return did_stop;
+  }
+
+  FuturePtr<> StopTokenManagerFactoryApp() {
+    if (!token_manager_factory_app_) {
+      FXL_DLOG(INFO)
+          << "StopTokenManagerFactoryApp() called when already stopped";
+
+      return Future<>::CreateCompleted("StopTokenManagerFactoryApp::Completed");
+    }
+
+    auto did_stop = Future<>::Create("StopTokenManagerFactoryApp");
+
+    token_manager_factory_app_->Teardown(kBasicTimeout, [did_stop, this] {
+      FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
+
+      token_manager_factory_app_.release();
+      did_stop->Complete();
+    });
+
+    return did_stop;
+  }
+
   void Start() {
     if (settings_.test) {
       // 0. Print test banner.
@@ -343,19 +383,30 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     // Start OAuth Token Manager App.
     fuchsia::modular::AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
-    token_manager_ =
+    if (settings_.enable_garnet_token_manager) {
+      token_manager_factory_app_ =
+          std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+              context_->launcher().get(), CloneStruct(token_manager_config));
+      token_manager_factory_app_->services().ConnectToService(
+          token_manager_factory_.NewRequest());
+    } else {
+      token_manager_factory_app_.release();
+    }
+
+    account_provider_ =
         std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
             context_->launcher().get(), std::move(token_manager_config),
             "/data/modular/ACCOUNT_MANAGER");
-    token_manager_->SetAppErrorHandler([] {
+    account_provider_->SetAppErrorHandler([] {
       FXL_CHECK(false) << "Token manager crashed. Stopping device runner.";
     });
-    token_manager_->primary_service()->Initialize(
+    account_provider_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
 
     user_provider_impl_.reset(new UserProviderImpl(
         context_, settings_.user_runner, settings_.user_shell,
-        settings_.story_shell, token_manager_->primary_service().get(), this));
+        settings_.story_shell, account_provider_->primary_service().get(),
+        token_manager_factory_.get(), this));
 
     ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
   }
@@ -386,11 +437,14 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
 
     user_provider_impl_.Teardown(kUserProviderTimeout, [this] {
       FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
-      token_manager_->Teardown(kBasicTimeout, [this] {
-        FXL_DLOG(INFO) << "- AuthProvider down";
-        StopDeviceShell()->Then([this] {
-          FXL_LOG(INFO) << "Clean Shutdown";
-          on_shutdown_();
+      StopAccountProvider()->Then([this] {
+        FXL_DLOG(INFO) << "- fuchsia::modular::auth::AccountProvider down";
+        StopTokenManagerFactoryApp()->Then([this] {
+          FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
+          StopDeviceShell()->Then([this] {
+            FXL_LOG(INFO) << "Clean Shutdown";
+            on_shutdown_();
+          });
         });
       });
     });
@@ -619,7 +673,10 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       account_provider_context_binding_;
 
   std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>>
-      token_manager_;
+      account_provider_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
+      token_manager_factory_app_;
+  fuchsia::auth::TokenManagerFactoryPtr token_manager_factory_;
 
   bool device_shell_running_{};
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> device_shell_app_;

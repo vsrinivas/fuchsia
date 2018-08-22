@@ -70,12 +70,14 @@ UserProviderImpl::UserProviderImpl(
     const fuchsia::modular::AppConfig& default_user_shell,
     const fuchsia::modular::AppConfig& story_shell,
     fuchsia::modular::auth::AccountProvider* const account_provider,
+    fuchsia::auth::TokenManagerFactory* const token_manager_factory,
     Delegate* const delegate)
     : context_(std::move(context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
       account_provider_(account_provider),
+      token_manager_factory_(token_manager_factory),
       delegate_(delegate) {
   FXL_DCHECK(delegate);
 
@@ -299,6 +301,19 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
       });
 }
 
+void UserProviderImpl::AddUserV2(
+    fuchsia::modular::auth::IdentityProvider identity_provider,
+    AddUserCallback callback) {
+  // TODO(ukode): Provide impl here.
+  FXL_CHECK(token_manager_factory_);
+}
+
+void UserProviderImpl::RemoveUserV2(fidl::StringPtr account_id,
+                                    RemoveUserCallback callback) {
+  // TODO(ukode): Provide impl here.
+  FXL_CHECK(token_manager_factory_);
+}
+
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
                                     std::string* const error) {
   if (!Parse(serialized_users)) {
@@ -341,6 +356,10 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
       account ? account->id.get() : GetRandomId(),
       token_provider_factory.NewRequest());
 
+  // TODO(ukode): Add impl to get token_manager from token_manager_factory for
+  // the given user.
+  fuchsia::auth::TokenManagerPtr token_manager;
+
   auto user_shell = params.user_shell_config
                         ? std::move(*params.user_shell_config)
                         : CloneStruct(default_user_shell_);
@@ -353,8 +372,8 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   auto controller = std::make_unique<UserControllerImpl>(
       context_->launcher().get(), CloneStruct(user_runner_),
       std::move(user_shell), CloneStruct(story_shell_),
-      std::move(token_provider_factory), std::move(account),
-      std::move(view_owner), std::move(service_provider),
+      std::move(token_provider_factory), std::move(token_manager),
+      std::move(account), std::move(view_owner), std::move(service_provider),
       std::move(params.user_controller), [this](UserControllerImpl* c) {
         user_controllers_.erase(c);
         delegate_->DidLogout();
