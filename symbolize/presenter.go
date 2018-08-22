@@ -29,7 +29,7 @@ func NewBacktracePresenter(out io.Writer, next PostProcessor) *BacktracePresente
 func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInfo) {
 	modRelAddr := info.addr - info.seg.Vaddr + info.seg.ModRelAddr
 	if len(info.locs) == 0 {
-		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x", hdr.Present(), frame, info.addr, info.mod.Name, modRelAddr)
+		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x\n", hdr.Present(), frame, info.addr, info.mod.Name, modRelAddr)
 		return
 	}
 	for i, _ := range info.locs {
