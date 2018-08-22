@@ -10,7 +10,7 @@ use fdio::{self, fdio_sys, make_ioctl};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_vlog};
 use fuchsia_zircon::{self as zx, Signals, sys::zx_handle_t};
-use futures::{stream, TryFutureExt, TryStreamExt};
+use futures::TryFutureExt;
 use std::fs::File;
 use std::io::{self, Result};
 use std::marker::Send;
@@ -132,17 +132,13 @@ where
         .try_clone()
         .map_err(|e| io::Error::new(e.kind(), format!("error copying power device file: {}", e)))?;
 
-    let f = stream::repeat(Ok(())).try_fold((callback, h, file_copy),
-        |(callback, handle, file), ()| {
-            // TODO: change OnSignals to wrap this so that is is not created again and again.
-            fasync::OnSignals::new(&handle, Signals::USER_0).map_ok(|_| {
-                fx_vlog!(1, "callback called {:?}", file);
-                callback(&file);
-                (callback, handle, file)
-            })
+    fasync::spawn(async move {
+        loop {
+            let _signals = await!(fasync::OnSignals::new(&h, Signals::USER_0))?;
+            fx_vlog!(1, "callback called {:?}", file_copy);
+            callback(&file_copy);
         }
-    );
-    fasync::spawn(f.map_ok(|_| ()).unwrap_or_else(|e| {
+    }.unwrap_or_else(|e: failure::Error| {
         fx_log_err!(
             "not able to apply listener to power device, wait failed: {:?}",
             e
