@@ -4,11 +4,17 @@
 
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
+declare_args() {
+  linux_guest_use_ramdisk = false
+}
+
 linux_dir = "$target_out_dir/linux/source"
 sysroot_dir = "$target_out_dir/linux/sysroot"
 linux_image = "$target_out_dir/linux/Image"
 disk_image = "$target_out_dir/linux/disk.img"
-initrd_image = "$target_out_dir/linux/initrd.img"
+if (linux_guest_use_ramdisk) {
+  initrd_image = "$target_out_dir/linux/initrd.img"
+}
 
 # Build a simple toybox sysroot that is packaged both as an initrd and
 # as an ext2 filesystem image.
@@ -20,9 +26,6 @@ action("sysroot") {
     "-r",
     "-p",
     rebase_path("$disk_image"),
-    "-i",
-    "-o",
-    rebase_path("$initrd_image"),
     "-d",
     rebase_path("$sysroot_dir/toybox"),
     "-s",
@@ -32,8 +35,19 @@ action("sysroot") {
 
   outputs = [
     disk_image,
-    initrd_image,
   ]
+
+  if (linux_guest_use_ramdisk) {
+    args += [
+      "-i",
+      "-o",
+      rebase_path("$initrd_image"),
+    ]
+
+    outputs += [
+      initrd_image,
+    ]
+  }
 }
 
 action("kernel") {
@@ -64,11 +78,13 @@ guest_package("linux_guest") {
   } else if (target_cpu == "x64") {
     cmdline = "earlycon=uart,io,0x3f8"
   }
-  cmdline += " console=hvc0 console=tty0"
+  cmdline += " console=hvc0 console=tty0 root=/dev/vda"
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "target_out_dir")
   linux = "$host_out_dir/linux/Image"
-  ramdisk = "$host_out_dir/linux/initrd.img"
+  if (linux_guest_use_ramdisk) {
+    ramdisk = "$host_out_dir/linux/initrd.img"
+  }
 
   disk_name = "filesystem.img"
   resources = [

@@ -6,7 +6,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
 guest_package("zircon_guest") {
-  # TODO(PD-162): This should just use zircon.zbi as zircon and have no
+  # TODO(MAC-3): This should just use zircon.zbi as zircon and have no
   # ramdisk, when the guest loader supports that.
   zircon = "$zircon_build_dir/kernel.zbi"
   ramdisk = "$zircon_build_dir/zircon.zbi"
