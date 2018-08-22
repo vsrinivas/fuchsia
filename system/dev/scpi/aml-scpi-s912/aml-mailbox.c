@@ -2,49 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "aml-mailbox.h"
+#include "aml-mailbox-hw.h"
+#include <ddk/binding.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 #include <unistd.h>
-#include "aml-mailbox.h"
-#include "aml-mailbox-hw.h"
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/mailbox.h>
 
-#define READ32_MAILBOX_PL_REG(offset)         readl(io_buffer_virt(&mailbox->mmio_mailbox_payload)\
-                                                    + (offset)*4)
+#define READ32_MAILBOX_PL_REG(offset) readl(io_buffer_virt(&mailbox->mmio_mailbox_payload) + \
+                                            (offset)*4)
 #define WRITE32_MAILBOX_PL_REG(offset, value) writel(value, \
-                                                    io_buffer_virt(&mailbox->mmio_mailbox_payload)\
-                                                    + (offset)*4)
-#define READ32_MAILBOX_REG(offset)            readl(io_buffer_virt(&mailbox->mmio_mailbox) \
-                                                    + (offset)*4)
-#define WRITE32_MAILBOX_REG(offset, value)    writel(value, io_buffer_virt(&mailbox->mmio_mailbox)\
+                                                    io_buffer_virt(&mailbox->mmio_mailbox_payload) \
                                                      + (offset)*4)
+#define READ32_MAILBOX_REG(offset) readl(io_buffer_virt(&mailbox->mmio_mailbox) + (offset)*4)
+#define WRITE32_MAILBOX_REG(offset, value) writel(value, io_buffer_virt(&mailbox->mmio_mailbox) \
+                                                  + (offset)*4)
 
 static int aml_get_rx_mailbox(uint32_t tx_mailbox) {
-    switch(tx_mailbox) {
-        case AP_SECURE_MAILBOX:
-            return SCP_SECURE_MAILBOX;
-        case AP_NS_LOW_PRIORITY_MAILBOX:
-            return SCP_NS_LOW_PRIORITY_MAILBOX;
-        case AP_NS_HIGH_PRIORITY_MAILBOX:
-            return SCP_NS_HIGH_PRIORITY_MAILBOX;
-        default:
-            return INVALID_MAILBOX;
+    switch (tx_mailbox) {
+    case AP_SECURE_MAILBOX:
+        return SCP_SECURE_MAILBOX;
+    case AP_NS_LOW_PRIORITY_MAILBOX:
+        return SCP_NS_LOW_PRIORITY_MAILBOX;
+    case AP_NS_HIGH_PRIORITY_MAILBOX:
+        return SCP_NS_HIGH_PRIORITY_MAILBOX;
+    default:
+        return INVALID_MAILBOX;
     }
 }
 
-static zx_status_t aml_mailbox_send_cmd(void *ctx,
-                                 mailbox_channel_t *channel,
-                                 mailbox_data_buf_t* mdata) {
+static zx_status_t aml_mailbox_send_cmd(void* ctx,
+                                        mailbox_channel_t* channel,
+                                        mailbox_data_buf_t* mdata) {
     aml_mailbox_t* mailbox = ctx;
     int rx_mailbox_id;
     if (!channel || !mdata) {
@@ -52,18 +43,18 @@ static zx_status_t aml_mailbox_send_cmd(void *ctx,
     }
 
     if (INVALID_MAILBOX == (rx_mailbox_id =
-        aml_get_rx_mailbox(channel->mailbox))) {
+                                aml_get_rx_mailbox(channel->mailbox))) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     mtx_lock(&mailbox->mailbox_chan_lock[channel->mailbox]);
-    aml_mailbox_block_t *rx_mailbox = &vim2_mailbox_block[rx_mailbox_id];
-    aml_mailbox_block_t *tx_mailbox = &vim2_mailbox_block[channel->mailbox];
+    aml_mailbox_block_t* rx_mailbox = &vim2_mailbox_block[rx_mailbox_id];
+    aml_mailbox_block_t* tx_mailbox = &vim2_mailbox_block[channel->mailbox];
 
     if (mdata->tx_size != 0) {
         uint32_t num = GET_NUM_WORDS(mdata->tx_size);
-        uint32_t *tx_payload = (uint32_t*)(mdata->tx_buf);
-        for (uint32_t i =0; i<num; i++) {
+        uint32_t* tx_payload = (uint32_t*)(mdata->tx_buf);
+        for (uint32_t i = 0; i < num; i++) {
             // AP writes parameters to Payload
             WRITE32_MAILBOX_PL_REG(tx_mailbox->payload_offset + i, tx_payload[i]);
         }
@@ -82,8 +73,8 @@ static zx_status_t aml_mailbox_send_cmd(void *ctx,
     // AP reads the Payload to get requested information
     if (channel->rx_size != 0) {
         uint32_t num = GET_NUM_WORDS(channel->rx_size);
-        uint32_t *rx_payload = (uint32_t*)(channel->rx_buf);
-        for (uint32_t i=0; i<num; i++) {
+        uint32_t* rx_payload = (uint32_t*)(channel->rx_buf);
+        for (uint32_t i = 0; i < num; i++) {
             rx_payload[i] = READ32_MAILBOX_PL_REG(rx_mailbox->payload_offset + i);
         }
     }
@@ -95,12 +86,11 @@ static zx_status_t aml_mailbox_send_cmd(void *ctx,
     return ZX_OK;
 }
 
-
 static void aml_mailbox_release(void* ctx) {
     aml_mailbox_t* mailbox = ctx;
     io_buffer_release(&mailbox->mmio_mailbox);
     io_buffer_release(&mailbox->mmio_mailbox_payload);
-    for (uint32_t i=0; i<NUM_MAILBOXES; i++) {
+    for (uint32_t i = 0; i < NUM_MAILBOXES; i++) {
         zx_interrupt_destroy(mailbox->inth[i]);
         zx_handle_close(mailbox->inth[i]);
     }
@@ -119,13 +109,13 @@ static mailbox_protocol_ops_t mailbox_ops = {
 static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
-    aml_mailbox_t *mailbox = calloc(1, sizeof(aml_mailbox_t));
+    aml_mailbox_t* mailbox = calloc(1, sizeof(aml_mailbox_t));
     if (!mailbox) {
         return ZX_ERR_NO_MEMORY;
     }
 
     status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &mailbox->pdev);
-    if (status !=  ZX_OK) {
+    if (status != ZX_OK) {
         MAILBOX_ERROR("Could not get parent protocol\n");
         goto fail;
     }
@@ -140,21 +130,21 @@ static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {
     // Map all MMIOs
     status = pdev_map_mmio_buffer(&mailbox->pdev, MMIO_MAILBOX,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &mailbox->mmio_mailbox);
+                                  &mailbox->mmio_mailbox);
     if (status != ZX_OK) {
-        MAILBOX_ERROR("Could not map mailbox MMIO_MAILBOX %d\n",status);
+        MAILBOX_ERROR("Could not map mailbox MMIO_MAILBOX %d\n", status);
         goto fail;
     }
 
     status = pdev_map_mmio_buffer(&mailbox->pdev, MMIO_MAILBOX_PAYLOAD,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &mailbox->mmio_mailbox_payload);
+                                  &mailbox->mmio_mailbox_payload);
     if (status != ZX_OK) {
-        MAILBOX_ERROR("Could not map mailbox MMIO_MAILBOX_PAYLOAD %d\n",status);
+        MAILBOX_ERROR("Could not map mailbox MMIO_MAILBOX_PAYLOAD %d\n", status);
         goto fail;
     }
 
-    for (uint32_t i=0; i<NUM_MAILBOXES; i++) {
+    for (uint32_t i = 0; i < NUM_MAILBOXES; i++) {
         status = pdev_map_interrupt(&mailbox->pdev, i,
                                     &mailbox->inth[i]);
         if (status != ZX_OK) {
@@ -194,8 +184,8 @@ fail:
 }
 
 static zx_driver_ops_t aml_mailbox_driver_ops = {
-    .version    = DRIVER_OPS_VERSION,
-    .bind       = aml_mailbox_bind,
+    .version = DRIVER_OPS_VERSION,
+    .bind = aml_mailbox_bind,
 };
 
 ZIRCON_DRIVER_BEGIN(aml_mailbox, aml_mailbox_driver_ops, "zircon", "0.1", 4)
@@ -204,4 +194,3 @@ ZIRCON_DRIVER_BEGIN(aml_mailbox, aml_mailbox_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MAILBOX),
 ZIRCON_DRIVER_END(aml_mailbox)
-

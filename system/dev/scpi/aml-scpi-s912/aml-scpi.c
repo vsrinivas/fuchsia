@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "aml-scpi.h"
+#include "aml-mailbox.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -12,11 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 #include <unistd.h>
 #include <zircon/device/thermal.h>
-#include "aml-scpi.h"
-#include "aml-mailbox.h"
 
 static scpi_opp_t* scpi_opp[MAX_DVFS_DOMAINS];
 

@@ -12,6 +12,7 @@
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/scpi.h>
 #include <ddk/debug.h>
+#include <threads.h>
 
 #define SCPI_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define SCPI_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)

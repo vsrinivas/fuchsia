@@ -9,16 +9,14 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-
+#include "aml-canvas.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/canvas.h>
 #include <zircon/pixelformat.h>
-#include "aml-canvas.h"
 
 static void aml_canvas_release(void* ctx) {
     aml_canvas_t* canvas = ctx;
@@ -43,14 +41,15 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
     }
 
     uint32_t size = ROUNDUP((info->stride_bytes * info->height) +
-                            (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
+                                (offset & (PAGE_SIZE - 1)),
+                            PAGE_SIZE);
     uint32_t num_pages = size / PAGE_SIZE;
     uint32_t index;
     zx_paddr_t paddr[num_pages];
     mtx_lock(&canvas->lock);
 
     uint32_t height = info->height;
-    uint32_t width  = info->stride_bytes;
+    uint32_t width = info->stride_bytes;
 
     if (!IS_ALIGNED(height, 8) || !IS_ALIGNED(width, 8)) {
         CANVAS_ERROR("Height or width is not aligned\n");
@@ -113,7 +112,7 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
             ((info->wrap & DMC_CAV_XWRAP) ? DMC_CAV_XWRAP : 0) |
             ((info->wrap & DMC_CAV_YWRAP) ? DMC_CAV_YWRAP : 0) |
             ((info->endianness & DMC_CAV_ENDIANNESS_MASK) << DMC_CAV_ENDIANNESS_BIT);
-    WRITE32_DMC_REG(DMC_CAV_LUT_DATAH,value);
+    WRITE32_DMC_REG(DMC_CAV_LUT_DATAH, value);
 
     WRITE32_DMC_REG(DMC_CAV_LUT_ADDR, DMC_CAV_LUT_ADDR_WR_EN | index);
 
@@ -138,12 +137,11 @@ static zx_status_t aml_canvas_free(void* ctx, uint8_t canvas_idx) {
     return ZX_OK;
 }
 
-static void aml_canvas_init(aml_canvas_t* canvas)
-{
+static void aml_canvas_init(aml_canvas_t* canvas) {
     WRITE32_DMC_REG(DMC_CAV_LUT_DATAL, 0);
     WRITE32_DMC_REG(DMC_CAV_LUT_DATAH, 0);
 
-    for (int index=0; index<NUM_CANVAS_ENTRIES; index++) {
+    for (int index = 0; index < NUM_CANVAS_ENTRIES; index++) {
         WRITE32_DMC_REG(DMC_CAV_LUT_ADDR, DMC_CAV_LUT_ADDR_WR_EN | index);
         READ32_DMC_REG(DMC_CAV_LUT_DATAH);
     }
@@ -157,32 +155,32 @@ static void aml_canvas_unbind(void* ctx) {
 static zx_protocol_device_t aml_canvas_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = aml_canvas_release,
-    .unbind  = aml_canvas_unbind,
+    .unbind = aml_canvas_unbind,
 };
 
 static canvas_protocol_ops_t canvas_ops = {
     .config = aml_canvas_config,
-    .free   = aml_canvas_free,
+    .free = aml_canvas_free,
 };
 
 static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
-    aml_canvas_t *canvas = calloc(1, sizeof(aml_canvas_t));
+    aml_canvas_t* canvas = calloc(1, sizeof(aml_canvas_t));
     if (!canvas) {
         return ZX_ERR_NO_MEMORY;
     }
 
     // Get device protocol
     status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &canvas->pdev);
-    if (status !=  ZX_OK) {
+    if (status != ZX_OK) {
         CANVAS_ERROR("Could not get parent protocol\n");
         goto fail;
     }
 
     platform_bus_protocol_t pbus;
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
-        CANVAS_ERROR("ZX_PROTOCOL_PLATFORM_BUS not available %d \n",status);
+        CANVAS_ERROR("ZX_PROTOCOL_PLATFORM_BUS not available %d \n", status);
         goto fail;
     }
 
@@ -198,7 +196,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &canvas->dmc_regs);
     if (status != ZX_OK) {
-        CANVAS_ERROR("Could not map DMC registers %d\n",status);
+        CANVAS_ERROR("Could not map DMC registers %d\n", status);
         goto fail;
     }
 
@@ -232,8 +230,8 @@ fail:
 }
 
 static zx_driver_ops_t aml_canvas_driver_ops = {
-    .version    = DRIVER_OPS_VERSION,
-    .bind       = aml_canvas_bind,
+    .version = DRIVER_OPS_VERSION,
+    .bind = aml_canvas_bind,
 };
 
 ZIRCON_DRIVER_BEGIN(aml_canvas, aml_canvas_driver_ops, "zircon", "0.1", 4)

@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include "s905d2-gpu.h"
+#include "s912-gpu.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -16,12 +13,14 @@
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <hw/reg.h>
-#include <soc/aml-common/aml-gpu.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/device/gpu.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/device/gpu.h>
-#include "s912-gpu.h"
-#include "s905d2-gpu.h"
 
 static int32_t current_clk_source;
 
@@ -42,7 +41,8 @@ static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
     current_clk_cntl &= ~(CLOCK_MUX_MASK << mux_shift);
     // set the divisor, enable & source for the unused mux
     current_clk_cntl |= CALCULATE_CLOCK_MUX(true,
-                        gpu_block->gpu_clk_freq[clk_source], 1) << mux_shift;
+                                            gpu_block->gpu_clk_freq[clk_source], 1)
+                        << mux_shift;
 
     // Write the new values to the unused mux
     WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, current_clk_cntl);
@@ -64,7 +64,7 @@ static void aml_gpu_set_initial_clk_freq_source(aml_gpu_t* gpu, int32_t clk_sour
     uint32_t mux_shift = enabled_mux ? 16 : 0;
 
     if (current_clk_cntl & (1 << (mux_shift + CLK_ENABLED_BIT_SHIFT))) {
-         aml_gpu_set_clk_freq_source(gpu, clk_source);
+        aml_gpu_set_clk_freq_source(gpu, clk_source);
     } else {
         GPU_INFO("Setting initial clock source to %d: %d\n", clk_source, gpu_block->gpu_clk_freq[clk_source]);
         // Switching the final dynamic mux from a disabled source to an enabled
@@ -72,7 +72,8 @@ static void aml_gpu_set_initial_clk_freq_source(aml_gpu_t* gpu, int32_t clk_sour
         // enable it instead of switching.
         current_clk_cntl &= ~(CLOCK_MUX_MASK << mux_shift);
         current_clk_cntl |= CALCULATE_CLOCK_MUX(true,
-                            gpu_block->gpu_clk_freq[clk_source], 1) << mux_shift;
+                                                gpu_block->gpu_clk_freq[clk_source], 1)
+                            << mux_shift;
 
         // Write the new values to the existing mux.
         WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, current_clk_cntl);
@@ -80,7 +81,6 @@ static void aml_gpu_set_initial_clk_freq_source(aml_gpu_t* gpu, int32_t clk_sour
         current_clk_source = clk_source;
     }
 }
-
 
 static void aml_gpu_init(aml_gpu_t* gpu) {
     uint32_t temp;
@@ -144,30 +144,30 @@ static zx_status_t aml_gpu_ioctl(void* ctx, uint32_t op,
                                  void* out_buf, size_t out_len,
                                  size_t* out_actual) {
     aml_gpu_t* gpu = ctx;
-    switch(op) {
-        case IOCTL_GPU_SET_CLK_FREQ_SOURCE: {
-            if (in_len != sizeof(int32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            int32_t *clk_source = (int32_t*)in_buf;
-
-            if (*clk_source >= MAX_GPU_CLK_FREQ) {
-                GPU_ERROR("Invalid clock freq source index\n");
-                return ZX_ERR_NOT_SUPPORTED;
-            }
-            aml_gpu_set_clk_freq_source(gpu, *clk_source);
-            return ZX_OK;
+    switch (op) {
+    case IOCTL_GPU_SET_CLK_FREQ_SOURCE: {
+        if (in_len != sizeof(int32_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
-        default:
+        int32_t* clk_source = (int32_t*)in_buf;
+
+        if (*clk_source >= MAX_GPU_CLK_FREQ) {
+            GPU_ERROR("Invalid clock freq source index\n");
             return ZX_ERR_NOT_SUPPORTED;
+        }
+        aml_gpu_set_clk_freq_source(gpu, *clk_source);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 static zx_protocol_device_t aml_gpu_protocol = {
-    .version        = DEVICE_OPS_VERSION,
-    .release        = aml_gpu_release,
-    .get_protocol   = aml_gpu_get_protocol,
-    .ioctl          = aml_gpu_ioctl,
+    .version = DEVICE_OPS_VERSION,
+    .release = aml_gpu_release,
+    .get_protocol = aml_gpu_get_protocol,
+    .ioctl = aml_gpu_ioctl,
 };
 
 static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
@@ -183,21 +183,21 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
     }
 
     status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_GPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &gpu->gpu_buffer);
+                                  &gpu->gpu_buffer);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
     status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &gpu->hiu_buffer);
+                                  &gpu->hiu_buffer);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
     status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &gpu->preset_buffer);
+                                  &gpu->preset_buffer);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
         goto fail;
@@ -212,10 +212,10 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
 
     switch (info.pid) {
     case PDEV_PID_AMLOGIC_S912:
-        gpu->gpu_block      = &s912_gpu_blocks;
+        gpu->gpu_block = &s912_gpu_blocks;
         break;
     case PDEV_PID_AMLOGIC_S905D2:
-        gpu->gpu_block      = &s905d2_gpu_blocks;
+        gpu->gpu_block = &s905d2_gpu_blocks;
         break;
     default:
         GPU_ERROR("unsupported SOC PID %u\n", info.pid);
@@ -254,8 +254,8 @@ fail:
 }
 
 static zx_driver_ops_t aml_gpu_driver_ops = {
-    .version    = DRIVER_OPS_VERSION,
-    .bind       = aml_gpu_bind,
+    .version = DRIVER_OPS_VERSION,
+    .bind = aml_gpu_bind,
 };
 
 ZIRCON_DRIVER_BEGIN(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1", 5)

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <soc/aml-common/aml-gpu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 enum {

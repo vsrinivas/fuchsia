@@ -4,19 +4,22 @@
 
 #pragma once
 
-#include <hw/reg.h>
-#include <lib/sync/completion.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/mailbox.h>
-#include <ddk/debug.h>
+#include <hw/reg.h>
+#include <lib/sync/completion.h>
+#include <threads.h>
 
 #define MAILBOX_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define MAILBOX_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define NUM_MAILBOXES    6
-#define GET_NUM_WORDS(x) ((x)/4 + (((x)%4)? 1:0))
+#define NUM_MAILBOXES 6
+#define GET_NUM_WORDS(x) ((x) / 4 + (((x) % 4) ? 1 : 0))
 
 typedef struct {
     uint32_t set_offset;
@@ -26,15 +29,15 @@ typedef struct {
 } aml_mailbox_block_t;
 
 typedef struct {
-    zx_device_t*                        zxdev;
-    platform_device_protocol_t          pdev;
+    zx_device_t* zxdev;
+    platform_device_protocol_t pdev;
 
-    io_buffer_t                         mmio_mailbox;
-    io_buffer_t                         mmio_mailbox_payload;
+    io_buffer_t mmio_mailbox;
+    io_buffer_t mmio_mailbox_payload;
 
-    zx_handle_t                         inth[NUM_MAILBOXES];
+    zx_handle_t inth[NUM_MAILBOXES];
 
-    mtx_t                               mailbox_chan_lock[NUM_MAILBOXES];
+    mtx_t mailbox_chan_lock[NUM_MAILBOXES];
 } aml_mailbox_t;
 
 // MMIO Indexes
