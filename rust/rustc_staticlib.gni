@@ -57,6 +57,7 @@ template("rustc_staticlib") {
                              "name",
                              "version",
                              "deps",
+                             "edition",
                              "non_rust_deps",
                              "with_unit_tests",
                              "output_name",
@@ -71,7 +72,6 @@ template("rustc_staticlib") {
     public_hdrs += invoker.public
   }
 
-  
   header_target = "_${target_name}_staticlib_headers"
   config_target = "_${target_name}_staticlib_config"
 
