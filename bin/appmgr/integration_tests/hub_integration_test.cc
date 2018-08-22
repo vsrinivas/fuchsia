@@ -72,12 +72,6 @@ TEST(ProbeHub, RealmSvc) {
 
 TEST_F(HubTest, ScopePolicy) {
   std::string glob_url = "glob";
-  // test that we can find logger
-  RunComponent(launcher_ptr(), glob_url, {"/hub/c/logger"}, 0);
-
-  // test that we cannot find /hub/r/sys as we are scopped into /hub/r/sys.
-  RunComponent(launcher_ptr(), glob_url, {"/hub/r/sys"}, 1);
-
   // create nested environment
   // test that we can see nested env
   auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest");

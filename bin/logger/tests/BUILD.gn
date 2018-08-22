@@ -2,12 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
+import("//garnet/bin/run_test_component/test_package.gni")
 
-  public_deps = [
+test_package("logger_integration_tests") {
+  deps = [
     "cpp:logger_integration_cpp_tests",
-    "rust:bin",
     "go/src:logger_integration_go_tests",
+    "rust:bin",
+  ]
+
+  tests = [
+    {
+      name = "logger_integration_bin_test_rustc"
+    },
+    {
+      name = "logger_integration_cpp_tests"
+    },
+    {
+      name = "logger_integration_go_tests"
+    },
   ]
 }

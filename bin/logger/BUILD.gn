@@ -38,21 +38,11 @@ package("logger_tests") {
 
   deps = [
     ":bin",
-    "tests",
   ]
 
   tests = [
     {
       name = "logger_bin_test_rustc"
-    },
-    {
-      name = "logger_integration_bin_test_rustc"
-    },
-    {
-      name = "logger_integration_cpp_tests"
-    },
-    {
-      name = "logger_integration_go_tests"
     },
   ]
 }

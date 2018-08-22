@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/logger_integration_bin_test_rustc"
+    },
+    "sandbox": {
+        "services": ["fuchsia.logger.LogSink", "fuchsia.logger.Log"]
+    }
+}

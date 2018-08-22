@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "test/appmgr_hub_integration_tests"
+    },
+    "sandbox": {
+        "services": ["fuchsia.sys.Environment", "fuchsia.sys.Loader"],
+        "features": [ "shell"]
+    }
+}

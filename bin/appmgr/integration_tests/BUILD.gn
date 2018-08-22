@@ -34,18 +34,6 @@ executable("realm_tests") {
   ]
 }
 
-test_package("appmgr_realm_integration_tests") {
-  deps = [
-    ":realm_tests",
-  ]
-
-  tests = [
-    {
-      name = "appmgr_realm_integration_tests"
-    },
-  ]
-}
-
 executable("hub_tests") {
   testonly = true
 
@@ -63,13 +51,16 @@ executable("hub_tests") {
   ]
 }
 
-package("appmgr_hub_integration_tests") {
-  testonly = true
-
+test_package("appmgr_integration_tests") {
   deps = [
     ":hub_tests",
+    ":realm_tests",
   ]
+
   tests = [
+    {
+      name = "appmgr_realm_integration_tests"
+    },
     {
       name = "appmgr_hub_integration_tests"
     },

@@ -102,7 +102,7 @@ func testToStdout(t *testing.T, tag, expected string) {
 // output into a temporary file. The temporary file is then checked for the
 // expected string.
 func testToFile(t *testing.T, tag, expected string) {
-	tmpfile, err := ioutil.TempFile("/data", "logger-test")
+	tmpfile, err := ioutil.TempFile("", "logger-test")
 	if err != nil {
 		t.Fatal(err)
 	}

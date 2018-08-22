@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/logger_integration_go_tests"
+    },
+    "sandbox": {
+        "services": ["fuchsia.logger.LogSink", "fuchsia.logger.Log", "fuchsia.process.Launcher"],
+        "system": ["bin"],
+        "dev": ["null"],
+        "features": ["system-temp"]
+    }
+}

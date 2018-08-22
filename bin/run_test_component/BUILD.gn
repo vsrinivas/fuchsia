@@ -9,14 +9,18 @@ source_set("lib") {
   testonly = true
 
   sources = [
+    "env_config.cc",
+    "env_config.h",
     "run_test_component.cc",
     "run_test_component.h",
   ]
 
   public_deps = [
+    "//garnet/lib/json",
     "//garnet/lib/pkg_url",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -50,6 +54,13 @@ package("run_test_component") {
       name = "run_test_component"
     },
   ]
+
+  resources = [
+    {
+      dest = "run_test_component/environment.config"
+      path = rebase_path("environment.config")
+    },
+  ]
 }
 
 executable("test_bin") {
@@ -57,6 +68,7 @@ executable("test_bin") {
   output_name = "run_test_component_unittests"
 
   sources = [
+    "env_config_unittest.cc",
     "run_test_component_unittest.cc",
   ]
 
