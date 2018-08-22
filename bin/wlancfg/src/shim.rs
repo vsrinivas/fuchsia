@@ -74,8 +74,8 @@ pub fn serve_legacy(requests: legacy::WlanRequestStream, client: ClientRef)
                 .map(move |mut r| responder.send(&mut r))
         ),
         legacy::WlanRequest::Disconnect { responder } => WlanFut::Disconnect({
-            eprintln!("Disconnect() is not implemented");
-            future::ready(responder.send(&mut not_supported()))
+            disconnect(client.clone())
+                .map(move |mut r| responder.send(&mut r))
         }),
         legacy::WlanRequest::Status { responder } => WlanFut::Status(
             status(&client)
@@ -197,6 +197,22 @@ fn connect(client: &ClientRef, legacy_req: legacy::ConnectConfig)
         })
         .map_ok(convert_connect_result)
         .unwrap_or_else(|e| e)
+}
+
+async fn disconnect(client: ClientRef) -> legacy::Error {
+    let client = match client.get() {
+        Ok(c) => c,
+        Err(e) => return e,
+    };
+    let (responder, receiver) = oneshot::channel();
+    if let Err(e) = client.client.disconnect(responder) {
+        eprintln!("Failed to enqueue a disconnect command: {}", e);
+        return internal_error();
+    }
+    match await!(receiver) {
+        Ok(()) => success(),
+        Err(_) => error_message("Request was canceled"),
+    }
 }
 
 fn convert_connect_result(code: fidl_sme::ConnectResultCode) -> legacy::Error {

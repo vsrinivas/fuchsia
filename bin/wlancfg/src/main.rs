@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api, pin, arbitrary_self_types, transpose_result)]
+#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types, transpose_result)]
 #![deny(warnings)]
 
 #[macro_use]
@@ -51,7 +51,7 @@ use wlan_service::DeviceServiceMarker;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Never {}
 impl Never {
-    pub fn never_into<T>(self) -> T { match self {} }
+    pub fn into_any<T>(self) -> T { match self {} }
 }
 
 fn serve_fidl(_client_ref: shim::ClientRef)

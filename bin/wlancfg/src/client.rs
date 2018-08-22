@@ -28,9 +28,16 @@ pub struct Client {
 
 impl Client {
     pub fn connect(&self, request: ConnectRequest) -> Result<(), failure::Error> {
-        self.req_sender.unbounded_send(ManualRequest::Connect(request))
-            .map_err(|_| format_err!("Station does not exist anymore"))
+        handle_send_err(self.req_sender.unbounded_send(ManualRequest::Connect(request)))
     }
+
+    pub fn disconnect(&self, responder: oneshot::Sender<()>) -> Result<(), failure::Error> {
+        handle_send_err(self.req_sender.unbounded_send(ManualRequest::Disconnect(responder)))
+    }
+}
+
+fn handle_send_err(r: Result<(), mpsc::TrySendError<ManualRequest>>) -> Result<(), failure::Error> {
+    r.map_err(|_| format_err!("Station does not exist anymore"))
 }
 
 pub struct ConnectRequest {
@@ -41,6 +48,10 @@ pub struct ConnectRequest {
 
 enum ManualRequest {
     Connect(ConnectRequest),
+    // The sender will be notified once we are done disconnecting.
+    // If the disconnect request is canceled or superseded (e.g., by a connect request),
+    // then the sender will be dropped.
+    Disconnect(oneshot::Sender<()>),
 }
 
 pub fn new_client(iface_id: u16,
@@ -57,7 +68,7 @@ pub fn new_client(iface_id: u16,
     let state_machine = future::lazy(move |_| {
         auto_connect_state(services, req_receiver.into_future())
             .into_future()
-            .map_ok(Never::never_into::<()>)
+            .map_ok(Never::into_any::<()>)
             .unwrap_or_else(move |e| eprintln!("wlancfg: Client station state machine \
                     for iface {} terminated with an error: {}", iface_id, e))
     }).then(|fut| fut);
@@ -104,6 +115,9 @@ fn handle_manual_request(services: Services,
         Some(ManualRequest::Connect(req)) => {
             Ok(manual_connect_state(services, req_stream.into_future(), req))
         },
+        Some(ManualRequest::Disconnect(responder)) => {
+            Ok(disconnected_state(responder, services, req_stream.into_future()).into_state())
+        }
         None => bail!("The stream of user requests ended unexpectedly")
     }
 }
@@ -205,6 +219,59 @@ fn connected_state(services: Services, next_req: NextReqFut) -> State {
         .map(|(req, req_stream)| {
             handle_manual_request(services, req, req_stream)
         }).into_state()
+}
+
+async fn disconnected_state(responder: oneshot::Sender<()>,
+                            services: Services, mut next_req: NextReqFut)
+    -> Result<State, failure::Error>
+{
+    // First, ask the SME to disconnect and wait for its response.
+    // In the meantime, also listen to user requests.
+    let mut responders = vec![responder];
+    let mut pending_disconnect = services.sme.disconnect();
+    'waiting_to_disconnect: loop {
+        next_req = select! {
+            pending_disconnect => {
+                // If 'disconnect' call to SME failed, return an error since we can't
+                // recover from it
+                pending_disconnect.map_err(
+                    |e| format_err!("Failed to send a disconnect command to wlanstack: {}", e))?;
+                break 'waiting_to_disconnect;
+            },
+            next_req => {
+                let (req, req_stream) = next_req;
+                match req {
+                    // If another disconnect request comes in, save its responder
+                    Some(ManualRequest::Disconnect(responder)) => {
+                        responders.push(responder);
+                        req_stream.into_future()
+                    },
+                    // Drop all responders to indicate that disconnecting was superseded
+                    // by another command and transition to an appropriate state
+                    other => return handle_manual_request(services.clone(), other, req_stream),
+                }
+            },
+        }
+    }
+
+    // Notify the user(s) that disconnect was confirmed by the SME
+    for responder in responders {
+        responder.send(()).unwrap_or_else(|_| ())
+    }
+
+    // Now that we are officially disconnected, wait for user requests
+    loop {
+        let (req, req_stream) = await!(next_req);
+        next_req = match req {
+            // If asked to disconnect, just reply immediately since we are already disconnected
+            Some(ManualRequest::Disconnect(responder)) => {
+                responder.send(()).unwrap_or_else(|_e| ());
+                req_stream.into_future()
+            },
+            // Otherwise, handle the request normally
+            other => return handle_manual_request(services.clone(), other, req_stream),
+        }
+    }
 }
 
 fn start_scan_txn(sme: &fidl_sme::ClientSmeProxy)
@@ -325,7 +392,7 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
         // Expect a "connect" request to the SME and reply to it
-        send_connect_result(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
                             fidl_sme::ConnectResultCode::Success);
 
         // Let the state machine absorb the connect ack
@@ -349,7 +416,7 @@ mod tests {
         // to start connecting to the network immediately
         let mut receiver = send_manual_connect_request(&client, b"foo");
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
                             fidl_sme::ConnectResultCode::Success);
 
         // Let the state machine absorb the response
@@ -400,7 +467,7 @@ mod tests {
 
         // Expect the state machine to start connecting to the network immediately.
         // Send a successful result and let the state machine absorb it.
-        send_connect_result(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
                             fidl_sme::ConnectResultCode::Success);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
@@ -429,7 +496,7 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
         send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"12345",
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"12345",
                             fidl_sme::ConnectResultCode::Success);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
@@ -440,7 +507,7 @@ mod tests {
         // Now, send a manual connect request and expect the machine to start connecting immediately
         let mut receiver = send_manual_connect_request(&client, b"bar");
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_connect_result(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
                             fidl_sme::ConnectResultCode::Success);
 
         // Let the state machine absorb the response
@@ -468,7 +535,7 @@ mod tests {
         // Reply with a failure.
         let mut receiver = send_manual_connect_request(&client, b"foo");
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
                             fidl_sme::ConnectResultCode::Failed);
         // auto connect will only scan with a saved network, make sure we have one
         ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
@@ -493,6 +560,163 @@ mod tests {
         // Network should not be saved as known since we failed to connect
         assert_eq!(None, ess_store.lookup(b"foo"));
         assert_eq!(1, ess_store.known_network_count());
+    }
+
+    #[test]
+    fn manual_connect_after_sme_disconnected() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+
+        // Transition to disconnected state
+        let (sender, mut receiver) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a disconnect request to SME, reply to it and absorb the response
+        exchange_disconnect_with_sme(&mut exec, &mut next_sme_req);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Our disconnect request must have been processed at this point
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut receiver));
+
+        // Issue a manual connect request and expect a corresponding message to SME
+        let _receiver = send_manual_connect_request(&client, b"foo");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
+                            fidl_sme::ConnectResultCode::Success);
+    }
+
+    #[test]
+    fn manual_connect_while_sme_is_disconnecting() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+
+        // Transition to disconnected state
+        let (sender, mut receiver_one) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed (1)");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a disconnect request to SME, but don't reply to it yet
+        let _disconnect_responder = expect_disconnect_req_to_sme(&mut exec, &mut next_sme_req);
+
+        // Send another disconnect request from the user
+        let (sender, mut receiver_two) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed (2)");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Don't expect another message to SME since we already sent a disconnect request
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+
+        // Issue a manual connect request and expect a corresponding message to SME
+        let _receiver = send_manual_connect_request(&client, b"foo");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a connect request to SME, but don't reply yet
+        let _connect_txn = expect_connect_req_to_sme(&mut exec, &mut next_sme_req, b"foo", b"qwerty");
+
+        // Both user's disconnect requests must have been marked as canceled
+        assert_eq!(Poll::Ready(Err(oneshot::Canceled)), exec.run_until_stalled(&mut receiver_one));
+        assert_eq!(Poll::Ready(Err(oneshot::Canceled)), exec.run_until_stalled(&mut receiver_two));
+    }
+
+    #[test]
+    fn disconnect_request_when_already_disconnected() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+
+        // Transition to disconnected state
+        let (sender, mut receiver) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed (1)");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a disconnect request to SME, reply to it and absorb the response
+        exchange_disconnect_with_sme(&mut exec, &mut next_sme_req);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Our disconnect request must have been processed at this point
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut receiver));
+
+        // Issue another disconnect request and expect a reply immediately since
+        // we are already disconnected
+        let (sender, mut receiver) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed (2)");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut receiver));
+    }
+
+    #[test]
+    fn disconnect_request_when_manually_connecting() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+
+        // Send the first manual connect request and expect a corresponding message to SME
+        let mut connect_receiver = send_manual_connect_request(&client, b"foo");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        let mut connect_txn = expect_connect_req_to_sme(
+                &mut exec, &mut next_sme_req, b"foo", b"qwerty");
+
+        // Before the SME replies, issue a Disconnect request
+        let (sender, _disconnect_receiver) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect the connect transaction to be dropped by us
+        match exec.run_until_stalled(&mut connect_txn.next()) {
+            Poll::Ready(None) => {},
+            _ => panic!("expected connect_txn channel to be closed by the state machine"),
+        }
+
+        // Expect a disconnect request to the SME
+        let _disconnect_responder = expect_disconnect_req_to_sme(&mut exec, &mut next_sme_req);
+
+        // User should be notified that their connect request was canceled
+        assert_eq!(Poll::Ready(Ok(fidl_sme::ConnectResultCode::Canceled)),
+                   exec.run_until_stalled(&mut connect_receiver));
+    }
+
+    #[test]
+    fn disconnect_when_connected() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+
+        // Save the network that we will auto-connect to
+        ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
+            .expect("failed to store a network password");
+
+        // Get the state machine into the connected state by auto-connecting to a known network
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"12345",
+                                  fidl_sme::ConnectResultCode::Success);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Request to disconnect
+        let (sender, mut receiver) = oneshot::channel();
+        client.disconnect(sender).expect("sending a disconnect request failed");
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a disconnect request to SME, reply to it and absorb the response
+        exchange_disconnect_with_sme(&mut exec, &mut next_sme_req);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Our disconnect request must have been processed at this point
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut receiver));
     }
 
     fn send_manual_connect_request(client: &Client, ssid: &[u8])
@@ -544,21 +768,48 @@ mod tests {
         txn.send_on_finished().expect("failed to send OnFinished to ScanTxn");
     }
 
-    fn send_connect_result(exec: &mut async::Executor,
-                           next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
-                           expected_ssid: &[u8],
-                           expected_password: &[u8],
-                           code: fidl_sme::ConnectResultCode) {
-        let txn = match poll_sme_req(exec, next_sme_req) {
+    fn exchange_connect_with_sme(exec: &mut async::Executor,
+                                 next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+                                 expected_ssid: &[u8],
+                                 expected_password: &[u8],
+                                 code: fidl_sme::ConnectResultCode) {
+        let txn = expect_connect_req_to_sme(exec, next_sme_req, expected_ssid, expected_password);
+        txn.control_handle().send_on_finished(code)
+            .expect("failed to send OnFinished to ConnectTxn");
+    }
+
+    fn expect_connect_req_to_sme(exec: &mut async::Executor,
+                                 next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+                                 expected_ssid: &[u8],
+                                 expected_password: &[u8])
+        -> fidl_sme::ConnectTransactionRequestStream
+    {
+        match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
                 assert_eq!(expected_password, &req.password[..]);
                 txn.expect("expected a Connect transaction channel")
+                    .into_stream()
+                    .expect("failed to create a connect txn stream")
             },
             _ => panic!("expected a Connect request"),
-        };
-        let txn = txn.into_stream().expect("failed to create a connect txn stream").control_handle();
-        txn.send_on_finished(code).expect("failed to send OnFinished to ConnectTxn");
+        }
+    }
+
+    fn exchange_disconnect_with_sme(exec: &mut async::Executor,
+                                    next_sme_req: &mut StreamFuture<ClientSmeRequestStream>) {
+        let responder = expect_disconnect_req_to_sme(exec, next_sme_req);
+        responder.send().expect("failed to respond to Disconnect request");
+    }
+
+    fn expect_disconnect_req_to_sme(exec: &mut async::Executor,
+                                    next_sme_req: &mut StreamFuture<ClientSmeRequestStream>)
+        -> fidl_sme::ClientSmeDisconnectResponder
+    {
+        match poll_sme_req(exec, next_sme_req) {
+            Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder,
+            _ => panic!("expected a Disconnect request"),
+        }
     }
 
     fn create_ess_store(path: &Path) -> Arc<KnownEssStore> {
