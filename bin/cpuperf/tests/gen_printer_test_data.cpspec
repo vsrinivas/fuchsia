@@ -14,7 +14,7 @@
       "group_name": "fixed",
       "event_name": "instructions_retired",
       "rate": 10000,
-      "flags": [ "os", "user", "pc" ]
+      "flags": [ "os", "user", "pc", "last_branch" ]
     },
     {
       // This one is used to get CPUPERF_RECORD_VALUE records.

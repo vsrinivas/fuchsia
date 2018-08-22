@@ -8,9 +8,11 @@
 
 #include <utility>
 
+#include <trace-engine/types.h>
 #include <trace-provider/provider.h>
 #include <trace-reader/reader.h>
 
+#include "garnet/lib/cpuperf/writer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "rapidjson/writer.h"
@@ -124,8 +126,21 @@ void ChromiumExporter::Stop() {
   }
 
   writer_.EndArray();
-  writer_.EndObject();
-  writer_.EndObject();
+  writer_.EndObject();  // Finishes systemTraceEvents
+
+  if (last_branch_records_.size() > 0) {
+    writer_.Key("lastBranch");
+    writer_.StartObject();
+    writer_.Key("records");
+    writer_.StartArray();
+    for (const auto& record : last_branch_records_) {
+      ExportLastBranchBlob(record);
+    }
+    writer_.EndArray();
+    writer_.EndObject();
+  }
+
+  writer_.EndObject();  // Finishes StartObject() begun in Start()
 }
 
 void ChromiumExporter::ExportRecord(const trace::Record& record) {
@@ -144,6 +159,15 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
     case trace::RecordType::kKernelObject:
       ExportKernelObject(record.GetKernelObject());
       break;
+    case trace::RecordType::kBlob: {
+      const auto& blob = record.GetBlob();
+      if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
+        auto lbr =
+          reinterpret_cast<const cpuperf::LastBranchRecord*>(blob.blob);
+        last_branch_records_.push_back(*lbr);
+      }
+      break;
+    }
     case trace::RecordType::kLog:
       ExportLog(record.GetLog());
       break;
@@ -342,6 +366,27 @@ void ChromiumExporter::ExportKernelObject(
     default:
       break;
   }
+}
+
+void ChromiumExporter::ExportLastBranchBlob(
+    const cpuperf::LastBranchRecord& lbr) {
+  writer_.StartObject();
+  writer_.Key("cpu");
+  writer_.Uint(lbr.cpu);
+  writer_.Key("branches");
+  writer_.StartArray();
+  for (unsigned i = 0; i < lbr.num_branches; ++i) {
+    writer_.StartObject();
+    writer_.Key("from");
+    writer_.Uint64(lbr.branches[i].from);
+    writer_.Key("to");
+    writer_.Uint64(lbr.branches[i].to);
+    writer_.Key("info");
+    writer_.Uint64(lbr.branches[i].info);
+    writer_.EndObject();
+  }
+  writer_.EndArray();
+  writer_.EndObject();
 }
 
 void ChromiumExporter::ExportLog(const trace::Record::Log& log) {

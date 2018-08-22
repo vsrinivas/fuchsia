@@ -23,6 +23,7 @@ union SampleRecord {
   const cpuperf_count_record_t* count;
   const cpuperf_value_record_t* value;
   const cpuperf_pc_record_t* pc;
+  const cpuperf_last_branch_record_t* last_branch;
 
   // Ideally this would return the enum type, but we don't make any
   // assumptions about the validity of the trace data.

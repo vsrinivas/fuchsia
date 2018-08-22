@@ -46,6 +46,7 @@ class RawPrinter {
   void PrintCountRecord(const SampleRecord& record);
   void PrintValueRecord(const SampleRecord& record);
   void PrintPcRecord(const SampleRecord& record);
+  void PrintLastBranchRecord(const SampleRecord& record);
 
   FILE* const out_file_;
   const SessionResultSpec* const session_result_spec_;

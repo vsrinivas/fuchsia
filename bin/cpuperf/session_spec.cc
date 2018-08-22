@@ -60,7 +60,8 @@ const char kRootSchema[] = R"({
                 "os",
                 "user",
                 "pc",
-                "timebase0"
+                "timebase0",
+                "last_branch"
               ]
             }
           },
@@ -172,6 +173,8 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
           flags |= CPUPERF_CONFIG_FLAG_PC;
         } else if (flag_name == "timebase0") {
           flags |= CPUPERF_CONFIG_FLAG_TIMEBASE0;
+        } else if (flag_name == "last_branch") {
+          flags |= CPUPERF_CONFIG_FLAG_LAST_BRANCH;
         } else {
           FXL_LOG(ERROR) << "Unknown flag for event " << group_name << ":"
                          << event_name << ": " << flag_name;

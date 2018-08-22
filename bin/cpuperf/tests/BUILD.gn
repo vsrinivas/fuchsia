@@ -25,6 +25,7 @@ executable("cpuperf_integration_tests") {
   if (current_cpu == "x64") {
     sources += [
       "fixed_counters.cc",
+      "last_branch.cc",
       "os_flag.cc",
       "programmable_counters.cc",
       "run_test.cc",
@@ -79,6 +80,10 @@ package("cpuperf_tests") {
       {
         path = rebase_path("fixed_counters.cpspec")
         dest = "fixed_counters.cpspec"
+      },
+      {
+        path = rebase_path("last_branch.cpspec")
+        dest = "last_branch.cpspec"
       },
       {
         path = rebase_path("os_flag.cpspec")

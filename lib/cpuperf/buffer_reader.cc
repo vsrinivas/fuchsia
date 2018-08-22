@@ -126,6 +126,10 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
   case CPUPERF_RECORD_PC:
     record->pc = reinterpret_cast<const cpuperf_pc_record_t*>(next_record_);
     break;
+  case CPUPERF_RECORD_LAST_BRANCH:
+    record->last_branch =
+      reinterpret_cast<const cpuperf_last_branch_record_t*>(next_record_);
+    break;
   default:
     // We shouldn't get here because RecordSize() should have returned
     // zero and we would have skipped to the next cpu.

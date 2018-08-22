@@ -94,6 +94,14 @@ void RawPrinter::PrintPcRecord(const SampleRecord& record) {
          record.pc->aspace, record.pc->pc);
 }
 
+void RawPrinter::PrintLastBranchRecord(const SampleRecord& record) {
+  Printf("LastBranch: ");
+  PrintHeader(record);
+  Printf(", aspace 0x%" PRIx64 ", %u branches\n",
+         record.last_branch->aspace, record.last_branch->num_branches);
+  // TODO(dje): Print each branch, but it's a lot so maybe only if verbose?
+}
+
 uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
   uint64_t total_records = 0;
 
@@ -139,6 +147,9 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
       break;
     case CPUPERF_RECORD_PC:
       PrintPcRecord(record);
+      break;
+    case CPUPERF_RECORD_LAST_BRANCH:
+      PrintLastBranchRecord(record);
       break;
     default:
       // The reader shouldn't be returning unknown records.

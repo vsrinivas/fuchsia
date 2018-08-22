@@ -13,6 +13,7 @@
 
 #include <trace-reader/reader.h>
 
+#include "garnet/lib/cpuperf/writer.h"
 #include "rapidjson/ostreamwrapper.h"
 #include "rapidjson/writer.h"
 
@@ -30,6 +31,7 @@ class ChromiumExporter {
   void Start();
   void Stop();
   void ExportEvent(const trace::Record::Event& event);
+  void ExportLastBranchBlob(const cpuperf::LastBranchRecord& lbr);
   void ExportKernelObject(const trace::Record::KernelObject& kernel_object);
   void ExportLog(const trace::Record::Log& log);
   void ExportMetadata(const trace::Record::Metadata& metadata);
@@ -50,6 +52,11 @@ class ChromiumExporter {
   // records, so we can't emit them inline. Save them for later emission to
   // the systemTraceEvents section.
   std::vector<trace::Record::ContextSwitch> context_switch_records_;
+
+  // The chromium/catapult trace file format doesn't support random blobs,
+  // so we can't emit them inline. Save them for later emission.
+  // LastBranch records will go to the lastBranch section.
+  std::vector<cpuperf::LastBranchRecord> last_branch_records_;
 };
 
 }  // namespace tracing

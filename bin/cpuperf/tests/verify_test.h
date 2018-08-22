@@ -21,6 +21,7 @@ class Verifier {
     size_t count_records;
     size_t value_records;
     size_t pc_records;
+    size_t last_branch_records;
   };
 
   virtual ~Verifier() = default;
@@ -56,6 +57,7 @@ struct TestSpec {
 // These are defined in each testcase's file, and referenced by the
 // testcase verifier.
 extern const TestSpec kFixedCounterSpec;
+extern const TestSpec kLastBranchSpec;
 extern const TestSpec kOsFlagSpec;
 extern const TestSpec kProgrammableCounterSpec;
 extern const TestSpec kTallySpec;

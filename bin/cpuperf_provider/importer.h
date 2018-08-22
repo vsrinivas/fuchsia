@@ -126,6 +126,11 @@ class Importer {
                         trace_ticks_t start_time, trace_ticks_t end_time,
                         uint64_t ticks_per_second, uint64_t value);
 
+  void EmitLastBranchRecord(trace_cpu_number_t cpu,
+                            const cpuperf_config_t& config,
+                            const cpuperf::SampleRecord& record,
+                            trace_ticks_t time);
+
   void EmitTallyCounts(const cpuperf_config_t& config,
                        const EventTracker* event_data);
 

@@ -1,0 +1,19 @@
+// Test the x86 "last branch record" support.
+{
+  "config_name": "last-branch",
+  // We only use one event so we can unambiguously verify the last-branch
+  // record has the correct event id.
+  "events": [
+    {
+      "group_name": "arch",
+      "event_name": "instructions_retired",
+      "rate": 10000,
+      "flags": [ "os", "user", "last_branch" ]
+    }
+  ],
+  "buffer_size_in_mb": 16,
+  "duration": 2,
+  "num_iterations": 1,
+  "output_path_prefix": "/data/cpuperf-test",
+  "session_result_spec_path": "/data/cpuperf-test.cpsession"
+}

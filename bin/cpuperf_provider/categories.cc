@@ -55,6 +55,8 @@ static const CategorySpec kCategories[] = {
      static_cast<CategoryValue>(TraceOption::kUser), 0, nullptr},
     {"cpu:pc", CategoryGroup::kOption,
      static_cast<CategoryValue>(TraceOption::kPc), 0, nullptr},
+    {"cpu:last_branch",   CategoryGroup::kOption,
+     static_cast<CategoryValue>(TraceOption::kLastBranch), 0, nullptr},
 
 // Sampling rates.
 // Only one of the following is allowed.
@@ -110,6 +112,7 @@ void TraceConfig::Reset() {
   trace_os_ = false;
   trace_user_ = false;
   trace_pc_ = false;
+  trace_last_branch_ = false;
   sample_rate_ = 0;
   timebase_event_ = CPUPERF_EVENT_ID_NONE;
   selected_categories_.clear();
@@ -152,6 +155,9 @@ bool TraceConfig::ProcessCategories() {
               break;
             case TraceOption::kPc:
               trace_pc_ = true;
+              break;
+            case TraceOption::kLastBranch:
+              trace_last_branch_ = true;
               break;
           }
           break;
@@ -236,6 +242,8 @@ bool TraceConfig::Changed(const TraceConfig& old) const {
     return true;
   if (trace_pc_ != old.trace_pc_)
     return true;
+  if (trace_last_branch_ != old.trace_last_branch_)
+    return true;
   if (sample_rate_ != old.sample_rate_)
     return true;
   if (timebase_event_ != old.timebase_event_)
@@ -300,6 +308,8 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
     // These can only be set for events that are their own timebase.
     if (trace_pc_)
       flags |= CPUPERF_CONFIG_FLAG_PC;
+    if (trace_last_branch_)
+      flags |= CPUPERF_CONFIG_FLAG_LAST_BRANCH;
   }
   if (timebase_event_ != CPUPERF_EVENT_ID_NONE)
     flags |= CPUPERF_CONFIG_FLAG_TIMEBASE0;
@@ -312,6 +322,8 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
   if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
     if (trace_pc_)
       cfg->flags[0] |= CPUPERF_CONFIG_FLAG_PC;
+    if (trace_last_branch_)
+      cfg->flags[0] |= CPUPERF_CONFIG_FLAG_LAST_BRANCH;
   }
 
   return true;
@@ -342,6 +354,8 @@ std::string TraceConfig::ToString() const {
     result += ",user";
   if (trace_pc_)
     result += ",pc";
+  if (trace_last_branch_)
+    result += ",last_branch";
 
   for (const auto& cat : selected_categories_) {
     result += ",";

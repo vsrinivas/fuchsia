@@ -32,6 +32,9 @@ class Controller {
   // Return true if cpuperf is supported on this device.
   static bool IsSupported();
 
+  // Fetch the properties of this device.
+  static bool GetProperties(cpuperf_properties_t* props);
+
   static bool Create(uint32_t buffer_size_in_mb,
                      const cpuperf_config_t& config,
                      std::unique_ptr<Controller>* out_controller);

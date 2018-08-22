@@ -34,6 +34,18 @@ TEST(Cpuperf, ValueRecords) {
   RunAndVerify("/pkg/data/value_records.cpspec");
 }
 
+TEST(Cpuperf, LastBranchRecord) {
+  cpuperf_properties_t properties;
+  ASSERT_TRUE(cpuperf::Controller::GetProperties(&properties));
+  if (!(properties.flags & CPUPERF_PROPERTY_FLAG_HAS_LAST_BRANCH)) {
+    // Not supported on this h/w. Punt.
+    FXL_LOG(INFO) << "Last Branch Records not supported, skipping test";
+    return;
+  }
+
+  RunAndVerify("/pkg/data/last_branch.cpspec");
+}
+
 #endif  // __x86_64__
 
 // Provide our own main so that --verbose,etc. are recognized.

@@ -25,6 +25,9 @@ enum class TraceOption {
   kUser,
   // Collect the PC value for each event that is its own timebase.
   kPc,
+  // Collect the set of last branch entries for each event that is its
+  // own timebase.
+  kLastBranch,
 };
 
 enum class CategoryGroup {
@@ -69,6 +72,7 @@ class TraceConfig final {
   bool trace_os() const { return trace_os_; }
   bool trace_user() const { return trace_user_; }
   bool trace_pc() const { return trace_pc_; }
+  bool trace_last_branch() const { return trace_last_branch_; }
 
   uint32_t sample_rate() const { return sample_rate_; }
 
@@ -97,6 +101,7 @@ class TraceConfig final {
   bool trace_os_ = false;
   bool trace_user_ = false;
   bool trace_pc_ = false;
+  bool trace_last_branch_ = false;
   uint32_t sample_rate_ = 0;
   cpuperf_event_id_t timebase_event_ = CPUPERF_EVENT_ID_NONE;
 

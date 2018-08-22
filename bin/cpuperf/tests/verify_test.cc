@@ -25,6 +25,7 @@
 // A test automatically fails if it's not listed here.
 const TestSpec* const kTestSpecs[] = {
   &kFixedCounterSpec,
+  &kLastBranchSpec,
   &kOsFlagSpec,
   &kProgrammableCounterSpec,
   &kTallySpec,
@@ -72,6 +73,9 @@ bool Verifier::VerifyIteration(uint32_t iter) {
       break;
     case CPUPERF_RECORD_PC:
       ++counts.pc_records;
+      break;
+    case CPUPERF_RECORD_LAST_BRANCH:
+      ++counts.last_branch_records;
       break;
     default:
       // The reader shouldn't be returning records of unknown types.

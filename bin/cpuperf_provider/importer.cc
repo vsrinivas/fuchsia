@@ -4,6 +4,7 @@
 
 #include "garnet/bin/cpuperf_provider/importer.h"
 
+#include <assert.h>
 #include <inttypes.h>
 #include <atomic>
 
@@ -12,6 +13,7 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/cpuperf/reader.h"
+#include "garnet/lib/cpuperf/writer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_point.h"
@@ -184,6 +186,11 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
                                ticks_per_second, sample_rate);
           }
           break;
+        case CPUPERF_RECORD_LAST_BRANCH:
+          if (!is_tally_mode) {
+            EmitLastBranchRecord(cpu, config, record, current_time);
+          }
+          break;
         default:
           // The reader shouldn't be returning unknown records.
           FXL_NOTREACHED();
@@ -323,6 +330,30 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
                                            &cpuperf_category_ref_, &name_ref,
                                            id, &args[0], n_args);
 #endif
+}
+
+void Importer::EmitLastBranchRecord(trace_cpu_number_t cpu,
+                                    const cpuperf_config_t& config,
+                                    const cpuperf::SampleRecord& record,
+                                    trace_ticks_t time) {
+  // Use the cpu's name as the blob's name.
+  auto cpu_name_ref{GetCpuNameRef(cpu)};
+  uint16_t num_branches = record.last_branch->num_branches;
+  size_t size = cpuperf::LastBranchRecordSize(num_branches);
+  void* ptr = trace_context_begin_write_blob_record(
+      context_, TRACE_BLOB_TYPE_LAST_BRANCH, &cpu_name_ref, size);
+  if (ptr) {
+    auto rec = reinterpret_cast<cpuperf::LastBranchRecord*>(ptr);
+    rec->cpu = cpu;
+    rec->num_branches = record.last_branch->num_branches;
+    rec->reserved = 0;
+    rec->event_time = time;
+    rec->aspace = record.last_branch->aspace;
+    static_assert(sizeof(rec->branches[0]) ==
+                  sizeof(record.last_branch->branches[0]), "");
+    memcpy(&rec->branches[0], &record.last_branch->branches[0],
+           num_branches * sizeof(record.last_branch->branches[0]));
+  }
 }
 
 // Chrome interprets the timestamp we give Count records as the start

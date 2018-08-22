@@ -18,6 +18,7 @@ static_library("cpuperf") {
     "records.h",
     "types.cc",
     "types.h",
+    "writer.h",
   ]
 
   public_deps = [

@@ -53,6 +53,20 @@ bool Controller::IsSupported() {
   return S_ISCHR(stat_buffer.st_mode);
 }
 
+bool Controller::GetProperties(cpuperf_properties_t* props) {
+  int raw_fd = open(kCpuPerfDev, O_WRONLY);
+  if (raw_fd < 0) {
+    FXL_LOG(ERROR) << "Failed to open " << kCpuPerfDev << ": errno=" << errno;
+    return false;
+  }
+  fxl::UniqueFD fd(raw_fd);
+
+  auto status = ioctl_cpuperf_get_properties(fd.get(), props);
+  if (status < 0)
+    FXL_LOG(ERROR) << "ioctl_cpuperf_get_properties failed: " << status;
+  return status >= 0;
+}
+
 bool Controller::Alloc(int fd, uint32_t num_traces, uint32_t buffer_size,
                        const cpuperf_config_t& config) {
   ioctl_cpuperf_alloc_t alloc;

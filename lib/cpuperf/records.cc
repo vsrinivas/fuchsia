@@ -13,6 +13,7 @@ cpuperf_record_type_t RecordType(const cpuperf_record_header_t* hdr) {
     case CPUPERF_RECORD_COUNT:
     case CPUPERF_RECORD_VALUE:
     case CPUPERF_RECORD_PC:
+    case CPUPERF_RECORD_LAST_BRANCH:
       return static_cast<cpuperf_record_type_t>(hdr->type);
     default:
       return CPUPERF_RECORD_RESERVED;
@@ -31,6 +32,12 @@ size_t RecordSize(const cpuperf_record_header_t* hdr) {
       return sizeof(cpuperf_value_record_t);
     case CPUPERF_RECORD_PC:
       return sizeof(cpuperf_pc_record_t);
+    case CPUPERF_RECORD_LAST_BRANCH: {
+      auto rec = reinterpret_cast<const cpuperf_last_branch_record_t*>(hdr);
+      if (rec->num_branches > countof(rec->branches))
+        return 0;
+      return CPUPERF_LAST_BRANCH_RECORD_SIZE(rec);
+    }
     default:
       return 0;
   }
