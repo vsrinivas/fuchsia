@@ -16,7 +16,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/gpt
+    system/ulib/gpt \
+    third_party/ulib/cksum \
 
 MODULE_LIBS := \
     system/ulib/fs-management \

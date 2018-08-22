@@ -15,6 +15,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/pretty \
+    third_party/ulib/cksum \
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 

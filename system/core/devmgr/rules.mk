@@ -89,6 +89,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/cksum \
     third_party/ulib/lz4 \
 
 MODULE_LIBS := \
