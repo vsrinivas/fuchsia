@@ -114,7 +114,11 @@ static const struct ath10k_band ath10k_supported_bands[] = {
                      .tx_beamforming_capabilities = 0x00000000,
                      .asel_capabilities = 0x00 },
         .vht_supported = false,
-        .basic_rates = { 2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108 },
+        // TODO(NET-1321, NET-1375):
+        // Unmark the "BasicRate" bit for the first 4 rates.
+        // Rename ".basic_rates" to ".supported_rates"
+        // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
+        .basic_rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
         .base_freq = 2407,
         .n_channels = countof(ath10k_2ghz_channels),
         .channels = ath10k_2ghz_channels,
@@ -134,7 +138,11 @@ static const struct ath10k_band ath10k_supported_bands[] = {
                      .tx_beamforming_capabilities = 0x00000000,
                      .asel_capabilities = 0x00 },
         .vht_supported = false,
-        .basic_rates = { 12, 18, 24, 36, 48, 72, 96, 108 },
+        // TODO(NET-1321, NET-1375):
+        // Unmark the "BasicRate" bit for the first 4 rates.
+        // Rename ".basic_rates" to ".supported_rates"
+        // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
+        .basic_rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
         .base_freq = 5000,
         .n_channels = countof(ath10k_5ghz_channels),
         .channels = ath10k_5ghz_channels,
