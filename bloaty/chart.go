@@ -64,15 +64,20 @@ type htmlData struct {
 //    calculated from the size of all its children.
 func toTable(bloatyData map[string]*Segment) *[][]interface{} {
 	var data [][]interface{}
-	data = append(data, []interface{}{"ID", "Parent", "File Size"})
-	data = append(data, []interface{}{"Build", nil, 0})
+	data = append(data, []interface{}{"ID", "Parent", "File Size", "Color"})
+	data = append(data, []interface{}{"Build", nil, uint64(0), 0})
 
 	for seg, segData := range bloatyData {
-		data = append(data, []interface{}{seg, "Build", 0})
+		data = append(data, []interface{}{seg, "Build", uint64(0), 0})
 		for file, fileData := range segData.Files {
-			data = append(data, []interface{}{fmt.Sprintf("%s (%s)", file, seg), seg, fileData.TotalFilesz})
+			data = append(data, []interface{}{fmt.Sprintf("%s (%s)", file, seg), seg, fileData.TotalFilesz, 0})
 			for sym, symData := range fileData.Symbols {
-				data = append(data, []interface{}{fmt.Sprintf("%s:%s (%s)", file, sym, seg), fmt.Sprintf("%s (%s)", file, seg), symData.Filesz})
+				data = append(data, []interface{}{
+					fmt.Sprintf("%s:%s (%s)", file, sym, seg),
+					fmt.Sprintf("%s (%s)", file, seg),
+					symData.Filesz,
+					len(symData.Binaries),
+				})
 			}
 		}
 	}
