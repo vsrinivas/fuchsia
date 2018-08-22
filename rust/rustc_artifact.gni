@@ -80,11 +80,8 @@ template("rustc_artifact") {
     version = "0.1.0"
   }
 
-  if (defined(invoker.edition)) {
-    edition = invoker.edition
-  } else {
-    edition = "2015"
-  }
+  assert(defined(invoker.edition), "Must specify an edition. Preferably 2018")
+  edition = invoker.edition
 
   group_deps = []
 
