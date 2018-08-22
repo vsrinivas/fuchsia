@@ -107,6 +107,11 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
             sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
             await!(handle_connect_transaction(local))
         }
+        opts::ClientCmd::Disconnect { iface_id } => {
+            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+            await!(sme.disconnect())
+                .map_err(|e| format_err!("error sending disconnect request: {}", e))
+        },
         opts::ClientCmd::Status { iface_id } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let st = await!(sme.status())?;

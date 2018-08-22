@@ -101,6 +101,11 @@ pub enum ClientCmd {
         #[structopt(short = "p", long = "password")]
         password: String
     },
+    #[structopt(name = "disconnect")]
+    Disconnect {
+        #[structopt(raw(required = "true"))]
+        iface_id: u16,
+    },
     #[structopt(name = "status")]
     Status {
         #[structopt(raw(required = "true"))]

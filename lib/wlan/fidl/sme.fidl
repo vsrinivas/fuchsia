@@ -69,5 +69,6 @@ struct ClientStatusResponse {
 interface ClientSme {
     1: Scan(ScanRequest req, request<ScanTransaction> txn);
     2: Connect(ConnectRequest req, request<ConnectTransaction>? txn);
-    3: Status() -> (ClientStatusResponse resp);
+    3: Disconnect() -> ();
+    4: Status() -> (ClientStatusResponse resp);
 };

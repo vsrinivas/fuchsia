@@ -138,6 +138,11 @@ impl<T: Tokens> ClientSme<T> {
         self.send_scan_request(req);
     }
 
+    pub fn on_disconnect_command(&mut self) {
+        self.state = self.state.take().map(
+            |state| state.disconnect(&self.mlme_sink, &self.user_sink));
+    }
+
     pub fn on_scan_command(&mut self, token: T::ScanToken) {
         let req = self.scan_sched.enqueue_scan_to_discover(DiscoveryScan{ token });
         self.send_scan_request(req);

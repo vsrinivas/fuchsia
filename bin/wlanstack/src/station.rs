@@ -172,6 +172,10 @@ fn new_client_service(client: Arc<Mutex<Client>>, endpoint: ClientSmeEndpoint)
                     Ok(connect(&client, req.ssid, req.password, txn)
                         .unwrap_or_else(|e| error!("Error starting a connect transaction: {:?}", e)))
                 },
+                ClientSmeRequest::Disconnect { responder } => {
+                    disconnect(&client);
+                    responder.send()
+                }
                 ClientSmeRequest::Status { responder } => responder.send(&mut status(&client)),
             }))
         })
@@ -196,6 +200,10 @@ fn connect(client: &Arc<Mutex<Client>>, ssid: Vec<u8>, password: Vec<u8>,
     };
     client.lock().unwrap().on_connect_command(ssid, password, handle);
     Ok(())
+}
+
+fn disconnect(client: &Arc<Mutex<Client>>) {
+    client.lock().unwrap().on_disconnect_command();
 }
 
 fn status(client: &Arc<Mutex<Client>>) -> fidl_sme::ClientStatusResponse {
