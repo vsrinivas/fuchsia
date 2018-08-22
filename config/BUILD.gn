@@ -31,7 +31,7 @@ if (!is_fuchsia) {
 
 config("compiler") {
   asmflags = []
-  cflags = []
+  cflags = [ "-fcolor-diagnostics" ]
   cflags_c = []
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
   cflags_objc = []
@@ -53,6 +53,11 @@ config("compiler") {
     } else if (current_os == "mac") {
       configs += [ "//build/config/mac:compiler" ]
     }
+  }
+
+  # Linker on macOS does not support `color-diagnostics`
+  if (current_os != "mac") {
+    ldflags += [ "-Wl,--color-diagnostics" ]
   }
 
   asmflags += cflags
