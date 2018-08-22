@@ -702,10 +702,10 @@ static bool test_suspend_multiple() {
                 "");
 
     // The thread should now be blocked on a debugger exception.
+    ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_EXCEPTION));
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread_h, &info), "");
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION, "");
 
     advance_over_breakpoint(thread_h);
 
