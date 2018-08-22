@@ -495,6 +495,25 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "GetEncoderForProject() => " << StatusToString(status);
 
+  fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
+  context_->ConnectToEnvironmentService(logger_factory.NewRequest());
+
+  fuchsia::cobalt::Status2 status2 = fuchsia::cobalt::Status2::INTERNAL_ERROR;
+  logger_factory->CreateLogger(LoadCobaltConfig2(), logger_.NewRequest(),
+                               &status2);
+  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
+      << "CreateLogger() => " << StatusToString(status2);
+
+  logger_factory->CreateLoggerExt(LoadCobaltConfig2(), logger_ext_.NewRequest(),
+                                  &status2);
+  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
+      << "CreateLoggerExt() => " << StatusToString(status2);
+
+  logger_factory->CreateLoggerSimple(LoadCobaltConfig2(),
+                                     logger_simple_.NewRequest(), &status2);
+  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
+      << "CreateLoggerSimple() => " << StatusToString(status2);
+
   // Invoke TestRareEventWithIndicesUsingServiceFromEnvironment() three times
   // and return true if it succeeds all three times.
   for (int i = 0; i < 3; i++) {
