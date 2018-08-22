@@ -5,39 +5,23 @@
 #![feature(futures_api)]
 #![deny(warnings)]
 
-extern crate fidl;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_vfs_watcher as vfs_watcher;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate parking_lot;
-
-#[macro_use(make_ioctl)]
-extern crate fdio;
-
-#[macro_use(format_err)]
-extern crate failure;
-
-#[macro_use]
-extern crate fuchsia_syslog as syslog;
-
-mod power;
-
-use app::server::ServicesServer;
-use failure::{Error, ResultExt};
+use failure::{Error, ResultExt, format_err};
 use fidl::endpoints2::{RequestStream, ServiceMarker};
-use futures::prelude::*;
-use parking_lot::Mutex;
-use std::fs::File;
-use std::io;
-use std::path::PathBuf;
-use std::sync::Arc;
-
-extern crate fidl_fuchsia_power;
 use fidl_fuchsia_power::{BatteryStatus, PowerManagerMarker, PowerManagerRequest,
                          PowerManagerRequestStream, PowerManagerWatcherProxy,
                          Status as power_status};
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use fuchsia_syslog::{self as syslog, fx_log, fx_log_err, fx_log_info, fx_vlog};
+use fuchsia_vfs_watcher as vfs_watcher;
+use fuchsia_zircon as zx;
+use futures::prelude::*;
+use parking_lot::Mutex;
+use std::fs::File;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+mod power;
 
 static POWER_DEVICE: &str = "/dev/class/power";
 
@@ -188,7 +172,7 @@ fn process_watch_event(
     if powerbuffer.power_type == power::POWER_TYPE_BATTERY {
         *battery_device_found = true;
         let bsh = bsh.clone();
-        let timer = async::Interval::new(zx::Duration::from_seconds(SLEEP_TIME));
+        let timer = fasync::Interval::new(zx::Duration::from_seconds(SLEEP_TIME));
         let f = timer
             .map(move |_| {
                 let mut bsh = bsh.lock();
@@ -197,7 +181,7 @@ fn process_watch_event(
                 }
             }).collect::<()>();
 
-        async::spawn(f);
+        fasync::spawn(f);
     } else {
         *adapter_device_found = true;
     }
@@ -255,9 +239,9 @@ fn watch_power_device(
         })
 }
 
-fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
+fn spawn_power_manager(pm: PowerManagerServer, chan: fasync::Channel) {
     let state = Arc::new(pm);
-    async::spawn(
+    fasync::spawn(
         PowerManagerRequestStream::from_channel(chan)
             .map_ok(move |req| {
                 let state = state.clone();
@@ -298,12 +282,12 @@ fn main() {
 }
 
 fn main_pm() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("unable to create executor")?;
+    let mut executor = fasync::Executor::new().context("unable to create executor")?;
     let bsh = Arc::new(Mutex::new(BatteryStatusHelper::new()));
     let bsh2 = bsh.clone();
     let f = watch_power_device(bsh2);
 
-    async::spawn(f.unwrap_or_else(|e| {
+    fasync::spawn(f.unwrap_or_else(|e| {
         fx_log_err!("watch_power_device failed {:?}", e);
     }));
 

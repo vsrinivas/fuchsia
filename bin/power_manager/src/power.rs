@@ -6,17 +6,17 @@ extern crate libc;
 
 use self::libc::{int32_t, uint32_t};
 
-use async;
-use fdio::{self, fdio_sys};
+use fdio::{self, fdio_sys, make_ioctl};
+use fuchsia_async as fasync;
+use fuchsia_syslog::{fx_log, fx_log_err, fx_vlog};
+use fuchsia_zircon::{self as zx, Signals, sys::zx_handle_t};
 use futures::{stream, TryFutureExt, TryStreamExt};
-use io::{self, Result};
 use std::fs::File;
+use std::io::{self, Result};
 use std::marker::Send;
 use std::mem;
 use std::os::raw;
 use std::ptr;
-use zx::sys::zx_handle_t;
-use zx::{self, Signals};
 
 const IOCTL_POWER_GET_INFO: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
@@ -135,14 +135,14 @@ where
     let f = stream::repeat(Ok(())).try_fold((callback, h, file_copy),
         |(callback, handle, file), ()| {
             // TODO: change OnSignals to wrap this so that is is not created again and again.
-            async::OnSignals::new(&handle, Signals::USER_0).map_ok(|_| {
+            fasync::OnSignals::new(&handle, Signals::USER_0).map_ok(|_| {
                 fx_vlog!(1, "callback called {:?}", file);
                 callback(&file);
                 (callback, handle, file)
             })
         }
     );
-    async::spawn(f.map_ok(|_| ()).unwrap_or_else(|e| {
+    fasync::spawn(f.map_ok(|_| ()).unwrap_or_else(|e| {
         fx_log_err!(
             "not able to apply listener to power device, wait failed: {:?}",
             e
