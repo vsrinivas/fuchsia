@@ -563,20 +563,16 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 		}
 	}()
 
-	if ep != nil {
-		// This must be initialized before starting the control loop below, or it will race with opClose.
-		ios.writeLoopDone = make(chan struct{})
-	}
+	// This must be initialized before starting the control loop below, or it will race with opClose.
+	ios.writeLoopDone = make(chan struct{})
 
 	ios.controlLoopDone = make(chan struct{})
 	go ios.loopControl(s, int64(newCookie))
 
 	switch transProto {
 	case tcp.ProtocolNumber:
-		if ep != nil {
-			go ios.loopSocketRead(s.stack)
-			go ios.loopSocketWrite(s.stack)
-		}
+		go ios.loopSocketRead(s.stack)
+		go ios.loopSocketWrite(s.stack)
 	case udp.ProtocolNumber, ipv4.PingProtocolNumber:
 		ios.dgramLoopClosing = make(chan struct{})
 		go ios.loopDgramRead(s.stack)
@@ -682,12 +678,6 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 		}
 		return errStatus(err)
 	}
-	if ios.ep == nil {
-		if debug {
-			log.Printf("getsockopt: no socket")
-		}
-		return zx.ErrBadState
-	}
 	if opt := val.Unpack(); opt != nil {
 		switch o := opt.(type) {
 		case tcpip.ErrorOption:
@@ -778,12 +768,6 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 		}
 		return errStatus(err)
 	}
-	if ios.ep == nil {
-		if debug {
-			log.Printf("setsockopt: no socket")
-		}
-		return zx.ErrBadState
-	}
 	if opt := val.Unpack(); opt != nil {
 		if err := ios.ep.SetSockOpt(opt); err != nil {
 			return mxNetError(err)
@@ -808,12 +792,6 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 		}()
 	}
 
-	if ios.ep == nil {
-		if debug {
-			log.Printf("bind: no socket")
-		}
-		return zx.ErrBadState
-	}
 	if err := ios.ep.Bind(*addr, nil); err != nil {
 		return mxNetError(err)
 	}
@@ -952,9 +930,6 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *zxsocket.Msg) zx.Status 
 }
 
 func (s *socketServer) opGetPeerName(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
-	if ios.ep == nil {
-		return zx.ErrBadState
-	}
 	a, err := ios.ep.GetRemoteAddress()
 	if err != nil {
 		return mxNetError(err)
@@ -1041,12 +1016,6 @@ func (s *socketServer) opListen(ios *iostate, msg *zxsocket.Msg) (status zx.Stat
 		return zx.ErrInvalidArgs
 	}
 	backlog := binary.LittleEndian.Uint32(d)
-	if ios.ep == nil {
-		if debug {
-			log.Printf("listen: no socket")
-		}
-		return zx.ErrBadState
-	}
 
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&inEntry, waiter.EventIn)
@@ -1202,9 +1171,7 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 			log.Printf("close: signal failed: %v", err)
 		}
 
-		if ios.ep != nil {
-			ios.ep.Close()
-		}
+		ios.ep.Close()
 		ios.dataHandle.Close()
 	}()
 
