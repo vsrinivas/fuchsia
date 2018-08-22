@@ -46,6 +46,7 @@ void Station::Reset() {
     assoc_timeout_.Cancel();
     signal_report_timeout_.Cancel();
     bssid_.Reset();
+    bu_queue_.clear();
 }
 zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
     WLAN_STATS_INC(svc_msg.in);
@@ -72,25 +73,9 @@ zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
-    switch (pkt->peer()) {
-    case Packet::Peer::kEthernet: {
-        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-            HandleEthFrame(eth_frame.IntoOwned(fbl::move(pkt)));
-        }
-        break;
-    }
-    case Packet::Peer::kWlan:
-        return HandleAnyWlanFrame(fbl::move(pkt));
-    default:
-        errorf("unknown Packet peer: %u\n", pkt->peer());
-        break;
-    }
-
-    return ZX_OK;
-}
-
 zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+    ZX_DEBUG_ASSERT(pkt->peer() == Packet::Peer::kWlan);
+
     if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
         auto mgmt_frame = possible_mgmt_frame.CheckLength();
         if (!mgmt_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
@@ -332,6 +317,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     state_ = WlanState::kJoined;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
+    bu_queue_.clear();
     service::SendDeauthConfirm(device_, bssid_);
 
     return ZX_OK;
@@ -584,6 +570,7 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
     state_ = WlanState::kJoined;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
+    bu_queue_.clear();
 
     return service::SendDeauthIndication(device_, bssid_,
                                          static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
@@ -680,6 +667,7 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     signal_report_timeout_.Cancel();
+    bu_queue_.clear();
 
     return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
 }
@@ -875,15 +863,22 @@ zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
 zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     debugfn();
 
-    // For now, drop outgoing data frames if we are off channel
-    // TODO(NET-1294)
-    if (!chan_sched_->OnChannel()) { return ZX_OK; }
-
     // Drop Ethernet frames when not associated.
     auto bss_setup = (bssid() != nullptr);
     auto associated = (state_ == WlanState::kAssociated);
     if (!associated) { debugf("dropping eth packet while not associated\n"); }
     if (!bss_setup || !associated) { return ZX_OK; }
+
+    // If off channel, buffer Ethernet frame
+    if (!chan_sched_->OnChannel()) {
+        if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
+            bu_queue_.Dequeue();
+            warnf("dropping oldest unicast frame\n");
+        }
+        bu_queue_.Enqueue(eth_frame.Take());
+        debugps("queued frame since off channel; bu queue size: %lu\n", bu_queue_.size());
+        return ZX_OK;
+    }
 
     auto eth_hdr = eth_frame.hdr();
     const size_t frame_len =
@@ -1262,6 +1257,17 @@ void Station::BackToMainChannel() {
         auto deadline = now + std::max(remaining_auto_deauth_timeout_, WLAN_TU(1u));
         timer_mgr_.Schedule(deadline, &auto_deauth_timeout_);
         auto_deauth_last_accounted_ = now;
+
+        SendBufferedUnits();
+    }
+}
+
+void Station::SendBufferedUnits() {
+    while (bu_queue_.size() > 0) {
+        fbl::unique_ptr<Packet> packet = bu_queue_.Dequeue();
+        debugps("sending buffered frame; queue size at: %lu\n", bu_queue_.size());
+        ZX_DEBUG_ASSERT(packet->peer() == Packet::Peer::kEthernet);
+        HandleEthFrame(EthFrame(fbl::move(packet)));
     }
 }
 

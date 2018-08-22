@@ -58,7 +58,7 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateFrame<F>(&pkt);
         if (status != ZX_OK) { return status; }
-        station.HandleAnyFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(fbl::move(pkt));
         return ZX_OK;
     }
 
@@ -66,7 +66,7 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateDataFrame(&pkt, kTestPayload, sizeof(kTestPayload));
         if (status != ZX_OK) { return status; }
-        station.HandleAnyFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(fbl::move(pkt));
         return ZX_OK;
     }
 
@@ -74,7 +74,7 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateDataFrame(&pkt, nullptr, 0);
         if (status != ZX_OK) { return status; }
-        station.HandleAnyFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(fbl::move(pkt));
         return ZX_OK;
     }
 
@@ -82,7 +82,15 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateNullDataFrame(&pkt);
         if (status != ZX_OK) { return status; }
-        station.HandleAnyFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(fbl::move(pkt));
+        return ZX_OK;
+    }
+
+    zx_status_t SendEthFrame() {
+        fbl::unique_ptr<Packet> pkt;
+        auto status = CreateEthFrame(&pkt, kTestPayload, sizeof(kTestPayload));
+        if (status != ZX_OK) { return status; }
+        station.HandleEthFrame(EthFrame(fbl::move(pkt)));
         return ZX_OK;
     }
 
@@ -90,7 +98,7 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateBeaconFrameWithBssid(&pkt, bssid);
         if (status != ZX_OK) { return status; }
-        station.HandleAnyFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(fbl::move(pkt));
         return ZX_OK;
     }
 
@@ -148,7 +156,7 @@ struct ClientTest : public ::testing::Test {
                                            .handler = &off_channel_handler};
         chan_sched.RequestOffChannelTime(off_channel_request);
         station.PreSwitchOffChannel();
-        device.wlan_queue.clear();
+        device.wlan_queue.erase(device.wlan_queue.begin()); // dequeue the power-saving frame
         ASSERT_FALSE(chan_sched.OnChannel()); // sanity check
     }
 
@@ -157,7 +165,7 @@ struct ClientTest : public ::testing::Test {
         chan_sched.HandleTimeout(); // calling this just to reset channel scheduler's
                                     // `ensure_on_channel` flag.
         station.BackToMainChannel();
-        device.wlan_queue.clear();
+        device.wlan_queue.erase(device.wlan_queue.begin()); // dequeue the power-saving frame
         ASSERT_TRUE(chan_sched.OnChannel()); // sanity check
     }
 
@@ -458,7 +466,7 @@ TEST_F(ClientTest, DropManagementFrames) {
     hdr->addr3 = common::MacAddr(kBssid2);
     auto deauth = frame.body();
     deauth->reason_code = 42;
-    station.HandleAnyFrame(frame.Take());
+    station.HandleAnyWlanFrame(frame.Take());
 
     // Verify neither a management frame nor service message were sent.
     ASSERT_TRUE(device.svc_queue.empty());
@@ -664,6 +672,31 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
+TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
+    Connect();
+
+    GoOffChannel();
+    SendEthFrame();
+    ASSERT_TRUE(device.wlan_queue.empty());
+
+    GoBackToMainChannel();
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+
+    auto pkt = std::move(*device.wlan_queue.begin());
+    ASSERT_EQ(pkt->peer(), Packet::Peer::kWlan);
+    auto type_checked_frame = DataFrameView<LlcHeader>::CheckType(pkt.get());
+    ASSERT_TRUE(type_checked_frame);
+    auto frame = type_checked_frame.CheckLength();
+    ASSERT_TRUE(frame);
+    ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
+    ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+    ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+
+    auto llc_hdr = frame.body();
+    ASSERT_EQ(frame.body_len() - llc_hdr->len(), sizeof(kTestPayload));
+    ASSERT_EQ(std::memcmp(llc_hdr->payload, kTestPayload, sizeof(kTestPayload)), 0);
+}
+
 TEST_F(ClientTest, InvalidAuthenticationResponse) {
     Join();
 
@@ -676,7 +709,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
     MgmtFrame<Authentication> auth_frame(fbl::move(auth_pkt));
     auth_frame.body()->auth_algorithm_number = AuthAlgorithm::kSae;
-    ASSERT_EQ(station.HandleAnyFrame(auth_frame.Take()), ZX_OK);
+    ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
 
     // Verify that AUTHENTICATION.confirm was received.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
@@ -695,7 +728,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     // This frame should be ignored as the client reset.
     ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
     auth_frame = MgmtFrame<Authentication>(fbl::move(auth_pkt));
-    ASSERT_EQ(station.HandleAnyFrame(auth_frame.Take()), ZX_OK);
+    ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
 
     // Fast forward in time far beyond an authentication timeout.
     // There should not be any AUTHENTICATION.confirm sent as the client

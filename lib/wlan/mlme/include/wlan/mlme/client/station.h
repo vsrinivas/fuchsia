@@ -8,6 +8,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/packet.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer_manager.h>
@@ -122,7 +123,8 @@ class Station {
     zx_status_t SendKeepAliveResponse();
 
     zx_status_t HandleAnyMlmeMsg(const BaseMlmeMsg&);
-    zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>);
+    zx_status_t HandleEthFrame(EthFrame&&);
+    zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
     zx_status_t HandleTimeout();
 
     void PreSwitchOffChannel();
@@ -136,9 +138,11 @@ class Station {
     static constexpr size_t kSignalReportBcnCountTimeout = 10;
     static constexpr size_t kAutoDeauthBcnCountTimeout = 50;
     static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
+    // Maximum number of packets buffered while station is in power saving mode.
+    // TODO(NET-687): Find good BU limit.
+    static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
-    zx_status_t HandleEthFrame(EthFrame&&);
-    zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
+
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&&);
     zx_status_t HandleAnyDataFrame(DataFrame<>&&);
     bool ShouldDropMgmtFrame(const MgmtFrameView<>&);
@@ -170,6 +174,7 @@ class Station {
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
     zx_status_t SendDeauthFrame(wlan_mlme::ReasonCode reason_code);
+    void SendBufferedUnits();
     void DumpDataFrame(const DataFrameView<>&);
 
     zx::time deadline_after_bcn_period(size_t bcn_count);
@@ -217,6 +222,9 @@ class Station {
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
     AssocConfig assoc_cfg_{};
+
+    // Queue holding buffered, outbound Ethernet frames
+    PacketQueue bu_queue_;
 };
 
 const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);

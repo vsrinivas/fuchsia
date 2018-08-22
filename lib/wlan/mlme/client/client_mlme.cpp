@@ -99,7 +99,24 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
-    chan_sched_->HandleIncomingFrame(fbl::move(pkt));
+    switch (pkt->peer()) {
+    case Packet::Peer::kEthernet: {
+        // For outbound frame (Ethernet frame), hand to station directly so
+        // station sends frame to device when on channel, or buffers it when
+        // off channel.
+        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+            sta_->HandleEthFrame(eth_frame.IntoOwned(fbl::move(pkt)));
+        }
+        break;
+    }
+    case Packet::Peer::kWlan: {
+        chan_sched_->HandleIncomingFrame(fbl::move(pkt));
+        break;
+    }
+    default:
+        errorf("unknown Packet peer: %u\n", pkt->peer());
+        break;
+    }
     return ZX_OK;
 }
 
@@ -132,13 +149,19 @@ void ClientMlme::OnChannelHandlerImpl::PreSwitchOffChannel() {
 
 void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Packet> packet) {
     debugfn();
+    // Only WLAN frame is handed to channel handler since all Ethernet frames are handed
+    // over to station directly.
+    ZX_DEBUG_ASSERT(packet->peer() == Packet::Peer::kWlan);
+
     if (auto mgmt_frame = MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
         if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
             mlme_->scanner_->HandleBeacon(bcn_frame);
         }
     }
 
-    if (mlme_->IsStaValid()) { mlme_->sta_->HandleAnyFrame(fbl::move(packet)); }
+    if (mlme_->IsStaValid()) {
+        mlme_->sta_->HandleAnyWlanFrame(fbl::move(packet));
+    }
 }
 
 void ClientMlme::OnChannelHandlerImpl::ReturnedOnChannel() {

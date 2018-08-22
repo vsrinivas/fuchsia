@@ -358,4 +358,30 @@ zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
+zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet,
+                           const uint8_t* payload,
+                           size_t len) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    size_t buf_len = sizeof(EthernetII) + len;
+    auto buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
+    packet->set_peer(Packet::Peer::kEthernet);
+
+    EthFrame eth_frame(fbl::move(packet));
+    auto eth_hdr = eth_frame.hdr();
+    std::memset(eth_hdr, 0, buf_len);
+    eth_hdr->src = client;
+    eth_hdr->dest = bssid;
+    eth_hdr->ether_type = 2;
+    std::memcpy(eth_hdr->payload, payload, len);
+
+    *out_packet = eth_frame.Take();
+
+    return ZX_OK;
+}
+
 }  // namespace wlan
