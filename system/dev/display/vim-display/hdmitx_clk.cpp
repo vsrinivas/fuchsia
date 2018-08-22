@@ -51,7 +51,7 @@ void configure_hpll_clk_out(vim2_display_t* display, uint32_t hpll)
     uint8_t n;
     uint16_t m;
     n = (uint8_t)desired_pll;
-    m = ((float)desired_pll - (float)n) * 1000;
+    m = static_cast<uint16_t>(((float)desired_pll - (float)n) * 1000);
 
     DISP_ERROR("Desired PLL = %f (m = %d, n = %d) (hpll = %d)\n", desired_pll, m, n, hpll);
 

@@ -37,19 +37,9 @@ bool edid_rgb_disp(const uint8_t* edid_buf)
     return (!!((edid->feature_support & (1 << 2)) >> 2));
 }
 
-static char* get_mfg_id(const uint8_t* edid_buf)
-{
-    char *mfg_str = calloc(1, sizeof(char));;
-    mfg_str[0] = ((edid_buf[8] & 0x7c) >> 2) + 'A' - 1;
-    mfg_str[1] = (((edid_buf[8] & 0x03) << 3) | (edid_buf[9] & 0xe0) >> 5) + 'A' - 1;
-    mfg_str[2] = ((edid_buf[9] & 0x1f)) + 'A' - 1;
-    mfg_str[3] = '\0';
-    return mfg_str;
-}
-
 static uint16_t get_prod_id(const uint8_t* edid_buf)
 {
-    return ((edid_buf[11] << 8) | (edid_buf[10]));
+    return static_cast<uint16_t>((edid_buf[11] << 8) | (edid_buf[10]));
 }
 
 static void edid_dump_disp_timing(const disp_timing_t* d)
@@ -73,28 +63,28 @@ static void edid_dump_disp_timing(const disp_timing_t* d)
 
 static void populate_timings(detailed_timing_t* raw_dtd, disp_timing_t* disp_timing)
 {
-    disp_timing->pixel_clk = raw_dtd->raw_pixel_clk[1] << 8 |
-                                                        raw_dtd->raw_pixel_clk[0];
-    disp_timing->HActive = (((raw_dtd->raw_Hact_HBlank & 0xf0)>>4) << 8) |
-                                                        raw_dtd->raw_Hact;
-    disp_timing->HBlanking = ((raw_dtd->raw_Hact_HBlank & 0x0f) << 8) |
-                                                        raw_dtd->raw_HBlank;
-    disp_timing->VActive = (((raw_dtd->raw_Vact_VBlank & 0xf0)>>4) << 8) |
-                                                        raw_dtd->raw_Vact;
-    disp_timing->VBlanking = ((raw_dtd->raw_Vact_VBlank & 0x0f) << 8) |
-                                                        raw_dtd->raw_VBlank;
-    disp_timing->HSyncOffset = (((raw_dtd->raw_HSync_VSync_OFF_PW & 0xc0)>>6) << 8) |
-                                                        raw_dtd->raw_HSyncOff;
-    disp_timing->HSyncPulseWidth = (((raw_dtd->raw_HSync_VSync_OFF_PW & 0x30)>>4) << 8) |
-                                                        raw_dtd->raw_HSyncPW;
-    disp_timing->VSyncOffset = (((raw_dtd->raw_HSync_VSync_OFF_PW & 0x0c)>>2) << 4) |
-                                                        (raw_dtd->raw_VSyncOff_VSyncPW & 0xf0)>>4;
-    disp_timing->VSyncPulseWidth = ((raw_dtd->raw_HSync_VSync_OFF_PW & 0x03) << 4) |
-                                                        (raw_dtd->raw_VSyncOff_VSyncPW & 0x0f);
-    disp_timing->HImageSize = (((raw_dtd->raw_H_V_ImageSize & 0xf0)>>4)<<8) |
-                                                        raw_dtd->raw_HImageSize;
-    disp_timing->VImageSize = ((raw_dtd->raw_H_V_ImageSize & 0x0f)<<8) |
-                                                        raw_dtd->raw_VImageSize;
+    disp_timing->pixel_clk = static_cast<uint16_t>(raw_dtd->raw_pixel_clk[1] << 8 |
+                                                        raw_dtd->raw_pixel_clk[0]);
+    disp_timing->HActive = static_cast<uint16_t>((((raw_dtd->raw_Hact_HBlank & 0xf0)>>4) << 8) |
+                                                        raw_dtd->raw_Hact);
+    disp_timing->HBlanking = static_cast<uint16_t>(((raw_dtd->raw_Hact_HBlank & 0x0f) << 8) |
+                                                        raw_dtd->raw_HBlank);
+    disp_timing->VActive = static_cast<uint16_t>((((raw_dtd->raw_Vact_VBlank & 0xf0)>>4) << 8) |
+                                                        raw_dtd->raw_Vact);
+    disp_timing->VBlanking = static_cast<uint16_t>(((raw_dtd->raw_Vact_VBlank & 0x0f) << 8) |
+                                                        raw_dtd->raw_VBlank);
+    disp_timing->HSyncOffset = static_cast<uint16_t>((((raw_dtd->raw_HSync_VSync_OFF_PW & 0xc0)>>6) << 8) |
+                                                        raw_dtd->raw_HSyncOff);
+    disp_timing->HSyncPulseWidth = static_cast<uint16_t>((((raw_dtd->raw_HSync_VSync_OFF_PW & 0x30)>>4) << 8) |
+                                                        raw_dtd->raw_HSyncPW);
+    disp_timing->VSyncOffset = static_cast<uint8_t>((((raw_dtd->raw_HSync_VSync_OFF_PW & 0x0c)>>2) << 4) |
+                                                        (raw_dtd->raw_VSyncOff_VSyncPW & 0xf0)>>4);
+    disp_timing->VSyncPulseWidth = static_cast<uint8_t>(((raw_dtd->raw_HSync_VSync_OFF_PW & 0x03) << 4) |
+                                                        (raw_dtd->raw_VSyncOff_VSyncPW & 0x0f));
+    disp_timing->HImageSize = static_cast<uint16_t>((((raw_dtd->raw_H_V_ImageSize & 0xf0)>>4)<<8) |
+                                                        raw_dtd->raw_HImageSize);
+    disp_timing->VImageSize = static_cast<uint16_t>(((raw_dtd->raw_H_V_ImageSize & 0x0f)<<8) |
+                                                        raw_dtd->raw_VImageSize);
     disp_timing->HBorder = raw_dtd->raw_HBorder;
     disp_timing->VBorder = raw_dtd->raw_VBorder;
     disp_timing->Flags = raw_dtd->raw_Flags;
@@ -384,7 +374,9 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
         hdmitx_writereg(display, HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);        // clear INT
 
         for (i = 0; i < 8; i ++) {
-            display->edid_buf[addr+i] = hdmitx_readreg(display, HDMITX_DWC_I2CM_READ_BUFF0 + i);
+            uint32_t address = static_cast<uint32_t>(HDMITX_DWC_I2CM_READ_BUFF0 + i);
+            display->edid_buf[addr+i] =
+                    static_cast<uint8_t>(hdmitx_readreg(display, address));
         }
     }
 
