@@ -73,7 +73,7 @@ ObjectIdentifier CreateObjectIdentifier(std::string digest) {
 TEST(ObjectImplTest, InlinedObject) {
   std::string data = RandomString(12);
   ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
 
   InlinedObject object(identifier);
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
@@ -82,7 +82,7 @@ TEST(ObjectImplTest, InlinedObject) {
 TEST(ObjectImplTest, StringObject) {
   std::string data = RandomString(256);
   ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
 
   StringObject object(identifier, data);
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
@@ -105,7 +105,7 @@ TEST(ObjectImplTest, LevelDBObject) {
 
   std::string data = RandomString(256);
   ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
 
   status = db_ptr->Put(write_options_, "", data);
   ASSERT_TRUE(status.ok());
@@ -122,7 +122,7 @@ TEST(ObjectImplTest, LevelDBObject) {
 TEST(ObjectImplTest, VmoObject) {
   std::string data = RandomString(256);
   ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
 
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(data, &vmo));

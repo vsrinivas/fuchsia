@@ -163,7 +163,7 @@ class SplitContext {
     auto data_view = data->Get();
     size_t size = data_view.size();
     ObjectDigest object_digest =
-        ComputeObjectDigest(ObjectType::VALUE, data_view);
+        ComputeObjectDigest(ObjectType::CHUNK, data_view);
     auto identifier =
         callback_(IterationStatus::IN_PROGRESS, object_digest, std::move(data));
     AddIdentifierAtLevel(0, {std::move(identifier), size});

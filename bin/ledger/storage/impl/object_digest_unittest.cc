@@ -27,7 +27,7 @@ TEST_P(ObjectDigestSmallTest, Index) {
 
 TEST_P(ObjectDigestSmallTest, Value) {
   ObjectDigest object_digest =
-      ComputeObjectDigest(ObjectType::VALUE, GetParam());
+      ComputeObjectDigest(ObjectType::CHUNK, GetParam());
   EXPECT_EQ(ObjectDigestType::INLINE, GetObjectDigestType(object_digest));
   EXPECT_EQ(GetParam(), ExtractObjectDigestData(object_digest));
 }
@@ -49,8 +49,8 @@ TEST_P(ObjectDigestBigTest, Index) {
 
 TEST_P(ObjectDigestBigTest, Value) {
   ObjectDigest object_digest =
-      ComputeObjectDigest(ObjectType::VALUE, GetParam());
-  EXPECT_EQ(ObjectDigestType::VALUE_HASH, GetObjectDigestType(object_digest));
+      ComputeObjectDigest(ObjectType::CHUNK, GetParam());
+  EXPECT_EQ(ObjectDigestType::CHUNK_HASH, GetObjectDigestType(object_digest));
   EXPECT_EQ(encryption::SHA256WithLengthHash(GetParam()),
             ExtractObjectDigestData(object_digest));
 }

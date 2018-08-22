@@ -57,21 +57,21 @@ ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest) {
 
   switch (object_digest[0]) {
     case kValueHashPrefix:
-      return ObjectDigestType::VALUE_HASH;
+      return ObjectDigestType::CHUNK_HASH;
     case kIndexHashPrefix:
       return ObjectDigestType::INDEX_HASH;
   }
 
   FXL_NOTREACHED() << "Unknown digest prefix: "
                    << static_cast<uint32_t>(object_digest[0]);
-  return ObjectDigestType::VALUE_HASH;
+  return ObjectDigestType::CHUNK_HASH;
 }
 
 ObjectType GetObjectType(ObjectDigestType digest_type) {
   switch (digest_type) {
     case ObjectDigestType::INLINE:
-    case ObjectDigestType::VALUE_HASH:
-      return ObjectType::VALUE;
+    case ObjectDigestType::CHUNK_HASH:
+      return ObjectType::CHUNK;
     case ObjectDigestType::INDEX_HASH:
       return ObjectType::INDEX;
   }
@@ -93,7 +93,7 @@ fxl::StringView ExtractObjectDigestData(ObjectDigestView object_digest) {
 ObjectDigest ComputeObjectDigest(ObjectType type,
                                  convert::ExtendedStringView content) {
   switch (type) {
-    case ObjectType::VALUE:
+    case ObjectType::CHUNK:
       if (content.size() <= kStorageHashSize) {
         return content.ToString();
       }

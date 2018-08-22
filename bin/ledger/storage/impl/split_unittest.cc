@@ -114,7 +114,7 @@ void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
       result->append(content.data(), content.size());
       break;
     }
-    case ObjectDigestType::VALUE_HASH: {
+    case ObjectDigestType::CHUNK_HASH: {
       if (data.count(digest) == 0) {
         return ::testing::AssertionFailure() << "Unknown object.";
       }
@@ -163,7 +163,7 @@ TEST_P(SplitSmallValueTest, SmallValue) {
   ASSERT_EQ(1u, split_result.data.size());
   EXPECT_EQ(content, split_result.data.begin()->second->Get());
   EXPECT_EQ(split_result.calls[1].digest,
-            ComputeObjectDigest(ObjectType::VALUE, content));
+            ComputeObjectDigest(ObjectType::CHUNK, content));
 
   std::string found_content;
   ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.data,
@@ -188,7 +188,7 @@ TEST_P(SplitBigValueTest, BigValues) {
   fxl::StringView current = content;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
-        GetObjectDigestType(call.digest) == ObjectDigestType::VALUE_HASH) {
+        GetObjectDigestType(call.digest) == ObjectDigestType::CHUNK_HASH) {
       EXPECT_EQ(current.substr(0, split_result.data[call.digest]->Get().size()),
                 split_result.data[call.digest]->Get());
       current = current.substr(split_result.data[call.digest]->Get().size());
@@ -225,7 +225,7 @@ TEST(SplitTest, PathologicalCase) {
   size_t total_size = 0u;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
-        GetObjectDigestType(call.digest) == ObjectDigestType::VALUE_HASH) {
+        GetObjectDigestType(call.digest) == ObjectDigestType::CHUNK_HASH) {
       total_size += split_result.data[call.digest]->Get().size();
       EXPECT_EQ(std::string(split_result.data[call.digest]->Get().size(), '\0'),
                 split_result.data[call.digest]->Get());

@@ -490,7 +490,7 @@ void PageStorageImpl::GetObject(
             GetObjectDigestType(object_identifier.object_digest);
 
         if (digest_type == ObjectDigestType::INLINE ||
-            digest_type == ObjectDigestType::VALUE_HASH) {
+            digest_type == ObjectDigestType::CHUNK_HASH) {
           callback(status, std::move(object));
           return;
         }
@@ -867,7 +867,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
         }
         auto object_digest_type =
             GetObjectDigestType(object_identifier.object_digest);
-        FXL_DCHECK(object_digest_type == ObjectDigestType::VALUE_HASH ||
+        FXL_DCHECK(object_digest_type == ObjectDigestType::CHUNK_HASH ||
                    object_digest_type == ObjectDigestType::INDEX_HASH);
 
         if (object_identifier.object_digest !=
@@ -877,7 +877,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           return;
         }
 
-        if (object_digest_type == ObjectDigestType::VALUE_HASH) {
+        if (object_digest_type == ObjectDigestType::CHUNK_HASH) {
           callback(SynchronousAddPiece(handler, std::move(object_identifier),
                                        source, is_object_synced,
                                        std::move(chunk)));
@@ -985,7 +985,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
     ObjectDigestType digest_type =
         GetObjectDigestType(object->GetIdentifier().object_digest);
     if (digest_type == ObjectDigestType::INLINE ||
-        digest_type == ObjectDigestType::VALUE_HASH) {
+        digest_type == ObjectDigestType::CHUNK_HASH) {
       if (size != content.size()) {
         FXL_LOG(ERROR) << "Error in serialization format. Expecting object: "
                        << object->GetIdentifier() << " to have size: " << size

@@ -1968,13 +1968,13 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // which contains child).
   std::string child_data = btree::EncodeNode(0u, std::vector<Entry>(), {});
   ObjectIdentifier child_identifier = encryption_service_.MakeObjectIdentifier(
-      ComputeObjectDigest(ObjectType::VALUE, child_data));
+      ComputeObjectDigest(ObjectType::CHUNK, child_data));
   sync.AddObject(child_identifier, child_data);
 
   std::string root_data =
       btree::EncodeNode(0u, std::vector<Entry>(), {{0u, child_identifier}});
   ObjectIdentifier root_identifier = encryption_service_.MakeObjectIdentifier(
-      ComputeObjectDigest(ObjectType::VALUE, root_data));
+      ComputeObjectDigest(ObjectType::CHUNK, root_data));
   sync.AddObject(root_identifier, root_data);
 
   std::vector<std::unique_ptr<const Commit>> parent;

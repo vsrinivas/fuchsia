@@ -13,13 +13,13 @@
 namespace storage {
 
 enum class ObjectType {
-  VALUE,
+  CHUNK,
   INDEX,
 };
 
 enum class ObjectDigestType {
   INLINE,
-  VALUE_HASH,
+  CHUNK_HASH,
   INDEX_HASH,
 };
 
