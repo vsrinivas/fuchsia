@@ -20,6 +20,18 @@ import (
 var output = flag.String("output", "", "Path to the generated tarball")
 var manifest = flag.String("manifest", "", "Path to the file containing a description of the tarball's contents")
 
+func writeToArchive(archive *tar.Writer, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err = io.Copy(archive, file); err != nil {
+		return err
+	}
+	return nil
+}
+
 func createTar(archive string, mappings map[string]string) error {
 	file, err := os.Create(archive)
 	if err != nil {
@@ -49,12 +61,9 @@ func createTar(archive string, mappings map[string]string) error {
 			return err
 		}
 
-		file, err := os.Open(src)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		if _, err = io.Copy(tw, file); err != nil {
+		// Using a separate function for this step to ensure copied files are closed
+		// in a timely manner.
+		if err = writeToArchive(tw, src); err != nil {
 			return err
 		}
 	}
