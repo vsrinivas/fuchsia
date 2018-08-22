@@ -562,6 +562,8 @@ _payload stream_ (variable size)
 
 The following blob types are defined:
 - `0x01`: Raw untyped data. Consumer is expected to know how to consume it, perhaps based on context.
+- `0x02`: Last Branch Record of Intel Performance Monitor. The format
+is defined by the Cpuperf Trace Provider.
 
 ### Userspace Object Record (record type = 6)
 

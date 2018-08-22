@@ -128,6 +128,17 @@ typedef enum {
 
 #define IA32_DEBUGCTL 0x1d9
 
+#define SKL_LAST_BRANCH_SELECT  0x1c8
+#define SKL_LAST_BRANCH_TOS     0x1c9
+
+// N.B. These values have changed across models.
+#define SKL_LAST_BRANCH_FROM_0  0x680
+#define SKL_LAST_BRANCH_FROM_16 0x690
+#define SKL_LAST_BRANCH_TO_0    0x6c0
+#define SKL_LAST_BRANCH_TO_16   0x6d0
+#define SKL_LAST_BRANCH_INFO_0  0xdc0
+#define SKL_LAST_BRANCH_INFO_16 0xdd0
+
 // Vendor,device ids of the device with MCHBAR stats registers.
 #define INTEL_MCHBAR_PCI_VENDOR_ID 0x8086
 const uint16_t supported_mem_device_ids[] = {
@@ -163,23 +174,29 @@ static_assert(1
 static uint64_t kGlobalCtrlWritableBits;
 static uint64_t kFixedCounterCtrlWritableBits;
 
+// While the last-branch record is far larger, it is not emitted for each
+// event.
 static constexpr size_t kMaxEventRecordSize = sizeof(cpuperf_pc_record_t);
 
 // Commented out values represent currently unsupported features.
 // They remain present for documentation purposes.
+// Note: Making this const assumes at least PM version >= 2 (e.g.,
+// IA32_DEBUGCTL_FREEZE_LBRS_ON_PMI_MASK).
+// Note: At least FREEZE_WHILE_SMM needs to be set based on a runtime
+// determination (need to check PERF_CAPABILITIES).
 static constexpr uint64_t kDebugCtrlWritableBits =
-    (/*IA32_DEBUGCTL_LBR_MASK |*/
+    (IA32_DEBUGCTL_LBR_MASK |
      /*IA32_DEBUGCTL_BTF_MASK |*/
      /*IA32_DEBUGCTL_TR_MASK |*/
      /*IA32_DEBUGCTL_BTS_MASK |*/
      /*IA32_DEBUGCTL_BTINT_MASK |*/
      /*IA32_DEBUGCTL_BTS_OFF_OS_MASK |*/
      /*IA32_DEBUGCTL_BTS_OFF_USR_MASK |*/
-     /*IA32_DEBUGCTL_FREEZE_LBRS_ON_PMI_MASK |*/
+     IA32_DEBUGCTL_FREEZE_LBRS_ON_PMI_MASK |
 #if TRY_FREEZE_ON_PMI
      IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_MASK |
 #endif
-     /*IA32_DEBUGCTL_FREEZE_WHILE_SMM_EN_MASK |*/
+     /*IA32_DEBUGCTL_FREEZE_WHILE_SMM_MASK |*/
      /*IA32_DEBUGCTL_RTM_MASK |*/
      0);
 static constexpr uint64_t kEventSelectWritableBits =
@@ -195,6 +212,12 @@ static constexpr uint64_t kEventSelectWritableBits =
      IA32_PERFEVTSEL_INV_MASK |
      IA32_PERFEVTSEL_CMASK_MASK);
 
+enum LbrFormat {
+    LBR_FORMAT_32 = 0,
+    // The format contains LBR_INFO in addition to LBR_FROM/LBR_TO.
+    LBR_FORMAT_INFO = 0b101,
+};
+
 static bool supports_perfmon = false;
 
 static uint32_t perfmon_version = 0;
@@ -208,6 +231,9 @@ static uint32_t perfmon_capabilities = 0;
 // Maximum counter values, derived from their width.
 static uint64_t perfmon_max_fixed_counter_value = 0;
 static uint64_t perfmon_max_programmable_counter_value = 0;
+
+// Number of entries we can write in an LBR record.
+static uint32_t perfmon_lbr_stack_size = 0;
 
 // Counter bits in GLOBAL_STATUS to check on each interrupt.
 static uint64_t perfmon_counter_status_bits = 0;
@@ -286,6 +312,9 @@ struct PerfmonState {
     unsigned num_used_fixed = 0;
     unsigned num_used_programmable = 0;
     unsigned num_used_misc = 0;
+
+    // True if last branch records have been requested.
+    bool request_lbr_record = false;
 
     // Number of entries in |cpu_data|.
     const unsigned num_cpus;
@@ -408,6 +437,44 @@ static void x86_perfmon_init_mchbar() {
     }
 }
 
+// Return the size of the LBR stack, or zero if not supported.
+static unsigned x86_perfmon_lbr_stack_size() {
+    // This table comes from Intel Volume 3, Table 17.15
+    // "LBR Stack Size and TOS Pointer Range".
+    // TODO(dje): Use X86_MICROARCH_INTEL_SKYLAKE,etc.? Move this out?
+    static const struct {
+        uint8_t display_family;
+        uint8_t display_model;
+        uint8_t stack_size;
+    } supported_models[] = {
+        { 0x06, 0x4e, 32 },
+        { 0x06, 0x5e, 32 },
+    };
+
+    unsigned lbr_format =
+        perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
+    // TODO(dje): KISS and only support these formats for now.
+    switch (lbr_format) {
+    case LBR_FORMAT_INFO:
+        break;
+    default:
+        return 0;
+    }
+
+    const x86_model_info* model_info = x86_get_model();
+    for (const auto& model : supported_models) {
+        if (model.display_family == model_info->display_family &&
+                model.display_model == model_info->display_model)
+            return model.stack_size;
+    }
+
+    return 0;
+}
+
+static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
+    perfmon_lbr_stack_size = lbr_stack_size;
+}
+
 void x86_perfmon_init(void)
 {
     struct cpuid_leaf leaf;
@@ -492,6 +559,17 @@ void x86_perfmon_init(void)
     if (x86_perfmon_have_mchbar_data()) {
         x86_perfmon_init_mchbar();
     }
+
+    unsigned lbr_stack_size = x86_perfmon_lbr_stack_size();
+    if (lbr_stack_size != 0) {
+        // Don't crash if the h/w supports more than we do, just clip it.
+        if (lbr_stack_size > CPUPERF_MAX_NUM_LAST_BRANCH) {
+            TRACEF("WARNING: H/W LBR stack size is %u, clipping to %u\n",
+                   lbr_stack_size, CPUPERF_MAX_NUM_LAST_BRANCH);
+            lbr_stack_size = CPUPERF_MAX_NUM_LAST_BRANCH;
+        }
+        x86_perfmon_init_lbr(lbr_stack_size);
+    }
 }
 
 static void x86_perfmon_clear_overflow_indicators() {
@@ -528,8 +606,11 @@ size_t get_max_space_needed_for_all_records(PerfmonState* state) {
     size_t num_events = (state->num_used_programmable +
                          state->num_used_fixed +
                          state->num_used_misc);
-    return (sizeof(cpuperf_time_record_t) +
-            num_events * kMaxEventRecordSize);
+    size_t space_needed = (sizeof(cpuperf_time_record_t) +
+                           num_events * kMaxEventRecordSize);
+    if (state->request_lbr_record)
+        space_needed += sizeof(cpuperf_last_branch_record_t);
+    return space_needed;
 }
 
 static void x86_perfmon_write_header(cpuperf_record_header_t* hdr,
@@ -815,7 +896,7 @@ static zx_status_t x86_ipm_verify_misc_config(
             }
             // Currently we only support the MCHBAR events.
             // They cannot provide pc. We ignore the OS/USER bits.
-            if (config->misc_flags[i] & IPM_CONFIG_FLAG_PC) {
+            if (config->misc_flags[i] & (IPM_CONFIG_FLAG_PC | IPM_CONFIG_FLAG_LBR)) {
                 TRACEF("Invalid bits (0x%x) in |misc_flags[%zu]|\n",
                        config->misc_flags[i], i);
                 return ZX_ERR_INVALID_ARGS;
@@ -1002,6 +1083,11 @@ zx_status_t x86_ipm_stage_config(zx_x86_ipm_config_t* config) {
     state->fixed_ctrl = config->fixed_ctrl;
     state->debug_ctrl = config->debug_ctrl;
     state->timebase_id = config->timebase_id;
+
+    if (state->debug_ctrl & IA32_DEBUGCTL_LBR_MASK) {
+        DEBUG_ASSERT(perfmon_lbr_stack_size > 0);
+        state->request_lbr_record = true;
+    }
 
     x86_ipm_stage_fixed_config(config, state);
     x86_ipm_stage_programmable_config(config, state);
@@ -1722,6 +1808,39 @@ zx_status_t x86_ipm_fini() {
 
 // Interrupt handling.
 
+// Write out a |cpuperf_last_branch_record_t| record.
+static cpuperf_record_header_t* x86_perfmon_write_last_branches(
+        PerfmonState* state, uint64_t cr3, cpuperf_record_header_t* hdr,
+        cpuperf_event_id_t id) {
+    auto rec = reinterpret_cast<cpuperf_last_branch_record_t*>(hdr);
+    auto num_entries = perfmon_lbr_stack_size;
+    DEBUG_ASSERT(num_entries > 0 && num_entries <= countof(rec->branches));
+    x86_perfmon_write_header(&rec->header, CPUPERF_RECORD_LAST_BRANCH, id);
+    rec->num_branches = num_entries;
+    rec->aspace = cr3;
+
+    auto branches = &rec->branches[0];
+    unsigned tos = ((read_msr(SKL_LAST_BRANCH_TOS) & IA32_LBR_TOS_TOS_MASK) >>
+                    IA32_LBR_TOS_TOS_SHIFT);
+    for (unsigned i = 0; i < num_entries; ++i) {
+        unsigned msr_offset = (tos - i) % num_entries;
+        branches[i].from = read_msr(SKL_LAST_BRANCH_FROM_0 + msr_offset);
+        branches[i].to = read_msr(SKL_LAST_BRANCH_TO_0 + msr_offset);
+        uint64_t info = read_msr(SKL_LAST_BRANCH_INFO_0 + msr_offset);
+        // Only write these bits out.
+        info &= (IA32_LBR_INFO_CYCLE_COUNT_MASK | IA32_LBR_INFO_MISPRED_MASK);
+        branches[i].info = info;
+    }
+
+    // Get a pointer to the end of this record. Since this record is
+    // variable length it's more complicated than just "rec + 1".
+    auto next = reinterpret_cast<cpuperf_record_header_t*>(
+        reinterpret_cast<char*>(rec) + CPUPERF_LAST_BRANCH_RECORD_SIZE(rec));
+    LTRACEF("LBR record: num branches %u, @%p, next @%p\n",
+            num_entries, hdr, next);
+    return next;
+}
+
 // Helper function so that there is only one place where we enable/disable
 // interrupts (our caller).
 // Returns true if success, false if buffer is full.
@@ -1764,6 +1883,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 
         auto next = data->buffer_next;
         bool saw_timebase = false;
+        bool request_lbr = false;
+        // We can't record every event that requested LBR data.
+        // It is unspecified which one we pick.
+        cpuperf_event_id_t lbr_id = CPUPERF_EVENT_ID_NONE;
 
         next = x86_perfmon_write_time_record(next, CPUPERF_EVENT_ID_NONE, now);
 
@@ -1790,6 +1913,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             } else {
                 next = x86_perfmon_write_tick_record(next, id);
             }
+            if (state->programmable_flags[i] & IPM_CONFIG_FLAG_LBR) {
+                request_lbr = true;
+                lbr_id = id;
+            }
             LTRACEF("cpu %u: resetting PMC %u to 0x%" PRIx64 "\n",
                     cpu, i, state->programmable_initial_value[i]);
             write_msr(IA32_PMC_FIRST + i, state->programmable_initial_value[i]);
@@ -1813,6 +1940,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 next = x86_perfmon_write_pc_record(next, id, cr3, frame->ip);
             } else {
                 next = x86_perfmon_write_tick_record(next, id);
+            }
+            if (state->fixed_flags[i] & IPM_CONFIG_FLAG_LBR) {
+                request_lbr = true;
+                lbr_id = id;
             }
             LTRACEF("cpu %u: resetting FIXED %u to 0x%" PRIx64 "\n",
                     cpu, hw_num, state->fixed_initial_value[i]);
@@ -1878,6 +2009,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                     }
                 }
             }
+        }
+
+        if (request_lbr) {
+            next = x86_perfmon_write_last_branches(state, cr3, next, lbr_id);
         }
 
         data->buffer_next = next;

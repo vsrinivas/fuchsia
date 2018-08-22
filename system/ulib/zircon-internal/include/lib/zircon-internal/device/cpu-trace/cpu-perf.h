@@ -70,6 +70,8 @@ typedef enum {
   CPUPERF_RECORD_VALUE = 4,
   // The record is a |cpuperf_pc_record_t|.
   CPUPERF_RECORD_PC = 5,
+  // The record is a |cpuperf_last_branch_record_t|.
+  CPUPERF_RECORD_LAST_BRANCH = 6,
 } cpuperf_record_type_t;
 
 // Trace buffer space is expensive, we want to keep records small.
@@ -191,6 +193,64 @@ typedef struct {
     uint64_t pc;
 } CPUPERF_ALIGN_RECORD cpuperf_pc_record_t;
 
+// Entry in a last branch record.
+typedef struct  {
+    uint64_t from;
+    uint64_t to;
+    // Various bits of info about this branch. See CPUPERF_LAST_BRANCH_INFO_*.
+    uint64_t info;
+} CPUPERF_ALIGN_RECORD cpuperf_last_branch_t;
+
+// Utility to compute masks for fields in this file.
+#define CPUPERF_GEN_MASK64(len, shift) (((1ULL << (len)) - 1) << (shift))
+
+// Fields in |cpuperf_last_branch_t.info|.
+
+// Number of cycles since the last branch, or zero if unknown.
+// The unit of measurement is architecture-specific.
+#define CPUPERF_LAST_BRANCH_INFO_CYCLES_SHIFT (0u)
+#define CPUPERF_LAST_BRANCH_INFO_CYCLES_LEN   (16u)
+#define CPUPERF_LAST_BRANCH_INFO_CYCLES_MASK  \
+    CPUPERF_GEN_MASK64(CPUPERF_LAST_BRANCH_INFO_CYCLES_SHIFT, \
+                       CPUPERF_LAST_BRANCH_INFO_CYCLES_LEN)
+
+// Non-zero if branch was mispredicted.
+// Whether this bit is available is architecture-specific.
+#define CPUPERF_LAST_BRANCH_INFO_MISPRED_SHIFT (16u)
+#define CPUPERF_LAST_BRANCH_INFO_MISPRED_LEN   (1u)
+#define CPUPERF_LAST_BRANCH_INFO_MISPRED_MASK  \
+    CPUPERF_GEN_MASK64(CPUPERF_LAST_BRANCH_INFO_MISPRED_SHIFT, \
+                       CPUPERF_LAST_BRANCH_INFO_MISPRED_LEN)
+
+// Record a set of last branches executed.
+// It is expected that this record follows a TIME record.
+// Note that this record is variable-length.
+// This is used when doing gprof-like profiling.
+typedef struct {
+    cpuperf_record_header_t header;
+    // Number of entries in |branch|.
+    uint32_t num_branches;
+    // The aspace id at the time data was collected. This is not necessarily
+    // the aspace id of each branch. S/W will need to determine from the
+    // branch addresses how far back aspace is valid.
+    // The meaning of the value is architecture-specific.
+    // In the case of x86 this is the cr3 value.
+    uint64_t aspace;
+    // The set of last branches, in reverse chronological order:
+    // The first entry is the most recent one.
+    // Note that the emitted record may be smaller than this, as indicated by
+    // |num_branches|.
+    // Reverse order seems most useful.
+// 32 is the max value for Skylake
+#define CPUPERF_MAX_NUM_LAST_BRANCH (32u)
+    cpuperf_last_branch_t branches[CPUPERF_MAX_NUM_LAST_BRANCH];
+} CPUPERF_ALIGN_RECORD cpuperf_last_branch_record_t;
+
+// Return the size of valid last branch record |lbr|.
+#define CPUPERF_LAST_BRANCH_RECORD_SIZE(lbr) \
+    (sizeof(cpuperf_last_branch_record_t) - \
+     (CPUPERF_MAX_NUM_LAST_BRANCH - (lbr)->num_branches) * sizeof((lbr)->branches[0]))
+
 // The properties of this system.
 typedef struct {
     // S/W API version = CPUPERF_API_VERSION.
@@ -209,6 +269,9 @@ typedef struct {
     // If different counters have different widths, the choice is architecture
     // specific.
     uint16_t programmable_counter_width;
+    // Various flags.
+    uint32_t flags;
+#define CPUPERF_PROPERTY_FLAG_HAS_LAST_BRANCH (1u << 0)
 } cpuperf_properties_t;
 
 // The type of the |rate| field of cpuperf_config_t.
@@ -238,7 +301,7 @@ typedef struct {
     // TODO(dje): hypervisor, host/guest os/user
     uint32_t flags[CPUPERF_MAX_EVENTS];
 // Valid bits in |flags|.
-#define CPUPERF_CONFIG_FLAG_MASK      0xf
+#define CPUPERF_CONFIG_FLAG_MASK      0x1f
 // Collect os data.
 #define CPUPERF_CONFIG_FLAG_OS        (1u << 0)
 // Collect userspace data.
@@ -251,6 +314,11 @@ typedef struct {
 // record (depending on what the event is).
 // It is an error to have this bit set for an event and have rate[0] be zero.
 #define CPUPERF_CONFIG_FLAG_TIMEBASE0 (1u << 3)
+// Collect the available set of last branches.
+// Branch data is emitted as CPUPERF_RECORD_LAST_BRANCH records.
+// This is only available when the underlying system supports it.
+// TODO(dje): Provide knob to specify how many branches.
+#define CPUPERF_CONFIG_FLAG_LAST_BRANCH (1u << 4)
 } cpuperf_config_t;
 
 ///////////////////////////////////////////////////////////////////////////////

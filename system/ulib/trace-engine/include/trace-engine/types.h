@@ -325,6 +325,7 @@ static inline trace_arg_t trace_make_arg(trace_string_ref_t name_ref,
 // BlobType enumerates all known trace blob types.
 typedef enum {
     TRACE_BLOB_TYPE_DATA = 1,
+    TRACE_BLOB_TYPE_LAST_BRANCH = 2,
 } trace_blob_type_t;
 
 // The maximum size of a blob.

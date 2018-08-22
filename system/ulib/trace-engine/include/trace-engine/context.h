@@ -205,6 +205,23 @@ static inline trace_thread_ref_t trace_context_make_registered_thread(
     return ref;
 }
 
+// Allocate space for a blob and write its header.
+// Returns a pointer to the "raw" contents of the blob,
+// which must be filled in by the caller.
+// Returns |nullptr| if there is no space in the buffer for |blob_size| bytes,
+// or if |blob_size| is larger than TRACE_MAX_BLOB_SIZE.
+// |context| must be a valid trace context reference.
+// |type| is the blob type.
+// |name_ref| is the name of the blob.
+// |blob_size| is the size of the binary data to write.
+// The caller is required to fill in the blob after we return.
+// There is no need to zero out any padding, that has already been done.
+__EXPORT void* trace_context_begin_write_blob_record(
+    trace_context_t* context,
+    trace_blob_type_t type,
+    const trace_string_ref_t* name_ref,
+    size_t blob_size);
+
 // Write a blob of binary data into the trace buffer.
 // Discards the record if it cannot be written.
 // |context| must be a valid trace context reference.

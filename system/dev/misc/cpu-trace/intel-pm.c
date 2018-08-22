@@ -283,6 +283,11 @@ static int ipm_lookup_misc_event(cpuperf_event_id_t id) {
     return (int) result;
 }
 
+static bool ipm_lbr_supported(void) {
+    // KISS: For now LBR support is available for PM version >= 4.
+    return ipm_properties.pm_version >= 4;
+}
+
 
 // The userspace side of the driver.
 
@@ -313,6 +318,8 @@ static zx_status_t ipm_get_properties(cpuperf_device_t* dev,
     props.num_programmable_events = ipm_properties.num_programmable_events;
     props.fixed_counter_width = ipm_properties.fixed_counter_width;
     props.programmable_counter_width = ipm_properties.programmable_counter_width;
+    if (ipm_lbr_supported())
+        props.flags |= CPUPERF_PROPERTY_FLAG_HAS_LAST_BRANCH;
 
     memcpy(reply, &props, sizeof(props));
     *out_actual = sizeof(props);
@@ -506,6 +513,22 @@ static zx_status_t ipm_stage_fixed_config(const cpuperf_config_t* icfg,
         ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_TIMEBASE;
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_PC)
         ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_PC;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_LAST_BRANCH) {
+        if (!ipm_lbr_supported()) {
+            zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
+                   , __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (icfg->rate[ii] == 0 ||
+                ((icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0) &&
+                 ii != 0)) {
+            zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n"
+                   , __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_LBR;
+        ocfg->debug_ctrl |= IA32_DEBUGCTL_LBR_MASK;
+    }
 
     ++ss->num_fixed;
     return ZX_OK;
@@ -588,6 +611,22 @@ static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
         ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_TIMEBASE;
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_PC)
         ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_PC;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_LAST_BRANCH) {
+        if (!ipm_lbr_supported()) {
+            zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
+                   , __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (icfg->rate[ii] == 0 ||
+                ((icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0) &&
+                 ii != 0)) {
+            zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n"
+                   , __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_LBR;
+        ocfg->debug_ctrl |= IA32_DEBUGCTL_LBR_MASK;
+    }
 
     ++ss->num_programmable;
     return ZX_OK;
@@ -687,6 +726,11 @@ static zx_status_t ipm_stage_config(cpuperf_device_t* dev,
         if (id == 0)
             break;
         unsigned group = CPUPERF_EVENT_ID_GROUP(id);
+
+        if (icfg->flags[ii] & ~CPUPERF_CONFIG_FLAG_MASK) {
+            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
 
         if (icfg->flags[ii] & ~CPUPERF_CONFIG_FLAG_MASK) {
             zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
