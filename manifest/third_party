@@ -111,7 +111,7 @@
     <project name="third_party/go"
              remote="https://fuchsia.googlesource.com/third_party/go"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="ffd2f784b5aa12a50159e17f41011d3b689f9a7e"
+             revision="1add1b8731536e92f353b7d050a0ab19ef63b6d8"
              path="third_party/go"/>
     <project name="third_party/golibs/golang.org/x/crypto"
              path="third_party/golibs/golang.org/x/crypto"
