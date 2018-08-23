@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/eisa_vid_lut.cpp \
     $(LOCAL_DIR)/hdmitx.cpp \
     $(LOCAL_DIR)/hdmitx_clk.cpp \
+    $(LOCAL_DIR)/registers.cpp \
     $(LOCAL_DIR)/vim-audio.cpp \
     $(LOCAL_DIR)/vim-audio-utils.cpp \
     $(LOCAL_DIR)/vim-display.cpp \

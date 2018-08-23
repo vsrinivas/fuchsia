@@ -120,9 +120,9 @@ void disable_vd(vim2_display_t* display, uint32_t vd_index);
 void configure_vd(vim2_display_t* display, uint32_t vd_index);
 void flip_vd(vim2_display_t* display, uint32_t vd_index, uint32_t index);
 
-void disable_osd2(vim2_display_t* display);
-zx_status_t configure_osd2(vim2_display_t* display);
-void flip_osd2(vim2_display_t* display, uint8_t idx);
+void disable_osd(vim2_display_t* display, uint32_t osd_index);
+zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index);
+void flip_osd(vim2_display_t* display, uint32_t osd_index, uint8_t idx);
 void osd_debug_dump_register_all(vim2_display_t* display);
 void osd_dump(vim2_display_t* display);
 zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size);

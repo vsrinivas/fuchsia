@@ -276,16 +276,16 @@ static void vim_apply_configuration(void* ctx,
             uint32_t addr =
                 (uint32_t)(uint64_t)display_configs[0]->layers[0]->cfg.primary.image.handle;
             flip_vd(display, 0, addr);
-            disable_osd2(display);
+            disable_osd(display, 1);
         } else {
             uint8_t addr;
             addr = (uint8_t)(uint64_t)display_configs[0]->layers[0]->cfg.primary.image.handle;
-            flip_osd2(display, addr);
+            flip_osd(display, 1, addr);
             disable_vd(display, 0);
         }
     } else {
         disable_vd(display, 0);
-        disable_osd2(display);
+        disable_osd(display, 1);
     }
 
     mtx_unlock(&display->display_lock);
@@ -310,7 +310,7 @@ static void display_release(void* ctx) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
 
     if (display) {
-        disable_osd2(display);
+        disable_osd(display, 1);
         disable_vd(display, 0);
         bool wait_for_vsync_shutdown = false;
         if (display->vsync_interrupt != ZX_HANDLE_INVALID) {
@@ -405,7 +405,7 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
         return status;
     }
 
-    configure_osd2(display);
+    configure_osd(display, 1);
     configure_vd(display, 0);
 
     return ZX_OK;
