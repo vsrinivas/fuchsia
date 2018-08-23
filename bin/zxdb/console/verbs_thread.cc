@@ -257,16 +257,15 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   // TODO(brettw) hook this up with switches on the command.
   FormatValueOptions options;
 
-  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
+  auto helper = fxl::MakeRefCounted<FormatValue>();
   for (const auto& pair : vars) {
     helper->AppendVariableWithName(location.symbol_context(),
                                    cmd.frame()->GetSymbolDataProvider(),
                                    pair.second, options);
     helper->Append(OutputBuffer::WithContents("\n"));
   }
-  helper->Complete([helper](OutputBuffer out) {
-    Console::get()->Output(std::move(out));
-  });
+  helper->Complete(
+      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
   return Err();
 }
 
@@ -412,19 +411,16 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
 
   EvalExpression(expr, cmd.frame()->GetExprEvalContext(),
                  [options, data_provider](const Err& err, ExprValue value) {
-                   OutputBuffer out;
-                   // Note that this doesn't use the variant of FormatExprValue
-                   // that takes an Err. That will rewrite the error to be in
-                   // <>, but when printing we can afford to output multiline
-                   // error messages, and the parser will generate such
-                   // messages.
                    if (err.has_error()) {
-                     out.OutputErr(err);
+                     Console::get()->Output(err);
                    } else {
-                     FormatExprValue(data_provider, value, options,
-                                     [](OutputBuffer out) {
-                                       Console::get()->Output(std::move(out));
-                                     });
+                     auto formatter = fxl::MakeRefCounted<FormatValue>();
+                     formatter->AppendValue(data_provider, value, options);
+                     // Bind the formatter to keep it in scope across this
+                     // async call.
+                     formatter->Complete([formatter](OutputBuffer out) {
+                       Console::get()->Output(std::move(out));
+                     });
                    }
                  });
 

@@ -82,6 +82,9 @@ class ConsoleContext : public ProcessObserver,
  private:
   struct ThreadRecord {
     Thread* thread = nullptr;
+
+    // This isn't necessarily valid since the frames could have been changed
+    // out from under us. Be sure to range check before use.
     int active_frame_id = 0;
 
     // Default to showing source code for thread stops.

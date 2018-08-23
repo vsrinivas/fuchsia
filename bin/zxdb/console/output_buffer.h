@@ -81,9 +81,15 @@ enum class TextForegroundColor {
 class OutputBuffer {
  public:
   OutputBuffer();
+
+  // Creates an output buffer with one substring in it.
+  explicit OutputBuffer(std::string str);
+  OutputBuffer(Syntax syntax, std::string str);
+
   ~OutputBuffer();
 
   // Helpers to construct an OutputBuffer with one substring in it.
+  // TODO(brettw) remove in favor of using the constructors.
   static OutputBuffer WithContents(std::string str);
   static OutputBuffer WithContents(Syntax syntax, std::string str);
 

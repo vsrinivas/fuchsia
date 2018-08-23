@@ -67,7 +67,7 @@ void SymbolEvalContext::GetVariable(const std::string& name, Callback cb) {
 
   // Not found. In the future, it might be nice to suggest the closest
   // match in the error message.
-  cb(Err(fxl::StringPrintf("No variable '%s' in this context", name.c_str())),
+  cb(Err(fxl::StringPrintf("No variable '%s' in this context.", name.c_str())),
      ExprValue());
 }
 

@@ -6,11 +6,11 @@
 
 namespace zxdb {
 
+class FormatValue;
 struct FormatValueOptions;
 class Frame;
 class OutputBuffer;
 class Thread;
-class ValueFormatHelper;
 
 // Outputs the list of frames to the console. This will complete asynchronously
 // if the frames are not currently available.
@@ -24,10 +24,10 @@ void FormatFrame(const Frame* frame, OutputBuffer* out, int id = -1);
 
 // Formats one frame using the long format. Since the long format includes
 // function parameters which are computed asynchronously, this takes the
-// asynchronous ValueFormatHelper as the output.
+// asynchronous FormatValue as the output.
 //
 // This does not append a newline at the end of the output.
-void FormatFrameLong(const Frame* frame, ValueFormatHelper* out,
+void FormatFrameLong(const Frame* frame, FormatValue* out,
                      const FormatValueOptions& options, int id = -1);
 
 }  // namespace zxdb

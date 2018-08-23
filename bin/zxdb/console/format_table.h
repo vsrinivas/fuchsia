@@ -15,8 +15,9 @@ enum class Align { kLeft, kRight };
 
 struct ColSpec {
   explicit ColSpec(Align align = Align::kLeft, int max_width = 0,
-                   const std::string& head = std::string(), int pad_left = 0)
-      : align(align), max_width(max_width), head(head), pad_left(pad_left) {}
+                   const std::string& head = std::string(), int pad_left = 0,
+                   Syntax syntax = Syntax::kNormal)
+      : align(align), max_width(max_width), head(head), pad_left(pad_left), syntax(syntax) {}
 
   Align align = Align::kLeft;
 

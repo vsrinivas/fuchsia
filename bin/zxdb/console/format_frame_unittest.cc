@@ -21,7 +21,7 @@ std::string SyncFormatFrameLong(const Frame* frame,
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
-  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
+  auto helper = fxl::MakeRefCounted<FormatValue>();
   FormatFrameLong(frame, helper.get(), FormatValueOptions());
 
   std::string out_string;
@@ -60,7 +60,7 @@ TEST(FormatFrame, Unsymbolized) {
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
-  EXPECT_EQ("\n    IP=0x12345678, BP=0x0, SP=0x567890",
+  EXPECT_EQ("\n      IP = 0x12345678, BP = 0x0, SP = 0x567890",
             SyncFormatFrameLong(&frame, FormatValueOptions()));
 
   // With index.

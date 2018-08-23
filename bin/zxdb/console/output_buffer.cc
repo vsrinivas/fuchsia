@@ -175,6 +175,13 @@ static const ForegroundColorMap& GetForegroundColorMap() {
 OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(t) {}
 
 OutputBuffer::OutputBuffer() = default;
+
+OutputBuffer::OutputBuffer(std::string str) { Append(std::move(str)); }
+
+OutputBuffer::OutputBuffer(Syntax syntax, std::string str) {
+  Append(syntax, std::move(str));
+}
+
 OutputBuffer::~OutputBuffer() = default;
 
 // static

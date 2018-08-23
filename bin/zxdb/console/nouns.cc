@@ -102,7 +102,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveTarget(cmd.target());
 
   // Schedule asynchronous output of the full frame description.
-  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
+  auto helper = fxl::MakeRefCounted<FormatValue>();
   FormatFrameLong(cmd.frame(), helper.get(), FormatValueOptions(),
                   context->GetActiveFrameIdForThread(cmd.thread()));
   helper->Complete(
@@ -183,7 +183,8 @@ void ListThreads(ConsoleContext* context, Process* process) {
 
   OutputBuffer out;
   FormatTable(
-      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
+      {ColSpec(Align::kLeft),
+       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
       rows, &out);
@@ -310,7 +311,8 @@ void ListProcesses(ConsoleContext* context) {
 
   OutputBuffer out;
   FormatTable(
-      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
+      {ColSpec(Align::kLeft),
+       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
       rows, &out);
@@ -412,7 +414,8 @@ void ListBreakpoints(ConsoleContext* context) {
 
   OutputBuffer out;
   FormatTable(
-      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
+      {ColSpec(Align::kLeft),
+       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
        ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
        ColSpec(Align::kLeft, 0, "Enabled"),
        ColSpec(Align::kLeft, 0, "Location")},

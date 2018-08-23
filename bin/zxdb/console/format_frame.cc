@@ -27,7 +27,7 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
   Console* console = Console::get();
   int active_frame_id = console->context().GetActiveFrameIdForThread(thread);
 
-  auto helper = fxl::MakeRefCounted<ValueFormatHelper>();
+  auto helper = fxl::MakeRefCounted<FormatValue>();
 
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.
@@ -41,17 +41,16 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
       else
         helper->Append("  ");
 
-      // The frames can get very long due to templates so use reverse video
-      // to highlight the indices so the lines can be found.
-      helper->Append(OutputBuffer::WithContents(Syntax::kReversed,
-                                                fxl::StringPrintf(" %d ", i)));
-      helper->Append(" ");
+      helper->Append(OutputBuffer::WithContents(Syntax::kSpecial,
+                                                fxl::StringPrintf("%d ", i)));
 
+      // Supply "-1" for the frame index to suppress printing (we already
+      // did it above).
       if (long_format) {
-        FormatFrameLong(frames[i], helper.get(), FormatValueOptions(), i);
+        FormatFrameLong(frames[i], helper.get(), FormatValueOptions(), -1);
       } else {
         OutputBuffer out;
-        FormatFrame(frames[i], &out, i);
+        FormatFrame(frames[i], &out, -1);
         helper->Append(std::move(out));
       }
 
@@ -85,7 +84,7 @@ void FormatFrame(const Frame* frame, OutputBuffer* out, int id) {
   out->Append(DescribeLocation(frame->GetLocation(), false));
 }
 
-void FormatFrameLong(const Frame* frame, ValueFormatHelper* out,
+void FormatFrameLong(const Frame* frame, FormatValue* out,
                      const FormatValueOptions& options, int id) {
   if (id >= 0)
     out->Append(OutputBuffer::WithContents(fxl::StringPrintf("Frame %d ", id)));
@@ -94,11 +93,11 @@ void FormatFrameLong(const Frame* frame, ValueFormatHelper* out,
   // address will be shown twice.
   const Location& location = frame->GetLocation();
   if (location.has_symbols())
-    out->Append(" " + DescribeLocation(location, false));
+    out->Append(DescribeLocation(location, false));
 
   // Long format includes the IP address.
-  out->Append(OutputBuffer::WithContents(fxl::StringPrintf(
-      "\n    IP=0x%" PRIx64 ", BP=0x%" PRIx64 ", SP=0x%" PRIx64,
+  out->Append(OutputBuffer(Syntax::kComment, fxl::StringPrintf(
+      "\n      IP = 0x%" PRIx64 ", BP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
       frame->GetAddress(), frame->GetBasePointer(), frame->GetStackPointer())));
 
   if (location.function()) {
@@ -110,7 +109,7 @@ void FormatFrameLong(const Frame* frame, ValueFormatHelper* out,
         if (!value)
           continue;  // Symbols are corrupt.
 
-        out->Append("\n    ");  // Indent.
+        out->Append("\n      ");  // Indent.
         out->AppendVariableWithName(location.symbol_context(),
                                     frame->GetSymbolDataProvider(), value,
                                     options);

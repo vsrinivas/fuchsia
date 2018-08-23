@@ -611,12 +611,12 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
     if (thread_record) {
       const auto& frames = thread_record->thread->GetFrames();
       frame_id = thread_record->active_frame_id;
-      if (frame_id < static_cast<int>(frames.size())) {
+      if (frame_id >= 0 && frame_id < static_cast<int>(frames.size())) {
         cmd->set_frame(frames[frame_id]);
-      } else {
-        // If the active frame doesn't point to a valid frame, it should
-        // always be 0.
-        FXL_DCHECK(frame_id == 0);
+      } else if (!frames.empty()) {
+        // Invalid frame index, default to 0th frame.
+        frame_id = 0;
+        cmd->set_frame(frames[0]);
       }
     }
     return Err();
@@ -627,7 +627,7 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
     return Err(ErrType::kInput, "There is no thread to have frames.");
 
   const auto& frames = thread_record->thread->GetFrames();
-  if (frame_id < static_cast<int>(frames.size())) {
+  if (frame_id >= 0 && frame_id < static_cast<int>(frames.size())) {
     cmd->set_frame(frames[frame_id]);
     return Err();
   }
