@@ -4,22 +4,11 @@
 
 #![deny(warnings)]
 
-extern crate failure;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate fidl;
-extern crate fidl_fuchsia_devicesettings;
-extern crate fidl_fuchsia_netstack as netstack;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-
-use async::temp::TempFutureExt;
+use fuchsia_async::temp::TempFutureExt;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
-use netstack::{NetstackMarker, NetAddress, Ipv4Address, Ipv6Address, NetAddressFamily, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
+use fidl_fuchsia_netstack::{NetstackMarker, NetAddress, Ipv4Address, Ipv6Address, NetAddressFamily, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
+use serde_derive::Deserialize;
 use std::fs;
 use std::net::IpAddr;
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
@@ -56,9 +45,9 @@ fn main() -> Result<(), Error> {
     println!("netcfg: started");
     let default_config_file = fs::File::open(DEFAULT_CONFIG_FILE)?;
     let default_config: Config = serde_json::from_reader(default_config_file)?;
-    let mut executor = async::Executor::new().context("error creating event loop")?;
-    let netstack = app::client::connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
-    let device_settings_manager = app::client::connect_to_service::<DeviceSettingsManagerMarker>()
+    let mut executor = fuchsia_async::Executor::new().context("error creating event loop")?;
+    let netstack = fuchsia_app::client::connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
+    let device_settings_manager = fuchsia_app::client::connect_to_service::<DeviceSettingsManagerMarker>()
         .context("failed to connect to device settings manager")?;
 
     let device_name = match default_config.device_name {
