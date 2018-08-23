@@ -33,6 +33,23 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
              TimerManager* timer_manager);
 
  protected:
+  // Helper function to allow LogEventCount, LogElapsedTime, LogMemoryUsage and
+  // LogFrameRate to share their codepaths since they have very similar
+  // implementations.
+  //
+  // If |value_part_required| is true, then |event_type_index| and |component|
+  // are required only if the metric given by |metric_name| has INDEX and STRING
+  // parts respectively. If |value_part_required| is false, then at least 2 of
+  // |event_type_index|, |component| and |value| must be supplied and must have
+  // corresponding MetricParts. |value_part_name| is only used to identify the
+  // metric that could not be logged when an error occurs.
+  template <class ValueType, class CB>
+  void LogThreePartMetric(const std::string& value_part_name,
+                          fidl::StringPtr metric_name,
+                          uint32_t event_type_index, fidl::StringPtr component,
+                          ValueType value, CB callback,
+                          bool value_part_required);
+
   template <class CB>
   void AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
                              CB callback);
@@ -43,6 +60,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
   void LogEvent(fidl::StringPtr metric_name, uint32_t event_type_index,
                 LogEventCallback callback) override;
 
+  // In the current implementation, |period_duration_micros| is ignored
   void LogEventCount(fidl::StringPtr metric_name, uint32_t event_type_index,
                      fidl::StringPtr component, int64_t period_duration_micros,
                      uint32_t count, LogEventCountCallback callback) override;

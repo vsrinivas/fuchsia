@@ -6,6 +6,8 @@
 
 #include "garnet/bin/cobalt/app/utils.h"
 
+#include <type_traits>
+
 namespace cobalt {
 
 using cobalt::TimerManager;
@@ -28,25 +30,27 @@ Status2 ToStatus2(Status s) {
   }
 }
 
-// Returns a tuple of the names of the three MetricParts used to report an
-// elapsed time. The 0th item will be the name of the int part for elapsed
-// micros, the 1st item will be the name of the string part for the component
-// name, and the 2nd item will be the name of the index part that is for the
-// event type index. If the metric is not found or there are not exactly three
-// parts of the expected types, a tuple with empty strings will be returned.
-std::tuple<std::string, std::string, std::string> ElapsedTimeMetricPartNames(
+// Returns a tuple of the names of the three MetricParts used to report a
+// Metric with at most one int/float part, one string part and one index part.
+// The 0th item will be the name of the int/float part, the 1st item will be the
+// name of the string part for the component name, and the 2nd item will be the
+// name of the index part that is for the event type index. If the metric is not
+// found or the MetricParts do not fit the expected types, a tuple with empty
+// strings will be returned.
+std::tuple<std::string, std::string, std::string> ThreePartMetricPartNames(
     const Metric* metric) {
-  if (!metric || metric->parts_size() != 3) {
+  if (!metric || metric->parts_size() > 3) {
     return std::make_tuple("", "", "");
   }
-  std::string elapsed_micros_part, component_name_part, index_part;
+  std::string number_part, component_name_part, index_part;
   for (auto pair : metric->parts()) {
     switch (pair.second.data_type()) {
-      case MetricPart::INT: {
-        if (!elapsed_micros_part.empty()) {
+      case MetricPart::INT:
+      case MetricPart::DOUBLE: {
+        if (!number_part.empty()) {
           return std::make_tuple("", "", "");
         }
-        elapsed_micros_part = pair.first;
+        number_part = pair.first;
         break;
       }
       case MetricPart::STRING: {
@@ -67,7 +71,7 @@ std::tuple<std::string, std::string, std::string> ElapsedTimeMetricPartNames(
         return std::make_tuple("", "", "");
     }
   }
-  return std::make_tuple(elapsed_micros_part, component_name_part, index_part);
+  return std::make_tuple(number_part, component_name_part, index_part);
 }
 }  // namespace
 
@@ -84,6 +88,92 @@ LoggerImpl::LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
       encrypt_to_analyzer_(encrypt_to_analyzer),
       shipping_dispatcher_(shipping_dispatcher),
       timer_manager_(timer_manager) {}
+
+template <class ValueType, class CB>
+void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
+                                    fidl::StringPtr metric_name,
+                                    uint32_t event_type_index,
+                                    fidl::StringPtr component, ValueType value,
+                                    CB callback, bool value_part_required) {
+  uint32_t metric_id = encoder_.MetricId(metric_name);
+  if (metric_id == 0) {
+    FXL_LOG(ERROR) << "Metric " << metric_name << " does not exist.";
+    callback(Status2::INVALID_ARGUMENTS);
+    return;
+  }
+
+  auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
+
+  std::string value_part, component_name_part, index_part;
+  std::tie(value_part, component_name_part, index_part) =
+      ThreePartMetricPartNames(encoder_.GetMetric(metric_id));
+  cobalt::encoder::Encoder::Value new_value;
+
+  // LogElapsedTime, LogFrameRate and LogMemoryUsage can be logged to a metric
+  // with just a single part while LogEventCount cannot (the user should use
+  // LogEvent instead)
+  if (encodings.size() == 1 && value_part_required) {
+    if (event_type_index != 0 || !component->empty()) {
+      FXL_LOG(ERROR)
+          << "Metric " << metric_name << " is a single part metric so only "
+          << value_part_name
+          << " must be provided "
+             "(event_type_index must be 0 and component must be empty).";
+      callback(Status2::INVALID_ARGUMENTS);
+      return;
+    }
+    if (std::is_same<ValueType, int64_t>::value) {
+      new_value.AddIntPart(encodings.begin()->second, "", value);
+    } else if (std::is_same<ValueType, float>::value) {
+      new_value.AddDoublePart(encodings.begin()->second, "", value);
+    }
+  } else if (encodings.size() == 2 || encodings.size() == 3) {
+    if (!value_part.empty()) {
+      if (std::is_same<ValueType, int64_t>::value ||
+          std::is_same<ValueType, uint32_t>::value) {
+        new_value.AddIntPart(encodings[value_part], value_part, value);
+      } else if (std::is_same<ValueType, float>::value) {
+        new_value.AddDoublePart(encodings[value_part], value_part, value);
+      }
+    } else if (value_part_required) {
+      FXL_LOG(ERROR) << "Metric " << metric_name
+                     << " must have a numeric part to be a valid "
+                     << value_part_name << " metric.";
+      callback(Status2::INVALID_ARGUMENTS);
+      return;
+    }
+
+    if (!component_name_part.empty()) {
+      new_value.AddStringPart(encodings[component_name_part],
+                              component_name_part, component);
+    } else if (component_name_part.empty() && !component->empty()) {
+      FXL_LOG(ERROR) << "Metric " << metric_name
+                     << " is a two part metric with no string part so "
+                        "component must be empty";
+      callback(Status2::INVALID_ARGUMENTS);
+      return;
+    }
+
+    if (!index_part.empty()) {
+      new_value.AddIndexPart(encodings[index_part], index_part,
+                             event_type_index);
+    } else if (index_part.empty() && event_type_index != 0) {
+      FXL_LOG(ERROR) << "Metric " << metric_name
+                     << " is a two part metric with no index part so "
+                        "event_type_index must be 0";
+      callback(Status2::INVALID_ARGUMENTS);
+      return;
+    }
+  } else {
+    FXL_LOG(ERROR) << "Metric " << metric_name << " is not a valid "
+                   << value_part_name << " metric.";
+    callback(Status2::INVALID_ARGUMENTS);
+    return;
+  }
+
+  auto result = encoder_.Encode(metric_id, new_value);
+  AddEncodedObservation(&result, std::move(callback));
+}
 
 // Duplicated from cobalt_encoder_impl.cc
 template <class CB>
@@ -166,8 +256,8 @@ void LoggerImpl::LogEventCount(fidl::StringPtr metric_name,
                                fidl::StringPtr component,
                                int64_t period_duration_micros, uint32_t count,
                                LogEventCountCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status2::INTERNAL_ERROR);
+  LogThreePartMetric("event count", metric_name, event_type_index, component,
+                     count, std::move(callback), false);
 }
 
 void LoggerImpl::LogElapsedTime(fidl::StringPtr metric_name,
@@ -175,62 +265,24 @@ void LoggerImpl::LogElapsedTime(fidl::StringPtr metric_name,
                                 fidl::StringPtr component,
                                 int64_t elapsed_micros,
                                 LogElapsedTimeCallback callback) {
-  uint32_t metric_id = encoder_.MetricId(metric_name);
-  if (metric_id == 0) {
-    FXL_LOG(ERROR) << "Metric " << metric_name << " does not exist.";
-    callback(Status2::INVALID_ARGUMENTS);
-    return;
-  }
-
-  auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
-
-  std::string elapsed_micros_part, component_name_part, index_part;
-  std::tie(elapsed_micros_part, component_name_part, index_part) =
-      ElapsedTimeMetricPartNames(encoder_.GetMetric(metric_id));
-  cobalt::encoder::Encoder::Value value;
-
-  if (encodings.size() == 1) {
-    if (event_type_index != 0 || !component->empty()) {
-      FXL_LOG(ERROR)
-          << "Metric " << metric_name
-          << " is a single part metric so only elapsed_micros must be provided "
-             "(event_type_index must be 0 and component must be empty).";
-      callback(Status2::INVALID_ARGUMENTS);
-      return;
-    }
-    value.AddIntPart(encodings.begin()->second, "", elapsed_micros);
-  } else if (!elapsed_micros_part.empty() && !component_name_part.empty() &&
-             !index_part.empty()) {
-    value.AddIntPart(encodings[elapsed_micros_part], elapsed_micros_part,
-                     elapsed_micros);
-    value.AddStringPart(encodings[component_name_part], component_name_part,
-                        component);
-    value.AddIndexPart(encodings[index_part], index_part, event_type_index);
-  } else {
-    FXL_LOG(ERROR) << "Metric " << metric_name
-                   << " is not a valid elapsed time metric.";
-    callback(Status2::INVALID_ARGUMENTS);
-    return;
-  }
-
-  auto result = encoder_.Encode(metric_id, value);
-  AddEncodedObservation(&result, std::move(callback));
+  LogThreePartMetric("elapsed time", metric_name, event_type_index, component,
+                     elapsed_micros, std::move(callback), true);
 }
 
 void LoggerImpl::LogFrameRate(fidl::StringPtr metric_name,
                               uint32_t event_type_index,
                               fidl::StringPtr component, float fps,
                               LogFrameRateCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status2::INTERNAL_ERROR);
+  LogThreePartMetric("frame rate", metric_name, event_type_index, component,
+                     fps, std::move(callback), true);
 }
 
 void LoggerImpl::LogMemoryUsage(fidl::StringPtr metric_name,
                                 uint32_t event_type_index,
                                 fidl::StringPtr component, int64_t bytes,
                                 LogMemoryUsageCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status2::INTERNAL_ERROR);
+  LogThreePartMetric("memory usage", metric_name, event_type_index, component,
+                     bytes, std::move(callback), true);
 }
 
 void LoggerImpl::LogString(fidl::StringPtr metric_name, fidl::StringPtr s,

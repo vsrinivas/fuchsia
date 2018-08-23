@@ -121,6 +121,21 @@ const uint32_t kElapsedTimeEventIndex = 0;
 const std::string kElapsedTimeComponent = "some_component";
 const int64_t kElapsedTime = 30;
 
+// For V1 frame rates.
+const std::string kFrameRateMetricName = "Frame Rate Metric";
+const std::string kFrameRateComponent = "some_component";
+const float kFrameRate = 45.5;
+
+// For V1 memory usage.
+const std::string kMemoryUsageMetricName = "Memory Usage Metric";
+const uint32_t kMemoryUsageIndex = 1;
+const int64_t kMemoryUsage = 1000000;
+
+// For events that happened in specific components
+const std::string kEventInComponentMetricName = "Event in Component Metric";
+const uint32_t kEventInComponentIndex = 2;
+const std::string kEventInComponentName = "some_component";
+
 std::string StatusToString(Status status) {
   switch (status) {
     case Status::OK:
@@ -232,7 +247,13 @@ class CobaltTestApp {
 
   bool TestLogEvent();
 
+  bool TestLogEventCount();
+
   bool TestLogElapsedTime();
+
+  bool TestLogFrameRate();
+
+  bool TestLogMemoryUsage();
 
   bool TestLogString();
 
@@ -295,12 +316,29 @@ class CobaltTestApp {
   bool LogEventAndSend(const std::string& metric_name, uint32_t index,
                        bool use_request_send_soon);
 
+  // Synchronously invokes LogEventCount() |num_observations_per_batch_|
+  // times using the given parameters. Then invokes CheckForSuccessfulSend().
+  bool LogEventCountAndSend(const std::string& metric_name, uint32_t index,
+                            const std::string& component, uint32_t count,
+                            bool use_request_send_soon);
+
   // Synchronously invokes LogElapsedTime() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
   bool LogElapsedTimeAndSend(const std::string& metric_name, uint32_t index,
                              const std::string& component,
                              int64_t elapsed_micros,
                              bool use_request_send_soon);
+
+  // Synchronously invokes LogFrameRate() |num_observations_per_batch_|
+  // times using the given parameters. Then invokes CheckForSuccessfulSend().
+  bool LogFrameRateAndSend(const std::string& metric_name,
+                           const std::string& component, float fps,
+                           bool use_request_send_soon);
+
+  // Synchronously invokes LogMemoryUsage() |num_observations_per_batch_|
+  // times using the given parameters. Then invokes CheckForSuccessfulSend().
+  bool LogMemoryUsageAndSend(const std::string& metric_name, uint32_t index,
+                             int64_t bytes, bool use_request_send_soon);
 
   // Synchronously invokes LogString() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
@@ -561,7 +599,16 @@ bool CobaltTestApp::RequestSendSoonTests() {
   if (!TestLogEvent()) {
     return false;
   }
+  if (!TestLogEventCount()) {
+    return false;
+  }
   if (!TestLogElapsedTime()) {
+    return false;
+  }
+  if (!TestLogFrameRate()) {
+    return false;
+  }
+  if (!TestLogMemoryUsage()) {
     return false;
   }
   if (!TestLogString()) {
@@ -740,6 +787,18 @@ bool CobaltTestApp::TestLogEvent() {
   return true;
 }
 
+bool CobaltTestApp::TestLogEventCount() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogEventCount";
+  bool use_request_send_soon = true;
+  bool success =
+      LogEventCountAndSend(kEventInComponentMetricName, kEventInComponentIndex,
+                           kEventInComponentName, 1, use_request_send_soon);
+
+  FXL_LOG(INFO) << "TestLogEventCount : " << (success ? "PASS" : "FAIL");
+  return true;
+}
+
 bool CobaltTestApp::TestLogElapsedTime() {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "TestLogElapsedTime";
@@ -752,6 +811,29 @@ bool CobaltTestApp::TestLogElapsedTime() {
                                        kModEndTimestamp - kModStartTimestamp,
                                        use_request_send_soon);
   FXL_LOG(INFO) << "TestLogElapsedTime : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool CobaltTestApp::TestLogFrameRate() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogFrameRate";
+  bool use_request_send_soon = true;
+  bool success = LogFrameRateAndSend(kFrameRateMetricName, kFrameRateComponent,
+                                     kFrameRate, use_request_send_soon);
+
+  FXL_LOG(INFO) << "TestLogFrameRate : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool CobaltTestApp::TestLogMemoryUsage() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogMemoryUsage";
+  bool use_request_send_soon = true;
+  bool success =
+      LogMemoryUsageAndSend(kMemoryUsageMetricName, kMemoryUsageIndex,
+                            kMemoryUsage, use_request_send_soon);
+
+  FXL_LOG(INFO) << "TestLogFrameRate : " << (success ? "PASS" : "FAIL");
   return success;
 }
 
@@ -1021,6 +1103,25 @@ bool CobaltTestApp::LogEventAndSend(const std::string& metric_name,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestApp::LogEventCountAndSend(const std::string& metric_name,
+                                         uint32_t index,
+                                         const std::string& component,
+                                         uint32_t count,
+                                         bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    Status2 status = Status2::INTERNAL_ERROR;
+    logger_->LogEventCount(metric_name, index, component, 0, count, &status);
+    FXL_VLOG(1) << "LogEventCount(" << index << ") => "
+                << StatusToString(status);
+    if (status != Status2::OK) {
+      FXL_LOG(ERROR) << "LogEventCount() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
 bool CobaltTestApp::LogElapsedTimeAndSend(const std::string& metric_name,
                                           uint32_t index,
                                           const std::string& component,
@@ -1033,6 +1134,38 @@ bool CobaltTestApp::LogElapsedTimeAndSend(const std::string& metric_name,
     FXL_VLOG(1) << "LogElapsedTime() => " << StatusToString(status);
     if (status != Status2::OK) {
       FXL_LOG(ERROR) << "LogElapsedTime() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::LogFrameRateAndSend(const std::string& metric_name,
+                                        const std::string& component, float fps,
+                                        bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    Status2 status = Status2::INTERNAL_ERROR;
+    logger_->LogFrameRate(metric_name, 0, component, fps, &status);
+    FXL_VLOG(1) << "LogFrameRate() => " << StatusToString(status);
+    if (status != Status2::OK) {
+      FXL_LOG(ERROR) << "LogFrameRate() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::LogMemoryUsageAndSend(const std::string& metric_name,
+                                          uint32_t index, int64_t bytes,
+                                          bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    Status2 status = Status2::INTERNAL_ERROR;
+    logger_->LogMemoryUsage(metric_name, index, "", bytes, &status);
+    FXL_VLOG(1) << "LogMemoryUsage) => " << StatusToString(status);
+    if (status != Status2::OK) {
+      FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
       return false;
     }
   }
