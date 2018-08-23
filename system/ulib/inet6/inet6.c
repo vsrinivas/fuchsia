@@ -189,22 +189,6 @@ static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
     return mac_cache_lookup(_mac, _ip);
 }
 
-static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
-    uint32_t sum = _sum;
-    const uint16_t* data = _data;
-    while (len > 1) {
-        sum += *data++;
-        len -= 2;
-    }
-    if (len) {
-        sum += (*data & 0xFF);
-    }
-    while (sum > 0xFFFF) {
-        sum = (sum & 0xFFFF) + (sum >> 16);
-    }
-    return sum;
-}
-
 typedef struct {
     uint8_t eth[16];
     ip6_hdr_t ip6;
@@ -217,22 +201,6 @@ typedef struct {
     udp_hdr_t udp;
     uint8_t data[0];
 } udp_pkt_t;
-
-unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
-    uint16_t sum;
-
-    // length and protocol field for pseudo-header
-    sum = checksum(&ip->length, 2, htons(type));
-    // src/dst for pseudo-header + payload
-    sum = checksum(&ip->src, 32 + length, sum);
-
-    // 0 is illegal, so 0xffff remains 0xffff
-    if (sum != 0xffff) {
-        return ~sum;
-    } else {
-        return sum;
-    }
-}
 
 static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* daddr, size_t length, uint8_t type) {
     mac_addr_t dmac;
@@ -338,8 +306,7 @@ void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     if (udp->checksum == 0xFFFF)
         udp->checksum = 0;
 
-    sum = checksum(&ip->length, 2, htons(HDR_UDP));
-    sum = checksum(&ip->src, 32 + len, sum);
+    sum = ip6_checksum(ip, HDR_UDP, len);
     if (unlikely(sum != 0xFFFF)) {
         BAD_PACKET_FROM(&ip->src, "incorrect checksum in UDP packet");
         return;
@@ -372,8 +339,7 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     if (icmp->checksum == 0xFFFF)
         icmp->checksum = 0;
 
-    sum = checksum(&ip->length, 2, htons(HDR_ICMP6));
-    sum = checksum(&ip->src, 32 + len, sum);
+    sum = ip6_checksum(ip, HDR_ICMP6, len);
     if (unlikely(sum != 0xFFFF)) {
         BAD_PACKET_FROM(&ip->src, "incorrect checksum in ICMP packet");
         return;

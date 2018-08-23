@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/checksum.c \
     $(LOCAL_DIR)/inet6.c \
     $(LOCAL_DIR)/netifc.c \
     $(LOCAL_DIR)/eth-client.c \
