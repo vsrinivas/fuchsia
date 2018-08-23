@@ -146,12 +146,30 @@ void FakeControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
 void FakeControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream) {
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+    zx::eventpair stream_token) {
   rate_ = frame_rate;
 
   buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
 
   stream_ = fbl::make_unique<FakeStreamImpl>(*this, fbl::move(stream));
+  stream_token_ = fbl::move(stream_token);
+  // If not triggered by the token being closed, this waiter will be cancelled
+  // by the destruction of this class, so the "this" pointer will be valid as
+  // long as the waiter is around.
+  stream_token_waiter_ = std::make_unique<async::Wait>(
+      stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, std::bind([this]() {
+        stream_->Stop();
+        stream_.reset();
+        stream_token_.reset();
+        stream_token_waiter_.reset();
+      }));
+
+  zx_status_t status =
+      stream_token_waiter_->Begin(async_get_default_dispatcher());
+  // The waiter, dispatcher and token are known to be valid, so this should
+  // never fail.
+  FXL_CHECK(status == ZX_OK);
 }
 
 void FakeControlImpl::FakeStreamImpl::OnFrameAvailable(

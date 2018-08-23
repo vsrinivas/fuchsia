@@ -9,10 +9,12 @@
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fzl/vmo-pool.h>
 #include <lib/media/timeline/timeline_function.h>
+#include <lib/zx/eventpair.h>
 
 namespace simple_camera {
 
@@ -50,10 +52,10 @@ class FakeControlImpl : public fuchsia::camera::Control {
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
-  void CreateStream(
-      fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-      fuchsia::camera::FrameRate frame_rate,
-      fidl::InterfaceRequest<fuchsia::camera::Stream> stream) override;
+  void CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                    fuchsia::camera::FrameRate frame_rate,
+                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                    zx::eventpair stream_token) override;
 
   // Get the vendor and product information about the device.
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;
@@ -82,6 +84,8 @@ class FakeControlImpl : public fuchsia::camera::Control {
   };
 
   fbl::unique_ptr<FakeStreamImpl> stream_;
+  zx::eventpair stream_token_;
+  std::unique_ptr<async::Wait> stream_token_waiter_;
 
   FakeControlImpl(const FakeControlImpl&) = delete;
   FakeControlImpl& operator=(const FakeControlImpl&) = delete;

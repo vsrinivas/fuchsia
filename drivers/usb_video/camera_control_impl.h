@@ -7,7 +7,9 @@
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/camera/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/zx/eventpair.h>
 
 namespace video {
 namespace usb {
@@ -37,16 +39,23 @@ class ControlImpl : public fuchsia::camera::Control {
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
-  void CreateStream(
-      fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-      fuchsia::camera::FrameRate frame_rate,
-      fidl::InterfaceRequest<fuchsia::camera::Stream> stream) override;
+  // The |stream_token| allows the camera manager to retain a handle to the
+  // stream that was created, so it can signal the camera driver to kill the
+  // stream if needed.
+  void CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                    fuchsia::camera::FrameRate frame_rate,
+                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                    zx::eventpair stream_token) override;
 
- private:
+  void ShutDownStream();
+
   class StreamImpl : public fuchsia::camera::Stream {
    public:
     StreamImpl(ControlImpl& owner,
-               fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
+               fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+               zx::eventpair stream_token);
+
+    ~StreamImpl();
 
     // Starts the streaming of frames.
     void Start() override;
@@ -64,6 +73,8 @@ class ControlImpl : public fuchsia::camera::Control {
    private:
     ControlImpl& owner_;
     fidl::Binding<Stream> binding_;
+    zx::eventpair stream_token_;
+    async::Wait stream_token_waiter_;
   };
 
   fbl::unique_ptr<StreamImpl> stream_;

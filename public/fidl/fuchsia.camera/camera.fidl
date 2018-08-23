@@ -87,8 +87,13 @@ interface Control {
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
+  // The stream token is used to provide additional control over the interface from the
+  // Camera Manager.  The driver provides the guarantee that:
+  //     1) If the stream token receives the PEER_CLOSED event, the driver will close
+  //        the stream.
+  //     2) If the Stream interface is closed, the driver will close the eventpair.
   2: CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
-                  FrameRate rate, request<Stream> stream);
+                  FrameRate rate, request<Stream> stream, handle<eventpair> stream_token);
 
   3: GetDeviceInfo() -> (DeviceInfo device_info);
 };

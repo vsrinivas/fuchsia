@@ -12,6 +12,7 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <garnet/lib/media/camera/simple_camera_lib/buffer_fence.h>
 #include <garnet/lib/media/camera/simple_camera_lib/frame_scheduler.h>
+#include <lib/zx/eventpair.h>
 
 #include <garnet/drivers/usb_video/usb-video-camera.h>
 
@@ -75,6 +76,7 @@ class VideoDisplay {
     fuchsia::camera::StreamPtr stream_;
   };
   std::unique_ptr<CameraClient> camera_client_;
+  zx::eventpair stream_token_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VideoDisplay);
 };

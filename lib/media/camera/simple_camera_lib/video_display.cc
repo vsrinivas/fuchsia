@@ -290,9 +290,19 @@ zx_status_t VideoDisplay::ConnectToCamera(
       return status;
     }
 
+    // Create stream token.  The stream token is not very meaningful when
+    // you have a direct connection to the driver, but this use case should
+    // be disappearing soon anyway.  For now, we just hold on to the token.
+    zx::eventpair driver_token;
+    status = zx::eventpair::create(0, &stream_token_, &driver_token);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
+      DisconnectFromCamera();
+      return status;
+    }
     status = camera_client_->control_->CreateStream(
         std::move(buffer_collection), chosen_format.rate,
-        camera_client_->stream_.NewRequest());
+        camera_client_->stream_.NewRequest(), std::move(driver_token));
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
       DisconnectFromCamera();

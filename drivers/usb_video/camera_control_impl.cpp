@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include "lib/fxl/logging.h"
 
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video-stream.h"
@@ -74,7 +75,8 @@ void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
 void ControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream) {
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+    zx::eventpair stream_token) {
   zx_status_t status =
       usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
 
@@ -84,7 +86,8 @@ void ControlImpl::CreateStream(
     return;
   }
 
-  stream_ = fbl::make_unique<StreamImpl>(*this, fbl::move(stream));
+  stream_ = fbl::make_unique<StreamImpl>(*this, fbl::move(stream),
+                                         fbl::move(stream_token));
 }
 
 void ControlImpl::StreamImpl::OnFrameAvailable(
@@ -116,9 +119,39 @@ void ControlImpl::StreamImpl::ReleaseFrame(uint32_t buffer_index) {
   }
 }
 
+void ControlImpl::ShutDownStream() {
+  // This has the effect of cancelling the wait, deleting the
+  // stream_token, and unbinding from the stream channel.
+  stream_ = nullptr;
+}
+
+ControlImpl::StreamImpl::~StreamImpl() {
+  // Doesn't matter what this returns:
+  (void)owner_.usb_video_stream_->StopStreaming();
+}
+
 ControlImpl::StreamImpl::StreamImpl(
-    ControlImpl& owner, fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
-    : owner_(owner), binding_(this, fbl::move(stream)) {
+    ControlImpl& owner, fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+    zx::eventpair stream_token)
+    : owner_(owner),
+      binding_(this, fbl::move(stream)),
+      stream_token_(fbl::move(stream_token)),
+      // If not triggered by the token being closed, this waiter will be
+      // cancelled by the destruction of this class, so the "this" pointer will
+      // be valid as long as the waiter is around.
+      stream_token_waiter_(stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED,
+                           std::bind([this]() {
+                             // If the peer is closed, shut down the whole
+                             // stream.
+                             owner_.ShutDownStream();
+                             // We just deleted ourselves. Don't do anything
+                             // else.
+                           })) {
+  zx_status_t status =
+      stream_token_waiter_.Begin(async_get_default_dispatcher());
+  // The waiter, dispatcher and token are known to be valid, so this should
+  // never fail.
+  FXL_CHECK(status == ZX_OK);
   binding_.set_error_handler(
       [this] { owner_.usb_video_stream_->DeactivateVideoBuffer(); });
 }

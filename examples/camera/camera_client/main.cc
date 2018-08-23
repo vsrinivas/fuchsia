@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/fxl/logging.h>
+#include <lib/zx/eventpair.h>
 
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
@@ -81,8 +82,19 @@ zx_status_t run_camera() {
     return status;
   }
 
+  // Create stream token.  The stream token is not very meaningful when
+  // you have a direct connection to the driver, but this use case should
+  // be disappearing soon anyway.  For now, we just hold on to the token.
+  zx::eventpair driver_token;
+  zx::eventpair stream_token;
+  status = zx::eventpair::create(0, &stream_token, &driver_token);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
+    return status;
+  }
   status = client.camera()->CreateStream(std::move(buffer_collection),
-                                         formats[0].rate, stream.NewRequest());
+                                         formats[0].rate, stream.NewRequest(),
+                                         std::move(driver_token));
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
     return status;
