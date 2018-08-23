@@ -5,14 +5,16 @@
 package connectivity
 
 import (
-	"app/context"
-	"fidl/fuchsia/net"
-	"fidl/fuchsia/netstack"
 	"log"
-	"netstack/fidlconv"
-	"netstack/netiface"
 	"sync"
 	"syscall/zx"
+
+	"app/context"
+	"netstack/fidlconv"
+	"netstack/netiface"
+
+	"fidl/fuchsia/net"
+	"fidl/fuchsia/netstack"
 )
 
 var service *net.ConnectivityService = &net.ConnectivityService{}
