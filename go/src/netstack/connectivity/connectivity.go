@@ -5,18 +5,32 @@
 package connectivity
 
 import (
+	"app/context"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 	"log"
 	"netstack/fidlconv"
 	"netstack/netiface"
 	"sync"
+	"syscall/zx"
 )
 
-var Service *net.ConnectivityService = &net.ConnectivityService{}
+var service *net.ConnectivityService = &net.ConnectivityService{}
 var reachable bool = false
 var mu sync.Mutex
 var debug = false
+
+func AddOutgoingService(ctx *context.Context) error {
+	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
+		k, err := service.Add(struct{}{}, c, nil)
+		// Let clients know the status of the network when they get added.
+		if p, ok := service.EventProxyFor(k); ok {
+			p.OnNetworkReachable(reachable)
+		}
+		return err
+	})
+	return nil
+}
 
 // TODO(NET-1001): extract into a separate reachability service based on a
 // better network reachability signal.
@@ -36,10 +50,6 @@ func InferAndNotify(ifs []netstack.NetInterface) {
 	mu.Unlock()
 }
 
-func CurrentlyReachable() bool {
-	return reachable
-}
-
 func hasDHCPAddress(nic netstack.NetInterface) bool {
 	return nic.Flags&netstack.NetInterfaceFlagDhcp != 0 && nic.Flags&netstack.NetInterfaceFlagUp != 0 && !netiface.IsAny(fidlconv.NetAddressToTCPIPAddress(nic.Addr))
 }
@@ -54,8 +64,8 @@ func inferReachability(ifs []netstack.NetInterface) bool {
 }
 
 func notify(reachable bool) {
-	for key, _ := range Service.Bindings {
-		if p, ok := Service.EventProxyFor(key); ok {
+	for key, _ := range service.Bindings {
+		if p, ok := service.EventProxyFor(key); ok {
 			p.OnNetworkReachable(reachable)
 		}
 	}

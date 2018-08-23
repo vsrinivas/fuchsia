@@ -10,6 +10,7 @@ import (
 
 	"app/context"
 
+	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/link/eth"
 	"netstack/watcher"
@@ -64,6 +65,9 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := AddLegacySocketProvider(ctx); err != nil {
+		log.Fatal(err)
+	}
+	if err := connectivity.AddOutgoingService(ctx); err != nil {
 		log.Fatal(err)
 	}
 

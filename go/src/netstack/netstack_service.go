@@ -16,7 +16,6 @@ import (
 	"netstack/link/eth"
 	"syscall/zx"
 
-	"fidl/fuchsia/net"
 	nsfidl "fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
@@ -385,19 +384,10 @@ func AddNetstackService(ctx *context.Context) error {
 
 	// TODO(NET-1263): register resolver admin service once clients don't crash netstack
 	// when registering.
-	// ctx.OutgoingService.AddService(nsfidl.ResolverAdminName, func(c zx.Channel) error {
+	// ctx.OutgoingService.AddService(fidl.ResolverAdminName, func(c zx.Channel) error {
 	//   _, err := dnsService.Add(&dnsImpl{}, c, nil)
 	//   return err
 	// })
-
-	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
-		k, err := connectivity.Service.Add(struct{}{}, c, nil)
-		// Let clients know the status of the network when they get added.
-		if p, ok := connectivity.Service.EventProxyFor(k); ok {
-			p.OnNetworkReachable(connectivity.CurrentlyReachable())
-		}
-		return err
-	})
 
 	return nil
 }
