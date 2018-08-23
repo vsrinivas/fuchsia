@@ -4,6 +4,8 @@
 
 library fuchsia.ui.viewsv1;
 
+using fuchsia.ui.viewsv1token;
+
 // A view container is an interface exposed by |View| and |ViewTree| to
 // manage their child views.  Although |View| may have any number of children,
 // a |ViewTree| can have at most one (its root view).

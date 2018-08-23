@@ -6,6 +6,7 @@ library fuchsia.wlan.device.service;
 
 using fuchsia.wlan.device;
 using fuchsia.wlan.sme;
+using fuchsia.wlan.stats;
 
 struct PhyListItem {
     uint16 phy_id;

@@ -4,6 +4,9 @@
 
 library fuchsia.camera;
 
+using fuchsia.sysmem;
+using zx;
+
 const uint32 MAX_FORMATS_PER_RESPONSE = 16;
 
 // A coarse set of capabilities.  This struct is used in the camera description

@@ -4,6 +4,8 @@
 
 library fuchsia.mediaplayer;
 
+using fuchsia.media;
+
 // Manages sinks on behalf of a Player.
 // Ordinal range: 0x1501-15ff
 interface SinkManager {

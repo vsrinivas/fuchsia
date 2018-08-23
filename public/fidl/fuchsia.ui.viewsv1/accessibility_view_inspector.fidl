@@ -4,7 +4,9 @@
 
 library fuchsia.ui.viewsv1;
 
+using fuchsia.ui.gfx;
 using fuchsia.ui.scenic;
+using fuchsia.math;
 
 // This is a temporary solution to expose hit testing to the accessibility manager before the
 // scenic refactor.

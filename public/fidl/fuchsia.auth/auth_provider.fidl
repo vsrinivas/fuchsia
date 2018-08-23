@@ -5,7 +5,6 @@
 library fuchsia.auth;
 
 using fuchsia.ui.viewsv1token;
-using fuchsia.auth.attestation_signer;
 
 // This file defines an auth provider service that can be used by Garnet's
 // Token Manager service to mint oauth tokens for clients such as Framework,

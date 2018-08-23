@@ -4,6 +4,8 @@
 
 library fuchsia.guest;
 
+using zx;
+
 // |kHostCid| is the reserved context ID (CID) of the host.
 //
 // CIDs for guests are assigned by the GuestManager and can be found in the

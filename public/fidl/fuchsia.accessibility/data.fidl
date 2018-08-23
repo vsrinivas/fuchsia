@@ -4,6 +4,8 @@
 
 library fuchsia.accessibility;
 
+using fuchsia.ui.gfx;
+
 // Represents the data needed to identify a specific ui element.
 // TODO(SCN-814) Figure out how we want to serialize data.
 // Starting with a very small selection of fields for testing.
@@ -40,6 +42,3 @@ struct Node {
     vector<int32> children_hit_test_order;
     Data data;
 };
-
-
-

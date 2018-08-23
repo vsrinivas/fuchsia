@@ -4,6 +4,8 @@
 
 library fuchsia.bluetooth.control;
 
+using fuchsia.bluetooth;
+
 struct SecurityProperties {
   bool authenticated;
   bool secure_connections;

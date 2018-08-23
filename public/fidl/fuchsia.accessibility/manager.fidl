@@ -4,6 +4,9 @@
 
 library fuchsia.accessibility;
 
+using fuchsia.ui.input;
+using fuchsia.ui.viewsv1;
+
 // The accessibility manager as a whole acts as an aggregator of accessibility
 // information provided by the compositor, Scenic, and front-ends like Flutter.
 // It is also the main contact for accessibility services to read accessibility

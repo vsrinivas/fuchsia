@@ -4,6 +4,8 @@
 
 library fuchsia.ui.viewsv1;
 
+using fuchsia.sys;
+
 // A view tree is a top-level container for a hierarchy of views.
 // Each view is intended to operate independently from others and will
 // generally correspond to discrete interactive spaces such as separate

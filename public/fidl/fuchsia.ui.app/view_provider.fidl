@@ -4,6 +4,8 @@
 
 library fuchsia.ui.app;
 
+using fuchsia.sys;
+
 // NOTE: This is likely not the ViewProvider you are looking for!  This is
 // the new ViewProvider interface that will be deprectaing the old one soon.
 // The old ViewProvider is in fuchsia.ui.viewsv1.ViewProvider.

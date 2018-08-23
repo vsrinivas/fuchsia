@@ -4,8 +4,6 @@
 
 library fuchsia.ui.gfx;
 
-using fuchsia.ui.gfx;
-
 [Discoverable]
 // A minimal fidl interface to allow sourcing the contents of a PoseBuffer from another service.
 interface PoseBufferProvider {

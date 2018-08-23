@@ -4,6 +4,9 @@
 
 library fuchsia.ui.viewsv1;
 
+using fuchsia.sys;
+using fuchsia.ui.viewsv1token;
+
 // Provides a View upon request.
 //
 // Applications should implement and expose this service so that they can

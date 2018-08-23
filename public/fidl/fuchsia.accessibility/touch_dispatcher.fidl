@@ -4,6 +4,9 @@
 
 library fuchsia.accessibility;
 
+using fuchsia.ui.input;
+using fuchsia.ui.viewsv1;
+
 // The touch dispatcher routes raw touch events to accessibility gesture detectors
 // for them to perform custom gesture detection. A connected gesture detector gets
 // raw touch events from a Presentation and can send back simulated input
