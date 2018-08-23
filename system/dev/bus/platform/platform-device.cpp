@@ -4,6 +4,7 @@
 
 #include "platform-device.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,117 +59,6 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
     resource_tree_.BuildDeviceIndex(&device_index_);
 
     return ZX_OK;
-}
-
-zx_status_t PlatformDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                                    size_t* out_size, zx_paddr_t* out_paddr,
-                                    zx_handle_t* out_handle) {
-    const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
-    if (index >= dr->mmio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    const pbus_mmio_t& mmio = dr->mmio(index);
-    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
-    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
-    zx_handle_t vmo_handle;
-    zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
-                                                &vmo_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
-        return status;
-    }
-
-    status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
-        goto fail;
-    }
-
-    uintptr_t virt;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, vmo_size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
-                         &virt);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
-        goto fail;
-    }
-
-    *out_size = mmio.length;
-    *out_handle = vmo_handle;
-    if (out_paddr) {
-        *out_paddr = vmo_base;
-    }
-    *out_vaddr = reinterpret_cast<void*>(virt + (mmio.base - vmo_base));
-    return ZX_OK;
-
-fail:
-    zx_handle_close(vmo_handle);
-    return status;
-}
-
-zx_status_t PlatformDevice::MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
-    const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
-    if (index >= dr->irq_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    if (out_handle == nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    const pbus_irq_t& irq = dr->irq(index);
-    if (flags == 0) {
-        flags = irq.mode;
-    }
-    zx_status_t status = zx_interrupt_create(bus_->GetResource(), irq.irq, flags, out_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
-        return status;
-    }
-    return status;
-}
-
-zx_status_t PlatformDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
-    const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
-    if (index >= dr->bti_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    if (out_handle == nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    const pbus_bti_t& bti = dr->bti(index);
-
-    return bus_->GetBti(bti.iommu_index, bti.bti_id, out_handle);
-}
-
-zx_status_t PlatformDevice::GetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info) {
-    memset(out_info, 0, sizeof(*out_info));
-    out_info->vid = vid_;
-    out_info->pid = pid_;
-    out_info->did = did_;
-    out_info->mmio_count = static_cast<uint32_t>(dr->mmio_count());
-    out_info->irq_count = static_cast<uint32_t>(dr->irq_count());
-    out_info->gpio_count = static_cast<uint32_t>(dr->gpio_count());
-    out_info->i2c_channel_count = static_cast<uint32_t>(dr->i2c_channel_count());
-    out_info->clk_count = static_cast<uint32_t>(dr->clk_count());
-    out_info->bti_count = static_cast<uint32_t>(dr->bti_count());
-    out_info->metadata_count = static_cast<uint32_t>(dr->metadata_count());
-    memcpy(out_info->name, name_, sizeof(out_info->name));
-
-    return ZX_OK;
-}
-
-zx_status_t PlatformDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
-    return GetDeviceInfo(device_index_[ROOT_DEVICE_ID], out_info);
-}
-
-zx_status_t PlatformDevice::GetBoardInfo(pdev_board_info_t* out_info) {
-    return bus_->GetBoardInfo(out_info);
-}
-
-zx_status_t PlatformDevice::DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out) {
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 // Create a resource and pass it back to the proxy along with necessary metadata
@@ -242,6 +132,28 @@ zx_status_t PlatformDevice::RpcGetBti(const DeviceResources* dr, uint32_t index,
     return status;
 }
 
+zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info) {
+    pdev_device_info_t info = {
+        .vid = vid_,
+        .pid = pid_,
+        .did = did_,
+        .mmio_count = static_cast<uint32_t>(dr->mmio_count()),
+        .irq_count = static_cast<uint32_t>(dr->irq_count()),
+        .gpio_count = static_cast<uint32_t>(dr->gpio_count()),
+        .i2c_channel_count = static_cast<uint32_t>(dr->i2c_channel_count()),
+        .clk_count = static_cast<uint32_t>(dr->clk_count()),
+        .bti_count = static_cast<uint32_t>(dr->bti_count()),
+        .metadata_count = static_cast<uint32_t>(dr->metadata_count()),
+        .reserved = {},
+        .name = {},
+    };
+    static_assert(sizeof(info.name) == sizeof(name_), "");
+    memcpy(info.name, name_, sizeof(out_info->name));
+    memcpy(out_info, &info, sizeof(info));
+
+    return ZX_OK;
+}
+
 zx_status_t PlatformDevice::RpcDeviceAdd(const DeviceResources* dr, uint32_t index,
                                          uint32_t* out_device_id) {
     if (index >= dr->child_count()) {
@@ -270,7 +182,7 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
     } else {
         const void* data;
         uint32_t length;
-        auto status = GetZbiMetadata(metadata.type, metadata.extra, &data, &length);
+        auto status = bus_->GetZbiMetadata(metadata.type, metadata.extra, &data, &length);
         if (status == ZX_OK) {
             if (length > buf_size) {
                 return ZX_ERR_BUFFER_TOO_SMALL;
@@ -494,7 +406,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             status = RpcGetBti(dr, req->index, &handle, &handle_count);
             break;
         case PDEV_GET_DEVICE_INFO:
-            status = GetDeviceInfo(dr, &resp->device_info);
+            status = RpcGetDeviceInfo(dr, &resp->device_info);
             break;
         case PDEV_GET_BOARD_INFO:
             status = bus_->GetBoardInfo(&resp->board_info);
@@ -660,58 +572,28 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     return status;
 }
 
-zx_status_t PlatformDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
-    if (proto_id == ZX_PROTOCOL_PLATFORM_DEV) {
-        auto proto = static_cast<platform_device_protocol_t*>(out);
-        proto->ops = &pdev_proto_ops_;
-        proto->ctx = this;
-        return ZX_OK;
-    } else {
-        return bus_->DdkGetProtocol(proto_id, out);
-    }
-}
-
 void PlatformDevice::DdkRelease() {
     delete this;
 }
 
-zx_status_t PlatformDevice::GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
-                                           uint32_t* out_size) {
-    const uint8_t* metadata = bus_->metadata();
-    const size_t metadata_size = bus_->metadata_size();
-    size_t offset = 0;
-
-    while (offset < metadata_size) {
-        auto header = reinterpret_cast<const zbi_header_t*>(metadata);
-        size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
-
-        if (header->type == type && header->extra == extra) {
-            *out_metadata = header + 1;
-            *out_size = static_cast<uint32_t>(length - sizeof(zbi_header_t));
-            return ZX_OK;
-        }
-        metadata += length;
-        offset += length;
-    }
-    zxlogf(ERROR, "%s metadata not found for type %08x, extra %u\n", __FUNCTION__, type, extra);
-    return ZX_ERR_NOT_FOUND;
-}
-
-zx_status_t PlatformDevice::Start(uint32_t device_add_flags) {
+zx_status_t PlatformDevice::Start() {
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, vid_},
         {BIND_PLATFORM_DEV_PID, 0, pid_},
         {BIND_PLATFORM_DEV_DID, 0, did_},
     };
 
-    char namestr[ZX_DEVICE_NAME_MAX];
+    char name[ZX_DEVICE_NAME_MAX];
     if (vid_ == PDEV_VID_GENERIC && pid_ == PDEV_PID_GENERIC && did_ == PDEV_DID_KPCI) {
-        strlcpy(namestr, "pci", sizeof(namestr));
+        strlcpy(name, "pci", sizeof(name));
     } else {
-        snprintf(namestr, sizeof(namestr), "%02x:%02x:%01x", vid_, pid_, did_);
+        snprintf(name, sizeof(name), "%02x:%02x:%01x", vid_, pid_, did_);
     }
     char argstr[64];
-    snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
+    snprintf(argstr, sizeof(argstr), "pdev:%s,", name);
+
+    // Platform devices run in their own devhosts.
+    uint32_t device_add_flags = DEVICE_ADD_MUST_ISOLATE;
 
     const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
     size_t metadata_count = dr->metadata_count();
@@ -720,7 +602,8 @@ zx_status_t PlatformDevice::Start(uint32_t device_add_flags) {
         device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
 
-    auto status = DdkAdd(namestr, device_add_flags, props, countof(props), argstr);
+    auto status = DdkAdd(name, device_add_flags, props, countof(props), ZX_PROTOCOL_PLATFORM_DEV,
+                         argstr);
     if (status != ZX_OK) {
         return status;
     }
@@ -733,7 +616,7 @@ zx_status_t PlatformDevice::Start(uint32_t device_add_flags) {
             } else {
                 const void* data;
                 uint32_t length;
-                status = GetZbiMetadata(pbm.type, pbm.extra, &data, &length);
+                status = bus_->GetZbiMetadata(pbm.type, pbm.extra, &data, &length);
                 if (status == ZX_OK) {
                     status = DdkAddMetadata(pbm.type, data, length);
                 }

@@ -299,7 +299,8 @@ template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
     zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
-                       uint32_t prop_count = 0, const char* proxy_args = nullptr) {
+                       uint32_t prop_count = 0, uint32_t proto_id = 0,
+                       const char* proxy_args = nullptr) {
         if (zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
@@ -314,6 +315,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         args.flags = flags;
         args.props = props;
         args.prop_count = prop_count;
+        args.proto_id = proto_id;
         args.proxy_args = proxy_args;
         AddProtocol(&args);
 

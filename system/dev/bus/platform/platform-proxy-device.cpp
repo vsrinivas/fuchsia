@@ -420,7 +420,7 @@ ProxyDevice::ProxyDevice(zx_device_t* parent, uint32_t device_id,
     canvas_proto_ops_.config = CanvasConfig;
     canvas_proto_ops_.free = CanvasFree;
     clk_proto_ops_.enable = ClkEnable;
-    clk_proto_ops_.disable = ClkDisable;    
+    clk_proto_ops_.disable = ClkDisable;
     gpio_proto_ops_.config = GpioConfig;
     gpio_proto_ops_.set_alt_function = GpioSetAltFunction;
     gpio_proto_ops_.read = GpioRead;

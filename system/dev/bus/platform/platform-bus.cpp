@@ -21,8 +21,6 @@
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
-#include "platform-device.h"
-
 namespace platform_bus {
 
 zx_status_t PlatformBus::GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle) {
@@ -120,15 +118,14 @@ zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev) {
         return status;
     }
 
-    size_t index = devices_.size();
-    fbl::AllocChecker ac;
-    devices_.push_back(fbl::move(dev), &ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
+    status = dev->Start();
+    if (status != ZX_OK) {
+        return status;
     }
 
-    // Platform devices run in their own devhosts.
-    return devices_[index]->Start(DEVICE_ADD_MUST_ISOLATE);
+    // devmgr is now in charge of the device.
+    __UNUSED auto* dummy = dev.release();
+    return ZX_OK;
 }
 
 zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
@@ -141,37 +138,33 @@ zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* 
         break;
     default:
         zxlogf(ERROR, "%s: unsupported protocol %08x\n", __func__, proto_id);
-        return ZX_ERR_NOT_SUPPORTED;    
+        return ZX_ERR_NOT_SUPPORTED;
     }
-    
+
     if (!pdev->name) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::unique_ptr<platform_bus::PlatformDevice> dev;
-    auto status = PlatformDevice::Create(pdev, zxdev(), this, &dev);
+    fbl::unique_ptr<platform_bus::ProtocolDevice> dev;
+    auto status = ProtocolDevice::Create(pdev, zxdev(), this, &dev);
     if (status != ZX_OK) {
         return status;
-    }
-
-    size_t index = devices_.size();
-    fbl::AllocChecker ac;
-    devices_.push_back(fbl::move(dev), &ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
     }
 
     // Protocol devices run in our devhost.
-    status = devices_[index]->Start(0);
+    status = dev->Start();
     if (status != ZX_OK) {
         return status;
     }
 
+    // devmgr is now in charge of the device.
+    __UNUSED auto* dummy = dev.release();
+
     // Wait for protocol implementation driver to register its protocol.
-    platform_bus_protocol_t dummy;
+    ddk::AnyProtocol dummy_proto;
 
     mutex_.Acquire();
-    while (DdkGetProtocol(proto_id, &dummy) == ZX_ERR_NOT_SUPPORTED) {
+    while (DdkGetProtocol(proto_id, &dummy_proto) == ZX_ERR_NOT_SUPPORTED) {
         sync_completion_reset(&proto_completion_);
         mutex_.Release();
         zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(10));
@@ -350,6 +343,31 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
     }
 
     return ZX_OK;
+}
+
+zx_status_t PlatformBus::GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
+                                        uint32_t* out_size) {
+    const uint8_t* metadata = metadata_.get();
+    const size_t metadata_size = metadata_.size();
+    size_t offset = 0;
+
+    while (offset + sizeof(zbi_header_t) < metadata_size) {
+        const auto header = reinterpret_cast<const zbi_header_t*>(metadata);
+        const size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
+        if (offset + length > metadata_size) {
+            break;
+        }
+
+        if (header->type == type && header->extra == extra) {
+            *out_metadata = header + 1;
+            *out_size = static_cast<uint32_t>(length - sizeof(zbi_header_t));
+            return ZX_OK;
+        }
+        metadata += length;
+        offset += length;
+    }
+    zxlogf(ERROR, "%s metadata not found for type %08x, extra %u\n", __FUNCTION__, type, extra);
+    return ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t PlatformBus::I2cInit(i2c_impl_protocol_t* i2c) {

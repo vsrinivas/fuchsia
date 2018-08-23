@@ -4,41 +4,36 @@
 
 #pragma once
 
-#include <ddk/protocol/canvas.h>
-#include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform-bus.h>
-#include <ddktl/protocol/platform-device.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "device-resources.h"
 #include "proxy-protocol.h"
 
-// An overview of PlatformDevice and PlatformProxy.
-//
-// Both this class and PlatformProxy implement the platform device protocol.
-// The implementation in this file implements the platform device protocol for drivers that
-// exist within the platform bus process. The implementation of the protocol
-// in PlatformProxy is for drivers that live in their own devhost and perform
-// RPC calls to the platform bus over a channel. In that case, RPC calls are
+// This class, along with PlatformProxyDevice, represent a platform device.
+// Platform devices run in separate devhosts than the platform bus driver.
+// PlatformDevice exists in the platform bus devhost and PlatformProxyDevice
+// exists in the platform device's devhost. PlatformProxyDevice proxys
+// requests from the platform device via a channel, which are then
 // handled by PlatformDevice::DdkRxrpc and then handled by relevant Rpc* methods.
-// Any resource handles passed back to the proxy are then used to create/map mmio
-// and irq objects within the proxy process. This ensures if the proxy driver dies
-// we will release their address space resources back to the kernel if necessary.
+//
+// Resource handles passed to the proxy to allow it to access MMIOs and interrupts.
+// This ensures if the proxy driver dies we will release their address space resources
+// back to the kernel if necessary.
 
 namespace platform_bus {
 
 class PlatformBus;
 
 class PlatformDevice;
-using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::GetProtocolable, ddk::Rxrpcable>;
+using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::Rxrpcable>;
 
 // This class represents a platform device attached to the platform bus.
 // Instances of this class are created by PlatformBus at boot time when the board driver
 // calls the platform bus protocol method pbus_device_add().
 
-class PlatformDevice : public PlatformDeviceType, public ddk::PlatformDevProtocol<PlatformDevice> {
+class PlatformDevice : public PlatformDeviceType {
 public:
     // Creates a new PlatformDevice instance.
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
@@ -50,25 +45,11 @@ public:
     inline uint32_t did() const { return did_; }
 
     // Device protocol implementation.
-    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     void DdkRelease();
     zx_status_t DdkRxrpc(zx_handle_t channel);
 
-    // Platform device protocol implementation for devices running in the platform bus devhost.
-    zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, size_t* out_size,
-                        zx_paddr_t* out_paddr, zx_handle_t* out_handle);
-    zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
-    zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
-    zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
-    zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
-    zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
-
-    // Common GetDeviceInfo implementation, used for both devices in the proxying case
-    // and those running in the platform bus devhost.
-    zx_status_t GetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info);
-
     // Starts the underlying devmgr device.
-    zx_status_t Start(uint32_t device_add_flags);
+    zx_status_t Start();
 
 private:
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
@@ -83,6 +64,7 @@ private:
                                 uint32_t* out_handle_count);
     zx_status_t RpcGetBti(const DeviceResources* dr, uint32_t index, zx_handle_t* out_handle,
                           uint32_t* out_handle_count);
+    zx_status_t RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info);
     zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
     zx_status_t RpcGetMetadata(const DeviceResources* dr, uint32_t index, uint32_t* out_type,
                                uint8_t* buf, uint32_t buf_size, uint32_t* actual);
@@ -104,9 +86,6 @@ private:
                                          size_t* out_size);
     zx_status_t RpcClkEnable(const DeviceResources* dr, uint32_t index);
     zx_status_t RpcClkDisable(const DeviceResources* dr, uint32_t index);
-
-    zx_status_t GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
-                               uint32_t* out_size);
 
     PlatformBus* bus_;
     char name_[ZX_DEVICE_NAME_MAX + 1];

@@ -25,6 +25,7 @@
 #include <zircon/types.h>
 
 #include "platform-device.h"
+#include "platform-protocol-device.h"
 #include "platform-i2c.h"
 #include "proxy-protocol.h"
 
@@ -65,14 +66,15 @@ public:
     // Helper for PlatformDevice.
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
 
+    zx_status_t GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
+                               uint32_t* out_size);
+
     // Protocol accessors for PlatformDevice.
     inline ddk::CanvasProtocolProxy* canvas() const { return canvas_.get(); }
     inline ddk::ClkProtocolProxy* clk() const { return clk_.get(); }
     inline ddk::GpioProtocolProxy* gpio() const { return gpio_.get(); }
     inline ddk::I2cImplProtocolProxy* i2c_impl() const { return i2c_impl_.get(); }
     inline ddk::UmsProtocolProxy* ums() const { return ums_.get(); }
-    inline const uint8_t* metadata() const { return metadata_.get(); }
-    inline size_t metadata_size() const { return metadata_.size(); }
 
 private:
     explicit PlatformBus(zx_device_t* parent);
@@ -104,8 +106,6 @@ private:
     // Metadata extracted from ZBI.
     fbl::Array<uint8_t> metadata_;
 
-    // List of platform devices.
-    fbl::Vector<fbl::unique_ptr<PlatformDevice>> devices_;
     // List of I2C buses.
     fbl::Vector<fbl::unique_ptr<PlatformI2cBus>> i2c_buses_;
 
