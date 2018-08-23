@@ -11,6 +11,7 @@ import("//build/images/crashpad.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/sdk/sdk_molecule.gni")
 import("//garnet/go/src/amber/amber.gni")
 
 declare_args() {
@@ -1201,9 +1202,13 @@ action("ids.txt") {
 ### SDK
 ###
 
+sdk_images = []
+
 foreach(image, images) {
   if (defined(image.sdk)) {
-    sdk_atom("${image.sdk}_sdk") {
+    image_target_name = "${image.sdk}_sdk"
+    sdk_images += [ ":$image_target_name" ]
+    sdk_atom(image_target_name) {
       domain = "image"
       name = image.sdk
       id = "sdk://images/${image.sdk}"
@@ -1233,7 +1238,9 @@ foreach(image, images) {
 }
 
 # TODO(alainv): Add dependency to zircon.bin when such a target exists.
-sdk_atom("zircon.bin_sdk") {
+zircon_bin_sdk_target_name = "zircon.bin_sdk"
+sdk_images += [ ":$zircon_bin_sdk_target_name" ]
+sdk_atom(zircon_bin_sdk_target_name) {
   domain = "image"
   name = "zircon.bin"
   id = "sdk://images/zircon.bin"
@@ -1246,4 +1253,29 @@ sdk_atom("zircon.bin_sdk") {
       dest = "zircon.bin"
     },
   ]
+}
+
+if (target_cpu == "arm64") {
+  qemu_zircon_bin_sdk_target_name = "qemu-zircon.bin_sdk"
+  sdk_images += [ ":$qemu_zircon_bin_sdk_target_name" ]
+  sdk_atom(qemu_zircon_bin_sdk_target_name) {
+    domain = "image"
+    name = "qemu-zircon.bin"
+    id = "sdk://images/qemu-zircon.bin"
+    category = "partner"
+    testonly = true
+
+    files = [
+      {
+        source = "${zircon_build_dir}/qemu-zircon.bin"
+        dest = "qemu-zircon.bin"
+      },
+    ]
+  }
+}
+
+sdk_molecule("images_sdk") {
+  testonly = true
+
+  deps = sdk_images
 }
