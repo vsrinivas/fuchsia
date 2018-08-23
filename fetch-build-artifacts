@@ -3,9 +3,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### fetch artifacts for a CI build
+# NOTE: This tool must be able to be downloaded and run independently of the
+# rest of this repo: the manual release processes that use it do not have a
+# fuchsia checkout.
 
-## usage: fx fetch-buid-artifacts [-r] [-o <outdir>] <buildbucket_id>
+## usage: fetch-build-artifacts \
+##            [-r] [-p <parent_dir>] [-o <out_dir>] [-h] \
+##            <buildbucket_id>
 ##
 ## Downloads artifacts created by the specified build.
 ##
@@ -26,39 +30,44 @@
 ## Optional arguments:
 ##   -r    Indicates that the build ID points to a release build, whose
 ##         artifacts are stored in a special GCS bucket.
+##   -p    The parent directory of the destination build artifact directory:
+##         see -o. Defaults to "${HOME}/.cache/fuchsia/build-artifacts".
+##         Mutually exclusive with -o.
 ##   -o    The directory to write the artifacts to. Defaults to
-##         <fuchsia-root>/out/build-artifacts/<buildbucket_id>.
+##         <parent_dir>/<buildbucket_id>. Mutually exclusive with -p.
+##   -h    Prints this help message.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx-config-read
+set -o errexit
+set -o nounset
+set -o pipefail
+
+readonly DEFAULT_PARENT_DIR="${HOME}/.cache/fuchsia/build-artifacts"
 
 function usage {
-  fx-command-help fetch-build-artifacts
+  # Prints lines from this file that begin with ##.
+  sed -n -e 's/^## //p' -e 's/^##$//p' < "${BASH_SOURCE[0]}"
 }
 
 function main {
-  fx-standard-switches "$@"
-  set -- "${FX_ARGV[@]}"
-
-  set -o errexit
-  set -o nounset
-  set -o pipefail
-
   if [[ -z "$(which gsutil)" ]]; then
     echo "ERROR: Please install gsutil and run 'gcloud init'."
     echo "See https://cloud.google.com/storage/docs/gsutil_install"
     return 1
   fi
 
-  local outdir=''
+  local parent_dir=''
+  local out_dir=''
   local is_release=0
-  while getopts "ro:" arg; do
+  while getopts "rp:o:h" arg; do
     case ${arg} in
-      o)
-        outdir="${OPTARG}"
-        ;;
       r)
         is_release=1
+        ;;
+      p)
+        parent_dir="${OPTARG}"
+        ;;
+      o)
+        out_dir="${OPTARG}"
         ;;
       *)
         usage
@@ -68,7 +77,14 @@ function main {
   done
   shift $((${OPTIND} - 1))
 
+  if [[ "${parent_dir}" ]] && [[ "${out_dir}" ]]; then
+    echo "ERROR: Cannot specify both -p and -o."
+    usage
+    return 1
+  fi
+
   # Expect exactly one build ID.
+  # TODO(dbort): We could support multiple build IDs if -o isn't specified.
   if [[ $# -ne 1 ]]; then
     echo "ERROR: Build ID missing."
     usage
@@ -85,8 +101,12 @@ function main {
   fi
   build_id="${build_id#b}"  # Remove leading 'b' if present.
 
-  if [[ -z "${outdir}" ]]; then
-    outdir="${FUCHSIA_OUT_DIR}/build-artifacts/${build_id}"
+  if [[ -z "${parent_dir}" ]]; then
+    parent_dir="${DEFAULT_PARENT_DIR}"
+  fi
+
+  if [[ -z "${out_dir}" ]]; then
+    out_dir="${parent_dir}/${build_id}"
   fi
 
   if (( is_release )); then
@@ -95,19 +115,20 @@ function main {
     local archive_bucket='fuchsia-archive'
   fi
 
-  echo "Fetching build ${build_id} to ${outdir} ..."
-  mkdir -p "${outdir}"
+  echo "Fetching build ${build_id} to ${out_dir} ..."
+  mkdir -p "${out_dir}"
 
   local failed=0
   (
     set -x  # Prints the gsutil command
+    # -m: Download files in parallel
     # -c: Continue downloading later files even if an earlier one fails
-    # -L: Log file to use for resuming. Also avoids re-downloading files.
-    gsutil cp \
+    # -L: Log file to use for resuming; also avoids re-downloading files
+    gsutil -m cp \
       -c \
-      -L "${outdir}/.gsutil-cp.log" \
+      -L "${out_dir}/.gsutil-cp.log" \
       -r \
-      "gs://${archive_bucket}/builds/${build_id}/*" "${outdir}"
+      "gs://${archive_bucket}/builds/${build_id}/*" "${out_dir}"
   ) || failed=1
 
   if (( failed )); then
@@ -118,7 +139,7 @@ function main {
     return 1
   fi
 
-  echo "Downloaded artifacts to ${outdir}"
+  echo "Downloaded artifacts to ${out_dir}"
   echo "DONE"
 }
 
