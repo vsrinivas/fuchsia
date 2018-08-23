@@ -49,7 +49,7 @@ use std::env;
 use std::fs::File;
 
 const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
-// Hardcoded IPv4 address: if you use something other than a /24, update the subnet below as well.
+// Hardcoded IPv4 address: if you use something other than a 192.168.1/24, update the subnet below.
 const FIXED_IPADDR: ip::Ipv4Addr = ip::Ipv4Addr::new([192, 168, 1, 39]);
 
 fn main() -> Result<(), failure::Error> {
@@ -77,9 +77,8 @@ fn main() -> Result<(), failure::Error> {
     let eth_id = state
         .device
         .add_ethernet_device(device::ethernet::EthernetDeviceState::default());
-    // Hardcoded subnet: if you update the IPADDR above to use a network that's not /24, update
-    // this as well.
-    let fixed_subnet = ip::Subnet::new(ip::Ipv4Addr::new([255, 255, 255, 0]), 24);
+    // Hardcoded subnet: if you update the IPADDR above, update this as well.
+    let fixed_subnet = ip::Subnet::new(ip::Ipv4Addr::new([192, 168, 1, 0]), 24);
     device::ethernet::set_ip_addr(&mut state, eth_id.id(), FIXED_IPADDR, fixed_subnet);
 
     let mut buf = [0; 2048];
