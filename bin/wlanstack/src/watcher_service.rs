@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Never;
-use failure;
-use fidl;
+use failure::format_err;
 use fidl::endpoints2::{RequestStream, ServerEnd};
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::prelude::*;
+use log::{error, log};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
-use watchable_map::{MapEvent, WatchableMap};
-use wlan_service::{self, DeviceWatcherControlHandle, DeviceWatcherRequestStream};
+use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceWatcherControlHandle, DeviceWatcherRequestStream};
+
+use crate::Never;
+use crate::watchable_map::{MapEvent, WatchableMap};
 
 // In reality, P and I are always PhyDevice and IfaceDevice, respectively.
 // They are generic solely for the purpose of mocking for tests.
@@ -60,7 +61,7 @@ impl<P, I> Clone for WatcherService<P, I> {
 }
 
 impl<P, I> WatcherService<P, I> {
-    pub fn add_watcher(&self, endpoint: ServerEnd<wlan_service::DeviceWatcherMarker>)
+    pub fn add_watcher(&self, endpoint: ServerEnd<fidl_svc::DeviceWatcherMarker>)
         -> Result<(), fidl::Error>
     {
         let stream = endpoint.into_stream()?;
@@ -195,14 +196,14 @@ fn reap_watchers<P, I>(inner: Arc<Mutex<Inner<P, I>>>, watchers: UnboundedReceiv
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async;
+    use fidl_fuchsia_wlan_device_service::DeviceWatcherEvent;
+    use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use std::mem;
-    use wlan_service::DeviceWatcherEvent;
-    use zx;
 
     #[test]
     fn reap_watchers() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
         assert_eq!(0, helper.service.inner.lock().watchers.len());
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
@@ -228,7 +229,7 @@ mod tests {
 
     #[test]
     fn add_remove_phys() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
@@ -262,7 +263,7 @@ mod tests {
 
     #[test]
     fn add_remove_ifaces() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
@@ -290,7 +291,7 @@ mod tests {
 
     #[test]
     fn snapshot_phys() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
 
         // Add and remove phys before we the watcher is added
@@ -317,7 +318,7 @@ mod tests {
 
     #[test]
     fn snapshot_ifaces() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
 
         // Add and remove ifaces before we the watcher is added
@@ -344,7 +345,7 @@ mod tests {
 
     #[test]
     fn two_watchers() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
 
         helper.ifaces.insert(20, 2000);
@@ -374,7 +375,7 @@ mod tests {
 
     #[test]
     fn remove_watcher_on_send_error() {
-        let exec = &mut async::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, mut future) = setup();
 
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
@@ -422,8 +423,8 @@ mod tests {
         (helper, future)
     }
 
-    fn fetch_events(exec: &mut async::Executor,
-                    stream: wlan_service::DeviceWatcherEventStream) -> Vec<DeviceWatcherEvent> {
+    fn fetch_events(exec: &mut fasync::Executor,
+                    stream: fidl_svc::DeviceWatcherEventStream) -> Vec<DeviceWatcherEvent> {
         let events = Arc::new(Mutex::new(Some(Vec::new())));
         let events_two = events.clone();
         let mut event_fut = stream

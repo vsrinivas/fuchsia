@@ -4,24 +4,25 @@
 
 #![allow(dead_code)]
 
-use failure;
-use fidl_mlme;
+use failure::format_err;
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use fidl_fuchsia_wlan_device as fidl_wlan_dev;
+use fuchsia_wlan_dev as wlan_dev;
+use fuchsia_vfs_watcher::{Watcher, WatchEvent};
+use fuchsia_zircon::Status as zx_Status;
 use futures::prelude::*;
+use log::{error, info, log};
 use std::io;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use vfs_watcher::{Watcher, WatchEvent};
-use wlan;
-use wlan_dev;
-use zx::Status as zx_Status;
 
 const PHY_PATH: &str = "/dev/class/wlanphy";
 const IFACE_PATH: &str = "/dev/class/wlanif";
 
 pub struct NewPhyDevice {
     pub id: u16,
-    pub proxy: wlan::PhyProxy,
+    pub proxy: fidl_wlan_dev::PhyProxy,
     pub device: wlan_dev::Device,
 }
 
@@ -98,14 +99,15 @@ fn id_from_path(path: &PathBuf) -> Result<u16, failure::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async::{self, TimeoutExt};
-    use fidl_wlantap;
+    use fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy};
+    use fidl_fuchsia_wlan_tap as fidl_wlantap;
+    use fuchsia_async::{self as fasync, TimeoutExt};
+    use fuchsia_zircon::prelude::*;
     use wlantap_client;
-    use zx::prelude::*;
 
     #[test]
     fn watch_phys() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut new_phy_stream = watch_phy_devices().expect("watch_phy_devices() failed");
         let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
         let _tap_phy = wlantap.create_phy(create_wlantap_config(*b"wtchph"));
@@ -120,9 +122,8 @@ mod tests {
     }
 
     fn create_wlantap_config(mac_addr: [u8; 6]) -> fidl_wlantap::WlantapPhyConfig {
-        use wlan::SupportedPhy;
         fidl_wlantap::WlantapPhyConfig {
-            phy_info: wlan::PhyInfo {
+            phy_info: fidl_wlan_dev::PhyInfo {
                 id: 0,
                 dev_path: None,
                 hw_mac_address: mac_addr,
@@ -130,7 +131,7 @@ mod tests {
                     SupportedPhy::Dsss, SupportedPhy::Cck, SupportedPhy::Ofdm, SupportedPhy::Ht
                 ],
                 driver_features: vec![],
-                mac_roles: vec![wlan::MacRole::Client],
+                mac_roles: vec![fidl_wlan_dev::MacRole::Client],
                 caps: vec![],
                 bands: vec![create_2_4_ghz_band_info()]
             },
@@ -138,10 +139,10 @@ mod tests {
         }
     }
 
-    fn create_2_4_ghz_band_info() -> wlan::BandInfo {
-        wlan::BandInfo{
+    fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
+        fidl_wlan_dev::BandInfo{
             description: String::from("2.4 GHz"),
-            ht_caps: wlan::HtCapabilities {
+            ht_caps: fidl_wlan_dev::HtCapabilities {
                 ht_capability_info: 0x01fe,
                 ampdu_params: 0,
                 supported_mcs_set: [
@@ -153,7 +154,7 @@ mod tests {
             },
             vht_caps: None,
             basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
-            supported_channels: wlan::ChannelList {
+            supported_channels: fidl_wlan_dev::ChannelList {
                 base_freq: 2407,
                 channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
             }

@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Never;
-use async;
-use device::{self, PhyDevice, PhyMap, IfaceDevice, IfaceMap};
-use failure;
+use failure::format_err;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
+use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
+use fidl_fuchsia_wlan_device as fidl_wlan_dev;
+use fuchsia_async::{self as fasync, unsafe_many_futures};
+use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::{future, Future, FutureExt, stream};
 use futures::prelude::*;
-use station;
-use stats_scheduler::StatsRef;
+use log::{error, info, log};
 use std::sync::Arc;
-use watchable_map::MapEvent;
-use watcher_service;
-use wlan_service::{self, DeviceServiceRequest};
-use wlan;
-use zx;
+
+use crate::device::{self, PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+use crate::Never;
+use crate::station;
+use crate::stats_scheduler::StatsRef;
+use crate::watchable_map::MapEvent;
+use crate::watcher_service;
 
 unsafe_many_futures!(ServiceFut,
  [ListPhys, QueryPhy, ListIfaces, CreateIface, GetClientSme, GetIfaceStats, WatchDevices]);
@@ -30,7 +32,7 @@ pub fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
                          iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
                          new_clients: S)
     -> impl Future<Output = Result<Never, failure::Error>>
-    where S: Stream<Item = async::Channel>
+    where S: Stream<Item = fasync::Channel>
 {
     let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
         phys.clone(), ifaces.clone(), phy_events, iface_events);
@@ -51,13 +53,13 @@ pub fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
 
 fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
                  watcher_service: watcher_service::WatcherService<PhyDevice, IfaceDevice>,
-                 channel: async::Channel)
+                 channel: fasync::Channel)
     -> impl Future<Output = ()>
 {
     // Note that errors from responder.send() are propagated intentionally.
     // If we fail to send a response, the only way to recover is to stop serving the client
     // and close the channel. Otherwise, the client would be left hanging forever.
-    wlan_service::DeviceServiceRequestStream::from_channel(channel)
+    fidl_svc::DeviceServiceRequestStream::from_channel(channel)
         .try_for_each_concurrent(CONCURRENT_LIMIT, move |request| match request {
             DeviceServiceRequest::ListPhys{ responder } => ServiceFut::ListPhys({
                 future::ready(responder.send(&mut list_phys(&phys)))
@@ -102,22 +104,22 @@ fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
         .unwrap_or_else(|e| error!("error serving a DeviceService client: {}", e))
 }
 
-fn list_phys(phys: &Arc<PhyMap>) -> wlan_service::ListPhysResponse {
+fn list_phys(phys: &Arc<PhyMap>) -> fidl_svc::ListPhysResponse {
     let list = phys
         .get_snapshot()
         .iter()
         .map(|(phy_id, phy)| {
-            wlan_service::PhyListItem {
+            fidl_svc::PhyListItem {
                 phy_id: *phy_id,
                 path: phy.device.path().to_string_lossy().into_owned(),
             }
         })
         .collect();
-    wlan_service::ListPhysResponse { phys: list }
+    fidl_svc::ListPhysResponse { phys: list }
 }
 
 fn query_phy(phys: &Arc<PhyMap>, id: u16)
-    -> impl Future<Output = (zx::Status, Option<wlan_service::QueryPhyResponse>)>
+    -> impl Future<Output = (zx::Status, Option<fidl_svc::QueryPhyResponse>)>
 {
     info!("query_phy(id = {})", id);
     let phy = phys.get(&id)
@@ -144,35 +146,35 @@ fn query_phy(phys: &Arc<PhyMap>, id: u16)
         })
         .map(|r| match r {
             Ok(phy_info) => {
-                let resp = wlan_service::QueryPhyResponse { info: phy_info };
+                let resp = fidl_svc::QueryPhyResponse { info: phy_info };
                 (zx::Status::OK, Some(resp))
             },
             Err(status) => (status, None),
         })
 }
 
-fn list_ifaces(ifaces: &Arc<IfaceMap>) -> wlan_service::ListIfacesResponse {
+fn list_ifaces(ifaces: &Arc<IfaceMap>) -> fidl_svc::ListIfacesResponse {
     let list = ifaces
         .get_snapshot()
         .iter()
         .map(|(iface_id, iface)| {
-            wlan_service::IfaceListItem {
+            fidl_svc::IfaceListItem {
                 iface_id: *iface_id,
                 path: iface.device.path().to_string_lossy().into_owned(),
             }
         })
         .collect();
-    wlan_service::ListIfacesResponse{ ifaces: list }
+    fidl_svc::ListIfacesResponse{ ifaces: list }
 }
 
-fn create_iface(phys: &Arc<PhyMap>, req: wlan_service::CreateIfaceRequest)
-    -> impl Future<Output = (zx::Status, Option<wlan_service::CreateIfaceResponse>)>
+fn create_iface(phys: &Arc<PhyMap>, req: fidl_svc::CreateIfaceRequest)
+    -> impl Future<Output = (zx::Status, Option<fidl_svc::CreateIfaceResponse>)>
 {
     future::ready(phys.get(&req.phy_id)
         .map(|phy| phy.proxy.clone())
         .ok_or(zx::Status::NOT_FOUND))
         .and_then(move |proxy| {
-            let mut phy_req = wlan::CreateIfaceRequest { role: req.role };
+            let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role };
             proxy.create_iface(&mut phy_req)
                 .map_err(move |e| {
                     error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
@@ -183,7 +185,7 @@ fn create_iface(phys: &Arc<PhyMap>, req: wlan_service::CreateIfaceRequest)
         .map(|r| match r {
             Ok(iface_id) => {
                 // TODO(gbonik): this is not the ID that we want to return
-                let resp = wlan_service::CreateIfaceResponse { iface_id };
+                let resp = fidl_svc::CreateIfaceResponse { iface_id };
                 (zx::Status::OK, Some(resp))
             },
             Err(status) => (status, None),
@@ -221,23 +223,20 @@ fn get_iface_stats(ifaces: &Arc<IfaceMap>, iface_id: u16)
 
 #[cfg(test)]
 mod tests {
-    use async;
-    use device::{self, PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+    use super::*;
+
     use fidl::endpoints2::create_endpoints;
-    use fidl_sme;
-    use futures::prelude::*;
+    use fidl_fuchsia_wlan_device::{PhyRequest, PhyRequestStream};
+    use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
+    use fidl_fuchsia_wlan_sme as fidl_sme;
+    use fuchsia_wlan_dev as wlan_dev;
     use futures::channel::mpsc;
-    use station;
-    use stats_scheduler::{self, StatsRequest};
-    use std::sync::Arc;
-    use wlan::{self, PhyRequest, PhyRequestStream};
-    use wlan_service::{self, IfaceListItem, PhyListItem};
-    use wlan_dev;
-    use zx;
+
+    use crate::stats_scheduler::{self, StatsRequest};
 
     #[test]
     fn list_two_phys() {
-        let _exec = async::Executor::new().expect("Failed to create an executor");
+        let _exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy_null, _phy_null_stream) = fake_phy("/dev/null");
@@ -254,7 +253,7 @@ mod tests {
 
     #[test]
     fn query_phy_success() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -273,7 +272,7 @@ mod tests {
         };
 
         // Reply with a fake phy info
-        responder.send(&mut wlan::QueryResponse {
+        responder.send(&mut fidl_wlan_dev::QueryResponse {
             status: zx::sys::ZX_OK,
             info: fake_phy_info(),
         }).expect("failed to send QueryResponse");
@@ -288,7 +287,7 @@ mod tests {
 
     #[test]
     fn query_phy_not_found() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
@@ -299,7 +298,7 @@ mod tests {
 
     #[test]
     fn list_two_ifaces() {
-        let _exec = async::Executor::new().expect("Failed to create an executor");
+        let _exec = fasync::Executor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
         let iface_null = fake_client_iface("/dev/null");
@@ -316,7 +315,7 @@ mod tests {
 
     #[test]
     fn create_iface_success() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
@@ -325,9 +324,9 @@ mod tests {
 
         // Initiate a CreateIface request. The returned future should not be able
         // to produce a result immediately
-        let mut create_fut = super::create_iface(&phy_map, wlan_service::CreateIfaceRequest {
+        let mut create_fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
             phy_id: 10,
-            role: wlan::MacRole::Client,
+            role: fidl_wlan_dev::MacRole::Client,
         });
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut create_fut));
 
@@ -341,10 +340,10 @@ mod tests {
 
         // Since we requested the Client role, the request to the phy should also have
         // the Client role
-        assert_eq!(wlan::MacRole::Client, req.role);
+        assert_eq!(fidl_wlan_dev::MacRole::Client, req.role);
 
         // Pretend that we created an interface device with id 123 and send a response
-        responder.send(&mut wlan::CreateIfaceResponse {
+        responder.send(&mut fidl_wlan_dev::CreateIfaceResponse {
             status: zx::sys::ZX_OK,
             iface_id: 123,
         }).expect("failed to send CreateIfaceResponse");
@@ -361,13 +360,13 @@ mod tests {
 
     #[test]
     fn create_iface_not_found() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
-        let mut fut = super::create_iface(&phy_map, wlan_service::CreateIfaceRequest {
+        let mut fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
             phy_id: 10,
-            role: wlan::MacRole::Client,
+            role: fidl_wlan_dev::MacRole::Client,
         });
         assert_eq!(Poll::Ready((zx::Status::NOT_FOUND, None)),
                    exec.run_until_stalled(&mut fut));
@@ -375,7 +374,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_success() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -405,7 +404,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_not_found() {
-        let mut _exec = async::Executor::new().expect("Failed to create an executor");
+        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -415,7 +414,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_wrong_role() {
-        let mut _exec = async::Executor::new().expect("Failed to create an executor");
+        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -427,7 +426,7 @@ mod tests {
     }
 
     fn fake_phy(path: &str) -> (PhyDevice, PhyRequestStream) {
-        let (proxy, server) = create_endpoints::<wlan::PhyMarker>()
+        let (proxy, server) = create_endpoints::<fidl_wlan_dev::PhyMarker>()
             .expect("fake_phy: create_endpoints() failed");
         let device = wlan_dev::Device::new(path).expect(&format!("fake_phy: failed to open {}", path));
         let stream = server.into_stream().expect("fake_phy: failed to create stream");
@@ -477,8 +476,8 @@ mod tests {
         }
     }
 
-    fn fake_phy_info() -> wlan::PhyInfo {
-        wlan::PhyInfo {
+    fn fake_phy_info() -> fidl_wlan_dev::PhyInfo {
+        fidl_wlan_dev::PhyInfo {
             id: 10,
             dev_path: Some("/dev/null".to_string()),
             hw_mac_address: [ 0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b ],

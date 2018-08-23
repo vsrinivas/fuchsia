@@ -8,29 +8,6 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-#[macro_use] extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_cobalt as cobalt;
-extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
-extern crate fidl_fuchsia_wlan_device as wlan;
-extern crate fidl_fuchsia_wlan_device_service as wlan_service;
-extern crate fidl_fuchsia_wlan_sme as fidl_sme;
-extern crate fidl_fuchsia_wlan_stats as fidl_stats;
-extern crate fuchsia_app as component;
-#[macro_use] extern crate fuchsia_async as async;
-extern crate fuchsia_vfs_watcher as vfs_watcher;
-extern crate fuchsia_wlan_dev as wlan_dev;
-extern crate fuchsia_zircon as zx;
-#[macro_use] extern crate futures;
-#[macro_use]
-extern crate log;
-extern crate parking_lot;
-#[macro_use] extern crate pin_utils;
-extern crate wlan_sme;
-
-#[cfg(test)] extern crate fidl_fuchsia_wlan_tap as fidl_wlantap;
-#[cfg(test)] extern crate wlantap_client;
-
 mod device;
 mod device_watch;
 mod future_util;
@@ -42,15 +19,18 @@ mod telemetry;
 mod watchable_map;
 mod watcher_service;
 
-use component::server::ServicesServer;
-use device::{PhyDevice, PhyMap, IfaceDevice, IfaceMap};
-use failure::{Error, ResultExt};
+use failure::{Error, format_err, ResultExt};
 use fidl::endpoints2::ServiceMarker;
+use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
 use futures::prelude::*;
 use futures::channel::mpsc::{self, UnboundedReceiver};
+use log::{info, log};
 use std::sync::Arc;
-use watchable_map::MapEvent;
-use wlan_service::DeviceServiceMarker;
+
+use crate::device::{PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+use crate::watchable_map::MapEvent;
 
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
@@ -71,7 +51,7 @@ fn main() -> Result<(), Error> {
 
     info!("Starting");
 
-    let mut exec = async::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::Executor::new().context("error creating event loop")?;
 
     let (phys, phy_events) = device::PhyMap::new();
     let (ifaces, iface_events) = device::IfaceMap::new();

@@ -2,27 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async::Timer;
-use device_watch::{self, NewIfaceDevice};
-use failure::{Error, ResultExt};
-use fidl_mlme::{self, DeviceQueryConfirm, MlmeEventStream};
-use future_util::ConcurrentTasks;
+use failure::{bail, Error, format_err, ResultExt};
+use fidl_fuchsia_wlan_device as fidl_wlan_dev;
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceQueryConfirm, MlmeEventStream};
+use fuchsia_async::Timer;
+use fuchsia_wlan_dev as wlan_dev;
+use fuchsia_zircon::prelude::*;
 use futures::prelude::*;
 use futures::channel::mpsc;
-use Never;
-use station;
-use stats_scheduler::{self, StatsScheduler};
+use futures::select;
+use log::{error, info, log, warn};
+use pin_utils::pin_mut;
 use std::collections::HashSet;
-use watchable_map::WatchableMap;
-use wlan;
-use wlan_dev;
-use wlan_sme;
-use zx::prelude::*;
-
 use std::sync::Arc;
+use wlan_sme;
+
+use crate::device_watch::{self, NewIfaceDevice};
+use crate::future_util::ConcurrentTasks;
+use crate::Never;
+use crate::station;
+use crate::stats_scheduler::{self, StatsScheduler};
+use crate::watchable_map::WatchableMap;
 
 pub struct PhyDevice {
-    pub proxy: wlan::PhyProxy,
+    pub proxy: fidl_wlan_dev::PhyProxy,
     pub device: wlan_dev::Device,
 }
 

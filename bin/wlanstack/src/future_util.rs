@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use futures::prelude::*;
-use futures::task;
+use futures::ready;
 use futures::stream::{Fuse, Stream, StreamExt};
-use Never;
+use futures::task;
+use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::marker::Unpin;
 use std::mem::PinMut;
+
+use crate::Never;
 
 pub struct GroupAvailable<S, T, E> where S: Stream<Item = Result<T, E>> {
     stream: Fuse<S>,
@@ -115,19 +118,19 @@ impl<T> Future for ConcurrentTasks<T> where T: Future<Output = ()> {
 
 #[cfg(test)]
 mod tests {
-    use async;
-    use async::temp::TempStreamExt;
-    use Never;
-    use futures::prelude::*;
-    use futures::stream;
     use super::*;
+
+    use fuchsia_async::{self as fasync, temp::TempStreamExt};
     use futures::channel::mpsc;
+    use futures::stream;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::Never;
+
     #[test]
     fn empty() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (item, _) = exec.run_singlethreaded(
             stream::empty::<Result<(), Never>>().group_available().try_into_future())
                 .unwrap_or_else(Never::into_any);
@@ -136,7 +139,7 @@ mod tests {
 
     #[test]
     fn pending() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let always_pending = stream::poll_fn(|_cx| Poll::Pending::<Option<Result<(), Never>>>);
         let mut group_available = always_pending.group_available();
         let mut fut = group_available.try_next();
@@ -146,7 +149,7 @@ mod tests {
 
     #[test]
     fn group_available_items() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (send, recv) = mpsc::unbounded();
 
         send.unbounded_send(10i32).unwrap();
@@ -162,7 +165,7 @@ mod tests {
 
     #[test]
     fn buffer_error() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
 
         let mut s = stream::iter(vec![Ok(10i32), Ok(20i32), Err(-30i32)])
             .group_available();
@@ -176,7 +179,7 @@ mod tests {
 
     #[test]
     fn concurrent_tasks() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
 
         let mut tasks = ConcurrentTasks::new();
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));

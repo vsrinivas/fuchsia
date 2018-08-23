@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-use cobalt::{EncoderFactoryMarker, EncoderProxy, ObservationValue, Status, Value};
-use component;
-use device::{IfaceDevice, IfaceMap};
 use failure::{Error, ResultExt};
-use fidl;
-use fidl_stats;
+use fidl_fuchsia_cobalt::{EncoderFactoryMarker, EncoderProxy, ObservationValue, Status, Value};
+use fidl_fuchsia_wlan_stats as fidl_stats;
+use fuchsia_async as fasync;
+use fuchsia_zircon::DurationNum;
+use futures::join;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use log::{error, log};
 use parking_lot::Mutex;
 use std::sync::Arc;
-use zx::DurationNum;
+
+use crate::device::{IfaceDevice, IfaceMap};
 
 const REPORT_PERIOD_MINUTES: i64 = 1;
 
@@ -31,7 +32,7 @@ enum CobaltEncodingId {
 fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
     let (proxy, server_end) =
         fidl::endpoints2::create_endpoints().context("Failed to create endpoints")?;
-    let encoder_factory = component::client::connect_to_service::<EncoderFactoryMarker>()
+    let encoder_factory = fuchsia_app::client::connect_to_service::<EncoderFactoryMarker>()
         .context("Failed to connect to the Cobalt EncoderFactory")?;
     encoder_factory
         .get_encoder(COBALT_PROJECT_ID, server_end)
@@ -41,7 +42,7 @@ fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
 
 // Export DispatcherStats to Cobalt every REPORT_PERIOD_MINUTES.
 pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>) {
-    let mut interval_stream = async::Interval::new(REPORT_PERIOD_MINUTES.minutes());
+    let mut interval_stream = fasync::Interval::new(REPORT_PERIOD_MINUTES.minutes());
     while let Some(_) = await!(interval_stream.next()) {
         let mut futures = FuturesUnordered::new();
         for iface in ifaces_map.get_snapshot().values() {
