@@ -104,13 +104,6 @@ def main():
 
     build_goroot = os.path.abspath(args.go_root)
 
-    # Setting GOROOT is a workaround for https://golang.org/issue/18678:
-    # Go should be able to automagically find itself and derive GOROOT
-    # from that instead of using any compiled in value for GOROOT.
-    # Our in-tree build of Go should have a correct compiled-in GOROOT,
-    # but play it safe. Remove this when we're using Go 1.9 (or above).
-    env['GOROOT'] = build_goroot
-
     if goos == 'fuchsia':
         # These are used by $CC (gccwrap.sh).
         env['ZIRCON'] = os.path.join(args.fuchsia_root, 'zircon')
