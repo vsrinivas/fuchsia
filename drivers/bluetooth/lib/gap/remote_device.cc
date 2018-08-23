@@ -4,9 +4,10 @@
 
 #include "remote_device.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "advertising_data.h"
@@ -29,7 +30,7 @@ std::string ConnectionStateToString(RemoteDevice::ConnectionState state) {
       return "bonded";
   }
 
-  FXL_NOTREACHED();
+  ZX_PANIC("invalid connection state %u", static_cast<unsigned int>(state));
   return "(unknown)";
 }
 
@@ -55,14 +56,14 @@ RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
       temporary_(true),
       rssi_(hci::kRSSIInvalid),
       advertising_data_length_(0u) {
-  FXL_DCHECK(notify_listeners_callback_);
-  FXL_DCHECK(update_expiry_callback_);
-  FXL_DCHECK(!identifier_.empty());
+  ZX_DEBUG_ASSERT(notify_listeners_callback_);
+  ZX_DEBUG_ASSERT(update_expiry_callback_);
+  ZX_DEBUG_ASSERT(!identifier_.empty());
   // TODO(armansito): Add a mechanism for assigning "dual-mode" for technology.
 }
 
 void RemoteDevice::SetLEConnectionState(ConnectionState state) {
-  FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
+  ZX_DEBUG_ASSERT(connectable() || state == ConnectionState::kNotConnected);
 
   if (state == le_connection_state_) {
     bt_log(TRACE, "gap-le", "LE connection state already \"%s\"!",
@@ -82,7 +83,7 @@ void RemoteDevice::SetLEConnectionState(ConnectionState state) {
 }
 
 void RemoteDevice::SetBREDRConnectionState(ConnectionState state) {
-  FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
+  ZX_DEBUG_ASSERT(connectable() || state == ConnectionState::kNotConnected);
 
   if (state == bredr_connection_state_) {
     bt_log(TRACE, "gap-bredr", "BR/EDR connection state already \"%s\"",
@@ -103,8 +104,8 @@ void RemoteDevice::SetBREDRConnectionState(ConnectionState state) {
 
 void RemoteDevice::SetLEAdvertisingData(
     int8_t rssi, const common::ByteBuffer& advertising_data) {
-  FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
-  FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(technology() == TechnologyType::kLowEnergy);
+  ZX_DEBUG_ASSERT(address_.type() != common::DeviceAddress::Type::kBREDR);
   update_expiry_callback_(*this);
 
   // Reallocate the advertising data buffer only if we need more space.
@@ -139,7 +140,7 @@ typename std::enable_if<
     std::is_same<T, hci::InquiryResultRSSI>::value ||
     std::is_same<T, hci::ExtendedInquiryResultEventParams>::value>::type
 RemoteDevice::SetInquiryData(const T& inquiry_result) {
-  FXL_DCHECK(address_.value() == inquiry_result.bd_addr);
+  ZX_DEBUG_ASSERT(address_.value() == inquiry_result.bd_addr);
   update_expiry_callback_(*this);
 
   bool significant_change_common =
@@ -196,7 +197,7 @@ std::string RemoteDevice::ToString() const {
 // Private methods below.
 
 bool RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
-  FXL_DCHECK(bytes.size() <= hci::kExtendedInquiryResponseBytes);
+  ZX_DEBUG_ASSERT(bytes.size() <= hci::kExtendedInquiryResponseBytes);
   update_expiry_callback_(*this);
 
   if (extended_inquiry_response_.size() < bytes.size()) {

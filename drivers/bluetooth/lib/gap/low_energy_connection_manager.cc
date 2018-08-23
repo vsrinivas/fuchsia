@@ -4,6 +4,8 @@
 
 #include "low_energy_connection_manager.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -13,7 +15,6 @@
 #include "garnet/drivers/bluetooth/lib/sm/pairing_state.h"
 #include "garnet/drivers/bluetooth/lib/sm/util.h"
 
-#include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -43,10 +44,10 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
         dispatcher_(dispatcher),
         conn_mgr_(conn_mgr),
         weak_ptr_factory_(this) {
-    FXL_DCHECK(!id_.empty());
-    FXL_DCHECK(link_);
-    FXL_DCHECK(dispatcher_);
-    FXL_DCHECK(conn_mgr_);
+    ZX_DEBUG_ASSERT(!id_.empty());
+    ZX_DEBUG_ASSERT(link_);
+    ZX_DEBUG_ASSERT(dispatcher_);
+    ZX_DEBUG_ASSERT(conn_mgr_);
   }
 
   ~LowEnergyConnection() override {
@@ -61,7 +62,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   LowEnergyConnectionRefPtr AddRef() {
     LowEnergyConnectionRefPtr conn_ref(
         new LowEnergyConnectionRef(id_, handle(), conn_mgr_));
-    FXL_CHECK(conn_ref);
+    ZX_ASSERT(conn_ref);
 
     refs_.insert(conn_ref.get());
 
@@ -72,10 +73,11 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   }
 
   void DropRef(LowEnergyConnectionRef* ref) {
-    FXL_DCHECK(ref);
+    ZX_DEBUG_ASSERT(ref);
 
     __UNUSED size_t res = refs_.erase(ref);
-    FXL_DCHECK(res == 1u) << "DropRef called with wrong connection reference";
+    ZX_DEBUG_ASSERT_MSG(res == 1u,
+                        "DropRef called with wrong connection reference");
     bt_log(TRACE, "gap-le", "dropped ref (handle: %#.4x, count: %lu)", handle(),
            ref_count());
   }
@@ -214,7 +216,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
     // TODO(armansito): Support providing a TK out of band.
     // OnTKRequest() should only be called for legacy pairing.
-    FXL_DCHECK(method == sm::PairingMethod::kJustWorks);
+    ZX_DEBUG_ASSERT(method == sm::PairingMethod::kJustWorks);
 
     delegate->ConfirmPairing(id(),
                              [responder = std::move(responder)](bool confirm) {
@@ -255,21 +257,21 @@ LowEnergyConnectionRef::LowEnergyConnectionRef(
     const std::string& device_id, hci::ConnectionHandle handle,
     fxl::WeakPtr<LowEnergyConnectionManager> manager)
     : active_(true), device_id_(device_id), handle_(handle), manager_(manager) {
-  FXL_DCHECK(!device_id_.empty());
-  FXL_DCHECK(manager_);
-  FXL_DCHECK(handle_);
+  ZX_DEBUG_ASSERT(!device_id_.empty());
+  ZX_DEBUG_ASSERT(manager_);
+  ZX_DEBUG_ASSERT(handle_);
 }
 
 LowEnergyConnectionRef::~LowEnergyConnectionRef() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (active_) {
     Release();
   }
 };
 
 void LowEnergyConnectionRef::Release() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(active_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(active_);
   active_ = false;
   if (manager_) {
     manager_->ReleaseReference(this);
@@ -294,7 +296,7 @@ LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
 
 void LowEnergyConnectionManager::PendingRequestData::NotifyCallbacks(
     hci::Status status, const RefFunc& func) {
-  FXL_DCHECK(!callbacks_.empty());
+  ZX_DEBUG_ASSERT(!callbacks_.empty());
   for (const auto& callback : callbacks_) {
     callback(status, func());
   }
@@ -312,12 +314,12 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
       gatt_(gatt),
       connector_(connector),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(device_cache_);
-  FXL_DCHECK(l2cap_);
-  FXL_DCHECK(gatt_);
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(connector_);
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(device_cache_);
+  ZX_DEBUG_ASSERT(l2cap_);
+  ZX_DEBUG_ASSERT(gatt_);
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(connector_);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
 
@@ -401,8 +403,8 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
   // either success of failure).
   auto pending_iter = pending_requests_.find(device_identifier);
   if (pending_iter != pending_requests_.end()) {
-    FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
-    FXL_DCHECK(connector_->request_pending());
+    ZX_DEBUG_ASSERT(connections_.find(device_identifier) == connections_.end());
+    ZX_DEBUG_ASSERT(connector_->request_pending());
 
     pending_iter->second.AddCallback(std::move(callback));
     return true;
@@ -458,7 +460,7 @@ bool LowEnergyConnectionManager::Disconnect(
 LowEnergyConnectionRefPtr
 LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
     hci::ConnectionPtr link) {
-  FXL_DCHECK(link);
+  ZX_DEBUG_ASSERT(link);
   bt_log(TRACE, "gap-le", "new remote-initiated link (local addr: %s): %s",
          link->local_address().ToString().c_str(), link->ToString().c_str());
 
@@ -492,10 +494,10 @@ void LowEnergyConnectionManager::SetDisconnectCallbackForTesting(
 
 void LowEnergyConnectionManager::ReleaseReference(
     LowEnergyConnectionRef* conn_ref) {
-  FXL_DCHECK(conn_ref);
+  ZX_DEBUG_ASSERT(conn_ref);
 
   auto iter = connections_.find(conn_ref->device_identifier());
-  FXL_DCHECK(iter != connections_.end());
+  ZX_DEBUG_ASSERT(iter != connections_.end());
 
   iter->second->DropRef(conn_ref);
   if (iter->second->ref_count() != 0u)
@@ -546,7 +548,7 @@ void LowEnergyConnectionManager::TryCreateNextConnection() {
 }
 
 void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
-  FXL_DCHECK(peer);
+  ZX_DEBUG_ASSERT(peer);
 
   // During the initial connection to a peripheral we use the initial high
   // duty-cycle parameters to ensure that initiating procedures (bonding,
@@ -579,8 +581,8 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
 
 LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
     const std::string& device_id, std::unique_ptr<hci::Connection> link) {
-  FXL_DCHECK(link);
-  FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
+  ZX_DEBUG_ASSERT(link);
+  ZX_DEBUG_ASSERT(link->ll_type() == hci::Connection::LinkType::kLE);
 
   // TODO(armansito): For now reject having more than one link with the same
   // peer. This should change once this has more context on the local
@@ -642,11 +644,11 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::AddConnectionRef(
 
 void LowEnergyConnectionManager::CleanUpConnection(
     std::unique_ptr<internal::LowEnergyConnection> conn, bool close_link) {
-  FXL_DCHECK(conn);
+  ZX_DEBUG_ASSERT(conn);
 
   // Mark the peer device as no longer connected.
   RemoteDevice* peer = device_cache_->FindDeviceById(conn->id());
-  FXL_DCHECK(peer);
+  ZX_DEBUG_ASSERT(peer);
   peer->SetLEConnectionState(RemoteDevice::ConnectionState::kNotConnected);
 
   // Clean up GATT profile.
@@ -670,8 +672,8 @@ void LowEnergyConnectionManager::CleanUpConnection(
 
 void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
     std::unique_ptr<hci::Connection> link) {
-  FXL_DCHECK(link);
-  FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
+  ZX_DEBUG_ASSERT(link);
+  ZX_DEBUG_ASSERT(link->ll_type() == hci::Connection::LinkType::kLE);
   bt_log(INFO, "gap-le", "new connection %s", link->ToString().c_str());
 
   RemoteDevice* peer = UpdateRemoteDeviceWithLink(*link);
@@ -683,10 +685,10 @@ void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
   auto first_ref = InitializeConnection(peer->identifier(), std::move(link));
 
   // We take care never to initiate more than one connection to the same peer.
-  FXL_DCHECK(first_ref);
+  ZX_DEBUG_ASSERT(first_ref);
 
   auto conn_iter = connections_.find(peer->identifier());
-  FXL_DCHECK(conn_iter != connections_.end());
+  ZX_DEBUG_ASSERT(conn_iter != connections_.end());
 
   // For now, jump to the initialized state.
   peer->SetLEConnectionState(RemoteDevice::ConnectionState::kConnected);
@@ -705,7 +707,7 @@ void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
   // will disconnect the link if no callback retained its reference.
   first_ref = nullptr;
 
-  FXL_DCHECK(!connector_->request_pending());
+  ZX_DEBUG_ASSERT(!connector_->request_pending());
   TryCreateNextConnection();
 }
 
@@ -726,7 +728,7 @@ RemoteDevice* LowEnergyConnectionManager::UpdateRemoteDeviceWithLink(
 void LowEnergyConnectionManager::OnConnectResult(
     const std::string& device_identifier, hci::Status status,
     hci::ConnectionPtr link) {
-  FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
+  ZX_DEBUG_ASSERT(connections_.find(device_identifier) == connections_.end());
 
   if (status) {
     bt_log(TRACE, "gap-le", "connection request successful");
@@ -738,12 +740,12 @@ void LowEnergyConnectionManager::OnConnectResult(
   bt_log(ERROR, "gap-le", "failed to connect to device (id: %s)",
          device_identifier.c_str());
   RemoteDevice* dev = device_cache_->FindDeviceById(device_identifier);
-  FXL_CHECK(dev);
+  ZX_ASSERT(dev);
   dev->SetLEConnectionState(RemoteDevice::ConnectionState::kNotConnected);
 
   // Notify the matching pending callbacks about the failure.
   auto iter = pending_requests_.find(device_identifier);
-  FXL_DCHECK(iter != pending_requests_.end());
+  ZX_DEBUG_ASSERT(iter != pending_requests_.end());
 
   // Remove the entry from |pending_requests_| before notifying callbacks.
   auto pending_req_data = std::move(iter->second);
@@ -751,13 +753,13 @@ void LowEnergyConnectionManager::OnConnectResult(
   pending_req_data.NotifyCallbacks(status, [] { return nullptr; });
 
   // Process the next pending attempt.
-  FXL_DCHECK(!connector_->request_pending());
+  ZX_DEBUG_ASSERT(!connector_->request_pending());
   TryCreateNextConnection();
 }
 
 void LowEnergyConnectionManager::OnDisconnectionComplete(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kDisconnectionCompleteEventCode);
   const auto& params =
       event.view().payload<hci::DisconnectionCompleteEventParams>();
   hci::ConnectionHandle handle = le16toh(params.connection_handle);
@@ -790,7 +792,7 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
   auto conn = std::move(iter->second);
   connections_.erase(iter);
 
-  FXL_DCHECK(conn->ref_count());
+  ZX_DEBUG_ASSERT(conn->ref_count());
 
   // The connection is already closed, so no need to send HCI_Disconnect.
   CleanUpConnection(std::move(conn), false /* close_link */);
@@ -798,13 +800,14 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
 
 void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
-  FXL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
-             hci::kLEConnectionUpdateCompleteSubeventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kLEMetaEventCode);
+  ZX_DEBUG_ASSERT(
+      event.view().payload<hci::LEMetaEventParams>().subevent_code ==
+      hci::kLEConnectionUpdateCompleteSubeventCode);
 
   auto payload =
       event.le_event_params<hci::LEConnectionUpdateCompleteSubeventParams>();
-  FXL_CHECK(payload);
+  ZX_ASSERT(payload);
   hci::ConnectionHandle handle = le16toh(payload->connection_handle);
 
   if (payload->status != hci::StatusCode::kSuccess) {
@@ -824,7 +827,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
   }
 
   const auto& conn = *iter->second;
-  FXL_DCHECK(conn.handle() == handle);
+  ZX_DEBUG_ASSERT(conn.handle() == handle);
 
   bt_log(INFO, "gap-le", "conn. parameters updated (id: %s, handle: %#.4x)",
          conn.id().c_str(), handle);
@@ -886,7 +889,7 @@ void LowEnergyConnectionManager::UpdateConnectionParams(
   event_params->maximum_ce_length = 0x0000;
 
   auto status_cb = [handle](auto id, const hci::EventPacket& event) {
-    FXL_DCHECK(event.event_code() == hci::kCommandStatusEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() == hci::kCommandStatusEventCode);
 
     // Warn if the command failed.
     hci_is_error(event, TRACE, "gap-le",

@@ -198,7 +198,7 @@ std::unique_ptr<btlib::hci::EventPacket> VendorHci::ReadEventPacket() const {
     return nullptr;
   }
 
-  FXL_DCHECK(observed & ZX_CHANNEL_READABLE);
+  ZX_DEBUG_ASSERT(observed & ZX_CHANNEL_READABLE);
 
   // Allocate a buffer for the event. We don't know the size
   // beforehand we allocate the largest possible buffer.

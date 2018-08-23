@@ -35,8 +35,8 @@ void ChannelImpl::Activate(RxCallback rx_callback,
 }
 
 void ChannelImpl::Send(common::ByteBufferPtr data) {
-  FXL_DCHECK(session_);
-  FXL_DCHECK(rx_callback_) << "Must call Activate() first";
+  ZX_DEBUG_ASSERT(session_);
+  ZX_DEBUG_ASSERT_MSG(rx_callback_, "must call Activate() first");
   session_->SendUserData(dlci_, std::move(data));
 }
 

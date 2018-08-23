@@ -36,7 +36,7 @@ ctrl::TechnologyType TechnologyTypeToFidl(::btlib::gap::TechnologyType type) {
     case ::btlib::gap::TechnologyType::kDualMode:
       return ctrl::TechnologyType::DUAL_MODE;
     default:
-      FXL_NOTREACHED();
+      ZX_PANIC("invalid technology type: %u", static_cast<unsigned int>(type));
       break;
   }
 
@@ -89,7 +89,7 @@ btlib::common::DeviceAddress::Type NewAddrType(
     case ctrl::AddressType::BREDR:
       return btlib::common::DeviceAddress::Type::kBREDR;
     default:
-      FXL_NOTREACHED();
+      ZX_PANIC("invalid address type: %u", static_cast<unsigned int>(type));
       break;
   }
   return btlib::common::DeviceAddress::Type::kBREDR;
@@ -240,7 +240,7 @@ bool IsScanFilterValid(const ble::ScanFilter& fidl_filter) {
 
 bool PopulateDiscoveryFilter(const ble::ScanFilter& fidl_filter,
                              ::btlib::gap::DiscoveryFilter* out_filter) {
-  FXL_DCHECK(out_filter);
+  ZX_DEBUG_ASSERT(out_filter);
 
   if (fidl_filter.service_uuids) {
     std::vector<::btlib::common::UUID> uuids;

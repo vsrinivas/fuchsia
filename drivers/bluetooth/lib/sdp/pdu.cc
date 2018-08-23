@@ -25,7 +25,7 @@ namespace {
 // Returns true if the continuation state is valid here, false otherwise.
 // Sets |out| to point to it if present and valid.
 bool ValidContinuationState(const ByteBuffer& buf, BufferView* out) {
-  FXL_DCHECK(out);
+  ZX_DEBUG_ASSERT(out);
   if (buf.size() == 0) {
     return false;
   }
@@ -59,13 +59,13 @@ common::MutableByteBufferPtr GetNewPDU(OpCode pdu_id, TransactionId tid,
 Request::Request() { cont_state_.Fill(0); }
 
 void Request::SetContinuationState(const ByteBuffer& buf) {
-  FXL_DCHECK(buf.size() < kMaxContStateLength);
+  ZX_DEBUG_ASSERT(buf.size() < kMaxContStateLength);
   cont_state_[0] = buf.size();
   if (cont_state_[0] == 0) {
     return;
   }
   size_t copied = buf.Copy(&cont_state_, sizeof(uint8_t), buf.size());
-  FXL_DCHECK(copied == buf.size());
+  ZX_DEBUG_ASSERT(copied == buf.size());
 }
 
 bool Request::ParseContinuationState(const ByteBuffer& buf) {
@@ -78,7 +78,7 @@ bool Request::ParseContinuationState(const ByteBuffer& buf) {
 }
 
 size_t Request::WriteContinuationState(MutableByteBuffer* buf) const {
-  FXL_DCHECK(buf->size() > cont_info_size());
+  ZX_DEBUG_ASSERT(buf->size() > cont_info_size());
   size_t written_size = sizeof(uint8_t) + cont_info_size();
   buf->Write(cont_state_.view(0, written_size));
   return written_size;

@@ -9,6 +9,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -149,7 +150,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   struct PendingCallback {
     PendingCallback(T callback, async_dispatcher_t* dispatcher)
         : callback(std::move(callback)), dispatcher(dispatcher) {
-      FXL_DCHECK(this->callback);
+      ZX_DEBUG_ASSERT(this->callback);
     }
 
     T callback;
@@ -202,7 +203,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // Returns true if characteristic discovery has completed. This must be
   // accessed only through |gatt_dispatcher_|.
   inline bool HasCharacteristics() const {
-    FXL_DCHECK(IsOnGattThread());
+    ZX_DEBUG_ASSERT(IsOnGattThread());
     return remaining_descriptor_requests_ == 0u;
   }
 

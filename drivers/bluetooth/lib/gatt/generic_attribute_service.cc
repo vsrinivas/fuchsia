@@ -4,6 +4,8 @@
 
 #include "generic_attribute_service.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
@@ -28,8 +30,8 @@ GenericAttributeService::GenericAttributeService(
     SendIndicationCallback send_indication_callback)
   : local_service_manager_(local_service_manager),
     send_indication_callback_(std::move(send_indication_callback)) {
-  FXL_DCHECK(local_service_manager != nullptr);
-  FXL_DCHECK(send_indication_callback_);
+  ZX_DEBUG_ASSERT(local_service_manager != nullptr);
+  ZX_DEBUG_ASSERT(send_indication_callback_);
 
   Register();
 }
@@ -55,10 +57,10 @@ void GenericAttributeService::Register() {
                                            types::kGenericAttributeService);
   service->AddCharacteristic(std::move(service_changed_chr));
 
-  ClientConfigCallback ccc_callback =
-    [this](IdType service_id, IdType chrc_id, const std::string& peer_id,
-           bool notify, bool indicate) {
-    FXL_DCHECK(chrc_id == 0u);
+  ClientConfigCallback ccc_callback = [this](IdType service_id, IdType chrc_id,
+                                             const std::string& peer_id,
+                                             bool notify, bool indicate) {
+    ZX_DEBUG_ASSERT(chrc_id == 0u);
 
     // Discover the handle assigned to this characteristic if necessary.
     if (svc_changed_handle_ == att::kInvalidHandle) {
@@ -86,7 +88,7 @@ void GenericAttributeService::Register() {
   service_id_ = local_service_manager_->RegisterService(
       std::move(service), NopReadHandler, NopWriteHandler,
       std::move(ccc_callback));
-  FXL_DCHECK(service_id_ != kInvalidId);
+  ZX_DEBUG_ASSERT(service_id_ != kInvalidId);
   local_service_manager_->set_service_changed_callback(
       fit::bind_member(this, &GenericAttributeService::OnServiceChanged));
 }

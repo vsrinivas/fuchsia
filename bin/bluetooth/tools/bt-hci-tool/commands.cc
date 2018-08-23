@@ -200,8 +200,8 @@ void DisplayAdvertisingReport(const ::btlib::hci::LEAdvertisingReportData& data,
 }
 
 void DisplayInquiryResult(const ::btlib::hci::InquiryResult& result) {
-  std::cout << "  Result: " << result.bd_addr << " (" << result.class_of_device
-            << ")" << std::endl;
+  std::cout << "  Result: " << result.bd_addr.ToString() << " ("
+            << result.class_of_device.ToString() << ")" << std::endl;
 }
 
 bool HandleVersionInfo(const CommandData* cmd_data,

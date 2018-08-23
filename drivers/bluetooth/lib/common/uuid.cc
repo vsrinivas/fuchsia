@@ -7,9 +7,9 @@
 #include <cinttypes>
 
 #include <endian.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -41,7 +41,7 @@ constexpr size_t k128BitSize = 16;
 // place, I've decided that it sucks. I'm explicitly naming this using the
 // "Uuid" style as a reminder to fix style elsewhere.
 bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
-  FXL_DCHECK(out_bytes);
+  ZX_DEBUG_ASSERT(out_bytes);
 
   if (uuid_string.length() == 4) {
     // Possibly a 16-bit short UUID, parse it in context of the Base UUID.
@@ -173,7 +173,7 @@ const BufferView UUID::CompactView(bool allow_32bit) const {
 }
 
 std::size_t UUID::Hash() const {
-  FXL_DCHECK(sizeof(value_) % sizeof(size_t) == 0);
+  ZX_DEBUG_ASSERT(sizeof(value_) % sizeof(size_t) == 0);
   size_t hash = 0;
   for (size_t i = 0; i < (sizeof(value_) / sizeof(size_t)); i++) {
     hash ^=
@@ -183,14 +183,14 @@ std::size_t UUID::Hash() const {
 }
 
 uint16_t UUID::ValueAs16Bit() const {
-  FXL_DCHECK(type_ == Type::k16Bit);
+  ZX_DEBUG_ASSERT(type_ == Type::k16Bit);
 
   return le16toh(
       *reinterpret_cast<const uint16_t*>(value_.data() + kBaseOffset));
 }
 
 uint32_t UUID::ValueAs32Bit() const {
-  FXL_DCHECK(type_ != Type::k128Bit);
+  ZX_DEBUG_ASSERT(type_ != Type::k128Bit);
 
   return le32toh(
       *reinterpret_cast<const uint32_t*>(value_.data() + kBaseOffset));
@@ -202,7 +202,7 @@ bool IsStringValidUuid(const std::string& uuid_string) {
 }
 
 bool StringToUuid(const std::string& uuid_string, UUID* out_uuid) {
-  FXL_DCHECK(out_uuid);
+  ZX_DEBUG_ASSERT(out_uuid);
 
   UInt128 bytes;
   if (!ParseUuidString(uuid_string, &bytes))

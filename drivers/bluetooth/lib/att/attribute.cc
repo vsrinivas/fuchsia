@@ -34,16 +34,16 @@ Attribute::Attribute(AttributeGrouping* group,
       type_(type),
       read_reqs_(read_reqs),
       write_reqs_(write_reqs) {
-  FXL_DCHECK(group_);
-  FXL_DCHECK(is_initialized());
+  ZX_DEBUG_ASSERT(group_);
+  ZX_DEBUG_ASSERT(is_initialized());
 }
 
 Attribute::Attribute() : handle_(kInvalidHandle) {}
 
 void Attribute::SetValue(const common::ByteBuffer& value) {
-  FXL_DCHECK(value.size());
-  FXL_DCHECK(value.size() <= kMaxAttributeValueLength);
-  FXL_DCHECK(!write_reqs_.allowed());
+  ZX_DEBUG_ASSERT(value.size());
+  ZX_DEBUG_ASSERT(value.size() <= kMaxAttributeValueLength);
+  ZX_DEBUG_ASSERT(!write_reqs_.allowed());
   value_ = common::DynamicByteBuffer(value);
 }
 
@@ -79,9 +79,9 @@ AttributeGrouping::AttributeGrouping(const common::UUID& group_type,
                                      size_t attr_count,
                                      const common::ByteBuffer& decl_value)
     : start_handle_(start_handle), active_(false) {
-  FXL_DCHECK(start_handle_ != kInvalidHandle);
-  FXL_DCHECK(kHandleMax - start_handle > attr_count);
-  FXL_DCHECK(decl_value.size());
+  ZX_DEBUG_ASSERT(start_handle_ != kInvalidHandle);
+  ZX_DEBUG_ASSERT(kHandleMax - start_handle > attr_count);
+  ZX_DEBUG_ASSERT(decl_value.size());
 
   end_handle_ = start_handle + attr_count;
   attributes_.reserve(attr_count + 1);
@@ -102,7 +102,7 @@ Attribute* AttributeGrouping::AddAttribute(
   if (complete())
     return nullptr;
 
-  FXL_DCHECK(attributes_[attributes_.size() - 1].handle() < end_handle_);
+  ZX_DEBUG_ASSERT(attributes_[attributes_.size() - 1].handle() < end_handle_);
 
   Handle handle = start_handle_ + attributes_.size();
   attributes_.push_back(Attribute(this, handle, type, read_reqs, write_reqs));

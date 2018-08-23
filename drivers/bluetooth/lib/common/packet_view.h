@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 
@@ -69,8 +69,8 @@ class PacketView {
   // |payload_size| value of 0 indicates that the packet contains no payload.
   explicit PacketView(const ByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
-    FXL_CHECK(buffer_);
-    FXL_CHECK(buffer_->size() >= size_);
+    ZX_ASSERT(buffer_);
+    ZX_ASSERT(buffer_->size() >= size_);
   }
 
   const BufferView data() const { return buffer_->view(0, size_); }
@@ -82,18 +82,18 @@ class PacketView {
   size_t payload_size() const { return size() - sizeof(HeaderType); }
 
   const uint8_t* payload_bytes() const {
-    FXL_CHECK(is_valid());
+    ZX_ASSERT(is_valid());
     return payload_size() ? buffer_->data() + sizeof(HeaderType) : nullptr;
   }
 
   const HeaderType& header() const {
-    FXL_CHECK(is_valid());
+    ZX_ASSERT(is_valid());
     return *reinterpret_cast<const HeaderType*>(buffer_->data());
   }
 
   template <typename PayloadType>
   const PayloadType& payload() const {
-    FXL_CHECK(sizeof(PayloadType) <= payload_size());
+    ZX_ASSERT(sizeof(PayloadType) <= payload_size());
     return *reinterpret_cast<const PayloadType*>(payload_bytes());
   }
 
@@ -114,9 +114,9 @@ class PacketView {
 
  protected:
   void set_size(size_t size) {
-    FXL_CHECK(buffer_);
-    FXL_CHECK(buffer_->size() >= size);
-    FXL_CHECK(size >= sizeof(HeaderType));
+    ZX_ASSERT(buffer_);
+    ZX_ASSERT(buffer_->size() >= size);
+    ZX_ASSERT(size >= sizeof(HeaderType));
     size_ = size;
   }
 
@@ -157,7 +157,7 @@ class MutablePacketView : public PacketView<HeaderType> {
 
   template <typename PayloadType>
   PayloadType* mutable_payload() {
-    FXL_CHECK(sizeof(PayloadType) <= this->payload_size());
+    ZX_ASSERT(sizeof(PayloadType) <= this->payload_size());
     return reinterpret_cast<PayloadType*>(mutable_payload_bytes());
   }
 

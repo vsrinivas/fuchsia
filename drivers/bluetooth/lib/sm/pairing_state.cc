@@ -65,7 +65,7 @@ bool PairingState::LegacyState::WaitingForTK() const {
 }
 
 bool PairingState::LegacyState::RequestedKeysObtained() const {
-  FXL_DCHECK(features);
+  ZX_DEBUG_ASSERT(features);
 
   // Return true if we expect no keys from the remote.
   return !features->remote_key_distribution ||
@@ -73,22 +73,22 @@ bool PairingState::LegacyState::RequestedKeysObtained() const {
 }
 
 bool PairingState::LegacyState::ShouldReceiveLTK() const {
-  FXL_DCHECK(features);
+  ZX_DEBUG_ASSERT(features);
   return (features->remote_key_distribution & KeyDistGen::kEncKey);
 }
 
 bool PairingState::LegacyState::ShouldReceiveIdentity() const {
-  FXL_DCHECK(features);
+  ZX_DEBUG_ASSERT(features);
   return (features->remote_key_distribution & KeyDistGen::kIdKey);
 }
 
 bool PairingState::LegacyState::ShouldSendLTK() const {
-  FXL_DCHECK(features);
+  ZX_DEBUG_ASSERT(features);
   return (features->local_key_distribution & KeyDistGen::kEncKey);
 }
 
 bool PairingState::LegacyState::ShouldSendIdentity() const {
-  FXL_DCHECK(features);
+  ZX_DEBUG_ASSERT(features);
   return (features->local_key_distribution & KeyDistGen::kIdKey);
 }
 
@@ -108,12 +108,12 @@ PairingState::PairingState(fxl::WeakPtr<hci::Connection> link,
       delegate_(delegate),
       le_link_(link),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(delegate_);
-  FXL_DCHECK(le_link_);
-  FXL_DCHECK(smp);
-  FXL_DCHECK(link->handle() == smp->link_handle());
-  FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
-  FXL_DCHECK(smp->id() == l2cap::kLESMPChannelId);
+  ZX_DEBUG_ASSERT(delegate_);
+  ZX_DEBUG_ASSERT(le_link_);
+  ZX_DEBUG_ASSERT(smp);
+  ZX_DEBUG_ASSERT(link->handle() == smp->link_handle());
+  ZX_DEBUG_ASSERT(link->ll_type() == hci::Connection::LinkType::kLE);
+  ZX_DEBUG_ASSERT(smp->id() == l2cap::kLESMPChannelId);
 
   // Set up SMP data bearer.
   // TODO(armansito): Enable SC when we support it.
@@ -142,7 +142,7 @@ void PairingState::UpdateSecurity(SecurityLevel level,
   // If pairing is in progress then we queue the request.
   if (legacy_state_) {
     bt_log(SPEW, "sm", "LE legacy pairing in progress; request queued");
-    FXL_DCHECK(le_smp_->pairing_started());
+    ZX_DEBUG_ASSERT(le_smp_->pairing_started());
     request_queue_.emplace(level, std::move(callback));
     return;
   }
@@ -164,8 +164,8 @@ void PairingState::UpdateSecurity(SecurityLevel level,
 }
 
 void PairingState::AbortLegacyPairing(ErrorCode error_code) {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(le_smp_->pairing_started());
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(le_smp_->pairing_started());
 
   le_smp_->Abort(error_code);
 
@@ -173,8 +173,8 @@ void PairingState::AbortLegacyPairing(ErrorCode error_code) {
 }
 
 void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
-  FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
-  FXL_DCHECK(!legacy_state_) << "already pairing!";
+  ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kMaster);
+  ZX_DEBUG_ASSERT_MSG(!legacy_state_, "already pairing!");
 
   if (level == SecurityLevel::kAuthenticated) {
     le_smp_->set_mitm_required(true);
@@ -196,17 +196,17 @@ void PairingState::Abort() {
 
 void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
                                             const ByteBuffer& pres) {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->WaitingForTK());
-  FXL_DCHECK(!legacy_state_->features->secure_connections);
-  FXL_DCHECK(!legacy_state_->has_tk);
-  FXL_DCHECK(!legacy_state_->has_peer_confirm);
-  FXL_DCHECK(!legacy_state_->has_peer_rand);
-  FXL_DCHECK(!legacy_state_->sent_local_confirm);
-  FXL_DCHECK(!legacy_state_->sent_local_rand);
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_->WaitingForTK());
+  ZX_DEBUG_ASSERT(!legacy_state_->features->secure_connections);
+  ZX_DEBUG_ASSERT(!legacy_state_->has_tk);
+  ZX_DEBUG_ASSERT(!legacy_state_->has_peer_confirm);
+  ZX_DEBUG_ASSERT(!legacy_state_->has_peer_rand);
+  ZX_DEBUG_ASSERT(!legacy_state_->sent_local_confirm);
+  ZX_DEBUG_ASSERT(!legacy_state_->sent_local_rand);
   // Cache |preq| and |pres|. These are used for confirm value generation.
-  FXL_DCHECK(preq.size() == legacy_state_->preq.size());
-  FXL_DCHECK(pres.size() == legacy_state_->pres.size());
+  ZX_DEBUG_ASSERT(preq.size() == legacy_state_->preq.size());
+  ZX_DEBUG_ASSERT(pres.size() == legacy_state_->pres.size());
   preq.Copy(&legacy_state_->preq);
   pres.Copy(&legacy_state_->pres);
 
@@ -233,7 +233,7 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
       return;
     }
 
-    FXL_DCHECK(state->WaitingForTK());
+    ZX_DEBUG_ASSERT(state->WaitingForTK());
 
     // Set the lower bits to |tk|.
     tk = htole32(tk);
@@ -241,7 +241,7 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
     std::memcpy(state->tk.data(), &tk, sizeof(tk));
     state->has_tk = true;
 
-    FXL_DCHECK(state->InPhase2());
+    ZX_DEBUG_ASSERT(state->InPhase2());
 
     // We have TK so we can generate the confirm value now.
     const DeviceAddress *ia, *ra;
@@ -261,32 +261,32 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
     }
   };
 
-  FXL_DCHECK(delegate_);
+  ZX_DEBUG_ASSERT(delegate_);
   delegate_->OnTemporaryKeyRequest(legacy_state_->features->method,
                                    std::move(tk_callback));
 }
 
 void PairingState::LegacySendConfirmValue() {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->InPhase2());
-  FXL_DCHECK(!legacy_state_->sent_local_confirm);
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_->InPhase2());
+  ZX_DEBUG_ASSERT(!legacy_state_->sent_local_confirm);
 
   legacy_state_->sent_local_confirm = true;
   le_smp_->SendConfirmValue(legacy_state_->local_confirm);
 }
 
 void PairingState::LegacySendRandomValue() {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->InPhase2());
-  FXL_DCHECK(!legacy_state_->sent_local_rand);
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_->InPhase2());
+  ZX_DEBUG_ASSERT(!legacy_state_->sent_local_rand);
 
   legacy_state_->sent_local_rand = true;
   le_smp_->SendRandomValue(legacy_state_->local_rand);
 }
 
 void PairingState::EndLegacyPairingPhase2() {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->InPhase2());
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_->InPhase2());
 
   // Update the current security level. Even though the link is encrypted with
   // the STK (i.e. a temporary key) it provides a level of security.
@@ -304,22 +304,22 @@ void PairingState::EndLegacyPairingPhase2() {
     return;
   }
 
-  FXL_DCHECK(legacy_state_->InPhase3());
+  ZX_DEBUG_ASSERT(legacy_state_->InPhase3());
 
   if (legacy_state_->features->initiator) {
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
+    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kMaster);
     bt_log(TRACE, "sm", "waiting to receive keys from the slave");
   } else {
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
+    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kSlave);
 
     // TODO(NET-1088): Distribute the slave's (local) keys now.
   }
 }
 
 void PairingState::CompleteLegacyPairing() {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->IsComplete());
-  FXL_DCHECK(le_smp_->pairing_started());
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_->IsComplete());
+  ZX_DEBUG_ASSERT(le_smp_->pairing_started());
 
   le_smp_->StopTimer();
 
@@ -344,7 +344,7 @@ void PairingState::CompleteLegacyPairing() {
   legacy_state_ = nullptr;
 
   // TODO(armansito): Report CSRK when we support it.
-  FXL_DCHECK(delegate_);
+  ZX_DEBUG_ASSERT(delegate_);
   delegate_->OnPairingComplete(Status());
   delegate_->OnNewPairingData(ltk, irk, identity_addr, common::Optional<Key>());
 
@@ -382,7 +382,7 @@ void PairingState::OnPairingFailed(Status status) {
   // TODO(NET-1201): implement "waiting interval" to prevent repeated attempts
   // as described in Vol 3, Part H, 2.3.6.
 
-  FXL_DCHECK(delegate_);
+  ZX_DEBUG_ASSERT(delegate_);
   delegate_->OnPairingComplete(status);
 
   auto requests = std::move(request_queue_);
@@ -392,7 +392,7 @@ void PairingState::OnPairingFailed(Status status) {
   }
 
   if (legacy_state_) {
-    FXL_DCHECK(le_link_);
+    ZX_DEBUG_ASSERT(le_link_);
     le_link_->set_link_key(hci::LinkKey());
     legacy_state_ = nullptr;
   }
@@ -405,7 +405,7 @@ void PairingState::OnFeatureExchange(const PairingFeatures& features,
 
   if (!features.initiator) {
     if (legacy_state_) {
-      FXL_DCHECK(legacy_state_->features);
+      ZX_DEBUG_ASSERT(legacy_state_->features);
 
       // Reject if the peer sent a new pairing request while pairing is already
       // in progress.
@@ -416,7 +416,7 @@ void PairingState::OnFeatureExchange(const PairingFeatures& features,
     legacy_state_ = std::make_unique<LegacyState>(next_pairing_id_++);
   }
 
-  FXL_DCHECK(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_);
   legacy_state_->features = features;
   BeginLegacyPairingPhase2(preq, pres);
 }
@@ -463,15 +463,15 @@ void PairingState::OnPairingConfirm(const UInt128& confirm) {
 
   if (legacy_state_->features->initiator) {
     // We MUST have a TK and have previously generated an Mconfirm.
-    FXL_DCHECK(legacy_state_->has_tk);
+    ZX_DEBUG_ASSERT(legacy_state_->has_tk);
 
     // We are the master and have previously sent Mconfirm and just received
     // Sconfirm. We now send Mrand for the slave to compare.
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
+    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kMaster);
     LegacySendRandomValue();
   } else {
     // We are the slave and have just received Mconfirm.
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
+    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kSlave);
 
     if (!legacy_state_->WaitingForTK()) {
       LegacySendConfirmValue();
@@ -496,7 +496,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
 
   // We must have a TK and sent a confirm value by now (this is implied by
   // InPhase2() above).
-  FXL_DCHECK(legacy_state_->has_tk);
+  ZX_DEBUG_ASSERT(legacy_state_->has_tk);
 
   // abort pairing if we received a second random value from the peer. The
   // specification defines a certain order for the phase 2 commands.
@@ -516,7 +516,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
 
   // Check that the order of the SMP commands is correct.
   if (legacy_state_->features->initiator) {
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
+    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kMaster);
 
     // The master distributes both values before the slave sends Srandom.
     if (!legacy_state_->sent_local_rand || !legacy_state_->sent_local_confirm) {
@@ -525,10 +525,10 @@ void PairingState::OnPairingRandom(const UInt128& random) {
       return;
     }
   } else {
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
+    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kSlave);
 
     // We cannot have sent the Srand without receiving Mrand first.
-    FXL_DCHECK(!legacy_state_->sent_local_rand);
+    ZX_DEBUG_ASSERT(!legacy_state_->sent_local_rand);
 
     // We need to send Sconfirm before the master sends Mrand.
     if (!legacy_state_->sent_local_confirm) {
@@ -555,7 +555,7 @@ void PairingState::OnPairingRandom(const UInt128& random) {
     return;
   }
 
-  FXL_DCHECK(le_link_);
+  ZX_DEBUG_ASSERT(le_link_);
 
   // Generate the STK.
   UInt128 stk;
@@ -614,7 +614,7 @@ void PairingState::OnLongTermKey(const common::UInt128& ltk) {
     return;
   }
 
-  FXL_DCHECK(!(legacy_state_->obtained_remote_keys & KeyDistGen::kEncKey));
+  ZX_DEBUG_ASSERT(!(legacy_state_->obtained_remote_keys & KeyDistGen::kEncKey));
   legacy_state_->ltk_bytes = ltk;
   legacy_state_->has_ltk = true;
 
@@ -637,7 +637,7 @@ void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
     return;
   }
 
-  FXL_DCHECK(legacy_state_->stk_encrypted);
+  ZX_DEBUG_ASSERT(legacy_state_->stk_encrypted);
 
   if (!legacy_state_->ShouldReceiveLTK()) {
     bt_log(ERROR, "sm", "received unexpected ediv/rand");
@@ -694,7 +694,7 @@ void PairingState::OnIdentityResolvingKey(const common::UInt128& irk) {
     return;
   }
 
-  FXL_DCHECK(!(legacy_state_->obtained_remote_keys & KeyDistGen::kIdKey));
+  ZX_DEBUG_ASSERT(!(legacy_state_->obtained_remote_keys & KeyDistGen::kIdKey));
   legacy_state_->irk = irk;
   legacy_state_->has_irk = true;
 
@@ -759,7 +759,7 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
     return;
   }
 
-  FXL_DCHECK(le_smp_->pairing_started());
+  ZX_DEBUG_ASSERT(le_smp_->pairing_started());
 
   if (legacy_state_->InPhase2()) {
     bt_log(TRACE, "sm", "link encrypted with STK");
@@ -778,18 +778,18 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
 }
 
 void PairingState::OnExpectedKeyReceived() {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(!legacy_state_->ltk_encrypted);
-  FXL_DCHECK(legacy_state_->stk_encrypted);
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(!legacy_state_->ltk_encrypted);
+  ZX_DEBUG_ASSERT(legacy_state_->stk_encrypted);
 
   if (!legacy_state_->RequestedKeysObtained()) {
-    FXL_DCHECK(legacy_state_->InPhase3());
+    ZX_DEBUG_ASSERT(legacy_state_->InPhase3());
     bt_log(TRACE, "sm", "more keys pending");
     return;
   }
 
   // We are no longer in Phase 3.
-  FXL_DCHECK(!legacy_state_->InPhase3());
+  ZX_DEBUG_ASSERT(!legacy_state_->InPhase3());
 
   // Complete pairing now if we didn't receive a LTK. Otherwise we'll mark it as
   // complete when the link is encrypted with it.
@@ -807,8 +807,8 @@ void PairingState::OnExpectedKeyReceived() {
 
 void PairingState::LEPairingAddresses(const DeviceAddress** out_initiator,
                                       const DeviceAddress** out_responder) {
-  FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->features);
+  ZX_DEBUG_ASSERT(legacy_state_);
+  ZX_DEBUG_ASSERT(legacy_state_->features);
 
   if (legacy_state_->features->initiator) {
     *out_initiator = &le_link_->local_address();

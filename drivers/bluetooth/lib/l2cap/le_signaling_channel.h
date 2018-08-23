@@ -5,9 +5,10 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LE_SIGNALING_CHANNEL_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LE_SIGNALING_CHANNEL_H_
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/signaling_channel.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -37,8 +38,9 @@ class LESignalingChannel final : public SignalingChannel {
   void set_conn_param_update_callback(
       ConnectionParameterUpdateCallback callback,
       async_dispatcher_t* dispatcher) {
-    FXL_DCHECK(IsCreationThreadCurrent());
-    FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
+    ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
+    ZX_DEBUG_ASSERT(static_cast<bool>(callback) ==
+                    static_cast<bool>(dispatcher));
     conn_param_update_cb_ = std::move(callback);
     dispatcher_ = dispatcher;
   }

@@ -7,8 +7,6 @@
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/remote_service.h"
 
-#include "lib/fxl/logging.h"
-
 namespace btlib {
 
 using common::HostError;
@@ -20,7 +18,7 @@ RemoteServiceManager::ServiceListRequest::ServiceListRequest(
     ServiceListCallback callback,
     const std::vector<common::UUID>& uuids)
     : callback_(std::move(callback)), uuids_(uuids) {
-  FXL_DCHECK(callback_);
+  ZX_DEBUG_ASSERT(callback_);
 }
 
 void RemoteServiceManager::ServiceListRequest::Complete(
@@ -53,15 +51,15 @@ RemoteServiceManager::RemoteServiceManager(std::unique_ptr<Client> client,
       client_(std::move(client)),
       initialized_(false),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(gatt_dispatcher_);
-  FXL_DCHECK(client_);
+  ZX_DEBUG_ASSERT(gatt_dispatcher_);
+  ZX_DEBUG_ASSERT(client_);
 
   client_->SetNotificationHandler(
       fit::bind_member(this, &RemoteServiceManager::OnNotification));
 }
 
 RemoteServiceManager::~RemoteServiceManager() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   client_->SetNotificationHandler({});
   ClearServices();
@@ -78,7 +76,7 @@ RemoteServiceManager::~RemoteServiceManager() {
 }
 
 void RemoteServiceManager::Initialize(att::StatusCallback cb) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   auto self = weak_ptr_factory_.GetWeakPtr();
 
@@ -176,7 +174,7 @@ void RemoteServiceManager::ClearServices() {
 
 void RemoteServiceManager::OnNotification(bool, att::Handle value_handle,
                                           const common::ByteBuffer& value) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (services_.empty()) {
     bt_log(TRACE, "gatt", "ignoring notification from unknown service");
@@ -189,7 +187,7 @@ void RemoteServiceManager::OnNotification(bool, att::Handle value_handle,
 
   // If |value_handle| is within the previous service then we found it.
   auto& svc = iter->second;
-  FXL_DCHECK(value_handle >= svc->handle());
+  ZX_DEBUG_ASSERT(value_handle >= svc->handle());
 
   if (svc->info().range_end >= value_handle) {
     svc->HandleNotification(value_handle, value);

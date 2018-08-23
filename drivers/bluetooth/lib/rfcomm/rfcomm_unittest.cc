@@ -37,7 +37,7 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
 
   void SetUp() override {
     l2cap_ = l2cap::testing::FakeLayer::Create();
-    FXL_DCHECK(l2cap_);
+    ZX_DEBUG_ASSERT(l2cap_);
 
     l2cap_->Initialize();
     l2cap_->AddACLConnection(
@@ -50,7 +50,7 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
     // |handle_to_incoming_frames_|.
     l2cap_->set_channel_callback(
         [this](fbl::RefPtr<l2cap::testing::FakeChannel> l2cap_channel) {
-          FXL_DCHECK(l2cap_channel);
+          ZX_DEBUG_ASSERT(l2cap_channel);
           auto handle = l2cap_channel->link_handle();
           handle_to_fake_channel_.emplace(handle, l2cap_channel);
           l2cap_channel->SetSendCallback(
@@ -67,7 +67,7 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
         });
 
     channel_manager_ = ChannelManager::Create(l2cap_.get());
-    FXL_DCHECK(channel_manager_);
+    ZX_DEBUG_ASSERT(channel_manager_);
   }
 
   void TearDown() override {
@@ -83,16 +83,16 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
   // updated throughout the test (e.g. the multiplexer state should change when
   // the multiplexer starts up).
   PeerState& AddFakePeerState(hci::ConnectionHandle handle, PeerState state) {
-    FXL_DCHECK(handle_to_peer_state_.find(handle) ==
-               handle_to_peer_state_.end());
+    ZX_DEBUG_ASSERT(handle_to_peer_state_.find(handle) ==
+                    handle_to_peer_state_.end());
     handle_to_peer_state_.emplace(handle, std::move(state));
     return handle_to_peer_state_[handle];
   }
 
   fbl::RefPtr<l2cap::testing::FakeChannel> GetFakeChannel(
       hci::ConnectionHandle handle) {
-    FXL_DCHECK(handle_to_fake_channel_.find(handle) !=
-               handle_to_fake_channel_.end());
+    ZX_DEBUG_ASSERT(handle_to_fake_channel_.find(handle) !=
+                    handle_to_fake_channel_.end());
     return handle_to_fake_channel_[handle];
   }
 
@@ -164,8 +164,9 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
 
 fbl::RefPtr<Channel> RFCOMM_ChannelManagerTest::OpenOutgoingChannel(
     hci::ConnectionHandle handle, ServerChannel server_channel) {
-  FXL_DCHECK(handle_to_peer_state_.find(handle) != handle_to_peer_state_.end())
-      << "No peer state for handle " << handle;
+  ZX_DEBUG_ASSERT_MSG(
+      handle_to_peer_state_.find(handle) != handle_to_peer_state_.end(),
+      "no peer state set for handle %#.4x", handle);
   PeerState& state = handle_to_peer_state_[handle];
 
   fbl::RefPtr<Channel> return_channel = nullptr;
@@ -194,7 +195,7 @@ fbl::RefPtr<Channel> RFCOMM_ChannelManagerTest::OpenOutgoingChannel(
       Frame::Parse(state.credit_based_flow, state.role, queue.front()->view());
 
   queue.pop();
-  FXL_DCHECK(frame);
+  ZX_DEBUG_ASSERT(frame);
 
   // If we received a mux startup request, respond to it.
   if (static_cast<FrameType>(frame->control()) ==
@@ -267,9 +268,9 @@ fbl::RefPtr<Channel> RFCOMM_ChannelManagerTest::OpenOutgoingChannel(
 
 void RFCOMM_ChannelManagerTest::OpenIncomingChannel(
     hci::ConnectionHandle handle, ServerChannel server_channel) {
-  FXL_DCHECK(handle_to_peer_state_.find(handle) != handle_to_peer_state_.end())
-      << "Please set peer state for handle " << handle
-      << " before attempting to open a channel on this handle";
+  ZX_DEBUG_ASSERT_MSG(
+      handle_to_peer_state_.find(handle) != handle_to_peer_state_.end(),
+      "no peer state set for handle %#.4x", handle);
 
   PeerState& state = handle_to_peer_state_[handle];
 

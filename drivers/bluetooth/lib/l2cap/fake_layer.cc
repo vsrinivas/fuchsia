@@ -15,7 +15,7 @@ namespace testing {
 void FakeLayer::TriggerLEConnectionParameterUpdate(
     hci::ConnectionHandle handle,
     const hci::LEPreferredConnectionParameters& params) {
-  FXL_DCHECK(initialized_);
+  ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
   async::PostTask(
@@ -25,15 +25,15 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
 
 void FakeLayer::TriggerOutboundChannel(hci::ConnectionHandle handle, PSM psm,
                                        ChannelId id, ChannelId remote_id) {
-  FXL_DCHECK(initialized_);
+  ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
   auto cb_iter = link_data.outbound_conn_cbs.find(psm);
-  FXL_DCHECK(cb_iter != link_data.outbound_conn_cbs.end())
-      << "l2cap: no previous call to OpenChannel with PSM " << psm;
+  ZX_DEBUG_ASSERT_MSG(cb_iter != link_data.outbound_conn_cbs.end(),
+                      "no previous call to OpenChannel with PSM %#.4x", psm);
 
   std::list<ChannelDelivery>& handlers = cb_iter->second;
-  FXL_DCHECK(!handlers.empty());
+  ZX_DEBUG_ASSERT(!handlers.empty());
 
   ChannelCallback& cb = handlers.front().first;
   auto chan = OpenFakeChannel(&link_data, id, remote_id);
@@ -50,12 +50,12 @@ void FakeLayer::TriggerOutboundChannel(hci::ConnectionHandle handle, PSM psm,
 
 void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
                                       ChannelId id, ChannelId remote_id) {
-  FXL_DCHECK(initialized_);
+  ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
   auto cb_iter = inbound_conn_cbs_.find(psm);
-  FXL_DCHECK(cb_iter != inbound_conn_cbs_.end())
-      << "l2cap: no service registered for PSM " << psm;
+  ZX_DEBUG_ASSERT_MSG(cb_iter != inbound_conn_cbs_.end(),
+                      "no service registered for PSM %#.4x", psm);
 
   ChannelCallback& cb = cb_iter->second.first;
   async_dispatcher_t* const dispatcher = cb_iter->second.second;
@@ -138,8 +138,8 @@ FakeLayer::LinkData* FakeLayer::RegisterInternal(
     hci::ConnectionHandle handle, hci::Connection::Role role,
     hci::Connection::LinkType link_type, LinkErrorCallback link_error_cb,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(links_.find(handle) == links_.end())
-      << "l2cap: Connection handle re-used!";
+  ZX_DEBUG_ASSERT_MSG(links_.find(handle) == links_.end(),
+                      "connection handle re-used (handle: %#.4x)", handle);
 
   LinkData data;
   data.handle = handle;
@@ -173,8 +173,8 @@ fbl::RefPtr<FakeChannel> FakeLayer::OpenFakeFixedChannel(LinkData* link,
 
 FakeLayer::LinkData& FakeLayer::FindLinkData(hci::ConnectionHandle handle) {
   auto link_iter = links_.find(handle);
-  FXL_DCHECK(link_iter != links_.end())
-      << "l2cap: fake link not found: (handle: " << handle << ")";
+  ZX_DEBUG_ASSERT_MSG(link_iter != links_.end(),
+                      "fake link not found (handle: %#.4x)", handle);
   return link_iter->second;
 }
 

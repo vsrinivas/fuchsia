@@ -93,7 +93,7 @@ void GattClientServer::ConnectToService(
       return;
 
     // The operation must be in progress.
-    FXL_DCHECK(self->connected_services_.count(id));
+    ZX_DEBUG_ASSERT(self->connected_services_.count(id));
 
     // Automatically called on failure.
     auto fail_cleanup =

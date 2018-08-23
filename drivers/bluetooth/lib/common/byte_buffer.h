@@ -10,7 +10,8 @@
 #include <memory>
 #include <string>
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 
@@ -78,7 +79,7 @@ class ByteBuffer {
 
   // Read-only random access operator.
   inline const uint8_t& operator[](size_t pos) const {
-    FXL_CHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
+    ZX_ASSERT_MSG(pos < size(), "invalid offset (pos = %zu)", pos);
     return data()[pos];
   }
 
@@ -86,7 +87,7 @@ class ByteBuffer {
   // buffer is allowed to be larger than T.
   template <typename T>
   const T& As() const {
-    FXL_CHECK(size() >= sizeof(T));
+    ZX_ASSERT(size() >= sizeof(T));
     return *reinterpret_cast<const T*>(data());
   }
 
@@ -120,7 +121,7 @@ class MutableByteBuffer : public ByteBuffer {
 
   // Random access operator that allows mutations.
   inline uint8_t& operator[](size_t pos) {
-    FXL_CHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
+    ZX_ASSERT_MSG(pos < size(), "invalid offset (pos = %zu)", pos);
     return mutable_data()[pos];
   }
 

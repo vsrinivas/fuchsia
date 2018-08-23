@@ -9,11 +9,9 @@
 
 #include <fbl/slab_allocator.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-
 namespace btlib {
 namespace common {
+
 namespace internal {
 constexpr size_t kSlabOverhead = 16;
 }  // namespace internal

@@ -45,10 +45,10 @@ void TestController::QueueCommandTransaction(
 
 void TestController::SetDataCallback(DataCallback callback,
                                      async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
-  FXL_DCHECK(!data_callback_);
-  FXL_DCHECK(!data_dispatcher_);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
+  ZX_DEBUG_ASSERT(!data_callback_);
+  ZX_DEBUG_ASSERT(!data_dispatcher_);
 
   data_callback_ = std::move(callback);
   data_dispatcher_ = dispatcher;
@@ -57,10 +57,10 @@ void TestController::SetDataCallback(DataCallback callback,
 void TestController::SetTransactionCallback(
     fit::closure callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
-  FXL_DCHECK(!transaction_callback_);
-  FXL_DCHECK(!transaction_dispatcher_);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
+  ZX_DEBUG_ASSERT(!transaction_callback_);
+  ZX_DEBUG_ASSERT(!transaction_dispatcher_);
 
   transaction_callback_ = std::move(callback);
   transaction_dispatcher_ = dispatcher;

@@ -7,13 +7,13 @@
 #include <endian.h>
 
 #include <lib/async/default.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -35,8 +35,8 @@ CommandChannel::QueuedCommand::QueuedCommand(
     std::unique_ptr<CommandPacket> command_packet,
     std::unique_ptr<TransactionData> transaction_data)
     : packet(std::move(command_packet)), data(std::move(transaction_data)) {
-  FXL_DCHECK(data);
-  FXL_DCHECK(packet);
+  ZX_DEBUG_ASSERT(data);
+  ZX_DEBUG_ASSERT(packet);
 }
 
 CommandChannel::TransactionData::TransactionData(
@@ -51,8 +51,8 @@ CommandChannel::TransactionData::TransactionData(
       callback_(std::move(callback)),
       dispatcher_(dispatcher),
       handler_id_(0u) {
-  FXL_DCHECK(id != 0u);
-  FXL_DCHECK(dispatcher_);
+  ZX_DEBUG_ASSERT(id != 0u);
+  ZX_DEBUG_ASSERT(dispatcher_);
 }
 
 CommandChannel::TransactionData::~TransactionData() {
@@ -77,7 +77,7 @@ CommandChannel::TransactionData::~TransactionData() {
 void CommandChannel::TransactionData::Start(fit::closure timeout_cb,
                                             zx::duration timeout) {
   // Transactions should only ever be started once.
-  FXL_DCHECK(!timeout_task_.is_pending());
+  ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
 
   timeout_task_.set_handler(std::move(timeout_cb));
   timeout_task_.PostDelayed(async_get_default_dispatcher(), timeout);
@@ -112,8 +112,8 @@ CommandChannel::CommandChannel(Transport* transport,
       channel_wait_(this, channel_.get(), ZX_CHANNEL_READABLE),
       is_initialized_(false),
       allowed_command_packets_(1u) {
-  FXL_DCHECK(transport_);
-  FXL_DCHECK(channel_.is_valid());
+  ZX_DEBUG_ASSERT(transport_);
+  ZX_DEBUG_ASSERT(channel_.is_valid());
 }
 
 CommandChannel::~CommandChannel() {
@@ -122,8 +122,8 @@ CommandChannel::~CommandChannel() {
 }
 
 void CommandChannel::Initialize() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(!is_initialized_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!is_initialized_);
 
   auto setup_handler_task = [this] {
     zx_status_t status = channel_wait_.Begin(async_get_default_dispatcher());
@@ -148,7 +148,7 @@ void CommandChannel::Initialize() {
 }
 
 void CommandChannel::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (!is_initialized_)
     return;
 
@@ -201,7 +201,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
     return 0u;
   }
 
-  FXL_DCHECK(command_packet);
+  ZX_DEBUG_ASSERT(command_packet);
 
   if (IsAsync(complete_event_code)) {
     std::lock_guard<std::mutex> lock(event_handler_mutex_);
@@ -316,7 +316,7 @@ void CommandChannel::TrySendQueuedCommands() {
   if (!is_initialized_)
     return;
 
-  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
+  ZX_DEBUG_ASSERT(async_get_default_dispatcher() == io_dispatcher_);
 
   if (allowed_command_packets_ == 0) {
     bt_log(SPEW, "hci", "controller queue full, waiting");
@@ -395,7 +395,7 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
   // The handler hasn't been added yet.
   auto id = NewEventHandler(data->complete_event_code(), false,
                             data->MakeCallback(), data->dispatcher());
-  FXL_DCHECK(id != 0u);
+  ZX_DEBUG_ASSERT(id != 0u);
   data->set_handler_id(id);
   async_cmd_handlers_[data->complete_event_code()] = id;
   event_code_handlers_.emplace(data->complete_event_code(), id);
@@ -407,9 +407,9 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
     bool is_le_meta,
     EventCallback event_callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(event_code);
-  FXL_DCHECK(event_callback);
-  FXL_DCHECK(dispatcher);
+  ZX_DEBUG_ASSERT(event_code);
+  ZX_DEBUG_ASSERT(event_callback);
+  ZX_DEBUG_ASSERT(dispatcher);
 
   auto id = next_event_handler_id_++;
   EventHandlerData data;
@@ -421,7 +421,8 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
 
   bt_log(SPEW, "hci", "adding event handler %zu for event code %#.2x", id,
          event_code);
-  FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
+  ZX_DEBUG_ASSERT(event_handler_id_map_.find(id) ==
+                  event_handler_id_map_.end());
   event_handler_id_map_[id] = std::move(data);
 
   return id;
@@ -430,8 +431,8 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
 void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   hci::EventCode event_code = event->event_code();
 
-  FXL_DCHECK(event_code == kCommandStatusEventCode ||
-             event_code == kCommandCompleteEventCode);
+  ZX_DEBUG_ASSERT(event_code == kCommandStatusEventCode ||
+                  event_code == kCommandCompleteEventCode);
 
   OpCode matching_opcode;
 
@@ -463,7 +464,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   auto pending = std::move(it->second);
   pending_transactions_.erase(it);
 
-  FXL_DCHECK(pending->opcode() == matching_opcode);
+  ZX_DEBUG_ASSERT(pending->opcode() == matching_opcode);
 
   pending->Complete(std::move(event));
 
@@ -516,10 +517,10 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       bt_log(SPEW, "hci", "notifying handler (id %zu) for event code %#.2x",
              event_id, event_code);
       auto handler_iter = event_handler_id_map_.find(event_id);
-      FXL_DCHECK(handler_iter != event_handler_id_map_.end());
+      ZX_DEBUG_ASSERT(handler_iter != event_handler_id_map_.end());
 
       auto& handler = handler_iter->second;
-      FXL_DCHECK(handler.event_code == event_code);
+      ZX_DEBUG_ASSERT(handler.event_code == event_code);
 
       callback = handler.event_callback.share();
       dispatcher = handler.dispatcher;
@@ -557,9 +558,8 @@ void CommandChannel::OnChannelReady(
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
-
-  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
-  FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
+  ZX_DEBUG_ASSERT(async_get_default_dispatcher() == io_dispatcher_);
+  ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_READABLE);
 
   if (status != ZX_OK) {
     bt_log(TRACE, "hci", "channel error: %s", zx_status_get_string(status));

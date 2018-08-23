@@ -10,11 +10,11 @@
 #include <cstdint>
 #include <string>
 
-#include "garnet/drivers/bluetooth/lib/common/log.h"
+#include <zircon/assert.h>
+
 #include "lib/fxl/strings/string_printf.h"
 
-// TODO(armansito): Included for FXL_DCHECK. Replace with a DDK assert.
-#include "lib/fxl/logging.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 namespace btlib {
 namespace common {
@@ -84,8 +84,9 @@ class Status {
   // The result will carry a host error. Constructs a success result by default.
   constexpr explicit Status(HostError ecode = HostError::kNoError)
       : error_(ecode) {
-    FXL_DCHECK(ecode != HostError::kProtocolError)
-        << "HostError::kProtocolError not allowed in HostError constructor";
+    ZX_DEBUG_ASSERT_MSG(
+        ecode != HostError::kProtocolError,
+        "HostError::kProtocolError not allowed in HostError constructor");
   }
 
   // Returns true if this is a success result.

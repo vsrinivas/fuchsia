@@ -7,10 +7,10 @@
 
 #include <endian.h>
 #include <fbl/intrusive_double_list.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -71,8 +71,8 @@ class PDU final {
   // An unpopulated PDU is considered invalid, which is the default-constructed
   // state.
   bool is_valid() const {
-    FXL_DCHECK(fragments_.is_empty() && !fragment_count_ ||
-               !fragments_.is_empty() && fragment_count_);
+    ZX_DEBUG_ASSERT(fragments_.is_empty() && !fragment_count_ ||
+                    !fragments_.is_empty() && fragment_count_);
     return !fragments_.is_empty();
   }
 
@@ -89,7 +89,7 @@ class PDU final {
   // The connection handle that identifies the logical link this PDU is intended
   // for.
   hci::ConnectionHandle connection_handle() const {
-    FXL_DCHECK(is_valid());
+    ZX_DEBUG_ASSERT(is_valid());
     return fragments_.begin()->connection_handle();
   }
 

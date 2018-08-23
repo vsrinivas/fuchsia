@@ -123,14 +123,14 @@ common::DynamicByteBuffer CreateLengthFieldOctets(size_t length) {
 
   for (size_t i = 0; i < octets.size(); i++) {
     // There should still be meaningful data left in length.
-    FXL_DCHECK(length);
+    ZX_DEBUG_ASSERT(length);
     // We set the EA bit to 0.
     octets[i] = ~kEAMask & (length << kLengthShift);
     length >>= 7;
   }
   // If we calculated the number of octets correctly above, then there should be
   // nothing remaining in length.
-  FXL_DCHECK(length == 0);
+  ZX_DEBUG_ASSERT(length == 0);
 
   // Set the EA bit of the last octet to 1, to indicate it's the last octet.
   octets[octets.size() - 1] |= kEAMask;
@@ -171,8 +171,8 @@ MuxCommand::MuxCommand(MuxCommandType command_type,
 
 std::unique_ptr<MuxCommand> MuxCommand::Parse(
     const common::ByteBuffer& buffer) {
-  FXL_DCHECK(buffer.size() >= kMinHeaderSize)
-      << "Buffer must contain at least a type and length octet.";
+  ZX_DEBUG_ASSERT_MSG(buffer.size() >= kMinHeaderSize,
+                      "buffer must contain at least a type and length octet");
 
   CommandResponse command_response = (buffer[kTypeIndex] & kCRMask)
                                          ? CommandResponse::kCommand
@@ -258,7 +258,7 @@ std::unique_ptr<TestCommand> TestCommand::Parse(
 }
 
 void TestCommand::Write(common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
 
   size_t idx = 0;
 
@@ -294,7 +294,7 @@ std::unique_ptr<FlowControlOnCommand> FlowControlOnCommand::Parse(
 }
 
 void FlowControlOnCommand::Write(common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // Length = 0, EA bit = 1.
   buffer[kLengthIndex] = kFlowcontrolOnLength;
@@ -308,7 +308,7 @@ std::unique_ptr<FlowControlOffCommand> FlowControlOffCommand::Parse(
 }
 
 void FlowControlOffCommand::Write(common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // Length = 0, EA bit = 1.
   buffer[kLengthIndex] = kFlowcontrolOffLength;
@@ -355,7 +355,7 @@ std::unique_ptr<ModemStatusCommand> ModemStatusCommand::Parse(
 }
 
 void ModemStatusCommand::Write(common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // EA bit = 1.
   buffer[kLengthIndex] =
@@ -436,7 +436,7 @@ RemotePortNegotiationCommand::Parse(CommandResponse command_response,
 
 void RemotePortNegotiationCommand::Write(
     common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // EA bit = 1.
   buffer[kLengthIndex] =
@@ -488,7 +488,7 @@ std::unique_ptr<RemoteLineStatusCommand> RemoteLineStatusCommand::Parse(
 }
 
 void RemoteLineStatusCommand::Write(common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // EA bit = 1.
   buffer[kLengthIndex] = (kRLSLength << kLengthShift) | kEAMask;
@@ -524,7 +524,7 @@ std::unique_ptr<NonSupportedCommandResponse> NonSupportedCommandResponse::Parse(
 
 void NonSupportedCommandResponse::Write(
     common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // EA bit = 1.
   buffer[kLengthIndex] = (kNSCLength << kLengthShift) | kEAMask;
@@ -561,7 +561,7 @@ DLCParameterNegotiationCommand::Parse(CommandResponse command_response,
 
 void DLCParameterNegotiationCommand::Write(
     common::MutableBufferView buffer) const {
-  FXL_CHECK(buffer.size() >= written_size());
+  ZX_ASSERT(buffer.size() >= written_size());
   buffer[kTypeIndex] = type_field_octet();
   // EA bit = 1.
   buffer[kLengthIndex] = (kPNLength << kLengthShift) | kEAMask;

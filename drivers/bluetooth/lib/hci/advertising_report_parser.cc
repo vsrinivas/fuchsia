@@ -4,7 +4,7 @@
 
 #include "advertising_report_parser.h"
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 #include "control_packets.h"
 
@@ -13,9 +13,9 @@ namespace hci {
 
 AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
     : encountered_error_(false) {
-  FXL_DCHECK(event.event_code() == kLEMetaEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == kLEMetaEventCode);
   const auto& params = event.view().payload<LEMetaEventParams>();
-  FXL_DCHECK(params.subevent_code == kLEAdvertisingReportSubeventCode);
+  ZX_DEBUG_ASSERT(params.subevent_code == kLEAdvertisingReportSubeventCode);
 
   auto subevent_params =
       event.le_event_params<LEAdvertisingReportSubeventParams>();
@@ -29,8 +29,8 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
 bool AdvertisingReportParser::GetNextReport(
     const LEAdvertisingReportData** out_data,
     int8_t* out_rssi) {
-  FXL_DCHECK(out_data);
-  FXL_DCHECK(out_rssi);
+  ZX_DEBUG_ASSERT(out_data);
+  ZX_DEBUG_ASSERT(out_rssi);
 
   if (encountered_error_ || !HasMoreReports())
     return false;

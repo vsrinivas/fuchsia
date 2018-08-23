@@ -23,7 +23,7 @@ GattHost::GattHost(std::string thrd_name)
       weak_ptr_factory_(this) {
   // Initialize the profile to operate on our task runner.
   gatt_ = gatt::GATT::Create(dispatcher());
-  FXL_DCHECK(gatt_);
+  ZX_DEBUG_ASSERT(gatt_);
 }
 
 GattHost::~GattHost() {}

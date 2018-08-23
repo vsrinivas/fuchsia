@@ -87,7 +87,7 @@ class GATT_RemoteServiceManagerTest : public ::gtest::TestLoopFixture {
 
     RunLoopUntilIdle();
 
-    FXL_DCHECK(services.size() == 1u);
+    ZX_DEBUG_ASSERT(services.size() == 1u);
     return services[0];
   }
 
@@ -96,7 +96,7 @@ class GATT_RemoteServiceManagerTest : public ::gtest::TestLoopFixture {
       fbl::RefPtr<RemoteService> service,
       std::vector<CharacteristicData> fake_chrs,
       std::vector<DescriptorData> fake_descrs = std::vector<DescriptorData>()) {
-    FXL_DCHECK(service);
+    ZX_DEBUG_ASSERT(service);
 
     fake_client()->set_characteristics(std::move(fake_chrs));
     fake_client()->set_descriptors(std::move(fake_descrs));
@@ -129,8 +129,8 @@ class GATT_RemoteServiceManagerTest : public ::gtest::TestLoopFixture {
       fbl::RefPtr<RemoteService> service, IdType chr_id,
       att::Status* out_status, IdType* out_id,
       RemoteService::ValueCallback callback = NopValueCallback) {
-    FXL_DCHECK(out_status);
-    FXL_DCHECK(out_id);
+    ZX_DEBUG_ASSERT(out_status);
+    ZX_DEBUG_ASSERT(out_id);
     service->EnableNotifications(chr_id, std::move(callback),
                                  [&](att::Status cb_status, IdType cb_id) {
                                    *out_status = cb_status;

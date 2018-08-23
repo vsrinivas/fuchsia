@@ -75,8 +75,8 @@ DLCI GetDLCIFromMuxCommand(MuxCommand* mux_command) {
 // 2,4,6,...,60, and server applications on the initiating device are reachable
 // on 3,5,7,...,61."
 constexpr bool IsValidLocalChannel(Role role, DLCI dlci) {
-  FXL_DCHECK(IsMultiplexerStarted(role));
-  FXL_DCHECK(IsUserDLCI(dlci));
+  ZX_DEBUG_ASSERT(IsMultiplexerStarted(role));
+  ZX_DEBUG_ASSERT(IsUserDLCI(dlci));
   return (role == Role::kInitiator ? 1 : 0) == dlci % 2;
 }
 
@@ -85,7 +85,7 @@ constexpr bool IsValidLocalChannel(Role role, DLCI dlci) {
 void Session::SendUserData(DLCI dlci, common::ByteBufferPtr data) {
   bool sent = SendFrame(std::make_unique<UserDataFrame>(
       role_, credit_based_flow_, dlci, std::move(data)));
-  FXL_DCHECK(sent);
+  ZX_DEBUG_ASSERT(sent);
 }
 
 std::unique_ptr<Session> Session::Create(
@@ -107,8 +107,8 @@ Session::Session(ChannelOpenedCallback channel_opened_cb)
       weak_ptr_factory_(this) {}
 
 bool Session::SetL2CAPChannel(fbl::RefPtr<l2cap::Channel> l2cap_channel) {
-  FXL_DCHECK(!l2cap_channel_);
-  FXL_DCHECK(l2cap_channel);
+  ZX_DEBUG_ASSERT(!l2cap_channel_);
+  ZX_DEBUG_ASSERT(l2cap_channel);
   l2cap_channel_.Reset(l2cap_channel);
   auto self = weak_ptr_factory_.GetWeakPtr();
   return l2cap_channel_->Activate(
@@ -159,14 +159,14 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
       FrameType::kSetAsynchronousBalancedMode, dlci,
       [this, dlci, server_channel, cb = std::move(channel_opened_cb)](
           std::unique_ptr<Frame> response) mutable {
-        FXL_DCHECK(response);
+        ZX_DEBUG_ASSERT(response);
         FrameType type = FrameType(response->control());
         fbl::RefPtr<Channel> new_channel;
         switch (type) {
           case FrameType::kUnnumberedAcknowledgement: {
             bt_log(TRACE, "rfcomm", "channel %u started successfully", dlci);
             new_channel = fbl::AdoptRef(new internal::ChannelImpl(dlci, this));
-            FXL_DCHECK(channels_.find(dlci) == channels_.end());
+            ZX_DEBUG_ASSERT(channels_.find(dlci) == channels_.end());
             channels_.emplace(dlci, new_channel);
             break;
           }
@@ -207,7 +207,7 @@ void Session::RxCallback(const l2cap::SDU& sdu) {
       case FrameType::kDisconnectedMode: {
         auto callbacks_it = outstanding_frames_.find(dlci);
         if (callbacks_it == outstanding_frames_.end()) {
-          FXL_NOTIMPLEMENTED() << "Unsolicited UA or DM frame";
+          bt_log(TRACE, "rfcomm", "unsolicited UA or DM frame");
           return;
         }
 
@@ -256,12 +256,12 @@ void Session::ClosedCallback() { Closedown(); }
 
 void Session::SendCommand(FrameType frame_type, DLCI dlci,
                           CommandResponseCallback command_response_cb) {
-  FXL_DCHECK(frame_type == FrameType::kSetAsynchronousBalancedMode ||
-             frame_type == FrameType::kDisconnect);
-  FXL_DCHECK(IsValidDLCI(dlci));
-  FXL_DCHECK(outstanding_frames_.find(dlci) == outstanding_frames_.end())
-      << "rfcomm: There is already an outstanding command frame for DLCI "
-      << static_cast<unsigned>(dlci);
+  ZX_DEBUG_ASSERT(frame_type == FrameType::kSetAsynchronousBalancedMode ||
+                  frame_type == FrameType::kDisconnect);
+  ZX_DEBUG_ASSERT(IsValidDLCI(dlci));
+  ZX_DEBUG_ASSERT_MSG(
+      outstanding_frames_.find(dlci) == outstanding_frames_.end(),
+      "there is already an outstanding command frame for DLCI %u", dlci);
 
   auto timeout_cb = std::make_unique<async::TaskClosure>([this, dlci] {
     bt_log(ERROR, "rfcomm",
@@ -293,13 +293,13 @@ void Session::SendCommand(FrameType frame_type, DLCI dlci,
   bool sent = SendFrame(std::move(frame), [this, timeout, dlci] {
     outstanding_frames_[dlci].second->PostDelayed(dispatcher_, timeout);
   });
-  FXL_DCHECK(sent);
+  ZX_DEBUG_ASSERT(sent);
 }
 
 void Session::SendResponse(FrameType frame_type, DLCI dlci) {
-  FXL_DCHECK(frame_type == FrameType::kUnnumberedAcknowledgement ||
-             frame_type == FrameType::kDisconnectedMode);
-  FXL_DCHECK(IsValidDLCI(dlci));
+  ZX_DEBUG_ASSERT(frame_type == FrameType::kUnnumberedAcknowledgement ||
+                  frame_type == FrameType::kDisconnectedMode);
+  ZX_DEBUG_ASSERT(IsValidDLCI(dlci));
 
   std::unique_ptr<Frame> frame;
   if (frame_type == FrameType::kUnnumberedAcknowledgement)
@@ -308,16 +308,16 @@ void Session::SendResponse(FrameType frame_type, DLCI dlci) {
     frame = std::make_unique<DisconnectedModeResponse>(role_, dlci);
 
   bool sent = SendFrame(std::move(frame));
-  FXL_DCHECK(sent);
+  ZX_DEBUG_ASSERT(sent);
 }
 
 bool Session::SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
-  FXL_DCHECK(frame);
+  ZX_DEBUG_ASSERT(frame);
   const DLCI dlci = frame->dlci();
   const FrameType type = static_cast<FrameType>(frame->control());
 
   // If the multiplexer isn't started, only startup frames should be sent.
-  FXL_DCHECK(multiplexer_started() || IsMuxStartupFrame(type, dlci));
+  ZX_DEBUG_ASSERT(multiplexer_started() || IsMuxStartupFrame(type, dlci));
 
   // TODO(gusss): check that the DLC is actually open.
 
@@ -347,14 +347,14 @@ bool Session::SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
 
 void Session::SendMuxCommand(std::unique_ptr<MuxCommand> mux_command,
                              MuxResponseCallback callback) {
-  FXL_DCHECK(mux_command);
+  ZX_DEBUG_ASSERT(mux_command);
 
   // If we're not expecting a response, we can send right away.
   if (!callback) {
     auto frame = std::make_unique<MuxCommandFrame>(role_, credit_based_flow_,
                                                    std::move(mux_command));
     bool sent = SendFrame(std::move(frame));
-    FXL_DCHECK(sent);
+    ZX_DEBUG_ASSERT(sent);
     return;
   }
 
@@ -364,11 +364,10 @@ void Session::SendMuxCommand(std::unique_ptr<MuxCommand> mux_command,
   DLCI dlci = GetDLCIFromMuxCommand(mux_command.get());
   OutstandingMuxCommand key = std::make_pair(type, dlci);
 
-  FXL_DCHECK(outstanding_mux_commands_.find(key) ==
-             outstanding_mux_commands_.end())
-      << "rfcomm: Already an outstanding mux command for (command type,"
-      << " dlci) = (" << static_cast<unsigned>(type) << ", "
-      << static_cast<unsigned>(dlci) << ")";
+  ZX_DEBUG_ASSERT_MSG(
+      outstanding_mux_commands_.find(key) == outstanding_mux_commands_.end(),
+      "already an outstanding mux command for (command type: %u, dlci: %u)",
+      static_cast<unsigned int>(type), dlci);
 
   auto timeout_cb =
       std::make_unique<async::TaskClosure>([this] { Closedown(); });
@@ -384,7 +383,7 @@ void Session::SendMuxCommand(std::unique_ptr<MuxCommand> mux_command,
     outstanding_mux_commands_[key].second->PostDelayed(dispatcher_,
                                                        kMuxResponseTimer);
   });
-  FXL_DCHECK(sent);
+  ZX_DEBUG_ASSERT(sent);
 }
 
 void Session::StartupMultiplexer() {
@@ -399,11 +398,11 @@ void Session::StartupMultiplexer() {
 
   SendCommand(FrameType::kSetAsynchronousBalancedMode, kMuxControlDLCI,
               [this](auto response) {
-                FXL_DCHECK(response);
+                ZX_DEBUG_ASSERT(response);
 
                 FrameType type = static_cast<FrameType>(response->control());
-                FXL_DCHECK(type == FrameType::kUnnumberedAcknowledgement ||
-                           type == FrameType::kDisconnectedMode);
+                ZX_DEBUG_ASSERT(type == FrameType::kUnnumberedAcknowledgement ||
+                                type == FrameType::kDisconnectedMode);
 
                 switch (role_) {
                   case Role::kNegotiating: {
@@ -426,7 +425,8 @@ void Session::StartupMultiplexer() {
                     break;
                   default:
                     // TODO(gusss): shouldn't get here.
-                    FXL_NOTREACHED();
+                    ZX_PANIC("invalid role: %u",
+                             static_cast<unsigned int>(role_));
                     break;
                 }
               });
@@ -456,7 +456,7 @@ void Session::HandleSABM(DLCI dlci) {
         // cancelling timeout, and removing callbacks.
         role_ = Role::kUnassigned;
         auto frame_it = outstanding_frames_.find(dlci);
-        FXL_DCHECK(frame_it != outstanding_frames_.end());
+        ZX_DEBUG_ASSERT(frame_it != outstanding_frames_.end());
         frame_it->second.second->Cancel();
         outstanding_frames_.erase(frame_it);
 
@@ -478,7 +478,7 @@ void Session::HandleSABM(DLCI dlci) {
         bt_log(WARN, "rfcomm", "request to start already started multiplexer");
         return;
       default:
-        FXL_NOTREACHED();
+        ZX_PANIC("invalid role: %u", static_cast<unsigned int>(role_));
         return;
     }
   }
@@ -522,7 +522,7 @@ void Session::HandleSABM(DLCI dlci) {
 }
 
 void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
-  FXL_DCHECK(mux_command);
+  ZX_DEBUG_ASSERT(mux_command);
   MuxCommandType type = mux_command->command_type();
 
   if (mux_command->command_response() == CommandResponse::kResponse) {
@@ -625,7 +625,8 @@ void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
                 ? received_params.maximum_frame_size
                 : ideal_params.maximum_frame_size;
       } else {
-        FXL_DCHECK(received_params.maximum_frame_size == maximum_frame_size_);
+        ZX_DEBUG_ASSERT(received_params.maximum_frame_size ==
+                        maximum_frame_size_);
         negotiated_params.maximum_frame_size = maximum_frame_size_;
       }
 
@@ -667,14 +668,15 @@ void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
       return;
     }
     default: {
-      FXL_NOTIMPLEMENTED();
+      bt_log(ERROR, "rfcomm", "unsupported mux command: %u",
+             static_cast<unsigned int>(type));
       break;
     }
   }
 }
 
 void Session::SetMultiplexerStarted(Role role) {
-  FXL_DCHECK(role == Role::kInitiator || role == Role::kResponder);
+  ZX_DEBUG_ASSERT(role == Role::kInitiator || role == Role::kResponder);
 
   role_ = role;
   bt_log(TRACE, "rfcomm", "multiplexer started (role: %s)",
@@ -696,11 +698,12 @@ void Session::Closedown() {
 }
 
 void Session::RunInitialParameterNegotiation(DLCI dlci) {
-  FXL_DCHECK(multiplexer_started())
-      << "Parameter negotiation requested before multiplexer started";
-  FXL_DCHECK(initial_param_negotiation_state_ ==
-             ParameterNegotiationState::kNotNegotiated)
-      << "Initial parameter negotiation already run";
+  ZX_DEBUG_ASSERT_MSG(
+      multiplexer_started(),
+      "parameter negotiation requested before multiplexer started");
+  ZX_DEBUG_ASSERT_MSG(initial_param_negotiation_state_ ==
+                          ParameterNegotiationState::kNotNegotiated,
+                      "initial parameter negotiation already run");
 
   // Mark the DLCI as in the negotiating state.
   channels_negotiating_[dlci] = ParameterNegotiationState::kNegotiating;
@@ -714,10 +717,10 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
                                          maximum_frame_size =
                                              params.maximum_frame_size](
                                             auto mux_command) {
-    FXL_DCHECK(initial_param_negotiation_state_ ==
-                   ParameterNegotiationState::kNegotiating ||
-               initial_param_negotiation_state_ ==
-                   ParameterNegotiationState::kNegotiated);
+    ZX_DEBUG_ASSERT(initial_param_negotiation_state_ ==
+                        ParameterNegotiationState::kNegotiating ||
+                    initial_param_negotiation_state_ ==
+                        ParameterNegotiationState::kNegotiated);
 
     if (mux_command == nullptr) {
       // A response of nullptr signals a DM response from the peer.
@@ -734,9 +737,10 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
       return;
     }
 
-    FXL_DCHECK(mux_command->command_type() ==
-                   MuxCommandType::kDLCParameterNegotiation &&
-               mux_command->command_response() == CommandResponse::kResponse);
+    ZX_DEBUG_ASSERT(mux_command->command_type() ==
+                        MuxCommandType::kDLCParameterNegotiation &&
+                    mux_command->command_response() ==
+                        CommandResponse::kResponse);
 
     auto pn_response = std::unique_ptr<DLCParameterNegotiationCommand>(
         static_cast<DLCParameterNegotiationCommand*>(mux_command.release()));
@@ -808,13 +812,14 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
            params.initial_credits, params.priority, maximum_frame_size_);
 
     // Set channel to not negotiating anymore.
-    FXL_DCHECK(channels_negotiating_.find(dlci) != channels_negotiating_.end());
+    ZX_DEBUG_ASSERT(channels_negotiating_.find(dlci) !=
+                    channels_negotiating_.end());
     channels_negotiating_[dlci] = ParameterNegotiationState::kNegotiated;
   });
 }
 
 ParameterNegotiationParams Session::GetIdealParameters(DLCI dlci) const {
-  FXL_DCHECK(IsValidDLCI(dlci));
+  ZX_DEBUG_ASSERT(IsValidDLCI(dlci));
 
   // We set the MTU of the RFCOMM channel based on the MTUs of the underlying
   // L2CAP link; we take the minimum of the two.

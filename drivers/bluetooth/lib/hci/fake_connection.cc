@@ -17,7 +17,7 @@ FakeConnection::FakeConnection(ConnectionHandle handle, LinkType ll_type,
 
 void FakeConnection::TriggerEncryptionChangeCallback(Status status,
                                                      bool enabled) {
-  FXL_DCHECK(encryption_change_callback());
+  ZX_DEBUG_ASSERT(encryption_change_callback());
   encryption_change_callback()(status, enabled);
 }
 

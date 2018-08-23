@@ -54,7 +54,7 @@ GattRemoteServiceServer::GattRemoteServiceServer(
     : GattServerBase(gatt, this, std::move(request)),
       service_(std::move(service)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(service_);
+  ZX_DEBUG_ASSERT(service_);
 }
 
 GattRemoteServiceServer::~GattRemoteServiceServer() {
@@ -207,9 +207,9 @@ void GattRemoteServiceServer::NotifyCharacteristic(
     }
 
     if (status) {
-      FXL_DCHECK(handler_id != btlib::gatt::kInvalidId);
-      FXL_DCHECK(self->notify_handlers_.count(id) == 1u);
-      FXL_DCHECK(self->notify_handlers_[id] == btlib::gatt::kInvalidId);
+      ZX_DEBUG_ASSERT(handler_id != btlib::gatt::kInvalidId);
+      ZX_DEBUG_ASSERT(self->notify_handlers_.count(id) == 1u);
+      ZX_DEBUG_ASSERT(self->notify_handlers_[id] == btlib::gatt::kInvalidId);
       self->notify_handlers_[id] = handler_id;
     } else {
       // Remove our handle holder.

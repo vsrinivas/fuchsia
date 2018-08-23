@@ -8,12 +8,12 @@
 #include <memory>
 
 #include <lib/async/cpp/task.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 
@@ -136,10 +136,10 @@ class FakeControllerTest : public ::gtest::TestLoopFixture {
     zx::channel acl0;
 
     zx_status_t status = zx::channel::create(0, &cmd0, &cmd1_);
-    FXL_DCHECK(ZX_OK == status);
+    ZX_DEBUG_ASSERT(ZX_OK == status);
 
     status = zx::channel::create(0, &acl0, &acl1_);
-    FXL_DCHECK(ZX_OK == status);
+    ZX_DEBUG_ASSERT(ZX_OK == status);
 
     auto hci_dev = std::make_unique<hci::DummyDeviceWrapper>(std::move(cmd0),
                                                              std::move(acl0));

@@ -7,7 +7,6 @@
 #include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "command_channel.h"
@@ -77,7 +76,7 @@ std::string LinkTypeToString(Connection::LinkType type) {
       return "LE";
   }
 
-  FXL_NOTREACHED();
+  ZX_PANIC("invalid link type: %u", static_cast<unsigned int>(type));
   return "(invalid)";
 }
 
@@ -101,8 +100,8 @@ std::unique_ptr<Connection> Connection::CreateLE(
     const common::DeviceAddress& local_address,
     const common::DeviceAddress& peer_address,
     const LEConnectionParameters& params, fxl::RefPtr<Transport> hci) {
-  FXL_DCHECK(local_address.type() != common::DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(peer_address.type() != common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(local_address.type() != common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(peer_address.type() != common::DeviceAddress::Type::kBREDR);
   auto conn = std::make_unique<ConnectionImpl>(
       handle, LinkType::kLE, role, local_address, peer_address, hci);
   conn->set_low_energy_parameters(params);
@@ -114,8 +113,8 @@ std::unique_ptr<Connection> Connection::CreateACL(
     ConnectionHandle handle, Role role,
     const common::DeviceAddress& local_address,
     const common::DeviceAddress& peer_address, fxl::RefPtr<Transport> hci) {
-  FXL_DCHECK(local_address.type() == common::DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(peer_address.type() == common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(local_address.type() == common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(peer_address.type() == common::DeviceAddress::Type::kBREDR);
   auto conn = std::make_unique<ConnectionImpl>(
       handle, LinkType::kACL, role, local_address, peer_address, hci);
   return conn;
@@ -130,7 +129,7 @@ Connection::Connection(ConnectionHandle handle, LinkType ll_type, Role role,
       is_open_(true),
       local_address_(local_address),
       peer_address_(peer_address) {
-  FXL_DCHECK(handle_);
+  ZX_DEBUG_ASSERT(handle_);
 }
 
 std::string Connection::ToString() const {
@@ -154,7 +153,7 @@ ConnectionImpl::ConnectionImpl(ConnectionHandle handle, LinkType ll_type,
     : Connection(handle, ll_type, role, local_address, peer_address),
       hci_(hci),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci_);
+  ZX_DEBUG_ASSERT(hci_);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
 
@@ -193,7 +192,7 @@ fxl::WeakPtr<Connection> ConnectionImpl::WeakPtr() {
 }
 
 void ConnectionImpl::Close(StatusCode reason) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (!is_open())
     return;
 
@@ -210,7 +209,7 @@ void ConnectionImpl::Close(StatusCode reason) {
   // Here we send a HCI_Disconnect command without waiting for it to complete.
 
   auto status_cb = [](auto id, const EventPacket& event) {
-    FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() == kCommandStatusEventCode);
     const auto& params = event.view().payload<CommandStatusEventParams>();
     if (params.status != StatusCode::kSuccess) {
       bt_log(WARN, "hci", "ignoring failed disconnection status: %#.2x",
@@ -231,7 +230,7 @@ void ConnectionImpl::Close(StatusCode reason) {
 }
 
 bool ConnectionImpl::StartEncryption() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) {
     bt_log(TRACE, "hci", "connection closed; cannot start encryption");
     return false;
@@ -258,7 +257,7 @@ bool ConnectionImpl::StartEncryption() {
 }
 
 bool ConnectionImpl::LEStartEncryption(const LinkKey& ltk) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   // TODO(NET-1042): Tell the data channel to stop data flow.
 
@@ -310,8 +309,8 @@ void ConnectionImpl::HandleEncryptionStatus(Status status, bool enabled) {
 }
 
 void ConnectionImpl::OnEncryptionChangeEvent(const EventPacket& event) {
-  FXL_DCHECK(event.event_code() == kEncryptionChangeEventCode);
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(event.event_code() == kEncryptionChangeEventCode);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (!encryption_change_callback()) {
     bt_log(TRACE, "hci", "encryption changed event ignored");
@@ -349,8 +348,8 @@ void ConnectionImpl::OnEncryptionChangeEvent(const EventPacket& event) {
 
 void ConnectionImpl::OnEncryptionKeyRefreshCompleteEvent(
     const EventPacket& event) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(event.event_code() == kEncryptionKeyRefreshCompleteEventCode);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(event.event_code() == kEncryptionKeyRefreshCompleteEventCode);
 
   if (!encryption_change_callback()) {
     bt_log(TRACE, "hci", "encryption key refresh event ignored");
@@ -387,10 +386,10 @@ void ConnectionImpl::OnEncryptionKeyRefreshCompleteEvent(
 }
 
 void ConnectionImpl::OnLELongTermKeyRequestEvent(const EventPacket& event) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(event.event_code() == kLEMetaEventCode);
-  FXL_DCHECK(event.view().payload<LEMetaEventParams>().subevent_code ==
-             kLELongTermKeyRequestSubeventCode);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(event.event_code() == kLEMetaEventCode);
+  ZX_DEBUG_ASSERT(event.view().payload<LEMetaEventParams>().subevent_code ==
+                  kLELongTermKeyRequestSubeventCode);
 
   auto* params = event.le_event_params<LELongTermKeyRequestSubeventParams>();
   if (!params) {

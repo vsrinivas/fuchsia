@@ -4,7 +4,8 @@
 
 #include "device_address.h"
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
+
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -35,13 +36,13 @@ DeviceAddressBytes::DeviceAddressBytes() {
 }
 
 DeviceAddressBytes::DeviceAddressBytes(std::initializer_list<uint8_t> bytes) {
-  FXL_DCHECK(bytes.size() == bytes_.size());
+  ZX_DEBUG_ASSERT(bytes.size() == bytes_.size());
   std::copy(bytes.begin(), bytes.end(), bytes_.begin());
 }
 
 DeviceAddressBytes::DeviceAddressBytes(const std::string& bdaddr_string) {
-  // Use FXL_CHECK to prevent this from being compiled out on non-debug builds.
-  FXL_CHECK(SetFromString(bdaddr_string));
+  // Use ZX_ASSERT to prevent this from being compiled out on non-debug builds.
+  ZX_ASSERT(SetFromString(bdaddr_string));
 }
 
 bool DeviceAddressBytes::SetFromString(const std::string& bdaddr_string) {
@@ -117,17 +118,5 @@ hash<::btlib::common::DeviceAddress>::operator()(
     argument_type const& value) const {
   return value.Hash();
 }
-
-// Stream operators for easy logging
-ostream& operator<<(ostream& os,
-                    const ::btlib::common::DeviceAddressBytes& db) {
-  os << db.ToString();
-  return os;
-};
-
-ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddress& d) {
-  os << d.ToString();
-  return os;
-};
 
 }  // namespace std

@@ -7,6 +7,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -47,7 +48,7 @@ class ServerBase : public Server, public Interface {
   // Constructs a FIDL server by binding a zx::channel.
   ServerBase(Interface* impl, zx::channel channel)
       : binding_(impl, std::move(channel)) {
-    FXL_DCHECK(binding_.is_bound());
+    ZX_DEBUG_ASSERT(binding_.is_bound());
   }
 
   ~ServerBase() override = default;
@@ -78,7 +79,7 @@ class AdapterServerBase : public ServerBase<Interface> {
   AdapterServerBase(fxl::WeakPtr<btlib::gap::Adapter> adapter, Interface* impl,
                     zx::channel channel)
       : ServerBase<Interface>(impl, std::move(channel)), adapter_(adapter) {
-    FXL_DCHECK(adapter_);
+    ZX_DEBUG_ASSERT(adapter_);
   }
 
   ~AdapterServerBase() override = default;
@@ -100,7 +101,7 @@ class GattServerBase : public ServerBase<Interface> {
   GattServerBase(fbl::RefPtr<btlib::gatt::GATT> gatt, Interface* impl,
                  fidl::InterfaceRequest<Interface> request)
       : ServerBase<Interface>(impl, std::move(request)), gatt_(gatt) {
-    FXL_DCHECK(gatt_);
+    ZX_DEBUG_ASSERT(gatt_);
   }
 
   ~GattServerBase() override = default;

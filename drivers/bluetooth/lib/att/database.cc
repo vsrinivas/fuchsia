@@ -6,8 +6,9 @@
 
 #include <algorithm>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace att {
@@ -29,7 +30,7 @@ Database::Iterator::Iterator(GroupingList* list,
                              const common::UUID* type,
                              bool groups_only)
     : start_(start), end_(end), grp_only_(groups_only), attr_offset_(0u) {
-  FXL_DCHECK(list);
+  ZX_DEBUG_ASSERT(list);
   grp_end_ = list->end();
 
   if (type)
@@ -68,7 +69,7 @@ const Attribute* Database::Iterator::get() const {
   if (AtEnd() || !grp_iter_->active())
     return nullptr;
 
-  FXL_DCHECK(attr_offset_ < grp_iter_->attributes().size());
+  ZX_DEBUG_ASSERT(attr_offset_ < grp_iter_->attributes().size());
   return &grp_iter_->attributes()[attr_offset_];
 }
 
@@ -81,7 +82,7 @@ void Database::Iterator::Advance() {
       // If this grouping has more attributes to look at.
       if (attr_offset_ < grp_iter_->attributes().size() - 1) {
         size_t end_offset = grp_iter_->end_handle() - grp_iter_->start_handle();
-        FXL_DCHECK(end_offset < grp_iter_->attributes().size());
+        ZX_DEBUG_ASSERT(end_offset < grp_iter_->attributes().size());
 
         // Advance.
         attr_offset_++;
@@ -107,7 +108,7 @@ void Database::Iterator::Advance() {
       // next group below.
       attr_offset_ = 0u;
     } else {
-      FXL_DCHECK(attr_offset_ == 0u);
+      ZX_DEBUG_ASSERT(attr_offset_ == 0u);
     }
 
     // Advance the group.
@@ -133,18 +134,18 @@ void Database::Iterator::Advance() {
 
 Database::Database(Handle range_start, Handle range_end)
     : range_start_(range_start), range_end_(range_end) {
-  FXL_DCHECK(range_start_ < range_end_);
-  FXL_DCHECK(range_start_ >= kHandleMin);
-  FXL_DCHECK(range_end_ <= kHandleMax);
+  ZX_DEBUG_ASSERT(range_start_ < range_end_);
+  ZX_DEBUG_ASSERT(range_start_ >= kHandleMin);
+  ZX_DEBUG_ASSERT(range_end_ <= kHandleMax);
 }
 
 Database::Iterator Database::GetIterator(Handle start,
                                          Handle end,
                                          const common::UUID* type,
                                          bool groups_only) {
-  FXL_DCHECK(start >= range_start_);
-  FXL_DCHECK(end <= range_end_);
-  FXL_DCHECK(start <= end);
+  ZX_DEBUG_ASSERT(start >= range_start_);
+  ZX_DEBUG_ASSERT(end <= range_end_);
+  ZX_DEBUG_ASSERT(start <= end);
 
   return Iterator(&groupings_, start, end, type, groups_only);
 }
@@ -195,7 +196,7 @@ AttributeGrouping* Database::NewGrouping(const common::UUID& group_type,
 
   auto iter =
       groupings_.emplace(pos, group_type, start_handle, attr_count, decl_value);
-  FXL_DCHECK(iter != groupings_.end());
+  ZX_DEBUG_ASSERT(iter != groupings_.end());
 
   return &*iter;
 }
@@ -225,7 +226,7 @@ const Attribute* Database::FindAttribute(Handle handle) {
     return nullptr;
 
   size_t index = handle - iter->start_handle();
-  FXL_DCHECK(index < iter->attributes().size());
+  ZX_DEBUG_ASSERT(index < iter->attributes().size());
 
   return &iter->attributes()[index];
 }

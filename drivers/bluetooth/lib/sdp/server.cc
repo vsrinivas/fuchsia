@@ -23,8 +23,8 @@ constexpr uint32_t kInitialDbState = 0;
 
 // Populates the ServiceDiscoveryService record.
 void PopulateServiceDiscoveryService(ServiceRecord* sdp) {
-  FXL_DCHECK(sdp);
-  FXL_DCHECK(sdp->handle() == kSDPHandle);
+  ZX_DEBUG_ASSERT(sdp);
+  ZX_DEBUG_ASSERT(sdp->handle() == kSDPHandle);
   // ServiceClassIDList attribute should have the
   // ServiceDiscoveryServerServiceClassID
   // See v5.0, Vol 3, Part B, Sec 5.2.2
@@ -46,7 +46,7 @@ Server::Server()
       db_state_(0),
       weak_ptr_factory_(this) {
   auto* sdp_record = MakeNewRecord(kSDPHandle);
-  FXL_DCHECK(sdp_record);
+  ZX_DEBUG_ASSERT(sdp_record);
   PopulateServiceDiscoveryService(sdp_record);
 }
 
@@ -83,7 +83,7 @@ bool Server::AddConnection(const std::string& peer_id,
 }
 
 bool Server::RegisterService(ConstructCallback callback) {
-  FXL_DCHECK(callback);
+  ZX_DEBUG_ASSERT(callback);
   ServiceHandle next = GetNextHandle();
   if (!next) {
     return false;
@@ -195,7 +195,7 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
 
   reader.ReadNext(length, [length, chan = it->second.share()](
                               const common::ByteBuffer& pdu) {
-    FXL_CHECK(pdu.size() == length);
+    ZX_ASSERT(pdu.size() == length);
     common::PacketView<Header> packet(&pdu);
     TransactionId tid = betoh16(packet.header().tid);
     uint16_t param_length = betoh16(packet.header().param_length);

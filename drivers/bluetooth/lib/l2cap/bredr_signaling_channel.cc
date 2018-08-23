@@ -27,7 +27,7 @@ BrEdrSignalingChannel::BrEdrSignalingChannel(fbl::RefPtr<Channel> chan,
 bool BrEdrSignalingChannel::SendRequest(CommandCode req_code,
                                         const common::ByteBuffer& payload,
                                         ResponseHandler cb) {
-  FXL_DCHECK(cb);
+  ZX_DEBUG_ASSERT(cb);
   const CommandId id = EnqueueResponse(req_code + 1, std::move(cb));
   if (id == kInvalidCommandId) {
     return false;
@@ -38,8 +38,8 @@ bool BrEdrSignalingChannel::SendRequest(CommandCode req_code,
 
 void BrEdrSignalingChannel::ServeRequest(CommandCode req_code,
                                          RequestDelegate cb) {
-  FXL_DCHECK(!IsSupportedResponse(req_code));
-  FXL_DCHECK(cb);
+  ZX_DEBUG_ASSERT(!IsSupportedResponse(req_code));
+  ZX_DEBUG_ASSERT(cb);
   inbound_handlers_[req_code] = std::move(cb);
 }
 
@@ -107,7 +107,7 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
       };
 
   // Performing a single read for the entire length of an SDU can never fail.
-  FXL_CHECK(reader.ReadNext(sdu.length(), split_and_process_packets_from_sdu));
+  ZX_ASSERT(reader.ReadNext(sdu.length(), split_and_process_packets_from_sdu));
 }
 
 bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
@@ -132,7 +132,7 @@ bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
 
 CommandId BrEdrSignalingChannel::EnqueueResponse(CommandCode expected_code,
                                                  ResponseHandler cb) {
-  FXL_DCHECK(IsSupportedResponse(expected_code));
+  ZX_DEBUG_ASSERT(IsSupportedResponse(expected_code));
 
   // Command identifiers for pending requests are assumed to be unique across
   // all types of requests and reused by order of least recent use. See v5.0

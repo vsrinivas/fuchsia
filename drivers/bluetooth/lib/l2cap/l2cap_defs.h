@@ -171,7 +171,7 @@ constexpr PSM kAVDTP = 0x0019; // Audio/Video Distribution Transport Protocol
 constexpr PSM kAVCTP_Browse = 0x001B; // Audio/Video Remote Control Profile (Browsing)
 constexpr PSM kATT = 0x001F; // ATT
 constexpr PSM k3DSP = 0x0021; // 3D Synchronization Profile
-constexpr PSM kLE_PSM_IPSP = 0x0023; // Internet Protocol Support Profile
+constexpr PSM kLE_IPSP = 0x0023; // Internet Protocol Support Profile
 constexpr PSM kOTS = 0x0025; // Object Transfer Service
 
 // Identifier assigned to each signaling transaction. This is used to match each

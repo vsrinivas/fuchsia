@@ -9,6 +9,8 @@
 
 #include <cstdint>
 
+#include <zircon/assert.h>
+
 namespace btlib {
 namespace hci {
 
@@ -39,7 +41,7 @@ class LMPFeatureSet {
 
   // Sets |page| features to |features|
   inline void SetPage(size_t page, uint64_t features) {
-    FXL_DCHECK(page < kMaxPages);
+    ZX_DEBUG_ASSERT(page < kMaxPages);
     features_[page] = features;
     valid_pages_[page] = true;
   }

@@ -14,14 +14,14 @@ PDU::Reader::Reader(const PDU* pdu)
     : offset_(sizeof(BasicHeader)),
       frag_offset_(sizeof(BasicHeader)),
       pdu_(pdu) {
-  FXL_DCHECK(pdu_);
-  FXL_DCHECK(pdu_->is_valid());
+  ZX_DEBUG_ASSERT(pdu_);
+  ZX_DEBUG_ASSERT(pdu_->is_valid());
 
   cur_fragment_ = pdu_->fragments_.cbegin();
 }
 
 bool PDU::Reader::ReadNext(size_t size, const ReadFunc& func) {
-  FXL_DCHECK(func);
+  ZX_DEBUG_ASSERT(func);
 
   if (!size)
     return false;
@@ -70,7 +70,7 @@ bool PDU::Reader::ReadNext(size_t size, const ReadFunc& func) {
     remaining -= copy_size;
 
     // Reset fragment offset if we processed an entire fragment.
-    FXL_DCHECK(frag_offset_ <= payload.size());
+    ZX_DEBUG_ASSERT(frag_offset_ <= payload.size());
     if (frag_offset_ == payload.size()) {
       frag_offset_ = 0u;
       ++cur_fragment_;
@@ -100,12 +100,12 @@ PDU& PDU::operator=(PDU&& other) {
 size_t PDU::Copy(common::MutableByteBuffer* out_buffer,
                  size_t pos,
                  size_t size) const {
-  FXL_DCHECK(out_buffer);
-  FXL_DCHECK(pos < length());
-  FXL_DCHECK(is_valid());
+  ZX_DEBUG_ASSERT(out_buffer);
+  ZX_DEBUG_ASSERT(pos < length());
+  ZX_DEBUG_ASSERT(is_valid());
 
   size_t remaining = std::min(size, length() - pos);
-  FXL_DCHECK(out_buffer->size() >= remaining);
+  ZX_DEBUG_ASSERT(out_buffer->size() >= remaining);
 
   bool found = false;
   size_t offset = 0u;
@@ -149,7 +149,7 @@ size_t PDU::Copy(common::MutableByteBuffer* out_buffer,
 }
 
 const common::BufferView PDU::ViewFirstFragment(size_t size) const {
-  FXL_DCHECK(is_valid());
+  ZX_DEBUG_ASSERT(is_valid());
   return fragments_.begin()->view().payload_data().view(sizeof(BasicHeader),
                                                         size);
 }
@@ -158,23 +158,23 @@ PDU::FragmentList PDU::ReleaseFragments() {
   auto out_list = std::move(fragments_);
   fragment_count_ = 0u;
 
-  FXL_DCHECK(!is_valid());
+  ZX_DEBUG_ASSERT(!is_valid());
   return out_list;
 }
 
 const BasicHeader& PDU::basic_header() const {
-  FXL_DCHECK(!fragments_.is_empty());
+  ZX_DEBUG_ASSERT(!fragments_.is_empty());
   const auto& fragment = *fragments_.begin();
 
-  FXL_DCHECK(fragment.packet_boundary_flag() !=
-             hci::ACLPacketBoundaryFlag::kContinuingFragment);
+  ZX_DEBUG_ASSERT(fragment.packet_boundary_flag() !=
+                  hci::ACLPacketBoundaryFlag::kContinuingFragment);
   return fragment.view().payload<BasicHeader>();
 }
 
 void PDU::AppendFragment(hci::ACLDataPacketPtr fragment) {
-  FXL_DCHECK(fragment);
-  FXL_DCHECK(!is_valid() || fragments_.begin()->connection_handle() ==
-                                fragment->connection_handle());
+  ZX_DEBUG_ASSERT(fragment);
+  ZX_DEBUG_ASSERT(!is_valid() || fragments_.begin()->connection_handle() ==
+                                     fragment->connection_handle());
   fragments_.push_back(std::move(fragment));
   fragment_count_++;
 }

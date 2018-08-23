@@ -5,9 +5,9 @@
 #include "util.h"
 
 #include <openssl/aes.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 
@@ -25,7 +25,7 @@ constexpr size_t kPreqSize = 7;
 // Swap the endianness of a 128-bit integer. |in| and |out| should not be backed
 // by the same buffer.
 void Swap128(const UInt128& in, UInt128* out) {
-  FXL_DCHECK(out);
+  ZX_DEBUG_ASSERT(out);
   for (size_t i = 0; i < in.size(); ++i) {
     (*out)[i] = in[in.size() - i - 1];
   }
@@ -34,7 +34,7 @@ void Swap128(const UInt128& in, UInt128* out) {
 // XOR two 128-bit integers and return the result in |out|. It is possible to
 // pass a pointer to one of the inputs as |out|.
 void Xor128(const UInt128& int1, const UInt128& int2, UInt128* out) {
-  FXL_DCHECK(out);
+  ZX_DEBUG_ASSERT(out);
 
   uint64_t lower1 = *reinterpret_cast<const uint64_t*>(int1.data());
   uint64_t upper1 = *reinterpret_cast<const uint64_t*>(int1.data() + 8);
@@ -183,9 +183,9 @@ void Encrypt(const common::UInt128& key, const common::UInt128& plaintext_data,
 void C1(const UInt128& tk, const UInt128& rand, const ByteBuffer& preq,
         const ByteBuffer& pres, const DeviceAddress& initiator_addr,
         const DeviceAddress& responder_addr, UInt128* out_confirm_value) {
-  FXL_DCHECK(preq.size() == kPreqSize);
-  FXL_DCHECK(pres.size() == kPreqSize);
-  FXL_DCHECK(out_confirm_value);
+  ZX_DEBUG_ASSERT(preq.size() == kPreqSize);
+  ZX_DEBUG_ASSERT(pres.size() == kPreqSize);
+  ZX_DEBUG_ASSERT(out_confirm_value);
 
   UInt128 p1, p2;
 
@@ -215,7 +215,7 @@ void C1(const UInt128& tk, const UInt128& rand, const ByteBuffer& preq,
 
 void S1(const UInt128& tk, const UInt128& r1, const UInt128& r2,
         UInt128* out_stk) {
-  FXL_DCHECK(out_stk);
+  ZX_DEBUG_ASSERT(out_stk);
 
   UInt128 r_prime;
 

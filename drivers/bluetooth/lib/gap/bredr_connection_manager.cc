@@ -4,6 +4,8 @@
 
 #include "bredr_connection_manager.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
@@ -18,7 +20,7 @@ namespace {
 
 void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
                         async_dispatcher_t* dispatcher, hci::StatusCallback cb) {
-  FXL_DCHECK(cb);
+  ZX_DEBUG_ASSERT(cb);
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   auto finish_enable_cb = [enabled, dispatcher, hci, finish_cb = std::move(cb)](
                               auto, const hci::EventPacket& event) mutable {
@@ -61,7 +63,7 @@ hci::CommandChannel::EventHandlerId BrEdrConnectionManager::AddEventHandler(
         }
       },
       dispatcher_);
-  FXL_DCHECK(event_id);
+  ZX_DEBUG_ASSERT(event_id);
   return event_id;
 }
 
@@ -76,9 +78,9 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
       use_interlaced_scan_(use_interlaced_scan),
       dispatcher_(async_get_default_dispatcher()),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(cache_);
-  FXL_DCHECK(dispatcher_);
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(cache_);
+  ZX_DEBUG_ASSERT(dispatcher_);
 
   hci_cmd_runner_ =
       std::make_unique<hci::SequentialCommandRunner>(dispatcher_, hci_);
@@ -213,7 +215,7 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
 
 void BrEdrConnectionManager::OnConnectionRequest(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kConnectionRequestEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kConnectionRequestEventCode);
   const auto& params =
       event.view().payload<hci::ConnectionRequestEventParams>();
   std::string link_type_str =
@@ -261,7 +263,7 @@ void BrEdrConnectionManager::OnConnectionRequest(
 
 void BrEdrConnectionManager::OnConnectionComplete(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kConnectionCompleteEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kConnectionCompleteEventCode);
   const auto& params =
       event.view().payload<hci::ConnectionCompleteEventParams>();
   bt_log(TRACE, "gap-bredr",
@@ -310,7 +312,7 @@ void BrEdrConnectionManager::OnConnectionComplete(
 
 void BrEdrConnectionManager::OnDisconnectionComplete(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kDisconnectionCompleteEventCode);
   const auto& params =
       event.view().payload<hci::DisconnectionCompleteEventParams>();
 
@@ -344,7 +346,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
 
 void BrEdrConnectionManager::OnIOCapabilitiesRequest(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kIOCapabilityRequestEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kIOCapabilityRequestEventCode);
   const auto& params =
       event.view().payload<hci::IOCapabilityRequestEventParams>();
 
@@ -369,7 +371,7 @@ void BrEdrConnectionManager::OnIOCapabilitiesRequest(
 
 void BrEdrConnectionManager::OnUserConfirmationRequest(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kUserConfirmationRequestEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kUserConfirmationRequestEventCode);
   const auto& params =
       event.view().payload<hci::UserConfirmationRequestEventParams>();
 

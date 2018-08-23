@@ -46,18 +46,19 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
       listener_(listener),
       feature_exchange_pending_(false),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(chan_);
-  FXL_DCHECK(listener_);
-  FXL_DCHECK(async_get_default_dispatcher()) << "Default dispatcher required!";
+  ZX_DEBUG_ASSERT(chan_);
+  ZX_DEBUG_ASSERT(listener_);
+  ZX_DEBUG_ASSERT_MSG(async_get_default_dispatcher(),
+                      "default dispatcher required!");
 
   if (chan_->link_type() == hci::Connection::LinkType::kLE) {
-    FXL_DCHECK(chan_->id() == l2cap::kLESMPChannelId);
+    ZX_DEBUG_ASSERT(chan_->id() == l2cap::kLESMPChannelId);
     mtu_ = kLEMTU;
   } else if (chan_->link_type() == hci::Connection::LinkType::kACL) {
-    FXL_DCHECK(chan_->id() == l2cap::kSMPChannelId);
+    ZX_DEBUG_ASSERT(chan_->id() == l2cap::kSMPChannelId);
     mtu_ = kBREDRMTU;
   } else {
-    FXL_NOTREACHED() << "Unsupported link type!";
+    ZX_PANIC("unsupported link type!");
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
@@ -104,7 +105,7 @@ bool Bearer::InitiateFeatureExchange() {
   pdu->Copy(&pairing_payload_buffer_);
 
   // Start pairing timer.
-  FXL_DCHECK(!timeout_task_.is_pending());
+  ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
   timeout_task_.PostDelayed(async_get_default_dispatcher(),
                             zx::sec(kPairingTimeout));
 
@@ -231,7 +232,7 @@ void Bearer::OnFailure(Status status) {
 
   // TODO(armansito): Clear other procedure states here.
   feature_exchange_pending_ = false;
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnPairingFailed(status);
 }
 
@@ -247,8 +248,8 @@ ErrorCode Bearer::ResolveFeatures(bool local_initiator,
                                   const PairingRequestParams& preq,
                                   const PairingResponseParams& pres,
                                   PairingFeatures* out_features) {
-  FXL_DCHECK(pairing_started());
-  FXL_DCHECK(feature_exchange_pending_);
+  ZX_DEBUG_ASSERT(pairing_started());
+  ZX_DEBUG_ASSERT(feature_exchange_pending_);
 
   // Select the smaller of the initiator and responder max. encryption key size
   // values (Vol 3, Part H, 2.3.4).
@@ -305,9 +306,9 @@ ErrorCode Bearer::ResolveFeatures(bool local_initiator,
 void Bearer::BuildPairingParameters(PairingRequestParams* params,
                                     KeyDistGenField* out_local_keys,
                                     KeyDistGenField* out_remote_keys) {
-  FXL_DCHECK(params);
-  FXL_DCHECK(out_local_keys);
-  FXL_DCHECK(out_remote_keys);
+  ZX_DEBUG_ASSERT(params);
+  ZX_DEBUG_ASSERT(out_local_keys);
+  ZX_DEBUG_ASSERT(out_remote_keys);
 
   // We always request bonding.
   AuthReqField auth_req = AuthReq::kBondingFlag;
@@ -372,7 +373,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
   }
 
   // We shouldn't be in this state when pairing is initiated by the remote.
-  FXL_DCHECK(!feature_exchange_pending_);
+  ZX_DEBUG_ASSERT(!feature_exchange_pending_);
   feature_exchange_pending_ = true;
 
   const auto& req_params = reader.payload<PairingRequestParams>();
@@ -390,7 +391,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
   }
 
   // Start pairing timer.
-  FXL_DCHECK(!timeout_task_.is_pending());
+  ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
   timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(kPairingTimeout));
 
   PacketWriter writer(kPairingResponse, pdu.get());
@@ -424,7 +425,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
   pdu->Copy(&pairing_payload_buffer_);
   chan_->Send(std::move(pdu));
 
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnFeatureExchange(features, reader.data(),
                                pairing_payload_buffer_);
 }
@@ -459,7 +460,7 @@ void Bearer::OnPairingResponse(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnFeatureExchange(features, pairing_payload_buffer_,
                                reader.data());
 }
@@ -484,7 +485,7 @@ void Bearer::OnPairingConfirm(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnPairingConfirm(reader.payload<PairingConfirmValue>());
 }
 
@@ -508,7 +509,7 @@ void Bearer::OnPairingRandom(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnPairingRandom(reader.payload<PairingRandomValue>());
 }
 
@@ -533,7 +534,7 @@ void Bearer::OnEncryptionInformation(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnLongTermKey(reader.payload<EncryptionInformationParams>());
 }
 
@@ -558,7 +559,7 @@ void Bearer::OnMasterIdentification(const PacketReader& reader) {
   }
 
   const auto& params = reader.payload<MasterIdentificationParams>();
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnMasterIdentification(le16toh(params.ediv), le64toh(params.rand));
 }
 
@@ -575,7 +576,7 @@ void Bearer::OnIdentityInformation(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnIdentityResolvingKey(reader.payload<IRK>());
 }
 
@@ -593,7 +594,7 @@ void Bearer::OnIdentityAddressInformation(const PacketReader& reader) {
   }
 
   const auto& params = reader.payload<IdentityAddressInformationParams>();
-  FXL_DCHECK(listener_);
+  ZX_DEBUG_ASSERT(listener_);
   listener_->OnIdentityAddress(
       DeviceAddress(params.type == AddressType::kStaticRandom
                         ? DeviceAddress::Type::kLERandom
@@ -633,7 +634,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
   // The following will read the entire PDU in a single call.
   l2cap::SDU::Reader l2cap_reader(&sdu);
   l2cap_reader.ReadNext(length, [this, length](const ByteBuffer& sm_pdu) {
-    FXL_DCHECK(sm_pdu.size() == length);
+    ZX_DEBUG_ASSERT(sm_pdu.size() == length);
     PacketReader reader(&sm_pdu);
 
     switch (reader.code()) {

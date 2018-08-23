@@ -5,6 +5,7 @@
 #include "bredr_discovery_manager.h"
 
 #include <lib/async/default.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
@@ -38,7 +39,7 @@ std::unordered_set<RemoteDevice*> ProcessInquiryResult(
     if (!device) {
       device = cache->NewDevice(addr, true);
     }
-    FXL_DCHECK(device);
+    ZX_DEBUG_ASSERT(device);
 
     device->SetInquiryData(result.responses[i]);
     updated.insert(device);
@@ -53,7 +54,7 @@ BrEdrDiscoverySession::BrEdrDiscoverySession(
     : manager_(manager) {}
 
 BrEdrDiscoverySession::~BrEdrDiscoverySession() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   manager_->RemoveDiscoverySession(this);
 }
 
@@ -75,7 +76,7 @@ BrEdrDiscoverableSession::BrEdrDiscoverableSession(
     : manager_(manager) {}
 
 BrEdrDiscoverableSession::~BrEdrDiscoverableSession() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   manager_->RemoveDiscoverableSession(this);
 }
 
@@ -89,26 +90,26 @@ BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
       desired_inquiry_mode_(mode),
       current_inquiry_mode_(hci::InquiryMode::kStandard),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(cache_);
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(dispatcher_);
+  ZX_DEBUG_ASSERT(cache_);
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(dispatcher_);
 
   result_handler_id_ = hci_->command_channel()->AddEventHandler(
       hci::kInquiryResultEventCode,
       fit::bind_member(this, &BrEdrDiscoveryManager::InquiryResult),
       dispatcher_);
-  FXL_DCHECK(result_handler_id_);
+  ZX_DEBUG_ASSERT(result_handler_id_);
   rssi_handler_id_ = hci_->command_channel()->AddEventHandler(
       hci::kInquiryResultWithRSSIEventCode,
       fbl::BindMember(this, &BrEdrDiscoveryManager::InquiryResult),
       dispatcher_);
-  FXL_DCHECK(rssi_handler_id_);
+  ZX_DEBUG_ASSERT(rssi_handler_id_);
   // TODO(NET-729): add event handlers for the other inquiry modes
   eir_handler_id_ = hci_->command_channel()->AddEventHandler(
       hci::kExtendedInquiryResultEventCode,
       fbl::BindMember(this, &BrEdrDiscoveryManager::ExtendedInquiryResult),
       dispatcher_);
-  FXL_DCHECK(eir_handler_id_);
+  ZX_DEBUG_ASSERT(eir_handler_id_);
 }
 
 BrEdrDiscoveryManager::~BrEdrDiscoveryManager() {
@@ -119,8 +120,8 @@ BrEdrDiscoveryManager::~BrEdrDiscoveryManager() {
 }
 
 void BrEdrDiscoveryManager::RequestDiscovery(DiscoveryCallback callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(callback);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(callback);
 
   bt_log(TRACE, "gap-bredr", "RequestDiscovery");
 
@@ -210,7 +211,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
           return;
         }
 
-        FXL_DCHECK(event.event_code() == hci::kInquiryCompleteEventCode);
+        ZX_DEBUG_ASSERT(event.event_code() == hci::kInquiryCompleteEventCode);
 
         if (bt_is_error(status, SPEW, "gap", "inquiry complete error")) {
           return;
@@ -225,7 +226,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
 
 // Stops the inquiry procedure.
 void BrEdrDiscoveryManager::StopInquiry() {
-  FXL_DCHECK(result_handler_id_);
+  ZX_DEBUG_ASSERT(result_handler_id_);
   bt_log(SPEW, "gap-bredr", "cancelling inquiry");
 
   auto inq_cancel = hci::CommandPacket::New(hci::kInquiryCancel);
@@ -246,7 +247,7 @@ void BrEdrDiscoveryManager::InquiryResult(const hci::EventPacket& event) {
     devices = ProcessInquiryResult<hci::InquiryResultWithRSSIEventParams,
                                    hci::InquiryResultRSSI>(cache_, event);
   } else {
-    FXL_NOTREACHED() << "Unsupported Inquiry result type";
+    bt_log(ERROR, "gap-bredr", "unsupported inquiry result type");
     return;
   }
 
@@ -262,7 +263,7 @@ void BrEdrDiscoveryManager::InquiryResult(const hci::EventPacket& event) {
 
 void BrEdrDiscoveryManager::ExtendedInquiryResult(
     const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kExtendedInquiryResultEventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kExtendedInquiryResultEventCode);
 
   bt_log(SPEW, "gap-bredr", "ExtendedInquiryResult received");
   if (event.view().payload_size() !=
@@ -280,7 +281,7 @@ void BrEdrDiscoveryManager::ExtendedInquiryResult(
   if (!device) {
     device = cache_->NewDevice(addr, true);
   }
-  FXL_DCHECK(device);
+  ZX_DEBUG_ASSERT(device);
 
   device->SetInquiryData(result);
 
@@ -304,7 +305,7 @@ void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
   packet->mutable_view()->mutable_payload_data().SetToZeros();
   auto params = packet->mutable_view()
                     ->mutable_payload<hci::RemoteNameRequestCommandParams>();
-  FXL_DCHECK(device->page_scan_repetition_mode().HasValue());
+  ZX_DEBUG_ASSERT(device->page_scan_repetition_mode().HasValue());
   params->bd_addr = device->address().value();
   params->page_scan_repetition_mode = *(device->page_scan_repetition_mode());
   if (device->clock_offset()) {
@@ -322,7 +323,8 @@ void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
       return;
     }
 
-    FXL_DCHECK(event.event_code() == hci::kRemoteNameRequestCompleteEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() ==
+                    hci::kRemoteNameRequestCompleteEventCode);
 
     const auto& params =
         event.view()
@@ -345,8 +347,8 @@ void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
 }
 
 void BrEdrDiscoveryManager::RequestDiscoverable(DiscoverableCallback callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(callback);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(callback);
 
   bt_log(TRACE, "gap-bredr", "RequestDiscoverable");
 
@@ -452,7 +454,7 @@ BrEdrDiscoveryManager::AddDiscoverySession() {
   // constructor.
   std::unique_ptr<BrEdrDiscoverySession> session(
       new BrEdrDiscoverySession(weak_ptr_factory_.GetWeakPtr()));
-  FXL_DCHECK(discovering_.find(session.get()) == discovering_.end());
+  ZX_DEBUG_ASSERT(discovering_.find(session.get()) == discovering_.end());
   discovering_.insert(session.get());
   return session;
 }
@@ -474,7 +476,7 @@ BrEdrDiscoveryManager::AddDiscoverableSession() {
   // constructor.
   std::unique_ptr<BrEdrDiscoverableSession> session(
       new BrEdrDiscoverableSession(weak_ptr_factory_.GetWeakPtr()));
-  FXL_DCHECK(discoverable_.find(session.get()) == discoverable_.end());
+  ZX_DEBUG_ASSERT(discoverable_.find(session.get()) == discoverable_.end());
   discoverable_.insert(session.get());
   return session;
 }

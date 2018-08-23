@@ -7,13 +7,14 @@
 
 #include <cstdint>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_state.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/lmp_feature_set.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace gap {
@@ -61,7 +62,7 @@ class AdapterState final {
   // command list.
   inline bool IsCommandSupported(size_t octet,
                                  hci::SupportedCommand command_bit) const {
-    FXL_DCHECK(octet < sizeof(supported_commands_));
+    ZX_DEBUG_ASSERT(octet < sizeof(supported_commands_));
     return supported_commands_[octet] & static_cast<uint8_t>(command_bit);
   }
 

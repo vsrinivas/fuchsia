@@ -145,8 +145,8 @@ class GattServerServer::LocalServiceImpl
         owner_(owner),
         id_(id),
         delegate_(std::move(delegate)) {
-    FXL_DCHECK(owner_);
-    FXL_DCHECK(delegate_);
+    ZX_DEBUG_ASSERT(owner_);
+    ZX_DEBUG_ASSERT(delegate_);
   }
 
   // The destructor removes the GATT service
@@ -296,7 +296,7 @@ void GattServerServer::PublishService(
       return;
     }
 
-    FXL_DCHECK(self->services_.find(id) == self->services_.end());
+    ZX_DEBUG_ASSERT(self->services_.find(id) == self->services_.end());
 
     // This will be called if either the delegate or the service connection
     // closes.
@@ -339,7 +339,7 @@ void GattServerServer::OnReadRequest(::btlib::gatt::IdType service_id,
   };
 
   auto* delegate = iter->second->delegate();
-  FXL_DCHECK(delegate);
+  ZX_DEBUG_ASSERT(delegate);
   delegate->OnReadValue(id, offset, fxl::MakeCopyable(std::move(cb)));
 }
 
@@ -355,7 +355,7 @@ void GattServerServer::OnWriteRequest(::btlib::gatt::IdType service_id,
 
   auto fidl_value = fxl::To<fidl::VectorPtr<uint8_t>>(value);
   auto* delegate = iter->second->delegate();
-  FXL_DCHECK(delegate);
+  ZX_DEBUG_ASSERT(delegate);
 
   if (!responder) {
     delegate->OnWriteWithoutResponse(id, offset, std::move(fidl_value));
@@ -377,7 +377,7 @@ void GattServerServer::OnCharacteristicConfig(::btlib::gatt::IdType service_id,
   auto iter = services_.find(service_id);
   if (iter != services_.end()) {
     auto* delegate = iter->second->delegate();
-    FXL_DCHECK(delegate);
+    ZX_DEBUG_ASSERT(delegate);
     delegate->OnCharacteristicConfiguration(chrc_id, peer_id, notify, indicate);
   }
 }

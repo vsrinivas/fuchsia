@@ -5,6 +5,8 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TASK_DOMAIN_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_TASK_DOMAIN_H_
 
+#include <string>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>
@@ -13,8 +15,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
-#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/macros.h"
 
 namespace btlib {
 namespace common {
@@ -102,12 +105,12 @@ class TaskDomain {
   TaskDomain(T* obj, async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
     Init(obj);
 
-    FXL_DCHECK(dispatcher_);
+    ZX_DEBUG_ASSERT(dispatcher_);
   }
 
   virtual ~TaskDomain() {
-    FXL_DCHECK(!alive_)
-        << "ScheduleCleanUp() must be called before destruction";
+    ZX_DEBUG_ASSERT_MSG(!alive_,
+                        "ScheduleCleanUp() must be called before destruction");
   }
 
   // Runs the object's CleanUp() handler on the domain's dispatcher. Quits the
@@ -146,7 +149,7 @@ class TaskDomain {
   // default. This is purely intended for debug assertions and should not be
   // used for any other purpose.
   inline void AssertOnDispatcherThread() const {
-    FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
+    ZX_DEBUG_ASSERT(async_get_default_dispatcher() == dispatcher());
   }
 
   // Returns true if this domain is still alive. This function is only safe to
@@ -158,7 +161,7 @@ class TaskDomain {
 
  private:
   void Init(T* obj) {
-    FXL_DCHECK(obj);
+    ZX_DEBUG_ASSERT(obj);
     obj_ = obj;
     alive_ = true;
 

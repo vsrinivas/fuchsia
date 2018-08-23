@@ -5,10 +5,10 @@
 #include "fragmenter.h"
 
 #include <endian.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace l2cap {
@@ -17,10 +17,10 @@ Fragmenter::Fragmenter(hci::ConnectionHandle connection_handle,
                        uint16_t max_acl_payload_size)
     : connection_handle_(connection_handle),
       max_acl_payload_size_(max_acl_payload_size) {
-  FXL_DCHECK(connection_handle_);
-  FXL_DCHECK(connection_handle_ <= hci::kConnectionHandleMax);
-  FXL_DCHECK(max_acl_payload_size_);
-  FXL_DCHECK(max_acl_payload_size_ >= sizeof(BasicHeader));
+  ZX_DEBUG_ASSERT(connection_handle_);
+  ZX_DEBUG_ASSERT(connection_handle_ <= hci::kConnectionHandleMax);
+  ZX_DEBUG_ASSERT(max_acl_payload_size_);
+  ZX_DEBUG_ASSERT(max_acl_payload_size_ >= sizeof(BasicHeader));
 }
 
 // NOTE(armansito): The following method copies the contents of |data| into ACL
@@ -51,8 +51,8 @@ Fragmenter::Fragmenter(hci::ConnectionHandle connection_handle,
 PDU Fragmenter::BuildBasicFrame(ChannelId channel_id,
                                 const common::ByteBuffer& data,
                                 bool flushable) {
-  FXL_DCHECK(data.size() < kMaxBasicFramePayloadSize);
-  FXL_DCHECK(channel_id);
+  ZX_DEBUG_ASSERT(data.size() < kMaxBasicFramePayloadSize);
+  ZX_DEBUG_ASSERT(channel_id);
 
   const size_t frame_size = data.size() + sizeof(BasicHeader);
   const size_t num_fragments = frame_size / max_acl_payload_size_ +
@@ -61,7 +61,7 @@ PDU Fragmenter::BuildBasicFrame(ChannelId channel_id,
   PDU pdu;
   size_t processed = 0;
   for (size_t i = 0; i < num_fragments; i++) {
-    FXL_DCHECK(frame_size > processed);
+    ZX_DEBUG_ASSERT(frame_size > processed);
 
     const size_t fragment_size = std::min(
         frame_size - processed, static_cast<size_t>(max_acl_payload_size_));
@@ -75,7 +75,7 @@ PDU Fragmenter::BuildBasicFrame(ChannelId channel_id,
     auto acl_packet = hci::ACLDataPacket::New(
         connection_handle_, pbf, hci::ACLBroadcastFlag::kPointToPoint,
         fragment_size);
-    FXL_DCHECK(acl_packet);
+    ZX_DEBUG_ASSERT(acl_packet);
 
     auto mut_payload = acl_packet->mutable_view()->mutable_payload_data();
 
@@ -101,7 +101,7 @@ PDU Fragmenter::BuildBasicFrame(ChannelId channel_id,
   }
 
   // The PDU should have been completely processed if we got here.
-  FXL_DCHECK(processed == frame_size);
+  ZX_DEBUG_ASSERT(processed == frame_size);
 
   return pdu;
 }

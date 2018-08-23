@@ -4,8 +4,9 @@
 
 #include "util.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 
@@ -118,7 +119,7 @@ std::string StatusCodeToString(StatusCode code) {
 
 bool DeviceAddressFromAdvReport(const LEAdvertisingReportData& report,
                                 DeviceAddress* out_address) {
-  FXL_DCHECK(out_address);
+  ZX_DEBUG_ASSERT(out_address);
 
   DeviceAddress::Type type;
   switch (report.address_type) {
@@ -188,7 +189,7 @@ LEAddressType AddressTypeToHCI(DeviceAddress::Type type) {
       result = LEAddressType::kAnonymous;
       break;
     default:
-      FXL_NOTREACHED();
+      ZX_PANIC("invalid address type: %u", static_cast<unsigned int>(type));
       break;
   }
   return result;

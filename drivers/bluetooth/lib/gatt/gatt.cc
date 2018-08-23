@@ -6,6 +6,8 @@
 
 #include <unordered_map>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
@@ -29,13 +31,13 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
       : TaskDomainBase(this, gatt_dispatcher), initialized_(false) {}
 
   ~Impl() override {
-    FXL_DCHECK(!initialized_) << "gatt: ShutDown() must have been called!";
+    ZX_DEBUG_ASSERT_MSG(!initialized_, "ShutDown() must have been called!");
   }
 
   // GATT overrides:
   void Initialize() override {
     PostMessage([this] {
-      FXL_DCHECK(!initialized_);
+      ZX_DEBUG_ASSERT(!initialized_);
 
       local_services_ = std::make_unique<LocalServiceManager>();
 
@@ -79,7 +81,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
     bt_log(TRACE, "gatt", "add connection %s", peer_id.c_str());
 
     PostMessage([this, peer_id, att_chan] {
-      FXL_DCHECK(local_services_);
+      ZX_DEBUG_ASSERT(local_services_);
 
       auto iter = connections_.find(peer_id);
       if (iter != connections_.end()) {
@@ -140,7 +142,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
       if (!initialized_)
         return;
 
-      FXL_DCHECK(local_services_);
+      ZX_DEBUG_ASSERT(local_services_);
       local_services_->UnregisterService(service_id);
     });
   }
@@ -203,7 +205,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 
   void RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
                                     async_dispatcher_t* dispatcher) override {
-    FXL_DCHECK(callback);
+    ZX_DEBUG_ASSERT(callback);
     PostMessage(
         [this, callback = std::move(callback), runner = dispatcher]() mutable {
           if (initialized_) {
@@ -216,7 +218,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   void ListServices(std::string peer_id,
                     std::vector<common::UUID> uuids,
                     ServiceListCallback callback) override {
-    FXL_DCHECK(callback);
+    ZX_DEBUG_ASSERT(callback);
     PostMessage([this, peer_id = std::move(peer_id),
                  callback = std::move(callback),
                  uuids = std::move(uuids)]() mutable {

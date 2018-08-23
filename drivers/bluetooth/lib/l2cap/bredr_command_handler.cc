@@ -119,7 +119,7 @@ void BrEdrCommandHandler::InformationResponder::Send(InformationResult result,
 
 BrEdrCommandHandler::BrEdrCommandHandler(SignalingChannelInterface* sig)
     : sig_(sig) {
-  FXL_DCHECK(sig_);
+  ZX_DEBUG_ASSERT(sig_);
 }
 
 bool BrEdrCommandHandler::SendConnectionRequest(uint16_t psm,

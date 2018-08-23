@@ -152,6 +152,8 @@ class FlowControlOffCommand : public MuxCommand {
 };
 
 // These signals map to various V.24 signals as described in GSM tables 6 and 7.
+// TODO(armansito): Remove this and use the bitfield directly. There is no
+// benefit to unpacking a bitfield as a struct of bools and it is inefficient.
 struct ModemStatusCommandSignals {
   bool flow_control;
   bool ready_to_communicate;

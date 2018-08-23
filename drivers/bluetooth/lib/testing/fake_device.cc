@@ -5,12 +5,12 @@
 #include "fake_device.h"
 
 #include <endian.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 
@@ -46,21 +46,21 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable,
       gatt_server_(this) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
-  FXL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
+  ZX_DEBUG_ASSERT(data.size() <= hci::kMaxLEAdvertisingDataLength);
   adv_data_ = common::DynamicByteBuffer(data);
 }
 
 void FakeDevice::SetScanResponse(bool should_batch_reports,
                                  const common::ByteBuffer& data) {
-  FXL_DCHECK(scannable_);
-  FXL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
+  ZX_DEBUG_ASSERT(scannable_);
+  ZX_DEBUG_ASSERT(data.size() <= hci::kMaxLEAdvertisingDataLength);
   scan_rsp_ = common::DynamicByteBuffer(data);
   should_batch_reports_ = should_batch_reports;
 }
 
 common::DynamicByteBuffer FakeDevice::CreateInquiryResponseEvent(
     hci::InquiryMode mode) const {
-  FXL_DCHECK(address_.type() == common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(address_.type() == common::DeviceAddress::Type::kBREDR);
 
   size_t param_size;
   if (mode == hci::InquiryMode::kStandard) {
@@ -111,7 +111,7 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(
                       sizeof(hci::LEAdvertisingReportData) + adv_data_.size() +
                       sizeof(int8_t);
   if (include_scan_rsp) {
-    FXL_DCHECK(scannable_);
+    ZX_DEBUG_ASSERT(scannable_);
     param_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() +
                   sizeof(int8_t);
   }
@@ -160,7 +160,7 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(
 }
 
 common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
-  FXL_DCHECK(scannable_);
+  ZX_DEBUG_ASSERT(scannable_);
   size_t param_size = sizeof(hci::LEMetaEventParams) +
                       sizeof(hci::LEAdvertisingReportSubeventParams) +
                       sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() +
@@ -187,7 +187,7 @@ common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
 }
 
 void FakeDevice::AddLink(hci::ConnectionHandle handle) {
-  FXL_DCHECK(!HasLink(handle));
+  ZX_DEBUG_ASSERT(!HasLink(handle));
   logical_links_.insert(handle);
 
   if (logical_links_.size() == 1u)
@@ -195,7 +195,7 @@ void FakeDevice::AddLink(hci::ConnectionHandle handle) {
 }
 
 void FakeDevice::RemoveLink(hci::ConnectionHandle handle) {
-  FXL_DCHECK(HasLink(handle));
+  ZX_DEBUG_ASSERT(HasLink(handle));
   logical_links_.erase(handle);
   if (logical_links_.empty())
     set_connected(false);
@@ -212,7 +212,7 @@ FakeDevice::HandleSet FakeDevice::Disconnect() {
 
 void FakeDevice::WriteScanResponseReport(
     hci::LEAdvertisingReportData* report) const {
-  FXL_DCHECK(scannable_);
+  ZX_DEBUG_ASSERT(scannable_);
   report->event_type = hci::LEAdvertisingEventType::kScanRsp;
   report->address_type =
       (address_.type() == common::DeviceAddress::Type::kLERandom)

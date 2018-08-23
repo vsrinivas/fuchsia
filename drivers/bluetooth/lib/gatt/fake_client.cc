@@ -4,6 +4,8 @@
 
 #include "fake_client.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/gatt/client.h"
 
 namespace btlib {
@@ -14,7 +16,7 @@ using att::StatusCallback;
 
 FakeClient::FakeClient(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher), weak_ptr_factory_(this) {
-  FXL_DCHECK(dispatcher_);
+  ZX_DEBUG_ASSERT(dispatcher_);
 }
 
 fxl::WeakPtr<Client> FakeClient::AsWeakPtr() {

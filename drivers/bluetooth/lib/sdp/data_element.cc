@@ -38,7 +38,7 @@ DataElement::Size SizeToSizeType(size_t size) {
     case 16:
       return DataElement::Size::kSixteenBytes;
     default:
-      FXL_NOTREACHED();
+      ZX_PANIC("invalid data element size: %zu", size);
   }
   return DataElement::Size::kNextFour;
 }
@@ -430,7 +430,8 @@ size_t DataElement::Read(DataElement* elem, const common::ByteBuffer& buffer) {
       }
       common::BufferView sequence_buf = cursor.view(0, data_bytes);
       size_t remaining = data_bytes;
-      FXL_CHECK(sequence_buf.size() == data_bytes);
+      ZX_DEBUG_ASSERT(sequence_buf.size() == data_bytes);
+
       std::vector<DataElement> seq;
       while (remaining > 0) {
         DataElement next;
@@ -441,7 +442,7 @@ size_t DataElement::Read(DataElement* elem, const common::ByteBuffer& buffer) {
         seq.push_back(std::move(next));
         remaining -= used;
       }
-      FXL_DCHECK(remaining == 0);
+      ZX_DEBUG_ASSERT(remaining == 0);
       if (type_desc == Type::kAlternative) {
         elem->SetAlternative(std::move(seq));
       } else {
@@ -547,7 +548,7 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
     }
     case Type::kUuid: {
       size_t written = uuid_.ToBytes(&cursor);
-      FXL_DCHECK(written);
+      ZX_DEBUG_ASSERT(written);
       // SDP is big-endian, so reverse.
       std::reverse(cursor.mutable_data(), cursor.mutable_data() + written);
       pos += written;
@@ -555,7 +556,7 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
     }
     case Type::kString: {
       size_t used = WriteLength(&cursor, string_.size());
-      FXL_DCHECK(used);
+      ZX_DEBUG_ASSERT(used);
       pos += used;
       cursor.Write(reinterpret_cast<const uint8_t*>(string_.c_str()),
                    string_.size(), used);
@@ -565,12 +566,12 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
     case Type::kSequence:
     case Type::kAlternative: {
       size_t used = WriteLength(&cursor, AggregateSize(aggregate_));
-      FXL_DCHECK(used);
+      ZX_DEBUG_ASSERT(used);
       pos += used;
       cursor = cursor.mutable_view(used);
       for (const auto& elem : aggregate_) {
         used = elem.Write(&cursor);
-        FXL_DCHECK(used);
+        ZX_DEBUG_ASSERT(used);
         pos += used;
         cursor = cursor.mutable_view(used);
       }

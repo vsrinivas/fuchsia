@@ -4,9 +4,10 @@
 
 #include "channel.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "logical_link.h"
@@ -28,9 +29,9 @@ Channel::Channel(ChannelId id, ChannelId remote_id,
       // instead (see NET-308).
       tx_mtu_(kDefaultMTU),
       rx_mtu_(kDefaultMTU) {
-  FXL_DCHECK(id_);
-  FXL_DCHECK(link_type_ == hci::Connection::LinkType::kLE ||
-             link_type_ == hci::Connection::LinkType::kACL);
+  ZX_DEBUG_ASSERT(id_);
+  ZX_DEBUG_ASSERT(link_type_ == hci::Connection::LinkType::kLE ||
+                  link_type_ == hci::Connection::LinkType::kACL);
 }
 
 namespace internal {
@@ -43,14 +44,14 @@ ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
       dispatcher_(nullptr),
       link_(link),
       pending_rx_sdus_(std::move(buffered_pdus)) {
-  FXL_DCHECK(link_);
+  ZX_DEBUG_ASSERT(link_);
 }
 
 bool ChannelImpl::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
                            async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(rx_callback);
-  FXL_DCHECK(closed_callback);
+  ZX_DEBUG_ASSERT(rx_callback);
+  ZX_DEBUG_ASSERT(closed_callback);
 
   fit::closure task;
   bool run_task = false;
@@ -63,9 +64,9 @@ bool ChannelImpl::Activate(RxCallback rx_callback,
     if (!link_)
       return false;
 
-    FXL_DCHECK(!active_);
+    ZX_DEBUG_ASSERT(!active_);
     active_ = true;
-    FXL_DCHECK(!dispatcher_);
+    ZX_DEBUG_ASSERT(!dispatcher_);
     dispatcher_ = dispatcher;
     rx_cb_ = std::move(rx_callback);
     closed_cb_ = std::move(closed_callback);
@@ -81,7 +82,7 @@ bool ChannelImpl::Activate(RxCallback rx_callback,
           pending.pop();
         }
       };
-      FXL_DCHECK(pending_rx_sdus_.empty());
+      ZX_DEBUG_ASSERT(pending_rx_sdus_.empty());
     }
   }
 
@@ -129,7 +130,7 @@ void ChannelImpl::SignalLinkError() {
 }
 
 bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
-  FXL_DCHECK(sdu);
+  ZX_DEBUG_ASSERT(sdu);
 
   if (sdu->size() > tx_mtu()) {
     bt_log(TRACE, "l2cap", "SDU size exceeds channel TxMTU (channel-id: %#.4x)",
@@ -170,7 +171,7 @@ void ChannelImpl::OnLinkClosed() {
       return;
     }
 
-    FXL_DCHECK(closed_cb_);
+    ZX_DEBUG_ASSERT(closed_cb_);
     dispatcher = dispatcher_;
     task = std::move(closed_cb_);
     active_ = false;
@@ -191,7 +192,7 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
     std::lock_guard<std::mutex> lock(mtx_);
 
     // This will only be called on a live link.
-    FXL_DCHECK(link_);
+    ZX_DEBUG_ASSERT(link_);
 
     // Buffer the packets if the channel hasn't been activated.
     if (!active_) {
@@ -204,7 +205,7 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
       func(std::move(pdu));
     };
 
-    FXL_DCHECK(rx_cb_);
+    ZX_DEBUG_ASSERT(rx_cb_);
   }
   RunOrPost(std::move(task), dispatcher);
 }

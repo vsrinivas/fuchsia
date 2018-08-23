@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fxl/logging.h>
+#include "frames.h"
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/frames.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/mux_commands.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "gtest/gtest.h"
+
+#include "mux_commands.h"
+#include "rfcomm.h"
 
 namespace btlib {
 namespace rfcomm {

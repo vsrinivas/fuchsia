@@ -4,9 +4,10 @@
 
 #include "low_energy_discovery_manager.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_scanner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fxl/logging.h"
 
 #include "remote_device.h"
 #include "remote_device_cache.h"
@@ -17,11 +18,11 @@ namespace gap {
 LowEnergyDiscoverySession::LowEnergyDiscoverySession(
     fxl::WeakPtr<LowEnergyDiscoveryManager> manager)
     : active_(true), manager_(manager) {
-  FXL_DCHECK(manager_);
+  ZX_DEBUG_ASSERT(manager_);
 }
 
 LowEnergyDiscoverySession::~LowEnergyDiscoverySession() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (active_)
     Stop();
 }
@@ -33,14 +34,14 @@ void LowEnergyDiscoverySession::SetResultCallback(
     return;
   for (const auto& cached_device_id : manager_->cached_scan_results()) {
     auto device = manager_->device_cache()->FindDeviceById(cached_device_id);
-    FXL_DCHECK(device);
+    ZX_DEBUG_ASSERT(device);
     NotifyDiscoveryResult(*device);
   }
 }
 
 void LowEnergyDiscoverySession::Stop() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(active_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(active_);
   if (manager_) {
     manager_->RemoveSession(this);
   }
@@ -67,13 +68,13 @@ LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(
     : dispatcher_(async_get_default_dispatcher()),
       device_cache_(device_cache),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci);
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(device_cache_);
+  ZX_DEBUG_ASSERT(hci);
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(device_cache_);
 
   // We currently do not support the Extended Advertising feature.
-  FXL_DCHECK(mode == Mode::kLegacy);
+  ZX_DEBUG_ASSERT(mode == Mode::kLegacy);
 
   scanner_ =
       std::make_unique<hci::LegacyLowEnergyScanner>(this, hci, dispatcher_);
@@ -84,8 +85,8 @@ LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
 }
 
 void LowEnergyDiscoveryManager::StartDiscovery(SessionCallback callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(callback);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(callback);
   bt_log(INFO, "gap-le", "start discovery");
 
   // If a request to start or stop is currently pending then this one will
@@ -95,7 +96,7 @@ void LowEnergyDiscoveryManager::StartDiscovery(SessionCallback callback) {
   if (!pending_.empty() ||
       (scanner_->state() == hci::LowEnergyScanner::State::kStopping &&
        sessions_.empty())) {
-    FXL_DCHECK(!scanner_->IsScanning());
+    ZX_DEBUG_ASSERT(!scanner_->IsScanning());
     pending_.push(std::move(callback));
     return;
   }
@@ -113,7 +114,7 @@ void LowEnergyDiscoveryManager::StartDiscovery(SessionCallback callback) {
     return;
   }
 
-  FXL_DCHECK(scanner_->state() == hci::LowEnergyScanner::State::kIdle);
+  ZX_DEBUG_ASSERT(scanner_->state() == hci::LowEnergyScanner::State::kIdle);
 
   pending_.push(std::move(callback));
   StartScan();
@@ -125,21 +126,21 @@ LowEnergyDiscoveryManager::AddSession() {
   // constructor.
   std::unique_ptr<LowEnergyDiscoverySession> session(
       new LowEnergyDiscoverySession(weak_ptr_factory_.GetWeakPtr()));
-  FXL_DCHECK(sessions_.find(session.get()) == sessions_.end());
+  ZX_DEBUG_ASSERT(sessions_.find(session.get()) == sessions_.end());
   sessions_.insert(session.get());
   return session;
 }
 
 void LowEnergyDiscoveryManager::RemoveSession(
     LowEnergyDiscoverySession* session) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(session);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(session);
 
   // Only active sessions are allowed to call this method. If there is at least
   // one active session object out there, then we MUST be scanning.
-  FXL_DCHECK(session->active());
+  ZX_DEBUG_ASSERT(session->active());
 
-  FXL_DCHECK(sessions_.find(session) != sessions_.end());
+  ZX_DEBUG_ASSERT(sessions_.find(session) != sessions_.end());
   sessions_.erase(session);
 
   // Stop scanning if the session count has dropped to zero.
@@ -149,7 +150,7 @@ void LowEnergyDiscoveryManager::RemoveSession(
 
 void LowEnergyDiscoveryManager::OnDeviceFound(
     const hci::LowEnergyScanResult& result, const common::ByteBuffer& data) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   auto device = device_cache_->FindDeviceByAddress(result.address);
   if (!device) {
@@ -207,7 +208,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
           callback(std::move(new_sessions[i]));
         }
       }
-      FXL_DCHECK(pending_.empty());
+      ZX_DEBUG_ASSERT(pending_.empty());
       break;
     case hci::LowEnergyScanner::ScanStatus::kStopped:
       // TODO(armansito): Revise this logic when we support pausing a scan even

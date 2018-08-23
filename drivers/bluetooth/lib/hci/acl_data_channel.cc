@@ -7,11 +7,11 @@
 #include <endian.h>
 
 #include <lib/async/default.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "slab_allocators.h"
 #include "transport.h"
@@ -42,8 +42,8 @@ ACLDataChannel::ACLDataChannel(Transport* transport,
       le_num_sent_packets_(0u) {
   // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as
   // well.
-  FXL_DCHECK(transport_);
-  FXL_DCHECK(channel_.is_valid());
+  ZX_DEBUG_ASSERT(transport_);
+  ZX_DEBUG_ASSERT(channel_.is_valid());
 }
 
 ACLDataChannel::~ACLDataChannel() {
@@ -53,9 +53,10 @@ ACLDataChannel::~ACLDataChannel() {
 
 void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
                                 const DataBufferInfo& le_buffer_info) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(!is_initialized_);
-  FXL_DCHECK(bredr_buffer_info.IsAvailable() || le_buffer_info.IsAvailable());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!is_initialized_);
+  ZX_DEBUG_ASSERT(bredr_buffer_info.IsAvailable() ||
+                  le_buffer_info.IsAvailable());
 
   bredr_buffer_info_ = bredr_buffer_info;
   le_buffer_info_ = le_buffer_info;
@@ -83,7 +84,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
       std::bind(&ACLDataChannel::NumberOfCompletedPacketsCallback, this,
                 std::placeholders::_1),
       io_dispatcher_);
-  FXL_DCHECK(event_handler_id_);
+  ZX_DEBUG_ASSERT(event_handler_id_);
 
   is_initialized_ = true;
 
@@ -91,7 +92,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
 }
 
 void ACLDataChannel::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (!is_initialized_)
     return;
 
@@ -136,7 +137,7 @@ bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet,
     return false;
   }
 
-  FXL_DCHECK(data_packet);
+  ZX_DEBUG_ASSERT(data_packet);
 
   if (data_packet->view().payload_size() > GetBufferMTU(ll_type)) {
     bt_log(ERROR, "hci", "ACL data packet too large!");
@@ -223,8 +224,8 @@ size_t ACLDataChannel::GetBufferMTU(Connection::LinkType ll_type) const {
 
 void ACLDataChannel::NumberOfCompletedPacketsCallback(
     const EventPacket& event) {
-  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
-  FXL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
+  ZX_DEBUG_ASSERT(async_get_default_dispatcher() == io_dispatcher_);
+  ZX_DEBUG_ASSERT(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
   const auto& payload =
       event.view().payload<NumberOfCompletedPacketsEventParams>();
@@ -245,7 +246,7 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(
 
     uint16_t comp_packets = le16toh(data->hc_num_of_completed_packets);
 
-    FXL_DCHECK(iter->second.count);
+    ZX_DEBUG_ASSERT(iter->second.count);
     if (iter->second.count < comp_packets) {
       bt_log(WARN, "hci",
              "packet tx count mismatch! (handle: %#.4x, expected: %zu, "
@@ -258,7 +259,7 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(
       // On debug builds it's better to assert and crash so that we can catch
       // controller bugs. On release builds we log the warning message above and
       // continue.
-      FXL_NOTREACHED() << "Controller reported incorrect packet count!";
+      ZX_PANIC("controller reported incorrect packet count!");
     } else {
       iter->second.count -= comp_packets;
     }
@@ -352,7 +353,7 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
 }
 
 size_t ACLDataChannel::GetNumFreeBREDRPacketsLocked() const {
-  FXL_DCHECK(bredr_buffer_info_.max_num_packets() >= num_sent_packets_);
+  ZX_DEBUG_ASSERT(bredr_buffer_info_.max_num_packets() >= num_sent_packets_);
   return bredr_buffer_info_.max_num_packets() - num_sent_packets_;
 }
 
@@ -360,12 +361,12 @@ size_t ACLDataChannel::GetNumFreeLEPacketsLocked() const {
   if (!le_buffer_info_.IsAvailable())
     return GetNumFreeBREDRPacketsLocked();
 
-  FXL_DCHECK(le_buffer_info_.max_num_packets() >= le_num_sent_packets_);
+  ZX_DEBUG_ASSERT(le_buffer_info_.max_num_packets() >= le_num_sent_packets_);
   return le_buffer_info_.max_num_packets() - le_num_sent_packets_;
 }
 
 void ACLDataChannel::DecrementTotalNumPacketsLocked(size_t count) {
-  FXL_DCHECK(num_sent_packets_ >= count);
+  ZX_DEBUG_ASSERT(num_sent_packets_ >= count);
   num_sent_packets_ -= count;
 }
 
@@ -375,12 +376,13 @@ void ACLDataChannel::DecrementLETotalNumPacketsLocked(size_t count) {
     return;
   }
 
-  FXL_DCHECK(le_num_sent_packets_ >= count);
+  ZX_DEBUG_ASSERT(le_num_sent_packets_ >= count);
   le_num_sent_packets_ -= count;
 }
 
 void ACLDataChannel::IncrementTotalNumPacketsLocked(size_t count) {
-  FXL_DCHECK(num_sent_packets_ + count <= bredr_buffer_info_.max_num_packets());
+  ZX_DEBUG_ASSERT(num_sent_packets_ + count <=
+                  bredr_buffer_info_.max_num_packets());
   num_sent_packets_ += count;
 }
 
@@ -390,7 +392,8 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
     return;
   }
 
-  FXL_DCHECK(le_num_sent_packets_ + count <= le_buffer_info_.max_num_packets());
+  ZX_DEBUG_ASSERT(le_num_sent_packets_ + count <=
+                  le_buffer_info_.max_num_packets());
   le_num_sent_packets_ += count;
 }
 
@@ -408,8 +411,8 @@ void ACLDataChannel::OnChannelReady(
     return;
   }
 
-  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
-  FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
+  ZX_DEBUG_ASSERT(async_get_default_dispatcher() == io_dispatcher_);
+  ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
   if (!rx_callback_) {
@@ -460,7 +463,7 @@ void ACLDataChannel::OnChannelReady(
 
     packet->InitializeFromBuffer();
 
-    FXL_DCHECK(rx_dispatcher_);
+    ZX_DEBUG_ASSERT(rx_dispatcher_);
 
     async::PostTask(rx_dispatcher_,
                     [cb = rx_callback_.share(), packet = std::move(packet)]() mutable {

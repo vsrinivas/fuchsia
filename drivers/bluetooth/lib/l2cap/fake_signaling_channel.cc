@@ -84,7 +84,7 @@ class RejectInvalidChannelIdExpecter : public Expecter {
 
 FakeSignalingChannel::FakeSignalingChannel(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {
-  FXL_DCHECK(dispatcher_);
+  ZX_DEBUG_ASSERT(dispatcher_);
 }
 
 bool FakeSignalingChannel::SendRequest(CommandCode req_code,

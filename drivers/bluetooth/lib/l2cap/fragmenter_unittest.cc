@@ -119,7 +119,8 @@ TEST(L2CAP_FragmenterTest, TwoFragmentsOffByOne) {
 
 TEST(L2CAP_FragmenterTest, TwoFragmentsExact) {
   auto payload = common::CreateStaticByteBuffer('T', 'e', 's', 't');
-  FXL_DCHECK(payload.size() % 2 == 0) << "Test payload size should be even";
+  ZX_DEBUG_ASSERT_MSG(payload.size() % 2 == 0,
+                      "test payload size should be even");
 
   auto expected_fragment0 = common::CreateStaticByteBuffer(
       // ACL data header

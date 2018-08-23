@@ -5,11 +5,11 @@
 #include "server.h"
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/att/database.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "gatt_defs.h"
@@ -54,8 +54,8 @@ Server::Server(const std::string& peer_id,
                fxl::RefPtr<att::Database> database,
                fxl::RefPtr<att::Bearer> bearer)
     : peer_id_(peer_id), db_(database), att_(bearer), weak_ptr_factory_(this) {
-  FXL_DCHECK(db_);
-  FXL_DCHECK(att_);
+  ZX_DEBUG_ASSERT(db_);
+  ZX_DEBUG_ASSERT(att_);
 
   exchange_mtu_id_ = att_->RegisterHandler(
       att::kExchangeMTURequest, fit::bind_member(this, &Server::OnExchangeMTU));
@@ -96,7 +96,7 @@ void Server::SendNotification(att::Handle handle,
                               bool indicate) {
   auto buffer = common::NewSlabBuffer(sizeof(att::Header) + sizeof(handle) +
                                       value.size());
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   att::PacketWriter writer(indicate ? att::kIndication : att::kNotification,
                            buffer.get());
@@ -120,7 +120,7 @@ void Server::SendNotification(att::Handle handle,
 
 void Server::OnExchangeMTU(att::Bearer::TransactionId tid,
                            const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kExchangeMTURequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kExchangeMTURequest);
 
   if (packet.payload_size() != sizeof(att::ExchangeMTURequestParams)) {
     att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
@@ -133,7 +133,7 @@ void Server::OnExchangeMTU(att::Bearer::TransactionId tid,
 
   auto buffer = common::NewSlabBuffer(sizeof(att::Header) +
                                       sizeof(att::ExchangeMTUResponseParams));
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   att::PacketWriter writer(att::kExchangeMTUResponse, buffer.get());
   auto rsp_params = writer.mutable_payload<att::ExchangeMTUResponseParams>();
@@ -150,7 +150,7 @@ void Server::OnExchangeMTU(att::Bearer::TransactionId tid,
 
 void Server::OnFindInformation(att::Bearer::TransactionId tid,
                                const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kFindInformationRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kFindInformationRequest);
 
   if (packet.payload_size() != sizeof(att::FindInformationRequestParams)) {
     att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
@@ -163,7 +163,7 @@ void Server::OnFindInformation(att::Bearer::TransactionId tid,
 
   constexpr size_t kRspStructSize = sizeof(att::FindInformationResponseParams);
   constexpr size_t kHeaderSize = sizeof(att::Header) + kRspStructSize;
-  FXL_DCHECK(kHeaderSize <= att_->mtu());
+  ZX_DEBUG_ASSERT(kHeaderSize <= att_->mtu());
 
   if (start == att::kInvalidHandle || start > end) {
     att_->ReplyWithError(tid, start, att::ErrorCode::kInvalidHandle);
@@ -178,7 +178,7 @@ void Server::OnFindInformation(att::Bearer::TransactionId tid,
   std::list<const att::Attribute*> results;
   for (auto it = db_->GetIterator(start, end); !it.AtEnd(); it.Advance()) {
     const auto* attr = it.get();
-    FXL_DCHECK(attr);
+    ZX_DEBUG_ASSERT(attr);
 
     // GATT does not allow 32-bit UUIDs
     size_t compact_size = attr->type().CompactSize(false /* allow_32bit */);
@@ -199,12 +199,12 @@ void Server::OnFindInformation(att::Bearer::TransactionId tid,
     return;
   }
 
-  FXL_DCHECK(!results.empty());
+  ZX_DEBUG_ASSERT(!results.empty());
 
   size_t pdu_size = kHeaderSize + entry_size * results.size();
 
   auto buffer = common::NewSlabBuffer(pdu_size);
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   att::PacketWriter writer(att::kFindInformationResponse, buffer.get());
   auto rsp_params =
@@ -230,7 +230,7 @@ void Server::OnFindInformation(att::Bearer::TransactionId tid,
 
 void Server::OnFindByTypeValueRequest(att::Bearer::TransactionId tid,
                                       const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kFindByTypeValueRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kFindByTypeValueRequest);
 
   if (packet.payload_size() < sizeof(att::FindByTypeValueRequestParams)) {
     att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
@@ -264,7 +264,7 @@ void Server::OnFindByTypeValueRequest(att::Bearer::TransactionId tid,
   // Filter for identical values
   for (; !iter.AtEnd(); iter.Advance()) {
     const auto* attr = iter.get();
-    FXL_DCHECK(attr);
+    ZX_DEBUG_ASSERT(attr);
 
     // Only support static values for this Request type
     if (attr->value()) {
@@ -284,7 +284,7 @@ void Server::OnFindByTypeValueRequest(att::Bearer::TransactionId tid,
   constexpr size_t kRspStructSize = sizeof(att::HandlesInformationList);
   size_t pdu_size = sizeof(att::Header) + kRspStructSize * results.size();
   auto buffer = common::NewSlabBuffer(pdu_size);
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   att::PacketWriter writer(att::kFindByTypeValueResponse, buffer.get());
 
@@ -307,7 +307,7 @@ void Server::OnFindByTypeValueRequest(att::Bearer::TransactionId tid,
 
 void Server::OnReadByGroupType(att::Bearer::TransactionId tid,
                                const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kReadByGroupTypeRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kReadByGroupTypeRequest);
 
   att::Handle start, end;
   common::UUID group_type;
@@ -336,7 +336,7 @@ void Server::OnReadByGroupType(att::Bearer::TransactionId tid,
 
   constexpr size_t kRspStructSize = sizeof(att::ReadByGroupTypeResponseParams);
   constexpr size_t kHeaderSize = sizeof(att::Header) + kRspStructSize;
-  FXL_DCHECK(kHeaderSize <= att_->mtu());
+  ZX_DEBUG_ASSERT(kHeaderSize <= att_->mtu());
 
   size_t value_size;
   std::list<const att::Attribute*> results;
@@ -349,19 +349,19 @@ void Server::OnReadByGroupType(att::Bearer::TransactionId tid,
     return;
   }
 
-  FXL_DCHECK(!results.empty());
+  ZX_DEBUG_ASSERT(!results.empty());
 
   size_t entry_size = value_size + sizeof(att::AttributeGroupDataEntry);
   size_t pdu_size = kHeaderSize + entry_size * results.size();
-  FXL_DCHECK(pdu_size <= att_->mtu());
+  ZX_DEBUG_ASSERT(pdu_size <= att_->mtu());
 
   auto buffer = common::NewSlabBuffer(pdu_size);
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   att::PacketWriter writer(att::kReadByGroupTypeResponse, buffer.get());
   auto params = writer.mutable_payload<att::ReadByGroupTypeResponseParams>();
 
-  FXL_DCHECK(entry_size <= std::numeric_limits<uint8_t>::max());
+  ZX_DEBUG_ASSERT(entry_size <= std::numeric_limits<uint8_t>::max());
   params->length = static_cast<uint8_t>(entry_size);
 
   // Points to the next entry in the target PDU.
@@ -382,7 +382,7 @@ void Server::OnReadByGroupType(att::Bearer::TransactionId tid,
 
 void Server::OnReadByType(att::Bearer::TransactionId tid,
                           const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kReadByTypeRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kReadByTypeRequest);
 
   att::Handle start, end;
   common::UUID type;
@@ -405,7 +405,7 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
 
   constexpr size_t kRspStructSize = sizeof(att::ReadByTypeResponseParams);
   constexpr size_t kHeaderSize = sizeof(att::Header) + kRspStructSize;
-  FXL_DCHECK(kHeaderSize <= att_->mtu());
+  ZX_DEBUG_ASSERT(kHeaderSize <= att_->mtu());
 
   size_t value_size;
   std::list<const att::Attribute*> results;
@@ -418,11 +418,11 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
     return;
   }
 
-  FXL_DCHECK(!results.empty());
+  ZX_DEBUG_ASSERT(!results.empty());
 
   // If the value is dynamic, then delegate the read to any registered handler.
   if (!results.front()->value()) {
-    FXL_DCHECK(results.size() == 1u);
+    ZX_DEBUG_ASSERT(results.size() == 1u);
 
     const size_t kMaxValueSize =
         std::min(att_->mtu() - kHeaderSize - sizeof(att::AttributeData),
@@ -463,13 +463,13 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
   }
 
   size_t entry_size = sizeof(att::AttributeData) + value_size;
-  FXL_DCHECK(entry_size <= std::numeric_limits<uint8_t>::max());
+  ZX_DEBUG_ASSERT(entry_size <= std::numeric_limits<uint8_t>::max());
 
   size_t pdu_size = kHeaderSize + entry_size * results.size();
-  FXL_DCHECK(pdu_size <= att_->mtu());
+  ZX_DEBUG_ASSERT(pdu_size <= att_->mtu());
 
   auto buffer = common::NewSlabBuffer(pdu_size);
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   att::PacketWriter writer(att::kReadByTypeResponse, buffer.get());
   auto params = writer.mutable_payload<att::ReadByTypeResponseParams>();
@@ -491,7 +491,7 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
 
 void Server::OnReadBlobRequest(att::Bearer::TransactionId tid,
                                const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kReadBlobRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kReadBlobRequest);
 
   if (packet.payload_size() != sizeof(att::ReadBlobRequestParams)) {
     att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
@@ -529,7 +529,7 @@ void Server::OnReadBlobRequest(att::Bearer::TransactionId tid,
 
     size_t value_size = std::min(value.size(), self->att_->mtu() - kHeaderSize);
     auto buffer = common::NewSlabBuffer(value_size + kHeaderSize);
-    FXL_CHECK(buffer);
+    ZX_ASSERT(buffer);
 
     att::PacketWriter writer(att::kReadBlobResponse, buffer.get());
     writer.mutable_payload_data().Write(value.view(0, value_size));
@@ -557,7 +557,7 @@ void Server::OnReadBlobRequest(att::Bearer::TransactionId tid,
 
 void Server::OnReadRequest(att::Bearer::TransactionId tid,
                            const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kReadRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kReadRequest);
 
   if (packet.payload_size() != sizeof(att::ReadRequestParams)) {
     att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
@@ -594,7 +594,7 @@ void Server::OnReadRequest(att::Bearer::TransactionId tid,
 
     size_t value_size = std::min(value.size(), self->att_->mtu() - kHeaderSize);
     auto buffer = common::NewSlabBuffer(value_size + kHeaderSize);
-    FXL_CHECK(buffer);
+    ZX_ASSERT(buffer);
 
     att::PacketWriter writer(att::kReadResponse, buffer.get());
     writer.mutable_payload_data().Write(value.view(0, value_size));
@@ -615,7 +615,7 @@ void Server::OnReadRequest(att::Bearer::TransactionId tid,
 
 void Server::OnWriteCommand(att::Bearer::TransactionId tid,
                             const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kWriteCommand);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kWriteCommand);
 
   if (packet.payload_size() < sizeof(att::WriteRequestParams)) {
     // Ignore if wrong size, no response allowed
@@ -653,7 +653,7 @@ void Server::OnWriteCommand(att::Bearer::TransactionId tid,
 
 void Server::OnWriteRequest(att::Bearer::TransactionId tid,
                             const att::PacketReader& packet) {
-  FXL_DCHECK(packet.opcode() == att::kWriteRequest);
+  ZX_DEBUG_ASSERT(packet.opcode() == att::kWriteRequest);
 
   if (packet.payload_size() < sizeof(att::WriteRequestParams)) {
     att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
@@ -719,8 +719,8 @@ att::ErrorCode Server::ReadByTypeHelper(
     size_t entry_prefix_size,
     size_t* out_value_size,
     std::list<const att::Attribute*>* out_results) {
-  FXL_DCHECK(out_results);
-  FXL_DCHECK(out_value_size);
+  ZX_DEBUG_ASSERT(out_results);
+  ZX_DEBUG_ASSERT(out_value_size);
 
   if (start == att::kInvalidHandle || start > end)
     return att::ErrorCode::kInvalidHandle;
@@ -738,7 +738,7 @@ att::ErrorCode Server::ReadByTypeHelper(
 
   for (; !iter.AtEnd(); iter.Advance()) {
     const auto* attr = iter.get();
-    FXL_DCHECK(attr);
+    ZX_DEBUG_ASSERT(attr);
 
     auto sec_result =
         CheckSecurity(attr->read_reqs(), true /* read_or_write */);

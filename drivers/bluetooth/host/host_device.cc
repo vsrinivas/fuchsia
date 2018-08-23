@@ -16,7 +16,7 @@ namespace bthost {
 
 HostDevice::HostDevice(zx_device_t* device)
     : dev_(nullptr), parent_(device), loop_(&kAsyncLoopConfigNoAttachToThread) {
-  FXL_DCHECK(parent_);
+  ZX_DEBUG_ASSERT(parent_);
 
   dev_proto_.version = DEVICE_OPS_VERSION;
   dev_proto_.unbind = &HostDevice::DdkUnbind;
@@ -161,13 +161,13 @@ zx_status_t HostDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
   if (status != ZX_OK)
     return status;
 
-  FXL_DCHECK(local);
-  FXL_DCHECK(remote);
+  ZX_DEBUG_ASSERT(local);
+  ZX_DEBUG_ASSERT(remote);
 
   std::lock_guard<std::mutex> lock(mtx_);
 
   // Tell Host to start processing messages on this handle.
-  FXL_DCHECK(host_);
+  ZX_DEBUG_ASSERT(host_);
   async::PostTask(loop_.dispatcher(),
                   [host = host_, chan = std::move(local)]() mutable {
                     host->BindHostInterface(std::move(chan));

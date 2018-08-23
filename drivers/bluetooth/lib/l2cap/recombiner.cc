@@ -4,16 +4,17 @@
 
 #include "recombiner.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace l2cap {
 namespace {
 
 const BasicHeader& GetBasicHeader(const hci::ACLDataPacket& fragment) {
-  FXL_DCHECK(fragment.packet_boundary_flag() !=
-             hci::ACLPacketBoundaryFlag::kContinuingFragment);
+  ZX_DEBUG_ASSERT(fragment.packet_boundary_flag() !=
+                  hci::ACLPacketBoundaryFlag::kContinuingFragment);
   return fragment.view().payload<BasicHeader>();
 }
 
@@ -22,7 +23,7 @@ const BasicHeader& GetBasicHeader(const hci::ACLDataPacket& fragment) {
 Recombiner::Recombiner() : ready_(false), frame_length_(0u), cur_length_(0u) {}
 
 bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
-  FXL_DCHECK(fragment);
+  ZX_DEBUG_ASSERT(fragment);
 
   if (ready())
     return false;
@@ -30,7 +31,7 @@ bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
   if (empty()) {
     if (!ProcessFirstFragment(*fragment))
       return false;
-    FXL_DCHECK(!empty());
+    ZX_DEBUG_ASSERT(!empty());
   } else {
     if (fragment->packet_boundary_flag() !=
         hci::ACLPacketBoundaryFlag::kContinuingFragment) {
@@ -58,7 +59,7 @@ bool Recombiner::Release(PDU* out_pdu) {
   if (empty() || !ready())
     return false;
 
-  FXL_DCHECK(out_pdu);
+  ZX_DEBUG_ASSERT(out_pdu);
 
   *out_pdu = std::move(*pdu_);
   Drop();
@@ -74,9 +75,9 @@ void Recombiner::Drop() {
 }
 
 bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {
-  FXL_DCHECK(!ready());
-  FXL_DCHECK(!frame_length_);
-  FXL_DCHECK(!cur_length_);
+  ZX_DEBUG_ASSERT(!ready());
+  ZX_DEBUG_ASSERT(!frame_length_);
+  ZX_DEBUG_ASSERT(!cur_length_);
 
   // The first fragment needs to at least contain the Basic L2CAP header and
   // should not be a continuation fragment.

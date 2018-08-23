@@ -6,10 +6,10 @@
 
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
-#include "lib/fxl/logging.h"
 
 #include "channel.h"
 
@@ -24,9 +24,9 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
       role_(role),
       next_cmd_id_(0x01),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(chan_);
-  FXL_DCHECK(chan_->id() == kSignalingChannelId ||
-             chan_->id() == kLESignalingChannelId);
+  ZX_DEBUG_ASSERT(chan_);
+  ZX_DEBUG_ASSERT(chan_->id() == kSignalingChannelId ||
+                  chan_->id() == kLESignalingChannelId);
 
   // Note: No need to guard against out-of-thread access as these callbacks are
   // called on the L2CAP thread.
@@ -43,12 +43,14 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
       async_get_default_dispatcher());
 }
 
-SignalingChannel::~SignalingChannel() { FXL_DCHECK(IsCreationThreadCurrent()); }
+SignalingChannel::~SignalingChannel() {
+  ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
+}
 
 SignalingChannel::ResponderImpl::ResponderImpl(SignalingChannel* sig,
                                                CommandCode code, CommandId id)
     : sig_(sig), code_(code), id_(id) {
-  FXL_DCHECK(sig_);
+  ZX_DEBUG_ASSERT(sig_);
 }
 
 void SignalingChannel::ResponderImpl::Send(
@@ -72,14 +74,14 @@ void SignalingChannel::ResponderImpl::RejectInvalidChannelId(
 
 bool SignalingChannel::SendPacket(CommandCode code, uint8_t identifier,
                                   const common::ByteBuffer& data) {
-  FXL_DCHECK(IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
   return Send(BuildPacket(code, identifier, data));
 }
 
 bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
-  FXL_DCHECK(IsCreationThreadCurrent());
-  FXL_DCHECK(packet);
-  FXL_DCHECK(packet->size() >= sizeof(CommandHeader));
+  ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(packet);
+  ZX_DEBUG_ASSERT(packet->size() >= sizeof(CommandHeader));
 
   if (!is_open())
     return false;
@@ -90,19 +92,19 @@ bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
   // response rather than assert and crash.
   __UNUSED SignalingPacket reply(packet.get(),
                                  packet->size() - sizeof(CommandHeader));
-  FXL_DCHECK(reply.header().code);
-  FXL_DCHECK(reply.payload_size() == le16toh(reply.header().length));
-  FXL_DCHECK(chan_);
+  ZX_DEBUG_ASSERT(reply.header().code);
+  ZX_DEBUG_ASSERT(reply.payload_size() == le16toh(reply.header().length));
+  ZX_DEBUG_ASSERT(chan_);
 
   return chan_->Send(std::move(packet));
 }
 
 std::unique_ptr<common::ByteBuffer> SignalingChannel::BuildPacket(
     CommandCode code, uint8_t identifier, const common::ByteBuffer& data) {
-  FXL_DCHECK(data.size() <= std::numeric_limits<uint16_t>::max());
+  ZX_DEBUG_ASSERT(data.size() <= std::numeric_limits<uint16_t>::max());
 
   auto buffer = common::NewSlabBuffer(sizeof(CommandHeader) + data.size());
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   MutableSignalingPacket packet(buffer.get(), data.size());
   packet.mutable_header()->code = code;
@@ -116,7 +118,7 @@ std::unique_ptr<common::ByteBuffer> SignalingChannel::BuildPacket(
 bool SignalingChannel::SendCommandReject(uint8_t identifier,
                                          RejectReason reason,
                                          const common::ByteBuffer& data) {
-  FXL_DCHECK(data.size() <= kCommandRejectMaxDataLength);
+  ZX_DEBUG_ASSERT(data.size() <= kCommandRejectMaxDataLength);
 
   constexpr size_t kMaxPayloadLength =
       sizeof(CommandRejectPayload) + kCommandRejectMaxDataLength;
@@ -141,14 +143,14 @@ CommandId SignalingChannel::GetNextCommandId() {
 }
 
 void SignalingChannel::OnChannelClosed() {
-  FXL_DCHECK(IsCreationThreadCurrent());
-  FXL_DCHECK(is_open());
+  ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(is_open());
 
   is_open_ = false;
 }
 
 void SignalingChannel::OnRxBFrame(const SDU& sdu) {
-  FXL_DCHECK(IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
 
   if (!is_open())
     return;

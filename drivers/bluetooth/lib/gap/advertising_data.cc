@@ -7,11 +7,11 @@
 #include <type_traits>
 
 #include <endian.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/utf_codecs.h"
 #include "lib/fxl/type_converter.h"
@@ -43,10 +43,10 @@ using UuidFunction = fit::function<void(const common::UUID&)>;
 bool ParseUuids(const common::BufferView& data,
                 size_t uuid_size,
                 UuidFunction func) {
-  FXL_DCHECK(func);
-  FXL_DCHECK((uuid_size == k16BitUuidElemSize) ||
-             (uuid_size == k32BitUuidElemSize) ||
-             (uuid_size == k128BitUuidElemSize));
+  ZX_DEBUG_ASSERT(func);
+  ZX_DEBUG_ASSERT((uuid_size == k16BitUuidElemSize) ||
+                  (uuid_size == k32BitUuidElemSize) ||
+                  (uuid_size == k128BitUuidElemSize));
 
   if (data.size() % uuid_size) {
     bt_log(WARN, "gap-le", "malformed service UUIDs list");
@@ -144,7 +144,7 @@ std::string DecodeUri(const std::string& uri) {
     // Malformed UTF-8
     return "";
   }
-  FXL_DCHECK(cp >= 2);
+  ZX_DEBUG_ASSERT(cp >= 2);
   return kUriSchemes[cp - 2] + uri.substr(index + 1);
 }
 
@@ -160,7 +160,7 @@ inline size_t BufferWrite(common::MutableByteBuffer* buffer,
 
 bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
                                 AdvertisingData* out_ad) {
-  FXL_DCHECK(out_ad);
+  ZX_DEBUG_ASSERT(out_ad);
   AdvertisingDataReader reader(data);
   if (!reader.is_valid())
     return false;
@@ -259,7 +259,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
 
 ::ble::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData() const {
   auto fidl_data = ::ble::AdvertisingData::New();
-  FXL_DCHECK(fidl_data);
+  ZX_DEBUG_ASSERT(fidl_data);
 
   if (tx_power_) {
     fidl_data->tx_power_level = ::fuchsia::bluetooth::Int8::New();
@@ -302,7 +302,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
 
 void AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
                                AdvertisingData* out_ad) {
-  FXL_DCHECK(out_ad);
+  ZX_DEBUG_ASSERT(out_ad);
   common::UUID uuid;
   for (const auto& uuid_str : *fidl_ad.service_uuids) {
     if (common::StringToUuid(uuid_str, &uuid)) {
@@ -507,7 +507,7 @@ size_t AdvertisingData::CalculateBlockSize() const {
 }
 
 bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
-  FXL_DCHECK(buffer);
+  ZX_DEBUG_ASSERT(buffer);
   if (buffer->size() < CalculateBlockSize())
     return false;
 
@@ -679,15 +679,15 @@ AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
 
 bool AdvertisingDataReader::GetNextField(DataType* out_type,
                                          common::BufferView* out_data) {
-  FXL_DCHECK(out_type);
-  FXL_DCHECK(out_data);
+  ZX_DEBUG_ASSERT(out_type);
+  ZX_DEBUG_ASSERT(out_data);
 
   if (!HasMoreData())
     return false;
 
   size_t tlv_len = remaining_[0];
   size_t cur_struct_size = tlv_len + 1;
-  FXL_DCHECK(cur_struct_size <= remaining_.size());
+  ZX_DEBUG_ASSERT(cur_struct_size <= remaining_.size());
 
   *out_type = static_cast<DataType>(remaining_[1]);
   *out_data = remaining_.view(2, tlv_len - 1);
@@ -708,7 +708,7 @@ bool AdvertisingDataReader::HasMoreData() const {
 
 AdvertisingDataWriter::AdvertisingDataWriter(common::MutableByteBuffer* buffer)
     : buffer_(buffer), bytes_written_(0u) {
-  FXL_DCHECK(buffer_);
+  ZX_DEBUG_ASSERT(buffer_);
 }
 
 bool AdvertisingDataWriter::WriteField(DataType type,
@@ -725,7 +725,7 @@ bool AdvertisingDataWriter::WriteField(DataType type,
 
   // Copy the data into the view.
   size_t written = data.Copy(&target);
-  FXL_DCHECK(written == data.size());
+  ZX_DEBUG_ASSERT(written == data.size());
 
   bytes_written_ += written;
 

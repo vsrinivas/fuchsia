@@ -4,9 +4,10 @@
 
 #include "logical_link.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "bredr_signaling_channel.h"
@@ -56,17 +57,17 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
       role_(role),
       fragmenter_(handle),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(type_ == hci::Connection::LinkType::kLE ||
-             type_ == hci::Connection::LinkType::kACL);
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(type_ == hci::Connection::LinkType::kLE ||
+                  type_ == hci::Connection::LinkType::kACL);
 
   if (type_ == hci::Connection::LinkType::kLE) {
-    FXL_DCHECK(hci_->acl_data_channel()->GetLEBufferInfo().IsAvailable());
+    ZX_DEBUG_ASSERT(hci_->acl_data_channel()->GetLEBufferInfo().IsAvailable());
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetLEBufferInfo().max_data_length());
   } else {
-    FXL_DCHECK(hci_->acl_data_channel()->GetBufferInfo().IsAvailable());
+    ZX_DEBUG_ASSERT(hci_->acl_data_channel()->GetBufferInfo().IsAvailable());
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetBufferInfo().max_data_length());
   }
@@ -84,7 +85,7 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
 LogicalLink::~LogicalLink() { Close(); }
 
 fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
@@ -116,9 +117,9 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 }
 
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(!recombiner_.ready());
-  FXL_DCHECK(packet);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!recombiner_.ready());
+  ZX_DEBUG_ASSERT(packet);
 
   if (!recombiner_.AddFragment(std::move(packet))) {
     bt_log(TRACE, "l2cap", "ACL data packet rejected (handle: %#.4x)", handle_);
@@ -128,8 +129,8 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   }
 
   // |recombiner_| should have taken ownership of |packet|.
-  FXL_DCHECK(!packet);
-  FXL_DCHECK(!recombiner_.empty());
+  ZX_DEBUG_ASSERT(!packet);
+  ZX_DEBUG_ASSERT(!recombiner_.empty());
 
   // Wait for continuation fragments if a partial fragment was received.
   if (!recombiner_.ready())
@@ -138,7 +139,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   PDU pdu;
   recombiner_.Release(&pdu);
 
-  FXL_DCHECK(pdu.is_valid());
+  ZX_DEBUG_ASSERT(pdu.is_valid());
 
   uint16_t channel_id = pdu.channel_id();
   auto iter = channels_.find(channel_id);
@@ -172,7 +173,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
 
 void LogicalLink::SendBasicFrame(ChannelId id,
                                  const common::ByteBuffer& payload) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   // TODO(armansito): The following makes a copy of |payload| when constructing
   // |pdu|. Think about how this could be optimized, especially when |payload|
@@ -180,14 +181,14 @@ void LogicalLink::SendBasicFrame(ChannelId id,
   PDU pdu = fragmenter_.BuildBasicFrame(id, payload);
   auto fragments = pdu.ReleaseFragments();
 
-  FXL_DCHECK(!fragments.is_empty());
+  ZX_DEBUG_ASSERT(!fragments.is_empty());
   hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
 }
 
 void LogicalLink::set_error_callback(fit::closure callback,
                                      async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
   link_error_cb_ = std::move(callback);
   link_error_dispatcher_ = dispatcher;
@@ -206,8 +207,8 @@ bool LogicalLink::AllowsFixedChannel(ChannelId id) {
 }
 
 void LogicalLink::RemoveChannel(Channel* chan) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(chan);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(chan);
 
   auto iter = channels_.find(chan->id());
   if (iter == channels_.end())
@@ -223,7 +224,7 @@ void LogicalLink::RemoveChannel(Channel* chan) {
 }
 
 void LogicalLink::SignalError() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (link_error_cb_) {
     async::PostTask(link_error_dispatcher_, std::move(link_error_cb_));
@@ -232,14 +233,14 @@ void LogicalLink::SignalError() {
 }
 
 void LogicalLink::Close() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   auto channels = std::move(channels_);
   for (auto& iter : channels) {
     static_cast<ChannelImpl*>(iter.second.get())->OnLinkClosed();
   }
 
-  FXL_DCHECK(channels_.empty());
+  ZX_DEBUG_ASSERT(channels_.empty());
 }
 
 }  // namespace internal

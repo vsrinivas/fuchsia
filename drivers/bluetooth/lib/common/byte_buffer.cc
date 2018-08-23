@@ -10,19 +10,19 @@ namespace common {
 size_t ByteBuffer::Copy(MutableByteBuffer* out_buffer,
                         size_t pos,
                         size_t size) const {
-  FXL_CHECK(out_buffer);
-  FXL_CHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  ZX_ASSERT(out_buffer);
+  ZX_ASSERT_MSG(pos <= this->size(), "invalid offset (pos = %zu)", pos);
 
   size_t write_size = std::min(size, this->size() - pos);
-  FXL_CHECK(write_size <= out_buffer->size())
-      << "|out_buffer| is not large enough for copy!";
+  ZX_ASSERT_MSG(write_size <= out_buffer->size(),
+                "|out_buffer| is not large enough for copy!");
 
   std::memcpy(out_buffer->mutable_data(), data() + pos, write_size);
   return write_size;
 }
 
 const BufferView ByteBuffer::view(size_t pos, size_t size) const {
-  FXL_CHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  ZX_ASSERT_MSG(pos <= this->size(), "invalid offset (pos = %zu)", pos);
   return BufferView(data() + pos, std::min(size, this->size() - pos));
 }
 
@@ -38,18 +38,19 @@ void MutableByteBuffer::Write(const uint8_t* data, size_t size, size_t pos) {
   if (!size)
     return;
 
-  FXL_CHECK(data);
-  FXL_CHECK(pos <= this->size()) << "Invalid offset (pos: " << pos
-                                 << ", buffer size: " << this->size() << ")";
-  FXL_CHECK(size <= this->size() - pos)
-      << "Buffer not large enough! (required: " << size
-      << ", available: " << this->size() - pos << ")";
+  ZX_ASSERT(data);
+  ZX_ASSERT_MSG(pos <= this->size(),
+                "invalid offset (pos: %zu, buffer size: %zu", pos,
+                this->size());
+  ZX_ASSERT_MSG(size <= this->size() - pos,
+                "buffer not large enough! (required: %zu, available: %zu)",
+                size, this->size() - pos);
 
   std::memcpy(mutable_data() + pos, data, size);
 }
 
 MutableBufferView MutableByteBuffer::mutable_view(size_t pos, size_t size) {
-  FXL_CHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  ZX_ASSERT_MSG(pos <= this->size(), "invalid offset (pos = %zu)", pos);
   return MutableBufferView(mutable_data() + pos,
                            std::min(size, this->size() - pos));
 }
@@ -64,23 +65,23 @@ DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size)
 
   // TODO(armansito): For now this is dumb but we should properly handle the
   // case when we're out of memory.
-  FXL_CHECK(buffer_.get()) << "Failed to allocate buffer";
+  ZX_ASSERT_MSG(buffer_.get(), "failed to allocate buffer");
 }
 
 DynamicByteBuffer::DynamicByteBuffer(const ByteBuffer& buffer)
     : buffer_size_(buffer.size()),
       buffer_(buffer.size() ? std::make_unique<uint8_t[]>(buffer.size())
                             : nullptr) {
-  FXL_CHECK(!buffer_size_ || buffer_.get())
-      << "|buffer| cannot be nullptr when |buffer_size| is non-zero";
+  ZX_ASSERT_MSG(!buffer_size_ || buffer_.get(),
+                "|buffer| cannot be nullptr when |buffer_size| is non-zero");
   buffer.Copy(this);
 }
 
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size,
                                      std::unique_ptr<uint8_t[]> buffer)
     : buffer_size_(buffer_size), buffer_(std::move(buffer)) {
-  FXL_CHECK(!buffer_size_ || buffer_.get())
-      << "|buffer| cannot be nullptr when |buffer_size| is non-zero";
+  ZX_ASSERT_MSG(!buffer_size_ || buffer_.get(),
+                "|buffer| cannot be nullptr when |buffer_size| is non-zero");
 }
 
 DynamicByteBuffer::DynamicByteBuffer(DynamicByteBuffer&& other) {
@@ -132,7 +133,7 @@ BufferView::BufferView(const fxl::StringView& string) {
 BufferView::BufferView(const void* bytes, size_t size)
     : size_(size), bytes_(static_cast<const uint8_t*>(bytes)) {
   // If |size| non-zero then |bytes| cannot be nullptr.
-  FXL_CHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
+  ZX_ASSERT_MSG(!size_ || bytes_, "|bytes_| cannot be nullptr if |size_| > 0");
 }
 
 BufferView::BufferView() : size_(0u), bytes_(nullptr) {}
@@ -154,7 +155,7 @@ ByteBuffer::const_iterator BufferView::cend() const {
 }
 
 MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
   size_ = buffer->size();
   bytes_ = buffer->mutable_data();
 }
@@ -162,7 +163,7 @@ MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
 MutableBufferView::MutableBufferView(void* bytes, size_t size)
     : size_(size), bytes_(static_cast<uint8_t*>(bytes)) {
   // If |size| non-zero then |bytes| cannot be nullptr.
-  FXL_CHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
+  ZX_ASSERT_MSG(!size_ || bytes_, "|bytes_| cannot be nullptr if |size_| > 0");
 }
 
 MutableBufferView::MutableBufferView() : size_(0u), bytes_(nullptr) {}

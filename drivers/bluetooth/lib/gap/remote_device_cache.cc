@@ -5,6 +5,7 @@
 #include "remote_device_cache.h"
 
 #include <fbl/function.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
@@ -89,7 +90,7 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
     return nullptr;
 
   auto* dev = FindDeviceById(iter->second);
-  FXL_DCHECK(dev);
+  ZX_DEBUG_ASSERT(dev);
 
   return dev;
 }
@@ -97,8 +98,8 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
 // Private methods below.
 
 void RemoteDeviceCache::NotifyDeviceBonded(const RemoteDevice& device) {
-  FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
-  FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
+  ZX_DEBUG_ASSERT(devices_.find(device.identifier()) != devices_.end());
+  ZX_DEBUG_ASSERT(devices_.at(device.identifier()).device() == &device);
 
   bt_log(INFO, "gap", "peer bonded %s", device.ToString().c_str());
   if (device_bonded_callback_) {
@@ -107,21 +108,21 @@ void RemoteDeviceCache::NotifyDeviceBonded(const RemoteDevice& device) {
 }
 
 void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {
-  FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
-  FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
+  ZX_DEBUG_ASSERT(devices_.find(device.identifier()) != devices_.end());
+  ZX_DEBUG_ASSERT(devices_.at(device.identifier()).device() == &device);
   if (device_updated_callback_)
     device_updated_callback_(device);
 }
 
 void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
   auto device_record_iter = devices_.find(device.identifier());
-  FXL_DCHECK(device_record_iter != devices_.end());
+  ZX_DEBUG_ASSERT(device_record_iter != devices_.end());
 
   auto& device_record = device_record_iter->second;
-  FXL_DCHECK(device_record.device() == &device);
+  ZX_DEBUG_ASSERT(device_record.device() == &device);
 
   const auto cancel_res = device_record.removal_task()->Cancel();
-  FXL_DCHECK(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND);
+  ZX_DEBUG_ASSERT(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND);
 
   if (!device.temporary() ||
       device.le_connection_state() ==
@@ -133,15 +134,15 @@ void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
 
   const auto schedule_res = device_record.removal_task()->PostDelayed(
       async_get_default_dispatcher(), kCacheTimeout);
-  FXL_DCHECK(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
+  ZX_DEBUG_ASSERT(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
 }
 
 void RemoteDeviceCache::RemoveDevice(RemoteDevice* device) {
-  FXL_DCHECK(device);
+  ZX_DEBUG_ASSERT(device);
 
   auto device_record_it = devices_.find(device->identifier());
-  FXL_DCHECK(device_record_it != devices_.end());
-  FXL_DCHECK(device_record_it->second.device() == device);
+  ZX_DEBUG_ASSERT(device_record_it != devices_.end());
+  ZX_DEBUG_ASSERT(device_record_it->second.device() == device);
 
   const std::string identifier_copy = device->identifier();
   address_map_.erase(device->address());

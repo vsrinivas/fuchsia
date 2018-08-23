@@ -6,10 +6,10 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_SLAB_BUFFER_H_
 
 #include <fbl/slab_allocator.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator_traits.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -19,8 +19,8 @@ template <size_t BackingBufferSize>
 class SlabBuffer : public MutableByteBuffer {
  public:
   explicit SlabBuffer(size_t size) : size_(size) {
-    FXL_DCHECK(size);
-    FXL_DCHECK(size_ <= buffer_.size());
+    ZX_DEBUG_ASSERT(size);
+    ZX_DEBUG_ASSERT(size_ <= buffer_.size());
   }
 
   // ByteBuffer overrides:

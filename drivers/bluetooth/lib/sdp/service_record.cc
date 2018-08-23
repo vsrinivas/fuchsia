@@ -46,7 +46,7 @@ void ServiceRecord::SetAttribute(AttributeId id, DataElement value) {
 
 const DataElement& ServiceRecord::GetAttribute(AttributeId id) const {
   auto it = attributes_.find(id);
-  FXL_DCHECK(it != attributes_.end()) << "Attribute " << id << " not set!";
+  ZX_DEBUG_ASSERT_MSG(it != attributes_.end(), "attribute %#.4x not set!", id);
   return it->second;
 }
 
@@ -178,7 +178,7 @@ bool ServiceRecord::AddInfo(const std::string& language_code,
   auto it = attributes_.find(kLanguageBaseAttributeIdList);
   if (it != attributes_.end()) {
     base_attr_list = *it->second.Get<std::vector<DataElement>>();
-    FXL_DCHECK(base_attr_list.size() % 3 == 0);
+    ZX_DEBUG_ASSERT(base_attr_list.size() % 3 == 0);
     // 0x0100 is guaranteed to be taken, start counting from higher.
     base_attrid = 0x9000;
   }

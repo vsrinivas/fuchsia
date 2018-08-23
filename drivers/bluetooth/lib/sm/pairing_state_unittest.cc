@@ -89,7 +89,7 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   }
 
   void UpdateSecurity(SecurityLevel level) {
-    FXL_DCHECK(pairing_);
+    ZX_DEBUG_ASSERT(pairing_);
     pairing_->UpdateSecurity(level, [this](auto status, const auto& props) {
       pairing_callback_count_++;
       pairing_status_ = status;
@@ -99,7 +99,7 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
 
   // Called when SMP sends a packet over the fake channel.
   void OnDataReceived(std::unique_ptr<const ByteBuffer> packet) {
-    FXL_DCHECK(packet);
+    ZX_DEBUG_ASSERT(packet);
 
     PacketReader reader(packet.get());
     switch (reader.code()) {
@@ -197,7 +197,7 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
 
   void GenerateConfirmValue(const UInt128& random, UInt128* out_value,
                             bool peer_initiator = false, uint32_t tk = 0) {
-    FXL_DCHECK(out_value);
+    ZX_DEBUG_ASSERT(out_value);
 
     tk = htole32(tk);
     UInt128 tk128;
@@ -330,8 +330,8 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
 
   void GenerateMatchingConfirmAndRandom(UInt128* out_confirm,
                                         UInt128* out_random, uint32_t tk = 0) {
-    FXL_DCHECK(out_confirm);
-    FXL_DCHECK(out_random);
+    ZX_DEBUG_ASSERT(out_confirm);
+    ZX_DEBUG_ASSERT(out_random);
     zx_cprng_draw(out_random->data(), out_random->size());
     GenerateConfirmValue(*out_random, out_confirm, false /* peer_initiator */,
                          tk);
@@ -372,7 +372,7 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
     EXPECT_EQ(0, pairing_failed_count());
     EXPECT_EQ(0, pairing_callback_count());
 
-    FXL_DCHECK(out_stk);
+    ZX_DEBUG_ASSERT(out_stk);
 
     UInt128 tk;
     tk.fill(0);
@@ -410,8 +410,8 @@ class SMP_SlavePairingTest : public SMP_PairingStateTest {
 
   void GenerateMatchingConfirmAndRandom(UInt128* out_confirm,
                                         UInt128* out_random, uint32_t tk = 0) {
-    FXL_DCHECK(out_confirm);
-    FXL_DCHECK(out_random);
+    ZX_DEBUG_ASSERT(out_confirm);
+    ZX_DEBUG_ASSERT(out_random);
     zx_cprng_draw(out_random->data(), out_random->size());
     GenerateConfirmValue(*out_random, out_confirm, true /* peer_initiator */,
                          tk);

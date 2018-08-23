@@ -4,17 +4,16 @@
 
 #include "host_server.h"
 
-#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/host/gatt_host.h"
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/sm/util.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 
 #include "helpers.h"
 #include "low_energy_central_server.h"
@@ -41,7 +40,7 @@ HostServer::HostServer(zx::channel channel,
       gatt_host_(gatt_host),
       io_capability_(IOCapability::kNoInputNoOutput),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(gatt_host_);
+  ZX_DEBUG_ASSERT(gatt_host_);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   adapter->remote_device_cache()->set_device_updated_callback(
@@ -122,7 +121,7 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
 
 void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
   bt_log(TRACE, "bt-host", "StartDiscovery()");
-  FXL_DCHECK(adapter());
+  ZX_DEBUG_ASSERT(adapter());
 
   if (le_discovery_session_ || requesting_discovery_) {
     bt_log(TRACE, "bt-host", "discovery already in progress");
@@ -402,7 +401,7 @@ void HostServer::RequestPasskey(std::string id,
 }
 
 void HostServer::OnConnectionError(Server* server) {
-  FXL_DCHECK(server);
+  ZX_DEBUG_ASSERT(server);
   servers_.erase(server);
 }
 

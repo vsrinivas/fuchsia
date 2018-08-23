@@ -304,11 +304,11 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 
   att_chan =
       ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-  FXL_DCHECK(att_chan);
+  ZX_DEBUG_ASSERT(att_chan);
 
   smp_chan =
       ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
-  FXL_DCHECK(smp_chan);
+  ZX_DEBUG_ASSERT(smp_chan);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(smp_cb_called);
@@ -360,11 +360,11 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
 
   att_chan =
       ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-  FXL_DCHECK(att_chan);
+  ZX_DEBUG_ASSERT(att_chan);
 
   smp_chan =
       ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
-  FXL_DCHECK(smp_chan);
+  ZX_DEBUG_ASSERT(smp_chan);
 
   RunLoopUntilIdle();
 
@@ -380,10 +380,10 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
                         [](auto) {}, DoNothing, dispatcher());
   auto att_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kATTChannelId);
-  FXL_DCHECK(att_chan);
+  ZX_DEBUG_ASSERT(att_chan);
 
   auto smp_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kLESMPChannelId);
-  FXL_DCHECK(smp_chan);
+  ZX_DEBUG_ASSERT(smp_chan);
 
   common::StaticByteBuffer<255> buffer;
 
@@ -432,7 +432,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
                         [](auto) {}, DoNothing, dispatcher());
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
-  FXL_DCHECK(att_chan);
+  ZX_DEBUG_ASSERT(att_chan);
 
   chanmgr()->Unregister(kTestHandle1);
 
@@ -443,7 +443,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
                         [](auto) {}, DoNothing, dispatcher());
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
-  FXL_DCHECK(att_chan);
+  ZX_DEBUG_ASSERT(att_chan);
 
   std::unique_ptr<common::ByteBuffer> received;
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
@@ -479,7 +479,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendDynamicChannelSdu) {
   // TODO(xow): Fix this test after dynamic channels are implemented for
   // ChannelManager
   auto dyn_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
-  FXL_DCHECK(dyn_chan);
+  ZX_DEBUG_ASSERT(dyn_chan);
   dyn_chan->set_id_for_testing(kLocalId);
   dyn_chan->set_remote_id_for_testing(kRemoteId);
 
@@ -520,7 +520,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   std::vector<std::unique_ptr<common::ByteBuffer>> le_fragments, acl_fragments;
   auto data_cb = [&le_fragments,
                   &acl_fragments](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(hci::ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(hci::ACLDataHeader));
@@ -620,7 +620,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
   std::vector<std::unique_ptr<common::ByteBuffer>> le_fragments, acl_fragments;
   auto data_cb = [&le_fragments,
                   &acl_fragments](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(hci::ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(hci::ACLDataHeader));

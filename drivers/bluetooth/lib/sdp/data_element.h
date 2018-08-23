@@ -25,17 +25,17 @@ namespace sdp {
 // DataElement elem;  // A null type
 // uint32_t seymour = 0xFEED;
 // elem.Set(seymour);
-// FXL_DCHECK(elem.type() == DataElement::Type::kUnsignedInt);
-// FXL_DCHECK(elem.Get<uint32_t>());
-// FXL_DCHECK(*elem.Get<uint32_t>() == seymour);
+// ZX_DEBUG_ASSERT(elem.type() == DataElement::Type::kUnsignedInt);
+// ZX_DEBUG_ASSERT(elem.Get<uint32_t>());
+// ZX_DEBUG_ASSERT(*elem.Get<uint32_t>() == seymour);
 //
 // std::vector<DataElement> service_class_ids;
 // DataElement uuid;
 // uuid.Set(UUID(sdp::ServiceClass::kAudioSource));
 // service_class_ids.emplace_back(std::move(uuid));
 // elem.Set(service_class_ids);
-// FXL_DCHECK(e.type() == DataElement::Type::kSeqeuence);
-// FXL_DCHECK(!e.Get<uint32_t>());
+// ZX_DEBUG_ASSERT(e.type() == DataElement::Type::kSeqeuence);
+// ZX_DEBUG_ASSERT(!e.Get<uint32_t>());
 class DataElement {
  public:
   // Type Descriptors. Only the top 5 bits are used, see kTypeMask

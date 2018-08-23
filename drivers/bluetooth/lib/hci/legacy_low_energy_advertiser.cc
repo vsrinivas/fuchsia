@@ -5,6 +5,7 @@
 #include "legacy_low_energy_advertiser.h"
 
 #include <endian.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/log.h"
@@ -24,7 +25,7 @@ std::unique_ptr<CommandPacket> BuildEnablePacket(GenericEnableParam enable) {
   packet->mutable_view()
       ->mutable_payload<LESetAdvertisingEnableCommandParams>()
       ->advertising_enable = enable;
-  FXL_CHECK(packet);
+  ZX_ASSERT(packet);
   return packet;
 }
 
@@ -139,8 +140,8 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     uint32_t interval_ms,
     bool anonymous,
     AdvertisingStatusCallback callback) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(address.type() != common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(address.type() != common::DeviceAddress::Type::kBREDR);
 
   if (anonymous) {
     bt_log(TRACE, "hci-le", "anonymous advertising not supported");
@@ -224,28 +225,28 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
   // Enable advertising.
   hci_cmd_runner_->QueueCommand(BuildEnablePacket(GenericEnableParam::kEnable));
 
-  hci_cmd_runner_->RunCommands([this, address, interval_slices,
-                                callback = std::move(callback),
-                                connect_callback = std::move(connect_callback)](Status status) mutable {
-    FXL_DCHECK(starting_);
-    starting_ = false;
+  hci_cmd_runner_->RunCommands(
+      [this, address, interval_slices, callback = std::move(callback),
+       connect_callback = std::move(connect_callback)](Status status) mutable {
+        ZX_DEBUG_ASSERT(starting_);
+        starting_ = false;
 
-    bt_log(TRACE, "hci-le", "advertising status: %s",
-           status.ToString().c_str());
+        bt_log(TRACE, "hci-le", "advertising status: %s",
+               status.ToString().c_str());
 
-    uint16_t interval;
-    if (status) {
-      advertised_ = address;
-      connect_callback_ = std::move(connect_callback);
-      interval = TimeslicesToMilliseconds(interval_slices);
-    } else {
-      // Clear out the advertising data if it partially succeeded.
-      StopAdvertisingInternal();
-      interval = 0;
-    }
+        uint16_t interval;
+        if (status) {
+          advertised_ = address;
+          connect_callback_ = std::move(connect_callback);
+          interval = TimeslicesToMilliseconds(interval_slices);
+        } else {
+          // Clear out the advertising data if it partially succeeded.
+          StopAdvertisingInternal();
+          interval = 0;
+        }
 
-    callback(interval, status);
-  });
+        callback(interval, status);
+      });
 }
 
 bool LegacyLowEnergyAdvertiser::StopAdvertising(
@@ -266,12 +267,12 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
       bt_log(TRACE, "hci-le", "already stopping");
 
       // The advertised address must have been cleared in this state.
-      FXL_DCHECK(!advertising());
+      ZX_DEBUG_ASSERT(!advertising());
       return;
     }
 
     // Cancel the pending start
-    FXL_DCHECK(starting_);
+    ZX_DEBUG_ASSERT(starting_);
     hci_cmd_runner_->Cancel();
     starting_ = false;
   }

@@ -141,10 +141,6 @@ struct hash<::btlib::common::DeviceAddress> {
   result_type operator()(argument_type const& value) const;
 };
 
-// Stream operators for easy logging
-ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddressBytes& db);
-ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddress& d);
-
 }  // namespace std
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_DEVICE_ADDRESS_H_

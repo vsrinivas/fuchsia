@@ -4,10 +4,9 @@
 
 #include "low_energy_central_server.h"
 
-#include "garnet/drivers/bluetooth/lib/common/log.h"
+#include <zircon/assert.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 #include "helpers.h"
 
@@ -27,7 +26,7 @@ LowEnergyCentralServer::LowEnergyCentralServer(
       gatt_host_(gatt_host),
       requesting_scan_(false),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(gatt_host_);
+  ZX_DEBUG_ASSERT(gatt_host_);
 }
 
 LowEnergyCentralServer::~LowEnergyCentralServer() {
@@ -38,13 +37,13 @@ void LowEnergyCentralServer::GetPeripherals(
     ::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
     GetPeripheralsCallback callback) {
   // TODO:
-  FXL_NOTIMPLEMENTED();
+  bt_log(ERROR, "bt-host", "GetPeripherals() not implemented");
 }
 
 void LowEnergyCentralServer::GetPeripheral(::fidl::StringPtr identifier,
                                            GetPeripheralCallback callback) {
   // TODO:
-  FXL_NOTIMPLEMENTED();
+  bt_log(ERROR, "bt-host", "GetPeripheral() not implemented");
 }
 
 void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
@@ -158,15 +157,15 @@ void LowEnergyCentralServer::ConnectPeripheral(
     }
 
     if (!status) {
-      FXL_DCHECK(!conn_ref);
+      ZX_DEBUG_ASSERT(!conn_ref);
       bt_log(TRACE, "bt-host", "failed to connect to connect to device (id %s)",
              peer_id.c_str());
       callback(fidl_helpers::StatusToFidl(status, "failed to connect"));
       return;
     }
 
-    FXL_DCHECK(conn_ref);
-    FXL_DCHECK(peer_id == conn_ref->device_identifier());
+    ZX_DEBUG_ASSERT(conn_ref);
+    ZX_DEBUG_ASSERT(peer_id == conn_ref->device_identifier());
 
     if (iter->second) {
       // This can happen if a connect is requested after a previous request was

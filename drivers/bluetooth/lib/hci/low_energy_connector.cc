@@ -5,13 +5,13 @@
 #include "low_energy_connector.h"
 
 #include <endian.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
 namespace btlib {
@@ -36,10 +36,10 @@ LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
       local_address_(local_address),
       delegate_(std::move(delegate)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(delegate_);
-  FXL_DCHECK(local_address_.type() == DeviceAddress::Type::kLEPublic);
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(delegate_);
+  ZX_DEBUG_ASSERT(local_address_.type() == DeviceAddress::Type::kLEPublic);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   event_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
@@ -63,15 +63,15 @@ bool LowEnergyConnector::CreateConnection(
     uint16_t scan_window,
     const LEPreferredConnectionParameters& initial_parameters,
     StatusCallback status_callback, int64_t timeout_ms) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(status_callback);
-  FXL_DCHECK(peer_address.type() != DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(timeout_ms > 0);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(status_callback);
+  ZX_DEBUG_ASSERT(peer_address.type() != DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(timeout_ms > 0);
 
   if (request_pending())
     return false;
 
-  FXL_DCHECK(!request_timeout_task_.is_pending());
+  ZX_DEBUG_ASSERT(!request_timeout_task_.is_pending());
   pending_request_ = PendingRequest(peer_address, std::move(status_callback));
 
   auto request = CommandPacket::New(kLECreateConnection,
@@ -103,7 +103,7 @@ bool LowEnergyConnector::CreateConnection(
   // HCI Command Status Event will be sent as our completion callback.
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto complete_cb = [self, timeout_ms](auto id, const EventPacket& event) {
-    FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() == kCommandStatusEventCode);
 
     if (!self)
       return;
@@ -133,7 +133,7 @@ void LowEnergyConnector::Cancel() {
 }
 
 void LowEnergyConnector::CancelInternal(bool timed_out) {
-  FXL_DCHECK(request_pending());
+  ZX_DEBUG_ASSERT(request_pending());
 
   if (pending_request_->canceled) {
     bt_log(WARN, "hci-le", "connection attempt already canceled!");
@@ -159,12 +159,12 @@ void LowEnergyConnector::CancelInternal(bool timed_out) {
 }
 
 void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
-  FXL_DCHECK(event.event_code() == kLEMetaEventCode);
-  FXL_DCHECK(event.view().payload<LEMetaEventParams>().subevent_code ==
-             kLEConnectionCompleteSubeventCode);
+  ZX_DEBUG_ASSERT(event.event_code() == kLEMetaEventCode);
+  ZX_DEBUG_ASSERT(event.view().payload<LEMetaEventParams>().subevent_code ==
+                  kLEConnectionCompleteSubeventCode);
 
   auto params = event.le_event_params<LEConnectionCompleteSubeventParams>();
-  FXL_CHECK(params);
+  ZX_ASSERT(params);
 
   // First check if this event is related to the currently pending request.
   const DeviceAddress peer_address(
@@ -232,7 +232,7 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
 
 void LowEnergyConnector::OnCreateConnectionComplete(Status status,
                                                     ConnectionPtr link) {
-  FXL_DCHECK(pending_request_);
+  ZX_DEBUG_ASSERT(pending_request_);
 
   request_timeout_task_.Cancel();
 
@@ -243,7 +243,7 @@ void LowEnergyConnector::OnCreateConnectionComplete(Status status,
 }
 
 void LowEnergyConnector::OnCreateConnectionTimeout() {
-  FXL_DCHECK(pending_request_);
+  ZX_DEBUG_ASSERT(pending_request_);
   bt_log(INFO, "hci-le", "create connection timed out: canceling request");
 
   // TODO(armansito): This should cancel the connection attempt only if the

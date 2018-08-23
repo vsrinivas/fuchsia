@@ -7,10 +7,11 @@
 
 #include <memory>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/linked_list.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -105,8 +106,8 @@ class PacketBase : public common::LinkedListable<T> {
   // Called by derived classes to initialize |view_| after initializing the
   // corresponding buffer.
   void init_view(const common::MutablePacketView<HeaderType>& view) {
-    FXL_DCHECK(!view_.is_valid());
-    FXL_DCHECK(view.is_valid());
+    ZX_DEBUG_ASSERT(!view_.is_valid());
+    ZX_DEBUG_ASSERT(view.is_valid());
     view_ = view;
   }
 

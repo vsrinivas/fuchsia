@@ -4,6 +4,8 @@
 
 #include "generic_attribute_service.h"
 
+#include <zircon/assert.h>
+
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
@@ -41,10 +43,10 @@ class GATT_GenericAttributeServiceTest : public ::testing::Test {
   bool WriteServiceChangedCCC(const std::string& device_id,
                               uint16_t ccc_value,
                               att::ErrorCode* out_ecode) {
-    FXL_DCHECK(out_ecode);
+    ZX_DEBUG_ASSERT(out_ecode);
 
     auto* attr = mgr.database()->FindAttribute(kCCCHandle);
-    FXL_DCHECK(attr);
+    ZX_DEBUG_ASSERT(attr);
     auto result_cb = [&out_ecode](auto cb_code) { *out_ecode = cb_code; };
     uint16_t value = htole16(ccc_value);
     return attr->WriteAsync(

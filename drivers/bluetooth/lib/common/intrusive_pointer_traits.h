@@ -5,7 +5,7 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_INTRUSIVE_POINTER_TRAITS_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_INTRUSIVE_POINTER_TRAITS_H_
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 namespace fbl {
 namespace internal {
@@ -42,7 +42,7 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
 
   static inline void DetachSentinel(PtrType& ptr) {
     __UNUSED RawPtrType detached = ptr.release();
-    FXL_DCHECK((detached == nullptr) || IsSentinel(detached));
+    ZX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
   }
 
   static constexpr bool IsSentinel(const PtrType& ptr) {

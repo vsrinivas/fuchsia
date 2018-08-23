@@ -22,31 +22,31 @@ SequentialCommandRunner::SequentialCommandRunner(
       sequence_number_(0u),
       running_commands_(0u),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(transport_);
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(transport_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 }
 
 SequentialCommandRunner::~SequentialCommandRunner() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 }
 
 void SequentialCommandRunner::QueueCommand(
     std::unique_ptr<CommandPacket> command_packet,
     CommandCompleteCallback callback, bool wait) {
-  FXL_DCHECK(!status_callback_);
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(sizeof(CommandHeader) <= command_packet->view().size());
+  ZX_DEBUG_ASSERT(!status_callback_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(sizeof(CommandHeader) <= command_packet->view().size());
 
   command_queue_.emplace(
       QueuedCommand{std::move(command_packet), std::move(callback), wait});
 }
 
 void SequentialCommandRunner::RunCommands(StatusCallback status_callback) {
-  FXL_DCHECK(!status_callback_);
-  FXL_DCHECK(status_callback);
-  FXL_DCHECK(!command_queue_.empty());
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!status_callback_);
+  ZX_DEBUG_ASSERT(status_callback);
+  ZX_DEBUG_ASSERT(!command_queue_.empty());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   status_callback_ = std::move(status_callback);
   sequence_number_++;
@@ -55,23 +55,23 @@ void SequentialCommandRunner::RunCommands(StatusCallback status_callback) {
 }
 
 bool SequentialCommandRunner::IsReady() const {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   return !status_callback_;
 }
 
 void SequentialCommandRunner::Cancel() {
-  FXL_DCHECK(status_callback_);
+  ZX_DEBUG_ASSERT(status_callback_);
   status_callback_(Status(common::HostError::kCanceled));
   Reset();
 }
 
 bool SequentialCommandRunner::HasQueuedCommands() const {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   return !command_queue_.empty();
 }
 
 void SequentialCommandRunner::TryRunNextQueuedCommand(Status status) {
-  FXL_DCHECK(status_callback_);
+  ZX_DEBUG_ASSERT(status_callback_);
 
   //. If an error occurred or we're done, reset.
   if (!status || (command_queue_.empty() && running_commands_ == 0)) {
@@ -98,8 +98,8 @@ void SequentialCommandRunner::TryRunNextQueuedCommand(Status status) {
     }
 
     // TODO(NET-682): Allow async commands to be queued.
-    FXL_DCHECK(!status ||
-               event_packet.event_code() == kCommandCompleteEventCode);
+    ZX_DEBUG_ASSERT(!status ||
+                    event_packet.event_code() == kCommandCompleteEventCode);
 
     if (cmd_cb) {
       cmd_cb(event_packet);
@@ -110,7 +110,7 @@ void SequentialCommandRunner::TryRunNextQueuedCommand(Status status) {
     if (!self || !self->status_callback_ || seq_no != self->sequence_number_) {
       return;
     }
-    FXL_DCHECK(self->running_commands_ > 0);
+    ZX_DEBUG_ASSERT(self->running_commands_ > 0);
     self->running_commands_--;
     self->TryRunNextQueuedCommand(status);
   };
@@ -133,7 +133,7 @@ void SequentialCommandRunner::Reset() {
 }
 
 void SequentialCommandRunner::NotifyStatusAndReset(Status status) {
-  FXL_DCHECK(status_callback_);
+  ZX_DEBUG_ASSERT(status_callback_);
   auto status_cb = std::move(status_callback_);
   Reset();
   status_cb(status);

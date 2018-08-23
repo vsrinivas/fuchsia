@@ -5,11 +5,11 @@
 #include "fake_gatt_server.h"
 
 #include <endian.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/att/packet.h"
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
-#include "lib/fxl/logging.h"
 
 #include "fake_controller.h"
 #include "fake_device.h"
@@ -22,7 +22,7 @@ using common::CreateStaticByteBuffer;
 using common::StaticByteBuffer;
 
 FakeGattServer::FakeGattServer(FakeDevice* dev) : dev_(dev) {
-  FXL_DCHECK(dev_);
+  ZX_DEBUG_ASSERT(dev_);
 }
 
 void FakeGattServer::HandlePdu(hci::ConnectionHandle conn,

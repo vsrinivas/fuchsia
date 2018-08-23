@@ -6,10 +6,10 @@
 
 #include <lib/async/default.h>
 #include <lib/zx/channel.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "lib/fxl/logging.h"
 
 #include "device_wrapper.h"
 
@@ -27,7 +27,7 @@ Transport::Transport(std::unique_ptr<DeviceWrapper> hci_device)
       is_initialized_(false),
       io_dispatcher_(nullptr),
       closed_cb_dispatcher_(nullptr) {
-  FXL_DCHECK(hci_device_);
+  ZX_DEBUG_ASSERT(hci_device_);
 }
 
 Transport::~Transport() {
@@ -36,11 +36,11 @@ Transport::~Transport() {
 }
 
 bool Transport::Initialize(async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(hci_device_);
-  FXL_DCHECK(!command_channel_);
-  FXL_DCHECK(!acl_data_channel_);
-  FXL_DCHECK(!IsInitialized());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(hci_device_);
+  ZX_DEBUG_ASSERT(!command_channel_);
+  ZX_DEBUG_ASSERT(!acl_data_channel_);
+  ZX_DEBUG_ASSERT(!IsInitialized());
 
   // Obtain command channel handle.
   zx::channel channel = hci_device_->GetCommandChannel();
@@ -70,8 +70,8 @@ bool Transport::Initialize(async_dispatcher_t* dispatcher) {
 bool Transport::InitializeACLDataChannel(
     const DataBufferInfo& bredr_buffer_info,
     const DataBufferInfo& le_buffer_info) {
-  FXL_DCHECK(hci_device_);
-  FXL_DCHECK(IsInitialized());
+  ZX_DEBUG_ASSERT(hci_device_);
+  ZX_DEBUG_ASSERT(IsInitialized());
 
   // Obtain ACL data channel handle.
   zx::channel channel = hci_device_->GetACLDataChannel();
@@ -93,18 +93,18 @@ bool Transport::InitializeACLDataChannel(
 void Transport::SetTransportClosedCallback(
     fit::closure callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
-  FXL_DCHECK(!closed_cb_);
-  FXL_DCHECK(!closed_cb_dispatcher_);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
+  ZX_DEBUG_ASSERT(!closed_cb_);
+  ZX_DEBUG_ASSERT(!closed_cb_dispatcher_);
 
   closed_cb_ = std::move(callback);
   closed_cb_dispatcher_ = dispatcher;
 }
 
 void Transport::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(IsInitialized());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(IsInitialized());
 
   bt_log(INFO, "hci", "transport shutting down");
 
@@ -168,7 +168,7 @@ void Transport::OnChannelClosed(
   if (status != ZX_OK) {
     bt_log(ERROR, "hci", "channel error: %s", zx_status_get_string(status));
   } else {
-    FXL_DCHECK(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+    ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
   }
   NotifyClosedCallback();
 }

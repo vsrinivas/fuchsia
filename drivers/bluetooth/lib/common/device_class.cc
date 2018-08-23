@@ -4,7 +4,7 @@
 
 #include "device_class.h"
 
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 namespace btlib {
 namespace common {
@@ -13,7 +13,7 @@ DeviceClass::DeviceClass()
     : bytes_{0x00, uint8_t(MajorClass::kUnspecified), 0x00} {}
 
 DeviceClass::DeviceClass(std::initializer_list<uint8_t> bytes) {
-  FXL_DCHECK(bytes.size() == bytes_.size());
+  ZX_DEBUG_ASSERT(bytes.size() == bytes_.size());
   std::copy(bytes.begin(), bytes.end(), bytes_.begin());
 }
 
@@ -42,16 +42,9 @@ std::string DeviceClass::ToString() const {
     case MajorClass::kUnspecified:
       return "Unspecified";
   };
+
+  return "(unknown)";
 }
 
 }  // namespace common
 }  // namespace btlib
-
-namespace std {
-
-ostream& operator<<(ostream& os, const ::btlib::common::DeviceClass& d) {
-  os << d.ToString();
-  return os;
-};
-
-}  // namespace std

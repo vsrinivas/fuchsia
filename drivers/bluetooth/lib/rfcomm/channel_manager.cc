@@ -16,7 +16,7 @@ namespace btlib {
 namespace rfcomm {
 
 std::unique_ptr<ChannelManager> ChannelManager::Create(l2cap::L2CAP* l2cap) {
-  FXL_DCHECK(l2cap);
+  ZX_DEBUG_ASSERT(l2cap);
   // ChannelManager constructor private; can't use make_unique.
   auto channel_manager =
       std::unique_ptr<ChannelManager>(new ChannelManager(l2cap));
@@ -68,8 +68,8 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
                                        ServerChannel server_channel,
                                        ChannelOpenedCallback channel_opened_cb,
                                        async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(channel_opened_cb);
-  FXL_DCHECK(dispatcher);
+  ZX_DEBUG_ASSERT(channel_opened_cb);
+  ZX_DEBUG_ASSERT(dispatcher);
 
   auto session_it = handle_to_session_.find(handle);
 
@@ -89,8 +89,8 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
 
           bt_log(INFO, "rfcomm", "opened L2CAP session with handle %#.4x",
                  handle);
-          FXL_DCHECK(handle_to_session_.find(handle) ==
-                     handle_to_session_.end());
+          ZX_DEBUG_ASSERT(handle_to_session_.find(handle) ==
+                          handle_to_session_.end());
           handle_to_session_.emplace(
               handle,
               Session::Create(
@@ -109,7 +109,7 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
     return;
   }
 
-  FXL_DCHECK(session_it != handle_to_session_.end());
+  ZX_DEBUG_ASSERT(session_it != handle_to_session_.end());
 
   session_it->second->OpenRemoteChannel(
       server_channel, [cb = std::move(channel_opened_cb), dispatcher](
@@ -140,14 +140,14 @@ ChannelManager::ChannelManager(l2cap::L2CAP* l2cap)
     : dispatcher_(async_get_default_dispatcher()),
       l2cap_(l2cap),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(l2cap_);
+  ZX_DEBUG_ASSERT(l2cap_);
 }
 
 void ChannelManager::ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,
                                    ServerChannel server_channel) {
   auto server_channel_it = server_channels_.find(server_channel);
-  FXL_DCHECK(server_channel_it != server_channels_.end())
-      << "rfcomm: New channel created on an unallocated Server Channel";
+  ZX_DEBUG_ASSERT_MSG(server_channel_it != server_channels_.end(),
+                      "new channel created on an unallocated Server Channel");
 
   async::PostTask(server_channel_it->second.second,
                   [server_channel, rfcomm_channel,

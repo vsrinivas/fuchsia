@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
@@ -169,12 +171,12 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
   std::unique_ptr<LowEnergyDiscoverySession> StartDiscoverySession() {
     std::unique_ptr<LowEnergyDiscoverySession> session;
     discovery_manager()->StartDiscovery([&](auto cb_session) {
-      FXL_DCHECK(cb_session);
+      ZX_DEBUG_ASSERT(cb_session);
       session = std::move(cb_session);
     });
 
     RunLoopUntilIdle();
-    FXL_DCHECK(session);
+    ZX_DEBUG_ASSERT(session);
     return session;
   }
 

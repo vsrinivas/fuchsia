@@ -6,10 +6,11 @@
 
 #include <map>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -46,7 +47,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
       size_t max_ad_size,
       std::map<common::DeviceAddress, AdvertisementStatus>* ad_store)
       : max_ads_(max_ads), max_ad_size_(max_ad_size), ads_(ad_store) {
-    FXL_CHECK(ads_);
+    ZX_ASSERT(ads_);
   }
 
   ~FakeLowEnergyAdvertiser() override = default;

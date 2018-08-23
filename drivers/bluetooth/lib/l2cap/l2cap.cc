@@ -20,13 +20,13 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
       : L2CAP(),
         common::TaskDomain<Impl, L2CAP>(this, std::move(thread_name)),
         hci_(hci) {
-    FXL_DCHECK(hci_);
+    ZX_DEBUG_ASSERT(hci_);
   }
 
   void Initialize() override {
     PostMessage([this] {
       // This can only run once during initialization.
-      FXL_DCHECK(!chanmgr_);
+      ZX_DEBUG_ASSERT(!chanmgr_);
       chanmgr_ = std::make_unique<ChannelManager>(hci_, dispatcher());
       bt_log(TRACE, "l2cap", "initialized");
     });
@@ -69,8 +69,8 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
         auto att = chanmgr_->OpenFixedChannel(handle, kATTChannelId);
         auto smp = chanmgr_->OpenFixedChannel(handle, kLESMPChannelId);
-        FXL_DCHECK(att);
-        FXL_DCHECK(smp);
+        ZX_DEBUG_ASSERT(att);
+        ZX_DEBUG_ASSERT(smp);
         async::PostTask(dispatcher, [att = std::move(att), smp = std::move(smp),
                                      cb = std::move(chan_cb)]() mutable {
           cb(std::move(att), std::move(smp));
@@ -117,7 +117,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 // static
 fbl::RefPtr<L2CAP> L2CAP::Create(fxl::RefPtr<hci::Transport> hci,
                                  std::string thread_name) {
-  FXL_DCHECK(hci);
+  ZX_DEBUG_ASSERT(hci);
 
   return AdoptRef(new Impl(hci, std::move(thread_name)));
 }

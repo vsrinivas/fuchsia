@@ -4,6 +4,8 @@
 
 #include "remote_characteristic.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
@@ -50,13 +52,13 @@ RemoteCharacteristic::PendingNotifyRequest::PendingNotifyRequest(
     : dispatcher(d),
       value_callback(std::move(value_cb)),
       status_callback(std::move(status_cb)) {
-  FXL_DCHECK(value_callback);
-  FXL_DCHECK(status_callback);
+  ZX_DEBUG_ASSERT(value_callback);
+  ZX_DEBUG_ASSERT(status_callback);
 }
 
 RemoteCharacteristic::NotifyHandler::NotifyHandler(async_dispatcher_t* d, ValueCallback cb)
     : dispatcher(d), callback(std::move(cb)) {
-  FXL_DCHECK(callback);
+  ZX_DEBUG_ASSERT(callback);
 }
 
 RemoteCharacteristic::Descriptor::Descriptor(IdType id,
@@ -75,8 +77,8 @@ RemoteCharacteristic::RemoteCharacteristic(fxl::WeakPtr<Client> client,
       client_(client),
       weak_ptr_factory_(this) {
   // See comments about "ID scheme" in remote_characteristics.h
-  FXL_DCHECK(id_ <= std::numeric_limits<uint16_t>::max());
-  FXL_DCHECK(client_);
+  ZX_DEBUG_ASSERT(id_ <= std::numeric_limits<uint16_t>::max());
+  ZX_DEBUG_ASSERT(client_);
 }
 
 RemoteCharacteristic::RemoteCharacteristic(RemoteCharacteristic&& other)
@@ -92,7 +94,7 @@ RemoteCharacteristic::RemoteCharacteristic(RemoteCharacteristic&& other)
 }
 
 void RemoteCharacteristic::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   // Make sure that all weak pointers are invalidated on the GATT thread.
   weak_ptr_factory_.InvalidateWeakPtrs();
@@ -113,11 +115,11 @@ void RemoteCharacteristic::ShutDown() {
 
 void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
                                                att::StatusCallback callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(client_);
-  FXL_DCHECK(callback);
-  FXL_DCHECK(!shut_down_);
-  FXL_DCHECK(range_end >= info().value_handle);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(client_);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(!shut_down_);
+  ZX_DEBUG_ASSERT(range_end >= info().value_handle);
 
   discovery_error_ = false;
   descriptors_.clear();
@@ -132,7 +134,7 @@ void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
     if (!self)
       return;
 
-    FXL_DCHECK(self->thread_checker_.IsCreationThreadCurrent());
+    ZX_DEBUG_ASSERT(self->thread_checker_.IsCreationThreadCurrent());
     if (self->discovery_error_)
       return;
 
@@ -147,8 +149,8 @@ void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
     }
 
     // See comments about "ID scheme" in remote_characteristics.h
-    FXL_DCHECK(self->descriptors_.size() <=
-               std::numeric_limits<uint16_t>::max());
+    ZX_DEBUG_ASSERT(self->descriptors_.size() <=
+                    std::numeric_limits<uint16_t>::max());
     IdType id = (self->id_ << 16) | self->descriptors_.size();
     self->descriptors_.push_back(Descriptor(id, desc));
   };
@@ -159,7 +161,7 @@ void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
       return;
     }
 
-    FXL_DCHECK(self->thread_checker_.IsCreationThreadCurrent());
+    ZX_DEBUG_ASSERT(self->thread_checker_.IsCreationThreadCurrent());
 
     if (self->discovery_error_) {
       status = att::Status(HostError::kFailed);
@@ -178,11 +180,11 @@ void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
 void RemoteCharacteristic::EnableNotifications(
     ValueCallback value_callback, NotifyStatusCallback status_callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(client_);
-  FXL_DCHECK(value_callback);
-  FXL_DCHECK(status_callback);
-  FXL_DCHECK(!shut_down_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(client_);
+  ZX_DEBUG_ASSERT(value_callback);
+  ZX_DEBUG_ASSERT(status_callback);
+  ZX_DEBUG_ASSERT(!shut_down_);
 
   if (!(info().properties & (Property::kNotify | Property::kIndicate)) ||
       ccc_handle_ == att::kInvalidHandle) {
@@ -194,7 +196,7 @@ void RemoteCharacteristic::EnableNotifications(
 
   // If notifications are already enabled then succeed right away.
   if (!notify_handlers_.empty()) {
-    FXL_DCHECK(pending_notify_reqs_.empty());
+    ZX_DEBUG_ASSERT(pending_notify_reqs_.empty());
 
     IdType id = next_notify_handler_id_++;
     notify_handlers_[id] = NotifyHandler(dispatcher, std::move(value_callback));
@@ -234,9 +236,9 @@ void RemoteCharacteristic::EnableNotifications(
 }
 
 bool RemoteCharacteristic::DisableNotifications(IdType handler_id) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(client_);
-  FXL_DCHECK(!shut_down_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(client_);
+  ZX_DEBUG_ASSERT(!shut_down_);
 
   if (!notify_handlers_.erase(handler_id)) {
     bt_log(SPEW, "gatt", "notify handler not found (id: %u)", handler_id);
@@ -251,7 +253,7 @@ bool RemoteCharacteristic::DisableNotifications(IdType handler_id) {
 }
 
 void RemoteCharacteristic::DisableNotificationsInternal() {
-  FXL_DCHECK(ccc_handle_ != att::kInvalidHandle);
+  ZX_DEBUG_ASSERT(ccc_handle_ != att::kInvalidHandle);
 
   if (!client_) {
     bt_log(SPEW, "gatt", "client bearer invalid!");
@@ -295,9 +297,9 @@ void RemoteCharacteristic::ResolvePendingNotifyRequests(att::Status status) {
 }
 
 void RemoteCharacteristic::HandleNotification(const common::ByteBuffer& value) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(client_);
-  FXL_DCHECK(!shut_down_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(client_);
+  ZX_DEBUG_ASSERT(!shut_down_);
 
   for (auto& iter : notify_handlers_) {
     auto& handler = iter.second;

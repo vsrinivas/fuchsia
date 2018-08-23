@@ -4,8 +4,7 @@
 
 #include "control_packets.h"
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
+#include <zircon/assert.h>
 
 #include "slab_allocators.h"
 
@@ -38,7 +37,7 @@ using EventAllocator = fbl::SlabAllocator<EventTraits>;
 namespace {
 
 std::unique_ptr<CommandPacket> NewCommandPacket(size_t payload_size) {
-  FXL_DCHECK(payload_size <= slab_allocators::kLargeControlPayloadSize);
+  ZX_DEBUG_ASSERT(payload_size <= slab_allocators::kLargeControlPayloadSize);
 
   if (payload_size <= slab_allocators::kSmallControlPayloadSize) {
     auto buffer = slab_allocators::SmallCommandAllocator::New(payload_size);
@@ -56,7 +55,7 @@ std::unique_ptr<CommandPacket> NewCommandPacket(size_t payload_size) {
 // |status| member of type hci::StatusCode for this to compile.
 template <typename T>
 bool StatusCodeFromEvent(const EventPacket& event, hci::StatusCode* out_code) {
-  FXL_DCHECK(out_code);
+  ZX_DEBUG_ASSERT(out_code);
 
   if (event.view().payload_size() < sizeof(T))
     return false;
@@ -70,7 +69,7 @@ template <>
 bool StatusCodeFromEvent<CommandCompleteEventParams>(
     const EventPacket& event,
     hci::StatusCode* out_code) {
-  FXL_DCHECK(out_code);
+  ZX_DEBUG_ASSERT(out_code);
 
   const auto* params = event.return_params<SimpleReturnParams>();
   if (!params)
@@ -124,8 +123,7 @@ bool EventPacket::ToStatusCode(StatusCode* out_code) const {
       // TODO(armansito): Complete this list.
 
     default:
-      FXL_NOTREACHED() << fxl::StringPrintf("Event not implemented! (%#.2x)",
-                                            event_code());
+      ZX_PANIC("event (%#.2x) not implemented!", event_code());
       break;
   }
   return false;

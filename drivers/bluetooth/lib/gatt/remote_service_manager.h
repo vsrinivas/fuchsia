@@ -11,6 +11,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <lib/async/dispatcher.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/att/status.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
@@ -43,7 +44,7 @@ class RemoteServiceManager final {
 
   // Adds a handler to be notified when a new service is added.
   void set_service_watcher(RemoteServiceWatcher watcher) {
-    FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+    ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
     svc_watcher_ = std::move(watcher);
   }
 

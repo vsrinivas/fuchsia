@@ -132,9 +132,9 @@ Bearer::PendingTransaction::PendingTransaction(OpCode opcode,
       callback(std::move(callback)),
       error_callback(std::move(error_callback)),
       pdu(std::move(pdu)) {
-  FXL_DCHECK(this->callback);
-  FXL_DCHECK(this->error_callback);
-  FXL_DCHECK(this->pdu);
+  ZX_DEBUG_ASSERT(this->callback);
+  ZX_DEBUG_ASSERT(this->error_callback);
+  ZX_DEBUG_ASSERT(this->pdu);
 }
 
 Bearer::PendingRemoteTransaction::PendingRemoteTransaction(TransactionId id,
@@ -149,8 +149,8 @@ Bearer::TransactionQueue::TransactionQueue(TransactionQueue&& other)
 }
 
 Bearer::PendingTransactionPtr Bearer::TransactionQueue::ClearCurrent() {
-  FXL_DCHECK(current_);
-  FXL_DCHECK(timeout_task_.is_pending());
+  ZX_DEBUG_ASSERT(current_);
+  ZX_DEBUG_ASSERT(timeout_task_.is_pending());
 
   timeout_task_.Cancel();
 
@@ -164,7 +164,7 @@ void Bearer::TransactionQueue::Enqueue(PendingTransactionPtr transaction) {
 void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
                                            async::Task::Handler timeout_cb,
                                            uint32_t timeout_ms) {
-  FXL_DCHECK(chan);
+  ZX_DEBUG_ASSERT(chan);
 
   // Abort if a transaction is currently pending.
   if (current())
@@ -173,7 +173,7 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
   // Advance to the next transaction.
   current_ = queue_.pop_front();
   if (current()) {
-    FXL_DCHECK(!timeout_task_.is_pending());
+    ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
     timeout_task_.set_handler(std::move(timeout_cb));
     timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::msec(timeout_ms));
     chan->Send(std::move(current()->pdu));
@@ -201,7 +201,7 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan)
     : chan_(std::move(chan)),
       next_remote_transaction_id_(1u),
       next_handler_id_(1u) {
-  FXL_DCHECK(chan_);
+  ZX_DEBUG_ASSERT(chan_);
 
   if (chan_->link_type() == hci::Connection::LinkType::kLE) {
     min_mtu_ = kLEMinMTU;
@@ -215,7 +215,7 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan)
 }
 
 Bearer::~Bearer() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   rx_task_.Cancel();
   chan_ = nullptr;
@@ -225,7 +225,7 @@ Bearer::~Bearer() {
 }
 
 bool Bearer::Activate() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   rx_task_.Reset(fit::bind_member(this, &Bearer::OnRxBFrame));
   chan_closed_cb_.Reset(fit::bind_member(this, &Bearer::OnChannelClosed));
@@ -240,8 +240,8 @@ void Bearer::ShutDown() {
 }
 
 void Bearer::ShutDownInternal(bool due_to_timeout) {
-  FXL_DCHECK(is_open());
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(is_open());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   bt_log(TRACE, "att", "bearer shutting down");
 
@@ -273,22 +273,22 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
 bool Bearer::StartTransaction(common::ByteBufferPtr pdu,
                               TransactionCallback callback,
                               ErrorCallback error_callback) {
-  FXL_DCHECK(pdu);
-  FXL_DCHECK(callback);
-  FXL_DCHECK(error_callback);
+  ZX_DEBUG_ASSERT(pdu);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(error_callback);
 
   return SendInternal(std::move(pdu), std::move(callback), std::move(error_callback));
 }
 
 bool Bearer::SendWithoutResponse(common::ByteBufferPtr pdu) {
-  FXL_DCHECK(pdu);
+  ZX_DEBUG_ASSERT(pdu);
   return SendInternal(std::move(pdu), {}, {});
 }
 
 bool Bearer::SendInternal(common::ByteBufferPtr pdu,
                           TransactionCallback callback,
                           ErrorCallback error_callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) {
     bt_log(SPEW, "att", "bearer closed; cannot send packet");
     return false;
@@ -341,7 +341,7 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
 
 Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
                                           Handler handler) {
-  FXL_DCHECK(handler);
+  ZX_DEBUG_ASSERT(handler);
 
   if (!is_open())
     return kInvalidHandlerId;
@@ -357,7 +357,7 @@ Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
     return kInvalidHandlerId;
 
   auto res = handler_id_map_.emplace(id, opcode);
-  FXL_CHECK(res.second) << "att: Handler ID got reused (id: " << id << ")";
+  ZX_ASSERT_MSG(res.second, "handler ID got reused (id: %zu)", id);
 
   handlers_[opcode] = std::move(handler);
 
@@ -365,8 +365,8 @@ Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
 }
 
 void Bearer::UnregisterHandler(HandlerId id) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(id != kInvalidHandlerId);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(id != kInvalidHandlerId);
 
   auto iter = handler_id_map_.find(id);
   if (iter == handler_id_map_.end()) {
@@ -379,8 +379,8 @@ void Bearer::UnregisterHandler(HandlerId id) {
 }
 
 bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(pdu);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(pdu);
 
   if (tid == kInvalidTransactionId)
     return false;
@@ -421,7 +421,7 @@ bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
 bool Bearer::ReplyWithError(TransactionId id,
                             Handle handle,
                             ErrorCode error_code) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   RemoteTransaction* pending = FindRemoteTransaction(id);
   if (!pending)
@@ -444,8 +444,8 @@ bool Bearer::IsPacketValid(const common::ByteBuffer& packet) {
 }
 
 void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
-  FXL_DCHECK(is_open());
-  FXL_DCHECK(tq);
+  ZX_DEBUG_ASSERT(is_open());
+  ZX_DEBUG_ASSERT(tq);
 
   tq->TrySendNext(chan_.get(),
                   [this](async_dispatcher_t*, async::Task*, zx_status_t status) {
@@ -458,11 +458,11 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
 void Bearer::SendErrorResponse(OpCode request_opcode,
                                Handle attribute_handle,
                                ErrorCode error_code) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   auto buffer =
       common::NewSlabBuffer(sizeof(Header) + sizeof(ErrorResponseParams));
-  FXL_CHECK(buffer);
+  ZX_ASSERT(buffer);
 
   PacketWriter packet(kErrorResponse, buffer.get());
   auto* payload = packet.mutable_payload<ErrorResponseParams>();
@@ -475,9 +475,9 @@ void Bearer::SendErrorResponse(OpCode request_opcode,
 
 void Bearer::HandleEndTransaction(TransactionQueue* tq,
                                   const PacketReader& packet) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(is_open());
-  FXL_DCHECK(tq);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(is_open());
+  ZX_DEBUG_ASSERT(tq);
 
   if (!tq->current()) {
     bt_log(TRACE, "att", "received unexpected transaction PDU (opcode: %#.2x)",
@@ -493,7 +493,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
 
   if (packet.opcode() == kErrorResponse) {
     // We should never hit this branch for indications.
-    FXL_DCHECK(tq->current()->opcode != kIndication);
+    ZX_DEBUG_ASSERT(tq->current()->opcode != kIndication);
 
     if (packet.payload_size() == sizeof(ErrorResponseParams)) {
       report_error = true;
@@ -512,7 +512,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
     target_opcode = MatchingTransactionCode(packet.opcode());
   }
 
-  FXL_DCHECK(tq->current()->opcode != kInvalidOpCode);
+  ZX_DEBUG_ASSERT(tq->current()->opcode != kInvalidOpCode);
 
   if (tq->current()->opcode != target_opcode) {
     bt_log(TRACE, "att", "received bad transaction PDU (opcode: %#.2x)",
@@ -524,7 +524,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
   // The transaction is complete. Send out the next queued transaction and
   // notify the callback.
   auto transaction = tq->ClearCurrent();
-  FXL_DCHECK(transaction);
+  ZX_DEBUG_ASSERT(transaction);
 
   TryStartNextTransaction(tq);
 
@@ -558,8 +558,8 @@ Bearer::TransactionId Bearer::NextRemoteTransactionId() {
 
 void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
                                     const PacketReader& packet) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(currently_pending);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(currently_pending);
 
   if (currently_pending->HasValue()) {
     bt_log(TRACE, "att", "A transaction is already pending! (opcode: %#.2x)",
@@ -583,7 +583,7 @@ void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
 }
 
 Bearer::RemoteTransaction* Bearer::FindRemoteTransaction(TransactionId id) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (remote_request_ && remote_request_->id == id) {
     return &remote_request_;
@@ -598,7 +598,7 @@ Bearer::RemoteTransaction* Bearer::FindRemoteTransaction(TransactionId id) {
 }
 
 void Bearer::HandlePDUWithoutResponse(const PacketReader& packet) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   auto iter = handlers_.find(packet.opcode());
   if (iter == handlers_.end()) {
@@ -611,15 +611,15 @@ void Bearer::HandlePDUWithoutResponse(const PacketReader& packet) {
 }
 
 void Bearer::OnChannelClosed() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   // This will deactivate the channel and notify |closed_cb_|.
   ShutDown();
 }
 
 void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
-  FXL_DCHECK(is_open());
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(is_open());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   uint16_t length = sdu.length();
 
@@ -639,7 +639,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
   // The following will read the entire ATT PDU in a single call.
   l2cap::SDU::Reader reader(&sdu);
   reader.ReadNext(length, [this, length](const common::ByteBuffer& att_pdu) {
-    FXL_CHECK(att_pdu.size() == length);
+    ZX_ASSERT(att_pdu.size() == length);
     PacketReader packet(&att_pdu);
 
     MethodType type = GetMethodType(packet.opcode());

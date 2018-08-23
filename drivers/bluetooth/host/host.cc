@@ -43,8 +43,8 @@ bool Host::Initialize(InitCallback callback) {
   if (!gap_)
     return false;
 
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(l2cap_);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(l2cap_);
 
   // Called when the GAP layer is ready. We initialize L2CAP and the GATT
   // profile after initial setup in GAP (which sets up ACL data).
@@ -67,7 +67,7 @@ bool Host::Initialize(InitCallback callback) {
 }
 
 void Host::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   bt_log(TRACE, "bt-host", "shutting down");
 
   // Closes all FIDL channels owned by |host_server_|.
@@ -83,19 +83,19 @@ void Host::ShutDown() {
 }
 
 void Host::BindHostInterface(zx::channel channel) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (host_server_) {
     bt_log(WARN, "bt-host", "Host interface channel already open!");
     return;
   }
 
-  FXL_DCHECK(gap_);
-  FXL_DCHECK(gatt_host_);
+  ZX_DEBUG_ASSERT(gap_);
+  ZX_DEBUG_ASSERT(gatt_host_);
 
   host_server_ = std::make_unique<HostServer>(std::move(channel),
                                               gap_->AsWeakPtr(), gatt_host_);
   host_server_->set_error_handler([this] {
-    FXL_DCHECK(host_server_);
+    ZX_DEBUG_ASSERT(host_server_);
     bt_log(TRACE, "bt-host", "Host interface disconnected");
     host_server_ = nullptr;
   });

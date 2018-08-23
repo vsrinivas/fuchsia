@@ -6,6 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_CONNECTION_H_
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
@@ -13,7 +14,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -106,14 +106,14 @@ class Connection {
   // The active LE connection parameters of this connection. Must only be called
   // on a Connection with the LE link type.
   const LEConnectionParameters& low_energy_parameters() const {
-    FXL_DCHECK(ll_type_ == LinkType::kLE);
+    ZX_DEBUG_ASSERT(ll_type_ == LinkType::kLE);
     return le_params_;
   }
 
   // Sets the active LE parameters of this connection. Must only be called on a
   // Connection with the LE link type.
   void set_low_energy_parameters(const LEConnectionParameters& params) {
-    FXL_DCHECK(ll_type_ == LinkType::kLE);
+    ZX_DEBUG_ASSERT(ll_type_ == LinkType::kLE);
     le_params_ = params;
   }
 

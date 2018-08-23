@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
@@ -215,14 +216,14 @@ class AttributeGrouping final {
   }
 
   const common::UUID& group_type() const {
-    FXL_DCHECK(!attributes_.empty());
+    ZX_DEBUG_ASSERT(!attributes_.empty());
     return attributes_[0].type();
   }
 
   // Value of the group declaration attribute.
   const common::BufferView decl_value() const {
-    FXL_DCHECK(!attributes_.empty());
-    FXL_DCHECK(attributes_[0].value());
+    ZX_DEBUG_ASSERT(!attributes_.empty());
+    ZX_DEBUG_ASSERT(attributes_[0].value());
     return attributes_[0].value()->view();
   }
 
@@ -232,8 +233,8 @@ class AttributeGrouping final {
 
   bool active() const { return active_; }
   void set_active(bool active) {
-    FXL_DCHECK(complete())
-        << "att: set_active() called on incomplete grouping!";
+    ZX_DEBUG_ASSERT_MSG(complete(),
+                        "set_active() called on incomplete grouping!");
     active_ = active;
   }
 

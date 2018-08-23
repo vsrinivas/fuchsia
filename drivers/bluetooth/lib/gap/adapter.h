@@ -10,12 +10,12 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -112,19 +112,19 @@ class Adapter final {
 
   // Returns this Adapter's LE discovery manager.
   LowEnergyDiscoveryManager* le_discovery_manager() const {
-    FXL_DCHECK(le_discovery_manager_);
+    ZX_DEBUG_ASSERT(le_discovery_manager_);
     return le_discovery_manager_.get();
   }
 
   // Returns this Adapter's LE connection manager.
   LowEnergyConnectionManager* le_connection_manager() const {
-    FXL_DCHECK(le_connection_manager_);
+    ZX_DEBUG_ASSERT(le_connection_manager_);
     return le_connection_manager_.get();
   }
 
   // Returns this Adapter's LE advertising manager.
   LowEnergyAdvertisingManager* le_advertising_manager() const {
-    FXL_DCHECK(le_advertising_manager_);
+    ZX_DEBUG_ASSERT(le_advertising_manager_);
     return le_advertising_manager_.get();
   }
 

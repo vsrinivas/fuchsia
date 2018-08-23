@@ -5,12 +5,10 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_RFCOMM_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_RFCOMM_H_
 
+#include <zircon/assert.h>
 #include <cstdint>
 
-#include <lib/fxl/logging.h>
-
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -78,15 +76,15 @@ constexpr ServerChannel kInvalidServerChannel = 0;
 constexpr size_t kServerChannelShift = 1;
 
 inline constexpr ServerChannel DLCIToServerChannel(DLCI dlci) {
-  FXL_DCHECK(IsUserDLCI(dlci));
+  ZX_DEBUG_ASSERT(IsUserDLCI(dlci));
   return dlci >> kServerChannelShift;
 }
 
 inline constexpr DLCI ServerChannelToDLCI(ServerChannel server_channel,
                                           Role role) {
-  FXL_DCHECK(role == Role::kInitiator || role == Role::kResponder);
-  FXL_DCHECK(server_channel >= kMinServerChannel &&
-             server_channel <= kMaxServerChannel);
+  ZX_DEBUG_ASSERT(role == Role::kInitiator || role == Role::kResponder);
+  ZX_DEBUG_ASSERT(server_channel >= kMinServerChannel &&
+                  server_channel <= kMaxServerChannel);
   return (server_channel << kServerChannelShift) |
          (role == Role::kInitiator ? 1 : 0);
 }

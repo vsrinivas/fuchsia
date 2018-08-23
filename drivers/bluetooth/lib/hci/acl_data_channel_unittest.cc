@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include <lib/async/cpp/task.h>
+#include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
@@ -80,7 +81,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
 
   // Callback invoked by TestDevice when it receive a data packet from us.
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(ACLDataHeader));
@@ -154,7 +155,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   size_t handle0_packet_count = 0;
   size_t handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(ACLDataHeader));
@@ -235,7 +236,7 @@ TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(ACLDataHeader));
@@ -309,7 +310,7 @@ TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(ACLDataHeader));
@@ -380,7 +381,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
   int handle2_processed_count = 0;
   int total_packet_count = 0;
   auto data_cb = [&](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(ACLDataHeader));
@@ -482,7 +483,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPackets) {
   bool pass = true;
   int seq_no = 0;
   auto data_cb = [&pass, &seq_no](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
     common::PacketView<hci::ACLDataHeader> packet(
         &bytes, bytes.size() - sizeof(ACLDataHeader));
     EXPECT_EQ(1u, packet.payload_size());
@@ -525,7 +526,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
 
   std::vector<std::unique_ptr<common::ByteBuffer>> received;
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
-    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    ZX_DEBUG_ASSERT(bytes.size() >= sizeof(ACLDataHeader));
     received.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
   };
   test_device()->SetDataCallback(data_cb, dispatcher());
@@ -628,12 +629,13 @@ TEST_F(HCI_ACLDataChannelTest, ReceiveData) {
   ConnectionHandle packet1_handle;
   auto data_rx_cb = [&](ACLDataPacketPtr packet) {
     num_rx_packets++;
-    if (num_rx_packets == 1)
+    if (num_rx_packets == 1) {
       packet0_handle = packet->connection_handle();
-    else if (num_rx_packets == 2)
+    } else if (num_rx_packets == 2) {
       packet1_handle = packet->connection_handle();
-    else
-      FXL_NOTREACHED();
+    } else {
+      ZX_PANIC("|num_rx_packets| has unexpected value: %zu", num_rx_packets);
+    }
   };
   set_data_received_callback(std::move(data_rx_cb));
 

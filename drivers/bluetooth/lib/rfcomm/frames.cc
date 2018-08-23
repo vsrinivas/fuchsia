@@ -158,8 +158,10 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
             cr_bit ? CommandResponse::kResponse : CommandResponse::kCommand;
         break;
       default:
-        FXL_NOTREACHED();
-        break;
+        // TODO(armansito): Add a unit test for this case.
+        bt_log(ERROR, "rfcomm", "malformed frame type: %u",
+               static_cast<unsigned int>(frame_type));
+        return nullptr;
     }
   }
   bool poll_final = buffer[kControlIndex] & kPFMask;
@@ -243,14 +245,14 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
 
 // Write this RFCOMM frame into a buffer.
 void Frame::Write(common::MutableBufferView buffer) const {
-  FXL_DCHECK(buffer.size() >= header_size());
+  ZX_DEBUG_ASSERT(buffer.size() >= header_size());
 
   // Writes address, control, and length octets.
   WriteHeader(buffer);
 
   // Begin writing after header.
   size_t offset = header_size();
-  FXL_DCHECK(buffer.size() > offset);
+  ZX_DEBUG_ASSERT(buffer.size() > offset);
 
   // FCS is calculated on address and control fields for UIH frames, and
   // calculated on address, control, and length fields for all other frames.
@@ -261,7 +263,7 @@ void Frame::Write(common::MutableBufferView buffer) const {
 }
 
 void Frame::WriteHeader(common::MutableBufferView buffer) const {
-  FXL_DCHECK(buffer.size() >= header_size());
+  ZX_DEBUG_ASSERT(buffer.size() >= header_size());
 
   size_t offset = 0;
 
@@ -279,7 +281,7 @@ void Frame::WriteHeader(common::MutableBufferView buffer) const {
   } else if (role_ == Role::kUnassigned || role_ == Role::kNegotiating) {
     // There are only specific frames which can be encoded when the multiplexer
     // is not yet started.
-    FXL_DCHECK(IsMuxStartupFrame(FrameType(control_), dlci_));
+    ZX_DEBUG_ASSERT(IsMuxStartupFrame(FrameType(control_), dlci_));
 
     // TODO(gusss): the spec does not say how we encode the C/R bit when the
     // multiplexer is not yet started.
@@ -289,8 +291,8 @@ void Frame::WriteHeader(common::MutableBufferView buffer) const {
     //  - DM (response) frames come from would-be responder, C/R = 1
     command_response_bit = 1;
   } else {
-    FXL_NOTREACHED() << "rfcomm: Unexpected role while writing frame: "
-                     << unsigned(role_);
+    ZX_PANIC("unexpected role while writing frame: %u",
+             static_cast<unsigned int>(role_));
     return;
   }
 
@@ -396,7 +398,7 @@ size_t UnnumberedInfoHeaderCheckFrame::header_size() const {
 
 void UnnumberedInfoHeaderCheckFrame::WriteHeader(
     common::MutableBufferView buffer) const {
-  FXL_DCHECK(buffer.size() >= header_size());
+  ZX_DEBUG_ASSERT(buffer.size() >= header_size());
 
   // Write address, control, length
   Frame::WriteHeader(buffer);
@@ -414,7 +416,7 @@ UserDataFrame::UserDataFrame(Role role, bool credit_based_flow, DLCI dlci,
       information_(std::move(information)) {}
 
 void UserDataFrame::Write(common::MutableBufferView buffer) const {
-  FXL_DCHECK(buffer.size() >= written_size());
+  ZX_DEBUG_ASSERT(buffer.size() >= written_size());
 
   WriteHeader(buffer);
 
@@ -444,7 +446,7 @@ MuxCommandFrame::MuxCommandFrame(Role role, bool credit_based_flow,
       mux_command_(std::move(mux_command)) {}
 
 void MuxCommandFrame::Write(common::MutableBufferView buffer) const {
-  FXL_DCHECK(buffer.size() >= written_size());
+  ZX_DEBUG_ASSERT(buffer.size() >= written_size());
 
   WriteHeader(buffer);
 

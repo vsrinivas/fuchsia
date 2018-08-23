@@ -22,11 +22,11 @@ FakeChannel::FakeChannel(ChannelId id, ChannelId remote_id,
       activate_fails_(false),
       link_error_(false),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(handle_);
+  ZX_DEBUG_ASSERT(handle_);
 }
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
-  FXL_DCHECK(!!rx_cb_ == !!dispatcher_);
+  ZX_DEBUG_ASSERT(!!rx_cb_ == !!dispatcher_);
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
   if (dispatcher_) {
@@ -41,7 +41,7 @@ void FakeChannel::Receive(const common::ByteBuffer& data) {
 
 void FakeChannel::SetSendCallback(SendCallback callback,
                                   async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
+  ZX_DEBUG_ASSERT(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
   send_cb_ = std::move(callback);
   send_dispatcher_ = dispatcher;
@@ -49,7 +49,7 @@ void FakeChannel::SetSendCallback(SendCallback callback,
 
 void FakeChannel::SetLinkErrorCallback(L2CAP::LinkErrorCallback callback,
                                        async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
+  ZX_DEBUG_ASSERT(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
   link_err_cb_ = std::move(callback);
   link_err_dispatcher_ = dispatcher;
@@ -63,10 +63,10 @@ void FakeChannel::Close() {
 bool FakeChannel::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
                            async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(rx_callback);
-  FXL_DCHECK(closed_callback);
-  FXL_DCHECK(!rx_cb_);
-  FXL_DCHECK(!closed_cb_);
+  ZX_DEBUG_ASSERT(rx_callback);
+  ZX_DEBUG_ASSERT(closed_callback);
+  ZX_DEBUG_ASSERT(!rx_cb_);
+  ZX_DEBUG_ASSERT(!closed_cb_);
 
   if (activate_fails_)
     return false;
@@ -98,12 +98,12 @@ void FakeChannel::SignalLinkError() {
 }
 
 bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
-  FXL_DCHECK(sdu);
+  ZX_DEBUG_ASSERT(sdu);
 
   if (!send_cb_)
     return false;
 
-  FXL_DCHECK(send_dispatcher_);
+  ZX_DEBUG_ASSERT(send_dispatcher_);
   async::PostTask(send_dispatcher_,
                   [cb = send_cb_.share(), sdu = std::move(sdu)]() mutable {
                     cb(std::move(sdu));

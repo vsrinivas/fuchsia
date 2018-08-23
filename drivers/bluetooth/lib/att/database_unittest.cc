@@ -4,6 +4,8 @@
 
 #include "database.h"
 
+#include <zircon/assert.h>
+
 #include "gtest/gtest.h"
 
 namespace btlib {
@@ -24,7 +26,7 @@ const auto kTestValue2 = common::CreateStaticByteBuffer('x', 'x', 'x');
 // Returns the handles of each attribute visited by advancing |iter| until the
 // end.
 std::vector<Handle> IterHandles(Database::Iterator* iter) {
-  FXL_DCHECK(iter);
+  ZX_DEBUG_ASSERT(iter);
 
   std::vector<Handle> handles;
   for (; !iter->AtEnd(); iter->Advance()) {

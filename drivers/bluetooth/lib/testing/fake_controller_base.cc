@@ -112,7 +112,7 @@ void FakeControllerBase::HandleCommandPacket(
   zx_status_t status = cmd_channel_.read(0u, buffer.mutable_data(),
                                          hci::kMaxCommandPacketPayloadSize,
                                          &read_size, nullptr, 0, nullptr);
-  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
+  ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
   if (status < 0) {
     if (status == ZX_ERR_PEER_CLOSED) {
       bt_log(INFO, "fake-hci", "command channel was closed");
@@ -152,7 +152,7 @@ void FakeControllerBase::HandleACLPacket(
   zx_status_t status =
       acl_channel_.read(0u, buffer.mutable_data(), buffer.size(), &read_size,
                         nullptr, 0, nullptr);
-  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
+  ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
   if (status < 0) {
     if (status == ZX_ERR_PEER_CLOSED) {
       bt_log(INFO, "fake-hci", "ACL channel was closed");

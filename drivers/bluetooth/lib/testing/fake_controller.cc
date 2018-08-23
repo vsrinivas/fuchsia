@@ -186,7 +186,7 @@ FakeController::~FakeController() { Stop(); }
 
 void FakeController::SetDefaultResponseStatus(hci::OpCode opcode,
                                               hci::StatusCode status) {
-  FXL_DCHECK(status != hci::StatusCode::kSuccess);
+  ZX_DEBUG_ASSERT(status != hci::StatusCode::kSuccess);
   default_status_map_[opcode] = status;
 }
 
@@ -202,8 +202,8 @@ void FakeController::AddDevice(std::unique_ptr<FakeDevice> device) {
 void FakeController::SetScanStateCallback(
     ScanStateCallback callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
 
   scan_state_cb_ = std::move(callback);
   scan_state_cb_dispatcher_ = dispatcher;
@@ -212,8 +212,8 @@ void FakeController::SetScanStateCallback(
 void FakeController::SetAdvertisingStateCallback(
     fit::closure callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
 
   advertising_state_cb_ = std::move(callback);
   advertising_state_cb_dispatcher_ = dispatcher;
@@ -222,8 +222,8 @@ void FakeController::SetAdvertisingStateCallback(
 void FakeController::SetConnectionStateCallback(
     ConnectionStateCallback callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
 
   conn_state_cb_ = std::move(callback);
   conn_state_cb_dispatcher_ = dispatcher;
@@ -232,8 +232,8 @@ void FakeController::SetConnectionStateCallback(
 void FakeController::SetLEConnectionParametersCallback(
     LEConnectionParametersCallback callback,
     async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(dispatcher);
 
   le_conn_params_cb_ = std::move(callback);
   le_conn_params_cb_dispatcher_ = dispatcher;
@@ -321,7 +321,7 @@ void FakeController::SendLEMetaEvent(hci::EventCode subevent_code,
 
 void FakeController::SendACLPacket(hci::ConnectionHandle handle,
                                    const ByteBuffer& payload) {
-  FXL_DCHECK(payload.size() <= hci::kMaxACLPayloadSize);
+  ZX_DEBUG_ASSERT(payload.size() <= hci::kMaxACLPayloadSize);
 
   common::DynamicByteBuffer buffer(sizeof(hci::ACLDataHeader) + payload.size());
   common::MutablePacketView<hci::ACLDataHeader> acl(&buffer, payload.size());
@@ -337,8 +337,8 @@ void FakeController::SendACLPacket(hci::ConnectionHandle handle,
 void FakeController::SendL2CAPBFrame(hci::ConnectionHandle handle,
                                      l2cap::ChannelId channel_id,
                                      const ByteBuffer& payload) {
-  FXL_DCHECK(payload.size() <=
-             hci::kMaxACLPayloadSize - sizeof(l2cap::BasicHeader));
+  ZX_DEBUG_ASSERT(payload.size() <=
+                  hci::kMaxACLPayloadSize - sizeof(l2cap::BasicHeader));
 
   common::DynamicByteBuffer buffer(sizeof(l2cap::BasicHeader) + payload.size());
   common::MutablePacketView<l2cap::BasicHeader> bframe(&buffer, payload.size());
@@ -447,7 +447,7 @@ void FakeController::L2CAPConnectionParameterUpdate(
           return;
         }
 
-        FXL_DCHECK(!dev->logical_links().empty());
+        ZX_DEBUG_ASSERT(!dev->logical_links().empty());
 
         l2cap::ConnectionParameterUpdateRequestPayload payload;
         payload.interval_min = htole16(params.min_interval());
@@ -474,8 +474,8 @@ void FakeController::Disconnect(const common::DeviceAddress& addr) {
     }
 
     auto links = dev->Disconnect();
-    FXL_DCHECK(!dev->connected());
-    FXL_DCHECK(!links.empty());
+    ZX_DEBUG_ASSERT(!dev->connected());
+    ZX_DEBUG_ASSERT(!links.empty());
 
     NotifyConnectionState(addr, false);
 
@@ -555,7 +555,7 @@ void FakeController::NotifyAdvertisingState() {
     return;
   }
 
-  FXL_DCHECK(advertising_state_cb_dispatcher_);
+  ZX_DEBUG_ASSERT(advertising_state_cb_dispatcher_);
   async::PostTask(advertising_state_cb_dispatcher_, advertising_state_cb_.share());
 }
 
@@ -565,7 +565,7 @@ void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
   if (!conn_state_cb_)
     return;
 
-  FXL_DCHECK(conn_state_cb_dispatcher_);
+  ZX_DEBUG_ASSERT(conn_state_cb_dispatcher_);
   async::PostTask(conn_state_cb_dispatcher_, [
     addr, connected, canceled, cb = conn_state_cb_.share()
   ] { cb(addr, connected, canceled); });
@@ -577,7 +577,7 @@ void FakeController::NotifyLEConnectionParameters(
   if (!le_conn_params_cb_)
     return;
 
-  FXL_DCHECK(le_conn_params_cb_dispatcher_);
+  ZX_DEBUG_ASSERT(le_conn_params_cb_dispatcher_);
   async::PostTask(le_conn_params_cb_dispatcher_,
       [addr, params, cb = le_conn_params_cb_.share()] { cb(addr, params); });
 }
@@ -593,7 +593,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
 
   common::DeviceAddress::Type addr_type =
       hci::AddressTypeFromHCI(params.peer_address_type);
-  FXL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
+  ZX_DEBUG_ASSERT(addr_type != common::DeviceAddress::Type::kBREDR);
 
   const common::DeviceAddress peer_address(addr_type, params.peer_address);
   hci::StatusCode status = hci::StatusCode::kSuccess;
@@ -692,7 +692,7 @@ void FakeController::OnLEConnectionUpdateCommandReceived(
     return;
   }
 
-  FXL_DCHECK(device->connected());
+  ZX_DEBUG_ASSERT(device->connected());
 
   uint16_t min_interval = le16toh(params.conn_interval_min);
   uint16_t max_interval = le16toh(params.conn_interval_max);
@@ -737,7 +737,7 @@ void FakeController::OnDisconnectCommandReceived(
     return;
   }
 
-  FXL_DCHECK(device->connected());
+  ZX_DEBUG_ASSERT(device->connected());
 
   RespondWithCommandStatus(hci::kDisconnect, hci::StatusCode::kSuccess);
 
@@ -1143,7 +1143,7 @@ void FakeController::OnCommandPacketReceived(
       // event. This guarantees that single-threaded unit tests receive the scan
       // state update BEFORE the HCI command sequence terminates.
       if (scan_state_cb_) {
-        FXL_DCHECK(scan_state_cb_dispatcher_);
+        ZX_DEBUG_ASSERT(scan_state_cb_dispatcher_);
         async::PostTask(scan_state_cb_dispatcher_, [
           cb = scan_state_cb_.share(), enabled = le_scan_state_.enabled
         ] { cb(enabled); });

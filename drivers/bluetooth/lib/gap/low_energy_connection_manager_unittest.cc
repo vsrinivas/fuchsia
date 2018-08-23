@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/fake_layer.h"
@@ -119,10 +121,12 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     if (canceled) {
       canceled_devices_.insert(address);
     } else if (connected) {
-      FXL_DCHECK(connected_devices_.find(address) == connected_devices_.end());
+      ZX_DEBUG_ASSERT(connected_devices_.find(address) ==
+                      connected_devices_.end());
       connected_devices_.insert(address);
     } else {
-      FXL_DCHECK(connected_devices_.find(address) != connected_devices_.end());
+      ZX_DEBUG_ASSERT(connected_devices_.find(address) !=
+                      connected_devices_.end());
       connected_devices_.erase(address);
     }
   }
@@ -280,7 +284,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
 
 struct TestObject final : fbl::RefCounted<TestObject> {
   explicit TestObject(bool* d) : deleted(d) {
-    FXL_DCHECK(deleted);
+    ZX_DEBUG_ASSERT(deleted);
     *deleted = false;
   }
 

@@ -4,9 +4,10 @@
 
 #include "low_energy_scanner.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace hci {
@@ -32,9 +33,9 @@ LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
       delegate_(delegate),
       dispatcher_(dispatcher),
       transport_(hci) {
-  FXL_DCHECK(delegate_);
-  FXL_DCHECK(transport_);
-  FXL_DCHECK(dispatcher_);
+  ZX_DEBUG_ASSERT(delegate_);
+  ZX_DEBUG_ASSERT(transport_);
+  ZX_DEBUG_ASSERT(dispatcher_);
 
   hci_cmd_runner_ =
       std::make_unique<SequentialCommandRunner>(dispatcher_, transport_);

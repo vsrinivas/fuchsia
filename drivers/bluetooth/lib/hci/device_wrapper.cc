@@ -4,19 +4,19 @@
 
 #include "device_wrapper.h"
 
+#include <zircon/assert.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace hci {
 
 IoctlDeviceWrapper::IoctlDeviceWrapper(fxl::UniqueFD device_fd)
     : device_fd_(std::move(device_fd)) {
-  FXL_DCHECK(device_fd_.is_valid());
+  ZX_DEBUG_ASSERT(device_fd_.is_valid());
 }
 
 zx::channel IoctlDeviceWrapper::GetCommandChannel() {
@@ -26,7 +26,7 @@ zx::channel IoctlDeviceWrapper::GetCommandChannel() {
   if (status < 0) {
     bt_log(ERROR, "hci", "Failed to obtain command channel handle: %s",
            zx_status_get_string(status));
-    FXL_DCHECK(!channel.is_valid());
+    ZX_DEBUG_ASSERT(!channel.is_valid());
   }
   return channel;
 }
@@ -38,7 +38,7 @@ zx::channel IoctlDeviceWrapper::GetACLDataChannel() {
   if (status < 0) {
     bt_log(ERROR, "hci", "Failed to obtain ACL data channel handle: %s",
            zx_status_get_string(status));
-    FXL_DCHECK(!channel.is_valid());
+    ZX_DEBUG_ASSERT(!channel.is_valid());
   }
   return channel;
 }

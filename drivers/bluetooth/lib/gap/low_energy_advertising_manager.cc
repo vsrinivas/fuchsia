@@ -4,6 +4,8 @@
 
 #include "low_energy_advertising_manager.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/gap/random_address_generator.h"
@@ -11,9 +13,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "lib/fxl/random/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
-
-// TODO(armansito): Introduce BT assert macro and remove
-#include "lib/fxl/logging.h"
 
 namespace btlib {
 namespace gap {
@@ -25,7 +24,7 @@ constexpr uint8_t kDefaultFlags = 0;
 
 // Write the block for the flags to the |buffer|.
 void WriteFlags(common::MutableByteBuffer* buffer, bool limited = false) {
-  FXL_DCHECK(buffer->size() >= kFlagsSize);
+  ZX_DEBUG_ASSERT(buffer->size() >= kFlagsSize);
   (*buffer)[0] = 2;
   (*buffer)[1] = static_cast<uint8_t>(DataType::kFlags);
   if (limited) {
@@ -57,7 +56,7 @@ class LowEnergyAdvertisingManager::ActiveAdvertisement final {
 LowEnergyAdvertisingManager::LowEnergyAdvertisingManager(
     hci::LowEnergyAdvertiser* advertiser)
     : advertiser_(advertiser), weak_ptr_factory_(this) {
-  FXL_DCHECK(advertiser_);
+  ZX_DEBUG_ASSERT(advertiser_);
 }
 
 LowEnergyAdvertisingManager::~LowEnergyAdvertisingManager() {

@@ -22,7 +22,6 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/cancelable_callback.h"
-#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {

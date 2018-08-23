@@ -55,9 +55,4 @@ static_assert(sizeof(DeviceClass) == 3,
 }  // namespace common
 }  // namespace btlib
 
-namespace std {
-// Stream operator for easy logging
-ostream& operator<<(ostream& os, const ::btlib::common::DeviceClass& d);
-}  // namespace std
-
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_DEVICE_CLASS_H_

@@ -135,7 +135,7 @@ void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
   };
 
   // Performing a single read for the entire length of an SDU can never fail.
-  FXL_CHECK(reader.ReadNext(sdu.length(), process_sdu_as_packet));
+  ZX_ASSERT(reader.ReadNext(sdu.length(), process_sdu_as_packet));
 }
 
 bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {

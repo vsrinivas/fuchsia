@@ -4,12 +4,13 @@
 
 #include "low_energy_peripheral_server.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/logging.h"
 
 #include "helpers.h"
 
@@ -44,21 +45,21 @@ std::string MessageFromStatus(btlib::hci::Status status) {
 LowEnergyPeripheralServer::InstanceData::InstanceData(
     const std::string& id, fxl::WeakPtr<LowEnergyPeripheralServer> owner)
     : id_(id), owner_(owner) {
-  FXL_DCHECK(owner_);
+  ZX_DEBUG_ASSERT(owner_);
 }
 
 void LowEnergyPeripheralServer::InstanceData::RetainConnection(
     ConnectionRefPtr conn_ref, RemoteDevice peer) {
-  FXL_DCHECK(connectable());
-  FXL_DCHECK(!conn_ref_);
+  ZX_DEBUG_ASSERT(connectable());
+  ZX_DEBUG_ASSERT(!conn_ref_);
 
   conn_ref_ = std::move(conn_ref);
   owner_->binding()->events().OnCentralConnected(id_, std::move(peer));
 }
 
 void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
-  FXL_DCHECK(connectable());
-  FXL_DCHECK(conn_ref_);
+  ZX_DEBUG_ASSERT(connectable());
+  ZX_DEBUG_ASSERT(conn_ref_);
 
   owner_->binding()->events().OnCentralDisconnected(
       conn_ref_->device_identifier());
@@ -73,7 +74,7 @@ LowEnergyPeripheralServer::LowEnergyPeripheralServer(
 
 LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
   auto* advertising_manager = adapter()->le_advertising_manager();
-  FXL_DCHECK(advertising_manager);
+  ZX_DEBUG_ASSERT(advertising_manager);
 
   for (const auto& it : instances_) {
     advertising_manager->StopAdvertising(it.first);
@@ -84,7 +85,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
     AdvertisingData advertising_data, AdvertisingDataPtr scan_result,
     uint32_t interval, bool anonymous, StartAdvertisingCallback callback) {
   auto* advertising_manager = adapter()->le_advertising_manager();
-  FXL_DCHECK(advertising_manager);
+  ZX_DEBUG_ASSERT(advertising_manager);
 
   ::btlib::gap::AdvertisingData ad_data, scan_data;
   ::btlib::gap::AdvertisingData::FromFidl(advertising_data, &ad_data);
@@ -147,7 +148,7 @@ bool LowEnergyPeripheralServer::StopAdvertisingInternal(const std::string& id) {
 
 void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
                                             ::btlib::hci::ConnectionPtr link) {
-  FXL_DCHECK(link);
+  ZX_DEBUG_ASSERT(link);
 
   // If the active adapter that was used to start advertising was changed before
   // we process this connection then the instance will have been removed.
@@ -158,7 +159,7 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
     return;
   }
 
-  FXL_DCHECK(it->second.connectable());
+  ZX_DEBUG_ASSERT(it->second.connectable());
 
   auto conn = adapter()->le_connection_manager()->RegisterRemoteInitiatedLink(
       std::move(link));
@@ -186,12 +187,12 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
   // A RemoteDevice will have been created for the new connection.
   auto* device =
       adapter()->device_cache().FindDeviceById(conn->device_identifier());
-  FXL_DCHECK(device);
+  ZX_DEBUG_ASSERT(device);
 
   bt_log(TRACE, "bt-host", "central connected");
   RemoteDevicePtr remote_device =
       fidl_helpers::NewLERemoteDevice(std::move(*device));
-  FXL_DCHECK(remote_device);
+  ZX_DEBUG_ASSERT(remote_device);
   it->second.RetainConnection(std::move(conn), std::move(*remote_device));
 }
 

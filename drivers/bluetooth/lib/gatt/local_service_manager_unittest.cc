@@ -4,6 +4,8 @@
 
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 
+#include <zircon/assert.h>
+
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
@@ -936,9 +938,9 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
                const std::string& device_id,
                att::ErrorCode* out_ecode,
                uint16_t* out_value) {
-    FXL_DCHECK(attr);
-    FXL_DCHECK(out_ecode);
-    FXL_DCHECK(out_value);
+    ZX_DEBUG_ASSERT(attr);
+    ZX_DEBUG_ASSERT(out_ecode);
+    ZX_DEBUG_ASSERT(out_value);
 
     auto result_cb = [&out_ecode, &out_value](auto cb_code, const auto& value) {
       *out_ecode = cb_code;
@@ -956,8 +958,8 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
                 const std::string& device_id,
                 uint16_t ccc_value,
                 att::ErrorCode* out_ecode) {
-    FXL_DCHECK(attr);
-    FXL_DCHECK(out_ecode);
+    ZX_DEBUG_ASSERT(attr);
+    ZX_DEBUG_ASSERT(out_ecode);
 
     auto result_cb = [&out_ecode](auto cb_code) { *out_ecode = cb_code; };
     uint16_t value = htole16(ccc_value);

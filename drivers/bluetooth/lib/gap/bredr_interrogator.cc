@@ -4,6 +4,8 @@
 
 #include "bredr_interrogator.h"
 
+#include <zircon/assert.h>
+
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
@@ -13,8 +15,8 @@ namespace gap {
 BrEdrInterrogator::Interrogation::Interrogation(hci::ConnectionPtr conn,
                                                 ResultCallback cb)
     : conn_ptr(std::move(conn)), result_cb(std::move(cb)) {
-  FXL_DCHECK(conn_ptr);
-  FXL_DCHECK(result_cb);
+  ZX_DEBUG_ASSERT(conn_ptr);
+  ZX_DEBUG_ASSERT(result_cb);
 }
 
 BrEdrInterrogator::Interrogation::~Interrogation() {
@@ -39,9 +41,9 @@ BrEdrInterrogator::BrEdrInterrogator(RemoteDeviceCache* cache,
       dispatcher_(dispatcher),
       cache_(cache),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(cache_);
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(cache_);
 }
 
 BrEdrInterrogator::~BrEdrInterrogator() {
@@ -53,8 +55,8 @@ BrEdrInterrogator::~BrEdrInterrogator() {
 void BrEdrInterrogator::Start(const std::string& device_id,
                               hci::ConnectionPtr conn_ptr,
                               ResultCallback callback) {
-  FXL_DCHECK(conn_ptr);
-  FXL_DCHECK(callback);
+  ZX_DEBUG_ASSERT(conn_ptr);
+  ZX_DEBUG_ASSERT(callback);
 
   hci::ConnectionHandle handle = conn_ptr->handle();
 
@@ -129,7 +131,7 @@ void BrEdrInterrogator::MaybeComplete(const std::string& device_id) {
 
 void BrEdrInterrogator::Complete(std::string device_id, hci::Status status) {
   auto it = pending_.find(std::move(device_id));
-  FXL_DCHECK(it != pending_.end());
+  ZX_DEBUG_ASSERT(it != pending_.end());
 
   it->second->Finish(std::move(status));
   pending_.erase(it);
@@ -157,7 +159,7 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
   }
 
   auto it = pending_.find(device_id);
-  FXL_DCHECK(it != pending_.end());
+  ZX_DEBUG_ASSERT(it != pending_.end());
 
   it->second->callbacks.emplace_back(
       [device_id, self = weak_ptr_factory_.GetWeakPtr()](auto,
@@ -172,8 +174,8 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
           return;
         }
 
-        FXL_DCHECK(event.event_code() ==
-                   hci::kRemoteNameRequestCompleteEventCode);
+        ZX_DEBUG_ASSERT(event.event_code() ==
+                        hci::kRemoteNameRequestCompleteEventCode);
 
         const auto& params =
             event.view()
@@ -213,7 +215,7 @@ void BrEdrInterrogator::ReadRemoteVersionInformation(
       ->connection_handle = htole16(handle);
 
   auto it = pending_.find(device_id);
-  FXL_DCHECK(it != pending_.end());
+  ZX_DEBUG_ASSERT(it != pending_.end());
 
   it->second->callbacks.emplace_back([device_id,
                                       self = weak_ptr_factory_.GetWeakPtr()](
@@ -228,8 +230,8 @@ void BrEdrInterrogator::ReadRemoteVersionInformation(
       return;
     }
 
-    FXL_DCHECK(event.event_code() ==
-               hci::kReadRemoteVersionInfoCompleteEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() ==
+                    hci::kReadRemoteVersionInfoCompleteEventCode);
 
     const auto params =
         event.view()
@@ -262,7 +264,7 @@ void BrEdrInterrogator::ReadRemoteFeatures(const std::string& device_id,
       ->connection_handle = htole16(handle);
 
   auto it = pending_.find(device_id);
-  FXL_DCHECK(it != pending_.end());
+  ZX_DEBUG_ASSERT(it != pending_.end());
 
   it->second->callbacks.emplace_back(
       [device_id, handle, self = weak_ptr_factory_.GetWeakPtr()](
@@ -277,8 +279,8 @@ void BrEdrInterrogator::ReadRemoteFeatures(const std::string& device_id,
           return;
         }
 
-        FXL_DCHECK(event.event_code() ==
-                   hci::kReadRemoteSupportedFeaturesCompleteEventCode);
+        ZX_DEBUG_ASSERT(event.event_code() ==
+                        hci::kReadRemoteSupportedFeaturesCompleteEventCode);
 
         const auto& params =
             event.view()
@@ -319,7 +321,7 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
   params->page_number = page;
 
   auto it = pending_.find(device_id);
-  FXL_DCHECK(it != pending_.end());
+  ZX_DEBUG_ASSERT(it != pending_.end());
 
   it->second->callbacks.emplace_back(
       [device_id, handle, page, self = weak_ptr_factory_.GetWeakPtr()](
@@ -334,8 +336,8 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
           return;
         }
 
-        FXL_DCHECK(event.event_code() ==
-                   hci::kReadRemoteExtendedFeaturesCompleteEventCode);
+        ZX_DEBUG_ASSERT(event.event_code() ==
+                        hci::kReadRemoteExtendedFeaturesCompleteEventCode);
 
         const auto& params =
             event.view()

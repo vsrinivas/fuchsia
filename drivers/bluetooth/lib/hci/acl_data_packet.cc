@@ -5,8 +5,7 @@
 #include "acl_data_packet.h"
 
 #include <endian.h>
-
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 #include "slab_allocators.h"
 
@@ -34,7 +33,7 @@ using SmallACLAllocator = fbl::SlabAllocator<SmallACLTraits>;
 namespace {
 
 ACLDataPacketPtr NewACLDataPacket(size_t payload_size) {
-  FXL_DCHECK(payload_size <= slab_allocators::kLargeACLDataPayloadSize);
+  ZX_DEBUG_ASSERT(payload_size <= slab_allocators::kLargeACLDataPayloadSize);
 
   if (payload_size <= slab_allocators::kSmallACLDataPayloadSize) {
     auto buffer = slab_allocators::SmallACLAllocator::New(payload_size);
@@ -103,11 +102,11 @@ void ACLDataPacket::WriteHeader(ConnectionHandle connection_handle,
                                 ACLPacketBoundaryFlag packet_boundary_flag,
                                 ACLBroadcastFlag broadcast_flag) {
   // Must fit inside 12-bits.
-  FXL_DCHECK(connection_handle <= 0x0FFF);
+  ZX_DEBUG_ASSERT(connection_handle <= 0x0FFF);
 
   // Must fit inside 2-bits.
-  FXL_DCHECK(static_cast<uint8_t>(packet_boundary_flag) <= 0x03);
-  FXL_DCHECK(static_cast<uint8_t>(broadcast_flag) <= 0x03);
+  ZX_DEBUG_ASSERT(static_cast<uint8_t>(packet_boundary_flag) <= 0x03);
+  ZX_DEBUG_ASSERT(static_cast<uint8_t>(broadcast_flag) <= 0x03);
 
   uint16_t handle_and_flags =
       connection_handle | (static_cast<uint16_t>(packet_boundary_flag) << 12) |

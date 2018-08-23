@@ -5,14 +5,13 @@
 #include "run_or_post.h"
 
 #include <lib/async/cpp/task.h>
-
-#include "lib/fxl/logging.h"
+#include <zircon/assert.h>
 
 namespace btlib {
 namespace common {
 
 void RunOrPost(fit::closure task, async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(task);
+  ZX_DEBUG_ASSERT(task);
 
   if (!dispatcher) {
     task();

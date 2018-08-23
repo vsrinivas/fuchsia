@@ -10,7 +10,6 @@
 #include <ddk/debug.h>
 #include <syslog/global.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "optional.h"

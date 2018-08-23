@@ -55,11 +55,10 @@ Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
       l2cap_(l2cap),
       gatt_(gatt),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci_);
-  FXL_DCHECK(l2cap_);
-  FXL_DCHECK(gatt_);
-
-  FXL_DCHECK(dispatcher_) << "gap: Must create on a thread with a dispatcher";
+  ZX_DEBUG_ASSERT(hci_);
+  ZX_DEBUG_ASSERT(l2cap_);
+  ZX_DEBUG_ASSERT(gatt_);
+  ZX_DEBUG_ASSERT_MSG(dispatcher_, "must create on a thread with a dispatcher");
 
   init_seq_runner_ =
       std::make_unique<hci::SequentialCommandRunner>(dispatcher_, hci_);
@@ -80,21 +79,21 @@ Adapter::~Adapter() {
 
 bool Adapter::Initialize(InitializeCallback callback,
                          fit::closure transport_closed_cb) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(callback);
-  FXL_DCHECK(transport_closed_cb);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(callback);
+  ZX_DEBUG_ASSERT(transport_closed_cb);
 
   if (IsInitialized()) {
     bt_log(WARN, "gap", "Adapter already initialized");
     return false;
   }
 
-  FXL_DCHECK(!IsInitializing());
+  ZX_DEBUG_ASSERT(!IsInitializing());
 
   init_state_ = State::kInitializing;
 
-  FXL_DCHECK(init_seq_runner_->IsReady());
-  FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
+  ZX_DEBUG_ASSERT(init_seq_runner_->IsReady());
+  ZX_DEBUG_ASSERT(!init_seq_runner_->HasQueuedCommands());
 
   transport_closed_cb_ = std::move(transport_closed_cb);
 
@@ -179,11 +178,11 @@ bool Adapter::Initialize(InitializeCallback callback,
 }
 
 void Adapter::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   bt_log(TRACE, "gap", "adapter shutting down");
 
   if (IsInitializing()) {
-    FXL_DCHECK(!init_seq_runner_->IsReady());
+    ZX_DEBUG_ASSERT(!init_seq_runner_->IsReady());
     init_seq_runner_->Cancel();
   }
 
@@ -237,8 +236,8 @@ void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
 }
 
 void Adapter::InitializeStep2(InitializeCallback callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(IsInitializing());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(IsInitializing());
 
   // Low Energy MUST be supported. We don't support BR/EDR-only controllers.
   if (!state_.IsLowEnergySupported()) {
@@ -255,7 +254,7 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
            hci::HCIVersionToString(state_.hci_version()).c_str());
   }
 
-  FXL_DCHECK(init_seq_runner_->IsReady());
+  ZX_DEBUG_ASSERT(init_seq_runner_->IsReady());
 
   // If the controller supports the Read Buffer Size command then send it.
   // Otherwise we'll default to 0 when initializing the ACLDataChannel.
@@ -383,8 +382,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
 }
 
 void Adapter::InitializeStep3(InitializeCallback callback) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(IsInitializing());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(IsInitializing());
 
   if (!state_.bredr_data_buffer_info().IsAvailable() &&
       !state_.low_energy_state().data_buffer_info().IsAvailable()) {
@@ -405,8 +404,8 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     return;
   }
 
-  FXL_DCHECK(init_seq_runner_->IsReady());
-  FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
+  ZX_DEBUG_ASSERT(init_seq_runner_->IsReady());
+  ZX_DEBUG_ASSERT(!init_seq_runner_->HasQueuedCommands());
 
   // HCI_Set_Event_Mask
   {
@@ -494,7 +493,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
 }
 
 void Adapter::InitializeStep4(InitializeCallback callback) {
-  FXL_DCHECK(IsInitializing());
+  ZX_DEBUG_ASSERT(IsInitializing());
 
   // Initialize the scan manager based on current feature support.
   if (state_.low_energy_state().IsFeatureSupported(
@@ -613,7 +612,7 @@ uint64_t Adapter::BuildLEEventMask() {
 }
 
 void Adapter::CleanUp() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   init_state_ = State::kNotInitialized;
   state_ = AdapterState();
