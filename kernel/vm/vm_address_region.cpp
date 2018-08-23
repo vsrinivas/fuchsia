@@ -542,23 +542,49 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
     canary_.Assert();
     DEBUG_ASSERT(ve != nullptr);
     DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-    for (auto& child : subregions_) {
-        DEBUG_ASSERT(child.IsAliveLocked());
-        if (child.is_mapping()) {
-            VmMapping* mapping = child.as_vm_mapping().get();
+
+    const uint min_depth = depth;
+    for (auto itr = subregions_.begin(), end = subregions_.end(); itr != end;) {
+        DEBUG_ASSERT(itr->IsAliveLocked());
+        auto curr = itr++;
+        VmAddressRegion* up = curr->parent_;
+
+        if (curr->is_mapping()) {
+            VmMapping* mapping = curr->as_vm_mapping().get();
             DEBUG_ASSERT(mapping != nullptr);
             if (!ve->OnVmMapping(mapping, this, depth)) {
                 return false;
             }
         } else {
-            VmAddressRegion* vmar = child.as_vm_address_region().get();
+            VmAddressRegion* vmar = curr->as_vm_address_region().get();
             DEBUG_ASSERT(vmar != nullptr);
             if (!ve->OnVmAddressRegion(vmar, depth)) {
                 return false;
             }
-            if (!vmar->EnumerateChildrenLocked(ve, depth + 1)) {
-                return false;
+            if (!vmar->subregions_.is_empty()) {
+                // If the sub-VMAR is not empty, iterate through its children.
+                itr = vmar->subregions_.begin();
+                end = vmar->subregions_.end();
+                depth++;
+                continue;
             }
+        }
+        if (depth > min_depth && itr == end) {
+            // If we are at a depth greater than the minimum, and have reached
+            // the end of a sub-VMAR range, we ascend and continue iteration.
+            do {
+                itr = up->subregions_.upper_bound(curr->base());
+                if (itr.IsValid()) {
+                    break;
+                }
+                up = up->parent_;
+            } while (depth-- != min_depth);
+            if (!itr.IsValid()) {
+                // If we have reached the end after ascending all the way up,
+                // break out of the loop.
+                break;
+            }
+            end = up->subregions_.end();
         }
     }
     return true;
@@ -674,7 +700,6 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         }
     }
 
-    VmAddressRegion* const top = this;
     bool at_top = true;
     for (auto itr = begin; itr != end;) {
         // Create a copy of the iterator, in case we destroy this element
@@ -730,17 +755,17 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
 
         if (allow_partial_vmar && !at_top && itr == end) {
             // If partial VMARs are allowed, and we have reached the end of a
-            // sub-VMAR range, we should ascend and continue processing.
+            // sub-VMAR range, we ascend and continue iteration.
             do {
                 begin = up->subregions_.upper_bound(curr->base());
                 if (begin.IsValid()) {
                     break;
                 }
-                at_top = up == top;
+                at_top = up == this;
                 up = up->parent_;
             } while (!at_top);
             if (!begin.IsValid()) {
-                // If we have reached the end, after ascending all the way up,
+                // If we have reached the end after ascending all the way up,
                 // break out of the loop.
                 break;
             }
