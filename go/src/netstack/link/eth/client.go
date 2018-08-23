@@ -451,6 +451,20 @@ func (c *Client) ListenTX() {
 	IoctlTXListenStart(m)
 }
 
+type LinkStatus uint32
+
+const (
+	LinkDown LinkStatus = 0
+	LinkUp   LinkStatus = 1
+)
+
+// Check IoctlGetStatus link status, 0: link down; 1: link up
+func (c *Client) GetStatus() (LinkStatus, error) {
+	m := syscall.FDIOForFD(int(c.f.Fd()))
+	status, err := IoctlGetStatus(m)
+	return LinkStatus(status), err
+}
+
 type State int
 
 const (

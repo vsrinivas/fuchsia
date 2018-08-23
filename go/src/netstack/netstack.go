@@ -274,9 +274,7 @@ func (ifs *ifState) onEthRestart() {
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	// TODO(NET-298): remove special case for WLAN after fix for multiple DHCP clients
-	// is enabled
-	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&ethernet.InfoFeatureWlan != 0)
+	ifs.setDHCPStatus(true)
 }
 
 func (ifs *ifState) onEthStop() {
@@ -485,7 +483,6 @@ func (ns *Netstack) addEth(path string) error {
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
 
 	nicid := ns.countNIC + 1
-	firstNIC := nicid == 2
 	ifs.nic.ID = nicid
 	ifs.nic.Features = client.Features
 	setNICName(ifs.nic)
@@ -525,9 +522,12 @@ func (ns *Netstack) addEth(path string) error {
 		return nil
 	}
 
-	// TODO(stijlist): remove default DHCP policy for first NIC once policy manager
-	// sets DHCP status.
-	if firstNIC {
+	status, err := client.GetStatus()
+	if err != nil {
+		return fmt.Errorf("failed to getStatus for MAC[%v], error %v", client.MAC, err)
+	}
+
+	if status == eth.LinkUp {
 		ifs.setDHCPStatus(true)
 	}
 	return nil
