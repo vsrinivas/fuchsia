@@ -17,6 +17,7 @@
 #include "msd_arm_context.h"
 #include "msd_arm_device.h"
 #include "msd_arm_semaphore.h"
+#include "platform_barriers.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 
@@ -341,6 +342,10 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
                                              (page_offset_in_buffer + pages_to_add) * PAGE_SIZE))
                 return DRETF(false, "EnsureRegionFlushed failed");
         }
+
+        // Ensure mapping isn't put into the page table until the cache flush
+        // above completed.
+        magma::barriers::WriteBarrier();
 
         if (!address_space_->Insert(mapping->gpu_va() + prev_committed_page_count * PAGE_SIZE,
                                     bus_mapping.get(), page_offset_in_buffer * PAGE_SIZE,

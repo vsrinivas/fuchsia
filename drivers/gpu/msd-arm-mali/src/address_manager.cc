@@ -8,6 +8,7 @@
 
 #include "address_space.h"
 #include "msd_arm_connection.h"
+#include "platform_barriers.h"
 
 // Normal memory, outer non-cacheable, inner cacheable with
 // implementation-defined allocation. The definition of this is similar to
@@ -231,6 +232,10 @@ void AddressManager::HardwareSlot::InvalidateSlot(magma::RegisterIo* io)
     registers.MemoryAttributes().FromValue(kMemoryAttributes).WriteTo(io);
 
     registers.Command().FromValue(registers::AsCommand::kCmdUpdate).WriteTo(io);
+
+    // Ensure CPU reads and writes to buffers in the address space don't happen
+    // until after the hardware got the command to finish using the buffer.
+    magma::barriers::Barrier();
 }
 
 void AddressManager::HardwareSlot::WaitForMmuIdle(magma::RegisterIo* io)
@@ -262,6 +267,9 @@ void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t
             log2_num_pages++;
     }
 
+    // Ensure page table writes are completed before the hardware tries to
+    // access the buffer.
+    magma::barriers::WriteBarrier();
     constexpr uint32_t kRegionLengthOffset = 11;
 
     // The low 12 bits are used to specify how many pages are to be locked in
@@ -283,6 +291,9 @@ void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t
         registers.Command().FromValue(registers::AsCommand::kCmdFlushPageTable).WriteTo(io);
     }
     WaitForMmuIdle(io);
+    // If a page range was unmapped, ensure the hardware is no longer accessing
+    // it before any CPU reads or writes to the memory.
+    magma::barriers::Barrier();
 }
 
 void AddressManager::HardwareSlot::UnlockMmu(magma::RegisterIo* io)

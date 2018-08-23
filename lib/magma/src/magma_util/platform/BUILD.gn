@@ -14,6 +14,18 @@ config("tracing") {
   }
 }
 
+source_set("barriers") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_barriers.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/ddk",
+  ]
+}
+
 source_set("buffer_header") {
   public_configs = [ ":platform_include_config" ]
 
@@ -26,8 +38,8 @@ source_set("buffer") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util:common",
     ":buffer_header",
+    "$magma_build_root/src/magma_util:common",
   ]
 
   deps = [
@@ -160,13 +172,21 @@ source_set("connection_header") {
 }
 
 source_set("client_connection") {
-  public_deps = [ ":connection_header" ]
-  deps = [ "zircon:client_connection" ]
+  public_deps = [
+    ":connection_header",
+  ]
+  deps = [
+    "zircon:client_connection",
+  ]
 }
 
 source_set("connection") {
-  public_deps = [ ":connection_header" ]
-  deps = [ "zircon:connection" ]
+  public_deps = [
+    ":connection_header",
+  ]
+  deps = [
+    "zircon:connection",
+  ]
 }
 
 source_set("thread_header") {
@@ -180,7 +200,9 @@ source_set("thread_header") {
 source_set("thread") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [ ":thread_header" ]
+  public_deps = [
+    ":thread_header",
+  ]
 
   deps = [
     "zircon:thread",

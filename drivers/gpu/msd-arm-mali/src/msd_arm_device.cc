@@ -15,6 +15,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
+#include "platform_barriers.h"
 #include "platform_port.h"
 #include "platform_trace.h"
 
@@ -779,6 +780,11 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
         }
     }
 
+    // Ensure the client's writes/cache flushes to the job chain are complete
+    // before scheduling. Unlikely to be an issue since several thread and
+    // process hops already happened.
+    magma::barriers::WriteBarrier();
+
     registers::JobSlotRegisters slot(atom->slot());
     slot.HeadNext().FromValue(atom->gpu_address()).WriteTo(register_io);
     auto config = slot.ConfigNext().FromValue(0);
@@ -816,6 +822,10 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
     if (result != kArmMaliResultSoftStopped) {
         atom->set_result_code(result);
         auto connection = atom->connection().lock();
+        // Ensure any client writes/reads from memory happen after the mmio access saying memory is
+        // read. In practice unlikely to be an issue due to data dependencies and the thread/process
+        // hops.
+        magma::barriers::Barrier();
         if (connection)
             connection->SendNotificationData(atom, result);
     }

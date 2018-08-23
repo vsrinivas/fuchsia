@@ -4,6 +4,7 @@
 
 #include "performance_counters.h"
 
+#include "platform_barriers.h"
 #include "registers.h"
 
 namespace {
@@ -58,6 +59,9 @@ bool PerformanceCounters::Enable()
         buffer_ = buffer;
         address_mapping_ = mapping;
     }
+    // Ensure the cache flush or any previous read completes before signaling the hardware to
+    // write into the buffer.
+    magma::barriers::Barrier();
 
     auto base = registers::PerformanceCounterBase::Get().FromValue(kPerfBufferStartOffset);
     base.WriteTo(owner_->register_io());
@@ -120,6 +124,8 @@ std::vector<uint32_t> PerformanceCounters::ReadCompleted(uint64_t* duration_ms_o
 
     void* mapped_data;
     uint64_t base = last_perf_base_ - kPerfBufferStartOffset;
+    // A memory barrier is unnecessary since this was triggered by an interrupt
+    // which can't be reordered-past.
     buffer_->platform_buffer()->CleanCache(base, kPerfBufferSize, true);
     bool success = buffer_->platform_buffer()->MapCpu(&mapped_data);
     DASSERT(success);
