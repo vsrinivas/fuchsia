@@ -11,7 +11,7 @@ import (
 	"unsafe"
 )
 
-const numBuffers = 1024
+const numBuffers = 2048
 const bufferSize = 2048
 
 // A Buffer is a single packet-sized segment of non-heap memory.
