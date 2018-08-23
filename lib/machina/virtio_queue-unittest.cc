@@ -22,7 +22,7 @@ TEST(VirtioQueueTest, HandleOverflow) {
 
   // Setup queue pointers so that the next descriptor will wrap avail->idx
   // to 0.
-  queue->UpdateRing<void>([](virtio_queue_t* ring) {
+  queue->UpdateRing<void>([](VirtioRing* ring) {
     const_cast<uint16_t&>(ring->avail->idx) = UINT16_MAX;
     ring->index = UINT16_MAX;
   });
@@ -37,8 +37,8 @@ TEST(VirtioQueueTest, HandleOverflow) {
   uint16_t desc;
   ASSERT_EQ(queue->NextAvail(&desc), ZX_OK);
   ASSERT_EQ(desc, expected_desc);
-  ASSERT_EQ(queue->ring()->avail->idx, 0);
-  ASSERT_EQ(queue->ring()->index, 0);
+  ASSERT_EQ(queue_fake.ring()->avail->idx, 0);
+  ASSERT_EQ(queue_fake.ring()->index, 0);
 }
 
 }  // namespace

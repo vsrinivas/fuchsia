@@ -117,7 +117,7 @@ class Stream {
   VirtioQueueWaiter queue_wait_;
   async::WaitMethod<Stream, &Stream::OnSocketReady> socket_wait_{this};
   uint16_t head_;
-  virtio_desc_t desc_;
+  VirtioDescriptor desc_;
 };
 
 class VirtioConsole::Port {

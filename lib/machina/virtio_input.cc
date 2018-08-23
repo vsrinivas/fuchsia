@@ -451,7 +451,7 @@ zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   uint16_t head;
   event_queue()->Wait(&head);
 
-  virtio_desc_t desc;
+  VirtioDescriptor desc;
   zx_status_t status = event_queue()->ReadDesc(head, &desc);
   if (status != ZX_OK) {
     return status;

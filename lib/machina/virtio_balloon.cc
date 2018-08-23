@@ -145,7 +145,7 @@ zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
   }
   WaitForStatsBuffer(stats_queue);
 
-  virtio_desc_t desc;
+  VirtioDescriptor desc;
   status = stats_queue->ReadDesc(stats_.desc_index, &desc);
   if (status != ZX_OK) {
     return status;

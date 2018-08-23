@@ -66,7 +66,7 @@ class DescBuilder {
 // simulated guest physical address space aliases our address space.
 class VirtioQueueFake {
  public:
-  explicit VirtioQueueFake(VirtioQueue* queue) : queue_(queue) {}
+  explicit VirtioQueueFake(VirtioQueue* queue);
   ~VirtioQueueFake();
 
   // Allocate memory for a queue with the given size and wire up the queue
@@ -75,6 +75,8 @@ class VirtioQueueFake {
 
   // Access the underlying VirtioQueue.
   VirtioQueue* queue() const { return queue_; }
+  // Access the underlying VirtioRing.
+  VirtioRing* ring() const { return ring_; }
 
   // Allocate and write a descriptor. |addr|, |len|, and |flags| correspond
   // to the fields in vring_desc.
@@ -110,8 +112,9 @@ class VirtioQueueFake {
   struct vring_used_elem NextUsed();
 
  private:
-  uint16_t queue_size_;
-  VirtioQueue* queue_;
+  VirtioQueue* queue_ = nullptr;
+  VirtioRing* ring_ = nullptr;
+  uint16_t queue_size_ = 0;
   fbl::unique_ptr<uint8_t[]> desc_buf_;
   fbl::unique_ptr<uint8_t[]> avail_ring_buf_;
   fbl::unique_ptr<uint8_t[]> used_ring_buf_;

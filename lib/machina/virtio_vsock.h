@@ -155,9 +155,9 @@ class VirtioVsock::Connection {
 
   virtual zx_status_t Shutdown(uint32_t flags) = 0;
   virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                           virtio_desc_t* desc, uint32_t* used) = 0;
+                           VirtioDescriptor* desc, uint32_t* used) = 0;
   virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                            virtio_desc_t* desc) = 0;
+                            VirtioDescriptor* desc) = 0;
 
   zx_status_t WaitOnTransmit(zx_status_t status);
   zx_status_t WaitOnReceive(zx_status_t status);
@@ -195,11 +195,11 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
 
   zx_status_t Shutdown(uint32_t flags) override { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   virtio_desc_t* desc, uint32_t* used) override {
+                   VirtioDescriptor* desc, uint32_t* used) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    virtio_desc_t* desc) override {
+                    VirtioDescriptor* desc) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 };
@@ -217,9 +217,9 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
 
   zx_status_t Shutdown(uint32_t flags) override;
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   virtio_desc_t* desc, uint32_t* used) override;
+                   VirtioDescriptor* desc, uint32_t* used) override;
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    virtio_desc_t* desc) override;
+                    VirtioDescriptor* desc) override;
 
  private:
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
@@ -248,9 +248,9 @@ class VirtioVsock::ChannelConnection final : public VirtioVsock::Connection {
 
   zx_status_t Shutdown(uint32_t flags) override;
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   virtio_desc_t* desc, uint32_t* used) override;
+                   VirtioDescriptor* desc, uint32_t* used) override;
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    virtio_desc_t* desc) override;
+                    VirtioDescriptor* desc) override;
 
  private:
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);

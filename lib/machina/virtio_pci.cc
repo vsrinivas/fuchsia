@@ -188,7 +188,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
           (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
       value->access_size = 4;
       value->u32 = queue->UpdateRing<uint32_t>(
-          [word](virtio_queue_t* ring) { return ring->addr.words[word]; });
+          [word](VirtioRing* ring) { return ring->addr.words[word]; });
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF: {
@@ -238,12 +238,6 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
   }
   FXL_LOG(ERROR) << "Unhandled config BAR read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
-}
-
-static void virtio_queue_update_addr(VirtioQueue* queue) {
-  queue->set_desc_addr(queue->desc_addr());
-  queue->set_avail_addr(queue->avail_addr());
-  queue->set_used_addr(queue->used_addr());
 }
 
 // Handle writes to the common configuration structure as defined in
@@ -315,8 +309,9 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
         return ZX_ERR_BAD_STATE;
       }
 
-      queue->set_size(value.u16);
-      virtio_queue_update_addr(queue);
+      zx_gpaddr_t desc_addr, avail_addr, used_addr;
+      queue->GetAddrs(&desc_addr, &avail_addr, &used_addr);
+      queue->Configure(value.u16, desc_addr, avail_addr, used_addr);
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
@@ -328,12 +323,17 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
         return ZX_ERR_BAD_STATE;
       }
 
+      // Update the configuration words for the queue.
       size_t word =
           (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
-      queue->UpdateRing<void>([&value, word](virtio_queue_t* ring) {
+      queue->UpdateRing<void>([&value, word](VirtioRing* ring) {
         ring->addr.words[word] = value.u32;
       });
-      virtio_queue_update_addr(queue);
+
+      // Update the configuration based on the new configuration words.
+      zx_gpaddr_t desc_addr, avail_addr, used_addr;
+      queue->GetAddrs(&desc_addr, &avail_addr, &used_addr);
+      queue->Configure(queue->size(), desc_addr, avail_addr, used_addr);
       return ZX_OK;
     }
     // Not implemented registers.

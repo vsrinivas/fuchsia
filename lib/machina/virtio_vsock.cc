@@ -279,7 +279,7 @@ zx_status_t VirtioVsock::SocketConnection::Shutdown(uint32_t flags) {
 
 static zx_status_t setup_desc_chain(VirtioQueue* queue,
                                     virtio_vsock_hdr_t* header,
-                                    virtio_desc_t* desc) {
+                                    VirtioDescriptor* desc) {
   desc->addr = header + 1;
   desc->len -= sizeof(*header);
   // If the descriptor was only large enough for the header, read the next
@@ -292,7 +292,7 @@ static zx_status_t setup_desc_chain(VirtioQueue* queue,
 
 zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue,
                                                 virtio_vsock_hdr_t* header,
-                                                virtio_desc_t* desc,
+                                                VirtioDescriptor* desc,
                                                 uint32_t* used) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
@@ -317,7 +317,7 @@ zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue,
 
 zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
                                                  virtio_vsock_hdr_t* header,
-                                                 virtio_desc_t* desc) {
+                                                 VirtioDescriptor* desc) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
     uint32_t len = std::min(desc->len, header->len);
@@ -420,7 +420,7 @@ zx_status_t VirtioVsock::ChannelConnection::Shutdown(uint32_t flags) {
 
 zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue,
                                                  virtio_vsock_hdr_t* header,
-                                                 virtio_desc_t* desc,
+                                                 VirtioDescriptor* desc,
                                                  uint32_t* used) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
@@ -461,7 +461,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue,
 
 zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue,
                                                   virtio_vsock_hdr_t* header,
-                                                  virtio_desc_t* desc) {
+                                                  VirtioDescriptor* desc) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
     status = channel_.write(0, desc->addr, desc->len, nullptr, 0);
@@ -637,7 +637,7 @@ void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
 }
 
 static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index,
-                                      virtio_desc_t* desc, bool writable) {
+                                      VirtioDescriptor* desc, bool writable) {
   zx_status_t status = queue->ReadDesc(index, desc);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to read descriptor from queue " << status;
@@ -656,7 +656,7 @@ static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index,
 }
 
 static zx_status_t transmit(VirtioVsock::Connection* conn, VirtioQueue* queue,
-                            virtio_vsock_hdr_t* header, virtio_desc_t* desc,
+                            virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
                             uint32_t* used) {
   switch (conn->op()) {
     case VIRTIO_VSOCK_OP_REQUEST:
@@ -699,7 +699,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
   }
 
   bool index_valid = true;
-  virtio_desc_t desc;
+  VirtioDescriptor desc;
   std::lock_guard<std::mutex> lock(mutex_);
   for (auto i = readable_.begin(), end = readable_.end(); i != end;
        i = readable_.erase(i)) {
@@ -774,7 +774,7 @@ static void set_shutdown(virtio_vsock_hdr_t* header) {
 }
 
 static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
-                           virtio_vsock_hdr_t* header, virtio_desc_t* desc) {
+                           virtio_vsock_hdr_t* header, VirtioDescriptor* desc) {
   switch (header->op) {
     case VIRTIO_VSOCK_OP_RESPONSE:
       return conn->Accept();
@@ -814,7 +814,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
     return;
   }
 
-  virtio_desc_t desc;
+  VirtioDescriptor desc;
   std::lock_guard<std::mutex> lock(mutex_);
   do {
     auto free_desc =

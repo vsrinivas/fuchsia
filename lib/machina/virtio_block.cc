@@ -68,7 +68,7 @@ zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue, uint16_t head,
   uint8_t* block_status_ptr = nullptr;
   const virtio_blk_req_t* req = nullptr;
   off_t offset = 0;
-  virtio_desc_t desc;
+  VirtioDescriptor desc;
 
   zx_status_t status = queue->ReadDesc(head, &desc);
   if (status != ZX_OK) {

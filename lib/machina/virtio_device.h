@@ -146,17 +146,14 @@ class VirtioDevice {
   VirtioPci pci_;
 };
 
-template <uint16_t VIRTIO_ID, int NUM_QUEUES, typename ConfigType,
-          uint16_t QUEUE_SIZE_MAX = 128>
+template <uint16_t VirtioId, int NumQueues, typename ConfigType>
 class VirtioDeviceBase : public VirtioDevice {
  public:
   VirtioDeviceBase(const PhysMem& phys_mem)
-      : VirtioDevice(VIRTIO_ID, sizeof(config_), queues_, NUM_QUEUES,
-                     phys_mem) {
+      : VirtioDevice(VirtioId, sizeof(config_), queues_, NumQueues, phys_mem) {
     // Advertise support for common/bus features.
     add_device_features(kVirtioBusFeatures);
-    for (int i = 0; i < NUM_QUEUES; ++i) {
-      queues_[i].set_size(QUEUE_SIZE_MAX);
+    for (int i = 0; i < NumQueues; ++i) {
       queues_[i].set_device(this);
     }
   }
@@ -208,7 +205,7 @@ class VirtioDeviceBase : public VirtioDevice {
   }
 
   zx_status_t Kick(uint16_t kicked_queue) override {
-    if (kicked_queue >= NUM_QUEUES) {
+    if (kicked_queue >= NumQueues) {
       return ZX_ERR_OUT_OF_RANGE;
     }
 
@@ -219,9 +216,9 @@ class VirtioDeviceBase : public VirtioDevice {
     // correlation tracing should only be considered best-effort and may provide
     // inaccurate correlations if new kicks happen while the queue is not empty.
     const trace_async_id_t flow_id =
-        (static_cast<trace_async_id_t>(VIRTIO_ID) << 56) +
+        (static_cast<trace_async_id_t>(VirtioId) << 56) +
         (static_cast<trace_async_id_t>(kicked_queue) << 40) + TRACE_NONCE();
-    TRACE_DURATION("machina", "io_queue_kick", "device_id", VIRTIO_ID,
+    TRACE_DURATION("machina", "io_queue_kick", "device_id", VirtioId,
                    "kicked_queue", kicked_queue, "flow_id", flow_id);
 
     // Only emplace a new flow ID if there is no other still in flight.
@@ -235,11 +232,11 @@ class VirtioDeviceBase : public VirtioDevice {
   }
 
   VirtioQueue* queue(uint16_t sel) {
-    return sel >= NUM_QUEUES ? nullptr : &queues_[sel];
+    return sel >= NumQueues ? nullptr : &queues_[sel];
   }
 
   std::atomic<trace_async_id_t>* trace_flow_id(uint16_t sel) {
-    return sel >= NUM_QUEUES ? nullptr : &trace_flow_ids_[sel];
+    return sel >= NumQueues ? nullptr : &trace_flow_ids_[sel];
   }
 
  protected:
@@ -248,10 +245,10 @@ class VirtioDeviceBase : public VirtioDevice {
   ConfigType config_ __TA_GUARDED(config_mutex_) = {};
 
  private:
-  VirtioQueue queues_[NUM_QUEUES];
+  VirtioQueue queues_[NumQueues];
 
   // One flow ID slot for each device queue, used for IO correlation tracing.
-  std::atomic<trace_async_id_t> trace_flow_ids_[NUM_QUEUES] = {};
+  std::atomic<trace_async_id_t> trace_flow_ids_[NumQueues] = {};
 };
 
 }  // namespace machina

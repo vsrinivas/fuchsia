@@ -54,7 +54,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
   // We should have no work at this point as all the buffers will be owned by
   // the ethernet device.
   RunLoopUntilIdle();
-  ASSERT_EQ(0u, net_.rx_queue()->ring()->used->idx);
+  ASSERT_EQ(0u, queue_.ring()->used->idx);
 
   // Return a descriptor to the queue, this should trigger it to be returned.
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
@@ -65,7 +65,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
 
   // Run the async tasks, verify buffers are returned.
   RunLoopUntilIdle();
-  ASSERT_EQ(1u, net_.rx_queue()->ring()->used->idx);
+  ASSERT_EQ(1u, queue_.ring()->used->idx);
 }
 
 TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {

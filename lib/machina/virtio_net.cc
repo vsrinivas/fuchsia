@@ -67,7 +67,7 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   }
 
   FXL_DCHECK(fifo_num_entries_ == 0);
-  virtio_desc_t desc;
+  VirtioDescriptor desc;
   fifo_num_entries_ = 0;
   fifo_entries_write_index_ = 0;
   do {

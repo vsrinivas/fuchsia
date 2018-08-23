@@ -19,12 +19,16 @@ struct vring_used;
 
 namespace machina {
 
+// We initialize Virtio devices with a ring size so that a sensible size is set,
+// even if they do not configure one themselves.
+static constexpr uint16_t kDefaultVirtioRingSize = 128;
+
 class VirtioDevice;
 
 // Stores the Virtio queue based on the ring provided by the guest.
 //
 // NOTE(abdulla): This structure points to guest-controlled memory.
-typedef struct virtio_queue {
+struct VirtioRing {
   // Queue addresses as defined in Virtio 1.0 Section 4.1.4.3.
   union {
     struct {
@@ -39,7 +43,7 @@ typedef struct virtio_queue {
   } addr;
 
   // Number of entries in the descriptor table.
-  uint16_t size;
+  uint16_t size = kDefaultVirtioRingSize;
   uint16_t index;
 
   const volatile struct vring_desc* desc;  // guest-controlled
@@ -49,10 +53,10 @@ typedef struct virtio_queue {
 
   volatile struct vring_used* used;  // guest-controlled
   volatile uint16_t* avail_event;    // guest-controlled
-} virtio_queue_t;
+};
 
 // A higher-level API for vring_desc.
-typedef struct virtio_desc {
+struct VirtioDescriptor {
   // Pointer to the buffer in our address space.
   void* addr;
   // Number of bytes at addr.
@@ -64,7 +68,7 @@ typedef struct virtio_desc {
   // If true, this buffer must only be written to (no reads). Otherwise this
   // buffer must only be read from (no writes).
   bool writable;
-} virtio_desc_t;
+};
 
 class VirtioQueue {
  public:
@@ -73,14 +77,8 @@ class VirtioQueue {
 
   VirtioQueue();
 
-  // TODO(tjdetwiler): Temporary escape hatches to allow accessing the
-  // underlying ring structure.
-  const virtio_queue_t* ring() { return &ring_; }
-
-  template <typename T>
-  using RingUpdateFunc = fit::function<T(virtio_queue_t*)>;
-  template <typename T>
-  T UpdateRing(RingUpdateFunc<T> func) {
+  template <typename Result, typename Func>
+  Result UpdateRing(Func func) {
     std::lock_guard<std::mutex> lock(mutex_);
     return func(&ring_);
   }
@@ -91,10 +89,6 @@ class VirtioQueue {
 
   // Gets of sets the number of descriptors in the queue.
   uint16_t size() const;
-  void set_size(uint16_t size);
-  void set_size_unsafe(uint16_t size) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    ring_.size = size;
-  };
 
   // If the device negotiates |VIRTIO_F_EVENT_IDX|, this is the number of
   // descriptors to allow the driver to queue into the avail ring before
@@ -108,20 +102,10 @@ class VirtioQueue {
   uint16_t avail_event_num();
   void set_avail_event_num(uint16_t num);
 
-  // Gets or sets the address of the descriptor table for this queue.
-  // The address should be in guest physical address space.
-  void set_desc_addr(uint64_t desc_addr);
-  uint64_t desc_addr() const;
-
-  // Gets or sets the address of the available ring for this queue.
-  // The address should be in guest physical address space.
-  void set_avail_addr(uint64_t avail_addr);
-  uint64_t avail_addr() const;
-
-  // Gets or sets the address of the used ring for this queue.
-  // The address should be in guest physical address space.
-  void set_used_addr(uint64_t used_addr);
-  uint64_t used_addr() const;
+  void GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
+                zx_gpaddr_t* used_addr) const;
+  void Configure(uint16_t size, zx_gpaddr_t desc_addr, zx_gpaddr_t avail_addr,
+                 zx_gpaddr_t used_addr);
 
   // Returns a handle that can waited on for available descriptors in the.
   // While buffers are available in the queue |ZX_USER_SIGNAL_0| will be
@@ -164,7 +148,7 @@ class VirtioQueue {
   // This method should only be called using descriptor indices acquired with
   // virtio_queue_next_avail (including any chained descriptors) and before
   // they've been released with virtio_queue_return.
-  zx_status_t ReadDesc(uint16_t index, virtio_desc_t* desc);
+  zx_status_t ReadDesc(uint16_t index, VirtioDescriptor* desc);
 
   // Callback for |Poll| and |PollAsync|.
   //
@@ -227,7 +211,7 @@ class VirtioQueue {
 
   mutable std::mutex mutex_;
   VirtioDevice* device_;
-  virtio_queue_t ring_ __TA_GUARDED(mutex_) = {};
+  VirtioRing ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;
   uint16_t avail_event_num_ __TA_GUARDED(mutex_) = 1;
 };
