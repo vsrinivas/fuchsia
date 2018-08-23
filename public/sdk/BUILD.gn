@@ -23,9 +23,7 @@ sdk("garnet") {
   testonly = true
 
   deps = [
-    "//build/images:bootdata-blob.bin_sdk",
-    "//build/images:fvm.blk_sdk",
-    "//build/images:zircon.bin_sdk",
+    "//build/images:images_sdk",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
