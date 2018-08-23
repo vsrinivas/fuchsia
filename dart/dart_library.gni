@@ -355,6 +355,10 @@ if (current_toolchain == dart_toolchain) {
           "Dart libraries published in SDKs must have an explicit package name")
       atom_name = invoker.package_name
 
+      assert(
+          !defined(invoker.extra_sources),
+          "Extra sources can not be included in SDKs: put them in source_dir")
+
       # Dependencies that should normally be included in any SDK containing this
       # target.
       sdk_deps = []
