@@ -50,6 +50,7 @@ static int vim_start_thread(void* arg) {
     vim_bus_t* bus = arg;
     zx_status_t status;
 
+    // Start protocol drivers before adding platform devices.
     if ((status = vim_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init failed: %d\n", status);
         goto fail;
@@ -58,6 +59,16 @@ static int vim_start_thread(void* arg) {
         zxlogf(ERROR, "vim_i2c_init failed: %d\n", status);
         goto fail;
     }
+    if ((status = vim_clk_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_clk_init failed: %d\n", status);
+        goto fail;
+    }
+    if ((status = vim2_canvas_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim2_canvas_init failed: %d\n", status);
+        goto fail;
+    }
+
+    // Start platform devices.
     if ((status = vim_uart_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_uart_init failed: %d\n", status);
         goto fail;
@@ -79,11 +90,6 @@ static int vim_start_thread(void* arg) {
 
     if ((status = vim_sdio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_sdio_init failed: %d\n", status);
-        goto fail;
-    }
-
-    if ((status = vim_clk_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "vim_clk_init failed: %d\n", status);
         goto fail;
     }
 
@@ -120,11 +126,6 @@ static int vim_start_thread(void* arg) {
 
     if ((status = vim_rtc_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_rtc_init failed: %d\n", status);
-        goto fail;
-    }
-
-    if ((status = vim2_canvas_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "vim2_canvas_init failed: %d\n", status);
         goto fail;
     }
 
