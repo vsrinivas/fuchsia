@@ -1090,7 +1090,7 @@ struct InquiryResultRSSI {
 
   // RSSI
   // Valid range: -127 to +20
-  uint8_t rssi;
+  int8_t rssi;
 } __PACKED;
 
 struct InquiryResultWithRSSIEventParams {

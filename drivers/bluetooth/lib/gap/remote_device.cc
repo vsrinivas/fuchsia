@@ -13,6 +13,12 @@
 #include "advertising_data.h"
 
 namespace btlib {
+
+using common::BufferView;
+using common::ByteBuffer;
+using common::DeviceAddress;
+using common::DynamicByteBuffer;
+
 namespace gap {
 namespace {
 
@@ -24,48 +30,64 @@ std::string ConnectionStateToString(RemoteDevice::ConnectionState state) {
       return "connecting";
     case RemoteDevice::ConnectionState::kConnected:
       return "connected";
-    case RemoteDevice::ConnectionState::kBonding:
-      return "bonding";
-    case RemoteDevice::ConnectionState::kBonded:
-      return "bonded";
   }
 
   ZX_PANIC("invalid connection state %u", static_cast<unsigned int>(state));
   return "(unknown)";
 }
 
-constexpr uint16_t kClockOffsetValidBitMask = 0x8000;
-
 }  // namespace
 
-RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
-                           DeviceCallback update_expiry_callback,
-                           const std::string& identifier,
-                           const common::DeviceAddress& address,
-                           bool connectable)
-    : notify_listeners_callback_(std::move(notify_listeners_callback)),
-      update_expiry_callback_(std::move(update_expiry_callback)),
-      identifier_(identifier),
-      address_(address),
-      technology_((address.type() == common::DeviceAddress::Type::kBREDR)
-                      ? TechnologyType::kClassic
-                      : TechnologyType::kLowEnergy),
-      le_connection_state_(ConnectionState::kNotConnected),
-      bredr_connection_state_(ConnectionState::kNotConnected),
-      connectable_(connectable),
-      temporary_(true),
-      rssi_(hci::kRSSIInvalid),
-      advertising_data_length_(0u) {
-  ZX_DEBUG_ASSERT(notify_listeners_callback_);
-  ZX_DEBUG_ASSERT(update_expiry_callback_);
-  ZX_DEBUG_ASSERT(!identifier_.empty());
-  // TODO(armansito): Add a mechanism for assigning "dual-mode" for technology.
+RemoteDevice::LowEnergyData::LowEnergyData(RemoteDevice* owner)
+    : dev_(owner),
+      conn_state_(ConnectionState::kNotConnected),
+      adv_data_len_(0u) {
+  ZX_DEBUG_ASSERT(dev_);
 }
 
-void RemoteDevice::SetLEConnectionState(ConnectionState state) {
-  ZX_DEBUG_ASSERT(connectable() || state == ConnectionState::kNotConnected);
+void RemoteDevice::LowEnergyData::SetAdvertisingData(
+    int8_t rssi, const common::ByteBuffer& adv) {
+  // Prolong this device's expiration in case it is temporary.
+  dev_->UpdateExpiry();
 
-  if (state == le_connection_state_) {
+  bool notify_listeners = dev_->SetRssiInternal(rssi);
+
+  // Update the advertising data
+  // TODO(armansito): Validate that the advertising data is not malformed?
+  if (adv_data_buffer_.size() < adv.size()) {
+    adv_data_buffer_ = DynamicByteBuffer(adv.size());
+  }
+  adv_data_len_ = adv.size();
+  adv.Copy(&adv_data_buffer_);
+
+  // Walk through the advertising data and update common device fields.
+  AdvertisingDataReader reader(adv);
+  gap::DataType type;
+  BufferView data;
+  while (reader.GetNextField(&type, &data)) {
+    if (type == gap::DataType::kCompleteLocalName ||
+        type == gap::DataType::kShortenedLocalName) {
+      // TODO(armansito): Parse more advertising data fields, such as preferred
+      // connection parameters.
+      // TODO(NET-607): SetName should be a no-op if a name was obtained via
+      // the name discovery procedure.
+      if (dev_->SetNameInternal(data.ToString())) {
+        notify_listeners = true;
+      }
+    }
+  }
+
+  if (notify_listeners) {
+    dev_->UpdateExpiry();
+    dev_->NotifyListeners();
+  }
+}
+
+void RemoteDevice::LowEnergyData::SetConnectionState(ConnectionState state) {
+  ZX_DEBUG_ASSERT(dev_->connectable() ||
+                  state == ConnectionState::kNotConnected);
+
+  if (state == connection_state()) {
     bt_log(TRACE, "gap-le", "LE connection state already \"%s\"!",
            ConnectionStateToString(state).c_str());
     return;
@@ -73,19 +95,64 @@ void RemoteDevice::SetLEConnectionState(ConnectionState state) {
 
   bt_log(TRACE, "gap-le",
          "peer (%s) LE connection state changed from \"%s\" to \"%s\"",
-         identifier_.c_str(),
-         ConnectionStateToString(le_connection_state_).c_str(),
+         dev_->identifier().c_str(),
+         ConnectionStateToString(connection_state()).c_str(),
          ConnectionStateToString(state).c_str());
 
-  le_connection_state_ = state;
-  update_expiry_callback_(*this);
-  notify_listeners_callback_(*this);
+  conn_state_ = state;
+  dev_->UpdateExpiry();
+  dev_->NotifyListeners();
 }
 
-void RemoteDevice::SetBREDRConnectionState(ConnectionState state) {
-  ZX_DEBUG_ASSERT(connectable() || state == ConnectionState::kNotConnected);
+void RemoteDevice::LowEnergyData::SetConnectionParameters(
+    const hci::LEConnectionParameters& params) {
+  ZX_DEBUG_ASSERT(dev_->connectable());
+  conn_params_ = params;
+}
 
-  if (state == bredr_connection_state_) {
+void RemoteDevice::LowEnergyData::SetPreferredConnectionParameters(
+    const hci::LEPreferredConnectionParameters& params) {
+  ZX_DEBUG_ASSERT(dev_->connectable());
+  preferred_conn_params_ = params;
+}
+
+void RemoteDevice::LowEnergyData::SetKeys(const sm::LTK& ltk) {
+  ZX_DEBUG_ASSERT(dev_->connectable());
+  ltk_ = ltk;
+}
+
+RemoteDevice::BrEdrData::BrEdrData(RemoteDevice* owner)
+    : dev_(owner), conn_state_(ConnectionState::kNotConnected), eir_len_(0u) {
+  ZX_DEBUG_ASSERT(dev_);
+}
+
+void RemoteDevice::BrEdrData::SetInquiryData(const hci::InquiryResult& value) {
+  ZX_DEBUG_ASSERT(dev_->address().value() == value.bd_addr);
+  SetInquiryData(value.class_of_device, value.clock_offset,
+                 value.page_scan_repetition_mode);
+}
+
+void RemoteDevice::BrEdrData::SetInquiryData(
+    const hci::InquiryResultRSSI& value) {
+  ZX_DEBUG_ASSERT(dev_->address().value() == value.bd_addr);
+  SetInquiryData(value.class_of_device, value.clock_offset,
+                 value.page_scan_repetition_mode, value.rssi);
+}
+
+void RemoteDevice::BrEdrData::SetInquiryData(
+    const hci::ExtendedInquiryResultEventParams& value) {
+  ZX_DEBUG_ASSERT(dev_->address().value() == value.bd_addr);
+  SetInquiryData(value.class_of_device, value.clock_offset,
+                 value.page_scan_repetition_mode, value.rssi,
+                 BufferView(value.extended_inquiry_response,
+                            sizeof(value.extended_inquiry_response)));
+}
+
+void RemoteDevice::BrEdrData::SetConnectionState(ConnectionState state) {
+  ZX_DEBUG_ASSERT(dev_->connectable() ||
+                  state == ConnectionState::kNotConnected);
+
+  if (state == connection_state()) {
     bt_log(TRACE, "gap-bredr", "BR/EDR connection state already \"%s\"",
            ConnectionStateToString(state).c_str());
     return;
@@ -93,100 +160,129 @@ void RemoteDevice::SetBREDRConnectionState(ConnectionState state) {
 
   bt_log(TRACE, "gap-bredr",
          "peer (%s) BR/EDR connection state changed from \"%s\" to \"%s\"",
-         identifier_.c_str(),
-         ConnectionStateToString(bredr_connection_state_).c_str(),
+         dev_->identifier().c_str(),
+         ConnectionStateToString(connection_state()).c_str(),
          ConnectionStateToString(state).c_str());
 
-  bredr_connection_state_ = state;
-  update_expiry_callback_(*this);
-  notify_listeners_callback_(*this);
+  conn_state_ = state;
+  dev_->UpdateExpiry();
+  dev_->NotifyListeners();
 }
 
-void RemoteDevice::SetLEAdvertisingData(
-    int8_t rssi, const common::ByteBuffer& advertising_data) {
-  ZX_DEBUG_ASSERT(technology() == TechnologyType::kLowEnergy);
-  ZX_DEBUG_ASSERT(address_.type() != common::DeviceAddress::Type::kBREDR);
-  update_expiry_callback_(*this);
+void RemoteDevice::BrEdrData::SetInquiryData(
+    common::DeviceClass device_class, uint16_t clock_offset,
+    hci::PageScanRepetitionMode page_scan_rep_mode, int8_t rssi,
+    const common::BufferView& eir_data) {
+  dev_->UpdateExpiry();
 
-  // Reallocate the advertising data buffer only if we need more space.
-  // TODO(armansito): Revisit this strategy while addressing NET-209
-  if (advertising_data_buffer_.size() < advertising_data.size()) {
-    advertising_data_buffer_ =
-        common::DynamicByteBuffer(advertising_data.size());
+  bool notify_listeners = false;
+
+  // TODO(armansito): Consider sending notifications for RSSI updates perhaps
+  // with throttling to avoid spamming.
+  dev_->SetRssiInternal(rssi);
+
+  page_scan_rep_mode_ = page_scan_rep_mode;
+  clock_offset_ = static_cast<uint16_t>(hci::kClockOffsetValidFlagBit |
+                                        le16toh(clock_offset));
+
+  if (!device_class_ || *device_class_ != device_class) {
+    device_class_ = device_class;
+    notify_listeners = true;
   }
 
-  AdvertisingData old_parsed_ad;
-  if (!AdvertisingData::FromBytes(advertising_data_buffer_, &old_parsed_ad)) {
-    old_parsed_ad = AdvertisingData();
+  if (eir_data.size() && SetEirData(eir_data)) {
+    notify_listeners = true;
   }
 
-  AdvertisingData new_parsed_ad;
-  if (!AdvertisingData::FromBytes(advertising_data, &new_parsed_ad)) {
-    new_parsed_ad = AdvertisingData();
-  }
-
-  rssi_ = rssi;
-  advertising_data_length_ = advertising_data.size();
-  advertising_data.Copy(&advertising_data_buffer_);
-
-  if (old_parsed_ad.local_name() != new_parsed_ad.local_name()) {
-    notify_listeners_callback_(*this);
-  }
-}
-
-template <typename T>
-typename std::enable_if<
-    std::is_same<T, hci::InquiryResult>::value ||
-    std::is_same<T, hci::InquiryResultRSSI>::value ||
-    std::is_same<T, hci::ExtendedInquiryResultEventParams>::value>::type
-RemoteDevice::SetInquiryData(const T& inquiry_result) {
-  ZX_DEBUG_ASSERT(address_.value() == inquiry_result.bd_addr);
-  update_expiry_callback_(*this);
-
-  bool significant_change_common =
-      !device_class_ || (device_class_->major_class() !=
-                         inquiry_result.class_of_device.major_class());
-  clock_offset_ =
-      le16toh(kClockOffsetValidBitMask | inquiry_result.clock_offset);
-  page_scan_repetition_mode_ = inquiry_result.page_scan_repetition_mode;
-  device_class_ = inquiry_result.class_of_device;
-
-  bool significant_change_specific = SetSpecificInquiryData(inquiry_result);
-  if (significant_change_common || significant_change_specific) {
-    notify_listeners_callback_(*this);
+  if (notify_listeners) {
+    dev_->NotifyListeners();
   }
 }
 
-template void RemoteDevice::SetInquiryData<>(const hci::InquiryResult&);
-template void RemoteDevice::SetInquiryData<>(const hci::InquiryResultRSSI&);
-template void RemoteDevice::SetInquiryData<>(
-    const hci::ExtendedInquiryResultEventParams&);
+bool RemoteDevice::BrEdrData::SetEirData(const common::ByteBuffer& eir) {
+  ZX_DEBUG_ASSERT(eir.size());
 
-void RemoteDevice::SetName(const std::string& name) {
-  update_expiry_callback_(*this);
-  if (!name_ || *name_ != name) {
-    name_ = name;
-    notify_listeners_callback_(*this);
+  // TODO(armansito): Validate that the EIR data is not malformed?
+  if (eir_buffer_.size() < eir.size()) {
+    eir_buffer_ = DynamicByteBuffer(eir.size());
+  }
+  eir_len_ = eir.size();
+  eir.Copy(&eir_buffer_);
+
+  // TODO(jamuraa): maybe rename this class?
+  AdvertisingDataReader reader(eir);
+  gap::DataType type;
+  common::BufferView data;
+  bool changed = false;
+  while (reader.GetNextField(&type, &data)) {
+    if (type == gap::DataType::kCompleteLocalName) {
+      // TODO(armansito): Parse more fields.
+      // TODO(armansito): SetName should be a no-op if a name was obtained via
+      // the name discovery procedure.
+      changed = dev_->SetNameInternal(data.ToString());
+    }
+  }
+  return changed;
+}
+
+RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
+                           DeviceCallback update_expiry_callback,
+                           const std::string& identifier,
+                           const DeviceAddress& address, bool connectable)
+    : notify_listeners_callback_(std::move(notify_listeners_callback)),
+      update_expiry_callback_(std::move(update_expiry_callback)),
+      identifier_(identifier),
+      technology_((address.type() == DeviceAddress::Type::kBREDR)
+                      ? TechnologyType::kClassic
+                      : TechnologyType::kLowEnergy),
+      address_(address),
+      identity_known_(false),
+      connectable_(connectable),
+      temporary_(true),
+      rssi_(hci::kRSSIInvalid) {
+  ZX_DEBUG_ASSERT(notify_listeners_callback_);
+  ZX_DEBUG_ASSERT(update_expiry_callback_);
+  ZX_DEBUG_ASSERT(!identifier_.empty());
+
+  if (address.type() == DeviceAddress::Type::kBREDR ||
+      address.type() == DeviceAddress::Type::kLEPublic) {
+    identity_known_ = true;
+  }
+
+  // Initialize transport-specific state.
+  if (technology_ == TechnologyType::kClassic) {
+    bredr_data_ = BrEdrData(this);
+  } else {
+    le_data_ = LowEnergyData(this);
   }
 }
 
-bool RemoteDevice::TryMakeNonTemporary() {
-  // TODO(armansito): Since we don't currently support address resolution,
-  // random addresses should never be persisted.
-  if (!connectable() ||
-      address().type() == common::DeviceAddress::Type::kLERandom ||
-      address().type() == common::DeviceAddress::Type::kLEAnonymous) {
-    bt_log(TRACE, "gap", "remains temporary: %s", ToString().c_str());
-    return false;
+RemoteDevice::LowEnergyData& RemoteDevice::MutLe() {
+  if (le_data_) {
+    return *le_data_;
   }
 
-  if (temporary_) {
-    temporary_ = false;
-    update_expiry_callback_(*this);
-    notify_listeners_callback_(*this);
+  le_data_ = LowEnergyData(this);
+
+  // Set to dual-mode if both transport states have been initialized.
+  if (bredr_data_) {
+    technology_ = TechnologyType::kDualMode;
+  }
+  return *le_data_;
+}
+
+RemoteDevice::BrEdrData& RemoteDevice::MutBrEdr() {
+  if (bredr_data_) {
+    return *bredr_data_;
   }
 
-  return true;
+  bredr_data_ = BrEdrData(this);
+
+  // Set to dual-mode if both transport states have been initialized.
+  if (le_data_) {
+    technology_ = TechnologyType::kDualMode;
+  }
+  return *bredr_data_;
 }
 
 std::string RemoteDevice::ToString() const {
@@ -194,52 +290,57 @@ std::string RemoteDevice::ToString() const {
                            identifier_.c_str(), address_.ToString().c_str());
 }
 
-// Private methods below.
+bool RemoteDevice::TryMakeNonTemporary() {
+  // TODO(armansito): Since we don't currently support address resolution,
+  // random addresses should never be persisted.
+  if (!connectable() || address().type() == DeviceAddress::Type::kLERandom ||
+      address().type() == DeviceAddress::Type::kLEAnonymous) {
+    bt_log(TRACE, "gap", "remains temporary: %s", ToString().c_str());
+    return false;
+  }
 
-bool RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
-  ZX_DEBUG_ASSERT(bytes.size() <= hci::kExtendedInquiryResponseBytes);
+  if (temporary_) {
+    temporary_ = false;
+    UpdateExpiry();
+    NotifyListeners();
+  }
+
+  return true;
+}
+
+void RemoteDevice::SetName(const std::string& name) {
+  if (SetNameInternal(name)) {
+    UpdateExpiry();
+    NotifyListeners();
+  }
+}
+
+// Private methods below:
+
+bool RemoteDevice::SetRssiInternal(int8_t rssi) {
+  if (rssi != hci::kRSSIInvalid && rssi_ != rssi) {
+    rssi_ = rssi;
+    return true;
+  }
+  return false;
+}
+
+bool RemoteDevice::SetNameInternal(const std::string& name) {
+  if (!name_ || *name_ != name) {
+    name_ = name;
+    return true;
+  }
+  return false;
+}
+
+void RemoteDevice::UpdateExpiry() {
+  ZX_DEBUG_ASSERT(update_expiry_callback_);
   update_expiry_callback_(*this);
-
-  if (extended_inquiry_response_.size() < bytes.size()) {
-    extended_inquiry_response_ = common::DynamicByteBuffer(bytes.size());
-  }
-  bytes.Copy(&extended_inquiry_response_);
-
-  // TODO(jamuraa): maybe rename this class?
-  AdvertisingDataReader reader(extended_inquiry_response_);
-
-  gap::DataType type;
-  common::BufferView data;
-  bool significant_change = false;
-  while (reader.GetNextField(&type, &data)) {
-    if (type == gap::DataType::kCompleteLocalName) {
-      auto new_name = data.ToString();
-      if (!name_ || *name_ != new_name) {
-        name_ = new_name;
-        significant_change = true;
-      }
-    }
-  }
-
-  return significant_change;
 }
 
-bool RemoteDevice::SetSpecificInquiryData(const hci::InquiryResult& result) {
-  // All InquiryResult data is handled in the common case. Nothing left to do.
-  return false;
-}
-
-bool RemoteDevice::SetSpecificInquiryData(
-    const hci::InquiryResultRSSI& result) {
-  rssi_ = result.rssi;
-  return false;
-}
-
-bool RemoteDevice::SetSpecificInquiryData(
-    const hci::ExtendedInquiryResultEventParams& result) {
-  rssi_ = result.rssi;
-  return SetExtendedInquiryResponse(common::BufferView(
-      result.extended_inquiry_response, hci::kExtendedInquiryResponseBytes));
+void RemoteDevice::NotifyListeners() {
+  ZX_DEBUG_ASSERT(notify_listeners_callback_);
+  notify_listeners_callback_(*this);
 }
 
 }  // namespace gap

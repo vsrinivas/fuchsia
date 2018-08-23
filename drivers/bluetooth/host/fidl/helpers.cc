@@ -152,9 +152,9 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
   fidl_device->identifier = device.identifier();
   fidl_device->address = device.address().value().ToString();
   fidl_device->technology = TechnologyTypeToFidl(device.technology());
+  fidl_device->connected = device.connected();
 
   // TODO(armansito): Report correct values once we support these.
-  fidl_device->connected = false;
   fidl_device->bonded = false;
 
   // Set default value for device appearance.
@@ -165,35 +165,34 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
     fidl_device->rssi->value = device.rssi();
   }
 
-  ::btlib::gap::AdvertisingData adv_data;
-  if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
-                                                &adv_data)) {
-    fidl_device->service_uuids.resize(0);
-    return fidl_device;
+  if (device.name()) {
+    fidl_device->name = *device.name();
   }
 
-  const auto& uuids = adv_data.service_uuids();
+  if (device.le()) {
+    ::btlib::gap::AdvertisingData adv_data;
 
-  // |service_uuids| is not a nullable field, so we need to assign something to
-  // it.
-  if (uuids.empty()) {
+    // |service_uuids| is not a nullable field, so we need to assign something
+    // to it.
     fidl_device->service_uuids.resize(0);
-  } else {
-    for (const auto& uuid : uuids) {
+
+    if (!::btlib::gap::AdvertisingData::FromBytes(
+            device.le()->advertising_data(), &adv_data)) {
+      return fidl_device;
+    }
+
+    for (const auto& uuid : adv_data.service_uuids()) {
       fidl_device->service_uuids.push_back(uuid.ToString());
     }
-  }
-
-  if (adv_data.local_name())
-    fidl_device->name = *adv_data.local_name();
-  if (adv_data.appearance()) {
-    fidl_device->appearance =
-        static_cast<ctrl::Appearance>(le16toh(*adv_data.appearance()));
-  }
-  if (adv_data.tx_power()) {
-    auto fidl_tx_power = Int8::New();
-    fidl_tx_power->value = *adv_data.tx_power();
-    fidl_device->tx_power = std::move(fidl_tx_power);
+    if (adv_data.appearance()) {
+      fidl_device->appearance =
+          static_cast<ctrl::Appearance>(le16toh(*adv_data.appearance()));
+    }
+    if (adv_data.tx_power()) {
+      auto fidl_tx_power = Int8::New();
+      fidl_tx_power->value = *adv_data.tx_power();
+      fidl_device->tx_power = std::move(fidl_tx_power);
+    }
   }
 
   return fidl_device;
@@ -202,17 +201,21 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
 ble::RemoteDevicePtr NewLERemoteDevice(
     const ::btlib::gap::RemoteDevice& device) {
   ::btlib::gap::AdvertisingData ad;
+  if (!device.le()) {
+    return nullptr;
+  }
+
+  const auto& le = *device.le();
   auto fidl_device = ble::RemoteDevice::New();
   fidl_device->identifier = device.identifier();
   fidl_device->connectable = device.connectable();
 
   // Initialize advertising data only if its non-empty.
-  if (device.advertising_data().size() != 0u) {
+  if (le.advertising_data().size() != 0u) {
     ::btlib::gap::AdvertisingData ad;
-    if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
-                                                  &ad))
+    if (!::btlib::gap::AdvertisingData::FromBytes(le.advertising_data(), &ad)) {
       return nullptr;
-
+    }
     fidl_device->advertising_data = ad.AsLEAdvertisingData();
   }
 

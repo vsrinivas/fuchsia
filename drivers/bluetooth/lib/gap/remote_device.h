@@ -31,7 +31,7 @@ class RemoteDeviceCache;
 // RemoteDeviceCache.
 class RemoteDevice final {
  public:
-  // TODO(armansito): Probably keep separate states for LE and BR/EDR.
+  // Device connection state.
   enum class ConnectionState {
     // No link exists between the local adapter and this device.
     kNotConnected,
@@ -42,13 +42,160 @@ class RemoteDevice final {
     kInitializing,
 
     // Link setup, service discovery, and any encryption setup has completed
-    kConnected,
+    kConnected
+  };
 
-    // Bonding procedures are in progress
-    kBonding,
+  // Contains RemoteDevice data that apply only to the LE transport.
+  class LowEnergyData final {
+   public:
+    // TODO(NET-1436): Remove default constructor once common::Optional no
+    // longer requires it.
+    LowEnergyData() = default;
+    explicit LowEnergyData(RemoteDevice* owner);
 
-    // Bonded
-    kBonded
+    // Current connection state.
+    ConnectionState connection_state() const { return conn_state_; }
+    bool connected() const {
+      return connection_state() == ConnectionState::kConnected;
+    }
+
+    // Advertising (and optionally scan response) data obtained during
+    // discovery.
+    const common::BufferView advertising_data() const {
+      return adv_data_buffer_.view(0, adv_data_len_);
+    }
+
+    // Most recently used LE connection parameters. Has no value if this device
+    // has never been connected.
+    const common::Optional<hci::LEConnectionParameters>& connection_parameters()
+        const {
+      return conn_params_;
+    }
+
+    // Preferred LE connection parameters as reported by this device.
+    const common::Optional<hci::LEPreferredConnectionParameters>&
+    preferred_connection_parameters() const {
+      return preferred_conn_params_;
+    }
+
+    // The link encryption key.
+    const common::Optional<sm::LTK>& ltk() const { return ltk_; }
+
+    // Setters:
+
+    // Updates the LE advertising and scan response data for this device.
+    // |rssi| corresponds to the most recent advertisement RSSI.
+    // |advertising_data| should include any scan response data if obtained
+    // during an active scan.
+    void SetAdvertisingData(int8_t rssi, const common::ByteBuffer& data);
+
+    // Updates the connection state and notifies listeners if necessary.
+    void SetConnectionState(ConnectionState state);
+
+    // Modify the current or preferred connection parameters for this device.
+    // The device must be connectable.
+    void SetConnectionParameters(const hci::LEConnectionParameters& value);
+    void SetPreferredConnectionParameters(
+        const hci::LEPreferredConnectionParameters& value);
+
+    // TODO(armansito): Generalize this to store all keys.
+    void SetKeys(const sm::LTK& ltk);
+
+    // TODO(armansito): Store most recently seen random address and identity
+    // address separately, once RemoteDeviceCache can index devices by multiple
+    // addresses.
+
+   private:
+    RemoteDevice* dev_;  // weak
+
+    ConnectionState conn_state_;
+    size_t adv_data_len_;
+    common::DynamicByteBuffer adv_data_buffer_;
+    common::Optional<hci::LEConnectionParameters> conn_params_;
+    common::Optional<hci::LEPreferredConnectionParameters>
+        preferred_conn_params_;
+
+    common::Optional<sm::LTK> ltk_;
+
+    // TODO(armansito): Store all keys
+    // TODO(armansito): Store GATT service UUIDs.
+  };
+
+  // Contains RemoteDevice data that apply only to the BR/EDR transport.
+  class BrEdrData final {
+   public:
+    // TODO(NET-1436): Remove default constructor once common::Optional no
+    // longer requires it.
+    BrEdrData() = default;
+    explicit BrEdrData(RemoteDevice* owner);
+
+    // Current connection state.
+    ConnectionState connection_state() const { return conn_state_; }
+    bool connected() const {
+      return connection_state() == ConnectionState::kConnected;
+    }
+
+    // Returns the device class of this device, if it is known.
+    const common::Optional<common::DeviceClass>& device_class() const {
+      return device_class_;
+    }
+
+    // Returns the page scan repetition mode of this device, if known.
+    const common::Optional<hci::PageScanRepetitionMode>&
+    page_scan_repetition_mode() const {
+      return page_scan_rep_mode_;
+    }
+
+    // Returns the clock offset reported by the device, if known and valid. The
+    // clock offset will have the highest-order bit set and the rest represent
+    // bits 16-2 of CLKNslave-CLK (see hci::kClockOffsetFlagBit in
+    // hci/hci_constants.h).
+    const common::Optional<uint16_t>& clock_offset() const {
+      return clock_offset_;
+    }
+    const common::BufferView extended_inquiry_response() const {
+      return eir_buffer_.view(0, eir_len_);
+    }
+
+    // Setters:
+
+    // Updates the inquiry data for this device and notifies listeners. These
+    // methods expect HCI inquiry result structures as they are obtained from
+    // the Bluetooth controller. Each field should be encoded in little-endian
+    // byte order.
+    void SetInquiryData(const hci::InquiryResult& value);
+    void SetInquiryData(const hci::InquiryResultRSSI& value);
+    void SetInquiryData(const hci::ExtendedInquiryResultEventParams& value);
+
+    // Updates the connection state and notifies listeners if necessary.
+    void SetConnectionState(ConnectionState state);
+
+    // TODO(armansito): Store BD_ADDR here, once RemoteDeviceCache can index
+    // devices by multiple addresses.
+
+   private:
+    // All multi-byte fields must be in little-endian byte order as they were
+    // received from the controller.
+    void SetInquiryData(
+        common::DeviceClass device_class, uint16_t clock_offset,
+        hci::PageScanRepetitionMode page_scan_rep_mode,
+        int8_t rssi = hci::kRSSIInvalid,
+        const common::BufferView& eir_data = common::BufferView());
+
+    // Updates the EIR data field and returns true if any properties changed.
+    bool SetEirData(const common::ByteBuffer& data);
+
+    RemoteDevice* dev_;  // weak
+    ConnectionState conn_state_;
+    common::Optional<common::DeviceClass> device_class_;
+    common::Optional<hci::PageScanRepetitionMode> page_scan_rep_mode_;
+    common::Optional<uint16_t> clock_offset_;
+    // TODO(jamuraa): Parse more of the Extended Inquiry Response fields
+    size_t eir_len_;
+    common::DynamicByteBuffer eir_buffer_;
+
+    // TODO(armansito): Store link key.
+    // TODO(armansito): Store traditional service UUIDs.
   };
 
   // 128-bit UUID that uniquely identifies this device on this system.
@@ -57,85 +204,49 @@ class RemoteDevice final {
   // The Bluetooth technologies that are supported by this device.
   TechnologyType technology() const { return technology_; }
 
-  // The known device address of this device.
-  // TODO(armansito):
-  //   - For paired devices this should return the identity address.
-  //   - For temporary devices this is the address that was seen in the
-  //     advertisement.
-  //   - For classic devices this the BD_ADDR.
+  // The known device address of this device. Depending on the technologies
+  // supported by this device this has the following meaning:
+  //
+  //   * For BR/EDR devices this is the BD_ADDR.
+  //
+  //   * For LE devices this is identity address IF identity_known() returns
+  //     true. This is always the case if the address type is LE Public.
+  //
+  //     For LE devices that use privacy, identity_known() will be set to false
+  //     upon discovery. The address will be updated only once the identity
+  //     address has been obtained during the pairing procedure.
+  //
+  //   * For BR/EDR/LE devices this is the BD_ADDR and the LE identity address.
+  //     If a BR/EDR/LE device uses an identity address that is different from
+  //     its BD_ADDR, then there will be two separate RemoteDevice entries for
+  //     it.
   const common::DeviceAddress& address() const { return address_; }
+  bool identity_known() const { return identity_known_; }
+
+  // The LMP version of this device obtained doing discovery.
+  const common::Optional<hci::HCIVersion>& version() const {
+    return lmp_version_;
+  }
 
   // Returns true if this is a connectable device.
   bool connectable() const { return connectable_; }
 
-  // Returns the advertising data for this device (including any scan response
-  // data).
-  const common::BufferView advertising_data() const {
-    return advertising_data_buffer_.view(0, advertising_data_length_);
+  // Returns true if this device is connected over BR/EDR or LE transports.
+  bool connected() const {
+    return (le() && le()->connected()) || (bredr() && bredr()->connected());
   }
 
   // Returns the most recently observed RSSI for this remote device. Returns
   // hci::kRSSIInvalid if the value is unknown.
   int8_t rssi() const { return rssi_; }
 
-  // Updates the advertising and scan response data for this device.
-  // |rssi| corresponds to the most recent advertisement RSSI.
-  // |advertising_data| should include any scan response data.
-  void SetLEAdvertisingData(int8_t rssi,
-                            const common::ByteBuffer& advertising_data);
-
-  // Updates the device based on |inquiry_result|. Notifies listeners if |this|
-  // has changed in a significant way.
-  template <typename T>
-  typename std::enable_if<
-      std::is_same<T, hci::InquiryResult>::value ||
-      std::is_same<T, hci::InquiryResultRSSI>::value ||
-      std::is_same<T, hci::ExtendedInquiryResultEventParams>::value>::type
-  SetInquiryData(const T& inquiry_result);
-
-  // Updates the name of this device.
-  // If Advertising Data has been set, this must match any local name advertised
-  // in that data. (Bluetooth 5.0, Vol 2 E 6.23)
-  void SetName(const std::string& name);
-
-  // Gets the user-friendly name of the device, if it's known.
-  // This can be set by LE Advertising data as well as by SetName.
+  // Gets the user-friendly name of the device, if it's known. This can be
+  // assigned based on LE advertising data, BR/EDR inquiry data, or by directly
+  // calling the SetName() method.
   const common::Optional<std::string>& name() const { return name_; }
 
-  // Returns the most recently used connection parameters for this device.
-  // Returns nullptr if these values are unknown.
-  const hci::LEConnectionParameters* le_connection_params() const {
-    return le_conn_params_.value();
-  }
-  void set_le_connection_params(const hci::LEConnectionParameters& params) {
-    le_conn_params_ = params;
-  }
-
-  void set_ltk(const sm::LTK& key) { ltk_ = key; }
-
-  const common::Optional<sm::LTK> ltk() const { return ltk_; }
-
-  // Returns this device's preferred connection parameters, if known. LE
-  // peripherals report their preferred connection parameters using one of the
-  // GAP Connection Parameter Update procedures (e.g. L2CAP, Advertising, LL).
-  const hci::LEPreferredConnectionParameters* le_preferred_connection_params()
-      const {
-    return le_preferred_conn_params_.value();
-  }
-  void set_le_preferred_connection_params(
-      const hci::LEPreferredConnectionParameters& params) {
-    le_preferred_conn_params_ = params;
-  }
-
-  // The current LE connection state of this RemoteDevice.
-  ConnectionState le_connection_state() const { return le_connection_state_; }
-  void SetLEConnectionState(ConnectionState state);
-
-  // The current BR/EDR connection state of this RemoteDevice.
-  ConnectionState bredr_connection_state() const {
-    return bredr_connection_state_;
-  }
-  void SetBREDRConnectionState(ConnectionState state);
+  // Returns the set of features of this device.
+  const hci::LMPFeatureSet& features() const { return lmp_features_; }
 
   // A temporary device is one that is never persisted, such as
   //
@@ -147,6 +258,28 @@ class RemoteDevice final {
   // All other devices can be considered bonded.
   bool temporary() const { return temporary_; }
 
+  // Returns the LE transport specific data of this device, if any. This will be
+  // present if information about this device is obtained using the LE discovery
+  // and connection procedures.
+  const common::Optional<LowEnergyData>& le() const { return le_data_; }
+
+  // Returns the BR/EDR transport specific data of this device, if any. This
+  // will be present if information about this device is obtained using the
+  // BR/EDR discovery and connection procedures.
+  const common::Optional<BrEdrData>& bredr() const { return bredr_data_; }
+
+  // Returns a mutable reference to each transport-specific data structure,
+  // initializing the structure if it is unitialized. Use these to mutate
+  // members of the transport-specific structs. The caller must make sure to
+  // invoke these only if the device is known to support said technology.
+  LowEnergyData& MutLe();
+  BrEdrData& MutBrEdr();
+
+  // Returns a string representation of this device.
+  std::string ToString() const;
+
+  // The following methods mutate RemoteDevice properties:
+
   // Marks this device as non-temporary. This operation may fail due to one of
   // the conditions described above the |temporary()| method.
   //
@@ -155,39 +288,19 @@ class RemoteDevice final {
   // conditions are subtle and not fully supported yet.
   bool TryMakeNonTemporary();
 
-  // Returns a string representation of this device.
-  std::string ToString() const;
+  // Updates the name of this device. This will override the existing name (if
+  // present) and notify listeners of the change.
+  void SetName(const std::string& name);
 
-  // Returns the device class of this device, if it is known.
-  const common::Optional<common::DeviceClass>& device_class() const {
-    return device_class_;
-  }
-
-  // Returns the page scan repettion mode of this device, if known.
-  const common::Optional<hci::PageScanRepetitionMode>&
-  page_scan_repetition_mode() const {
-    return page_scan_repetition_mode_;
-  }
-
-  // Returns the clock offset reported by the device, if known and valid.
-  // The clock offset will have the highest-order bit set, and the rest
-  // represent bits 16-2 of CLKNslave-CLK.
-  const common::Optional<uint16_t>& clock_offset() const {
-    return clock_offset_;
-  }
-
-  // Returns the set of features of this device.
-  const hci::LMPFeatureSet& features() const { return lmp_features_; }
-
+  // Sets the value of the LMP |features| for the given |page| number.
   void SetFeaturePage(size_t page, uint64_t features) {
     lmp_features_.SetPage(page, features);
   }
 
+  // Sets the last available LMP feature |page| number for this device.
   void set_last_page_number(uint8_t page) {
     lmp_features_.set_last_page_number(page);
   }
-
-  uint8_t last_page_number() const { return lmp_features_.last_page_number(); }
 
   void set_version(hci::HCIVersion version, uint16_t manufacturer,
                    uint16_t subversion) {
@@ -196,15 +309,9 @@ class RemoteDevice final {
     lmp_subversion_ = subversion;
   }
 
-  const common::Optional<hci::HCIVersion>& version() const {
-    return lmp_version_;
-  }
-
  private:
   friend class RemoteDeviceCache;
   using DeviceCallback = fit::function<void(const RemoteDevice&)>;
-
-  // TODO(armansito): Add constructor from persistent storage format.
 
   // Caller must ensure that both callbacks are non-empty.
   // Note that the ctor is only intended for use by RemoteDeviceCache.
@@ -216,59 +323,48 @@ class RemoteDevice final {
                const std::string& identifier,
                const common::DeviceAddress& address, bool connectable);
 
-  // Updates the device based on extended inquiry response data.
-  // |bytes| contains the data from an ExtendedInquiryResponse event.
-  // Returns true if |this| was modified in a way that warrants notification to
+  // Updates the RSSI and returns true if it changed.
+  bool SetRssiInternal(int8_t rssi);
+
+  // Updates the name and returns true if there was a change without notifying
   // listeners.
-  bool SetExtendedInquiryResponse(const common::ByteBuffer& bytes);
+  // TODO(armansito): Add similarly styled internal setters so that we can batch
+  // more updates.
+  bool SetNameInternal(const std::string& name);
 
-  // Updates the device based on type-specific inquiry data. Returns true if
-  // |this| was modified in a way that warrants notification to listeners.
-  bool SetSpecificInquiryData(const hci::InquiryResult& result);
-  bool SetSpecificInquiryData(const hci::InquiryResultRSSI& result);
-  bool SetSpecificInquiryData(
-      const hci::ExtendedInquiryResultEventParams& result);
+  // Tells the owning RemoteDeviceCache to update the expiry state of this
+  // device.
+  void UpdateExpiry();
 
+  // Signal to the cache to notify listeners.
+  void NotifyListeners();
+
+  // Callbacks used to notify state changes.
   DeviceCallback notify_listeners_callback_;
   DeviceCallback update_expiry_callback_;
+
   const std::string identifier_;
+  TechnologyType technology_;
+
   const common::DeviceAddress address_;
-  const TechnologyType technology_;
-  ConnectionState le_connection_state_;
-  ConnectionState bredr_connection_state_;
-  common::Optional<sm::LTK> ltk_;
+  bool identity_known_;
+
   common::Optional<std::string> name_;
+  common::Optional<hci::HCIVersion> lmp_version_;
+  common::Optional<uint16_t> lmp_manufacturer_;
+  common::Optional<uint16_t> lmp_subversion_;
+  hci::LMPFeatureSet lmp_features_;
   bool connectable_;
   bool temporary_;
   int8_t rssi_;
 
-  common::Optional<common::DeviceClass> device_class_;
-  common::Optional<hci::PageScanRepetitionMode> page_scan_repetition_mode_;
-  common::Optional<uint16_t> clock_offset_;
-  common::Optional<hci::HCIVersion> lmp_version_;
-  uint16_t lmp_manufacturer_;
-  uint16_t lmp_subversion_;
-  hci::LMPFeatureSet lmp_features_;
+  // Data that only applies to the LE transport. This is present if this device
+  // is known to support LE.
+  common::Optional<LowEnergyData> le_data_;
 
-  // TODO(armansito): Store device name and remote features.
-  // TODO(armansito): Store discovered service UUIDs.
-  // TODO(armansito): Store an AdvertisingData structure rather than the raw
-  // payload.
-  size_t advertising_data_length_;
-  common::DynamicByteBuffer advertising_data_buffer_;
-
-  // TODO(jamuraa): Parse more of the Extended Inquiry Response fields
-  common::DynamicByteBuffer extended_inquiry_response_;
-
-  // Most recently used LE connection parameters. Has no value if this device
-  // has never been connected.
-  common::Optional<hci::LEConnectionParameters> le_conn_params_;
-
-  // Preferred LE connection parameters as reported by this device. Has no value
-  // if this parameter is unknown.
-  // TODO(armansito): Add a method for storing the preferred parameters.
-  common::Optional<hci::LEPreferredConnectionParameters>
-      le_preferred_conn_params_;
+  // Data that only applies to the BR/EDR transport. This is present if this
+  // device is known to support BR/EDR.
+  common::Optional<BrEdrData> bredr_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDevice);
 };

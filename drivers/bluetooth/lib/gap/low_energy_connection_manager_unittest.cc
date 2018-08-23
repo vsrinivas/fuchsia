@@ -170,8 +170,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
       hci::StatusCode::kConnectionFailedToBeEstablished);
   test_device()->AddDevice(std::move(fake_dev));
 
+  ASSERT_TRUE(dev->le());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 
   hci::Status status;
   auto callback = [&status](auto cb_status, auto conn_ref) {
@@ -181,7 +182,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 
   RunLoopUntilIdle();
 
@@ -189,7 +190,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
             status.protocol_error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 }
 
 // LE Connection Complete event reports error
@@ -207,8 +208,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  ASSERT_TRUE(dev->le());
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 
   RunLoopUntilIdle();
 
@@ -216,7 +218,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
             status.protocol_error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
@@ -234,15 +236,16 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
 
   conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeoutMs);
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  ASSERT_TRUE(dev->le());
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 
   RunLoopFor(zx::msec(kTestRequestTimeoutMs));
 
   EXPECT_FALSE(status);
   EXPECT_EQ(common::HostError::kTimedOut, status.error()) << status.ToString();
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 }
 
 // Successful connection to single device
@@ -265,8 +268,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
 
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  ASSERT_TRUE(dev->le());
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 
   RunLoopUntilIdle();
 
@@ -279,7 +283,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   EXPECT_EQ(dev->identifier(), conn_ref->device_identifier());
   EXPECT_FALSE(dev->temporary());
   EXPECT_EQ(RemoteDevice::ConnectionState::kConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 }
 
 struct TestObject final : fbl::RefCounted<TestObject> {
@@ -357,8 +361,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
 
   EXPECT_TRUE(status);
   EXPECT_EQ(1u, connected_devices().size());
+  ASSERT_TRUE(dev->le());
   EXPECT_EQ(RemoteDevice::ConnectionState::kConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 
   ASSERT_TRUE(conn_ref);
   conn_ref = nullptr;
@@ -367,7 +372,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
 
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->le_connection_state());
+            dev->le()->connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest,
@@ -791,6 +796,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, RegisterRemoteInitiatedLink) {
   auto* dev = dev_cache()->FindDeviceByAddress(kAddress0);
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), conn_ref->device_identifier());
+  EXPECT_TRUE(dev->connected());
+  EXPECT_TRUE(dev->le()->connected());
 
   conn_ref = nullptr;
 
@@ -845,8 +852,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
   EXPECT_TRUE(fake_dev_cb_called);
   ASSERT_TRUE(conn_params_cb_called);
 
-  EXPECT_EQ(preferred, *dev->le_preferred_connection_params());
-  EXPECT_EQ(actual, *dev->le_connection_params());
+  ASSERT_TRUE(dev->le());
+  EXPECT_EQ(preferred, *dev->le()->preferred_connection_parameters());
+  EXPECT_EQ(actual, *dev->le()->connection_parameters());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPSignalLinkError) {

@@ -41,7 +41,7 @@ std::unordered_set<RemoteDevice*> ProcessInquiryResult(
     }
     ZX_DEBUG_ASSERT(device);
 
-    device->SetInquiryData(result.responses[i]);
+    device->MutBrEdr().SetInquiryData(result.responses[i]);
     updated.insert(device);
   }
   return updated;
@@ -283,7 +283,7 @@ void BrEdrDiscoveryManager::ExtendedInquiryResult(
   }
   ZX_DEBUG_ASSERT(device);
 
-  device->SetInquiryData(result);
+  device->MutBrEdr().SetInquiryData(result);
 
   if (!device->name()) {
     RequestRemoteDeviceName(device->identifier());
@@ -305,11 +305,13 @@ void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
   packet->mutable_view()->mutable_payload_data().SetToZeros();
   auto params = packet->mutable_view()
                     ->mutable_payload<hci::RemoteNameRequestCommandParams>();
-  ZX_DEBUG_ASSERT(device->page_scan_repetition_mode().HasValue());
+  ZX_DEBUG_ASSERT(device->bredr());
+  ZX_DEBUG_ASSERT(device->bredr()->page_scan_repetition_mode());
   params->bd_addr = device->address().value();
-  params->page_scan_repetition_mode = *(device->page_scan_repetition_mode());
-  if (device->clock_offset()) {
-    params->clock_offset = *(device->clock_offset());
+  params->page_scan_repetition_mode =
+      *(device->bredr()->page_scan_repetition_mode());
+  if (device->bredr()->clock_offset()) {
+    params->clock_offset = htole16(*(device->bredr()->clock_offset()));
   }
 
   auto cb = [id, self = weak_ptr_factory_.GetWeakPtr()](auto,

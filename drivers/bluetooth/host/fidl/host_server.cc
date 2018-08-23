@@ -242,30 +242,34 @@ void HostServer::OnRemoteDeviceBonded(
   BondingData data;
   data.identifier = remote_device.identifier().c_str();
 
-  // If the bond is LE
-  if (remote_device.technology() == btlib::gap::TechnologyType::kLowEnergy) {
+  if (remote_device.le() && remote_device.le()->ltk()) {
     data.le = LEData::New();
     data.le->address = remote_device.address().value().ToString();
+    auto fidl_ltk = fuchsia::bluetooth::control::LTK::New();
+    const auto& ltk = remote_device.le()->ltk();
 
-    if (remote_device.ltk()) {
-      data.le->ltk = fuchsia::bluetooth::control::LTK::New();
-      // Set security properties
-      auto key_data = remote_device.ltk()->key().value().data();
-      std::copy(key_data, key_data + 16, data.le->ltk->key.value.begin());
-      data.le->ltk->key.security_properties.authenticated =
-          remote_device.ltk()->security().authenticated();
-      data.le->ltk->key.security_properties.secure_connections =
-          remote_device.ltk()->security().secure_connections();
-      data.le->ltk->key.security_properties.encryption_key_size =
-          remote_device.ltk()->security().enc_key_size();
+    // Copy the key.
+    const auto& key_value = ltk->key().value().data();
+    std::copy(key_value, key_value + 16, fidl_ltk->key.value.begin());
 
-      data.le->ltk->key_size = remote_device.ltk()->security().enc_key_size();
-      data.le->ltk->rand = remote_device.ltk()->key().rand();
-      data.le->ltk->ediv = remote_device.ltk()->key().ediv();
-    }
+    // Set security properties
+    fidl_ltk->key.security_properties.authenticated =
+        ltk->security().authenticated();
+    fidl_ltk->key.security_properties.secure_connections =
+        ltk->security().secure_connections();
+    fidl_ltk->key.security_properties.encryption_key_size =
+        ltk->security().enc_key_size();
+
+    fidl_ltk->key_size = ltk->security().enc_key_size();
+    fidl_ltk->rand = ltk->key().rand();
+    fidl_ltk->ediv = ltk->key().ediv();
+
+    data.le->ltk = std::move(fidl_ltk);
   }
 
-  this->binding()->events().OnNewBondingData(std::move(data));
+  // TODO(armansito): Initialize BR/EDR data.
+
+  binding()->events().OnNewBondingData(std::move(data));
 }
 
 void HostServer::SetDiscoverable(bool discoverable,

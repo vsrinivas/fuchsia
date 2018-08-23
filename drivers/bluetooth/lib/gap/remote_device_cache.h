@@ -46,6 +46,8 @@ class RemoteDeviceCache final {
 
   bool StoreLTK(std::string device_id, const sm::LTK& key);
 
+  // TODO: documentation
+  // TODO: consume struct
   bool AddBondedDevice(std::string identifier,
                        const common::DeviceAddress& address,
                        const sm::LTK& key);
@@ -106,7 +108,6 @@ class RemoteDeviceCache final {
   // |device| must already exist in the cache.
   void NotifyDeviceUpdated(const RemoteDevice& device);
 
-
   // Updates the expiration time for |device|, if a temporary. Cancels expiry,
   // if a non-temporary. Pre-conditions:
   // - |device| must already exist in the cache
@@ -124,6 +125,7 @@ class RemoteDeviceCache final {
   // Mapping from unique device IDs to RemoteDeviceRecords.
   // Owns the corresponding RemoteDevices.
   std::unordered_map<std::string, RemoteDeviceRecord> devices_;
+
   // Mapping from device addresses to unique device identifiers for all known
   // devices. This is used to look-up and update existing cached data for a
   // particular scan result so as to avoid creating duplicate entries for the
@@ -134,11 +136,8 @@ class RemoteDeviceCache final {
   std::unordered_map<common::DeviceAddress, std::string> address_map_;
 
   DeviceUpdatedCallback device_updated_callback_;
-
   DeviceRemovedCallback device_removed_callback_;
-
   DeviceUpdatedCallback device_bonded_callback_;
-
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
 };

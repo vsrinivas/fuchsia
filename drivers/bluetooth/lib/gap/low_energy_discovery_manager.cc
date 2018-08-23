@@ -50,8 +50,9 @@ void LowEnergyDiscoverySession::Stop() {
 
 void LowEnergyDiscoverySession::NotifyDiscoveryResult(
     const RemoteDevice& device) const {
+  ZX_DEBUG_ASSERT(device.le());
   if (device_found_callback_ &&
-      filter_.MatchLowEnergyResult(device.advertising_data(),
+      filter_.MatchLowEnergyResult(device.le()->advertising_data(),
                                    device.connectable(), device.rssi())) {
     device_found_callback_(device);
   }
@@ -156,7 +157,7 @@ void LowEnergyDiscoveryManager::OnDeviceFound(
   if (!device) {
     device = device_cache_->NewDevice(result.address, result.connectable);
   }
-  device->SetLEAdvertisingData(result.rssi, data);
+  device->MutLe().SetAdvertisingData(result.rssi, data);
 
   cached_scan_results_.insert(device->identifier());
 

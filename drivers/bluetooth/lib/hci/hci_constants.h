@@ -1232,6 +1232,11 @@ constexpr uint8_t kAdvertisingHandleMax = 0xEF;
 // The maximum value that can be sert for the length of an Inquiry
 constexpr uint8_t kInquiryLengthMax = 0x30;
 
+// Bit 15, or "Clock_Offset_Valid_Flag" of the 16-bit clock offset field.
+// Some HCI commands that require a clock offset expect this bit to be set (e.g.
+// see HCI_Remote_Name_Request command, Vol 2, Part E, 7.1.19).
+constexpr uint16_t kClockOffsetValidFlagBit = 0x8000;
+
 // The page scan repetition mode, representing a maximum time between Page Scans.
 // (See Core Spec v5.0, Volume 2, Part B, Section 8.3.1)
 enum class PageScanRepetitionMode : uint8_t {

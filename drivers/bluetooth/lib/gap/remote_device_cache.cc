@@ -14,12 +14,15 @@
 #include "lib/fxl/random/uuid.h"
 #include "lib/zx/time.h"
 
-namespace {
-constexpr auto kCacheTimeout = zx::sec(60);
-}
-
 namespace btlib {
 namespace gap {
+namespace {
+
+// Interval that must expire before a temporary device is removed from the
+// cache.
+constexpr zx::duration kCacheTimeout = zx::sec(60);
+
+}  // namespace
 
 RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
                                            bool connectable) {
@@ -61,7 +64,7 @@ bool RemoteDeviceCache::AddBondedDevice(std::string identifier,
       std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
                             [this, device] { RemoveDevice(device); }));
   address_map_[device->address()] = device->identifier();
-  device->set_ltk(key);
+  device->MutLe().SetKeys(key);
   NotifyDeviceUpdated(*device);
   return true;
 }
@@ -72,7 +75,7 @@ bool RemoteDeviceCache::StoreLTK(std::string device_id, const sm::LTK& key) {
   if (!device)
     return false;
 
-  device->set_ltk(key);
+  device->MutLe().SetKeys(key);
   NotifyDeviceBonded(*device);
   return true;
 }
@@ -124,11 +127,8 @@ void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
   const auto cancel_res = device_record.removal_task()->Cancel();
   ZX_DEBUG_ASSERT(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND);
 
-  if (!device.temporary() ||
-      device.le_connection_state() ==
-          RemoteDevice::ConnectionState::kConnected ||
-      device.bredr_connection_state() ==
-          RemoteDevice::ConnectionState::kConnected) {
+  // TODO: this shouldn't need to check the connection state
+  if (!device.temporary() || device.connected()) {
     return;
   }
 

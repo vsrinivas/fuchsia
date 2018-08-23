@@ -429,7 +429,8 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
     return true;
   }
 
-  peer->SetLEConnectionState(RemoteDevice::ConnectionState::kInitializing);
+  peer->MutLe().SetConnectionState(
+      RemoteDevice::ConnectionState::kInitializing);
   pending_requests_[device_identifier] =
       PendingRequestData(peer->address(), std::move(callback));
 
@@ -469,7 +470,11 @@ LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
   // TODO(armansito): Use own address when storing the connection (NET-321).
   // Currently this will refuse the connection and disconnect the link if |peer|
   // is already connected to us by a different local address.
-  return InitializeConnection(peer->identifier(), std::move(link));
+  auto conn_ref = InitializeConnection(peer->identifier(), std::move(link));
+  if (conn_ref) {
+    peer->MutLe().SetConnectionState(RemoteDevice::ConnectionState::kConnected);
+  }
+  return conn_ref;
 }
 
 void LowEnergyConnectionManager::SetPairingDelegate(
@@ -649,7 +654,8 @@ void LowEnergyConnectionManager::CleanUpConnection(
   // Mark the peer device as no longer connected.
   RemoteDevice* peer = device_cache_->FindDeviceById(conn->id());
   ZX_DEBUG_ASSERT(peer);
-  peer->SetLEConnectionState(RemoteDevice::ConnectionState::kNotConnected);
+  peer->MutLe().SetConnectionState(
+      RemoteDevice::ConnectionState::kNotConnected);
 
   // Clean up GATT profile.
   gatt_->RemoveConnection(conn->id());
@@ -691,7 +697,7 @@ void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
   ZX_DEBUG_ASSERT(conn_iter != connections_.end());
 
   // For now, jump to the initialized state.
-  peer->SetLEConnectionState(RemoteDevice::ConnectionState::kConnected);
+  peer->MutLe().SetConnectionState(RemoteDevice::ConnectionState::kConnected);
 
   auto iter = pending_requests_.find(peer->identifier());
   if (iter != pending_requests_.end()) {
@@ -719,8 +725,8 @@ RemoteDevice* LowEnergyConnectionManager::UpdateRemoteDeviceWithLink(
         device_cache_->NewDevice(link.peer_address(), true /* connectable */);
   }
 
+  peer->MutLe().SetConnectionParameters(link.low_energy_parameters());
   peer->TryMakeNonTemporary();
-  peer->set_le_connection_params(link.low_energy_parameters());
 
   return peer;
 }
@@ -741,7 +747,7 @@ void LowEnergyConnectionManager::OnConnectResult(
          device_identifier.c_str());
   RemoteDevice* dev = device_cache_->FindDeviceById(device_identifier);
   ZX_ASSERT(dev);
-  dev->SetLEConnectionState(RemoteDevice::ConnectionState::kNotConnected);
+  dev->MutLe().SetConnectionState(RemoteDevice::ConnectionState::kNotConnected);
 
   // Notify the matching pending callbacks about the failure.
   auto iter = pending_requests_.find(device_identifier);
@@ -842,7 +848,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
     return;
   }
 
-  peer->set_le_connection_params(params);
+  peer->MutLe().SetConnectionParameters(params);
 
   if (test_conn_params_cb_)
     test_conn_params_cb_(*peer);
@@ -859,13 +865,11 @@ void LowEnergyConnectionManager::OnNewLEConnectionParams(
     return;
   }
 
-  peer->set_le_preferred_connection_params(params);
+  peer->MutLe().SetPreferredConnectionParameters(params);
 
   // Use the new parameters if we're not performing service discovery or
   // bonding.
-  if (peer->le_connection_state() ==
-          RemoteDevice::ConnectionState::kConnected ||
-      peer->le_connection_state() == RemoteDevice::ConnectionState::kBonded) {
+  if (peer->le()->connected()) {
     UpdateConnectionParams(handle, params);
   }
 }

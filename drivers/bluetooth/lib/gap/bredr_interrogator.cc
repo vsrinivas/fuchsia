@@ -119,7 +119,8 @@ void BrEdrInterrogator::MaybeComplete(const std::string& device_id) {
   if (!device->features().HasPage(0)) {
     return;
   } else if (device->features().HasBit(0, hci::LMPFeature::kExtendedFeatures)) {
-    for (uint8_t page = 1; page <= device->last_page_number(); page++) {
+    for (uint8_t page = 1; page <= device->features().last_page_number();
+         page++) {
       if (!device->features().HasPage(page)) {
         return;
       }
@@ -143,9 +144,10 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
     Complete(device_id, hci::Status(common::HostError::kFailed));
     return;
   }
+  ZX_DEBUG_ASSERT(device->bredr());
   hci::PageScanRepetitionMode mode = hci::PageScanRepetitionMode::kR0;
-  if (device->page_scan_repetition_mode()) {
-    mode = *device->page_scan_repetition_mode();
+  if (device->bredr()->page_scan_repetition_mode()) {
+    mode = *device->bredr()->page_scan_repetition_mode();
   }
   auto packet = hci::CommandPacket::New(
       hci::kRemoteNameRequest, sizeof(hci::RemoteNameRequestCommandParams));
@@ -154,8 +156,8 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
                     ->mutable_payload<hci::RemoteNameRequestCommandParams>();
   params->bd_addr = device->address().value();
   params->page_scan_repetition_mode = mode;
-  if (device->clock_offset()) {
-    params->clock_offset = *(device->clock_offset());
+  if (device->bredr()->clock_offset()) {
+    params->clock_offset = *(device->bredr()->clock_offset());
   }
 
   auto it = pending_.find(device_id);
@@ -360,7 +362,7 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
           device->set_last_page_number(params.max_page_number);
         }
 
-        if (params.page_number < device->last_page_number()) {
+        if (params.page_number < device->features().last_page_number()) {
           self->ReadRemoteExtendedFeatures(device_id, handle,
                                            params.page_number + 1);
         }
