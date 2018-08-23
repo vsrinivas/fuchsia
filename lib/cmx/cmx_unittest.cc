@@ -51,7 +51,6 @@ class CmxMetadataTest : public ::testing::Test {
     return cmx->ParseFromDeprecatedRuntimeFileAt(dirfd, *json_basename);
   }
 
-
  private:
   files::ScopedTempDir tmp_dir_;
 };
@@ -65,18 +64,30 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
       "services": []
   },
   "runner": "dart_runner",
+  "facets": {
+    "some_key": "some_value"
+  },
   "other": "stuff"
   })JSON";
   std::string file_unused;
   EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused)) << cmx.error_str();
   EXPECT_FALSE(cmx.HasError());
+
   const auto& sandbox = cmx.sandbox_meta();
   EXPECT_FALSE(sandbox.IsNull());
   EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
   EXPECT_TRUE(sandbox.HasFeature("feature_a"));
   EXPECT_FALSE(sandbox.HasFeature("feature_b"));
+
   EXPECT_FALSE(cmx.runtime_meta().IsNull());
   EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
+
+  const auto& facets = cmx.facets_meta();
+  const auto& some_value = facets.GetSection("some_key");
+  ASSERT_TRUE(some_value.IsString());
+  EXPECT_EQ("some_value", std::string(some_value.GetString()));
+  const auto& null_value = facets.GetSection("invalid");
+  EXPECT_TRUE(null_value.IsNull());
 }
 
 TEST_F(CmxMetadataTest, ParseEmpty) {
@@ -114,7 +125,7 @@ TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
 }
 
 #define NO_SERVICES \
-    "$0: Sandbox must include either 'services' or 'deprecated-all-services'."
+  "$0: Sandbox must include either 'services' or 'deprecated-all-services'."
 
 TEST_F(CmxMetadataTest, ParseWithErrors) {
   rapidjson::Value sandbox;

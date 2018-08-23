@@ -8,6 +8,7 @@
 #include <regex>
 #include <string>
 
+#include "garnet/lib/cmx/facets.h"
 #include "garnet/lib/cmx/program.h"
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/cmx/sandbox.h"
@@ -42,17 +43,20 @@ class CmxMetadata {
   const SandboxMetadata& sandbox_meta() { return sandbox_meta_; }
   const RuntimeMetadata& runtime_meta() { return runtime_meta_; }
   const ProgramMetadata& program_meta() { return program_meta_; }
+  const FacetsMetadata& facets_meta() { return facets_meta_; }
 
  private:
   static std::string GetCmxPathFromPath(const std::regex& regex,
                                         const std::string& path);
   void ParseSandboxMetadata(const rapidjson::Document& document);
   void ParseProgramMetadata(const rapidjson::Document& document);
+  void ParseFacetsMetadata(const rapidjson::Document& document);
 
   json::JSONParser json_parser_;
   SandboxMetadata sandbox_meta_;
   RuntimeMetadata runtime_meta_;
   ProgramMetadata program_meta_;
+  FacetsMetadata facets_meta_;
 };
 
 }  // namespace component

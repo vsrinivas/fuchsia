@@ -8,6 +8,8 @@ source_set("cmx") {
   sources = [
     "cmx.cc",
     "cmx.h",
+    "facets.cc",
+    "facets.h",
     "program.cc",
     "program.h",
     "runtime.cc",
@@ -19,8 +21,8 @@ source_set("cmx") {
   deps = [
     "//garnet/lib/json",
     "//garnet/public/lib/fxl",
-    "//zircon/public/lib/fit",
     "//third_party/rapidjson",
+    "//zircon/public/lib/fit",
   ]
 }
 
@@ -31,6 +33,7 @@ executable("tests") {
 
   sources = [
     "cmx_unittest.cc",
+    "facets_unittest.cc",
     "program_unittest.cc",
     "runtime_unittest.cc",
     "sandbox_unittest.cc",

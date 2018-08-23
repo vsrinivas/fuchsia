@@ -15,6 +15,7 @@ namespace component {
 
 constexpr char kSandbox[] = "sandbox";
 constexpr char kProgram[] = "program";
+constexpr char kFacets[] = "facets";
 constexpr char kCmxPath[] = "meta/";
 constexpr char kCmxExtension[] = ".cmx";
 static const std::regex* const kPackageNameFileScheme =
@@ -35,6 +36,7 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file) {
   ParseSandboxMetadata(document);
   runtime_meta_.ParseFromDocument(document, &json_parser_);
   ParseProgramMetadata(document);
+  ParseFacetsMetadata(document);
   return !HasError();
 }
 
@@ -99,6 +101,15 @@ void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document) {
     return;
   }
   program_meta_.Parse(program->value, &json_parser_);
+}
+
+void CmxMetadata::ParseFacetsMetadata(const rapidjson::Document& document) {
+  auto facets = document.FindMember(kFacets);
+  if (facets == document.MemberEnd()) {
+    // Valid syntax, but no value.
+    return;
+  }
+  facets_meta_.Parse(facets->value, &json_parser_);
 }
 
 }  // namespace component
