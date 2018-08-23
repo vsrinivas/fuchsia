@@ -101,6 +101,36 @@ runbench_exec "${OUT_DIR}/ledger.delete_entry_transactions.json" \
     --test-suite=fuchsia.ledger.delete_entry_transactions \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_entry_transactions.json"
 
+runbench_exec "${OUT_DIR}/ledger.disk_space_empty_ledger.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_ledger.tspec \
+    --test-suite=fuchsia.ledger.disk_space_empty_ledger \
+    --benchmark-results-file="${OUT_DIR}/ledger.disk_space_empty_ledger.json"
+
+runbench_exec "${OUT_DIR}/ledger.disk_space_entries.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_entries.tspec \
+    --test-suite=fuchsia.ledger.disk_space_entries \
+    --benchmark-results-file="${OUT_DIR}/ledger.disk_space_entries.json"
+
+runbench_exec "${OUT_DIR}/ledger.disk_space_small_keys.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_small_keys.tspec \
+    --test-suite=fuchsia.ledger.disk_space_small_keys \
+    --benchmark-results-file="${OUT_DIR}/ledger.disk_space_small_keys.json"
+
+runbench_exec "${OUT_DIR}/ledger.disk_space_updates.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_updates.tspec \
+    --test-suite=fuchsia.ledger.disk_space_updates \
+    --benchmark-results-file="${OUT_DIR}/ledger.disk_space_updates.json"
+
+runbench_exec "${OUT_DIR}/ledger.disk_space_one_commit_per_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_one_commit_per_entry.tspec \
+    --test-suite=fuchsia.ledger.disk_space_one_commit_per_entry \
+    --benchmark-results-file="${OUT_DIR}/ledger.disk_space_one_commit_per_entry.json"
+
 # TODO(MI4-1253): Fix and re-enable this benchmark.
 # runbench_exec "${OUT_DIR}/modular.story_runner.json" \
 #    trace record \
