@@ -14,9 +14,9 @@ import (
 	"netstack/link/eth"
 	"syscall/zx"
 
-	netfidl "fidl/fuchsia/net"
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
-	nsfidl "fidl/fuchsia/netstack"
+	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -43,13 +43,13 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	features := []stack.InterfaceFeature{}
-	if ifs.nic.Features&nsfidl.InterfaceFeatureWlan != 0 {
+	if ifs.nic.Features&netstack.InterfaceFeatureWlan != 0 {
 		features = append(features, stack.InterfaceFeatureWlan)
 	}
-	if ifs.nic.Features&nsfidl.InterfaceFeatureSynth != 0 {
+	if ifs.nic.Features&netstack.InterfaceFeatureSynth != 0 {
 		features = append(features, stack.InterfaceFeatureSynthetic)
 	}
-	if ifs.nic.Features&nsfidl.InterfaceFeatureLoopback != 0 {
+	if ifs.nic.Features&netstack.InterfaceFeatureLoopback != 0 {
 		features = append(features, stack.InterfaceFeatureLoopback)
 	}
 
@@ -62,7 +62,7 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		})
 	}
 
-	var mac netfidl.MacAddress
+	var mac net.MacAddress
 	var path string
 	if eth := ifs.eth; eth != nil {
 		mac.Addr = eth.MAC
@@ -148,12 +148,12 @@ func addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
 
 	var protocol tcpip.NetworkProtocolNumber
 	switch ifAddr.IpAddress.Which() {
-	case netfidl.IpAddressIpv4:
+	case net.IpAddressIpv4:
 		if len(ifs.nic.Addr) > 0 {
 			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
 		}
 		protocol = ipv4.ProtocolNumber
-	case netfidl.IpAddressIpv6:
+	case net.IpAddressIpv6:
 		// TODO(tkilbourn): support IPv6 addresses (NET-1181)
 		return &stack.Error{Type: stack.ErrorTypeNotSupported}
 	}
@@ -183,7 +183,7 @@ func getForwardingTable() []stack.ForwardingEntry {
 			dest.SetNextHop(fidlconv.ToNetIpAddress(route.Gateway))
 		}
 		entry := stack.ForwardingEntry{
-			Subnet: netfidl.Subnet{
+			Subnet: net.Subnet{
 				Addr:      fidlconv.ToNetIpAddress(route.Destination),
 				PrefixLen: fidlconv.GetPrefixLen(route.Mask),
 			},
@@ -215,7 +215,7 @@ func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress)
 	return addInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) DelInterfaceAddress(id uint64, addr netfidl.IpAddress) (*stack.Error, error) {
+func (ni *stackImpl) DelInterfaceAddress(id uint64, addr net.IpAddress) (*stack.Error, error) {
 	panic("not implemented")
 }
 
@@ -227,7 +227,7 @@ func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (*stack.Err
 	panic("not implemented")
 }
 
-func (ni *stackImpl) DelForwardingEntry(subset netfidl.Subnet) (*stack.Error, error) {
+func (ni *stackImpl) DelForwardingEntry(subset net.Subnet) (*stack.Error, error) {
 	panic("not implemented")
 }
 
