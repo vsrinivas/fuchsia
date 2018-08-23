@@ -17,7 +17,8 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   // In the future, some special alignment might happen here, or special
   // memory allocated...
   // Simple GetBufferSize.  Only valid for simple formats:
-  size_t buffer_size = format.format.height * format.format.bytes_per_row;
+  size_t buffer_size =
+      format.format.height * format.format.planes[0].bytes_per_row;
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
   buffer_collection->format.set_image(std::move(format.format));
@@ -66,7 +67,7 @@ zx_status_t run_camera() {
   for (int i = 0; i < (int)formats.size(); i++) {
     printf("format[%d] - width: %d, height: %d, stride: %lu\n", i,
            formats[i].format.width, formats[i].format.height,
-           formats[i].format.bytes_per_row);
+           formats[i].format.planes[0].bytes_per_row);
   }
 
   int frame_counter = 0;

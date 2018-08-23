@@ -44,12 +44,12 @@ fuchsia::camera::VideoFormat ToFidl(const UvcFormat& format_in) {
       .format.width = format_in.width,
       .format.height = format_in.height,
       .format.layers = 1,
-      .format.bytes_per_row = format_in.stride,
       // The frame descriptor frame interval is expressed in 100ns units.
       // e.g. a frame interval of 333333 is equivalent to 30fps (1e7 / 333333).
       .rate.frames_per_sec_numerator =
           NANOSECS_IN_SEC / 100,  // static_cast<uint32_t>(1e7),
       .rate.frames_per_sec_denominator = format_in.default_frame_interval};
+  ret.format.planes[0].bytes_per_row = format_in.stride;
   // Convert Pixel Format:
   switch (format_in.pixel_format) {
     case UvcPixelFormat::BGRA32:
@@ -76,8 +76,7 @@ fuchsia::camera::VideoFormat ToFidl(const UvcFormat& format_in) {
   return ret;
 }
 
-bool Compare(const fuchsia::camera::VideoFormat& vf,
-             const UvcFormat& uf) {
+bool Compare(const fuchsia::camera::VideoFormat& vf, const UvcFormat& uf) {
   fuchsia::camera::VideoFormat uvf = ToFidl(uf);
 
   bool has_equal_frame_rate =
@@ -86,11 +85,17 @@ bool Compare(const fuchsia::camera::VideoFormat& vf,
       (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
        uvf.rate.frames_per_sec_denominator);
 
+  for (uint32_t i = 0; i < countof(uvf.format.planes); i++) {
+    if (vf.format.planes[i].byte_offset != uvf.format.planes[i].byte_offset ||
+        vf.format.planes[i].bytes_per_row !=
+            uvf.format.planes[i].bytes_per_row) {
+      return false;
+    }
+  }
+
   if (vf.format.pixel_format == uvf.format.pixel_format &&
       vf.format.width == uvf.format.width &&
-      vf.format.height == uvf.format.height &&
-      vf.format.bytes_per_row == uvf.format.bytes_per_row &&
-      has_equal_frame_rate) {
+      vf.format.height == uvf.format.height && has_equal_frame_rate) {
     return true;
   }
   return false;

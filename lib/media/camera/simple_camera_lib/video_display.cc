@@ -61,7 +61,8 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   // In the future, some special alignment might happen here, or special
   // memory allocated...
   // Simple GetBufferSize.  Only valid for simple formats:
-  size_t buffer_size = format.format.height * format.format.bytes_per_row;
+  size_t buffer_size =
+      format.format.height * format.format.planes[0].bytes_per_row;
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
   buffer_collection->format.set_image(std::move(format.format));
@@ -98,7 +99,7 @@ zx_status_t VideoDisplay::SetupBuffers(
     const fuchsia::sysmem::BufferCollectionInfo& buffer_collection) {
   // auto image_info = fuchsia::images::ImageInfo::New();
   fuchsia::images::ImageInfo image_info;
-  image_info.stride = buffer_collection.format.image().bytes_per_row;
+  image_info.stride = buffer_collection.format.image().planes[0].bytes_per_row;
   image_info.tiling = fuchsia::images::Tiling::LINEAR;
   image_info.width = buffer_collection.format.image().width;
   image_info.height = buffer_collection.format.image().height;
@@ -267,8 +268,8 @@ zx_status_t VideoDisplay::ConnectToCamera(
     for (int i = 0; i < (int)formats.size(); i++) {
       FXL_LOG(INFO) << "format[" << i
                     << "] - width: " << formats[i].format.width
-                    << ", height: " << formats[i].format.height
-                    << ", stride: " << formats[i].format.bytes_per_row;
+                    << ", height: " << formats[i].format.height << ", stride: "
+                    << formats[i].format.planes[0].bytes_per_row;
     }
   }
   auto chosen_format = formats[0];

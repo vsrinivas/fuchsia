@@ -117,14 +117,17 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
 
   fuchsia::camera::VideoFormat format = {
-      .format = {.pixel_format = {.type =
-                                      fuchsia::sysmem::PixelFormatType::BGRA32},
-                 .width = 640,
-                 .height = 480,
-                 // .bits_per_pixel = 4,
-                 .bytes_per_row = 4 * 640},
+      .format =
+          {
+              .pixel_format = {.type =
+                                   fuchsia::sysmem::PixelFormatType::BGRA32},
+              .width = 640,
+              .height = 480,
+              // .bits_per_pixel = 4,
+          },
       .rate = {.frames_per_sec_numerator = 30,
                .frames_per_sec_denominator = 1}};
+  format.format.planes[0].bytes_per_row = 4 * 640;
 
   formats.push_back(format);
   callback(fbl::move(formats), 1, ZX_OK);
