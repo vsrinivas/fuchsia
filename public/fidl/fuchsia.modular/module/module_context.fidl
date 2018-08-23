@@ -109,8 +109,12 @@ interface ModuleContext {
   //
   // Modules should close |request| when the ongoing activity has stopped, and
   // this will also signal to the user shell that the ongoing activity has
-  // stopped. Modules must request a connection per ongoing activity; a single
-  // connection may not be re-used for multiple ongoing activities.
+  // stopped. For now, pausing media should count as a stopped ongoing activity,
+  // and when it is resumed it should be started as a new ongoing activity.
+  // Conversely, media playing in a continuous playlist (i.e playing the next
+  // video or song) should be treated as the same ongoing activity.
+  // Modules must request a connection per ongoing activity; a single connection
+  // may not be re-used for multiple ongoing activities.
   14: StartOngoingActivity(OngoingActivityType type,
                            request<OngoingActivity> @request);
 };

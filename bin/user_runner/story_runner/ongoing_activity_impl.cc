@@ -8,7 +8,6 @@
 
 namespace modular {
 
-using fuchsia::modular::OngoingActivity;
 using fuchsia::modular::OngoingActivityType;
 
 OngoingActivityImpl::OngoingActivityImpl(

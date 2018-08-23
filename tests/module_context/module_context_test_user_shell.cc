@@ -199,6 +199,7 @@ class TestApp
             if (module_data->size() == 1) {
               second_module_active_.Pass();
             }
+            VerifyStoryStillRunning();
           });
     });
 
@@ -209,7 +210,6 @@ class TestApp
           if (story_id == story_id_ && activities->empty()) {
             on_done_ongoing_activities_stopped.Pass();
           }
-          VerifyStoryStillRunning();
         });
   }
 

@@ -140,7 +140,8 @@ interface StoryProviderWatcher {
 //
 // Clients can expect this event whenever there is a newly started/stopped
 // ongoing activity, as well as when the client first registers for updates
-// via StoryProvider.WatchActivity().
+// via StoryProvider.WatchActivity(). |activities| can contain duplicate
+// OngoingActivityType's, ex. if a story is playing 2 videos at once.
 interface StoryActivityWatcher {
   1: OnStoryActivityChange(string story_id,
                            vector<OngoingActivityType> activities);

@@ -9,22 +9,20 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
-using fuchsia::modular::OngoingActivity;
-using fuchsia::modular::OngoingActivityType;
-
 namespace modular {
 
-class OngoingActivityImpl : public OngoingActivity {
+class OngoingActivityImpl : public fuchsia::modular::OngoingActivity {
  public:
-  OngoingActivityImpl(OngoingActivityType ongoing_activity_type,
-                      fit::closure on_destroy);
+  OngoingActivityImpl(
+      fuchsia::modular::OngoingActivityType ongoing_activity_type,
+      fit::closure on_destroy);
 
   ~OngoingActivityImpl() override;
 
-  OngoingActivityType GetType();
+  fuchsia::modular::OngoingActivityType GetType();
 
  private:
-  const OngoingActivityType ongoing_activity_type_;
+  const fuchsia::modular::OngoingActivityType ongoing_activity_type_;
   fit::closure on_destroy_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(OngoingActivityImpl);
