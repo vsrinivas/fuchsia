@@ -69,14 +69,14 @@ typedef struct zx_packet_exception {
 } zx_packet_exception_t;
 
 typedef struct zx_packet_guest_bell {
-    zx_vaddr_t addr;
+    zx_gpaddr_t addr;
     uint64_t reserved0;
     uint64_t reserved1;
     uint64_t reserved2;
 } zx_packet_guest_bell_t;
 
 typedef struct zx_packet_guest_mem {
-    zx_vaddr_t addr;
+    zx_gpaddr_t addr;
 #if __aarch64__
     uint8_t access_size;
     bool sign_extend;
@@ -118,7 +118,7 @@ typedef struct zx_packet_guest_vcpu {
         } interrupt;
         struct {
             uint64_t id;
-            zx_vaddr_t entry;
+            zx_gpaddr_t entry;
         } startup;
     };
     uint64_t reserved;
