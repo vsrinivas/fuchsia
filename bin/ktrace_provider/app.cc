@@ -77,13 +77,18 @@ void App::UpdateState() {
   uint32_t group_mask = 0;
   bool capture_log = false;
   if (trace_state() == TRACE_STARTED) {
+    size_t num_enabled_categories = 0;
     for (size_t i = 0; i < arraysize(kGroupCategories); i++) {
       auto& category = kGroupCategories[i];
       if (trace_is_category_enabled(category.name)) {
         group_mask |= category.group;
+        ++num_enabled_categories;
       }
     }
-    capture_log = trace_is_category_enabled(kLogCategory);
+    // Avoid capturing log traces in the default case by detecting whether all
+    // categories are enabled or not.
+    capture_log = trace_is_category_enabled(kLogCategory) &&
+                  num_enabled_categories != arraysize(kGroupCategories);
   }
 
   if (current_group_mask_ != group_mask) {
