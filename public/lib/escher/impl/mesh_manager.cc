@@ -32,7 +32,8 @@ MeshManager::~MeshManager() { FXL_DCHECK(builder_count_ == 0); }
 MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec,
                                            size_t max_vertex_count,
                                            size_t max_index_count) {
-  size_t stride = spec.GetStride();
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  size_t stride = spec.stride(0);
   return AdoptRef(new MeshManager::MeshBuilder(
       this, spec, max_vertex_count, max_index_count,
       uploader_->GetWriter(max_vertex_count * stride),
@@ -45,19 +46,21 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
                                       size_t max_index_count,
                                       GpuUploader::Writer vertex_writer,
                                       GpuUploader::Writer index_writer)
-    : escher::MeshBuilder(max_vertex_count, max_index_count, spec.GetStride(),
+    : escher::MeshBuilder(max_vertex_count, max_index_count, spec.stride(0),
                           vertex_writer.ptr(),
                           reinterpret_cast<uint32_t*>(index_writer.ptr())),
       manager_(manager),
       spec_(spec),
       is_built_(false),
       vertex_writer_(std::move(vertex_writer)),
-      index_writer_(std::move(index_writer)) {}
+      index_writer_(std::move(index_writer)) {
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
+}
 
 MeshManager::MeshBuilder::~MeshBuilder() {}
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
-  FXL_DCHECK(spec_.flags & MeshAttribute::kPosition2D);
+  FXL_DCHECK(spec_.attribute_offset(0, MeshAttribute::kPosition2D) == 0);
   uint8_t* vertex_ptr = vertex_staging_buffer_;
 
   vec2* pos = reinterpret_cast<vec2*>(vertex_ptr);
@@ -75,7 +78,7 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
 }
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
-  FXL_DCHECK(spec_.flags & MeshAttribute::kPosition3D);
+  FXL_DCHECK(spec_.attribute_offset(0, MeshAttribute::kPosition3D) == 0);
   uint8_t* vertex_ptr = vertex_staging_buffer_;
 
   vec3* pos = reinterpret_cast<vec3*>(vertex_ptr);
@@ -94,9 +97,10 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
   FXL_DCHECK(vertex_count_ > 0);
-  FXL_DCHECK(spec_.IsValid());
-  return spec_.flags & MeshAttribute::kPosition2D ? ComputeBoundingBox2D()
-                                                  : ComputeBoundingBox3D();
+  FXL_DCHECK(spec_.IsValidOneBufferMesh());
+  return spec_.has_attribute(0, MeshAttribute::kPosition2D)
+             ? ComputeBoundingBox2D()
+             : ComputeBoundingBox3D();
 }
 
 MeshPtr MeshManager::MeshBuilder::Build() {

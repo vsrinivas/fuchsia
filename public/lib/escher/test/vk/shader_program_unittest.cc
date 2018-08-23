@@ -158,17 +158,17 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   cb->BindTexture(1, 1, noise_texture);
 
   auto mesh = ring_mesh1();
+  auto ab = &mesh->attribute_buffer(0);
 
   cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(),
                   vk::IndexType::eUint32);
 
-  cb->BindVertices(0, mesh->vertex_buffer(), mesh->vertex_buffer_offset(),
-                   mesh->spec().GetStride());
+  cb->BindVertices(0, ab->buffer, ab->offset, ab->stride);
   cb->SetVertexAttributes(
       0, 0, vk::Format::eR32G32Sfloat,
-      mesh->spec().GetAttributeOffset(MeshAttribute::kPosition2D));
+      mesh->spec().attribute_offset(0, MeshAttribute::kPosition2D));
   cb->SetVertexAttributes(0, 2, vk::Format::eR32G32Sfloat,
-                          mesh->spec().GetAttributeOffset(MeshAttribute::kUV));
+                          mesh->spec().attribute_offset(0, MeshAttribute::kUV));
 
   // Set the command buffer to a known default state, and obtain a pipeline.
   cb->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
@@ -193,36 +193,36 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   // Changing to a different mesh with the same layout doesn't change the
   // obtained pipeline.
   mesh = ring_mesh2();
+  ab = &mesh->attribute_buffer(0);
 
   cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(),
                   vk::IndexType::eUint32);
 
-  cb->BindVertices(0, mesh->vertex_buffer(), mesh->vertex_buffer_offset(),
-                   mesh->spec().GetStride());
+  cb->BindVertices(0, ab->buffer, ab->offset, ab->stride);
 
   cb->SetVertexAttributes(
       0, 0, vk::Format::eR32G32Sfloat,
-      mesh->spec().GetAttributeOffset(MeshAttribute::kPosition2D));
+      mesh->spec().attribute_offset(0, MeshAttribute::kPosition2D));
   cb->SetVertexAttributes(0, 2, vk::Format::eR32G32Sfloat,
-                          mesh->spec().GetAttributeOffset(MeshAttribute::kUV));
+                          mesh->spec().attribute_offset(0, MeshAttribute::kUV));
 
   EXPECT_EQ(depth_readonly_pipeline, ObtainGraphicsPipeline(cb));
 
   // Changing to a mesh with a different layout results in a different pipeline.
   // pipeline.
   mesh = sphere_mesh();
+  ab = &mesh->attribute_buffer(0);
 
   cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(),
                   vk::IndexType::eUint32);
 
-  cb->BindVertices(0, mesh->vertex_buffer(), mesh->vertex_buffer_offset(),
-                   mesh->spec().GetStride());
+  cb->BindVertices(0, ab->buffer, ab->offset, ab->stride);
 
   cb->SetVertexAttributes(
       0, 0, vk::Format::eR32G32B32Sfloat,
-      mesh->spec().GetAttributeOffset(MeshAttribute::kPosition3D));
+      mesh->spec().attribute_offset(0, MeshAttribute::kPosition3D));
   cb->SetVertexAttributes(2, 0, vk::Format::eR32G32Sfloat,
-                          mesh->spec().GetAttributeOffset(MeshAttribute::kUV));
+                          mesh->spec().attribute_offset(0, MeshAttribute::kUV));
 
   EXPECT_NE(depth_readonly_pipeline, ObtainGraphicsPipeline(cb));
   EXPECT_NE(vk::Pipeline(), ObtainGraphicsPipeline(cb));

@@ -13,36 +13,35 @@
 namespace {
 using namespace escher;
 
-// This test should be updated to include all hashed types used by Escher.
 TEST(MeshSpec, SingleAttributeOffsetAndStride) {
   {
     MeshSpec spec{MeshAttribute::kPosition2D};
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kPosition2D));
-    EXPECT_EQ(sizeof(vec2), spec.GetStride());
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kPosition2D));
+    EXPECT_EQ(sizeof(vec2), spec.stride(0));
   }
 
   {
     MeshSpec spec{MeshAttribute::kPosition3D};
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kPosition3D));
-    EXPECT_EQ(sizeof(vec3), spec.GetStride());
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kPosition3D));
+    EXPECT_EQ(sizeof(vec3), spec.stride(0));
   }
 
   {
     MeshSpec spec{MeshAttribute::kPositionOffset};
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kPositionOffset));
-    EXPECT_EQ(sizeof(vec2), spec.GetStride());
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kPositionOffset));
+    EXPECT_EQ(sizeof(vec2), spec.stride(0));
   }
 
   {
     MeshSpec spec{MeshAttribute::kUV};
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kUV));
-    EXPECT_EQ(sizeof(vec2), spec.GetStride());
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kUV));
+    EXPECT_EQ(sizeof(vec2), spec.stride(0));
   }
 
   {
     MeshSpec spec{MeshAttribute::kPerimeterPos};
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kPerimeterPos));
-    EXPECT_EQ(sizeof(float), spec.GetStride());
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kPerimeterPos));
+    EXPECT_EQ(sizeof(float), spec.stride(0));
   }
 }
 
@@ -52,17 +51,17 @@ TEST(MeshSpec, MultiAttributeOffsetAndStride) {
     MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                   MeshAttribute::kUV | MeshAttribute::kPerimeterPos};
     size_t expected_offset = 0;
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kPosition2D));
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kPosition2D));
     expected_offset += sizeof(vec2);
     EXPECT_EQ(expected_offset,
-              spec.GetAttributeOffset(MeshAttribute::kPositionOffset));
+              spec.attribute_offset(0, MeshAttribute::kPositionOffset));
     expected_offset += sizeof(vec2);
-    EXPECT_EQ(expected_offset, spec.GetAttributeOffset(MeshAttribute::kUV));
+    EXPECT_EQ(expected_offset, spec.attribute_offset(0, MeshAttribute::kUV));
     expected_offset += sizeof(vec2);
     EXPECT_EQ(expected_offset,
-              spec.GetAttributeOffset(MeshAttribute::kPerimeterPos));
+              spec.attribute_offset(0, MeshAttribute::kPerimeterPos));
     expected_offset += sizeof(float);
-    EXPECT_EQ(expected_offset, spec.GetStride());
+    EXPECT_EQ(expected_offset, spec.stride(0));
   }
 
   // Leave out kUV.  This should affect the offset of kPerimeterPos.
@@ -70,15 +69,15 @@ TEST(MeshSpec, MultiAttributeOffsetAndStride) {
     MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                   MeshAttribute::kPerimeterPos};
     size_t expected_offset = 0;
-    EXPECT_EQ(0U, spec.GetAttributeOffset(MeshAttribute::kPosition2D));
+    EXPECT_EQ(0U, spec.attribute_offset(0, MeshAttribute::kPosition2D));
     expected_offset += sizeof(vec2);
     EXPECT_EQ(expected_offset,
-              spec.GetAttributeOffset(MeshAttribute::kPositionOffset));
+              spec.attribute_offset(0, MeshAttribute::kPositionOffset));
     expected_offset += sizeof(vec2);
     EXPECT_EQ(expected_offset,
-              spec.GetAttributeOffset(MeshAttribute::kPerimeterPos));
+              spec.attribute_offset(0, MeshAttribute::kPerimeterPos));
     expected_offset += sizeof(float);
-    EXPECT_EQ(expected_offset, spec.GetStride());
+    EXPECT_EQ(expected_offset, spec.stride(0));
   }
 }
 
@@ -86,33 +85,33 @@ TEST(MeshSpec, NumAttributes) {
   EXPECT_EQ(
       4U, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                    MeshAttribute::kUV | MeshAttribute::kPerimeterPos}
-              .GetNumAttributes());
+              .attribute_count(0));
 
   EXPECT_EQ(
       4U, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kPositionOffset |
                    MeshAttribute::kUV | MeshAttribute::kPerimeterPos}
-              .GetNumAttributes());
+              .attribute_count(0));
 
   EXPECT_EQ(2U, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}
-                    .GetNumAttributes());
+                    .attribute_count(0));
 
   EXPECT_EQ(2U, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kUV}
-                    .GetNumAttributes());
+                    .attribute_count(0));
 
-  EXPECT_EQ(1U, MeshSpec{MeshAttribute::kPosition2D}.GetNumAttributes());
+  EXPECT_EQ(1U, MeshSpec{MeshAttribute::kPosition2D}.attribute_count(0));
 
-  EXPECT_EQ(1U, MeshSpec{MeshAttribute::kPosition3D}.GetNumAttributes());
+  EXPECT_EQ(1U, MeshSpec{MeshAttribute::kPosition3D}.attribute_count(0));
 
-  EXPECT_EQ(0U, MeshSpec{MeshAttributes()}.GetNumAttributes());
+  EXPECT_EQ(0U, MeshSpec{MeshAttributes()}.attribute_count(0));
 }
 
 TEST(MeshSpec, Validity) {
   // Meshs must have either 2D positions or 3D positions, not both.
-  EXPECT_TRUE(MeshSpec{MeshAttribute::kPosition2D}.IsValid());
-  EXPECT_TRUE(MeshSpec{MeshAttribute::kPosition3D}.IsValid());
-  EXPECT_FALSE(MeshSpec{MeshAttributes()}.IsValid());
+  EXPECT_TRUE(MeshSpec{MeshAttribute::kPosition2D}.IsValidOneBufferMesh());
+  EXPECT_TRUE(MeshSpec{MeshAttribute::kPosition3D}.IsValidOneBufferMesh());
+  EXPECT_FALSE(MeshSpec{MeshAttributes()}.IsValidOneBufferMesh());
   EXPECT_FALSE(MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kPosition3D}
-                   .IsValid());
+                   .IsValidOneBufferMesh());
 }
 
 }  // namespace

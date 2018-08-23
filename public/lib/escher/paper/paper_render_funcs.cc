@@ -12,17 +12,11 @@
 
 namespace {
 
-constexpr uint32_t kMeshVertexBufferBindingIndex = 0;
-constexpr uint32_t kMeshAttributeBindingIndices_Position2D[] = {
-    kMeshVertexBufferBindingIndex, 0};
-constexpr uint32_t kMeshAttributeBindingIndices_Position3D[] = {
-    kMeshVertexBufferBindingIndex, 0};
-constexpr uint32_t kMeshAttributeBindingIndices_PositionOffset[] = {
-    kMeshVertexBufferBindingIndex, 1};
-constexpr uint32_t kMeshAttributeBindingIndices_UV[] = {
-    kMeshVertexBufferBindingIndex, 2};
-constexpr uint32_t kMeshAttributeBindingIndices_PerimeterPos[] = {
-    kMeshVertexBufferBindingIndex, 3};
+constexpr uint32_t kMeshAttributeBindingLocation_Position2D = 0;
+constexpr uint32_t kMeshAttributeBindingLocation_Position3D = 0;
+constexpr uint32_t kMeshAttributeBindingLocation_PositionOffset = 1;
+constexpr uint32_t kMeshAttributeBindingLocation_UV = 2;
+constexpr uint32_t kMeshAttributeBindingLocation_PerimeterPos = 3;
 
 constexpr uint32_t kMeshUniformBindingIndices_ViewProjectionMatrix[] = {0, 0};
 
@@ -70,12 +64,61 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
   }
 }
 
+// Helper for PaperRenderFuncs::NewMeshObjectData().
+static PaperRenderFuncs::VertexAttributeBinding* FillVertexAttributeBindings(
+    PaperRenderFuncs::VertexAttributeBinding* binding, uint32_t binding_index,
+    MeshAttributes attributes) {
+  using VertexAttributeBinding = PaperRenderFuncs::VertexAttributeBinding;
+
+  if (attributes & MeshAttribute::kPosition2D) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = kMeshAttributeBindingLocation_Position2D,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset =
+            GetMeshAttributeOffset(attributes, MeshAttribute::kPosition2D)};
+  }
+  if (attributes & MeshAttribute::kPosition3D) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = kMeshAttributeBindingLocation_Position3D,
+        .format = vk::Format::eR32G32B32Sfloat,
+        .offset =
+            GetMeshAttributeOffset(attributes, MeshAttribute::kPosition3D)};
+  }
+  if (attributes & MeshAttribute::kPositionOffset) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = kMeshAttributeBindingLocation_PositionOffset,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset =
+            GetMeshAttributeOffset(attributes, MeshAttribute::kPositionOffset)};
+  }
+  if (attributes & MeshAttribute::kUV) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = kMeshAttributeBindingLocation_UV,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kUV)};
+  }
+  if (attributes & MeshAttribute::kPerimeterPos) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = kMeshAttributeBindingLocation_PerimeterPos,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset =
+            GetMeshAttributeOffset(attributes, MeshAttribute::kPerimeterPos)};
+  }
+  return binding;
+}
+
 PaperRenderFuncs::MeshObjectData* PaperRenderFuncs::NewMeshObjectData(
     const FramePtr& frame, const MeshPtr& mesh, const TexturePtr& texture,
     const ShaderProgramPtr& program,
     const UniformAllocation& view_projection_uniform) {
   FXL_DCHECK(mesh);
   FXL_DCHECK(texture);
+  auto& mesh_spec = mesh->spec();
 
   // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
   frame->command_buffer()->KeepAlive(mesh.get());
@@ -92,62 +135,46 @@ PaperRenderFuncs::MeshObjectData* PaperRenderFuncs::NewMeshObjectData(
   obj->index_buffer_offset = mesh->index_buffer_offset();
   obj->num_indices = mesh->num_indices();
 
-  obj->vertex_binding_count = 1;
-  obj->vertex_bindings = frame->Allocate<VertexBinding>();
-  auto& vertex_buffer = mesh->vertex_buffer();
-  // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
-  frame->command_buffer()->KeepAlive(vertex_buffer);
-  obj->vertex_bindings[0] =
-      VertexBinding{.binding_index = kMeshVertexBufferBindingIndex,
-                    .buffer = vertex_buffer.get(),
-                    .offset = mesh->vertex_buffer_offset(),
-                    .stride = mesh->spec().GetStride()};
+  // Set up vertex buffer bindings.
+  obj->vertex_binding_count = mesh_spec.vertex_buffer_count();
+  obj->vertex_bindings =
+      frame->AllocateMany<VertexBinding>(obj->vertex_binding_count);
 
-  // Set up vertex attributes based on MeshSpec.
-  auto& mesh_spec = mesh->spec();
-  size_t num_attributes = mesh_spec.GetNumAttributes();
-  obj->vertex_attribute_count = num_attributes;
+  {
+    uint32_t binding_count = 0;
+    for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+      if (auto& attribute_buffer = mesh->attribute_buffer(i)) {
+        // TODO(ES-103): avoid reaching in to impl::CommandBuffer for
+        // keep-alive.
+        frame->command_buffer()->KeepAlive(attribute_buffer.buffer);
+
+        obj->vertex_bindings[binding_count++] =
+            VertexBinding{.binding_index = i,
+                          .buffer = attribute_buffer.buffer.get(),
+                          .offset = attribute_buffer.offset,
+                          .stride = attribute_buffer.stride};
+      }
+    }
+    FXL_DCHECK(binding_count == obj->vertex_binding_count);
+  }
+
+  // Set up vertex attribute bindings.
+  obj->vertex_attribute_count = mesh_spec.total_attribute_count();
   obj->vertex_attributes =
-      frame->AllocateMany<VertexAttributeBinding>(num_attributes);
-  size_t attribute_index = 0;
-  if (mesh_spec.flags & MeshAttribute::kPosition2D) {
-    obj->vertex_attributes[attribute_index++] = VertexAttributeBinding{
-        .binding_index = kMeshAttributeBindingIndices_Position2D[0],
-        .attribute_index = kMeshAttributeBindingIndices_Position2D[1],
-        .format = vk::Format::eR32G32Sfloat,
-        .offset = mesh->spec().GetAttributeOffset(MeshAttribute::kPosition2D)};
+      frame->AllocateMany<VertexAttributeBinding>(obj->vertex_attribute_count);
+  {
+    VertexAttributeBinding* current = obj->vertex_attributes;
+    for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+      if (mesh_spec.attribute_count(i) > 0) {
+        current =
+            FillVertexAttributeBindings(current, i, mesh_spec.attributes[i]);
+      }
+    }
+
+    // Sanity check that we filled in the correct number of attributes.
+    FXL_DCHECK(current ==
+               (obj->vertex_attributes + obj->vertex_attribute_count));
   }
-  if (mesh_spec.flags & MeshAttribute::kPosition3D) {
-    obj->vertex_attributes[attribute_index++] = VertexAttributeBinding{
-        .binding_index = kMeshAttributeBindingIndices_Position3D[0],
-        .attribute_index = kMeshAttributeBindingIndices_Position3D[1],
-        .format = vk::Format::eR32G32B32Sfloat,
-        .offset = mesh->spec().GetAttributeOffset(MeshAttribute::kPosition3D)};
-  }
-  if (mesh_spec.flags & MeshAttribute::kPositionOffset) {
-    obj->vertex_attributes[attribute_index++] = VertexAttributeBinding{
-        .binding_index = kMeshAttributeBindingIndices_PositionOffset[0],
-        .attribute_index = kMeshAttributeBindingIndices_PositionOffset[1],
-        .format = vk::Format::eR32G32Sfloat,
-        .offset =
-            mesh->spec().GetAttributeOffset(MeshAttribute::kPositionOffset)};
-  }
-  if (mesh_spec.flags & MeshAttribute::kUV) {
-    obj->vertex_attributes[attribute_index++] = VertexAttributeBinding{
-        .binding_index = kMeshAttributeBindingIndices_UV[0],
-        .attribute_index = kMeshAttributeBindingIndices_UV[1],
-        .format = vk::Format::eR32G32Sfloat,
-        .offset = mesh->spec().GetAttributeOffset(MeshAttribute::kUV)};
-  }
-  if (mesh_spec.flags & MeshAttribute::kPerimeterPos) {
-    obj->vertex_attributes[attribute_index++] = VertexAttributeBinding{
-        .binding_index = kMeshAttributeBindingIndices_PerimeterPos[0],
-        .attribute_index = kMeshAttributeBindingIndices_PerimeterPos[1],
-        .format = vk::Format::eR32G32Sfloat,
-        .offset =
-            mesh->spec().GetAttributeOffset(MeshAttribute::kPerimeterPos)};
-  }
-  FXL_DCHECK(attribute_index == num_attributes);  // sanity check
 
   obj->uniform_binding_count = 1;
   obj->uniform_bindings = frame->Allocate<UniformBinding>();

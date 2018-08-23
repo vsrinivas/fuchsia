@@ -45,6 +45,10 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
                                  const MeshSpec& mesh_spec, void* vertices_out,
                                  uint32_t max_bytes);
 
+void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
+                                 const MeshSpec& mesh_spec, void* vertices_out,
+                                 uint32_t max_bytes);
+
 }  // namespace escher
 
 #endif  // LIB_ESCHER_SHAPE_ROUNDED_RECT_H_

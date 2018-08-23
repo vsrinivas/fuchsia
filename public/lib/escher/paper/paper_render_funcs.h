@@ -22,16 +22,18 @@ class PaperRenderFuncs {
                          uint32_t instance_count);
 
   // Struct referenced by |MeshObjectData|, see below.
+  // TODO(ES-133):  Why not store a vk::Buffer instead of a Buffer*?
   struct VertexBinding {
     uint32_t binding_index;
     Buffer* buffer;
     uint64_t offset;
-    uint64_t stride;
+    uint32_t stride;
   };
 
   // Struct referenced by |MeshObjectData| and |MeshInstanceData|, see below.
   // Typically populated from a |UniformAllocation|, such as obtained from a
   // |UniformBlockAllocator|.
+  // TODO(ES-133):  Why not store a vk::Buffer instead of a Buffer*?
   struct UniformBinding {
     uint32_t descriptor_set_index;
     uint32_t binding_index;
@@ -45,7 +47,7 @@ class PaperRenderFuncs {
     uint32_t binding_index;
     uint32_t attribute_index;
     vk::Format format;
-    uint64_t offset;
+    uint32_t offset;
   };
 
   // Struct intended to be used as the |object_data| of a |RenderQueueItem|.

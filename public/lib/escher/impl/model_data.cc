@@ -102,12 +102,12 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
   if (ptr) {
     return *ptr;
   }
-  FXL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
 
   std::vector<vk::VertexInputAttributeDescription> attributes;
 
   vk::DeviceSize stride = 0;
-  if (spec.flags & MeshAttribute::kPosition2D) {
+  if (spec.has_attribute(0, MeshAttribute::kPosition2D)) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kPositionAttributeLocation;
     attribute.binding = 0;
@@ -117,7 +117,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
     stride += sizeof(vec2);
     attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttribute::kPosition3D) {
+  if (spec.has_attribute(0, MeshAttribute::kPosition3D)) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kPositionAttributeLocation;
     attribute.binding = 0;
@@ -127,7 +127,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
     stride += sizeof(vec3);
     attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttribute::kPositionOffset) {
+  if (spec.has_attribute(0, MeshAttribute::kPositionOffset)) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kPositionOffsetAttributeLocation;
     attribute.binding = 0;
@@ -137,7 +137,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
     stride += sizeof(vec2);
     attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttribute::kUV) {
+  if (spec.has_attribute(0, MeshAttribute::kUV)) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kUVAttributeLocation;
     attribute.binding = 0;
@@ -147,7 +147,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
     stride += sizeof(vec2);
     attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttribute::kPerimeterPos) {
+  if (spec.has_attribute(0, MeshAttribute::kPerimeterPos)) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kPerimeterPosAttributeLocation;
     attribute.binding = 0;

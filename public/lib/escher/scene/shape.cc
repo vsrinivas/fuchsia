@@ -23,7 +23,10 @@ Shape::Shape(MeshPtr mesh, ShapeModifiers modifiers)
   if (modifiers_ & ShapeModifier::kWobble) {
     const MeshAttributes required =
         MeshAttribute::kPositionOffset | MeshAttribute::kPerimeterPos;
-    if (required != (mesh_->spec().flags & required)) {
+    if (required != (mesh_->spec().attributes[0] & required)) {
+      // NOTE: We check in attributes[0] because that's where ModelRenderer
+      // expects them to be; this isn't currently suppored by PaperRenderQueue,
+      // and probably never will be.
       FXL_LOG(ERROR) << "ShapeModifier::kWobble requires both kPositionOffset "
                         "and kPerimeterPos";
       FXL_CHECK(false);

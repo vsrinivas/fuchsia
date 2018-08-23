@@ -207,7 +207,8 @@ void DumpVisitor::Visit(MeshShape* r) {
     WriteProperty("num_indices") << mesh->num_indices();
     WriteProperty("num_vertices") << mesh->num_vertices();
     WriteProperty("index_buffer_offset") << mesh->index_buffer_offset();
-    WriteProperty("vertex_buffer_offset") << mesh->vertex_buffer_offset();
+    WriteProperty("vertex_buffer_offset") << mesh->attribute_buffer(0).offset;
+    WriteProperty("vertex_buffer_stride") << mesh->attribute_buffer(0).stride;
     BeginSection("index_buffer");
     r->index_buffer()->Accept(this);
     EndSection();

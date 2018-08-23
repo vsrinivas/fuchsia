@@ -36,6 +36,14 @@ struct PosUvVertex {
   vec2 uv;
 };
 
+struct PosVertex {
+  vec2 pos;
+};
+
+struct UvVertex {
+  vec2 uv;
+};
+
 }  // anonymous namespace
 
 RoundedRectSpec::RoundedRectSpec(float width, float height,
@@ -146,28 +154,13 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
   FXL_DCHECK(out == kIndexCount);
 }
 
-void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
-                                 const MeshSpec& mesh_spec, void* vertices_out,
-                                 uint32_t max_bytes) {
+namespace {
+
+// Helper for GenerateRoundedRectVertices().
+template <typename VertT>
+void GenerateRoundedRectVertexUVs(const RoundedRectSpec& spec, VertT* verts) {
   const float width = spec.width;
   const float height = spec.height;
-  FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
-  FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
-  FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
-  FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
-  FXL_DCHECK(max_bytes == kVertexCount * mesh_spec.GetStride());
-  FXL_DCHECK(mesh_spec.flags ==
-             (MeshAttribute::kPosition2D | MeshAttribute::kUV));
-  FXL_DCHECK(0U == mesh_spec.GetAttributeOffset(MeshAttribute::kPosition2D));
-  FXL_DCHECK(sizeof(vec2) == mesh_spec.GetAttributeOffset(MeshAttribute::kUV));
-  FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.GetStride());
-
-  // NOTE: for clarity, we first generate the UV-coordinates for each vertex,
-  // then make a second pass where we use these UV-coords to generate the vertex
-  // positions.
-
-  // Output vertices are writen here.
-  PosUvVertex* const verts = static_cast<PosUvVertex*>(vertices_out);
 
   // First compute UV coordinates of the four "corner centers".
   verts[1].uv =
@@ -235,14 +228,65 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
     verts[out++].uv = verts[4].uv + vec2(cos(angle), sin(angle)) * scale;
     angle += kAngleStep;
   }
+}
 
-  // The hard part is finished!  Make one final pass to generate the vertex
-  // positions from the UV-coordinates.
-  FXL_DCHECK(out == kVertexCount);
-  const vec2 extent(width, height);
+// Helper for GenerateRoundedRectVertices().
+template <typename UvVertT, typename PosVertT>
+void GenerateRoundedRectVertexPositionsFromUVs(const RoundedRectSpec& spec,
+                                               UvVertT* uv_verts,
+                                               PosVertT* pos_verts) {
+  const vec2 extent(spec.width, spec.height);
   const vec2 offset = -0.5f * extent;
   for (size_t i = 0; i < kVertexCount; ++i) {
-    verts[i].pos = verts[i].uv * extent + offset;
+    pos_verts[i].pos = uv_verts[i].uv * extent + offset;
+  }
+}
+
+}  // namespace
+
+void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
+                                 const MeshSpec& mesh_spec, void* vertices_out,
+                                 uint32_t max_bytes) {
+  const float width = spec.width;
+  const float height = spec.height;
+  FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
+  FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
+  FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
+  FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
+
+  // We first generate the UV-coordinates for each vertex, then make a second
+  // pass where we use these UV-coords to generate the vertex positions.
+
+  size_t vertex_buffer_count = mesh_spec.vertex_buffer_count();
+  FXL_DCHECK(vertex_buffer_count <= 2);
+
+  if (vertex_buffer_count == 1) {
+    FXL_DCHECK(max_bytes == kVertexCount * mesh_spec.stride(0));
+    FXL_DCHECK(mesh_spec.has_attributes(
+        0, (MeshAttribute::kPosition2D | MeshAttribute::kUV)));
+    FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
+    FXL_DCHECK(sizeof(vec2) ==
+               mesh_spec.attribute_offset(0, MeshAttribute::kUV));
+    FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.stride(0));
+
+    // Output vertices are writen here.
+    PosUvVertex* const verts = static_cast<PosUvVertex*>(vertices_out);
+
+    GenerateRoundedRectVertexUVs(spec, verts);
+    GenerateRoundedRectVertexPositionsFromUVs(spec, verts, verts);
+  } else {
+    FXL_DCHECK(max_bytes ==
+               kVertexCount * (mesh_spec.stride(0) + mesh_spec.stride(1)));
+    FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
+    FXL_DCHECK(0U == mesh_spec.attribute_offset(1, MeshAttribute::kUV));
+    FXL_DCHECK(sizeof(PosVertex) == mesh_spec.stride(0));
+    FXL_DCHECK(sizeof(UvVertex) == mesh_spec.stride(1));
+
+    PosVertex* const positions = static_cast<PosVertex*>(vertices_out);
+    UvVertex* const uvs = reinterpret_cast<UvVertex*>(positions + kVertexCount);
+
+    GenerateRoundedRectVertexUVs(spec, uvs);
+    GenerateRoundedRectVertexPositionsFromUVs(spec, uvs, positions);
   }
 }
 

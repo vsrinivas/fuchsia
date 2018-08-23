@@ -201,21 +201,21 @@ std::string ModelRenderPass::GetVertexShaderSourceCode(
     const ModelPipelineSpec& spec) {
   std::ostringstream src;
   src << kVertexShaderPreamble;
-  if (spec.mesh_spec.flags & MeshAttribute::kPosition2D ||
-      spec.mesh_spec.flags & MeshAttribute::kPosition3D) {
+  if (spec.mesh_spec.has_attribute(0, MeshAttribute::kPosition2D) ||
+      spec.mesh_spec.has_attribute(0, MeshAttribute::kPosition3D)) {
     // NOTE: this shader works with both 2D and 3D meshes.  In the former case,
     // Vulkan fills the Z-coordinate of |inPosition| with the default value: 0.
     // See section 20.2 of the Vulkan spec (as of Vulkan 1.0.57).
     src << "layout(location = 0) in vec3 inPosition;\n";
   }
 
-  if (spec.mesh_spec.flags & MeshAttribute::kPositionOffset) {
+  if (spec.mesh_spec.has_attribute(0, MeshAttribute::kPositionOffset)) {
     src << "layout(location = 1) in vec3 inPositionOffset;\n";
   }
-  if (spec.mesh_spec.flags & MeshAttribute::kUV) {
+  if (spec.mesh_spec.has_attribute(0, MeshAttribute::kUV)) {
     src << "layout(location = 2) in vec2 inUV;\n";
   }
-  if (spec.mesh_spec.flags & MeshAttribute::kPerimeterPos) {
+  if (spec.mesh_spec.has_attribute(0, MeshAttribute::kPerimeterPos)) {
     src << "layout(location = 3) in float inPerimeter;\n";
   }
 

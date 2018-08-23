@@ -32,30 +32,30 @@ VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex,
                                                    const MeshSpec& spec,
                                                    MeshBuilderPtr builder) {
   FXL_CHECK(builder->vertex_stride() <= vertex_size);
-  FXL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
 
   VertexAttributePointers attribute_pointers{};
 
   // Compute the offset of each vertex attribute.
-  if (spec.flags & MeshAttribute::kPosition2D) {
+  if (spec.has_attribute(0, MeshAttribute::kPosition2D)) {
     attribute_pointers.pos2 = reinterpret_cast<vec2*>(
-        vertex + spec.GetAttributeOffset(MeshAttribute::kPosition2D));
+        vertex + spec.attribute_offset(0, MeshAttribute::kPosition2D));
   }
-  if (spec.flags & MeshAttribute::kPosition3D) {
+  if (spec.has_attribute(0, MeshAttribute::kPosition3D)) {
     attribute_pointers.pos3 = reinterpret_cast<vec3*>(
-        vertex + spec.GetAttributeOffset(MeshAttribute::kPosition3D));
+        vertex + spec.attribute_offset(0, MeshAttribute::kPosition3D));
   }
-  if (spec.flags & MeshAttribute::kUV) {
+  if (spec.has_attribute(0, MeshAttribute::kUV)) {
     attribute_pointers.uv = reinterpret_cast<vec2*>(
-        vertex + spec.GetAttributeOffset(MeshAttribute::kUV));
+        vertex + spec.attribute_offset(0, MeshAttribute::kUV));
   }
-  if (spec.flags & MeshAttribute::kPositionOffset) {
+  if (spec.has_attribute(0, MeshAttribute::kPositionOffset)) {
     attribute_pointers.pos_offset = reinterpret_cast<vec2*>(
-        vertex + spec.GetAttributeOffset(MeshAttribute::kPositionOffset));
+        vertex + spec.attribute_offset(0, MeshAttribute::kPositionOffset));
   }
-  if (spec.flags & MeshAttribute::kPerimeterPos) {
+  if (spec.has_attribute(0, MeshAttribute::kPerimeterPos)) {
     attribute_pointers.perim = reinterpret_cast<float*>(
-        vertex + spec.GetAttributeOffset(MeshAttribute::kPerimeterPos));
+        vertex + spec.attribute_offset(0, MeshAttribute::kPerimeterPos));
   }
   return attribute_pointers;
 }
@@ -65,7 +65,7 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
                       float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
-  FXL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
   size_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
@@ -139,7 +139,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
                     float inner_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
-  FXL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
   size_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
@@ -327,7 +327,7 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
 MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
                       int subdivisions, vec3 center, float radius) {
   FXL_DCHECK(subdivisions >= 0);
-  FXL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec.IsValidOneBufferMesh());
   size_t vertex_count = 9;
   size_t triangle_count = 8;
   for (int i = 0; i < subdivisions; ++i) {
@@ -378,7 +378,8 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
   // TODO(ES-32): this is a hack to ease implementation.  We don't currently
   // need any tessellated spheres; this is just a way to verify that 3D meshes
   // are working properly.
-  FXL_DCHECK(spec.flags == (MeshAttribute::kPosition3D | MeshAttribute::kUV))
+  FXL_DCHECK(spec.attributes[0] ==
+             (MeshAttribute::kPosition3D | MeshAttribute::kUV))
       << "Tessellated sphere must have UV-coordinates.";
   size_t position_offset = reinterpret_cast<uint8_t*>(vertex_p.pos3) - vertex;
   size_t uv_offset = reinterpret_cast<uint8_t*>(vertex_p.uv) - vertex;

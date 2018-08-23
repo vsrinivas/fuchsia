@@ -124,9 +124,11 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
   AddWaitSemaphore(mesh->TakeWaitSemaphore(),
                    vk::PipelineStageFlagBits::eVertexInput);
 
-  vk::Buffer vbo = mesh->vk_vertex_buffer();
-  vk::DeviceSize vbo_offset = mesh->vertex_buffer_offset();
-  uint32_t vbo_binding = MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
+  const uint32_t vbo_binding =
+      MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
+  auto& attribute_buffer = mesh->attribute_buffer(vbo_binding);
+  vk::Buffer vbo = attribute_buffer.vk_buffer;
+  vk::DeviceSize vbo_offset = attribute_buffer.offset;
   command_buffer_.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
   command_buffer_.bindIndexBuffer(mesh->vk_index_buffer(),
                                   mesh->index_buffer_offset(),

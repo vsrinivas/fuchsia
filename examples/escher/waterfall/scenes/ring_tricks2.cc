@@ -54,10 +54,18 @@ void RingTricks2::Init(escher::Stage* stage) {
 
   // Create rounded rectangles.
   {
+    // Work in progress.  The "#if 1" variant works with both the Waterfall and
+    // Waterfall2 demos, but the "#if 0" variant works only with the Waterfall2
+    // demo.  This is because the way ModelRenderer VkPipelines are built is
+    // extremely fiddly and manual, and not worth fixing since they'll soon be
+    // deleted.
+#if 1
     MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-    rounded_rect1_ =
-        factory_.NewRoundedRect(RoundedRectSpec(200, 400, 90, 20, 20, 50),
-                                mesh_spec, &gpu_uploader);
+#else
+    MeshSpec mesh_spec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
+#endif
+    rounded_rect1_ = factory_.NewRoundedRect(
+        RoundedRectSpec(200, 400, 90, 20, 20, 50), mesh_spec, &gpu_uploader);
   }
 
   // Create sphere.

@@ -43,10 +43,10 @@ bool MeshShape::BindBuffers(
   escher::MeshSpec spec;
   switch (vertex_format.position_type) {
     case ::fuchsia::ui::gfx::ValueType::kVector2:
-      spec.flags |= escher::MeshAttribute::kPosition2D;
+      spec.attributes[0] |= escher::MeshAttribute::kPosition2D;
       break;
     case ::fuchsia::ui::gfx::ValueType::kVector3:
-      spec.flags |= escher::MeshAttribute::kPosition3D;
+      spec.attributes[0] |= escher::MeshAttribute::kPosition3D;
       break;
     default:
       session()->error_reporter()->ERROR()
@@ -63,7 +63,7 @@ bool MeshShape::BindBuffers(
   }
   switch (vertex_format.tex_coord_type) {
     case ::fuchsia::ui::gfx::ValueType::kVector2:
-      spec.flags |= escher::MeshAttribute::kUV;
+      spec.attributes[0] |= escher::MeshAttribute::kUV;
       break;
     case ::fuchsia::ui::gfx::ValueType::kNone:
       break;

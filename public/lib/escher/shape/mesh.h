@@ -23,33 +23,67 @@ class Mesh : public WaitableResource {
 
   Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
        BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
-       BufferPtr vertex_buffer, BufferPtr index_buffer,
-       vk::DeviceSize vertex_buffer_offset = 0,
+       BufferPtr primary_attribute_buffer, BufferPtr index_buffer,
+       vk::DeviceSize primary_attribute_buffer_offset = 0,
+       vk::DeviceSize index_buffer_offset = 0);
+
+  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
+       BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
+       BufferPtr primary_attribute_buffer, BufferPtr secondary_attribute_buffer,
+       BufferPtr index_buffer,
+       vk::DeviceSize primary_attribute_buffer_offset = 0,
+       vk::DeviceSize secondary_attribute_buffer_offset = 0,
        vk::DeviceSize index_buffer_offset = 0);
 
   ~Mesh() override;
 
   const MeshSpec& spec() const { return spec_; }
   const BoundingBox& bounding_box() const { return bounding_box_; }
-  uint32_t num_vertices() const { return num_vertices_; }
+
+  // Number of indices in the mesh's index buffer, equal to the number of
+  // triangles divided by 3.
   uint32_t num_indices() const { return num_indices_; }
-  vk::Buffer vk_vertex_buffer() const { return vk_vertex_buffer_; }
-  vk::Buffer vk_index_buffer() const { return vk_index_buffer_; }
-  const BufferPtr& vertex_buffer() const { return vertex_buffer_; }
+
+  // Number of distinct vertices that are present in the mesh.
+  uint32_t num_vertices() const { return num_vertices_; }
+
   const BufferPtr& index_buffer() const { return index_buffer_; }
-  vk::DeviceSize vertex_buffer_offset() const { return vertex_buffer_offset_; }
+  vk::Buffer vk_index_buffer() const { return vk_index_buffer_; }
   vk::DeviceSize index_buffer_offset() const { return index_buffer_offset_; }
 
+  struct AttributeBuffer {
+    vk::Buffer vk_buffer;
+    BufferPtr buffer;
+    vk::DeviceSize offset;
+    uint32_t stride;
+
+    explicit operator bool() const { return buffer.get() != nullptr; }
+  };
+  using AttributeBufferArray =
+      std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers>;
+
+  const AttributeBuffer& attribute_buffer(size_t buffer_index) const {
+    return attribute_buffers_[buffer_index];
+  }
+
+  const AttributeBufferArray& attribute_buffers() const {
+    return attribute_buffers_;
+  }
+
  private:
+  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
+       BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
+       std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers>
+           attribute_buffers,
+       BufferPtr index_buffer, vk::DeviceSize index_buffer_offset);
+
   const MeshSpec spec_;
   const BoundingBox bounding_box_;
   const uint32_t num_vertices_;
   const uint32_t num_indices_;
-  const vk::Buffer vk_vertex_buffer_;
+  AttributeBufferArray attribute_buffers_;
   const vk::Buffer vk_index_buffer_;
-  const BufferPtr vertex_buffer_;
   const BufferPtr index_buffer_;
-  const vk::DeviceSize vertex_buffer_offset_;
   const vk::DeviceSize index_buffer_offset_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Mesh);

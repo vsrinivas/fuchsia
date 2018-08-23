@@ -129,7 +129,7 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
       continue;
     }
 
-    auto& vertex_buffer = object.shape().mesh()->vertex_buffer();
+    auto& vertex_buffer = object.shape().mesh()->attribute_buffer(0).buffer;
     auto compute_buffer =
         Buffer::New(recycler_, allocator_, vertex_buffer->size(),
                     vk::BufferUsageFlagBits::eVertexBuffer |

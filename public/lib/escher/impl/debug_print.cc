@@ -88,17 +88,17 @@ std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr) {
   return str;
 }
 
-std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
-  bool has_flag = false;
-  str << "MeshSpec[";
-  // TODO: would be nice to guarantee that we don't miss any.  Too bad we can't
-  // enumerate over the values in an enum class.
-  std::array<MeshAttribute, 5> all_flags = {
+std::ostream& operator<<(std::ostream& str, const MeshAttributes& attributes) {
+  static_assert(uint32_t(MeshAttribute::kStride) == (1 << 5), "missing enum");
+
+  constexpr std::array<MeshAttribute, 5> all_flags = {
       {MeshAttribute::kPosition2D, MeshAttribute::kPosition3D,
        MeshAttribute::kPositionOffset, MeshAttribute::kUV,
        MeshAttribute::kPerimeterPos}};
+
+  bool has_flag = false;  // has a flag already been seen?
   for (auto flag : all_flags) {
-    if (spec.flags & flag) {
+    if (attributes & flag) {
       // Put a pipe after the previous flag, if there is one.
       if (has_flag) {
         str << "|";
@@ -106,6 +106,23 @@ std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
         has_flag = true;
       }
       str << flag;
+    }
+  }
+
+  return str;
+}
+
+std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
+  str << "MeshSpec[";
+
+  bool any_attributes = false;
+  for (size_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+    if (spec.attribute_count(i) > 0) {
+      if (any_attributes) {
+        str << ", ";
+      }
+      any_attributes = true;
+      str << i << ":" << spec.attributes[i];
     }
   }
   str << "]";

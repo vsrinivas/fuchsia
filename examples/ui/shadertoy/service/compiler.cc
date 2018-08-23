@@ -245,9 +245,8 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
     fragment_module = result.value;
   }
 
-  escher::MeshSpec mesh_spec;
-  mesh_spec.flags =
-      escher::MeshAttribute::kPosition2D | escher::MeshAttribute::kUV;
+  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D |
+                             escher::MeshAttribute::kUV};
 
   auto pipeline = ConstructPipeline(vertex_module, fragment_module, mesh_spec);
   vk_device.destroyShaderModule(vertex_module);

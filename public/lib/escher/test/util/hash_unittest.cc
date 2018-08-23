@@ -53,8 +53,7 @@ void TestHashForValue(const Hashee& hashee) {
 TEST(Hash, AllHashedTypes) {
   // MeshSpec and ModelPipelineSpec.
   {
-    MeshSpec mesh_spec;
-    mesh_spec.flags = MeshAttribute::kPosition2D | MeshAttribute::kUV;
+    MeshSpec mesh_spec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
 
     impl::ModelPipelineSpec model_pipeline_spec;
     model_pipeline_spec.mesh_spec = mesh_spec;

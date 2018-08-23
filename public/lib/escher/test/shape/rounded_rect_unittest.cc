@@ -21,7 +21,7 @@ struct Vertex {
 TEST(RoundedRect, Tessellation) {
   RoundedRectSpec rect_spec(100, 500, 20, 20, 20, 20);
   MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-  ASSERT_EQ(sizeof(Vertex), mesh_spec.GetStride());
+  ASSERT_EQ(sizeof(Vertex), mesh_spec.stride(0));
 
   auto counts = GetRoundedRectMeshVertexAndIndexCounts(rect_spec);
   const uint32_t vertex_count = counts.first;

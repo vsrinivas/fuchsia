@@ -26,9 +26,13 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
   auto index_buffer = GetIndexBuffer(spec, mesh_spec, batch_gpu_uploader);
 
   auto counts = GetRoundedRectMeshVertexAndIndexCounts(spec);
-  uint32_t vertex_count = counts.first;
-  uint32_t index_count = counts.second;
-  size_t vertex_buffer_size = vertex_count * mesh_spec.GetStride();
+  const uint32_t vertex_count = counts.first;
+  const uint32_t index_count = counts.second;
+  const size_t primary_buffer_stride = mesh_spec.stride(0);
+  const size_t secondary_buffer_stride = mesh_spec.stride(1);
+
+  const size_t vertex_buffer_size =
+      vertex_count * (primary_buffer_stride + secondary_buffer_stride);
 
   auto vertex_buffer =
       buffer_factory_->NewBuffer(vertex_buffer_size,
@@ -43,15 +47,27 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
                       Semaphore::New(vk_device()));
   batch_gpu_uploader->PostWriter(std::move(writer));
 
-  BoundingBox bounding_box =
+  const BoundingBox bounding_box =
       spec.width > 0.f && spec.height > 0.f
           ? BoundingBox(-0.5f * vec3(spec.width, spec.height, 0),
                         0.5f * vec3(spec.width, spec.height, 0))
           : BoundingBox();
 
-  return fxl::MakeRefCounted<Mesh>(
-      static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
-      vertex_count, index_count, vertex_buffer, std::move(index_buffer));
+  switch (mesh_spec.vertex_buffer_count()) {
+    case 1:
+      return fxl::MakeRefCounted<Mesh>(
+          static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
+          vertex_count, index_count, vertex_buffer, std::move(index_buffer));
+    case 2:
+      return fxl::MakeRefCounted<Mesh>(
+          static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
+          vertex_count, index_count, vertex_buffer, std::move(vertex_buffer),
+          std::move(index_buffer), 0, vertex_count * primary_buffer_stride, 0);
+    default:
+      FXL_CHECK(false) << "unsupported vertex buffer count: "
+                       << mesh_spec.vertex_buffer_count();
+      return nullptr;
+  }
 }
 
 BufferPtr RoundedRectFactory::GetIndexBuffer(
@@ -63,7 +79,7 @@ BufferPtr RoundedRectFactory::GetIndexBuffer(
   // return the same index buffer.
   if (!index_buffer_) {
     uint32_t index_count = GetRoundedRectMeshVertexAndIndexCounts(spec).second;
-    size_t index_buffer_size = index_count * MeshSpec::kIndexSize;
+    size_t index_buffer_size = index_count * sizeof(MeshSpec::IndexType);
 
     index_buffer_ =
         buffer_factory_->NewBuffer(index_buffer_size,
