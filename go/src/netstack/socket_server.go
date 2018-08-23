@@ -92,7 +92,7 @@ func newSocketServer(stk *stack.Stack, ctx *context.Context) (*socketServer, err
 	return &a, nil
 }
 
-func (s *socketServer) setNetstack(ns *netstack) {
+func (s *socketServer) setNetstack(ns *Netstack) {
 	s.ns = ns
 }
 
@@ -584,7 +584,7 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 
 type socketServer struct {
 	stack *stack.Stack
-	ns    *netstack
+	ns    *Netstack
 
 	mu   sync.Mutex
 	next cookie

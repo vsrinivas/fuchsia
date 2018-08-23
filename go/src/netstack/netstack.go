@@ -38,8 +38,8 @@ const (
 	defaultNodename                  = "fuchsia-unset-device-name"
 )
 
-// A netstack tracks all of the running state of the network stack.
-type netstack struct {
+// A Netstack tracks all of the running state of the network stack.
+type Netstack struct {
 	arena        *eth.Arena
 	stack        *stack.Stack
 	socketServer *socketServer
@@ -65,7 +65,7 @@ type dhcpState struct {
 
 // Each ifState tracks the state of a network interface.
 type ifState struct {
-	ns     *netstack
+	ns     *Netstack
 	ctx    context.Context
 	cancel context.CancelFunc
 	eth    *eth.Client
@@ -117,7 +117,7 @@ func applyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
 	return tcpip.Address(subnet)
 }
 
-func (ns *netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
+func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
 	sn, err := toSubnet(addr, prefixLen)
 
 	if err != nil {
@@ -166,7 +166,7 @@ func toSubnet(address tcpip.Address, prefixLen uint8) (tcpip.Subnet, error) {
 	return tcpip.NewSubnet(address.Mask(m), m)
 }
 
-func (ns *netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
+func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
 
 	sn, err := toSubnet(addr, prefixLen)
 	if err != nil {
@@ -304,7 +304,7 @@ func (ifs *ifState) onEthStop() {
 	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 }
 
-func (ns *netstack) flattenRouteTables() []tcpip.Route {
+func (ns *Netstack) flattenRouteTables() []tcpip.Route {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
@@ -329,7 +329,7 @@ func (ns *netstack) flattenRouteTables() []tcpip.Route {
 
 // Return a slice of references to each NIC's DNS servers.
 // The caller takes ownership of the returned slice.
-func (ns *netstack) getRuntimeDNSServerRefs() []*[]tcpip.Address {
+func (ns *Netstack) getRuntimeDNSServerRefs() []*[]tcpip.Address {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
@@ -340,7 +340,7 @@ func (ns *netstack) getRuntimeDNSServerRefs() []*[]tcpip.Address {
 	return refs
 }
 
-func (ns *netstack) getDNSServers() []tcpip.Address {
+func (ns *Netstack) getDNSServers() []tcpip.Address {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
@@ -360,7 +360,7 @@ func (ns *netstack) getDNSServers() []tcpip.Address {
 	return out
 }
 
-func (ns *netstack) addLoopback() error {
+func (ns *Netstack) addLoopback() error {
 	const nicid = 1
 	ctx, cancel := context.WithCancel(context.Background())
 	nic := &netiface.NIC{
@@ -423,7 +423,7 @@ func (ns *netstack) addLoopback() error {
 	return nil
 }
 
-func (ns *netstack) Bridge(nics []tcpip.NICID) error {
+func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	// TODO(stijlist): save bridge in netstack state as NetInterface
 	// TODO(stijlist): initialize bridge context.Context & cancelFunc
 	b, err := ns.stack.Bridge(nics)
@@ -443,7 +443,7 @@ func (ns *netstack) Bridge(nics []tcpip.NICID) error {
 	return nil
 }
 
-func (ns *netstack) addEth(path string) error {
+func (ns *Netstack) addEth(path string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ifs := &ifState{

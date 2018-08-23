@@ -34,7 +34,7 @@ import (
 // TODO(tkilbourn): change the default to false after tracking down NET-1077
 var pprofServer = flag.Bool("pprof", true, "run the pprof http server")
 
-var ns *netstack
+var ns *Netstack
 
 func main() {
 	log.SetFlags(0)
@@ -83,7 +83,7 @@ func main() {
 
 	ctx.ConnectToEnvService(req)
 
-	ns = &netstack{
+	ns = &Netstack{
 		arena:          arena,
 		stack:          stk,
 		socketServer:   s,
