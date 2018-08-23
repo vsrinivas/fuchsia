@@ -8,8 +8,6 @@ import os
 import string
 import sys
 
-import label_to_package_name
-
 def parse_dot_packages(dot_packages_path):
   deps = {}
   with open(dot_packages_path) as dot_packages:
@@ -39,9 +37,8 @@ def main():
       description="Generate .packages file for dart package")
   parser.add_argument("--out", help="Path to .packages file to generate",
                       required=True)
-  parser.add_argument("--package-name", help="Name of this package")
-  parser.add_argument("--package-label", help="Label of target for this package"
-          "from which the package name is inferred")
+  parser.add_argument("--package-name", help="Name of this package",
+                      required=True)
   parser.add_argument("--source-dir", help="Path to package source",
                       required=True)
   parser.add_argument("--deps", help="List of dependencies' package file",
@@ -51,12 +48,9 @@ def main():
   dot_packages_file = args.out
   create_base_directory(dot_packages_file)
 
-  package_deps = {}
-  if args.package_name:
-      package_name = args.package_name
-  else:
-      package_name = label_to_package_name.convert(args.package_label)
-  package_deps[package_name] = args.source_dir
+  package_deps = {
+    args.package_name: args.source_dir,
+  }
 
   for dep in args.deps:
     dependent_packages = parse_dot_packages(dep)

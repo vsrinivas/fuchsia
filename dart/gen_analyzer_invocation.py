@@ -9,8 +9,6 @@ import stat
 import string
 import sys
 
-import label_to_package_name
-
 def main():
   parser = argparse.ArgumentParser(
       description='Generate a script that invokes the Dart analyzer')
@@ -25,15 +23,10 @@ def main():
                       required=True)
   parser.add_argument('--dart-sdk', help='Path to the Dart SDK',
                       required=True)
-  parser.add_argument('--package-name', help='Name of the analyzed package')
-  parser.add_argument('--package-label', help='Label of the analyzed package')
+  parser.add_argument('--package-name', help='Name of the analyzed package',
+                      required=True)
   parser.add_argument('--options', help='Path to analysis options')
   args = parser.parse_args()
-
-  if args.package_name:
-      package_name = args.package_name
-  else:
-      package_name = label_to_package_name.convert(args.package_label)
 
   with open(args.source_file, 'r') as source_file:
       sources = source_file.read().strip().split('\n')
@@ -59,7 +52,7 @@ $dartanalyzer \\
   with open(analyzer_file, 'w') as file:
       file.write(script_template.substitute(
           args.__dict__,
-          package_name = package_name,
+          package_name = args.package_name,
           sources_argument = ' '.join(sources),
           options_argument = '--options='+args.options if args.options else ''))
   permissions = (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |

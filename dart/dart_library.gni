@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/sdk.gni")
 import("//build/dart/dart.gni")
 import("//build/dart/toolchain.gni")
 import("//build/sdk/sdk_atom.gni")
@@ -32,14 +33,10 @@ declare_args() {
 #     Name of the Dart package. This is used as an identifier in code that
 #     depends on this library.
 #
-#   package_label (optional)
-#     Label to infer package name from.
-#
 #   infer_package_name (optional)
 #     Infer the package name based on the path to the package.
 #
-#     NOTE: Exactly one of package_name, package_label, or infer_package_name
-#           must be set.
+#     NOTE: Exactly one of package_name or infer_package_name must be set.
 #
 #   source_dir (optional)
 #     Path to the directory containing the package sources, relative to
@@ -85,11 +82,27 @@ if (current_toolchain == dart_toolchain) {
 
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
-    } else if (defined(invoker.package_label)) {
-      target_label = invoker.package_label
     } else if (defined(invoker.infer_package_name) &&
                invoker.infer_package_name) {
-      target_label = get_label_info(":$target_name", "label_no_toolchain")
+      # Compute a package name from the label:
+      #   //foo/bar --> foo.bar
+      #   //foo/bar:blah --> foo.bar._blah
+      #   //garnet/public/foo/bar --> foo.bar
+      # Strip public directories.
+      full_dir = get_label_info(":$target_name", "dir")
+      foreach(sdk_dir, sdk_dirs) {
+        full_dir = string_replace(full_dir, "$sdk_dir/", "")
+      }
+      package_name = full_dir
+      package_name = string_replace(package_name, "//", "")
+      package_name = string_replace(package_name, "/", ".")
+      # If the last directory name does not match the target name, add the
+      # target name to the resulting package name.
+      name = get_label_info(":$target_name", "name")
+      last_dir = get_path_info(full_dir, "name")
+      if (last_dir != name) {
+        package_name = "$package_name._$name"
+      }
     } else {
       assert(false, "Must specify either a package_name or infer_package_name")
     }
@@ -149,11 +162,6 @@ if (current_toolchain == dart_toolchain) {
         public_deps = invoker.non_dart_deps
       }
 
-      inputs = [
-        # This file contributes to the script and needs to be listed as an input.
-        "//build/dart/label_to_package_name.py",
-      ]
-
       sources = package_files + [
                   # Require a manifest file, allowing the analysis service to identify the
                   # package.
@@ -169,20 +177,10 @@ if (current_toolchain == dart_toolchain) {
                rebase_path(dot_packages_file),
                "--source-dir",
                rebase_path(source_dir),
+               "--package-name",
+               package_name,
                "--deps",
              ] + rebase_path(package_files)
-
-      if (defined(package_name)) {
-        args += [
-          "--package-name",
-          package_name,
-        ]
-      } else {
-        args += [
-          "--package-label",
-          target_label,
-        ]
-      }
     }
 
     with_analysis =
@@ -228,19 +226,9 @@ if (current_toolchain == dart_toolchain) {
           rebase_path(dart_sdk),
           "--options",
           rebase_path(options_file),
+          "--package-name",
+          package_name,
         ]
-
-        if (defined(package_name)) {
-          args += [
-            "--package-name",
-            package_name,
-          ]
-        } else {
-          args += [
-            "--package-label",
-            target_label,
-          ]
-        }
       }
 
       analysis_target_name = "${target_name}_analysis"
