@@ -24,14 +24,14 @@ func TestClient_AllocForSend(t *testing.T) {
 	}
 
 	// Arrange for arena allocation to fail.
-	arena.freebufs = arena.freebufs[:0]
+	arena.mu.freebufs = arena.mu.freebufs[:0]
 
 	if got := c.AllocForSend(); got != nil {
 		t.Fatalf("AllocForSend() = %v, want %v", got, nil)
 	}
 
 	// Arrange for arena allocation to succeed.
-	arena.freebufs = arena.freebufs[:cap(arena.freebufs)]
+	arena.mu.freebufs = arena.mu.freebufs[:cap(arena.mu.freebufs)]
 
 	// Saturate the client.
 	for i := c.txDepth; i > 0; i--  {
