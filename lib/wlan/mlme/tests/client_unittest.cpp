@@ -395,7 +395,7 @@ TEST_F(ClientTest, DropManagementFrames) {
 
     // Construct and send deauthentication frame from another BSS.
     MgmtFrame<Deauthentication> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     ASSERT_EQ(status, ZX_OK);
     auto hdr = frame.hdr();
     hdr->addr1 = common::MacAddr(kBssid2);

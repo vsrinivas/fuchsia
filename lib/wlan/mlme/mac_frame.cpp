@@ -13,20 +13,22 @@
 namespace wlan {
 
 template <typename Body>
-zx_status_t BuildMgmtFrame(MgmtFrame<Body>* out_frame, size_t body_payload_len, bool has_ht_ctrl) {
-    size_t hdr_len = sizeof(MgmtFrameHeader) + (has_ht_ctrl ? kHtCtrlLen : 0);
-    size_t body_len = sizeof(Body) + body_payload_len;
-    size_t frame_len = hdr_len + body_len;
+zx_status_t CreateMgmtFrame(MgmtFrame<Body>* out_frame, size_t body_payload_len, bool has_ht_ctrl) {
+    size_t max_frame_len = MgmtFrameHeader::max_len() + Body::max_len() + body_payload_len;
 
-    auto pkt = Packet::CreateWlanPacket(frame_len);
-    if (pkt == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    auto buffer = GetBuffer(max_frame_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), max_frame_len);
+    packet->set_peer(Packet::Peer::kWlan);
 
     // Zero out the packet buffer by default for the management frame.
-    pkt->clear();
+    packet->clear();
 
-    MgmtFrame<Body> frame(fbl::move(pkt));
+    MgmtFrame<Body> frame(fbl::move(packet));
     if (!frame.HasValidLen()) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
+    frame.hdr()->fc.set_type(FrameType::kManagement);
     frame.hdr()->fc.set_subtype(Body::Subtype());
     if (has_ht_ctrl) { frame.hdr()->fc.set_htc_order(1); }
 
@@ -35,8 +37,8 @@ zx_status_t BuildMgmtFrame(MgmtFrame<Body>* out_frame, size_t body_payload_len, 
 }
 
 #define DECLARE_BUILD_MGMTFRAME(bodytype)                                                    \
-    template zx_status_t BuildMgmtFrame(MgmtFrame<bodytype>* frame, size_t body_payload_len, \
-                                        bool has_ht_ctrl)
+    template zx_status_t CreateMgmtFrame(MgmtFrame<bodytype>* frame, size_t reserved_ie_len, \
+                                         bool has_ht_ctrl)
 
 DECLARE_BUILD_MGMTFRAME(ProbeRequest);
 DECLARE_BUILD_MGMTFRAME(ProbeResponse);

@@ -337,8 +337,8 @@ static constexpr aid_t kMaxBssClients = 2008;
 static constexpr aid_t kUnknownAid = kMaxBssClients + 1;
 
 template <typename Body>
-zx_status_t BuildMgmtFrame(MgmtFrame<Body>* frame, size_t body_payload_len = 0,
-                           bool has_ht_ctrl = false);
+zx_status_t CreateMgmtFrame(MgmtFrame<Body>* frame, size_t body_payload_len = 0,
+                            bool has_ht_ctrl = false);
 
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq);
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, uint8_t aci, Sequence* seq);

@@ -378,6 +378,7 @@ const uint16_t kFcsLen = 4;
 
 struct EmptyHdr {
     constexpr size_t len() const { return 0; }
+    static constexpr size_t max_len() { return 0; }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
@@ -408,11 +409,13 @@ class FrameControl : public common::BitField<uint16_t> {
     bool HasHtCtrl() const { return htc_order() != 0; }
 
     constexpr size_t len() const { return sizeof(*this); }
+    static constexpr size_t max_len() { return sizeof(FrameControl); }
 };
 
 // IEEE Std 802.11-2016, 9.3.3.2
 struct MgmtFrameHeader {
     static constexpr FrameType Type() { return FrameType::kManagement; }
+    static constexpr size_t max_len() { return sizeof(MgmtFrameHeader) + kHtCtrlLen; }
 
     FrameControl fc;
     uint16_t duration;
@@ -433,26 +436,19 @@ struct MgmtFrameHeader {
     const HtControl* ht_ctrl() const {
         if (!fc.HasHtCtrl()) return nullptr;
         size_t offset = sizeof(MgmtFrameHeader);
-        return reinterpret_cast<const HtControl* const>(raw() + offset);
+        return reinterpret_cast<const HtControl*>(raw() + offset);
     }
 
-    HtControl* ht_ctrl() { return const_cast<HtControl*>(const_this()->ht_ctrl()); }
-
-    bool IsBeacon() const { return fc.subtype() == ManagementSubtype::kBeacon; }
-
-    bool IsProbeResponse() const { return fc.subtype() == ManagementSubtype::kProbeResponse; }
-
-    bool IsAction() const { return fc.subtype() == ManagementSubtype::kAction; }
-
    private:
+    // TODO(NET-500): Dangerous as this cast is undefined and should not be used.
     const uint8_t* raw() const { return reinterpret_cast<const uint8_t*>(this); }
-    const MgmtFrameHeader* const_this() { return const_cast<const MgmtFrameHeader*>(this); }
 
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.3
 struct Beacon {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kBeacon; }
+    static constexpr size_t max_len() { return sizeof(Beacon); }
 
     bool Validate(size_t len) const;
 
@@ -471,6 +467,7 @@ struct Beacon {
 // IEEE Std 802.11-2016, 9.3.3.10
 struct ProbeRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
+    static constexpr size_t max_len() { return sizeof(ProbeRequest); }
 
     bool Validate(size_t len) const;
 
@@ -483,6 +480,7 @@ struct ProbeRequest {
 // IEEE Std 802.11-2016, 9.3.3.11
 struct ProbeResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
+    static constexpr size_t max_len() { return sizeof(ProbeResponse); }
 
     bool Validate(size_t len) const;
 
@@ -511,6 +509,7 @@ enum AuthAlgorithm : uint16_t {
 // IEEE Std 802.11-2016, 9.3.3.12
 struct Authentication {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAuthentication; }
+    static constexpr size_t max_len() { return sizeof(Authentication); }
 
     // TODO(tkilbourn): bool Validate(size_t len)
     // Authentication frames are complicated, so when we need more than Open
@@ -531,6 +530,7 @@ struct Authentication {
 // IEEE Std 802.11-2016, 9.3.3.13
 struct Deauthentication {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kDeauthentication; }
+    static constexpr size_t max_len() { return sizeof(Deauthentication); }
 
     // 9.4.1.7
     uint16_t reason_code;
@@ -545,6 +545,7 @@ struct Deauthentication {
 // IEEE Std 802.11-2016, 9.3.3.6
 struct AssociationRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationRequest; }
+    static constexpr size_t max_len() { return sizeof(AssociationRequest); }
 
     bool Validate(size_t len) const;
 
@@ -563,6 +564,7 @@ constexpr uint16_t kAidMask = (1 << 11) - 1;
 // IEEE Std 802.11-2016, 9.3.3.7
 struct AssociationResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
+    static constexpr size_t max_len() { return sizeof(AssociationResponse); }
 
     bool Validate(size_t len) const;
 
@@ -581,6 +583,7 @@ struct AssociationResponse {
 // IEEE Std 802.11-2016, 9.3.3.5
 struct Disassociation {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kDisassociation; }
+    static constexpr size_t max_len() { return sizeof(Disassociation); }
 
     // 9.4.1.7
     uint16_t reason_code;
@@ -595,6 +598,9 @@ struct Disassociation {
 // IEEE Std 802.11-2016, 9.3.2.1
 struct DataFrameHeader {
     static constexpr FrameType Type() { return FrameType::kData; }
+    static constexpr size_t max_len() {
+        return sizeof(DataFrameHeader) + common::kMacAddrLen + kQosCtrlLen + kHtCtrlLen;
+    }
 
     FrameControl fc;
     uint16_t duration;
@@ -671,6 +677,7 @@ struct NullDataHdr : public EmptyHdr {
 // definition.
 struct CtrlFrameHdr {
     static constexpr FrameType Type() { return FrameType::kControl; }
+    static constexpr size_t max_len() { return sizeof(CtrlFrameHdr); }
 
     FrameControl fc;
 
@@ -680,6 +687,7 @@ struct CtrlFrameHdr {
 // IEEE Std 802.11-2016, 9.3.1.5
 struct PsPollFrame {
     static constexpr ControlSubtype Subtype() { return ControlSubtype::kPsPoll; }
+    static constexpr size_t max_len() { return sizeof(PsPollFrame); }
 
     uint16_t aid;
     common::MacAddr bssid;
@@ -699,6 +707,7 @@ struct LlcHeader {
     uint8_t payload[];
 
     constexpr size_t len() const { return sizeof(*this); }
+    static constexpr size_t max_len() { return sizeof(LlcHeader); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.2.2
@@ -710,9 +719,8 @@ struct AmsduSubframeHeader {
 
     uint16_t msdu_len() const { return be16toh(msdu_len_be); }
 
-    void set_msdu_len(uint16_t msdu_len) { msdu_len_be = htobe16(msdu_len); }
-
     constexpr size_t len() const { return sizeof(*this); }
+    static constexpr size_t max_len() { return sizeof(AmsduSubframeHeader); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.2.3
@@ -725,9 +733,6 @@ struct AmsduSubframeHeaderShort {
 constexpr uint8_t kLlcSnapExtension = 0xaa;
 constexpr uint8_t kLlcUnnumberedInformation = 0x03;
 const uint8_t kLlcOui[3] = {};
-
-constexpr size_t kDataFrameHdrLenMax =
-    sizeof(DataFrameHeader) + common::kMacAddrLen + kQosCtrlLen + kHtCtrlLen;
 
 // IEEE Std 802.11-2016, 9.2.3
 // TODO(NET-500): Remove this header. It causes more problems than it solves.
@@ -779,6 +784,7 @@ struct EthernetII {
     uint8_t payload[];
 
     constexpr size_t len() const { return sizeof(*this); }
+    static constexpr size_t max_len() { return sizeof(EthernetII); }
 } __PACKED;
 
 // IEEE Std 802.1X-2010, 11.3, Figure 11-1
@@ -792,6 +798,7 @@ struct EapolHdr {
     }
 
     constexpr size_t len() const { return sizeof(*this); }
+    static constexpr size_t max_len() { return sizeof(EapolHdr); }
 } __PACKED;
 
 CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs);

@@ -102,11 +102,9 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
 
-    // TODO(hahnr): Length of elements is not known at this time. Allocate enough
-    // bytes. This should be updated once there is a better size management.
-    size_t body_payload_len = 256;
+    size_t reserved_ie_len = 256;
     MgmtFrame<Beacon> frame;
-    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    auto status = CreateMgmtFrame(&frame, reserved_ie_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -123,7 +121,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     bcn->cap.set_short_preamble(1);
 
     // Write elements.
-    ElementWriter w(bcn->elements, body_payload_len);
+    ElementWriter w(bcn->elements, reserved_ie_len);
     status = WriteSsid(&w);
     if (status != ZX_OK) { return status; }
 
@@ -156,7 +154,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
 
     // Update the length with final values
-    size_t body_len = sizeof(Beacon) + w.size();
+    size_t body_len = frame.body()->len() + w.size();
     status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not set body length to %zu: %d\n", bssid.ToString().c_str(),
@@ -180,9 +178,9 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
 
     // Length of elements is not known at this time. Allocate enough bytes.
     // This should be updated once there is a better size management.
-    size_t body_payload_len = 256;
+    size_t reserved_ie_len = 256;
     MgmtFrame<ProbeResponse> frame;
-    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    auto status = CreateMgmtFrame(&frame, reserved_ie_len);
     if (status != ZX_OK) { return; }
 
     auto hdr = frame.hdr();
@@ -199,7 +197,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
     resp->cap.set_short_preamble(1);
 
     // Write elements.
-    ElementWriter w(resp->elements, body_payload_len);
+    ElementWriter w(resp->elements, reserved_ie_len);
     if (WriteSsid(&w) != ZX_OK) { return; }
     if (WriteSupportedRates(&w) != ZX_OK) { return; }
     if (WriteDsssParamSet(&w) != ZX_OK) { return; }

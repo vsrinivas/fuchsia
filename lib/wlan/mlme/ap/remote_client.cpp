@@ -272,7 +272,7 @@ zx_status_t AssociatedState::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& fra
     debugbss("[client] [%s] no more BU available\n", client_->addr().ToString().c_str());
     // There are no frames buffered for the client.
     // Respond with a null data frame and report the situation.
-    size_t len = sizeof(DataFrameHeader);
+    size_t len = DataFrameHeader::max_len();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -353,7 +353,7 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame) 
     // yet.
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return ZX_OK; }
 
-    const size_t eth_len = sizeof(EthernetII) + llc_frame.body_len();
+    const size_t eth_len = EthernetII::max_len() + llc_frame.body_len();
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -429,7 +429,7 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 }
 
 zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
-    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.body()->data->size();
+    size_t len = DataFrameHeader::max_len() + LlcHeader::max_len() + req.body()->data->size();
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -445,7 +445,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     hdr->addr3.Set(req.body()->src_addr.data());
     hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
 
-    auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
+    auto llc = packet->mut_field<LlcHeader>(hdr->len());
     llc->dsap = kLlcSnapExtension;
     llc->ssap = kLlcSnapExtension;
     llc->control = kLlcUnnumberedInformation;
@@ -628,7 +628,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     debugbss("[client] [%s] sending Authentication response\n", addr_.ToString().c_str());
 
     MgmtFrame<Authentication> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) { return status; }
 
     frame.FillTxInfo();
@@ -658,9 +658,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     debugfn();
     debugbss("[client] [%s] sending Association Response\n", addr_.ToString().c_str());
 
-    size_t body_payload_len = 256;
+    size_t reserved_ie_len = 256;
     MgmtFrame<AssociationResponse> frame;
-    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    auto status = CreateMgmtFrame(&frame, reserved_ie_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -678,7 +678,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     assoc->cap.set_short_preamble(1);
 
     // Write elements.
-    ElementWriter w(assoc->elements, body_payload_len);
+    ElementWriter w(assoc->elements, reserved_ie_len);
 
     std::vector<SupportedRate> rates = {
         SupportedRate::basic(12), SupportedRate(18), SupportedRate::basic(24), SupportedRate(36),
@@ -701,7 +701,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     // Validate the request in debug mode.
     ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
 
-    size_t body_len = sizeof(AssociationResponse) + w.size();
+    size_t body_len = frame.body()->len() + w.size();
     status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
         errorf("[client] [%s] could not set assocresp length to %zu: %d\n",
@@ -722,7 +722,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     debugbss("[client] [%s] sending Deauthentication\n", addr_.ToString().c_str());
 
     MgmtFrame<Deauthentication> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -821,8 +821,8 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     debugbss("[client] [%s] sending AddBaRequest\n", addr_.ToString().c_str());
 
     MgmtFrame<ActionFrame> tx_frame;
-    size_t payload_len = sizeof(ActionFrameBlockAck) + sizeof(AddBaRequestFrame);
-    auto status = BuildMgmtFrame(&tx_frame, payload_len);
+    size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
+    auto status = CreateMgmtFrame(&tx_frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = tx_frame.hdr();
@@ -865,8 +865,8 @@ zx_status_t RemoteClient::SendAddBaRequest() {
 
 zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     MgmtFrame<ActionFrame> tx_frame;
-    size_t payload_len = sizeof(ActionFrameBlockAck) + sizeof(AddBaRequestFrame);
-    auto status = BuildMgmtFrame(&tx_frame, payload_len);
+    size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
+    auto status = CreateMgmtFrame(&tx_frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = tx_frame.hdr();

@@ -273,7 +273,7 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     debugjoin("authenticating to %s\n", MACSTR(bssid_));
 
     MgmtFrame<Authentication> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) {
         errorf("authing: failed to build a frame\n");
         return status;
@@ -327,7 +327,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
     MgmtFrame<Deauthentication> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -381,9 +381,9 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     debugjoin("associating to %s\n", MACSTR(bssid_));
 
-    size_t body_payload_len = 128;
+    size_t reserved_ie_len = 128;
     MgmtFrame<AssociationRequest> frame;
-    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    auto status = CreateMgmtFrame(&frame, reserved_ie_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -401,8 +401,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
 
-    ElementWriter w(assoc->elements,
-                    frame.len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
+    ElementWriter w(assoc->elements, reserved_ie_len);
     if (!w.write<SsidElement>(bss_->ssid->data())) {
         errorf("could not write ssid \"%s\" to association request\n", bss_->ssid->data());
         service::SendAssocConfirm(device_,
@@ -459,7 +458,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     // Validate the request in debug mode
     ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
 
-    size_t body_len = sizeof(AssociationRequest) + w.size();
+    size_t body_len = frame.body()->len() + w.size();
     status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
         errorf("could not set body length to %zu: %d\n", body_len, status);
@@ -517,9 +516,8 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
 
-    auto bcn = frame.body();
-    size_t elt_len = frame.body_len() - sizeof(Beacon);
-    ElementReader reader(bcn->elements, elt_len);
+    size_t elt_len = frame.body_len() - frame.body()->len();
+    ElementReader reader(frame.body()->elements, elt_len);
     while (reader.is_valid()) {
         const ElementHeader* hdr = reader.peek();
         if (hdr == nullptr) break;
@@ -726,8 +724,8 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
 
     // Construct AddBaResponse frame
     MgmtFrame<ActionFrame> frame;
-    size_t payload_len = sizeof(ActionFrameBlockAck) + sizeof(AddBaRequestFrame);
-    auto status = BuildMgmtFrame(&frame, payload_len);
+    size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
+    auto status = CreateMgmtFrame(&frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -846,7 +844,7 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     }
 
     // Prepare a packet
-    const size_t eth_frame_len = sizeof(EthernetII) + llc_payload_len;
+    const size_t eth_frame_len = EthernetII::max_len() + llc_payload_len;
     auto buffer = GetBuffer(eth_frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), eth_frame_len);
@@ -900,11 +898,12 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     if (!bss_setup || !associated) { return ZX_OK; }
 
     auto eth_hdr = eth_frame.hdr();
-    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + eth_frame.body_len();
-    auto buffer = GetBuffer(buf_len);
+    const size_t frame_len =
+        DataFrameHeader::max_len() + LlcHeader::max_len() + eth_frame.body_len();
+    auto buffer = GetBuffer(frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), frame_len);
     // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
     // the payload
     packet->set_peer(Packet::Peer::kWlan);
@@ -915,7 +914,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     // Set header
     bool has_ht_ctrl = false;
-    std::memset(data_hdr, 0, kDataFrameHdrLenMax);
+    std::memset(data_hdr, 0, DataFrameHeader::max_len());
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(IsQosReady() ? DataSubtype::kQosdata : DataSubtype::kDataSubtype);
     data_hdr->fc.set_to_ds(1);
@@ -1023,9 +1022,9 @@ zx_status_t Station::SendKeepAliveResponse() {
         return ZX_OK;
     }
 
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(kDataFrameHdrLenMax);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(DataFrameHeader::max_len());
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), kDataFrameHdrLenMax);
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), DataFrameHeader::max_len());
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
 
@@ -1076,8 +1075,8 @@ zx_status_t Station::SendAddBaRequestFrame() {
     }
 
     MgmtFrame<ActionFrame> frame;
-    size_t payload_len = sizeof(ActionFrameBlockAck) + sizeof(AddBaRequestFrame);
-    auto status = BuildMgmtFrame(&frame, payload_len);
+    size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
+    auto status = CreateMgmtFrame(&frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -1130,7 +1129,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     }
 
     size_t llc_payload_len = req.body()->data->size();
-    size_t max_frame_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + llc_payload_len;
+    size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + llc_payload_len;
     fbl::unique_ptr<Buffer> buffer = GetBuffer(max_frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
     auto packet = fbl::make_unique<Packet>(std::move(buffer), max_frame_len);
@@ -1263,10 +1262,9 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
         return ZX_OK;
     }
 
-    constexpr size_t max_frame_len = kDataFrameHdrLenMax;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(max_frame_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(DataFrameHeader::max_len());
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), max_frame_len);
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), DataFrameHeader::max_len());
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
 
@@ -1316,7 +1314,7 @@ zx_status_t Station::SendPsPoll() {
         return ZX_OK;
     }
 
-    size_t len = sizeof(CtrlFrameHdr) + sizeof(PsPollFrame);
+    size_t len = CtrlFrameHdr::max_len() + PsPollFrame::max_len();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
     auto packet = fbl::make_unique<Packet>(std::move(buffer), len);

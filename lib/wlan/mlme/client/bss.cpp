@@ -116,10 +116,7 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
 
     // IE's.
     auto ie_chains = beacon.elements;
-    auto ie_chains_len = frame_len - sizeof(Beacon);  // Subtract the beacon header len.
-
-    ZX_DEBUG_ASSERT(ie_chains != nullptr);
-    ZX_DEBUG_ASSERT(ie_chains_len <= frame_len);
+    size_t ie_chains_len = frame_len - beacon.len();
     return ParseIE(ie_chains, ie_chains_len);
 }
 
@@ -539,7 +536,7 @@ wlan_mlme::BSSDescription Bss::ToFidl() const {
 
     std::memcpy(fidl.bssid.mutable_data(), bssid_.byte, common::kMacAddrLen);
 
-    if (has_dsss_param_set_chan_ == true) {
+    if (has_dsss_param_set_chan_) {
         // Channel was explicitly announced by the AP
         fidl.chan.primary = dsss_param_set_chan_;
     } else {

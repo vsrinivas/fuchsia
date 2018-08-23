@@ -377,11 +377,11 @@ zx_status_t InfraBss::SendNextBu() {
 }
 
 zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Packet>* out_packet) {
-    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len();
-    auto buffer = GetBuffer(buf_len);
+    size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + frame.body_len();
+    auto buffer = GetBuffer(max_frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    *out_packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
+    *out_packet = fbl::make_unique<Packet>(std::move(buffer), max_frame_len);
     (*out_packet)->set_peer(Packet::Peer::kWlan);
 
     auto hdr = (*out_packet)->mut_field<DataFrameHeader>(0);
@@ -427,7 +427,7 @@ zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Pack
     llc->protocol_id = frame.hdr()->ether_type;
     std::memcpy(llc->payload, frame.body(), frame.body_len());
 
-    auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len();
+    auto frame_len = hdr->len() + llc->len() + frame.body_len();
     auto status = (*out_packet)->set_len(frame_len);
     if (status != ZX_OK) {
         errorf("[infra-bss] [%s] could not set data frame length to %zu: %d\n",

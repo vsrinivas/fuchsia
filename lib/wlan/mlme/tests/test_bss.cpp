@@ -180,7 +180,7 @@ zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>* out_packet) {
 
     size_t body_payload_len = 256;
     MgmtFrame<Beacon> frame;
-    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    auto status = CreateMgmtFrame(&frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -226,7 +226,7 @@ zx_status_t CreateAuthFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr client(kClientAddress);
 
     MgmtFrame<Authentication> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -254,7 +254,7 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr client(kClientAddress);
 
     MgmtFrame<AssociationResponse> frame;
-    auto status = BuildMgmtFrame(&frame);
+    auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -285,7 +285,7 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + len;
+    const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + len;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -294,7 +294,7 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
 
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
-    std::memset(data_hdr, 0, kDataFrameHdrLenMax);
+    std::memset(data_hdr, 0, DataFrameHeader::max_len());
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
     data_hdr->fc.set_to_ds(1);
@@ -330,15 +330,15 @@ zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    auto buffer = GetBuffer(kDataFrameHdrLenMax);
+    auto buffer = GetBuffer(DataFrameHeader::max_len());
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), kDataFrameHdrLenMax);
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), DataFrameHeader::max_len());
     packet->set_peer(Packet::Peer::kWlan);
 
     DataFrame<> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
-    std::memset(data_hdr, 0, kDataFrameHdrLenMax);
+    std::memset(data_hdr, 0, DataFrameHeader::max_len());
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kNull);
     data_hdr->fc.set_to_ds(1);

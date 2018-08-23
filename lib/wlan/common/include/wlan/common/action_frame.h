@@ -78,10 +78,14 @@ enum BaAction : uint8_t {
 
 }  // namespace action
 
+// TODO(hahnr): The structs declared in this file are not frames, but headers,
+// and we should rename them for consistency and prevent confusion.
+
 // IEEE Std 802.11-2016, 9.6.5.2
 // TODO(hahnr): Rename all these to *Hdr rather than *Frame.
 struct AddBaRequestFrame {
     static constexpr action::BaAction BlockAckAction() { return action::BaAction::kAddBaRequest; }
+    static constexpr size_t max_len() { return sizeof(AddBaRequestFrame); }
 
     uint8_t dialog_token;  // IEEE Std 802.11-2016, 9.4.1.12
     BlockAckParameters params;
@@ -100,6 +104,7 @@ struct AddBaRequestFrame {
 // IEEE Std 802.11-2016, 9.6.5.3
 struct AddBaResponseFrame {
     static constexpr action::BaAction BlockAckAction() { return action::BaAction::kAddBaResponse; }
+    static constexpr size_t max_len() { return sizeof(AddBaResponseFrame); }
 
     uint8_t dialog_token;       // IEEE Std 802.11-2016, 9.4.1.12
     uint16_t status_code;       // TODO(porce): Refactor out mac_frame.h and use type StatusCode.
@@ -126,6 +131,7 @@ class BlockAckDelBaParameters : public common::BitField<uint16_t> {
 // IEEE Std 802.11-2016, 9.6.5.4
 struct DelBaFrame {
     static constexpr action::BaAction BlockAckAction() { return action::BaAction::kDelBa; }
+    static constexpr size_t max_len() { return sizeof(DelBaFrame); }
 
     BlockAckDelBaParameters params;
     uint16_t reason_code;         // TODO(porce): Refactor mac_frame.h and use ReasonCode type
@@ -141,6 +147,7 @@ struct DelBaFrame {
 // IEEE Std 802.11-2016, 9.6.5.1
 struct ActionFrameBlockAck {
     static constexpr action::Category ActionCategory() { return action::Category::kBlockAck; }
+    static constexpr size_t max_len() { return sizeof(ActionFrameBlockAck); }
 
     action::BaAction action;
 
@@ -150,6 +157,7 @@ struct ActionFrameBlockAck {
 // IEEE Std 802.11-2016, 9.3.3.14
 struct ActionFrame {
     static constexpr uint8_t Subtype() { return 0x0D; }
+    static constexpr size_t max_len() { return sizeof(ActionFrame); }
     uint8_t category;
 
     constexpr size_t len() const { return sizeof(*this); }
