@@ -9,8 +9,11 @@ follow in order to be uploaded to the performance dashboard.
 
 ## Helper Libraries
 
-Rather than write code to produce this JSON yourself, you can use one of the
-existing Fuchsia libraries for your language:
+If you're creating a [trace-based benchmark], your exported results will
+already have the correct schema.
+
+If you're writing your own benchmark program, then you can use the existing
+Fuchsia libraries for your language for emitting the JSON data:
 
 * [C/C++]
 * [Go]
@@ -21,6 +24,7 @@ library or file a bug against IN to request one.
 [C/C++]: https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest
 [Go]: https://fuchsia.googlesource.com/garnet/+/master/go/src/benchmarking
 [Dart]: #
+[trace-based benchmark]: trace_based_benchmarking.md
 
 ## JSON Description
 
