@@ -6,17 +6,20 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("magma-tools") {
-  deprecated_system_image = true
-
   deps = [
     ":tools",
   ]
-
   binaries = [
-    {
-      name = "magma_info"
-    },
+      {
+        name = "magma_info"
+      },
   ]
+  meta = [
+      {
+        path = rebase_path("meta/magma-tools.cmx")
+        dest = "magma-tools.cmx"
+      },
+    ]
 }
 
 package("vkcube") {
