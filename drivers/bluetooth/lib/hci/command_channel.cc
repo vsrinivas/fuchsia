@@ -319,7 +319,7 @@ void CommandChannel::TrySendQueuedCommands() {
   ZX_DEBUG_ASSERT(async_get_default_dispatcher() == io_dispatcher_);
 
   if (allowed_command_packets_ == 0) {
-    bt_log(SPEW, "hci", "controller queue full, waiting");
+    bt_log(DEBUG, "hci", "controller queue full, waiting");
     return;
   }
 
@@ -447,7 +447,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     allowed_command_packets_ = params.num_hci_command_packets;
     async_failed = params.status != StatusCode::kSuccess;
   }
-  bt_log(SPEW, "hci", "allowed packets update: %zu", allowed_command_packets_);
+  bt_log(DEBUG, "hci", "allowed packets update: %zu", allowed_command_packets_);
 
   if (matching_opcode == 0) {
     return;
@@ -514,7 +514,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       EventCallback callback;
       async_dispatcher_t* dispatcher;
       EventHandlerId event_id = iter->second;
-      bt_log(SPEW, "hci", "notifying handler (id %zu) for event code %#.2x",
+      bt_log(DEBUG, "hci", "notifying handler (id %zu) for event code %#.2x",
              event_id, event_code);
       auto handler_iter = event_handler_id_map_.find(event_id);
       ZX_DEBUG_ASSERT(handler_iter != event_handler_id_map_.end());

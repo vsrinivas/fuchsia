@@ -39,6 +39,10 @@
 // In driver mode, the "tag" argument to bt_log is informational and gets
 // included in the log message.
 //
+// (refer to
+// https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md#driver_name_log_flags
+// for all supported DDK debug log flags).
+//
 // PRINTF MODE:
 //
 // When btlib code is run outside a driver (e.g. bt-host-unittests) log messages
@@ -97,9 +101,13 @@ enum class LogSeverity {
 
   // Very verbose messages.
   SPEW = 4,
+
+  // Reserved for highly verbose messages (corresponds to the "debug1" driver
+  // log flag).
+  DEBUG = 5,
 };
 
-constexpr size_t kNumLogSeverities = 5;
+constexpr size_t kNumLogSeverities = 6;
 
 bool IsLogLevelEnabled(LogSeverity severity);
 void LogMessage(const char* file, int line, LogSeverity severity,

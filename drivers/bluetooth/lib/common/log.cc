@@ -18,11 +18,12 @@ namespace {
 std::atomic_int g_printf_min_severity(-1);
 
 uint32_t kDdkSeverities[kNumLogSeverities] = {
-    DDK_LOG_ERROR, DDK_LOG_WARN, DDK_LOG_INFO, DDK_LOG_TRACE, DDK_LOG_SPEW,
+    DDK_LOG_ERROR, DDK_LOG_WARN, DDK_LOG_INFO,
+    DDK_LOG_TRACE, DDK_LOG_SPEW, DDK_LOG_DEBUG1,
 };
 
 const char* const kLogSeverityNames[kNumLogSeverities] = {
-    "ERROR", "WARN", "INFO", "TRACE", "SPEW",
+    "ERROR", "WARN", "INFO", "TRACE", "SPEW", "DEBUG",
 };
 
 constexpr size_t LogSeverityToIndex(LogSeverity severity) {
