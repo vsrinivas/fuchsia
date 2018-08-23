@@ -48,8 +48,9 @@ TODO(ZX-2399)
 **ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
 **ZX_ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
-(e.g., **PROT_WRITE** but not **PROT_READ**), *addr* is not page-aligned,
-*len* is 0, or some subrange of the requested range is occupied by a subregion.
+(e.g., **ZX_VM_FLAG_PERM_WRITE** but not **ZX_VM_FLAG_PERM_READ**), *addr* is
+not page-aligned, *len* is 0, or some subrange of the requested range is
+occupied by a subregion.
 
 **ZX_ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
 
