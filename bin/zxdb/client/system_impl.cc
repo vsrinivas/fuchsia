@@ -164,6 +164,11 @@ void SystemImpl::DidConnect() {
     observer.DidTryToLoadSymbolMapping(ids_loaded, symbol_msg);
 }
 
+void SystemImpl::DidDisconnect() {
+  for (auto& target : targets_)
+    target->ImplicitlyDetach();
+}
+
 BreakpointImpl* SystemImpl::BreakpointImplForId(uint32_t id) {
   auto found = breakpoints_.find(id);
   if (found == breakpoints_.end())

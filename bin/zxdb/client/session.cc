@@ -362,8 +362,6 @@ void Session::OnStreamReadable() {
 
 void Session::OnStreamError() {
   ClearConnectionData();
-  // TODO(brettw) DX-301 issue some kind of notification and mark all processes
-  // as terminated.
 }
 
 bool Session::IsConnected() const { return !!stream_; }
@@ -433,6 +431,7 @@ void Session::ClearConnectionData() {
   connection_storage_.reset();
   arch_info_.reset();
   arch_ = debug_ipc::Arch::kUnknown;
+  system_.DidDisconnect();
 }
 
 void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,

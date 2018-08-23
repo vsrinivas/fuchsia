@@ -47,8 +47,10 @@ class SystemImpl final : public System {
   void Pause() override;
   void Continue() override;
 
-  // Notification that a new connection has been made to a target system.
+  // Notification that a connection has been made/terminated to a target
+  // system.
   void DidConnect();
+  void DidDisconnect();
 
   // Returns the breakpoint implementation for the given ID, or null if the
   // ID was not found in the map. This will include both internal and regular
