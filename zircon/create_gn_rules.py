@@ -28,11 +28,13 @@ SYSROOT_PACKAGES = ['c', 'zircon']
 
 # Prefixes of Zircon headers that should not appear in SDKs.
 NON_SDK_SYSROOT_HEADER_PREFIXES = ['zircon/device']
-# TODO(ZX-2503): remove this whitelist.
+# TODO(FIDL-273): remove this allowlist.
 MANDATORY_SDK_HEADERS = [
     'zircon/device/ioctl.h', # Needed by zircon/device/ramdisk.h
     'zircon/device/ioctl-wrapper.h', # Needed by zircon/device/ramdisk.h
+    # TODO(ZX-2503): remove this entry.
     'zircon/device/ramdisk.h', # Needed by fs-management/ramdisk.h
+    'zircon/device/sysinfo.h', # Needed by some external clients
 ]
 
 # List of libraries with header files being transitioned from
