@@ -4,73 +4,25 @@
 
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
-declare_args() {
-  linux_guest_use_ramdisk = false
-}
-
-linux_dir = "$target_out_dir/linux/source"
-sysroot_dir = "$target_out_dir/linux/sysroot"
 linux_image = "$target_out_dir/linux/Image"
 disk_image = "$target_out_dir/linux/disk.img"
-if (linux_guest_use_ramdisk) {
-  initrd_image = "$target_out_dir/linux/initrd.img"
+
+copy("block") {
+  visibility = [ ":*" ]
+  sources = [ "images/${target_cpu}/disk.img" ]
+  outputs = [ disk_image ]
 }
 
-# Build a simple toybox sysroot that is packaged both as an initrd and
-# as an ext2 filesystem image.
-action("sysroot") {
+copy("kernel") {
   visibility = [ ":*" ]
-
-  script = "//garnet/bin/guest/pkg/linux_guest/mksysroot.sh"
-  args = [
-    "-r",
-    "-p",
-    rebase_path("$disk_image"),
-    "-d",
-    rebase_path("$sysroot_dir/toybox"),
-    "-s",
-    rebase_path("$sysroot_dir/dash"),
-    "$target_cpu",
-  ]
-
-  outputs = [
-    disk_image,
-  ]
-
-  if (linux_guest_use_ramdisk) {
-    args += [
-      "-i",
-      "-o",
-      rebase_path("$initrd_image"),
-    ]
-
-    outputs += [
-      initrd_image,
-    ]
-  }
-}
-
-action("kernel") {
-  visibility = [ ":*" ]
-
-  script = "//garnet/bin/guest/pkg/linux_guest/mklinux.sh"
-  args = [
-    "-l",
-    rebase_path("$linux_dir"),
-    "-o",
-    rebase_path("$linux_image"),
-    "$target_cpu",
-  ]
-
-  outputs = [
-    linux_image,
-  ]
+  sources = [ "images/${target_cpu}/Image" ]
+  outputs = [ linux_image ]
 }
 
 guest_package("linux_guest") {
   deps = [
-    ":kernel($host_toolchain)",
-    ":sysroot($host_toolchain)",
+    ":block",
+    ":kernel",
   ]
 
   if (target_cpu == "arm64") {
@@ -80,16 +32,12 @@ guest_package("linux_guest") {
   }
   cmdline += " console=hvc0 console=tty0 root=/dev/vda"
 
-  host_out_dir = get_label_info(":bogus($host_toolchain)", "target_out_dir")
-  linux = "$host_out_dir/linux/Image"
-  if (linux_guest_use_ramdisk) {
-    ramdisk = "$host_out_dir/linux/initrd.img"
-  }
+  linux = "$target_out_dir/linux/Image"
 
   disk_name = "filesystem.img"
   resources = [
     {
-      path = rebase_path("$host_out_dir/linux/disk.img")
+      path = rebase_path("$target_out_dir/linux/disk.img")
       dest = "${disk_name}"
     },
   ]

@@ -12,17 +12,17 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set x64 --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest --args guest_display=\"framebuffer\"
+$ fx set S{ARCH} --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\"
 $ fx full-build
 $ fx boot
 ```
+Where `${ARCH}` is one of `x64` or `arm64`.
 
-## Building for QEMU
-Configure, build, and boot the guest package as follows:
+### Note for external developers
+The linux_guest package expects the Linux kernel binaries to be in `garnet/bin/guest/pkg/linux_guest/`, you should create them before running `fx full-build` by running the following scripts:
 ```
-$ fx set arm64 --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest
-$ fx full-build
-$ fx run
+$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh -l /tmp/linux/source -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image ${ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image -d /tmp/toybox -s /tmp/dash S{ARCH}
 ```
 
 ## Running guests
@@ -59,27 +59,11 @@ $ guest launch (linux_guest|zircon_guest) --gic=3
 ## Running from Topaz
 To run from Topaz, configure the guest package as follows:
 ```
-$ fx set x64 --packages topaz/packages/topaz,garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest
+$ fx set ${ARCH} --packages topaz/packages/topaz,garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/zircon_guest
 ```
 
 After netbooting the guest packages can be launched from the system launcher as
 `linux_guest` and `zircon_guest`.
-
-## Building for arm64
-First flash Zedboot onto your VIM2:
-```
-$ cd $ZIRCON_DIR
-$ scripts/build-zircon-arm64
-$ scripts/flash-vim2 -m
-
-```
-
-Then configure, build, and boot the guest package as follows:
-```
-$ fx set arm64 --packages garnet/packages/experimental/disabled/linux_guest,garnet/packages/experimental/disabled/zircon_guest --args guest_display=\"framebuffer\" --netboot
-$ fx full-build
-$ fx boot vim2
-```
 
 # Guest Configuration
 Guest systems can be configured by including a config file inside the guest
