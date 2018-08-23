@@ -47,21 +47,26 @@
 namespace ddk {
 
 template <typename D>
-class GpioProtocol {
+class GpioProtocol : public internal::base_protocol {
 public:
     GpioProtocol() {
         internal::CheckGpioProtocolSubclass<D>();
-        gpio_proto_ops_.config = GpioConfig;
-        gpio_proto_ops_.set_alt_function = GpioSetAltFunction;
-        gpio_proto_ops_.read = GpioRead;
-        gpio_proto_ops_.write = GpioWrite;
-        gpio_proto_ops_.get_interrupt = GpioGetInterrupt;
-        gpio_proto_ops_.release_interrupt = GpioReleaseInterrupt;
-        gpio_proto_ops_.set_polarity = GpioSetPolarity;
+        ops_.config = GpioConfig;
+        ops_.set_alt_function = GpioSetAltFunction;
+        ops_.read = GpioRead;
+        ops_.write = GpioWrite;
+        ops_.get_interrupt = GpioGetInterrupt;
+        ops_.release_interrupt = GpioReleaseInterrupt;
+        ops_.set_polarity = GpioSetPolarity;
+
+        // Can only inherit from one base_protocol implemenation
+        ZX_ASSERT(ddk_proto_id_ == 0);
+        ddk_proto_id_ = ZX_PROTOCOL_GPIO;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    gpio_protocol_ops_t gpio_proto_ops_ = {};
+    gpio_protocol_ops_t ops_ = {};
 
 private:
     static zx_status_t GpioConfig(void* ctx, uint32_t index, uint32_t flags) {

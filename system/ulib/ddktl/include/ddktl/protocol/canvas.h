@@ -43,16 +43,21 @@
 namespace ddk {
 
 template <typename D>
-class CanvasProtocol {
+class CanvasProtocol : public internal::base_protocol {
 public:
     CanvasProtocol() {
         internal::CheckCanvasProtocolSubclass<D>();
-        canvas_proto_ops_.config = CanvasConfig;
-        canvas_proto_ops_.free = CanvasFree;
+        ops_.config = CanvasConfig;
+        ops_.free = CanvasFree;
+
+        // Can only inherit from one base_protocol implemenation
+        ZX_ASSERT(ddk_proto_id_ == 0);
+        ddk_proto_id_ = ZX_PROTOCOL_CANVAS;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    canvas_protocol_ops_t canvas_proto_ops_ = {};
+    canvas_protocol_ops_t ops_ = {};
 
 private:
     static zx_status_t CanvasConfig(void* ctx, zx_handle_t vmo, size_t offset, canvas_info_t* info,

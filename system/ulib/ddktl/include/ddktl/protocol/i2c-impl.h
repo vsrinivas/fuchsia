@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/i2c-impl.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -43,18 +44,23 @@
 namespace ddk {
 
 template <typename D>
-class I2cImplProtocol {
+class I2cImplProtocol : public internal::base_protocol {
 public:
     I2cImplProtocol() {
         internal::CheckI2cImplProtocolSubclass<D>();
-        i2c_impl_proto_ops_.get_bus_count = I2cImplGetBusCount;
-        i2c_impl_proto_ops_.get_max_transfer_size = I2cImplGetMaxTransferSize;
-        i2c_impl_proto_ops_.set_bitrate = I2cImplSetBitRate;
-        i2c_impl_proto_ops_.transact = I2cImplTransact;
+        ops_.get_bus_count = I2cImplGetBusCount;
+        ops_.get_max_transfer_size = I2cImplGetMaxTransferSize;
+        ops_.set_bitrate = I2cImplSetBitRate;
+        ops_.transact = I2cImplTransact;
+
+        // Can only inherit from one base_protocol implemenation
+        ZX_ASSERT(ddk_proto_id_ == 0);
+        ddk_proto_id_ = ZX_PROTOCOL_I2C_IMPL;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    i2c_impl_protocol_ops_t i2c_impl_proto_ops_ = {};
+    i2c_impl_protocol_ops_t ops_ = {};
 
 private:
     static uint32_t I2cImplGetBusCount(void* ctx) {

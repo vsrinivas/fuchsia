@@ -6,13 +6,13 @@
 
 #include "platform-proxy-device.h"
 
+#include <ddk/protocol/canvas.h>
+#include <ddk/protocol/clk.h>
+#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/i2c.h>
+#include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/canvas.h>
-#include <ddktl/protocol/clk.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform-device.h>
-#include <ddktl/protocol/usb-mode-switch.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/channel.h>
@@ -26,10 +26,7 @@ class PlatformProxy;
 class ProxyDevice;
 using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
-class ProxyDevice : public ProxyDeviceType, public ddk::PlatformDevProtocol<ProxyDevice>,
-                    public ddk::CanvasProtocol<ProxyDevice>, public ddk::ClkProtocol<ProxyDevice>,
-                    public ddk::GpioProtocol<ProxyDevice>, public ddk::I2cProtocol<ProxyDevice>,
-                    public ddk::UmsProtocol<ProxyDevice> {
+class ProxyDevice : public ProxyDeviceType, public ddk::PlatformDevProtocol<ProxyDevice> {
 public:
     static zx_status_t Create(zx_device_t* parent, uint32_t device_id,
                               fbl::RefPtr<PlatformProxy> proxy, device_add_args_t* args);
@@ -61,30 +58,32 @@ public:
     zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
 
     // Canvas protocol implementation.
-    zx_status_t CanvasConfig(zx_handle_t vmo, size_t offset, canvas_info_t* info,
+    static zx_status_t CanvasConfig(void* ctx, zx_handle_t vmo, size_t offset, canvas_info_t* info,
                              uint8_t* canvas_idx);
-    zx_status_t CanvasFree(uint8_t canvas_idx);
+    static zx_status_t CanvasFree(void* ctx, uint8_t canvas_idx);
 
     // Clock protocol implementation.
-    zx_status_t ClkEnable(uint32_t index);
-    zx_status_t ClkDisable(uint32_t index);
+    static zx_status_t ClkEnable(void* ctx, uint32_t index);
+    static zx_status_t ClkDisable(void* ctx, uint32_t index);
 
     // GPIO protocol implementation.
-    zx_status_t GpioConfig(uint32_t index, uint32_t flags);
-    zx_status_t GpioSetAltFunction(uint32_t index, uint64_t function);
-    zx_status_t GpioRead(uint32_t index, uint8_t* out_value);
-    zx_status_t GpioWrite(uint32_t index, uint8_t value);
-    zx_status_t GpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
-    zx_status_t GpioReleaseInterrupt(uint32_t index);
-    zx_status_t GpioSetPolarity(uint32_t index, uint32_t polarity);
+    static zx_status_t GpioConfig(void* ctx, uint32_t index, uint32_t flags);
+    static zx_status_t GpioSetAltFunction(void* ctx, uint32_t index, uint64_t function);
+    static zx_status_t GpioRead(void* ctx, uint32_t index, uint8_t* out_value);
+    static zx_status_t GpioWrite(void* ctx, uint32_t index, uint8_t value);
+    static zx_status_t GpioGetInterrupt(void* ctx, uint32_t index, uint32_t flags,
+                                        zx_handle_t* out_handle);
+    static zx_status_t GpioReleaseInterrupt(void* ctx, uint32_t index);
+    static zx_status_t GpioSetPolarity(void* ctx, uint32_t index, uint32_t polarity);
 
     // I2C protocol implementation.
-    zx_status_t I2cTransact(uint32_t index, const void* write_buf, size_t write_length,
+    static zx_status_t I2cTransact(void* ctx, uint32_t index, const void* write_buf,
+                                   size_t write_length,
                             size_t read_length, i2c_complete_cb complete_cb, void* cookie);
-    zx_status_t I2cGetMaxTransferSize(uint32_t index, size_t* out_size);
+    static zx_status_t I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t* out_size);
 
     // USB mode switch protocol implementation.
-    zx_status_t UmsSetMode(usb_mode_t mode);
+    static zx_status_t UmsSetMode(void* ctx, usb_mode_t mode);
 
 private:
     struct Mmio {
@@ -99,8 +98,7 @@ private:
         zx::handle resource;
     };
 
-    explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
-        : ProxyDeviceType(parent), device_id_(device_id), proxy_(proxy) {}
+    explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy);
 
     zx_status_t Init(device_add_args_t* args);
 
@@ -111,6 +109,14 @@ private:
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
     char name_[ZX_MAX_NAME_LEN];
+
+    // We can't used ddktl for these because ddktl only allows a device to implement one protocol,
+    // and we are using ddktl for the platform device protocol.
+    canvas_protocol_ops_t canvas_proto_ops_;
+    clk_protocol_ops_t clk_proto_ops_;
+    gpio_protocol_ops_t gpio_proto_ops_;
+    i2c_protocol_ops_t i2c_proto_ops_;
+    usb_mode_switch_protocol_ops_t usb_mode_switch_proto_ops_;
 
     // These fields are saved values from the device_add_args_t passed to pdev_device_add().
     // These are unused for top level devices created via pbus_device_add().

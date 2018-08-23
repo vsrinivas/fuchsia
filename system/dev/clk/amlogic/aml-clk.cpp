@@ -70,9 +70,6 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         return status;
     }
 
-    clk_.ctx = this;
-    clk_.ops = &clk_proto_ops_;
-
     status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &clk_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "meson_clk_bind: pbus_register_protocol failed, st = %d\n", status);

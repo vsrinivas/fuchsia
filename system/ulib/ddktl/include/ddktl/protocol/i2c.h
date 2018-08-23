@@ -43,16 +43,21 @@
 namespace ddk {
 
 template <typename D>
-class I2cProtocol {
+class I2cProtocol : public internal::base_protocol {
 public:
     I2cProtocol() {
         internal::CheckI2cProtocolSubclass<D>();
-        i2c_proto_ops_.transact = I2cTransact;
-        i2c_proto_ops_.get_max_transfer_size = I2cGetMaxTransferSize;
+        ops_.transact = I2cTransact;
+        ops_.get_max_transfer_size = I2cGetMaxTransferSize;
+
+        // Can only inherit from one base_protocol implemenation
+        ZX_ASSERT(ddk_proto_id_ == 0);
+        ddk_proto_id_ = ZX_PROTOCOL_I2C;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    i2c_protocol_ops_t i2c_proto_ops_ = {};
+    i2c_protocol_ops_t ops_ = {};
 
 private:
     static zx_status_t I2cTransact(void* ctx, uint32_t index, const void* write_buf,

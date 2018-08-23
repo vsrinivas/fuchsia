@@ -42,16 +42,21 @@
 namespace ddk {
 
 template <typename D>
-class ClkProtocol {
+class ClkProtocol : public internal::base_protocol {
 public:
     ClkProtocol() {
         internal::CheckClkProtocolSubclass<D>();
-        clk_proto_ops_.enable = ClkEnable;
-        clk_proto_ops_.disable = ClkDisable;
+        ops_.enable = ClkEnable;
+        ops_.disable = ClkDisable;
+
+        // Can only inherit from one base_protocol implemenation
+        ZX_ASSERT(ddk_proto_id_ == 0);
+        ddk_proto_id_ = ZX_PROTOCOL_CLK;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    clk_protocol_ops_t clk_proto_ops_ = {};
+    clk_protocol_ops_t ops_ = {};
 
 private:
     static zx_status_t ClkEnable(void* ctx, uint32_t index) {
