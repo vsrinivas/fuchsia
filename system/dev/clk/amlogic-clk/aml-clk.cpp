@@ -48,7 +48,7 @@ zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
 
     // Map the MSR registers.
     zx_status_t status = pdev_map_mmio_buffer(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &hiu_mmio_);
+                                              &msr_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
@@ -106,21 +106,38 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         }
     });
 
+    meson_clk_gate_t* clk_gates;
+
     // Populate the correct register blocks.
     switch (info.did) {
-    case PDEV_DID_AMLOGIC_AXG_CLK:
-        gates_.reset(axg_clk_gates, countof(axg_clk_gates));
+    case PDEV_DID_AMLOGIC_AXG_CLK: {
+        clk_gates = (meson_clk_gate_t*)calloc(countof(axg_clk_gates), sizeof(meson_clk_gate_t));
+        if (clk_gates == nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(clk_gates, axg_clk_gates, sizeof(meson_clk_gate_t) * countof(axg_clk_gates));
+
+        gates_.reset(clk_gates, countof(axg_clk_gates));
         clk_msr_ = false;
         break;
-    case PDEV_DID_AMLOGIC_GXL_CLK:
-        gates_.reset(gxl_clk_gates, countof(gxl_clk_gates));
+    }
+    case PDEV_DID_AMLOGIC_GXL_CLK: {
+        clk_gates = (meson_clk_gate_t*)calloc(countof(gxl_clk_gates), sizeof(meson_clk_gate_t));
+        if (clk_gates == nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(clk_gates, gxl_clk_gates, sizeof(meson_clk_gate_t) * countof(axg_clk_gates));
+
+        gates_.reset(clk_gates, countof(gxl_clk_gates));
         clk_msr_ = false;
         break;
-    case PDEV_DID_AMLOGIC_G12A_CLK:
+    }
+    case PDEV_DID_AMLOGIC_G12A_CLK: {
         clk_msr_offsets_ = g12_clk_msr;
         clk_table_.reset(g12a_clk_table, countof(g12a_clk_table));
         clk_gates_ = false;
         break;
+    }
     default:
         zxlogf(ERROR, "aml-clk: Unsupported SOC DID %u\n", info.pid);
         return ZX_ERR_INVALID_ARGS;
@@ -237,6 +254,7 @@ zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint32_t* clk_freq) {
             value = msr_regs_->Read<uint32_t>(clk_msr_offsets_.reg2_offset);
             // Magic numbers, since lack of documentation.
             *clk_freq = (((value + 31) & MSR_VAL_MASK) / 64);
+            return ZX_OK;
         }
     }
     return ZX_ERR_TIMED_OUT;
@@ -272,12 +290,22 @@ zx_status_t AmlClock::DdkIoctl(uint32_t op, const void* in_buf,
             return ZX_ERR_INVALID_ARGS;
         }
         auto index = *(static_cast<const uint32_t*>(in_buf));
-        auto info = *(static_cast<clk_freq_info_t*>(out_buf));
+        auto* info = static_cast<clk_freq_info_t*>(out_buf);
         if (clk_msr_) {
-            return ClkMeasure(index, &info);
+            *out_actual = sizeof(clk_freq_info_t);
+            return ClkMeasure(index, info);
         } else {
             return ZX_ERR_NOT_SUPPORTED;
         }
+    }
+    case IOCTL_CLK_GET_COUNT: {
+        if (out_buf == nullptr || out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        auto* num_count = static_cast<uint32_t*>(out_buf);
+        *num_count = static_cast<uint32_t>(clk_table_.size());
+        *out_actual = sizeof(uint32_t);
+        return ZX_OK;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
