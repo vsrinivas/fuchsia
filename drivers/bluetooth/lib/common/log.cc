@@ -8,24 +8,17 @@
 #include <algorithm>
 
 #include <ddk/debug.h>
-#include <syslog/global.h>
 
 #include "lib/fxl/strings/string_printf.h"
-
-#include "optional.h"
 
 namespace btlib {
 namespace common {
 namespace {
 
-std::atomic_bool g_use_fx_log(false);
+std::atomic_int g_printf_min_severity(-1);
 
 uint32_t kDdkSeverities[kNumLogSeverities] = {
     DDK_LOG_ERROR, DDK_LOG_WARN, DDK_LOG_INFO, DDK_LOG_TRACE, DDK_LOG_SPEW,
-};
-
-fx_log_severity_t kSyslogSeverities[kNumLogSeverities] = {
-    FX_LOG_ERROR, FX_LOG_WARNING, FX_LOG_INFO, -1, -2,
 };
 
 const char* const kLogSeverityNames[kNumLogSeverities] = {
@@ -40,10 +33,6 @@ inline uint32_t LogSeverityToDdkLog(LogSeverity severity) {
   return kDdkSeverities[LogSeverityToIndex(severity)];
 }
 
-inline fx_log_severity_t LogSeverityToFxLog(LogSeverity severity) {
-  return kSyslogSeverities[LogSeverityToIndex(severity)];
-}
-
 inline const char* LogSeverityToString(LogSeverity severity) {
   return kLogSeverityNames[LogSeverityToIndex(severity)];
 }
@@ -53,13 +42,13 @@ const char* StripPath(const char* path) {
   return p ? p + 1 : path;
 }
 
+bool IsPrintfEnabled() { return g_printf_min_severity >= 0; }
+
 }  // namespace
 
 bool IsLogLevelEnabled(LogSeverity severity) {
-  if (g_use_fx_log) {
-    fx_logger_t* logger = fx_log_get_logger();
-    return logger &&
-           (fx_logger_get_min_severity(logger) <= LogSeverityToFxLog(severity));
+  if (IsPrintfEnabled()) {
+    return static_cast<int>(severity) <= g_printf_min_severity;
   }
   return zxlog_level_enabled_etc(LogSeverityToDdkLog(severity));
 }
@@ -71,9 +60,9 @@ void LogMessage(const char* file, int line, LogSeverity severity,
   std::string msg = fxl::StringVPrintf(fmt, args);
   va_end(args);
 
-  if (g_use_fx_log) {
-    fx_logger_logf(fx_log_get_logger(), LogSeverityToFxLog(severity), tag,
-                   "[%s(%d)]: %s", StripPath(file), line, msg.c_str());
+  if (IsPrintfEnabled()) {
+    printf("[%s:%s(%d)] %s: %s\n", LogSeverityToString(severity),
+           StripPath(file), line, tag, msg.c_str());
   } else {
     driver_printf(LogSeverityToDdkLog(severity), "[%s:%s(%d)] %s: %s\n",
                   LogSeverityToString(severity), StripPath(file), line, tag,
@@ -81,7 +70,9 @@ void LogMessage(const char* file, int line, LogSeverity severity,
   }
 }
 
-void UseSyslog() { g_use_fx_log = true; }
+void UsePrintf(LogSeverity min_severity) {
+  g_printf_min_severity = static_cast<int>(min_severity);
+}
 
 }  // namespace common
 }  // namespace btlib

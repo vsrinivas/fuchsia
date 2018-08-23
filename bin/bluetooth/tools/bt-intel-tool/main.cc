@@ -9,8 +9,6 @@
 #include <sys/stat.h>
 
 #include <ddk/driver.h>
-#include <syslog/global.h>
-
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/bluetooth/tools/lib/command_dispatcher.h"
@@ -20,9 +18,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/strings/string_printf.h"
 
 #include "command_channel.h"
 #include "commands.h"
@@ -53,18 +48,11 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  // By default suppress all log messages below the LOG_ERROR level.
-  fxl::LogSettings log_settings;
-  log_settings.min_log_level = fxl::LOG_ERROR;
-  if (!fxl::ParseLogSettings(cl, &log_settings)) {
-    std::cout << kUsageString << std::endl;
-    return EXIT_FAILURE;
+  auto severity = btlib::common::LogSeverity::ERROR;
+  if (cl.HasOption("verbose", nullptr)) {
+    severity = btlib::common::LogSeverity::TRACE;
   }
-
-  fx_log_init();
-  fx_logger_set_min_severity(fx_log_get_logger(), log_settings.min_log_level);
-
-  btlib::common::UseSyslog();
+  btlib::common::UsePrintf(severity);
 
   std::string hci_dev_path = kDefaultHCIDev;
   if (cl.GetOptionValue("dev", &hci_dev_path) && hci_dev_path.empty()) {

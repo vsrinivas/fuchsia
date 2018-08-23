@@ -8,8 +8,8 @@
 #include <cstddef>
 
 // Logging utilities for the host library. This provides a common abstraction
-// over Zircon DDK debug utilities (used when btlib runs in a driver) and the
-// Fuchsia syslog.
+// over Zircon DDK debug utilities (used when btlib runs in a driver) and
+// printf.
 //
 // USAGE:
 //
@@ -39,28 +39,26 @@
 // In driver mode, the "tag" argument to bt_log is informational and gets
 // included in the log message.
 //
-// SYSLOG MODE:
+// PRINTF MODE:
 //
 // When btlib code is run outside a driver (e.g. bt-host-unittests) log messages
-// can be routed to the Fuchsia syslog system. To enable this mode, call the
-// "UseSyslog()" function at process start-up:
+// can be routed to stdout via printf instead of driver_printf. To enable this
+// mode, call the UsePrintf() function at process start-up:
 //
 //    int main() {
-//      ::btlib::common::UseSyslog();
-//      syslog::LogSettings settings = {FX_LOG_INFO, -1};
-//      if (syslog::InitLogger(settings, {"mytag"}) != ZX_OK) {
-//        return -1;
-//      }
+//      ::btlib::common::UsePrintf(::btlib::common::LogSeverity::ERROR);
 //
 //      ...do stuff...
 //
 //      return 0;
 //    }
 //
-// In syslog mode, the "tag" argument to bt_log is used as a syslog tag.
+// The |min_severity| parameter determines the smallest severity level that will
+// be allowed. For example, passing LogSeverity::INFO will enable INFO, WARN,
+// and ERROR severity levels.
 //
-// The UseSyslog() function is NOT thread-safe. This should be called EARLY
-// and ONLY ONCE during initialization. Once the syslog mode is enabled it
+// The UsePrintf() function is NOT thread-safe. This should be called EARLY
+// and ONLY ONCE during initialization. Once the printf mode is enabled it
 // cannot be toggled back to driver mode.
 //
 // CAVEATS:
@@ -68,13 +66,13 @@
 // Since the logging mode is determined at run-time and not compile-time (due
 // to build dependency reasons) users of these utilities will need to link a
 // symbol for |__zircon_driver_rec__|. While this symbol will remain unused in
-// syslog-mode it is needed to pass compilation if the target is not a driver.
+// printf-mode it is needed to pass compilation if the target is not a driver.
 // Use the BT_DECLARE_FAKE_DRIVER macro for this purpose:
 //
 //    BT_DECLARE_FAKE_DRIVER();
 //
 //    int main() {
-//      ::btlib::common::UseSyslog();
+//      ::btlib::common::UsePrintf(::btlib::common::LogSeverity::TRACE);
 //    }
 
 namespace btlib {
@@ -107,7 +105,7 @@ bool IsLogLevelEnabled(LogSeverity severity);
 void LogMessage(const char* file, int line, LogSeverity severity,
                 const char* tag, const char* fmt, ...);
 
-void UseSyslog();
+void UsePrintf(LogSeverity min_severity);
 
 }  // namespace common
 }  // namespace btlib

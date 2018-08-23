@@ -5,33 +5,52 @@
 #include "gtest/gtest.h"
 
 #include <ddk/driver.h>
-#include <syslog/global.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 
-#include "lib/fsl/syslogger/init.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/syslog/cpp/logger.h"
 
 BT_DECLARE_FAKE_DRIVER();
+
+using ::btlib::common::LogSeverity;
+
+namespace {
+
+LogSeverity FxlLogToBtLogLevel(fxl::LogSeverity severity) {
+  switch (severity) {
+    case fxl::LOG_ERROR:
+      return LogSeverity::ERROR;
+    case fxl::LOG_WARNING:
+      return LogSeverity::WARN;
+    case fxl::LOG_INFO:
+      return LogSeverity::INFO;
+    case -1:
+      return LogSeverity::TRACE;
+    case -2:
+      return LogSeverity::SPEW;
+    default:
+      break;
+  }
+  if (severity < 0) {
+    return LogSeverity::SPEW;
+  }
+  return LogSeverity::ERROR;
+}
+
+}  // namespace
 
 int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  // TODO(armansito): It turns out syslog shouldn't be dynamically linked into
-  // drivers. Switch to using printf directly instead of syslog and parse
-  // command-line args using FXL (which is OK to link into unit tests).
-  // Set up syslog to print to stdout.
-  syslog::LogSettings syslog_settings = {FX_LOG_INFO, STDOUT_FILENO};
-  std::string error = fsl::ParseLoggerSettings(cl, &syslog_settings);
-  if (syslog::InitLogger(syslog_settings, {"unittest"}) != ZX_OK ||
-      !error.empty()) {
+  fxl::LogSettings log_settings;
+  log_settings.min_log_level = fxl::LOG_ERROR;
+  if (!fxl::ParseLogSettings(cl, &log_settings)) {
     return EXIT_FAILURE;
   }
 
-  // Set all library log messages to use syslog instead ddk logging.
-  btlib::common::UseSyslog();
+  // Set all library log messages to use printf instead ddk logging.
+  btlib::common::UsePrintf(FxlLogToBtLogLevel(log_settings.min_log_level));
 
   testing::InitGoogleTest(&argc, argv);
 

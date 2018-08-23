@@ -43,7 +43,6 @@ source_set("common") {
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
   ]
 }
