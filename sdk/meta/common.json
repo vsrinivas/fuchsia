@@ -19,6 +19,10 @@
       "required": [
         "files"
       ]
+    },
+    "fidl_library_name": {
+      "description": "Name of a FIDL library",
+      "type": "string"
     }
   }
 }

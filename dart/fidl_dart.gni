@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk_molecule.gni")
 
 # Generates some Dart bindings for a FIDL library.
 #
@@ -95,7 +96,6 @@ template("fidl_dart") {
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
       "testonly",
-      "sdk_category",
       "visibility",
     ])
 
@@ -125,5 +125,20 @@ template("fidl_dart") {
       ":$copy_pubspec_target_name",
       ":$generation_target_name",
     ]
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    # Instead of depending on the generated bindings, set up a dependency on the
+    # original library.
+    sdk_target_name = "${main_target_name}_sdk"
+    sdk_molecule(sdk_target_name) {
+      category = invoker.sdk_category
+
+      is_group = true
+
+      deps = [
+        ":$sdk_target_name($fidl_toolchain)",
+      ]
+    }
   }
 }

@@ -237,7 +237,13 @@ template("sdk") {
       ]
     }
   } else {
-    group(archive_target_name) {}
+    group(archive_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":$archive_manifest_target_name",
+      ]
+    }
   }
 
   group(main_target_name) {

@@ -105,6 +105,18 @@ def detect_collisions(atoms):
     return has_collisions
 
 
+def get_lone_atom(manifest):
+    '''Returns the only atom in a given manifest.'''
+    with open(manifest, 'r') as manifest_file:
+        data = json.load(manifest_file)
+    ids = data['ids']
+    if len(ids) != 1:
+        raise Exception('Group dependencies not allowed: %s' % manifest)
+    id = AtomId(ids[0])
+    atoms = [Atom(a) for a in data['atoms']]
+    return next(a for a in atoms if a.id == id)
+
+
 CATEGORIES = [
     'excluded',
     'experimental',

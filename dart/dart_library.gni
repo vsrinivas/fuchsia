@@ -114,8 +114,6 @@ if (current_toolchain == dart_toolchain) {
       }
     }
 
-    dot_packages_file = "$target_gen_dir/$target_name.packages"
-
     package_root = "."
     if (defined(invoker.package_root)) {
       package_root = invoker.package_root
@@ -143,6 +141,7 @@ if (current_toolchain == dart_toolchain) {
     # Dependencies of the umbrella group for the targets in this file.
     group_deps = []
 
+    dot_packages_file = "$target_gen_dir/$target_name.packages"
     dot_packages_target_name = "${target_name}_dot_packages"
     group_deps += [ ":$dot_packages_target_name" ]
 
@@ -363,18 +362,25 @@ if (current_toolchain == dart_toolchain) {
       # target.
       sdk_deps = []
 
-      # Path to manifest files for third-party dependencies.
-      third_party_specs = []
+      # Path to SDK manifest files for first-party dependencies.
+      sdk_manifests = []
+      # Path to Dart manifest files for third-party dependencies.
+      third_party_pubspecs = []
       if (defined(invoker.deps)) {
         sorted_deps =
             exec_script("//build/dart/sdk/sort_deps.py", invoker.deps, "scope")
         foreach(dep, sorted_deps.local) {
           full_label = get_label_info(dep, "label_no_toolchain")
-          sdk_deps += [ "${full_label}_sdk" ]
+          sdk_dep = "${full_label}_sdk"
+          sdk_deps += [ sdk_dep ]
+
+          gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+          name = get_label_info(sdk_dep, "name")
+          sdk_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
         }
         foreach(dep, sorted_deps.third_party) {
           path = get_label_info(dep, "dir")
-          third_party_specs += [ rebase_path("$path/pubspec.yaml") ]
+          third_party_pubspecs += [ rebase_path("$path/pubspec.yaml") ]
         }
       }
 
@@ -383,6 +389,7 @@ if (current_toolchain == dart_toolchain) {
       third_party_spec_target_name = "${target_name}_third_party_spec"
       third_party_spec_file = "$target_gen_dir/${target_name}_3p_tags"
 
+      # TODO(DX-340): should not be needed anymore.
       action(third_party_spec_target_name) {
         script = "//build/dart/sdk/gen_3p_manifest.py"
 
@@ -396,18 +403,47 @@ if (current_toolchain == dart_toolchain) {
                  "--name",
                  atom_name,
                  "--specs",
-               ] + third_party_specs
+               ] + third_party_pubspecs
       }
 
       sdk_sources = []
+      sdk_source_mappings = []
       foreach(source, rebased_sources) {
         relative_source = rebase_path(source, source_dir)
-        sdk_sources += [
+        destination = "lib/$relative_source"
+        sdk_sources += [ "dart/$package_name/$destination" ]
+        sdk_source_mappings += [
           {
             source = source
-            dest = "lib/$relative_source"
+            dest = destination
           }
         ]
+      }
+
+      metadata_target_name = "${target_name}_sdk_metadata"
+      metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
+      action(metadata_target_name) {
+        script = "//build/dart/sdk/gen_meta_file.py"
+
+        inputs = sdk_manifests + third_party_pubspecs
+
+        outputs = [
+          metadata_file,
+        ]
+
+        args = [
+          "--out",
+          rebase_path(metadata_file),
+          "--name",
+          package_name,
+          "--specs",
+        ] + sdk_manifests + [
+          "--sources",
+        ] + sdk_sources + [
+          "--third-party-specs",
+        ] + third_party_pubspecs
+
+        deps = sdk_deps
       }
 
       sdk_atom("${target_name}_sdk") {
@@ -422,16 +458,23 @@ if (current_toolchain == dart_toolchain) {
 
         category = invoker.sdk_category
 
+        meta = {
+            source = metadata_file
+            dest = "dart/$package_name/meta.json"
+            schema = "dart_library"
+        }
+
         deps = sdk_deps
 
         non_sdk_deps = [
+          ":$metadata_target_name",
           ":$third_party_spec_target_name",
         ]
         if (defined(invoker.non_dart_deps)) {
           non_sdk_deps += invoker.non_dart_deps
         }
 
-        files = sdk_sources
+        files = sdk_source_mappings
       }
     }
   }

@@ -191,13 +191,18 @@ template("fidl_library") {
       sources = []
     }
     foreach(source, invoker.sources) {
-      file_name = get_path_info(source, "file")
-      destination = "fidl/$library_name/$file_name"
+      relative_source = rebase_path(source, ".")
+      if (string_replace(relative_source, "..", "bogus") != relative_source) {
+        # If the source file is not within the same directory, just use the file
+        # name.
+        relative_source = get_path_info(source, "file")
+      }
+      destination = "fidl/$library_name/$relative_source"
       meta_data.sources += [ destination ]
       all_files += [
         {
           source = rebase_path(source)
-          dest = file_name
+          dest = relative_source
         },
       ]
     }

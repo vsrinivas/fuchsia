@@ -1,0 +1,84 @@
+{
+  "description": "A Dart library",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "description": "Marker for this type of element",
+          "type": "string",
+          "enum": [
+            "dart_library"
+          ]
+        },
+        "name": {
+          "description": "Name of the library",
+          "$ref": "#/definitions/package_name"
+        },
+        "sources": {
+          "description": "List of library sources",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "deps": {
+          "description": "List of Dart libraries this library depends on",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/package_name"
+          }
+        },
+        "third_party_deps": {
+          "description": "List of third-party dependencies",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/third_party_library"
+          }
+        },
+        "fidl_deps": {
+          "description": "List of FIDL libraries this library depends on",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/fidl_library_name"
+          }
+        }
+      },
+      "required": [
+        "deps",
+        "fidl_deps",
+        "name",
+        "sources",
+        "third_party_deps",
+        "type"
+      ]
+    }
+  ],
+  "definitions": {
+    "package_name": {
+      "description": "A Dart package name",
+      "type": "string"
+    },
+    "third_party_library": {
+      "description": "A third-party Dart package",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the package",
+          "$ref": "#/definitions/package_name"
+        },
+        "version": {
+          "description": "Version number of the package",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    }
+  }
+}
