@@ -146,18 +146,18 @@ interface LoggerFactory {
 interface Logger {
     // Logs the fact that an event has occurred.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type EVENT_OCCURRED.
     //
     // |event_type_index| The index of the event type that occurred. The indexed
     //     set of all event types is specified in the metric definition.
-    1: LogEvent(string:64 metric_name, uint32 event_type_index)
+    1: LogEvent(uint32 metric_id, uint32 event_type_index)
            -> (Status2 status);
 
     // Logs that an event has occurred a given number of times.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type EVENT_COUNT.
     //
@@ -178,14 +178,14 @@ interface Logger {
     //      always set this value to 1 and always set
     //     |period_duration_micros| to 0 in order to achieve a semantics
     //     similar to the LogEventOccurred() method, but with a |component|.
-    2: LogEventCount(string:64 metric_name, uint32 event_type_index,
+    2: LogEventCount(uint32 metric_id, uint32 event_type_index,
                      string:64 component, int64 period_duration_micros,
                      uint32 count)
            -> (Status2 status);
 
     // Logs that an event lasted a given amount of time.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type ELAPSED_TIME.
     //
@@ -199,13 +199,13 @@ interface Logger {
     //
     // |elapsed_micros| The elapsed time of the event, specified as a number
     //     of microseconds.
-    3: LogElapsedTime(string:64 metric_name, uint32 event_type_index,
+    3: LogElapsedTime(uint32 metric_id, uint32 event_type_index,
                       string:64 component, int64 elapsed_micros)
            -> (Status2 status);
 
     // Logs a measured average frame rate.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type FRAME_RATE.
     //
@@ -219,13 +219,13 @@ interface Logger {
     //     notion of component.
     //
     // |fps| The average-frame rate in frames-per-second.
-    4: LogFrameRate(string:64 metric_name, uint32 event_type_index,
+    4: LogFrameRate(uint32 metric_id, uint32 event_type_index,
                     string:64 component, float32 fps)
            -> (Status2 status);
 
     // Logs a measured memory usage.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type MEMORY_USAGE.
     //
@@ -239,7 +239,7 @@ interface Logger {
     //     component.
     //
     // |bytes| The memory used, in bytes.
-    5: LogMemoryUsage(string:64 metric_name, uint32 event_type_index,
+    5: LogMemoryUsage(uint32 metric_id, uint32 event_type_index,
                       string:64 component, int64 bytes)
            -> (Status2 status);
 
@@ -255,13 +255,13 @@ interface Logger {
     //    most commonly used strings from S over the population of all Fuchsia
     //    devices.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type STRING_USED.
     //
     // |s| The string to log. This should be a human-readable string of
     //      size no more than 256 bytes.
-    6: LogString(string:64 metric_name, string:256 s) -> (Status2 status);
+    6: LogString(uint32 metric_id, string:256 s) -> (Status2 status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This starts
@@ -272,7 +272,7 @@ interface Logger {
     // |duration_microseconds|. It is OK if Cobalt receives the EndTimer()
     // call before the StartTimer() call.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type ELAPSED_TIME.
     //
@@ -325,7 +325,7 @@ interface Logger {
     //        will be forgotten.
     //     Any error returned by LogElapsedTime() may also be returned by this
     //     method.
-    7: StartTimer(string:64 metric_name, uint32 event_type_index,
+    7: StartTimer(uint32 metric_id, uint32 event_type_index,
                   string:64 component, string:64 timer_id,
                   uint64 timestamp, uint32 timeout_s)
            -> (Status2 status);
@@ -427,7 +427,7 @@ interface LoggerExt {
     // with very high frequency and it is not practical to make a FIDL call
     // for each individual measurement.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type INT_HISTOGRAM.
     //
@@ -443,21 +443,21 @@ interface LoggerExt {
     // |histogram| The histogram to log. Each HistogramBucket gives the count
     //     for one bucket of the histogram. The definitions of the buckets is
     //     given in the Metric definition.
-    100: LogIntHistogram(string:64 metric_name, uint32 event_type_index,
+    100: LogIntHistogram(uint32 metric_id, uint32 event_type_index,
                          string:64 component, vector<HistogramBucket> histogram)
              -> (Status2 status);
 
     // Logs a custom Event. The semantics of the Metric are specified in the
     // Metric defintion.
     //
-    // |metric_name| Unique name for the Metric. It must be one of the Metrics
+    // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type CUSTOM.
     //
     // |event_values| The values for the custom Event. There is one value for
     // each dimension of the Metric. The number and types of the values must
     // be consistent with the dimensions declared in the Metric definition.
-    101: LogCustomEvent(string:64 metric_name,
+    101: LogCustomEvent(uint32 metric_id,
                         vector<CustomEventValue> event_values)
              -> (Status2 status);
 };
@@ -468,13 +468,13 @@ interface LoggerExt {
 
 // The parameters to an invocation of Logger::LogEvent()
 struct LogEventParams {
-    string:64 metric_name;
+    uint32 metric_id;
     uint32 event_type_index;
 };
 
 // The parameters to an invocation of Logger::LogEventCount()
 struct LogEventCountParams {
-    string:64 metric_name;
+    uint32 metric_id;
     uint32 event_type_index;
     string:64 component;
     int64 period_duration_micros;
@@ -515,7 +515,7 @@ interface LoggerSimple {
     // requirements of Simple layout. Instead of a vector of HistogramBucekts
     // this version takes two parallel vectors of bucket indices and the
     // corresponding bucket counts.
-    100: LogIntHistogram(string:64 metric_name, uint32 event_type_index,
+    100: LogIntHistogram(uint32 metric_id, uint32 event_type_index,
                          string:64 component,
                          vector<uint32>:100 bucket_indices,
                          vector<uint64>:100 bucket_counts)
@@ -528,7 +528,7 @@ interface LoggerSimple {
     // information. This method is similar except that it adheres to the
     // requirements of Simple layout.  Instead of a vector of CustomEventValue
     // this version takes a json string.
-    101: LogCustomEvent(string:64 metric_name,
+    101: LogCustomEvent(uint32 metric_id,
                         string:1024 json_string)
              -> (Status2 status);
 };
