@@ -312,8 +312,8 @@ void PageDownload::GetObject(
                     convert::ToArray(object_name),
                     [this, object_identifier = std::move(object_identifier),
                      callback = std::move(callback)](
-                        cloud_provider::Status status, uint64_t size,
-                        zx::socket data) mutable {
+                        cloud_provider::Status status,
+                        ::fuchsia::mem::BufferPtr data) mutable {
                       if (status != cloud_provider::Status::OK) {
                         HandleGetObjectError(std::move(object_identifier),
                                              IsPermanentError(status),
@@ -321,10 +321,18 @@ void PageDownload::GetObject(
                                              std::move(callback));
                         return;
                       }
+                      fsl::SizedVmo sized_vmo;
+                      if (!fsl::SizedVmo::FromTransport(std::move(*data),
+                                                        &sized_vmo)) {
+                        HandleGetObjectError(std::move(object_identifier), true,
+                                             "converting to SizedVmo",
+                                             std::move(callback));
+                        return;
+                      }
 
                       DecryptObject(
                           std::move(object_identifier),
-                          storage::DataSource::Create(std::move(data), size),
+                          storage::DataSource::Create(std::move(sized_vmo)),
                           std::move(callback));
                     });
           }));

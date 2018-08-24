@@ -223,14 +223,12 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
                        ToArray(id), std::move(data).ToTransport(), &status));
   EXPECT_EQ(Status::OK, status);
 
-  uint64_t size;
-  zx::socket stream;
-  ASSERT_EQ(ZX_OK, page_cloud->GetObject(ToArray(id), &status, &size, &stream));
+  ::fuchsia::mem::BufferPtr buffer_ptr;
+  ASSERT_EQ(ZX_OK, page_cloud->GetObject(ToArray(id), &status, &buffer_ptr));
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(8u, size);
-  std::string data_str;
-  ASSERT_TRUE(fsl::BlockingCopyToString(std::move(stream), &data_str));
-  EXPECT_EQ("bazinga!", data_str);
+  std::string read_data;
+  ASSERT_TRUE(fsl::StringFromVmo(*buffer_ptr, &read_data));
+  EXPECT_EQ("bazinga!", read_data);
 }
 
 TEST_F(PageCloudTest, AddSameObjectTwice) {

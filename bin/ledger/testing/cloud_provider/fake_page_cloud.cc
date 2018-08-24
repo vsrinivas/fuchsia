@@ -7,6 +7,7 @@
 #include <functional>
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
@@ -234,17 +235,20 @@ void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
 void FakePageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
                               GetObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kGetObjectSeed))) {
-    callback(cloud_provider::Status::NETWORK_ERROR, 0u, zx::socket());
+    callback(cloud_provider::Status::NETWORK_ERROR, nullptr);
     return;
   }
   std::string id_str = convert::ToString(id);
   if (!objects_.count(id_str)) {
-    callback(cloud_provider::Status::NOT_FOUND, 0u, zx::socket());
+    callback(cloud_provider::Status::NOT_FOUND, nullptr);
     return;
   }
-
-  callback(cloud_provider::Status::OK, objects_[id_str].size(),
-           fsl::WriteStringToSocket(objects_[id_str]));
+  ::fuchsia::mem::Buffer buffer;
+  if (!fsl::VmoFromString(objects_[id_str], &buffer)) {
+    callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
+    return;
+  }
+  callback(cloud_provider::Status::OK, fidl::MakeOptional(std::move(buffer)));
 }
 
 void FakePageCloud::SetWatcher(

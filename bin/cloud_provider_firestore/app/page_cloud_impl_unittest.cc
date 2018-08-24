@@ -242,12 +242,11 @@ TEST_F(PageCloudImplTest, AddObject) {
 TEST_F(PageCloudImplTest, GetObject) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  uint64_t size;
-  zx::socket data;
+  ::fuchsia::mem::BufferPtr data;
   page_cloud_->GetObject(
       convert::ToArray("some_id"),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &size, &data));
+                        &data));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -262,23 +261,20 @@ TEST_F(PageCloudImplTest, GetObject) {
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
-  EXPECT_EQ(response_data.size(), size);
-  EXPECT_TRUE(data);
 
   std::string read_data;
-  ASSERT_TRUE(fsl::BlockingCopyToString(std::move(data), &read_data));
+  ASSERT_TRUE(fsl::StringFromVmo(*data, &read_data));
   EXPECT_EQ("some_data", read_data);
 }
 
 TEST_F(PageCloudImplTest, GetObjectParseError) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  uint64_t size;
-  zx::socket data;
+  ::fuchsia::mem::BufferPtr data;
   page_cloud_->GetObject(
       convert::ToArray("some_id"),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &size, &data));
+                        &data));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
@@ -84,18 +85,22 @@ void TestPageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
                               GetObjectCallback callback) {
   get_object_calls++;
   if (status_to_return != cloud_provider::Status::OK) {
-    callback(status_to_return, 0, zx::socket());
+    callback(status_to_return, nullptr);
     return;
   }
 
   std::string object_id = convert::ToString(id);
   if (objects_to_return.count(object_id) == 0) {
-    callback(cloud_provider::Status::INTERNAL_ERROR, 0, zx::socket());
+    callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
     return;
   }
 
-  callback(status_to_return, objects_to_return[object_id].size(),
-           fsl::WriteStringToSocket(objects_to_return[object_id]));
+  ::fuchsia::mem::Buffer buffer;
+  if (!fsl::VmoFromString(objects_to_return[object_id], &buffer)) {
+    callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
+    return;
+  }
+  callback(status_to_return, fidl::MakeOptional(std::move(buffer)));
 }
 
 void TestPageCloud::SetWatcher(

@@ -5,6 +5,7 @@
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
 #include <lib/callback/scoped_callback.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/sized_vmo.h>
@@ -265,22 +266,26 @@ void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
             std::move(request), std::move(call_credentials),
             [callback = std::move(callback)](auto status, auto result) {
               if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()), 0u,
-                         zx::socket());
+                callback(ConvertGrpcStatus(status.error_code()), nullptr);
                 return;
               }
 
               if (result.fields().count(kDataKey) != 1) {
                 FXL_LOG(ERROR)
                     << "Incorrect format of the retrieved object document";
-                callback(cloud_provider::Status::PARSE_ERROR, 0u, zx::socket());
+                callback(cloud_provider::Status::PARSE_ERROR, nullptr);
                 return;
               }
 
               const std::string& bytes =
                   result.fields().at(kDataKey).bytes_value();
-              callback(cloud_provider::Status::OK, bytes.size(),
-                       fsl::WriteStringToSocket(bytes));
+              ::fuchsia::mem::Buffer buffer;
+              if (!fsl::VmoFromString(bytes, &buffer)) {
+                callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
+                return;
+              }
+              callback(cloud_provider::Status::OK,
+                       fidl::MakeOptional(std::move(buffer)));
             });
       });
 }

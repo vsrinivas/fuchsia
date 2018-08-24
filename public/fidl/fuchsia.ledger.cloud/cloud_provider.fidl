@@ -136,13 +136,10 @@ interface PageCloud {
 
   // Retrieves the object of the given id from the cloud.
   //
-  // The size of the object is passed to the callback along with the socket
-  // handle, so that the client can verify that all data was streamed when
-  // draining the socket.
-  //
-  // TODO(ppi): return a VMO instead of a socket, see LE-442.
+  // If the resulting |status| is |OK|, |buffer| will contain the object
+  // content. If the resulting |status| is not |OK|, |buffer| will be null.
   4: GetObject(vector<uint8> id)
-      -> (Status @status, uint64 size, handle<socket>? stream);
+      -> (Status @status, fuchsia.mem.Buffer? buffer);
 
   // Watches the cloud for push notifications.
   //
