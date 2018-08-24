@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/path.cpp \
     $(LOCAL_DIR)/string-list.cpp \
     $(LOCAL_DIR)/string-map.cpp \
 

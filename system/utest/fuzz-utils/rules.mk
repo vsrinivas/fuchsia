@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/path.cpp \
     $(LOCAL_DIR)/string-list.cpp \
     $(LOCAL_DIR)/string-map.cpp \
 
@@ -30,4 +31,3 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
 
 include make/module.mk
-\
