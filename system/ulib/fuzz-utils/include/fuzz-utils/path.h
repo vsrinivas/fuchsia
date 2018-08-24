@@ -31,6 +31,9 @@ public:
     // Returns an absolute path to the file described by |relpath|.
     fbl::String Join(const char* relpath) const;
 
+    // Returns the size of the file in |out|, if it exists.
+    zx_status_t GetSize(const char *relpath, size_t *out) const;
+
     // Changes the current path to the directory described by |relpath|.
     zx_status_t Push(const char* relpath);
 

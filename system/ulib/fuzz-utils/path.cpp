@@ -62,6 +62,17 @@ fbl::String Path::Join(const char* relpath) const {
     return fbl::move(abspath);
 }
 
+zx_status_t Path::GetSize(const char *relpath, size_t *out) const {
+    fbl::String abspath = Join(relpath);
+    struct stat buf;
+    if (stat(abspath.c_str(), &buf) != 0) {
+        xprintf("Failed to get status for '%s': %s\n", abspath.c_str(), strerror(errno));
+        return ZX_ERR_IO;
+    }
+    *out = buf.st_size;
+    return ZX_OK;
+}
+
 zx_status_t Path::Push(const char* relpath) {
     ZX_DEBUG_ASSERT(relpath);
     if (*relpath == '\0') {

@@ -130,6 +130,25 @@ bool TestPushAndPop() {
     END_TEST;
 }
 
+bool TestGetSize() {
+    BEGIN_TEST;
+    PathFixture fixture;
+    ASSERT_TRUE(fixture.Create());
+
+    Path path;
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo/ba/").c_str()));
+
+    size_t size;
+    EXPECT_EQ(ZX_OK, path.GetSize("r", &size));
+    EXPECT_EQ(size, 0);
+
+    // +1 is for null terminator
+    EXPECT_EQ(ZX_OK, path.GetSize("z/qu/x", &size));
+    EXPECT_EQ(size, static_cast<size_t>(strlen("hello world") + 1));
+
+    END_TEST;
+}
+
 bool TestReset() {
     BEGIN_TEST;
     PathFixture fixture;
@@ -147,6 +166,7 @@ bool TestReset() {
 BEGIN_TEST_CASE(PathTest)
 RUN_TEST(TestJoin)
 RUN_TEST(TestPushAndPop)
+RUN_TEST(TestGetSize)
 RUN_TEST(TestReset)
 END_TEST_CASE(PathTest)
 
