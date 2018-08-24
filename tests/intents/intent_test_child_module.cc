@@ -43,11 +43,19 @@ class TestApp : fuchsia::modular::IntentHandler {
   // |IntentHandler|
   void HandleIntent(fuchsia::modular::Intent intent) override {
     for (const auto& parameter : *intent.parameters) {
-      if (parameter.name == kIntentParameterName ||
-          parameter.name == kIntentParameterNameAlternate) {
-        std::string parameter_data;
-        FXL_CHECK(fsl::StringFromVmo(parameter.data.json(), &parameter_data));
-        Signal(kChildModuleHandledIntent + parameter_data);
+      if (parameter.data.is_json()) {
+        if (parameter.name == kIntentParameterName ||
+            parameter.name == kIntentParameterNameAlternate) {
+          std::string parameter_data;
+          FXL_CHECK(fsl::StringFromVmo(parameter.data.json(), &parameter_data));
+          Signal(kChildModuleHandledIntent + parameter_data);
+        }
+      }
+      if (parameter.data.is_link_name()) {
+        // The parent module expects parameters which are either link_name or
+        // link_path to be transformed before they are handled here. This
+        // notifies the parent of which link name was received.
+        Signal(kChildModuleHandledIntent + *parameter.data.link_name());
       }
     }
   }
