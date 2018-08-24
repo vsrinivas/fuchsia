@@ -179,7 +179,7 @@ func getTopN(fileSizes map[string]uint64, topFiles, topSyms uint64, output *map[
 
 // RunBloaty runs bloaty on all files in ids.txt, and returns a mapping of the
 // symbols and files by segment.
-func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms uint64) (map[string]*Segment, error) {
+func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms, j uint64) (map[string]*Segment, error) {
 	files, err := getFiles(idsPath)
 	if err != nil {
 		return nil, err
@@ -190,11 +190,16 @@ func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms uint64) (map[string
 	fileSizes := make(map[string]uint64)
 	data := make(chan bloatyOutput)
 
+	// Only allow up to j concurrent executions
+	sem := make(chan struct{}, j)
+
 	for _, file := range files {
 		wg.Add(1)
+		sem <- struct{}{}
 		go func(bloatyPath, file string) {
 			run(bloatyPath, file, data)
 			wg.Done()
+			<-sem
 		}(bloatyPath, file)
 	}
 

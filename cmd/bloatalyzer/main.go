@@ -55,6 +55,7 @@ var (
 	title      string
 	topFiles   uint64
 	topSyms    uint64
+	j          uint64
 )
 
 func init() {
@@ -65,6 +66,7 @@ func init() {
 	flag.StringVar(&title, "title", "Bloaty Analysis", "title for html page")
 	flag.Uint64Var(&topFiles, "top-files", 0, "max number of files to keep")
 	flag.Uint64Var(&topSyms, "top-syms", 0, "max number of symbols to keep per file")
+	flag.Uint64Var(&j, "j", 32, "max number of concurrent bloaty runs")
 }
 
 func main() {
@@ -83,7 +85,11 @@ func main() {
 		logger.Fatalf(ctx, "%s", "must provide path to ids.txt file.")
 	}
 
-	data, err := bloaty.RunBloaty(bloatyPath, idsPath, topFiles, topSyms)
+	if j <= 0 {
+		logger.Fatalf(ctx, "%s", "j must be greater than 0.")
+	}
+
+	data, err := bloaty.RunBloaty(bloatyPath, idsPath, topFiles, topSyms, j)
 	if err != nil {
 		logger.Fatalf(ctx, "%v", err)
 	}
@@ -91,10 +97,12 @@ func main() {
 	var out io.Writer
 	if output != "" {
 		var err error
-		out, err = os.Create(output)
+		f, err := os.Create(output)
 		if err != nil {
 			logger.Fatalf(ctx, "uanble to open file: %v", err)
 		}
+		defer f.Close()
+		out = f
 	} else {
 		out = os.Stdout
 	}
