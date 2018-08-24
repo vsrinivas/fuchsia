@@ -23,7 +23,9 @@ fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
                 println!("Received echo request for string {:?}", value);
             }
             responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-            println!("echo response sent successfully");
+            if !quiet {
+                println!("echo response sent successfully");
+            }
         }
         Ok(())
     }.unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)));
