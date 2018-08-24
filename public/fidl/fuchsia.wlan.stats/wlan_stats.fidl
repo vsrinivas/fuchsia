@@ -30,7 +30,7 @@ const uint8 RSSI_BINS = 129;
 // where r is defined in [-128, 0] in dBm.
 struct RssiStats {
   // TODO(alexandrew): Change this to array.
-  vector<uint16>:RSSI_BINS hist;
+  vector<uint64>:RSSI_BINS hist;
 };
 
 struct ClientMlmeStats {

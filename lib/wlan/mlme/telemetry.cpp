@@ -119,7 +119,7 @@ void Telemetry::ReportRssiStats(const uint32_t rssi_metric_id, const wlan_stats:
     //
     // The for loop below converts the stats internal representation to the
     // Cobalt representation and prepares the histogram that will be sent.
-    const std::vector<uint16_t>& hist = stats.hist;
+    const std::vector<uint64_t>& hist = stats.hist;
     for (uint8_t bin = 0; bin < wlan_stats::RSSI_BINS; ++bin) {
         if (hist[bin]) {
             cobalt::BucketDistributionEntry entry;

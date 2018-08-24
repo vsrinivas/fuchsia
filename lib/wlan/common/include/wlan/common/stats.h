@@ -83,7 +83,7 @@ struct RssiStats {
         std::lock_guard<std::mutex> guard(lock);
         ::fuchsia::wlan::stats::RssiStats rssi_stats{};
         rssi_stats.hist.reset(
-            std::vector<uint16_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS));
+            std::vector<uint64_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS));
         return rssi_stats;
     };
     void Reset() {
@@ -95,14 +95,14 @@ struct RssiStats {
         std::lock_guard<std::mutex> guard(lock);
         return hist[-r] += delta;
     }
-    uint16_t Get(const int8_t r) {
+    uint64_t Get(const int8_t r) {
         if (r > 0 || -r >= ::fuchsia::wlan::stats::RSSI_BINS) { return 0; }
         std::lock_guard<std::mutex> guard(lock);
         return hist[-r];
     }
 
    private:
-    uint16_t hist[::fuchsia::wlan::stats::RSSI_BINS] __TA_GUARDED(lock);
+    uint64_t hist[::fuchsia::wlan::stats::RSSI_BINS] __TA_GUARDED(lock);
     mutable std::mutex lock;
 };
 
