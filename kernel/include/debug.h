@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <zircon/compiler.h>
 #include <platform/debug.h>
 
@@ -79,7 +80,14 @@ static inline void hexdump8(const void *ptr, size_t len)
 
 /* systemwide halts */
 void _panic(void *caller, void *frame, const char *fmt, ...) __PRINTFLIKE(3, 4) __NO_RETURN;
+
 #define panic(x...) _panic(__GET_CALLER(), __GET_FRAME(), x)
+
+void _panic_no_format(const char *msg, size_t len) __NO_RETURN;
+
+__NO_RETURN static inline void panic_no_format(const char* msg) {
+    _panic_no_format(msg, strlen(msg));
+}
 
 #define PANIC_UNIMPLEMENTED panic("%s unimplemented\n", __PRETTY_FUNCTION__)
 
