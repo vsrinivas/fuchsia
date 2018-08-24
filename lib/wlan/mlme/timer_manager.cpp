@@ -21,10 +21,11 @@ TimerManager::TimerManager(fbl::unique_ptr<Timer> timer) : timer_(fbl::move(time
 }
 
 TimerManager::~TimerManager() {
-    timer_->CancelTimer();
+    if (timer_) { timer_->CancelTimer(); }
 }
 
 zx_status_t TimerManager::Schedule(zx::time deadline, TimedEvent* event) {
+    ZX_DEBUG_ASSERT(timer_ != nullptr);
     ZX_DEBUG_ASSERT(event != nullptr);
 
     events_.push(deadline);
@@ -40,6 +41,8 @@ zx_status_t TimerManager::Schedule(zx::time deadline, TimedEvent* event) {
 }
 
 zx::time TimerManager::HandleTimeout() {
+    ZX_DEBUG_ASSERT(timer_ != nullptr);
+
     zx::time now = Now();
     while (!events_.empty() && events_.top() <= now) {
         events_.pop();

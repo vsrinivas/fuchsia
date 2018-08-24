@@ -93,6 +93,13 @@ TEST_F(TimerManagerTest, UpdateTimerAfterSchedule) {
     ASSERT_EQ(timer()->deadline, zx::time(30));
 }
 
+TEST_F(TimerManagerTest, Move) {
+    clock()->Set(zx::time(100));
+    TimerManager mgr1(fbl::make_unique<TestTimer>(0u, clock()));
+    TimerManager mgr2(std::move(mgr1));
+    ASSERT_EQ(mgr2.Now(), zx::time(100));
+}
+
 TEST_F(TimerManagerTest, UpdateTimerAfterTimeoutTriggered) {
     // Schedule multiple events.
     TimedEvent event;

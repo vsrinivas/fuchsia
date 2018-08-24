@@ -35,6 +35,7 @@ class TimedEvent {
 class TimerManager {
   public:
     TimerManager(fbl::unique_ptr<Timer> timer);
+    TimerManager(TimerManager&&) = default;
     ~TimerManager();
 
     // Schedules a new event which expires at the given |deadline|.
