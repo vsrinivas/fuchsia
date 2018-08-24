@@ -733,8 +733,8 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
                 }
             }
         } else {
-            vaddr_t unmap_base;
-            size_t unmap_size;
+            vaddr_t unmap_base = 0;
+            size_t unmap_size = 0;
             __UNUSED bool intersects = GetIntersect(base, size, curr->base(), curr->size(),
                                                     &unmap_base, &unmap_size);
             DEBUG_ASSERT(intersects);
