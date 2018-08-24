@@ -84,6 +84,21 @@ class PageCommunicatorImpl : public PageCommunicator,
       flatbuffers::FlatBufferBuilder* buffer,
       std::list<ObjectResponseHolder> object_responses);
 
+  // Processes an incoming CommitRequest object from device |source|.
+  void ProcessCommitRequest(std::string source,
+                            MessageHolder<CommitRequest> request);
+
+  // Builds a CommitResponse buffer in response to an incoming CommitRequest.
+  // This is different from |BuildCommitBuffer| which builds CommitResponse for
+  // a remote watcher. In particular, |BuildCommitBuffer|'s commits always
+  // exist. In this method, the pair's second element for a commit will be null
+  // if the commit does not exist on this device.
+  void BuildCommitResponseBuffer(
+      flatbuffers::FlatBufferBuilder* buffer,
+      const std::vector<
+          std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>&
+          commits);
+
   // Processes an incoming ObjectRequest object.
   void ProcessObjectRequest(fxl::StringView source,
                             MessageHolder<ObjectRequest> request);

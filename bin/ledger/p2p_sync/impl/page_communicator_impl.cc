@@ -230,7 +230,12 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
       break;
     }
     case RequestMessage_CommitRequest:
-      FXL_NOTIMPLEMENTED();
+      ProcessCommitRequest(
+          source.ToString(),
+          std::move(message).TakeAndMap<CommitRequest>(
+              [](const Request* request) {
+                return static_cast<const CommitRequest*>(request->request());
+              }));
       break;
     case RequestMessage_ObjectRequest:
       ProcessObjectRequest(
@@ -433,6 +438,87 @@ void PageCommunicatorImpl::BuildCommitBuffer(
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
+}
+
+void PageCommunicatorImpl::BuildCommitResponseBuffer(
+    flatbuffers::FlatBufferBuilder* buffer,
+    const std::vector<
+        std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>&
+        commits) {
+  flatbuffers::Offset<NamespacePageId> namespace_page_id =
+      CreateNamespacePageId(*buffer,
+                            convert::ToFlatBufferVector(buffer, namespace_id_),
+                            convert::ToFlatBufferVector(buffer, page_id_));
+  std::vector<flatbuffers::Offset<Commit>> fb_commits;
+  for (const auto& commit : commits) {
+    flatbuffers::Offset<CommitId> fb_commit_id = CreateCommitId(
+        *buffer, convert::ToFlatBufferVector(buffer, commit.first));
+    if (commit.second) {
+      flatbuffers::Offset<Data> fb_commit_data =
+          CreateData(*buffer, convert::ToFlatBufferVector(
+                                  buffer, commit.second->GetStorageBytes()));
+      fb_commits.emplace_back(
+          CreateCommit(*buffer, fb_commit_id, CommitStatus_OK, fb_commit_data));
+    } else {
+      fb_commits.emplace_back(
+          CreateCommit(*buffer, fb_commit_id, CommitStatus_UNKNOWN_COMMIT));
+    }
+  }
+
+  flatbuffers::Offset<CommitResponse> commit_response =
+      CreateCommitResponse(*buffer, buffer->CreateVector(fb_commits));
+  flatbuffers::Offset<Response> response =
+      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
+                     ResponseMessage_CommitResponse, commit_response.Union());
+  flatbuffers::Offset<Message> message =
+      CreateMessage(*buffer, MessageUnion_Response, response.Union());
+  buffer->Finish(message);
+}
+
+void PageCommunicatorImpl::ProcessCommitRequest(
+    std::string source, MessageHolder<CommitRequest> request) {
+  coroutine_manager_.StartCoroutine([this, source = std::move(source),
+                                     request = std::move(request)](
+                                        coroutine::CoroutineHandler* handler) {
+    auto commit_waiter = fxl::MakeRefCounted<callback::Waiter<
+        storage::Status,
+        std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>>(
+        storage::Status::OK);
+    for (const CommitId* id : *request->commit_ids()) {
+      storage_->GetCommit(
+          id->id(), [commit_id = convert::ToString(id->id()),
+                     callback = commit_waiter->NewCallback()](
+                        storage::Status status,
+                        std::unique_ptr<const storage::Commit> commit) mutable {
+            if (status == storage::Status::NOT_FOUND) {
+              // Not finding an commit is okay in this context: we'll just
+              // reply we don't have it. There is not need to abort
+              // processing the request.
+              callback(storage::Status::OK,
+                       std::make_pair(std::move(commit_id), nullptr));
+              return;
+            }
+            callback(status,
+                     std::make_pair(std::move(commit_id), std::move(commit)));
+          });
+    }
+    storage::Status status;
+    std::vector<
+        std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>
+        commits;
+    if (coroutine::Wait(handler, std::move(commit_waiter), &status, &commits) ==
+        coroutine::ContinuationStatus::INTERRUPTED) {
+      return;
+    }
+
+    if (status != storage::Status::OK) {
+      return;
+    }
+
+    flatbuffers::FlatBufferBuilder buffer;
+    BuildCommitResponseBuffer(&buffer, commits);
+    mesh_->Send(source, buffer);
+  });
 }
 
 void PageCommunicatorImpl::ProcessObjectRequest(

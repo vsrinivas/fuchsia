@@ -4,6 +4,11 @@
 
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
@@ -25,6 +30,28 @@ using testing::IsEmpty;
 namespace p2p_sync {
 namespace {
 
+class FakeCommit : public storage::CommitEmptyImpl {
+ public:
+  FakeCommit(std::string id, std::string data)
+      : id_(std::move(id)), data_(std::move(data)) {}
+
+  std::unique_ptr<FakeCommit> Clone() {
+    return std::make_unique<FakeCommit>(id_, data_);
+  }
+
+  const storage::CommitId& GetId() const override { return id_; }
+
+  fxl::StringView GetStorageBytes() const override { return data_; }
+
+  std::unique_ptr<storage::Commit> Clone() const override {
+    return std::make_unique<FakeCommit>(id_, data_);
+  }
+
+ private:
+  const std::string id_;
+  const std::string data_;
+};
+
 class FakePageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(async_dispatcher_t* dispatcher, std::string page_id)
@@ -37,6 +64,25 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
       fit::function<void(storage::Status, std::vector<storage::CommitId>)>
           callback) override {
     callback(storage::Status::OK, {"commit_id"});
+  }
+
+  const FakeCommit& AddCommit(std::string id, std::string data) {
+    auto commit =
+        commits_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                         std::forward_as_tuple(id, std::move(data)));
+    return commit.first->second;
+  }
+
+  void GetCommit(storage::CommitIdView commit_id,
+                 fit::function<void(storage::Status,
+                                    std::unique_ptr<const storage::Commit>)>
+                     callback) override {
+    auto it = commits_.find(commit_id);
+    if (it == commits_.end()) {
+      callback(storage::Status::NOT_FOUND, nullptr);
+      return;
+    }
+    callback(storage::Status::OK, it->second.Clone());
   }
 
   void GetPiece(storage::ObjectIdentifier object_identifier,
@@ -112,24 +158,8 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   const std::string page_id_;
   std::map<storage::ObjectIdentifier, std::string> objects_;
   std::set<storage::ObjectIdentifier> synced_objects_;
-};
-
-class FakeCommit : public storage::CommitEmptyImpl {
- public:
-  FakeCommit(std::string id, std::string data)
-      : id_(std::move(id)), data_(std::move(data)) {}
-
-  const storage::CommitId& GetId() const override { return id_; }
-
-  fxl::StringView GetStorageBytes() const override { return data_; }
-
-  std::unique_ptr<storage::Commit> Clone() const override {
-    return std::make_unique<FakeCommit>(id_, data_);
-  }
-
- private:
-  const std::string id_;
-  const std::string data_;
+  std::map<storage::CommitId, FakeCommit, convert::StringViewComparator>
+      commits_;
 };
 
 class FakeDeviceMesh : public DeviceMesh {
@@ -242,6 +272,30 @@ void BuildObjectResponseBuffer(
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
+}
+
+void BuildCommitRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
+                              fxl::StringView namespace_id,
+                              fxl::StringView page_id,
+                              std::vector<storage::CommitId> commit_ids) {
+  flatbuffers::Offset<NamespacePageId> namespace_page_id =
+      CreateNamespacePageId(*buffer,
+                            convert::ToFlatBufferVector(buffer, namespace_id),
+                            convert::ToFlatBufferVector(buffer, page_id));
+  std::vector<flatbuffers::Offset<CommitId>> fb_commit_ids;
+  fb_commit_ids.reserve(commit_ids.size());
+  for (const storage::CommitId& commit_id : commit_ids) {
+    fb_commit_ids.emplace_back(CreateCommitId(
+        *buffer, convert::ToFlatBufferVector(buffer, commit_id)));
+  }
+  flatbuffers::Offset<CommitRequest> commit_request =
+      CreateCommitRequest(*buffer, buffer->CreateVector(fb_commit_ids));
+  flatbuffers::Offset<Request> fb_request =
+      CreateRequest(*buffer, namespace_page_id, RequestMessage_CommitRequest,
+                    commit_request.Union());
+  flatbuffers::Offset<Message> fb_message =
+      CreateMessage(*buffer, MessageUnion_Request, fb_request.Union());
+  buffer->Finish(fb_message);
 }
 
 class PageCommunicatorImplTest : public gtest::TestLoopFixture {
@@ -966,6 +1020,63 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   EXPECT_EQ(storage::Status::NOT_FOUND, status4);
   EXPECT_EQ(storage::ChangeSource::P2P, source4);
   EXPECT_FALSE(data4);
+}
+
+TEST_F(PageCommunicatorImplTest, CommitRequest) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  const storage::Commit& commit_1 = storage.AddCommit("commit1", "data1");
+
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  // Send request to PageCommunicator. We request two objects: |object_digest|
+  // and |object_digest2|. Only |object_digest| will be present in storage.
+  flatbuffers::FlatBufferBuilder request_buffer;
+  BuildCommitRequestBuffer(&request_buffer, "ledger", "page",
+                           {storage::CommitId(commit_1.GetId()),
+                            storage::CommitId("missing_commit")});
+  MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
+                                         &GetMessage);
+  page_communicator.OnNewRequest(
+      "device2", std::move(request_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
+
+  RunLoopUntilIdle();
+
+  // Verify the response.
+  ASSERT_EQ(1u, mesh.messages_.size());
+  EXPECT_EQ("device2", mesh.messages_[0].first);
+
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
+      mesh.messages_[0].second.size());
+  ASSERT_TRUE(VerifyMessageBuffer(verifier));
+
+  const Message* reply_message = GetMessage(mesh.messages_[0].second.data());
+  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  const Response* response =
+      static_cast<const Response*>(reply_message->message());
+  const NamespacePageId* response_namespace_page_id =
+      response->namespace_page();
+  EXPECT_EQ("ledger", convert::ExtendedStringView(
+                          response_namespace_page_id->namespace_id()));
+  EXPECT_EQ("page",
+            convert::ExtendedStringView(response_namespace_page_id->page_id()));
+  EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
+  const CommitResponse* commit_response =
+      static_cast<const CommitResponse*>(response->response());
+  ASSERT_EQ(2u, commit_response->commits()->size());
+  auto it = commit_response->commits()->begin();
+  EXPECT_EQ("commit1", convert::ExtendedStringView(it->id()->id()));
+  EXPECT_EQ(CommitStatus_OK, it->status());
+  EXPECT_EQ("data1", convert::ExtendedStringView(it->commit()->bytes()));
+  it++;
+  EXPECT_EQ("missing_commit", convert::ExtendedStringView(it->id()->id()));
+  EXPECT_EQ(CommitStatus_UNKNOWN_COMMIT, it->status());
 }
 
 }  // namespace
