@@ -4,17 +4,10 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate fdio;
-extern crate fidl;
-extern crate fidl_fuchsia_wlan_device as wlan;
-extern crate fuchsia_async as async;
-extern crate fuchsia_wlan_dev as wlan_dev;
-extern crate futures;
-
-use failure::{Error, ResultExt};
+use failure::{Error, ResultExt, format_err};
+use fidl_fuchsia_wlan_device as wlan;
+use fuchsia_async as fasync;
+use fuchsia_wlan_dev as wlan_dev;
 use futures::prelude::*;
 use std::convert::Into;
 use std::fs::{File, OpenOptions};
@@ -35,8 +28,8 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new().read(true).write(true).open(path).map_err(Into::into)
 }
 
-fn get_proxy() -> Result<(async::Executor, wlan::PhyProxy), Error> {
-    let executor = async::Executor::new().context("error creating event loop")?;
+fn get_proxy() -> Result<(fasync::Executor, wlan::PhyProxy), Error> {
+    let executor = fasync::Executor::new().context("error creating event loop")?;
 
     let phy = wlan_dev::Device::new(DEV_WLANPHY)?;
     let proxy = wlan_dev::connect_wlan_phy(&phy)?;

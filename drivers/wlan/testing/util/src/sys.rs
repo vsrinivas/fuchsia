@@ -5,7 +5,7 @@
 #![deny(warnings)]
 
 use failure::Error;
-use fdio::{fdio_sys, ioctl};
+use fdio::{fdio_sys, ioctl, make_ioctl};
 use std::ffi::{CString, OsStr, OsString};
 use std::fs::File;
 use std::os::raw;
