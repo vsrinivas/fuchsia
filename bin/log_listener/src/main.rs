@@ -2,27 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
+#[deny(warnings)]
 
-extern crate chrono;
 use chrono::TimeZone;
-
-extern crate failure;
-extern crate fuchsia_async as async;
-extern crate fuchsia_syslog_listener as syslog_listener;
-
-extern crate fuchsia_zircon as zx;
-
 use failure::{Error, ResultExt};
+use fuchsia_async as fasync;
+use fuchsia_syslog_listener as syslog_listener;
+use fuchsia_syslog_listener::LogProcessor;
+use fuchsia_zircon as zx;
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::{stdout, Write};
-use syslog_listener::LogProcessor;
 
 // Include the generated FIDL bindings for the `Logger` service.
-extern crate fidl_fuchsia_logger;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN_BYTES,
 };
@@ -369,7 +363,7 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
 }
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let (filter_options, local_options) = options.map_or_else(
         || (None, LocalOptions::default()),
         |o| (Some(&mut o.filter), o.local.clone()),
@@ -424,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_log_fn() {
-        let _executor = async::Executor::new().expect("unable to create executor");
+        let _executor = fasync::Executor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new("test").expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
@@ -718,7 +712,7 @@ mod tests {
         }
 
         #[test]
-        fn file() {
+        fn file_test() {
             let mut expected = LogListenerOptions::default();
             expected.local.file = Some("/data/test".to_string());
             let args = vec!["--file".to_string(), "/data/test".to_string()];
