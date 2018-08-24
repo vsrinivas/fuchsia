@@ -39,10 +39,24 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
         return status;
     }
 
+    // Create the CPU frequency scaling object.
+    auto cpufreq_scaling = fbl::make_unique_checked<thermal::AmlCpuFrequency>(&ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // Initialize CPU frequency scaling.
+    status = cpufreq_scaling->Init(device);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-thermal: Could not inititalize CPU freq. scaling: %d\n", status);
+        return status;
+    }
+
     auto thermal_device = fbl::make_unique_checked<thermal::
                                                        AmlThermal>(&ac, device,
                                                                    fbl::move(tsensor),
-                                                                   fbl::move(voltage_regulator));
+                                                                   fbl::move(voltage_regulator),
+                                                                   fbl::move(cpufreq_scaling));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

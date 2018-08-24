@@ -5,6 +5,7 @@
 #pragma once
 
 #include "aml-clk-blocks.h"
+#include <soc/aml-meson/g12a-clk.h>
 
 // TODO(braval): Use common bitfield header (ZX-2526) when available for
 //               macros used below to avoid duplication.
@@ -17,6 +18,20 @@
 #define MSR_INTR BIT(18) // interrupts.
 #define MSR_RUN BIT(19)
 #define MSR_BUSY BIT(31)
+
+#define G12A_HHI_SYS_CPU_CLK_CNTL1 (0x57 << 2)
+#define G12A_HHI_TS_CLK_CNTL (0x64 << 2)
+
+// NOTE: This list only contains the clocks in use currently and
+//       not all avaialbe clocks.
+static meson_clk_gate_t g12a_clk_gates[] = {
+    // SYS CPU Clock gates.
+    {.reg = G12A_HHI_SYS_CPU_CLK_CNTL1, .bit = 24}, // CLK_SYS_PLL_DIV16
+    {.reg = G12A_HHI_SYS_CPU_CLK_CNTL1, .bit = 1},  // CLK_SYS_CPU_CLK_DIV16
+};
+
+static_assert(CLK_G12A_COUNT == countof(g12a_clk_gates),
+              "g12a_clk_gates[] and g12a_clk_gate_idx_t count mismatch");
 
 static meson_clk_msr_t g12_clk_msr = {
     .reg0_offset = (0x1 << 2),

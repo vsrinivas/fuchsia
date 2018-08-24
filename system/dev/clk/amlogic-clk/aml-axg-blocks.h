@@ -75,4 +75,3 @@ static meson_clk_gate_t axg_clk_gates[] = {
 static_assert(CLK_AXG_COUNT == countof(axg_clk_gates),
               "axg_clk_gates[] and axg_clk_gate_idx count mismatch");
 
-static const char meson_axg_clk_name[] = "meson-axg-clk";

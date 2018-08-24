@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "aml-cpufreq.h"
 #include "aml-pwm.h"
 #include "aml-tsensor.h"
 #include "aml-voltage.h"
@@ -24,9 +25,11 @@ class AmlThermal : public DeviceType,
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermal);
     AmlThermal(zx_device_t* device, fbl::unique_ptr<thermal::AmlTSensor> tsensor,
-               fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator)
+               fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
+               fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling)
         : DeviceType(device), tsensor_(fbl::move(tsensor)),
-          voltage_regulator_(fbl::move(voltage_regulator)) {
+          voltage_regulator_(fbl::move(voltage_regulator)),
+          cpufreq_scaling_(fbl::move(cpufreq_scaling)) {
         ddk_proto_id_ = ZX_PROTOCOL_THERMAL;
     };
     static zx_status_t Create(zx_device_t* device);
@@ -40,5 +43,6 @@ public:
 private:
     fbl::unique_ptr<thermal::AmlTSensor> tsensor_;
     fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
+    fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
 };
 } // namespace thermal

@@ -135,7 +135,13 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
     case PDEV_DID_AMLOGIC_G12A_CLK: {
         clk_msr_offsets_ = g12_clk_msr;
         clk_table_.reset(g12a_clk_table, countof(g12a_clk_table));
-        clk_gates_ = false;
+        clk_gates = (meson_clk_gate_t*)calloc(countof(g12a_clk_gates), sizeof(meson_clk_gate_t));
+        if (clk_gates == nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(clk_gates, g12a_clk_gates, sizeof(meson_clk_gate_t) * countof(g12a_clk_gates));
+
+        gates_.reset(clk_gates, countof(g12a_clk_gates));
         break;
     }
     default:

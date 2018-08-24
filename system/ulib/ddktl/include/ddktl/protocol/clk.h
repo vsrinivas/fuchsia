@@ -7,7 +7,7 @@
 #include <ddk/protocol/clk.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
-
+#include <ddk/driver.h>
 #include "clk-internal.h"
 
 // DDK clock protocol support.

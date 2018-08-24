@@ -8,6 +8,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
+#include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <zircon/device/thermal.h>
@@ -34,6 +35,15 @@ static const pbus_irq_t thermal_irqs[] = {
     {
         .irq = S905D2_TS_PLL_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_clk_t thermal_clk_gates[] = {
+    {
+        .clk = CLK_SYS_PLL_DIV16,
+    },
+    {
+        .clk = CLK_SYS_CPU_CLK_DIV16,
     },
 };
 
@@ -195,6 +205,8 @@ static pbus_dev_t thermal_dev = {
     .did = PDEV_DID_AMLOGIC_THERMAL,
     .mmios = thermal_mmios,
     .mmio_count = countof(thermal_mmios),
+    .clks = thermal_clk_gates,
+    .clk_count = countof(thermal_clk_gates),
     .irqs = thermal_irqs,
     .irq_count = countof(thermal_irqs),
     .metadata = thermal_metadata,
