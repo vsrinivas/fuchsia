@@ -5,21 +5,11 @@
 #![feature(futures_api)]
 // #![deny(warnings)]
 
-extern crate failure;
-extern crate fdio;
-extern crate fidl;
-extern crate fidl_fuchsia_devicesettings;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-#[macro_use]
-extern crate fuchsia_syslog as syslog;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate mxruntime;
-extern crate mxruntime_sys;
-extern crate parking_lot;
-
-use app::server::ServicesServer;
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use fuchsia_syslog as syslog;
+use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_zircon as zx;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{RequestStream, ServiceMarker};
 use futures::prelude::*;
@@ -101,9 +91,9 @@ fn read_file(file: &str) -> io::Result<String> {
     Ok(contents)
 }
 
-fn spawn_device_settings_server(state: DeviceSettingsManagerServer, chan: async::Channel) {
+fn spawn_device_settings_server(state: DeviceSettingsManagerServer, chan: fasync::Channel) {
     let state = Arc::new(Mutex::new(state));
-    async::spawn(
+    fasync::spawn(
         DeviceSettingsManagerRequestStream::from_channel(chan)
             .try_for_each(move |req| {
                 let state = state.clone();
@@ -211,7 +201,7 @@ fn main() {
 
 fn main_ds() -> Result<(), Error> {
     syslog::init_with_tags(&["device_settings"])?;
-    let mut core = async::Executor::new().context("unable to create executor")?;
+    let mut core = fasync::Executor::new().context("unable to create executor")?;
 
     let watchers = Arc::new(Mutex::new(HashMap::new()));
     // Attempt to create data directory
@@ -267,8 +257,8 @@ mod tests {
             .expect("executor run failed");
     }
 
-    fn setup(keys: &[&str]) -> Result<(async::Executor, DeviceSettingsManagerProxy, TempDir), ()> {
-        let exec = async::Executor::new().unwrap();
+    fn setup(keys: &[&str]) -> Result<(fasync::Executor, DeviceSettingsManagerProxy, TempDir), ()> {
+        let exec = fasync::Executor::new().unwrap();
         let mut device_settings = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
             watchers: Arc::new(Mutex::new(HashMap::new())),
@@ -278,8 +268,8 @@ mod tests {
         device_settings.initialize_keys(tmp_dir.path().to_str().unwrap(), keys);
 
         let (server_chan, client_chan) = zx::Channel::create().unwrap();
-        let server_chan = async::Channel::from_channel(server_chan).unwrap();
-        let client_chan = async::Channel::from_channel(client_chan).unwrap();
+        let server_chan = fasync::Channel::from_channel(server_chan).unwrap();
+        let client_chan = fasync::Channel::from_channel(client_chan).unwrap();
 
         spawn_device_settings_server(device_settings, server_chan);
 
