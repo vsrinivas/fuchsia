@@ -56,4 +56,4 @@ public:
     }
 };
 
-}  // namespace ddk
+} // namespace ddk

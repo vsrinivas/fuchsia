@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -69,7 +70,7 @@ protected:
 
 private:
     static zx_status_t MapMmio(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                        size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
+                               size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
         return static_cast<D*>(ctx)->MapMmio(index, cache_policy, out_vaddr, out_size, out_paddr,
                                              out_handle);
     }

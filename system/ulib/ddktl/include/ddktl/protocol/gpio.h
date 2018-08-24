@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/gpio.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>

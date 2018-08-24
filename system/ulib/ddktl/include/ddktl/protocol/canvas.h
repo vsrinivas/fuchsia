@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/canvas.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -80,7 +81,7 @@ public:
     }
 
     zx_status_t Config(zx_handle_t vmo, size_t offset, canvas_info_t* info,
-                             uint8_t* canvas_idx) {
+                       uint8_t* canvas_idx) {
         return ops_->config(ctx_, vmo, offset, info, canvas_idx);
     }
     zx_status_t Free(uint8_t canvas_idx) {

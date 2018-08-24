@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
 #include <ddktl/protocol/hidbus-internal.h>
-#include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/assert.h>
 
 // DDK hidbus protocol support
 //
@@ -62,12 +63,12 @@
 namespace ddk {
 
 class HidBusIfcProxy {
-  public:
+public:
     HidBusIfcProxy()
-      : ifc_(nullptr), cookie_(nullptr) {}
+        : ifc_(nullptr), cookie_(nullptr) {}
 
     HidBusIfcProxy(hidbus_ifc_t* ifc, void* cookie)
-      : ifc_(ifc), cookie_(cookie) {}
+        : ifc_(ifc), cookie_(cookie) {}
 
     void IoQueue(const uint8_t* buf, size_t len) {
         ifc_->io_queue(cookie_, buf, len);
@@ -82,14 +83,14 @@ class HidBusIfcProxy {
         cookie_ = nullptr;
     }
 
-  private:
+private:
     hidbus_ifc_t* ifc_;
     void* cookie_;
 };
 
 template <typename D>
 class HidBusProtocol : public internal::base_protocol {
-  public:
+public:
     HidBusProtocol() {
         internal::CheckHidBusProtocolSubclass<D>();
         ops_.query = Query;
@@ -109,7 +110,7 @@ class HidBusProtocol : public internal::base_protocol {
         ddk_proto_ops_ = &ops_;
     }
 
-  private:
+private:
     static zx_status_t Query(void* ctx, uint32_t options, hid_info_t* info) {
         return static_cast<D*>(ctx)->HidBusQuery(options, info);
     }
@@ -156,4 +157,4 @@ class HidBusProtocol : public internal::base_protocol {
     hidbus_protocol_ops_t ops_ = {};
 };
 
-}  // namespace ddk
+} // namespace ddk

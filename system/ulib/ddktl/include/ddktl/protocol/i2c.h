@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -77,7 +78,7 @@ public:
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
     zx_status_t Transact(uint32_t index, const void* write_buf, size_t write_length,
-                            size_t read_length, i2c_complete_cb complete_cb, void* cookie) {
+                         size_t read_length, i2c_complete_cb complete_cb, void* cookie) {
         return ops_->transact(ctx_, index, write_buf, write_length, read_length, complete_cb,
                               cookie);
     }

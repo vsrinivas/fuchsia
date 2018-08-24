@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 #include <ddktl/protocol/block-internal.h>
 #include <fbl/type_support.h>
@@ -47,7 +48,7 @@ namespace ddk {
 
 template <typename D>
 class BlockProtocol : public internal::base_protocol {
-  public:
+public:
     BlockProtocol() {
         internal::CheckBlockProtocolSubclass<D>();
         ops_.query = Query;
@@ -59,7 +60,7 @@ class BlockProtocol : public internal::base_protocol {
         ddk_proto_ops_ = &ops_;
     }
 
-  private:
+private:
     static void Query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
         static_cast<D*>(ctx)->BlockQuery(info_out, block_op_size_out);
     }
@@ -71,4 +72,4 @@ class BlockProtocol : public internal::base_protocol {
     block_protocol_ops_t ops_ = {};
 };
 
-}  // namespace ddk
+} // namespace ddk

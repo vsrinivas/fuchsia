@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddktl/protocol/ethernet-internal.h>
-#include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/assert.h>
 
 // DDK ethernet protocol support
 //
@@ -122,7 +123,7 @@ namespace ddk {
 
 template <typename D>
 class EthmacIfc {
-  public:
+public:
     EthmacIfc() {
         internal::CheckEthmacIfc<D>();
         ifc_.status = Status;
@@ -132,7 +133,7 @@ class EthmacIfc {
 
     ethmac_ifc_t* ethmac_ifc() { return &ifc_; }
 
-  private:
+private:
     static void Status(void* cookie, uint32_t status) {
         static_cast<D*>(cookie)->EthmacStatus(status);
     }
@@ -149,9 +150,9 @@ class EthmacIfc {
 };
 
 class EthmacIfcProxy {
-  public:
+public:
     EthmacIfcProxy(ethmac_ifc_t* ifc, void* cookie)
-      : ifc_(ifc), cookie_(cookie) {}
+        : ifc_(ifc), cookie_(cookie) {}
 
     void Status(uint32_t status) {
         ifc_->status(cookie_, status);
@@ -165,14 +166,14 @@ class EthmacIfcProxy {
         ifc_->complete_tx(cookie_, netbuf, status);
     }
 
-  private:
+private:
     ethmac_ifc_t* ifc_;
     void* cookie_;
 };
 
 template <typename D>
 class EthmacProtocol : public internal::base_protocol {
-  public:
+public:
     EthmacProtocol() {
         internal::CheckEthmacProtocolSubclass<D>();
         ops_.query = Query;
@@ -188,7 +189,7 @@ class EthmacProtocol : public internal::base_protocol {
         ddk_proto_ops_ = &ops_;
     }
 
-  private:
+private:
     static zx_status_t Query(void* ctx, uint32_t options, ethmac_info_t* info) {
         return static_cast<D*>(ctx)->EthmacQuery(options, info);
     }
@@ -218,9 +219,9 @@ class EthmacProtocol : public internal::base_protocol {
 };
 
 class EthmacProtocolProxy {
-  public:
+public:
     EthmacProtocolProxy(ethmac_protocol_t* proto)
-      : ops_(proto->ops), ctx_(proto->ctx) {}
+        : ops_(proto->ops), ctx_(proto->ctx) {}
 
     zx_status_t Query(uint32_t options, ethmac_info_t* info) {
         return ops_->query(ctx_, options, info);
@@ -245,9 +246,9 @@ class EthmacProtocolProxy {
         return ops_->set_param(ctx_, param, value, data);
     }
 
-  private:
+private:
     ethmac_protocol_ops_t* ops_;
     void* ctx_;
 };
 
-}  // namespace ddk
+} // namespace ddk

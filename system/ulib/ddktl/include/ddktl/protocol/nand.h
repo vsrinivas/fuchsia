@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -91,7 +92,7 @@ public:
     }
 
     zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                uint32_t* num_bad_blocks) {
+                                       uint32_t* num_bad_blocks) {
         return ops_->get_factory_bad_block_list(ctx_, bad_blocks, bad_block_len, num_bad_blocks);
     }
 

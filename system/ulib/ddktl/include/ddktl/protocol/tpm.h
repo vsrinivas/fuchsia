@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <zircon/assert.h>
+#include <ddk/driver.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/assert.h>
 
 // DDK tpm protocol support
 //
@@ -45,7 +46,7 @@ namespace ddk {
 
 template <typename D>
 class TpmProtocol : public internal::base_protocol {
-  public:
+public:
     TpmProtocol() {
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -53,11 +54,11 @@ class TpmProtocol : public internal::base_protocol {
         ddk_proto_ops_ = &ops_;
     }
 
-  private:
+private:
     // Empty struct to use for ops, so that we do not break the invariant that ddk_proto_ops_ is
     // non-null for devices with a protocol.
     struct {
     } ops_;
 };
 
-}  // namespace ddk
+} // namespace ddk

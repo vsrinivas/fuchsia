@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/serial-impl.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>

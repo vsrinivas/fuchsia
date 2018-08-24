@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -84,7 +85,6 @@ private:
     static zx_status_t SetBoardInfo(void* ctx, const pbus_board_info_t* info) {
         return static_cast<D*>(ctx)->SetBoardInfo(info);
     }
-
 };
 
 class PlatformBusProtocolProxy {
