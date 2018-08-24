@@ -212,6 +212,49 @@ bool TestEnsureAndRemove() {
     END_TEST;
 }
 
+bool TestRename() {
+    BEGIN_TEST;
+    BEGIN_TEST;
+    PathFixture fixture;
+    ASSERT_TRUE(fixture.Create());
+
+    Path path;
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo/ba").c_str()));
+
+    EXPECT_NE(ZX_OK, path.Rename("", "empty"));
+    EXPECT_NE(ZX_OK, path.Rename("empty", ""));
+
+    EXPECT_NE(ZX_OK, path.Rename("missing", "found"));
+
+    fbl::unique_fd fd(open(fixture.path("foo/ba/r").c_str(), O_RDWR));
+    EXPECT_TRUE(!!fd);
+    fd.reset(open(fixture.path("foo/ba/s").c_str(), O_RDWR));
+    EXPECT_FALSE(!!fd);
+
+    EXPECT_EQ(ZX_OK, path.Rename("r", "s"));
+    fd.reset(open(fixture.path("foo/ba/r").c_str(), O_RDWR));
+    EXPECT_FALSE(!!fd);
+    fd.reset(open(fixture.path("foo/ba/s").c_str(), O_RDWR));
+    EXPECT_TRUE(!!fd);
+
+    EXPECT_EQ(ZX_OK, path.Rename("s", "r"));
+    fd.reset(open(fixture.path("foo/ba/r").c_str(), O_RDWR));
+    EXPECT_TRUE(!!fd);
+    fd.reset(open(fixture.path("foo/ba/s").c_str(), O_RDWR));
+    EXPECT_FALSE(!!fd);
+
+    EXPECT_EQ(ZX_OK, path.Rename("z", "y"));
+    EXPECT_NE(ZX_OK, path.Push("z/qu/ux"));
+    EXPECT_EQ(ZX_OK, path.Push("y/qu/ux"));
+
+    path.Pop();
+    EXPECT_EQ(ZX_OK, path.Rename("y", "z"));
+    EXPECT_NE(ZX_OK, path.Push("y/qu/ux"));
+    EXPECT_EQ(ZX_OK, path.Push("z/qu/ux"));
+
+    END_TEST;
+}
+
 bool TestReset() {
     BEGIN_TEST;
     PathFixture fixture;
@@ -232,6 +275,7 @@ RUN_TEST(TestPushAndPop)
 RUN_TEST(TestGetSize)
 RUN_TEST(TestList)
 RUN_TEST(TestEnsureAndRemove)
+RUN_TEST(TestRename)
 RUN_TEST(TestReset)
 END_TEST_CASE(PathTest)
 

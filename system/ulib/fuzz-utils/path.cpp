@@ -209,6 +209,17 @@ zx_status_t Path::Remove(const char* relpath) {
     return ZX_OK;
 }
 
+zx_status_t Path::Rename(const char* old_relpath, const char* new_relpath) {
+    fbl::String old_abspath = fbl::move(Join(old_relpath));
+    fbl::String new_abspath = fbl::move(Join(new_relpath));
+    if (rename(old_abspath.c_str(), new_abspath.c_str()) != 0) {
+        xprintf("Failed to rename '%s' to '%s': %s.\n", old_abspath.c_str(), new_abspath.c_str(),
+                strerror(errno));
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
 void Path::Reset() {
     parent_.reset();
     path_->buffer_.Clear();

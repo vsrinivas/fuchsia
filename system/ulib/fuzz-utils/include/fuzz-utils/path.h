@@ -50,6 +50,9 @@ public:
     // Deletes the file described by |relpath|, if it exists.
     zx_status_t Remove(const char* relpath);
 
+    // Moves and/or renames the file described by |old_relpath| to |new_relpath|.
+    zx_status_t Rename(const char* old_relpath, const char* new_relpath);
+
     // Resets the current path to point at the filesystem root.
     void Reset();
 
