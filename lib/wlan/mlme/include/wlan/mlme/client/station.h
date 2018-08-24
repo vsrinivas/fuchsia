@@ -64,6 +64,14 @@ struct AssocContext {
     VhtOperation vht_op;
 };
 
+// TODO(NET-1322): Replace by a FIDL struct
+// AssocConfig stores the per-association configuration on top of
+// what associations peers are mutually capable of.
+// The configuration is an instruction from SME to MLME.
+struct AssocConfig {
+    wlan_mlme::CBW cbw;
+};
+
 class Station {
    public:
     Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched);
@@ -165,7 +173,7 @@ class Station {
     const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
 
     bool IsHTReady() const;
-    bool IsCbw40RxReady() const;
+    bool IsCbw40Rx() const;
     bool IsCbw40TxReady() const;
     bool IsQosReady() const;
     bool IsAmsduRxReady() const;
@@ -197,6 +205,7 @@ class Station {
     wlan_channel_t join_chan_;
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
+    AssocConfig assoc_cfg_{};
 };
 
 const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);

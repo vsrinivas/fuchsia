@@ -184,6 +184,10 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
 
     auto chan = GetBssChan();
 
+    // TODO(NET-1322): Receive instruction from SME
+    assoc_cfg_ = {};
+    assoc_cfg_.cbw = wlan_mlme::CBW::CBW40;
+
     // TODO(NET-449): Move this logic to policy engine
     // Validation and sanitization
     if (!common::IsValidChan(chan)) {
@@ -193,10 +197,10 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
                common::ChanStr(chan).c_str(), common::ChanStr(chan_sanitized).c_str());
         chan = chan_sanitized;
     }
-    if (IsCbw40RxReady()) {
-        // Override with CBW40 support
+    if (IsCbw40Rx()) {
         wlan_channel_t chan_override = chan;
-        chan_override.cbw = CBW40;
+        // Override with capabilities and configurations
+        if (assoc_cfg_.cbw == wlan_mlme::CBW::CBW40) { chan_override.cbw = CBW40; }
         chan_override.cbw = common::GetValidCbw(chan_override);
 
         infof("CBW40 Rx is ready. Overriding the channel configuration from %s to %s\n",
@@ -1342,8 +1346,49 @@ bool Station::IsHTReady() const {
     return true;
 }
 
-bool Station::IsCbw40RxReady() const {
-    // TODO(porce): Test capabilites and configurations of the client and its BSS.
+bool Station::IsCbw40Rx() const {
+    ZX_DEBUG_ASSERT(bss_ != nullptr);
+    if (bss_ == nullptr) { return false; }
+
+    auto chan = GetBssChan();
+    auto ifc_info = device_->GetWlanInfo().ifc_info;
+    auto client_assoc = ToAssocContext(ifc_info, chan);
+
+    debugf(
+        "IsCbw40Rx: bss.ht_cap:%s, bss.chan_width_set:%s client_assoc.has_ht_cap:%s "
+        "client_assoc.chan_width_set:%u user_cfg.cbw:%u\n",
+        (bss_->ht_cap != nullptr) ? "yes" : "no",
+        (bss_->ht_cap == nullptr)
+            ? "invalid"
+            : (bss_->ht_cap->ht_cap_info.chan_width_set == wlan_mlme::ChanWidthSet::TWENTY_ONLY)
+                  ? "20"
+                  : "40",
+        client_assoc.has_ht_cap ? "yes" : "no",
+        static_cast<uint8_t>(client_assoc.ht_cap.ht_cap_info.chan_width_set()), assoc_cfg_.cbw);
+
+    if (bss_->ht_cap == nullptr) {
+        debugjoin("Disable CBW40: no HT support in target BSS\n");
+        return false;
+    }
+    if (bss_->ht_cap->ht_cap_info.chan_width_set == wlan_mlme::ChanWidthSet::TWENTY_ONLY) {
+        debugjoin("Disable CBW40: no CBW40 support in target BSS\n");
+        return false;
+    }
+
+    if (!client_assoc.has_ht_cap) {
+        debugjoin("Disable CBW40: no HT support in the this device\n");
+        return false;
+    }
+    if (client_assoc.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
+        debugjoin("Disable CBW40: no CBW40 support in the this device\n");
+        return false;
+    }
+
+    if (assoc_cfg_.cbw == wlan_mlme::CBW::CBW20) {
+        debugjoin("Disable CBW40: overridden by user config\n");
+        return false;
+    }
+
     return true;
 }
 
@@ -1400,8 +1445,7 @@ zx_status_t Station::OverrideHtCapability(HtCapabilities* ht_cap) const {
     if (ht_cap == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
     HtCapabilityInfo& hci = ht_cap->ht_cap_info;
-    // TODO(NET-1321): Check the configuration to suppress the bandwidth to CBW20.
-    if (!IsCbw40RxReady()) { hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY); }
+    if (!IsCbw40Rx()) { hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY); }
 
     return ZX_OK;
 }
