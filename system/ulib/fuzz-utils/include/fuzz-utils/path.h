@@ -31,18 +31,32 @@ public:
     // Returns an absolute path to the file described by |relpath|.
     fbl::String Join(const char* relpath) const;
 
+    // Changes the current path to the directory described by |relpath|.
+    zx_status_t Push(const char* relpath);
+
+    // Changes to current path to value before the corresponding |Push|.  Does nothing if already at
+    // the filesystem root.
+    void Pop();
+
     // Resets the current path to point at the filesystem root.
     void Reset();
 
 private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Path);
-
     // |fuzzing::Path::PathBuffer| defines a reference-counted string buffer that can be shared
     // between multiple |fuzzing::Path| objects chained together by |Push|.
     struct PathBuffer final : public fbl::RefCounted<PathBuffer> {
         fbl::StringBuffer<PATH_MAX> buffer_;
     };
 
+    explicit Path(fbl::RefPtr<PathBuffer> path);
+    explicit Path(const Path& other);
+
+    Path(Path&&) = delete;
+    Path& operator=(const Path&) = delete;
+    Path& operator=(Path&&) = delete;
+
+    // The preceding |Path| object as set by |Push|.
+    fbl::unique_ptr<Path> parent_;
     // The reference-counted string buffer shared by |push|-chained |Path| objects.
     fbl::RefPtr<PathBuffer> path_;
     // The amount of |buffer_| belonging to this |Path| object.  The buffer will be reset to this

@@ -15,9 +15,25 @@
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
+#include "fixture.h"
+
 namespace fuzzing {
 namespace testing {
 namespace {
+
+// |fuzzing::testing::PathFixture| creates several empty files and directories for use in testing
+// |fuzzing::Path|.
+class PathFixture : public Fixture {
+public:
+    bool Create() override {
+        BEGIN_HELPER;
+        ASSERT_TRUE(Fixture::Create());
+        ASSERT_TRUE(CreateFile("foo/ba/r", nullptr));
+        ASSERT_TRUE(CreateFile("foo/ba/z/qu/x", "hello world"));
+        ASSERT_TRUE(CreateDirectory("foo/ba/z/qu/ux"));
+        END_HELPER;
+    }
+};
 
 bool TestJoin() {
     BEGIN_TEST;
@@ -49,8 +65,89 @@ bool TestJoin() {
     END_TEST;
 }
 
+bool TestPushAndPop() {
+    BEGIN_TEST;
+    PathFixture fixture;
+    ASSERT_TRUE(fixture.Create());
+
+    Path path;
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    EXPECT_EQ(ZX_OK, path.Push("tmp"));
+    EXPECT_STR_EQ(path.c_str(), "/tmp/");
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    EXPECT_EQ(ZX_OK, path.Push("//tmp"));
+    EXPECT_STR_EQ(path.c_str(), "/tmp/");
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    EXPECT_EQ(ZX_OK, path.Push("tmp//"));
+    EXPECT_STR_EQ(path.c_str(), "/tmp/");
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    EXPECT_EQ(ZX_OK, path.Push("//tmp//"));
+    EXPECT_STR_EQ(path.c_str(), "/tmp/");
+
+    EXPECT_NE(ZX_OK, path.Push(""));
+    EXPECT_STR_EQ(path.c_str(), "/tmp/");
+
+    EXPECT_NE(ZX_OK, path.Push("f"));
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    path.Reset();
+    EXPECT_EQ(ZX_OK, path.Push(fixture.path().c_str()));
+    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+
+    EXPECT_EQ(ZX_OK, path.Push("foo/ba"));
+    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/").c_str());
+
+    EXPECT_NE(ZX_OK, path.Push("r"));
+    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/").c_str());
+
+    EXPECT_EQ(ZX_OK, path.Push("z/qu/ux/"));
+    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/z/qu/ux/").c_str());
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/").c_str());
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+
+    path.Pop();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    END_TEST;
+}
+
+bool TestReset() {
+    BEGIN_TEST;
+    PathFixture fixture;
+    ASSERT_TRUE(fixture.Create());
+
+    Path path;
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path().c_str()));
+
+    path.Reset();
+    EXPECT_STR_EQ(path.c_str(), "/");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(PathTest)
 RUN_TEST(TestJoin)
+RUN_TEST(TestPushAndPop)
+RUN_TEST(TestReset)
 END_TEST_CASE(PathTest)
 
 } // namespace

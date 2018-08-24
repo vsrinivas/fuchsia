@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/fixture.cpp \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_SRCS += \
