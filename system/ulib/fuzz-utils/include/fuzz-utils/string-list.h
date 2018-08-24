@@ -16,6 +16,7 @@ namespace fuzzing {
 class StringList final {
 public:
     StringList();
+    StringList(const char* const* elements, size_t num_elements);
     ~StringList();
 
     // Identical to |fbl::DoublyLinkedList<fbl::unique_ptr<StringElement>>::is_empty|.
@@ -23,6 +24,11 @@ public:
 
     // Identical to |fbl::DoublyLinkedList<fbl::unique_ptr<StringElement>>::size_slow|.
     size_t length() const;
+
+    // These methods are similar to |fbl::DoublyLinkedList|'s, except that take raw C strings and
+    // abstract away the process of wrapping them in the |StringElement| structure defined below.
+    void push_front(const char* str);
+    void push_back(const char* str);
 
     // In place of iterators, this class provides |first| and |next| methods.  The former resets the
     // internal iterator to the beginning of the list, while the latter returns successive elements
@@ -40,6 +46,9 @@ private:
     struct StringElement final : public fbl::DoublyLinkedListable<fbl::unique_ptr<StringElement>> {
         fbl::String str_;
     };
+
+    // Implements |push_front| and |push_back| above, depending on the value of |front|.
+    void push(const char* str, bool front);
 
     // The actual list elements, and an iterator to return the |next| one.
     using List = fbl::DoublyLinkedList<fbl::unique_ptr<StringElement>>;

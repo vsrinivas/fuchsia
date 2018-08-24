@@ -14,6 +14,12 @@ StringList::StringList() {
     iterator_ = elements_.end();
 }
 
+StringList::StringList(const char* const* elements, size_t num_elements) {
+    for (size_t i = 0; i < num_elements; ++i) {
+        push_back(elements[i]);
+    }
+}
+
 StringList::~StringList() {}
 
 bool StringList::is_empty() const {
@@ -31,6 +37,31 @@ const char* StringList::first() {
 
 const char* StringList::next() {
     return iterator_ != elements_.end() ? (iterator_++)->str_.c_str() : nullptr;
+}
+
+void StringList::push_front(const char* str) {
+    push(str, true /* front */);
+}
+
+void StringList::push_back(const char* str) {
+    push(str, false /* !front */);
+}
+
+void StringList::push(const char* str, bool front) {
+    if (!str) {
+        return;
+    }
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<StringElement> element(new (&ac) StringElement());
+    ZX_ASSERT(ac.check());
+    element->str_.Set(str, &ac);
+    ZX_ASSERT(ac.check());
+    if (front) {
+        elements_.push_front(fbl::move(element));
+    } else {
+        elements_.push_back(fbl::move(element));
+    }
+    iterator_ = elements_.end();
 }
 
 } // namespace fuzzing
