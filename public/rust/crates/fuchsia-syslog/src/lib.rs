@@ -260,7 +260,7 @@ pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
     let config = syslog::fx_logger_config_t {
         severity: levels::INFO,
         fd: -1,
-        log_service_channel: mxruntime::ZX_HANDLE_INVALID,
+        log_service_channel: zx::sys::ZX_HANDLE_INVALID,
         tags: c_tags.as_ptr(),
         num_tags: c_tags.len(),
     };
@@ -311,7 +311,7 @@ mod test {
         let config = syslog::fx_logger_config_t {
             severity: levels::INFO,
             fd: tmp_file.as_raw_fd(),
-            log_service_channel: mxruntime::ZX_HANDLE_INVALID,
+            log_service_channel: zx::sys::ZX_HANDLE_INVALID,
             tags: ptr::null(),
             num_tags: 0,
         };

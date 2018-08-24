@@ -139,6 +139,29 @@ pub mod client {
 pub mod server {
     use super::*;
 
+    /// Startup handle types, derived from zircon/system/public/zircon/processargs.h.
+    /// Other variants may be added in the future.
+    #[repr(u32)]
+    enum HandleType {
+        /// Server endpoint for handling connections to appmgr services.
+        DirectoryRequest = 0x3B,
+    }
+
+    fn take_startup_handle(htype: HandleType) -> Option<zx::Handle> {
+        unsafe {
+            let raw = zx_take_startup_handle(htype as u32);
+            if raw == zx::sys::ZX_HANDLE_INVALID {
+                None
+            } else {
+                Some(zx::Handle::from_raw(raw))
+            }
+        }
+    }
+
+    extern {
+        fn zx_take_startup_handle(id: u32) -> zx::sys::zx_handle_t;
+    }
+
     /// An error indicating the startup handle on which the FIDL server
     /// attempted to start was missing.
     #[derive(Debug, Fail)]
@@ -194,7 +217,7 @@ pub mod server {
         /// PA_DIRECTORY_REQUEST handle
         pub fn start(self) -> Result<FdioServer, Error> {
             let fdio_handle =
-                mxruntime::get_startup_handle(mxruntime::HandleType::DirectoryRequest)
+                take_startup_handle(HandleType::DirectoryRequest)
                     .ok_or(MissingStartupHandle)?;
 
             let fdio_channel = fasync::Channel::from_channel(fdio_handle.into())?;

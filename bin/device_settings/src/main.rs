@@ -5,13 +5,13 @@
 #![feature(futures_api)]
 // #![deny(warnings)]
 
+use failure::{Error, ResultExt};
+use fidl::endpoints2::{RequestStream, ServiceMarker};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
-use failure::{Error, ResultExt};
-use fidl::endpoints2::{RequestStream, ServiceMarker};
 use futures::prelude::*;
 use futures::future;
 use futures::io;

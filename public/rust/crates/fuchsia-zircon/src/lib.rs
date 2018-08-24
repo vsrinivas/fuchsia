@@ -92,23 +92,23 @@ mod thread;
 mod vmar;
 mod vmo;
 
-pub use crate::channel::*;
-pub use crate::cprng::*;
-pub use crate::event::*;
-pub use crate::eventpair::*;
-pub use crate::fifo::*;
-pub use crate::handle::*;
-pub use crate::job::*;
-pub use crate::port::*;
-pub use crate::process::*;
-pub use crate::rights::*;
-pub use crate::socket::*;
-pub use crate::signals::*;
-pub use crate::status::*;
-pub use crate::thread::*;
-pub use crate::time::*;
-pub use crate::vmar::*;
-pub use crate::vmo::*;
+pub use self::channel::*;
+pub use self::cprng::*;
+pub use self::event::*;
+pub use self::eventpair::*;
+pub use self::fifo::*;
+pub use self::handle::*;
+pub use self::job::*;
+pub use self::port::*;
+pub use self::process::*;
+pub use self::rights::*;
+pub use self::socket::*;
+pub use self::signals::*;
+pub use self::status::*;
+pub use self::thread::*;
+pub use self::time::*;
+pub use self::vmar::*;
+pub use self::vmo::*;
 
 /// Prelude containing common utility traits.
 /// Designed for use like `use fuchsia_zircon::prelude::*;`

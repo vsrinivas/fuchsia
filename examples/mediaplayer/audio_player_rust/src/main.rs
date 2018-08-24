@@ -15,7 +15,6 @@ use {
         sys::zx_handle_t,
     },
     futures::prelude::*,
-    mxruntime_sys::*,
     std::{
         fs::File,
         io,
@@ -25,6 +24,9 @@ use {
     structopt::StructOpt,
     url::Url,
 };
+
+// Indicator for the remote handle type used by FDIO.
+const PA_FDIO_REMOTE: u32 = 0x32;
 
 fn channel_from_file(file: File) -> Result<zx::Channel, io::Error> {
     unsafe {

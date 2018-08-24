@@ -18,8 +18,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-syslog",
     "//garnet/public/rust/crates/fuchsia-zircon",
-    "//garnet/public/rust/crates/mxruntime",
-    "//garnet/public/rust/crates/mxruntime/mxruntime-sys",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
