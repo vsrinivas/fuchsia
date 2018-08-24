@@ -36,7 +36,6 @@ source_set("mlme") {
     "include/wlan/mlme/packet.h",
     "include/wlan/mlme/sequence.h",
     "include/wlan/mlme/service.h",
-    "include/wlan/mlme/telemetry.h",
     "include/wlan/mlme/timer.h",
     "include/wlan/mlme/timer_manager.h",
     "include/wlan/mlme/wlan.h",
@@ -62,7 +61,6 @@ source_set("mlme") {
     "mcs.cpp",
     "packet.cpp",
     "service.cpp",
-    "telemetry.cpp",
     "timer.cpp",
     "timer_manager.cpp",
   ]
@@ -73,7 +71,6 @@ source_set("mlme") {
     "//garnet/public/fidl/fuchsia.wlan.mlme",
     "//garnet/public/fidl/fuchsia.wlan.stats",
     "//garnet/public/lib/svc/cpp",
-    "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",

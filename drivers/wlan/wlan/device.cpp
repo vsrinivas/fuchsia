@@ -154,7 +154,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
-    dispatcher_->CreateAndStartTelemetry(services_);
     if ((wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
         !(wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION)) {
         minstrel_.reset(new MinstrelManager);

@@ -33,8 +33,6 @@
 
 namespace wlan {
 
-constexpr uint8_t kTelemetryReportPeriodMinutes = 1;
-
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
@@ -285,11 +283,6 @@ wlan_mlme::StatsQueryResponse Dispatcher::GetStatsToFidl() const {
             std::make_unique<wlan_stats::MlmeStats>(mlme_->GetMlmeStats());
     }
     return stats_response;
-}
-
-void Dispatcher::CreateAndStartTelemetry(std::shared_ptr<component::Services>& services) {
-    telemetry_.reset(new Telemetry(this, services));
-    telemetry_->StartWorker(kTelemetryReportPeriodMinutes);
 }
 
 }  // namespace wlan
