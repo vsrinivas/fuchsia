@@ -6,37 +6,41 @@
 
 #![deny(warnings)]
 
-extern crate fuchsia_zircon as zircon;
-extern crate bytes;
-
-#[allow(non_camel_case_types)]
-#[allow(non_snake_case)]
+#[allow(bad_style)]
 pub mod fdio_sys;
+pub use self::fdio_sys::fdio_ioctl as ioctl_raw;
 
-use zircon::prelude::*;
-use zircon::sys as sys;
-
-use std::ffi::{CString, CStr};
-use std::fs::File;
-use std::os::raw;
-use std::ffi;
-use std::os::unix::ffi::OsStrExt;
-use std::os::unix::io::AsRawFd;
-use std::path::Path;
-
-pub use fdio_sys::fdio_ioctl as ioctl_raw;
+use {
+    fuchsia_zircon::{
+        self as zx,
+        prelude::*,
+        sys,
+    },
+    std::{
+        ffi::{self, CString, CStr},
+        fs::File,
+        os::{
+            raw,
+            unix::{
+                ffi::OsStrExt,
+                io::AsRawFd,
+            },
+        },
+        path::Path,
+    },
+};
 
 pub unsafe fn ioctl(dev: &File, op: raw::c_int, in_buf: *const raw::c_void, in_len: usize,
-         out_buf: *mut raw::c_void, out_len: usize) -> Result<i32, zircon::Status> {
+         out_buf: *mut raw::c_void, out_len: usize) -> Result<i32, zx::Status> {
    match ioctl_raw(dev.as_raw_fd(), op, in_buf, in_len, out_buf, out_len) as i32 {
-     e if e < 0 => Err(zircon::Status::from_raw(e)),
+     e if e < 0 => Err(zx::Status::from_raw(e)),
      e => Ok(e),
    }
 }
 
 /// Connects a channel to a named service.
-pub fn service_connect(service_path: &str, channel: zircon::Channel) -> Result<(), zircon::Status> {
-    let c_service_path = CString::new(service_path).map_err(|_| zircon::Status::INVALID_ARGS)?;
+pub fn service_connect(service_path: &str, channel: zx::Channel) -> Result<(), zx::Status> {
+    let c_service_path = CString::new(service_path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // TODO(raggi): this should be convered to an asynchronous FDIO
     // client protocol as soon as that is available (post fidl2) as this
@@ -46,7 +50,7 @@ pub fn service_connect(service_path: &str, channel: zircon::Channel) -> Result<(
     // On success, the channel is connected, and on failure, it is closed.
     // In either case, we do not need to clean up the channel so we use
     // `into_raw` so that Rust forgets about it.
-    zircon::ok(unsafe {
+    zx::ok(unsafe {
         fdio_sys::fdio_service_connect(
             c_service_path.as_ptr(),
             channel.into_raw())
@@ -55,10 +59,10 @@ pub fn service_connect(service_path: &str, channel: zircon::Channel) -> Result<(
 
 /// Connects a channel to a named service relative to a directory `dir`.
 /// `dir` must be a directory protocol channel.
-pub fn service_connect_at(dir: &zircon::Channel, service_path: &str, channel: zircon::Channel)
-    -> Result<(), zircon::Status>
+pub fn service_connect_at(dir: &zx::Channel, service_path: &str, channel: zx::Channel)
+    -> Result<(), zx::Status>
 {
-    let c_service_path = CString::new(service_path).map_err(|_| zircon::Status::INVALID_ARGS)?;
+    let c_service_path = CString::new(service_path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // TODO(raggi): this should be convered to an asynchronous FDIO
     // client protocol as soon as that is available (post fidl2) as this
@@ -70,7 +74,7 @@ pub fn service_connect_at(dir: &zircon::Channel, service_path: &str, channel: zi
     // On success, the channel is connected, and on failure, it is closed.
     // In either case, we do not need to clean up the channel so we use
     // `into_raw` so that Rust forgets about it.
-    zircon::ok(unsafe {
+    zx::ok(unsafe {
         fdio_sys::fdio_service_connect_at(
             dir.raw_handle(),
             c_service_path.as_ptr(),
@@ -79,7 +83,7 @@ pub fn service_connect_at(dir: &zircon::Channel, service_path: &str, channel: zi
 }
 
 /// Retrieves the topological path for a device node.
-pub fn device_get_topo_path(dev: &File) -> Result<String, zircon::Status> {
+pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     let mut topo = vec![0; 1024];
 
     // This is safe because the length of the output buffer is computed from the vector, and the
@@ -94,7 +98,7 @@ pub fn device_get_topo_path(dev: &File) -> Result<String, zircon::Status> {
             topo.len())?
     };
     topo.truncate((size - 1) as usize);
-    String::from_utf8(topo).map_err(|_| zircon::Status::IO)
+    String::from_utf8(topo).map_err(|_| zx::Status::IO)
 }
 
 /// Events that can occur while watching a directory, including files that already exist prior to
@@ -149,7 +153,7 @@ unsafe extern "C" fn watcher_cb<F>(
     watcher: *mut raw::c_void,
 ) -> sys::zx_status_t
 where
-    F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zircon::Status>,
+    F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zx::Status>,
 {
     let cb: &mut F = &mut *(watcher as *mut F);
     let filename = ffi::OsStr::from_bytes(CStr::from_ptr(fn_).to_bytes());
@@ -162,22 +166,22 @@ where
 /// Runs the given callback for each file in the directory and each time a new file is
 /// added to the directory.
 ///
-/// If the callback returns an error, the watching stops, and the zircon::Status is returned.
+/// If the callback returns an error, the watching stops, and the zx::Status is returned.
 ///
 /// This function blocks for the duration of the watch operation. The deadline parameter will stop
-/// the watch at the given (absolute) time and return zircon::Status::ErrTimedOut. A deadline of
-/// zircon::ZX_TIME_INFINITE will never expire.
+/// the watch at the given (absolute) time and return zx::Status::ErrTimedOut. A deadline of
+/// zx::ZX_TIME_INFINITE will never expire.
 ///
-/// The callback may use zircon::ErrStop as a way to signal to the caller that it wants to
+/// The callback may use zx::ErrStop as a way to signal to the caller that it wants to
 /// stop because it found what it was looking for. Since this error code is not returned by
 /// syscalls or public APIs, the callback does not need to worry about it turning up normally.
-pub fn watch_directory<F>(dir: &File, deadline: sys::zx_time_t, mut f: F) -> zircon::Status
+pub fn watch_directory<F>(dir: &File, deadline: sys::zx_time_t, mut f: F) -> zx::Status
 where
-    F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zircon::Status>,
+    F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zx::Status>,
 {
     let cb_ptr: *mut raw::c_void = &mut f as *mut _ as *mut raw::c_void;
     unsafe {
-        zircon::Status::from_raw(fdio_sys::fdio_watch_directory(
+        zx::Status::from_raw(fdio_sys::fdio_watch_directory(
             dir.as_raw_fd(),
             Some(watcher_cb::<F>),
             deadline,
@@ -198,12 +202,12 @@ pub fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> r
     make_ioctl!(kind, family, number)
 }
 
-pub fn get_vmo_copy_from_file(file: &File) -> Result<zircon::Vmo, zircon::Status> {
+pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
     unsafe {
-        let mut vmo_handle: zircon::sys::zx_handle_t = zircon::sys::ZX_HANDLE_INVALID;
+        let mut vmo_handle: zx::sys::zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
         match fdio_sys::fdio_get_vmo_copy(file.as_raw_fd(), &mut vmo_handle) {
-            0 => Ok(zircon::Vmo::from(zircon::Handle::from_raw(vmo_handle))),
-            error_code => Err(zircon::Status::from_raw(error_code))
+            0 => Ok(zx::Vmo::from(zx::Handle::from_raw(vmo_handle))),
+            error_code => Err(zx::Status::from_raw(error_code))
         }
     }
 }

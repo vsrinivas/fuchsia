@@ -5,8 +5,10 @@
 // This file was generated with bindgen, then modified to consume already bound
 // types and remove various bindgen-isms that we don't want.
 
-use zircon::sys::*;
-use std::os::raw;
+use {
+    fuchsia_zircon::sys::*,
+    std::os::raw,
+};
 
 #[repr(C)]
 #[derive(Default)]
