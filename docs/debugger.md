@@ -14,19 +14,16 @@ The debugger runs remotely only (you can't do self-hosted debug).
 
 ### Major limitations
 
-  * **There is no “print” command.** It doesn’t know anything about function
-    parameters, variables, or types. It is impossible to look at program state
-    beyond registers (“regs” command) and memory dumps (“x” and “stack”
-    commands). This means you’re either debugging in assembly or based on the
-    flow of your program (“how did I get here and where is it going”).
-
   * **There is no “next” command.** This is annoying but can be worked around
     since “step” and “finish” both work, or you can do things like “u 43” to
     get to a certain line.
 
   * Be aware that our debug build is compiled with some optimizations which
     means stepping may not work the way you would want even if the debugger was
-    perfect.
+    perfect (see "Getting less optimization" below).
+
+  * Variables in non-top stack frames aren't available as often as they could
+    be.
 
   * “step” steps into syscalls which end up as a few assembly instructions you
     have to step through.
@@ -87,7 +84,7 @@ or
 [zxdb] attach 3452
 ```
 
-### 5. Do more stuff.
+### 5. Run and step
 
 Type "help" for commands, there is an extensive built-in help system. Some
 examples of stuff you can do:
@@ -126,6 +123,91 @@ Exited with code 0: Process 1 Not running /foo/bar/myapp
 
 [zxdb] q
 ```
+
+### 6. Print stuff.
+
+```
+[zxdb] bt
+▶  0 main() • ps.c:282
+      IP=0x1a77a1f9b991, BP=0x6db4c69eff0, SP=0x6db4c69efd0
+      argc = 1
+      argv = (char**) 0x49d00d252eac
+   1 start_main() • __libc_start_main.c:49
+      IP=0x598098780d2f, BP=0x6db4c69eff0, SP=0x6db4c69efe0
+      p = <no type>
+
+[zxdb] locals
+arg = <invalid pointer>
+i = 5
+options = {also_show_threads = false, only_show_jobs = false}
+ret = 0
+status = 2
+
+[zxdb] print ret
+0
+
+[zxdb] print options.also_show_threads
+false
+```
+
+## Tips
+
+### Getting less optimization
+
+Fuchsia's "debug" build compiles with `-Og` which does some optimizations but
+tries to be debugger-friendly about it. Some things will still be optimized
+out and reordered that can make debugging more challenging.
+
+If you're encountering optimization problems you can do a local build change to
+override the debug flag for your target only. In the target's definition (in
+the `BUILD.gn` file) add this code:
+
+```python
+if (is_debug) {
+  # Force no optimization in debug builds.
+  configs -= [ "//build/config:debug" ]
+  cflags = [ "-O0" ]
+}
+```
+
+It will apply only to .cc files in that target. We recommend not checking this
+code in. If you find yourself needing this a lot, please speak up. We can
+consider adding another globally build optimization level.
+
+### Running out-of-tree
+
+The debugger is currently designed to run in-tree on a system you have just
+built. If you build out-of-tree, you can still experiment with some extra
+manual; steps.
+
+Be aware that we aren't yet treating the protocol as frozen. Ideally the
+debugger will be from the same build as the operating system itself (more
+precicely, it needs to match the debug\_agent).
+
+The main thing will be finding symbols for your binary as we have not designed
+the system for registering new symbols with the debugger.
+
+zxdb will look in a file "../ids.txt" relative to its own binary for the
+mappings to symbolized binaries on the local dev host (symbols in the binary on
+the Fuchsia target are never used so the files can be stripped). It will
+print the path of this file when it loads it after it connects to the remote
+system.
+
+The ids.txt file has one line per binary, with each line having the format:
+
+  * **Build ID**: A hex string which uniquely identifies a binary file. One
+    way to look this up is to run the debugger on your binary and type
+    `sym-stat`. It will list the build ID and probably tell you that it
+    couldn't find symbols for it.
+  * **Space**
+  * **Full path to binary with symbols**: This should be an unstripped ELF
+    binary on the local developer host system.
+
+While there is no way to add a second ID mapping file, you can append to the
+existing one (watch out: it will be overwritten by the next Fuchsia build).
+You will need to disconnect and reconnect zxdb to re-read this file.
+
+The best way to debug issues around finding symbols is the `sym-stat` command.
 
 ## Running the tests
 
