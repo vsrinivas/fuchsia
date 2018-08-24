@@ -5,20 +5,9 @@
 #![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
-extern crate byteorder;
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_logger;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate libc;
-extern crate parking_lot;
-
-#[macro_use]
-extern crate futures;
-
-use app::server::ServicesServer;
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{ClientEnd, RequestStream, ServiceMarker};
 use futures::{TryFutureExt, TryStreamExt};
@@ -256,9 +245,9 @@ fn log_manager_helper(
     }
 }
 
-fn spawn_log_manager(state: LogManager, chan: async::Channel) {
+fn spawn_log_manager(state: LogManager, chan: fasync::Channel) {
     let state = Arc::new(state);
-    async::spawn(
+    fasync::spawn(
         LogRequestStream::from_channel(chan)
             .map_ok(move |req| {
                 let state = state.clone();
@@ -286,9 +275,9 @@ fn process_log(shared_members: Arc<Mutex<LogManagerShared>>, mut log_msg: LogMes
     shared_members.log_msg_buffer.push(log_msg, size);
 }
 
-fn spawn_log_sink(state: LogManager, chan: async::Channel) {
+fn spawn_log_sink(state: LogManager, chan: fasync::Channel) {
     let state = Arc::new(state);
-    async::spawn(
+    fasync::spawn(
         LogSinkRequestStream::from_channel(chan)
             .map_ok(move |req| {
                 let state = state.clone();
@@ -309,7 +298,7 @@ fn spawn_log_sink(state: LogManager, chan: async::Channel) {
                     })
                     .try_collect::<()>();
 
-                async::spawn(f.unwrap_or_else(|e| {
+                fasync::spawn(f.unwrap_or_else(|e| {
                     eprintln!("Logger: Stream failed {:?}", e);
                 }));
             })
@@ -325,7 +314,7 @@ fn main() {
 }
 
 fn main_wrapper() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("unable to create executor")?;
+    let mut executor = fasync::Executor::new().context("unable to create executor")?;
     let shared_members = Arc::new(Mutex::new(LogManagerShared {
         listeners: Vec::new(),
         log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
@@ -368,8 +357,8 @@ mod tests {
     use fidl::encoding2::OutOfLine;
     use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerRequest,
                               LogListenerRequestStream, LogProxy, LogSinkProxy};
-    use logger::fx_log_packet_t;
-    use zx::prelude::*;
+    use crate::logger::fx_log_packet_t;
+    use fuchsia_zircon::prelude::*;
 
     mod memory_bounded_buffer {
         use super::*;
@@ -463,9 +452,9 @@ mod tests {
             .for_each(|x| *x = value);
     }
 
-    fn spawn_log_listener(ll: LogListenerState, chan: async::Channel) {
+    fn spawn_log_listener(ll: LogListenerState, chan: fasync::Channel) {
         let state = Arc::new(Mutex::new(ll));
-        async::spawn(
+        fasync::spawn(
             LogListenerRequestStream::from_channel(chan)
                 .map_ok(move |req| {
                     let state = state.clone();
@@ -502,7 +491,7 @@ mod tests {
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
         let remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
-        let local = async::Channel::from_channel(local).expect("failed to make async channel");
+        let local = fasync::Channel::from_channel(local).expect("failed to make async channel");
         spawn_log_listener(ll, local);
 
         let filter_options = filter_options.map(OutOfLine);
@@ -517,13 +506,13 @@ mod tests {
     }
 
     fn setup_test() -> (
-        async::Executor,
+        fasync::Executor,
         LogProxy,
         LogSinkProxy,
         zx::Socket,
         zx::Socket,
     ) {
-        let executor = async::Executor::new().expect("unable to create executor");
+        let executor = fasync::Executor::new().expect("unable to create executor");
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let shared_members = Arc::new(Mutex::new(LogManagerShared {
             listeners: Vec::new(),
@@ -535,15 +524,15 @@ mod tests {
         };
 
         let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let log_proxy = LogProxy::new(client_end);
-        let server_end = async::Channel::from_channel(server_end).expect("unable to asyncify");
+        let server_end = fasync::Channel::from_channel(server_end).expect("unable to asyncify");
         spawn_log_manager(lm.clone(), server_end);
 
         let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let log_sink_proxy = LogSinkProxy::new(client_end);
-        let server_end = async::Channel::from_channel(server_end).expect("unable to asyncify");
+        let server_end = fasync::Channel::from_channel(server_end).expect("unable to asyncify");
         spawn_log_sink(lm.clone(), server_end);
 
         (executor, log_proxy, log_sink_proxy, sin, sout)
@@ -601,7 +590,7 @@ mod tests {
             if done.load(Ordering::Relaxed) || (test_dump_logs && closed.load(Ordering::Relaxed)) {
                 break;
             }
-            let timeout = async::Timer::new(100.millis().after_now());
+            let timeout = fasync::Timer::new(100.millis().after_now());
             executor.run(timeout, 2);
         }
 
@@ -656,7 +645,7 @@ mod tests {
             if done.load(Ordering::Relaxed) {
                 break;
             }
-            let timeout = async::Timer::new(100.millis().after_now());
+            let timeout = fasync::Timer::new(100.millis().after_now());
             println!("DEBUG: {}: wait on executor", test_name);
             executor.run(timeout, 2);
             println!("DEBUG: {}: executor returned", test_name);

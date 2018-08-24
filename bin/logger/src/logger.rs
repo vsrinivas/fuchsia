@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::LogMessage;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::io;
 use futures::prelude::*;
+use futures::ready;
 use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
 use std::cell::RefCell;
 use std::marker::Unpin;
 use std::mem::{self, PinMut};
 use std::str;
-use zx;
 
 type FxLogSeverityT = c_int;
 type ZxKoid = uint64_t;
@@ -54,7 +55,7 @@ impl Default for fx_log_packet_t {
 
 #[must_use = "futures/streams"]
 pub struct LoggerStream {
-    socket: async::Socket,
+    socket: fasync::Socket,
 }
 
 impl Unpin for LoggerStream {}
@@ -68,7 +69,7 @@ impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
     pub fn new(socket: zx::Socket) -> Result<LoggerStream, io::Error> {
         let l = LoggerStream {
-            socket: async::Socket::from_socket(socket)?,
+            socket: fasync::Socket::from_socket(socket)?,
         };
         Ok(l)
     }
@@ -162,7 +163,7 @@ mod tests {
     use std::slice;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
-    use zx::prelude::*;
+    use fuchsia_zircon::prelude::*;
 
     #[repr(C, packed)]
     pub struct fx_log_metadata_t_packed {
@@ -223,7 +224,7 @@ mod tests {
 
     #[test]
     fn logger_stream_test() {
-        let mut executor = async::Executor::new().unwrap();
+        let mut executor = fasync::Executor::new().unwrap();
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let mut p: fx_log_packet_t = Default::default();
         p.metadata.pid = 1;
@@ -251,7 +252,7 @@ mod tests {
             c.fetch_add(1, Ordering::Relaxed);
         }).try_collect::<()>();
 
-        async::spawn(f.unwrap_or_else(|e| {
+        fasync::spawn(f.unwrap_or_else(|e| {
             panic!("test fail {:?}", e);
         }));
 
@@ -260,7 +261,7 @@ mod tests {
             if calltimes.load(Ordering::Relaxed) == 1 {
                 break;
             }
-            let timeout = async::Timer::new(100.millis().after_now());
+            let timeout = fasync::Timer::new(100.millis().after_now());
             executor.run(timeout, 2);
         }
         assert_eq!(1, calltimes.load(Ordering::Relaxed));
@@ -272,7 +273,7 @@ mod tests {
             if calltimes.load(Ordering::Relaxed) == 2 {
                 break;
             }
-            let timeout = async::Timer::new(100.millis().after_now());
+            let timeout = fasync::Timer::new(100.millis().after_now());
             executor.run(timeout, 2);
         }
         assert_eq!(2, calltimes.load(Ordering::Relaxed));

@@ -4,13 +4,14 @@
 
 // Read kernel logs, convert them to LogMessages and serve them.
 
-use async;
 use byteorder::{ByteOrder, LittleEndian};
+use crate::logger;
 use fidl_fuchsia_logger::{self, LogMessage};
+use fuchsia_async as fasync;
+use fuchsia_zircon::{AsHandleRef, Signals};
+use fuchsia_zircon::sys::zx_handle_t;
+use fuchsia_zircon as zx;
 use futures::{future, stream, TryFutureExt, TryStreamExt};
-use logger;
-use zx::sys::zx_handle_t;
-use zx::{self, AsHandleRef, Signals};
 
 const ZX_LOG_FLAG_READABLE: u32 = 0x40000000;
 const ZX_LOG_RECORD_MAX: u32 = 256;
@@ -30,7 +31,7 @@ where
 
     let f = stream::repeat(Ok(())).try_fold((callback, h), |(callback, handle), ()| {
         // TODO: change OnSignals to wrap this so that is is not created again and again.
-        async::OnSignals::new(&handle, Signals::LOG_READABLE).and_then(|_| {
+        fasync::OnSignals::new(&handle, Signals::LOG_READABLE).and_then(|_| {
             loop {
                 let mut buf = [0; ZX_LOG_RECORD_MAX as usize];
                 let status = unsafe {
@@ -74,7 +75,7 @@ where
         })
     }).map_ok(|_| ());
 
-    async::spawn(f.unwrap_or_else(|e| {
+    fasync::spawn(f.unwrap_or_else(|e| {
         eprintln!(
             "logger: not able to apply listener to kernel logs, failed: {:?}",
             e
