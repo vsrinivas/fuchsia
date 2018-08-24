@@ -5,6 +5,11 @@
 import("//build/compiled_action.gni")
 import("sdk_molecule.gni")
 
+declare_args() {
+  # Whether to build SDK tarballs.
+  build_sdk_archives = false
+}
+
 # A collection of elements to be published in an SDK.
 #
 # Parameters
@@ -202,33 +207,37 @@ template("sdk") {
     ]
   }
 
-  final_archive = "$root_out_dir/sdk/$sdk_name.tar.gz"
+  if (build_sdk_archives) {
+    # Generates the final archive.
+    final_archive = "$root_out_dir/sdk/$sdk_name.tar.gz"
 
-  # Generates the final archive.
-  compiled_action(archive_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    compiled_action(archive_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
 
-    tool = "//build/tools/tar_maker"
+      tool = "//build/tools/tar_maker"
 
-    inputs = [
-      archive_manifest_file,
-    ]
+      inputs = [
+        archive_manifest_file,
+      ]
 
-    outputs = [
-      final_archive,
-    ]
+      outputs = [
+        final_archive,
+      ]
 
-    args = [
-      "-manifest",
-      rebase_path(archive_manifest_file),
-      "-output",
-      rebase_path(final_archive),
-    ]
+      args = [
+        "-manifest",
+        rebase_path(archive_manifest_file),
+        "-output",
+        rebase_path(final_archive),
+      ]
 
-    deps = [
-      ":$archive_manifest_target_name",
-      ":$copy_target_name",
-    ]
+      deps = [
+        ":$archive_manifest_target_name",
+        ":$copy_target_name",
+      ]
+    }
+  } else {
+    group(archive_target_name) {}
   }
 
   group(main_target_name) {
