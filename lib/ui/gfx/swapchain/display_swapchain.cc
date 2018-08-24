@@ -104,15 +104,21 @@ bool DisplaySwapchain::InitializeFramebuffers(
   FXL_CHECK(escher_);
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
 
-#if !defined(__x86_64__)
-  FXL_DLOG(ERROR) << "Display swapchain only supported on intel";
+#if !defined(__aarch64__) && !defined(__x86_64__)
+  FXL_DLOG(ERROR) << "Display swapchain only supported on intel and arm";
   return false;
 #endif
 
   const uint32_t width_in_px = display_->width_in_px();
   const uint32_t height_in_px = display_->height_in_px();
-  display_manager_->SetImageConfig(width_in_px, height_in_px,
-                                   ZX_PIXEL_FORMAT_ARGB_8888);
+  zx_pixel_format_t pixel_format;
+#if defined(__aarch64__)
+  pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
+#else
+  pixel_format = ZX_PIXEL_FORMAT_ARGB_8888;
+#endif
+
+  display_manager_->SetImageConfig(width_in_px, height_in_px, pixel_format);
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
     // Allocate a framebuffer.
 
@@ -124,7 +130,14 @@ bool DisplaySwapchain::InitializeFramebuffers(
     create_info.mipLevels = 1;
     create_info.arrayLayers = 1;
     create_info.samples = vk::SampleCountFlagBits::e1;
+#if defined(__x86_64__)
     create_info.tiling = vk::ImageTiling::eOptimal;
+#else
+    create_info.tiling = vk::ImageTiling::eLinear;
+    // TODO(SCN-79): Use vulkan extension to allocate with correct stride.
+    create_info.extent.width =
+        display_manager_->FetchLinearStride(width_in_px, pixel_format);
+#endif
     create_info.usage = image_usage;
     create_info.sharingMode = vk::SharingMode::eExclusive;
     create_info.initialLayout = vk::ImageLayout::eUndefined;
@@ -141,7 +154,19 @@ bool DisplaySwapchain::InitializeFramebuffers(
         device_.getImageMemoryRequirements(image_result.value);
 
     uint32_t memory_type_index = 0;
+
+    zx::vmo memory =
+        display_manager_->AllocateDisplayMemory(memory_requirements.size);
+    if (!memory) {
+      FXL_DLOG(ERROR) << "allocating vmo failed";
+      return false;
+    }
+    vk::ImportMemoryFuchsiaHandleInfoKHR import_info;
+    import_info.setHandle(memory.release());
+    import_info.setHandleType(
+        vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
     vk::MemoryAllocateInfo alloc_info;
+    alloc_info.setPNext(&import_info);
     alloc_info.allocationSize = memory_requirements.size;
     alloc_info.memoryTypeIndex = memory_type_index;
 
@@ -417,6 +442,11 @@ vk::ImageUsageFlags GetFramebufferImageUsage() {
 }
 
 vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
+#if defined(__aarch64__)
+  // Format has to match pixel format for the display.
+  // device_queues->vk_surface() is null on ARM, so it can't be used.
+  return vk::Format::eB8G8R8A8Unorm;
+#else
   vk::PhysicalDevice physical_device = device_queues->vk_physical_device();
   vk::SurfaceKHR surface = device_queues->vk_surface();
   FXL_DCHECK(surface);
@@ -449,6 +479,7 @@ vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
   }
   FXL_CHECK(format != vk::Format::eUndefined);
   return format;
+#endif
 }
 
 }  // namespace

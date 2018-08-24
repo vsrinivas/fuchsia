@@ -198,8 +198,10 @@ void DisplayManager::SetImageConfig(int32_t width, int32_t height,
 #if defined(__x86_64__)
   // IMAGE_TYPE_X_TILED from ddk/protocol/intel-gpu-core.h
   image_config_.type = 1;
+#elif defined(__aarch64__)
+  image_config_.type = 0;
 #else
-  FXL_DCHECK(false) << "Display swapchain only supported on intel";
+  FXL_DCHECK(false) << "Display swapchain only supported on intel and ARM";
 #endif
 
   display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_);
@@ -220,6 +222,15 @@ uint64_t DisplayManager::ImportImage(const zx::vmo& vmo) {
 
 void DisplayManager::ReleaseImage(uint64_t id) {
   display_controller_->ReleaseImage(id);
+}
+
+zx::vmo DisplayManager::AllocateDisplayMemory(int32_t size) {
+  zx::vmo vmo;
+  zx_status_t status = display_controller_->AllocateVmo(size, &status, &vmo);
+  if (status != ZX_OK)
+    FXL_DLOG(ERROR) << "AllocateDisplayMemory failed.";
+
+  return vmo;
 }
 
 void DisplayManager::Flip(Display* display, uint64_t buffer,

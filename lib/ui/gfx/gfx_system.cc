@@ -74,7 +74,14 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
   vulkan_instance_ = escher::VulkanInstance::New(std::move(instance_params));
+#if !defined(__aarch64__) || SCENIC_VULKAN_SWAPCHAIN
+  // When SCENIC_VULKAN_SWAPCHAIN isn't set the Magma surface isn't used to
+  // render, so it isn't needed. The exception is on Intel, because it's used to
+  // query what display formats are supported.
+  // Creating it doesn't work on Amlogic when the DisplaySwapchain is in use,
+  // because both components try to take ownership of the display.
   surface_ = CreateVulkanMagmaSurface(vulkan_instance_->vk_instance());
+#endif
 
   // Tell Escher not to filter out queues that don't support presentation.
   // The display manager only supports a single connection, so none of the
