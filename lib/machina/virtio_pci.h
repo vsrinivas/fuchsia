@@ -15,9 +15,27 @@ namespace machina {
 class VirtioDevice;
 class VirtioQueue;
 
+// Virtio 1.0 Section 4.1.4.4: notify_off_multiplier is combined with the
+// queue_notify_off to derive the Queue Notify address within a BAR for a
+// virtqueue:
+//
+//      cap.offset + queue_notify_off * notify_off_multiplier
+//
+// Virtio 1.0 Section 4.1.4.4.1: The device MUST either present
+// notify_off_multiplier as an even power of 2, or present
+// notify_off_multiplier as 0.
+//
+// By using a multiplier of 4, we use sequential 4b words to notify, ex:
+//
+//      cap.offset + 0  -> Notify Queue 0
+//      cap.offset + 4  -> Notify Queue 1
+//      ...
+//      cap.offset + 4n -> Notify Queuen 'n'
+static constexpr size_t kVirtioPciNotifyCfgMultiplier = 4;
+
 static constexpr size_t kVirtioPciNumCapabilities = 4;
 
-/* Virtio PCI transport implementation. */
+// Virtio PCI transport implementation.
 class VirtioPci : public PciDevice {
  public:
   VirtioPci(VirtioDevice* device);

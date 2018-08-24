@@ -135,7 +135,7 @@ zx_status_t DescBuilder::Build(uint16_t* desc) {
     prev_desc_ = 0;
     len_ = 0;
     // Signal so that queue event signals will be set.
-    status_ = queue_->queue()->Signal();
+    status_ = queue_->queue()->Notify();
   }
   return status_;
 }

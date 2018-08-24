@@ -118,7 +118,7 @@ void VirtioQueue::Wait(uint16_t* index) {
   FXL_CHECK(status == ZX_OK);
 }
 
-zx_status_t VirtioQueue::Signal() {
+zx_status_t VirtioQueue::Notify() {
   std::lock_guard<std::mutex> lock(mutex_);
   if (HasAvailLocked()) {
     return event_.signal(0, SIGNAL_QUEUE_AVAIL);

@@ -38,12 +38,12 @@ zx_status_t VirtioDevice::NotifyGuest() {
   return pci_.Interrupt();
 }
 
-zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
-  if (kicked_queue >= num_queues_) {
+zx_status_t VirtioDevice::Notify(uint16_t queue) {
+  if (queue >= num_queues_) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx_status_t status = HandleQueueNotify(kicked_queue);
+  zx_status_t status = HandleQueueNotify(queue);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to handle queue notify event";
     return status;
@@ -57,7 +57,7 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
   }
 
   // Notify threads waiting on a descriptor.
-  return queues_[kicked_queue].Signal();
+  return queues_[queue].Notify();
 }
 
 }  // namespace machina

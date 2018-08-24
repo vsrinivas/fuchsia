@@ -376,8 +376,7 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet,
                              uint64_t trap_key) {
   switch (packet.type) {
     case ZX_PKT_GUEST_VCPU_INTERRUPT:
-      return guest_->SignalInterrupt(packet.interrupt.mask,
-                                     packet.interrupt.vector);
+      return guest_->Interrupt(packet.interrupt.mask, packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
       if (id_ != 0) {
         FXL_LOG(ERROR)

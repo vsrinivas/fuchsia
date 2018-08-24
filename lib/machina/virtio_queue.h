@@ -127,7 +127,7 @@ class VirtioQueue {
 
   // Notify waiting threads blocked on |virtio_queue_wait| that the avail ring
   // has descriptors available.
-  zx_status_t Signal();
+  zx_status_t Notify();
 
   // Return a descriptor to the used ring.
   //

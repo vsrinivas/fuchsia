@@ -59,24 +59,6 @@ static_assert(is_aligned(kVirtioPciCommonCfgBase, 4),
               "Virtio PCI common config has illegal alignment");
 
 // Notification configuration.
-//
-// Virtio 1.0 Section 4.1.4.4: notify_off_multiplier is combined with the
-// queue_notify_off to derive the Queue Notify address within a BAR for a
-// virtqueue:
-//
-//      cap.offset + queue_notify_off * notify_off_multiplier
-//
-// Virtio 1.0 Section 4.1.4.4.1: The device MUST either present
-// notify_off_multiplier as an even power of 2, or present
-// notify_off_multiplier as 0.
-//
-// By using a multiplier of 4, we use sequential 4b words to notify, ex:
-//
-//      cap.offset + 0  -> Notify Queue 0
-//      cap.offset + 4  -> Notify Queue 1
-//      ...
-//      cap.offset + 4n -> Notify Queuen 'n'
-static constexpr size_t kVirtioPciNotifyCfgMultiplier = 4;
 static constexpr size_t kVirtioPciNotifyCfgBase = 0;
 // Virtio 1.0 Section 4.1.4.4.1: offset MUST be 2-byte aligned.
 static_assert(is_aligned(kVirtioPciNotifyCfgBase, 2),
@@ -506,9 +488,8 @@ zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto notify_queue =
-      static_cast<uint16_t>(offset / kVirtioPciNotifyCfgMultiplier);
-  return device_->Kick(notify_queue);
+  auto queue = static_cast<uint16_t>(offset / kVirtioPciNotifyCfgMultiplier);
+  return device_->Notify(queue);
 }
 
 }  // namespace machina

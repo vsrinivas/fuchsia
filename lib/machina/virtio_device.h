@@ -94,8 +94,8 @@ class VirtioDevice {
   VirtioDevice(uint8_t device_id, size_t config_size, VirtioQueue* queues,
                uint16_t num_queues, const PhysMem& phys_mem);
 
-  // Handles kicks from the driver that a queue needs attention.
-  virtual zx_status_t Kick(uint16_t kicked_queue);
+  // Handles notifications from the driver that a queue needs attention.
+  virtual zx_status_t Notify(uint16_t queue);
 
  private:
   // Temporarily expose our state to the PCI transport until the proper
@@ -204,31 +204,32 @@ class VirtioDeviceBase : public VirtioDevice {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t Kick(uint16_t kicked_queue) override {
-    if (kicked_queue >= NumQueues) {
+  zx_status_t Notify(uint16_t queue) override {
+    if (queue >= NumQueues) {
       return ZX_ERR_OUT_OF_RANGE;
     }
 
     // Generate a flow ID that will be later read by the queue request handler
-    // to trace correlation from kicks generated from PCI bus traps/interrupts
-    // to their corresponding descriptor processing in the queue handler. As
-    // there is no exact mapping between kicks and descriptors in the queue,
-    // correlation tracing should only be considered best-effort and may provide
-    // inaccurate correlations if new kicks happen while the queue is not empty.
+    // to trace correlation from notifications generated from PCI bus traps /
+    // interrupts to their corresponding descriptor processing in the queue
+    // handler. As there is no exact mapping between notifications and
+    // descriptors in the queue, correlation tracing should only be considered
+    // best-effort and may provide inaccurate correlations if new notifications
+    // happen while the queue is not empty.
     const trace_async_id_t flow_id =
         (static_cast<trace_async_id_t>(VirtioId) << 56) +
-        (static_cast<trace_async_id_t>(kicked_queue) << 40) + TRACE_NONCE();
-    TRACE_DURATION("machina", "io_queue_kick", "device_id", VirtioId,
-                   "kicked_queue", kicked_queue, "flow_id", flow_id);
+        (static_cast<trace_async_id_t>(queue) << 40) + TRACE_NONCE();
+    TRACE_DURATION("machina", "queue_notify", "device_id", VirtioId, "queue",
+                   queue, "flow_id", flow_id);
 
     // Only emplace a new flow ID if there is no other still in flight.
     trace_async_id_t unset = 0;
-    if (trace_flow_id(kicked_queue)->compare_exchange_strong(unset, flow_id)) {
-      TRACE_FLOW_BEGIN("machina", "io_queue_signal", flow_id);
+    if (trace_flow_id(queue)->compare_exchange_strong(unset, flow_id)) {
+      TRACE_FLOW_BEGIN("machina", "queue_signal", flow_id);
     }
 
-    // Perform the actual kick.
-    return VirtioDevice::Kick(kicked_queue);
+    // Perform the actual notification.
+    return VirtioDevice::Notify(queue);
   }
 
   VirtioQueue* queue(uint16_t sel) {

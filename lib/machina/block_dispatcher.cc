@@ -41,8 +41,8 @@ class FdioBlockDispatcher : public BlockDispatcher {
   }
 
   zx_status_t Read(off_t disk_offset, void* buf, size_t size) override {
-    TRACE_DURATION("machina", "io_block_read", "offset", disk_offset, "buf",
-                   buf, "size", size);
+    TRACE_DURATION("machina", "block_read", "offset", disk_offset, "buf", buf,
+                   "size", size);
 
     std::lock_guard<std::mutex> lock(file_mutex_);
 
@@ -59,8 +59,8 @@ class FdioBlockDispatcher : public BlockDispatcher {
   }
 
   zx_status_t Write(off_t disk_offset, const void* buf, size_t size) override {
-    TRACE_DURATION("machina", "io_block_write", "offset", disk_offset, "buf",
-                   buf, "size", size);
+    TRACE_DURATION("machina", "block_write", "offset", disk_offset, "buf", buf,
+                   "size", size);
 
     std::lock_guard<std::mutex> lock(file_mutex_);
 

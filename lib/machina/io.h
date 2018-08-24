@@ -78,7 +78,7 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   zx_status_t Read(uint64_t addr, IoValue* value) const {
     canary_.Assert();
     const uint64_t address = addr - base_ + offset_;
-    TRACE_DURATION("machina", "io_read", "address", address, "access_size",
+    TRACE_DURATION("machina", "read", "address", address, "access_size",
                    value->access_size);
     return handler_->Read(address, value);
   }
@@ -86,7 +86,7 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   zx_status_t Write(uint64_t addr, const IoValue& value) {
     canary_.Assert();
     const uint64_t address = addr - base_ + offset_;
-    TRACE_DURATION("machina", "io_write", "address", address, "access_size",
+    TRACE_DURATION("machina", "write", "address", address, "access_size",
                    value.access_size);
     return handler_->Write(address, value);
   }

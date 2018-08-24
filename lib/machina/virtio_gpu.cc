@@ -89,8 +89,9 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
   const uint32_t command_type = request_header->type;
   const char* command_label = command_to_string(command_type);
 
-  // Attempt to correlate the processing of descriptors with a previous kick.
-  // As noted in virtio_device.cc this should be considered best-effort only.
+  // Attempt to correlate the processing of descriptors with a previous
+  // notification. As noted in virtio_device.cc this should be considered
+  // best-effort only.
   const uint16_t sel =
       queue == control_queue() ? VIRTIO_GPU_Q_CONTROLQ : VIRTIO_GPU_Q_CURSORQ;
   const char* queue_label = sel == VIRTIO_GPU_Q_CONTROLQ ? "control" : "cursor";
@@ -99,7 +100,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
                  TA_STRING_LITERAL(queue_label), "command",
                  TA_STRING_LITERAL(command_label), "flow_id", flow_id);
   if (flow_id != 0) {
-    TRACE_FLOW_END("machina", "io_queue_signal", flow_id);
+    TRACE_FLOW_END("machina", "queue_signal", flow_id);
   }
 
   // Cursor commands don't send a response (at least not in the linux driver).
