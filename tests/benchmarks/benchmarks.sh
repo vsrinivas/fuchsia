@@ -19,7 +19,7 @@ runbench_read_arguments "$@"
 # TODO(LE-425): Fix & re-enable this test.
 # runbench_exec "${OUT_DIR}/ledger.add_many_pages.json" \
 #    trace record \
-#    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_many_pages.tspec \
+#    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/DISABLED_add_many_pages.tspec \
 #    --test-suite=fuchsia.ledger.add_many_pages \
 #    --benchmark-results-file="${OUT_DIR}/ledger.add_many_pages.json"
 

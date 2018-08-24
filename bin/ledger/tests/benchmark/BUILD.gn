@@ -107,7 +107,7 @@ package("ledger_benchmarks") {
 
     {
       path = rebase_path("get_page/add_many_pages.tspec")
-      dest = "add_many_pages.tspec"
+      dest = "DISABLED_add_many_pages.tspec"
     },
 
     {
@@ -137,7 +137,7 @@ package("ledger_benchmarks") {
 
     {
       path = rebase_path("backlog/backlog_small_entry_updates.tspec")
-      dest = "backlog_small_entry_updates.tspec"
+      dest = "DISABLED_backlog_small_entry_updates.tspec"
     },
 
     {
