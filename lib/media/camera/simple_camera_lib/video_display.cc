@@ -56,8 +56,7 @@ zx_status_t VideoDisplay::IncomingBufferFilled(
 
 // This is a stand-in for some actual gralloc type service which would allocate
 // the right type of memory for the application and return it as a vmo.
-zx_status_t Gralloc(fuchsia::camera::VideoFormat format,
-                    uint32_t num_buffers,
+zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
                     fuchsia::sysmem::BufferCollectionInfo* buffer_collection) {
   // In the future, some special alignment might happen here, or special
   // memory allocated...
@@ -222,16 +221,14 @@ zx_status_t VideoDisplay::ConnectToCamera(
   camera_client_ = std::make_unique<CameraClient>();
 
   camera_client_->stream_.events().OnFrameAvailable =
-      [video_display =
-           this](fuchsia::camera::FrameAvailableEvent frame) {
+      [video_display = this](fuchsia::camera::FrameAvailableEvent frame) {
         video_display->IncomingBufferFilled(frame);
       };
 
-  camera_client_->stream_.set_error_handler(
-      [this] {
-        DisconnectFromCamera();
-        on_shut_down_callback_();
-        });
+  camera_client_->stream_.set_error_handler([this] {
+    DisconnectFromCamera();
+    on_shut_down_callback_();
+  });
 
   // Open a connection to the Camera
   zx_status_t status =

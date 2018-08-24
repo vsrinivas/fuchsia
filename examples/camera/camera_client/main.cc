@@ -12,8 +12,7 @@ using namespace fuchsia::camera;
 
 // This is a stand-in for some actual gralloc type service which would allocate
 // the right type of memory for the application and return it as a vmo.
-zx_status_t Gralloc(fuchsia::camera::VideoFormat format,
-                    uint32_t num_buffers,
+zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
                     fuchsia::sysmem::BufferCollectionInfo* buffer_collection) {
   // In the future, some special alignment might happen here, or special
   // memory allocated...
@@ -65,37 +64,35 @@ zx_status_t run_camera() {
 
   printf("Available formats: %d\n", (int)formats.size());
   for (int i = 0; i < (int)formats.size(); i++) {
-    printf(
-        "format[%d] - width: %d, height: %d, stride: %lu\n",
-        i, formats[i].format.width, formats[i].format.height,
-        formats[i].format.bytes_per_row);
+    printf("format[%d] - width: %d, height: %d, stride: %lu\n", i,
+           formats[i].format.width, formats[i].format.height,
+           formats[i].format.bytes_per_row);
   }
 
   int frame_counter = 0;
   fuchsia::camera::StreamPtr stream;
 
-   static constexpr uint16_t kNumberOfBuffers = 8;
-    fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-    status = Gralloc(formats[0], kNumberOfBuffers, &buffer_collection);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
-      return status;
-    }
+  static constexpr uint16_t kNumberOfBuffers = 8;
+  fuchsia::sysmem::BufferCollectionInfo buffer_collection;
+  status = Gralloc(formats[0], kNumberOfBuffers, &buffer_collection);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
+    return status;
+  }
 
-  status = client.camera()->CreateStream(
-      std::move(buffer_collection), formats[0].rate,
-      stream.NewRequest());
+  status = client.camera()->CreateStream(std::move(buffer_collection),
+                                         formats[0].rate, stream.NewRequest());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
     return status;
   }
-  
-    stream.events().OnFrameAvailable =
-      [&stream, &frame_counter](FrameAvailableEvent frame) {
-        printf("Received FrameNotify Event %d at index: %u\n",
-               frame_counter++, frame.buffer_id);
 
-            stream->ReleaseFrame(frame.buffer_id);
+  stream.events().OnFrameAvailable =
+      [&stream, &frame_counter](FrameAvailableEvent frame) {
+        printf("Received FrameNotify Event %d at index: %u\n", frame_counter++,
+               frame.buffer_id);
+
+        stream->ReleaseFrame(frame.buffer_id);
         if (frame_counter > 10) {
           stream->Stop();
         }
