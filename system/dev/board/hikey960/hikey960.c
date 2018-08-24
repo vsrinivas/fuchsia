@@ -26,31 +26,6 @@
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
-static zx_status_t hikey960_set_mode(void* ctx, usb_mode_t mode) {
-    hikey960_t* hikey = ctx;
-
-    if (mode == hikey->usb_mode) {
-        return ZX_OK;
-    }
-    if (mode == USB_MODE_OTG) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    gpio_config(&hikey->gpio, GPIO_HUB_VDD33_EN, GPIO_DIR_OUT);
-    gpio_config(&hikey->gpio, GPIO_VBUS_TYPEC, GPIO_DIR_OUT);
-    gpio_config(&hikey->gpio, GPIO_USBSW_SW_SEL, GPIO_DIR_OUT);
-
-    gpio_write(&hikey->gpio, GPIO_HUB_VDD33_EN, mode == USB_MODE_HOST);
-    gpio_write(&hikey->gpio, GPIO_VBUS_TYPEC, mode == USB_MODE_HOST);
-    gpio_write(&hikey->gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
-
-    hikey->usb_mode = mode;
-    return ZX_OK;
-}
-
-usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
-    .set_mode = hikey960_set_mode,
-};
 
 static void hikey960_release(void* ctx) {
     hikey960_t* hikey = ctx;
@@ -71,20 +46,11 @@ static zx_protocol_device_t hikey960_device_protocol = {
 static int hikey960_start_thread(void* arg) {
     hikey960_t* hikey = arg;
 
-    usb_mode_switch_protocol_t usb_mode_switch;
-    usb_mode_switch.ops = &usb_mode_switch_ops;
-    usb_mode_switch.ctx = hikey;
-
     zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &hikey->gpio);
     if (status != ZX_OK) {
         goto fail;
     }
     status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &hikey->gpio);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-
-    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &usb_mode_switch);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -137,7 +103,6 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
     }
 
     hikey->parent = parent;
-    hikey->usb_mode = USB_MODE_NONE;
 
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();

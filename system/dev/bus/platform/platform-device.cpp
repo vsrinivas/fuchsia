@@ -195,13 +195,6 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
     }
 }
 
-zx_status_t PlatformDevice::RpcUmsSetMode(const DeviceResources* dr, usb_mode_t mode) {
-    if (bus_->ums() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->ums()->SetMode(mode);
-}
-
 zx_status_t PlatformDevice::RpcGpioConfig(const DeviceResources* dr, uint32_t index, uint32_t flags) {
     if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -423,24 +416,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             resp_len += resp->pdev.metadata_length;
             break;
         }
-        default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        auto req = reinterpret_cast<rpc_ums_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-        resp_len = sizeof(*resp_header);
-
-        switch (req_header->op) {
-        case UMS_SET_MODE:
-            status = RpcUmsSetMode(dr, req->usb_mode);
-            break;
         default:
             zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
             return ZX_ERR_INTERNAL;

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddk/protocol/canvas.h>
-#include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform-bus.h>
 #include <ddktl/protocol/platform-device.h>

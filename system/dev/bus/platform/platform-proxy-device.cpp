@@ -17,7 +17,6 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/usb-mode-switch.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 
@@ -31,17 +30,6 @@
 // More information can be found at the top of platform-device.cpp.
 
 namespace platform_bus {
-
-zx_status_t ProxyDevice::UmsSetMode(void* ctx, usb_mode_t mode) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
-    rpc_ums_req_t req = {};
-    req.header.protocol = ZX_PROTOCOL_USB_MODE_SWITCH;
-    req.header.op = UMS_SET_MODE;
-    req.usb_mode = mode;
-    rpc_rsp_header_t resp;
-
-    return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
-}
 
 zx_status_t ProxyDevice::GpioConfig(void* ctx, uint32_t index, uint32_t flags) {
     ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
@@ -430,7 +418,6 @@ ProxyDevice::ProxyDevice(zx_device_t* parent, uint32_t device_id,
     gpio_proto_ops_.set_polarity = GpioSetPolarity;
     i2c_proto_ops_.transact = I2cTransact;
     i2c_proto_ops_.get_max_transfer_size = I2cGetMaxTransferSize;
-    usb_mode_switch_proto_ops_.set_mode = UmsSetMode;
 }
 
 zx_status_t ProxyDevice::Init(device_add_args_t* args) {
@@ -566,10 +553,6 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     switch (proto_id) {
     case ZX_PROTOCOL_PLATFORM_DEV: {
         proto->ops = &pdev_proto_ops_;
-        break;
-    }
-    case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        proto->ops = &usb_mode_switch_proto_ops_;
         break;
     }
     case ZX_PROTOCOL_GPIO: {

@@ -7,7 +7,6 @@
 #include <ddk/protocol/canvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/usb-mode-switch.h>
 
 namespace platform_bus {
 
@@ -74,15 +73,6 @@ typedef struct {
 static constexpr uint32_t I2C_MAX_TRANSFER_SIZE = (PROXY_MAX_TRANSFER_SIZE -
             (sizeof(rpc_pdev_req_t) > sizeof(rpc_pdev_rsp_t) ?
              sizeof(rpc_pdev_req_t) : sizeof(rpc_pdev_rsp_t)));
-
-// ZX_PROTOCOL_USB_MODE_SWITCH  proxy support.
-enum {
-    UMS_SET_MODE,
-};
-typedef struct {
-    rpc_req_header_t header;
-    usb_mode_t usb_mode;
-} rpc_ums_req_t;
 
 // ZX_PROTOCOL_GPIO proxy support.
 enum {

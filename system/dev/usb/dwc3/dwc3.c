@@ -360,9 +360,11 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         }
     }
 
-    status = usb_mode_switch_set_mode(&dwc->ums, mode);
-    if (status != ZX_OK) {
-        goto fail;
+    if (dwc->ums.ops != NULL) {
+        status = usb_mode_switch_set_mode(&dwc->ums, mode);
+        if (status != ZX_OK) {
+            goto fail;
+        }
     }
 
     if (mode == USB_MODE_DEVICE) {
@@ -381,7 +383,9 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     return ZX_OK;
 
 fail:
-    usb_mode_switch_set_mode(&dwc->ums, USB_MODE_NONE);
+    if (dwc->ums.ops != NULL) {
+        usb_mode_switch_set_mode(&dwc->ums, USB_MODE_NONE);
+    }
     dwc->usb_mode = USB_MODE_NONE;
 
     return status;
@@ -450,9 +454,10 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    // USB mode switch is optional, so ignore errors here.
     status = device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
     if (status != ZX_OK) {
-        goto fail;
+        dwc->ums.ops = NULL;;
     }
 
     mtx_init(&dwc->lock, mtx_plain);

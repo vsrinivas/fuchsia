@@ -10,7 +10,6 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform-device.h>
 #include <fbl/ref_ptr.h>
@@ -82,9 +81,6 @@ public:
                             size_t read_length, i2c_complete_cb complete_cb, void* cookie);
     static zx_status_t I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t* out_size);
 
-    // USB mode switch protocol implementation.
-    static zx_status_t UmsSetMode(void* ctx, usb_mode_t mode);
-
 private:
     struct Mmio {
         zx_paddr_t base;
@@ -116,7 +112,6 @@ private:
     clk_protocol_ops_t clk_proto_ops_;
     gpio_protocol_ops_t gpio_proto_ops_;
     i2c_protocol_ops_t i2c_proto_ops_;
-    usb_mode_switch_protocol_ops_t usb_mode_switch_proto_ops_;
 
     // These fields are saved values from the device_add_args_t passed to pdev_device_add().
     // These are unused for top level devices created via pbus_device_add().

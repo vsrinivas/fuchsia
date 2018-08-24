@@ -38,14 +38,6 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
     fbl::AllocChecker ac;
 
     switch (proto_id) {
-    case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        ums_.reset(new (&ac) ddk::UmsProtocolProxy(
-            static_cast<usb_mode_switch_protocol_t*>(protocol)));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        break;
-    }
     case ZX_PROTOCOL_GPIO: {
         gpio_.reset(new (&ac) ddk::GpioProtocolProxy(static_cast<gpio_protocol_t*>(protocol)));
         if (!ac.check()) {
@@ -134,7 +126,6 @@ zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* 
     case ZX_PROTOCOL_CLK:
     case ZX_PROTOCOL_GPIO:
     case ZX_PROTOCOL_I2C_IMPL:
-    case ZX_PROTOCOL_USB_MODE_SWITCH:
         break;
     default:
         zxlogf(ERROR, "%s: unsupported protocol %08x\n", __func__, proto_id);
@@ -200,12 +191,6 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* protocol) {
         proto->ops = &pbus_proto_ops_;
         return ZX_OK;
     }
-    case ZX_PROTOCOL_USB_MODE_SWITCH:
-        if (ums_ != nullptr) {
-            ums_->GetProto(static_cast<usb_mode_switch_protocol_t*>(protocol));
-            return ZX_OK;
-        }
-        break;
     case ZX_PROTOCOL_GPIO:
         if (gpio_ != nullptr) {
             gpio_->GetProto(static_cast<gpio_protocol_t*>(protocol));
