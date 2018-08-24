@@ -206,7 +206,8 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
             if (status == ZX_OK) {
                 uint32_t added_success_count = added_success_capture;
                 for (unsigned i = 0; i < added_success_count; i++) {
-                    if (!PopulateDisplayTimings(added_ptr[i].get())) {
+                    if (added_ptr[i]->has_edid
+                            && !PopulateDisplayTimings(added_ptr[i].get())) {
                         zxlogf(WARN, "Ignoring display with no compatible edid timings\n");
 
                         added_ptr[i] = fbl::move(added_ptr[--added_success_count]);
