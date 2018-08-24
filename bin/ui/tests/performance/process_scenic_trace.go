@@ -368,6 +368,7 @@ func main() {
 		log.Fatalf("failed to write results to %s: %v", outputFilename, err)
 	}
 
-	//TODO(US-528): Uncomment when this Printf no longer causes a crash.
+	// TODO(US-528): Uncomment when this Printf no longer causes a crash.
+	// TODO(TC-226): This is a synonym for US-528.
 	//fmt.Printf("\n\nWrote benchmark values to file '%s'.\n", outputFilename)
 }
