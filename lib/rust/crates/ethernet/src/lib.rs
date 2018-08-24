@@ -8,22 +8,15 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate fdio;
-extern crate fuchsia_async as fasync;
-extern crate fuchsia_zircon as zx;
-#[macro_use]
-extern crate futures;
-extern crate shared_buffer;
+use bitflags::{bitflags, __bitflags, __impl_bitflags};
+use fuchsia_async as fasync;
+use futures::{prelude::*, ready, try_ready};
+use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 
-use futures::prelude::*;
 use std::fs::File;
 use std::marker::Unpin;
 use std::mem::PinMut;
 use std::sync::{Arc, Mutex};
-use zx::{AsHandleRef, HandleBased};
 
 mod buffer;
 mod sys;

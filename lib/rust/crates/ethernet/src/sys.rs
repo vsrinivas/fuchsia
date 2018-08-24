@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fasync::FifoEntry;
-use fdio::{fdio_sys, ioctl_raw};
+use fuchsia_async::FifoEntry;
+use fdio::{fdio_sys, ioctl_raw, make_ioctl};
 use std::fmt;
 use std::fs::File;
 use std::mem;
 use std::os::raw;
 use std::os::unix::io::AsRawFd;
 use std::ptr;
-use zx::sys::zx_status_t;
-use zx::{self, AsHandleRef};
+use fuchsia_zircon::sys::zx_status_t;
+use fuchsia_zircon::{self as zx, AsHandleRef};
 
 #[repr(C)]
 #[derive(Default)]

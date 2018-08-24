@@ -5,8 +5,8 @@
 use shared_buffer::SharedBuffer;
 use std::fmt;
 use std::sync::{Arc, Mutex};
-use sys;
-use zx;
+use crate::sys;
+use fuchsia_zircon as zx;
 
 fn fifo_entry(offset: u32, length: u16) -> sys::eth_fifo_entry {
     sys::eth_fifo_entry {
