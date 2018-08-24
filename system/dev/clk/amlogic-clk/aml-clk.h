@@ -29,7 +29,7 @@ class AmlClock : public DeviceType,
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
-    AmlClock(zx_device_t* device)
+    explicit AmlClock(zx_device_t* device)
         : DeviceType(device){};
     // Performs the object initialization.
     static zx_status_t Create(zx_device_t* device);
@@ -62,8 +62,6 @@ private:
     zx_status_t InitMsrRegs(pdev_device_info_t* info);
     // Platform device protocol.
     platform_device_protocol_t pdev_;
-    // Clock protocol.
-    clk_protocol_t clk_;
     // IO MMIO
     io_buffer_t hiu_mmio_;
     io_buffer_t msr_mmio_;

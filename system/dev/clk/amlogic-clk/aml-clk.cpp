@@ -152,7 +152,12 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         return status;
     }
 
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &clk_);
+    clk_protocol_t clk_proto = {
+        .ops = &ops_,
+        .ctx = this,
+    };
+
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &clk_proto);
     if (status != ZX_OK) {
         zxlogf(ERROR, "meson_clk_bind: pbus_register_protocol failed, st = %d\n", status);
         return status;
