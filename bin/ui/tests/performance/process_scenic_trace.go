@@ -167,6 +167,16 @@ func mergeArgs(event1 *TraceEvent, event2 *TraceEvent) {
 // the given events, which must be sorted.
 func calculateFps(sortedEvents []TraceEvent) (fps float64, fpsPerWindow []float64) {
 	baseTime := sortedEvents[0].Ts
+
+	// Find the time of the first frame presented. There may be a few seconds
+	// at the beginning with no frames and we want to skip that.
+	for _, event := range sortedEvents {
+		if event.Cat == "gfx" && event.Name == "FramePresented" {
+			baseTime = event.Ts
+			break
+		}
+	}
+
 	lastEventTime := sortedEvents[len(sortedEvents)-1].Ts
 
 	// window = one-second time window
@@ -178,8 +188,7 @@ func calculateFps(sortedEvents []TraceEvent) (fps float64, fpsPerWindow []float6
 	numFrames := 0.0
 
 	for _, event := range sortedEvents {
-		name := event.Name
-		if name == "FramePresented" {
+		if event.Cat == "gfx" && event.Name == "FramePresented" {
 			if event.Ts < windowEndTime {
 				numFramesInWindow++
 				numFrames++
