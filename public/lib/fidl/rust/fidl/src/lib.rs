@@ -8,42 +8,37 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-extern crate fuchsia_zircon as zircon;
-extern crate byteorder;
-#[macro_use] extern crate failure;
-extern crate fuchsia_async as async;
-#[macro_use] extern crate futures;
-extern crate parking_lot;
-extern crate slab;
-
 #[macro_use]
 pub mod encoding2;
-mod error;
 pub mod client2;
 pub mod endpoints2;
 
-pub use error::{Error, Result};
+mod error;
+pub use self::error::{Error, Result};
 
-use futures::task::{self, AtomicWaker};
-use std::sync::atomic::{self, AtomicBool};
+use {
+    fuchsia_async as fasync,
+    futures::task::{self, AtomicWaker},
+    std::sync::atomic::{self, AtomicBool},
+};
 
 /// A type used from the innards of server implementations
 pub struct ServeInner {
     waker: AtomicWaker,
     shutdown: AtomicBool,
-    channel: async::Channel,
+    channel: fasync::Channel,
 }
 
 impl ServeInner {
     /// Create a new set of server innards.
-    pub fn new(channel: async::Channel) -> Self {
+    pub fn new(channel: fasync::Channel) -> Self {
         let waker = AtomicWaker::new();
         let shutdown = AtomicBool::new(false);
         ServeInner { waker, shutdown, channel }
     }
 
     /// Get a reference to the inner channel.
-    pub fn channel(&self) -> &async::Channel {
+    pub fn channel(&self) -> &fasync::Channel {
         &self.channel
     }
 

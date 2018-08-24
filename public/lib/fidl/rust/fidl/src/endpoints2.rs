@@ -4,8 +4,12 @@
 
 //! Wrapper types for the endpoints of a connection.
 
-use {async, Error, zircon as zx};
-use std::marker::PhantomData;
+use {
+    crate::Error,
+    fuchsia_async as fasync,
+    fuchsia_zircon as zx,
+    std::marker::PhantomData,
+};
 
 /// A marker for a particular FIDL service.
 ///
@@ -26,7 +30,7 @@ pub trait ServiceMarker: Sized {
 /// A type which allows querying a remote FIDL server over a channel.
 pub trait Proxy: Sized {
     /// Create a proxy over the given channel.
-    fn from_channel(inner: async::Channel) -> Self;
+    fn from_channel(inner: fasync::Channel) -> Self;
 }
 
 /// A stream of requests coming into a FIDL server over a channel.
@@ -39,7 +43,7 @@ pub trait RequestStream: Sized {
     fn control_handle(&self) -> Self::ControlHandle;
 
     /// Create a request stream from the given channel.
-    fn from_channel(inner: async::Channel) -> Self;
+    fn from_channel(inner: fasync::Channel) -> Self;
 }
 
 /// The `Client` end of a FIDL connection.
@@ -65,7 +69,7 @@ impl<T: ServiceMarker> ClientEnd<T> {
     /// Convert the `ClientEnd` into a `Proxy` through which FIDL calls may be made.
     pub fn into_proxy(self) -> Result<T::Proxy, Error> {
         Ok(T::Proxy::from_channel(
-            async::Channel::from_channel(self.inner)
+            fasync::Channel::from_channel(self.inner)
                 .map_err(Error::AsyncChannel)?))
     }
 }
@@ -131,7 +135,7 @@ impl<T> ServerEnd<T> {
         where T: ServiceMarker,
     {
         Ok(T::RequestStream::from_channel(
-            async::Channel::from_channel(self.inner)
+            fasync::Channel::from_channel(self.inner)
                 .map_err(Error::AsyncChannel)?))
     }
 

@@ -4,28 +4,40 @@
 
 //! An implementation of a client for a fidl interface.
 
-use {async, Error, zircon as zx};
-use async::temp::{TempFutureExt, Either};
-use encoding2::{
-    Encodable,
-    Decodable,
-    Encoder,
-    Decoder,
-    decode_transaction_header,
-    TransactionHeader,
-    TransactionMessage
+use {
+    crate::{
+        encoding2::{
+            Encodable,
+            Decodable,
+            Encoder,
+            Decoder,
+            decode_transaction_header,
+            TransactionHeader,
+            TransactionMessage
+        },
+        Error,
+    },
+    fuchsia_async::{
+        self as fasync,
+        temp::{TempFutureExt, Either},
+    },
+    fuchsia_zircon as zx,
+    futures::{
+        future::{self, Future, Ready, AndThen, TryFutureExt},
+        ready,
+        stream::Stream,
+        task::{self, Poll, Waker},
+    },
+    parking_lot::Mutex,
+    slab::Slab,
+    std::{
+        collections::VecDeque,
+        marker::Unpin,
+        mem::{self, PinMut},
+        ops::Deref,
+        sync::Arc,
+    },
 };
-use futures::future::{self, Ready, AndThen};
-use futures::prelude::*;
-use futures::task::Waker;
-use parking_lot::Mutex;
-use slab::Slab;
-use std::collections::VecDeque;
-use std::marker::Unpin;
-use std::mem::{self, PinMut};
-use std::ops::Deref;
-use std::sync::Arc;
-use self::zx::MessageBuf;
 
 /// Decode a new value of a decodable type from a transaction.
 fn decode_transaction_body<D: Decodable>(mut buf: zx::MessageBuf) -> Result<D, Error> {
@@ -51,14 +63,14 @@ pub struct Client {
 
 
 /// A future representing the raw response to a FIDL query.
-pub type RawQueryResponseFut = Either<Ready<Result<MessageBuf, Error>>, MessageResponse>;
+pub type RawQueryResponseFut = Either<Ready<Result<zx::MessageBuf, Error>>, MessageResponse>;
 
 /// A future representing the decoded response to a FIDL query.
 pub type QueryResponseFut<D> =
     AndThen<
         RawQueryResponseFut,
         Ready<Result<D, Error>>,
-        fn(MessageBuf) -> Ready<Result<D, Error>>>;
+        fn(zx::MessageBuf) -> Ready<Result<D, Error>>>;
 
 /// A FIDL transaction id. Will not be zero for a message that includes a response.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -92,7 +104,7 @@ impl Client {
     ///
     /// `channel` is the asynchronous channel over which data is sent and received.
     /// `event_ordinals` are the ordinals on which events will be received.
-    pub fn new(channel: async::Channel) -> Client {
+    pub fn new(channel: fasync::Channel) -> Client {
         Client {
             inner: Arc::new(ClientInner {
                 channel: channel,
@@ -194,7 +206,7 @@ pub struct MessageResponse {
 impl Unpin for MessageResponse {}
 
 impl Future for MessageResponse {
-    type Output = Result<MessageBuf, Error>;
+    type Output = Result<zx::MessageBuf, Error>;
     fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
         let this = &mut *self;
         let res;
@@ -234,7 +246,7 @@ enum MessageInterest {
     /// A task is waiting to receive a response, and can be awoken with `Waker`.
     Waiting(Waker),
     /// A message has been received, and a task will poll to receive it.
-    Received(MessageBuf),
+    Received(zx::MessageBuf),
     /// A message has not been received, but the person interested in the response
     /// no longer cares about it, so the message should be discared upon arrival.
     Discard,
@@ -250,7 +262,7 @@ impl MessageInterest {
         }
     }
 
-    fn unwrap_received(self) -> MessageBuf {
+    fn unwrap_received(self) -> zx::MessageBuf {
         if let MessageInterest::Received(buf) = self {
             buf
         } else {
@@ -268,7 +280,7 @@ pub struct EventReceiver {
 impl Unpin for EventReceiver {}
 
 impl Stream for EventReceiver {
-    type Item = Result<MessageBuf, Error>;
+    type Item = Result<zx::MessageBuf, Error>;
 
     fn poll_next(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
         Poll::Ready(match ready!(self.inner.poll_recv_event(cx)) {
@@ -289,7 +301,7 @@ impl Drop for EventReceiver {
 #[derive(Debug, Default)]
 struct EventChannel {
     listener: EventListener,
-    queue: VecDeque<MessageBuf>,
+    queue: VecDeque<zx::MessageBuf>,
 }
 
 #[derive(Debug)]
@@ -309,7 +321,7 @@ impl Default for EventListener {
 /// A shared client channel which tracks EXPECTED and received responses
 #[derive(Debug)]
 struct ClientInner {
-    channel: async::Channel,
+    channel: fasync::Channel,
 
     /// A map of message interests to either `None` (no message received yet)
     /// or `Some(DecodeBuf)` when a message has been received.
@@ -323,7 +335,7 @@ struct ClientInner {
 }
 
 impl Deref for Client {
-    type Target = async::Channel;
+    type Target = fasync::Channel;
 
     fn deref(&self) -> &Self::Target {
         &self.inner.channel
@@ -345,7 +357,7 @@ impl ClientInner {
     fn poll_recv_event(
         &self,
         cx: &mut task::Context,
-    ) -> Poll<Result<MessageBuf, Error>> {
+    ) -> Poll<Result<zx::MessageBuf, Error>> {
         let is_closed = self.recv_all(cx)?;
 
         let mut lock = self.event_channel.lock();
@@ -366,7 +378,7 @@ impl ClientInner {
         &self,
         txid: Txid,
         cx: &mut task::Context,
-    ) -> Poll<Result<MessageBuf, Error>> {
+    ) -> Poll<Result<zx::MessageBuf, Error>> {
         let is_closed = self.recv_all(cx)?;
 
         let mut message_interests = self.message_interests.lock();
@@ -404,7 +416,7 @@ impl ClientInner {
         // one happens on this call.
 
         loop {
-            let mut buf = MessageBuf::new();
+            let mut buf = zx::MessageBuf::new();
             match self.channel.recv_from(&mut buf, cx) {
                 Poll::Ready(Ok(())) => {}
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
@@ -482,12 +494,13 @@ impl ClientInner {
 
 #[cfg(test)]
 mod tests {
-    use async::{self, TimeoutExt};
-    use futures::io;
-    use futures::prelude::*;
-    use zircon::prelude::*;
-    use zircon::{self, MessageBuf};
     use super::*;
+    use {
+        futures::{FutureExt, StreamExt},
+        fuchsia_async::TimeoutExt,
+        fuchsia_zircon::DurationNum,
+        std::io,
+    };
 
     #[test]
     fn client() {
@@ -499,14 +512,14 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
         ];
 
-        let mut executor = async::Executor::new().unwrap();
+        let mut executor = fasync::Executor::new().unwrap();
 
-        let (client_end, server_end) = zircon::Channel::create().unwrap();
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
 
-        let server = async::Channel::from_channel(server_end).unwrap();
-        let mut buffer = MessageBuf::new();
+        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let mut buffer = zx::MessageBuf::new();
         let receiver = server.recv_msg(&mut buffer).map_ok(|(_chan, buf)| {
             assert_eq!(EXPECTED, buf.bytes());
         });
@@ -516,7 +529,7 @@ mod tests {
             300.millis().after_now(),
             || panic!("did not receive message in time!"));
 
-        let sender = async::Timer::new(100.millis().after_now()).map(|()|{
+        let sender = fasync::Timer::new(100.millis().after_now()).map(|()|{
             client.send(&mut 55u8, 42).unwrap();
             Ok(())
         });
@@ -535,14 +548,14 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
         ];
 
-        let mut executor = async::Executor::new().unwrap();
+        let mut executor = fasync::Executor::new().unwrap();
 
-        let (client_end, server_end) = zircon::Channel::create().unwrap();
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
 
-        let server = async::Channel::from_channel(server_end).unwrap();
-        let mut buffer = MessageBuf::new();
+        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let mut buffer = zx::MessageBuf::new();
         let receiver = server.recv_msg(&mut buffer).map_ok(|(chan, buf)| {
             assert_eq!(EXPECTED, buf.bytes());
             let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
@@ -589,9 +602,9 @@ mod tests {
     #[test]
     #[should_panic]
     fn event_cant_be_taken_twice() {
-        let _exec = async::Executor::new().unwrap();
-        let (client_end, _) = zircon::Channel::create().unwrap();
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let _exec = fasync::Executor::new().unwrap();
+        let (client_end, _) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
         let _foo = client.take_event_receiver();
         client.take_event_receiver();
@@ -599,23 +612,23 @@ mod tests {
 
     #[test]
     fn event_can_be_taken() {
-        let _exec = async::Executor::new().unwrap();
-        let (client_end, _) = zircon::Channel::create().unwrap();
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let _exec = fasync::Executor::new().unwrap();
+        let (client_end, _) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
         client.take_event_receiver();
     }
 
     #[test]
     fn event_received() {
-        let mut executor = async::Executor::new().unwrap();
+        let mut executor = fasync::Executor::new().unwrap();
 
-        let (client_end, server_end) = zircon::Channel::create().unwrap();
-        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
 
         // Send the event from the server
-        let server = async::Channel::from_channel(server_end).unwrap();
+        let server = fasync::Channel::from_channel(server_end).unwrap();
         let event = &mut TransactionMessage {
             header: TransactionHeader {
                 tx_id: 0,

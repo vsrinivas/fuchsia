@@ -4,12 +4,15 @@
 
 //! Encoding2 contains functions and traits for FIDL2 encoding and decoding.
 
-use {Error, Result};
-use std::{mem, ptr, str, u32, u64};
-use zircon as zx;
-use self::zx::HandleBased;
-
-use byteorder::{ByteOrder, LittleEndian};
+use {
+    crate::{Error, Result},
+    byteorder::{ByteOrder, LittleEndian},
+    fuchsia_zircon::{
+        self as zx,
+        HandleBased,
+    },
+    std::{mem, ptr, str, u32, u64},
+};
 
 /// Rounds `x` up if necessary so that it is a multiple of `align`.
 pub fn round_up_to_align(x: usize, align: usize) -> usize {
@@ -1575,7 +1578,7 @@ impl<'a, T> Encodable for &'a mut T where T: Encodable {
 mod test {
     use super::*;
     use std::{fmt, u64, i64, f32, f64};
-    use self::zx::AsHandleRef;
+    use fuchsia_zircon::AsHandleRef;
 
     fn encode_decode<T: Encodable + Decodable>(start: &mut T) -> T {
         let buf = &mut Vec::new();
