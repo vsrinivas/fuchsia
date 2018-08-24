@@ -91,16 +91,17 @@ LoggerImpl::LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
 
 template <class ValueType, class CB>
 void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
-                                    fidl::StringPtr metric_name,
+                                    uint32_t metric_id,
                                     uint32_t event_type_index,
                                     fidl::StringPtr component, ValueType value,
                                     CB callback, bool value_part_required) {
-  uint32_t metric_id = encoder_.MetricId(metric_name);
-  if (metric_id == 0) {
-    FXL_LOG(ERROR) << "Metric " << metric_name << " does not exist.";
+  const Metric* metric = encoder_.GetMetric(metric_id);
+  if (!metric) {
+    FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
     callback(Status2::INVALID_ARGUMENTS);
     return;
   }
+  const std::string& metric_name = metric->name();
 
   auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
 
@@ -219,30 +220,28 @@ void LoggerImpl::AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
   callback(status);
 }
 
-bool LoggerImpl::GetSinglePartMetricInfo(const fidl::StringPtr& metric_name,
-                                         uint32_t* metric_id,
-                                         uint32_t* encoding_id) {
-  *metric_id = encoder_.MetricId(metric_name);
-  if (*metric_id == 0) {
-    FXL_LOG(ERROR) << "Metric " << metric_name << " does not exist.";
-    return false;
+uint32_t LoggerImpl::GetSinglePartMetricEncoding(uint32_t metric_id) {
+  const Metric* metric = encoder_.GetMetric(metric_id);
+  if (!metric) {
+    FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
+    return 0;
   }
-  auto encodings = encoder_.DefaultEncodingsForMetric(*metric_id);
+  const std::string& metric_name = metric->name();
+
+  auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
   if (encodings.size() != 1) {
-    FXL_LOG(ERROR) << "Expected Metric " << *metric_id
+    FXL_LOG(ERROR) << "Expected Metric " << metric_name
                    << " to only have a single part.";
-    return false;
+    return 0;
   }
 
-  *encoding_id = encodings.begin()->second;
-  return true;
+  return encodings.begin()->second;
 }
 
-void LoggerImpl::LogEvent(fidl::StringPtr metric_name,
-                          uint32_t event_type_index,
+void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_type_index,
                           LogEventCallback callback) {
-  uint32_t metric_id, encoding_id;
-  if (!GetSinglePartMetricInfo(metric_name, &metric_id, &encoding_id)) {
+  uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
+  if (encoding_id == 0) {
     callback(Status2::INVALID_ARGUMENTS);
     return;
   }
@@ -251,45 +250,42 @@ void LoggerImpl::LogEvent(fidl::StringPtr metric_name,
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::LogEventCount(fidl::StringPtr metric_name,
-                               uint32_t event_type_index,
+void LoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                                fidl::StringPtr component,
                                int64_t period_duration_micros, uint32_t count,
                                LogEventCountCallback callback) {
-  LogThreePartMetric("event count", metric_name, event_type_index, component,
+  LogThreePartMetric("event count", metric_id, event_type_index, component,
                      count, std::move(callback), false);
 }
 
-void LoggerImpl::LogElapsedTime(fidl::StringPtr metric_name,
-                                uint32_t event_type_index,
+void LoggerImpl::LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
                                 fidl::StringPtr component,
                                 int64_t elapsed_micros,
                                 LogElapsedTimeCallback callback) {
-  LogThreePartMetric("elapsed time", metric_name, event_type_index, component,
+  LogThreePartMetric("elapsed time", metric_id, event_type_index, component,
                      elapsed_micros, std::move(callback), true);
 }
 
-void LoggerImpl::LogFrameRate(fidl::StringPtr metric_name,
-                              uint32_t event_type_index,
+void LoggerImpl::LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
                               fidl::StringPtr component, float fps,
                               LogFrameRateCallback callback) {
-  LogThreePartMetric("frame rate", metric_name, event_type_index, component,
-                     fps, std::move(callback), true);
+  LogThreePartMetric("frame rate", metric_id, event_type_index, component, fps,
+                     std::move(callback), true);
 }
 
-void LoggerImpl::LogMemoryUsage(fidl::StringPtr metric_name,
-                                uint32_t event_type_index,
+void LoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
                                 fidl::StringPtr component, int64_t bytes,
                                 LogMemoryUsageCallback callback) {
-  LogThreePartMetric("memory usage", metric_name, event_type_index, component,
+  LogThreePartMetric("memory usage", metric_id, event_type_index, component,
                      bytes, std::move(callback), true);
 }
 
-void LoggerImpl::LogString(fidl::StringPtr metric_name, fidl::StringPtr s,
+void LoggerImpl::LogString(uint32_t metric_id, fidl::StringPtr s,
                            LogStringCallback callback) {
-  uint32_t metric_id, encoding_id;
-  if (!GetSinglePartMetricInfo(metric_name, &metric_id, &encoding_id)) {
+  uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
+  if (encoding_id == 0) {
     callback(Status2::INVALID_ARGUMENTS);
+    return;
   }
 
   auto result = encoder_.EncodeString(metric_id, encoding_id, s);
@@ -312,8 +308,7 @@ void LoggerImpl::AddTimerObservationIfReady(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::StartTimer(fidl::StringPtr metric_name,
-                            uint32_t event_type_index,
+void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
                             fidl::StringPtr component, fidl::StringPtr timer_id,
                             uint64_t timestamp, uint32_t timeout_s,
                             StartTimerCallback callback) {
@@ -323,9 +318,10 @@ void LoggerImpl::StartTimer(fidl::StringPtr metric_name,
     callback(Status2::INVALID_ARGUMENTS);
   }
   std::unique_ptr<TimerVal> timer_val_ptr;
-  uint32_t metric_id, encoding_id;
-  if (!GetSinglePartMetricInfo(metric_name, &metric_id, &encoding_id)) {
+  uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
+  if (encoding_id == 0) {
     callback(Status2::INVALID_ARGUMENTS);
+    return;
   }
   auto status = ToStatus2(timer_manager_->GetTimerValWithStart(
       metric_id, encoding_id, timer_id.get(), timestamp, timeout_s,
@@ -354,8 +350,7 @@ void LoggerImpl::EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
 }
 
 void LoggerExtImpl::LogIntHistogram(
-    fidl::StringPtr metric_name, uint32_t event_type_index,
-    fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
     LogIntHistogramCallback callback) {
   FXL_LOG(ERROR) << "Not yet implemented";
@@ -363,10 +358,9 @@ void LoggerExtImpl::LogIntHistogram(
 }
 
 void LoggerExtImpl::LogCustomEvent(
-    fidl::StringPtr metric_name,
+    uint32_t metric_id,
     fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values,
     LogCustomEventCallback callback) {
-  uint32_t metric_id = encoder_.MetricId(metric_name);
   auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
   cobalt::encoder::Encoder::Value value;
   for (const auto& event_val : *event_values) {
@@ -406,7 +400,7 @@ void LoggerExtImpl::LogCustomEvent(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerSimpleImpl::LogIntHistogram(fidl::StringPtr metric_name,
+void LoggerSimpleImpl::LogIntHistogram(uint32_t metric_id,
                                        uint32_t event_type_index,
                                        fidl::StringPtr component,
                                        fidl::VectorPtr<uint32_t> bucket_indices,
@@ -416,7 +410,7 @@ void LoggerSimpleImpl::LogIntHistogram(fidl::StringPtr metric_name,
   callback(Status2::INTERNAL_ERROR);
 }
 
-void LoggerSimpleImpl::LogCustomEvent(fidl::StringPtr metric_name,
+void LoggerSimpleImpl::LogCustomEvent(uint32_t metric_id,
                                       fidl::StringPtr json_string,
                                       LogCustomEventCallback callback) {
   FXL_LOG(ERROR) << "Not yet implemented";

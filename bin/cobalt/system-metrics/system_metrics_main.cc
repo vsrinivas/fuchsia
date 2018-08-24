@@ -21,8 +21,8 @@
 #include "lib/fxl/logging.h"
 
 constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
-constexpr char kUptimeMetricName[] = "System Uptime";
-constexpr char kMemoryUsageMetricName[] = "System Memory Usage";
+const uint32_t kUptimeMetricId = 1;
+const uint32_t kMemoryUsageMetricId = 3;
 const unsigned int kIntervalMinutes = 1;
 
 // Gets the root resource which is needed in order to access a variety of system
@@ -129,7 +129,7 @@ fuchsia::cobalt::Status2 SystemMetricsApp::LogUptime(
   while (next_uptime_bucket_ <= uptime_minutes.count()) {
     fuchsia::cobalt::Status2 status = fuchsia::cobalt::Status2::INTERNAL_ERROR;
 
-    logger_->LogElapsedTime(kUptimeMetricName, 0, "", next_uptime_bucket_,
+    logger_->LogElapsedTime(kUptimeMetricId, 0, "", next_uptime_bucket_,
                             &status);
     // If we failed to send an observation, we stop gathering metrics for up to
     // one minute.
@@ -170,9 +170,8 @@ fuchsia::cobalt::Status2 SystemMetricsApp::LogMemoryUsage(
   }
 
   auto cobalt_status = fuchsia::cobalt::Status2::INTERNAL_ERROR;
-  logger_->LogMemoryUsage(
-      kMemoryUsageMetricName, 0, "",
-      stats.total_bytes - stats.free_bytes, &cobalt_status);
+  logger_->LogMemoryUsage(kMemoryUsageMetricId, 0, "",
+                          stats.total_bytes - stats.free_bytes, &cobalt_status);
   if (cobalt_status != fuchsia::cobalt::Status2::OK) {
     FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(cobalt_status);
     return cobalt_status;

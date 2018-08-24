@@ -38,46 +38,44 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
   // implementations.
   //
   // If |value_part_required| is true, then |event_type_index| and |component|
-  // are required only if the metric given by |metric_name| has INDEX and STRING
+  // are required only if the metric given by |metric_id| has INDEX and STRING
   // parts respectively. If |value_part_required| is false, then at least 2 of
   // |event_type_index|, |component| and |value| must be supplied and must have
   // corresponding MetricParts. |value_part_name| is only used to identify the
   // metric that could not be logged when an error occurs.
   template <class ValueType, class CB>
   void LogThreePartMetric(const std::string& value_part_name,
-                          fidl::StringPtr metric_name,
-                          uint32_t event_type_index, fidl::StringPtr component,
-                          ValueType value, CB callback,
-                          bool value_part_required);
+                          uint32_t metric_id, uint32_t event_type_index,
+                          fidl::StringPtr component, ValueType value,
+                          CB callback, bool value_part_required);
 
   template <class CB>
   void AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
                              CB callback);
 
-  bool GetSinglePartMetricInfo(const fidl::StringPtr& metric_name,
-                               uint32_t* metric_id, uint32_t* encoding_id);
+  uint32_t GetSinglePartMetricEncoding(uint32_t metric_id);
 
-  void LogEvent(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void LogEvent(uint32_t metric_id, uint32_t event_type_index,
                 LogEventCallback callback) override;
 
   // In the current implementation, |period_duration_micros| is ignored
-  void LogEventCount(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                      fidl::StringPtr component, int64_t period_duration_micros,
                      uint32_t count, LogEventCountCallback callback) override;
 
-  void LogElapsedTime(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
                       fidl::StringPtr component, int64_t elapsed_micros,
                       LogElapsedTimeCallback callback) override;
 
-  void LogFrameRate(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
                     fidl::StringPtr component, float fps,
                     LogFrameRateCallback callback) override;
 
-  void LogMemoryUsage(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
                       fidl::StringPtr component, int64_t bytes,
                       LogMemoryUsageCallback callback) override;
 
-  void LogString(fidl::StringPtr metric_name, fidl::StringPtr s,
+  void LogString(uint32_t metric_id, fidl::StringPtr s,
                  LogStringCallback callback) override;
 
   // Adds an observation from the timer given if both StartTimer and EndTimer
@@ -86,7 +84,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
   void AddTimerObservationIfReady(std::unique_ptr<TimerVal> timer_val_ptr,
                                   CB callback);
 
-  void StartTimer(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void StartTimer(uint32_t metric_id, uint32_t event_type_index,
                   fidl::StringPtr component, fidl::StringPtr timer_id,
                   uint64_t timestamp, uint32_t timeout_s,
                   StartTimerCallback callback) override;
@@ -109,13 +107,12 @@ class LoggerExtImpl : public LoggerImpl, public fuchsia::cobalt::LoggerExt {
 
  private:
   void LogIntHistogram(
-      fidl::StringPtr metric_name, uint32_t event_type_index,
-      fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
       fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
       LogIntHistogramCallback callback) override;
 
   void LogCustomEvent(
-      fidl::StringPtr metric_name,
+      uint32_t metric_id,
       fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values,
       LogCustomEventCallback callback) override;
 };
@@ -126,13 +123,13 @@ class LoggerSimpleImpl : public LoggerImpl,
   using LoggerImpl::LoggerImpl;
 
  private:
-  void LogIntHistogram(fidl::StringPtr metric_name, uint32_t event_type_index,
+  void LogIntHistogram(uint32_t metric_id, uint32_t event_type_index,
                        fidl::StringPtr component,
                        fidl::VectorPtr<uint32_t> bucket_indices,
                        fidl::VectorPtr<uint64_t> bucket_counts,
                        LogIntHistogramCallback callback) override;
 
-  void LogCustomEvent(fidl::StringPtr metric_name, fidl::StringPtr json_string,
+  void LogCustomEvent(uint32_t metric_id, fidl::StringPtr json_string,
                       LogCustomEventCallback callback) override;
 };
 
