@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs/lazy-dir.h>
+#include <fuchsia/io/c/fidl.h>
 
 namespace fs {
 
@@ -58,8 +59,9 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
     fs::DirentFiller df(dirents, len);
     zx_status_t r = 0;
 
+    const uint64_t ino = fuchsia_io_kInoUnknown;
     if (DoDot(cookie)) {
-        if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
+        if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
             *out_actual = df.BytesFilled();
             return r;
         }
@@ -72,7 +74,7 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
         if (cookie->n >= it->id) {
             continue;
         }
-        if ((r = df.Next(it->name, VTYPE_TO_DTYPE(it->type))) != ZX_OK) {
+        if ((r = df.Next(it->name, VTYPE_TO_DTYPE(it->type), ino)) != ZX_OK) {
             *out_actual = df.BytesFilled();
             return r;
         }

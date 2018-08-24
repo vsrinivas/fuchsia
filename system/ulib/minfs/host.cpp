@@ -454,15 +454,16 @@ struct dirent* emu_readdir(DIR* dirp) {
     for (;;) {
         if (dir->size >= sizeof(vdirent_t)) {
             vdirent_t* vde = (vdirent_t*)dir->ptr;
-            if (dir->size >= vde->size) {
-                struct dirent* ent = &dir->de;
-                strcpy(ent->d_name, vde->name);
-                ent->d_type = vde->type;
-                dir->ptr += vde->size;
-                dir->size -= vde->size;
-                return ent;
-            }
-            dir->size = 0;
+            struct dirent* ent = &dir->de;
+            size_t name_len = vde->size;
+            size_t entry_len = vde->size + sizeof(vdirent_t);
+            ZX_DEBUG_ASSERT(dir->size >= entry_len);
+            memcpy(ent->d_name, vde->name, name_len);
+            ent->d_name[name_len] = '\0';
+            ent->d_type = vde->type;
+            dir->ptr += entry_len;
+            dir->size -= entry_len;
+            return ent;
         }
         size_t actual;
         zx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, DIR_BUFSIZE, &actual);

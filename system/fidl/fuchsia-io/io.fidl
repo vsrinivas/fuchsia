@@ -226,6 +226,10 @@ const uint32 kDirentTypeFile = 8;
 const uint32 kDirentTypeSocket = 12;
 const uint32 kDirentTypeService = 16;
 
+// Nodes which do not have ino values should return this value
+// from Readdir and GetAttr.
+const uint64 kInoUnknown = 0xFFFFFFFFFFFFFFFF;
+
 // Directory defines a node which is capable of containing other Objects.
 [Layout = "Simple"]
 interface Directory : Node {
@@ -240,14 +244,16 @@ interface Directory : Node {
     // calling read multiple times on a file, directories have a seek
     // offset which is updated on subsequent calls to ReadDirents.
     //
-    // These dirents are aligned to uint32_t, and of the form:
+    // These dirents are of the form:
     // struct dirent {
+    //   // Describes the inode of the entry.
+    //   uint64_t ino;
     //   // Describes the length of the dirent name.
-    //   uint32_t size;
+    //   uint8_t size;
     //   // Describes the type of the entry. Aligned with the
     //   // POSIX d_type values.
-    //   uint32_t type;
-    //   // Null-terminated name of entry.
+    //   uint8_t type;
+    //   // Unterminated name of entry.
     //   char name[0];
     // }
     0x83000003: ReadDirents(uint64 max_out) -> (zx.status s, vector<uint8>:kMaxBuf dirents);

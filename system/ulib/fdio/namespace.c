@@ -14,6 +14,7 @@
 #include <zircon/processargs.h>
 #include <zircon/device/vfs.h>
 
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
@@ -328,17 +329,15 @@ static zx_status_t mxdir_open(fdio_t* io, const char* path,
 
 static zx_status_t fill_dirent(vdirent_t* de, size_t delen,
                                const char* name, size_t len, uint32_t type) {
-    size_t sz = sizeof(vdirent_t) + len + 1;
+    size_t sz = sizeof(vdirent_t) + len;
 
-    // round up to uint32 aligned
-    if (sz & 3)
-        sz = (sz + 3) & (~3);
-    if (sz > delen)
+    if (sz > delen || len > NAME_MAX) {
         return ZX_ERR_INVALID_ARGS;
-    de->size = sz;
+    }
+    de->ino = fuchsia_io_kInoUnknown;
+    de->size = len;
     de->type = type;
     memcpy(de->name, name, len);
-    de->name[len] = 0;
     return sz;
 }
 
@@ -366,7 +365,7 @@ static zx_status_t mxdir_readdir_locked(mxdir_t* dir, void* buf, size_t len) {
 static zx_status_t mxdir_get_attr(fdio_t* io, vnattr_t* attr) {
     memset(attr, 0, sizeof(*attr));
     attr->mode = V_TYPE_DIR | V_IRUSR;
-    attr->inode = 1;
+    attr->inode = fuchsia_io_kInoUnknown;
     attr->nlink = 1;
     return ZX_OK;
 }

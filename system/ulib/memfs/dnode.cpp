@@ -132,7 +132,9 @@ zx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
     zx_status_t r;
 
     if (c->order == 0) {
-        if ((r = df->Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
+        // TODO(smklein): Return the real ino.
+        uint64_t ino = fuchsia_io_kInoUnknown;
+        if ((r = df->Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
             return r;
         }
         c->order++;
@@ -156,7 +158,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
         }
         uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
         if ((r = df->Next(fbl::StringPiece(dn.name_.get(), dn.NameLen()),
-                          VTYPE_TO_DTYPE(vtype))) != ZX_OK) {
+                          VTYPE_TO_DTYPE(vtype), dn.AcquireVnode()->ino())) != ZX_OK) {
             return;
         }
         c->order = dn.ordering_token_ + 1;

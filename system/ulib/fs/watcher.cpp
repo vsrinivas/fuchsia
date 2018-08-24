@@ -107,12 +107,13 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
                     auto dirent = reinterpret_cast<vdirent_t*>(ptr);
                     if (dirent->name[0]) {
                         wb.AddMsg(watcher->h, VFS_WATCH_EVT_EXISTING,
-                                  fbl::StringPiece(dirent->name));
+                                  fbl::StringPiece(dirent->name, dirent->size));
                     }
-                    ZX_ASSERT(dirent->size <= actual); // Prevent underflow
-                    actual -= dirent->size;
+                    size_t entry_len = dirent->size + sizeof(vdirent_t);
+                    ZX_ASSERT(entry_len <= actual); // Prevent underflow
+                    actual -= entry_len;
                     ptr = reinterpret_cast<void*>(
-                            static_cast<uintptr_t>(dirent->size) +
+                            static_cast<uintptr_t>(entry_len) +
                             reinterpret_cast<uintptr_t>(ptr));
                 }
             }

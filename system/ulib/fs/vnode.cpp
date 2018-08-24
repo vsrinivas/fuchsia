@@ -133,21 +133,17 @@ void Vnode::SetRemote(zx::channel remote) {
 DirentFiller::DirentFiller(void* ptr, size_t len)
     : ptr_(static_cast<char*>(ptr)), pos_(0), len_(len) {}
 
-zx_status_t DirentFiller::Next(fbl::StringPiece name, uint32_t type) {
+zx_status_t DirentFiller::Next(fbl::StringPiece name, uint8_t type, uint64_t ino) {
     vdirent_t* de = reinterpret_cast<vdirent_t*>(ptr_ + pos_);
-    size_t sz = sizeof(vdirent_t) + name.length() + 1;
+    size_t sz = sizeof(vdirent_t) + name.length();
 
-    // round up to uint32 aligned
-    if (sz & 3) {
-        sz = (sz + 3) & (~3);
-    }
-    if (sz > len_ - pos_) {
+    if (sz > len_ - pos_ || name.length() > NAME_MAX) {
         return ZX_ERR_INVALID_ARGS;
     }
-    de->size = static_cast<uint32_t>(sz);
+    de->ino = ino;
+    de->size = static_cast<uint8_t>(name.length());
     de->type = type;
     memcpy(de->name, name.data(), name.length());
-    de->name[name.length()] = 0;
     pos_ += sz;
     return ZX_OK;
 }

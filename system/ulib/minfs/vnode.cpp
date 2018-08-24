@@ -1491,7 +1491,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
 
         if (de->ino && name != "..") {
             zx_status_t status;
-            if ((status = df.Next(name, de->type)) != ZX_OK) {
+            if ((status = df.Next(name, de->type, de->ino)) != ZX_OK) {
                 // no more space
                 goto done;
             }

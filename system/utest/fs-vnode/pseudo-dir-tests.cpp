@@ -27,10 +27,12 @@ public:
 
         ASSERT_NE(0u, remaining_);
         auto entry = reinterpret_cast<const vdirent_t*>(current_);
-        ASSERT_GE(remaining_, entry->size);
-        current_ += entry->size;
-        remaining_ -= entry->size;
-        EXPECT_STR_EQ(name, entry->name, "name");
+        size_t entry_size = entry->size + sizeof(vdirent_t);
+        ASSERT_GE(remaining_, entry_size);
+        current_ += entry_size;
+        remaining_ -= entry_size;
+        EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(name),
+                        reinterpret_cast<const uint8_t*>(entry->name), strlen(name), "name");
         EXPECT_EQ(VTYPE_TO_DTYPE(vtype), entry->type);
 
         END_HELPER;

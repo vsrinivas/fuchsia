@@ -75,9 +75,10 @@ typedef struct vnattr {
 #define DTYPE_TO_VTYPE(type) (((type)&15) << 12)
 
 typedef struct vdirent {
-    uint32_t size;
-    uint32_t type;
+    uint64_t ino;
+    uint8_t size;
+    uint8_t type;
     char name[0];
-} vdirent_t;
+} __PACKED vdirent_t;
 
 __END_CDECLS

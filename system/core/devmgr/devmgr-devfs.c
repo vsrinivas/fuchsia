@@ -562,19 +562,17 @@ fail:
 // cannot be mistaken for an internal dev coordinator RPC message
 static_assert((ZXFIDL_OPEN & DC_OP_ID_BIT) == 0, "");
 
-static zx_status_t fill_dirent(vdirent_t* de, size_t delen,
-                               const char* name, size_t len, uint32_t type) {
-    size_t sz = sizeof(vdirent_t) + len + 1;
+static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
+                               const char* name, size_t len, uint8_t type) {
+    size_t sz = sizeof(vdirent_t) + len;
 
-    // round up to uint32 aligned
-    if (sz & 3)
-        sz = (sz + 3) & (~3);
-    if (sz > delen)
+    if (sz > delen || len > NAME_MAX) {
         return ZX_ERR_INVALID_ARGS;
-    de->size = sz;
+    }
+    de->ino = ino;
+    de->size = len;
     de->type = type;
     memcpy(de->name, name, len);
-    de->name[len] = 0;
     return sz;
 }
 
@@ -601,7 +599,7 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
             }
         }
         ino = child->ino;
-        zx_status_t r = fill_dirent(ptr, len, child->name, strlen(child->name),
+        zx_status_t r = fill_dirent(ptr, len, ino, child->name, strlen(child->name),
                                     VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             break;

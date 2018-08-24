@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include <fbl/auto_lock.h>
+#include <fuchsia/io/c/fidl.h>
 
 namespace fs {
 
@@ -52,7 +53,8 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
     fs::DirentFiller df(data, len);
     zx_status_t r = 0;
     if (cookie->n < kDotId) {
-        if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
+        uint64_t ino = fuchsia_io_kInoUnknown;
+        if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
             *out_actual = df.BytesFilled();
             return r;
         }
@@ -70,7 +72,7 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
             continue;
         }
         if ((r = df.Next(it->name().ToStringPiece(),
-                         VTYPE_TO_DTYPE(attr.mode))) != ZX_OK) {
+                         VTYPE_TO_DTYPE(attr.mode), attr.inode)) != ZX_OK) {
             *out_actual = df.BytesFilled();
             return r;
         }
@@ -96,7 +98,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 
     Notify(name.ToStringPiece(), VFS_WATCH_EVT_ADDED);
     auto entry = fbl::make_unique<Entry>(next_node_id_++,
-                                                fbl::move(name), fbl::move(vn));
+                                         fbl::move(name), fbl::move(vn));
     entries_by_name_.insert(entry.get());
     entries_by_id_.insert(fbl::move(entry));
     return ZX_OK;
