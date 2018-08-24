@@ -5,7 +5,9 @@
 #include <fcntl.h>
 #include <poll.h>
 
+#include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma.h"
+#include "magma_sysmem.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
@@ -231,6 +233,38 @@ public:
         test2->SemaphoreImport(handle, id);
     }
 
+    void ImageFormat()
+    {
+        fuchsia::sysmem::SingleBufferSettings buffer_settings;
+        buffer_settings.has_image_format_constraints = true;
+        buffer_settings.image_format_constraints.pixel_format.type =
+            fuchsia::sysmem::PixelFormatType::NV12;
+        buffer_settings.image_format_constraints.min_bytes_per_row = 128;
+        buffer_settings.image_format_constraints.bytes_per_row_divisor = 256;
+        buffer_settings.image_format_constraints.min_coded_height = 64;
+        fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
+        encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
+        buffer_settings.Encode(&encoder, 0);
+        std::vector<uint8_t> encoded_bytes = encoder.TakeBytes();
+        magma_buffer_format_description_t description;
+        ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_description(
+                                       encoded_bytes.data(), encoded_bytes.size(), &description));
+        magma_image_plane_t planes[4];
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_plane_info(description, planes));
+
+        EXPECT_EQ(256u, planes[0].bytes_per_row);
+        EXPECT_EQ(0u, planes[0].byte_offset);
+        EXPECT_EQ(256u, planes[1].bytes_per_row);
+        EXPECT_EQ(256u * 64u, planes[1].byte_offset);
+        magma_buffer_format_description_release(description);
+        EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+                  magma_get_buffer_format_description(encoded_bytes.data(),
+                                                      encoded_bytes.size() + 1, &description));
+        EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+                  magma_get_buffer_format_description(encoded_bytes.data(),
+                                                      encoded_bytes.size() - 1, &description));
+    }
+
 private:
     int fd_ = -1;
     magma_connection_t connection_;
@@ -298,6 +332,12 @@ TEST(MagmaAbi, SemaphoreImportExport)
     TestConnection test1;
     TestConnection test2;
     TestConnection::SemaphoreImportExport(&test1, &test2);
+}
+
+TEST(MagmaAbi, ImageFormat)
+{
+    TestConnection test;
+    test.ImageFormat();
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }

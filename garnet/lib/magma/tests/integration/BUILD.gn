@@ -26,5 +26,6 @@ executable("magma_abi_conformance_tests") {
     "$magma_build_root/src/libmagma",
     "$magma_build_root/src/magma_util/platform:buffer",
     "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-sysmem",
   ]
 }

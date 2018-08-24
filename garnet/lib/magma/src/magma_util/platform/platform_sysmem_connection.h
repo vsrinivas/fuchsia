@@ -33,12 +33,16 @@ public:
 class PlatformSysmemConnection {
 public:
     struct BufferDescription {
-        magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES];
+        magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
     };
 
     virtual ~PlatformSysmemConnection() {}
 
     static std::unique_ptr<PlatformSysmemConnection> Create();
+
+    static magma_status_t
+    DecodeBufferDescription(const uint8_t* image_data, uint64_t image_data_size,
+                            std::unique_ptr<BufferDescription>* buffer_description_out);
 
     virtual magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                           std::unique_ptr<PlatformBuffer>* buffer_out) = 0;
