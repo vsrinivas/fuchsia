@@ -11,11 +11,11 @@ const Interface = `
 {{- if .Request }}
 {{ template "StructDefinition" .Request }}
 {{- end }}
+{{- if .RequestHandles }}
+{{ template "StructDefinition" .RequestHandles }}
+{{- end }}
 {{- if .Response }}
 {{ template "StructDefinition" .Response }}
-{{- end }}
-{{- range .Structs }}
-{{ template "StructDefinition" . }}
 {{- end }}
 {{- end }}
 
@@ -27,7 +27,7 @@ fdio_service_connect${{ .Name }}(path ptr[in, string["/svc/{{ .ServiceNameString
 
 {{- $if := .Name }}
 {{- range .Methods }}
-zx_channel_call${{ .Name }}(handle zx_chan_{{ $if }}_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[{{ .Name }}Request, array[zx_handle], array[zx_handle]]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call${{ .Name }}(handle zx_chan_{{ $if }}_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[{{ .Name }}Request, {{ .Name }}RequestHandles, array[zx_handle]]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 {{- end }}
 
 {{ end -}}

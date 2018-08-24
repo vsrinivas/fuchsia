@@ -20,6 +20,12 @@ const (
 // Type represents a syzkaller type including type-options.
 type Type string
 
+type Enum struct {
+	Name    string
+	Type    string
+	Members []string
+}
+
 // Struct represents a syzkaller struct.
 type Struct struct {
 	Name string
@@ -58,6 +64,9 @@ type Method struct {
 	// Request represents a struct containing the request parameters.
 	Request *Struct
 
+	// RequestHandles represents a struct containing the handles in the request parameters.
+	RequestHandles *Struct
+
 	// Response represents an optional struct containing the response parameters.
 	Response *Struct
 
@@ -70,11 +79,21 @@ type Root struct {
 	// Name is the name of the library.
 	Name string
 
-	// Interfaces represents the list of FIDL interfaces represented as a collection of syskaller syscall descriptions.
+	// C header file path to be included in syscall description.
+	HeaderPath string
+
+	// Interfaces represent the list of FIDL interfaces represented as a collection of syskaller syscall descriptions.
 	Interfaces []Interface
+
+	// Structs correspond to syzkaller structs.
+	Structs []Struct
+
+	// Enums correspond to syzkaller flags.
+	Enums []Enum
 }
 
 type StructMap map[types.EncodedCompoundIdentifier]types.Struct
+type EnumMap map[types.EncodedCompoundIdentifier]types.Enum
 
 type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
@@ -82,6 +101,9 @@ type compiler struct {
 
 	// structs contain all top-level struct definitions for the FIDL source.
 	structs StructMap
+
+	// enums contain all top-level enum definitions for the FIDL source.
+	enums EnumMap
 
 	// library is the identifier for the current library.
 	library types.LibraryIdentifier
@@ -124,6 +146,26 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 	types.Float64: "int64",
 }
 
+var handleSubtypes = map[types.HandleSubtype]string{
+	types.Handle:    "zx_handle",
+	types.Process:   "zx_process",
+	types.Thread:    "zx_thread",
+	types.Vmo:       "zx_vmo",
+	types.Channel:   "zx_chan",
+	types.Event:     "zx_event",
+	types.Port:      "zx_port",
+	types.Interrupt: "zx_interrupt",
+	types.Log:       "zx_log",
+	types.Socket:    "zx_socket",
+	types.Resource:  "zx_resource",
+	types.Eventpair: "zx_eventpair",
+	types.Job:       "zx_job",
+	types.Vmar:      "zx_vmar",
+	types.Fifo:      "zx_fifo",
+	types.Guest:     "zx_guest",
+	types.Time:      "zx_timer",
+}
+
 func isReservedWord(str string) bool {
 	_, ok := reservedWords[str]
 	return ok
@@ -137,18 +179,22 @@ func changeIfReserved(val types.Identifier, ext string) string {
 	return str
 }
 
-func (_ *compiler) compileIdentifier(id types.Identifier, ext string) string {
-	str := string(id)
-	str = common.ToSnakeCase(str)
-	return changeIfReserved(types.Identifier(str), ext)
-}
-
 func formatLibrary(library types.LibraryIdentifier, sep string) string {
 	parts := []string{}
 	for _, part := range library {
 		parts = append(parts, string(part))
 	}
 	return changeIfReserved(types.Identifier(strings.Join(parts, sep)), "")
+}
+
+func formatLibraryPath(library types.LibraryIdentifier) string {
+	return formatLibrary(library, "/")
+}
+
+func (_ *compiler) compileIdentifier(id types.Identifier, ext string) string {
+	str := string(id)
+	str = common.ToSnakeCase(str)
+	return changeIfReserved(types.Identifier(str), ext)
 }
 
 func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
@@ -171,9 +217,30 @@ func (c *compiler) compilePrimitiveSubtypeRange(val types.PrimitiveSubtype, valR
 	return Type(fmt.Sprintf("%s[%s]", c.compilePrimitiveSubtype(val), valRange))
 }
 
-func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *StructMember, []Struct) {
+func (c *compiler) compileHandleSubtype(val types.HandleSubtype) Type {
+	if t, ok := handleSubtypes[val]; ok {
+		return Type(t)
+	}
+	log.Fatal("Unknown handle type: ", val)
+	return Type("")
+}
+
+func (c *compiler) compileEnum(val types.Enum) Enum {
+	e := Enum{
+		c.compileCompoundIdentifier(val.Name, ""),
+		string(c.compilePrimitiveSubtype(val.Type)),
+		[]string{},
+	}
+	for _, v := range val.Members {
+		e.Members = append(e.Members, fmt.Sprintf("%s_%s", e.Name, v.Name))
+	}
+	return e
+}
+
+func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *StructMember, *StructMember, []Struct) {
 	var i StructMember
 	var o *StructMember
+	var h *StructMember
 	var s []Struct
 
 	switch p.Type.Kind {
@@ -185,6 +252,23 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 	case types.HandleType:
 		i = StructMember{
 			Type: Type("flags[fidl_handle_presence, int32]"),
+			Name: c.compileIdentifier(p.Name, ""),
+		}
+
+		// Out-of-line handles
+		h = &StructMember{
+			Type: c.compileHandleSubtype(p.Type.HandleSubtype),
+			Name: c.compileIdentifier(p.Name, ""),
+		}
+	case types.RequestType:
+		i = StructMember{
+			Type: Type("flags[fidl_handle_presence, int32]"),
+			Name: c.compileIdentifier(p.Name, ""),
+		}
+
+		// Out-of-line handles
+		h = &StructMember{
+			Type: Type(fmt.Sprintf("zx_chan_%s_server", c.compileCompoundIdentifier(p.Type.RequestSubtype, ""))),
 			Name: c.compileIdentifier(p.Name, ""),
 		}
 	case types.StringType:
@@ -207,7 +291,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 		}
 
 		// Variable-size, out-of-line data
-		inLine, outOfLine, structs := c.compileStructMember(types.StructMember{
+		inLine, outOfLine, handle, structs := c.compileStructMember(types.StructMember{
 			Name: types.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
 			Type: (*p.Type.ElementType),
 		})
@@ -223,41 +307,70 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
 			}
 		}
+
+		// Out-of-line handles
+		if handle != nil {
+			h = &StructMember{
+				Type: Type(fmt.Sprintf("array[%s]", handle.Type)),
+				Name: c.compileIdentifier(p.Name, ""),
+			}
+		}
 	case types.IdentifierType:
-		_, ok := c.decls[p.Type.Identifier]
+		declType, ok := c.decls[p.Type.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", p.Type.Identifier)
 		}
 
-		inLine, outOfLine, structs := c.compileStruct(c.structs[p.Type.Identifier])
-		s = append(s, structs...)
+		switch declType {
+		case types.EnumDeclType:
+			i = StructMember{
+				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.enums[p.Type.Identifier].Type))),
+				Name: c.compileIdentifier(p.Name, ""),
+			}
+		case types.StructDeclType:
+			inLine, outOfLine, handles, structs := c.compileStruct(c.structs[p.Type.Identifier])
+			s = append(s, structs...)
 
-		// Constant-size, in-line data
-		t := c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)
-		s = append(s, Struct{
-			Name:    t,
-			Members: inLine,
-		})
-		i = StructMember{
-			Type: Type(t),
-			Name: c.compileIdentifier(p.Name, InLineSuffix),
-		}
-
-		// Variable-size, out-of-line data
-		if outOfLine != nil {
-			t := c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)
+			// Constant-size, in-line data
+			t := c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)
 			s = append(s, Struct{
 				Name:    t,
-				Members: outOfLine,
+				Members: inLine,
 			})
-			o = &StructMember{
+			i = StructMember{
 				Type: Type(t),
-				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+				Name: c.compileIdentifier(p.Name, InLineSuffix),
+			}
+
+			// Variable-size, out-of-line data
+			if outOfLine != nil {
+				t := c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)
+				s = append(s, Struct{
+					Name:    t,
+					Members: outOfLine,
+				})
+				o = &StructMember{
+					Type: Type(t),
+					Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+				}
+			}
+
+			// Out-of-line handles
+			if handles != nil {
+				t := c.compileCompoundIdentifier(p.Type.Identifier, "")
+				s = append(s, Struct{
+					Name:    t,
+					Members: handles,
+				})
+				h = &StructMember{
+					Type: Type(t),
+					Name: c.compileIdentifier(p.Name, ""),
+				}
 			}
 		}
 	}
 
-	return i, o, s
+	return i, o, h, s
 }
 
 func (c *compiler) compileMessageHeader(Ordinal types.Ordinal) StructMember {
@@ -267,12 +380,12 @@ func (c *compiler) compileMessageHeader(Ordinal types.Ordinal) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember, []Struct) {
-	var i, o []StructMember
+func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember, []StructMember, []Struct) {
+	var i, o, h []StructMember
 	var s []Struct
 
 	for _, m := range p.Members {
-		inLine, outOfLine, structs := c.compileStructMember(m)
+		inLine, outOfLine, handles, structs := c.compileStructMember(m)
 
 		i = append(i, inLine)
 
@@ -280,10 +393,14 @@ func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember
 			o = append(o, *outOfLine)
 		}
 
+		if handles != nil {
+			h = append(h, *handles)
+		}
+
 		s = append(s, structs...)
 	}
 
-	return i, o, s
+	return i, o, h, s
 }
 
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
@@ -302,12 +419,25 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		})
 	}
 
-	i, o, structs := c.compileStruct(args)
+	i, o, h, structs := c.compileStruct(args)
 
 	r.Request = &Struct{
 		Name:    methodName + "Request",
 		Members: append(append([]StructMember{c.compileMessageHeader(val.Ordinal)}, i...), o...),
 	}
+
+	if len(h) == 0 {
+		h = append(h, StructMember{
+			Type: "void",
+			Name: "void",
+		})
+	}
+
+	r.RequestHandles = &Struct{
+		Name:    methodName + "RequestHandles",
+		Members: h,
+	}
+
 	r.Structs = structs
 
 	return r
@@ -329,16 +459,37 @@ func Compile(fidlData types.Root) Root {
 	libraryName := types.ParseLibraryName(fidlData.Name)
 	c := compiler{
 		decls:   fidlData.Decls,
-		structs: make(map[types.EncodedCompoundIdentifier]types.Struct),
+		structs: make(StructMap),
+		enums:   make(EnumMap),
 		library: libraryName,
 	}
+
+	root.HeaderPath = fmt.Sprintf("%s/c/fidl.h", formatLibraryPath(libraryName))
 
 	for _, v := range fidlData.Structs {
 		c.structs[v.Name] = v
 	}
 
+	for _, v := range fidlData.Enums {
+		c.enums[v.Name] = v
+
+		root.Enums = append(root.Enums, c.compileEnum(v))
+	}
+
 	for _, v := range fidlData.Interfaces {
 		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
+	}
+
+	exists := make(map[string]bool)
+	for _, i := range root.Interfaces {
+		for _, m := range i.Methods {
+			for _, s := range m.Structs {
+				if _, ok := exists[s.Name]; !ok {
+					root.Structs = append(root.Structs, s)
+					exists[s.Name] = true
+				}
+			}
+		}
 	}
 
 	return root

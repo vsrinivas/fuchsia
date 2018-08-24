@@ -7,7 +7,7 @@ const Struct = `
        {{- range .Members }}
        {{ .Name }} {{ .Type }}
        {{- end }}
-}
+} [packed]
 
 {{- end -}}
 `
