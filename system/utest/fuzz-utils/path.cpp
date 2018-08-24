@@ -149,6 +149,34 @@ bool TestGetSize() {
     END_TEST;
 }
 
+bool TestList() {
+    BEGIN_TEST;
+    PathFixture fixture;
+    ASSERT_TRUE(fixture.Create());
+
+    Path path;
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo").c_str()));
+
+    fbl::unique_ptr<StringList> list;
+    list = path.List();
+    EXPECT_STR_EQ(list->first(), "ba");
+    EXPECT_NULL(list->next());
+
+    ASSERT_EQ(ZX_OK, path.Push("ba"));
+    list = path.List();
+
+    EXPECT_EQ(list->length(), 2);
+    list->erase_if("r");
+    list->erase_if("z");
+    EXPECT_TRUE(list->is_empty());
+
+    ASSERT_EQ(ZX_OK, path.Push("z/qu/ux"));
+    list = path.List();
+    EXPECT_TRUE(list->is_empty());
+
+    END_TEST;
+}
+
 bool TestReset() {
     BEGIN_TEST;
     PathFixture fixture;
@@ -167,6 +195,7 @@ BEGIN_TEST_CASE(PathTest)
 RUN_TEST(TestJoin)
 RUN_TEST(TestPushAndPop)
 RUN_TEST(TestGetSize)
+RUN_TEST(TestList)
 RUN_TEST(TestReset)
 END_TEST_CASE(PathTest)
 

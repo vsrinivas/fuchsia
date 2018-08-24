@@ -32,7 +32,10 @@ public:
     fbl::String Join(const char* relpath) const;
 
     // Returns the size of the file in |out|, if it exists.
-    zx_status_t GetSize(const char *relpath, size_t *out) const;
+    zx_status_t GetSize(const char* relpath, size_t* out) const;
+
+    // Returns a list of files in the directory given by the current path.
+    fbl::unique_ptr<StringList> List() const;
 
     // Changes the current path to the directory described by |relpath|.
     zx_status_t Push(const char* relpath);

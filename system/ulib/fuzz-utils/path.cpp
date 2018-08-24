@@ -62,7 +62,7 @@ fbl::String Path::Join(const char* relpath) const {
     return fbl::move(abspath);
 }
 
-zx_status_t Path::GetSize(const char *relpath, size_t *out) const {
+zx_status_t Path::GetSize(const char* relpath, size_t* out) const {
     fbl::String abspath = Join(relpath);
     struct stat buf;
     if (stat(abspath.c_str(), &buf) != 0) {
@@ -71,6 +71,26 @@ zx_status_t Path::GetSize(const char *relpath, size_t *out) const {
     }
     *out = buf.st_size;
     return ZX_OK;
+}
+
+fbl::unique_ptr<StringList> Path::List() const {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<StringList> list(new (&ac) StringList());
+    ZX_ASSERT(ac.check());
+
+    DIR* dir = opendir(c_str());
+    if (!dir) {
+        return fbl::move(list);
+    }
+    auto close_dir = fbl::MakeAutoCall([&dir]() { closedir(dir); });
+
+    struct dirent* ent;
+    while ((ent = readdir(dir))) {
+        if (strcmp(".", ent->d_name) != 0) {
+            list->push_back(ent->d_name);
+        }
+    }
+    return fbl::move(list);
 }
 
 zx_status_t Path::Push(const char* relpath) {
