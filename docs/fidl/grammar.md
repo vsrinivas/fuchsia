@@ -52,7 +52,7 @@ documentation generation system.
 `file` is the starting symbol.
 
 ```
-file = library-header , using-list , declaration-list ;
+file = library-header , ( using-list ) , declaration-list ;
 
 library-header = ( attribute-list ) , "library" , compound-identifier , ";" ;
 
@@ -89,9 +89,9 @@ interface-method = ordinal , ":" , interface-parameters
 interface-parameters = IDENTIFIER , parameter-list , ( "->" , parameter-list )
                      | "->" , IDENTIFIER , parameter-list
 
-parameter-list = "(" , parameters , ")" ;
+parameter-list = "(" , ( parameters ) , ")" ;
 
-parameters = parameter | parameter , "," , parameter-list ;
+parameters = parameter | parameter , "," , parameters ;
 
 parameter = type , IDENTIFIER ;
 
@@ -105,7 +105,7 @@ union-field = type , IDENTIFIER ;
 
 attribute-list = "[" , attributes, "]" ;
 
-attributes = attribute | attribute , "," , attribute ;
+attributes = attribute | attribute , "," , attributes ;
 
 attribute = IDENTIFIER , ( "=", STRING-LITERAL ) ;
 
