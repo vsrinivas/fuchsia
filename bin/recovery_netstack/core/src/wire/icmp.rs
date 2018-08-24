@@ -14,9 +14,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6};
+use crate::wire::ipv4;
 use crate::wire::util::fits_in_u32;
-use crate::wire::util::Checksum;
-use crate::wire::{ipv4, BufferAndRange};
+use crate::wire::util::{BufferAndRange, Checksum, PacketSerializer};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ICMP
 // header. Thus, we can simply reinterpret the bytes of the ICMP header as a
@@ -182,7 +182,7 @@ impl IcmpIpExt for Ipv4 {
     type IcmpMessageType = Icmpv4MessageType;
 
     fn header_len(bytes: &[u8]) -> usize {
-        if bytes.len() < ipv4::MIN_HEADER_LEN {
+        if bytes.len() < ipv4::MIN_HEADER_BYTES {
             return bytes.len();
         }
         let (header_prefix, _) =
@@ -333,6 +333,16 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
         // infallible since it was validated in parse
         M::code_from_u8(self.header.code).unwrap()
     }
+
+    /// Construct a serializer with the same contents as this packet.
+    pub fn serializer(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketSerializer<I, M> {
+        IcmpPacketSerializer {
+            src_ip,
+            dst_ip,
+            code: self.code(),
+            msg: *self.message(),
+        }
+    }
 }
 
 impl<I: IcmpIpExt, B, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
@@ -381,54 +391,42 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I> + HasOriginalPacket> IcmpPack
     }
 }
 
-impl<I: IcmpIpExt, B, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
-    /// Compute how many bytes will be consumed by an ICMP packet.
-    ///
-    /// `serialize_len` computes how many bytes will be consumed when calling
-    /// `serialize` with a `BufferAndRange` with a range of length `range_len`
-    /// for the message type `M`. It can be used to ensure that enough pre-range
-    /// bytes are provided to `serialize` to guarantee that it won't panic.
-    ///
-    /// # Panics
-    ///
-    /// `serialize_len` panics if the message type `M` doesn't take a body
-    /// (`M::HAS_BODY` is false) and `range_len` is non-zero.
-    pub fn serialize_len(range_len: usize) -> usize {
-        assert!(
-            M::HAS_BODY || range_len == 0,
-            "body provided for message that doesn't take a body"
-        );
-        mem::size_of::<Header>() + mem::size_of::<M>() + range_len
+/// A serializer for ICMP packets.
+pub struct IcmpPacketSerializer<I: IcmpIpExt, M: IcmpMessage<I>> {
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    code: M::Code,
+    msg: M,
+}
+
+impl<I: IcmpIpExt, M: IcmpMessage<I>> IcmpPacketSerializer<I, M> {
+    /// Construct a new `IcmpPacketSerializer`.
+    pub fn new(
+        src_ip: I::Addr, dst_ip: I::Addr, code: M::Code, msg: M,
+    ) -> IcmpPacketSerializer<I, M> {
+        IcmpPacketSerializer {
+            src_ip,
+            dst_ip,
+            code,
+            msg,
+        }
     }
 }
 
-impl<I: IcmpIpExt, B: AsMut<[u8]>, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
-    /// Serialize an ICMP packet in an existing buffer.
-    ///
-    /// `serialize creates an `IcmpPacket` which uses the provided `buffer` for
-    /// its storage, initializing all header and message fields including the
-    /// checksum. It treats `buffer.range()` as the body of the message. If the
-    /// message type does not contain a body, the packet will be serialized
-    /// immediately preceding `buffer.range()`, and `buffer.range()` must have a
-    /// length of 0. It returns a new `BufferAndRange` with a range equal to the
-    /// bytes of the ICMP packet (including the header). This range can be used
-    /// to indicate the range for encapsulation in another packet.
-    ///
-    /// # Examples
-    ///
-    /// TODO
-    ///
-    /// # Panics
-    ///
-    /// `serialize` panics if there is insufficient room preceding the range to
-    /// store the message and header. The caller can guarantee that there will
-    /// be enough room by providing at least `serialize_len` pre-range bytes.
-    ///
-    /// `serialize` also panics if the message type does not contain a body, but
-    /// `buffer.range()` is non-zero in length.
-    pub fn serialize(
-        mut buffer: BufferAndRange<B>, src_ip: I::Addr, dst_ip: I::Addr, code: M::Code, msg: M,
-    ) -> BufferAndRange<B> {
+// TODO(joshlf): Figure out a way to split body and non-body message types by
+// trait and implement PacketSerializer for some and InnerPacketSerializer for
+// others.
+
+impl<I: IcmpIpExt, M: IcmpMessage<I>> PacketSerializer for IcmpPacketSerializer<I, M> {
+    fn max_header_bytes(&self) -> usize {
+        mem::size_of::<Header>() + mem::size_of::<M>()
+    }
+
+    fn min_header_bytes(&self) -> usize {
+        self.max_header_bytes()
+    }
+
+    fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>) {
         let extend_backwards = {
             let (prefix, message_body, _) = buffer.parts_mut();
             assert!(
@@ -443,23 +441,26 @@ impl<I: IcmpIpExt, B: AsMut<[u8]>, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
             let (_, mut header) =
                 LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(prefix)
                     .expect("too few bytes for ICMP message");
-            *message = msg;
+            *message = self.msg;
             header.set_msg_type(M::TYPE);
-            header.code = code.into();
-            let checksum =
-                Self::compute_checksum(&header, message.bytes(), message_body, src_ip, dst_ip)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "total ICMP packet length of {} overflows 32-bit length field of \
-                             pseudo-header",
-                            header.bytes().len() + message.bytes().len() + message_body.len(),
-                        )
-                    });
+            header.code = self.code.into();
+            let checksum = IcmpPacket::<I, B, M>::compute_checksum(
+                &header,
+                message.bytes(),
+                message_body,
+                self.src_ip,
+                self.dst_ip,
+            ).unwrap_or_else(|| {
+                panic!(
+                    "total ICMP packet length of {} overflows 32-bit length field of pseudo-header",
+                    header.bytes().len() + message.bytes().len() + message_body.len(),
+                )
+            });
             header.set_checksum(checksum);
             header.bytes().len() + message.bytes().len()
         };
+
         buffer.extend_backwards(extend_backwards);
-        buffer
     }
 }
 
@@ -860,29 +861,30 @@ impl_icmp_message!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::ipv4::Ipv4Packet;
+    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
+    use crate::wire::util::{InnerSerializationRequest, SerializationRequest};
 
-    fn serialize_to_bytes<I: Ip, B: ByteSlice, M: IcmpMessage<I>>(
-        src_ip: I::Addr, dst_ip: I::Addr, icmp: &IcmpPacket<I, B, M>,
+    fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4>>(
+        src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,
+        serializer: Ipv4PacketSerializer,
     ) -> Vec<u8> {
-        let mut data = vec![0; IcmpPacket::<I, &[u8], M>::serialize_len(icmp.message_body.len())];
+        let icmp_serializer = icmp.serializer(src_ip, dst_ip);
+        let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
         let body_offset = data.len() - icmp.message_body.len();
         (&mut data[body_offset..]).copy_from_slice(&icmp.message_body);
-        IcmpPacket::serialize(
-            BufferAndRange::new(&mut data[..], body_offset..),
-            src_ip,
-            dst_ip,
-            icmp.code(),
-            *icmp.message,
-        );
-        data
+        BufferAndRange::new_from(&mut data[..], body_offset..)
+            .encapsulate(icmp_serializer)
+            .encapsulate(serializer)
+            .serialize_outer()
+            .as_ref()
+            .to_vec()
     }
 
     #[test]
     fn test_parse_and_serialize_echo_request() {
         use crate::wire::testdata::icmp_echo::*;
         let (ip, _) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, IcmpEchoRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
@@ -890,15 +892,15 @@ mod tests {
         assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
         assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], REQUEST_IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], REQUEST_IP_PACKET_BYTES);
     }
 
     #[test]
     fn test_parse_and_serialize_echo_response() {
         use crate::wire::testdata::icmp_echo::*;
         let (ip, _) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, IcmpEchoReply>::parse(ip.body(), src_ip, dst_ip).unwrap();
@@ -906,15 +908,15 @@ mod tests {
         assert_eq!(icmp.message_body(), ECHO_DATA);
         assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], RESPONSE_IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], RESPONSE_IP_PACKET_BYTES);
     }
 
     #[test]
     fn test_parse_and_serialize_timestamp_request() {
         use crate::wire::testdata::icmp_timestamp::*;
         let (ip, _) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, Icmpv4TimestampRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
@@ -930,15 +932,15 @@ mod tests {
         assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
         assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], REQUEST_IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], REQUEST_IP_PACKET_BYTES);
     }
 
     #[test]
     fn test_parse_and_serialize_timestamp_reply() {
         use crate::wire::testdata::icmp_timestamp::*;
         let (ip, _) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, Icmpv4TimestampReply>::parse(ip.body(), src_ip, dst_ip).unwrap();
@@ -951,52 +953,52 @@ mod tests {
         assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
         assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], RESPONSE_IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], RESPONSE_IP_PACKET_BYTES);
     }
 
     #[test]
     fn test_parse_and_serialize_dest_unreachable() {
         use crate::wire::testdata::icmp_dest_unreachable::*;
         let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<Ipv4, _, IcmpDestUnreachable>::parse(ip.body(), src_ip, dst_ip).unwrap();
         assert_eq!(icmp.code(), Icmpv4DestUnreachableCode::DestHostUnreachable);
         assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], IP_PACKET_BYTES);
     }
 
     #[test]
     fn test_parse_and_serialize_redirect() {
         use crate::wire::testdata::icmp_redirect::*;
         let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, Icmpv4Redirect>::parse(ip.body(), src_ip, dst_ip).unwrap();
         assert_eq!(icmp.code(), Icmpv4RedirectCode::RedirectForHost);
         assert_eq!(icmp.message().gateway, GATEWAY_ADDR);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], IP_PACKET_BYTES);
     }
 
     #[test]
     fn test_parse_and_serialize_time_exceeded() {
         use crate::wire::testdata::icmp_time_exceeded::*;
         let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
+        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, Icmpv4TimeExceeded>::parse(ip.body(), src_ip, dst_ip).unwrap();
         assert_eq!(icmp.code(), Icmpv4TimeExceededCode::TTLExpired);
         assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
-        assert_eq!(data[..], IP_PACKET_BYTES[20..]);
+        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], IP_PACKET_BYTES);
     }
 }

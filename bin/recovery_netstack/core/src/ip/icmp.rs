@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Implementation of Internet Control Message Protocol (ICMP)
+//! The Internet Control Message Protocol (ICMP).
 
 use std::mem;
 
 use log::trace;
 
 use crate::ip::{send_ip_packet, IpAddr, IpProto};
-use crate::wire::icmp::{IcmpPacket, Icmpv4Packet};
-use crate::wire::BufferAndRange;
+use crate::wire::icmp::{IcmpPacket, IcmpPacketSerializer, Icmpv4Packet};
+use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
@@ -53,22 +53,7 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
                             ctx,
                             dst_ip,
                             IpProto::Icmp,
-                            |src_ip, min_prefix_size, min_body_and_padding_size| {
-                                // TODO: Check IcmpPacket::serialize_len to make
-                                // sure we've given enough space in the buffer.
-                                // There definitely is since Echo Requests and
-                                // Echo Replies have the same format, but we
-                                // shouldn't be relying on that for correctness.
-                                let mut buffer = IcmpPacket::serialize(buffer, src_ip, dst_ip, code, req);
-                                // The current buffer may not have enough prefix
-                                // space for all of the link-layer headers or
-                                // for the post-body padding, so use
-                                // ensure_prefix_padding to ensure that we are
-                                // using a buffer with sufficient space.
-
-                                buffer.ensure_prefix_padding(min_prefix_size, min_body_and_padding_size);
-                                buffer
-                            },
+                            |src_ip| buffer.encapsulate(IcmpPacketSerializer::new(src_ip, dst_ip, code, req)),
                         );
                         true
                     }

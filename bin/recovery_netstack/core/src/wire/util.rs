@@ -595,6 +595,369 @@ mod buffer {
         lower..upper
     }
 
+    /// A serializer for non-encapsulating packets.
+    ///
+    /// `InnerPacketSerializer` is a serializer for packets which do not
+    /// themselves encapsulate other packets.
+    pub trait InnerPacketSerializer {
+        /// The number of bytes required to serialize this packet.
+        fn size(&self) -> usize;
+
+        /// Serialize a packet in an existing buffer.
+        ///
+        /// `serialize` serializes a packet into `buffer` from the present
+        /// configuration. It serializes starting at the beginning of
+        /// `buffer.range()`, and expects the range to be empty.
+        ///
+        /// `serialize` updates the buffer's range to be equal to the bytes of
+        /// the newly-serialized packet. This range can be used to indicate the
+        /// range for encapsulation in another packet.
+        ///
+        /// # Panics
+        ///
+        /// `serialize` panics if `buffer.range()` is non-empty, or if the
+        /// number of bytes following the range is less than `self.size()`.
+        fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>);
+    }
+
+    // TODO(joshlf): Since {max,min}_{header,footer}_bytes are methods on a
+    // PacketSerializer, perhaps we can just require that the PacketSerializer
+    // know exactly how many bytes will be required, and collapse these from
+    // four to two methods? Currently, the justification is that the difference
+    // in bytes is small, and so performing the dynamic calculation may be more
+    // expensive than allocating a few too many bytes, but that assumption may
+    // be worth revisiting.
+
+    /// A serializer for encapsulating packets.
+    ///
+    /// `PacketSerializer` is a serializer for packets which encapsulate other
+    /// packets.
+    pub trait PacketSerializer {
+        /// The maximum number of pre-body bytes consumed by all headers.
+        ///
+        /// By providing at least `max_header_bytes` bytes preceding the body,
+        /// the caller can ensure that a call to `serialize` will not panic.
+        /// Note that the actual number of bytes consumed may be less than this.
+        fn max_header_bytes(&self) -> usize {
+            0
+        }
+
+        /// The minimum number of pre-body bytes consumed by all headers.
+        ///
+        /// `min_header_bytes` returns the minimum number of bytes which are
+        /// guaranteed to be consumed by all pre-body headers. Note that the
+        /// actual number of bytes consumed may be more than this.
+        fn min_header_bytes(&self) -> usize {
+            0
+        }
+
+        /// The minimum size of the body and padding bytes combined.
+        ///
+        /// Some packet formats have minimum length requirements. In order to
+        /// satisfy these requirements, any bodies smaller than a certain
+        /// minimum must be followed by padding bytes.
+        /// `min_body_and_padding_bytes` returns the minimum number of bytes
+        /// which must be consumed by the body and post-body padding.
+        ///
+        /// If a body of fewer bytes than this minimum is to be serialized using
+        /// `serialize`, the caller must provide space for enough padding bytes
+        /// to make up the difference.
+        fn min_body_and_padding_bytes(&self) -> usize {
+            0
+        }
+
+        /// The maximum number of post-body, post-padding bytes consumed by all
+        /// footers.
+        ///
+        /// `max_footer_bytes` returns the number of bytes which must be present
+        /// after all body bytes and all post-body padding bytes in order to
+        /// guarantee enough room to serialize footers. Note that the actual
+        /// number of bytes consumed may be less than this.
+        fn max_footer_bytes(&self) -> usize {
+            0
+        }
+
+        /// The minimum number of post-body, post-padding bytes consumed by all
+        /// footers.
+        ///
+        /// `min_footer_bytes` returns the minimum number of bytes which are
+        /// guaranteed to be consumed by all post-body, post-padding footers.
+        /// Note that the actual number of bytes consumed may be more than this.
+        fn min_footer_bytes(&self) -> usize {
+            0
+        }
+
+        /// Serialize a packet in an existing buffer.
+        ///
+        /// `serialize` serializes a packet into `buffer`, initializing any
+        /// headers and footers from the present configuration. It treats
+        /// `buffer.range()` as the packet body. It uses the last bytes before
+        /// the body to store any headers. It leaves padding as necessary
+        /// following the body, and serializes any footers immediately following
+        /// the padding (if any).
+        ///
+        /// `serialize` updates the buffer's range to be equal to the bytes of
+        /// the newly-serialized packet (including any headers, padding, and
+        /// footers). This range can be used to indicate the range for
+        /// encapsulation in another packet.
+        ///
+        /// # Panics
+        ///
+        /// `serialize` may panics
+        /// - there are fewer than `max_header_bytes` bytes preceding the body
+        /// - there are fewer than `max_footer_bytes` bytes following the body
+        /// - the sum of the body bytes and post-body bytes is less than the sum
+        ///   of `min_body_and_padding_bytes` and `max_footer_bytes` (in other
+        ///   words, the minimum body and padding byte requirement is not met)
+        fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>);
+    }
+
+    // TODO(joshlf): Document common patterns with SerializationRequests,
+    // especially using an existing BufferAndRange to forward a just-parsed
+    // packet (this pattern is particularly subtle).
+
+    /// A request to serialize a payload.
+    ///
+    /// A `SerializationRequest` is a request to serialize a packet.
+    /// `SerializationRequest`s can be fulfilled either by serializing the
+    /// packet, or by creating a new `SerializationRequest` which represents
+    /// encapsulating the original packet in another packet, and then satisfying
+    /// the resulting request. `SerializationRequest`s handle all of the logic
+    /// of determining and satisfying header, footer, and padding requirements.
+    ///
+    /// `SerializationRequest` is implemented by the following types:
+    /// - A `BufferAndRange` represents a request to serialize the buffer's
+    ///   range. If a `BufferAndRange` is encapsulated, its range will be used
+    ///   as the payload, and the rest of the buffer will be used for the
+    ///   headers, footers, and padding of the encapsulating packets.
+    /// - An `InnerSerializationRequest` represents a request to serialize an
+    ///   innermost packet - one which doesn't encapsulate any other packets.
+    /// - An `EncapsulatingSerializationRequest` represents a request to
+    ///   serialize a packet which itself encapsulates the packet requested by
+    ///   another, nested `SerializationRequest`.
+    pub trait SerializationRequest: Sized {
+        type Buffer: AsRef<[u8]> + AsMut<[u8]>;
+
+        /// Serialize a packet, fulfilling this request.
+        ///
+        /// `serialize` serializes this request into a buffer, and returns the
+        /// buffer so that encapsulating packets may serialize their headers,
+        /// footers, and padding. The returned buffer's range represents the
+        /// bytes that have been serialized and should be encapsulated by any
+        /// lower layers. The returned buffer is guaranteed to satisfy the
+        /// following requirements:
+        /// - There are at least `header_bytes` bytes preceding the range
+        /// - There are at least `footer_bytes` bytes following the range
+        /// - The range and the bytes following it are at least
+        ///   `min_body_and_padding_bytes + footer_bytes` in length
+        fn serialize(
+            self, header_bytes: usize, min_body_and_padding_bytes: usize, footer_bytes: usize,
+        ) -> BufferAndRange<Self::Buffer>;
+
+        /// Serialize an outermost packet, fulfilling this request.
+        ///
+        /// `serialize_outer` is like `serialize`, except that the returned
+        /// buffer doesn't make any guarantees about how many bytes precede or
+        /// follow the range. It is intended to be called only when the returned
+        /// packet is not going to be further encapsulated.
+        fn serialize_outer(self) -> BufferAndRange<Self::Buffer> {
+            self.serialize(0, 0, 0)
+        }
+
+        /// Construct a new request to encapsulate this packet in another one.
+        ///
+        /// `encapsulate` consumes this request, and returns a new request
+        /// representing the encapsulation of this packet in another one.
+        /// `serializer` is a `PacketSerializer` which will be used to serialize
+        /// the encapsulating packet.
+        fn encapsulate<S: PacketSerializer>(
+            self, serializer: S,
+        ) -> EncapsulatingSerializationRequest<S, Self> {
+            EncapsulatingSerializationRequest {
+                serializer,
+                inner: self,
+            }
+        }
+    }
+
+    impl<I: InnerPacketSerializer> SerializationRequest for I {
+        type Buffer = Vec<u8>;
+
+        fn serialize(
+            self, header_bytes: usize, min_body_and_padding_bytes: usize, footer_bytes: usize,
+        ) -> BufferAndRange<Vec<u8>> {
+            InnerSerializationRequest::new(self).serialize(
+                header_bytes,
+                min_body_and_padding_bytes,
+                footer_bytes,
+            )
+        }
+    }
+
+    impl<'a> SerializationRequest for &'a [u8] {
+        type Buffer = Vec<u8>;
+
+        fn serialize(
+            self, header_bytes: usize, min_body_and_padding_bytes: usize, footer_bytes: usize,
+        ) -> BufferAndRange<Vec<u8>> {
+            // First use BufferAndRange::ensure_prefix_suffix_padding to either
+            // tell us that the current slice satisfies the constraints, or
+            // allocate a new, satisfying Vec for us.
+            let mut buffer = BufferAndRange::new_from(self, ..);
+            buffer.ensure_prefix_suffix_padding(
+                header_bytes,
+                footer_bytes,
+                min_body_and_padding_bytes,
+            );
+
+            // Next, either duplicate the slice (so we have something mutable)
+            // or use the existing Vec.
+            let range = buffer.range();
+            let mut v = match buffer.buffer {
+                RefOrOwned::Owned(v) => v,
+                RefOrOwned::Ref(r) => r.to_vec(),
+            };
+
+            BufferAndRange::new_from(v, range).serialize(
+                header_bytes,
+                min_body_and_padding_bytes,
+                footer_bytes,
+            )
+        }
+    }
+
+    /// A `SerializationRequest` for to serialize an inner packet.
+    ///
+    /// `InnerSerializationRequest` contains an `InnerPacketSerializer` and a
+    /// `BufferAndRange` and implements `SerializationRequest` by serializing
+    /// the serializer into the buffer.
+    pub struct InnerSerializationRequest<S: InnerPacketSerializer, B> {
+        serializer: S,
+        buffer: BufferAndRange<B>,
+    }
+
+    impl<S: InnerPacketSerializer, B> InnerSerializationRequest<S, B>
+    where
+        B: AsRef<[u8]>,
+    {
+        /// Construct a new `InnerSerializationRequest` from a serializer and a
+        /// buffer.
+        pub fn new_with_buffer(serializer: S, buffer: B) -> InnerSerializationRequest<S, B> {
+            InnerSerializationRequest {
+                serializer,
+                buffer: BufferAndRange::new_from(buffer, 0..0),
+            }
+        }
+    }
+
+    impl<S: InnerPacketSerializer> InnerSerializationRequest<S, Vec<u8>> {
+        /// Construct a new `InnerSerializationRequest` from a serializer,
+        /// allocating a new buffer.
+        pub fn new(serializer: S) -> InnerSerializationRequest<S, Vec<u8>> {
+            InnerSerializationRequest {
+                serializer,
+                buffer: BufferAndRange::new_from(vec![], ..),
+            }
+        }
+    }
+
+    impl<S: InnerPacketSerializer, B> SerializationRequest for InnerSerializationRequest<S, B>
+    where
+        B: AsRef<[u8]> + AsMut<[u8]>,
+    {
+        type Buffer = B;
+
+        fn serialize(
+            self, header_bytes: usize, min_body_and_padding_bytes: usize, footer_bytes: usize,
+        ) -> BufferAndRange<B> {
+            let InnerSerializationRequest {
+                serializer,
+                mut buffer,
+            } = self;
+            // Reset the buffer as required by InnerPacketSerializer::serialize.
+            buffer.range = 0..0;
+            // Ensure there's enough room for the packet itself.
+            let min_body_and_padding_bytes =
+                cmp::max(min_body_and_padding_bytes, serializer.size());
+            buffer.ensure_prefix_suffix_padding(
+                header_bytes,
+                footer_bytes,
+                min_body_and_padding_bytes,
+            );
+            serializer.serialize(&mut buffer);
+            buffer
+        }
+    }
+
+    /// A `SerializationRequest` to encapsulate a packet in another packet.
+    ///
+    /// `EncapsulatingSerializationRequest`s can be constructed from existing
+    /// `SerializationRequest`s using the `encapsulate` method.
+    ///
+    /// # Padding
+    ///
+    /// If the `PacketSerializer` used to construct this request specifies a
+    /// minimum body length requirement, and the encapsulated packet is not
+    /// large enough to satisfy that requirement, then padding will
+    /// automatically be added (and zeroed for security).
+    pub struct EncapsulatingSerializationRequest<S: PacketSerializer, R: SerializationRequest> {
+        serializer: S,
+        inner: R,
+    }
+
+    impl<S: PacketSerializer, R: SerializationRequest> SerializationRequest
+        for EncapsulatingSerializationRequest<S, R>
+    {
+        type Buffer = R::Buffer;
+
+        fn serialize(
+            self, mut header_bytes: usize, min_body_and_padding_bytes: usize,
+            mut footer_bytes: usize,
+        ) -> BufferAndRange<R::Buffer> {
+            header_bytes += self.serializer.max_header_bytes();
+            footer_bytes += self.serializer.max_footer_bytes();
+
+            // The number required by this layer.
+            let this_min_body = self.serializer.min_body_and_padding_bytes();
+            // The number required by the next outer layer, taking into account
+            // that at least min_header_bytes + min_footer_bytes will be
+            // consumed by this layer.
+            let next_min_body = min_body_and_padding_bytes
+                .checked_sub(
+                    self.serializer.min_header_bytes() + self.serializer.min_footer_bytes(),
+                ).unwrap_or(0);
+
+            let EncapsulatingSerializationRequest { serializer, inner } = self;
+            let mut buffer = inner.serialize(
+                header_bytes,
+                footer_bytes,
+                cmp::max(this_min_body, next_min_body),
+            );
+
+            let body_len = buffer.range().len();
+            if body_len < this_min_body {
+                // The body itself isn't large enough to satisfy the minimum
+                // body length requirement, so we add padding. This is only
+                // valid if the length requirement comes from this layer - if it
+                // comes from a lower layer, then there are other encapsulating
+                // packets which need to be serialized before the padding is
+                // added, and that layer's call to serialize will run this code
+                // block instead.
+
+                // This is guaranteed to succeed so long as inner.serialize
+                // satisfies its contract.
+                //
+                // SECURITY: Use _zero to ensure we zero padding bytes to
+                // prevent leaking information from packets previously stored in
+                // this buffer.
+                buffer.extend_forwards_zero(this_min_body - body_len);
+            }
+
+            serializer.serialize(&mut buffer);
+            buffer
+        }
+    }
+
     /// A buffer and a range into that buffer.
     ///
     /// A `BufferAndRange` stores a pair of a buffer and a range which
@@ -613,13 +976,13 @@ mod buffer {
     where
         B: AsRef<[u8]>,
     {
-        /// Construct a new `BufferAndRange`.
+        /// Construct a new `BufferAndRange` from an existing buffer.
         ///
         /// # Panics
         ///
-        /// `new` panics if `range` is out of bounds of `buffer` or is
+        /// `new_from` panics if `range` is out of bounds of `buffer` or is
         /// nonsensical (i.e., the upper bound precedes the lower bound).
-        pub fn new<R: RangeBounds<usize>>(buffer: B, range: R) -> BufferAndRange<B> {
+        pub fn new_from<R: RangeBounds<usize>>(buffer: B, range: R) -> BufferAndRange<B> {
             let len = buffer.as_ref().len();
             BufferAndRange {
                 buffer: RefOrOwned::Ref(buffer),
@@ -647,29 +1010,33 @@ mod buffer {
             self.range.end += bytes;
         }
 
-        /// Ensure that this `BufferAndRange` satisfies certain prefix and
-        /// padding size requirements.
+        /// Ensure that this `BufferAndRange` satisfies certain prefix, suffix,
+        /// and padding size requirements.
         ///
-        /// `ensure_prefix_padding` ensures that this `BufferAndRange` has at
-        /// least `prefix` bytes preceding the range and at least
-        /// `range_plus_padding` bytes in the range plus any padding bytes
-        /// following the range. If it already has enough prefix and
-        /// range/padding bytes, then it is left unchanged. Otherwise, a new
-        /// buffer is allocated, the original range bytes are copied into the
-        /// new buffer, and the range is adjusted so that it matches the
-        /// location of the bytes in the new buffer.
+        /// `ensure_prefix_suffix_padding` ensures that this `BufferAndRange`
+        /// has at least `prefix` bytes preceding the range, at least `suffix`
+        /// bytes following the range, and at least `range_plus_padding +
+        /// suffix` bytes in the range plus any bytes following the range. If it
+        /// already satisfies these constraints, then it is left unchanged.
+        /// Otherwise, a new buffer is allocated, the original range bytes are
+        /// copied into the new buffer, and the range is adjusted so that it
+        /// matches the location of the bytes in the new buffer.
         ///
         /// The "range plus padding" construction is useful when a packet format
-        /// requires a minimum body length, and the upper layers of the stack
-        /// which are producing the body to be encapsulated do not have enough
-        /// bytes to meet that minimum. In that case, it is necessary to add
-        /// extra padding bytes after the body in order to meet the minimum.
-        pub fn ensure_prefix_padding(&mut self, prefix: usize, range_plus_padding: usize) {
+        /// requires a minimum body length, and the body which is being
+        /// encapsulated does not meet that minimum. In that case, it is
+        /// necessary to add extra padding bytes after the body in order to meet
+        /// the minimum.
+        fn ensure_prefix_suffix_padding(
+            &mut self, prefix: usize, suffix: usize, range_plus_padding: usize,
+        ) {
             let range_len = self.range.end - self.range.start;
+            let post_range_len = self.buffer.as_ref().len() - self.range.end;
             // normalize to guarantee that range_plus_padding >= range_len
             let range_plus_padding = cmp::max(range_plus_padding, range_len);
             if prefix > self.range.start
-                || range_plus_padding > self.buffer.as_ref().len() - self.range.start
+                || suffix < post_range_len
+                || range_len + post_range_len < range_plus_padding + suffix
             {
                 // TODO(joshlf): Right now, we split the world into two cases -
                 // either the constraints aren't satisfied and so we need to
@@ -681,19 +1048,15 @@ mod buffer {
 
                 // The constraints aren't satisfied, and the buffer isn't large
                 // enough to satisfy the constraints, so we have to reallocate.
-                let range_len = self.range.end - self.range.start;
-                let total_len = prefix + range_plus_padding;
-                let mut vec = Vec::with_capacity(total_len);
-                vec.resize(total_len, 0);
+
+                let padding = range_plus_padding - range_len;
+                let total_len = prefix + range_len + padding + suffix;
+                let mut vec = vec![0; total_len];
                 vec[prefix..prefix + range_len]
                     .copy_from_slice(slice(self.buffer.as_ref(), &self.range));
-                // adjust the range given the new prefix length
-                let offset =
-                    isize::try_from(prefix).unwrap() - isize::try_from(self.range.start).unwrap();
-                let range = translate_range(&self.range, offset);
                 *self = BufferAndRange {
                     buffer: RefOrOwned::Owned(vec),
-                    range,
+                    range: prefix..prefix + range_len,
                 }
             }
         }
@@ -715,7 +1078,7 @@ mod buffer {
         /// ```rust,ignore
         /// # // TODO(joshlf): Make this compile and remove the ignore
         /// let buf = [0; 10];
-        /// let mut buf = BufferAndRange::new(&buf, 2..8);
+        /// let mut buf = BufferAndRange::new_from(&buf, 2..8);
         /// assert_eq!(buf.as_ref().len(), 6);
         /// buf.slice(2..6);
         /// assert_eq!(buf.as_ref().len(), 4);
@@ -791,11 +1154,33 @@ mod buffer {
         ///
         /// `extend_forwards_zero` panics if there are fewer than `bytes` bytes
         /// following the existing range.
-        pub fn extend_forwards_zero(&mut self, bytes: usize) {
+        fn extend_forwards_zero(&mut self, bytes: usize) {
             self.extend_forwards(bytes);
             let slice = self.as_mut();
             let len = slice.len();
             zero(&mut slice[len - bytes..]);
+        }
+    }
+
+    impl<B: AsRef<[u8]> + AsMut<[u8]>> SerializationRequest for BufferAndRange<B> {
+        type Buffer = B;
+
+        /// Serialize a packet, fulfilling this request.
+        ///
+        /// `serialize` ensures that this buffer satisfies the header, padding,
+        /// and footer requirements using `ensure_prefix_suffix_padding`, and
+        /// then returns it. The buffer's range is left in tact, and thus will
+        /// be treated as the payload to be encapsulated by any encapsulating
+        /// packets.
+        fn serialize(
+            mut self, header_bytes: usize, min_body_and_padding_bytes: usize, footer_bytes: usize,
+        ) -> BufferAndRange<B> {
+            self.ensure_prefix_suffix_padding(
+                header_bytes,
+                footer_bytes,
+                min_body_and_padding_bytes,
+            );
+            self
         }
     }
 
@@ -895,7 +1280,7 @@ mod buffer {
         #[test]
         fn test_buffer_and_range_slice() {
             let mut buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-            let mut buf = BufferAndRange::new(&mut buf, ..);
+            let mut buf = BufferAndRange::new_from(&mut buf, ..);
             assert_eq!(buf.range(), 0..10);
             assert_eq!(buf.as_ref(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             assert_eq!(
@@ -971,7 +1356,7 @@ mod buffer {
         #[test]
         fn test_buffer_and_range_extend_backwards() {
             let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-            let mut buf = BufferAndRange::new(&buf, 2..8);
+            let mut buf = BufferAndRange::new_from(&buf, 2..8);
             assert_eq!(buf.range(), 2..8);
             assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7]);
             buf.extend_backwards(1);
@@ -986,7 +1371,7 @@ mod buffer {
         #[should_panic]
         fn test_buffer_and_range_extend_backwards_panics() {
             let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-            let mut buf = BufferAndRange::new(&buf, 2..8);
+            let mut buf = BufferAndRange::new_from(&buf, 2..8);
             assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7]);
             buf.extend_backwards(1);
             assert_eq!(buf.as_ref(), [1, 2, 3, 4, 5, 6, 7]);
@@ -994,9 +1379,10 @@ mod buffer {
         }
 
         #[test]
-        fn test_ensure_prefix_padding() {
+        fn test_ensure_prefix_suffix_padding() {
             fn verify<B: AsRef<[u8]> + AsMut<[u8]>>(
-                mut buffer: BufferAndRange<B>, prefix: usize, range_plus_padding: usize,
+                mut buffer: BufferAndRange<B>, prefix: usize, suffix: usize,
+                range_plus_padding: usize,
             ) {
                 let range_len_old = {
                     let range = buffer.range();
@@ -1005,40 +1391,47 @@ mod buffer {
                 let mut range_old = Vec::with_capacity(range_len_old);
                 range_old.extend_from_slice(buffer.as_ref());
 
-                buffer.ensure_prefix_padding(prefix, range_plus_padding);
+                buffer.ensure_prefix_suffix_padding(prefix, suffix, range_plus_padding);
                 let range_len_new = {
                     let range = buffer.range();
                     range.end - range.start
                 };
                 assert_eq!(range_len_old, range_len_new);
-                let (pfx, range, suffix) = buffer.parts_mut();
+                let (pfx, range, sfx) = buffer.parts_mut();
                 assert!(pfx.len() >= prefix);
                 assert_eq!(range.len(), range_len_new);
+                assert!(sfx.len() >= suffix);
                 assert_eq!(range_old.as_slice(), range);
-                assert!(range.len() + suffix.len() >= range_plus_padding);
+                assert!(range.len() + sfx.len() >= (range_plus_padding + suffix));
             }
 
             // Test for every valid combination of buf_len, range_start,
-            // range_end, prefix, and range_plus_padding within [0, 8).
+            // range_end, prefix, suffix, and range_plus_padding within [0, 8).
             for buf_len in 0..8 {
                 for range_start in 0..buf_len {
                     for range_end in range_start..buf_len {
                         for prefix in 0..8 {
-                            for range_plus_padding in 0..8 {
-                                let mut vec = Vec::with_capacity(buf_len);
-                                vec.resize(buf_len, 0);
-                                // Initialize the vector with values 0, 1, 2,
-                                // ... so that we can check to make sure that
-                                // the range bytes have been properly copied if
-                                // the buffer is reallocated.
-                                for i in 0..vec.len() {
-                                    vec[i] = i as u8;
+                            for suffix in 0..8 {
+                                for range_plus_padding in 0..8 {
+                                    let mut vec = Vec::with_capacity(buf_len);
+                                    vec.resize(buf_len, 0);
+                                    // Initialize the vector with values 0, 1, 2,
+                                    // ... so that we can check to make sure that
+                                    // the range bytes have been properly copied if
+                                    // the buffer is reallocated.
+                                    for i in 0..vec.len() {
+                                        vec[i] = i as u8;
+                                    }
+                                    verify(
+                                        BufferAndRange::new_from(
+                                            vec.as_mut_slice(),
+                                            range_start..range_end,
+                                        ),
+                                        prefix,
+                                        suffix,
+                                        range_plus_padding,
+                                    );
                                 }
-                                verify(
-                                    BufferAndRange::new(vec.as_mut_slice(), range_start..range_end),
-                                    prefix,
-                                    range_plus_padding,
-                                );
                             }
                         }
                     }

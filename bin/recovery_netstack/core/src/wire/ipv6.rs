@@ -13,9 +13,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::ParseError;
 use crate::ip::{IpProto, Ipv6Addr};
-use crate::wire::util::BufferAndRange;
-
-const FIXED_HEADER_SIZE: usize = 40;
+use crate::wire::util::{BufferAndRange, PacketSerializer};
 
 // FixedHeader has the same memory layout (thanks to repr(C, packed)) as an IPv6
 // fixed header. Thus, we can simply reinterpret the bytes of the IPv6 fixed
@@ -47,13 +45,6 @@ pub struct FixedHeader {
     src_ip: [u8; 16],
     dst_ip: [u8; 16],
 }
-
-/// The minimum length of an IPv6 header in bytes.
-///
-/// When calculating the number of IPv6 body bytes required to meet a certain
-/// minimum body size requirement of an encapsulating packet format, the IPv6
-/// header is guaranteed to consume at least `MIN_HEADER_LEN` bytes.
-pub const MIN_HEADER_LEN: usize = 40;
 
 unsafe impl FromBytes for FixedHeader {}
 unsafe impl AsBytes for FixedHeader {}
@@ -178,6 +169,19 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     fn payload_len(&self) -> usize {
         self.extension_hdrs.as_ref().map(|b| b.len()).unwrap_or(0) + self.body.len()
     }
+
+    /// Construct a serializer with the same contents as this packet.
+    pub fn serializer(&self) -> Ipv6PacketSerializer {
+        Ipv6PacketSerializer {
+            ds: self.ds(),
+            ecn: self.ecn(),
+            flowlabel: self.flowlabel(),
+            hop_limit: self.hop_limit(),
+            proto: self.fixed_hdr.next_hdr,
+            src_ip: self.src_ip(),
+            dst_ip: self.dst_ip(),
+        }
+    }
 }
 
 impl<B: ByteSliceMut> Ipv6Packet<B> {
@@ -203,8 +207,8 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
     }
 }
 
-/// A builder for IPv6 packets.
-pub struct Ipv6PacketBuilder {
+/// A serializer for IPv6 packets.
+pub struct Ipv6PacketSerializer {
     ds: u8,
     ecn: u8,
     flowlabel: u32,
@@ -214,12 +218,12 @@ pub struct Ipv6PacketBuilder {
     dst_ip: Ipv6Addr,
 }
 
-impl Ipv6PacketBuilder {
-    /// Create a new `Ipv6PacketBuilder`.
+impl Ipv6PacketSerializer {
+    /// Construct a new `Ipv6PacketSerializer`.
     pub fn new(
         src_ip: Ipv6Addr, dst_ip: Ipv6Addr, hop_limit: u8, proto: IpProto,
-    ) -> Ipv6PacketBuilder {
-        Ipv6PacketBuilder {
+    ) -> Ipv6PacketSerializer {
+        Ipv6PacketSerializer {
             ds: 0,
             ecn: 0,
             flowlabel: 0,
@@ -259,28 +263,21 @@ impl Ipv6PacketBuilder {
         assert!(flowlabel <= 1 << 20, "invalid flowlabel: {:x}", flowlabel);
         self.flowlabel = flowlabel;
     }
+}
 
-    /// Serialize an IPv6 packet in an existing buffer.
-    ///
-    /// `serialize` creates an `Ipv6Packet` which uses the provided `buffer` for
-    /// its storage, initializing all header fields from the present
-    /// configuration. It treats `buffer.range()` as the packet body. It uses
-    /// the last bytes of `buffer` before the body to store the header, and
-    /// returns a new `BufferAndRange` with a range equal to the bytes of the
-    /// IPv6 packet (including the header). This range can be used to indicate
-    /// the range for encapsulation in another packet.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// # // TODO(joshlf): Make this compile and remove the ignore
-    /// let mut buffer = [0u8; 1024];
-    /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let builder = Ipv6PacketBuilder::new(src_ip, dst_ip, hop_limit, proto);
-    /// let buffer = builder.serialize(BufferAndRange::new(&mut buffer[..], 512..));
-    /// send_ip_frame(device, buffer);
-    /// ```
-    pub fn serialize<B: AsMut<[u8]>>(self, mut buffer: BufferAndRange<B>) -> BufferAndRange<B> {
+const FIXED_HEADER_BYTES: usize = 40;
+
+impl PacketSerializer for Ipv6PacketSerializer {
+    fn max_header_bytes(&self) -> usize {
+        // TODO(joshlf): Update when we support serializing extension headers
+        FIXED_HEADER_BYTES
+    }
+
+    fn min_header_bytes(&self) -> usize {
+        FIXED_HEADER_BYTES
+    }
+
+    fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>) {
         let extend_backwards = {
             let (header, body, _) = buffer.parts_mut();
             // TODO(tkilbourn): support extension headers
@@ -319,7 +316,6 @@ impl Ipv6PacketBuilder {
         };
 
         buffer.extend_backwards(extend_backwards);
-        buffer
     }
 }
 
@@ -390,22 +386,23 @@ mod tests {
         );
     }
 
-    // Return a stock Ipv6PacketBuilder with reasonable default values.
-    fn new_builder() -> Ipv6PacketBuilder {
-        Ipv6PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
+    // Return a stock Ipv6PacketSerializer with reasonable default values.
+    fn new_serializer() -> Ipv6PacketSerializer {
+        Ipv6PacketSerializer::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
     }
 
     #[test]
     fn test_serialize() {
         let mut buf = [0; 50];
-        let mut builder = new_builder();
-        builder.ds(0x12);
-        builder.ecn(3);
-        builder.flowlabel(0x10405);
+        let mut serializer = new_serializer();
+        serializer.ds(0x12);
+        serializer.ecn(3);
+        serializer.flowlabel(0x10405);
         {
             // set the body
             (&mut buf[40..]).copy_from_slice(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            let buffer = builder.serialize(BufferAndRange::new(&mut buf[..], 40..));
+            let mut buffer = BufferAndRange::new_from(&mut buf[..], 40..);
+            serializer.serialize(&mut buffer);
             assert_eq!(buffer.range(), 0..50);
         }
 
@@ -421,7 +418,7 @@ mod tests {
 
         let (packet, body_range) = Ipv6Packet::parse(&buf[..]).unwrap();
         // assert that when we parse those bytes, we get the values we set in
-        // the builder
+        // the serializer
         assert_eq!(body_range, 40..50);
         assert_eq!(packet.ds(), 0x12);
         assert_eq!(packet.ecn(), 3);
@@ -430,12 +427,12 @@ mod tests {
 
     #[test]
     fn test_serialize_zeroes() {
-        // Test that Ipv6PacketBuilder::serialize properly zeroes memory before
+        // Test that Ipv6PacketSerializer::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 40];
-        new_builder().serialize(BufferAndRange::new(&mut buf_0[..], 40..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut buf_0[..], 40..));
         let mut buf_1 = [0xFF; 40];
-        new_builder().serialize(BufferAndRange::new(&mut buf_1[..], 40..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut buf_1[..], 40..));
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 
@@ -443,7 +440,10 @@ mod tests {
     #[should_panic]
     fn test_serialize_panic_packet_length() {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
-        new_builder().serialize(BufferAndRange::new(&mut [0; (1 << 16) + 40][..], 40..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(
+            &mut [0; (1 << 16) + 40][..],
+            40..,
+        ));
     }
 
     #[test]
@@ -451,6 +451,6 @@ mod tests {
     fn test_serialize_panic_insufficient_header_space() {
         // Test that a body range which doesn't leave enough room for the header
         // is rejected.
-        new_builder().serialize(BufferAndRange::new(&mut [0u8; 40][..], ..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut [0u8; 40][..], ..));
     }
 }

@@ -13,8 +13,8 @@ use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::DeviceId;
 use crate::ip::{Ip, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use crate::wire::arp::peek_arp_types;
-use crate::wire::ethernet::EthernetFrame;
-use crate::wire::{BufferAndRange, SerializationCallback};
+use crate::wire::ethernet::{EthernetFrame, EthernetFrameSerializer};
+use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 /// A media access control (MAC) address.
@@ -133,82 +133,67 @@ impl EthernetDeviceState {
     }
 }
 
+/// An extension trait adding IP-related functionality to `Ipv4` and `Ipv6`.
+trait EthernetIpExt: Ip {
+    const EtherType: EtherType;
+}
+
+impl<I: Ip> EthernetIpExt for I {
+    default const EtherType: EtherType = EtherType::Ipv4;
+}
+
+impl EthernetIpExt for Ipv4 {
+    const EtherType: EtherType = EtherType::Ipv4;
+}
+
+impl EthernetIpExt for Ipv6 {
+    const EtherType: EtherType = EtherType::Ipv6;
+}
+
 /// Send an IP packet in an Ethernet frame.
 ///
-/// `send_ip_frame` accepts a device ID, a local IP address, and a callback. It
-/// computes the routing information and invokes the callback with the number of
-/// prefix bytes required by all encapsulating headers, and the minimum size of
-/// the body plus padding. The callback is expected to return a byte buffer and
-/// a range which corresponds to the desired body. The portion of the buffer
-/// beyond the end of the body range will be treated as padding. The total
-/// number of bytes in the body and the post-body padding must not be smaller
-/// than the minimum size passed to the callback.
-///
-/// For more details on the callback, see the
-/// [`crate::wire::SerializationCallback`] documentation.
-///
-/// # Panics
-///
-/// `send_ip_frame` panics if the buffer returned from `get_buffer` does not
-/// have sufficient space preceding the body for all encapsulating headers or
-/// does not have enough body plus padding bytes to satisfy the requirement
-/// passed to the callback.
-pub fn send_ip_frame<D: EventDispatcher, A, B, F>(
-    ctx: &mut Context<D>, device_id: u64, local_addr: A, get_buffer: F,
+/// `send_ip_frame` accepts a device ID, a local IP address, and a
+/// `SerializationRequest`. It computes the routing information and serializes
+/// the request in a new Ethernet frame and sends it.
+pub fn send_ip_frame<D: EventDispatcher, A, S>(
+    ctx: &mut Context<D>, device_id: u64, local_addr: A, body: S,
 ) where
     A: IpAddr,
-    B: AsRef<[u8]> + AsMut<[u8]>,
-    F: SerializationCallback<B>,
+    S: SerializationRequest,
 {
-    use crate::wire::ethernet::{MAX_HEADER_LEN, MIN_BODY_LEN};
-    let mut buffer = get_buffer(MAX_HEADER_LEN, MIN_BODY_LEN);
-    let range_len = {
-        let range = buffer.range();
-        range.end - range.start
-    };
-    if range_len < MIN_BODY_LEN {
-        // This is guaranteed to succeed so long as get_buffer satisfies its
-        // contract.
-        //
-        // SECURITY: Use _zero to ensure we zero padding bytes to prevent
-        // leaking information from packets previously stored in this buffer.
-        buffer.extend_forwards_zero(MIN_BODY_LEN - range_len);
-    }
-
-    // specialize_ip_addr! can't handle trait bounds with type arguments, so
-    // create AsMutU8 which is equivalent to AsMut<[u8]>, but without the type
-    // arguments. Ew.
-    trait AsU8: AsRef<[u8]> + AsMut<[u8]> {}
-    impl<A: AsRef<[u8]> + AsMut<[u8]>> AsU8 for A {}
     specialize_ip_addr!(
-        fn send_ip_frame<D, B>(ctx: &mut Context<D>, device_id: u64, local_addr: Self, buffer: BufferAndRange<B>)
+        fn lookup_dst_mac<D>(ctx: &mut Context<D>, device_id: u64, local_addr: Self) -> Option<Mac>
         where
             D: EventDispatcher,
-            B: AsU8,
         {
             Ipv4Addr => {
                 let src_mac = get_device_state(ctx, device_id).mac;
-                let dst_mac = if let Some(dst_mac) =
-                    crate::device::arp::lookup::<_, _, EthernetArpDevice>(
-                        ctx, device_id, src_mac, local_addr,
-                    ) {
-                    dst_mac
+                if let Some(dst_mac) = crate::device::arp::lookup::<_, _, EthernetArpDevice>(
+                    ctx, device_id, src_mac, local_addr,
+                ) {
+                    Some(dst_mac)
                 } else {
                     log_unimplemented!(
-                        (),
+                        None,
                         "device::ethernet::send_ip_frame: unimplemented on arp cache miss"
-                    );
-                    return;
-                };
-                let buffer = EthernetFrame::serialize(buffer, src_mac, dst_mac, EtherType::Ipv4);
-                ctx.dispatcher()
-                    .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+                    )
+                }
             }
-            Ipv6Addr => { log_unimplemented!((), "device::ethernet::send_ip_frame: IPv6 unimplemented") }
+            Ipv6Addr => { log_unimplemented!(None, "device::ethernet::send_ip_frame: IPv6 unimplemented") }
         }
     );
 
-    A::send_ip_frame(ctx, device_id, local_addr, buffer);
+    if let Some(dst_mac) = A::lookup_dst_mac(ctx, device_id, local_addr) {
+        let src_mac = get_device_state(ctx, device_id).mac;
+        let buffer = body
+            .encapsulate(EthernetFrameSerializer::new(
+                src_mac,
+                dst_mac,
+                A::Version::EtherType,
+            )).serialize_outer();
+        ctx.dispatcher()
+            .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+    }
 }
 
 /// Receive an Ethernet frame from the network.
@@ -223,7 +208,7 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
     if let Some(Ok(ethertype)) = frame.ethertype() {
         let (src, dst) = (frame.src_mac(), frame.dst_mac());
         let device = DeviceId::new_ethernet(device_id);
-        let buffer = BufferAndRange::new(bytes, body_range);
+        let buffer = BufferAndRange::new_from(bytes, body_range);
         match ethertype {
             EtherType::Arp => {
                 let types = if let Ok(types) = peek_arp_types(buffer.as_ref()) {
@@ -294,28 +279,13 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
     const BROADCAST: Mac = Mac::BROADCAST;
 
-    fn send_arp_frame<D: EventDispatcher, B, F>(
-        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
-    ) where
-        B: AsRef<[u8]> + AsMut<[u8]>,
-        F: SerializationCallback<B>,
-    {
-        use crate::wire::ethernet::{MAX_HEADER_LEN, MIN_BODY_LEN};
-        let mut buffer = get_buffer(MAX_HEADER_LEN, MIN_BODY_LEN);
-        let range_len = {
-            let range = buffer.range();
-            range.end - range.start
-        };
-        if range_len < MIN_BODY_LEN {
-            // This is guaranteed to succeed so long as get_buffer satisfies its
-            // contract.
-            //
-            // SECURITY: Use _zero to ensure we zero padding bytes to prevent
-            // leaking information from packets previously stored in this buffer.
-            buffer.extend_forwards_zero(MIN_BODY_LEN - range_len);
-        }
+    fn send_arp_frame<D: EventDispatcher, S: SerializationRequest>(
+        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, body: S,
+    ) {
         let src = get_device_state(ctx, device_id).mac;
-        let buffer = EthernetFrame::serialize(buffer, src, dst, EtherType::Ipv4);
+        let buffer = body
+            .encapsulate(EthernetFrameSerializer::new(src, dst, EtherType::Arp))
+            .serialize_outer();
         ctx.dispatcher()
             .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
     }

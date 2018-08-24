@@ -20,9 +20,9 @@ use std::ops::Range;
 use crate::device::DeviceId;
 use crate::error::ParseError;
 use crate::ip::forwarding::{Destination, ForwardingTable};
-use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
-use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-use crate::wire::{AddrSerializationCallback, BufferAndRange, SerializationCallback};
+use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
+use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
+use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 // default IPv4 TTL or IPv6 hops
@@ -103,19 +103,7 @@ pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
             packet.set_ttl(ttl - 1);
             // drop packet so we can re-use the underlying buffer
             mem::drop(packet);
-            crate::device::send_ip_frame(
-                ctx,
-                dest.device,
-                dest.next_hop,
-                |prefix_bytes, body_plus_padding_bytes| {
-                    // The current buffer may not have enough prefix space for
-                    // all of the link-layer headers or for the post-body
-                    // padding, so use ensure_prefix_padding to ensure that we
-                    // are using a buffer with sufficient space.
-                    buffer.ensure_prefix_padding(prefix_bytes, body_plus_padding_bytes);
-                    buffer
-                },
-            );
+            crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer);
             return;
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
@@ -211,36 +199,21 @@ pub fn is_local_addr<D: EventDispatcher, A: IpAddr>(ctx: &mut Context<D>, addr: 
 /// Send an IP packet to a remote host.
 ///
 /// `send_ip_packet` accepts a destination IP address, a protocol, and a
-/// callback. It computes the routing information and invokes the callback with
-/// the source address and the number of prefix bytes required by all
-/// encapsulating headers, and the minimum size of the body plus padding. The
-/// callback is expected to return a byte buffer and a range which corresponds
-/// to the desired body to be encapsulated. The portion of the buffer beyond the
-/// end of the body range will be treated as padding. The total number of bytes
-/// in the body and the post-body padding must not be smaller than the minimum
-/// size passed to the callback.
-///
-/// For more details on the callback, see the
-/// [`crate::wire::AddrSerializationCallback`] documentation.
-///
-/// # Panics
-///
-/// `send_ip_packet` panics if the buffer returned from `get_buffer` does not
-/// have sufficient space preceding the body for all encapsulating headers or
-/// does not have enough body plus padding bytes to satisfy the requirement
-/// passed to the callback.
-pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
-    ctx: &mut Context<D>, dst_ip: A, proto: IpProto, get_buffer: F,
+/// callback. It computes the routing information, and invokes the callback with
+/// the computed destination address. The callback returns a
+/// `SerializationRequest`, which is serialized in a new IP packet and sent.
+pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
+    ctx: &mut Context<D>, dst_ip: A, proto: IpProto, get_body: F,
 ) where
     A: IpAddr,
-    B: AsRef<[u8]> + AsMut<[u8]>,
-    F: AddrSerializationCallback<A, B>,
+    S: SerializationRequest,
+    F: FnOnce(A) -> S,
 {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
     increment_counter!(ctx, "send_ip_packet");
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
         increment_counter!(ctx, "send_ip_packet::loopback");
-        let buffer = get_buffer(A::Version::LOOPBACK_ADDRESS, 0, 0);
+        let buffer = get_body(A::Version::LOOPBACK_ADDRESS).serialize(0, 0, 0);
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
@@ -255,9 +228,7 @@ pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
             dst_ip,
             dest.next_hop,
             proto,
-            |prefix_bytes, body_plus_padding_bytes| {
-                get_buffer(src_ip, prefix_bytes, body_plus_padding_bytes)
-            },
+            get_body(src_ip),
         );
     } else {
         println!("No route to host");
@@ -268,34 +239,18 @@ pub fn send_ip_packet<D: EventDispatcher, A, B, F>(
 /// Send an IP packet to a remote host from a specific source address.
 ///
 /// `send_ip_packet_from` accepts a source and destination IP address and a
-/// callback. It invokes the callback with the number of prefix bytes required
-/// by all encapsulating headers, and the minimum size of the body plus padding.
-/// The callback is expected to return a byte buffer and a range which
-/// corresponds to the desired body to the encapsulated. The portion of the
-/// buffer beyond the end of the body range will be treated as padding. The
-/// total number of bytes in the body and the post-body padding must not be
-/// smaller than the minimum size passed to the callback.
-///
-/// /// For more details on the callback, see the
-/// [`crate::wire::SerializationCallback`] documentation.
+/// `SerializationRequest`. It computes the routing information and serializes
+/// the request in a new IP packet and sends it.
 ///
 /// `send_ip_packet_from` computes a route to the destination with the
 /// restriction that the packet must originate from the source address, and must
 /// eagress over the interface associated with that source address. If this
 /// restriction cannot be met, a "no route to host" error is returned.
-///
-/// # Panics
-///
-/// `send_ip_packet_from` panics if the buffer returned from `get_buffer` does
-/// not have sufficient space preceding the body for all encapsulating headers
-/// or does not have enough body plus padding bytes to satisfy the requirement
-/// passed to the callback.
-pub fn send_ip_packet_from<D: EventDispatcher, A, B, F>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, get_buffer: F,
+pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, body: S,
 ) where
     A: IpAddr,
-    B: AsRef<[u8]> + AsMut<[u8]>,
-    F: SerializationCallback<B>,
+    S: SerializationRequest,
 {
     // TODO(joshlf): Figure out how to compute a route with the restrictions
     // mentioned in the doc comment.
@@ -305,95 +260,53 @@ pub fn send_ip_packet_from<D: EventDispatcher, A, B, F>(
 /// Send an IP packet to a remote host over a specific device.
 ///
 /// `send_ip_packet_from_device` accepts a device, a source and destination IP
-/// address, a next hop IP address, and a callback. It invokes the callback with
-/// the number of prefix bytes required by all encapsulating headers, and the
-/// minimum size of the body plus padding. The callback is expected to return a
-/// byte buffer and a range which corresponds to the desired body to be
-/// encapsulated. The portion of the buffer beyond the end of the body range
-/// will be treated as padding. The total number of bytes in the body and the
-/// post-body padding must not be smaller than the minimum size passed to the
-/// callback.
-///
-/// For more details on the callback, see the
-/// [`crate::wire::SerializationCallback`] documentation.
+/// address, a next hop IP address, and a `SerializationRequest`. It computes
+/// the routing information and serializes the request in a new IP packet and
+/// sends it.
 ///
 /// # Panics
-///
-/// `send_ip_packet_from_device` panics if the buffer returned from `get_buffer`
-/// does not have sufficient space preceding the body for all encapsulating
-/// headers or does not have enough body plus padding bytes to satisfy the
-/// requirement passed to the callback.
 ///
 /// Since `send_ip_packet_from_device` specifies a physical device, it cannot
 /// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
 /// the loopback subnet, `send_ip_packet_from_device` will panic.
-pub fn send_ip_packet_from_device<D: EventDispatcher, A, B, F>(
+pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>, device: DeviceId, src_ip: A, dst_ip: A, next_hop: A, proto: IpProto,
-    get_buffer: F,
+    body: S,
 ) where
     A: IpAddr,
-    B: AsRef<[u8]> + AsMut<[u8]>,
-    F: SerializationCallback<B>,
+    S: SerializationRequest,
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
-    crate::device::send_ip_frame(
+
+    specialize_ip_addr!(
+        fn serialize<D, S>(
+            ctx: &mut Context<D>, device: DeviceId, src_ip: Self, dst_ip: Self, next_hop: Self, ttl: u8, proto: IpProto, body: S
+        )
+        where
+            D: EventDispatcher,
+            S: SerializationRequest,
+        {
+            Ipv4Addr => {
+                let body = body.encapsulate(Ipv4PacketSerializer::new(src_ip, dst_ip, ttl, proto));
+                crate::device::send_ip_frame(ctx, device, next_hop, body);
+            }
+            Ipv6Addr => {
+                let body = body.encapsulate(Ipv6PacketSerializer::new(src_ip, dst_ip, ttl, proto));
+                crate::device::send_ip_frame(ctx, device, next_hop, body);
+            }
+        }
+    );
+    A::serialize(
         ctx,
         device,
+        src_ip,
+        dst_ip,
         next_hop,
-        |mut prefix_bytes, mut body_plus_padding_bytes| {
-            prefix_bytes += max_header_len::<A::Version>();
-            body_plus_padding_bytes -= min_header_len::<A::Version>();
-            let buffer = get_buffer(prefix_bytes, body_plus_padding_bytes);
-            serialize_packet(src_ip, dst_ip, DEFAULT_TTL, proto, buffer)
-        },
-    );
-}
-
-// The maximum header length for a given IP packet format.
-fn max_header_len<I: Ip>() -> usize {
-    specialize_ip!(
-        fn max_header_len() -> usize {
-            Ipv4 => { crate::wire::ipv4::MAX_HEADER_LEN }
-            Ipv6 => { log_unimplemented!(60, "ip::max_header_len: Ipv6 not implemented") }
-        }
-    );
-    I::max_header_len()
-}
-
-// The minimum header length for a given IP packet format.
-fn min_header_len<I: Ip>() -> usize {
-    specialize_ip!(
-        fn min_header_len() -> usize {
-            Ipv4 => { crate::wire::ipv4::MIN_HEADER_LEN }
-            Ipv6 => { crate::wire::ipv6::MIN_HEADER_LEN }
-        }
-    );
-    I::min_header_len()
-}
-
-// Serialize an IP packet into the provided buffer, returning the byte range
-// within the buffer corresponding to the serialized packet.
-fn serialize_packet<A: IpAddr, B: AsMut<[u8]>>(
-    src_ip: A, dst_ip: A, ttl: u8, proto: IpProto, buffer: BufferAndRange<B>,
-) -> BufferAndRange<B> {
-    // serialize_ip! can't handle trait bounds with type arguments, so create
-    // AsMutU8 which is equivalent to AsMut<[u8]>, but without the type
-    // arguments. Ew.
-    trait AsMutU8: AsMut<[u8]> {}
-    impl<A: AsMut<[u8]>> AsMutU8 for A {}
-    specialize_ip!(
-        fn serialize<B>(
-            src_ip: Self::Addr, dst_ip: Self::Addr, ttl: u8, proto: IpProto, buffer: BufferAndRange<B>
-        ) -> BufferAndRange<B>
-        where
-            B: AsMutU8,
-        {
-            Ipv4 => { Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto).serialize(buffer) }
-            Ipv6 => { Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto).serialize(buffer) }
-        }
-    );
-    A::Version::serialize(src_ip, dst_ip, ttl, proto, buffer)
+        DEFAULT_TTL,
+        proto,
+        body,
+    )
 }
 
 // An `Ip` extension trait for internal use.

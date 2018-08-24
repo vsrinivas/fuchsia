@@ -11,8 +11,8 @@ use zerocopy::ByteSlice;
 
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4Addr, Ipv6Addr};
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
-use crate::wire::udp::UdpPacket;
-use crate::wire::BufferAndRange;
+use crate::wire::udp::{UdpPacket, UdpPacketSerializer};
+use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher, StackState};
 
 use log::log;
@@ -189,20 +189,12 @@ pub fn send_udp_conn<D: EventDispatcher, I: Ip>(
         local_addr,
         remote_addr,
         IpProto::Udp,
-        |mut prefix_bytes, mut body_plus_padding_bytes| {
-            let body_plus_padding_bytes = std::cmp::max(body_plus_padding_bytes, body.len());
-            let buffer = BufferAndRange::new(
-                vec![0u8; prefix_bytes + body_plus_padding_bytes],
-                prefix_bytes..,
-            );
-            UdpPacket::serialize(
-                buffer,
-                local_addr,
-                remote_addr,
-                Some(local_port),
-                remote_port,
-            )
-        },
+        body.encapsulate(UdpPacketSerializer::new(
+            local_addr,
+            remote_addr,
+            Some(local_port),
+            remote_port,
+        )),
     );
 }
 
@@ -268,20 +260,12 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr>(
         local_addr,
         remote_addr,
         IpProto::Udp,
-        |mut prefix_bytes, mut body_plus_padding_bytes| {
-            let body_plus_padding_bytes = std::cmp::max(body_plus_padding_bytes, body.len());
-            let buffer = BufferAndRange::new(
-                vec![0u8; prefix_bytes + body_plus_padding_bytes],
-                prefix_bytes..,
-            );
-            UdpPacket::serialize(
-                buffer,
-                local_addr,
-                remote_addr,
-                Some(local_port),
-                remote_port,
-            )
-        },
+        body.encapsulate(UdpPacketSerializer::new(
+            local_addr,
+            remote_addr,
+            Some(local_port),
+            remote_port,
+        )),
     );
 }
 

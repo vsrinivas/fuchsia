@@ -15,16 +15,10 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::ParseError;
 use crate::ip::{Ip, IpAddr, IpProto};
 use crate::transport::tcp::TcpOption;
-use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options};
+use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options,
+                        PacketSerializer};
 
 use self::options::TcpOptionImpl;
-
-/// The maximum length of a TCP header in bytes.
-///
-/// When calling `TcpSegmentBuilder::serialize`, provide at least
-/// `MAX_HEADER_LEN` bytes for the header in order to guarantee that `serialize`
-/// will not panic.
-pub const MAX_HEADER_LEN: usize = 60;
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as TCP
 // header prefix. Thus, we can simply reinterpret the bytes of the TCP header
@@ -83,7 +77,7 @@ impl HeaderPrefix {
 /// necessary.
 ///
 /// A `TcpSegment` - whether parsed using `parse` or created using
-/// `TcpSegmentBuilder` - maintains the invariant that the checksum is always
+/// `TcpSegmentSerializer` - maintains the invariant that the checksum is always
 /// valid.
 pub struct TcpSegment<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
@@ -248,16 +242,36 @@ impl<B: ByteSlice> TcpSegment<B> {
     fn total_segment_len(&self) -> usize {
         self.header_len() + self.body.len()
     }
+
+    /// Construct a serializer with the same contents as this packet.
+    pub fn serializer<A: IpAddr>(&self, src_ip: A, dst_ip: A) -> TcpSegmentSerializer<A> {
+        let mut s = TcpSegmentSerializer {
+            src_ip,
+            dst_ip,
+            src_port: self.src_port().get(),
+            dst_port: self.dst_port().get(),
+            seq_num: self.seq_num(),
+            ack_num: NetworkEndian::read_u32(&self.hdr_prefix.ack),
+            flags: 0,
+            window_size: self.window_size(),
+        };
+        s.rst(self.rst());
+        s.syn(self.syn());
+        s.fin(self.fin());
+        s
+    }
 }
 
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
 // expose any setters for the fields of the TCP segment; the only way to set
-// them is via TcpSegmentBuilder. This, combined with checksum validation
+// them is via TcpSegmentSerializer. This, combined with checksum validation
 // performed in TcpSegment::parse, provides the invariant that a UdpPacket
 // always has a valid checksum.
 
-/// A builder for TCP segments.
-pub struct TcpSegmentBuilder {
+/// A serializer for TCP segments.
+pub struct TcpSegmentSerializer<A: IpAddr> {
+    src_ip: A,
+    dst_ip: A,
     src_port: u16,
     dst_port: u16,
     seq_num: u32,
@@ -266,17 +280,18 @@ pub struct TcpSegmentBuilder {
     window_size: u16,
 }
 
-impl TcpSegmentBuilder {
-    /// Create a new `TcpSegmentBuilder`.
+impl<A: IpAddr> TcpSegmentSerializer<A> {
+    /// Construct a new `TcpSegmentSerializer`.
     ///
-    /// Create a new builder for TCP segments. If `ack_num` is `Some`, then the
-    /// ACK flag will be set.
+    /// If `ack_num` is `Some`, then the ACK flag will be set.
     pub fn new(
-        src_port: NonZeroU16, dst_port: NonZeroU16, seq_num: u32, ack_num: Option<u32>,
-        window_size: u16,
-    ) -> TcpSegmentBuilder {
+        src_ip: A, dst_ip: A, src_port: NonZeroU16, dst_port: NonZeroU16, seq_num: u32,
+        ack_num: Option<u32>, window_size: u16,
+    ) -> TcpSegmentSerializer<A> {
         let flags = if ack_num.is_some() { 1 << 4 } else { 0 };
-        TcpSegmentBuilder {
+        TcpSegmentSerializer {
+            src_ip,
+            dst_ip,
             src_port: src_port.get(),
             dst_port: dst_port.get(),
             seq_num,
@@ -308,36 +323,21 @@ impl TcpSegmentBuilder {
     pub fn fin(&mut self, fin: bool) {
         self.set_flag(FIN_MASK, fin);
     }
+}
 
-    /// Serialize a TCP segment in an existing buffer.
-    ///
-    /// `serialize` creates a `TcpSegment` which uses the provided `buffer` for
-    /// its storage, initializing all header fields and calculating the checksum
-    /// from the present configuration. It treats `buffer.range()` as the
-    /// segment body. It uses the last bytes of `buffer` before the body to
-    /// store the header, and returns a new `BufferAndRange` with a range equal
-    /// to the bytes of the TCP segment (including the header). This range can
-    /// be used to indicate the range for encapsulation in another packet.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// # // TODO(joshlf): Make this compile and remove the ignore
-    /// let mut buffer = [0u8; 1024];
-    /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let builder = TcpSegmentBuilder::new(src_port, dst_port, seq_num, ack_num, window_size);
-    /// let buffer = builder.serialize(BufferAndRange::new(&mut buffer[..], 512..), src_ip, dst_ip);
-    /// send_ip_packet(dst_ip, buffer);
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// `serialize` panics if there is insufficient room preceding the body to
-    /// store the TCP header. The caller can guarantee that there will be enough
-    /// room by providing at least `MAX_HEADER_LEN` pre-body bytes.
-    pub fn serialize<B: AsMut<[u8]>, A: IpAddr>(
-        self, mut buffer: BufferAndRange<B>, src_ip: A, dst_ip: A,
-    ) -> BufferAndRange<B> {
+const MAX_HEADER_BYTES: usize = 60;
+const MIN_HEADER_BYTES: usize = 20;
+
+impl<A: IpAddr> PacketSerializer for TcpSegmentSerializer<A> {
+    fn max_header_bytes(&self) -> usize {
+        MAX_HEADER_BYTES
+    }
+
+    fn min_header_bytes(&self) -> usize {
+        MIN_HEADER_BYTES
+    }
+
+    fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>) {
         let extend_backwards = {
             let (header, body, _) = buffer.parts_mut();
             // create a 0-byte slice for the options since we don't support
@@ -372,17 +372,18 @@ impl TcpSegmentBuilder {
             let segment_len = segment.total_segment_len();
             // This ignores the checksum field in the header, so it's fine that we
             // haven't set it yet, and so it could be filled with arbitrary bytes.
-            let checksum = segment.compute_checksum(src_ip, dst_ip).expect(&format!(
-                "total TCP segment length of {} bytes overflows length field of pseudo-header",
-                segment_len
-            ));
+            let checksum = segment
+                .compute_checksum(self.src_ip, self.dst_ip)
+                .expect(&format!(
+                    "total TCP segment length of {} bytes overflows length field of pseudo-header",
+                    segment_len
+                ));
             NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, checksum);
 
             segment.header_len()
         };
 
         buffer.extend_backwards(extend_backwards);
-        buffer
     }
 }
 
@@ -485,6 +486,7 @@ mod tests {
     use crate::ip::{IpProto, Ipv4Addr, Ipv6Addr};
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::Ipv4Packet;
+    use crate::wire::util::SerializationRequest;
 
     const TEST_SRC_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_DST_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -495,7 +497,7 @@ mod tests {
     ]);
 
     #[test]
-    fn test_parse_full() {
+    fn test_parse_serialize_full() {
         use crate::wire::testdata::tls_client_hello::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
@@ -530,6 +532,14 @@ mod tests {
             TCP_OPTIONS
         );
         assert_eq!(segment.body(), TCP_BODY);
+
+        // TODO(joshlf): Uncomment once we support serializing options
+        // let buffer = segment.body()
+        //     .encapsulate(segment.serializer(packet.src_ip(), packet.dst_ip()))
+        //     .encapsulate(packet.serializer())
+        //     .encapsulate(frame.serializer())
+        //     .serialize_outer();
+        // assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
     fn hdr_prefix_to_bytes(hdr_prefix: HeaderPrefix) -> [u8; 20] {
@@ -618,9 +628,11 @@ mod tests {
         );
     }
 
-    // Return a stock TcpSegmentBuilder with reasonable default values.
-    fn new_builder() -> TcpSegmentBuilder {
-        TcpSegmentBuilder::new(
+    // Return a stock TcpSegmentSerializer with reasonable default values.
+    fn new_serializer<A: IpAddr>(src_ip: A, dst_ip: A) -> TcpSegmentSerializer<A> {
+        TcpSegmentSerializer::new(
+            src_ip,
+            dst_ip,
             NonZeroU16::new(1).unwrap(),
             NonZeroU16::new(2).unwrap(),
             3,
@@ -632,18 +644,15 @@ mod tests {
     #[test]
     fn test_serialize() {
         let mut buf = [0; 30];
-        let mut builder = new_builder();
-        builder.fin(true);
-        builder.rst(true);
-        builder.syn(true);
+        let mut serializer = new_serializer(TEST_SRC_IPV4, TEST_DST_IPV4);
+        serializer.fin(true);
+        serializer.rst(true);
+        serializer.syn(true);
         {
             // set the body
             (&mut buf[20..]).copy_from_slice(&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]);
-            let buffer = builder.serialize(
-                BufferAndRange::new(&mut buf[..], 20..),
-                TEST_SRC_IPV4,
-                TEST_DST_IPV4,
-            );
+            let mut buffer = BufferAndRange::new_from(&mut buf[..], 20..);
+            serializer.serialize(&mut buffer);
             assert_eq!(buffer.range(), 0..30);
         }
 
@@ -658,7 +667,7 @@ mod tests {
         let (segment, body_range) =
             TcpSegment::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
         // assert that when we parse those bytes, we get the values we set in
-        // the builder
+        // the serializer
         assert_eq!(body_range, 20..30);
         assert_eq!(segment.src_port().get(), 1);
         assert_eq!(segment.dst_port().get(), 2);
@@ -670,20 +679,14 @@ mod tests {
 
     #[test]
     fn test_serialize_zeroes() {
-        // Test that TcpSegmentBuilder::serialize properly zeroes memory before
+        // Test that TcpSegmentSerializer::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 20];
-        new_builder().serialize(
-            BufferAndRange::new(&mut buf_0[..], 20..),
-            TEST_SRC_IPV4,
-            TEST_DST_IPV4,
-        );
+        new_serializer(TEST_SRC_IPV4, TEST_DST_IPV4)
+            .serialize(&mut BufferAndRange::new_from(&mut buf_0[..], 20..));
         let mut buf_1 = [0xFF; 20];
-        new_builder().serialize(
-            BufferAndRange::new(&mut buf_1[..], 20..),
-            TEST_SRC_IPV4,
-            TEST_DST_IPV4,
-        );
+        new_serializer(TEST_SRC_IPV4, TEST_DST_IPV4)
+            .serialize(&mut BufferAndRange::new_from(&mut buf_1[..], 20..));
         assert_eq!(buf_0, buf_1);
     }
 
@@ -692,11 +695,8 @@ mod tests {
     fn test_serialize_panic_body_range() {
         // Test that a body range which is out of bounds of the buffer is
         // rejected.
-        new_builder().serialize(
-            BufferAndRange::new(&mut [0; 20][..], ..21),
-            TEST_SRC_IPV4,
-            TEST_DST_IPV4,
-        );
+        new_serializer(TEST_SRC_IPV4, TEST_DST_IPV4)
+            .serialize(&mut BufferAndRange::new_from(&mut [0; 20][..], ..21));
     }
 
     #[test]
@@ -704,11 +704,8 @@ mod tests {
     fn test_serialize_panic_insufficient_header_space() {
         // Test that a body range which doesn't leave enough room for the header
         // is rejected.
-        new_builder().serialize(
-            BufferAndRange::new(&mut [0; 20][..], ..),
-            TEST_SRC_IPV4,
-            TEST_DST_IPV4,
-        );
+        new_serializer(TEST_SRC_IPV4, TEST_DST_IPV4)
+            .serialize(&mut BufferAndRange::new_from(&mut [0; 20][..], ..));
     }
 
     #[test]
@@ -716,11 +713,8 @@ mod tests {
     fn test_serialize_panic_segment_too_long_ipv4() {
         // Test that a segment length which overflows u16 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        new_builder().serialize(
-            BufferAndRange::new(&mut [0; 1 << 16][..], 20..),
-            TEST_SRC_IPV4,
-            TEST_DST_IPV4,
-        );
+        new_serializer(TEST_SRC_IPV4, TEST_DST_IPV4)
+            .serialize(&mut BufferAndRange::new_from(&mut [0; 1 << 16][..], 20..));
     }
 
     #[test]
@@ -730,10 +724,7 @@ mod tests {
     fn test_serialize_panic_segment_too_long_ipv6() {
         // Test that a segment length which overflows u32 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        new_builder().serialize(
-            BufferAndRange::new(&mut [0; 1 << 32][..], 20..),
-            TEST_SRC_IPV6,
-            TEST_DST_IPV6,
-        );
+        new_serializer(TEST_SRC_IPV6, TEST_DST_IPV6)
+            .serialize(&mut BufferAndRange::new_from(&mut [0; 1 << 32][..], 20..));
     }
 }

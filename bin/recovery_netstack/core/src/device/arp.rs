@@ -9,7 +9,7 @@ use std::hash::Hash;
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::wire::{arp::{ArpPacket, HType, PType},
-                  BufferAndRange, SerializationCallback};
+                  BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 /// The type of an ARP operation.
@@ -75,29 +75,11 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// Send an ARP packet in a device layer frame.
     ///
     /// `send_arp_frame` accepts a device ID, a destination hardware address,
-    /// and a callback. It computes the routing information and invokes the
-    /// callback with the number of prefix bytes required by all encapsulating
-    /// headers, and the minimum size of the body plus padding. The callback is
-    /// expected to return a byte buffer and a range which corresponds to the
-    /// desired body. The portion of the buffer beyond the end of the body range
-    /// will be treated as padding. The total number of bytes in the body and
-    /// the post-body padding must not be smaller than the minimum size passed
-    /// to the callback.
-    ///
-    /// For more details on the callback, see the
-    /// [`crate::wire::SerializationCallback`] documentation.
-    ///
-    /// # Panics
-    ///
-    /// `send_arp_frame` panics if the buffer returned from `get_buffer` does
-    /// not have sufficient space preceding the body for all encapsulating
-    /// headers or does not have enough body plus padding bytes to satisfy the
-    /// requirement passed to the callback.
-    fn send_arp_frame<D: EventDispatcher, B, F>(
-        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, get_buffer: F,
-    ) where
-        B: AsRef<[u8]> + AsMut<[u8]>,
-        F: SerializationCallback<B>;
+    /// and a `SerializationRequest`. It computes the routing information and
+    /// serializes the request in a device layer frame and sends it.
+    fn send_arp_frame<D: EventDispatcher, S: SerializationRequest>(
+        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, body: S,
+    );
 
     /// Get a mutable reference to a device's ARP state.
     fn get_arp_state<D: EventDispatcher>(
@@ -263,15 +245,15 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 
 #[cfg(test)]
 mod tests {
-    use crate::device::arp::*;
+    use super::*;
     use crate::device::ethernet::{set_ip_addr, EtherType, Mac};
-    use crate::device::DeviceId;
-    use crate::device::DeviceLayerEventDispatcher;
+    use crate::device::{DeviceId, DeviceLayerEventDispatcher};
     use crate::ip::{Ipv4Addr, Subnet};
     use crate::testutil::DummyEventDispatcher;
     use crate::transport::TransportLayerEventDispatcher;
-    use crate::wire::arp::peek_arp_types;
+    use crate::wire::arp::{peek_arp_types, ArpPacketSerializer};
     use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::{BufferAndRange, InnerSerializationRequest};
     use crate::StackState;
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
@@ -294,28 +276,23 @@ mod tests {
             Subnet::new(TEST_TARGET_IPV4, 24),
         );
 
-        let mut buf = [0; 28];
-        {
-            ArpPacket::serialize(
-                &mut buf[..],
-                ArpOp::Request,
-                TEST_SENDER_MAC,
-                TEST_SENDER_IPV4,
-                TEST_TARGET_MAC,
-                TEST_TARGET_IPV4,
-            );
-        }
-        let (hw, proto) = peek_arp_types(&buf[..]).unwrap();
+        let mut buf = InnerSerializationRequest::new(ArpPacketSerializer::new(
+            ArpOp::Request,
+            TEST_SENDER_MAC,
+            TEST_SENDER_IPV4,
+            TEST_TARGET_MAC,
+            TEST_TARGET_IPV4,
+        )).serialize_outer();
+        let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
-        let arp = BufferAndRange::new(&mut buf[..], ..);
 
-        receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, &mut [u8]>(
+        receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
             &mut ctx,
             0,
             TEST_SENDER_MAC,
             TEST_TARGET_MAC,
-            arp,
+            BufferAndRange::new_from(&mut buf, ..),
         );
 
         assert_eq!(

@@ -17,6 +17,7 @@ use crate::device::arp::{ArpHardwareType, ArpOp};
 use crate::device::ethernet::{EtherType, Mac};
 use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
+use crate::wire::util::{BufferAndRange, InnerPacketSerializer};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ARP
 // header. Thus, we can simply reinterpret the bytes of the ARP header as a
@@ -227,16 +228,6 @@ where
     HwAddr: Copy + HType + FromBytes + Unaligned,
     ProtoAddr: Copy + PType + FromBytes + Unaligned,
 {
-    /// The length of an ARP packet in bytes.
-    ///
-    /// When calling `ArpPacket::serialize`, provide at least `PACKET_LEN` bytes
-    /// for the packet in order to guarantee that `serialize` will not panic.
-    ///
-    /// `PACKET_LEN` may have different values depending on the type parameters
-    /// `HwAddr` and `ProtoAddr`.
-    pub const PACKET_LEN: usize =
-        mem::size_of::<Header>() + mem::size_of::<Body<HwAddr, ProtoAddr>>();
-
     /// Parse an ARP packet.
     ///
     /// `parse` parses `bytes` as an ARP packet and validates the header fields.
@@ -314,49 +305,57 @@ where
     pub fn target_protocol_address(&self) -> ProtoAddr {
         self.body.tpa
     }
+
+    /// Construct a serializer with the same contents as this packet.
+    pub fn serializer(&self) -> ArpPacketSerializer<HwAddr, ProtoAddr> {
+        ArpPacketSerializer {
+            op: self.operation(),
+            sha: self.sender_hardware_address(),
+            spa: self.sender_protocol_address(),
+            tha: self.target_hardware_address(),
+            tpa: self.target_protocol_address(),
+        }
+    }
 }
 
-impl<B, HwAddr, ProtoAddr> ArpPacket<B, HwAddr, ProtoAddr>
+/// A serializer for ARP packets.
+pub struct ArpPacketSerializer<HwAddr, ProtoAddr> {
+    op: ArpOp,
+    sha: HwAddr,
+    spa: ProtoAddr,
+    tha: HwAddr,
+    tpa: ProtoAddr,
+}
+
+impl<HwAddr, ProtoAddr> ArpPacketSerializer<HwAddr, ProtoAddr> {
+    /// Construct a new `ArpPacketSerializer`.
+    pub fn new(
+        operation: ArpOp, sender_hardware_addr: HwAddr, sender_protocol_addr: ProtoAddr,
+        target_hardware_addr: HwAddr, target_protocol_addr: ProtoAddr,
+    ) -> ArpPacketSerializer<HwAddr, ProtoAddr> {
+        ArpPacketSerializer {
+            op: operation,
+            sha: sender_hardware_addr,
+            spa: sender_protocol_addr,
+            tha: target_hardware_addr,
+            tpa: target_protocol_addr,
+        }
+    }
+}
+
+impl<HwAddr, ProtoAddr> InnerPacketSerializer for ArpPacketSerializer<HwAddr, ProtoAddr>
 where
-    B: AsMut<[u8]>,
     HwAddr: Copy + HType + FromBytes + AsBytes + Unaligned,
     ProtoAddr: Copy + PType + FromBytes + AsBytes + Unaligned,
 {
-    /// Serialize an ARP packet in an existing buffer.
-    ///
-    /// `serialize` serializes an `ArpPacket` which uses the provided `buffer`
-    /// for its storage, initializing all header and body fields. If the buffer
-    /// is larger than the packet size, it serializes from the beginning of the
-    /// buffer, and leaves any remaining bytes at the end of the buffer
-    /// untouched. Using a larger-than-necessary buffer can be useful if the
-    /// encapsulating protocol has a minimum payload size requirement, and an
-    /// ARP packet does not satisfy that minimum.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// # // TODO(joshlf): Make this compile and remove the ignore
-    /// let mut buffer = [0u8; 1024];
-    /// ArpPacket::serialize(
-    ///     &mut buffer,
-    ///     ArpOp::Request,
-    ///     src_mac,
-    ///     src_ip,
-    ///     dst_mac,
-    ///     dst_ip,
-    /// );
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// `serialize` panics if there is insufficient room in the buffer to store
-    /// the ARP packet. The caller can guarantee that there will be enough room
-    /// by providing a buffer of at least `ArpPacket::MAX_LEN` bytes.
-    pub fn serialize(
-        mut buffer: B, operation: ArpOp, sender_hardware_addr: HwAddr,
-        sender_protocol_addr: ProtoAddr, target_hardware_addr: HwAddr,
-        target_protocol_addr: ProtoAddr,
-    ) {
+    fn size(&self) -> usize {
+        mem::size_of::<Header>() + mem::size_of::<Body<HwAddr, ProtoAddr>>()
+    }
+
+    fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>) {
+        assert_eq!(buffer.range().len(), 0);
+        buffer.extend_forwards(self.size());
+
         // SECURITY: Use _zeroed constructors to ensure we zero memory to
         // prevent leaking information from packets previously stored in
         // this buffer.
@@ -366,16 +365,14 @@ where
         let (mut body, _) =
             LayoutVerified::<_, Body<HwAddr, ProtoAddr>>::new_unaligned_from_prefix_zeroed(rest)
                 .expect("not enough bytes for an ARP packet");
-
         header
             .set_hardware_protocol(<HwAddr as HType>::htype(), <HwAddr as HType>::hlen())
             .set_network_protocol(<ProtoAddr as PType>::ptype(), <ProtoAddr as PType>::plen())
-            .set_op_code(operation);
-
-        body.set_sha(sender_hardware_addr)
-            .set_spa(sender_protocol_addr)
-            .set_tha(target_hardware_addr)
-            .set_tpa(target_protocol_addr);
+            .set_op_code(self.op);
+        body.set_sha(self.sha)
+            .set_spa(self.spa)
+            .set_tha(self.tha)
+            .set_tpa(self.tpa);
     }
 }
 
@@ -390,7 +387,8 @@ impl<B, HwAddr, ProtoAddr> Debug for ArpPacket<B, HwAddr, ProtoAddr> {
 mod tests {
     use super::*;
     use crate::ip::Ipv4Addr;
-    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameSerializer};
+    use crate::wire::util::{InnerSerializationRequest, SerializationRequest};
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -398,7 +396,7 @@ mod tests {
     const TEST_TARGET_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
     #[test]
-    fn test_parse_full() {
+    fn test_parse_serialize_full() {
         use crate::wire::testdata::*;
 
         let (frame, _) = EthernetFrame::parse(ARP_REQUEST).unwrap();
@@ -410,6 +408,11 @@ mod tests {
         let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(frame.body()).unwrap();
         assert_eq!(arp.operation(), ArpOp::Request);
         assert_eq!(frame.src_mac(), arp.sender_hardware_address()); // These will be the same
+
+        let frame_bytes = InnerSerializationRequest::new(arp.serializer())
+            .encapsulate(frame.serializer())
+            .serialize_outer();
+        assert_eq!(frame_bytes.as_ref(), ARP_REQUEST);
     }
 
     fn header_to_bytes(header: Header) -> [u8; 8] {
@@ -467,13 +470,15 @@ mod tests {
     fn test_serialize() {
         let mut buf = [0; 28];
         {
-            ArpPacket::serialize(
-                &mut buf[..],
-                ArpOp::Request,
-                TEST_SENDER_MAC,
-                TEST_SENDER_IPV4,
-                TEST_TARGET_MAC,
-                TEST_TARGET_IPV4,
+            InnerPacketSerializer::serialize(
+                ArpPacketSerializer::new(
+                    ArpOp::Request,
+                    TEST_SENDER_MAC,
+                    TEST_SENDER_IPV4,
+                    TEST_TARGET_MAC,
+                    TEST_TARGET_IPV4,
+                ),
+                &mut BufferAndRange::new_from(&mut buf[..], ..0),
             );
         }
         assert_eq!(
@@ -592,22 +597,26 @@ mod tests {
         // Test that ArpPacket::serialize properly zeroes memory before
         // serializing the packet.
         let mut buf_0 = [0; 28];
-        ArpPacket::serialize(
-            &mut buf_0[..],
-            ArpOp::Request,
-            TEST_SENDER_MAC,
-            TEST_SENDER_IPV4,
-            TEST_TARGET_MAC,
-            TEST_TARGET_IPV4,
+        InnerPacketSerializer::serialize(
+            ArpPacketSerializer::new(
+                ArpOp::Request,
+                TEST_SENDER_MAC,
+                TEST_SENDER_IPV4,
+                TEST_TARGET_MAC,
+                TEST_TARGET_IPV4,
+            ),
+            &mut BufferAndRange::new_from(&mut buf_0[..], ..0),
         );
         let mut buf_1 = [0xFF; 28];
-        ArpPacket::serialize(
-            &mut buf_1[..],
-            ArpOp::Request,
-            TEST_SENDER_MAC,
-            TEST_SENDER_IPV4,
-            TEST_TARGET_MAC,
-            TEST_TARGET_IPV4,
+        InnerPacketSerializer::serialize(
+            ArpPacketSerializer::new(
+                ArpOp::Request,
+                TEST_SENDER_MAC,
+                TEST_SENDER_IPV4,
+                TEST_TARGET_MAC,
+                TEST_TARGET_IPV4,
+            ),
+            &mut BufferAndRange::new_from(&mut buf_1[..], ..0),
         );
         assert_eq!(buf_0, buf_1);
     }
@@ -617,13 +626,15 @@ mod tests {
     fn test_serialize_panic_insufficient_packet_space() {
         // Test that a buffer which doesn't leave enough room for the packet is
         // rejected.
-        ArpPacket::serialize(
-            &mut [0; 27],
-            ArpOp::Request,
-            TEST_SENDER_MAC,
-            TEST_SENDER_IPV4,
-            TEST_TARGET_MAC,
-            TEST_TARGET_IPV4,
+        InnerPacketSerializer::serialize(
+            ArpPacketSerializer::new(
+                ArpOp::Request,
+                TEST_SENDER_MAC,
+                TEST_SENDER_IPV4,
+                TEST_TARGET_MAC,
+                TEST_TARGET_IPV4,
+            ),
+            &mut BufferAndRange::new_from(&mut [0; 27], ..0),
         );
     }
 }

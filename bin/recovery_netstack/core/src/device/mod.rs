@@ -14,7 +14,7 @@ use log::debug;
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{IpAddr, Subnet};
-use crate::wire::SerializationCallback;
+use crate::wire::SerializationRequest;
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -103,35 +103,17 @@ pub trait DeviceLayerEventDispatcher {
 
 /// Send an IP packet in a device layer frame.
 ///
-/// `send_ip_frame` accepts a device ID, a local IP address, and a callback. It
-/// computes the routing information and invokes the callback with the number of
-/// prefix bytes required by all encapsulating headers, and the minimum size of
-/// the body plus padding. The callback is expected to return a byte buffer and
-/// a range which corresponds to the desired body. The portion of the buffer
-/// beyond the end of the body range will be treated as padding. The total
-/// number of bytes in the body and the post-body padding must not be smaller
-/// than the minimum size passed to the callback.
-///
-/// For more details on the callback, see the
-/// [`crate::wire::SerializationCallback`] documentation.
-///
-/// # Panics
-///
-/// `send_ip_frame` panics if the buffer returned from `get_buffer` does not
-/// have sufficient space preceding the body for all encapsulating headers or
-/// does not have enough body plus padding bytes to satisfy the requirement
-/// passed to the callback.
-pub fn send_ip_frame<D: EventDispatcher, A, B, F>(
-    ctx: &mut Context<D>, device: DeviceId, local_addr: A, get_buffer: F,
+/// `send_ip_frame` accepts a device ID, a local IP address, and a
+/// `SerializationRequest`. It computes the routing information and serializes
+/// the request in a new device layer frame and sends it.
+pub fn send_ip_frame<D: EventDispatcher, A, S>(
+    ctx: &mut Context<D>, device: DeviceId, local_addr: A, body: S,
 ) where
     A: IpAddr,
-    B: AsRef<[u8]> + AsMut<[u8]>,
-    F: SerializationCallback<B>,
+    S: SerializationRequest,
 {
     match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::send_ip_frame(ctx, device.id, local_addr, get_buffer)
-        }
+        DeviceProtocol::Ethernet => self::ethernet::send_ip_frame(ctx, device.id, local_addr, body),
     }
 }
 

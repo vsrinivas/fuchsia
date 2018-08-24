@@ -56,13 +56,13 @@ layer finds that the buffer is too small for the TCP segment that it wishes to
 serialize, it can still allocate a larger buffer. However, so long as the
 existing buffer is sufficient, it may be reused.
 
-### Prefix and Padding
+### Prefix, Suffix, and Padding
 
 When using a single buffer to serialize a packet - including any encapsulating
 headers of lower layers of the stack - it is important to satisfy some
 constraints:
-- There must be enough space preceding an upper-layer body for lower-layer
-  headers.
+- There must be enough space preceding and following an upper-layer body for
+  lower-layer headers and footers.
 - If any lower-layer protocols have minimum body length requirements, there must
   be enough space following an upper-layer body for any padding bytes needed to
   satisfy those requirements.
@@ -74,28 +74,37 @@ following the IPv4 packet to be used as padding in order to meet this minimum in
 case the IPv4 packet itself is not sufficiently large.
 
 In `recovery_netstack`, the canonical way to convey this information is through
-a `BufferAndRange`. A `BufferAndRange` represents a buffer which can be used for
-parsing or serialization and a range into that buffer. When serializing an
-upper-layer packet, the caller must first:
-- Figure out how many bytes of prefix to leave before the upper-layer packet in
-  order to leave room for headers
-- Figure out what the minimum body length requirement will be, and make sure to
-  leave enough bytes after the upper-layer packet so that the upper-layer packet
-  and padding bytes combined will satisfy this requirement
+a `SerializationRequest`. A `SerializationRequest` represents a request to
+serialize a packet. `SerializationRequest`s may be nested, which results in a
+request to serialize a sequence of encapsulated packets. When a sequence of
+nested `SerializationRequest`s is fulfilled, the header, footer, and minimum
+body size requirements are computed starting with the outermost packet and
+working in. Once the innermost request is reached, it is that request's
+responsibility to provide a buffer:
+- The buffer must contain the body to be encapsulated in the next layer. The
+  buffer is a `BufferAndRange` type, and the range identifies the bytes of the
+  buffer to be encapsulated.
+- The buffer must satisfy the header, footer, and minimum body size requirements
+  by providing enough room before and after the body range.
 
-Then, the caller constructs a `BufferAndRange` with the appropraite prefix and
-suffix bytes, and whose range is equal to the upper-layer packet, and passes
-this range to the layer below it. The layer below treats the range as its body,
-and serializes any headers in the bytes preceding the range. When control
-finally makes its way to a layer of the stack that has a minimimum body length
-requirement, that layer is responsible for consuming any bytes following the
-range for use as padding.
+Once the innermost request has produced its buffer, each subsequent packet
+serializes its headers and footers, expands the buffer's range to identify the
+whole packet as the body to be encapsulated in the next layer, and returns the
+buffer to be handled by the next layer.
 
-If an existing buffer is to be re-used, the `ensure_prefix_padding` method can
-be used to ensure that the buffer has enough prefix and suffix bytes to satisfy
-the requirements discussed here, reallocating a larger buffer if necessary.
+When control finally makes its way to a layer of the stack that has a minimimum
+body length requirement, that layer is responsible for consuming any bytes
+following the range for use as padding (and zeroing those bytes for security).
+This logic is handled by `EncapsulatingSerializationRequest`'s implementation of
+`serialize`.
 
-*See also: `wire::SerializationCallback`*
+`SerializationRequest` is implemented by a number of different types, allowing
+for a range of serialization scenarios including:
+- Serializing a new packet in a buffer which previously stored an incoming
+  packet.
+- Forwarding a packet by shrinking the incoming buffer's range to the body of
+  the packet to be serialized, and then passing that buffer back down the stack
+  of `SerializationRequest`s.
 
 ### In-Place Packet Modification
 
@@ -127,16 +136,12 @@ A special case of these requirements is post-body padding. For packet formats
 with minimum body size requirements, upper layers will provide extra buffer
 bytes beyond the end of the body. These bytes are outside of the range used by
 the `BufferAndRange` to indicate the body to be encapsulated, but are allocated.
-The code constructing the packet with the minimum body size requirement will
-extend the range to include the padding bytes just before passing the buffer to
-the seriliazation function for the packet format in question. It is the
-responsibility of such code to ensure that these padding bytes are zeroed before
-calling the serialization function. *For more on padding and minimum body sizes,
-see the "Prefix and Padding" section.*
 
-*See also:*
-- *The `_zeroed` constructors of the `zerocopy::LayoutVerified` type*
-- *`wire::BufferAndRange::extend_forwards_zero`*
+The logic for adding padding is provided by `EncapsulatingSerializationRequest`,
+described in the *Prefix, Suffix, and Padding* section above.
+`EncapsulatingSerializationRequest` ensures that these padding bytes are zeroed.
+
+*See also: the `_zeroed` constructors of the `zerocopy::LayoutVerified` type*
 
 ## IP Types
 

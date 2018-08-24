@@ -12,7 +12,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::ParseError;
 use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
-use crate::wire::util::{BufferAndRange, Checksum, Options};
+use crate::wire::util::{BufferAndRange, Checksum, Options, PacketSerializer};
 
 use self::options::Ipv4OptionImpl;
 
@@ -53,19 +53,6 @@ pub struct HeaderPrefix {
     dst_ip: [u8; 4],
 }
 
-/// The maximum length of an IPv4 header in bytes.
-///
-/// When calling `Ipv4PacketBuilder::build`, provide at least `MAX_HEADER_LEN`
-/// bytes for the header in order to guarantee that `serialize` will not panic.
-pub const MAX_HEADER_LEN: usize = 60;
-
-/// The minimum length of an IPv4 header in bytes.
-///
-/// When calculating the number of IPv4 body bytes required to meet a certain
-/// minimum body size requirement of an encapsulating packet format, the IPv4
-/// header is guaranteed to consume at least `MIN_HEADER_LEN` bytes.
-pub const MIN_HEADER_LEN: usize = 20;
-
 unsafe impl FromBytes for HeaderPrefix {}
 unsafe impl AsBytes for HeaderPrefix {}
 unsafe impl Unaligned for HeaderPrefix {}
@@ -96,7 +83,7 @@ impl HeaderPrefix {
 /// necessary.
 ///
 /// An `Ipv4Packet` - whether parsed using `parse` or created using
-/// `Ipv4PacketBuilder` - maintains the invariant that the checksum is always
+/// `Ipv4PacketSerializer` - maintains the invariant that the checksum is always
 /// valid.
 pub struct Ipv4Packet<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
@@ -242,6 +229,24 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     fn total_packet_len(&self) -> usize {
         self.header_len() + self.body.len()
     }
+
+    /// Construct a serializer with the same contents as this packet.
+    pub fn serializer(&self) -> Ipv4PacketSerializer {
+        let mut s = Ipv4PacketSerializer {
+            dscp: self.dscp(),
+            ecn: self.ecn(),
+            id: self.id(),
+            flags: 0,
+            frag_off: self.fragment_offset(),
+            ttl: self.ttl(),
+            proto: self.hdr_prefix.proto,
+            src_ip: self.src_ip(),
+            dst_ip: self.dst_ip(),
+        };
+        s.df_flag(self.df_flag());
+        s.mf_flag(self.mf_flag());
+        s
+    }
 }
 
 impl<B> Ipv4Packet<B>
@@ -284,8 +289,8 @@ where
     }
 }
 
-/// A builder for IPv4 packets.
-pub struct Ipv4PacketBuilder {
+/// A serializer for IPv4 packets.
+pub struct Ipv4PacketSerializer {
     dscp: u8,
     ecn: u8,
     id: u16,
@@ -297,12 +302,12 @@ pub struct Ipv4PacketBuilder {
     dst_ip: Ipv4Addr,
 }
 
-impl Ipv4PacketBuilder {
-    /// Create a new `Ipv4PacketBuilder`.
-    ///
-    /// Create a new builder for IPv4 packets.
-    pub fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: IpProto) -> Ipv4PacketBuilder {
-        Ipv4PacketBuilder {
+impl Ipv4PacketSerializer {
+    /// Construct a new `Ipv4PacketSerializer`.
+    pub fn new(
+        src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: IpProto,
+    ) -> Ipv4PacketSerializer {
+        Ipv4PacketSerializer {
             dscp: 0,
             ecn: 0,
             id: 0,
@@ -371,34 +376,22 @@ impl Ipv4PacketBuilder {
         );
         self.frag_off = fragment_offset;
     }
+}
 
-    /// Serialize an IPv4 packet in an existing buffer.
-    ///
-    /// `serialize` creates an `Ipv4Packet` which uses the provided `buffer` for its
-    /// storage, initializing all header fields from the present configuration.
-    /// It treats `buffer.range()` as the packet body. It uses the last bytes of
-    /// `buffer` before the body to store the header, and returns a new
-    /// `BufferAndRange` with a range equal to the bytes of the IPv4 packet
-    /// (including the header). This range can be used to indicate the range for
-    /// encapsulation in another packet.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// # // TODO(joshlf): Make this compile and remove the ignore
-    /// let mut buffer = [0u8; 1024];
-    /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let builder = Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto);
-    /// let buffer = builder.serialize(BufferAndRange::new(&mut buffer[..], 512..));
-    /// send_ip_frame(device, buffer);
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// `serialize` panics if there is insufficient room preceding the body to store
-    /// the IPv4 header. The caller can guarantee that there will be enough room
-    /// by providing at least `MAX_HEADER_LEN` pre-body bytes.
-    pub fn serialize<B: AsMut<[u8]>>(self, mut buffer: BufferAndRange<B>) -> BufferAndRange<B> {
+const MAX_HEADER_BYTES: usize = 60;
+// used by wire::icmp
+pub const MIN_HEADER_BYTES: usize = 20;
+
+impl PacketSerializer for Ipv4PacketSerializer {
+    fn max_header_bytes(&self) -> usize {
+        MAX_HEADER_BYTES
+    }
+
+    fn min_header_bytes(&self) -> usize {
+        MIN_HEADER_BYTES
+    }
+
+    fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>) {
         let extend_backwards = {
             let (header, body, _) = buffer.parts_mut();
             // create a 0-byte slice for the options since we don't support
@@ -444,7 +437,6 @@ impl Ipv4PacketBuilder {
         };
 
         buffer.extend_backwards(extend_backwards);
-        buffer
     }
 }
 
@@ -496,12 +488,13 @@ mod tests {
     use super::*;
     use crate::device::ethernet::EtherType;
     use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::util::SerializationRequest;
 
     const DEFAULT_SRC_IP: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const DEFAULT_DST_IP: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
 
     #[test]
-    fn test_parse_full_tcp() {
+    fn test_parse_serialize_full_tcp() {
         use crate::wire::testdata::tls_client_hello::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
@@ -522,10 +515,16 @@ mod tests {
         assert_eq!(packet.ttl(), IP_TTL);
         assert_eq!(packet.src_ip(), IP_SRC_IP);
         assert_eq!(packet.dst_ip(), IP_DST_IP);
+
+        let buffer = (&frame.body()[body_range])
+            .encapsulate(packet.serializer())
+            .encapsulate(frame.serializer())
+            .serialize_outer();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
     #[test]
-    fn test_parse_full_udp() {
+    fn test_parse_serialize_full_udp() {
         use crate::wire::testdata::dns_request::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
@@ -546,6 +545,12 @@ mod tests {
         assert_eq!(packet.ttl(), IP_TTL);
         assert_eq!(packet.src_ip(), IP_SRC_IP);
         assert_eq!(packet.dst_ip(), IP_DST_IP);
+
+        let buffer = (&frame.body()[body_range])
+            .encapsulate(packet.serializer())
+            .encapsulate(frame.serializer())
+            .serialize_outer();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
     fn hdr_prefix_to_bytes(hdr_prefix: HeaderPrefix) -> [u8; 20] {
@@ -614,25 +619,26 @@ mod tests {
         );
     }
 
-    // Return a stock Ipv4PacketBuilder with reasonable default values.
-    fn new_builder() -> Ipv4PacketBuilder {
-        Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
+    // Return a stock Ipv4PacketSerializer with reasonable default values.
+    fn new_serializer() -> Ipv4PacketSerializer {
+        Ipv4PacketSerializer::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
     }
 
     #[test]
     fn test_serialize() {
         let mut buf = [0; 30];
-        let mut builder = new_builder();
-        builder.dscp(0x12);
-        builder.ecn(3);
-        builder.id(0x0405);
-        builder.df_flag(true);
-        builder.mf_flag(true);
-        builder.fragment_offset(0x0607);
+        let mut serializer = new_serializer();
+        serializer.dscp(0x12);
+        serializer.ecn(3);
+        serializer.id(0x0405);
+        serializer.df_flag(true);
+        serializer.mf_flag(true);
+        serializer.fragment_offset(0x0607);
         {
             // set the body
             (&mut buf[20..]).copy_from_slice(&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]);
-            let buffer = builder.serialize(BufferAndRange::new(&mut buf[..], 20..));
+            let mut buffer = BufferAndRange::new_from(&mut buf[..], 20..);
+            serializer.serialize(&mut buffer);
             assert_eq!(buffer.range(), 0..30);
         }
 
@@ -646,7 +652,7 @@ mod tests {
         );
         let (packet, body_range) = Ipv4Packet::parse(&buf[..]).unwrap();
         // assert that when we parse those bytes, we get the values we set in
-        // the builder
+        // the serializer
         assert_eq!(body_range, 20..30);
         assert_eq!(packet.dscp(), 0x12);
         assert_eq!(packet.ecn(), 3);
@@ -658,12 +664,12 @@ mod tests {
 
     #[test]
     fn test_serialize_zeroes() {
-        // Test that Ipv4PacketBuilder::serialize properly zeroes memory before
+        // Test that Ipv4PacketSerializer::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 20];
-        new_builder().serialize(BufferAndRange::new(&mut buf_0[..], 20..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut buf_0[..], 20..));
         let mut buf_1 = [0xFF; 20];
-        new_builder().serialize(BufferAndRange::new(&mut buf_1[..], 20..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut buf_1[..], 20..));
         assert_eq!(buf_0, buf_1);
     }
 
@@ -671,7 +677,7 @@ mod tests {
     #[should_panic]
     fn test_serialize_panic_packet_length() {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
-        new_builder().serialize(BufferAndRange::new(&mut [0; 1 << 16][..], 20..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut [0; 1 << 16][..], 20..));
     }
 
     #[test]
@@ -679,6 +685,6 @@ mod tests {
     fn test_serialize_panic_insufficient_header_space() {
         // Test that a body range which doesn't leave enough room for the header
         // is rejected.
-        new_builder().serialize(BufferAndRange::new(&mut [0; 20], ..));
+        new_serializer().serialize(&mut BufferAndRange::new_from(&mut [0; 20], ..));
     }
 }

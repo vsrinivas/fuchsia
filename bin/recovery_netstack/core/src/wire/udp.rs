@@ -14,7 +14,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ip, IpAddr, IpProto};
-use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum};
+use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, PacketSerializer};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as a UDP
 // header. Thus, we can simply reinterpret the bytes of the UDP header as a
@@ -41,12 +41,6 @@ struct Header {
     length: [u8; 2],
     checksum: [u8; 2],
 }
-
-/// The length of a UDP header in bytes.
-///
-/// When calling `UdpPacket::serialize`, provide at least `HEADER_LEN` bytes for
-/// the header in order to guarantee that `serialize` will not panic.
-pub const HEADER_LEN: usize = 8;
 
 unsafe impl FromBytes for Header {}
 unsafe impl AsBytes for Header {}
@@ -234,53 +228,58 @@ impl<B: ByteSlice> UdpPacket<B> {
     fn total_packet_len(&self) -> usize {
         self.header_len() + self.body.len()
     }
+
+    /// Construct a serializer with the same contents as this packet.
+    pub fn serializer<A: IpAddr>(&self, src_ip: A, dst_ip: A) -> UdpPacketSerializer<A> {
+        UdpPacketSerializer {
+            src_ip,
+            dst_ip,
+            src_port: self.src_port(),
+            dst_port: self.dst_port(),
+        }
+    }
 }
 
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
 // expose any setters for the fields of the UDP packet; the only way to set them
-// is via UdpPacket::serialize. This, combined with checksum validation performed
-// in UdpPacket::parse, provides the invariant that a UdpPacket always has a
-// valid checksum.
+// is via UdpPacketSerializer::serialize. This, combined with checksum validation
+// performed in UdpPacket::parse, provides the invariant that a UdpPacket always
+// has a valid checksum.
 
-impl<B> UdpPacket<B>
-where
-    B: AsMut<[u8]>,
-{
-    /// Serialize a UDP packet in an existing buffer.
-    ///
-    /// `serialize` creates a `UdpPacket` which uses the provided `buffer` for
-    /// its storage, initializing all header fields and calculating the
-    /// checksum. It treats `buffer.range()` as the packet body. It uses the
-    /// last bytes of `buffer` before the body to store the header, and returns
-    /// a new `BufferAndRange` with a range equal to the bytes of the UDP packet
-    /// (including the header). This range can be used to indicate the range for
-    /// encapsulation in another packet.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// # // TODO(joshlf): Make this compile and remove the ignore
-    /// let mut buffer = [0u8; 1024];
-    /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let buffer = UdpPacket::serialize(
-    ///     BufferAndRange::new(&mut buffer[..], 512..),
-    ///     src_ip,
-    ///     dst_ip,
-    ///     src_port,
-    ///     dst_port,
-    /// );
-    /// send_ip_packet(dst_ip, buffer);
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// `serialize` panics if there is insufficient room preceding the body to
-    /// store the UDP header. The caller can guarantee that there will be enough
-    /// room by providing at least `MAX_HEADER_LEN` pre-body bytes.
-    pub fn serialize<A: IpAddr>(
-        mut buffer: BufferAndRange<B>, src_ip: A, dst_ip: A, src_port: Option<NonZeroU16>,
-        dst_port: NonZeroU16,
-    ) -> BufferAndRange<B> {
+/// A serializer for UDP packets.
+pub struct UdpPacketSerializer<A: IpAddr> {
+    src_ip: A,
+    dst_ip: A,
+    src_port: Option<NonZeroU16>,
+    dst_port: NonZeroU16,
+}
+
+impl<A: IpAddr> UdpPacketSerializer<A> {
+    /// Construct a new `UdpPacketSerializer`.
+    pub fn new(
+        src_ip: A, dst_ip: A, src_port: Option<NonZeroU16>, dst_port: NonZeroU16,
+    ) -> UdpPacketSerializer<A> {
+        UdpPacketSerializer {
+            src_ip,
+            dst_ip,
+            src_port,
+            dst_port,
+        }
+    }
+}
+
+const HEADER_BYTES: usize = 8;
+
+impl<A: IpAddr> PacketSerializer for UdpPacketSerializer<A> {
+    fn max_header_bytes(&self) -> usize {
+        HEADER_BYTES
+    }
+
+    fn min_header_bytes(&self) -> usize {
+        HEADER_BYTES
+    }
+
+    fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B>) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let extend_backwards = {
@@ -293,8 +292,8 @@ where
 
             packet
                 .header
-                .set_src_port(src_port.map(|port| port.get()).unwrap_or(0));
-            packet.header.set_dst_port(dst_port.get());
+                .set_src_port(self.src_port.map(|port| port.get()).unwrap_or(0));
+            packet.header.set_dst_port(self.dst_port.get());
             let total_len = packet.total_packet_len();
             let len_field = if fits_in_u16(total_len) {
                 total_len as u16
@@ -315,10 +314,13 @@ where
 
             // This ignores the checksum field in the header, so it's fine that we
             // haven't set it yet, and so it could be filled with arbitrary bytes.
-            let c = packet.compute_checksum(src_ip, dst_ip).expect(&format!(
-                "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
-                total_len
-            ));
+            let c = packet
+                .compute_checksum(self.src_ip, self.dst_ip)
+                .expect(&format!(
+                    "total UDP packet length of {} bytes overflow 32-bit length field of \
+                     pseudo-header",
+                    total_len
+                ));
             NetworkEndian::write_u16(
                 &mut packet.header.checksum,
                 if c == 0 {
@@ -333,7 +335,6 @@ where
         };
 
         buffer.extend_backwards(extend_backwards);
-        buffer
     }
 }
 
@@ -351,6 +352,7 @@ mod tests {
     use crate::ip::{Ipv4Addr, Ipv6Addr};
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::Ipv4Packet;
+    use crate::wire::util::SerializationRequest;
 
     use super::*;
 
@@ -363,7 +365,7 @@ mod tests {
     ]);
 
     #[test]
-    fn test_parse_full() {
+    fn test_parse_serialize_full() {
         use crate::wire::testdata::dns_request::*;
 
         let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
@@ -372,28 +374,36 @@ mod tests {
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
 
-        let (packet, body_range) = Ipv4Packet::parse(frame.body()).unwrap();
+        let (ip_packet, body_range) = Ipv4Packet::parse(frame.body()).unwrap();
         assert_eq!(body_range, IP_BODY_RANGE);
-        assert_eq!(packet.proto(), Ok(IpProto::Udp));
-        assert_eq!(packet.dscp(), IP_DSCP);
-        assert_eq!(packet.ecn(), IP_ECN);
-        assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
-        assert_eq!(packet.mf_flag(), IP_MORE_FRAGMENTS);
-        assert_eq!(packet.fragment_offset(), IP_FRAGMENT_OFFSET);
-        assert_eq!(packet.id(), IP_ID);
-        assert_eq!(packet.ttl(), IP_TTL);
-        assert_eq!(packet.src_ip(), IP_SRC_IP);
-        assert_eq!(packet.dst_ip(), IP_DST_IP);
+        assert_eq!(ip_packet.proto(), Ok(IpProto::Udp));
+        assert_eq!(ip_packet.dscp(), IP_DSCP);
+        assert_eq!(ip_packet.ecn(), IP_ECN);
+        assert_eq!(ip_packet.df_flag(), IP_DONT_FRAGMENT);
+        assert_eq!(ip_packet.mf_flag(), IP_MORE_FRAGMENTS);
+        assert_eq!(ip_packet.fragment_offset(), IP_FRAGMENT_OFFSET);
+        assert_eq!(ip_packet.id(), IP_ID);
+        assert_eq!(ip_packet.ttl(), IP_TTL);
+        assert_eq!(ip_packet.src_ip(), IP_SRC_IP);
+        assert_eq!(ip_packet.dst_ip(), IP_DST_IP);
 
-        let (packet, body_range) =
-            UdpPacket::parse(packet.body(), packet.src_ip(), packet.dst_ip()).unwrap();
+        let (udp_packet, body_range) =
+            UdpPacket::parse(ip_packet.body(), ip_packet.src_ip(), ip_packet.dst_ip()).unwrap();
         assert_eq!(body_range, UDP_BODY_RANGE);
         assert_eq!(
-            packet.src_port().map(|p| p.get()).unwrap_or(0),
+            udp_packet.src_port().map(|p| p.get()).unwrap_or(0),
             UDP_SRC_PORT
         );
-        assert_eq!(packet.dst_port().get(), UDP_DST_PORT);
-        assert_eq!(packet.body(), UDP_BODY);
+        assert_eq!(udp_packet.dst_port().get(), UDP_DST_PORT);
+        assert_eq!(udp_packet.body(), UDP_BODY);
+
+        let buffer = udp_packet
+            .body()
+            .encapsulate(udp_packet.serializer(ip_packet.src_ip(), ip_packet.dst_ip()))
+            .encapsulate(ip_packet.serializer())
+            .encapsulate(frame.serializer())
+            .serialize_outer();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
     #[test]
@@ -423,20 +433,20 @@ mod tests {
     fn test_serialize() {
         let mut buf = [0; 8];
         {
-            let buffer = UdpPacket::serialize(
-                BufferAndRange::new(&mut buf, 8..),
+            let mut buffer = BufferAndRange::new_from(&mut buf, 8..);
+            UdpPacketSerializer::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
-            );
+            ).serialize(&mut buffer);
             assert_eq!(buffer.range(), 0..8);
         }
         // assert that we get the literal bytes we expected
         assert_eq!(buf, [0, 1, 0, 2, 0, 8, 239, 199]);
         let (packet, _) = UdpPacket::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
         // assert that when we parse those bytes, we get the values we set in
-        // the builder
+        // the serializer
         assert_eq!(packet.src_port().unwrap().get(), 1);
         assert_eq!(packet.dst_port().get(), 2);
         assert!(packet.checksummed());
@@ -447,21 +457,19 @@ mod tests {
         // Test that UdpPacket::serialize properly zeroes memory before serializing
         // the header.
         let mut buf_0 = [0; 8];
-        UdpPacket::serialize(
-            BufferAndRange::new(&mut buf_0[..], 8..),
+        UdpPacketSerializer::new(
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             NonZeroU16::new(1),
             NonZeroU16::new(2).unwrap(),
-        );
+        ).serialize(&mut BufferAndRange::new_from(&mut buf_0[..], 8..));
         let mut buf_1 = [0xFF; 8];
-        UdpPacket::serialize(
-            BufferAndRange::new(&mut buf_1[..], 8..),
+        UdpPacketSerializer::new(
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             NonZeroU16::new(1),
             NonZeroU16::new(2).unwrap(),
-        );
+        ).serialize(&mut BufferAndRange::new_from(&mut buf_1[..], 8..));
         assert_eq!(buf_0, buf_1);
     }
 
@@ -520,26 +528,24 @@ mod tests {
     #[should_panic]
     fn test_serialize_fail_header_too_short() {
         let mut buf = [0; 7];
-        UdpPacket::serialize(
-            BufferAndRange::new(&mut buf[..], 7..),
+        UdpPacketSerializer::new(
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             None,
             NonZeroU16::new(1).unwrap(),
-        );
+        ).serialize(&mut BufferAndRange::new_from(&mut buf[..], 7..));
     }
 
     #[test]
     #[should_panic]
     fn test_serialize_fail_packet_too_long_ipv4() {
         let mut buf = [0; 1 << 16];
-        UdpPacket::serialize(
-            BufferAndRange::new(&mut buf[..], 8..),
+        UdpPacketSerializer::new(
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             None,
             NonZeroU16::new(1).unwrap(),
-        );
+        ).serialize(&mut BufferAndRange::new_from(&mut buf[..], 8..));
     }
 
     // This test tries to allocate 4GB of memory. Run at your own risk.
@@ -550,12 +556,11 @@ mod tests {
     fn test_serialize_fail_packet_too_long_ipv6() {
         // total length of 2^32 or greater is disallowed in IPv6
         let mut buf = vec![0u8; 1 << 32];
-        UdpPacket::serialize(
-            BufferAndRange::new(&mut buf[..], 8..),
+        UdpPacketSerializer::new(
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             None,
             NonZeroU16::new(1).unwrap(),
-        );
+        ).serialize(&mut BufferAndRange::new_from(&mut buf[..], 8..));
     }
 }

@@ -77,6 +77,7 @@ impl UdpEventDispatcher for DummyEventDispatcher {
     type UdpConn = ();
     type UdpListener = ();
 }
+
 impl TransportLayerEventDispatcher for DummyEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for DummyEventDispatcher {
