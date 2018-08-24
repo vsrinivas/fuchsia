@@ -64,6 +64,56 @@ void StringList::push(const char* str, bool front) {
     iterator_ = elements_.end();
 }
 
+void StringList::keep_if(const char* substr) {
+    if (!substr) {
+        return;
+    }
+    while (elements_.erase_if([substr](const StringElement& element) -> bool {
+        return strstr(element.str_.c_str(), substr) == nullptr;
+    })) {
+    }
+    iterator_ = elements_.end();
+}
+
+void StringList::keep_if_any(StringList* substrs) {
+    ZX_DEBUG_ASSERT(substrs);
+    while (elements_.erase_if([substrs](const StringElement& element) -> bool {
+        for (const char* substr = substrs->first(); substr; substr = substrs->next()) {
+            if (strstr(element.str_.c_str(), substr)) {
+                return false;
+            }
+        }
+        return true;
+    })) {
+    }
+    iterator_ = elements_.end();
+}
+
+void StringList::keep_if_all(StringList* substrs) {
+    ZX_DEBUG_ASSERT(substrs);
+    while (elements_.erase_if([substrs](const StringElement& element) -> bool {
+        for (const char* substr = substrs->first(); substr; substr = substrs->next()) {
+            if (!strstr(element.str_.c_str(), substr)) {
+                return true;
+            }
+        }
+        return false;
+    })) {
+    }
+    iterator_ = elements_.end();
+}
+
+void StringList::erase_if(const char* match) {
+    if (!match) {
+        return;
+    }
+    while (elements_.erase_if([match](const StringElement& element) -> bool {
+        return strcmp(element.str_.c_str(), match) == 0;
+    })) {
+    }
+    iterator_ = elements_.end();
+}
+
 void StringList::clear() {
     elements_.clear();
     iterator_ = elements_.begin();

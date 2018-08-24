@@ -30,6 +30,22 @@ public:
     void push_front(const char* str);
     void push_back(const char* str);
 
+    // These methods are similar to |fbl::DoublyLinkedList|'s, except that they apply a simple
+    // substring pattern match instead of taking a functor.  Empty strings match everything, while
+    // null inputs leave the list unchanged.
+
+    // Keeps elements if they **CONTAIN** |substr|.  Null strings leave the list unchanged.
+    void keep_if(const char* substr);
+
+    // Keeps elements if they contain at least one element of |substrs|.
+    void keep_if_any(StringList* substrs);
+
+    // Keeps elements if they contain every element of |substrs|.
+    void keep_if_all(StringList* substrs);
+
+    // Removes elements if they exactly **MATCH** |match|.  Null strings leave the list unchanged.
+    void erase_if(const char* match);
+
     // In place of iterators, this class provides |first| and |next| methods.  The former resets the
     // internal iterator to the beginning of the list, while the latter returns successive elements
     // with each successive call until it reaches the end of the list and returns null.  The list
