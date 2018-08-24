@@ -4,6 +4,11 @@
 
 library fuchsia.modular.internal;
 
+using fuchsia.modular;
+using fuchsia.modular.auth;
+using fuchsia.ui.policy;
+using fuchsia.ui.viewsv1token;
+
 // The device_runner application (there is no |DeviceRunner| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per
 // user.

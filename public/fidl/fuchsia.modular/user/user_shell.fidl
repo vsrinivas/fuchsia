@@ -4,7 +4,9 @@
 
 library fuchsia.modular;
 
+using fuchsia.modular.auth;
 using fuchsia.speech;
+using fuchsia.ui.policy;
 
 // This interface is implemented by a user shell. Dependencies are passed to it
 // in Initialize() on startup. The user shell is also expected to implement

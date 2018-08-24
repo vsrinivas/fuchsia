@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.media;
+
 struct QueryResponse {
   vector<Proposal> proposals;
   string? natural_language_response;

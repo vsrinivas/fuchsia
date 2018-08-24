@@ -4,6 +4,8 @@
 
 library fuchsia.ledger.cloud;
 
+using fuchsia.mem;
+
 // This file defines a cloud service that can be used by Ledger to power cloud
 // sync.
 

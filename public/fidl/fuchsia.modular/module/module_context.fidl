@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.ui.viewsv1token;
+
 // This interface is exposed to all Module instances in a story. It allows to
 // create Link instances and run more Module instances.
 [Discoverable]

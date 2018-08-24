@@ -4,6 +4,10 @@
 
 library fuchsia.modular;
 
+using fuchsia.modular.auth;
+using fuchsia.ui.viewsv1token;
+using fuchsia.sys;
+
 // Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
 // |DeviceShell| can get information about the users of this device from the
 // |DeviceRunner|, and act on the provided information (including extending the

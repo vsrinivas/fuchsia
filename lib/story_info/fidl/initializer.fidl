@@ -4,6 +4,8 @@
 
 library fuchsia.maxwell.internal;
 
+using fuchsia.modular;
+
 // This service is provided by the StoryInfoAcquirer through the
 // modular.Agent's Connect() call. Implemented by the StoryInfoAcquirer to get
 // its runtime dependencies from its parent process.

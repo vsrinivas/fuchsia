@@ -4,6 +4,9 @@
 
 library fuchsia.modular;
 
+using fuchsia.modular.auth;
+using fuchsia.ui.policy;
+
 // This interface is implemented by a device shell. Dependencies and parameters
 // are passed to it in Initialize() on startup. The device shell is also
 // expected to implement Lifecycle in order to receive a Terminate() call on

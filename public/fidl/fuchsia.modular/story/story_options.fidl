@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using zx;
+
 struct StoryOptions {
   // Whether or not the story will be hidden on a call to
   // StoryProvider#PreviousStories.

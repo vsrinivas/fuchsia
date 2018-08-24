@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.modular.auth;
+
 // An instance of this service is exposed to agents in their namespace.
 // |AgentContext| allows an agent to schedule tasks which run in response to
 // triggers. Triggers are conditions such as a message arriving on a
@@ -69,4 +71,3 @@ union TriggerCondition {
   // |alarm_in_seconds| seconds.
   uint32 alarm_in_seconds;
 };
-

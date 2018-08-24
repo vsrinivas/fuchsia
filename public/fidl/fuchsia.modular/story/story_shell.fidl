@@ -4,6 +4,9 @@
 
 library fuchsia.modular;
 
+using fuchsia.ui.policy;
+using fuchsia.ui.viewsv1token;
+
 // This interface is implemented by a story shell. Dependencies are passed to it
 // in Initialize() on startup. The story shell is also expected to implement
 // Lifecycle in order to receive a Terminate() call on teardown.

@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.ui.viewsv1token;
+
 // Used by the clients of StoryProvider (UserShell) to interact with a single
 // story. Created by StoryProvider.
 //

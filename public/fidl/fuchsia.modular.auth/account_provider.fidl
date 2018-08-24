@@ -4,6 +4,8 @@
 
 library fuchsia.modular.auth;
 
+using fuchsia.ui.viewsv1token;
+
 // An interface that allows the Framework to talk to the token manager service
 // to add new accounts or be able to get a |TokenProviderFactory| that can be
 // used to provide specialized instances of |TokenProvider| to third party

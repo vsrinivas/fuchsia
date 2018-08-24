@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.images;
+
 enum SuggestionImageType {
   PERSON = 0;
   OTHER = 1;

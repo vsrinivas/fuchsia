@@ -4,6 +4,9 @@
 
 library fuchsia.modular.internal;
 
+using fuchsia.ledger;
+using fuchsia.modular;
+
 struct StoryData {
   // Metadata available to the UserShell.
   fuchsia.modular.StoryInfo story_info;

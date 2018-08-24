@@ -4,6 +4,9 @@
 
 library fuchsia.modular;
 
+using fuchsia.ledger;
+using fuchsia.sys;
+
 // Provided to all component instances in their respective initialization
 // information by the framework. For example, a Module gets it from its
 // ModuleContext and an Agent gets it from its AgentContext.

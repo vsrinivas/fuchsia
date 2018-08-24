@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.sys;
+
 // This service is implemented by an application that is meant to be run as an
 // Agent.
 //

@@ -4,6 +4,9 @@
 
 library fuchsia.ledger.cloud.firestore;
 
+using fuchsia.ledger.cloud;
+using fuchsia.modular.auth;
+
 // Configuration to use when connecting to the Firestore server.
 struct Config {
   // ID of the Firestore instance.

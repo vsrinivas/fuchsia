@@ -4,6 +4,8 @@
 
 library fuchsia.ledger.internal;
 
+using fuchsia.ledger;
+
 [Discoverable]
 interface LedgerRepositoryDebug {
   // Returns the instances list in LedgerRepository.
