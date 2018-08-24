@@ -137,7 +137,14 @@ func main() {
 	}
 	if *cmdline == "" {
 		needFuchsiaBuildDir()
-		*cmdline = filepath.Join(*fuchsiaBuildDir, "cmdline")
+		p := filepath.Join(*fuchsiaBuildDir, "cmdline")
+		if _, err := os.Stat(p); err == nil {
+			*cmdline = p
+		}
+	} else {
+		if _, err := os.Stat(*cmdline); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if *abr {
@@ -423,7 +430,7 @@ func main() {
 		msCopyIn(root, *zbi, "zircon.bin")
 		msCopyIn(root, *zedboot, "zedboot.bin")
 	}
-	if _, err := os.Stat(*cmdline); err == nil {
+	if *cmdline != "" {
 		msCopyIn(root, *cmdline, "cmdline")
 	}
 
