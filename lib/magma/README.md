@@ -1,8 +1,24 @@
-Magma: Graphics for Zircon
-===========================
+Magma: A gpu driver architecture for Fuchsia
+============================================
 
-Magma is a framework for graphics drivers on the Zircon kernel. Magma drivers are logically divided into a 'System Driver' which runs as a userspace Zircon driver service, and an 'Application Driver' which runs in the application's address space (this mirrors the architecture of the 'Kernel Mode Driver' and 'User Mode Driver' in traditional graphics stack for monolithic kernels, but here both components run in userspace).
+Magma is a framework for building gpu drivers for the Fuchsia operating system.
 
-Magma itself is the body of software that sits between the Application Driver and the System Driver and facilitates communication between the two over Zircon IPC, and provides core buffer sharing logic which underlies the system compositing mechanism. 
+## Overview
 
-Both the Application Driver and the System Driver interface with the Magma framework through stable, versioned ABIs in order to allow updating the core graphics system and IHV drivers independently of one another.
+See [Magma: Overview](docs/overview.md).
+
+## Design
+
+See [Magma: Design](docs/design.md).
+
+## Porting Guide
+
+See [Magma: Porting Guide](docs/porting.md).
+
+## Contributing
+
+See [Magma: Contributing](docs/contributing.md).
+
+## Test Strategy
+
+See [Magma: Test Strategy](docs/test_strategy.md).
