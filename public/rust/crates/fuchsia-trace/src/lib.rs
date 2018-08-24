@@ -1,14 +1,18 @@
-extern crate fuchsia_zircon as zx;
+use {
+    fuchsia_zircon as zx,
+    std::{
+        ffi::CStr,
+        marker::PhantomData,
+        mem,
+        ptr,
+    },
+};
 
 // Re-export libc to be used from the c_char macro
 #[doc(hidden)]
-pub extern crate libc as __libc_reexport;
-use __libc_reexport as libc;
-
-use std::ffi::CStr;
-use std::marker::PhantomData;
-use std::mem;
-use std::ptr;
+pub mod __libc_reexport {
+    pub use libc::*;
+}
 
 /// `Scope` represents the scope of a trace event.
 #[derive(Copy, Clone)]
@@ -420,8 +424,7 @@ fn trace_make_inline_string_ref(string: &str) -> sys::trace_string_ref_t {
 
 mod sys {
     #![allow(non_camel_case_types, unused)]
-    use zx::sys::{zx_koid_t, zx_obj_type_t, zx_handle_t, zx_status_t};
-    use libc;
+    use fuchsia_zircon::sys::{zx_koid_t, zx_obj_type_t, zx_handle_t, zx_status_t};
 
     pub type trace_ticks_t = u64;
     pub type trace_counter_id_t = u64;
@@ -514,7 +517,7 @@ mod sys {
             unsafe fn(handler: *const trace_handler_t),
         pub trace_stopped:
             unsafe fn(handler: *const trace_handler_t,
-                      async: *const (),//async_t,
+                      async_ptr: *const (),//async_t,
                       disposition: zx_status_t,
                       buffer_bytes_written: libc::size_t),
         pub buffer_overflow:
@@ -730,7 +733,7 @@ mod sys {
         // From trace-engine/handler.h
         /*
         pub fn trace_start_engine(
-            async: *const async_t,
+            async_ptr: *const async_t,
             handler: *const trace_handler_t,
             buffer: *const (),
             buffer_num_bytes: libc::size_t) -> zx_status_t;
@@ -768,7 +771,7 @@ mod sys {
 
 #[cfg(test)]
 mod test {
-    use {Scope, trim_to_last_char_boundary};
+    use crate::{Scope, trim_to_last_char_boundary};
 
     #[test]
     fn trim_to_last_char_boundary_trims_to_last_character_boundary() {
