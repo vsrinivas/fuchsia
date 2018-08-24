@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("fuchsia-framebuffer") {
   name = "fuchsia_framebuffer"
   version = "0.1.0"
-  edition = "2015"
+  edition = "2018"
   deps = [
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",

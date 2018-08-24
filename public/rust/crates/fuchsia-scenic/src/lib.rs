@@ -4,14 +4,6 @@
 
 #![deny(warnings)]
 
-extern crate fidl;
-extern crate fidl_fuchsia_images;
-extern crate fidl_fuchsia_ui_gfx;
-extern crate fidl_fuchsia_ui_scenic;
-extern crate fuchsia_zircon;
-extern crate parking_lot;
-extern crate shared_buffer;
-
 mod cmd;
 
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};

@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate fidl_fuchsia_ui_gfx;
-
-use self::fidl_fuchsia_ui_gfx::Command as GfxCommand;
-use self::fidl_fuchsia_ui_gfx::{AddChildCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd,
+use fidl_fuchsia_ui_gfx::Command as GfxCommand;
+use fidl_fuchsia_ui_gfx::{AddChildCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd,
                                 DetachCmd, ImportResourceCmd, ImportSpec, Quaternion,
                                 QuaternionValue, ReleaseResourceCmd, ResourceArgs, SetColorCmd,
                                 SetEventMaskCmd, SetMaterialCmd, SetRotationCmd, SetScaleCmd,

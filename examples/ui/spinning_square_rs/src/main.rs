@@ -2,24 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use]
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_ui_gfx as gfx;
-extern crate fidl_fuchsia_ui_scenic;
-extern crate fidl_fuchsia_ui_viewsv1;
-extern crate fidl_fuchsia_ui_viewsv1token;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_scenic as scenic;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-
-use async::Interval;
-use component::client::connect_to_service;
-use component::server::ServiceFactory;
-use failure::{Error, ResultExt};
+use failure::{Error, ResultExt, bail};
 use fidl::endpoints2::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_scenic::{ScenicMarker, SessionListenerMarker, SessionListenerRequest,
                              SessionMarker};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
@@ -27,13 +12,16 @@ use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManag
                               ViewManagerProxy, ViewMarker, ViewProviderMarker,
                               ViewProviderRequestStream};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
+use fuchsia_app as component;
+use fuchsia_app::{client::connect_to_service, server::ServiceFactory};
+use fuchsia_async::{self as fasync, Interval};
+use fuchsia_scenic::{ImportNode, Material, Rectangle, Session, SessionPtr,
+                     ShapeNode};
+use fuchsia_zircon::{self as zx, ClockId, Duration, Time};
 use futures::future::ready as fready;
-use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
-use gfx::ColorRgba;
-use scenic::{ImportNode, Material, Rectangle, Session, SessionPtr, ShapeNode};
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use std::f32::consts::PI;
 use std::sync::{Arc, Mutex};
-use zx::{ClockId, Duration, Time};
 
 struct SpinningSquareView {
     _view: fidl_fuchsia_ui_viewsv1::ViewProxy,
@@ -95,7 +83,7 @@ impl SpinningSquareView {
             .map(move |_| {
                 view_controller.lock().unwrap().update();
             }).collect::<()>();
-        async::spawn(f);
+        fasync::spawn(f);
     }
 
     fn setup_session_listener(
@@ -104,20 +92,17 @@ impl SpinningSquareView {
         let session_listener_request =
             ServerEnd::<SessionListenerMarker>::new(session_listener_server);
         let view_controller = view_controller.clone();
-        async::spawn(
+        fasync::spawn(
             session_listener_request
                 .into_stream()
                 .unwrap()
-                .map_ok(move |request| {
-                    match request {
-                        SessionListenerRequest::OnEvent { events, .. } => view_controller
-                            .lock()
-                            .unwrap()
-                            .handle_session_events(events),
-                        _ => (),
-                    }
-                })
-                .try_collect::<()>()
+                .map_ok(move |request| match request {
+                    SessionListenerRequest::OnEvent { events, .. } => view_controller
+                        .lock()
+                        .unwrap()
+                        .handle_session_events(events),
+                    _ => (),
+                }).try_collect::<()>()
                 .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
         );
     }
@@ -127,7 +112,7 @@ impl SpinningSquareView {
         view_listener_request: ServerEnd<ViewListenerMarker>,
     ) {
         let view_controller = view_controller.clone();
-        async::spawn(
+        fasync::spawn(
             view_listener_request
                 .into_stream()
                 .unwrap()
@@ -142,8 +127,7 @@ impl SpinningSquareView {
                             .handle_properies_changed(&properties);
                         fready(responder.send())
                     },
-                )
-                .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
+                ).unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
         );
     }
 
@@ -204,7 +188,7 @@ impl SpinningSquareView {
     }
 
     fn present(&self) {
-        async::spawn(
+        fasync::spawn(
             self.session
                 .lock()
                 .present(0)
@@ -247,16 +231,15 @@ impl App {
         }))
     }
 
-    pub fn spawn_view_provider_server(app: &AppPtr, chan: async::Channel) {
+    pub fn spawn_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
         let app = app.clone();
-        async::spawn(
+        fasync::spawn(
             ViewProviderRequestStream::from_channel(chan)
                 .try_for_each(move |req| {
                     let CreateView { view_owner, .. } = req;
                     App::app_create_view(app.clone(), view_owner).unwrap();
                     futures::future::ready(Ok(()))
-                })
-                .unwrap_or_else(|e| eprintln!("error running view_provider server: {:?}", e)),
+                }).unwrap_or_else(|e| eprintln!("error running view_provider server: {:?}", e)),
         )
     }
 
@@ -293,13 +276,13 @@ impl ServiceFactory for ViewProvider {
         ViewProviderMarker::NAME
     }
 
-    fn spawn_service(&mut self, channel: async::Channel) {
+    fn spawn_service(&mut self, channel: fasync::Channel) {
         App::spawn_view_provider_server(&self.app, channel);
     }
 }
 
 fn main() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let app = App::new();
 

@@ -2,24 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate failure;
-extern crate fidl_fuchsia_amber as amber;
-extern crate font_rs;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_framebuffer;
-extern crate fuchsia_zircon as zx;
-
 mod text;
 
-use async::futures::{FutureExt, TryFutureExt};
+use crate::text::Face;
 use failure::Fail;
+use fidl_fuchsia_amber as amber;
+use fuchsia_app as app;
+use fuchsia_async::{self as fasync, futures::TryFutureExt};
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
+use fuchsia_zircon as zx;
 use std::cell::RefCell;
 use std::io::{self, Read};
 use std::rc::Rc;
 use std::thread;
-use text::Face;
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
@@ -86,7 +81,7 @@ fn main() {
 
     let face = Face::new(FONT_DATA).unwrap();
 
-    let mut executor = async::Executor::new().unwrap();
+    let mut executor = fasync::Executor::new().unwrap();
 
     let fb = FrameBuffer::new(None, &mut executor).unwrap();
     let config = fb.get_config();
@@ -117,7 +112,7 @@ fn main() {
                     .login(&src_list[0].id)
                     .map_err(|e| e.context("login failed"))
                     .map_ok(move |device_code| println!("device_code = {:#?}", device_code));
-                async::spawn_local(login.unwrap_or_else(move |err| {
+                fasync::spawn_local(login.unwrap_or_else(move |err| {
                     println!("in login recover {:#?}", err);
                     let mut ui_local = ui_login.borrow_mut();
                     ui_local.draw(&src_list[0].id, "Login failed")
@@ -129,10 +124,12 @@ fn main() {
             }
         });
 
-    async::spawn_local(list_srcs.unwrap_or_else(|err| println!("in list_srcs recover {:#?}", err)));
+    fasync::spawn_local(
+        list_srcs.unwrap_or_else(|err| println!("in list_srcs recover {:#?}", err)),
+    );
 
     loop {
-        let timeout = async::Timer::new(zx::Time::INFINITE);
+        let timeout = fasync::Timer::new(zx::Time::INFINITE);
         executor.run_singlethreaded(timeout);
         println!("tick");
     }

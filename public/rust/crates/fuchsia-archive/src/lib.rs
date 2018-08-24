@@ -52,16 +52,6 @@
 //!
 //! ```
 
-extern crate bincode;
-#[macro_use]
-extern crate failure;
-#[cfg(test)]
-extern crate itertools;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate tempdir;
-
 use bincode::{deserialize_from, serialize_into, Infinite};
 use failure::Error;
 use std::collections::BTreeMap;

@@ -67,7 +67,7 @@ impl<'a> Face<'a> {
     ) -> (i32, i32) {
         let mut max_top = 0;
         let mut x = left_x;
-        let padding : i32 = max(size as i32 / 16, 2);
+        let padding: i32 = max(size as i32 / 16, 2);
         for one_char in text.chars() {
             if one_char != ' ' {
                 if let Some(glyph_id) = self.font.lookup_glyph_id(one_char as u32) {
