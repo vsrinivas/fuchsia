@@ -48,6 +48,11 @@ if (zircon_boot_groups == "all") {
 # This will collect a list of scopes describing each image exported.
 # Each scope contains:
 #
+#   default (optional)
+#     [bool] Include image in the default group (default: true).
+#     It is preferred that very large images that are rarely used are not in the
+#     default group. Absence of a value is equivalent to true.
+#
 #   deps (required)
 #     [list of labels] Target that generates the image file.
 #     If `sources` is not specified, this must be an action in this file.
@@ -640,6 +645,7 @@ zbi("netboot") {
 }
 images += [
   {
+    default = false
     json = {
       name = "netboot"
       type = "zbi"
@@ -814,6 +820,7 @@ zircon_tool_action("installer") {
 }
 images += [
   {
+    default = false
     public = [
       "IMAGE_INSTALLER_RAW",
     ]
@@ -827,19 +834,25 @@ group("images") {
   testonly = true
   deps = [
     ":ids.txt",
-    ":legacy-images",
+    ":default-legacy-images",
     "zedboot",
   ]
   foreach(image, images) {
-    deps += image.deps
+    if (!defined(image.default) || image.default) {
+      deps += image.deps
+    }
   }
 }
 
 legacy_images = []
+default_legacy_images = []
 foreach(image, images) {
   if (defined(image.legacy_copy)) {
     copy("legacy_copy_" + image.legacy_copy) {
       visibility = [ ":legacy-images" ]
+      if (!defined(image.default) || image.default) {
+        visibility += [ ":default-legacy-images" ]
+      }
       testonly = true
       deps = image.deps
       outputs = [
@@ -847,13 +860,22 @@ foreach(image, images) {
       ]
       sources = get_target_outputs(deps[0])
     }
-    legacy_images += [ ":legacy_copy_${image.legacy_copy}" ]
+    legacy_target = ":legacy_copy_${image.legacy_copy}"
+    legacy_images += [ legacy_target ]
+    if (!defined(image.default) || image.default) {
+      default_legacy_images += [ legacy_target ]
+    }
   }
 }
 group("legacy-images") {
   visibility = [ ":images" ]
   testonly = true
   deps = legacy_images
+}
+group("default-legacy-images") {
+  visibility = [ ":images" ]
+  testonly = true
+  deps = default_legacy_images
 }
 
 # See definition of images (above) for purpose.
