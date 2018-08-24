@@ -338,8 +338,9 @@ void Record::Start(const fxl::CommandLine& command_line) {
       },
       [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); },
       [this] {
-        if (!options_.app.empty())
+        if (!options_.app.empty()) {
           options_.launchpad ? LaunchTool() : LaunchApp();
+        }
         StartTimer();
       },
       [this] { DoneTrace(); });

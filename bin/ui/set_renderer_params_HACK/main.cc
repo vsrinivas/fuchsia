@@ -52,6 +52,10 @@ int main(int argc, const char** argv) {
   auto presenter =
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+  presenter.set_error_handler([&loop] {
+    FXL_LOG(INFO) << "Lost connection to Presenter service.";
+    loop.Quit();
+  });
   presenter->HACK_SetRendererParams(clipping_enabled,
                                     std::move(renderer_params));
 

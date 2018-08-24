@@ -5,17 +5,30 @@
 import("//build/package.gni")
 
 copy("copy_benchmarks") {
-  sources = ["benchmarks.sh"]
-  outputs = ["$root_out_dir/garnet_{{source_file_part}}"]
+  sources = [
+    "benchmarks.sh",
+    "gfx_benchmarks.sh",
+  ]
+  outputs = [
+    "$root_out_dir/garnet_{{source_file_part}}",
+  ]
 }
 
 package("garnet_benchmarks") {
   testonly = true
 
-  deps = [":copy_benchmarks"]
+  deps = [
+    ":copy_benchmarks",
+  ]
 
-  binaries = [ {
-        name = "garnet_benchmarks.sh"
-        dest = "benchmarks.sh"
-      } ]
+  binaries = [
+    {
+      name = "garnet_benchmarks.sh"
+      dest = "benchmarks.sh"
+    },
+    {
+      name = "garnet_gfx_benchmarks.sh"
+      dest = "gfx_benchmarks.sh"
+    },
+  ]
 }

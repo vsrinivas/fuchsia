@@ -31,17 +31,11 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
 if `run vulkan_is_supported`; then
-  # Scenic performance tests.
-  SCENIC_BENCHMARK="/pkgfs/packages/scenic_benchmarks/0/data/scenic_benchmark.sh"
-
-  # hello_scenic
-  runbench_exec "${OUT_DIR}/hello_scenic_benchmark.json" \
-      "${SCENIC_BENCHMARK}" "${OUT_DIR}" \
-      "${OUT_DIR}/hello_scenic_benchmark.json" \
-      fuchsia.scenic.hello_scenic \
-      "run hello_scenic"
+  # Run the gfx benchmarks in the current shell environment, because they write
+  # to (hidden) global state used by runbench_finish.
+  . /pkgfs/packages/garnet_benchmarks/0/bin/gfx_benchmarks.sh "$@"
 else
-  echo "Vulkan not supported; Scenic tests skipped."
+  echo "Vulkan not supported; graphics tests skipped."
 fi
 
 # Test storage performance.

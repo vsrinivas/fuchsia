@@ -34,9 +34,18 @@ package("scenic_benchmarks") {
   deps = [
     ":process_scenic_trace",
   ]
+
   binaries = [
     {
+      name = "gfx_benchmarks_standalone.sh"
+      source = rebase_path("gfx_benchmarks_standalone.sh")
+    },
+    {
       name = "process_scenic_trace"
+    },
+    {
+      name = "run_scenic_benchmark.sh"
+      source = rebase_path("run_scenic_benchmark.sh")
     },
   ]
 
@@ -44,13 +53,6 @@ package("scenic_benchmarks") {
     {
       path = rebase_path("meta/scenic_benchmarks.cmx")
       dest = "scenic_benchmarks.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("scenic_benchmark.sh")
-      dest = "scenic_benchmark.sh"
     },
   ]
 }

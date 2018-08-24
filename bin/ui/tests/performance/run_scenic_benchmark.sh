@@ -22,11 +22,13 @@ echo "== $BENCHMARK_LABEL: Killing processes..."
 killall root_presenter; killall scenic; killall device_runner; killall view_manager; killall flutter*; killall set_root_view
 
 echo "== $BENCHMARK_LABEL: Configuring scenic renderer params..."
-set_renderer_params --render_continuously $RENDERER_PARAMS
+run set_renderer_params --render_continuously $RENDERER_PARAMS
 
 echo "== $BENCHMARK_LABEL: Tracing..."
 echo $TRACE_FILE
-$CMD &
+# Use `run` to ensure the command has the proper environment.
+run $CMD &
+
 # Only trace 'gfx' events which reduces trace size and prevents trace buffer overflow.
 # TODO(ZX-1107): Overflow might be fixed with continuous tracing.
 trace record --categories=gfx --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
