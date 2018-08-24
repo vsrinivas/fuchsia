@@ -37,12 +37,18 @@ public:
     // Returns a list of files in the directory given by the current path.
     fbl::unique_ptr<StringList> List() const;
 
+    // Checks if a directory exists at |relpath| and creates on if it does not.
+    zx_status_t Ensure(const char* relpath);
+
     // Changes the current path to the directory described by |relpath|.
     zx_status_t Push(const char* relpath);
 
     // Changes to current path to value before the corresponding |Push|.  Does nothing if already at
     // the filesystem root.
     void Pop();
+
+    // Deletes the file described by |relpath|, if it exists.
+    zx_status_t Remove(const char* relpath);
 
     // Resets the current path to point at the filesystem root.
     void Reset();

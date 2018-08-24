@@ -93,6 +93,35 @@ fbl::unique_ptr<StringList> Path::List() const {
     return fbl::move(list);
 }
 
+zx_status_t Path::Ensure(const char* relpath) {
+    ZX_DEBUG_ASSERT(relpath);
+    zx_status_t rc;
+
+    // First check if already exists
+    fbl::String abspath = fbl::move(Join(relpath));
+    struct stat buf;
+    if (stat(abspath.c_str(), &buf) == 0 && S_ISDIR(buf.st_mode)) {
+        return ZX_OK;
+    }
+
+    // Now recursively create the parent directories
+    const char* sep = strrchr(relpath, '/');
+    if (sep) {
+        fbl::String prefix(relpath, sep - relpath);
+        if ((rc = Ensure(prefix.c_str())) != ZX_OK) {
+            xprintf("Failed to ensure parent directory: %s\n", zx_status_get_string(rc));
+            return rc;
+        }
+    }
+
+    // Finally, create the last directory
+    if (mkdir(abspath.c_str(), 0777) != 0) {
+        xprintf("Failed to make directory '%s': %s.\n", abspath.c_str(), strerror(errno));
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
 zx_status_t Path::Push(const char* relpath) {
     ZX_DEBUG_ASSERT(relpath);
     if (*relpath == '\0') {
@@ -133,6 +162,51 @@ void Path::Pop() {
     fbl::unique_ptr<Path> parent;
     parent.swap(parent_->parent_);
     parent_.swap(parent);
+}
+
+zx_status_t Path::Remove(const char* relpath) {
+    ZX_DEBUG_ASSERT(relpath);
+    zx_status_t rc;
+
+    fbl::String abspath = fbl::move(Join(relpath));
+    struct stat buf;
+    if (stat(abspath.c_str(), &buf) != 0) {
+        // Ignore missing files
+        if (errno != ENOENT) {
+            xprintf("Failed to get status for '%s': %s\n", abspath.c_str(), strerror(errno));
+            return ZX_ERR_IO;
+        }
+
+    } else if (S_ISDIR(buf.st_mode)) {
+        // Recursively remove directories
+        if ((rc = Push(relpath)) != ZX_OK) {
+            xprintf("Failed to push subdirectory: %s\n", zx_status_get_string(rc));
+            return rc;
+        }
+        auto pop = fbl::MakeAutoCall([this]() { Pop(); });
+
+        auto names = List();
+        for (const char* name = names->first(); name; name = names->next()) {
+            if ((rc = Remove(name)) != ZX_OK) {
+                xprintf("Failed to remove subdirectory: %s\n", zx_status_get_string(rc));
+                return rc;
+            }
+        }
+        if (rmdir(c_str()) != 0) {
+            xprintf("Failed to remove directory '%s': %s\n", c_str(), strerror(errno));
+            return ZX_ERR_IO;
+        }
+        return ZX_OK;
+
+    } else {
+        // Remove file
+        if (unlink(abspath.c_str()) != 0) {
+            xprintf("Failed to unlink '%s': %s\n", abspath.c_str(), strerror(errno));
+            return ZX_ERR_IO;
+        }
+    }
+
+    return ZX_OK;
 }
 
 void Path::Reset() {

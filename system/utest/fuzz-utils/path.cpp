@@ -177,6 +177,41 @@ bool TestList() {
     END_TEST;
 }
 
+bool TestEnsureAndRemove() {
+    BEGIN_TEST;
+    PathFixture fixture;
+    ASSERT_TRUE(fixture.Create());
+
+    Path path;
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path().c_str()));
+    ASSERT_EQ(ZX_OK, path.Push("foo/ba/z/qu"));
+
+    EXPECT_EQ(ZX_OK, path.Ensure(""));
+    EXPECT_NE(ZX_OK, path.Ensure("x"));
+    EXPECT_EQ(ZX_OK, path.Ensure("ux"));
+    EXPECT_EQ(ZX_OK, path.Ensure("corge"));
+    EXPECT_EQ(ZX_OK, path.Ensure("g/rault"));
+    EXPECT_EQ(ZX_OK, path.Ensure("g/arply"));
+
+    EXPECT_NE(ZX_OK, path.Remove(""));
+    EXPECT_EQ(ZX_OK, path.Remove("a"));
+
+    EXPECT_EQ(ZX_OK, path.Remove("x"));
+    EXPECT_NE(ZX_OK, path.Push("x"));
+
+    EXPECT_EQ(ZX_OK, path.Remove("corge"));
+    EXPECT_NE(ZX_OK, path.Push("corge"));
+
+    EXPECT_EQ(ZX_OK, path.Remove("g"));
+    EXPECT_NE(ZX_OK, path.Push("g"));
+
+    path.Pop();
+    EXPECT_EQ(ZX_OK, path.Remove("foo"));
+    EXPECT_NE(ZX_OK, path.Push("foo"));
+
+    END_TEST;
+}
+
 bool TestReset() {
     BEGIN_TEST;
     PathFixture fixture;
@@ -196,6 +231,7 @@ RUN_TEST(TestJoin)
 RUN_TEST(TestPushAndPop)
 RUN_TEST(TestGetSize)
 RUN_TEST(TestList)
+RUN_TEST(TestEnsureAndRemove)
 RUN_TEST(TestReset)
 END_TEST_CASE(PathTest)
 
