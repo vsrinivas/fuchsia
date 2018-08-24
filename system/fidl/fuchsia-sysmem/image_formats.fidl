@@ -17,11 +17,6 @@ struct ImageFormat {
     // Defaults to 1 if not specified.
     uint32 layers;
 
-    // Stride in bytes per row.
-    // Only meaningful for linear buffer formats.
-    // TODO: remove
-    uint64 bytes_per_row;
-
     // Pixel format.
     PixelFormat pixel_format;
 
@@ -33,11 +28,11 @@ struct ImageFormat {
 
 struct ImagePlane {
     // Byte offset of the start of the plane from the beginning of the image.
-    uint64 byte_offset;
+    uint32 byte_offset;
 
     // Stride in bytes per row.
     // Only meaningful for linear buffer formats.
-    uint64 bytes_per_row;
+    uint32 bytes_per_row;
 };
 
 // Describes constraints for allocating images of some desired form.
