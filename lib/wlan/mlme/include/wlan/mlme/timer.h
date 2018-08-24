@@ -57,7 +57,7 @@ class TestTimer final : public Timer {
     zx::time Now() const override { return clock_->Now(); }
 
    protected:
-    zx_status_t SetTimerImpl(zx::time duration) override;
+    zx_status_t SetTimerImpl(zx::time deadline) override;
     zx_status_t CancelTimerImpl() override;
 
    private:

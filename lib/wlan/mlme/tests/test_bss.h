@@ -27,6 +27,7 @@ static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
 static constexpr uint8_t kBssid2[6] = {0xAC, 0xBF, 0x34, 0x11, 0x95, 0x02};
 static constexpr uint32_t kJoinTimeout = 200;  // Beacon Periods
 static constexpr uint32_t kAuthTimeout = 200;  // Beacon Periods
+static constexpr uint32_t kAutoDeauthTimeout = 50; // Beacon Periods
 static constexpr uint16_t kAid = 2;
 static constexpr uint16_t kBeaconPeriodTu = 100;
 static constexpr uint16_t kDtimPeriodTu = 2;
@@ -44,6 +45,7 @@ zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg);
 
 zx_status_t CreateAuthFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
+zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>*, common::MacAddr);
 zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
                             size_t len);

@@ -31,10 +31,6 @@ using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
-static constexpr size_t kAssocBcnCountTimeout = 20;
-static constexpr size_t kSignalReportBcnCountTimeout = 10;
-static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
-
 Station::Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched)
     : device_(device), timer_mgr_(std::move(timer_mgr)), chan_sched_(chan_sched) {
     bssid_.Reset();
@@ -325,22 +321,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
-    MgmtFrame<Deauthentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
-
-    auto hdr = frame.hdr();
-    hdr->addr1 = bssid_;
-    hdr->addr2 = self_addr();
-    hdr->addr3 = bssid_;
-    SetSeqNo(hdr, &seq_);
-    frame.FillTxInfo();
-
-    auto deauth = frame.body();
-    deauth->reason_code = static_cast<uint16_t>(req.body()->reason_code);
-
-    finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
-    status = SendNonData(frame.Take());
+    auto status = SendDeauthFrame(req.body()->reason_code);
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
@@ -514,6 +495,13 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
 
+    if (state_ != WlanState::kAssociated) {
+        return ZX_OK;
+    }
+
+    remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
+    auto_deauth_last_accounted_ = timer_mgr_.Now();
+
     size_t elt_len = frame.body_len() - frame.body()->len();
     ElementReader reader(frame.body()->elements, elt_len);
     while (reader.is_valid()) {
@@ -524,10 +512,6 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         case element_id::kTim: {
             auto tim = reader.read<TimElement>();
             if (tim == nullptr) goto done_iter;
-
-            // Do not process the Beacon's TIM element unless the client is associated.
-            if (state_ != WlanState::kAssociated) { continue; }
-
             if (tim->traffic_buffered(aid_)) { SendPsPoll(); }
             break;
         }
@@ -651,6 +635,13 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     avg_rssi_dbm_.reset();
     avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
     service::SendSignalReportIndication(device_, common::dBm(frame.View().rx_info()->rssi_dbm));
+
+    remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
+    status = timer_mgr_.Schedule(timer_mgr_.Now() + remaining_auto_deauth_timeout_,
+                                 &auto_deauth_timeout_);
+    if (status != ZX_OK) {
+        warnf("could not set auto-deauthentication timeout event\n");
+    }
 
     // Open port if user connected to an open network.
     if (bss_->rsn.is_null()) {
@@ -1011,6 +1002,35 @@ zx_status_t Station::HandleTimeout() {
         }
     }
 
+    if (auto_deauth_timeout_.Triggered(now)) {
+        auto_deauth_timeout_.Cancel();
+
+        debugclt("now: %lu\n", now.get());
+        debugclt("remaining auto-deauth timeout: %lu\n", remaining_auto_deauth_timeout_.get());
+        debugclt("auto-deauth last accounted time: %lu\n", auto_deauth_last_accounted_.get());
+
+        if (!chan_sched_->OnChannel()) {
+            ZX_DEBUG_ASSERT("auto-deauth timeout should not trigger while off channel\n");
+        } else if (remaining_auto_deauth_timeout_ > now - auto_deauth_last_accounted_) {
+            // Update the remaining auto-deauth timeout with the unaccounted time
+            remaining_auto_deauth_timeout_ -= now - auto_deauth_last_accounted_;
+            auto_deauth_last_accounted_ = now;
+            timer_mgr_.Schedule(now + remaining_auto_deauth_timeout_, &auto_deauth_timeout_);
+        } else if (state_ == WlanState::kAssociated) {
+            infof("lost BSS; deauthenticating...\n");
+            state_ = WlanState::kUnjoined;
+            device_->SetStatus(0);
+            controlled_port_ = eapol::PortState::kBlocked;
+
+            auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
+            service::SendDeauthIndication(device_, bssid_, reason_code);
+            auto status = SendDeauthFrame(reason_code);
+            if (status != ZX_OK) {
+                errorf("could not send deauth packet: %d\n", status);
+            }
+        }
+    }
+
     return ZX_OK;
 }
 
@@ -1220,12 +1240,29 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
 
 void Station::PreSwitchOffChannel() {
     debugfn();
-    if (state_ == WlanState::kAssociated) { SetPowerManagementMode(true); }
+    if (state_ == WlanState::kAssociated) {
+        SetPowerManagementMode(true);
+
+        auto_deauth_timeout_.Cancel();
+        zx::duration unaccounted_time = timer_mgr_.Now() - auto_deauth_last_accounted_;
+        if (remaining_auto_deauth_timeout_ > unaccounted_time) {
+            remaining_auto_deauth_timeout_ -= unaccounted_time;
+        } else {
+            remaining_auto_deauth_timeout_ = zx::duration(0);
+        }
+    }
 }
 
 void Station::BackToMainChannel() {
     debugfn();
-    if (state_ == WlanState::kAssociated) { SetPowerManagementMode(false); }
+    if (state_ == WlanState::kAssociated) {
+        SetPowerManagementMode(false);
+
+        zx::time now = timer_mgr_.Now();
+        auto deadline = now + std::max(remaining_auto_deauth_timeout_, WLAN_TU(1u));
+        timer_mgr_.Schedule(deadline, &auto_deauth_timeout_);
+        auto_deauth_last_accounted_ = now;
+    }
 }
 
 void Station::DumpDataFrame(const DataFrameView<>& frame) {
@@ -1335,9 +1372,35 @@ zx_status_t Station::SendPsPoll() {
     return ZX_OK;
 }
 
+zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
+    debugfn();
+
+    MgmtFrame<Deauthentication> frame;
+    auto status = CreateMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
+
+    auto hdr = frame.hdr();
+    hdr->addr1 = bssid_;
+    hdr->addr2 = self_addr();
+    hdr->addr3 = bssid_;
+    SetSeqNo(hdr, &seq_);
+    frame.FillTxInfo();
+
+    auto deauth = frame.body();
+    deauth->reason_code = static_cast<uint16_t>(reason_code);
+
+    finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
+    return SendNonData(frame.Take());
+}
+
 zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     return timer_mgr_.Now() + WLAN_TU(bss_->beacon_period * bcn_count);
+}
+
+zx::duration Station::FullAutoDeauthDuration() {
+    ZX_DEBUG_ASSERT(bss_ != nullptr);
+    return WLAN_TU(bss_->beacon_period * kAutoDeauthBcnCountTimeout);
 }
 
 bool Station::IsCbw40Rx() const {

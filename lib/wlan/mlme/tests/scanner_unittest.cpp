@@ -71,6 +71,7 @@ class ScannerTest : public ::testing::Test {
         req_ = wlan_mlme::ScanRequest::New();
         req_->channel_list.resize(0);
         req_->channel_list->push_back(1);
+        req_->max_channel_time = 1u;
         req_->ssid = "";
     }
 

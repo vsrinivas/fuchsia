@@ -132,6 +132,11 @@ class Station {
     void ResetStats();
 
    private:
+    static constexpr size_t kAssocBcnCountTimeout = 20;
+    static constexpr size_t kSignalReportBcnCountTimeout = 10;
+    static constexpr size_t kAutoDeauthBcnCountTimeout = 50;
+    static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
+
     zx_status_t HandleEthFrame(EthFrame&&);
     zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&&);
@@ -164,9 +169,11 @@ class Station {
     zx_status_t SendNonData(fbl::unique_ptr<Packet> packet);
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
+    zx_status_t SendDeauthFrame(wlan_mlme::ReasonCode reason_code);
     void DumpDataFrame(const DataFrameView<>&);
 
     zx::time deadline_after_bcn_period(size_t bcn_count);
+    zx::duration FullAutoDeauthDuration();
 
     // Returns the STA's own MAC address.
     const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
@@ -193,6 +200,14 @@ class Station {
     TimedEvent auth_timeout_;
     TimedEvent assoc_timeout_;
     TimedEvent signal_report_timeout_;
+    TimedEvent auto_deauth_timeout_;
+    // The remaining time we'll wait for a beacon before deauthenticating (while we are on channel)
+    // Note: Off-channel time does not count against `remaining_auto_deauth_timeout_`
+    zx::duration remaining_auto_deauth_timeout_ = zx::duration::infinite();
+    // The last time we re-calculated the `remaining_auto_deauth_timeout_`
+    // Note: During channel switching, `auto_deauth_last_accounted_` is set to the timestamp
+    //       we go back on channel (to make computation easier).
+    zx::time auto_deauth_last_accounted_;
     uint16_t aid_ = 0;
     common::MovingAverageDbm<20> avg_rssi_dbm_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;

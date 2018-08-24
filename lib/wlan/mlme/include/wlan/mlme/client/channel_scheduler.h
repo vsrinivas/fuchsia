@@ -23,8 +23,10 @@ struct OffChannelHandler {
     virtual void BeginOffChannelTime() = 0;
     virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) = 0;
 
-    // Invoked before switching back on channel.
-    // Fill |next_req| and return true to schedule another off-channel request.
+    // Invoked to end current off channel time and switch to another channel.
+    // (a) If switching to an off-channel, fill |next_req| and return `true` to schedule another
+    //     off-channel request.
+    // (b) If switching back on channel, return `false`
     virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) = 0;
 
     virtual ~OffChannelHandler() = default;

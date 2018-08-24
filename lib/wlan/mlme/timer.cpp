@@ -5,6 +5,7 @@
 #include <wlan/mlme/timer.h>
 
 #include <utility>
+#include <zircon/system/public/zircon/assert.h>
 
 namespace wlan {
 
@@ -34,7 +35,7 @@ zx_status_t SystemTimer::CancelTimerImpl() {
     return timer_.cancel();
 }
 
-zx_status_t TestTimer::SetTimerImpl(zx::time duration) {
+zx_status_t TestTimer::SetTimerImpl(zx::time deadline) {
     return ZX_OK;
 }
 

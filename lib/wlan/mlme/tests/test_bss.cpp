@@ -176,8 +176,10 @@ zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg) {
 }
 
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>* out_packet) {
-    common::MacAddr bssid(kBssid1);
+    return CreateBeaconFrameWithBssid(out_packet, common::MacAddr(kBssid1));
+}
 
+zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, common::MacAddr bssid) {
     size_t body_payload_len = 256;
     MgmtFrame<Beacon> frame;
     auto status = CreateMgmtFrame(&frame, body_payload_len);
