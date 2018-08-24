@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 namespace zxdb {
 
 // Holds the source of a value. This allows taking the address of an object
