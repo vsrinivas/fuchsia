@@ -9,30 +9,35 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate mxruntime;
-extern crate fdio;
-#[macro_use] extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_io;
-extern crate fidl_fuchsia_sys;
-extern crate futures;
-
-use fidl_fuchsia_io::{DirectoryRequestStream, DirectoryRequest, DirectoryObject, NodeAttributes, ObjectInfo};
-use fidl_fuchsia_sys::{
-    ComponentControllerProxy,
-    LauncherMarker,
-    LauncherProxy,
-    LaunchInfo,
+#[allow(unused)] // Remove pending fix to rust-lang/rust#53682
+use {
+    failure::{Error, ResultExt, Fail},
+    fuchsia_async as fasync,
+    futures::{
+        Future, Poll,
+        stream::{FuturesUnordered, StreamExt, StreamFuture},
+        task,
+    },
+    fidl::endpoints2::{RequestStream, ServiceMarker, Proxy},
+    fidl_fuchsia_io::{
+        DirectoryRequestStream,
+        DirectoryRequest,
+        DirectoryObject,
+        NodeAttributes,
+        ObjectInfo,
+    },
+    fidl_fuchsia_sys::{
+        ComponentControllerProxy,
+        LauncherMarker,
+        LauncherProxy,
+        LaunchInfo,
+    },
+    fuchsia_zircon as zx,
+    std::{
+        marker::Unpin,
+        mem::PinMut,
+    },
 };
-#[allow(unused_imports)]
-use fidl::endpoints2::{RequestStream, ServiceMarker, Proxy};
-
-#[allow(unused_imports)]
-use failure::{Error, ResultExt, Fail};
-use futures::prelude::*;
-use futures::stream::StreamFuture;
 
 /// Tools for starting or connecting to existing Fuchsia applications and services.
 pub mod client {
@@ -49,7 +54,7 @@ pub mod client {
         fdio::service_connect(&service_path, server)
             .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
 
-        let proxy = async::Channel::from_channel(proxy)?;
+        let proxy = fasync::Channel::from_channel(proxy)?;
         Ok(S::Proxy::from_channel(proxy))
     }
 
@@ -92,7 +97,7 @@ pub mod client {
                 .create_component(&mut launch_info, Some(controller_server_end.into()))
                 .context("Failed to start a new Fuchsia application.")?;
 
-            let controller = async::Channel::from_channel(controller)?;
+            let controller = fasync::Channel::from_channel(controller)?;
             let controller = ComponentControllerProxy::new(controller);
 
             Ok(App { directory_request, controller })
@@ -117,7 +122,7 @@ pub mod client {
         {
             let (client_channel, server_channel) = zx::Channel::create()?;
             self.pass_to_service(service, server_channel)?;
-            Ok(S::Proxy::from_channel(async::Channel::from_channel(client_channel)?))
+            Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
         }
 
         /// Connect to a service by passing a channel for the server.
@@ -133,22 +138,12 @@ pub mod client {
 /// Tools for providing Fuchsia services.
 pub mod server {
     use super::*;
-    use std::marker::Unpin;
-    use std::mem::PinMut;
-    use futures::{Future, Poll};
-    use futures::{StreamExt};
-    use futures::stream::FuturesUnordered;
-    use self::errors::*;
 
-    /// New root-level errors that may occur when using the `fuchsia_component::server` module.
-    /// Note that these are not the only kinds of errors that may occur: errors the module
-    /// may also be caused by `fidl::Error` or `zircon::Status`.
-    pub mod errors {
-        /// The startup handle on which the FIDL server attempted to start was missing.
-        #[derive(Debug, Fail)]
-        #[fail(display = "The startup handle on which the FIDL server attempted to start was missing.")]
-        pub struct MissingStartupHandle;
-    }
+    /// An error indicating the startup handle on which the FIDL server
+    /// attempted to start was missing.
+    #[derive(Debug, Fail)]
+    #[fail(display = "The startup handle on which the FIDL server attempted to start was missing.")]
+    pub struct MissingStartupHandle;
 
     /// `ServiceFactory` lazily creates instances of services.
     ///
@@ -161,17 +156,17 @@ pub mod server {
 
         /// Create a `fidl::Stub` service.
         // TODO(cramertj): allow `spawn` calls to fail.
-        fn spawn_service(&mut self, channel: async::Channel);
+        fn spawn_service(&mut self, channel: fasync::Channel);
     }
 
     impl<F> ServiceFactory for (&'static str, F)
-        where F: FnMut(async::Channel) + Send + 'static,
+        where F: FnMut(fasync::Channel) + Send + 'static,
     {
         fn service_name(&self) -> &str {
             self.0
         }
 
-        fn spawn_service(&mut self, channel: async::Channel) {
+        fn spawn_service(&mut self, channel: fasync::Channel) {
             (self.1)(channel)
         }
     }
@@ -200,9 +195,9 @@ pub mod server {
         pub fn start(self) -> Result<FdioServer, Error> {
             let fdio_handle =
                 mxruntime::get_startup_handle(mxruntime::HandleType::DirectoryRequest)
-                .ok_or(MissingStartupHandle)?;
+                    .ok_or(MissingStartupHandle)?;
 
-            let fdio_channel = async::Channel::from_channel(fdio_handle.into())?;
+            let fdio_channel = fasync::Channel::from_channel(fdio_handle.into())?;
 
             let mut server = FdioServer {
                 connections: FuturesUnordered::new(),
@@ -231,14 +226,14 @@ pub mod server {
     impl Unpin for FdioServer {}
 
     impl FdioServer {
-        fn serve_connection(&mut self, chan: async::Channel) {
+        fn serve_connection(&mut self, chan: fasync::Channel) {
             self.connections.push(DirectoryRequestStream::from_channel(chan).into_future())
         }
 
         fn handle_request(&mut self, req: DirectoryRequest) -> Result<(), Error> {
             match req {
                 DirectoryRequest::Clone { flags: _, object, control_handle: _ } => {
-                    let service_channel = async::Channel::from_channel(object.into_channel())?;
+                    let service_channel = fasync::Channel::from_channel(object.into_channel())?;
                     self.serve_connection(service_channel);
                     Ok(())
                 }
@@ -246,7 +241,7 @@ pub mod server {
                     responder.send(zx::sys::ZX_OK).map_err(|e| e.into())
                 }
                 DirectoryRequest::Open { flags: _, mode: _, path, object, control_handle: _, } => {
-                    let service_channel = async::Channel::from_channel(object.into_channel())?;
+                    let service_channel = fasync::Channel::from_channel(object.into_channel())?;
 
                     // This mechanism to open "public" redirects the service
                     // request to the FDIO Server itself for historical reasons.
