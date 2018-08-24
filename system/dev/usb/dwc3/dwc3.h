@@ -9,7 +9,6 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
-#include <lib/sync/completion.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -85,10 +84,9 @@ typedef struct {
     io_buffer_t mmio;
     zx_handle_t bti_handle;
 
-    // used to wait for XHCI driver to shut down
-    sync_completion_t xhci_done;
-
     usb_mode_t usb_mode;
+    bool start_device_on_xhci_release;
+    mtx_t usb_mode_lock; // protects usb_mode and start_device_on_xhci_release
 
     // event stuff
     io_buffer_t event_buffer;

@@ -136,8 +136,13 @@ static zx_status_t xhci_get_protocol(void* ctx, uint32_t proto_id, void* protoco
 
 static void xhci_release(void* ctx) {
     dwc3_t* dwc = ctx;
-    // signal that XHCI driver has shut down
-    sync_completion_signal(&dwc->xhci_done);
+    mtx_lock(&dwc->usb_mode_lock);
+    if (dwc->start_device_on_xhci_release) {
+        dwc3_start_peripheral_mode(dwc);
+        dwc->start_device_on_xhci_release = false;
+        dwc->usb_mode = USB_MODE_DEVICE;
+    }
+    mtx_unlock(&dwc->usb_mode_lock);
 }
 
 static zx_protocol_device_t xhci_dev_proto = {
@@ -339,7 +344,10 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     if (mode == USB_MODE_OTG) {
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    mtx_lock(&dwc->usb_mode_lock);
     if (dwc->usb_mode == mode) {
+        mtx_unlock(&dwc->usb_mode_lock);
         return ZX_OK;
     }
 
@@ -352,14 +360,18 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         dwc3_stop(dwc);
     } else if (dwc->usb_mode == USB_MODE_HOST) {
         if (dwc->xhci_dev) {
-            sync_completion_reset(&dwc->xhci_done);
             device_remove(dwc->xhci_dev);
-            // Wait for XHCI to shut down before switching to device mode
-            sync_completion_wait(&dwc->xhci_done, ZX_TIME_INFINITE);
             dwc->xhci_dev = NULL;
+
+            if (mode == USB_MODE_DEVICE) {
+                dwc->start_device_on_xhci_release = true;
+                mtx_unlock(&dwc->usb_mode_lock);
+                return ZX_OK;
+            }
         }
     }
 
+    dwc->start_device_on_xhci_release = false;
     if (dwc->ums.ops != NULL) {
         status = usb_mode_switch_set_mode(&dwc->ums, mode);
         if (status != ZX_OK) {
@@ -380,6 +392,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     }
 
     dwc->usb_mode = mode;
+    mtx_unlock(&dwc->usb_mode_lock);
     return ZX_OK;
 
 fail:
@@ -387,6 +400,7 @@ fail:
         usb_mode_switch_set_mode(&dwc->ums, USB_MODE_NONE);
     }
     dwc->usb_mode = USB_MODE_NONE;
+    mtx_unlock(&dwc->usb_mode_lock);
 
     return status;
 }
@@ -461,6 +475,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     }
 
     mtx_init(&dwc->lock, mtx_plain);
+    mtx_init(&dwc->usb_mode_lock, mtx_plain);
 
     status = pdev_get_bti(&dwc->pdev, 0, &dwc->bti_handle);
     if (status != ZX_OK) {
