@@ -342,11 +342,11 @@ void DwarfExprEval::ReportError(const std::string& msg) {
 void DwarfExprEval::ReportError(const Err& err) {
   data_provider_ = fxl::RefPtr<SymbolDataProvider>();
   is_complete_ = true;
-  completion_callback_(this, err);
 
-  // The callback should only be called once, so force accidental future uses
-  // to fail.
-  completion_callback_ = CompletionCallback();
+  // The callback may delete |this| but we also want to clear the value to
+  // prevent accidental future use.
+  auto cb = std::move(completion_callback_);
+  cb(this, err);
 }
 
 void DwarfExprEval::ReportStackUnderflow() {
