@@ -112,10 +112,10 @@ func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, 
 		signalErr := ch.Handle().SignalPeer(0, zx.SignalUser0)
 		if signalErr != nil {
 			lg.Log.Printf("signal failed: %s", signalErr)
-			ch.Close()
 		} else {
 			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
 		}
+		ch.Close()
 		return
 	}
 	lg.Log.Println("Package metadata retrieved, sending for additional processing")

@@ -56,8 +56,13 @@ func (am *ActivationMonitor) Do() {
 				break
 			}
 			lg.Log.Printf("Blocking update request received for %q\n", r.pkgData.Update.Merkle)
-			if err := am.writeMetaFAR(r.pkgData, r.replyChan); err != nil {
+			if err := am.writeMetaFAR(r.pkgData); err != nil {
 				r.pkgData.Err = err
+				msg := fmt.Sprintf("could not write package meta file: %s", err)
+				if r.replyChan != nil {
+					sendError(r.replyChan, msg)
+					r.replyChan.Close()
+				}
 				// if there was an error writing the meta FAR, don't listen for an activation
 				break
 			}
@@ -68,7 +73,7 @@ func (am *ActivationMonitor) Do() {
 				break
 			}
 
-			if err := am.writeMetaFAR(r.pkgData, nil); err != nil {
+			if err := am.writeMetaFAR(r.pkgData); err != nil {
 				r.pkgData.Err = err
 			} else {
 				am.setPkgInProgress(r)
@@ -113,22 +118,14 @@ func (am *ActivationMonitor) registerReq(req *completeUpdateRequest) {
 
 // writeMetaFAR writes out the meta FAR. It returns an error if the caller
 // should not expect the write operation to product a package activation
-// notification at a later date. If a replyChan is supplied it also sends
-// an error back through it and closes it as approriate.
-func (am *ActivationMonitor) writeMetaFAR(pkgData *daemon.GetResult, replyChan *zx.Channel) error {
+// notification at a later date.
+func (am *ActivationMonitor) writeMetaFAR(pkgData *daemon.GetResult) error {
 	file, err := am.create(pkgData)
 	if err == nil {
-		if _, err := am.write(pkgData, file); err != nil {
-			msg := fmt.Sprintf("could not write package meta file: %s", err)
-			if replyChan != nil {
-				sendError(replyChan, msg)
-			}
-			return err
-		}
+		_, err := am.write(pkgData, file)
+		return err
 	} else if !os.IsExist(err) {
-		if replyChan != nil {
-			sendError(replyChan, err.Error())
-		}
+
 		return err
 	}
 	return nil
@@ -141,7 +138,6 @@ func sendError(replyChan *zx.Channel, msg string) error {
 	signalErr := replyChan.Handle().SignalPeer(0, zx.SignalUser0)
 	if signalErr != nil {
 		lg.Log.Printf("signal failed: %s", signalErr)
-		replyChan.Close()
 	} else {
 		replyChan.Write([]byte(msg), []zx.Handle{}, 0)
 	}
