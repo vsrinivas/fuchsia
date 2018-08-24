@@ -7,16 +7,11 @@
 #![deny(missing_docs)]
 #![feature(futures_api, pin, arbitrary_self_types)]
 
-#[macro_use]
-extern crate fdio;
-extern crate fuchsia_async as async;
-#[macro_use]
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-#[macro_use]
-extern crate pin_utils;
+use fuchsia_async as fasync;
+use fuchsia_zircon::{self as zx, HandleBased, assoc_values};
+use pin_utils::pin_mut;
 
-use fdio::fdio_sys;
+use fdio::{fdio_sys, make_ioctl};
 use futures::{Poll, Stream, task};
 use std::ffi::OsStr;
 use std::fs::File;
@@ -27,7 +22,6 @@ use std::os::raw;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
-use zx::HandleBased;
 
 /// Describes the type of event that occurred in the direcotry being watched.
 #[repr(C)]
@@ -59,7 +53,7 @@ pub struct WatchMessage {
 #[derive(Debug)]
 #[must_use = "futures/streams must be polled"]
 pub struct Watcher {
-    ch: async::Channel,
+    ch: fasync::Channel,
     // If idx >= buf.bytes().len(), you must call reset_buf() before get_next_msg().
     buf: zx::MessageBuf,
     idx: usize,
@@ -88,7 +82,7 @@ impl Watcher {
 
         let mut buf = zx::MessageBuf::new();
         buf.ensure_capacity_bytes(VFS_WATCH_MSG_MAX);
-        Ok(Watcher{ ch: async::Channel::from_channel(h0)?, buf: buf, idx: 0})
+        Ok(Watcher{ ch: fasync::Channel::from_channel(h0)?, buf: buf, idx: 0})
     }
 
     fn reset_buf(&mut self) {
@@ -203,14 +197,14 @@ mod tests {
 
     use super::*;
 
-    use async::TimeoutExt;
+    use fuchsia_async::{self as fasync, TimeoutExt};
     use futures::prelude::*;
     use self::tempdir::TempDir;
     use std::fmt::Debug;
     use std::path::Path;
-    use zx::prelude::*;
+    use fuchsia_zircon::prelude::*;
 
-    fn one_step<S, OK, ERR>(exec: &mut async::Executor, s: &mut S) -> OK
+    fn one_step<S, OK, ERR>(exec: &mut fasync::Executor, s: &mut S) -> OK
         where S: Stream<Item = Result<OK, ERR>> + Unpin,
               ERR: Debug
     {
@@ -231,7 +225,7 @@ mod tests {
         let tmp_dir = TempDir::new("vfs-watcher-test-existing").unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
-        let exec = &mut async::Executor::new().unwrap();
+        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
         let w = Watcher::new(&dir).unwrap();
 
@@ -254,7 +248,7 @@ mod tests {
     fn test_add() {
         let tmp_dir = TempDir::new("vfs-watcher-test-add").unwrap();
 
-        let exec = &mut async::Executor::new().unwrap();
+        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
         let w = Watcher::new(&dir).unwrap();
         pin_mut!(w);
@@ -281,7 +275,7 @@ mod tests {
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
 
-        let exec = &mut async::Executor::new().unwrap();
+        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
         let w = Watcher::new(&dir).unwrap();
         pin_mut!(w);
@@ -306,7 +300,7 @@ mod tests {
     fn test_timeout() {
         let tmp_dir = TempDir::new("vfs-watcher-test-timeout").unwrap();
 
-        let exec = &mut async::Executor::new().unwrap();
+        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
         let w = Watcher::new(&dir).unwrap();
         pin_mut!(w);
