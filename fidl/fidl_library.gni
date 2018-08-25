@@ -42,14 +42,11 @@ template("fidl_library") {
   verification_target_name = "${target_name}_verify"
 
   all_deps = []
-  if (defined(invoker.deps) || defined(invoker.public_deps)) {
-    if (defined(invoker.deps)) {
-      all_deps += invoker.deps
-    }
-
-    if (defined(invoker.public_deps)) {
-      all_deps += invoker.public_deps
-    }
+  if (defined(invoker.deps)) {
+    all_deps += invoker.deps
+  }
+  if (defined(invoker.public_deps)) {
+    all_deps += invoker.public_deps
   }
 
   action(response_file_target_name) {
@@ -182,14 +179,9 @@ template("fidl_library") {
       library_name = invoker.name
     }
 
+    # Process sources.
     all_files = []
-
-    meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
-    meta_data = {
-      type = "fidl_library"
-      name = library_name
-      sources = []
-    }
+    sdk_sources = []
     foreach(source, invoker.sources) {
       relative_source = rebase_path(source, ".")
       if (string_replace(relative_source, "..", "bogus") != relative_source) {
@@ -198,7 +190,7 @@ template("fidl_library") {
         relative_source = get_path_info(source, "file")
       }
       destination = "fidl/$library_name/$relative_source"
-      meta_data.sources += [ destination ]
+      sdk_sources += [ destination ]
       all_files += [
         {
           source = rebase_path(source)
@@ -206,8 +198,41 @@ template("fidl_library") {
         },
       ]
     }
-    meta_data.files = meta_data.sources
-    write_file(meta_file, meta_data, "json")
+
+    # Identify metadata for dependencies.
+    sdk_metas = []
+    sdk_deps = []
+    foreach(dep, all_deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+      name = get_label_info(sdk_dep, "name")
+      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    }
+
+    # Generate the library metadata.
+    meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
+    meta_target_name = "${target_name}_meta"
+    action(meta_target_name) {
+      script = "//build/fidl/gen_sdk_meta.py"
+
+      inputs = sdk_metas
+
+      outputs = [ meta_file ]
+
+      args = [
+        "--out",
+        rebase_path(meta_file),
+        "--name",
+        library_name,
+        "--specs",
+      ] + sdk_metas + [
+        "--sources",
+      ] + sdk_sources
+
+      deps = sdk_deps
+    }
 
     sdk_atom("${target_name}_sdk") {
       domain = "fidl"
@@ -225,6 +250,10 @@ template("fidl_library") {
       tags = [ "name:$library_name" ]
 
       files = all_files
+
+      non_sdk_deps = [
+        ":$meta_target_name",
+      ]
 
       deps = []
       foreach(dep, all_deps) {

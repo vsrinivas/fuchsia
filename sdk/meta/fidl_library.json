@@ -16,7 +16,7 @@
         },
         "name": {
           "description": "Name of the library",
-          "type": "string"
+          "$ref": "common.json#/definitions/fidl_library_name"
         },
         "sources": {
           "description": "List of library sources",

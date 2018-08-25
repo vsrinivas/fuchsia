@@ -362,8 +362,8 @@ if (current_toolchain == dart_toolchain) {
       # target.
       sdk_deps = []
 
-      # Path to SDK manifest files for first-party dependencies.
-      sdk_manifests = []
+      # Path to SDK metadata files for first-party dependencies.
+      sdk_metas = []
       # Path to Dart manifest files for third-party dependencies.
       third_party_pubspecs = []
       if (defined(invoker.deps)) {
@@ -376,7 +376,7 @@ if (current_toolchain == dart_toolchain) {
 
           gen_dir = get_label_info(sdk_dep, "target_gen_dir")
           name = get_label_info(sdk_dep, "name")
-          sdk_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+          sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
         }
         foreach(dep, sorted_deps.third_party) {
           path = get_label_info(dep, "dir")
@@ -425,7 +425,7 @@ if (current_toolchain == dart_toolchain) {
       action(metadata_target_name) {
         script = "//build/dart/sdk/gen_meta_file.py"
 
-        inputs = sdk_manifests + third_party_pubspecs
+        inputs = sdk_metas + third_party_pubspecs
 
         outputs = [
           metadata_file,
@@ -437,7 +437,7 @@ if (current_toolchain == dart_toolchain) {
           "--name",
           package_name,
           "--specs",
-        ] + sdk_manifests + [
+        ] + sdk_metas + [
           "--sources",
         ] + sdk_sources + [
           "--third-party-specs",

@@ -202,9 +202,10 @@ template("sdk_atom") {
   if (defined(invoker.meta)) {
     # Validate the metadata file.
     meta_target_name = "${target_name}_meta"
+    meta_validate_target_name = "${target_name}_meta_validate"
     meta_content = invoker.meta
 
-    compiled_action(meta_target_name) {
+    compiled_action(meta_validate_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
       tool = "//build/tools/json_validator"
@@ -234,6 +235,23 @@ template("sdk_atom") {
 
       deps = gn_deps
     }
+
+    # Copy the file to a canonical location for access by other rules.
+    # TODO(DX-340): instead, make sure that all atoms generate their metadata
+    # file in the right location.
+    copy(meta_target_name) {
+      sources = [
+        meta_content.source,
+      ]
+
+      outputs = [
+        "$target_gen_dir/$target_name.meta.json",
+      ]
+
+      deps = gn_deps + [
+        ":$meta_validate_target_name",
+      ]
+    }
   }
 
   # Builds a manifest representing this element.
@@ -251,7 +269,7 @@ template("sdk_atom") {
     public_deps = gn_deps
 
     if (defined(invoker.meta)) {
-      deps = [
+      public_deps += [
         ":$meta_target_name",
       ]
     }

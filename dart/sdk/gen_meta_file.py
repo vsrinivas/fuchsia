@@ -16,8 +16,6 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
-sys.path += [os.path.join(FUCHSIA_ROOT, 'build', 'sdk')]
-from sdk_common import get_lone_atom
 
 
 # The list of packages that should be pulled from a Flutter SDK instead of pub.
@@ -75,13 +73,13 @@ def main():
     deps = []
     fidl_deps = []
     for spec in args.specs:
-        atom = get_lone_atom(spec)
-        # TODO(DX-340): use more accurate attributes.
-        type = atom.id.domain
-        name = atom.id.name
-        if type == 'dart':
+        with open(spec, 'r') as spec_file:
+            data = json.load(spec_file)
+        type = data['type']
+        name = data['name']
+        if type == 'dart_library':
             deps.append(name)
-        elif type == 'fidl':
+        elif type == 'fidl_library':
             fidl_deps.append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)

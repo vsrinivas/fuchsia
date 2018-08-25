@@ -8,6 +8,14 @@
       "description": "Base type for SDK elements",
       "type": "object",
       "properties": {
+        "type": {
+          "description": "The type of the element",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the element",
+          "type": "string"
+        },
         "files": {
           "description": "The list of files pertaining to the element",
           "type": "array",
