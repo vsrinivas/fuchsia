@@ -29,6 +29,24 @@ import("//build/package.gni")
 #       dest (required)
 #         [path] Location the resource will be placed within `meta/`.
 #
+#   binaries (optional)
+#     [list of scopes] Defines the binaries in the package. A binary is
+#     typically produced by the build system and is placed in the `bin/`
+#     directory of the assembled package.
+#
+#     Entries in a scope in the binaries list:
+#
+#       name (required)
+#         [string] Name of the binary.
+#
+#       source (optional)
+#         [path] Location of the binary in the build directory if it is not
+#         at `$root_out_dir/$name`.
+#
+#       dest (optional)
+#         [path] Location the binary will be placed within `bin/`.
+#
+#
 #   tests (optional)
 #     [list of scopes] Defines the test binaries in the package. A test is
 #     typically produced by the build system and is placed in the `test/`
@@ -104,11 +122,12 @@ template("test_package") {
     testonly = true
     forward_variables_from(invoker,
                            [
+                             "binaries",
+                             "data_deps",
                              "deps",
+                             "extra",
                              "meta",
                              "public_deps",
-                             "data_deps",
-                             "extra",
                              "resources",
                            ])
   }
