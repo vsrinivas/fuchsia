@@ -43,7 +43,8 @@ USE_GOLD ?= true
 endif
 THINLTO_CACHE_DIR ?= $(BUILDDIR)/thinlto-cache
 CLANG_TARGET_FUCHSIA ?= false
-USE_LINKER_GC ?= true
+USER_USE_LINKER_GC ?= true
+KERNEL_USE_LINKER_GC ?= true
 HOST_USE_ASAN ?= false
 
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
@@ -220,6 +221,14 @@ USER_LDFLAGS += -z rodynamic
 RODSO_LDFLAGS :=
 else
 RODSO_LDFLAGS := -T scripts/rodso.ld
+endif
+
+# Use linker garbage collection if enabled.
+ifeq ($(call TOBOOL,$(KERNEL_USE_LINKER_GC)),true)
+KERNEL_LDFLAGS += --gc-sections
+endif
+ifeq ($(call TOBOOL,$(USER_USE_LINKER_GC)),true)
+USER_LDFLAGS += --gc-sections
 endif
 
 # Turn on -fasynchronous-unwind-tables to get .eh_frame.

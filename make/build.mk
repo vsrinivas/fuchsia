@@ -5,11 +5,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# use linker garbage collection, if requested
-ifeq ($(call TOBOOL,$(USE_LINKER_GC)),true)
-GLOBAL_LDFLAGS += --gc-sections
-endif
-
 ifneq (,$(EXTRA_BUILDRULES))
 -include $(EXTRA_BUILDRULES)
 endif

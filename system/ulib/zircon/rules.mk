@@ -52,4 +52,7 @@ MODULE_SO_INSTALL_NAME := -
 # Make it use a simplified, hardened memory layout.
 MODULE_LDFLAGS := $(RODSO_LDFLAGS)
 
+# Instruct the linker to preserve the hidden alternate entry points.
+MODULE_EXTRA_OBJS += $(LOCAL_DIR)/alternates.ld
+
 include make/module.mk
