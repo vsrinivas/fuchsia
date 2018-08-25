@@ -7,18 +7,18 @@
 pub mod ec;
 
 use boringssl::{CHeapWrapper, CStackWrapper};
-use public::inner::BoringKey;
+use public::inner::BoringDerKey;
 use util::Sealed;
 use Error;
 
 /// The public component of a public/private key pair.
-pub trait PublicKey: Sealed + Sized + self::inner::Key {
+pub trait PublicKey: Sealed + Sized {
     /// The type of the private component.
     type Private: PrivateKey<Public = Self>;
 }
 
 /// The private component of a public/private key pair.
-pub trait PrivateKey: Sealed + Sized + self::inner::Key {
+pub trait PrivateKey: Sealed + Sized {
     /// The type of the public component.
     type Public: PublicKey<Private = Self>;
 
@@ -27,12 +27,18 @@ pub trait PrivateKey: Sealed + Sized + self::inner::Key {
     fn public(&self) -> Self::Public;
 }
 
+/// A public key which can be encoded as a DER object.
+pub trait DerPublicKey: PublicKey + self::inner::DerKey {}
+
+/// A private key which can be encoded as a DER object.
+pub trait DerPrivateKey: PrivateKey + self::inner::DerKey {}
+
 mod inner {
     use boringssl::{self, CHeapWrapper, CStackWrapper};
     use Error;
 
     /// A wrapper around a BoringSSL key object.
-    pub trait BoringKey: Sized {
+    pub trait BoringDerKey: Sized {
         // evp_pkey_assign_xxx
         fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>);
 
@@ -49,9 +55,9 @@ mod inner {
     }
 
     /// Properties shared by both public and private keys of a given type.
-    pub trait Key {
+    pub trait DerKey {
         /// The underlying BoringSSL object wrapper type.
-        type Boring: BoringKey;
+        type Boring: BoringDerKey;
 
         fn get_boring(&self) -> &Self::Boring;
 
@@ -66,7 +72,7 @@ mod inner {
 ///
 /// [RFC 5280]: https://tools.ietf.org/html/rfc5280
 #[must_use]
-pub fn marshal_public_key_der<P: PublicKey>(key: &P) -> Vec<u8> {
+pub fn marshal_public_key_der<P: DerPublicKey>(key: &P) -> Vec<u8> {
     let mut evp_pkey = CHeapWrapper::default();
     key.get_boring().pkey_assign(&mut evp_pkey);
     // cbb_new can only fail due to OOM
@@ -87,7 +93,7 @@ pub fn marshal_public_key_der<P: PublicKey>(key: &P) -> Vec<u8> {
 /// [RFC 5915]: https://tools.ietf.org/html/rfc5915
 /// [RFC 3447]: https://tools.ietf.org/html/rfc3447
 #[must_use]
-pub fn marshal_private_key_der<P: PrivateKey>(key: &P) -> Vec<u8> {
+pub fn marshal_private_key_der<P: DerPrivateKey>(key: &P) -> Vec<u8> {
     // cbb_new can only fail due to OOM
     let mut cbb = CStackWrapper::cbb_new(64).unwrap();
     key.get_boring()
@@ -109,7 +115,7 @@ pub fn marshal_private_key_der<P: PrivateKey>(key: &P) -> Vec<u8> {
 ///
 /// [RFC 5280]: https://tools.ietf.org/html/rfc5280
 #[must_use]
-pub fn parse_public_key_der<P: PublicKey>(bytes: &[u8]) -> Result<P, Error> {
+pub fn parse_public_key_der<P: DerPublicKey>(bytes: &[u8]) -> Result<P, Error> {
     CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
         let mut evp_pkey = CHeapWrapper::evp_parse_public_key(cbs)?;
         // NOTE: For EC, panics if evp_pkey doesn't have its group set. This is
@@ -139,7 +145,7 @@ pub fn parse_public_key_der<P: PublicKey>(bytes: &[u8]) -> Result<P, Error> {
 /// [RFC 5915]: https://tools.ietf.org/html/rfc5915
 /// [RFC 3447]: https://tools.ietf.org/html/rfc3447
 #[must_use]
-pub fn parse_private_key_der<P: PrivateKey>(bytes: &[u8]) -> Result<P, Error> {
+pub fn parse_private_key_der<P: DerPrivateKey>(bytes: &[u8]) -> Result<P, Error> {
     CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
         let key = P::Boring::parse_private_key(cbs)?;
         if cbs.cbs_len() > 1 {

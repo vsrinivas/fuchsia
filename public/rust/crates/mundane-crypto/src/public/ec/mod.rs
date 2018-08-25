@@ -10,14 +10,14 @@ pub use public::ec::curve::{Curve, EllipticCurve, P256, P384, P521};
 
 use public::ec::curve::DynamicCurve;
 use public::ec::inner::EcKey;
-use public::{inner::Key, PrivateKey, PublicKey};
+use public::{inner::DerKey, DerPrivateKey, DerPublicKey, PrivateKey, PublicKey};
 use util::Sealed;
 use Error;
 
 mod inner {
     use boringssl::{self, BoringError, CHeapWrapper, CStackWrapper};
     use public::ec::curve::Curve;
-    use public::inner::BoringKey;
+    use public::inner::BoringDerKey;
     use Error;
 
     // A convenience wrapper around boringssl::EC_KEY.
@@ -66,7 +66,7 @@ mod inner {
         }
     }
 
-    impl<C: Curve> BoringKey for EcKey<C> {
+    impl<C: Curve> BoringDerKey for EcKey<C> {
         fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) {
             pkey.evp_pkey_assign_ec_key(self.key.clone())
         }
@@ -149,8 +149,9 @@ impl<C: Curve> EcPubKey<C> {
 }
 
 impl<C: Curve> Sealed for EcPubKey<C> {}
+impl<C: Curve> DerPublicKey for EcPubKey<C> {}
 
-impl<C: Curve> Key for EcPubKey<C> {
+impl<C: Curve> DerKey for EcPubKey<C> {
     type Boring = EcKey<C>;
     fn get_boring(&self) -> &EcKey<C> {
         &self.inner
@@ -192,8 +193,9 @@ impl<C: Curve> EcPrivKey<C> {
 }
 
 impl<C: Curve> Sealed for EcPrivKey<C> {}
+impl<C: Curve> DerPrivateKey for EcPrivKey<C> {}
 
-impl<C: Curve> Key for EcPrivKey<C> {
+impl<C: Curve> DerKey for EcPrivKey<C> {
     type Boring = EcKey<C>;
     fn get_boring(&self) -> &EcKey<C> {
         &self.inner
