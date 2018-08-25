@@ -6,13 +6,13 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/amlogic-canvas.h>
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c-impl.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform-bus.h>
 #include <fbl/array.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -39,6 +39,8 @@ class PlatformBus : public PlatformBusType, public ddk::PlatformBusProtocol<Plat
 public:
     static zx_status_t Create(zx_device_t* parent, const char* name, zx::vmo zbi);
 
+    zx_status_t Proxy(platform_proxy_args_t* args);
+
     // Device protocol implementation.
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     void DdkRelease();
@@ -46,7 +48,8 @@ public:
     // Platform bus protocol implementation.
     zx_status_t DeviceAdd(const pbus_dev_t* dev);
     zx_status_t ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
-    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol);
+    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol, platform_proxy_cb_t proxy_cb,
+                                 void* proxy_cb_cookie);
     const char* GetBoardName();
     zx_status_t SetBoardInfo(const pbus_board_info_t* info);
 
@@ -69,12 +72,35 @@ public:
                                uint32_t* out_size);
 
     // Protocol accessors for PlatformDevice.
-    inline ddk::CanvasProtocolProxy* canvas() const { return canvas_.get(); }
     inline ddk::ClkProtocolProxy* clk() const { return clk_.get(); }
     inline ddk::GpioProtocolProxy* gpio() const { return gpio_.get(); }
     inline ddk::I2cImplProtocolProxy* i2c_impl() const { return i2c_impl_.get(); }
 
 private:
+    // This class is a wrapper for a platform_proxy_cb_t added via pbus_register_protocol().
+    // It also is the element type for the proto_proxys_ WAVL tree.
+    class ProtoProxy : public fbl::WAVLTreeContainable<fbl::unique_ptr<ProtoProxy>> {
+    public:
+        ProtoProxy(uint32_t proto_id, ddk::AnyProtocol* protocol, platform_proxy_cb_t proxy_cb,
+                   void* proxy_cb_cookie)
+            : proto_id_(proto_id), protocol_(*protocol), proxy_cb_(proxy_cb),
+              proxy_cb_cookie_(proxy_cb_cookie) {}
+
+        inline uint32_t GetKey() const { return proto_id_; }
+        inline void GetProtocol(void* out) const { memcpy(out, &protocol_, sizeof(protocol_)); }
+
+        inline zx_status_t Proxy(platform_proxy_args_t* args) {
+            return proxy_cb_(args, proxy_cb_cookie_);
+        }
+
+    private:
+        const uint32_t proto_id_;
+        ddk::AnyProtocol protocol_;
+        const platform_proxy_cb_t proxy_cb_;
+        void* proxy_cb_cookie_;
+    };
+
+
     explicit PlatformBus(zx_device_t* parent);
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
@@ -89,16 +115,15 @@ private:
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
-    fbl::unique_ptr<ddk::CanvasProtocolProxy> canvas_;
     fbl::unique_ptr<ddk::ClkProtocolProxy> clk_;
     fbl::unique_ptr<ddk::GpioProtocolProxy> gpio_;
     fbl::unique_ptr<ddk::IommuProtocolProxy> iommu_;
     fbl::unique_ptr<ddk::I2cImplProtocolProxy> i2c_impl_;
 
     // Completion used by WaitProtocol().
-    sync_completion_t proto_completion_ __TA_GUARDED(mutex_);
-
-    fbl::Mutex mutex_;
+    sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);
+    // Protects proto_completion_.
+    fbl::Mutex proto_completion_mutex_;
 
     // Metadata extracted from ZBI.
     fbl::Array<uint8_t> metadata_;
@@ -108,6 +133,11 @@ private:
 
     // Dummy IOMMU.
     zx::handle iommu_handle_;
+
+    fbl::WAVLTree<uint32_t, fbl::unique_ptr<ProtoProxy>> proto_proxys_
+                                                __TA_GUARDED(proto_proxys_mutex_);
+    // Protects proto_proxys_.
+    fbl::Mutex proto_proxys_mutex_;
 };
 
 } // namespace platform_bus

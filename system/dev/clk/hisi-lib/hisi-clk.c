@@ -224,7 +224,7 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
     hisi_clk->clk.ops = &clk_ops;
     hisi_clk->clk.ctx = hisi_clk;
 
-    st = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &hisi_clk->clk);
+    st = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &hisi_clk->clk, NULL, NULL);
     if (st != ZX_OK) {
         zxlogf(ERROR, "hisi_clk_bind: pbus_register_protocol failed, st = %d\n", st);
         goto fail;

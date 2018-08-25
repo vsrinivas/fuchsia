@@ -42,6 +42,7 @@ public:
     inline const pbus_clk_t& clk(size_t i) const { return clks_[i]; }
     inline const pbus_bti_t& bti(size_t i) const { return btis_[i]; }
     inline const pbus_metadata_t& metadata(size_t i) const { return metadata_[i]; }
+    inline const uint32_t* protocols() const { return protocols_.begin(); }
 
     // Counts for the above resource lists.
     inline size_t mmio_count() const { return mmios_.size(); }
@@ -52,10 +53,11 @@ public:
     inline size_t bti_count() const { return btis_.size(); }
     inline size_t metadata_count() const { return metadata_.size(); }
     inline size_t child_count() const { return children_.size(); }
+    inline size_t protocol_count() const { return protocols_.size(); }
 
 private:
     // Index of this DeviceResources instance in PlatformDevice::device_index_.
-    uint32_t index_;
+    const uint32_t index_;
 
     // Platform bus resources copied from the pbus_dev_t struct from the board driver.
     fbl::Array<pbus_mmio_t> mmios_;
@@ -65,6 +67,7 @@ private:
     fbl::Array<pbus_clk_t> clks_;
     fbl::Array<pbus_bti_t> btis_;
     fbl::Array<pbus_metadata_t> metadata_;
+    fbl::Array<uint32_t> protocols_;
 
     // Resources for children of this device.
     fbl::Vector<DeviceResources> children_;

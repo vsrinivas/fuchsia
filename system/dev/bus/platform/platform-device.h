@@ -68,6 +68,8 @@ private:
     zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
     zx_status_t RpcGetMetadata(const DeviceResources* dr, uint32_t index, uint32_t* out_type,
                                uint8_t* buf, uint32_t buf_size, uint32_t* actual);
+    zx_status_t RpcGetProtocols(const DeviceResources* dr, uint32_t* out_protocols,
+                                uint32_t* out_protocol_count);
     zx_status_t RpcGpioConfig(const DeviceResources* dr, uint32_t index, uint32_t flags);
     zx_status_t RpcGpioSetAltFunction(const DeviceResources* dr, uint32_t index, uint64_t function);
     zx_status_t RpcGpioRead(const DeviceResources* dr, uint32_t index, uint8_t* out_value);
@@ -76,9 +78,6 @@ private:
                                     zx_handle_t* out_handle, uint32_t* out_handle_count);
     zx_status_t RpcGpioReleaseInterrupt(const DeviceResources* dr, uint32_t index);
     zx_status_t RpcGpioSetPolarity(const DeviceResources* dr, uint32_t index, uint32_t flags);
-    zx_status_t RpcCanvasConfig(const DeviceResources* dr, zx_handle_t vmo, size_t offset,
-                                canvas_info_t* info, uint8_t* canvas_idx);
-    zx_status_t RpcCanvasFree(const DeviceResources* dr, uint8_t canvas_idx);
     zx_status_t RpcI2cTransact(const DeviceResources* dr, uint32_t txid, rpc_i2c_req_t* req,
                                uint8_t* data, zx_handle_t channel);
     zx_status_t RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,

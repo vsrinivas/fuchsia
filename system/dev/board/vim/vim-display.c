@@ -71,6 +71,10 @@ static const pbus_bti_t vim_display_btis[] = {
     },
 };
 
+static const uint32_t vim_display_protocols[] = {
+    ZX_PROTOCOL_AMLOGIC_CANVAS,
+};
+
 static const pbus_dev_t display_dev = {
     .name = "display",
     .vid = PDEV_VID_KHADAS,
@@ -84,6 +88,8 @@ static const pbus_dev_t display_dev = {
     .irq_count = countof(vim_display_irqs),
     .btis = vim_display_btis,
     .bti_count = countof(vim_display_btis),
+    .protocols = vim_display_protocols,
+    .protocol_count = countof(vim_display_protocols),
 };
 
 zx_status_t vim_display_init(vim_bus_t* bus) {

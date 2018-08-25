@@ -6,13 +6,13 @@
 
 #include "platform-proxy-device.h"
 
-#include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform-device.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -27,8 +27,14 @@ using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
 class ProxyDevice : public ProxyDeviceType, public ddk::PlatformDevProtocol<ProxyDevice> {
 public:
-    static zx_status_t Create(zx_device_t* parent, uint32_t device_id,
-                              fbl::RefPtr<PlatformProxy> proxy, device_add_args_t* args);
+    explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy);
+
+    // Creates a ProxyDevice to be the root platform device.
+    static zx_status_t CreateRoot(zx_device_t* parent, fbl::RefPtr<PlatformProxy> proxy);
+
+    // Creates a ProxyDevice to be a child platform device or a proxy client device.
+    static zx_status_t CreateChild(zx_device_t* parent, uint32_t device_id,
+                                   fbl::RefPtr<PlatformProxy> proxy, device_add_args_t* args);
 
     // Full device protocol implementation.
     // For child devices, these call through to the device protocol passed via pdev_device_add().
@@ -55,11 +61,6 @@ public:
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
-
-    // Canvas protocol implementation.
-    static zx_status_t CanvasConfig(void* ctx, zx_handle_t vmo, size_t offset, canvas_info_t* info,
-                             uint8_t* canvas_idx);
-    static zx_status_t CanvasFree(void* ctx, uint8_t canvas_idx);
 
     // Clock protocol implementation.
     static zx_status_t ClkEnable(void* ctx, uint32_t index);
@@ -94,21 +95,21 @@ private:
         zx::handle resource;
     };
 
-    explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy);
-
-    zx_status_t Init(device_add_args_t* args);
+    zx_status_t InitCommon();
+    zx_status_t InitRoot();
+    zx_status_t InitChild(device_add_args_t* args);
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(ProxyDevice);
 
-    uint32_t device_id_;
+    const uint32_t device_id_;
     fbl::RefPtr<PlatformProxy> proxy_;
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
     char name_[ZX_MAX_NAME_LEN];
+    uint32_t metadata_count_;
 
     // We can't used ddktl for these because ddktl only allows a device to implement one protocol,
     // and we are using ddktl for the platform device protocol.
-    canvas_protocol_ops_t canvas_proto_ops_;
     clk_protocol_ops_t clk_proto_ops_;
     gpio_protocol_ops_t gpio_proto_ops_;
     i2c_protocol_ops_t i2c_proto_ops_;

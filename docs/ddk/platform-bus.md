@@ -28,7 +28,15 @@ These drivers provide the lowest level of support for a particular feature, like
 eMMC or NAND storage, etc., with higher level drivers loading on top of that.
 
 - The **protocol implementation drivers**, such as GPIO or I2C, which provide protocol
-support as resources to platform device drivers.
+support as resources to platform device drivers. These drivers run in the same devhost as the
+platform bus driver. Protocol implementation drivers can also implement vendor or SOC-specific
+protocols and make them available to platform devices using a **proxy client driver** (see below).
+
+- The **proxy client driver** is a driver that implements client support for a vendor or
+SOC-specific protocol. This driver loads in the the platform device's devhost and is responsible
+for proxying its protocol to the protocol implementation driver.
+The Amlogic Canvas driver at [system/dev/display/aml-canvas/](../../system/dev/display/aml-canvas/)
+provides a simple example of how the proxying works.
 
 - Finally, the **platform proxy driver** a companion to the platform bus driver that loads
 into the platform device devhosts. This driver supports proxying the platform device protocol
@@ -52,7 +60,7 @@ from the platform data record. The correct board driver will bind to this device
 the platform bus initialization process..
 
 The board driver uses the platform bus protocol to communicate with the platform bus driver.
-After it does its own initialization, the board driver then uses the `pbus_load_protocol_device()`
+After it does its own initialization, the board driver then uses the `pbus_protocol_device_add()`
 API to load protocol implementation drivers for GPIO, I2C and other low level SOC protocols to be
 provided to the platform device drivers.
 After the protocol implementation drivers are loaded and have registered their protocols
@@ -110,3 +118,11 @@ The purpose of this protocol is for the board driver to load protocol implementa
 and to start platform device drivers. It is also used by protocol implementation drivers to
 register their protocols with the platform bus so their protocols can be made available
 to platform device drivers.
+
+## Platform Proxy Protocol
+
+The [platform proxy protocol](../../system/ulib/ddk/include/ddk/protocol/platform-proxy.h)
+(`ZX_PROTOCOL_PLATFORM_PROXY`) is used by the proxy client drivers that proxy protocols to
+protocol implementation drivers. It provides support for the proxy client driver to register
+its protocol with the platform proxy driver and for proxying its protocol to the
+protocol implementation driver over a channel.

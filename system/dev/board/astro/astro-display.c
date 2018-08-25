@@ -91,6 +91,9 @@ static const pbus_i2c_channel_t display_i2c_channels[] = {
     },
 };
 
+static const uint32_t display_protocols[] = {
+    ZX_PROTOCOL_AMLOGIC_CANVAS,
+};
 
 static pbus_dev_t display_dev = {
     .name = "display",
@@ -107,6 +110,8 @@ static pbus_dev_t display_dev = {
     .i2c_channel_count = countof(display_i2c_channels),
     .btis = display_btis,
     .bti_count = countof(display_btis),
+    .protocols = display_protocols,
+    .protocol_count = countof(display_protocols),
 };
 
 zx_status_t aml_display_init(aml_bus_t* bus) {

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-proxy.h>
 
 namespace platform_bus {
 
@@ -15,20 +15,6 @@ static constexpr size_t PROXY_MAX_TRANSFER_SIZE = 4096;
 
 // Device ID for a top level platform device (that is, an immediate child of the platform bus).
 static constexpr uint32_t ROOT_DEVICE_ID = 0;
-
-// Header for RPC requests.
-typedef struct {
-    zx_txid_t txid;
-    uint32_t device_id;
-    uint32_t protocol;
-    uint32_t op;
-} rpc_req_header_t;
-
-// Header for RPC responses.
-typedef struct {
-    zx_txid_t txid;
-    zx_status_t status;
-} rpc_rsp_header_t;
 
 // ZX_PROTOCOL_PLATFORM_DEV proxy support.
 enum {
@@ -39,16 +25,17 @@ enum {
     PDEV_GET_BOARD_INFO,
     PDEV_DEVICE_ADD,
     PDEV_GET_METADATA,
+    PDEV_GET_PROTOCOLS,
 };
 
 typedef struct {
-    rpc_req_header_t header;
+    platform_proxy_req_t header;
     uint32_t index;
     uint32_t flags;
 } rpc_pdev_req_t;
 
 typedef struct {
-    rpc_rsp_header_t header;
+    platform_proxy_rsp_t header;
     zx_paddr_t paddr;
     size_t length;
     uint32_t irq;
@@ -58,6 +45,7 @@ typedef struct {
     uint32_t device_id;
     uint32_t metadata_type;
     uint32_t metadata_length;
+    uint32_t protocol_count;
 } rpc_pdev_rsp_t;
 
 // Maximum metadata size that can be returned via PDEV_DEVICE_GET_METADATA.
@@ -68,6 +56,10 @@ typedef struct {
     rpc_pdev_rsp_t pdev;
     uint8_t metadata[PROXY_MAX_METADATA_SIZE];
 } rpc_pdev_metadata_rsp_t;
+
+// Maximum number of protocols that can be returned via PDEV_GET_PROTOCOLS.
+static constexpr size_t PROXY_MAX_PROTOCOLS = ((PLATFORM_PROXY_MAX_DATA - sizeof(rpc_pdev_rsp_t))
+                                                / sizeof(uint32_t));
 
 // Maximum I2C transfer is I2C_MAX_TRANSFER_SIZE minus size of largest header.
 static constexpr uint32_t I2C_MAX_TRANSFER_SIZE = (PROXY_MAX_TRANSFER_SIZE -
@@ -86,7 +78,7 @@ enum {
 };
 
 typedef struct {
-    rpc_req_header_t header;
+    platform_proxy_req_t header;
     uint32_t index;
     uint32_t flags;
     uint32_t polarity;
@@ -95,7 +87,7 @@ typedef struct {
 } rpc_gpio_req_t;
 
 typedef struct {
-    rpc_rsp_header_t header;
+    platform_proxy_rsp_t header;
     uint8_t value;
 } rpc_gpio_rsp_t;
 
@@ -106,7 +98,7 @@ enum {
 };
 
 typedef struct {
-    rpc_req_header_t header;
+    platform_proxy_req_t header;
     uint32_t index;
     size_t write_length;
     size_t read_length;
@@ -115,7 +107,7 @@ typedef struct {
 } rpc_i2c_req_t;
 
 typedef struct {
-    rpc_rsp_header_t header;
+    platform_proxy_rsp_t header;
     size_t max_transfer;
     i2c_complete_cb complete_cb;
     void* cookie;
@@ -128,26 +120,8 @@ enum {
 };
 
 typedef struct {
-    rpc_req_header_t header;
+    platform_proxy_req_t header;
     uint32_t index;
 } rpc_clk_req_t;
-
-// ZX_PROTOCOL_CANVAS proxy support.
-enum {
-    CANVAS_CONFIG,
-    CANVAS_FREE,
-};
-
-typedef struct {
-    rpc_req_header_t header;
-    canvas_info_t info;
-    size_t offset;
-    uint8_t idx;
-} rpc_canvas_req_t;
-
-typedef struct {
-    rpc_rsp_header_t header;
-    uint8_t idx;
-} rpc_canvas_rsp_t;
 
 } // namespace platform_bus

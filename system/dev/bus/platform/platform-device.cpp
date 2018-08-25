@@ -193,6 +193,15 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
         }
         return status;
     }
+    return ZX_OK;
+}
+
+zx_status_t PlatformDevice::RpcGetProtocols(const DeviceResources* dr, uint32_t* out_protocols,
+                                            uint32_t* out_protocol_count) {
+    auto count = dr->protocol_count();
+    memcpy(out_protocols, dr->protocols(), count * sizeof(*out_protocols));
+    *out_protocol_count = static_cast<uint32_t>(count);
+    return ZX_OK;
 }
 
 zx_status_t PlatformDevice::RpcGpioConfig(const DeviceResources* dr, uint32_t index, uint32_t flags) {
@@ -279,22 +288,6 @@ zx_status_t PlatformDevice::RpcGpioSetPolarity(const DeviceResources* dr, uint32
     return bus_->gpio()->SetPolarity(dr->gpio(index).gpio, flags);
 }
 
-zx_status_t PlatformDevice::RpcCanvasConfig(const DeviceResources* dr, zx_handle_t vmo,
-                                            size_t offset, canvas_info_t* info,
-                                            uint8_t* canvas_idx) {
-    if (bus_->canvas() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->canvas()->Config(vmo, offset, info, canvas_idx);
-}
-
-zx_status_t PlatformDevice::RpcCanvasFree(const DeviceResources* dr, uint8_t canvas_idx) {
-    if (bus_->canvas() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->canvas()->Free(canvas_idx);
-}
-
 zx_status_t PlatformDevice::RpcI2cTransact(const DeviceResources* dr, uint32_t txid,
                                            rpc_i2c_req_t* req, uint8_t* data, zx_handle_t channel) {
     if (bus_->i2c_impl() == nullptr) {
@@ -352,14 +345,16 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
 
     uint8_t req_buf[PROXY_MAX_TRANSFER_SIZE];
     uint8_t resp_buf[PROXY_MAX_TRANSFER_SIZE];
-    auto* req_header = reinterpret_cast<rpc_req_header_t*>(&req_buf);
-    auto* resp_header = reinterpret_cast<rpc_rsp_header_t*>(&resp_buf);
+    auto* req_header = reinterpret_cast<platform_proxy_req_t*>(&req_buf);
+    auto* resp_header = reinterpret_cast<platform_proxy_rsp_t*>(&resp_buf);
     uint32_t actual;
-    zx_handle_t in_handle;
-    uint32_t in_handle_count = 1;
+    zx_handle_t req_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    zx_handle_t resp_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t req_handle_count;
+    uint32_t resp_handle_count = 0;
 
-    auto status = zx_channel_read(channel, 0, &req_buf, &in_handle, sizeof(req_buf),
-                                  in_handle_count, &actual, &in_handle_count);
+    auto status = zx_channel_read(channel, 0, &req_buf, req_handles, sizeof(req_buf),
+                                  countof(req_handles), &actual, &req_handle_count);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
         return status;
@@ -372,11 +367,9 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     const DeviceResources* dr = device_index_[index];
 
     resp_header->txid = req_header->txid;
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    uint32_t handle_count = 0;
     uint32_t resp_len;
 
-    switch (req_header->protocol) {
+    switch (req_header->proto_id) {
     case ZX_PROTOCOL_PLATFORM_DEV: {
         auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
@@ -388,15 +381,15 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
 
         switch (req_header->op) {
         case PDEV_GET_MMIO:
-            status = RpcGetMmio(dr, req->index, &resp->paddr, &resp->length, &handle,
-                                &handle_count);
+            status = RpcGetMmio(dr, req->index, &resp->paddr, &resp->length, resp_handles,
+                                &resp_handle_count);
             break;
         case PDEV_GET_INTERRUPT:
-            status = RpcGetInterrupt(dr, req->index, &resp->irq, &resp->mode, &handle,
-                                     &handle_count);
+            status = RpcGetInterrupt(dr, req->index, &resp->irq, &resp->mode, resp_handles,
+                                     &resp_handle_count);
             break;
         case PDEV_GET_BTI:
-            status = RpcGetBti(dr, req->index, &handle, &handle_count);
+            status = RpcGetBti(dr, req->index, resp_handles, &resp_handle_count);
             break;
         case PDEV_GET_DEVICE_INFO:
             status = RpcGetDeviceInfo(dr, &resp->device_info);
@@ -416,8 +409,14 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             resp_len += resp->pdev.metadata_length;
             break;
         }
+        case PDEV_GET_PROTOCOLS: {
+            auto protos = reinterpret_cast<uint32_t*>(&resp[1]);
+            status = RpcGetProtocols(dr, protos, &resp->protocol_count);
+            resp_len += static_cast<uint32_t>(resp->protocol_count * sizeof(*protos));
+            break;
+        }
         default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;
@@ -445,7 +444,8 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             status = RpcGpioWrite(dr, req->index, req->value);
             break;
         case GPIO_GET_INTERRUPT:
-            status = RpcGpioGetInterrupt(dr, req->index, req->flags, &handle, &handle_count);
+            status = RpcGpioGetInterrupt(dr, req->index, req->flags, resp_handles,
+                                         &resp_handle_count);
             break;
         case GPIO_RELEASE_INTERRUPT:
             status = RpcGpioReleaseInterrupt(dr, req->index);
@@ -454,7 +454,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             status = RpcGpioSetPolarity(dr, req->index, req->polarity);
             break;
         default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            zxlogf(ERROR, "%s: unknown GPIO op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;
@@ -483,7 +483,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         }
         default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            zxlogf(ERROR, "%s: unknown I2C op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;
@@ -504,43 +504,35 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             status = RpcClkDisable(dr, req->index);
             break;
         default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
+            zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;
     }
-    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
-        auto req = reinterpret_cast<rpc_canvas_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-        auto resp = reinterpret_cast<rpc_canvas_rsp_t*>(&resp_buf);
-        resp_len = sizeof(*resp);
-
-        switch (req_header->op) {
-        case CANVAS_CONFIG:
-            status = RpcCanvasConfig(dr, in_handle, req->offset, &req->info,
-                                     &resp->idx);
-            break;
-        case CANVAS_FREE:
-            status = RpcCanvasFree(dr, req->idx);
-            break;
-        default:
-            zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
+    default: {
+        platform_proxy_args_t args = {
+            .req = req_header,
+            .req_size = actual,
+            .resp = resp_header,
+            .resp_size = sizeof(resp_buf),
+            .req_handles = req_handles,
+            .req_handle_count = req_handle_count,
+            .resp_handles = resp_handles,
+            .resp_handle_count = countof(resp_handles),
+            .resp_actual_size = 0,
+            .resp_actual_handles = 0,
+        };
+        status = bus_->Proxy(&args);
+        resp_len = args.resp_actual_size;
+        resp_handle_count = args.resp_actual_handles;
         break;
     }
-    default:
-        zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req_header->op);
-        return ZX_ERR_INTERNAL;
     }
 
     // set op to match request so zx_channel_write will return our response
     resp_header->status = status;
     status = zx_channel_write(channel, 0, resp_header, resp_len,
-                              (handle_count == 1 ? &handle : nullptr), handle_count);
+                              (resp_handle_count ? resp_handles : nullptr), resp_handle_count);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
     }
@@ -577,8 +569,16 @@ zx_status_t PlatformDevice::Start() {
         device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
 
-    auto status = DdkAdd(name, device_add_flags, props, countof(props), ZX_PROTOCOL_PLATFORM_DEV,
-                         argstr);
+    zx_status_t status;
+    if (dr->protocol_count() > 0) {
+        // PlatformDevice::Start with protocols
+        status = DdkAdd(name, device_add_flags, nullptr, 0, ZX_PROTOCOL_PLATFORM_PROXY, argstr);
+    
+    } else {
+        status = DdkAdd(name, device_add_flags, props, countof(props), ZX_PROTOCOL_PLATFORM_DEV,
+                        argstr);
+    }
+
     if (status != ZX_OK) {
         return status;
     }

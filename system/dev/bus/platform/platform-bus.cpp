@@ -23,6 +23,16 @@
 
 namespace platform_bus {
 
+zx_status_t PlatformBus::Proxy(platform_proxy_args_t* args) {
+    fbl::AutoLock lock(&proto_proxys_mutex_);
+    auto proto_proxy = proto_proxys_.find(args->req->proto_id);
+    if (!proto_proxy.IsValid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return proto_proxy->Proxy(args);
+}
+
 zx_status_t PlatformBus::GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle) {
     if (iommu_index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -30,7 +40,8 @@ zx_status_t PlatformBus::GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle
     return zx_bti_create(iommu_handle_.get(), 0, bti_id, out_handle);
 }
 
-zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
+zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
+                                          platform_proxy_cb_t proxy_cb, void* proxy_cb_cookie) {
     if (!protocol) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -39,6 +50,9 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
 
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO: {
+        if (proxy_cb != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
         gpio_.reset(new (&ac) ddk::GpioProtocolProxy(static_cast<gpio_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -46,6 +60,9 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
         break;
     }
     case ZX_PROTOCOL_I2C_IMPL: {
+        if (proxy_cb != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
         auto proto = static_cast<i2c_impl_protocol_t*>(protocol);
         auto status = I2cInit(proto);
         if (status != ZX_OK) {
@@ -59,6 +76,9 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
         break;
     }
     case ZX_PROTOCOL_CLK: {
+        if (proxy_cb != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
         clk_.reset(new (&ac) ddk::ClkProtocolProxy(static_cast<clk_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -66,26 +86,41 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
         break;
     }
     case ZX_PROTOCOL_IOMMU: {
+        if (proxy_cb != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
         iommu_.reset(new (&ac) ddk::IommuProtocolProxy(static_cast<iommu_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
         break;
     }
-    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
-        canvas_.reset(new (&ac) ddk::CanvasProtocolProxy(
-            static_cast<canvas_protocol_t*>(protocol)));
+    default: {
+        if (proxy_cb == nullptr) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        fbl::AutoLock lock(&proto_proxys_mutex_);
+        if (proto_proxys_.find(proto_id).IsValid()) {
+            zxlogf(ERROR, "%s: protocol %08x has already been registered\n", __func__, proto_id);
+            return ZX_ERR_BAD_STATE;
+        }
+
+        fbl::AllocChecker ac;
+        auto proxy = fbl::make_unique_checked<ProtoProxy>(&ac, proto_id,
+                                            static_cast<ddk::AnyProtocol*>(protocol), proxy_cb,
+                                            proxy_cb_cookie);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        break;
+
+        proto_proxys_.insert(fbl::move(proxy));
+        sync_completion_signal(&proto_completion_);
+        return ZX_OK;
     }
-    default:
-        // TODO(voydanoff) consider having a registry of arbitrary protocols
-        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    fbl::AutoLock lock(&mutex_);
+    fbl::AutoLock lock(&proto_completion_mutex_);
     sync_completion_signal(&proto_completion_);
     return ZX_OK;
 }
@@ -121,17 +156,6 @@ zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev) {
 }
 
 zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
-    switch (proto_id) {
-    case ZX_PROTOCOL_AMLOGIC_CANVAS:
-    case ZX_PROTOCOL_CLK:
-    case ZX_PROTOCOL_GPIO:
-    case ZX_PROTOCOL_I2C_IMPL:
-        break;
-    default:
-        zxlogf(ERROR, "%s: unsupported protocol %08x\n", __func__, proto_id);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     if (!pdev->name) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -154,18 +178,18 @@ zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* 
     // Wait for protocol implementation driver to register its protocol.
     ddk::AnyProtocol dummy_proto;
 
-    mutex_.Acquire();
+    proto_completion_mutex_.Acquire();
     while (DdkGetProtocol(proto_id, &dummy_proto) == ZX_ERR_NOT_SUPPORTED) {
         sync_completion_reset(&proto_completion_);
-        mutex_.Release();
+        proto_completion_mutex_.Release();
         zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(10));
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s failed for protocol %08x\n", __FUNCTION__, proto_id);
             return status;
         }
-        mutex_.Acquire();
+        proto_completion_mutex_.Acquire();
     }
-    mutex_.Release();
+    proto_completion_mutex_.Release();
     return ZX_OK;
 }
 
@@ -183,52 +207,52 @@ zx_status_t PlatformBus::GetBoardInfo(pdev_board_info_t* out_info) {
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* protocol) {
+zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     switch (proto_id) {
     case ZX_PROTOCOL_PLATFORM_BUS: {
-        auto proto = static_cast<platform_bus_protocol_t*>(protocol);
+        auto proto = static_cast<platform_bus_protocol_t*>(out);
         proto->ctx = this;
         proto->ops = &pbus_proto_ops_;
         return ZX_OK;
     }
     case ZX_PROTOCOL_GPIO:
         if (gpio_ != nullptr) {
-            gpio_->GetProto(static_cast<gpio_protocol_t*>(protocol));
+            gpio_->GetProto(static_cast<gpio_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_I2C_IMPL:
         if (i2c_impl_ != nullptr) {
-            i2c_impl_->GetProto(static_cast<i2c_impl_protocol_t*>(protocol));
+            i2c_impl_->GetProto(static_cast<i2c_impl_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_CLK:
         if (clk_ != nullptr) {
-            clk_->GetProto(static_cast<clk_protocol_t*>(protocol));
+            clk_->GetProto(static_cast<clk_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_IOMMU:
         if (iommu_ != nullptr) {
-            iommu_->GetProto(static_cast<iommu_protocol_t*>(protocol));
+            iommu_->GetProto(static_cast<iommu_protocol_t*>(out));
         } else {
             // return default implementation
-            auto proto = static_cast<iommu_protocol_t*>(protocol);
+            auto proto = static_cast<iommu_protocol_t*>(out);
             proto->ctx = this;
             proto->ops = &iommu_proto_ops_;
             return ZX_OK;
         }
         break;
-    case ZX_PROTOCOL_AMLOGIC_CANVAS:
-        if (canvas_ != nullptr) {
-            canvas_->GetProto(static_cast<canvas_protocol_t*>(protocol));
-            return ZX_OK;
+    default: {
+        fbl::AutoLock lock(&proto_proxys_mutex_);
+        auto proto_proxy = proto_proxys_.find(proto_id);
+        if (!proto_proxy.IsValid()) {
+            return ZX_ERR_NOT_SUPPORTED;
         }
-        break;
-    default:
-        // TODO(voydanoff) consider having a registry of arbitrary protocols
-        return ZX_ERR_NOT_SUPPORTED;
+        proto_proxy->GetProtocol(out);
+        return ZX_OK;
+    }
     }
 
     return ZX_ERR_NOT_SUPPORTED;

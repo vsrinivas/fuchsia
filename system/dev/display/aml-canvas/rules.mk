@@ -4,12 +4,29 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+# Build canvas implementation driver.
+
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/aml-canvas.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+include make/module.mk
+
+# Build canvas proxy client driver.
+
+MODULE := $(LOCAL_DIR).proxy
+
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/aml-canvas-proxy-client.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 

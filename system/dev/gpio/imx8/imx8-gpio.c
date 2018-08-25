@@ -472,7 +472,7 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent)
 
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO, &gpio->gpio);
+    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO, &gpio->gpio, NULL, NULL);
 
     return ZX_OK;
 

@@ -14,7 +14,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_device_add, DeviceAdd,
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_protocol_device_add, ProtocolDeviceAdd,
         zx_status_t (C::*)(uint32_t proto_id, const pbus_dev_t* dev));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_register_protocol, RegisterProtocol,
-        zx_status_t (C::*)(uint32_t proto_id, void* protocol));
+        zx_status_t (C::*)(uint32_t proto_id, void* protocol, platform_proxy_cb_t proxy_cb,
+                           void* proxy_cb_cookie));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_get_board_name, GetBoardName,
         const char* (C::*)());
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_set_board_info, SetBoardInfo,
@@ -30,7 +31,8 @@ constexpr void CheckPlatformBusProtocolSubclass() {
                   "ProtocolAdd(uint32_t proto_id, const pbus_dev_t* dev)");
     static_assert(internal::has_pbus_register_protocol<D>::value,
                   "PlatformBusProtocol subclasses must implement "
-                  "RegisterProtocol(uint32_t proto_id, void* protocol)");
+                  "RegisterProtocol(uint32_t proto_id, void* protocol, platform_proxy_cb_t "
+                  "proxy_cb, void* proxy_cb_cookie)");
     static_assert(internal::has_pbus_get_board_name<D>::value,
                   "PlatformBusProtocol subclasses must implement "
                   "GetBoardName()");

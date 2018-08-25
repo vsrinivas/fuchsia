@@ -14,6 +14,5 @@ static zx_driver_ops_t platform_bus_proxy_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(platform_bus_proxy, platform_bus_proxy_driver_ops, "zircon", "0.1", 1)
-    // devmgr loads us directly, so we need no binding information here
-    BI_ABORT_IF_AUTOBIND,
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_PROXY),
 ZIRCON_DRIVER_END(platform_bus_proxy)

@@ -9,14 +9,17 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include "aml-canvas.h"
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-proxy.h>
 #include <zircon/pixelformat.h>
+
+#include "aml-canvas.h"
 
 static void aml_canvas_release(void* ctx) {
     aml_canvas_t* canvas = ctx;
@@ -151,6 +154,35 @@ static canvas_protocol_ops_t canvas_ops = {
     .free = aml_canvas_free,
 };
 
+static zx_status_t aml_canvas_proxy_cb(platform_proxy_args_t* args, void* cookie) {
+    if (args->req->proto_id != ZX_PROTOCOL_AMLOGIC_CANVAS) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (args->req_size < sizeof(rpc_canvas_rsp_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    rpc_canvas_req_t* req = (rpc_canvas_req_t*)args->req;
+    rpc_canvas_rsp_t* resp = (rpc_canvas_rsp_t*)args->resp;
+    args->resp_actual_size = sizeof(*resp);
+    args->resp_actual_handles = 0;
+
+    switch (req->header.op) {
+    case CANVAS_CONFIG: {
+        resp->header.status = aml_canvas_config(cookie, args->req_handles[0], req->offset,
+                                                &req->info, &resp->idx);
+        break;
+    }
+    case CANVAS_FREE: {
+        resp->header.status = aml_canvas_free(cookie, req->idx);
+        break;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
+}
+
 static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
@@ -209,8 +241,9 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     canvas->canvas.ops = &canvas_ops;
     canvas->canvas.ctx = canvas;
 
-    // Set the canvas protocol on the platform bus
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas);
+    // Register the canvas protocol with the platform bus
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas, aml_canvas_proxy_cb,
+                           canvas);
     return ZX_OK;
 fail:
     aml_canvas_release(canvas);

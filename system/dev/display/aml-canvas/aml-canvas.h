@@ -51,17 +51,40 @@
 #define DMC_CAV_YWRAP                       (1<<23)
 #define DMC_CAV_XWRAP                       (1<<22)
 
+// Proxy request IDs.
+enum {
+    CANVAS_CONFIG,
+    CANVAS_FREE,
+};
+
+// Proxy request.
 typedef struct {
-    zx_device_t*                            zxdev;
-    platform_device_protocol_t              pdev;
+    platform_proxy_req_t header;
+    canvas_info_t info;
+    size_t offset;
+    uint8_t idx;
+} rpc_canvas_req_t;
 
-    io_buffer_t                             dmc_regs;
+// Proxy response.
+typedef struct {
+    platform_proxy_rsp_t header;
+    uint8_t idx;
+} rpc_canvas_rsp_t;
 
-    mtx_t                                   lock;
-
-    canvas_protocol_t                       canvas;
-
-    zx_handle_t                             bti;
-
-    zx_handle_t                             pmt_handle[NUM_CANVAS_ENTRIES];
+// Context for driver implementation.
+typedef struct {
+    zx_device_t* zxdev;
+    platform_device_protocol_t pdev;
+    io_buffer_t dmc_regs;
+    mtx_t lock;
+    canvas_protocol_t canvas;
+    zx_handle_t bti;
+    zx_handle_t pmt_handle[NUM_CANVAS_ENTRIES];
 } aml_canvas_t;
+
+// Context for driver proxy.
+typedef struct {
+    zx_device_t* zxdev;
+    platform_proxy_protocol_t proxy;
+    canvas_protocol_t canvas;
+} aml_canvas_proxy_t;
