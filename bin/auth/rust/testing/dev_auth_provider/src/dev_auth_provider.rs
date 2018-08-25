@@ -2,28 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_auth;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::ServerEnd;
 use fidl::Error;
-use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenResponder,
+use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
+                        AuthProviderGetAppAccessTokenResponder,
                         AuthProviderGetAppFirebaseTokenResponder,
                         AuthProviderGetAppIdTokenResponder,
-                        AuthProviderGetPersistentCredentialResponder,
-                        AuthProviderMarker,
-                        AuthProviderRequest,
-                        AuthProviderRevokeAppOrPersistentCredentialResponder,
                         AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
-                        AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
+                        AuthProviderGetPersistentCredentialResponder, AuthProviderMarker,
+                        AuthProviderRequest, AuthProviderRevokeAppOrPersistentCredentialResponder,
                         AuthProviderStatus, UserProfileInfo};
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::future;
 use futures::prelude::*;
+use log::{log, warn};
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 
@@ -58,7 +52,7 @@ impl AuthProvider {
             Err(err) => {
                 warn!("Error creating AuthProvider request stream {:?}", err);
             }
-            Ok(request_stream) => async::spawn(
+            Ok(request_stream) => fasync::spawn(
                 request_stream
                     .try_for_each(|r| future::ready(Self::handle_request(r)))
                     .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e)),
@@ -97,15 +91,13 @@ impl AuthProvider {
                 Self::revoke_app_or_persistent_credential(responder)
             }
 
-            AuthProviderRequest::GetPersistentCredentialFromAttestationJwt{
-                responder,
-                ..
+            AuthProviderRequest::GetPersistentCredentialFromAttestationJwt {
+                responder, ..
             } => Self::get_persistent_credential_from_attestation_jwt(responder),
 
-            AuthProviderRequest::GetAppAccessTokenFromAssertionJwt{
-                responder,
-                ..
-            } => Self::get_app_access_token_from_assertion_jwt(responder),
+            AuthProviderRequest::GetAppAccessTokenFromAssertionJwt { responder, .. } => {
+                Self::get_app_access_token_from_assertion_jwt(responder)
+            }
         }
     }
 
@@ -123,12 +115,11 @@ impl AuthProvider {
         });
 
         let credential = Some("rt_".to_string() + &generate_random_string());
-        responder
-            .send(
-                AuthProviderStatus::Ok,
-                credential.as_ref().map(|s| &**s),
-                user_profile_info.as_mut().map(OutOfLine),
-            )
+        responder.send(
+            AuthProviderStatus::Ok,
+            credential.as_ref().map(|s| &**s),
+            user_profile_info.as_mut().map(OutOfLine),
+        )
     }
 
     /// Implementation of the `GetAppAccessToken` method for the `AuthProvider`
@@ -147,8 +138,7 @@ impl AuthProvider {
             expires_in: TOKEN_LIFETIME.as_secs(),
         });
 
-        responder
-            .send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
+        responder.send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
     }
 
     /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl
@@ -162,8 +152,7 @@ impl AuthProvider {
             expires_in: TOKEN_LIFETIME.as_secs(),
         });
 
-        responder
-            .send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
+        responder.send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
     }
 
     /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider`
@@ -178,11 +167,10 @@ impl AuthProvider {
             expires_in: TOKEN_LIFETIME.as_secs(),
         });
 
-        responder
-            .send(
-                AuthProviderStatus::Ok,
-                firebase_token.as_mut().map(OutOfLine),
-            )
+        responder.send(
+            AuthProviderStatus::Ok,
+            firebase_token.as_mut().map(OutOfLine),
+        )
     }
 
     /// Implementation of the `RevokeAppOrPersistentCredential` method for the
@@ -208,7 +196,6 @@ impl AuthProvider {
     ) -> Result<(), Error> {
         responder.send(AuthProviderStatus::BadRequest, None, None, None)
     }
-
 }
 
 #[cfg(test)]
@@ -217,10 +204,10 @@ mod tests {
     use super::*;
     use fidl_fuchsia_auth::AuthProviderProxy;
 
-    fn set_up() -> Result<(async::Executor, AuthProviderProxy), failure::Error> {
-        let exec = async::Executor::new()?;
+    fn set_up() -> Result<(fasync::Executor, AuthProviderProxy), failure::Error> {
+        let exec = fasync::Executor::new()?;
         let (server_chan, client_chan) = zx::Channel::create()?;
-        let client_chan = async::Channel::from_channel(client_chan)?;
+        let client_chan = fasync::Channel::from_channel(client_chan)?;
         let server_end = ServerEnd::<AuthProviderMarker>::new(server_chan);
         AuthProvider::spawn(server_end);
         let proxy = AuthProviderProxy::new(client_chan);

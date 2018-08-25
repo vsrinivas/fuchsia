@@ -4,37 +4,27 @@
 
 #![feature(futures_api)]
 
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_auth;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_syslog as syslog;
-extern crate futures;
-#[macro_use]
-extern crate log;
-extern crate rand;
-
 mod dev_auth_provider;
 mod dev_auth_provider_factory;
 
-use component::server::ServicesServer;
-use dev_auth_provider_factory::AuthProviderFactory;
+use crate::dev_auth_provider_factory::AuthProviderFactory;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
 use fidl_fuchsia_auth::AuthProviderFactoryMarker;
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use log::{info, log};
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["auth"]).expect("Can't init logger");
+    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting dev auth provider");
 
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let fut = ServicesServer::new()
         .add_service((AuthProviderFactoryMarker::NAME, |chan| {
             AuthProviderFactory::spawn(chan)
-        }))
-        .start()
+        })).start()
         .context("Error starting dev auth provider server")?;
 
     executor
