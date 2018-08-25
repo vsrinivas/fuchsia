@@ -138,31 +138,31 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
  private:
   // sm::PairingState::Delegate override:
-  void OnNewPairingData(const Optional<sm::LTK>& ltk,
-                        const Optional<sm::Key>& irk,
-                        const Optional<DeviceAddress>& identity,
-                        const Optional<sm::Key>& csrk) override {
-    // Consider the pairing temporary if no pairing data was received. This
-    // means we'll remain encrypted with the STK without creating a bond.
-    bool temporary = !ltk && !irk && !identity && !csrk;
-
-    if (temporary) {
+  void OnNewPairingData(const sm::PairingData& pairing_data) override {
+    // Consider the pairing temporary if no link key was received. This
+    // means we'll remain encrypted with the STK without creating a bond and
+    // reinitiate pairing when we reconnect in the future.
+    // TODO(armansito): Support bonding with just the CSRK for LE security mode
+    // 2.
+    if (!pairing_data.ltk) {
       bt_log(INFO, "gap-le", "temporarily paired with device (id: %s)",
              id().c_str());
       return;
     }
 
     bt_log(INFO, "gap-le", "new pairing data [%s%s%s%sid: %s]",
-           ltk ? "ltk " : "", irk ? "irk " : "",
-           identity ? fxl::StringPrintf("(identity: %s) ",
-                                        identity->ToString().c_str())
-                          .c_str()
-                    : "",
-           csrk ? "csrk " : "", id().c_str());
+           pairing_data.ltk ? "ltk " : "", pairing_data.irk ? "irk " : "",
+           pairing_data.identity_address
+               ? fxl::StringPrintf(
+                     "(identity: %s) ",
+                     pairing_data.identity_address->ToString().c_str())
+                     .c_str()
+               : "",
+           pairing_data.csrk ? "csrk " : "", id().c_str());
 
     // TODO(armansito): Store all pairing data with the remote device cache.
-    if (ltk) {
-      conn_mgr_->device_cache()->StoreLTK(id_, *ltk);
+    if (pairing_data.ltk) {
+      conn_mgr_->device_cache()->StoreLTK(id_, *pairing_data.ltk);
     }
   }
 

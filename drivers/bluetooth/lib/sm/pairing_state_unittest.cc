@@ -77,15 +77,9 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   }
 
   // Called by |pairing_| when a new LTK is obtained.
-  void OnNewPairingData(const Optional<sm::LTK>& ltk,
-                        const Optional<sm::Key>& irk,
-                        const Optional<DeviceAddress>& identity,
-                        const Optional<sm::Key>& csrk) override {
+  void OnNewPairingData(const PairingData& pairing_data) override {
     pairing_data_callback_count_++;
-    ltk_ = ltk;
-    irk_ = irk;
-    identity_ = identity;
-    csrk_ = csrk;
+    pairing_data_ = pairing_data;
   }
 
   void UpdateSecurity(SecurityLevel level) {
@@ -238,10 +232,12 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   int pairing_data_callback_count() const {
     return pairing_data_callback_count_;
   }
-  const Optional<LTK>& ltk() const { return ltk_; }
-  const Optional<Key>& irk() const { return irk_; }
-  const Optional<DeviceAddress>& identity() const { return identity_; }
-  const Optional<Key>& csrk() const { return csrk_; }
+  const Optional<LTK>& ltk() const { return pairing_data_.ltk; }
+  const Optional<Key>& irk() const { return pairing_data_.irk; }
+  const Optional<DeviceAddress>& identity() const {
+    return pairing_data_.identity_address;
+  }
+  const Optional<Key>& csrk() const { return pairing_data_.csrk; }
 
   using TkDelegate =
       fit::function<void(PairingMethod, PairingState::Delegate::TkResponse)>;
@@ -280,13 +276,10 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   Status pairing_status_;
   SecurityProperties sec_props_;
 
-  // Number of times the LTK callback has been called and the most recent LTK
-  // that it was called with.
+  // Number of times the pairing data callback has been called and the most
+  // recent value that it was called with.
   int pairing_data_callback_count_ = 0;
-  Optional<LTK> ltk_;
-  Optional<Key> irk_;
-  Optional<DeviceAddress> identity_;
-  Optional<Key> csrk_;
+  PairingData pairing_data_;
 
   // State tracking the OnPairingComplete event.
   int pairing_complete_count_ = 0;

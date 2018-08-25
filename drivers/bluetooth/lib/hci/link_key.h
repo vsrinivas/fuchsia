@@ -27,6 +27,11 @@ class LinkKey final {
   uint64_t rand() const { return rand_; }
   uint16_t ediv() const { return ediv_; }
 
+  bool operator==(const LinkKey& other) const {
+    return value() == other.value() && rand() == other.rand() &&
+           ediv() == other.ediv();
+  }
+
  private:
   common::UInt128 value_;
   uint64_t rand_;

@@ -58,10 +58,7 @@ class PairingState final : public Bearer::Listener {
     virtual void OnPairingComplete(Status status) = 0;
 
     // Called when new pairing data has been obtained for this peer.
-    virtual void OnNewPairingData(
-        const common::Optional<LTK>& ltk, const common::Optional<Key>& irk,
-        const common::Optional<common::DeviceAddress>& identity_address,
-        const common::Optional<Key>& csrk) = 0;
+    virtual void OnNewPairingData(const sm::PairingData& data) = 0;
   };
 
   // |link|: The LE logical link over which pairing procedures occur.

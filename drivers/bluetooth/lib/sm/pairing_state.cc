@@ -327,17 +327,15 @@ void PairingState::CompleteLegacyPairing() {
   // properties of the link used to distribute them. This is reflected by
   // |le_sec_|.
 
-  common::Optional<LTK> ltk;
+  PairingData pairing_data;
   if (legacy_state_->ltk) {
-    ltk = LTK(le_sec_, *legacy_state_->ltk);
+    pairing_data.ltk = LTK(le_sec_, *legacy_state_->ltk);
   }
 
-  common::Optional<Key> irk;
-  common::Optional<DeviceAddress> identity_addr;
   if (legacy_state_->has_irk) {
     // If there is an IRK there must also be an identity address.
-    irk = Key(le_sec_, legacy_state_->irk);
-    identity_addr = legacy_state_->identity_address;
+    pairing_data.irk = Key(le_sec_, legacy_state_->irk);
+    pairing_data.identity_address = legacy_state_->identity_address;
   }
 
   bt_log(TRACE, "sm", "LE legacy pairing complete");
@@ -346,7 +344,7 @@ void PairingState::CompleteLegacyPairing() {
   // TODO(armansito): Report CSRK when we support it.
   ZX_DEBUG_ASSERT(delegate_);
   delegate_->OnPairingComplete(Status());
-  delegate_->OnNewPairingData(ltk, irk, identity_addr, common::Optional<Key>());
+  delegate_->OnNewPairingData(pairing_data);
 
   // Separate out the requests that are satisifed by the current security level
   // from the ones that require a higher level. We'll retry pairing for the

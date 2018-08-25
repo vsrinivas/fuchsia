@@ -5,6 +5,7 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_
 
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
 #include "garnet/drivers/bluetooth/lib/sm/smp.h"
@@ -67,7 +68,7 @@ class SecurityProperties final {
   std::string ToString() const;
 
   // Compare two properties for equality.
-  inline bool operator==(const SecurityProperties& other) const {
+  bool operator==(const SecurityProperties& other) const {
     return level_ == other.level_ && enc_key_size_ == other.enc_key_size_ &&
            sc_ == other.sc_;
   }
@@ -87,6 +88,10 @@ class LTK final {
   const SecurityProperties& security() const { return security_; }
   const hci::LinkKey& key() const { return key_; }
 
+  bool operator==(const LTK& other) const {
+    return security() == other.security() && key() == other.key();
+  }
+
  private:
   SecurityProperties security_;
   hci::LinkKey key_;
@@ -101,9 +106,33 @@ class Key final {
   const SecurityProperties& security() const { return security_; }
   const common::UInt128& value() const { return value_; }
 
+  bool operator==(const Key& other) const {
+    return security() == other.security() && value() == other.value();
+  }
+
  private:
   SecurityProperties security_;
   common::UInt128 value_;
+};
+
+// Container for LE pairing data.
+struct PairingData final {
+  // The identity address.
+  common::Optional<common::DeviceAddress> identity_address;
+
+  // The long term key used for link encryption.
+  common::Optional<sm::LTK> ltk;
+
+  // The identity resolving key used to resolve RPAs to |identity|.
+  common::Optional<sm::Key> irk;
+
+  // The connection signature resolving key used in LE security mode 2.
+  common::Optional<sm::Key> csrk;
+
+  bool operator==(const PairingData& other) const {
+    return identity_address == other.identity_address && ltk == other.ltk &&
+           irk == other.irk && csrk == other.csrk;
+  }
 };
 
 }  // namespace sm
