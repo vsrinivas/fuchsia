@@ -12,6 +12,7 @@
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/update_mod_call.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
@@ -40,12 +41,38 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
         module_source_(module_source) {}
 
  private:
-  // Start by finding the module through module resolver
   void Run() override {
     FlowToken flow{this, &result_, &module_data_};
-    // Success status by default, we'll update it if we find an error state.
+    // Success status by default, it will be update it if an error state is
+    // found.
     result_.status = fuchsia::modular::ExecuteStatus::OK;
 
+    if (mod_name_.is_null() || mod_name_->empty()) {
+      FindModule(flow);
+      return;
+    }
+
+    // Start by trying to update the mod instead of creating a new one.
+    fuchsia::modular::UpdateMod command;
+    fidl::Clone(intent_.parameters, &command.parameters);
+    command.mod_name = mod_name_.Clone();
+    AddUpdateModOperation(
+        &operation_queue_, story_storage_, std::move(command),
+        [this, flow](fuchsia::modular::ExecuteResult result) {
+          // UpdateMod failing with INVALID_MOD means that the mod to update
+          // wasn't found, doesn't exist. So the flow continues to resolve the
+          // intent and create the mod.
+          if (result.status == fuchsia::modular::ExecuteStatus::INVALID_MOD) {
+            FindModule(flow);
+            return;
+          }
+          result_ = std::move(result);
+          // Operation finishes since |flow| goes out of scope.
+        });
+  }
+
+  //  Find the module through module resolver.
+  void FindModule(FlowToken flow) {
     AddFindModulesOperation(
         &operation_queue_, story_storage_, module_resolver_, entity_resolver_,
         CloneOptional(intent_), surface_parent_mod_name_.Clone(),
@@ -71,8 +98,8 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   void CreateLinks(FlowToken flow) {
     CreateModuleParameterMapInfo(flow)->Then([this, flow] {
       if (result_.status != fuchsia::modular::ExecuteStatus::OK) {
-        // Early finish since we found an error state.
         return;
+        // Operation finishes since |flow| goes out of scope.
       }
       auto full_module_path = surface_parent_mod_name_.Clone();
       full_module_path->insert(full_module_path->end(), mod_name_->begin(),
@@ -159,7 +186,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
           auto did_get_lp = Future<fuchsia::modular::LinkPathPtr>::Create(
               "AddModCommandRunner::AddModCall::did_get_link");
           // TODO(miguelfrde): get rid of using surface_parent_mod_name this
-          // way. Maybe we should just return an INVALID status here since using
+          // way. Maybe INVALID status should be returned here since using
           // this parameter in a StoryCommand doesn't make much sense.
           AddGetLinkPathForParameterNameOperation(
               &operations_, story_storage_, surface_parent_mod_name_.Clone(),

@@ -57,9 +57,7 @@ source_set("update_mod_command_runner") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls:set_link_value_call",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/entity/cpp:json",
+    "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls:update_mod_call",
   ]
 
   public_deps = [

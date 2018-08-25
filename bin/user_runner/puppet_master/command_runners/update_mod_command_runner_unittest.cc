@@ -179,7 +179,7 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteNoModuleData) {
 
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_MOD,
                                result.status);
                      EXPECT_EQ("No module data", result.error_message);
                      done = true;
