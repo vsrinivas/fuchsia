@@ -170,7 +170,8 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
         memcpy(info->cursor_infos_.get(), display_params.cursor_infos,
                display_params.cursor_info_count * sizeof(cursor_info_t));
 
-        if (display_params.edid_present) {
+        info->has_edid = display_params.edid_present;
+        if (info->has_edid) {
             info->edid_data_ = fbl::Array<uint8_t>(
                     new (&ac) uint8_t[display_params.panel.edid.length],
                     display_params.panel.edid.length);
@@ -514,7 +515,7 @@ bool Controller::GetPanelConfig(uint64_t display_id,
     ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
     for (auto& display : displays_) {
         if (display.id == display_id) {
-            if (display.edid_data_.size()) {
+            if (display.has_edid) {
                 *timings = &display.edid_timings;
                 *params = nullptr;
             } else {
